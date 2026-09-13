@@ -1,0 +1,45 @@
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: colabike
+      POSTGRES_USER: colabike
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-colabike-local-only}
+    volumes:
+      - database:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U colabike -d colabike"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+    restart: unless-stopped
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://colabike:${POSTGRES_PASSWORD:-colabike-local-only}@db:5432/colabike
+      APP_ORIGIN: ${APP_ORIGIN:-http://localhost:3000}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      UPLOAD_DIR: /app/uploads
+    volumes:
+      - photos:/app/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+volumes:
+  database:
+  photos:
