@@ -18,6 +18,7 @@ COPY --from=builder --chown=colabike:colabike /app/.next/static ./.next/static
 COPY --from=builder --chown=colabike:colabike /app/public ./public
 COPY --from=builder --chown=colabike:colabike /app/db ./db
 COPY --from=builder --chown=colabike:colabike /app/scripts ./scripts
+COPY --from=builder --chown=colabike:colabike /app/lib ./lib
 USER colabike
 EXPOSE 3000
 CMD ["sh", "-c", "node scripts/migrate.js && node server.js"]
