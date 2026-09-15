@@ -1,0 +1,18 @@
+name: Deploy Cola
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: cola-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+
+    steps:
+      - name: Deploy
+        run: sudo /usr/local/sbin/deploy-cola
