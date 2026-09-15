@@ -1,14 +1,28 @@
 import "./globals.css";
-export const metadata = {
-  title: "ColaBike — ваш велосипед в деталях",
-  description: "Личный гараж, комплектация и аксессуары вашего велосипеда.",
-  robots: { index: false, follow: false },
-  icons: { icon: "/favicon.svg" },
-};
-export default function Layout({ children }) {
+import "./mobile.css";
+import SiteProvider from "./ui/site-provider.jsx";
+import { getSite } from "../lib/site.js";
+export const dynamic = "force-dynamic";
+export async function generateMetadata() {
+  const { settings } = await getSite();
+  return {
+    title: settings.siteName,
+    description: settings.siteDescription,
+    robots: { index: false, follow: false },
+    icons: {
+      icon: settings.faviconId
+        ? "/api/assets/" + settings.faviconId
+        : "/favicon.svg",
+    },
+  };
+}
+export default async function Layout({ children }) {
+  const site = await getSite();
   return (
     <html lang="ru">
-      <body>{children}</body>
+      <body>
+        <SiteProvider initial={site}>{children}</SiteProvider>
+      </body>
     </html>
   );
 }

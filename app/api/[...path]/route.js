@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { mkdir, readFile, writeFile, unlink } from "node:fs/promises";
 import path from "node:path";
 import { preparePhoto } from "../../../lib/images.js";
+import { getSite } from "../../../lib/site.js";
 import { db, transaction } from "../../../lib/db.js";
 import {
   currentUser,
@@ -75,6 +76,8 @@ async function handler(req, { params }) {
       )
         return fail("Слишком много попыток. Попробуйте через 15 минут.", 429);
       if (p[1] === "register") {
+        if (!(await getSite()).settings.registrationOpen)
+          return fail("Регистрация временно закрыта", 403);
         if (!input.name) return fail("Введите имя");
         const id = randomUUID();
         const hash = await hashPassword(input.password);
@@ -106,10 +109,16 @@ async function handler(req, { params }) {
         user?.password_hash ||
           "00000000000000000000000000000000:" + "00".repeat(64),
       );
-      if (!user || !valid) return fail("Неверная почта или пароль", 401);
+      if (!user || !valid || user.blocked)
+        return fail("Неверная почта или пароль либо аккаунт заблокирован", 401);
       await startSession(user.id);
       return json({
-        user: { id: user.id, email: user.email, name: user.name },
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+        },
       });
     }
     if (p[0] === "auth" && p[1] === "logout" && method === "POST") {
@@ -129,7 +138,7 @@ async function handler(req, { params }) {
     if (p[0] === "photos" && p.length === 2 && method === "GET") {
       if (!uuid.safeParse(p[1]).success) return fail("Фото не найдено", 404);
       const { rows } = await db.query(
-        "SELECT p.filename FROM photos p JOIN bikes b ON b.id=p.bike_id WHERE p.id=$1 AND (b.is_public=true OR b.owner_id=$2)",
+        "SELECT p.filename FROM photos p JOIN bikes b ON b.id=p.bike_id JOIN users u ON u.id=b.owner_id WHERE p.id=$1 AND u.blocked=false AND (b.is_public=true OR b.owner_id=$2)",
         [p[1], user?.id || null],
       );
       if (!rows[0]) return fail("Фото не найдено", 404);

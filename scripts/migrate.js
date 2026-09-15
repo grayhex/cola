@@ -1,5 +1,6 @@
 import pg from "pg";
 import { readFile } from "node:fs/promises";
+import { defaultSettings, defaultCatalog } from "../lib/site-defaults.js";
 const client = new pg.Client({ connectionString: process.env.DATABASE_URL });
 try {
   await client.connect();
@@ -8,7 +9,7 @@ try {
   await client.query(
     "CREATE TABLE IF NOT EXISTS schema_migrations (version text PRIMARY KEY, applied_at timestamptz DEFAULT now())",
   );
-  for (const version of ["001_initial"]) {
+  for (const version of ["001_initial", "002_admin"]) {
     const { rowCount } = await client.query(
       "SELECT 1 FROM schema_migrations WHERE version=$1",
       [version],
@@ -26,6 +27,14 @@ try {
       console.log(`Applied ${version}`);
     }
   }
+  await client.query(
+    "INSERT INTO site_settings(id,value) VALUES(1,$1) ON CONFLICT(id) DO NOTHING",
+    [JSON.stringify(defaultSettings)],
+  );
+  await client.query(
+    "INSERT INTO site_catalog(id,value) VALUES(1,$1) ON CONFLICT(id) DO NOTHING",
+    [JSON.stringify(defaultCatalog)],
+  );
   await client.query("COMMIT");
 } catch (error) {
   await client.query("ROLLBACK").catch(() => {});

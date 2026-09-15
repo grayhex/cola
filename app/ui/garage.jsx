@@ -20,13 +20,8 @@ import {
   Settings2,
   LoaderCircle,
 } from "lucide-react";
-import {
-  categories,
-  models,
-  parts,
-  partCategories,
-  manufacturers,
-} from "../../lib/catalog.js";
+import { useSite } from "./site-provider.jsx";
+import PartIcon from "./part-icon.jsx";
 
 const demo = {
   id: "demo",
@@ -144,6 +139,8 @@ async function api(url, method = "GET", data) {
   return b;
 }
 function Modal({ title, onClose, children }) {
+  const { settings, catalog, t } = useSite();
+  const { categories, models, parts, partCategories, manufacturers } = catalog;
   const ref = useRef();
   useEffect(() => {
     const el = ref.current;
@@ -164,7 +161,7 @@ function Modal({ title, onClose, children }) {
     >
       <div className="modal-head">
         <h2 id="dialog-title">{title}</h2>
-        <button className="icon" aria-label="Закрыть" onClick={onClose}>
+        <button className="icon" aria-label={t("Закрыть")} onClick={onClose}>
           <X size={20} />
         </button>
       </div>
@@ -173,6 +170,8 @@ function Modal({ title, onClose, children }) {
   );
 }
 function Field({ label, children }) {
+  const { settings, catalog, t } = useSite();
+  const { categories, models, parts, partCategories, manufacturers } = catalog;
   return (
     <label className="field">
       <span>{label}</span>
@@ -181,11 +180,15 @@ function Field({ label, children }) {
   );
 }
 function Photo({ bike, className = "", photo }) {
+  const { settings, catalog, t } = useSite();
+  const { categories, models, parts, partCategories, manufacturers } = catalog;
   const [failed, setFailed] = useState(false);
   const selected = photo || bike.photos?.[0];
   const src =
     bike.id === "demo"
-      ? demoImage
+      ? settings.demoImageId
+        ? "/api/assets/" + settings.demoImageId
+        : demoImage
       : selected
         ? "/api/photos/" + selected.id
         : null;
@@ -200,12 +203,14 @@ function Photo({ bike, className = "", photo }) {
   ) : (
     <div className={"photo-empty " + className}>
       <Camera size={38} strokeWidth={1} />
-      <span>Фотография велосипеда</span>
+      <span>{t("Фотография велосипеда")}</span>
     </div>
   );
 }
 
 export default function Garage({ share }) {
+  const { settings, catalog, t } = useSite();
+  const { categories, models, parts, partCategories, manufacturers } = catalog;
   const [user, setUser] = useState(null),
     [bikes, setBikes] = useState([]),
     [selected, setSelected] = useState(null),
@@ -257,7 +262,13 @@ export default function Garage({ share }) {
       setBusy(false);
     }
   }
-  const bike = share ? selected : user ? selected : demo;
+  const bike = share
+    ? selected
+    : user
+      ? selected
+      : settings.showDemo
+        ? demo
+        : null;
   const editable = !!user && !share && bike?.id !== "demo";
   function openBike(b) {
     setSelected(b);
@@ -288,23 +299,39 @@ export default function Garage({ share }) {
   return (
     <>
       <header className="header">
-        <a className="brand" href="/" aria-label="ColaBike — главная">
-          <span className="brand-mark">c.</span>Cola<span>Bike</span>
+        <a className="brand" href="/" aria-label={t("ColaBike — главная")}>
+          {settings.logoId ? (
+            <img
+              className="site-logo"
+              src={"/api/assets/" + settings.logoId}
+              alt=""
+            />
+          ) : (
+            <span className="brand-mark">c.</span>
+          )}
+          {settings.siteName}
         </a>
         <div className="header-right">
           {share ? (
             <a href="/" className="text-link">
-              Мой гараж <ArrowUpRight size={16} />
+              {t("Мой гараж")}
+              <ArrowUpRight size={16} />
             </a>
           ) : user ? (
             <>
+              {user.role === "admin" && (
+                <a className="admin-link" href="/admin">
+                  <Settings2 size={18} />
+                  <span>{t("Админка")}</span>
+                </a>
+              )}
               <span className="user-name">{user.name}</span>
               <span className="avatar">
                 {user.name.slice(0, 1).toUpperCase()}
               </span>
               <button
                 className="icon"
-                aria-label="Выйти"
+                aria-label={t("Выйти")}
                 disabled={busy}
                 onClick={() =>
                   run(async () => {
@@ -321,10 +348,15 @@ export default function Garage({ share }) {
           ) : (
             <>
               <button className="quiet" onClick={() => auth()}>
-                Войти
+                {t("Войти")}
               </button>
-              <button className="button small" onClick={() => auth("register")}>
-                Создать гараж <ArrowUpRight size={16} />
+              <button
+                className="button small"
+                disabled={!settings.registrationOpen}
+                onClick={() => auth("register")}
+              >
+                {t("Создать гараж")}
+                <ArrowUpRight size={16} />
               </button>
             </>
           )}
@@ -333,9 +365,13 @@ export default function Garage({ share }) {
       <div className="subnav">
         <span>
           <Bike size={18} />
-          {share ? "Публичный велосипед" : "Личный гараж"}
+          {share ? t("Публичный велосипед") : t("Личный гараж")}
         </span>
-        <span className="subnav-note">КАЖДАЯ ДЕТАЛЬ ИМЕЕТ ЗНАЧЕНИЕ</span>
+        {settings.showTagline && (
+          <span className="subnav-note">
+            {t("КАЖДАЯ ДЕТАЛЬ ИМЕЕТ ЗНАЧЕНИЕ")}
+          </span>
+        )}
       </div>
       {notice && (
         <div className="toast" role="status">
@@ -347,22 +383,22 @@ export default function Garage({ share }) {
         <div className="error global-error" role="alert">
           {error}
           <button className="quiet" onClick={() => run(load)}>
-            Повторить
+            {t("Повторить")}
           </button>
         </div>
       )}
       {loading ? (
         <main className="loading">
           <LoaderCircle className="spin" />
-          Открываем гараж…
+          {t("Открываем гараж…")}
         </main>
       ) : share && !bike ? (
         <main className="empty">
           <Lock size={36} />
-          <h1>Велосипед недоступен</h1>
-          <p>Владелец мог закрыть доступ или изменить ссылку.</p>
+          <h1>{t("Велосипед недоступен")}</h1>
+          <p>{t("Владелец мог закрыть доступ или изменить ссылку.")}</p>
           <a href="/" className="button">
-            Открыть ColaBike
+            {t("Открыть ColaBike")}
           </a>
         </main>
       ) : bike ? (
@@ -377,13 +413,13 @@ export default function Garage({ share }) {
                 }}
               >
                 <ArrowLeft size={16} />
-                Мой гараж
+                {t("Мой гараж")}
               </button>
             ) : (
               <span>
                 {share
-                  ? "Коллекция владельца"
-                  : "Пример вашего будущего гаража"}
+                  ? t("Коллекция владельца")
+                  : t("Пример вашего будущего гаража")}
               </span>
             )}
             <ChevronRight size={14} />
@@ -398,10 +434,10 @@ export default function Garage({ share }) {
                   {categories[bike.category]}
                 </span>
                 <span>{bike.year}</span>
-                {bike.id === "demo" && <span>ДЕМОНСТРАЦИЯ</span>}
+                {bike.id === "demo" && <span>{t("ДЕМОНСТРАЦИЯ")}</span>}
               </div>
               <h1>
-                {bike.brand || bike.name}
+                {bike.brand || bike.name}{" "}
                 <span>{bike.brand ? bike.model : ""}</span>
               </h1>
               <p className="nickname">{bike.brand ? bike.name : ""}</p>
@@ -414,11 +450,11 @@ export default function Garage({ share }) {
                     onClick={() => setModal({ type: "share" })}
                   >
                     {bike.is_public ? <Globe size={17} /> : <Lock size={17} />}
-                    Поделиться
+                    {t("Поделиться")}
                   </button>
                   <button
                     className="icon bordered"
-                    aria-label="Редактировать велосипед"
+                    aria-label={t("Редактировать велосипед")}
                     onClick={() => setModal({ type: "bike", bike })}
                   >
                     <Pencil size={18} />
@@ -429,12 +465,13 @@ export default function Garage({ share }) {
                   className="button secondary"
                   onClick={() => auth("register")}
                 >
-                  Добавить свой байк <Plus size={17} />
+                  {t("Добавить свой байк")}
+                  <Plus size={17} />
                 </button>
               ) : (
                 <span className="muted">
                   <Globe size={16} />
-                  Доступен по ссылке
+                  {t("Доступен по ссылке")}
                 </span>
               )}
             </div>
@@ -450,7 +487,13 @@ export default function Garage({ share }) {
                 ).padStart(2, "0")}{" "}
                 / {String(Math.max(1, bike.photos.length)).padStart(2, "0")}
               </span>
-              <Photo bike={bike} photo={photo} className="hero-photo" />
+              <button
+                className="photo-open"
+                aria-label={t("Открыть фото целиком")}
+                onClick={() => setModal({ type: "photoView" })}
+              >
+                <Photo bike={bike} photo={photo} className="hero-photo" />
+              </button>
               {editable && (
                 <button
                   className="photo-add"
@@ -458,52 +501,56 @@ export default function Garage({ share }) {
                   onClick={() => file.current.click()}
                 >
                   <Camera size={16} />
-                  {bike.photos.length ? "Добавить фото" : "Загрузить фото"}
+                  {bike.photos.length
+                    ? t("Добавить фото")
+                    : t("Загрузить фото")}
                 </button>
               )}
-              {bike.id === "demo" && (
+              {bike.id === "demo" && !settings.demoImageId && (
                 <a
                   className="photo-credit"
                   href="https://www.canyon.com/en-si/outlet-bikes/gravel-bikes/grizl-al-7-raw/50051247.html"
                   target="_blank"
                   rel="noreferrer"
                 >
-                  Фото: Canyon · пример сборки
+                  {t("Фото: Canyon · пример сборки")}
                 </a>
               )}
             </div>
             <aside className="bike-summary">
-              <span className="eyebrow">ПАСПОРТ ВЕЛОСИПЕДА</span>
+              <span className="eyebrow">{t("ПАСПОРТ ВЕЛОСИПЕДА")}</span>
               <h2>
-                Собран
+                {t("Собран")}
                 <br />
-                под себя.
+                {t("под себя.")}
               </h2>
               <p>
                 {bike.description ||
-                  "У каждого велосипеда своя история. Добавьте пару слов о вашем."}
+                  t(
+                    "У каждого велосипеда своя история. Добавьте пару слов о вашем.",
+                  )}
               </p>
               <dl>
                 <div>
-                  <dt>Год</dt>
+                  <dt>{t("Год")}</dt>
                   <dd>{bike.year}</dd>
                 </div>
                 <div>
-                  <dt>Размер рамы</dt>
+                  <dt>{t("Размер рамы")}</dt>
                   <dd>{bike.size || "—"}</dd>
                 </div>
                 <div>
-                  <dt>Вес</dt>
+                  <dt>{t("Вес")}</dt>
                   <dd>{bike.weight ? `${Number(bike.weight)} кг` : "—"}</dd>
                 </div>
                 <div>
-                  <dt>Цвет</dt>
+                  <dt>{t("Цвет")}</dt>
                   <dd>{bike.color || "—"}</dd>
                 </div>
               </dl>
               <div className="summary-bottom">
                 <span>{String(bike.components.length).padStart(2, "0")}</span>
-                деталей в конфигурации
+                {t("деталей в конфигурации")}
               </div>
             </aside>
           </div>
@@ -518,7 +565,7 @@ export default function Garage({ share }) {
                         ? "active"
                         : "")
                     }
-                    aria-label="Показать фотографию"
+                    aria-label={t("Показать фотографию")}
                     onClick={() => setPhoto(p)}
                   >
                     <Photo bike={bike} photo={p} />
@@ -535,15 +582,15 @@ export default function Garage({ share }) {
                               "PATCH",
                             );
                             await refresh();
-                            setNotice("Обложка обновлена");
+                            setNotice(t("Обложка обновлена"));
                           })
                         }
                       >
-                        {p.is_cover ? "Обложка" : "На обложку"}
+                        {p.is_cover ? t("Обложка") : t("На обложку")}
                       </button>
                       <button
                         className="icon"
-                        aria-label="Удалить фото"
+                        aria-label={t("Удалить фото")}
                         onClick={() =>
                           setModal({ type: "deletePhoto", photo: p })
                         }
@@ -561,11 +608,11 @@ export default function Garage({ share }) {
               <div
                 className="tabs"
                 role="tablist"
-                aria-label="Разделы конфигурации"
+                aria-label={t("Разделы конфигурации")}
               >
                 {[
-                  ["build", "Комплектация"],
-                  ["accessories", "Аксессуары"],
+                  ["build", t("Комплектация")],
+                  ["accessories", t("Аксессуары")],
                 ].map(([key, label]) => (
                   <button
                     key={key}
@@ -589,7 +636,8 @@ export default function Garage({ share }) {
                   onClick={() => setModal({ type: "part", section: tab })}
                 >
                   <Plus size={17} />
-                  Добавить {tab === "build" ? "компонент" : "аксессуар"}
+                  {t("Добавить")}{" "}
+                  {tab === "build" ? t("компонент") : t("аксессуар")}
                 </button>
               )}
             </div>
@@ -600,9 +648,11 @@ export default function Garage({ share }) {
             >
               <div className="spec-label">
                 <span>
-                  {tab === "build" ? "ОСНОВА И ДЕТАЛИ" : "ВСЁ ДЛЯ ПОЕЗДКИ"}
+                  {tab === "build"
+                    ? t("ОСНОВА И ДЕТАЛИ")
+                    : t("ВСЁ ДЛЯ ПОЕЗДКИ")}
                 </span>
-                <span>АКТУАЛЬНАЯ КОНФИГУРАЦИЯ</span>
+                <span>{t("АКТУАЛЬНАЯ КОНФИГУРАЦИЯ")}</span>
               </div>
               {bike.components.filter((c) => c.section === tab).length ? (
                 <div className="spec-table">
@@ -610,7 +660,13 @@ export default function Garage({ share }) {
                     .filter((c) => c.section === tab)
                     .map((c) => (
                       <div className="spec-row" key={c.id}>
-                        <span className="part-category">{c.category}</span>
+                        <span className="part-category">
+                          <PartIcon
+                            category={c.category}
+                            icons={catalog.icons}
+                          />
+                          {c.category}
+                        </span>
                         <div>
                           <strong>{c.name}</strong>
                           {c.notes && (
@@ -625,7 +681,7 @@ export default function Garage({ share }) {
                             <>
                               <button
                                 className="icon"
-                                aria-label={"Изменить " + c.name}
+                                aria-label={t("Изменить ") + c.name}
                                 onClick={() =>
                                   setModal({
                                     type: "part",
@@ -638,7 +694,7 @@ export default function Garage({ share }) {
                               </button>
                               <button
                                 className="icon"
-                                aria-label={"Удалить " + c.name}
+                                aria-label={t("Удалить ") + c.name}
                                 onClick={() =>
                                   setModal({ type: "deletePart", part: c })
                                 }
@@ -656,13 +712,17 @@ export default function Garage({ share }) {
                   <Package size={28} strokeWidth={1} />
                   <h3>
                     {tab === "build"
-                      ? "Всё начинается с первой детали"
-                      : "Место для полезных дополнений"}
+                      ? t("Всё начинается с первой детали")
+                      : t("Место для полезных дополнений")}
                   </h3>
                   <p>
                     {tab === "build"
-                      ? "Добавьте компоненты, из которых собран ваш велосипед."
-                      : "Свет, сумки, велокомпьютер — всё, что берёте с собой."}
+                      ? t(
+                          "Добавьте компоненты, из которых собран ваш велосипед.",
+                        )
+                      : t(
+                          "Свет, сумки, велокомпьютер — всё, что берёте с собой.",
+                        )}
                   </p>
                   {editable && (
                     <button
@@ -670,7 +730,7 @@ export default function Garage({ share }) {
                       onClick={() => setModal({ type: "part", section: tab })}
                     >
                       <Plus size={16} />
-                      Добавить
+                      {t("Добавить")}
                     </button>
                   )}
                 </div>
@@ -679,7 +739,9 @@ export default function Garage({ share }) {
             {editable && bike.components.some((c) => c.price != null) && (
               <div className="cost">
                 <Lock size={14} />
-                <span>Указанная стоимость деталей · видна только вам</span>
+                <span>
+                  {t("Указанная стоимость деталей · видна только вам")}
+                </span>
                 <strong>
                   {rub(
                     bike.components.reduce(
@@ -695,61 +757,71 @@ export default function Garage({ share }) {
             <div className="detail-footer">
               <span>
                 {bike.is_public
-                  ? "Публичная ссылка включена"
-                  : "Этот велосипед виден только вам"}
+                  ? t("Публичная ссылка включена")
+                  : t("Этот велосипед виден только вам")}
               </span>
               <button
                 className="quiet danger"
                 onClick={() => setModal({ type: "deleteBike" })}
               >
                 <Trash2 size={14} />
-                Удалить велосипед
+                {t("Удалить велосипед")}
               </button>
             </div>
           )}
         </main>
       ) : (
         <main className="garage">
+          {settings.garageImageId && (
+            <img
+              className="garage-banner"
+              src={"/api/assets/" + settings.garageImageId}
+              alt=""
+            />
+          )}
           <div className="garage-heading">
             <div>
-              <div className="eyebrow">ВАША ЛИЧНАЯ КОЛЛЕКЦИЯ</div>
+              <div className="eyebrow">{t("ВАША ЛИЧНАЯ КОЛЛЕКЦИЯ")}</div>
               <h1>
-                Мой гараж
+                {t("Мой гараж")}
                 <span className="count">
                   {String(bikes.length).padStart(2, "0")}
                 </span>
               </h1>
-              <p>Любимые велосипеды. Все детали на своих местах.</p>
+              <p>{t("Любимые велосипеды. Все детали на своих местах.")}</p>
             </div>
             <button
               className="button"
-              onClick={() => setModal({ type: "bike" })}
+              onClick={() =>
+                user ? setModal({ type: "bike" }) : auth("register")
+              }
             >
               <Plus size={18} />
-              Добавить велосипед
+              {t("Добавить велосипед")}
             </button>
           </div>
           <div className="garage-tools">
             <div className="filters">
-              {[["all", "Все велосипеды"], ...Object.entries(categories)].map(
-                ([key, label]) => (
-                  <button
-                    key={key}
-                    className={filter === key ? "active" : ""}
-                    onClick={() => setFilter(key)}
-                  >
-                    {label}
-                  </button>
-                ),
-              )}
+              {[
+                ["all", t("Все велосипеды")],
+                ...Object.entries(categories),
+              ].map(([key, label]) => (
+                <button
+                  key={key}
+                  className={filter === key ? "active" : ""}
+                  onClick={() => setFilter(key)}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
             <label className="search">
               <Search size={17} />
               <input
-                aria-label="Найти велосипед"
+                aria-label={t("Найти велосипед")}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Найти в гараже"
+                placeholder={t("Найти в гараже")}
               />
             </label>
           </div>
@@ -766,7 +838,7 @@ export default function Garage({ share }) {
                 </div>
                 <div className="card-info">
                   <span className="eyebrow">
-                    {b.year} · {b.is_public ? "По ссылке" : "Личный"}
+                    {b.year} · {b.is_public ? t("По ссылке") : t("Личный")}
                   </span>
                   <h2>
                     {b.brand} {b.model}
@@ -774,9 +846,14 @@ export default function Garage({ share }) {
                   </h2>
                   <p>{b.name}</p>
                   <div className="card-bottom">
-                    <span>{b.components.length} деталей</span>
                     <span>
-                      {b.weight ? Number(b.weight) + " кг" : "Вес не указан"}
+                      {b.components.length}
+                      {t("деталей")}
+                    </span>
+                    <span>
+                      {b.weight
+                        ? Number(b.weight) + t(" кг")
+                        : t("Вес не указан")}
                     </span>
                   </div>
                 </div>
@@ -785,18 +862,22 @@ export default function Garage({ share }) {
             {!query && filter === "all" && (
               <button
                 className="add-card"
-                onClick={() => setModal({ type: "bike" })}
+                onClick={() =>
+                  user ? setModal({ type: "bike" }) : auth("register")
+                }
               >
                 <span className="plus-circle">
                   <Plus size={28} />
                 </span>
                 <h2>
-                  {bikes.length ? "Ещё один любимый" : "Ваш первый велосипед"}
+                  {bikes.length
+                    ? t("Ещё один любимый")
+                    : t("Ваш первый велосипед")}
                 </h2>
                 <p>
-                  Добавьте байк и соберите
+                  {t("Добавьте байк и соберите")}
                   <br />
-                  его историю в деталях.
+                  {t("его историю в деталях.")}
                 </p>
               </button>
             )}
@@ -804,7 +885,7 @@ export default function Garage({ share }) {
           {!filtered.length && (query || filter !== "all") && (
             <div className="empty-parts">
               <Search />
-              <h3>Ничего не найдено</h3>
+              <h3>{t("Ничего не найдено")}</h3>
               <button
                 className="quiet"
                 onClick={() => {
@@ -812,7 +893,7 @@ export default function Garage({ share }) {
                   setFilter("all");
                 }}
               >
-                Сбросить фильтры
+                {t("Сбросить фильтры")}
               </button>
             </div>
           )}
@@ -820,9 +901,10 @@ export default function Garage({ share }) {
       )}
       <footer className="footer">
         <span className="footer-logo">
-          ColaBike<span>© {new Date().getFullYear()}</span>
+          {settings.siteName}
+          <span>© {new Date().getFullYear()}</span>
         </span>
-        <span>Ваш велосипед. В деталях.</span>
+        <span>{t("Ваш велосипед. В деталях.")}</span>
       </footer>
       <input
         ref={file}
@@ -835,7 +917,7 @@ export default function Garage({ share }) {
           if (!image) return;
           run(async () => {
             if (image.size > 10 * 1024 * 1024)
-              throw new Error("Фото должно быть меньше 10 МБ");
+              throw new Error(t("Фото должно быть меньше 10 МБ"));
             const r = await fetch(`/api/bikes/${bike.id}/photos`, {
               method: "POST",
               headers: { "Content-Type": image.type },
@@ -843,14 +925,14 @@ export default function Garage({ share }) {
             });
             if (!r.ok) throw new Error((await r.json()).error);
             await refresh();
-            setNotice("Фотография добавлена");
+            setNotice(t("Фотография добавлена"));
           });
         }}
       />
       {busy && !modal && (
         <div className="saving" role="status">
           <LoaderCircle className="spin" size={16} />
-          Сохраняем…
+          {t("Сохраняем…")}
         </div>
       )}
       {modal && (
@@ -859,18 +941,19 @@ export default function Garage({ share }) {
             {
               auth:
                 modal.mode === "register"
-                  ? "Ваш гараж начинается здесь"
-                  : "С возвращением",
-              bike: modal.bike ? "О велосипеде" : "Новый велосипед",
+                  ? t("Ваш гараж начинается здесь")
+                  : t("С возвращением"),
+              bike: modal.bike ? t("О велосипеде") : t("Новый велосипед"),
               part: modal.part
-                ? "Изменить деталь"
+                ? t("Изменить деталь")
                 : modal.section === "build"
-                  ? "Добавить компонент"
-                  : "Добавить аксессуар",
-              share: "Поделиться велосипедом",
-              deleteBike: "Удалить велосипед?",
-              deletePart: "Удалить деталь?",
-              deletePhoto: "Удалить фотографию?",
+                  ? t("Добавить компонент")
+                  : t("Добавить аксессуар"),
+              share: t("Поделиться велосипедом"),
+              photoView: t("Фотография велосипеда"),
+              deleteBike: t("Удалить велосипед?"),
+              deletePart: t("Удалить деталь?"),
+              deletePhoto: t("Удалить фотографию?"),
             }[modal.type]
           }
           onClose={close}
@@ -879,6 +962,9 @@ export default function Garage({ share }) {
             <div className="error" role="alert">
               {error}
             </div>
+          )}
+          {modal.type === "photoView" && (
+            <Photo bike={bike} photo={photo} className="full-photo" />
           )}
           {modal.type === "auth" && (
             <AuthForm
@@ -899,8 +985,8 @@ export default function Garage({ share }) {
                   setModal(null);
                   setNotice(
                     modal.mode === "register"
-                      ? "Гараж готов. Добавьте свой первый байк."
-                      : "Добро пожаловать",
+                      ? t("Гараж готов. Добавьте свой первый байк.")
+                      : t("Добро пожаловать"),
                   );
                 })
               }
@@ -923,7 +1009,7 @@ export default function Garage({ share }) {
                     openBike(b);
                   }
                   setModal(null);
-                  setNotice("Велосипед сохранён");
+                  setNotice(t("Велосипед сохранён"));
                 })
               }
             />
@@ -943,7 +1029,7 @@ export default function Garage({ share }) {
                   );
                   await refresh();
                   setModal(null);
-                  setNotice("Деталь сохранена");
+                  setNotice(t("Деталь сохранена"));
                 })
               }
             />
@@ -954,11 +1040,14 @@ export default function Garage({ share }) {
                 {bike.is_public ? <Globe size={26} /> : <Lock size={26} />}
                 <div>
                   <h3>
-                    {bike.is_public ? "Доступен по ссылке" : "Личный велосипед"}
+                    {bike.is_public
+                      ? t("Доступен по ссылке")
+                      : t("Личный велосипед")}
                   </h3>
                   <p>
-                    Видны фотографии, комплектация и аксессуары. Цены и почта
-                    скрыты.
+                    {t(
+                      "Видны фотографии, комплектация и аксессуары. Цены и почта скрыты.",
+                    )}
                   </p>
                 </div>
               </div>
@@ -975,14 +1064,14 @@ export default function Garage({ share }) {
                 }
               >
                 {bike.is_public
-                  ? "Закрыть доступ"
-                  : "Включить публичную ссылку"}
+                  ? t("Закрыть доступ")
+                  : t("Включить публичную ссылку")}
               </button>
               {bike.is_public && (
                 <div className="share-copy">
                   <input
                     readOnly
-                    aria-label="Публичная ссылка"
+                    aria-label={t("Публичная ссылка")}
                     value={
                       typeof window !== "undefined"
                         ? window.location.origin + "/b/" + bike.share_id
@@ -991,13 +1080,13 @@ export default function Garage({ share }) {
                   />
                   <button
                     className="icon bordered"
-                    aria-label="Скопировать ссылку"
+                    aria-label={t("Скопировать ссылку")}
                     onClick={() =>
                       run(async () => {
                         await navigator.clipboard.writeText(
                           window.location.origin + "/b/" + bike.share_id,
                         );
-                        setNotice("Ссылка скопирована");
+                        setNotice(t("Ссылка скопирована"));
                       })
                     }
                   >
@@ -1006,7 +1095,7 @@ export default function Garage({ share }) {
                 </div>
               )}
               <p className="help">
-                После закрытия доступа старая ссылка перестанет работать.
+                {t("После закрытия доступа старая ссылка перестанет работать.")}
               </p>
             </div>
           )}
@@ -1014,10 +1103,12 @@ export default function Garage({ share }) {
             <div>
               <p className="delete-text">
                 {modal.type === "deleteBike"
-                  ? "Велосипед, все его фотографии и детали будут удалены без возможности восстановления."
+                  ? t(
+                      "Велосипед, все его фотографии и детали будут удалены без возможности восстановления.",
+                    )
                   : modal.type === "deletePart"
                     ? `«${modal.part.name}» будет удалён из актуальной конфигурации.`
-                    : "Фотография будет удалена из галереи."}
+                    : t("Фотография будет удалена из галереи.")}
               </p>
               <div className="form-actions">
                 <button
@@ -1025,7 +1116,7 @@ export default function Garage({ share }) {
                   disabled={busy}
                   onClick={close}
                 >
-                  Отмена
+                  {t("Отмена")}
                 </button>
                 <button
                   className="button"
@@ -1042,11 +1133,11 @@ export default function Garage({ share }) {
                       setPhoto(null);
                       await refresh();
                       setModal(null);
-                      setNotice("Удалено");
+                      setNotice(t("Удалено"));
                     })
                   }
                 >
-                  {busy ? "Удаляем…" : "Удалить"}
+                  {busy ? t("Удаляем…") : t("Удалить")}
                 </button>
               </div>
             </div>
@@ -1057,6 +1148,8 @@ export default function Garage({ share }) {
   );
 }
 function AuthForm({ mode, busy, onSubmit, switchMode }) {
+  const { settings, catalog, t } = useSite();
+  const { categories, models, parts, partCategories, manufacturers } = catalog;
   return (
     <form
       onSubmit={(e) => {
@@ -1067,11 +1160,11 @@ function AuthForm({ mode, busy, onSubmit, switchMode }) {
     >
       <p className="form-intro">
         {mode === "register"
-          ? "Сохраните комплектацию и фотографии своих велосипедов."
-          : "Войдите, чтобы открыть свои велосипеды."}
+          ? t("Сохраните комплектацию и фотографии своих велосипедов.")
+          : t("Войдите, чтобы открыть свои велосипеды.")}
       </p>
       {mode === "register" && (
-        <Field label="Ваше имя">
+        <Field label={t("Ваше имя")}>
           <input
             name="name"
             required
@@ -1081,7 +1174,7 @@ function AuthForm({ mode, busy, onSubmit, switchMode }) {
           />
         </Field>
       )}
-      <Field label="Электронная почта">
+      <Field label={t("Электронная почта")}>
         <input
           name="email"
           type="email"
@@ -1091,7 +1184,7 @@ function AuthForm({ mode, busy, onSubmit, switchMode }) {
           autoFocus={mode === "login"}
         />
       </Field>
-      <Field label="Пароль">
+      <Field label={t("Пароль")}>
         <input
           name="password"
           type="password"
@@ -1103,24 +1196,26 @@ function AuthForm({ mode, busy, onSubmit, switchMode }) {
           }
         />
       </Field>
-      <p className="help">Минимум 10 символов.</p>
+      <p className="help">{t("Минимум 10 символов.")}</p>
       <button className="button full" disabled={busy}>
         {busy
-          ? "Подождите…"
+          ? t("Подождите…")
           : mode === "register"
-            ? "Создать аккаунт"
-            : "Войти в гараж"}
+            ? t("Создать аккаунт")
+            : t("Войти в гараж")}
         <ArrowUpRight size={17} />
       </button>
       <button type="button" className="quiet switch-auth" onClick={switchMode}>
         {mode === "register"
-          ? "Уже есть аккаунт? Войти"
-          : "Нет аккаунта? Зарегистрироваться"}
+          ? t("Уже есть аккаунт? Войти")
+          : t("Нет аккаунта? Зарегистрироваться")}
       </button>
     </form>
   );
 }
 function BikeForm({ initial, busy, onSubmit }) {
+  const { settings, catalog, t } = useSite();
+  const { categories, models, parts, partCategories, manufacturers } = catalog;
   const [b, set] = useState(
     initial ? { ...initial, weight: initial.weight || "" } : blankBike,
   );
@@ -1136,18 +1231,18 @@ function BikeForm({ initial, busy, onSubmit }) {
         });
       }}
     >
-      <Field label="Название вашего велосипеда">
+      <Field label={t("Название вашего велосипеда")}>
         <input
           autoFocus
           required
           maxLength={100}
           value={b.name}
           onChange={(e) => update("name", e.target.value)}
-          placeholder="Например, Дальше асфальта"
+          placeholder={t("Например, Дальше асфальта")}
         />
       </Field>
       <div className="form-grid">
-        <Field label="Тип">
+        <Field label={t("Тип")}>
           <select
             value={b.category}
             onChange={(e) => update("category", e.target.value)}
@@ -1159,7 +1254,7 @@ function BikeForm({ initial, busy, onSubmit }) {
             ))}
           </select>
         </Field>
-        <Field label="Год">
+        <Field label={t("Год")}>
           <input
             type="number"
             min="1900"
@@ -1169,43 +1264,43 @@ function BikeForm({ initial, busy, onSubmit }) {
             onChange={(e) => update("year", e.target.value)}
           />
         </Field>
-        <Field label="Марка">
+        <Field label={t("Марка")}>
           <input
             list="brands"
             maxLength={60}
             value={b.brand}
             onChange={(e) => update("brand", e.target.value)}
-            placeholder="Выберите или введите"
+            placeholder={t("Выберите или введите")}
           />
           <datalist id="brands">
-            {Object.keys(models[b.category]).map((m) => (
+            {Object.keys(models[b.category] || {}).map((m) => (
               <option key={m} value={m} />
             ))}
           </datalist>
         </Field>
-        <Field label="Модель">
+        <Field label={t("Модель")}>
           <input
             list="models"
             maxLength={100}
             value={b.model}
             onChange={(e) => update("model", e.target.value)}
-            placeholder="Выберите или введите"
+            placeholder={t("Выберите или введите")}
           />
           <datalist id="models">
-            {(models[b.category][b.brand] || []).map((m) => (
+            {(models[b.category]?.[b.brand] || []).map((m) => (
               <option key={m} value={m} />
             ))}
           </datalist>
         </Field>
-        <Field label="Размер рамы">
+        <Field label={t("Размер рамы")}>
           <input
             maxLength={30}
             value={b.size}
             onChange={(e) => update("size", e.target.value)}
-            placeholder="M / 54 см"
+            placeholder={t("M / 54 см")}
           />
         </Field>
-        <Field label="Вес, кг">
+        <Field label={t("Вес, кг")}>
           <input
             type="number"
             min="0.01"
@@ -1217,35 +1312,38 @@ function BikeForm({ initial, busy, onSubmit }) {
           />
         </Field>
       </div>
-      <Field label="Цвет">
+      <Field label={t("Цвет")}>
         <input
           maxLength={60}
           value={b.color}
           onChange={(e) => update("color", e.target.value)}
-          placeholder="Название или оттенок"
+          placeholder={t("Название или оттенок")}
         />
       </Field>
-      <Field label="Пара слов о велосипеде">
+      <Field label={t("Пара слов о велосипеде")}>
         <textarea
           rows={3}
           maxLength={2000}
           value={b.description}
           onChange={(e) => update("description", e.target.value)}
-          placeholder="Для каких дорог и приключений он создан?"
+          placeholder={t("Для каких дорог и приключений он создан?")}
         />
       </Field>
       <p className="help">
-        Фотографии можно добавить после сохранения. Велосипед по умолчанию
-        приватный.
+        {t(
+          "Фотографии можно добавить после сохранения. Велосипед по умолчанию приватный.",
+        )}
       </p>
       <button className="button full" disabled={busy}>
-        {busy ? "Сохраняем…" : "Сохранить велосипед"}
+        {busy ? t("Сохраняем…") : t("Сохранить велосипед")}
         <Check size={18} />
       </button>
     </form>
   );
 }
 function PartForm({ initial, section, busy, onSubmit }) {
+  const { settings, catalog, t } = useSite();
+  const { categories, models, parts, partCategories, manufacturers } = catalog;
   const [c, set] = useState(
     initial
       ? { ...initial, price: initial.price ?? "" }
@@ -1269,7 +1367,11 @@ function PartForm({ initial, section, busy, onSubmit }) {
         onSubmit({ ...c, price: c.price === "" ? null : Number(c.price) });
       }}
     >
-      <Field label="Категория">
+      <div className="selected-part-icon">
+        <PartIcon category={c.category} icons={catalog.icons} size={38} />
+        <span>{c.category}</span>
+      </div>
+      <Field label={t("Категория")}>
         <select
           value={c.category}
           onChange={(e) => {
@@ -1277,12 +1379,29 @@ function PartForm({ initial, section, busy, onSubmit }) {
             setSearch("");
           }}
         >
-          {partCategories[section].map((p) => (
-            <option key={p}>{p}</option>
-          ))}
+          {Array.from(new Set([c.category, ...partCategories[section]]))
+            .filter(Boolean)
+            .map((p) => (
+              <option key={p}>{p}</option>
+            ))}
         </select>
       </Field>
-      <Field label="Компонент или модель">
+      <Field label={t("Производитель")}>
+        <input
+          list="component-manufacturers"
+          placeholder={t("Выберите производителя")}
+          onChange={(e) => {
+            update("name", e.target.value + " ");
+            setSearch(e.target.value);
+          }}
+        />
+        <datalist id="component-manufacturers">
+          {manufacturers.map((m) => (
+            <option key={m} value={m} />
+          ))}
+        </datalist>
+      </Field>
+      <Field label={t("Компонент или модель")}>
         <input
           required
           autoFocus
@@ -1292,11 +1411,11 @@ function PartForm({ initial, section, busy, onSubmit }) {
             update("name", e.target.value);
             setSearch(e.target.value);
           }}
-          placeholder="Например, Brooks C17"
+          placeholder={t("Например, Brooks C17")}
         />
       </Field>
       {suggestions.length > 0 && (
-        <div className="suggestions" aria-label="Модели из справочника">
+        <div className="suggestions" aria-label={t("Модели из справочника")}>
           {suggestions.map((p) => (
             <button
               key={p}
@@ -1313,16 +1432,18 @@ function PartForm({ initial, section, busy, onSubmit }) {
           ))}
         </div>
       )}
-      <p className="help">Выберите из справочника или введите своё название.</p>
-      <Field label="Примечание">
+      <p className="help">
+        {t("Выберите из справочника или введите своё название.")}
+      </p>
+      <Field label={t("Примечание")}>
         <input
           maxLength={500}
           value={c.notes}
           onChange={(e) => update("notes", e.target.value)}
-          placeholder="Размер, материал, передаточное отношение…"
+          placeholder={t("Размер, материал, передаточное отношение…")}
         />
       </Field>
-      <Field label="Стоимость покупки / апгрейда, ₽">
+      <Field label={t("Стоимость покупки / апгрейда, ₽")}>
         <input
           type="number"
           min="0"
@@ -1330,15 +1451,15 @@ function PartForm({ initial, section, busy, onSubmit }) {
           step="0.01"
           value={c.price}
           onChange={(e) => update("price", e.target.value)}
-          placeholder="Необязательно"
+          placeholder={t("Необязательно")}
         />
       </Field>
       <p className="help">
         <Lock size={13} />
-        Стоимость видна только вам.
+        {t("Стоимость видна только вам.")}
       </p>
       <button className="button full" disabled={busy}>
-        {busy ? "Сохраняем…" : "Сохранить деталь"}
+        {busy ? t("Сохраняем…") : t("Сохранить деталь")}
         <Check size={18} />
       </button>
     </form>
