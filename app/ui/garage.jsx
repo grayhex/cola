@@ -1,4 +1,6 @@
 "use client";
+import { parseBikeName } from "../../lib/bike-name.js";
+import FactorySpecification from "./factory-specification.jsx";
 import { useEffect, useRef, useState } from "react";
 import {
   Bike,
@@ -222,6 +224,7 @@ export default function Garage({ share }) {
     [tab, setTab] = useState("build"),
     [filter, setFilter] = useState("all"),
     [query, setQuery] = useState(""),
+    [searchOpen, setSearchOpen] = useState(false),
     [photo, setPhoto] = useState(null);
   const file = useRef();
   async function load() {
@@ -446,11 +449,12 @@ export default function Garage({ share }) {
               {editable ? (
                 <>
                   <button
-                    className="button secondary"
+                    className="icon bordered share-action"
+                    aria-label={t("Поделиться")}
                     onClick={() => setModal({ type: "share" })}
                   >
                     {bike.is_public ? <Globe size={17} /> : <Lock size={17} />}
-                    {t("Поделиться")}
+                    <span>{t("Поделиться")}</span>
                   </button>
                   <button
                     className="icon bordered"
@@ -517,7 +521,8 @@ export default function Garage({ share }) {
                 </a>
               )}
             </div>
-            <aside className="bike-summary">
+            <details className="bike-summary">
+              <summary>О велосипеде</summary>
               <span className="eyebrow">{t("ПАСПОРТ ВЕЛОСИПЕДА")}</span>
               <h2>
                 {t("Собран")}
@@ -552,58 +557,88 @@ export default function Garage({ share }) {
                 <span>{String(bike.components.length).padStart(2, "0")}</span>
                 {t("деталей в конфигурации")}
               </div>
-            </aside>
+            </details>
           </div>
           {bike.photos.length > 0 && (
-            <div className="gallery">
-              {bike.photos.map((p) => (
-                <div className="thumb-wrap" key={p.id}>
-                  <button
-                    className={
-                      "thumb " +
-                      ((photo?.id || bike.photos[0].id) === p.id
-                        ? "active"
-                        : "")
-                    }
-                    aria-label={t("Показать фотографию")}
-                    onClick={() => setPhoto(p)}
-                  >
-                    <Photo bike={bike} photo={p} />
-                  </button>
-                  {editable && (
-                    <div className="thumb-actions">
-                      <button
-                        className="quiet"
-                        disabled={busy || p.is_cover}
-                        onClick={() =>
-                          run(async () => {
-                            await api(
-                              `bikes/${bike.id}/photos/${p.id}`,
-                              "PATCH",
-                            );
-                            await refresh();
-                            setNotice(t("Обложка обновлена"));
-                          })
-                        }
-                      >
-                        {p.is_cover ? t("Обложка") : t("На обложку")}
-                      </button>
-                      <button
-                        className="icon"
-                        aria-label={t("Удалить фото")}
-                        onClick={() =>
-                          setModal({ type: "deletePhoto", photo: p })
-                        }
-                      >
-                        <X size={14} />
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
+            <details className="gallery-details">
+              <summary>Фотографии · {bike.photos.length}</summary>
+              <div className="gallery">
+                {bike.photos.map((p) => (
+                  <div className="thumb-wrap" key={p.id}>
+                    <button
+                      className={
+                        "thumb " +
+                        ((photo?.id || bike.photos[0].id) === p.id
+                          ? "active"
+                          : "")
+                      }
+                      aria-label={t("Показать фотографию")}
+                      onClick={() => setPhoto(p)}
+                    >
+                      <Photo bike={bike} photo={p} />
+                    </button>
+                    {editable && (
+                      <div className="thumb-actions">
+                        <button
+                          className="quiet"
+                          disabled={busy || p.is_cover}
+                          onClick={() =>
+                            run(async () => {
+                              await api(
+                                `bikes/${bike.id}/photos/${p.id}`,
+                                "PATCH",
+                              );
+                              await refresh();
+                              setNotice(t("Обложка обновлена"));
+                            })
+                          }
+                        >
+                          {p.is_cover ? t("Обложка") : t("На обложку")}
+                        </button>
+                        <button
+                          className="icon"
+                          aria-label={t("Удалить фото")}
+                          onClick={() =>
+                            setModal({ type: "deletePhoto", photo: p })
+                          }
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </details>
           )}
           <section className="specifications">
+            {bike.factory_spec && (
+              <details className="factory-source">
+                <summary>
+                  Заводская комплектация ·{" "}
+                  {bike.factory_spec.source.manufacturer}
+                </summary>
+                <p className="help">
+                  Текущие компоненты можно менять независимо от заводской
+                  комплектации.{" "}
+                  <a
+                    href={bike.factory_spec.source.url}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Источник
+                  </a>
+                </p>
+                <dl className="resolver-preview">
+                  {bike.factory_spec.components.map((c, i) => (
+                    <div key={i}>
+                      <dt>{c.raw.label}</dt>
+                      <dd>{c.raw.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </details>
+            )}
             <div className="tabs-row">
               <div
                 className="tabs"
@@ -797,7 +832,7 @@ export default function Garage({ share }) {
               }
             >
               <Plus size={18} />
-              {t("Добавить велосипед")}
+              <span className="add-bike-label">{t("Добавить велосипед")}</span>
             </button>
           </div>
           <div className="garage-tools">
@@ -815,15 +850,29 @@ export default function Garage({ share }) {
                 </button>
               ))}
             </div>
-            <label className="search">
-              <Search size={17} />
-              <input
-                aria-label={t("Найти велосипед")}
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder={t("Найти в гараже")}
-              />
-            </label>
+            <button
+              className="icon search-toggle"
+              aria-label="Поиск по гаражу"
+              aria-expanded={searchOpen}
+              onClick={() => {
+                if (searchOpen) setQuery("");
+                setSearchOpen((v) => !v);
+              }}
+            >
+              <Search size={18} />
+            </button>
+            {searchOpen && (
+              <label className="search">
+                <Search size={17} />
+                <input
+                  aria-label={t("Найти велосипед")}
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  autoFocus
+                  placeholder={t("Найти в гараже")}
+                />
+              </label>
+            )}
           </div>
           <div className="bike-grid">
             {filtered.map((b) => (
@@ -1003,13 +1052,37 @@ export default function Garage({ share }) {
                     modal.bike ? "PATCH" : "POST",
                     data,
                   );
+                  let factoryWarning = false;
+                  if (data.importFactory) {
+                    try {
+                      const imported = await api(
+                        "bikes/" +
+                          (modal.bike?.id || result.id) +
+                          "/factory-spec",
+                        "POST",
+                        {
+                          candidateId: data.factoryCandidateId,
+                          initializeCurrent: data.initializeCurrent === true,
+                        },
+                      );
+                      factoryWarning = imported.status !== "resolved";
+                    } catch {
+                      factoryWarning = true;
+                    }
+                  }
                   await refresh();
                   if (!modal.bike) {
                     const { bike: b } = await api("bikes/" + result.id);
                     openBike(b);
                   }
                   setModal(null);
-                  setNotice(t("Велосипед сохранён"));
+                  setNotice(
+                    factoryWarning
+                      ? t(
+                          "Велосипед сохранён. Заводскую комплектацию импортировать не удалось; повторите поиск позже.",
+                        )
+                      : t("Велосипед сохранён"),
+                  );
                 })
               }
             />
@@ -1219,7 +1292,19 @@ function BikeForm({ initial, busy, onSubmit }) {
   const [b, set] = useState(
     initial ? { ...initial, weight: initial.weight || "" } : blankBike,
   );
-  const update = (k, v) => set((p) => ({ ...p, [k]: v }));
+  const [resolving, setResolving] = useState(false);
+  const update = (k, v) =>
+    set((p) => ({
+      ...p,
+      [k]: v,
+      ...(["brand", "model", "trim", "year"].includes(k)
+        ? {
+            importFactory: false,
+            factoryCandidateId: undefined,
+            factory_spec: null,
+          }
+        : {}),
+    }));
   return (
     <form
       onSubmit={(e) => {
@@ -1238,7 +1323,21 @@ function BikeForm({ initial, busy, onSubmit }) {
           maxLength={100}
           value={b.name}
           onChange={(e) => update("name", e.target.value)}
-          placeholder={t("Например, Дальше асфальта")}
+          onBlur={() => {
+            if (!initial && !b.brand && !b.model) {
+              const parsed = parseBikeName(b.name, [
+                ...new Set(Object.values(models).flatMap(Object.keys)),
+              ]);
+              if (parsed)
+                set((p) => ({
+                  ...p,
+                  ...parsed,
+                  importFactory: false,
+                  factory_spec: null,
+                }));
+            }
+          }}
+          placeholder="Canyon Grail CF SLX 8 AXS 2026"
         />
       </Field>
       <div className="form-grid">
@@ -1312,6 +1411,32 @@ function BikeForm({ initial, busy, onSubmit }) {
           />
         </Field>
       </div>
+      <Field label={t("Комплектация модели")}>
+        <input
+          maxLength={100}
+          value={b.trim || ""}
+          onChange={(e) => update("trim", e.target.value)}
+          placeholder="SL / CF SLX 8 AXS"
+        />
+      </Field>
+      <FactorySpecification
+        key={JSON.stringify([b.brand, b.model, b.trim, b.year])}
+        bike={b}
+        automatic={!initial}
+        onBusy={setResolving}
+        onReset={() =>
+          set((p) => ({ ...p, importFactory: false, initializeCurrent: false }))
+        }
+        onImport={(candidateId, initializeCurrent) =>
+          set((p) => ({
+            ...p,
+            importFactory: true,
+            factoryCandidateId: candidateId,
+            initializeCurrent,
+          }))
+        }
+        imported={b.importFactory}
+      />
       <Field label={t("Цвет")}>
         <input
           maxLength={60}
@@ -1334,7 +1459,7 @@ function BikeForm({ initial, busy, onSubmit }) {
           "Фотографии можно добавить после сохранения. Велосипед по умолчанию приватный.",
         )}
       </p>
-      <button className="button full" disabled={busy}>
+      <button className="button full" disabled={busy || resolving}>
         {busy ? t("Сохраняем…") : t("Сохранить велосипед")}
         <Check size={18} />
       </button>

@@ -90,3 +90,5 @@ Expected current default is `unsupported_brand`, not a fabricated success. Posit
 4. Add label aliases to the shared normalizer only where necessary. Preserve raw labels/values, expose unknown components as `other`, do not invent part numbers.
 5. Cover discovery, confirmed year, neighboring trims, ambiguity, upstream failure and the real spec fixture offline. Enable only after reliable discovery and identity verification; document limitations otherwise.
 6. Increment `adapterVersion` after parsing changes to invalidate earlier cached entries. No resolver-core edits should be necessary for another brand.
+
+Full disposable app/service HTTP checks (from repo root, with both dependency sets installed): `npm run build && npm run test:integration`. The runner uses only its own disposable PostgreSQL engine, captured Giant source and ports 3100/8081/5432; it does not use a production database. Covers existing auth/admin/media APIs and new resolve/import/settings flows.
