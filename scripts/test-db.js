@@ -10,6 +10,12 @@ await db.exec(
 await db.exec(
   await readFile(new URL("../db/002_admin.sql", import.meta.url), "utf8"),
 );
+await db.exec(
+  await readFile(
+    new URL("../db/003_factory_spec.sql", import.meta.url),
+    "utf8",
+  ),
+);
 await db.query("INSERT INTO site_settings(id,value) VALUES(1,$1)", [
   JSON.stringify(defaultSettings),
 ]);

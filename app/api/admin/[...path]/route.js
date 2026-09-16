@@ -1,3 +1,4 @@
+import { bikeResolverClient } from "../../../../lib/bike-resolver-client.js";
 import { randomUUID } from "node:crypto";
 import { mkdir, writeFile, unlink } from "node:fs/promises";
 import path from "node:path";
@@ -30,6 +31,38 @@ async function handler(req, { params }) {
       return fail("Недопустимый источник запроса", 403);
     const { path: p } = await params,
       method = req.method;
+    if (p[0] === "resolver") {
+      try {
+        if (p.length === 1 && method === "GET")
+          return json(await bikeResolverClient.request("/internal/settings"));
+        if (p.length === 1 && method === "PUT") {
+          const input = await readJson(req);
+          const result = await bikeResolverClient.request(
+            "/internal/settings",
+            "PUT",
+            input,
+          );
+          await audit(
+            db,
+            user.id,
+            "resolver.settings.update",
+            String(result.version),
+          );
+          return json(result);
+        }
+        if (p.length === 2 && p[1] === "cache" && method === "DELETE") {
+          const adapter = new URL(req.url).searchParams.get("adapter") || "";
+          const result = await bikeResolverClient.request(
+            "/internal/cache?adapter=" + encodeURIComponent(adapter),
+            "DELETE",
+          );
+          await audit(db, user.id, "resolver.cache.clear", adapter || "all");
+          return json(result);
+        }
+      } catch (e) {
+        return fail(e.message, e.status || 503);
+      }
+    }
     if (p[0] === "overview" && method === "GET") {
       const stats = await db.query(
         "SELECT (SELECT count(*)::int FROM users) AS users,(SELECT count(*)::int FROM bikes) AS bikes,(SELECT count(*)::int FROM photos) AS photos",
