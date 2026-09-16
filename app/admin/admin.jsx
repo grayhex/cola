@@ -1,4 +1,5 @@
 "use client";
+import ResolverSettings from "./resolver-settings.jsx";
 import { useEffect, useState, useRef } from "react";
 import {
   ArrowLeft,
@@ -156,6 +157,7 @@ function ListEditor({ values, onChange, label }) {
 }
 const sections = [
   ["overview", "Обзор", Settings2],
+  ["resolver", "Bike Resolver", Settings2],
   ["design", "Оформление", Palette],
   ["copy", "Тексты", Type],
   ["catalog", "Справочники", BookOpen],
@@ -382,6 +384,7 @@ export default function Admin() {
               {notice}
             </div>
           )}
+          {tab === "resolver" && <ResolverSettings />}
           {tab === "overview" && (
             <>
               <div className="admin-stats">

@@ -22,6 +22,7 @@ services:
       APP_ORIGIN: ${APP_ORIGIN:-http://localhost:3000}
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
       UPLOAD_DIR: /app/uploads
+      BIKE_RESOLVER_URL: http://bike-resolver:8080
     volumes:
       - photos:/app/uploads
     depends_on:
@@ -39,6 +40,23 @@ services:
       interval: 30s
       timeout: 5s
       start_period: 30s
+      retries: 3
+  bike-resolver:
+    build: ./services/bike-resolver
+    expose:
+      - "8080"
+    environment:
+      PORT: 8080
+      DATABASE_URL: postgresql://colabike:${POSTGRES_PASSWORD:-colabike-local-only}@db:5432/colabike
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:8080/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
       retries: 3
 volumes:
   database:

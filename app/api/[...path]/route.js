@@ -1,3 +1,8 @@
+import { saveFactorySpecification } from "../../../lib/factory-import.js";
+import {
+  bikeResolverClient,
+  resolverQuery,
+} from "../../../lib/bike-resolver-client.js";
 import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
 import { mkdir, readFile, writeFile, unlink } from "node:fs/promises";
@@ -160,6 +165,20 @@ async function handler(req, { params }) {
     }
     if (!user) return fail("Войдите в аккаунт", 401);
     if (p[0] !== "bikes") return fail("Не найдено", 404);
+    if (p.length === 2 && p[1] === "resolver-brands" && method === "GET") {
+      try {
+        return json(await bikeResolverClient.request("/v1/brands"));
+      } catch {
+        return json({ brands: [], autoResolve: false });
+      }
+    }
+    if (p.length === 2 && p[1] === "resolve" && method === "POST") {
+      if (!(await rateLimit("resolver:" + user.id, 30)))
+        return fail("Слишком много запросов поиска", 429);
+      return json(
+        await bikeResolverClient.resolve(resolverQuery.parse(await body(req))),
+      );
+    }
     if (p.length === 1) {
       if (method === "GET") {
         const { rows } = await db.query(
@@ -179,12 +198,40 @@ async function handler(req, { params }) {
     if (!uuid.safeParse(p[1]).success) return fail("Велосипед не найден", 404);
     const bike = await ownedBike(db, p[1], user.id);
     if (!bike) return fail("Велосипед не найден", 404);
+    if (p.length === 3 && p[2] === "factory-spec" && method === "POST") {
+      if (!(await rateLimit("resolver:" + user.id, 30)))
+        return fail("Слишком много запросов поиска", 429);
+      const selection = await body(req);
+      const input = resolverQuery.parse({
+        brand: bike.brand,
+        model: bike.model,
+        trim: bike.trim || null,
+        year: bike.year,
+        ...(selection.candidateId
+          ? { candidateId: selection.candidateId }
+          : {}),
+      });
+      const result = await bikeResolverClient.resolve(input);
+      if (result.status !== "resolved") return json(result);
+      const saved = await transaction((q) =>
+        saveFactorySpecification(
+          q,
+          bike,
+          user.id,
+          result,
+          selection.initializeCurrent === true,
+        ),
+      );
+      if (saved.conflict)
+        return fail("Данные велосипеда изменились. Повторите поиск.", 409);
+      return json({ ...result, importedCount: saved.importedCount });
+    }
     if (p.length === 2) {
       if (method === "GET") return json({ bike: await hydrate(db, bike) });
       if (method === "PATCH") {
         const b = bikeInput.parse(await body(req));
         await db.query(
-          "UPDATE bikes SET name=$1,brand=$2,model=$3,year=$4,category=$5,description=$6,color=$7,size=$8,weight=$9,updated_at=now() WHERE id=$10 AND owner_id=$11",
+          "UPDATE bikes SET name=$1,brand=$2,model=$3,year=$4,category=$5,description=$6,color=$7,size=$8,weight=$9,trim=$12,factory_spec=CASE WHEN brand=$2 AND model=$3 AND year=$4 AND trim=$12 THEN factory_spec ELSE NULL END,updated_at=now() WHERE id=$10 AND owner_id=$11",
           [
             b.name,
             b.brand,
@@ -197,6 +244,7 @@ async function handler(req, { params }) {
             b.weight,
             bike.id,
             user.id,
+            b.trim,
           ],
         );
         return json({ ok: true });
@@ -232,18 +280,23 @@ async function handler(req, { params }) {
     if (p[2] === "components") {
       if (p.length === 3 && method === "POST") {
         const c = componentInput.parse(await body(req));
-        await db.query(
-          "INSERT INTO components(id,bike_id,section,category,name,notes,price) VALUES($1,$2,$3,$4,$5,$6,$7)",
-          [
-            randomUUID(),
+        await transaction(async (q) => {
+          await q.query("SELECT id FROM bikes WHERE id=$1 FOR UPDATE", [
             bike.id,
-            c.section,
-            c.category,
-            c.name,
-            c.notes,
-            c.price,
-          ],
-        );
+          ]);
+          await q.query(
+            "INSERT INTO components(id,bike_id,section,category,name,notes,price) VALUES($1,$2,$3,$4,$5,$6,$7)",
+            [
+              randomUUID(),
+              bike.id,
+              c.section,
+              c.category,
+              c.name,
+              c.notes,
+              c.price,
+            ],
+          );
+        });
         return json({ ok: true }, 201);
       }
       if (p.length === 4 && uuid.safeParse(p[3]).success) {

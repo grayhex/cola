@@ -1258,3 +1258,344 @@
     padding: 40px 42px 80px;
   }
 }
+
+/* Compact garage and factory import feedback. */
+.search-toggle {
+  flex-shrink: 0;
+}
+.resolver-title,
+.resolver-progress > span,
+.resolver-found {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.resolver-title {
+  justify-content: space-between;
+}
+.factory-resolver {
+  padding: 12px;
+  margin: 12px 0 18px;
+  background: var(--wash);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-size: 14px;
+}
+.resolver-track {
+  height: 5px;
+  background: var(--line);
+  border-radius: 5px;
+  overflow: hidden;
+  margin: 12px 0;
+}
+.resolver-track i {
+  display: block;
+  height: 100%;
+  width: 35%;
+  background: var(--accent);
+  border-radius: 5px;
+  animation: resolver-loading 1.6s ease-in-out infinite;
+}
+.resolver-spinner {
+  animation: resolver-spin 1s linear infinite;
+}
+.resolver-progress small {
+  margin-left: auto;
+  color: var(--muted);
+}
+.resolver-preview {
+  margin: 10px 0;
+}
+.resolver-preview > div {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+.resolver-preview dt {
+  font-size: 12px;
+  color: var(--muted);
+}
+.resolver-preview dd {
+  margin: 3px 0 0;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.resolver-candidates {
+  padding-left: 18px;
+}
+.resolver-candidates li {
+  margin: 10px 0;
+}
+.resolver-candidates small {
+  display: block;
+}
+.resolver-adapter {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+.resolver-adapter p {
+  margin: 4px 0;
+}
+.factory-source {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0 0 8px;
+}
+.gallery-details {
+  margin: 10px 0;
+  font-size: 13px;
+}
+.bike-summary > summary {
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+.share-action span {
+  display: none;
+}
+@keyframes resolver-loading {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(390%);
+  }
+}
+@keyframes resolver-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .resolver-spinner,
+  .resolver-track i {
+    animation: none;
+  }
+  .resolver-track i {
+    width: 100%;
+    opacity: 0.55;
+  }
+}
+@media (max-width: 700px) {
+  .header {
+    min-height: 58px;
+    padding: 7px 16px;
+  }
+  .brand {
+    font-size: 23px;
+  }
+  .brand-symbol,
+  .site-logo {
+    height: 32px;
+  }
+  .subnav {
+    display: none;
+  }
+  .garage,
+  .detail {
+    padding: 16px 16px 32px;
+  }
+  .garage-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 0 0 10px;
+  }
+  .garage-heading .eyebrow,
+  .garage-heading p {
+    display: none;
+  }
+  .garage-heading h1 {
+    font-size: 27px;
+    letter-spacing: -0.8px;
+    margin: 0;
+  }
+  .garage-heading .count {
+    font-size: 17px;
+    margin-left: 8px;
+  }
+  .garage-heading .button {
+    margin: 0;
+    width: 44px;
+    padding: 10px;
+    flex-shrink: 0;
+  }
+  .add-bike-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .garage-tools {
+    flex-flow: row wrap;
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+  .filters {
+    flex: 1;
+    min-width: 0;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 3px;
+    scrollbar-width: none;
+  }
+  .filters button {
+    white-space: nowrap;
+    font-size: 12px;
+    padding: 6px 9px;
+  }
+  .garage-tools .search {
+    flex-basis: 100%;
+  }
+  .card-info {
+    padding: 12px 14px;
+  }
+  .card-info h2 {
+    font-size: 21px;
+  }
+  .card-info p {
+    margin: 5px 0;
+  }
+  .bike-grid {
+    gap: 12px;
+  }
+  .breadcrumbs {
+    margin-bottom: 6px;
+    font-size: 11px;
+  }
+  .bike-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .bike-heading > div:first-child {
+    min-width: 0;
+  }
+  .bike-heading h1 {
+    font-size: 25px;
+    line-height: 1.15;
+    margin: 4px 0;
+    letter-spacing: -0.7px;
+  }
+  .bike-heading h1 span {
+    display: inline;
+  }
+  .bike-heading .eyebrow {
+    font-size: 11px;
+    gap: 8px;
+  }
+  .bike-heading .category-tag {
+    padding: 2px 6px;
+    font-size: 10px;
+  }
+  .bike-heading .nickname {
+    display: none;
+  }
+  .detail-actions {
+    margin: 0;
+    display: flex;
+    gap: 2px;
+    flex-shrink: 0;
+  }
+  .detail-actions .icon {
+    width: 36px;
+    min-width: 36px;
+    padding: 8px;
+    border: 0;
+  }
+  .showcase {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .photo-stage,
+  .photo-open {
+    width: 100%;
+  }
+  .photo-stage .hero-photo,
+  [data-photo-mode="cover"] .photo-stage .hero-photo:not(.photo-empty) {
+    height: clamp(130px, 23dvh, 190px);
+    min-height: 0;
+    aspect-ratio: auto;
+    object-fit: contain;
+  }
+  .photo-stage .photo-empty {
+    height: 140px;
+  }
+  .photo-add {
+    padding: 5px 8px;
+    font-size: 11px;
+  }
+  .bike-summary:not([open]) > :not(summary) {
+    display: none;
+  }
+  .bike-summary {
+    padding: 0;
+  }
+  .bike-summary .eyebrow,
+  .summary-bottom {
+    display: none;
+  }
+  .specifications {
+    margin-top: 10px;
+  }
+  .tabs-row {
+    flex-wrap: nowrap;
+    gap: 8px;
+  }
+  .tabs {
+    gap: 14px;
+  }
+  .tabs button {
+    font-size: 14px;
+    padding: 10px 0;
+    gap: 5px;
+  }
+  .site-root .add-component {
+    font-size: 0;
+    margin-left: auto;
+  }
+  .add-component svg {
+    width: 20px;
+    height: 20px;
+  }
+  .spec-label {
+    display: none;
+  }
+  .spec-row {
+    padding: 9px 0;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 2px 8px;
+  }
+  .part-category {
+    font-size: 11px;
+    gap: 6px;
+  }
+  .part-category svg {
+    height: 15px;
+    width: 15px;
+  }
+  .spec-row strong {
+    font-size: 14px;
+  }
+  .part-end {
+    grid-column: 2;
+    grid-row: 1 / 3;
+  }
+  .part-end .icon {
+    min-width: 32px;
+    padding: 6px;
+  }
+  .part-notes {
+    font-size: 12px;
+  }
+  .gallery-details {
+    margin: 6px 0;
+  }
+}
+.gallery-details {
+  order: 3;
+}
