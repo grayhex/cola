@@ -38,3 +38,7 @@
  .site-root .bike-meters{margin-top:7px}
  .showcase-actions{gap:8px}
 }
+
+.site-root .card-photo{overflow:hidden}
+.site-root .card-open-photo{position:absolute;inset:0;height:100%}
+.site-root .card-open-photo>img{display:block;width:100%;height:100%;object-fit:cover;padding:0}
