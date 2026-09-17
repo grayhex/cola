@@ -15,18 +15,20 @@ export default function SiteProvider({ initial, children }) {
   const [site, setSite] = useState(
     initial || { settings: defaultSettings, catalog: defaultCatalog },
   );
+  const [preferences, setPreferences] = useState({});
+  const effective = { ...site.settings, ...preferences };
   const t = (text) => site.settings.copy[text] ?? text;
   return (
-    <Context.Provider value={{ ...site, setSite, t }}>
-      <ThemeStyle settings={site.settings} />
+    <Context.Provider value={{ ...site, setSite, t, setPreferences, personalSettings: effective }}>
+      <ThemeStyle settings={effective} />
       <div
         className="site-root"
-        data-theme={site.settings.theme}
-        data-bike-layout={site.settings.bikeLayout || "balanced"}
+        data-theme={effective.theme}
+        data-bike-layout={effective.bikeLayout || "balanced"}
         data-summary={site.settings.summaryPosition}
         data-detail-order={site.settings.detailOrder}
         data-photo-mode={site.settings.photoMode}
-        data-font={site.settings.font}
+        data-font={effective.font}
       >
         {children}
       </div>

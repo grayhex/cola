@@ -911,7 +911,7 @@ export default function BikeWizard({ onCreated, onBusy }) {
             </label>
             <div className="wizard-privacy">
               {[
-                ["is_public", "Доступен по публичной ссылке"],
+                ["is_public", "Опубликовать на общей витрине"],
                 ["show_bike_price", "Показывать стоимость велосипеда"],
                 ["show_component_prices", "Показывать стоимость компонентов"],
                 ["show_accessory_prices", "Показывать стоимость аксессуаров"],
@@ -927,7 +927,7 @@ export default function BikeWizard({ onCreated, onBusy }) {
               ))}
               <p className="help">
                 По умолчанию велосипед приватный. Включённые цены будут видны по
-                публичной ссылке.
+                витрине и по публичной ссылке.
               </p>
             </div>
           </>

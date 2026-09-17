@@ -1,3 +1,5 @@
+import { showcase, decorateBike, vote } from "../../../lib/showcase.js";
+import { profileInput } from "../../../lib/social-validation.js";
 import { importPhotos } from "../../../lib/photo-import.js";
 import { appVersion } from "../../../lib/version.js";
 import { z } from "zod";
@@ -135,10 +137,12 @@ async function handler(req, { params }) {
       await endSession();
       return json({ ok: true });
     }
+    const user = await currentUser();
     if (p[0] === "shared" && p.length === 2 && method === "GET") {
       if (!uuid.safeParse(p[1]).success)
         return fail("Велосипед не найден", 404);
-      const bike = await sharedBike(db, p[1]);
+      const rows = await db.query("SELECT b.* FROM bikes b JOIN users u ON u.id=b.owner_id WHERE b.share_id=$1 AND b.is_public=true AND u.blocked=false", [p[1]]);
+      const bike = rows.rows[0] ? await decorateBike(db, rows.rows[0], user?.id, await getSite(), true) : null;
       return bike
         ? json({ bike })
         : fail("Велосипед не найден или доступ закрыт", 404);
@@ -150,7 +154,6 @@ async function handler(req, { params }) {
       } catch {}
       return json({ app: appVersion, resolver });
     }
-    const user = await currentUser();
     if (p[0] === "me" && method === "GET") return json({ user });
     if (p[0] === "photos" && p.length === 2 && method === "GET") {
       if (!uuid.safeParse(p[1]).success) return fail("Фото не найдено", 404);
@@ -175,7 +178,25 @@ async function handler(req, { params }) {
         throw e;
       }
     }
+    if (p[0] === "showcase" && p.length === 1 && method === "GET") {
+      const url = new URL(req.url);
+      const page = z.coerce.number().int().min(1).max(10000).parse(url.searchParams.get("page") || 1);
+      const category = z.enum(["", "mtb", "road", "gravel"]).parse(url.searchParams.get("category") || "");
+      const search = z.string().trim().max(150).parse(url.searchParams.get("q") || "");
+      return json(await showcase(db, user?.id, {page, category, search}));
+    }
     if (!user) return fail("Войдите в аккаунт", 401);
+    if (p[0] === "profile" && p.length === 1 && method === "PATCH") {
+      const input = profileInput.parse(await body(req));
+      await db.query("UPDATE users SET name=$1,preferences=$2 WHERE id=$3", [input.name, JSON.stringify(input.preferences), user.id]);
+      return json({user: {...user, ...input}});
+    }
+    if (p[0] === "bikes" && p.length === 3 && p[2] === "like" && ["PUT", "DELETE"].includes(method)) {
+      if (!uuid.safeParse(p[1]).success) return fail("Велосипед не найден",404);
+      if (!(await rateLimit("likes:" + user.id, 120))) return fail("Слишком много голосов. Попробуйте позже.",429);
+      const result = await transaction(q => vote(q,p[1],user.id,method === "PUT"));
+      return result.error ? fail(result.error,result.status) : json(result);
+    }
     if (p[0] !== "bikes") return fail("Не найдено", 404);
     if (p[1] === "wizard" && p.length === 2 && method === "POST") {
       const input = wizardInput.parse(await body(req));
@@ -261,8 +282,9 @@ async function handler(req, { params }) {
           "SELECT * FROM bikes WHERE owner_id=$1 ORDER BY created_at DESC",
           [user.id],
         );
+        const site = await getSite();
         return json({
-          bikes: await Promise.all(rows.map((b) => hydrate(db, b))),
+          bikes: await Promise.all(rows.map((b) => decorateBike(db, b, user.id, site))),
         });
       }
       if (method === "POST") {
@@ -304,7 +326,7 @@ async function handler(req, { params }) {
       return json({ ...result, importedCount: saved.importedCount });
     }
     if (p.length === 2) {
-      if (method === "GET") return json({ bike: await hydrate(db, bike) });
+      if (method === "GET") return json({ bike: await decorateBike(db, bike, user.id, await getSite()) });
       if (method === "PATCH") {
         const b = bikeInput.parse({
           ...bike,

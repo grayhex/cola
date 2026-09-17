@@ -1,4 +1,5 @@
 "use client";
+import ScoringSettings from "./scoring-settings.jsx";
 import { BlockSettings, GroupSettings } from "./layout-settings.jsx";
 import { copyBlocks } from "../../lib/copy-blocks.js";
 import ResolverSettings from "./resolver-settings.jsx";
@@ -159,6 +160,7 @@ function ListEditor({ values, onChange, label }) {
 }
 const sections = [
   ["overview", "Обзор", Settings2],
+  ["scoring", "Оценка велосипедов", Settings2],
   ["resolver", "Bike Resolver", Settings2],
   ["design", "Оформление", Palette],
   ["blocks", "Блоки карточки", Settings2],
@@ -353,7 +355,7 @@ export default function Admin() {
             >
               <Icon size={19} />
               {label}
-              {((["design", "copy", "overview", "blocks"].includes(id) &&
+              {((["design", "copy", "overview", "blocks", "scoring"].includes(id) &&
                 dirtySettings) ||
                 (["catalog", "groups"].includes(id) && dirtyCatalog)) && (
                 <span
@@ -388,6 +390,7 @@ export default function Admin() {
               {notice}
             </div>
           )}
+          {tab === "scoring" && <ScoringSettings value={draft.scoring} catalog={catalog} onChange={v=>update("scoring",v)}/>}
           {tab === "resolver" && <ResolverSettings />}
           {tab === "overview" && (
             <>
@@ -429,11 +432,6 @@ export default function Admin() {
                   label="Показывать демонстрационный велосипед гостям"
                   checked={draft.showDemo}
                   onChange={(v) => update("showDemo", v)}
-                />
-                <Toggle
-                  label="Показывать подпись под шапкой"
-                  checked={draft.showTagline}
-                  onChange={(v) => update("showTagline", v)}
                 />
               </section>
               <p className="help">
@@ -905,7 +903,7 @@ export default function Admin() {
               {!events.length && <p>Действий пока нет.</p>}
             </section>
           )}
-          {["overview", "design", "copy", "catalog"].includes(tab) && (
+          {["overview", "design", "copy", "catalog", "scoring"].includes(tab) && (
             <div className="admin-save">
               <span>
                 {(tab === "catalog" ? dirtyCatalog : dirtySettings)

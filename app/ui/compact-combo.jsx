@@ -1,5 +1,5 @@
 "use client";
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { limitedOptions } from "../../lib/wizard-options.js";
 export default function CompactCombo({
   label,
@@ -13,6 +13,12 @@ export default function CompactCombo({
   const id = useId(),
     [open, setOpen] = useState(false),
     [active, setActive] = useState(-1);
+  const root = useRef(null), gesture = useRef(null), touchClick = useRef(false);
+  useEffect(() => {
+    const outside = e => { if (!root.current?.contains(e.target)) { gesture.current = null; setOpen(false); } };
+    document.addEventListener("pointerdown", outside);
+    return () => document.removeEventListener("pointerdown", outside);
+  }, []);
   const shown = limitedOptions(options, value);
   const choose = (v) => {
     onChange(v);
@@ -20,7 +26,7 @@ export default function CompactCombo({
     setActive(-1);
   };
   return (
-    <div className="field compact-combo">
+    <div ref={root} className="field compact-combo">
       <label htmlFor={id + "-input"}>{label}</label>
       <input
         id={id + "-input"}
@@ -37,7 +43,8 @@ export default function CompactCombo({
         placeholder={placeholder}
         value={value}
         onFocus={() => setOpen(true)}
-        onBlur={() => {
+        onBlur={(e) => {
+          if (gesture.current || root.current?.contains(e.relatedTarget)) return;
           setOpen(false);
           setActive(-1);
         }}
@@ -80,9 +87,24 @@ export default function CompactCombo({
                 id={id + "-" + i}
                 key={v}
                 onPointerDown={(e) => {
-                  e.preventDefault();
+                  touchClick.current = e.pointerType !== "mouse";
+                  if (e.pointerType === "mouse") e.preventDefault();
+                  else gesture.current = { x: e.clientX, y: e.clientY, moved: false };
                 }}
-                onClick={() => choose(v)}
+                onPointerMove={(e) => {
+                  const g = gesture.current;
+                  if (g && Math.hypot(e.clientX-g.x,e.clientY-g.y)>8) g.moved = true;
+                }}
+                onPointerCancel={() => { gesture.current = null; }}
+                onPointerUp={(e) => {
+                  const g = gesture.current;
+                  gesture.current = null;
+                  if (g && !g.moved && Math.hypot(e.clientX-g.x,e.clientY-g.y)<=8) {
+                    e.preventDefault();
+                    choose(v);
+                  }
+                }}
+                onClick={(e) => { if (!touchClick.current || e.detail === 0) choose(v); }}
               >
                 {v}
               </li>
