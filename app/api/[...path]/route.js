@@ -1,6 +1,7 @@
 import { importPhotos } from "../../../lib/photo-import.js";
 import { appVersion } from "../../../lib/version.js";
 import { z } from "zod";
+import { wizardInput, createWizardBike } from "../../../lib/bike-wizard.js";
 import { reorderComponents } from "../../../lib/component-order.js";
 import { saveFactorySpecification } from "../../../lib/factory-import.js";
 import {
@@ -176,6 +177,24 @@ async function handler(req, { params }) {
     }
     if (!user) return fail("Войдите в аккаунт", 401);
     if (p[0] !== "bikes") return fail("Не найдено", 404);
+    if (p[1] === "wizard" && p.length === 2 && method === "POST") {
+      const input = wizardInput.parse(await body(req));
+      try {
+        return json(
+          await transaction((q) => createWizardBike(q, user.id, input)),
+          201,
+        );
+      } catch (e) {
+        if (e.message === "PREVIEW_EXPIRED")
+          return fail(
+            "Результат поиска устарел. Вернитесь к шагу 2 или сохраните без привязки к источнику.",
+            409,
+          );
+        if (e.message === "REQUEST_CONFLICT")
+          return fail("Конфликт запроса", 409);
+        throw e;
+      }
+    }
     if (p.length === 2 && p[1] === "resolver-brands" && method === "GET") {
       try {
         return json(await bikeResolverClient.request("/v1/brands"));
@@ -186,9 +205,19 @@ async function handler(req, { params }) {
     if (p.length === 2 && p[1] === "resolve" && method === "POST") {
       if (!(await rateLimit("resolver:" + user.id, 30)))
         return fail("Слишком много запросов поиска", 429);
-      return json(
-        await bikeResolverClient.resolve(resolverQuery.parse(await body(req))),
+      const result = await bikeResolverClient.resolve(
+        resolverQuery.parse(await body(req)),
       );
+      if (result.status === "resolved") {
+        const previewId = randomUUID();
+        await db.query("DELETE FROM resolver_previews WHERE expires_at<now()");
+        await db.query(
+          "INSERT INTO resolver_previews(id,owner_id,response) VALUES($1,$2,$3)",
+          [previewId, user.id, result],
+        );
+        return json({ ...result, previewId });
+      }
+      return json(result);
     }
     if (p[1] === "photo-search" && p.length === 2 && method === "POST") {
       if (!(await rateLimit("photo-search:" + user.id, 15)))
@@ -284,7 +313,7 @@ async function handler(req, { params }) {
           ...(await body(req)),
         });
         await db.query(
-          "UPDATE bikes SET name=$1,brand=$2,model=$3,year=$4,category=$5,description=$6,color=$7,size=$8,weight=$9,trim=$12,manufacturer_url=$13,price=$14,show_bike_price=$15,show_component_prices=$16,show_accessory_prices=$17,factory_spec=CASE WHEN brand=$2 AND model=$3 AND year=$4 AND trim=$12 THEN factory_spec ELSE NULL END,updated_at=now() WHERE id=$10 AND owner_id=$11",
+          "UPDATE bikes SET name=$1,brand=$2,model=$3,year=$4,category=$5,description=$6,color=$7,size=$8,weight=$9,trim=$12,manufacturer_url=$13,price=$14,show_bike_price=$15,show_component_prices=$16,show_accessory_prices=$17,mileage=$18,is_public=$19,factory_spec=CASE WHEN brand=$2 AND model=$3 AND year=$4 AND trim=$12 THEN factory_spec ELSE NULL END,updated_at=now() WHERE id=$10 AND owner_id=$11",
           [
             b.name,
             b.brand,
@@ -303,6 +332,8 @@ async function handler(req, { params }) {
             b.show_bike_price,
             b.show_component_prices,
             b.show_accessory_prices,
+            b.mileage,
+            b.is_public,
           ],
         );
         return json({ ok: true });

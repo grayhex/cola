@@ -139,6 +139,31 @@ try {
     409,
     "in-use assets are protected",
   );
+  latest = (await admin("admin/overview")).data;
+  assert.equal(
+    (
+      await admin("admin/settings", "PUT", {
+        value: {
+          ...latest.settings,
+          logoId: null,
+          mtbImageId: asset,
+          roadImageId: asset,
+          gravelImageId: asset,
+          bikeLayout: "dense",
+        },
+        version: latest.settingsVersion,
+      })
+    ).status,
+    200,
+  );
+  assert.equal(
+    (await admin("admin/assets/" + asset, "DELETE")).status,
+    409,
+    "stock category images are protected without a logo reference",
+  );
+  const themed = (await (await fetch(base + "/api/site")).json()).settings;
+  assert.equal(themed.bikeLayout, "dense");
+  assert.equal(themed.mtbImageId, asset);
   assert.equal(
     (
       await guest("auth/register", "POST", {

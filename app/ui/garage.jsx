@@ -1,5 +1,6 @@
 "use client";
 import PhotoSearch from "./photo-search.jsx";
+import BikeWizard from "./bike-wizard.jsx";
 import Versions from "./versions.jsx";
 import { parseBikeName } from "../../lib/bike-name.js";
 import GroupedComponents from "./grouped-components.jsx";
@@ -197,7 +198,9 @@ function Photo({ bike, className = "", photo }) {
         : demoImage
       : selected
         ? "/api/photos/" + selected.id
-        : null;
+        : settings[bike.category + "ImageId"]
+          ? "/api/assets/" + settings[bike.category + "ImageId"]
+          : null;
   useEffect(() => setFailed(false), [src]);
   return src && !failed ? (
     <img
@@ -293,6 +296,12 @@ export default function Garage({ share }) {
   }
   function close() {
     if (!busy) {
+      if (
+        modal?.type === "bike" &&
+        !modal.bike &&
+        !window.confirm("Закрыть мастер? Несохранённые данные будут потеряны.")
+      )
+        return;
       setModal(null);
       setError("");
     }
@@ -584,6 +593,10 @@ export default function Garage({ share }) {
               <div>
                 <dt>{t("Цвет")}</dt>
                 <dd>{bike.color || "—"}</dd>
+              </div>
+              <div>
+                <dt>Пробег</dt>
+                <dd>{Number(bike.mileage || 0).toLocaleString("ru-RU")} км</dd>
               </div>
             </dl>
             <div className="summary-bottom">
@@ -1087,7 +1100,19 @@ export default function Garage({ share }) {
               }}
             />
           )}
-          {modal.type === "bike" && (
+          {modal.type === "bike" && !modal.bike && (
+            <BikeWizard
+              onBusy={setBusy}
+              onCreated={async (id) => {
+                await refresh();
+                const { bike: b } = await api("bikes/" + id);
+                openBike(b);
+                setModal(null);
+                setNotice("Велосипед сохранён");
+              }}
+            />
+          )}
+          {modal.type === "bike" && modal.bike && (
             <BikeForm
               initial={modal.bike}
               busy={busy}
@@ -1534,6 +1559,16 @@ function BikeForm({ initial, busy, onSubmit }) {
           </label>
         ))}
       </details>
+      <Field label="Текущий пробег, км">
+        <input
+          type="number"
+          min="0"
+          max="10000000"
+          step="1"
+          value={b.mileage ?? 0}
+          onChange={(e) => update("mileage", Number(e.target.value))}
+        />
+      </Field>
       <Field label={t("Цвет")}>
         <input
           maxLength={60}
@@ -1618,9 +1653,16 @@ function PartForm({ initial, section, busy, onSubmit }) {
           }}
         />
         <datalist id="component-manufacturers">
-          {manufacturers.map((m) => (
-            <option key={m} value={m} />
-          ))}
+          {manufacturers
+            .filter(
+              (m) =>
+                !search ||
+                m.toLowerCase().includes(search.trim().toLowerCase()),
+            )
+            .slice(0, 8)
+            .map((m) => (
+              <option key={m} value={m} />
+            ))}
         </datalist>
       </Field>
       <Field label={t("Компонент или модель")}>
@@ -1638,7 +1680,7 @@ function PartForm({ initial, section, busy, onSubmit }) {
       </Field>
       {suggestions.length > 0 && (
         <div className="suggestions" aria-label={t("Модели из справочника")}>
-          {suggestions.map((p) => (
+          {suggestions.slice(0, 8).map((p) => (
             <button
               key={p}
               type="button"
@@ -1655,7 +1697,8 @@ function PartForm({ initial, section, busy, onSubmit }) {
         </div>
       )}
       <p className="help">
-        {t("Выберите из справочника или введите своё название.")}
+        {t("Выберите из справочника или введите своё название.")} Показываем до
+        8 совпадений — уточните название.
       </p>
       <Field label={t("Примечание")}>
         <input

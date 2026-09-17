@@ -88,6 +88,9 @@ async function handler(req, { params }) {
             "faviconId",
             "demoImageId",
             "garageImageId",
+            "mtbImageId",
+            "roadImageId",
+            "gravelImageId",
           ])
             if (value[key]) {
               const a = await q.query(
@@ -252,9 +255,15 @@ async function handler(req, { params }) {
             await q.query("SELECT value FROM site_settings WHERE id=1")
           ).rows[0].value;
           if (
-            ["logoId", "faviconId", "demoImageId", "garageImageId"].some(
-              (k) => config[k] === p[1],
-            )
+            [
+              "logoId",
+              "faviconId",
+              "demoImageId",
+              "garageImageId",
+              "mtbImageId",
+              "roadImageId",
+              "gravelImageId",
+            ].some((k) => config[k] === p[1])
           )
             return {
               error:
