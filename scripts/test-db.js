@@ -25,6 +25,7 @@ await db.query("INSERT INTO site_catalog(id,value) VALUES(1,$1)", [
 await db.exec(await readFile(new URL("../db/004_garage_layout.sql",import.meta.url),"utf8"));
 await db.exec(await readFile(new URL("../db/005_bike_wizard.sql",import.meta.url),"utf8"));
 await db.exec(await readFile(new URL("../db/006_compact_defaults.sql",import.meta.url),"utf8"));
+await db.exec(await readFile(new URL("../db/007_showcase.sql",import.meta.url),"utf8"));
 const server = new PGLiteSocketServer({
   db,
   host: "127.0.0.1",
