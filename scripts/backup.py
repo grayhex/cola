@@ -74,7 +74,7 @@ def restore(folder,yes):
     compose('up','-d','--wait','db')
     count=output(COMPOSE+['exec','-T','db','psql','-U','colabike','-d','colabike','-Atc',"SELECT count(*) FROM pg_tables WHERE schemaname IN ('public','bike_resolver')"])
     if count!='0': raise RuntimeError('Destination database is not empty; restore refused')
-    compose('create','--no-deps','app')
+    compose('create','--build','--no-recreate','app')
     container=app_id()
     names=output(['docker','run','--rm','--volumes-from',container+':ro','--entrypoint','ls',image(container),'-A','/app/uploads'])
     if names: raise RuntimeError('Destination photos volume is not empty; restore refused')
