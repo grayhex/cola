@@ -37,7 +37,19 @@ export class ManufacturerHttpClient {
     private timeout = 10000,
     private settings?: () => Settings,
   ) {}
-  async get(url: string, domains: string[]): Promise<SourceDocument> {
+  async get(
+    url: string,
+    domains: string[],
+    headers: Record<string, string> = {},
+  ): Promise<SourceDocument> {
+    const d = await this.getBytes(url, domains, headers);
+    return { ...d, body: d.bytes.toString("utf8") };
+  }
+  async getBytes(
+    url: string,
+    domains: string[],
+    headers: Record<string, string> = {},
+  ) {
     const host = validateUrl(url, domains).hostname;
     const prior = this.queues.get(host) || Promise.resolve();
     const task = prior
@@ -45,7 +57,7 @@ export class ManufacturerHttpClient {
       .then(async () => {
         await pause(Math.max(0, (this.next.get(host) || 0) - Date.now()));
         try {
-          return await this.request(url, domains);
+          return await this.request(url, domains, headers);
         } finally {
           this.next.set(
             host,
@@ -63,7 +75,14 @@ export class ManufacturerHttpClient {
   private async request(
     input: string,
     domains: string[],
-  ): Promise<SourceDocument> {
+    headers: Record<string, string>,
+  ): Promise<{
+    url: string;
+    bytes: Buffer;
+    fetchedAt: string;
+    hash: string;
+    contentType: string;
+  }> {
     let url = input;
     for (let redirects = 0; redirects <= 4; redirects++) {
       const u = validateUrl(url, domains);
@@ -111,6 +130,7 @@ export class ManufacturerHttpClient {
             redirect: "manual",
             signal: controller.signal,
             headers: {
+              ...(u.hostname === new URL(input).hostname ? headers : {}),
               "User-Agent":
                 "ColaBikeResolver/1.0 (factory specifications; low-rate public catalogue client)",
               "Accept-Language": "en",
@@ -165,7 +185,8 @@ export class ManufacturerHttpClient {
             }
             chunks.push(value);
           }
-          const body = Buffer.concat(chunks).toString("utf8");
+          const bytes = Buffer.concat(chunks);
+          const body = bytes.toString("utf8");
           if (
             /<title>\s*(Just a moment|Access Denied)|cf-chl-|_Incapsula_Resource/i.test(
               body,
@@ -177,7 +198,8 @@ export class ManufacturerHttpClient {
             );
           return {
             url: u.href,
-            body,
+            bytes,
+            contentType: response.headers.get("content-type") || "",
             fetchedAt: new Date().toISOString(),
             hash: createHash("sha256").update(body).digest("hex"),
           };

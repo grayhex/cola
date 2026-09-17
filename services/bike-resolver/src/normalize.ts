@@ -65,6 +65,38 @@ const aliases: Partial<Record<ComponentType, string[]>> = {
   motor: ["drive unit"],
   battery: ["akku"],
 };
+const russian: Partial<Record<ComponentType, string[]>> = {
+  frame: ["рама"],
+  fork: ["вилка"],
+  rear_derailleur: ["задний переключатель"],
+  front_derailleur: ["передний переключатель"],
+  shifter: ["манетки", "манетки (шифтеры)", "шифтеры"],
+  crankset: ["система", "шатуны"],
+  bottom_bracket: ["каретка"],
+  cassette: ["кассета"],
+  chain: ["цепь"],
+  brake: ["тормоза"],
+  tire: ["покрышки", "шины"],
+  rim: ["обода"],
+  front_hub: ["передняя втулка"],
+  rear_hub: ["задняя втулка"],
+  handlebar: ["руль"],
+  stem: ["вынос"],
+  seatpost: ["подседельный штырь"],
+  saddle: ["седло"],
+  headset: ["рулевая колонка"],
+  pedals: ["педали"],
+  grips: ["грипсы"],
+  rack: ["багажник"],
+  mudguards: ["крылья"],
+  front_light: ["передний фонарь"],
+  rear_light: ["задний фонарь"],
+};
+for (const [type, values] of Object.entries(russian))
+  aliases[type as ComponentType] = [
+    ...(aliases[type as ComponentType] || []),
+    ...values,
+  ];
 const labels = new Map<string, ComponentType>();
 for (const type of componentTypes) {
   labels.set(normalize(type), type);

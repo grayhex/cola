@@ -1,3 +1,9 @@
+import { z } from "zod";
+import pino from "pino";
+import { ManualSources } from "./manual.js";
+import { ManufacturerHttpClient } from "./http.js";
+import { querySchema } from "./domain.js";
+import { buildVersion } from "./version.js";
 import Fastify from "fastify";
 import { requestSchema } from "./domain.js";
 import type { Resolver } from "./resolver.js";
@@ -8,6 +14,7 @@ export function buildApp(
   resolver: Resolver,
   cache: Cache,
   settings?: SettingsStore,
+  sourceClient?: ManufacturerHttpClient,
 ) {
   const app = Fastify({
     logger: true,
@@ -15,6 +22,47 @@ export function buildApp(
     requestTimeout: 120000,
   });
   const store = settings ?? new SettingsStore();
+  const manual = new ManualSources(
+    sourceClient ??
+      new ManufacturerHttpClient(pino(), 700, 10000, () => store.value),
+    resolver.adapters,
+    store,
+  );
+  app.get("/version", async () => buildVersion);
+  app.post("/v1/resolve-url", async (req, reply) => {
+    const data = querySchema
+      .extend({ sourceUrl: z.string().url().max(2048) })
+      .safeParse(req.body);
+    if (!data.success) return reply.code(400).send({ error: "invalid_input" });
+    const { sourceUrl, ...query } = data.data;
+    return manual.resolve(query, sourceUrl);
+  });
+  app.post("/v1/photos/search", async (req, reply) => {
+    const data = querySchema
+      .extend({ sourceUrl: z.string().url().max(2048).optional() })
+      .safeParse(req.body);
+    if (!data.success) return reply.code(400).send({ error: "invalid_input" });
+    const { sourceUrl, ...query } = data.data;
+    try {
+      return await manual.search(query, sourceUrl);
+    } catch {
+      return reply.code(503).send({ error: "Источник фотографий недоступен" });
+    }
+  });
+  app.get("/v1/photos/:id", async (req, reply) => {
+    const id = z
+      .string()
+      .uuid()
+      .safeParse((req.params as any).id);
+    if (!id.success) return reply.code(400).send({ error: "invalid_input" });
+    try {
+      return await manual.photo(id.data);
+    } catch {
+      return reply
+        .code(503)
+        .send({ error: "Изображение недоступно. Повторите поиск." });
+    }
+  });
   const brands = () =>
     resolver.adapters.map((a) => ({
       id: a.id,

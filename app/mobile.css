@@ -1599,3 +1599,38 @@
 .gallery-details {
   order: 3;
 }
+/* Configurable, independently ordered bicycle blocks. */
+.configurable-block[hidden], .configurable-block [hidden] {display:none!important}
+.detail > .showcase {display:block}
+.detail > .bike-summary {margin:10px 0}
+.detail > .bike-summary h2, .detail > .bike-summary > .eyebrow, .detail > .bike-summary .summary-bottom {display:none}
+.detail > .bike-summary dl {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 16px}
+.configurable-block[data-variant="card"] {padding:16px;background:var(--wash);border:1px solid var(--line);border-radius:var(--radius)}
+.configurable-block[data-variant="plain"] {padding:0;border:0;background:none}
+.component-group {margin:12px 0;border:1px solid var(--line);border-radius:10px;overflow:visible}
+.component-group-title {display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--wash);border-radius:10px 10px 0 0}
+.component-group-title h3 {font-size:14px;margin:0;flex:1}
+.component-group-title small {color:var(--muted);font-size:12px}
+.order-actions {display:flex;align-items:center;gap:0}
+.site-root .order-actions .icon {min-width:32px;width:32px;min-height:32px;padding:6px}
+.compact-part {display:flex;align-items:center;gap:8px;padding:7px 10px;border-top:1px solid var(--line)}
+.compact-part-main {flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.compact-part-main > small {font-size:10px;color:var(--muted)}
+.compact-part-main > strong {font-size:13px;line-height:1.35;overflow-wrap:anywhere}
+.compact-part .part-notes {font-size:11px;margin:0}
+.compact-part-actions {display:flex;align-items:center;gap:6px}
+.compact-part-actions details {position:relative}
+.compact-part-actions summary {cursor:pointer;padding:8px;list-style:none;font-size:20px;min-height:36px}
+.part-menu {display:flex;position:absolute;right:0;top:100%;z-index:5;background:var(--paper);border:1px solid var(--line);box-shadow:0 6px 20px #0002;border-radius:8px}
+.part-link {display:inline-flex;align-items:center;gap:4px;font-size:12px;margin-top:3px}
+.layout-block-editor,.group-editor,.copy-block {padding:12px 0;border-bottom:1px solid var(--line)}
+.group-editor > summary {display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;padding:10px 0}
+.copy-block > summary {cursor:pointer;font-weight:600;padding:10px 0}
+.copy-block > summary small {color:var(--muted);font-weight:400}
+.category-checks {display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:6px;font-size:13px}
+.category-checks label {display:flex;align-items:center;gap:8px}
+.price-settings {padding:10px 0}
+@media(min-width:701px){.component-groups{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}.component-group{margin:0}.detail>.bike-summary dl{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.build-versions{display:block;font-size:10px;color:var(--muted);font-weight:400;line-height:1.5}.footer{flex-wrap:wrap}.photo-search-trigger{align-self:flex-start;font-size:12px;margin:0 0 8px}.photo-candidates{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:14px 0}.photo-candidates label{position:relative;display:block}.photo-candidates img{width:100%;height:110px;object-fit:contain;background:#f5f5f3;border-radius:6px}.photo-candidates input{position:absolute;top:5px;left:5px;z-index:1}.photo-candidates a{font-size:11px}.photo-search .field{margin:12px 0}
+@media(max-width:600px){.photo-candidates{grid-template-columns:repeat(2,minmax(0,1fr))}.build-versions{width:100%;font-size:9px}}
+@media(min-width:701px){.showcase.configurable-block[data-variant="compact"] .hero-photo,.showcase.configurable-block[data-variant="compact"] .photo-empty{height:260px;min-height:0;aspect-ratio:auto;object-fit:contain}}

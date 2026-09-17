@@ -20,7 +20,8 @@ export default function FactorySpecification({
   const [result, setResult] = useState(null),
     [busy, setBusy] = useState(false),
     [elapsed, setElapsed] = useState(0),
-    [config, setConfig] = useState(null);
+    [config, setConfig] = useState(null),
+    [sourceUrl, setSourceUrl] = useState("");
   const controller = useRef(),
     mounted = useRef(true),
     callbacks = useRef({ onImport, onBusy, onReset });
@@ -72,7 +73,7 @@ export default function FactorySpecification({
           model: bike.model,
           trim: bike.trim || null,
           year: Number(bike.year),
-          ...(candidateId ? { candidateId } : {}),
+          ...(sourceUrl ? { sourceUrl } : candidateId ? { candidateId } : {}),
         }),
         signal: AbortSignal.any([abort.signal, AbortSignal.timeout(95000)]),
       });
@@ -80,7 +81,7 @@ export default function FactorySpecification({
       const data = await response.json();
       if (abort.signal.aborted || !mounted.current) return;
       setResult({ ...data, candidateId });
-      if (data.status === "resolved" && automatic)
+      if (data.status === "resolved" && automatic && !sourceUrl)
         callbacks.current.onImport(candidateId, true);
     } catch {
       if (!abort.signal.aborted && mounted.current)
@@ -93,7 +94,7 @@ export default function FactorySpecification({
     }
   }
   useEffect(() => {
-    if (!automatic || !valid || !config?.autoResolve) return;
+    if (!automatic || !valid || !config?.autoResolve || sourceUrl) return;
     if (
       !config.brands.some(
         (a) =>
@@ -103,7 +104,7 @@ export default function FactorySpecification({
       return;
     const timer = setTimeout(() => find(), 1400);
     return () => clearTimeout(timer);
-  }, [config, automatic, valid]);
+  }, [config, automatic, valid, sourceUrl]);
   const current = result?.status === "resolved" ? result : bike.factory_spec;
   return (
     <section
@@ -125,6 +126,20 @@ export default function FactorySpecification({
           </button>
         )}
       </div>
+      <label className="field">
+        <span>Ссылка на комплектацию (необязательно)</span>
+        <input
+          type="url"
+          placeholder="https://…"
+          value={sourceUrl}
+          disabled={busy}
+          onChange={(e) => {
+            setSourceUrl(e.target.value);
+            setResult(null);
+            callbacks.current.onReset?.();
+          }}
+        />
+      </label>
       {busy ? (
         <div role="status" className="resolver-progress">
           <span>
@@ -190,6 +205,12 @@ export default function FactorySpecification({
               </ul>
             </>
           )}
+          {result?.manualSelection && (
+            <p className="help">
+              Сверьте модель, год и компоненты перед импортом. Совпадение по
+              ссылке не проверено автоматически.
+            </p>
+          )}
           {current && (
             <>
               <p className="resolver-found">
@@ -228,7 +249,11 @@ export default function FactorySpecification({
                 type="button"
                 className="button secondary"
                 onClick={() =>
-                  callbacks.current.onImport(result.candidateId, true)
+                  callbacks.current.onImport(
+                    result.candidateId,
+                    true,
+                    sourceUrl,
+                  )
                 }
               >
                 Импортировать при сохранении

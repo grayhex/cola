@@ -1,4 +1,6 @@
 "use client";
+import { BlockSettings, GroupSettings } from "./layout-settings.jsx";
+import { copyBlocks } from "../../lib/copy-blocks.js";
 import ResolverSettings from "./resolver-settings.jsx";
 import { useEffect, useState, useRef } from "react";
 import {
@@ -159,6 +161,8 @@ const sections = [
   ["overview", "Обзор", Settings2],
   ["resolver", "Bike Resolver", Settings2],
   ["design", "Оформление", Palette],
+  ["blocks", "Блоки карточки", Settings2],
+  ["groups", "Группы деталей", BookOpen],
   ["copy", "Тексты", Type],
   ["catalog", "Справочники", BookOpen],
   ["users", "Пользователи", Users],
@@ -349,9 +353,9 @@ export default function Admin() {
             >
               <Icon size={19} />
               {label}
-              {((["design", "copy", "overview"].includes(id) &&
+              {((["design", "copy", "overview", "blocks"].includes(id) &&
                 dirtySettings) ||
-                (id === "catalog" && dirtyCatalog)) && (
+                (["catalog", "groups"].includes(id) && dirtyCatalog)) && (
                 <span
                   className="unsaved-dot"
                   aria-label="Есть несохранённые изменения"
@@ -504,26 +508,10 @@ export default function Admin() {
               </section>
               <section className="admin-panel">
                 <h2>Расположение элементов</h2>
+                <button className="quiet" onClick={() => setTab("blocks")}>
+                  Настроить блоки карточки →
+                </button>
                 <div className="admin-form-grid">
-                  <Select
-                    label="Паспорт велосипеда на широком экране"
-                    value={draft.summaryPosition}
-                    onChange={(v) => update("summaryPosition", v)}
-                    options={[
-                      ["right", "Справа от фото"],
-                      ["left", "Слева от фото"],
-                      ["below", "Под фото"],
-                    ]}
-                  />
-                  <Select
-                    label="Порядок блоков карточки"
-                    value={draft.detailOrder}
-                    onChange={(v) => update("detailOrder", v)}
-                    options={[
-                      ["photo-first", "Сначала фото"],
-                      ["specs-first", "Сначала комплектация"],
-                    ]}
-                  />
                   <Select
                     label="Выравнивание заголовков"
                     value={draft.textAlign}
@@ -588,6 +576,12 @@ export default function Admin() {
               </section>
             </>
           )}
+          {tab === "blocks" && (
+            <BlockSettings settings={draft} onChange={update} />
+          )}
+          {tab === "groups" && (
+            <GroupSettings catalog={cat} onChange={setCat} />
+          )}
           {tab === "copy" && (
             <section className="admin-panel">
               <p>
@@ -604,40 +598,52 @@ export default function Admin() {
                   onChange={(e) => setTextSearch(e.target.value)}
                 />
               </label>
-              {uiCopy
-                .filter((k) =>
+              {copyBlocks.map((group) => {
+                const keys = group.keys.filter((k) =>
                   (k + " " + (draft.copy[k] || ""))
                     .toLowerCase()
                     .includes(textSearch.toLowerCase()),
-                )
-                .map((key) => (
-                  <div className="copy-row" key={key}>
-                    <Field label={key}>
-                      <textarea
-                        rows={2}
-                        maxLength={2000}
-                        value={draft.copy[key] ?? key}
-                        onChange={(e) =>
-                          update("copy", {
-                            ...draft.copy,
-                            [key]: e.target.value,
-                          })
-                        }
-                      />
-                    </Field>
-                    <button
-                      className="quiet"
-                      disabled={!(key in draft.copy)}
-                      onClick={() => {
-                        const next = { ...draft.copy };
-                        delete next[key];
-                        update("copy", next);
-                      }}
-                    >
-                      Сбросить
-                    </button>
-                  </div>
-                ))}
+                );
+                return keys.length ? (
+                  <details
+                    className="copy-block"
+                    key={group.id}
+                    open={!!textSearch}
+                  >
+                    <summary>
+                      {group.name} <small>{keys.length}</small>
+                    </summary>
+                    {keys.map((key) => (
+                      <div className="copy-row" key={key}>
+                        <Field label={key}>
+                          <textarea
+                            rows={2}
+                            maxLength={2000}
+                            value={draft.copy[key] ?? key}
+                            onChange={(e) =>
+                              update("copy", {
+                                ...draft.copy,
+                                [key]: e.target.value,
+                              })
+                            }
+                          />
+                        </Field>
+                        <button
+                          className="quiet"
+                          disabled={!(key in draft.copy)}
+                          onClick={() => {
+                            const next = { ...draft.copy };
+                            delete next[key];
+                            update("copy", next);
+                          }}
+                        >
+                          Сбросить
+                        </button>
+                      </div>
+                    ))}
+                  </details>
+                ) : null;
+              })}
             </section>
           )}
           {tab === "catalog" && <CatalogEditor value={cat} onChange={setCat} />}

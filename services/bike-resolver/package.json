@@ -1,6 +1,6 @@
 {
   "name": "bike-resolver",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "tsx src/server.ts",
-    "build": "tsc",
+    "build": "node scripts/build-version.js && tsc",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "start": "node dist/server.js"

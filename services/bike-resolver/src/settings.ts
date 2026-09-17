@@ -16,6 +16,13 @@ export const settingsSchema = z
   .object({
     enabled: z.boolean(),
     autoResolve: z.boolean(),
+    manualDomains: z
+      .array(
+        z.string().regex(/^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/),
+      )
+      .max(40)
+      .default(["info.cube.eu", "www.velo-port.ru", "velo-port.ru"]),
+    photoSearch: z.boolean().default(true),
     timeoutMs: z.number().int().min(3000).max(20000),
     requestIntervalMs: z.number().int().min(500).max(5000),
     successTtlDays: z.number().int().min(30).max(730),
@@ -33,6 +40,8 @@ export type Settings = z.infer<typeof settingsSchema>;
 export const defaultSettings: Settings = {
   enabled: true,
   autoResolve: true,
+  manualDomains: ["info.cube.eu", "www.velo-port.ru", "velo-port.ru"],
+  photoSearch: true,
   timeoutMs: 10000,
   requestIntervalMs: 700,
   successTtlDays: 90,
