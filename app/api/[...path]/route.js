@@ -1,3 +1,7 @@
+import { traced, logError } from "../../../lib/observability.js";
+import { allowAuth } from "../../../lib/auth-limits.js";
+import { limits, QuotaError } from "../../../lib/limits.js";
+import { savePhotos } from "../../../lib/photo-storage.js";
 import { showcase, decorateBike, vote } from "../../../lib/showcase.js";
 import { profileInput } from "../../../lib/social-validation.js";
 import { importPhotos } from "../../../lib/photo-import.js";
@@ -72,8 +76,32 @@ async function handler(req, { params }) {
         return fail("Недопустимый источник запроса", 403);
     }
     if (p[0] === "health" && method === "GET") {
-      await db.query("SELECT 1");
       return json({ ok: true });
+    }
+    if (p[0] === "ready" && p.length === 1 && method === "GET") {
+      try {
+        await db.query("SELECT 1");
+        return json({ ok: true });
+      } catch (e) {
+        logError("database_unavailable", e);
+        return json({ ok: false }, 503);
+      }
+    }
+    if (p[0] === "status" && p.length === 1 && method === "GET") {
+      let database = false,
+        resolver = false;
+      try {
+        await db.query("SELECT 1");
+        database = true;
+      } catch {}
+      try {
+        const r = await fetch(
+          new URL("/ready", process.env.BIKE_RESOLVER_URL),
+          { signal: AbortSignal.timeout(2000), cache: "no-store" },
+        );
+        resolver = r.ok;
+      } catch {}
+      return json({ ok: database, database, resolver }, database ? 200 : 503);
     }
     if (
       p[0] === "auth" &&
@@ -82,10 +110,7 @@ async function handler(req, { params }) {
     ) {
       const input = credentials.parse(await body(req));
       // Global and per-account limits are DB-backed and do not trust proxy headers.
-      if (
-        !(await rateLimit("auth:global", 300)) ||
-        !(await rateLimit("auth:" + digest(input.email), 15))
-      )
+      if (!(await allowAuth(req, input.email, rateLimit)))
         return fail("Слишком много попыток. Попробуйте через 15 минут.", 429);
       if (p[1] === "register") {
         if (!(await getSite()).settings.registrationOpen)
@@ -141,8 +166,13 @@ async function handler(req, { params }) {
     if (p[0] === "shared" && p.length === 2 && method === "GET") {
       if (!uuid.safeParse(p[1]).success)
         return fail("Велосипед не найден", 404);
-      const rows = await db.query("SELECT b.* FROM bikes b JOIN users u ON u.id=b.owner_id WHERE b.share_id=$1 AND b.is_public=true AND u.blocked=false", [p[1]]);
-      const bike = rows.rows[0] ? await decorateBike(db, rows.rows[0], user?.id, await getSite(), true) : null;
+      const rows = await db.query(
+        "SELECT b.* FROM bikes b JOIN users u ON u.id=b.owner_id WHERE b.share_id=$1 AND b.is_public=true AND u.blocked=false",
+        [p[1]],
+      );
+      const bike = rows.rows[0]
+        ? await decorateBike(db, rows.rows[0], user?.id, await getSite(), true)
+        : null;
       return bike
         ? json({ bike })
         : fail("Велосипед не найден или доступ закрыт", 404);
@@ -180,25 +210,51 @@ async function handler(req, { params }) {
     }
     if (p[0] === "showcase" && p.length === 1 && method === "GET") {
       const url = new URL(req.url);
-      const page = z.coerce.number().int().min(1).max(10000).parse(url.searchParams.get("page") || 1);
-      const category = z.enum(["", "mtb", "road", "gravel"]).parse(url.searchParams.get("category") || "");
-      const search = z.string().trim().max(150).parse(url.searchParams.get("q") || "");
-      return json(await showcase(db, user?.id, {page, category, search}));
+      const page = z.coerce
+        .number()
+        .int()
+        .min(1)
+        .max(10000)
+        .parse(url.searchParams.get("page") || 1);
+      const category = z
+        .enum(["", "mtb", "road", "gravel"])
+        .parse(url.searchParams.get("category") || "");
+      const search = z
+        .string()
+        .trim()
+        .max(150)
+        .parse(url.searchParams.get("q") || "");
+      return json(await showcase(db, user?.id, { page, category, search }));
     }
     if (!user) return fail("Войдите в аккаунт", 401);
     if (p[0] === "profile" && p.length === 1 && method === "PATCH") {
       const input = profileInput.parse(await body(req));
-      await db.query("UPDATE users SET name=$1,preferences=$2 WHERE id=$3", [input.name, JSON.stringify(input.preferences), user.id]);
-      return json({user: {...user, ...input}});
+      await db.query("UPDATE users SET name=$1,preferences=$2 WHERE id=$3", [
+        input.name,
+        JSON.stringify(input.preferences),
+        user.id,
+      ]);
+      return json({ user: { ...user, ...input } });
     }
-    if (p[0] === "bikes" && p.length === 3 && p[2] === "like" && ["PUT", "DELETE"].includes(method)) {
-      if (!uuid.safeParse(p[1]).success) return fail("Велосипед не найден",404);
-      if (!(await rateLimit("likes:" + user.id, 120))) return fail("Слишком много голосов. Попробуйте позже.",429);
-      const result = await transaction(q => vote(q,p[1],user.id,method === "PUT"));
-      return result.error ? fail(result.error,result.status) : json(result);
+    if (
+      p[0] === "bikes" &&
+      p.length === 3 &&
+      p[2] === "like" &&
+      ["PUT", "DELETE"].includes(method)
+    ) {
+      if (!uuid.safeParse(p[1]).success)
+        return fail("Велосипед не найден", 404);
+      if (!(await rateLimit("likes:" + user.id, 120)))
+        return fail("Слишком много голосов. Попробуйте позже.", 429);
+      const result = await transaction((q) =>
+        vote(q, p[1], user.id, method === "PUT"),
+      );
+      return result.error ? fail(result.error, result.status) : json(result);
     }
     if (p[0] !== "bikes") return fail("Не найдено", 404);
     if (p[1] === "wizard" && p.length === 2 && method === "POST") {
+      if (!(await rateLimit("bike-create:" + user.id, limits.bikeCreates)))
+        return fail("Слишком много созданий велосипедов", 429);
       const input = wizardInput.parse(await body(req));
       try {
         return json(
@@ -284,12 +340,16 @@ async function handler(req, { params }) {
         );
         const site = await getSite();
         return json({
-          bikes: await Promise.all(rows.map((b) => decorateBike(db, b, user.id, site))),
+          bikes: await Promise.all(
+            rows.map((b) => decorateBike(db, b, user.id, site)),
+          ),
         });
       }
       if (method === "POST") {
+        if (!(await rateLimit("bike-create:" + user.id, limits.bikeCreates)))
+          return fail("Слишком много созданий велосипедов", 429);
         const b = bikeInput.parse(await body(req));
-        const id = await insertBike(db, user.id, b);
+        const id = await transaction((q) => insertBike(q, user.id, b));
         return json({ id }, 201);
       }
     }
@@ -326,7 +386,10 @@ async function handler(req, { params }) {
       return json({ ...result, importedCount: saved.importedCount });
     }
     if (p.length === 2) {
-      if (method === "GET") return json({ bike: await decorateBike(db, bike, user.id, await getSite()) });
+      if (method === "GET")
+        return json({
+          bike: await decorateBike(db, bike, user.id, await getSite()),
+        });
       if (method === "PATCH") {
         const b = bikeInput.parse({
           ...bike,
@@ -487,7 +550,7 @@ async function handler(req, { params }) {
       p.length === 4 &&
       method === "POST"
     ) {
-      if (!(await rateLimit("photo-import:" + user.id, 15)))
+      if (!(await rateLimit("photo-upload:" + user.id, limits.photoUploads)))
         return fail("Слишком много запросов", 429);
       const { ids } = z
         .object({
@@ -504,11 +567,15 @@ async function handler(req, { params }) {
           201,
         );
       } catch (e) {
-        return fail(e.message);
+        if (e instanceof QuotaError) throw e;
+        logError("photo_import_failed", e);
+        return fail("Не удалось импортировать фотографию. Повторите поиск.");
       }
     }
     if (p[2] === "photos") {
       if (p.length === 3 && method === "POST") {
+        if (!(await rateLimit("photo-upload:" + user.id, limits.photoUploads)))
+          return fail("Слишком много загрузок фотографий", 429);
         // Stream a raw file instead of buffering an unbounded multipart body.
         if (
           !["image/jpeg", "image/png", "image/webp"].includes(
@@ -524,7 +591,7 @@ async function handler(req, { params }) {
           const { done, value } = await reader.read();
           if (done) break;
           size += value.length;
-          if (size > 10 * 1024 * 1024) {
+          if (size > limits.fileBytes) {
             await reader.cancel();
             return fail("Фото должно быть меньше 10 МБ", 413);
           }
@@ -538,29 +605,13 @@ async function handler(req, { params }) {
         }
         const id = randomUUID(),
           filename = id + ".webp";
-        await mkdir(uploads(), { recursive: true });
-        await writeFile(path.join(uploads(), filename), image);
-        try {
-          await transaction(async (client) => {
-            await client.query("SELECT id FROM bikes WHERE id=$1 FOR UPDATE", [
-              bike.id,
-            ]);
-            const { rows } = await client.query(
-              "SELECT count(*)::int AS n FROM photos WHERE bike_id=$1",
-              [bike.id],
-            );
-            if (rows[0].n >= 12) throw new Error("PHOTO_LIMIT");
-            await client.query(
-              "INSERT INTO photos(id,bike_id,filename,is_cover) VALUES($1,$2,$3,$4)",
-              [id, bike.id, filename, rows[0].n === 0],
-            );
-          });
-        } catch (e) {
-          await unlink(path.join(uploads(), filename)).catch(() => {});
-          if (e.message === "PHOTO_LIMIT")
-            return fail("Максимум 12 фотографий");
-          throw e;
-        }
+        await savePhotos(
+          transaction,
+          user.id,
+          bike.id,
+          [{ id, filename, bytes: image }],
+          uploads(),
+        );
         return json({ id }, 201);
       }
       if (
@@ -603,6 +654,7 @@ async function handler(req, { params }) {
     }
     return fail("Не найдено", 404);
   } catch (e) {
+    if (e instanceof QuotaError) return fail(e.message, e.status);
     if (e.name === "ZodError")
       return fail(
         "Проверьте заполнение полей: " +
@@ -613,14 +665,15 @@ async function handler(req, { params }) {
       ["EMPTY_BODY", "BODY_LIMIT"].includes(e.message)
     )
       return fail("Некорректный запрос");
-    console.error("API error", e);
+    logError("api_error", e);
     return fail("Не удалось выполнить запрос. Попробуйте ещё раз.", 500);
   }
 }
+const route = traced(handler);
 export {
-  handler as GET,
-  handler as POST,
-  handler as PUT,
-  handler as PATCH,
-  handler as DELETE,
+  route as GET,
+  route as POST,
+  route as PUT,
+  route as PATCH,
+  route as DELETE,
 };

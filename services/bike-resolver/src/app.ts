@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 import pino from "pino";
 import { ManualSources } from "./manual.js";
@@ -17,9 +18,20 @@ export function buildApp(
   sourceClient?: ManufacturerHttpClient,
 ) {
   const app = Fastify({
-    logger: true,
+    logger: { redact: ["req.headers.authorization"] },
     bodyLimit: 8192,
     requestTimeout: 120000,
+  });
+  app.addHook("onRequest", async (req, reply) => {
+    const secret = process.env.BIKE_RESOLVER_TOKEN;
+    if (!secret || !req.routeOptions.url?.startsWith("/internal/")) return;
+    const supplied = req.headers.authorization || "",
+      expected = "Bearer " + secret;
+    if (
+      Buffer.byteLength(supplied) !== Buffer.byteLength(expected) ||
+      !timingSafeEqual(Buffer.from(supplied), Buffer.from(expected))
+    )
+      return reply.code(401).send({ error: "unauthorized" });
   });
   const store = settings ?? new SettingsStore();
   const manual = new ManualSources(
