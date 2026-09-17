@@ -1,3 +1,7 @@
+import { importPhotos } from "../../../lib/photo-import.js";
+import { appVersion } from "../../../lib/version.js";
+import { z } from "zod";
+import { reorderComponents } from "../../../lib/component-order.js";
 import { saveFactorySpecification } from "../../../lib/factory-import.js";
 import {
   bikeResolverClient,
@@ -138,6 +142,13 @@ async function handler(req, { params }) {
         ? json({ bike })
         : fail("Велосипед не найден или доступ закрыт", 404);
     }
+    if (p[0] === "versions" && method === "GET") {
+      let resolver = null;
+      try {
+        resolver = await bikeResolverClient.request("/version");
+      } catch {}
+      return json({ app: appVersion, resolver });
+    }
     const user = await currentUser();
     if (p[0] === "me" && method === "GET") return json({ user });
     if (p[0] === "photos" && p.length === 2 && method === "GET") {
@@ -179,6 +190,42 @@ async function handler(req, { params }) {
         await bikeResolverClient.resolve(resolverQuery.parse(await body(req))),
       );
     }
+    if (p[1] === "photo-search" && p.length === 2 && method === "POST") {
+      if (!(await rateLimit("photo-search:" + user.id, 15)))
+        return fail("Слишком много запросов", 429);
+      const input = resolverQuery.parse(await body(req));
+      const data = await bikeResolverClient.request(
+        "/v1/photos/search",
+        "POST",
+        input,
+      );
+      await db.query(
+        "DELETE FROM photo_search_candidates WHERE expires_at<now()",
+      );
+      for (const p of data.photos)
+        await db.query(
+          "INSERT INTO photo_search_candidates(id,owner_id) VALUES($1,$2)",
+          [uuid.parse(p.id), user.id],
+        );
+      return json(data);
+    }
+    if (p[1] === "photo-candidates" && p.length === 3 && method === "GET") {
+      const id = uuid.parse(p[2]);
+      const { rows } = await db.query(
+        "SELECT id FROM photo_search_candidates WHERE id=$1 AND owner_id=$2 AND expires_at>now()",
+        [id, user.id],
+      );
+      if (!rows.length) return fail("Поиск устарел", 404);
+      const photo = await bikeResolverClient.request("/v1/photos/" + id);
+      const bytes = await preparePhoto(Buffer.from(photo.data, "base64"));
+      return new NextResponse(bytes, {
+        headers: {
+          "Content-Type": "image/webp",
+          "Cache-Control": "private, max-age=600",
+          "X-Content-Type-Options": "nosniff",
+        },
+      });
+    }
     if (p.length === 1) {
       if (method === "GET") {
         const { rows } = await db.query(
@@ -207,6 +254,7 @@ async function handler(req, { params }) {
         model: bike.model,
         trim: bike.trim || null,
         year: bike.year,
+        ...(selection.sourceUrl ? { sourceUrl: selection.sourceUrl } : {}),
         ...(selection.candidateId
           ? { candidateId: selection.candidateId }
           : {}),
@@ -229,9 +277,14 @@ async function handler(req, { params }) {
     if (p.length === 2) {
       if (method === "GET") return json({ bike: await hydrate(db, bike) });
       if (method === "PATCH") {
-        const b = bikeInput.parse(await body(req));
+        const b = bikeInput.parse({
+          ...bike,
+          weight: bike.weight === null ? null : Number(bike.weight),
+          price: bike.price === null ? null : Number(bike.price),
+          ...(await body(req)),
+        });
         await db.query(
-          "UPDATE bikes SET name=$1,brand=$2,model=$3,year=$4,category=$5,description=$6,color=$7,size=$8,weight=$9,trim=$12,factory_spec=CASE WHEN brand=$2 AND model=$3 AND year=$4 AND trim=$12 THEN factory_spec ELSE NULL END,updated_at=now() WHERE id=$10 AND owner_id=$11",
+          "UPDATE bikes SET name=$1,brand=$2,model=$3,year=$4,category=$5,description=$6,color=$7,size=$8,weight=$9,trim=$12,manufacturer_url=$13,price=$14,show_bike_price=$15,show_component_prices=$16,show_accessory_prices=$17,factory_spec=CASE WHEN brand=$2 AND model=$3 AND year=$4 AND trim=$12 THEN factory_spec ELSE NULL END,updated_at=now() WHERE id=$10 AND owner_id=$11",
           [
             b.name,
             b.brand,
@@ -245,6 +298,11 @@ async function handler(req, { params }) {
             bike.id,
             user.id,
             b.trim,
+            b.manufacturer_url,
+            b.price,
+            b.show_bike_price,
+            b.show_component_prices,
+            b.show_accessory_prices,
           ],
         );
         return json({ ok: true });
@@ -266,6 +324,35 @@ async function handler(req, { params }) {
         return json({ ok: true });
       }
     }
+    if (p[2] === "order" && p.length === 3 && method === "PUT") {
+      const input = z
+        .object({
+          components: z.array(uuid).max(2000).optional(),
+          groups: z
+            .array(z.string().regex(/^[a-z0-9_-]{1,50}$/))
+            .max(31)
+            .refine((a) => new Set(a).size === a.length)
+            .optional(),
+        })
+        .strict()
+        .parse(await body(req));
+      const ok = await transaction(async (q) => {
+        if (
+          input.components &&
+          !(await reorderComponents(q, bike.id, input.components))
+        )
+          return false;
+        if (input.groups)
+          await q.query("UPDATE bikes SET group_order=$1 WHERE id=$2", [
+            JSON.stringify(input.groups),
+            bike.id,
+          ]);
+        return true;
+      });
+      return ok
+        ? json({ ok: true })
+        : fail("Список компонентов изменился. Обновите страницу.", 409);
+    }
     if (p[2] === "share" && method === "PATCH") {
       const b = await body(req);
       if (typeof b.is_public !== "boolean")
@@ -285,7 +372,7 @@ async function handler(req, { params }) {
             bike.id,
           ]);
           await q.query(
-            "INSERT INTO components(id,bike_id,section,category,name,notes,price) VALUES($1,$2,$3,$4,$5,$6,$7)",
+            "INSERT INTO components(id,bike_id,section,category,name,notes,price,url,group_id,sort_order) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,(SELECT coalesce(max(sort_order),-1)+1 FROM components WHERE bike_id=$2))",
             [
               randomUUID(),
               bike.id,
@@ -294,6 +381,8 @@ async function handler(req, { params }) {
               c.name,
               c.notes,
               c.price,
+              c.url,
+              c.group_id,
             ],
           );
         });
@@ -308,13 +397,61 @@ async function handler(req, { params }) {
           return json({ ok: true });
         }
         if (method === "PATCH") {
-          const c = componentInput.parse(await body(req));
+          const existing = await db.query(
+            "SELECT * FROM components WHERE id=$1 AND bike_id=$2",
+            [p[3], bike.id],
+          );
+          if (!existing.rows[0]) return fail("Компонент не найден", 404);
+          const c = componentInput.parse({
+            ...existing.rows[0],
+            price:
+              existing.rows[0].price === null
+                ? null
+                : Number(existing.rows[0].price),
+            ...(await body(req)),
+          });
           await db.query(
-            "UPDATE components SET section=$1,category=$2,name=$3,notes=$4,price=$5 WHERE id=$6 AND bike_id=$7",
-            [c.section, c.category, c.name, c.notes, c.price, p[3], bike.id],
+            "UPDATE components SET section=$1,category=$2,name=$3,notes=$4,price=$5,url=$8,group_id=$9 WHERE id=$6 AND bike_id=$7",
+            [
+              c.section,
+              c.category,
+              c.name,
+              c.notes,
+              c.price,
+              p[3],
+              bike.id,
+              c.url,
+              c.group_id,
+            ],
           );
           return json({ ok: true });
         }
+      }
+    }
+    if (
+      p[2] === "photos" &&
+      p[3] === "import" &&
+      p.length === 4 &&
+      method === "POST"
+    ) {
+      if (!(await rateLimit("photo-import:" + user.id, 15)))
+        return fail("Слишком много запросов", 429);
+      const { ids } = z
+        .object({
+          ids: z
+            .array(uuid)
+            .min(1)
+            .max(3)
+            .refine((a) => new Set(a).size === a.length),
+        })
+        .parse(await body(req));
+      try {
+        return json(
+          await importPhotos(db, transaction, bike.id, user.id, ids, uploads()),
+          201,
+        );
+      } catch (e) {
+        return fail(e.message);
       }
     }
     if (p[2] === "photos") {
@@ -427,4 +564,10 @@ async function handler(req, { params }) {
     return fail("Не удалось выполнить запрос. Попробуйте ещё раз.", 500);
   }
 }
-export { handler as GET, handler as POST, handler as PATCH, handler as DELETE };
+export {
+  handler as GET,
+  handler as POST,
+  handler as PUT,
+  handler as PATCH,
+  handler as DELETE,
+};

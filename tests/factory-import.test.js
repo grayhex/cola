@@ -16,7 +16,7 @@ test("full bicycle names retain significant trim and extract trailing year", () 
 test("factory import seeds empty configuration once, preserves user parts and rejects stale identity", async () => {
   const db = new PGlite();
   try {
-    for (const f of ["001_initial", "003_factory_spec"])
+    for (const f of ["001_initial", "003_factory_spec", "004_garage_layout"])
       await db.exec(
         await readFile(new URL("../db/" + f + ".sql", import.meta.url), "utf8"),
       );

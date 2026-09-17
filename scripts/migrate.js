@@ -9,7 +9,7 @@ try {
   await client.query(
     "CREATE TABLE IF NOT EXISTS schema_migrations (version text PRIMARY KEY, applied_at timestamptz DEFAULT now())",
   );
-  for (const version of ["001_initial", "002_admin", "003_factory_spec"]) {
+  for (const version of ["001_initial", "002_admin", "003_factory_spec", "004_garage_layout"]) {
     const { rowCount } = await client.query(
       "SELECT 1 FROM schema_migrations WHERE version=$1",
       [version],

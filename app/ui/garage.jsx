@@ -1,5 +1,9 @@
 "use client";
+import PhotoSearch from "./photo-search.jsx";
+import Versions from "./versions.jsx";
 import { parseBikeName } from "../../lib/bike-name.js";
+import GroupedComponents from "./grouped-components.jsx";
+import { defaultBlocks } from "../../lib/garage-layout.js";
 import FactorySpecification from "./factory-specification.jsx";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -272,6 +276,14 @@ export default function Garage({ share }) {
       : settings.showDemo
         ? demo
         : null;
+  const blocks = settings.detailBlocks || defaultBlocks;
+  const block = (id) =>
+    blocks.find((b) => b.id === id) || defaultBlocks.find((b) => b.id === id);
+  const blockProps = (id) => ({
+    hidden: !block(id).enabled,
+    style: { order: blocks.findIndex((b) => b.id === id) + 1 },
+    "data-variant": block(id).variant,
+  });
   const editable = !!user && !share && bike?.id !== "demo";
   function openBike(b) {
     setSelected(b);
@@ -430,7 +442,10 @@ export default function Garage({ share }) {
               {bike.brand} {bike.model}
             </span>
           </div>
-          <div className="bike-heading">
+          <div
+            className="bike-heading configurable-block"
+            {...blockProps("heading")}
+          >
             <div>
               <div className="eyebrow">
                 <span className="category-tag">
@@ -480,7 +495,10 @@ export default function Garage({ share }) {
               )}
             </div>
           </div>
-          <div className="showcase">
+          <div
+            className="showcase configurable-block"
+            {...blockProps("photos")}
+          >
             <div className="photo-stage">
               <span className="photo-index">
                 {String(
@@ -510,6 +528,16 @@ export default function Garage({ share }) {
                     : t("Загрузить фото")}
                 </button>
               )}
+              {(photo || bike.photos[0])?.source_page_url && (
+                <a
+                  className="photo-credit"
+                  href={(photo || bike.photos[0]).source_page_url}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Источник фотографии
+                </a>
+              )}
               {bike.id === "demo" && !settings.demoImageId && (
                 <a
                   className="photo-credit"
@@ -521,46 +549,82 @@ export default function Garage({ share }) {
                 </a>
               )}
             </div>
-            <details className="bike-summary">
-              <summary>О велосипеде</summary>
-              <span className="eyebrow">{t("ПАСПОРТ ВЕЛОСИПЕДА")}</span>
-              <h2>
-                {t("Собран")}
-                <br />
-                {t("под себя.")}
-              </h2>
-              <p>
-                {bike.description ||
-                  t(
-                    "У каждого велосипеда своя история. Добавьте пару слов о вашем.",
-                  )}
-              </p>
-              <dl>
-                <div>
-                  <dt>{t("Год")}</dt>
-                  <dd>{bike.year}</dd>
-                </div>
-                <div>
-                  <dt>{t("Размер рамы")}</dt>
-                  <dd>{bike.size || "—"}</dd>
-                </div>
-                <div>
-                  <dt>{t("Вес")}</dt>
-                  <dd>{bike.weight ? `${Number(bike.weight)} кг` : "—"}</dd>
-                </div>
-                <div>
-                  <dt>{t("Цвет")}</dt>
-                  <dd>{bike.color || "—"}</dd>
-                </div>
-              </dl>
-              <div className="summary-bottom">
-                <span>{String(bike.components.length).padStart(2, "0")}</span>
-                {t("деталей в конфигурации")}
-              </div>
-            </details>
           </div>
+          <details
+            className="bike-summary configurable-block"
+            {...blockProps("summary")}
+            open={block("summary").open}
+          >
+            <summary>{t("О велосипеде")}</summary>
+            <span className="eyebrow">{t("ПАСПОРТ ВЕЛОСИПЕДА")}</span>
+            <h2>
+              {t("Собран")}
+              <br />
+              {t("под себя.")}
+            </h2>
+            <p hidden={settings.summaryFields?.description === false}>
+              {bike.description ||
+                t(
+                  "У каждого велосипеда своя история. Добавьте пару слов о вашем.",
+                )}
+            </p>
+            <dl hidden={settings.summaryFields?.metadata === false}>
+              <div>
+                <dt>{t("Год")}</dt>
+                <dd>{bike.year}</dd>
+              </div>
+              <div>
+                <dt>{t("Размер рамы")}</dt>
+                <dd>{bike.size || "—"}</dd>
+              </div>
+              <div>
+                <dt>{t("Вес")}</dt>
+                <dd>{bike.weight ? `${Number(bike.weight)} кг` : "—"}</dd>
+              </div>
+              <div>
+                <dt>{t("Цвет")}</dt>
+                <dd>{bike.color || "—"}</dd>
+              </div>
+            </dl>
+            <div className="summary-bottom">
+              <span>{String(bike.components.length).padStart(2, "0")}</span>
+              {t("деталей в конфигурации")}
+            </div>
+            {bike.manufacturer_url &&
+              settings.summaryFields?.manufacturer !== false && (
+                <a
+                  className="part-link"
+                  href={bike.manufacturer_url}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {t("Сайт производителя")}
+                </a>
+              )}
+            {bike.show_bike_price &&
+              bike.price != null &&
+              settings.summaryFields?.price !== false && (
+                <p>
+                  {t("Стоимость велосипеда")}:{" "}
+                  <strong>{rub(bike.price)}</strong>
+                </p>
+              )}
+          </details>
+          {editable && (
+            <button
+              className="quiet photo-search-trigger"
+              style={{ order: 2 }}
+              onClick={() => setModal({ type: "photoSearch" })}
+            >
+              Найти фотографии в интернете
+            </button>
+          )}
           {bike.photos.length > 0 && (
-            <details className="gallery-details">
+            <details
+              className="gallery-details configurable-block"
+              {...blockProps("gallery")}
+              open={block("gallery").open}
+            >
               <summary>Фотографии · {bike.photos.length}</summary>
               <div className="gallery">
                 {bike.photos.map((p) => (
@@ -611,7 +675,10 @@ export default function Garage({ share }) {
               </div>
             </details>
           )}
-          <section className="specifications">
+          <section
+            className="specifications configurable-block"
+            {...blockProps("specifications")}
+          >
             {bike.factory_spec && (
               <details className="factory-source">
                 <summary>
@@ -690,58 +757,23 @@ export default function Garage({ share }) {
                 <span>{t("АКТУАЛЬНАЯ КОНФИГУРАЦИЯ")}</span>
               </div>
               {bike.components.filter((c) => c.section === tab).length ? (
-                <div className="spec-table">
-                  {bike.components
-                    .filter((c) => c.section === tab)
-                    .map((c) => (
-                      <div className="spec-row" key={c.id}>
-                        <span className="part-category">
-                          <PartIcon
-                            category={c.category}
-                            icons={catalog.icons}
-                          />
-                          {c.category}
-                        </span>
-                        <div>
-                          <strong>{c.name}</strong>
-                          {c.notes && (
-                            <span className="part-notes">{c.notes}</span>
-                          )}
-                        </div>
-                        <div className="part-end">
-                          {editable && c.price != null && (
-                            <span className="price">{rub(c.price)}</span>
-                          )}
-                          {editable && (
-                            <>
-                              <button
-                                className="icon"
-                                aria-label={t("Изменить ") + c.name}
-                                onClick={() =>
-                                  setModal({
-                                    type: "part",
-                                    part: c,
-                                    section: c.section,
-                                  })
-                                }
-                              >
-                                <Pencil size={15} />
-                              </button>
-                              <button
-                                className="icon"
-                                aria-label={t("Удалить ") + c.name}
-                                onClick={() =>
-                                  setModal({ type: "deletePart", part: c })
-                                }
-                              >
-                                <Trash2 size={15} />
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                </div>
+                <GroupedComponents
+                  bike={bike}
+                  section={tab}
+                  catalog={catalog}
+                  editable={editable}
+                  rub={rub}
+                  onEdit={(c) =>
+                    setModal({ type: "part", part: c, section: c.section })
+                  }
+                  onDelete={(c) => setModal({ type: "deletePart", part: c })}
+                  onOrder={(order) =>
+                    run(async () => {
+                      await api("bikes/" + bike.id + "/order", "PUT", order);
+                      await refresh();
+                    })
+                  }
+                />
               ) : (
                 <div className="empty-parts">
                   <Package size={28} strokeWidth={1} />
@@ -771,22 +803,24 @@ export default function Garage({ share }) {
                 </div>
               )}
             </div>
-            {editable && bike.components.some((c) => c.price != null) && (
-              <div className="cost">
-                <Lock size={14} />
-                <span>
-                  {t("Указанная стоимость деталей · видна только вам")}
-                </span>
-                <strong>
-                  {rub(
-                    bike.components.reduce(
-                      (s, c) => s + Number(c.price || 0),
-                      0,
-                    ),
-                  )}
-                </strong>
-              </div>
-            )}
+            {(tab === "build"
+              ? bike.show_component_prices
+              : bike.show_accessory_prices) &&
+              bike.components.some(
+                (c) => c.section === tab && c.price != null,
+              ) && (
+                <div className="cost">
+                  <Lock size={14} />
+                  <span>{t("Стоимость выбранного раздела")}</span>
+                  <strong>
+                    {rub(
+                      bike.components
+                        .filter((c) => c.section === tab)
+                        .reduce((s, c) => s + Number(c.price || 0), 0),
+                    )}
+                  </strong>
+                </div>
+              )}
           </section>
           {editable && (
             <div className="detail-footer">
@@ -954,6 +988,7 @@ export default function Garage({ share }) {
           <span>© {new Date().getFullYear()}</span>
         </span>
         <span>{t("Ваш велосипед. В деталях.")}</span>
+        <Versions />
       </footer>
       <input
         ref={file}
@@ -999,6 +1034,7 @@ export default function Garage({ share }) {
                   ? t("Добавить компонент")
                   : t("Добавить аксессуар"),
               share: t("Поделиться велосипедом"),
+              photoSearch: "Выбор фотографий",
               photoView: t("Фотография велосипеда"),
               deleteBike: t("Удалить велосипед?"),
               deletePart: t("Удалить деталь?"),
@@ -1041,6 +1077,16 @@ export default function Garage({ share }) {
               }
             />
           )}
+          {modal.type === "photoSearch" && (
+            <PhotoSearch
+              bike={bike}
+              onDone={async () => {
+                await refresh();
+                setModal(null);
+                setNotice("Фотографии добавлены");
+              }}
+            />
+          )}
           {modal.type === "bike" && (
             <BikeForm
               initial={modal.bike}
@@ -1061,6 +1107,7 @@ export default function Garage({ share }) {
                           "/factory-spec",
                         "POST",
                         {
+                          sourceUrl: data.factorySourceUrl,
                           candidateId: data.factoryCandidateId,
                           initializeCurrent: data.initializeCurrent === true,
                         },
@@ -1075,7 +1122,7 @@ export default function Garage({ share }) {
                     const { bike: b } = await api("bikes/" + result.id);
                     openBike(b);
                   }
-                  setModal(null);
+                  setModal(modal.bike ? null : { type: "photoSearch" });
                   setNotice(
                     factoryWarning
                       ? t(
@@ -1290,7 +1337,16 @@ function BikeForm({ initial, busy, onSubmit }) {
   const { settings, catalog, t } = useSite();
   const { categories, models, parts, partCategories, manufacturers } = catalog;
   const [b, set] = useState(
-    initial ? { ...initial, weight: initial.weight || "" } : blankBike,
+    initial
+      ? { ...initial, price: initial.price ?? "", weight: initial.weight || "" }
+      : {
+          ...blankBike,
+          price: "",
+          manufacturer_url: "",
+          show_bike_price: false,
+          show_component_prices: false,
+          show_accessory_prices: false,
+        },
   );
   const [resolving, setResolving] = useState(false);
   const update = (k, v) =>
@@ -1312,6 +1368,7 @@ function BikeForm({ initial, busy, onSubmit }) {
         onSubmit({
           ...b,
           year: Number(b.year),
+          price: b.price === "" ? null : Number(b.price),
           weight: b.weight === "" ? null : Number(b.weight),
         });
       }}
@@ -1427,16 +1484,56 @@ function BikeForm({ initial, busy, onSubmit }) {
         onReset={() =>
           set((p) => ({ ...p, importFactory: false, initializeCurrent: false }))
         }
-        onImport={(candidateId, initializeCurrent) =>
+        onImport={(candidateId, initializeCurrent, sourceUrl) =>
           set((p) => ({
             ...p,
             importFactory: true,
             factoryCandidateId: candidateId,
+            factorySourceUrl: sourceUrl,
             initializeCurrent,
           }))
         }
         imported={b.importFactory}
       />
+      <Field label={t("Сайт производителя")}>
+        <input
+          type="url"
+          value={b.manufacturer_url || ""}
+          onChange={(e) => update("manufacturer_url", e.target.value)}
+          placeholder="https://…"
+        />
+      </Field>
+      <Field label={t("Стоимость велосипеда")}>
+        <input
+          type="number"
+          min="0"
+          max="999999999"
+          step="0.01"
+          value={b.price ?? ""}
+          onChange={(e) => update("price", e.target.value)}
+        />
+      </Field>
+      <details className="price-settings">
+        <summary>{t("Отображение стоимости")}</summary>
+        <p className="help">
+          Включённая стоимость видна в карточке и по публичной ссылке, если
+          доступ открыт.
+        </p>
+        {[
+          ["show_bike_price", "Велосипед"],
+          ["show_component_prices", "Компоненты"],
+          ["show_accessory_prices", "Аксессуары"],
+        ].map(([key, label]) => (
+          <label className="admin-toggle" key={key}>
+            {label}
+            <input
+              type="checkbox"
+              checked={!!b[key]}
+              onChange={(e) => update(key, e.target.checked)}
+            />
+          </label>
+        ))}
+      </details>
       <Field label={t("Цвет")}>
         <input
           maxLength={60}
@@ -1566,6 +1663,28 @@ function PartForm({ initial, section, busy, onSubmit }) {
           value={c.notes}
           onChange={(e) => update("notes", e.target.value)}
           placeholder={t("Размер, материал, передаточное отношение…")}
+        />
+      </Field>
+      <Field label="Группа">
+        <select
+          value={c.group_id || ""}
+          onChange={(e) => update("group_id", e.target.value)}
+        >
+          <option value="">По категории</option>
+          {catalog.componentGroups.map((g) => (
+            <option key={g.id} value={g.id}>
+              {g.name}
+            </option>
+          ))}
+        </select>
+      </Field>
+      <Field label="Ссылка на компонент или аксессуар">
+        <input
+          type="url"
+          value={c.url || ""}
+          maxLength={2048}
+          onChange={(e) => update("url", e.target.value)}
+          placeholder="https://…"
         />
       </Field>
       <Field label={t("Стоимость покупки / апгрейда, ₽")}>

@@ -20,3 +20,4 @@ jobs:
         working-directory: services/bike-resolver
       - run: npm test && npm run build
         working-directory: services/bike-resolver
+      - run: pnpm test:integration

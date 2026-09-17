@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import Versions from "../ui/versions.jsx";
 async function request(method = "GET", body, path = "") {
   const r = await fetch("/api/admin/resolver" + path, {
     method,
@@ -57,6 +58,7 @@ export default function ResolverSettings() {
   return (
     <section className="admin-panel">
       <h2>Bike Resolver</h2>
+      <Versions />
       <p className="help">
         Поиск заводской комплектации на официальных сайтах. Изменения
         применяются без перезапуска. Текущие компоненты пользователей не
@@ -123,6 +125,33 @@ export default function ResolverSettings() {
               </label>
             ))}
           </div>
+          <label className="admin-toggle">
+            Поиск фотографий
+            <input
+              type="checkbox"
+              checked={draft.photoSearch}
+              onChange={(e) => set("photoSearch", e.target.checked)}
+            />
+          </label>
+          <label className="field">
+            <span>Дополнительные домены для импорта по ссылке</span>
+            <textarea
+              value={(draft.manualDomains || []).join("\n")}
+              onChange={(e) =>
+                set(
+                  "manualDomains",
+                  e.target.value.split(/\n/).map((s) => s.trim().toLowerCase()),
+                )
+              }
+              onBlur={() =>
+                set("manualDomains", draft.manualDomains.filter(Boolean))
+              }
+            />
+          </label>
+          <p className="help">
+            Один точный домен в строке, без https и пути. Сайты производителей
+            доступны отдельно. Закрытые сети и локальные адреса запрещены.
+          </p>
           <h3>Адаптеры производителей</h3>
           <p className="help">
             Непроверенные источники отключены. Их можно включить для

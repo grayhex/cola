@@ -131,7 +131,13 @@ export function extractSpecification(
   if (Object.keys(raw).filter((k) => componentType(k) !== "other").length < 3) {
     $("tr").each((_, e) => {
       const cols = $(e).children("th,td");
-      if (cols.length === 2 && componentType(cols.first().text()) !== "other")
+      if (
+        cols.length === 2 &&
+        (componentType(cols.first().text()) !== "other" ||
+          /^(дополнительные аксессуары|accessories)$/i.test(
+            clean(cols.first().text()),
+          ))
+      )
         add(cols.first().text(), cols.last().text());
     });
     $("dt").each((_, e) => {
