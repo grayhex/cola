@@ -45,6 +45,7 @@ are retained. This change adds no user-facing feature or redesign.
 `npm test`, `npm run build`; `pnpm test:integration`; `pnpm test:e2e` (install
 Chromium/WebKit first); `python3 scripts/test-compose.py`; backup drill in operations
 runbook. CI supplies an isolated PostgreSQL 17 service through `TEST_DATABASE_URL`.
-Do not point that variable at real data: migrations and HTTP fixtures write users
-and bikes. Without it, local HTTP smoke uses disposable PGlite with one connection;
+The harness creates and removes its own random database; the supplied connection
+needs CREATEDB permission. Use a test PostgreSQL server. Without it, local HTTP
+smoke uses disposable PGlite with one connection;
 the concurrent quota test explicitly requires real PostgreSQL and runs in CI.

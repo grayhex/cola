@@ -7,6 +7,7 @@ target_project="${source_project}-restore"
 cleanup() {
   docker compose -p "$source_project" -f "$tmp/compose.json" down -v --remove-orphans || true
   docker compose -p "$target_project" -f "$tmp/compose.json" down -v --remove-orphans || true
+  docker image rm "${source_project}-app" "${source_project}-bike-resolver" || true
   rm -rf "$tmp"
 }
 trap cleanup EXIT

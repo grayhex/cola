@@ -50,14 +50,16 @@ def backup(dest,keep):
             compose('exec','-T','db','pg_dump','-U','colabike','-d','colabike','-Fc',stdout=file)
         with open(temporary/'photos.tar.gz','wb') as file:
             run(['docker','run','--rm','--user','0','--volumes-from',container+':ro','--entrypoint','tar',image(container),'-C','/app/uploads','-czf','-','.'],stdout=file)
-        manifest={'format':'colabike-backup-v1','createdAt':stamp,'appImage':image(container),'sha256':{n:sha(temporary/n) for n in ['database.dump','photos.tar.gz']}}
+        manifest={'format':'colabike-backup-v1','createdAt':stamp,'appImage':image(container),'appImageId':output(['docker','inspect','--format','{{.Image}}',container]),'sha256':{n:sha(temporary/n) for n in ['database.dump','photos.tar.gz']}}
         (temporary/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
         validate(temporary)
         temporary.rename(final)
     finally:
-        if resume: compose('start',*resume)
-        # Incomplete archives are never published or eligible for retention cleanup.
-        if temporary.exists(): shutil.rmtree(temporary)
+        try:
+            if resume: compose('start',*resume)
+        finally:
+            # Incomplete archives are never published or eligible for retention cleanup.
+            if temporary.exists(): shutil.rmtree(temporary)
     candidates=[]
     for p in dest.glob('colabike-*'):
         if p.is_symlink() or not p.is_dir(): continue

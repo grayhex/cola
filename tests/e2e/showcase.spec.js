@@ -29,7 +29,7 @@ test("registration, touch autocomplete, bike/photo, public feed, like and revoke
     .getByRole("button", { name: "Добавить велосипед", exact: true })
     .click();
   const dialog = page.getByRole("dialog");
-  await dialog.getByLabel("Тип велосипеда").selectOption("road");
+  await dialog.getByLabel("Тип велосипеда").selectOption("mtb");
   await expect(dialog.getByLabel("Год", { exact: true })).toHaveValue("");
   const brand = dialog.getByRole("combobox", {
     name: "Производитель",

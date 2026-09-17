@@ -1,4 +1,6 @@
 import net from "node:net";
+import pg from "pg";
+import { randomUUID } from "node:crypto";
 // Starts an isolated, disposable DB, fixture resolver and built app in one process tree.
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
@@ -12,6 +14,9 @@ const children = [],
   logs = [];
 const base = "http://localhost:3100";
 const externalDatabase = process.env.TEST_DATABASE_URL;
+let databaseAdmin,
+  databaseCreated = false;
+const databaseName = "cola_test_" + randomUUID().replaceAll("-", "");
 const environment = {
   ...process.env,
   DATABASE_URL: externalDatabase || "postgres://test:test@127.0.0.1:5432/test",
@@ -24,7 +29,7 @@ const environment = {
   UPLOAD_DIR: path.join(dir, "uploads"),
 };
 function start(args, cwd = root) {
-  const log = path.join(dir, children.length + ".log");
+  const log = path.join(dir, logs.length + ".log");
   logs.push(log);
   const fd = openSync(log, "w");
   const child = spawn(process.execPath, args, {
@@ -57,6 +62,17 @@ try {
       probe.listen(port, "127.0.0.1", () => probe.close(resolve));
     });
   if (externalDatabase) {
+    databaseAdmin = new pg.Client({
+      connectionString: externalDatabase,
+      connectionTimeoutMillis: 5000,
+    });
+    await databaseAdmin.connect();
+    // Never migrate or seed the database named in the supplied admin connection.
+    await databaseAdmin.query('CREATE DATABASE "' + databaseName + '"');
+    databaseCreated = true;
+    const url = new URL(externalDatabase);
+    url.pathname = "/" + databaseName;
+    environment.DATABASE_URL = url.toString();
     const migration = start(["scripts/migrate.js"]);
     await new Promise((resolve, reject) =>
       migration.once("exit", (code) =>
@@ -123,5 +139,13 @@ try {
           }),
     ),
   );
-  await rm(dir, { recursive: true, force: true });
+  try {
+    if (databaseCreated)
+      await databaseAdmin.query(
+        'DROP DATABASE "' + databaseName + '" WITH (FORCE)',
+      );
+  } finally {
+    await databaseAdmin?.end();
+    await rm(dir, { recursive: true, force: true });
+  }
 }

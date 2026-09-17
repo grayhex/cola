@@ -39,7 +39,7 @@ The script refuses tracked local edits, keeps a normal `main` branch for later
 `git pull`, serializes with backups, and never removes volumes. First CI deployment
 records a successful SHA in `/var/lib/colabike/verified-sha`. Thereafter the existing
 `sudo -n /usr/local/sbin/deploy-cola` command redeploys that last successful SHA.
-Use Actions → **Deploy verified ColaBike** → Run workflow on main to retest and
+Use Actions → **Recheck and redeploy Cola** → Run workflow on main to retest and
 deploy a newer commit. Never pass an untested SHA manually.
 
 In GitHub branch protection for `main`, require the **check** job from
