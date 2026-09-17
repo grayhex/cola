@@ -1,4 +1,8 @@
 "use client";
+import BikeCategoryIcon from "./bike-category-icon.jsx";
+import BikeMeters from "./bike-meters.jsx";
+import ProfileForm from "./profile-form.jsx";
+
 import PhotoSearch from "./photo-search.jsx";
 import BikeWizard from "./bike-wizard.jsx";
 import Versions from "./versions.jsx";
@@ -9,6 +13,7 @@ import FactorySpecification from "./factory-specification.jsx";
 import { useEffect, useRef, useState } from "react";
 import {
   Bike,
+  Heart,
   Plus,
   ArrowUpRight,
   ArrowLeft,
@@ -232,8 +237,8 @@ function Photo({ bike, className = "", photo }) {
   );
 }
 
-export default function Garage({ share }) {
-  const { settings, catalog, t } = useSite();
+export default function Garage({ share, account = false }) {
+  const { personalSettings: settings, catalog, t, setPreferences } = useSite();
   const { categories, models, parts, partCategories, manufacturers } = catalog;
   const [user, setUser] = useState(null),
     [bikes, setBikes] = useState([]),
@@ -248,28 +253,34 @@ export default function Garage({ share }) {
     [query, setQuery] = useState(""),
     [searchOpen, setSearchOpen] = useState(false),
     [photo, setPhoto] = useState(null);
+  const [page, setPage] = useState(1), [total, setTotal] = useState(0);
+  const requestId = useRef(0);
   const file = useRef();
   async function load() {
+    const sequence = ++requestId.current;
+    const { user: u } = await api("me");
+    if (sequence !== requestId.current) return;
+    setUser(u);
+    setPreferences(u?.preferences || {});
     if (share) {
       const data = await api("shared/" + share);
-      setSelected(data.bike);
+      if (sequence === requestId.current) setSelected(data.bike);
     } else {
-      const { user: u } = await api("me");
-      setUser(u);
-      if (u) {
-        const { bikes: all } = await api("bikes");
-        setBikes(all);
-        setSelected(
-          (prev) => (prev && all.find((b) => b.id === prev.id)) || null,
-        );
-      }
+      const data = account
+        ? u ? await api("bikes") : {bikes:[]}
+        : await api("showcase?page=" + page + "&category=" + (filter === "all" ? "" : filter) + "&q=" + encodeURIComponent(query));
+      if (sequence !== requestId.current) return;
+      setBikes(data.bikes);
+      setTotal(data.total ?? data.bikes.length);
+      setSelected(prev => prev ? data.bikes.find(b => b.id === prev.id) || null : null);
     }
   }
   useEffect(() => {
-    load()
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
-  }, [share]);
+    const timer = setTimeout(() => {
+      load().catch(e => setError(e.message)).finally(() => setLoading(false));
+    }, query ? 200 : 0);
+    return () => { clearTimeout(timer); requestId.current++; };
+  }, [share, account, page, filter, query]);
   useEffect(() => {
     if (notice) {
       const t = setTimeout(() => setNotice(""), 4000);
@@ -287,13 +298,7 @@ export default function Garage({ share }) {
       setBusy(false);
     }
   }
-  const bike = share
-    ? selected
-    : user
-      ? selected
-      : settings.showDemo
-        ? demo
-        : null;
+  const bike = selected;
   const blocks = settings.detailBlocks || defaultBlocks;
   const block = (id) =>
     blocks.find((b) => b.id === id) || defaultBlocks.find((b) => b.id === id);
@@ -302,8 +307,9 @@ export default function Garage({ share }) {
     style: { order: blocks.findIndex((b) => b.id === id) + 1 },
     "data-variant": block(id).variant,
   });
-  const editable = !!user && !share && bike?.id !== "demo";
+  const editable = account && !!user && !share && bike?.is_owner === true;
   function openBike(b) {
+    if (!account) { window.location.assign("/b/" + b.share_id); return; }
     setSelected(b);
     setPhoto(null);
     setTab("build");
@@ -321,6 +327,14 @@ export default function Garage({ share }) {
       setError("");
     }
   }
+  async function like(b) {
+    if (!user) { auth(); return; }
+    await run(async () => {
+      const result = await api("bikes/" + b.id + "/like", b.liked ? "DELETE" : "PUT");
+      setBikes(all => all.map(x => x.id === b.id ? {...x,...result} : x));
+      setSelected(x => x?.id === b.id ? {...x,...result} : x);
+    });
+  }
   async function refresh() {
     await load();
   }
@@ -328,17 +342,17 @@ export default function Garage({ share }) {
     setError("");
     setModal({ type: "auth", mode });
   }
-  const filtered = bikes.filter(
+  const filtered = account ? bikes.filter(
     (b) =>
       (filter === "all" || b.category === filter) &&
       `${b.name} ${b.brand} ${b.model}`
         .toLowerCase()
         .includes(query.toLowerCase()),
-  );
+  ) : bikes;
   return (
     <>
       <header className="header">
-        <a className="brand" href="/" aria-label={t("ColaBike — главная")}>
+        <a className={"brand" + (settings.logoId ? " brand-illustrated" : "")} href="/" aria-label={t("ColaBike — главная")}>
           {settings.logoId ? (
             <img
               className="site-logo"
@@ -352,10 +366,7 @@ export default function Garage({ share }) {
         </a>
         <div className="header-right">
           {share ? (
-            <a href="/" className="text-link">
-              {t("Мой гараж")}
-              <ArrowUpRight size={16} />
-            </a>
+            <><a href="/" className="text-link">{t("Витрина")}<ArrowUpRight size={16}/></a>{user && <a className="account-link" href="/account">Личный кабинет</a>}</>
           ) : user ? (
             <>
               {user.role === "admin" && (
@@ -364,7 +375,8 @@ export default function Garage({ share }) {
                   <span>{t("Админка")}</span>
                 </a>
               )}
-              <span className="user-name">{user.name}</span>
+              <a className="user-name" href="/account">{user.name}</a>
+              <a className="account-link" href={account ? "/" : "/account"}>{account ? "Витрина" : "Личный кабинет"}</a>
               <span className="avatar">
                 {user.name.slice(0, 1).toUpperCase()}
               </span>
@@ -378,6 +390,8 @@ export default function Garage({ share }) {
                     setUser(null);
                     setBikes([]);
                     setSelected(null);
+                    setPreferences({});
+                    await load();
                   })
                 }
               >
@@ -394,24 +408,13 @@ export default function Garage({ share }) {
                 disabled={!settings.registrationOpen}
                 onClick={() => auth("register")}
               >
-                {t("Создать гараж")}
+                {t("Зарегистрироваться")}
                 <ArrowUpRight size={16} />
               </button>
             </>
           )}
         </div>
       </header>
-      <div className="subnav">
-        <span>
-          <Bike size={18} />
-          {share ? t("Публичный велосипед") : t("Личный гараж")}
-        </span>
-        {settings.showTagline && (
-          <span className="subnav-note">
-            {t("КАЖДАЯ ДЕТАЛЬ ИМЕЕТ ЗНАЧЕНИЕ")}
-          </span>
-        )}
-      </div>
       {notice && (
         <div className="toast" role="status">
           <Check size={18} />
@@ -429,7 +432,7 @@ export default function Garage({ share }) {
       {loading ? (
         <main className="loading">
           <LoaderCircle className="spin" />
-          {t("Открываем гараж…")}
+          {t("Загружаем велосипеды…")}
         </main>
       ) : share && !bike ? (
         <main className="empty">
@@ -443,7 +446,7 @@ export default function Garage({ share }) {
       ) : bike ? (
         <main className="detail">
           <div className="breadcrumbs">
-            {user && !share ? (
+            {!share ? (
               <button
                 className="quiet"
                 onClick={() => {
@@ -457,7 +460,7 @@ export default function Garage({ share }) {
             ) : (
               <span>
                 {share
-                  ? t("Коллекция владельца")
+                  ? bike.author
                   : t("Пример вашего будущего гаража")}
               </span>
             )}
@@ -518,7 +521,7 @@ export default function Garage({ share }) {
             hidden={!block("heading").enabled}
             style={{ order: blocks.findIndex((b) => b.id === "heading") + 1 }}
           >
-            <span className="category-tag">{categories[bike.category]}</span>
+            <span className="category-tag"><BikeCategoryIcon category={bike.category} label={categories[bike.category]} /></span>
             <span>{bike.year}</span>
             {bike.color && <span>{bike.color}</span>}
             {bike.size && <span>{bike.size}</span>}
@@ -550,6 +553,7 @@ export default function Garage({ share }) {
               >
                 <Photo bike={bike} photo={photo} className="hero-photo" />
               </button>
+              {bike.is_public && <button className="like-button" type="button" disabled={busy || bike.is_owner} aria-label={"Нравится: " + bike.likes} aria-pressed={!!bike.liked} onClick={() => like(bike)}><Heart size={16} fill={bike.liked ? "currentColor" : "none"} /><span>{bike.likes || 0}</span></button>}
               {editable && (
                 <div className="photo-tools">
                   <button
@@ -850,26 +854,13 @@ export default function Garage({ share }) {
             />
           )}
           <div className="garage-heading">
-            <div>
-              <div className="eyebrow">{t("ВАША ЛИЧНАЯ КОЛЛЕКЦИЯ")}</div>
-              <h1>
-                {t("Мой гараж")}
-                <span className="count">
-                  {String(bikes.length).padStart(2, "0")}
-                </span>
-              </h1>
-              <p>{t("Любимые велосипеды. Все детали на своих местах.")}</p>
+            <div><h1>{account ? "Мои велосипеды" : "Витрина"}<span className="count">{total}</span></h1></div>
+            <div className="showcase-actions">
+              {account && user && <button className="quiet" onClick={()=>setModal({type:"profile"})}><Settings2 size={16}/>Настройки</button>}
+              <button className="button" onClick={()=>user ? setModal({type:"bike"}) : auth("register")}><Plus size={18}/><span className="add-bike-label">Добавить велосипед</span></button>
             </div>
-            <button
-              className="button"
-              onClick={() =>
-                user ? setModal({ type: "bike" }) : auth("register")
-              }
-            >
-              <Plus size={18} />
-              <span className="add-bike-label">{t("Добавить велосипед")}</span>
-            </button>
           </div>
+          {account && !user && <p>Войдите, чтобы управлять своими велосипедами и оформлением.</p>}
           <div className="garage-tools">
             <div className="filters">
               {[
@@ -879,9 +870,9 @@ export default function Garage({ share }) {
                 <button
                   key={key}
                   className={filter === key ? "active" : ""}
-                  onClick={() => setFilter(key)}
+                  onClick={() => { setFilter(key); setPage(1); }}
                 >
-                  {label}
+                  {key === "all" ? label : <BikeCategoryIcon category={key} label={label} />}
                 </button>
               ))}
             </div>
@@ -902,70 +893,32 @@ export default function Garage({ share }) {
                 <input
                   aria-label={t("Найти велосипед")}
                   value={query}
-                  onChange={(e) => setQuery(e.target.value)}
+                  onChange={(e) => { setQuery(e.target.value); setPage(1); }}
                   autoFocus
-                  placeholder={t("Найти в гараже")}
+                  placeholder="Найти велосипед или автора"
                 />
               </label>
             )}
           </div>
           <div className="bike-grid">
-            {filtered.map((b) => (
-              <button
-                className="bike-card"
-                key={b.id}
-                onClick={() => openBike(b)}
-              >
+            {filtered.map(b => (
+              <article className="bike-card" key={b.id}>
                 <div className="card-photo">
-                  <Photo bike={b} />
-                  <span className="card-type">{categories[b.category]}</span>
+                  <button className="card-open-photo" type="button" onClick={()=>openBike(b)} aria-label={"Открыть " + b.name}><Photo bike={b}/></button>
+                  <span className="card-type"><BikeCategoryIcon category={b.category} label={categories[b.category]}/></span>
+                  {b.is_public && <button type="button" className="like-button" disabled={busy || b.is_owner} aria-label={"Нравится: " + b.likes} aria-pressed={!!b.liked} onClick={()=>like(b)}><Heart size={16} fill={b.liked ? "currentColor" : "none"}/><span>{b.likes || 0}</span></button>}
+                  {account && !b.is_public && <span className="private-badge" title="Личный велосипед"><Lock size={14}/></span>}
                 </div>
                 <div className="card-info">
-                  <span className="eyebrow">
-                    {b.year} · {b.is_public ? t("По ссылке") : t("Личный")}
-                  </span>
-                  <h2>
-                    {b.brand} {b.model}
-                    <ArrowUpRight size={22} />
-                  </h2>
-                  <p>{b.name}</p>
-                  <div className="card-bottom">
-                    <span>
-                      {b.components.length}
-                      {t("деталей")}
-                    </span>
-                    <span>
-                      {b.weight
-                        ? Number(b.weight) + t(" кг")
-                        : t("Вес не указан")}
-                    </span>
-                  </div>
+                  <div className="card-facts"><span>{b.year || ""}</span><span>{b.color || ""}</span><span>{b.size || ""}</span><span>{b.weight ? Number(b.weight)+" кг" : ""}</span></div>
+                  <h2><button type="button" onClick={()=>openBike(b)}>{b.name || [b.brand,b.model].join(" ")}</button><span className="card-author" title={b.author}>@{b.author}</span></h2>
+                  <BikeMeters scores={b.scores}/>
                 </div>
-              </button>
+              </article>
             ))}
-            {!query && filter === "all" && (
-              <button
-                className="add-card"
-                onClick={() =>
-                  user ? setModal({ type: "bike" }) : auth("register")
-                }
-              >
-                <span className="plus-circle">
-                  <Plus size={28} />
-                </span>
-                <h2>
-                  {bikes.length
-                    ? t("Ещё один любимый")
-                    : t("Ваш первый велосипед")}
-                </h2>
-                <p>
-                  {t("Добавьте байк и соберите")}
-                  <br />
-                  {t("его историю в деталях.")}
-                </p>
-              </button>
-            )}
           </div>
+          {!account && total > 24 && <nav className="feed-pages" aria-label="Страницы витрины"><button className="quiet" disabled={page<=1} onClick={()=>setPage(p=>p-1)}>Назад</button><span>{page} / {Math.ceil(total/24)}</span><button className="quiet" disabled={page*24>=total} onClick={()=>setPage(p=>p+1)}>Далее</button></nav>}
+          {!filtered.length && !query && filter === "all" && <p className="help">{account ? "Добавьте свой первый велосипед." : "Пока нет публичных велосипедов. Опубликуйте свой!"}</p>}
           {!filtered.length && (query || filter !== "all") && (
             <div className="empty-parts">
               <Search />
@@ -1024,6 +977,7 @@ export default function Garage({ share }) {
         <Modal
           title={
             {
+              profile: "Личный кабинет",
               auth:
                 modal.mode === "register"
                   ? t("Ваш гараж начинается здесь")
@@ -1049,6 +1003,9 @@ export default function Garage({ share }) {
               {error}
             </div>
           )}
+          {modal.type === "profile" && user && <ProfileForm user={user} busy={busy} onSave={data=>run(async()=>{
+            const result = await api("profile","PATCH",data); setUser(result.user); setPreferences(result.user.preferences); await refresh(); setModal(null); setNotice("Настройки сохранены");
+          })}/>}
           {modal.type === "photoView" && (
             <Photo bike={bike} photo={photo} className="full-photo" />
           )}
@@ -1092,6 +1049,7 @@ export default function Garage({ share }) {
             <BikeWizard
               onBusy={setBusy}
               onCreated={async (id) => {
+                if (!account) { window.location.assign("/account"); return; }
                 await refresh();
                 const { bike: b } = await api("bikes/" + id);
                 openBike(b);
@@ -1174,12 +1132,12 @@ export default function Garage({ share }) {
                 <div>
                   <h3>
                     {bike.is_public
-                      ? t("Доступен по ссылке")
+                      ? t("Опубликован на витрине")
                       : t("Личный велосипед")}
                   </h3>
                   <p>
                     {t(
-                      "Видны фотографии, комплектация и аксессуары. Цены и почта скрыты.",
+                      "Публичный велосипед виден всем на витрине. Почта скрыта; цены видны только при включённом отображении.",
                     )}
                   </p>
                 </div>
@@ -1198,7 +1156,7 @@ export default function Garage({ share }) {
               >
                 {bike.is_public
                   ? t("Закрыть доступ")
-                  : t("Включить публичную ссылку")}
+                  : t("Опубликовать на витрине")}
               </button>
               {bike.is_public && (
                 <div className="share-copy">

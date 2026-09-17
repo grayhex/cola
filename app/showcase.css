@@ -1,0 +1,40 @@
+/* Public exhibition and personal management share the same visual language. */
+.showcase-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.account-link{font-size:12px;color:inherit;text-decoration:none;white-space:nowrap}
+.site-root .bike-card{display:block;text-align:left;min-width:0}
+.site-root .card-open-photo{display:block;border:0;padding:0;width:100%;background:none;cursor:pointer}
+.site-root .card-photo{position:relative}
+.site-root .card-type{padding:4px 7px;display:flex;align-items:center;pointer-events:none}
+.site-root .card-facts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;font-size:11px;color:var(--muted);min-height:17px;margin-bottom:4px}
+.card-facts span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.site-root .card-info h2{display:flex;align-items:baseline;gap:8px}
+.site-root .card-info h2 button{min-width:0;flex:1;text-align:left;background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.site-root .card-info h2 .card-author{font-size:11px;font-weight:400;color:var(--muted);max-width:35%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.site-root .like-button{position:absolute;bottom:9px;right:9px;display:flex;gap:5px;align-items:center;justify-content:center;min-width:44px;min-height:36px;padding:6px 9px;border:0;border-radius:20px;background:#fffffff0;color:#242926;font-size:12px;cursor:pointer;z-index:2}
+.site-root .like-button[aria-pressed=true]{color:var(--accent)}
+.site-root .like-button:disabled{cursor:default;opacity:.8}
+.private-badge{position:absolute;bottom:10px;right:10px;background:var(--paper);padding:5px;border-radius:50%}
+.bike-meters{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:9px}
+.bike-meter>span{display:flex;justify-content:space-between;font-size:9px;color:var(--muted);gap:4px}
+.bike-meter small{font:inherit}
+.bike-meter [role=progressbar]{height:3px;background:var(--line);border-radius:3px;overflow:hidden;margin-top:4px}
+.bike-meter i{display:block;height:100%;background:var(--accent);transform-origin:left;animation:meter-fill .6s ease-out;transition:width .35s ease}
+.bike-meter.complete i{background:var(--muted)}
+.feed-pages{display:flex;align-items:center;justify-content:center;gap:18px;margin:18px 0;font-size:13px}
+@keyframes meter-fill{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@media(prefers-reduced-motion:reduce){.bike-meter i{animation:none;transition:none}}
+@media(min-width:900px){
+ .site-root .header{padding-top:0;padding-bottom:0;min-height:120px;gap:24px}
+ .site-root .brand-illustrated{width:min(52vw,1060px);height:120px;min-width:0;flex-shrink:1;position:relative;overflow:hidden;background:#fff}
+ .site-root .brand-illustrated .site-logo{width:100%;height:100%;max-width:none;object-fit:cover;object-position:left center;mask-image:linear-gradient(to right,#000 90%,transparent);-webkit-mask-image:linear-gradient(to right,#000 90%,transparent)}
+ .site-root .header-right{margin-left:auto;flex-shrink:0}
+}
+@media(max-width:600px){
+ .site-root .account-link{font-size:11px}
+ .site-root .header-right{gap:8px}
+ .site-root .card-info h2{font-size:16px}
+ .site-root .card-info h2 .card-author{font-size:10px}
+ .site-root .card-facts{font-size:10px}
+ .site-root .bike-meters{margin-top:7px}
+ .showcase-actions{gap:8px}
+}
