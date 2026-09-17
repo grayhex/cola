@@ -21,4 +21,4 @@ COPY --from=builder --chown=colabike:colabike /app/scripts ./scripts
 COPY --from=builder --chown=colabike:colabike /app/lib ./lib
 USER colabike
 EXPOSE 3000
-CMD ["sh", "-c", "node scripts/migrate.js && node server.js"]
+CMD ["sh", "-c", "node scripts/check-runtime.js && node scripts/migrate.js && node server.js"]

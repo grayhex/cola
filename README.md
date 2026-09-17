@@ -267,7 +267,7 @@ sudo git clone git@github.com:grayhex/cola.git /opt/stacks/cola
 cd /opt/stacks/cola
 ```
 
-Создайте production `.env` и **до первого запуска БД** задайте постоянный `POSTGRES_PASSWORD`.
+Этот раздел описывает существующую staging VM. Для публичного VDS используйте отдельный [production runbook](docs/OPERATIONS.md#migration-from-staging-vm-to-production-vds) и `compose.prod.yaml`. На staging **до первого запуска БД** задайте постоянный `POSTGRES_PASSWORD`.
 
 ```bash
 sudo nano /opt/stacks/cola/.env
@@ -291,28 +291,17 @@ sudo docker compose ps
 
 ## 2. Deploy script
 
-`/usr/local/sbin/deploy-cola` не хранится в репозитории: это серверный скрипт, который обновляет рабочую копию и пересобирает весь стек.
-
-Текущее содержимое:
-
-```bash
-#!/usr/bin/env bash
-set -Eeuo pipefail
-
-cd /opt/stacks/cola
-git pull --ff-only origin main
-docker compose up -d --build --remove-orphans --wait --wait-timeout 120
-docker compose ps
-```
-
-Установить его можно так:
+Скрипт теперь хранится в `ops/deploy-cola`. Он выкатывает точный проверенный
+commit, переданный CI, а не новый непроверенный HEAD main. Перед первым deploy
+после обновления установите его на VM:
 
 ```bash
-sudo nano /usr/local/sbin/deploy-cola
-sudo chmod 755 /usr/local/sbin/deploy-cola
+sudo install -o root -g root -m 755 ops/deploy-cola /usr/local/sbin/deploy-cola
 ```
 
-Важно: команда запускает **весь Compose-проект**, включая `app`, `db` и `bike-resolver`, а не только контейнер приложения.
+Обычный вызов без аргумента повторно выкатывает последний успешно проверенный
+commit. Для нового main используйте автоматический pipeline или ручной запуск
+workflow. Полная инструкция: [Beta operations](docs/OPERATIONS.md).
 
 ## 3. Sudo для GitHub runner
 
@@ -493,7 +482,7 @@ pnpm install
   → pnpm test:integration
 ```
 
-Production deployment отделён от CI и запускается только после push в `main` через self-hosted runner.
+Deploy на self-hosted runner выполняется после успешного `check` того же commit через `needs`. CI также проверяет Chromium, mobile WebKit, Compose и восстановление backup. Ручной workflow повторяет проверки перед deploy.
 
 ---
 
@@ -552,3 +541,8 @@ Dockerfile              production image ColaBike
 **ColaBike** — собери байк, покажи сборку, сравнивай идеи и продолжай прокачивать велосипед.
 
 </div>
+
+## Подготовка публичной beta
+
+[Эксплуатация, квоты, backup/restore и переезд на colabike.ru](docs/OPERATIONS.md).
+[Аудит безопасности и оставшиеся ограничения](docs/BETA_AUDIT.md).
