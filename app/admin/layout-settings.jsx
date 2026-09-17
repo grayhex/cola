@@ -14,7 +14,7 @@ export function BlockSettings({ settings, onChange }) {
       <h2>Блоки карточки велосипеда</h2>
       <p className="help">
         Порядок применяется и на телефоне, и на компьютере. «О велосипеде» по
-        умолчанию открыт.
+        умолчанию выключен.
       </p>
       {blocks.map((b, i) => (
         <article className="layout-block-editor" key={b.id}>
@@ -93,10 +93,18 @@ export function BlockSettings({ settings, onChange }) {
           )}
         </article>
       ))}
+      <label className="admin-toggle">
+        Показывать пробег под названием велосипеда
+        <input
+          type="checkbox"
+          checked={!!settings.showMileage}
+          onChange={(e) => onChange("showMileage", e.target.checked)}
+        />
+      </label>
       <h3>Содержимое «О велосипеде»</h3>
       {Object.entries({
         description: "Описание",
-        metadata: "Год, размер, вес и цвет",
+
         manufacturer: "Ссылка на производителя",
         price: "Стоимость велосипеда",
       }).map(([key, label]) => (

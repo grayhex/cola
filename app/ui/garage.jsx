@@ -151,8 +151,23 @@ function Modal({ title, onClose, children }) {
   const ref = useRef();
   useEffect(() => {
     const el = ref.current;
+    const y = window.scrollY,
+      body = document.body,
+      previous = body.getAttribute("style");
+    Object.assign(body.style, {
+      position: "fixed",
+      top: `-${y}px`,
+      left: "0",
+      right: "0",
+      width: "100%",
+    });
     el.showModal();
-    return () => el.close();
+    return () => {
+      el.close();
+      if (previous === null) body.removeAttribute("style");
+      else body.setAttribute("style", previous);
+      window.scrollTo({ top: y, behavior: "instant" });
+    };
   }, []);
   return (
     <dialog
@@ -333,7 +348,7 @@ export default function Garage({ share }) {
           ) : (
             <span className="brand-mark">c.</span>
           )}
-          {settings.siteName}
+          {!settings.logoId && settings.siteName}
         </a>
         <div className="header-right">
           {share ? (
@@ -456,18 +471,10 @@ export default function Garage({ share }) {
             {...blockProps("heading")}
           >
             <div>
-              <div className="eyebrow">
-                <span className="category-tag">
-                  {categories[bike.category]}
-                </span>
-                <span>{bike.year}</span>
-                {bike.id === "demo" && <span>{t("ДЕМОНСТРАЦИЯ")}</span>}
-              </div>
               <h1>
-                {bike.brand || bike.name}{" "}
-                <span>{bike.brand ? bike.model : ""}</span>
+                {bike.name ||
+                  [bike.brand, bike.model, bike.trim].filter(Boolean).join(" ")}
               </h1>
-              <p className="nickname">{bike.brand ? bike.name : ""}</p>
             </div>
             <div className="detail-actions">
               {editable ? (
@@ -487,6 +494,13 @@ export default function Garage({ share }) {
                   >
                     <Pencil size={18} />
                   </button>
+                  <button
+                    className="icon danger"
+                    aria-label="Удалить велосипед"
+                    onClick={() => setModal({ type: "deleteBike" })}
+                  >
+                    <Trash2 size={16} />
+                  </button>
                 </>
               ) : !share ? (
                 <button
@@ -496,13 +510,24 @@ export default function Garage({ share }) {
                   {t("Добавить свой байк")}
                   <Plus size={17} />
                 </button>
-              ) : (
-                <span className="muted">
-                  <Globe size={16} />
-                  {t("Доступен по ссылке")}
-                </span>
-              )}
+              ) : null}
             </div>
+          </div>
+          <div
+            className="bike-meta-line"
+            hidden={!block("heading").enabled}
+            style={{ order: blocks.findIndex((b) => b.id === "heading") + 1 }}
+          >
+            <span className="category-tag">{categories[bike.category]}</span>
+            <span>{bike.year}</span>
+            {bike.color && <span>{bike.color}</span>}
+            {bike.size && <span>{bike.size}</span>}
+            {bike.weight && <span>{Number(bike.weight)} кг</span>}
+            {settings.showMileage && (
+              <span>
+                {Number(bike.mileage || 0).toLocaleString("ru-RU")} км
+              </span>
+            )}
           </div>
           <div
             className="showcase configurable-block"
@@ -526,16 +551,25 @@ export default function Garage({ share }) {
                 <Photo bike={bike} photo={photo} className="hero-photo" />
               </button>
               {editable && (
-                <button
-                  className="photo-add"
-                  disabled={busy}
-                  onClick={() => file.current.click()}
-                >
-                  <Camera size={16} />
-                  {bike.photos.length
-                    ? t("Добавить фото")
-                    : t("Загрузить фото")}
-                </button>
+                <div className="photo-tools">
+                  <button
+                    type="button"
+                    className="icon"
+                    disabled={busy}
+                    aria-label="Загрузить фото"
+                    onClick={() => file.current.click()}
+                  >
+                    <Plus size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    className="icon"
+                    aria-label="Найти фотографии"
+                    onClick={() => setModal({ type: "photoSearch" })}
+                  >
+                    <Search size={16} />
+                  </button>
+                </div>
               )}
               {(photo || bike.photos[0])?.source_page_url && (
                 <a
@@ -577,28 +611,7 @@ export default function Garage({ share }) {
                   "У каждого велосипеда своя история. Добавьте пару слов о вашем.",
                 )}
             </p>
-            <dl hidden={settings.summaryFields?.metadata === false}>
-              <div>
-                <dt>{t("Год")}</dt>
-                <dd>{bike.year}</dd>
-              </div>
-              <div>
-                <dt>{t("Размер рамы")}</dt>
-                <dd>{bike.size || "—"}</dd>
-              </div>
-              <div>
-                <dt>{t("Вес")}</dt>
-                <dd>{bike.weight ? `${Number(bike.weight)} кг` : "—"}</dd>
-              </div>
-              <div>
-                <dt>{t("Цвет")}</dt>
-                <dd>{bike.color || "—"}</dd>
-              </div>
-              <div>
-                <dt>Пробег</dt>
-                <dd>{Number(bike.mileage || 0).toLocaleString("ru-RU")} км</dd>
-              </div>
-            </dl>
+
             <div className="summary-bottom">
               <span>{String(bike.components.length).padStart(2, "0")}</span>
               {t("деталей в конфигурации")}
@@ -623,15 +636,6 @@ export default function Garage({ share }) {
                 </p>
               )}
           </details>
-          {editable && (
-            <button
-              className="quiet photo-search-trigger"
-              style={{ order: 2 }}
-              onClick={() => setModal({ type: "photoSearch" })}
-            >
-              Найти фотографии в интернете
-            </button>
-          )}
           {bike.photos.length > 0 && (
             <details
               className="gallery-details configurable-block"
@@ -835,22 +839,6 @@ export default function Garage({ share }) {
                 </div>
               )}
           </section>
-          {editable && (
-            <div className="detail-footer">
-              <span>
-                {bike.is_public
-                  ? t("Публичная ссылка включена")
-                  : t("Этот велосипед виден только вам")}
-              </span>
-              <button
-                className="quiet danger"
-                onClick={() => setModal({ type: "deleteBike" })}
-              >
-                <Trash2 size={14} />
-                {t("Удалить велосипед")}
-              </button>
-            </div>
-          )}
         </main>
       ) : (
         <main className="garage">

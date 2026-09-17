@@ -1666,3 +1666,336 @@
 .build-versions{display:block;font-size:10px;color:var(--muted);font-weight:400;line-height:1.5}.footer{flex-wrap:wrap}.photo-search-trigger{align-self:flex-start;font-size:12px;margin:0 0 8px}.photo-candidates{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:14px 0}.photo-candidates label{position:relative;display:block}.photo-candidates img{width:100%;height:110px;object-fit:contain;background:#f5f5f3;border-radius:6px}.photo-candidates input{position:absolute;top:5px;left:5px;z-index:1}.photo-candidates a{font-size:11px}.photo-search .field{margin:12px 0}
 @media(max-width:600px){.photo-candidates{grid-template-columns:repeat(2,minmax(0,1fr))}.build-versions{width:100%;font-size:9px}}
 @media(min-width:701px){.showcase.configurable-block[data-variant="compact"] .hero-photo,.showcase.configurable-block[data-variant="compact"] .photo-empty{height:260px;min-height:0;aspect-ratio:auto;object-fit:contain}}
+
+/* Stable mobile forms: contain intrinsic grid width and avoid iOS focus zoom. */
+.site-root dialog {
+  box-sizing: border-box;
+  width: min(720px, calc(100% - 20px));
+  max-width: calc(100% - 20px);
+  min-width: 0;
+  margin: auto;
+  max-height: calc(100dvh - 20px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.site-root dialog form,
+.wizard-content,
+.form-grid,
+.field,
+.compact-combo {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.site-root dialog .form-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.site-root dialog input,
+.site-root dialog select,
+.site-root dialog textarea {
+  box-sizing: border-box;
+  max-width: 100%;
+  min-width: 0;
+}
+.compact-combo > label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+.combo-popup {
+  min-width: 0;
+  max-width: 100%;
+  touch-action: pan-y;
+}
+.combo-popup li {
+  min-height: 36px;
+}
+.combo-popup > small {
+  font-size: 9px;
+  overflow-wrap: anywhere;
+}
+.site-root .site-logo {
+  width: auto;
+  max-width: min(220px, 50vw);
+  height: 38px;
+  object-fit: contain;
+  border-radius: 0;
+}
+.site-root .bike-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 4px;
+}
+.bike-heading > div {
+  min-width: 0;
+}
+.site-root .bike-heading h1 {
+  font-size: clamp(19px, 3vw, 28px);
+  line-height: 1.2;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.site-root .bike-heading .detail-actions {
+  display: flex;
+  gap: 1px;
+  margin: 0;
+  align-items: center;
+}
+.site-root .bike-heading .detail-actions .icon {
+  width: 30px;
+  min-width: 30px;
+  min-height: 30px;
+  padding: 6px;
+  border: 0;
+}
+.detail-actions .share-action > span {
+  display: none;
+}
+.bike-meta-line {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 10px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow-x: auto;
+  max-width: 100%;
+  margin: 0 0 8px;
+  scrollbar-width: none;
+}
+.bike-meta-line[hidden] {
+  display: none;
+}
+.bike-meta-line .category-tag {
+  font-size: 9px;
+  padding: 2px 5px;
+}
+.site-root .detail .photo-stage {
+  background: transparent;
+}
+.site-root .detail .photo-stage .hero-photo:not(.photo-empty) {
+  width: 100%;
+  height: clamp(190px, 30svh, 300px) !important;
+  min-height: 0;
+  padding: 0;
+  object-fit: cover;
+  aspect-ratio: auto;
+}
+.site-root[data-bike-layout="dense"]
+  .detail
+  .photo-stage
+  .hero-photo:not(.photo-empty) {
+  height: clamp(165px, 26svh, 235px) !important;
+}
+.site-root[data-bike-layout="spacious"]
+  .detail
+  .photo-stage
+  .hero-photo:not(.photo-empty) {
+  height: clamp(250px, 39svh, 420px) !important;
+}
+.site-root .photo-index {
+  font-size: 8px;
+  line-height: 1;
+  padding: 3px 5px;
+  top: 6px;
+  left: 6px;
+  background: #ffffffc0;
+  border-radius: 4px;
+}
+.photo-tools {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  display: flex;
+  gap: 4px;
+  z-index: 2;
+}
+.site-root .photo-tools .icon {
+  width: 29px;
+  min-width: 29px;
+  min-height: 29px;
+  padding: 6px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 50%;
+}
+.photo-credit {
+  font-size: 8px;
+  max-width: 70%;
+  padding: 3px 5px;
+}
+.site-root .detail .specifications {
+  margin-top: 6px;
+}
+.site-root .tabs-row {
+  gap: 6px;
+  min-height: 0;
+  margin: 0 0 6px;
+  padding: 0;
+}
+.site-root .tabs button {
+  font-size: 11px;
+  padding: 6px 8px;
+  min-height: 30px;
+}
+.site-root .tabs-row > .button,
+.site-root .tabs-row > .quiet {
+  font-size: 11px;
+  padding: 5px 7px;
+  min-height: 30px;
+}
+.site-root .component-group-title {
+  padding: 4px 7px;
+}
+.site-root .component-group-title h3 {
+  font-size: 12px;
+}
+.site-root .compact-part {
+  padding: 4px 7px;
+}
+.site-root .compact-part-main > strong {
+  font-size: 12px;
+}
+.site-root[data-bike-layout="dense"] .component-group-title {
+  gap: 3px;
+  padding: 3px 5px;
+}
+.site-root[data-bike-layout="dense"] .component-group-title h3 {
+  font-size: 10px;
+  line-height: 1.2;
+  min-width: 0;
+}
+.site-root[data-bike-layout="dense"] .component-group-title > .order-actions {
+  flex-direction: row;
+}
+.site-root[data-bike-layout="dense"] .order-actions .icon {
+  width: 22px;
+  min-width: 22px;
+  min-height: 28px;
+  padding: 3px;
+}
+.site-root[data-bike-layout="dense"] .compact-part {
+  padding: 3px 5px;
+}
+.site-root[data-bike-layout="dense"] .compact-part-main > strong {
+  font-size: 10px;
+}
+.site-root[data-bike-layout="dense"] .compact-part-main > small {
+  font-size: 8px;
+}
+.site-root[data-bike-layout="dense"] .compact-part-actions summary {
+  font-size: 15px;
+  padding: 3px;
+  min-height: 28px;
+}
+.site-root[data-bike-layout="spacious"] .compact-part {
+  padding: 10px 12px;
+}
+.site-root[data-bike-layout="spacious"] .compact-part-main > strong {
+  font-size: 14px;
+}
+.wizard-stock-preview {
+  margin: 8px 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.wizard-stock-preview img {
+  display: block;
+  width: 100%;
+  height: 180px;
+  object-fit: contain;
+  background: var(--paper);
+}
+.wizard-stock-preview small {
+  display: block;
+  padding: 6px 10px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.stock-empty {
+  padding: 32px 16px;
+  text-align: center;
+  font-size: 13px;
+  background: var(--wash);
+}
+@media (max-width: 700px) {
+  .site-root dialog {
+    padding: 14px;
+  }
+  .site-root dialog input:not([type="checkbox"]):not([type="file"]),
+  .site-root dialog select,
+  .site-root dialog textarea {
+    font-size: 16px !important;
+  }
+  .site-root dialog .form-grid {
+    gap: 0 8px;
+  }
+  .wizard-part {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) 28px;
+  }
+  .wizard-steps {
+    gap: 3px;
+  }
+  .wizard-steps small {
+    font-size: 8px;
+  }
+  .site-root .garage {
+    padding-top: 12px;
+  }
+  .site-root .bike-grid {
+    gap: 12px;
+  }
+  .site-root .card-photo {
+    height: clamp(115px, 20svh, 165px);
+    aspect-ratio: auto;
+  }
+  .site-root .card-photo > img {
+    object-fit: cover;
+  }
+  .site-root .card-body {
+    padding: 8px 10px;
+  }
+  .site-root .card-body h2 {
+    font-size: 18px;
+    line-height: 1.2;
+    margin: 3px 0;
+  }
+  .site-root .card-body > p {
+    display: none;
+  }
+  .site-root .card-body > .eyebrow {
+    font-size: 9px;
+  }
+  .site-root .card-bottom {
+    font-size: 10px;
+    padding-top: 5px;
+    margin-top: 5px;
+  }
+  .site-root .breadcrumbs {
+    margin-bottom: 6px;
+    font-size: 10px;
+  }
+  .site-root .detail {
+    padding-top: 10px;
+    gap: 0;
+  }
+  .site-root .garage-heading {
+    margin-bottom: 10px;
+  }
+}
+
+.wizard-steps button {
+  min-width: 0;
+  white-space: normal;
+}
+.wizard-steps small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}

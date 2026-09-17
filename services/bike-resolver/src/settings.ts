@@ -16,12 +16,12 @@ export const settingsSchema = z
   .object({
     enabled: z.boolean(),
     autoResolve: z.boolean(),
-    manualDomains: z
+    blockedDomains: z
       .array(
         z.string().regex(/^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/),
       )
       .max(40)
-      .default(["info.cube.eu", "www.velo-port.ru", "velo-port.ru"]),
+      .default([]),
     photoSearch: z.boolean().default(true),
     timeoutMs: z.number().int().min(3000).max(20000),
     requestIntervalMs: z.number().int().min(500).max(5000),
@@ -40,7 +40,7 @@ export type Settings = z.infer<typeof settingsSchema>;
 export const defaultSettings: Settings = {
   enabled: true,
   autoResolve: true,
-  manualDomains: ["info.cube.eu", "www.velo-port.ru", "velo-port.ru"],
+  blockedDomains: [],
   photoSearch: true,
   timeoutMs: 10000,
   requestIntervalMs: 700,
@@ -60,7 +60,8 @@ export class SettingsStore {
       "SELECT value,version FROM bike_resolver.settings WHERE id=1",
     );
     if (rows[0]) {
-      this.value = settingsSchema.parse(rows[0].value);
+      const { manualDomains: _legacyAllowlist, ...current } = rows[0].value;
+      this.value = settingsSchema.parse(current);
       this.version = rows[0].version;
     }
   }

@@ -20,9 +20,10 @@ export default function CompactCombo({
     setActive(-1);
   };
   return (
-    <label className="field compact-combo">
-      <span>{label}</span>
+    <div className="field compact-combo">
+      <label htmlFor={id + "-input"}>{label}</label>
       <input
+        id={id + "-input"}
         role="combobox"
         aria-autocomplete="list"
         aria-expanded={open && !!shown.length}
@@ -80,7 +81,6 @@ export default function CompactCombo({
                 key={v}
                 onPointerDown={(e) => {
                   e.preventDefault();
-                  choose(v);
                 }}
                 onClick={() => choose(v)}
               >
@@ -91,6 +91,6 @@ export default function CompactCombo({
           <small>До 8 вариантов · уточните поиском или введите своё</small>
         </div>
       )}
-    </label>
+    </div>
   );
 }

@@ -5,14 +5,24 @@ import ipaddr from "ipaddr.js";
 import type { Logger } from "pino";
 import type { Settings } from "./settings.js";
 import { ResolverError, type SourceDocument } from "./domain.js";
-export function validateUrl(input: string, allowed: string[]): URL {
+export type UrlPolicy = string[] | { blockedDomains: string[] };
+export function validateUrl(input: string, allowed: UrlPolicy): URL {
   const u = new URL(input);
+  u.hostname = u.hostname.toLowerCase().replace(/\.$/, "");
   if (
     !["https:", "http:"].includes(u.protocol) ||
     u.username ||
     u.password ||
     (u.port && !["80", "443"].includes(u.port)) ||
-    !allowed.includes(u.hostname.toLowerCase())
+    (Array.isArray(allowed)
+      ? !allowed.includes(u.hostname.toLowerCase())
+      : !u.hostname.includes(".") ||
+        /(?:^|\.)(?:localhost|local|internal|home|lan)$/.test(u.hostname) ||
+        (ipaddr.isValid(u.hostname.replace(/^\[|\]$/g, "")) &&
+          !publicAddress(u.hostname.replace(/^\[|\]$/g, ""))) ||
+        allowed.blockedDomains.some(
+          (d) => u.hostname === d || u.hostname.endsWith("." + d),
+        ))
   )
     throw new ResolverError(
       "upstream_unavailable",
@@ -39,7 +49,7 @@ export class ManufacturerHttpClient {
   ) {}
   async get(
     url: string,
-    domains: string[],
+    domains: UrlPolicy,
     headers: Record<string, string> = {},
   ): Promise<SourceDocument> {
     const d = await this.getBytes(url, domains, headers);
@@ -47,7 +57,7 @@ export class ManufacturerHttpClient {
   }
   async getBytes(
     url: string,
-    domains: string[],
+    domains: UrlPolicy,
     headers: Record<string, string> = {},
   ) {
     const host = validateUrl(url, domains).hostname;
@@ -74,7 +84,7 @@ export class ManufacturerHttpClient {
   }
   private async request(
     input: string,
-    domains: string[],
+    domains: UrlPolicy,
     headers: Record<string, string>,
   ): Promise<{
     url: string;

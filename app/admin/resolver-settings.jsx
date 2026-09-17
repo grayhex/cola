@@ -134,23 +134,24 @@ export default function ResolverSettings() {
             />
           </label>
           <label className="field">
-            <span>Дополнительные домены для импорта по ссылке</span>
+            <span>Запрещённые домены для ручного парсинга</span>
             <textarea
-              value={(draft.manualDomains || []).join("\n")}
+              value={(draft.blockedDomains || []).join("\n")}
               onChange={(e) =>
                 set(
-                  "manualDomains",
+                  "blockedDomains",
                   e.target.value.split(/\n/).map((s) => s.trim().toLowerCase()),
                 )
               }
               onBlur={() =>
-                set("manualDomains", draft.manualDomains.filter(Boolean))
+                set("blockedDomains", draft.blockedDomains.filter(Boolean))
               }
             />
           </label>
           <p className="help">
-            Один точный домен в строке, без https и пути. Сайты производителей
-            доступны отдельно. Закрытые сети и локальные адреса запрещены.
+            Все публичные сайты разрешены. Один запрещённый домен в строке, без
+            https и пути; его поддомены тоже блокируются. Локальные сети всегда
+            недоступны.
           </p>
           <h3>Адаптеры производителей</h3>
           <p className="help">
