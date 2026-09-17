@@ -86,12 +86,7 @@ export class ManualSources {
     private settings: SettingsStore,
   ) {}
   domains() {
-    return [
-      ...new Set([
-        ...this.settings.value.manualDomains,
-        ...this.adapters.flatMap((a) => a.allowedDomains),
-      ]),
-    ];
+    return { blockedDomains: this.settings.value.blockedDomains };
   }
   async document(url: string) {
     if (!this.settings.value.enabled)
@@ -216,7 +211,7 @@ export class ManualSources {
     return {
       photos: [...new Set(urls)].slice(0, 12).map((url) => {
         // Image hosts come only from the fetched product page. IP checks and redirect allowlists remain mandatory.
-        validateUrl(url, [new URL(url).hostname]);
+        validateUrl(url, this.domains());
         if (this.photos.size >= 500)
           this.photos.delete(this.photos.keys().next().value!);
         const id = randomUUID();
@@ -241,7 +236,7 @@ export class ManualSources {
         "upstream_unavailable",
         "Search expired; search again",
       );
-    const d = await this.http.getBytes(p.url, [new URL(p.url).hostname]);
+    const d = await this.http.getBytes(p.url, this.domains());
     if (!/^image\/(jpeg|png|webp)(?:;|$)/i.test(d.contentType))
       throw new ResolverError("parse_error", "Unsupported image");
     return {

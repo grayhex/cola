@@ -40,13 +40,13 @@ function Progress({ text }) {
   );
 }
 export default function BikeWizard({ onCreated, onBusy }) {
-  const { catalog } = useSite();
+  const { catalog, settings } = useSite();
   const [step, setStep] = useState(0),
     [bike, setBike] = useState({
       brand: "",
       model: "",
       trim: "",
-      year: new Date().getFullYear(),
+      year: "",
       name: "",
       category: "gravel",
       description: "",
@@ -436,6 +436,19 @@ export default function BikeWizard({ onCreated, onBusy }) {
               Сначала определим модель и заводскую комплектацию. Обязательны
               производитель, модель и год.
             </p>
+            <label className="field">
+              <span>Тип велосипеда</span>
+              <select
+                value={bike.category}
+                onChange={(e) => update("category", e.target.value)}
+              >
+                {Object.entries(catalog.categories).map(([k, v]) => (
+                  <option value={k} key={k}>
+                    {v}
+                  </option>
+                ))}
+              </select>
+            </label>
             <div className="form-grid">
               <CompactCombo
                 label="Производитель"
@@ -453,9 +466,7 @@ export default function BikeWizard({ onCreated, onBusy }) {
                 label="Модель"
                 value={bike.model}
                 onChange={(v) => update("model", v)}
-                options={Object.values(catalog.models).flatMap(
-                  (m) => m[bike.brand] || [],
-                )}
+                options={Object.entries(catalog.models[bike.category]||{}).filter(([brand])=>brand.toLowerCase()===bike.brand.trim().toLowerCase()).flatMap(([,models])=>models)}
                 required
                 maxLength={100}
               />
@@ -561,8 +572,8 @@ export default function BikeWizard({ onCreated, onBusy }) {
                   <summary>Распознать по странице магазина</summary>
                   <p className="help">
                     Вставьте ссылку на товар с таблицей характеристик. Если
-                    страница не распознаётся, попробуйте другой магазин.
-                    Допустимые домены настраиваются администратором.
+                    страница не распознаётся, попробуйте другой магазин. Все
+                    публичные сайты доступны, кроме запрещённых администратором.
                   </p>
                   <label className="field">
                     <span>Страница велосипеда</span>
@@ -723,6 +734,28 @@ export default function BikeWizard({ onCreated, onBusy }) {
           <>
             <section>
               <h4>Фотографии</h4>
+              {!files.length && !chosen.length && (
+                <div className="wizard-stock-preview">
+                  {settings[bike.category + "ImageId"] ? (
+                    <img
+                      src={"/api/assets/" + settings[bike.category + "ImageId"]}
+                      alt={
+                        "Стоковое изображение: " +
+                        catalog.categories[bike.category]
+                      }
+                    />
+                  ) : (
+                    <div className="stock-empty">
+                      {catalog.categories[bike.category]} · стандартное
+                      изображение пока не загружено
+                    </div>
+                  )}
+                  <small>
+                    Стандартное изображение · замените своим или выберите
+                    найденное
+                  </small>
+                </div>
+              )}
               <p className="help">
                 Ищем автоматически по модели или найденной странице. Проверьте,
                 что на фото ваш велосипед; выберите до 3 изображений.
@@ -828,19 +861,6 @@ export default function BikeWizard({ onCreated, onBusy }) {
               </div>
             </section>
             <div className="form-grid">
-              <label className="field">
-                <span>Тип велосипеда</span>
-                <select
-                  value={bike.category}
-                  onChange={(e) => update("category", e.target.value)}
-                >
-                  {Object.entries(catalog.categories).map(([k, v]) => (
-                    <option value={k} key={k}>
-                      {v}
-                    </option>
-                  ))}
-                </select>
-              </label>
               {[
                 ["color", "Цвет"],
                 ["size", "Ростовка"],
