@@ -121,7 +121,7 @@ assert.equal(bike.photos.length, 1);
 assert(bike.photos[0].is_cover);
 assert.equal(bike.photos[0].source_page_url, sourceUrl);
 const version = await a("versions");
-assert.equal(version.data.app.version, "0.2.0");
+assert.equal(version.data.app.version, "0.3.0");
 assert.equal(version.data.resolver.version, "1.1.0");
 await a("bikes/" + id, "DELETE");
 console.log(

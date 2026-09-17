@@ -22,6 +22,7 @@ export default function SiteProvider({ initial, children }) {
       <div
         className="site-root"
         data-theme={site.settings.theme}
+        data-bike-layout={site.settings.bikeLayout || "balanced"}
         data-summary={site.settings.summaryPosition}
         data-detail-order={site.settings.detailOrder}
         data-photo-mode={site.settings.photoMode}

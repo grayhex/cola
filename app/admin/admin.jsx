@@ -508,6 +508,52 @@ export default function Admin() {
               </section>
               <section className="admin-panel">
                 <h2>Расположение элементов</h2>
+                <div
+                  className="layout-presets"
+                  role="radiogroup"
+                  aria-label="Компоновка велосипеда"
+                >
+                  {[
+                    [
+                      "dense",
+                      "Максимально компактно",
+                      "Маленькое фото, мелкий шрифт, две колонки деталей.",
+                    ],
+                    [
+                      "balanced",
+                      "Сбалансированно",
+                      "Умеренные отступы и компактная комплектация.",
+                    ],
+                    [
+                      "spacious",
+                      "Подробно",
+                      "Большое фото, крупнее текст, свободная одноколоночная комплектация.",
+                    ],
+                  ].map(([value, title, description]) => (
+                    <button
+                      type="button"
+                      role="radio"
+                      aria-checked={draft.bikeLayout === value}
+                      className={"layout-preset " + value}
+                      key={value}
+                      onClick={() => update("bikeLayout", value)}
+                    >
+                      <span className="layout-mini" aria-hidden="true">
+                        <i />
+                        <b />
+                        <b />
+                        <b />
+                      </span>
+                      <strong>{title}</strong>
+                      <small>{description}</small>
+                    </button>
+                  ))}
+                </div>
+                <p className="help">
+                  Компактная схема поднимает комплектацию на первый экран;
+                  длинные списки остаются доступны прокруткой. Порядок и
+                  видимость блоков задаются отдельно.
+                </p>
                 <button className="quiet" onClick={() => setTab("blocks")}>
                   Настроить блоки карточки →
                 </button>
@@ -565,6 +611,12 @@ export default function Admin() {
                 </p>
                 <div className="admin-form-grid">
                   {assetSelect("logoId", "Логотип в шапке")}
+                  {assetSelect("mtbImageId", "Стоковое изображение — MTB")}
+                  {assetSelect("roadImageId", "Стоковое изображение — шоссе")}
+                  {assetSelect(
+                    "gravelImageId",
+                    "Стоковое изображение — гравел",
+                  )}
                   {assetSelect("faviconId", "Иконка вкладки")}
                   {assetSelect("demoImageId", "Фото демонстрационного байка")}
                   {assetSelect("garageImageId", "Изображение над гаражом")}

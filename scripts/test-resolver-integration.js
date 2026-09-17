@@ -64,6 +64,7 @@ try {
     "tests/admin-http.js",
     "tests/resolver-http.js",
     "tests/layout-http.js",
+    "tests/wizard-http.js",
   ])
     await new Promise((resolve, reject) => {
       const p = spawn(process.execPath, [test], {
