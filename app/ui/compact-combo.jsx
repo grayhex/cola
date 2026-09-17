@@ -13,7 +13,7 @@ export default function CompactCombo({
   const id = useId(),
     [open, setOpen] = useState(false),
     [active, setActive] = useState(-1);
-  const root = useRef(null), gesture = useRef(null);
+  const root = useRef(null), gesture = useRef(null), touchClick = useRef(false);
   useEffect(() => {
     const outside = e => { if (!root.current?.contains(e.target)) { gesture.current = null; setOpen(false); } };
     document.addEventListener("pointerdown", outside);
@@ -87,6 +87,7 @@ export default function CompactCombo({
                 id={id + "-" + i}
                 key={v}
                 onPointerDown={(e) => {
+                  touchClick.current = e.pointerType !== "mouse";
                   if (e.pointerType === "mouse") e.preventDefault();
                   else gesture.current = { x: e.clientX, y: e.clientY, moved: false };
                 }}
@@ -103,7 +104,7 @@ export default function CompactCombo({
                     choose(v);
                   }
                 }}
-                onClick={() => choose(v)}
+                onClick={(e) => { if (!touchClick.current || e.detail === 0) choose(v); }}
               >
                 {v}
               </li>

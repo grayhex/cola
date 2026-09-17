@@ -433,11 +433,6 @@ export default function Admin() {
                   checked={draft.showDemo}
                   onChange={(v) => update("showDemo", v)}
                 />
-                <Toggle
-                  label="Показывать подпись под шапкой"
-                  checked={draft.showTagline}
-                  onChange={(v) => update("showTagline", v)}
-                />
               </section>
               <p className="help">
                 Адрес сервера, доступ к БД и secure-cookie задаются в окружении

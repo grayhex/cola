@@ -23,7 +23,7 @@ export default function ScoringSettings({ value = defaultScoring, onChange, cata
     </div><button className="quiet" type="button" onClick={()=>set("rules",value.rules.filter((_,n)=>n!==i))}>Удалить правило</button></fieldset>)}
     <button className="button secondary" type="button" disabled={value.rules.length>=100} onClick={()=>set("rules",[...value.rules,{groupId:"",category:"",match:"",points:0}])}>Добавить правило</button>
     <h2>Заполненность карточки</h2>
-    <p className="help">100% — есть собственное/импортированное фото и нужное число заполненных категорий комплектации. Стоковое изображение и дубли одной категории не учитываются.</p>
-    <div className="form-grid">{number("Категорий компонентов для 100%",value.componentTarget,v=>set("componentTarget",v),1,200)}{number("Доля фотографии, %",value.photoPoints,v=>set("photoPoints",v),0,100)}</div>
+    <p className="help">100% — есть собственное/импортированное фото и нужное число заполненных компонентов. Стоковое изображение и точные дубли компонентов не учитываются.</p>
+    <div className="form-grid">{number("Компонентов для 100%",value.componentTarget,v=>set("componentTarget",v),1,200)}{number("Доля фотографии, %",value.photoPoints,v=>set("photoPoints",v),0,100)}</div>
   </section>;
 }

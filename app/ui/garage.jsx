@@ -455,7 +455,7 @@ export default function Garage({ share, account = false }) {
                 }}
               >
                 <ArrowLeft size={16} />
-                {t("Мой гараж")}
+                {t("Мои велосипеды")}
               </button>
             ) : (
               <span>
@@ -878,7 +878,7 @@ export default function Garage({ share, account = false }) {
             </div>
             <button
               className="icon search-toggle"
-              aria-label="Поиск по гаражу"
+              aria-label="Поиск велосипедов"
               aria-expanded={searchOpen}
               onClick={() => {
                 if (searchOpen) setQuery("");
@@ -980,7 +980,7 @@ export default function Garage({ share, account = false }) {
               profile: "Личный кабинет",
               auth:
                 modal.mode === "register"
-                  ? t("Ваш гараж начинается здесь")
+                  ? t("Регистрация")
                   : t("С возвращением"),
               bike: modal.bike ? t("О велосипеде") : t("Новый велосипед"),
               part: modal.part
@@ -1028,7 +1028,7 @@ export default function Garage({ share, account = false }) {
                   setModal(null);
                   setNotice(
                     modal.mode === "register"
-                      ? t("Гараж готов. Добавьте свой первый байк.")
+                      ? t("Аккаунт готов. Добавьте свой первый байк.")
                       : t("Добро пожаловать"),
                   );
                 })
@@ -1293,7 +1293,7 @@ function AuthForm({ mode, busy, onSubmit, switchMode }) {
           ? t("Подождите…")
           : mode === "register"
             ? t("Создать аккаунт")
-            : t("Войти в гараж")}
+            : t("Войти")}
         <ArrowUpRight size={17} />
       </button>
       <button type="button" className="quiet switch-auth" onClick={switchMode}>

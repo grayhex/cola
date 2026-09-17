@@ -26,7 +26,7 @@ test("scores clamp, apply each literal trigger once, respect groups and price pr
   assert.equal(scoreBike({...b,weight:12.6,price:200000,show_bike_price:false},config).upgrade,55);
   assert.equal(scoreBike({...b,weight:12.6,price:200000,show_bike_price:true},config).upgrade,75);
 });
-test("completion needs actual photo and distinct component categories; input cannot inject site settings", () => {
+test("completion needs actual photo and distinct components; input cannot inject site settings", () => {
   const b={category:"road",photos:[],components:Array.from({length:21},(_,i)=>({section:"build",category:"Part "+i,name:"A"}))};
   assert(scoreBike(b).completeness<100);
   b.photos=[{id:"photo"}]; assert.equal(scoreBike(b).completeness,100);
