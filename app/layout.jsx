@@ -1,10 +1,10 @@
-import "./gamification.css";
 import "./globals.css";
 import "./mobile.css";
 import "./showcase.css";
 import "./social.css";
 import "./header.css";
 import "./community.css";
+import "./gamification.css";
 import SiteProvider from "./ui/site-provider.jsx";
 import { getSite } from "../lib/site.js";
 export const dynamic = "force-dynamic";

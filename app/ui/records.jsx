@@ -7,6 +7,7 @@ import {
   SocialFooter,
   Avatar,
 } from "./social-primitives.jsx";
+import { useSite } from "./site-provider.jsx";
 import Photo from "./bike-photo.jsx";
 function value(r, currency) {
   return (
@@ -81,6 +82,7 @@ function RecordCard({ record: r, currency }) {
   );
 }
 export default function Records() {
+  const { setPreferences } = useSite();
   const [data, setData] = useState(null),
     [user, setUser] = useState(),
     [error, setError] = useState("");
@@ -89,6 +91,7 @@ export default function Records() {
       .then(([d, m]) => {
         setData(d);
         setUser(m.user);
+        setPreferences(m.user?.preferences || {});
       })
       .catch((e) => setError(e.message));
   }, []);

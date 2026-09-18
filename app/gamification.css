@@ -19,15 +19,15 @@
 .record-card {
   min-width: 0;
   overflow: hidden;
-  border: 1px solid var(--border, #deded8);
+  border: 1px solid var(--line, #deded8);
   border-radius: var(--radius, 12px);
-  background: var(--surface, #fff);
+  background: var(--paper, #fff);
   scroll-margin-top: 100px;
 }
 .record-cover {
   position: relative;
   height: 205px;
-  background: var(--soft, #eee);
+  background: var(--wash, #eee);
   display: grid;
   place-items: center;
 }
@@ -90,7 +90,7 @@
 }
 .hall-rules {
   padding: 16px;
-  border: 1px solid var(--border, #ddd);
+  border: 1px solid var(--line, #ddd);
   border-radius: 12px;
 }
 .badge-shelf {
@@ -107,7 +107,7 @@
   align-items: center;
   font-size: 12px;
   padding: 7px 9px;
-  border: 1px solid var(--border, #ddd);
+  border: 1px solid var(--line, #ddd);
   border-radius: 20px;
 }
 .award.current {
@@ -131,7 +131,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  border: 1px solid var(--border, #ddd);
+  border: 1px solid var(--line, #ddd);
   border-radius: 20px;
   padding: 10px;
   background: transparent;
@@ -152,7 +152,7 @@
 }
 .locked-awards > div {
   padding: 14px;
-  border: 1px dashed var(--border, #ddd);
+  border: 1px dashed var(--line, #ddd);
   border-radius: 10px;
 }
 .locked-awards p {
@@ -167,7 +167,7 @@
   align-items: center;
   gap: 12px;
   padding: 10px;
-  border-bottom: 1px solid var(--border, #ddd);
+  border-bottom: 1px solid var(--line, #ddd);
 }
 .game-moderation a {
   flex: 1;
@@ -192,7 +192,7 @@
   margin: 8px 0;
 }
 .showcase-sort button {
-  border: 1px solid var(--border, #ddd);
+  border: 1px solid var(--line, #ddd);
   border-radius: 18px;
   background: transparent;
   color: inherit;
