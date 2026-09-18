@@ -109,8 +109,8 @@ export default function GlobalHeader({ user, onProfile }) {
       <nav className="global-nav" aria-label="Основная навигация">
         <NavLink
           href="/"
-          label="Витрина"
-          tooltip="Витрина"
+          label={settings.showcaseTitle || "Витрина"}
+          tooltip={settings.showcaseTitle || "Витрина"}
           assetId={settings.navHomeIconId}
           Fallback={Home}
           active={pathname === "/"}
@@ -138,6 +138,7 @@ export default function GlobalHeader({ user, onProfile }) {
         <NavLink
           href="/feed"
           label="Подписки"
+          assetId={settings.navSubscriptionsIconId}
           Fallback={Users}
           active={pathname === "/feed"}
         />
@@ -148,7 +149,7 @@ export default function GlobalHeader({ user, onProfile }) {
           aria-disabled="true"
           data-tooltip="Рекорды — скоро"
         >
-          <Graphic Fallback={Trophy} />
+          <Graphic assetId={settings.navRecordsIconId} Fallback={Trophy} />
         </button>
         <NavLink
           href="/notifications"
