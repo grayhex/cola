@@ -110,6 +110,7 @@ function ProfileEditor({ profile, onSaved }) {
           <span>Username</span>
           <input
             required
+            aria-label="Username"
             minLength={3}
             maxLength={30}
             autoCapitalize="none"

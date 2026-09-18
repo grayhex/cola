@@ -1,8 +1,10 @@
 import { test, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import sharp from "sharp";
+const origin = process.env.TEST_ORIGIN || "http://localhost:3100";
 async function register(request, name) {
   const response = await request.post("/api/auth/register", {
+    headers: { origin },
     data: {
       name,
       email: name + "@example.test",
@@ -31,9 +33,13 @@ test("account profile/avatar editing, public garage, author links and mutual mob
     weight: 14,
     is_public: true,
   };
-  const result = await page.request.post("/api/bikes", { data: bike });
+  const result = await page.request.post("/api/bikes", {
+    headers: { origin },
+    data: bike,
+  });
   expect(result.status()).toBe(201);
   await page.request.post("/api/bikes", {
+    headers: { origin },
     data: { ...bike, name: "Private " + nonce, is_public: false },
   });
   await page.goto("/account");
