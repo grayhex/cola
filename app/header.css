@@ -140,6 +140,8 @@
     min-height: 120px;
     padding-top: 0;
     padding-bottom: 0;
+    padding-left: max(24px, calc((100% - var(--showcase-shell-max)) / 2));
+    padding-right: max(24px, calc((100% - var(--showcase-shell-max)) / 2));
     gap: 24px;
   }
   .site-root .global-header .brand-illustrated {
