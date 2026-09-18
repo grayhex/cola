@@ -162,8 +162,8 @@ test("account profile/avatar editing, public garage, author links and mutual mob
     await visitor
       .getByRole("button", { name: "Отписаться", exact: true })
       .click();
-    await expect(visitor.locator(".profile-hero .friend-status")).toHaveCount(
-      0,
+    await expect(visitor.locator(".profile-hero .friend-status")).toHaveText(
+      "Подписан на вас",
     );
     await page.goto("/account?tab=social");
     await page.getByRole("button", { name: /Друзья · 0/ }).click();
