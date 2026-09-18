@@ -17,6 +17,18 @@ export default function SiteProvider({ initial, children }) {
   );
   const [preferences, setPreferences] = useState({});
   const effective = { ...site.settings, ...preferences };
+  const backgroundStyle = effective.backgroundImageId
+    ? {
+        "--site-background-image": `url("/api/assets/${effective.backgroundImageId}")`,
+        "--site-background-opacity": String(
+          Math.max(0, Math.min(100, Number(effective.backgroundOpacity ?? 20))) /
+            100,
+        ),
+      }
+    : {
+        "--site-background-image": "none",
+        "--site-background-opacity": "0",
+      };
   const t = (text) => site.settings.copy[text] ?? text;
   return (
     <Context.Provider value={{ ...site, setSite, t, setPreferences, personalSettings: effective }}>
@@ -24,6 +36,9 @@ export default function SiteProvider({ initial, children }) {
       <div
         className="site-root"
         data-theme={effective.theme}
+        data-background-mode={effective.backgroundMode || "cover"}
+        data-has-background={effective.backgroundImageId ? "true" : "false"}
+        style={backgroundStyle}
         data-bike-layout={effective.bikeLayout || "balanced"}
         data-summary={site.settings.summaryPosition}
         data-detail-order={site.settings.detailOrder}
