@@ -45,6 +45,7 @@ await db.exec(
 );
 await db.exec(await readFile(new URL("../db/009_social_core.sql",import.meta.url),"utf8"));
 await db.exec(await readFile(new URL("../db/010_community.sql",import.meta.url),"utf8"));
+await db.exec(await readFile(new URL("../db/011_gamification.sql",import.meta.url),"utf8"));
 const server = new PGLiteSocketServer({
   db,
   host: "127.0.0.1",

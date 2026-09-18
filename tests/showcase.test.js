@@ -40,7 +40,7 @@ test("completion needs actual photo and distinct components; input cannot inject
 test("showcase privacy, owner/voter permissions, duplicate votes, revocation, blocking and cascade", async () => {
   const db=new PGlite();
   try {
-    for (const m of ["001_initial","002_admin","003_factory_spec","004_garage_layout","005_bike_wizard","007_showcase","008_beta_limits","009_social_core","010_community"])
+    for (const m of ["001_initial","002_admin","003_factory_spec","004_garage_layout","005_bike_wizard","007_showcase","008_beta_limits","009_social_core","010_community", "011_gamification"])
       await db.exec(await readFile(new URL("../db/"+m+".sql",import.meta.url),"utf8"));
     await db.query("INSERT INTO site_settings(id,value) VALUES(1,$1)",[JSON.stringify(defaultSettings)]);
     await db.query("INSERT INTO site_catalog(id,value) VALUES(1,$1)",[JSON.stringify(defaultCatalog)]);

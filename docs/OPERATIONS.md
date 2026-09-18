@@ -264,3 +264,30 @@ Comment creation: 20/user/15min; edits/deletes: 40; reports: 10; read mutations:
 closure and comment deletion use the existing audit log. Abuse handling remains
 manual through the reports queue and existing user blocking. There is no DM,
 friend-request workflow, email delivery or separate background worker.
+
+## Gamification / Hall of Fame
+
+Migration 011 is additive and runs through the existing migration ledger. Awards,
+reactions, settings and exclusion flags are in the existing PostgreSQL database;
+normal database backups include them. There are no new volumes or external services.
+Deploy/restore flow is unchanged. Migration backfills milestones for existing users;
+it can take time proportional to their public bikes and engagement. The current
+fixed milestone evaluator uses transaction advisory locks per owner and unique
+award indexes. Never disable its triggers for application writes.
+
+Records are request-time snapshots with no cross-request cache. Privacy, exclusion
+and blocking are rechecked for every result; hidden prices are SQL-redacted before
+ranking. Public award history hides bike awards when their bike becomes private;
+account history remains available to its owner. User milestones describe previously
+public activity, not current private totals. A deleted bike cascades its bike awards.
+
+Admin exclusions and restorations require a reason and write `admin_audit` entries
+`leaderboard.exclude` / `leaderboard.restore`; settings write `gamification.settings`.
+To correct junk values, exclude the bike without changing visibility, then restore it
+when verified. Disabling reactions retains stored votes but removes public counts
+and community titles until enabled again. The fixed currency is RUB; changing the
+currency would require a deliberate data conversion policy, not relabeling amounts.
+
+Reproduce the synthetic plan with `node scripts/explain-records.js` (isolated PGlite,
+no production connection). Leaderboards scan eligible public builds in a bulk query;
+monitor duration as the site grows. Normal cards add only one batch awards query.

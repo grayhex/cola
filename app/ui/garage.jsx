@@ -1,4 +1,5 @@
 "use client";
+import {BikeGame} from "./achievements.jsx";
 import Discussion from "./discussion.jsx";
 import BikeCategoryIcon from "./bike-category-icon.jsx";
 import BikeMeters from "./bike-meters.jsx";
@@ -224,6 +225,7 @@ export default function Garage({ share, account = false, embedded = false, start
     [modal, setModal] = useState(null),
     [busy, setBusy] = useState(false),
     [tab, setTab] = useState("build"),
+    [sort, setSort] = useState("new"),
     [filter, setFilter] = useState("all"),
     [query, setQuery] = useState(""),
     [searchOpen, setSearchOpen] = useState(false),
@@ -245,7 +247,7 @@ export default function Garage({ share, account = false, embedded = false, start
     } else {
       const data = account
         ? u ? await api("bikes") : {bikes:[]}
-        : await api("showcase?page=" + page + "&category=" + (filter === "all" ? "" : filter) + "&q=" + encodeURIComponent(query));
+        : await api("showcase?sort="+sort+"&page=" + page + "&category=" + (filter === "all" ? "" : filter) + "&q=" + encodeURIComponent(query));
       if (sequence !== requestId.current) return;
       setBikes(data.bikes);
       setTotal(data.total ?? data.bikes.length);
@@ -259,7 +261,7 @@ export default function Garage({ share, account = false, embedded = false, start
       load().catch(e => setError(e.message)).finally(() => setLoading(false));
     }, query ? 200 : 0);
     return () => { clearTimeout(timer); requestId.current++; };
-  }, [share, account, page, filter, query]);
+  }, [share, account, page, filter, query, sort]);
   useEffect(() => {
     if (notice) {
       const t = setTimeout(() => setNotice(""), 4000);
@@ -782,6 +784,7 @@ export default function Garage({ share, account = false, embedded = false, start
                 </div>
               )}
           </section>
+          {bike.is_public && <BikeGame key={bike.id+":"+bike.likes} bike={bike} user={user}/>}
           {bike.is_public && <Discussion key={bike.id} bike={bike} user={user}/>}
         </Main>
       ) : (
@@ -802,6 +805,7 @@ export default function Garage({ share, account = false, embedded = false, start
                 <span className="count">{total}</span>
               </h1>
             </div>
+            {!account&&<div className="showcase-sort" aria-label="Порядок витрины">{[["new","Новые"],["popular","Популярные"],["records","Рекордсмены"]].map(([key,label])=><button key={key} aria-pressed={sort===key} onClick={()=>{setSort(key);setPage(1)}}>{label}</button>)}</div>}
             <div className="showcase-actions" aria-label="Действия витрины">
               <div
                 className="filters showcase-category-filters"

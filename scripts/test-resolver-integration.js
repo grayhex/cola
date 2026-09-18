@@ -112,6 +112,7 @@ try {
         "tests/showcase-http.js",
         "tests/social-http.js",
         "tests/community-http.js",
+        "tests/gamification-http.js",
         ...(externalDatabase ? ["tests/quota-http.js"] : []),
       ])
     await new Promise((resolve, reject) => {

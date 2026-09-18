@@ -72,6 +72,7 @@ export default function BikeCard({
           <AuthorLink author={b.author} />
         </h2>
         <BikeMeters scores={b.scores} />
+        {b.badges?.length>0&&<div className="card-awards">{b.badges.slice(0,2).map(a=><span key={a.key}>{a.name}</span>)}</div>}
         {b.is_public && <a className="card-comments" href={"/b/"+b.share_id+"#discussion"} aria-label={"Комментарии: "+(b.comments||0)}><MessageCircle size={12}/>{b.comments||0}</a>}
       </div>
     </article>

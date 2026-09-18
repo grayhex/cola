@@ -1,3 +1,4 @@
+import "./gamification.css";
 import "./globals.css";
 import "./mobile.css";
 import "./showcase.css";
