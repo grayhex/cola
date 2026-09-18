@@ -14,7 +14,7 @@ async function register(page, name) {
     .getByRole("button", { name: "Создать аккаунт", exact: true })
     .click();
   await expect(
-    page.getByRole("link", { name: "Личный кабинет", exact: true }),
+    page.getByRole("link", { name: "Профиль — " + name, exact: true }),
   ).toBeVisible();
 }
 test("registration, touch autocomplete, bike/photo, public feed, like and revoke", async ({
@@ -25,7 +25,9 @@ test("registration, touch autocomplete, bike/photo, public feed, like and revoke
   const name = "e2e-" + randomUUID(),
     bikeName = "Bike " + name;
   await register(page, name);
-  await page.getByRole("link", { name: "Личный кабинет", exact: true }).click();
+  await page
+    .getByRole("link", { name: "Профиль — " + name, exact: true })
+    .click();
   await page
     .getByRole("button", { name: "Добавить велосипед", exact: true })
     .click();
