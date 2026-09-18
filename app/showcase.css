@@ -42,3 +42,112 @@
 .site-root .card-photo{overflow:hidden}
 .site-root .card-open-photo{position:absolute;inset:0;height:100%}
 .site-root .card-open-photo>img{display:block;width:100%;height:100%;object-fit:cover;padding:0}
+
+
+/* Configurable showcase actions and transparent photo overlays. */
+.site-root .showcase-actions {
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+}
+.site-root .showcase-icon-action {
+  width: 52px;
+  height: 52px;
+  min-width: 52px;
+  min-height: 52px;
+  padding: 8px;
+  border-radius: 14px;
+  background: var(--paper);
+}
+.site-root .showcase-icon-action.active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--soft);
+}
+.site-root .site-asset-icon,
+.site-root .site-asset-icon-fallback {
+  display: block;
+  flex: 0 0 auto;
+  object-fit: contain;
+}
+.site-root .showcase-icon-action .site-asset-icon,
+.site-root .showcase-icon-action .site-asset-icon-fallback {
+  width: 34px;
+  height: 34px;
+}
+.site-root .showcase-search-field {
+  margin-left: auto;
+}
+.site-root .card-type {
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
+  color: var(--ink);
+}
+.site-root .card-type .bike-category-graphic {
+  display: block;
+  object-fit: contain;
+  background: transparent;
+  filter:
+    drop-shadow(0 1px 2px #ffffffcc)
+    drop-shadow(0 1px 3px #00000028);
+}
+.site-root .filters .bike-category-graphic,
+.site-root .bike-meta-line .bike-category-graphic {
+  display: block;
+  object-fit: contain;
+  background: transparent;
+}
+.site-root .like-button {
+  min-width: 0;
+  min-height: 0;
+  padding: 3px;
+  gap: 4px;
+  border-radius: 0;
+  background: transparent;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 800;
+  text-shadow:
+    0 1px 2px #fff,
+    0 1px 3px #0006;
+}
+.site-root .like-button:hover,
+.site-root .like-button:focus-visible {
+  background: transparent;
+  transform: scale(1.06);
+}
+.site-root .like-button .like-graphic {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+  filter:
+    drop-shadow(0 1px 2px #ffffffcc)
+    drop-shadow(0 1px 3px #00000035);
+}
+.site-root .like-button[aria-pressed="true"] .like-graphic {
+  transform: scale(1.08);
+}
+
+@media (max-width: 600px) {
+  .site-root .showcase-icon-action {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 6px;
+    border-radius: 12px;
+  }
+  .site-root .showcase-icon-action .site-asset-icon,
+  .site-root .showcase-icon-action .site-asset-icon-fallback {
+    width: 30px;
+    height: 30px;
+  }
+  .site-root .card-type .bike-category-graphic {
+    width: 34px;
+    height: 34px;
+  }
+  .site-root .like-button .like-graphic {
+    width: 28px;
+    height: 28px;
+  }
+}
