@@ -92,6 +92,11 @@ async function handler(req, { params }) {
             "mtbImageId",
             "roadImageId",
             "gravelImageId",
+            "navHomeIconId",
+            "navProfileIconId",
+            "navMessagesIconId",
+            "navAdminIconId",
+            "navLogoutIconId",
           ])
             if (value[key]) {
               const a = await q.query(
@@ -265,6 +270,11 @@ async function handler(req, { params }) {
               "mtbImageId",
               "roadImageId",
               "gravelImageId",
+              "navHomeIconId",
+              "navProfileIconId",
+              "navMessagesIconId",
+              "navAdminIconId",
+              "navLogoutIconId",
             ].some((k) => config[k] === p[1])
           )
             return {

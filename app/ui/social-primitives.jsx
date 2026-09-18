@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Heart, Settings2 } from "lucide-react";
+import { Heart } from "lucide-react";
+import GlobalHeader from "./global-header.jsx";
 import { useSite } from "./site-provider.jsx";
 import Versions from "./versions.jsx";
 export async function socialApi(path, method = "GET", data) {
@@ -51,43 +52,7 @@ export function AuthorLink({ author }) {
   );
 }
 export function SocialHeader({ user }) {
-  const { personalSettings: settings, t } = useSite();
-  return (
-    <header className="header">
-      <a
-        className={"brand" + (settings.logoId ? " brand-illustrated" : "")}
-        href="/"
-        aria-label="ColaBike — главная"
-      >
-        {settings.logoId ? (
-          <img
-            className="site-logo"
-            src={"/api/assets/" + settings.logoId}
-            alt=""
-          />
-        ) : (
-          <>
-            <span className="brand-mark">c.</span>
-            {settings.siteName}
-          </>
-        )}
-      </a>
-      <div className="header-right">
-        <a className="account-link" href="/">
-          Витрина
-        </a>
-        {user?.role === "admin" && (
-          <a href="/admin" className="admin-link" aria-label="Админка">
-            <Settings2 size={18} />
-          </a>
-        )}
-        <a className="account-link" href="/account">
-          {user ? "Личный кабинет" : "Войти"}
-        </a>
-        {user && <Avatar person={user} size="small" />}
-      </div>
-    </header>
-  );
+  return <GlobalHeader user={user} />;
 }
 export function SocialFooter() {
   const { settings } = useSite();
