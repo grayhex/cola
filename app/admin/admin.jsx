@@ -173,7 +173,7 @@ const sections = [
   ["audit", "Журнал", History],
 ];
 export default function Admin() {
-  const { settings, catalog, setSite } = useSite();
+  const { settings, catalog, setSite, setPreferences } = useSite();
   const [tab, setTab] = useState("overview"),
     [user, setUser] = useState(null),
     [loading, setLoading] = useState(true),
@@ -246,6 +246,7 @@ export default function Admin() {
     request("me")
       .then(async (r) => {
         setUser(r.user);
+        setPreferences(r.user?.preferences || {});
         if (r.user?.role === "admin") await reload();
       })
       .catch((e) => setError(e.message))
