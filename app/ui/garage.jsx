@@ -4,6 +4,7 @@ import BikeMeters from "./bike-meters.jsx";
 import Photo from "./bike-photo.jsx";
 import BikeCard from "./bike-card.jsx";
 import {AuthorLink} from "./social-primitives.jsx";
+import GlobalHeader from "./global-header.jsx";
 
 import PhotoSearch from "./photo-search.jsx";
 import BikeWizard from "./bike-wizard.jsx";
@@ -329,70 +330,7 @@ export default function Garage({ share, account = false, embedded = false, start
   ) : bikes;
   return (
     <>
-      {!embedded && <header className="header">
-        <a className={"brand" + (settings.logoId ? " brand-illustrated" : "")} href="/" aria-label={t("ColaBike — главная")}>
-          {settings.logoId ? (
-            <img
-              className="site-logo"
-              src={"/api/assets/" + settings.logoId}
-              alt=""
-            />
-          ) : (
-            <span className="brand-mark">c.</span>
-          )}
-          {!settings.logoId && settings.siteName}
-        </a>
-        <div className="header-right">
-          {share ? (
-            <><a href="/" className="text-link">{t("Витрина")}<ArrowUpRight size={16}/></a>{user && <a className="account-link" href="/account">Личный кабинет</a>}</>
-          ) : user ? (
-            <>
-              {user.role === "admin" && (
-                <a className="admin-link" href="/admin">
-                  <Settings2 size={18} />
-                  <span>{t("Админка")}</span>
-                </a>
-              )}
-              <a className="user-name" href="/account">{user.name}</a>
-              <a className="account-link" href={account ? "/" : "/account"}>{account ? "Витрина" : "Личный кабинет"}</a>
-              <span className="avatar">
-                {user.name.slice(0, 1).toUpperCase()}
-              </span>
-              <button
-                className="icon"
-                aria-label={t("Выйти")}
-                disabled={busy}
-                onClick={() =>
-                  run(async () => {
-                    await api("auth/logout", "POST");
-                    setUser(null);
-                    setBikes([]);
-                    setSelected(null);
-                    setPreferences({});
-                    await load();
-                  })
-                }
-              >
-                <LogOut size={18} />
-              </button>
-            </>
-          ) : (
-            <>
-              <button className="quiet" onClick={() => auth()}>
-                {t("Войти")}
-              </button>
-              <button
-                className="button small"
-                disabled={!settings.registrationOpen}
-                onClick={() => auth("register")}
-              >
-                {t("Зарегистрироваться")}
-                <ArrowUpRight size={16} />
-              </button>
-            </>
-          )}
-        </div>
-      </header>}
+      {!embedded && <GlobalHeader user={user} />}
       {notice && (
         <div className="toast" role="status">
           <Check size={18} />
