@@ -1,0 +1,290 @@
+.discussion {
+  order: 100 !important;
+  flex-basis: 100%;
+  width: 100%;
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+  min-width: 0;
+  scroll-margin-top: 16px;
+}
+.discussion h2 {
+  font-size: 21px;
+  margin: 0;
+}
+.discussion .section-heading {
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+.discussion .help {
+  font-size: 12px;
+  margin: 5px 0 12px;
+}
+.comment-thread {
+  border-bottom: 1px solid var(--line);
+  padding: 14px 0;
+}
+.comment {
+  min-width: 0;
+}
+.comment-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: space-between;
+}
+.comment-heading .person-identity {
+  font-size: 13px;
+}
+.comment-heading time,
+.notification-list time {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.comment-body {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 12px 0;
+}
+.comment-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.comment-actions .quiet,
+.report-trigger {
+  font-size: 11px !important;
+  min-height: 32px !important;
+  padding: 3px 0;
+}
+.comment-replies {
+  margin-left: 32px;
+  border-left: 2px solid var(--line);
+  padding-left: 14px;
+}
+.comment-reply {
+  margin-top: 18px;
+}
+.more-replies {
+  font-size: 12px;
+  margin-left: 46px;
+}
+.comment-editor {
+  margin-top: 20px;
+}
+.comment-editor textarea {
+  width: 100%;
+  resize: vertical;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--ink);
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 16px;
+  min-height: 78px;
+}
+.comment-editor > div {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: flex-end;
+}
+.comment-editor .help {
+  margin-right: auto;
+}
+.comment-editor .button {
+  margin-top: 8px;
+}
+.comment-confirm {
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 12px 0;
+}
+.report-control {
+  font-size: 11px;
+  max-width: 100%;
+}
+.report-trigger {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+}
+.report-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px;
+  background: var(--wash);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  margin: 6px 0;
+}
+.report-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.report-form select {
+  max-width: 100%;
+  font-size: 16px;
+}
+.profile-hero > .report-control {
+  grid-column: 2 / -1;
+  justify-self: start;
+}
+.notification-list {
+  padding: 0;
+  list-style: none;
+}
+.notification-list li {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  padding: 18px 12px;
+  border-bottom: 1px solid var(--line);
+  border-radius: 8px;
+}
+.notification-list li.unread {
+  background: var(--wash);
+  border-left: 3px solid var(--accent);
+}
+.notification-list li > div {
+  flex: 1;
+  min-width: 0;
+}
+.notification-list p {
+  margin: 0 0 6px;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.notification-list p a {
+  font-weight: 600;
+}
+.notification-actor {
+  color: var(--accent);
+}
+.notification-badge {
+  position: absolute;
+  right: 0;
+  top: 0;
+  font-size: 10px;
+  line-height: 18px;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 12px;
+  padding: 0 4px;
+  background: var(--accent);
+  color: white;
+  pointer-events: none;
+}
+.report-card {
+  padding: 20px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+}
+.report-card > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.report-card > div > span {
+  color: var(--muted);
+  font-size: 11px;
+}
+.card-comments {
+  font-size: 10px;
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 7px;
+}
+.community-page .section-heading {
+  margin-bottom: 18px;
+}
+.site-root .community-page .bike-grid {
+  margin-top: 20px;
+}
+@media (max-width: 700px) {
+  .site-root .global-header {
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 8px 14px;
+  }
+  .site-root .global-header .brand {
+    max-width: 100%;
+  }
+  .site-root .global-nav {
+    width: 100%;
+    justify-content: space-between;
+    gap: 2px;
+  }
+  .site-root .global-nav-item {
+    width: 42px;
+    min-width: 42px;
+    height: 44px;
+    min-height: 44px;
+  }
+  .site-root .global-nav-graphic {
+    width: 30px;
+    height: 30px;
+  }
+  .site-root .global-nav-graphic-fallback {
+    width: 24px;
+    height: 24px;
+  }
+  .comment-replies {
+    margin-left: 10px;
+    padding-left: 10px;
+  }
+  .comment-heading .person-identity {
+    font-size: 12px;
+  }
+  .comment-body {
+    font-size: 13px;
+  }
+  .comment-actions {
+    gap: 12px;
+  }
+  .discussion {
+    margin-top: 16px;
+    padding-top: 18px;
+  }
+  .discussion h2 {
+    font-size: 19px;
+  }
+  .comment-editor > div {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .comment-editor .button {
+    font-size: 12px !important;
+    padding: 8px 10px !important;
+  }
+  .notification-list li {
+    padding: 14px 8px;
+    gap: 10px;
+  }
+  .notification-list p {
+    font-size: 13px;
+  }
+  .notification-list .social-avatar {
+    width: 34px;
+    height: 34px;
+  }
+  .profile-hero > .report-control {
+    grid-column: 1 / -1;
+  }
+  .community-page .section-heading {
+    flex-wrap: wrap;
+  }
+}

@@ -1,4 +1,5 @@
 "use client";
+import {ReportButton} from "./community-controls.jsx";
 import { useEffect, useState } from "react";
 import { MapPin, Calendar, ArrowLeft } from "lucide-react";
 import {
@@ -118,7 +119,8 @@ export default function PublicProfile({ username }) {
                 </div>
               </div>
               <FollowButton profile={profile} user={user} onChange={refresh} />
-              <div className="social-stats">
+              {!profile.relationship.isSelf && <ReportButton entityType="profile" targetId={profile.id} user={user}/>}
+                <div className="social-stats">
                 <button onClick={() => setPeople("")} aria-pressed={!people}>
                   <strong>{profile.counts.bikes}</strong>Велосипеды
                 </button>

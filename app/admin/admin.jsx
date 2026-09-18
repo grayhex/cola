@@ -1,4 +1,5 @@
 "use client";
+import Reports from "./reports.jsx";
 import ScoringSettings from "./scoring-settings.jsx";
 import { BlockSettings, GroupSettings } from "./layout-settings.jsx";
 import { copyBlocks } from "../../lib/copy-blocks.js";
@@ -170,6 +171,7 @@ const sections = [
   ["copy", "Тексты", Type],
   ["catalog", "Справочники", BookOpen],
   ["users", "Пользователи", Users],
+  ["reports", "Жалобы", ShieldCheck],
   ["media", "Медиа", Image],
   ["audit", "Журнал", History],
 ];
@@ -428,6 +430,7 @@ export default function Admin() {
           )}
           {tab === "scoring" && <ScoringSettings value={draft.scoring} catalog={catalog} onChange={v=>update("scoring",v)}/>}
           {tab === "resolver" && <ResolverSettings />}
+          {tab === "reports" && <Reports onManageUser={username=>{setUserSearch(username);setPage(1);setTab("users");}}/>}
           {tab === "overview" && (
             <>
               <div className="admin-stats">
@@ -694,7 +697,7 @@ export default function Admin() {
                       {assetPicker("navProfileIconId", "Профиль", {
                         previewClassName: "icon",
                       })}
-                      {assetPicker("navMessagesIconId", "Сообщения", {
+                      {assetPicker("navMessagesIconId", "Уведомления", {
                         previewClassName: "icon",
                       })}
                       {assetPicker("navAdminIconId", "Админка", {
