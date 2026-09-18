@@ -330,7 +330,7 @@ export default function Garage({ share, account = false, embedded = false, start
   ) : bikes;
   return (
     <>
-      {!embedded && <GlobalHeader user={user} />}
+      {!embedded && <GlobalHeader user={user} onProfile={!user ? () => auth() : undefined} />}
       {notice && (
         <div className="toast" role="status">
           <Check size={18} />
