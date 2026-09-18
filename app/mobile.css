@@ -8,6 +8,7 @@
   --field: #fff;
   --soft: #e8eee5;
   --button-ink: #fff;
+  --showcase-shell-max: 1640px;
   min-height: 100dvh;
   background: var(--paper);
   color: var(--ink);
@@ -2156,5 +2157,62 @@
 @media (min-width: 1180px) {
   .asset-picker-grid.icon-slots {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+
+/* Showcase shell alignment and compact right-side toolbar. */
+.site-root .showcase-category-filters {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.site-root .showcase-category-filters .showcase-filter-action {
+  flex: 0 0 auto;
+}
+.site-root .showcase-search-row {
+  justify-content: flex-end;
+  margin-top: -12px;
+}
+.site-root .showcase-search-row .showcase-search-field {
+  width: min(360px, 100%);
+  margin-left: auto;
+}
+@media (min-width: 900px) {
+  .site-root .garage-banner {
+    width: min(var(--showcase-shell-max), calc(100vw - 48px));
+    max-width: none;
+    margin-left: 50%;
+    margin-right: 0;
+    transform: translateX(-50%);
+  }
+}
+@media (max-width: 700px) {
+  .site-root .garage-heading {
+    flex-wrap: wrap;
+  }
+  .site-root .showcase-actions {
+    margin-left: auto;
+    gap: 5px;
+  }
+  .site-root .showcase-category-filters {
+    gap: 3px;
+  }
+  .site-root .showcase-category-filters .showcase-filter-action {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    min-height: 38px;
+    padding: 4px;
+    border-radius: 10px;
+  }
+  .site-root .showcase-category-filters .bike-category-graphic {
+    width: 28px;
+    height: 28px;
+  }
+  .site-root .showcase-search-row {
+    margin-top: -4px;
   }
 }
