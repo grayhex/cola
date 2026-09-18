@@ -5,6 +5,7 @@ import BikeCategoryIcon from "./bike-category-icon.jsx";
 import BikeMeters from "./bike-meters.jsx";
 import { AuthorLink } from "./social-primitives.jsx";
 import { useSite } from "./site-provider.jsx";
+import SiteAssetIcon from "./site-asset-icon.jsx";
 export default function BikeCard({
   bike: b,
   onOpen,
@@ -12,7 +13,7 @@ export default function BikeCard({
   busy = false,
   ownerView = false,
 }) {
-  const { catalog } = useSite();
+  const { catalog, personalSettings: settings } = useSite();
   const open = onOpen || (() => window.location.assign("/b/" + b.share_id));
   return (
     <article className="bike-card">
@@ -29,6 +30,7 @@ export default function BikeCard({
           <BikeCategoryIcon
             category={b.category}
             label={catalog.categories[b.category]}
+            size={38}
           />
         </span>
         {b.is_public && (
@@ -40,7 +42,13 @@ export default function BikeCard({
             aria-pressed={!!b.liked}
             onClick={onLike}
           >
-            <Heart size={16} fill={b.liked ? "currentColor" : "none"} />
+            <SiteAssetIcon
+              assetId={settings.likeIconId}
+              Fallback={Heart}
+              size={28}
+              className="like-graphic"
+              fallbackProps={{ fill: b.liked ? "currentColor" : "none" }}
+            />
             <span>{b.likes || 0}</span>
           </button>
         )}

@@ -3,6 +3,7 @@ import ScoringSettings from "./scoring-settings.jsx";
 import { BlockSettings, GroupSettings } from "./layout-settings.jsx";
 import { copyBlocks } from "../../lib/copy-blocks.js";
 import ResolverSettings from "./resolver-settings.jsx";
+import AssetPicker from "./asset-picker.jsx";
 import GlobalHeader from "../ui/global-header.jsx";
 import { useEffect, useState, useRef } from "react";
 import {
@@ -291,13 +292,52 @@ export default function Admin() {
     setConfirm({ title, description, action, email });
     setConfirmEmail("");
   }
-  function assetSelect(key, label, emptyLabel = "По умолчанию") {
+  async function uploadAsset(file, assignKey = null) {
+    if (file.size > 10 * 1024 * 1024)
+      throw new Error("Максимальный размер 10 МБ");
+    const response = await fetch(
+      "/api/admin/assets?name=" + encodeURIComponent(file.name),
+      {
+        method: "POST",
+        headers: { "Content-Type": file.type },
+        body: file,
+      },
+    );
+    const uploaded = await response.json();
+    if (!response.ok)
+      throw new Error(uploaded.error || "Не удалось загрузить изображение");
+    setAssets((await request("admin/assets")).assets);
+    if (assignKey) update(assignKey, uploaded.id);
+    setNotice(
+      assignKey
+        ? "Изображение загружено и выбрано. Сохраните настройки."
+        : "Изображение загружено.",
+    );
+    return uploaded;
+  }
+  function assetPicker(
+    key,
+    label,
+    {
+      emptyLabel = "Плейсхолдер",
+      help = "",
+      previewClassName = "",
+    } = {},
+  ) {
     return (
-      <Select
+      <AssetPicker
+        key={key}
         label={label}
-        value={draft[key] || ""}
-        onChange={(v) => update(key, v || null)}
-        options={[["", emptyLabel], ...assets.map((a) => [a.id, a.name])]}
+        help={help}
+        value={draft[key] || null}
+        assets={assets}
+        emptyLabel={emptyLabel}
+        busy={busy}
+        previewClassName={previewClassName}
+        onChange={(value) => update(key, value)}
+        onUpload={(selectedFile) =>
+          run(() => uploadAsset(selectedFile, key))
+        }
       />
     );
   }
@@ -597,34 +637,150 @@ export default function Admin() {
                   ним. Любую фотографию можно открыть целиком.
                 </p>
               </section>
-              <section className="admin-panel">
-                <h2>Логотипы и графика</h2>
-                <p>
-                  Сначала загрузите изображения в разделе «Медиа», затем
-                  выберите их здесь. Для пяти иконок верхнего меню значение
-                  «Плейсхолдер» оставляет встроенную пиктограмму.
-                </p>
-                <div className="admin-form-grid">
-                  {assetSelect("logoId", "Логотип в шапке")}
-                  {assetSelect("navHomeIconId", "Меню — Главная", "Плейсхолдер")}
-                  {assetSelect("navProfileIconId", "Меню — Профиль", "Плейсхолдер")}
-                  {assetSelect("navMessagesIconId", "Меню — Сообщения", "Плейсхолдер")}
-                  {assetSelect("navAdminIconId", "Меню — Админка", "Плейсхолдер")}
-                  {assetSelect("navLogoutIconId", "Меню — Выход", "Плейсхолдер")}
-                  {assetSelect("mtbImageId", "Стоковое изображение — MTB")}
-                  {assetSelect("roadImageId", "Стоковое изображение — шоссе")}
-                  {assetSelect(
-                    "gravelImageId",
-                    "Стоковое изображение — гравел",
-                  )}
-                  {assetSelect("faviconId", "Иконка вкладки")}
-                  {assetSelect("demoImageId", "Фото демонстрационного байка")}
-                  {assetSelect("garageImageId", "Изображение над гаражом")}
+              <section className="admin-panel graphics-panel">
+                <div className="panel-heading">
+                  <div>
+                    <h2>Графика сайта</h2>
+                    <p>
+                      Каждое изображение можно выбрать из медиатеки или загрузить
+                      прямо здесь. После загрузки оно сразу назначается выбранному
+                      слоту; для публикации нажмите «Сохранить».
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className="button secondary"
+                    onClick={() => setTab("media")}
+                  >
+                    <Image size={17} />
+                    Медиатека
+                  </button>
                 </div>
-                <button className="quiet" onClick={() => setTab("media")}>
-                  <Upload size={16} />
-                  Открыть медиатеку
-                </button>
+
+                <div className="graphics-groups">
+                  <section className="graphics-group">
+                    <div className="graphics-group-heading">
+                      <h3>Брендинг</h3>
+                      <p>Основная айдентика и крупная графика страниц.</p>
+                    </div>
+                    <div className="asset-picker-grid">
+                      {assetPicker("logoId", "Логотип в шапке", {
+                        emptyLabel: "Текстовый логотип",
+                        previewClassName: "wide",
+                      })}
+                      {assetPicker("faviconId", "Иконка вкладки", {
+                        emptyLabel: "По умолчанию",
+                        previewClassName: "icon",
+                      })}
+                      {assetPicker("garageImageId", "Изображение над гаражом", {
+                        emptyLabel: "Без изображения",
+                        previewClassName: "wide",
+                      })}
+                    </div>
+                  </section>
+
+                  <section className="graphics-group">
+                    <div className="graphics-group-heading">
+                      <h3>Верхнее меню</h3>
+                      <p>
+                        Прозрачные PNG/WebP подходят лучше всего. Без файла
+                        остаётся встроенный Lucide-плейсхолдер.
+                      </p>
+                    </div>
+                    <div className="asset-picker-grid icon-slots">
+                      {assetPicker("navHomeIconId", "Главная", {
+                        previewClassName: "icon",
+                      })}
+                      {assetPicker("navProfileIconId", "Профиль", {
+                        previewClassName: "icon",
+                      })}
+                      {assetPicker("navMessagesIconId", "Сообщения", {
+                        previewClassName: "icon",
+                      })}
+                      {assetPicker("navAdminIconId", "Админка", {
+                        previewClassName: "icon",
+                      })}
+                      {assetPicker("navLogoutIconId", "Выход", {
+                        previewClassName: "icon",
+                      })}
+                    </div>
+                  </section>
+
+                  <section className="graphics-group">
+                    <div className="graphics-group-heading">
+                      <h3>Действия витрины</h3>
+                      <p>
+                        Кнопки в правой части заголовка витрины и лайк поверх
+                        фотографии.
+                      </p>
+                    </div>
+                    <div className="asset-picker-grid icon-slots">
+                      {assetPicker("addBikeIconId", "Добавить велосипед", {
+                        previewClassName: "icon",
+                      })}
+                      {assetPicker("searchIconId", "Поиск", {
+                        previewClassName: "icon",
+                      })}
+                      {assetPicker("likeIconId", "Лайк", {
+                        help: "Показывается прямо на фото без белой подложки.",
+                        previewClassName: "icon transparent",
+                      })}
+                    </div>
+                  </section>
+
+                  <section className="graphics-group">
+                    <div className="graphics-group-heading">
+                      <h3>Тип велосипеда</h3>
+                      <p>
+                        Иконка типа накладывается прямо на фотографию без
+                        фоновой плашки. Можно использовать прозрачные изображения.
+                      </p>
+                    </div>
+                    <div className="asset-picker-grid icon-slots">
+                      {assetPicker("mtbTypeIconId", "MTB / ATB", {
+                        previewClassName: "icon transparent",
+                      })}
+                      {assetPicker("roadTypeIconId", "Road", {
+                        previewClassName: "icon transparent",
+                      })}
+                      {assetPicker("gravelTypeIconId", "Gravel", {
+                        previewClassName: "icon transparent",
+                      })}
+                    </div>
+                  </section>
+
+                  <section className="graphics-group">
+                    <div className="graphics-group-heading">
+                      <h3>Стоковые изображения</h3>
+                      <p>
+                        Используются как подстановка, когда у велосипеда ещё нет
+                        собственной фотографии.
+                      </p>
+                    </div>
+                    <div className="asset-picker-grid">
+                      {assetPicker("mtbImageId", "Сток — MTB", {
+                        emptyLabel: "Без изображения",
+                        previewClassName: "wide",
+                      })}
+                      {assetPicker("roadImageId", "Сток — шоссе", {
+                        emptyLabel: "Без изображения",
+                        previewClassName: "wide",
+                      })}
+                      {assetPicker("gravelImageId", "Сток — гравел", {
+                        emptyLabel: "Без изображения",
+                        previewClassName: "wide",
+                      })}
+                      {assetPicker(
+                        "demoImageId",
+                        "Фото демонстрационного байка",
+                        {
+                          emptyLabel: "Внешнее демо-фото",
+                          previewClassName: "wide",
+                        },
+                      )}
+                    </div>
+                  </section>
+                </div>
               </section>
             </>
           )}
@@ -725,27 +881,10 @@ export default function Admin() {
                   hidden
                   ref={file}
                   onChange={(e) => {
-                    const f = e.target.files?.[0];
+                    const selectedFile = e.target.files?.[0];
                     e.target.value = "";
-                    if (!f) return;
-                    run(async () => {
-                      if (f.size > 10 * 1024 * 1024)
-                        throw new Error("Максимальный размер 10 МБ");
-                      const r = await fetch(
-                        "/api/admin/assets?name=" + encodeURIComponent(f.name),
-                        {
-                          method: "POST",
-                          headers: { "Content-Type": f.type },
-                          body: f,
-                        },
-                      );
-                      const b = await r.json();
-                      if (!r.ok) throw new Error(b.error);
-                      setAssets((await request("admin/assets")).assets);
-                      setNotice(
-                        "Изображение загружено. Выберите его в оформлении.",
-                      );
-                    });
+                    if (!selectedFile) return;
+                    run(() => uploadAsset(selectedFile));
                   }}
                 />
                 <div className="asset-grid">

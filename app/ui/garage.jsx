@@ -5,6 +5,7 @@ import Photo from "./bike-photo.jsx";
 import BikeCard from "./bike-card.jsx";
 import {AuthorLink} from "./social-primitives.jsx";
 import GlobalHeader from "./global-header.jsx";
+import SiteAssetIcon from "./site-asset-icon.jsx";
 
 import PhotoSearch from "./photo-search.jsx";
 import BikeWizard from "./bike-wizard.jsx";
@@ -470,7 +471,27 @@ export default function Garage({ share, account = false, embedded = false, start
               >
                 <Photo bike={bike} photo={photo} className="hero-photo" />
               </button>
-              {bike.is_public && <button className="like-button" type="button" disabled={busy || bike.is_owner} aria-label={"Нравится: " + bike.likes} aria-pressed={!!bike.liked} onClick={() => like(bike)}><Heart size={16} fill={bike.liked ? "currentColor" : "none"} /><span>{bike.likes || 0}</span></button>}
+              {bike.is_public && (
+                <button
+                  className="like-button"
+                  type="button"
+                  disabled={busy || bike.is_owner}
+                  aria-label={"Нравится: " + bike.likes}
+                  aria-pressed={!!bike.liked}
+                  onClick={() => like(bike)}
+                >
+                  <SiteAssetIcon
+                    assetId={settings.likeIconId}
+                    Fallback={Heart}
+                    size={28}
+                    className="like-graphic"
+                    fallbackProps={{
+                      fill: bike.liked ? "currentColor" : "none",
+                    }}
+                  />
+                  <span>{bike.likes || 0}</span>
+                </button>
+              )}
               {editable && (
                 <div className="photo-tools">
                   <button
@@ -771,13 +792,49 @@ export default function Garage({ share, account = false, embedded = false, start
             />
           )}
           <div className="garage-heading">
-            <div><h1>{account ? "Мои велосипеды" : "Витрина"}<span className="count">{total}</span></h1></div>
-            <div className="showcase-actions">
-
-              <button className="button" onClick={()=>user ? setModal({type:"bike"}) : auth("register")}><Plus size={18}/><span className="add-bike-label">Добавить велосипед</span></button>
+            <div>
+              <h1>
+                {account ? "Мои велосипеды" : "Витрина"}
+                <span className="count">{total}</span>
+              </h1>
+            </div>
+            <div className="showcase-actions" aria-label="Действия витрины">
+              <button
+                className="icon bordered showcase-icon-action"
+                aria-label="Добавить велосипед"
+                onClick={() =>
+                  user ? setModal({ type: "bike" }) : auth("register")
+                }
+              >
+                <SiteAssetIcon
+                  assetId={settings.addBikeIconId}
+                  Fallback={Plus}
+                  size={28}
+                />
+              </button>
+              <button
+                className={
+                  "icon bordered showcase-icon-action" +
+                  (searchOpen ? " active" : "")
+                }
+                aria-label="Поиск велосипедов"
+                aria-expanded={searchOpen}
+                onClick={() => {
+                  if (searchOpen) setQuery("");
+                  setSearchOpen((v) => !v);
+                }}
+              >
+                <SiteAssetIcon
+                  assetId={settings.searchIconId}
+                  Fallback={Search}
+                  size={28}
+                />
+              </button>
             </div>
           </div>
-          {account && !user && <p>Войдите, чтобы управлять своими велосипедами и оформлением.</p>}
+          {account && !user && (
+            <p>Войдите, чтобы управлять своими велосипедами и оформлением.</p>
+          )}
           <div className="garage-tools">
             <div className="filters">
               {[
@@ -787,30 +844,28 @@ export default function Garage({ share, account = false, embedded = false, start
                 <button
                   key={key}
                   className={filter === key ? "active" : ""}
-                  onClick={() => { setFilter(key); setPage(1); }}
+                  onClick={() => {
+                    setFilter(key);
+                    setPage(1);
+                  }}
                 >
-                  {key === "all" ? label : <BikeCategoryIcon category={key} label={label} />}
+                  {key === "all" ? (
+                    label
+                  ) : (
+                    <BikeCategoryIcon category={key} label={label} />
+                  )}
                 </button>
               ))}
             </div>
-            <button
-              className="icon search-toggle"
-              aria-label="Поиск велосипедов"
-              aria-expanded={searchOpen}
-              onClick={() => {
-                if (searchOpen) setQuery("");
-                setSearchOpen((v) => !v);
-              }}
-            >
-              <Search size={18} />
-            </button>
             {searchOpen && (
-              <label className="search">
-                <Search size={17} />
+              <label className="search showcase-search-field">
                 <input
                   aria-label={t("Найти велосипед")}
                   value={query}
-                  onChange={(e) => { setQuery(e.target.value); setPage(1); }}
+                  onChange={(e) => {
+                    setQuery(e.target.value);
+                    setPage(1);
+                  }}
                   autoFocus
                   placeholder="Найти велосипед или автора"
                 />
