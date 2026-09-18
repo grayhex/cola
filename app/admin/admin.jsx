@@ -691,6 +691,58 @@ export default function Admin() {
 
                   <section className="graphics-group">
                     <div className="graphics-group-heading">
+                      <h3>Общий фон сайта</h3>
+                      <p>
+                        Фоновое изображение применяется ко всем страницам сайта.
+                        Для паттернов используйте замощение, для крупных
+                        иллюстраций — масштабирование.
+                      </p>
+                    </div>
+                    <div className="asset-picker-grid">
+                      {assetPicker("backgroundImageId", "Фоновое изображение", {
+                        emptyLabel: "Без фонового изображения",
+                        help: "JPEG, PNG или WebP. Прозрачность исходного PNG/WebP сохраняется.",
+                        previewClassName: "wide",
+                      })}
+                    </div>
+                    <div className="admin-form-grid background-settings">
+                      <Select
+                        label="Размещение фонового изображения"
+                        value={draft.backgroundMode || "cover"}
+                        onChange={(v) => update("backgroundMode", v)}
+                        options={[
+                          ["cover", "Масштабировать на экран"],
+                          ["tile", "Замостить без масштабирования"],
+                        ]}
+                      />
+                      <Field
+                        label={
+                          "Прозрачность фона: " +
+                          (100 - Number(draft.backgroundOpacity ?? 20)) +
+                          "%"
+                        }
+                        help="0% — изображение без прозрачности, 100% — полностью скрыто."
+                      >
+                        <input
+                          type="range"
+                          min="0"
+                          max="100"
+                          step="1"
+                          value={100 - Number(draft.backgroundOpacity ?? 20)}
+                          disabled={!draft.backgroundImageId}
+                          onChange={(e) =>
+                            update(
+                              "backgroundOpacity",
+                              100 - Number(e.target.value),
+                            )
+                          }
+                        />
+                      </Field>
+                    </div>
+                  </section>
+
+                  <section className="graphics-group">
+                    <div className="graphics-group-heading">
                       <h3>Верхнее меню</h3>
                       <p>
                         Прозрачные PNG/WebP подходят лучше всего. Без файла
