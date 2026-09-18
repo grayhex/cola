@@ -784,7 +784,7 @@ export default function Garage({ share, account = false, embedded = false, start
                 </div>
               )}
           </section>
-          {bike.is_public && <BikeGame key={bike.id+":"+bike.likes} bike={bike} user={user}/>}
+          {bike.is_public && <BikeGame key={JSON.stringify([bike.id,bike.likes,bike.weight,bike.category,bike.show_bike_price,bike.price,bike.scores,bike.photos.length])} bike={bike} user={user}/>}
           {bike.is_public && <Discussion key={bike.id} bike={bike} user={user}/>}
         </Main>
       ) : (

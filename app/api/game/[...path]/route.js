@@ -3,7 +3,10 @@ import { currentUser, rateLimit } from "../../../../lib/auth.js";
 import { json, fail, sameOrigin, readJson } from "../../../../lib/http.js";
 import { traced, logError } from "../../../../lib/observability.js";
 import { uuid } from "../../../../lib/validation.js";
-import { CommunityError } from "../../../../lib/community-validation.js";
+import {
+  CommunityError,
+  communityPage,
+} from "../../../../lib/community-validation.js";
 import {
   records,
   gameShelf,
@@ -85,12 +88,8 @@ async function handler(req, { params }) {
         }
       }
       if (p.length === 2 && p[1] === "bikes" && m === "GET") {
-        const page = Math.max(
-          1,
-          Math.min(
-            10000,
-            Number(new URL(req.url).searchParams.get("page")) || 1,
-          ),
+        const page = communityPage.parse(
+          new URL(req.url).searchParams.get("page") || 1,
         );
         return json({
           bikes: (

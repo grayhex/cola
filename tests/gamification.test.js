@@ -265,3 +265,42 @@ test("migration backfills existing public milestones; blocked votes never earn a
     await q.close();
   }
 });
+test("admin record toggles and reaction switch remove titles without deleting votes; identity/threshold gates are explicit", async () => {
+  const q = await setup();
+  try {
+    const a = await rider(q, "toggleowner"),
+      v = await rider(q, "togglevoter"),
+      id = await bike(q, a);
+    await reactToBike(q, id, v, "dream", true);
+    assert(holder(await records(q), "dream"));
+    await q.query("UPDATE gamification_settings SET value=$1", [
+      {
+        ...defaultGamification,
+        reactionsEnabled: false,
+        enabledRecords: ["budget", "dream"],
+      },
+    ]);
+    assert.equal((await records(q)).records.length, 1);
+    await assert.rejects(
+      () => reactToBike(q, id, v, "clean", true),
+      (e) => e.status === 409,
+    );
+    assert.equal(
+      (await q.query("SELECT count(*)::int AS n FROM bike_reactions")).rows[0]
+        .n,
+      1,
+    );
+    await q.query("UPDATE gamification_settings SET value=$1", [
+      defaultGamification,
+    ]);
+    assert.equal(holder(await records(q), "dream").id, id);
+    await q.query("UPDATE bikes SET brand='' WHERE id=$1", [id]);
+    assert.equal(holder(await records(q), "budget"), null);
+    await q.query("UPDATE gamification_settings SET value=$1", [
+      { ...defaultGamification, minimumCompleteness: 100 },
+    ]);
+    assert((await records(q)).records.every((r) => r.holder === null));
+  } finally {
+    await q.close();
+  }
+});
