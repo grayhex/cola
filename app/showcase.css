@@ -1,4 +1,8 @@
 /* Shared photo-first cards: showcase, subscriptions and rider collections. */
+.site-root .garage {
+  max-width: var(--showcase-shell-max);
+  padding-top: 8px;
+}
 .site-root .bike-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -28,7 +32,7 @@
 .site-root .card-photo {
   position: relative;
   height: auto;
-  aspect-ratio: 4/3;
+  aspect-ratio: var(--photo-ratio, 4/3);
   overflow: hidden;
   background: var(--wash);
 }
@@ -401,7 +405,7 @@
   }
   .site-root .card-photo {
     height: auto;
-    aspect-ratio: 3/2;
+    aspect-ratio: var(--photo-ratio, 4/3);
   }
   .site-root .card-info {
     padding: 12px;
@@ -423,7 +427,7 @@
     font-size: 12px;
   }
   .filter-chips button {
-    min-height: 36px;
+    min-height: 44px;
   }
 }
 @media (prefers-reduced-motion: reduce) {

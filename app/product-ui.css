@@ -412,6 +412,10 @@
   .site-root .comment-body {
     font-size: 14px;
   }
+  .site-root .comment-actions .quiet,
+  .site-root .report-trigger {
+    min-height: 44px !important;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   .site-root *,

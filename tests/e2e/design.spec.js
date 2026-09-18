@@ -21,10 +21,11 @@ test("dense visual system: shared cards, filters, search, themes and responsive 
     },
   });
   expect(register.status()).toBe(201);
-  const user = (await register.json()).user;
+  const user = (await (await page.request.get("/api/me")).json()).user;
   await db.query("UPDATE users SET role='admin' WHERE id=$1", [user.id]);
   const overview = await (await page.request.get("/api/admin/overview")).json();
   const original = overview.settings;
+  const originalCatalog = overview.catalog;
   const bikes = [];
   let asset;
   async function settings(value) {
@@ -142,6 +143,26 @@ test("dense visual system: shared cards, filters, search, themes and responsive 
     await page.getByRole("searchbox").fill(name);
     await page.getByRole("button", { name: "Найти", exact: true }).click();
     await expect(page.locator(".bike-card")).toHaveCount(5);
+    // Simulate a future larger catalogue in the disposable database only.
+    // Production taxonomy and its database constraint remain unchanged.
+    const expanded = structuredClone(originalCatalog);
+    for (let i = 0; i < 20; i++)
+      expanded.categories["future-" + i] = "Дополнительная категория " + i;
+    await db.query("UPDATE site_catalog SET value=$1 WHERE id=1", [
+      JSON.stringify(expanded),
+    ]);
+    await page.reload();
+    await page.getByRole("button", { name: /^Фильтры/ }).click();
+    await expect(panel.getByRole("checkbox")).toHaveCount(23);
+    await panel.getByRole("checkbox").last().check();
+    await noOverflow();
+    await screenshot("long-filter-catalog");
+    await page.keyboard.press("Escape");
+    await expect(panel).not.toBeVisible();
+    await expect(page.getByRole("button", { name: /^Фильтры/ })).toBeFocused();
+    await db.query("UPDATE site_catalog SET value=$1 WHERE id=1", [
+      JSON.stringify(originalCatalog),
+    ]);
     for (const columns of [3, 4, 5]) {
       await settings({
         desktopColumns: columns,
@@ -196,6 +217,9 @@ test("dense visual system: shared cards, filters, search, themes and responsive 
         .evaluate((el) => getComputedStyle(el).transitionDuration),
     ).toBe("0s");
   } finally {
+    await db.query("UPDATE site_catalog SET value=$1 WHERE id=1", [
+      JSON.stringify(originalCatalog),
+    ]);
     await settings({});
     for (const id of bikes)
       await page.request.delete("/api/bikes/" + id, { headers: { origin } });

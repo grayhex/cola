@@ -1,6 +1,10 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import {
+  significantBadge,
+  metricSegments,
+} from "../../lib/card-presentation.js";
+import {
   X,
   SlidersHorizontal,
   Search,
@@ -249,10 +253,7 @@ export function MicroMetrics({ scores }) {
             <Icon size={14} />
             <span className="micro-segments" aria-hidden="true">
               {[0, 1, 2, 3].map((n) => (
-                <i
-                  key={n}
-                  data-filled={n < Math.min(4, Math.floor(value / 25) + 1)}
-                />
+                <i key={n} data-filled={n < metricSegments(value)} />
               ))}
             </span>
           </button>
@@ -280,15 +281,9 @@ export function MicroMetrics({ scores }) {
     </>
   );
 }
-const valuable = ["bike_likes_100", "bike_likes_50", "full_build"];
 export function ImportantBadge({ bike, records = [] }) {
-  const current = records.filter((r) => r.holder?.id === bike.id);
-  const record = current.find((r) => r.group !== "Community");
-  const award = valuable
-    .map((key) => (bike.badges || []).find((a) => a.key === key))
-    .find(Boolean);
-  const chosen = record || award || current[0];
-  if (!chosen || !bike.is_public) return null;
+  const chosen = significantBadge(bike, records);
+  if (!chosen) return null;
   const Icon = chosen.holder ? Trophy : Medal;
   return (
     <a

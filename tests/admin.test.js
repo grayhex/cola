@@ -9,6 +9,14 @@ import { getSite, updateManagedUser } from "../lib/site.js";
 import { iconPaths, categoryIcons } from "../lib/part-icons.js";
 test("settings validate safe themes, fonts, color, assets and copy; every seeded category has an icon", () => {
   assert.ok(settingsInput.safeParse(defaultSettings).success);
+  for (const desktopColumns of [3, 4, 5])
+    assert.ok(
+      settingsInput.safeParse({ ...defaultSettings, desktopColumns }).success,
+    );
+  assert.equal(
+    settingsInput.safeParse({ ...defaultSettings, desktopColumns: 6 }).success,
+    false,
+  );
   assert.ok(catalogInput.safeParse(defaultCatalog).success);
   assert.equal(
     settingsInput.safeParse({
