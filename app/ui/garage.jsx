@@ -796,24 +796,40 @@ export default function Garage({ share, account = false, embedded = false, start
           <div className="garage-heading">
             <div>
               <h1>
-                {account ? "Мои велосипеды" : "Витрина"}
+                {account
+                  ? "Мои велосипеды"
+                  : settings.showcaseTitle || "Витрина"}
                 <span className="count">{total}</span>
               </h1>
             </div>
             <div className="showcase-actions" aria-label="Действия витрины">
-              <button
-                className="icon bordered showcase-icon-action"
-                aria-label="Добавить велосипед"
-                onClick={() =>
-                  user ? setModal({ type: "bike" }) : auth("register")
-                }
+              <div
+                className="filters showcase-category-filters"
+                aria-label="Фильтр по типу велосипеда"
               >
-                <SiteAssetIcon
-                  assetId={settings.addBikeIconId}
-                  Fallback={Plus}
-                  size={28}
-                />
-              </button>
+                {Object.entries(categories).map(([key, label]) => (
+                  <button
+                    key={key}
+                    type="button"
+                    className={
+                      "icon bordered showcase-icon-action showcase-filter-action" +
+                      (filter === key ? " active" : "")
+                    }
+                    aria-label={label}
+                    aria-pressed={filter === key}
+                    onClick={() => {
+                      setFilter((current) => (current === key ? "all" : key));
+                      setPage(1);
+                    }}
+                  >
+                    <BikeCategoryIcon
+                      category={key}
+                      label={label}
+                      size={34}
+                    />
+                  </button>
+                ))}
+              </div>
               <button
                 className={
                   "icon bordered showcase-icon-action" +
@@ -832,34 +848,26 @@ export default function Garage({ share, account = false, embedded = false, start
                   size={28}
                 />
               </button>
+              <button
+                className="icon bordered showcase-icon-action"
+                aria-label="Добавить велосипед"
+                onClick={() =>
+                  user ? setModal({ type: "bike" }) : auth("register")
+                }
+              >
+                <SiteAssetIcon
+                  assetId={settings.addBikeIconId}
+                  Fallback={Plus}
+                  size={28}
+                />
+              </button>
             </div>
           </div>
           {account && !user && (
             <p>Войдите, чтобы управлять своими велосипедами и оформлением.</p>
           )}
-          <div className="garage-tools">
-            <div className="filters">
-              {[
-                ["all", t("Все велосипеды")],
-                ...Object.entries(categories),
-              ].map(([key, label]) => (
-                <button
-                  key={key}
-                  className={filter === key ? "active" : ""}
-                  onClick={() => {
-                    setFilter(key);
-                    setPage(1);
-                  }}
-                >
-                  {key === "all" ? (
-                    label
-                  ) : (
-                    <BikeCategoryIcon category={key} label={label} />
-                  )}
-                </button>
-              ))}
-            </div>
-            {searchOpen && (
+          {searchOpen && (
+            <div className="garage-tools showcase-search-row">
               <label className="search showcase-search-field">
                 <input
                   aria-label={t("Найти велосипед")}
@@ -872,8 +880,8 @@ export default function Garage({ share, account = false, embedded = false, start
                   placeholder="Найти велосипед или автора"
                 />
               </label>
-            )}
-          </div>
+            </div>
+          )}
           <div className="bike-grid">
             {filtered.map(b => <BikeCard key={b.id} bike={b} onOpen={()=>openBike(b)} onLike={()=>like(b)} busy={busy} ownerView={account}/>)}
           </div>
