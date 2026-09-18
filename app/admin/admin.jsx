@@ -454,6 +454,13 @@ export default function Admin() {
                     onChange={(e) => update("siteName", e.target.value)}
                   />
                 </Field>
+                <Field label="Заголовок витрины">
+                  <input
+                    maxLength={150}
+                    value={draft.showcaseTitle || "Витрина"}
+                    onChange={(e) => update("showcaseTitle", e.target.value)}
+                  />
+                </Field>
                 <Field label="Описание сайта">
                   <textarea
                     maxLength={300}
@@ -698,6 +705,12 @@ export default function Admin() {
                         previewClassName: "icon",
                       })}
                       {assetPicker("navMessagesIconId", "Уведомления", {
+                        previewClassName: "icon",
+                      })}
+                      {assetPicker("navSubscriptionsIconId", "Подписки", {
+                        previewClassName: "icon",
+                      })}
+                      {assetPicker("navRecordsIconId", "Рекорды / ачивки", {
                         previewClassName: "icon",
                       })}
                       {assetPicker("navAdminIconId", "Админка", {
