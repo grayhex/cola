@@ -68,14 +68,14 @@ test("account profile/avatar editing, public garage, author links and mutual mob
   await expect(page.getByRole("status")).toHaveText("Аватар обновлён");
   await expect(page.locator(".avatar-editor img")).toBeVisible();
   await page.getByRole("button", { name: "Оформление", exact: true }).click();
-  await page.getByLabel("Тема", { exact: true }).selectOption("dark");
+  await page.getByRole("combobox", { name: "Тема", exact: true }).selectOption("dark");
   await page.getByRole("button", { name: "Сохранить оформление" }).click();
   await expect(page.getByRole("status")).toHaveText("Оформление сохранено");
   await expect(page.locator(".site-root")).toHaveAttribute(
     "data-theme",
     "dark",
   );
-  await page.getByLabel("Тема", { exact: true }).selectOption("light");
+  await page.getByRole("combobox", { name: "Тема", exact: true }).selectOption("light");
   await page.getByRole("button", { name: "Сохранить оформление" }).click();
   await expect(page.locator(".site-root")).toHaveAttribute(
     "data-theme",
