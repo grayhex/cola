@@ -1,3 +1,4 @@
+import { logError } from "../lib/observability.js";
 import pg from "pg";
 import { readFile } from "node:fs/promises";
 import { defaultSettings, defaultCatalog } from "../lib/site-defaults.js";
@@ -9,7 +10,16 @@ try {
   await client.query(
     "CREATE TABLE IF NOT EXISTS schema_migrations (version text PRIMARY KEY, applied_at timestamptz DEFAULT now())",
   );
-  for (const version of ["001_initial", "002_admin", "003_factory_spec", "004_garage_layout", "005_bike_wizard", "006_compact_defaults", "007_showcase"]) {
+  for (const version of [
+    "001_initial",
+    "002_admin",
+    "003_factory_spec",
+    "004_garage_layout",
+    "005_bike_wizard",
+    "006_compact_defaults",
+    "007_showcase",
+    "008_beta_limits",
+  ]) {
     const { rowCount } = await client.query(
       "SELECT 1 FROM schema_migrations WHERE version=$1",
       [version],
@@ -38,7 +48,7 @@ try {
   await client.query("COMMIT");
 } catch (error) {
   await client.query("ROLLBACK").catch(() => {});
-  console.error(error);
+  logError("migration_failed", error);
   process.exitCode = 1;
 } finally {
   await client.end();

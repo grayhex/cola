@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -euo pipefail
+# COLA_VERIFIED_DEPLOY_V1
+# Install once as root at /usr/local/sbin/deploy-cola. CI supplies its tested SHA.
+exec 9>/var/lock/colabike-deploy.lock
+flock 9
+cd /opt/stacks/cola
+mkdir -p /var/lib/colabike
+sha=${1:-$(cat /var/lib/colabike/verified-sha 2>/dev/null || true)}
+[[ "$sha" =~ ^[a-f0-9]{40}$ ]] || { echo 'A tested commit SHA is required for the first deployment' >&2; exit 1; }
+git fetch origin main
+git cat-file -e "$sha^{commit}"
+git diff --quiet && git diff --cached --quiet || { echo "Tracked local changes: deployment refused" >&2; exit 1; }
+git checkout -B main "$sha"
+# Staging defaults stay unchanged. For VDS set COMPOSE_FILE and --env-file externally.
+docker compose up --build -d --wait --wait-timeout 180
+printf '%s\n' "$sha" > /var/lib/colabike/verified-sha
+echo "Deployed tested commit $sha"

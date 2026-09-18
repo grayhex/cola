@@ -1,3 +1,6 @@
+import net from "node:net";
+import pg from "pg";
+import { randomUUID } from "node:crypto";
 // Starts an isolated, disposable DB, fixture resolver and built app in one process tree.
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
@@ -10,17 +13,23 @@ const dir = await mkdtemp(path.join(tmpdir(), "cola-integration-"));
 const children = [],
   logs = [];
 const base = "http://localhost:3100";
+const externalDatabase = process.env.TEST_DATABASE_URL;
+let databaseAdmin,
+  databaseCreated = false;
+const databaseName = "cola_test_" + randomUUID().replaceAll("-", "");
 const environment = {
   ...process.env,
-  DATABASE_URL: "postgres://test:test@127.0.0.1:5432/test",
+  DATABASE_URL: externalDatabase || "postgres://test:test@127.0.0.1:5432/test",
+  DATABASE_POOL_MAX: externalDatabase ? "10" : "1",
   BIKE_RESOLVER_URL: "http://127.0.0.1:8081",
   APP_ORIGIN: base,
   TEST_ORIGIN: base,
   COOKIE_SECURE: "false",
+  MAX_PHOTOS_PER_USER: "20",
   UPLOAD_DIR: path.join(dir, "uploads"),
 };
 function start(args, cwd = root) {
-  const log = path.join(dir, children.length + ".log");
+  const log = path.join(dir, logs.length + ".log");
   logs.push(log);
   const fd = openSync(log, "w");
   const child = spawn(process.execPath, args, {
@@ -44,7 +53,39 @@ async function ready(url) {
   throw new Error("Service not ready: " + url);
 }
 try {
-  start(["scripts/test-db.js"]);
+  for (const port of externalDatabase ? [8081, 3100] : [5432, 8081, 3100])
+    await new Promise((resolve, reject) => {
+      const probe = net.createServer();
+      probe.once("error", () =>
+        reject(new Error("Test port already occupied: " + port)),
+      );
+      probe.listen(port, "127.0.0.1", () => probe.close(resolve));
+    });
+  if (externalDatabase) {
+    databaseAdmin = new pg.Client({
+      connectionString: externalDatabase,
+      connectionTimeoutMillis: 5000,
+    });
+    await databaseAdmin.connect();
+    // Never migrate or seed the database named in the supplied admin connection.
+    await databaseAdmin.query('CREATE DATABASE "' + databaseName + '"');
+    databaseCreated = true;
+    const url = new URL(externalDatabase);
+    url.pathname = "/" + databaseName;
+    environment.DATABASE_URL = url.toString();
+    const migration = start(["scripts/migrate.js"]);
+    await new Promise((resolve, reject) =>
+      migration.once("exit", (code) =>
+        code === 0 ? resolve() : reject(new Error("Migration failed")),
+      ),
+    );
+    children.splice(children.indexOf(migration), 1);
+  } else {
+    start(["scripts/test-db.js"]);
+    console.log(
+      "PGlite fallback: single connection; concurrent quota test requires TEST_DATABASE_URL (PostgreSQL 17 in CI).",
+    );
+  }
   start(
     ["--import", "tsx", "tests/fixture-server.ts"],
     path.join(root, "services/bike-resolver"),
@@ -58,17 +99,21 @@ try {
     "--port",
     "3100",
   ]);
-  await ready(base + "/api/health");
-  for (const test of [
-    "tests/http-smoke.js",
-    "tests/admin-http.js",
-    "tests/resolver-http.js",
-    "tests/layout-http.js",
-    "tests/wizard-http.js",
-    "tests/showcase-http.js",
-  ])
+  await ready(base + "/api/ready");
+  const e2e = process.argv.includes("--e2e");
+  for (const test of e2e
+    ? ["node_modules/@playwright/test/cli.js"]
+    : [
+        "tests/http-smoke.js",
+        "tests/admin-http.js",
+        "tests/resolver-http.js",
+        "tests/layout-http.js",
+        "tests/wizard-http.js",
+        "tests/showcase-http.js",
+        ...(externalDatabase ? ["tests/quota-http.js"] : []),
+      ])
     await new Promise((resolve, reject) => {
-      const p = spawn(process.execPath, [test], {
+      const p = spawn(process.execPath, e2e ? [test, "test"] : [test], {
         cwd: root,
         env: environment,
         stdio: "inherit",
@@ -94,5 +139,13 @@ try {
           }),
     ),
   );
-  await rm(dir, { recursive: true, force: true });
+  try {
+    if (databaseCreated)
+      await databaseAdmin.query(
+        'DROP DATABASE "' + databaseName + '" WITH (FORCE)',
+      );
+  } finally {
+    await databaseAdmin?.end();
+    await rm(dir, { recursive: true, force: true });
+  }
 }

@@ -1,3 +1,4 @@
+import { traced, logError } from "../../../../lib/observability.js";
 import { bikeResolverClient } from "../../../../lib/bike-resolver-client.js";
 import { randomUUID } from "node:crypto";
 import { mkdir, writeFile, unlink } from "node:fs/promises";
@@ -298,14 +299,15 @@ async function handler(req, { params }) {
       );
     if (e.code === "23505") return fail("Этот email уже используется", 409);
     if (e instanceof SyntaxError) return fail("Некорректный запрос");
-    console.error(e);
+    logError("admin_api_error", e);
     return fail("Не удалось выполнить действие", 500);
   }
 }
+const route = traced(handler);
 export {
-  handler as GET,
-  handler as PUT,
-  handler as POST,
-  handler as PATCH,
-  handler as DELETE,
+  route as GET,
+  route as PUT,
+  route as POST,
+  route as PATCH,
+  route as DELETE,
 };

@@ -1,18 +1,8 @@
-name: Deploy Cola
-
+name: Recheck and redeploy Cola
 on:
-  push:
-    branches:
-      - main
-
-concurrency:
-  group: cola-production
-  cancel-in-progress: false
-
+  workflow_dispatch:
+permissions:
+  contents: read
 jobs:
-  deploy:
-    runs-on: self-hosted
-
-    steps:
-      - name: Deploy
-        run: sudo -n /usr/local/sbin/deploy-cola
+  verified-deploy:
+    uses: ./.github/workflows/check.yml

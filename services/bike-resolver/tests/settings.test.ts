@@ -84,12 +84,69 @@ it("settings persist, reject stale saves and disable adapters before network acc
     await db.close();
   }
 }, 45000);
-it('upgrade drops legacy allowed domains without banning them',async()=>{
- const db=new PGlite();
- try{
-  for(const m of ['001_cache','002_settings'])await db.exec(readFileSync(new URL('../migrations/'+m+'.sql',import.meta.url),'utf8'));
-  await db.query(`UPDATE bike_resolver.settings SET value=value || '{"manualDomains":["www.velo-port.ru"]}'::jsonb`);
-  await db.exec(readFileSync(new URL('../migrations/003_source_policy.sql',import.meta.url),'utf8'));
-  const settings=new SettingsStore(db as any);await settings.load();expect(settings.value.blockedDomains).toEqual([]);expect(settings.value).not.toHaveProperty('manualDomains');
- }finally{await db.close();}
+it("upgrade drops legacy allowed domains without banning them", async () => {
+  const db = new PGlite();
+  try {
+    for (const m of ["001_cache", "002_settings"])
+      await db.exec(
+        readFileSync(
+          new URL("../migrations/" + m + ".sql", import.meta.url),
+          "utf8",
+        ),
+      );
+    await db.query(
+      `UPDATE bike_resolver.settings SET value=value || '{"manualDomains":["www.velo-port.ru"]}'::jsonb`,
+    );
+    await db.exec(
+      readFileSync(
+        new URL("../migrations/003_source_policy.sql", import.meta.url),
+        "utf8",
+      ),
+    );
+    const settings = new SettingsStore(db as any);
+    await settings.load();
+    expect(settings.value.blockedDomains).toEqual([]);
+    expect(settings.value).not.toHaveProperty("manualDomains");
+  } finally {
+    await db.close();
+  }
+});
+
+it("internal settings require the configured service token", async () => {
+  const previous = process.env.BIKE_RESOLVER_TOKEN;
+  process.env.BIKE_RESOLVER_TOKEN = "test-internal-token";
+  const cache = new MemoryCache(),
+    logger = pino({ level: "silent" });
+  const app = buildApp(
+    new Resolver(
+      createAdapters(new ManufacturerHttpClient(logger)),
+      cache,
+      logger,
+    ),
+    cache,
+  );
+  try {
+    expect((await app.inject("/health")).statusCode).toBe(200);
+    expect((await app.inject("/internal/settings")).statusCode).toBe(401);
+    expect(
+      (
+        await app.inject({
+          url: "/internal/settings",
+          headers: { authorization: "Bearer wrong" },
+        })
+      ).statusCode,
+    ).toBe(401);
+    expect(
+      (
+        await app.inject({
+          url: "/internal/settings",
+          headers: { authorization: "Bearer test-internal-token" },
+        })
+      ).statusCode,
+    ).toBe(200);
+  } finally {
+    await app.close();
+    if (previous === undefined) delete process.env.BIKE_RESOLVER_TOKEN;
+    else process.env.BIKE_RESOLVER_TOKEN = previous;
+  }
 });
