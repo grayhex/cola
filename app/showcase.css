@@ -416,6 +416,11 @@
   .site-root .social-stat,
   .micro-metric {
     min-height: 44px;
+    min-width: 44px;
+  }
+  .site-root .card-social .author-link,
+  .site-root .important-badge {
+    min-height: 44px;
   }
   .micro-metric {
     min-width: 44px;

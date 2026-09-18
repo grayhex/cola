@@ -379,7 +379,17 @@
   .site-root .social-stats strong {
     font-size: 17px;
   }
-  .site-root :is(.compact-button, .compact-icon, .button, .button.small) {
+  .site-root
+    :is(
+      .compact-button,
+      .compact-icon,
+      .button,
+      .button.small,
+      .quiet,
+      .icon,
+      .account-tabs button,
+      .social-switch button
+    ) {
     min-height: 44px;
   }
   .site-root .compact-icon {

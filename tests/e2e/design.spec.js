@@ -102,7 +102,9 @@ test("dense visual system: shared cards, filters, search, themes and responsive 
       1,
     );
     expect(
-      await card.locator("h2").evaluate((el) => getComputedStyle(el).fontSize),
+      await card
+        .locator(".card-info > h2")
+        .evaluate((el) => getComputedStyle(el).fontSize),
     ).toBe("18px");
     await card.locator(".micro-metric").first().click();
     await expect(
