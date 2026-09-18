@@ -48,9 +48,9 @@ test("account profile/avatar editing, public garage, author links and mutual mob
   ).toBeVisible();
   const header = page.locator(".global-header");
   await expect(header).toBeVisible();
-  await expect(header.getByRole("link", { name: "Главная", exact: true })).toBeVisible();
+  await expect(header.getByRole("link", { name: "Витрина", exact: true })).toBeVisible();
   await expect(header.getByRole("link", { name: /Профиль — owner-/ })).toBeVisible();
-  await expect(header.getByRole("button", { name: "Сообщения — скоро", exact: true })).toBeVisible();
+  await expect(header.getByRole("link", { name: /Уведомления:/ })).toBeVisible();
   await expect(header.getByRole("button", { name: "Выйти", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Мой профиль", exact: true }).click();
   await page.getByLabel("Username", { exact: true }).fill(username);

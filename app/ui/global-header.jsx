@@ -1,6 +1,14 @@
 "use client";
-import { useState } from "react";
-import { Home, UserRound, MessageCircle, Shield, LogOut } from "lucide-react";
+import { useState, useEffect } from "react";
+import {
+  Home,
+  UserRound,
+  Bell,
+  Users,
+  Trophy,
+  Shield,
+  LogOut,
+} from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useSite } from "./site-provider.jsx";
 
@@ -12,7 +20,15 @@ function Graphic({ assetId, Fallback }) {
   );
 }
 
-function NavLink({ href, label, tooltip = label, assetId, Fallback, active = false }) {
+function NavLink({
+  href,
+  label,
+  tooltip = label,
+  assetId,
+  Fallback,
+  active = false,
+  badge = 0,
+}) {
   return (
     <a
       className={"global-nav-item" + (active ? " active" : "")}
@@ -22,6 +38,11 @@ function NavLink({ href, label, tooltip = label, assetId, Fallback, active = fal
       data-tooltip={tooltip}
     >
       <Graphic assetId={assetId} Fallback={Fallback} />
+      {badge > 0 && (
+        <span className="notification-badge">
+          {badge >= 100 ? "99+" : badge}
+        </span>
+      )}
     </a>
   );
 }
@@ -30,6 +51,28 @@ export default function GlobalHeader({ user, onProfile }) {
   const { personalSettings: settings } = useSite();
   const pathname = usePathname() || "/";
   const [loggingOut, setLoggingOut] = useState(false);
+  const [unread, setUnread] = useState(0);
+  useEffect(() => {
+    let active = true;
+    async function update() {
+      if (!user) {
+        setUnread(0);
+        return;
+      }
+      try {
+        const r = await fetch("/api/community/notifications/count", {
+          cache: "no-store",
+        });
+        if (r.ok && active) setUnread((await r.json()).unread);
+      } catch {}
+    }
+    update();
+    window.addEventListener("cola:notifications", update);
+    return () => {
+      active = false;
+      window.removeEventListener("cola:notifications", update);
+    };
+  }, [user?.id, pathname]);
   const profileTooltip = user ? `Профиль — ${user.name}` : "Войти";
 
   async function logout() {
@@ -66,8 +109,8 @@ export default function GlobalHeader({ user, onProfile }) {
       <nav className="global-nav" aria-label="Основная навигация">
         <NavLink
           href="/"
-          label="Главная"
-          tooltip="Главная"
+          label="Витрина"
+          tooltip="Витрина"
           assetId={settings.navHomeIconId}
           Fallback={Home}
           active={pathname === "/"}
@@ -92,16 +135,34 @@ export default function GlobalHeader({ user, onProfile }) {
             active={pathname.startsWith("/account")}
           />
         )}
+        <NavLink
+          href="/feed"
+          label="Подписки"
+          Fallback={Users}
+          active={pathname === "/feed"}
+        />
         <button
           type="button"
           className="global-nav-item future"
-          aria-label="Сообщения — скоро"
+          aria-label="Рекорды — скоро"
           aria-disabled="true"
-          data-tooltip="Сообщения — скоро"
-          onClick={(event) => event.preventDefault()}
+          data-tooltip="Рекорды — скоро"
         >
-          <Graphic assetId={settings.navMessagesIconId} Fallback={MessageCircle} />
+          <Graphic Fallback={Trophy} />
         </button>
+        <NavLink
+          href="/notifications"
+          label={
+            "Уведомления: " +
+            (unread >= 100 ? "99+" : unread) +
+            " непрочитанных"
+          }
+          tooltip="Уведомления"
+          assetId={settings.navMessagesIconId}
+          Fallback={Bell}
+          active={pathname === "/notifications"}
+          badge={unread}
+        />
         {user?.role === "admin" && (
           <NavLink
             href="/admin"

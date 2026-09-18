@@ -1,4 +1,5 @@
 "use client";
+import Discussion from "./discussion.jsx";
 import BikeCategoryIcon from "./bike-category-icon.jsx";
 import BikeMeters from "./bike-meters.jsx";
 import Photo from "./bike-photo.jsx";
@@ -781,6 +782,7 @@ export default function Garage({ share, account = false, embedded = false, start
                 </div>
               )}
           </section>
+          {bike.is_public && <Discussion key={bike.id} bike={bike} user={user}/>}
         </Main>
       ) : (
         <Main className="garage">

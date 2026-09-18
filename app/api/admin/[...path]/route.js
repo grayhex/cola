@@ -140,11 +140,11 @@ async function handler(req, { params }) {
           );
         const values = ["%" + term + "%", (page - 1) * 20];
         const { rows } = await db.query(
-          "SELECT u.id,u.email,u.name,u.role,u.blocked,u.created_at,(SELECT count(*)::int FROM bikes b WHERE b.owner_id=u.id) AS bikes FROM users u WHERE u.email ILIKE $1 OR u.name ILIKE $1 ORDER BY u.created_at DESC,u.id LIMIT 20 OFFSET $2",
+          "SELECT u.id,u.email,u.name,u.role,u.blocked,u.created_at,(SELECT count(*)::int FROM bikes b WHERE b.owner_id=u.id) AS bikes FROM users u WHERE u.email ILIKE $1 OR u.name ILIKE $1 OR u.username ILIKE $1 ORDER BY u.created_at DESC,u.id LIMIT 20 OFFSET $2",
           values,
         );
         const total = await db.query(
-          "SELECT count(*)::int AS count FROM users WHERE email ILIKE $1 OR name ILIKE $1",
+          "SELECT count(*)::int AS count FROM users WHERE email ILIKE $1 OR name ILIKE $1 OR username ILIKE $1",
           [values[0]],
         );
         return json({ users: rows, total: total.rows[0].count, page });

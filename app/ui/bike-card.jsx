@@ -1,5 +1,5 @@
 "use client";
-import { Heart, Lock } from "lucide-react";
+import { Heart, Lock, MessageCircle } from "lucide-react";
 import Photo from "./bike-photo.jsx";
 import BikeCategoryIcon from "./bike-category-icon.jsx";
 import BikeMeters from "./bike-meters.jsx";
@@ -72,6 +72,7 @@ export default function BikeCard({
           <AuthorLink author={b.author} />
         </h2>
         <BikeMeters scores={b.scores} />
+        {b.is_public && <a className="card-comments" href={"/b/"+b.share_id+"#discussion"} aria-label={"Комментарии: "+(b.comments||0)}><MessageCircle size={12}/>{b.comments||0}</a>}
       </div>
     </article>
   );

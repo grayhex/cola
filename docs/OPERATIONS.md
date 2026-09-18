@@ -226,3 +226,41 @@ in addition to the existing DB/photo markers, checksum and overwrite checks.
 Continue backing up DB and the **entire** photos volume together. Rolling back to
 an old application version must not run that version's orphan-pruning script over
 new avatar files; use the current audit script.
+
+## Community interactions
+
+Migration `010_community.sql` adds comments, notifications and reports to the
+existing PostgreSQL database. No new service, Redis, broker, storage volume or
+backup procedure. The full DB backup includes all new tables automatically.
+A publication trigger maintains `bikes.published_at` across the existing create,
+wizard, edit and share paths. Existing public bikes are backfilled with created_at.
+
+Comments are plain text (1–1000 chars); client rendering never interprets HTML or
+Markdown. Same-bike FK and a depth trigger complement transactional service checks.
+Deleted body text is cleared; a tombstone preserves active replies. Blocking an
+author hides their text/identity publicly while keeping other authors' replies.
+Deleting a user nulls comment authors instead of orphaning threads. Bike deletion
+cascades its comments and notifications. Reports retain target UUIDs for moderation
+history; deleted targets display as unavailable, not reconstructed snapshots.
+
+Notifications are inserted inside the action transaction. Unique recipient/dedup
+keys prevent concurrent duplicate follow/like events for the lifetime of the pair;
+comment/reply keys use PostgreSQL 15-minute time buckets per actor/bike/type.
+Conflicts never reset timestamps or read state. The first comment in a bucket is
+the target. Coalescing can intentionally suppress further alerts until the next
+window, including if that first comment was deleted. No self notifications.
+
+Every notification read joins current actors, bikes and comments and rechecks
+publication/blocking/deletion. Removed likes/follows hide their event. Republishing
+or unblocking may reveal the original event again with its original read state.
+No private snapshot survives revocation. Read state is scoped to the recipient.
+The header count uses an indexed bounded scan of at most 100 visible unread IDs
+and renders 99+; it does not aggregate full history. Only an open, visible
+notification page polls (30s). Old notifications currently have no automatic
+retention cleanup; monitor table/index size with normal PostgreSQL operations.
+
+Comment creation: 20/user/15min; edits/deletes: 40; reports: 10; read mutations:
+120. Reports deduplicate per reporter/entity for their lifetime. Admin report
+closure and comment deletion use the existing audit log. Abuse handling remains
+manual through the reports queue and existing user blocking. There is no DM,
+friend-request workflow, email delivery or separate background worker.
