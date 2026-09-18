@@ -1,0 +1,522 @@
+"use client";
+import { useEffect, useState } from "react";
+import { Plus, ExternalLink, LogOut } from "lucide-react";
+import Garage from "./garage.jsx";
+import BikeCard from "./bike-card.jsx";
+import {
+  Avatar,
+  SocialHeader,
+  SocialFooter,
+  PeopleList,
+  socialApi,
+} from "./social-primitives.jsx";
+import { useSite } from "./site-provider.jsx";
+const tabs = {
+  overview: "Обзор",
+  profile: "Мой профиль",
+  bikes: "Мои велосипеды",
+  social: "Социальное",
+  appearance: "Оформление",
+  account: "Аккаунт",
+};
+function ProfileEditor({ profile, onSaved }) {
+  const [form, setForm] = useState({
+      username: profile.username,
+      name: profile.name,
+      bio: profile.bio,
+      location: profile.location,
+    }),
+    [busy, setBusy] = useState(false),
+    [message, setMessage] = useState(""),
+    [error, setError] = useState("");
+  const set = (key, value) => setForm((f) => ({ ...f, [key]: value }));
+  async function save(e) {
+    e.preventDefault();
+    setBusy(true);
+    setError("");
+    setMessage("");
+    try {
+      await socialApi("social/me", "PATCH", form);
+      await onSaved();
+      setMessage("Профиль сохранён");
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function avatar(file) {
+    setBusy(true);
+    setError("");
+    setMessage("");
+    try {
+      if (file && file.size > 2 * 1024 * 1024)
+        throw new Error("Размер файла — не больше 2 МБ");
+      const response = await fetch("/api/social/me/avatar", {
+        method: file ? "PUT" : "DELETE",
+        headers: file ? { "Content-Type": file.type } : {},
+        body: file || undefined,
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error);
+      await onSaved();
+      setMessage(file ? "Аватар обновлён" : "Аватар удалён");
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <div className="profile-editor">
+      <div className="avatar-editor">
+        <Avatar person={profile} size="large" />
+        <div>
+          <label
+            className={"button secondary small" + (busy ? " disabled" : "")}
+          >
+            Загрузить аватар
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              disabled={busy}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                e.target.value = "";
+                if (file) avatar(file);
+              }}
+            />
+          </label>
+          {profile.avatar && (
+            <button
+              className="quiet"
+              disabled={busy}
+              onClick={() => avatar(null)}
+            >
+              Удалить аватар
+            </button>
+          )}
+          <p className="help">
+            JPEG, PNG или WebP до 2 МБ. Фото обрезается до квадрата.
+          </p>
+        </div>
+      </div>
+      <form onSubmit={save}>
+        <p className="help">
+          Эти данные видны всем. Email и настройки оформления остаются
+          приватными.
+        </p>
+        <label className="field">
+          <span>Username</span>
+          <input
+            required
+            aria-label="Username"
+            minLength={3}
+            maxLength={30}
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            pattern="[a-zA-Z0-9._\-]{3,30}"
+            value={form.username}
+            onChange={(e) => set("username", e.target.value)}
+          />
+          <small>
+            3–30 символов: латиница, цифры, точка, дефис и подчёркивание. Ссылка
+            изменится вместе с username.
+          </small>
+        </label>
+        <label className="field">
+          <span>Отображаемое имя</span>
+          <input
+            required
+            maxLength={60}
+            value={form.name}
+            onChange={(e) => set("name", e.target.value)}
+          />
+        </label>
+        <label className="field">
+          <span>О себе</span>
+          <textarea
+            rows={3}
+            maxLength={500}
+            value={form.bio}
+            onChange={(e) => set("bio", e.target.value)}
+          />
+        </label>
+        <label className="field">
+          <span>Местоположение</span>
+          <input
+            maxLength={100}
+            placeholder="Город или регион — необязательно"
+            value={form.location}
+            onChange={(e) => set("location", e.target.value)}
+          />
+        </label>
+        <button className="button" disabled={busy}>
+          {busy ? "Сохраняем…" : "Сохранить профиль"}
+        </button>
+      </form>
+      {error && (
+        <p className="error" role="alert">
+          {error}
+        </p>
+      )}
+      {message && (
+        <p className="success" role="status">
+          {message}
+        </p>
+      )}
+    </div>
+  );
+}
+function Appearance({ initial, onSaved }) {
+  const [prefs, setPrefs] = useState(initial || {}),
+    [busy, setBusy] = useState(false),
+    [message, setMessage] = useState(""),
+    [error, setError] = useState("");
+  const { setPreferences } = useSite();
+  const set = (key, value) =>
+    setPrefs((p) => {
+      const next = { ...p };
+      if (value === "") delete next[key];
+      else next[key] = value;
+      return next;
+    });
+  return (
+    <form
+      className="account-form"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        setBusy(true);
+        setError("");
+        setMessage("");
+        try {
+          await socialApi("social/preferences", "PATCH", {
+            preferences: prefs,
+          });
+          setPreferences(prefs);
+          await onSaved();
+          setMessage("Оформление сохранено");
+        } catch (e) {
+          setError(e.message);
+        } finally {
+          setBusy(false);
+        }
+      }}
+    >
+      <p className="help">Личные настройки применяются только для вас.</p>
+      {[
+        [
+          "theme",
+          "Тема",
+          [
+            ["light", "Светлая"],
+            ["dark", "Тёмная"],
+            ["system", "Как на устройстве"],
+          ],
+        ],
+        [
+          "bikeLayout",
+          "Карточка велосипеда",
+          [
+            ["dense", "Компактная"],
+            ["balanced", "Сбалансированная"],
+            ["spacious", "Подробная"],
+          ],
+        ],
+        [
+          "font",
+          "Шрифт",
+          [
+            ["manrope", "Manrope"],
+            ["system", "Системный"],
+            ["arial", "Arial"],
+            ["georgia", "Georgia"],
+            ["mono", "Моноширинный"],
+          ],
+        ],
+      ].map(([key, label, options]) => (
+        <label className="field" key={key}>
+          <span>{label}</span>
+          <select
+            value={prefs[key] || ""}
+            onChange={(e) => set(key, e.target.value)}
+          >
+            <option value="">Как на сайте</option>
+            {options.map(([v, l]) => (
+              <option key={v} value={v}>
+                {l}
+              </option>
+            ))}
+          </select>
+        </label>
+      ))}
+      <label className="field">
+        <span>Цвет акцента</span>
+        <input
+          type="color"
+          value={prefs.accent || "#e7482f"}
+          onChange={(e) => set("accent", e.target.value)}
+        />
+      </label>
+      <label className="admin-toggle">
+        <span>Показывать пробег</span>
+        <input
+          type="checkbox"
+          checked={prefs.showMileage || false}
+          onChange={(e) => set("showMileage", e.target.checked)}
+        />
+      </label>
+      <div className="form-actions">
+        <button type="button" className="quiet" onClick={() => setPrefs({})}>
+          Сбросить оформление
+        </button>
+        <button className="button" disabled={busy}>
+          Сохранить оформление
+        </button>
+      </div>
+      {error && (
+        <p role="alert" className="error">
+          {error}
+        </p>
+      )}
+      {message && <p role="status">{message}</p>}
+    </form>
+  );
+}
+export default function Account() {
+  const [user, setUser] = useState(undefined),
+    [data, setData] = useState(null),
+    [bikes, setBikes] = useState([]),
+    [tab, setTab] = useState("overview"),
+    [kind, setKind] = useState("following"),
+    [error, setError] = useState(""),
+    [create, setCreate] = useState(false),
+    [selected, setSelected] = useState(null);
+  const { setPreferences } = useSite();
+  async function refresh() {
+    const me = await socialApi("me");
+    setUser(me.user);
+    if (me.user) {
+      setPreferences(me.user.preferences || {});
+      const [d, b] = await Promise.all([
+        socialApi("social/account"),
+        socialApi("bikes"),
+      ]);
+      setData(d);
+      setBikes(b.bikes);
+    }
+  }
+  useEffect(() => {
+    const requested = new URLSearchParams(window.location.search).get("tab");
+    if (tabs[requested]) setTab(requested);
+    refresh().catch((e) => setError(e.message));
+  }, []);
+  function navigate(next) {
+    setCreate(false);
+    setSelected(null);
+    setTab(next);
+    window.history.replaceState(
+      null,
+      "",
+      "/account" + (next === "overview" ? "" : "?tab=" + next),
+    );
+    if (next !== "bikes") refresh().catch((e) => setError(e.message));
+  }
+  if (user === null)
+    return <Garage account onAuthenticated={() => window.location.reload()} />;
+  const profile = data?.profile;
+  return (
+    <>
+      <SocialHeader user={user} />
+      <main className="social-page account-page">
+        <div className="account-heading">
+          <h1>Личный кабинет</h1>
+          {profile && (
+            <a href={"/u/" + profile.username} className="quiet">
+              <ExternalLink size={15} />
+              Мой публичный профиль
+            </a>
+          )}
+        </div>
+        <nav className="account-tabs" aria-label="Разделы личного кабинета">
+          {Object.entries(tabs).map(([key, label]) => (
+            <button
+              key={key}
+              aria-current={tab === key ? "page" : undefined}
+              onClick={() => navigate(key)}
+            >
+              {label}
+            </button>
+          ))}
+        </nav>
+        {error && (
+          <p role="alert" className="error">
+            {error}
+          </p>
+        )}
+        {!data ? (
+          <p role="status">Загружаем кабинет…</p>
+        ) : (
+          <div className="account-content">
+            {tab === "overview" && (
+              <>
+                <section className="account-overview">
+                  <Avatar person={profile} size="large" />
+                  <div>
+                    <h2>{profile.name}</h2>
+                    <span className="username">@{profile.username}</span>
+                    <p>
+                      <a href={"/u/" + profile.username}>
+                        Посмотреть мой публичный профиль
+                      </a>
+                    </p>
+                  </div>
+                  <button
+                    className="button small"
+                    onClick={() => {
+                      setCreate(true);
+                      setTab("bikes");
+                    }}
+                  >
+                    <Plus size={16} />
+                    Добавить велосипед
+                  </button>
+                </section>
+                <div className="account-metrics">
+                  {[
+                    ["Всего байков", data.stats.bikes, "bikes"],
+                    ["Публичные", data.stats.public, "bikes"],
+                    ["Приватные", data.stats.private, "bikes"],
+                    ["Подписчики", profile.counts.followers, "followers"],
+                    ["Подписки", profile.counts.following, "following"],
+                    ["Друзья", profile.counts.friends, "friends"],
+                    ["Лайки", data.stats.likes, null],
+                  ].map(([label, count, target]) => (
+                    <button
+                      key={label}
+                      disabled={!target}
+                      onClick={() => {
+                        if (target === "bikes") navigate("bikes");
+                        else {
+                          setKind(target);
+                          navigate("social");
+                        }
+                      }}
+                    >
+                      <strong>{count}</strong>
+                      <span>{label}</span>
+                    </button>
+                  ))}
+                </div>
+                <section className="recent-bikes">
+                  <div className="section-heading">
+                    <h2>Последние велосипеды</h2>
+                    <button className="quiet" onClick={() => navigate("bikes")}>
+                      Все велосипеды
+                    </button>
+                  </div>
+                  <div className="bike-grid">
+                    {bikes.slice(0, 3).map((b) => (
+                      <BikeCard
+                        key={b.id}
+                        bike={b}
+                        ownerView
+                        onOpen={() => {
+                          setSelected(b.id);
+                          setTab("bikes");
+                        }}
+                      />
+                    ))}
+                  </div>
+                  {!bikes.length && (
+                    <p className="help">
+                      Добавьте первый велосипед и начните свою коллекцию.
+                    </p>
+                  )}
+                </section>
+              </>
+            )}
+            {tab === "profile" && (
+              <section className="social-panel">
+                <h2>Мой профиль</h2>
+                <ProfileEditor profile={profile} onSaved={refresh} />
+              </section>
+            )}
+            {tab === "bikes" && (
+              <Garage
+                account
+                embedded
+                startCreate={create}
+                initialBikeId={selected}
+              />
+            )}
+            {tab === "social" && (
+              <section className="social-panel">
+                <h2>Социальное</h2>
+                <div className="social-switch" role="group" aria-label="Связи">
+                  {[
+                    ["following", "Подписки"],
+                    ["followers", "Подписчики"],
+                    ["friends", "Друзья"],
+                  ].map(([key, label]) => (
+                    <button
+                      className="quiet"
+                      aria-pressed={kind === key}
+                      key={key}
+                      onClick={() => setKind(key)}
+                    >
+                      {label} · {profile.counts[key]}
+                    </button>
+                  ))}
+                </div>
+                <PeopleList
+                  key={kind}
+                  username={profile.username}
+                  kind={kind}
+                  user={user}
+                  onChange={refresh}
+                />
+              </section>
+            )}
+            {tab === "appearance" && (
+              <section className="social-panel">
+                <h2>Оформление</h2>
+                <Appearance initial={data.preferences} onSaved={refresh} />
+              </section>
+            )}
+            {tab === "account" && (
+              <section className="social-panel account-private">
+                <h2>Аккаунт</h2>
+                <p className="help">Эта информация доступна только вам.</p>
+                <dl>
+                  <dt>Email</dt>
+                  <dd>{data.email}</dd>
+                  <dt>Дата регистрации</dt>
+                  <dd>
+                    {new Date(profile.createdAt).toLocaleDateString("ru-RU")}
+                  </dd>
+                </dl>
+                <button
+                  className="quiet"
+                  onClick={async () => {
+                    try {
+                      await socialApi("auth/logout", "POST");
+                      window.location.assign("/");
+                    } catch (e) {
+                      setError(e.message);
+                    }
+                  }}
+                >
+                  <LogOut size={16} />
+                  Выйти
+                </button>
+              </section>
+            )}
+          </div>
+        )}
+      </main>
+      <SocialFooter />
+    </>
+  );
+}

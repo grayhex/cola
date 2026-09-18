@@ -40,7 +40,7 @@ test("completion needs actual photo and distinct components; input cannot inject
 test("showcase privacy, owner/voter permissions, duplicate votes, revocation, blocking and cascade", async () => {
   const db=new PGlite();
   try {
-    for (const m of ["001_initial","002_admin","003_factory_spec","004_garage_layout","005_bike_wizard","007_showcase"])
+    for (const m of ["001_initial","002_admin","003_factory_spec","004_garage_layout","005_bike_wizard","007_showcase","008_beta_limits","009_social_core"])
       await db.exec(await readFile(new URL("../db/"+m+".sql",import.meta.url),"utf8"));
     await db.query("INSERT INTO site_settings(id,value) VALUES(1,$1)",[JSON.stringify(defaultSettings)]);
     await db.query("INSERT INTO site_catalog(id,value) VALUES(1,$1)",[JSON.stringify(defaultCatalog)]);
@@ -49,7 +49,7 @@ test("showcase privacy, owner/voter permissions, duplicate votes, revocation, bl
     const base={name:"Public Cube",brand:"Cube",model:"Travel",trim:"",year:2020,category:"road",description:"",color:"",size:"",weight:14,price:123456};
     const id=await insertBike(db,owner,{...base,is_public:true}),secret=await insertBike(db,owner,{...base,name:"SECRET",is_public:false});
     let feed=await showcase(db,viewer);
-    assert.equal(feed.total,1); assert.equal(feed.bikes[0].author,"Author");
+    assert.equal(feed.total,1); assert.equal(feed.bikes[0].author.name,"Author");
     assert.equal(feed.bikes[0].owner_id,undefined); assert.equal(feed.bikes[0].price,undefined);
     assert.equal((await vote(db,id,owner,true)).status,403);
     assert.equal((await vote(db,secret,viewer,true)).status,404);

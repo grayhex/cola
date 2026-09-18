@@ -166,7 +166,7 @@ async function handler(req, { params }) {
             "SELECT id FROM users WHERE role='admin' ORDER BY id FOR UPDATE",
           );
           const { rows } = await q.query(
-            "SELECT id,role,email FROM users WHERE id=$1 FOR UPDATE",
+            "SELECT id,role,email,avatar_id FROM users WHERE id=$1 FOR UPDATE",
             [p[1]],
           );
           if (!rows[0]) return { error: "Пользователь не найден", status: 404 };
@@ -186,6 +186,7 @@ async function handler(req, { params }) {
               [p[1]],
             )
           ).rows;
+          if(rows[0].avatar_id) files.push({filename:"avatar-"+rows[0].avatar_id+".webp"});
           await q.query("DELETE FROM users WHERE id=$1", [p[1]]);
           await audit(q, user.id, "user.delete", p[1]);
           return { ok: true };

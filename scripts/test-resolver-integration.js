@@ -110,6 +110,7 @@ try {
         "tests/layout-http.js",
         "tests/wizard-http.js",
         "tests/showcase-http.js",
+        "tests/social-http.js",
         ...(externalDatabase ? ["tests/quota-http.js"] : []),
       ])
     await new Promise((resolve, reject) => {

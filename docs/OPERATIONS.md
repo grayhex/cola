@@ -195,3 +195,34 @@ Edge nginx limits auth by actual client IP; only a matching private proxy key ma
 `X-Cola-Client-IP` trusted. Arbitrary `X-Forwarded-For` is ignored. Do not add CDN
 real-IP trust without a specific provider address allowlist. App maintains account,
 action and high-ceiling distributed auth limits in PostgreSQL.
+
+## Social profiles and avatars
+
+Migration `009_social_core.sql` adds usernames/profile fields and `user_follows`.
+The existing transactional migration runner records it once; no data is removed.
+Existing users get stable `rider-<UUID prefix>` names with collision suffixes.
+Registration remains compatible through a database default. Username uniqueness
+is enforced by a lowercase format constraint and a unique index on `lower(username)`.
+Follow foreign keys cascade when an account is deleted. Blocking hides the graph
+without destroying it; unblocking restores its public visibility.
+
+Avatars use the **existing photos volume**, named `avatar-<UUID>.webp` under
+`UPLOAD_DIR`. No new volume, external storage or backup secret is required.
+The database records the current avatar ID and processed byte size. Uploads are
+capped at 2 MiB; decoded images at 40 MP; output is metadata-free 512×512 WebP.
+The avatar counts toward the user's existing storage quota (not the bike-photo
+count). Replacing/removing it locks the owner row, commits the DB change, then
+removes the previous file; a failed pre-commit replacement removes the new file.
+If commit outcome is uncertain, retain the file for the existing orphan audit.
+
+`audit-photo-files.js` includes avatars in its known-file set and can prune
+unreferenced avatar files older than 24 hours. Administrative user deletion also
+removes the avatar. The public avatar endpoint checks the current DB reference and
+blocked state on every request and sends `private, no-store`; replaced/blocked
+avatars immediately return 404. Already downloaded bytes cannot be recalled.
+
+The backup drill now asserts both the restored avatar DB reference and file bytes,
+in addition to the existing DB/photo markers, checksum and overwrite checks.
+Continue backing up DB and the **entire** photos volume together. Rolling back to
+an old application version must not run that version's orphan-pruning script over
+new avatar files; use the current audit script.
