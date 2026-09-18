@@ -26,7 +26,7 @@ function NavLink({ href, label, tooltip = label, assetId, Fallback, active = fal
   );
 }
 
-export default function GlobalHeader({ user }) {
+export default function GlobalHeader({ user, onProfile }) {
   const { personalSettings: settings } = useSite();
   const pathname = usePathname() || "/";
   const [loggingOut, setLoggingOut] = useState(false);
@@ -72,14 +72,26 @@ export default function GlobalHeader({ user }) {
           Fallback={Home}
           active={pathname === "/"}
         />
-        <NavLink
-          href="/account"
-          label={profileTooltip}
-          tooltip={profileTooltip}
-          assetId={settings.navProfileIconId}
-          Fallback={UserRound}
-          active={pathname.startsWith("/account")}
-        />
+        {!user && onProfile ? (
+          <button
+            type="button"
+            className="global-nav-item"
+            aria-label="Войти"
+            data-tooltip="Профиль — войти"
+            onClick={onProfile}
+          >
+            <Graphic assetId={settings.navProfileIconId} Fallback={UserRound} />
+          </button>
+        ) : (
+          <NavLink
+            href="/account"
+            label={profileTooltip}
+            tooltip={profileTooltip}
+            assetId={settings.navProfileIconId}
+            Fallback={UserRound}
+            active={pathname.startsWith("/account")}
+          />
+        )}
         <button
           type="button"
           className="global-nav-item future"
