@@ -3,6 +3,7 @@ import ScoringSettings from "./scoring-settings.jsx";
 import { BlockSettings, GroupSettings } from "./layout-settings.jsx";
 import { copyBlocks } from "../../lib/copy-blocks.js";
 import ResolverSettings from "./resolver-settings.jsx";
+import GlobalHeader from "../ui/global-header.jsx";
 import { useEffect, useState, useRef } from "react";
 import {
   ArrowLeft,
@@ -289,58 +290,52 @@ export default function Admin() {
     setConfirm({ title, description, action, email });
     setConfirmEmail("");
   }
-  function assetSelect(key, label) {
+  function assetSelect(key, label, emptyLabel = "По умолчанию") {
     return (
       <Select
         label={label}
         value={draft[key] || ""}
         onChange={(v) => update(key, v || null)}
-        options={[["", "По умолчанию"], ...assets.map((a) => [a.id, a.name])]}
+        options={[["", emptyLabel], ...assets.map((a) => [a.id, a.name])]}
       />
     );
   }
   if (loading)
     return (
-      <main className="loading">
-        <LoaderCircle className="spin" />
-        Открываем управление…
-      </main>
+      <>
+        <GlobalHeader user={null} />
+        <main className="loading">
+          <LoaderCircle className="spin" />
+          Открываем управление…
+        </main>
+      </>
     );
   if (user?.role !== "admin")
     return (
-      <main className="empty">
-        <ShieldCheck size={40} />
-        <h1>Вход для администратора</h1>
-        <p>
-          {user
-            ? "У этого аккаунта нет прав администратора."
-            : "Войдите в аккаунт администратора на главной странице."}
-        </p>
-        <a className="button" href="/">
-          Открыть ColaBike
-        </a>
-        <p className="help">
-          Первого администратора назначает владелец сервера через команду из
-          README.
-        </p>
-        {error && <p role="alert">{error}</p>}
-      </main>
+      <>
+        <GlobalHeader user={user} />
+        <main className="empty">
+          <ShieldCheck size={40} />
+          <h1>Вход для администратора</h1>
+          <p>
+            {user
+              ? "У этого аккаунта нет прав администратора."
+              : "Войдите в аккаунт администратора на главной странице."}
+          </p>
+          <a className="button" href="/">
+            Открыть ColaBike
+          </a>
+          <p className="help">
+            Первого администратора назначает владелец сервера через команду из
+            README.
+          </p>
+          {error && <p role="alert">{error}</p>}
+        </main>
+      </>
     );
   return (
     <div className="admin-shell">
-      <header className="admin-header">
-        <a href="/" className="text-link">
-          <ArrowLeft size={18} />
-          На сайт
-        </a>
-        <strong>
-          {settings.siteName} <span>Управление</span>
-        </strong>
-        <span className="admin-account">
-          <ShieldCheck size={17} />
-          {user.name}
-        </span>
-      </header>
+      <GlobalHeader user={user} />
       <div className="admin-layout">
         <nav className="admin-nav" aria-label="Разделы админки">
           {sections.map(([id, label, Icon]) => (
@@ -609,6 +604,11 @@ export default function Admin() {
                 </p>
                 <div className="admin-form-grid">
                   {assetSelect("logoId", "Логотип в шапке")}
+                  {assetSelect("navHomeIconId", "Меню — Главная", "Плейсхолдер")}
+                  {assetSelect("navProfileIconId", "Меню — Профиль", "Плейсхолдер")}
+                  {assetSelect("navMessagesIconId", "Меню — Сообщения", "Плейсхолдер")}
+                  {assetSelect("navAdminIconId", "Меню — Админка", "Плейсхолдер")}
+                  {assetSelect("navLogoutIconId", "Меню — Выход", "Плейсхолдер")}
                   {assetSelect("mtbImageId", "Стоковое изображение — MTB")}
                   {assetSelect("roadImageId", "Стоковое изображение — шоссе")}
                   {assetSelect(
