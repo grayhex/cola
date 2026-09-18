@@ -6,7 +6,7 @@ const db = new pg.Client({ connectionString: process.env.DATABASE_URL }),
 try {
   await db.connect();
   const rows = await db.query(
-    "SELECT filename FROM photos UNION SELECT filename FROM site_assets",
+    "SELECT filename FROM photos UNION SELECT filename FROM site_assets UNION SELECT 'avatar-' || avatar_id::text || '.webp' AS filename FROM users WHERE avatar_id IS NOT NULL",
   );
   const known = new Set(rows.rows.map((r) => r.filename));
   const files = await readdir(directory);
@@ -23,7 +23,7 @@ try {
   for (const name of files) {
     if (
       known.has(name) ||
-      !/^([a-f0-9-]{36}|asset-[a-f0-9-]{36})\.webp$/.test(name)
+      !/^([a-f0-9-]{36}|(?:asset|avatar)-[a-f0-9-]{36})\.webp$/.test(name)
     )
       continue;
     const file = path.join(directory, name),

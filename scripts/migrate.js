@@ -19,6 +19,7 @@ try {
     "006_compact_defaults",
     "007_showcase",
     "008_beta_limits",
+    "009_social_core",
   ]) {
     const { rowCount } = await client.query(
       "SELECT 1 FROM schema_migrations WHERE version=$1",

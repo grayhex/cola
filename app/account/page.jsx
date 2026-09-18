@@ -1,2 +1,4 @@
-import Garage from "../ui/garage.jsx";
-export default function AccountPage() { return <Garage account />; }
+import Account from "../ui/account.jsx";
+export default function AccountPage() {
+  return <Account />;
+}
