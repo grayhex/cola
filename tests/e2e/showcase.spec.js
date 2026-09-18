@@ -3,8 +3,9 @@ import { randomUUID } from "node:crypto";
 import sharp from "sharp";
 async function register(page, name) {
   await page.goto("/");
+  await page.getByRole("button", { name: "Войти", exact: true }).click();
   await page
-    .getByRole("button", { name: "Зарегистрироваться", exact: true })
+    .getByRole("button", { name: "Нет аккаунта? Зарегистрироваться", exact: true })
     .click();
   await page.locator("input[name=name]").fill(name);
   await page.locator("input[name=email]").fill(name + "@example.test");
