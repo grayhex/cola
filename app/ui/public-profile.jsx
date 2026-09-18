@@ -1,4 +1,5 @@
 "use client";
+import {BadgeShelf} from "./achievements.jsx";
 import {ReportButton} from "./community-controls.jsx";
 import { useEffect, useState } from "react";
 import { MapPin, Calendar, ArrowLeft } from "lucide-react";
@@ -144,13 +145,7 @@ export default function PublicProfile({ username }) {
                 </button>
               </div>
             </section>
-            {profile.badges?.length > 0 && (
-              <section className="profile-badges" aria-label="Достижения">
-                {profile.badges.map((b) => (
-                  <span key={b.id}>{b.name}</span>
-                ))}
-              </section>
-            )}
+            <BadgeShelf endpoint={"game/profiles/"+profile.username}/>
             {people ? (
               <section className="social-panel">
                 <button className="quiet" onClick={() => setPeople("")}>

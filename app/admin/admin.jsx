@@ -1,4 +1,5 @@
 "use client";
+import Gamification from "./gamification.jsx";
 import Reports from "./reports.jsx";
 import ScoringSettings from "./scoring-settings.jsx";
 import { BlockSettings, GroupSettings } from "./layout-settings.jsx";
@@ -164,6 +165,7 @@ function ListEditor({ values, onChange, label }) {
 const sections = [
   ["overview", "Обзор", Settings2],
   ["scoring", "Оценка велосипедов", Settings2],
+  ["gamification", "Награды и рекорды", Settings2],
   ["resolver", "Bike Resolver", Settings2],
   ["design", "Оформление", Palette],
   ["blocks", "Блоки карточки", Settings2],
@@ -430,6 +432,7 @@ export default function Admin() {
           )}
           {tab === "scoring" && <ScoringSettings value={draft.scoring} catalog={catalog} onChange={v=>update("scoring",v)}/>}
           {tab === "resolver" && <ResolverSettings />}
+          {tab === "gamification" && <Gamification/>}
           {tab === "reports" && <Reports onManageUser={username=>{setUserSearch(username);setPage(1);setTab("users");}}/>}
           {tab === "overview" && (
             <>

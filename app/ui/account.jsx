@@ -1,4 +1,5 @@
 "use client";
+import { BadgeShelf } from "./achievements.jsx";
 import { useEffect, useState } from "react";
 import { Plus, ExternalLink, LogOut } from "lucide-react";
 import Garage from "./garage.jsx";
@@ -16,6 +17,7 @@ const tabs = {
   profile: "Мой профиль",
   bikes: "Мои велосипеды",
   social: "Социальное",
+  achievements: "Достижения",
   appearance: "Оформление",
   account: "Аккаунт",
 };
@@ -437,6 +439,7 @@ export default function Account() {
                 </section>
               </>
             )}
+            {tab === "achievements" && <BadgeShelf endpoint="game/me" account/>}
             {tab === "profile" && (
               <section className="social-panel">
                 <h2>Мой профиль</h2>

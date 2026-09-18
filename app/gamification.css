@@ -1,0 +1,276 @@
+.hall-heading {
+  padding: 1.8rem 0;
+}
+.hall-heading h1 {
+  font-size: clamp(2rem, 5vw, 4rem);
+  line-height: 1.08;
+  max-width: 800px;
+  margin: 0.4rem 0;
+}
+.hall-heading p {
+  max-width: 680px;
+}
+.hall-heroes,
+.record-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+.record-card {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--line, #deded8);
+  border-radius: var(--radius, 12px);
+  background: var(--paper, #fff);
+  scroll-margin-top: 100px;
+}
+.record-cover {
+  position: relative;
+  height: 205px;
+  background: var(--wash, #eee);
+  display: grid;
+  place-items: center;
+}
+.record-cover > a {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.record-cover img,
+.record-cover .photo-empty {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.record-title {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  right: 10px;
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  background: #202522e8;
+  color: white;
+  border-radius: 6px;
+  padding: 8px;
+  font-size: 13px;
+  pointer-events: none;
+}
+.record-info {
+  padding: 16px;
+}
+.record-value {
+  font-size: clamp(1.6rem, 3vw, 2.5rem);
+}
+.record-info h3 {
+  font-size: 18px;
+  margin: 8px 0;
+}
+.record-info h3 a {
+  display: flex;
+  justify-content: space-between;
+}
+.record-owner {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin: 12px 0;
+}
+.record-owner small {
+  display: block;
+}
+.record-info > small,
+.record-owner small {
+  color: var(--muted, #727974);
+  font-size: 11px;
+}
+.record-group {
+  margin: 32px 0;
+}
+.hall-rules {
+  padding: 16px;
+  border: 1px solid var(--line, #ddd);
+  border-radius: 12px;
+}
+.badge-shelf {
+  margin: 12px 0;
+}
+.award-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.award {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 12px;
+  padding: 7px 9px;
+  border: 1px solid var(--line, #ddd);
+  border-radius: 20px;
+}
+.award.current {
+  background: #f5bd3022;
+  border-color: #d4a93c;
+}
+.award small {
+  font-size: 9px;
+}
+.bike-game {
+  grid-column: 1/-1;
+  order: 95;
+  min-width: 0;
+}
+.reaction-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.reaction-row button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--line, #ddd);
+  border-radius: 20px;
+  padding: 10px;
+  background: transparent;
+  color: inherit;
+}
+.reaction-row button[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: #e7482f12;
+}
+.reaction-row button:disabled {
+  opacity: 0.6;
+}
+.locked-awards,
+.game-setting-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.locked-awards > div {
+  padding: 14px;
+  border: 1px dashed var(--line, #ddd);
+  border-radius: 10px;
+}
+.locked-awards p {
+  font-size: 13px;
+}
+.locked-awards progress {
+  max-width: 100%;
+  display: block;
+}
+.game-moderation {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  border-bottom: 1px solid var(--line, #ddd);
+}
+.game-moderation a {
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+.card-awards {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  font-size: 10px;
+  margin-top: 5px;
+}
+.card-awards span {
+  padding: 3px 6px;
+  border-radius: 10px;
+  background: #f5bd3022;
+}
+.showcase-sort {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin: 8px 0;
+}
+.showcase-sort button {
+  border: 1px solid var(--line, #ddd);
+  border-radius: 18px;
+  background: transparent;
+  color: inherit;
+  padding: 7px 12px;
+}
+.showcase-sort button[aria-pressed="true"] {
+  background: var(--ink, #202522);
+  color: var(--paper, #fff);
+}
+@media (max-width: 700px) {
+  .hall-heading {
+    padding: 14px 0;
+  }
+  .hall-heroes,
+  .record-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .hall-heroes .record-card:first-child {
+    grid-column: 1/-1;
+  }
+  .record-cover {
+    height: 145px;
+  }
+  .hall-heroes .record-card:first-child .record-cover {
+    height: 220px;
+  }
+  .record-info {
+    padding: 10px;
+  }
+  .record-value {
+    font-size: 23px;
+  }
+  .record-info h3 {
+    font-size: 14px;
+    overflow-wrap: anywhere;
+  }
+  .record-title {
+    font-size: 11px;
+    left: 5px;
+    right: 5px;
+    bottom: 5px;
+    padding: 5px;
+  }
+  .record-owner {
+    font-size: 11px;
+  }
+  .record-owner .social-avatar {
+    width: 25px;
+    height: 25px;
+    flex: 0 0 25px;
+  }
+  .locked-awards,
+  .game-setting-grid {
+    grid-template-columns: 1fr;
+  }
+  .game-moderation {
+    flex-wrap: wrap;
+  }
+  .award {
+    font-size: 11px;
+  }
+  .records-page {
+    overflow-wrap: anywhere;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .record-card {
+    animation: hall-enter 0.4s ease both;
+  }
+  @keyframes hall-enter {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}

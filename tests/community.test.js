@@ -297,7 +297,7 @@ test("subscription feed follows publication time and excludes private, blocked a
       },
     };
     let feed = await showcase(q, viewer.id, { followingId: viewer.id });
-    assert.equal(calls, 6);
+    assert.equal(calls, 7);
     assert.deepEqual(
       feed.bikes.map((b) => b.id),
       [first],

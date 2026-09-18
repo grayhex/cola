@@ -37,7 +37,7 @@ const sql = (name) =>
 async function setup(social = true) {
   const db = new PGlite();
   for (const m of migrations) await db.exec(await sql(m));
-  if (social) { await db.exec(await sql("009_social_core")); await db.exec(await sql("010_community")); }
+  if (social) { await db.exec(await sql("009_social_core")); await db.exec(await sql("010_community")); await db.exec(await sql("011_gamification")); }
   await db.query("INSERT INTO site_settings(id,value) VALUES(1,$1)", [
     JSON.stringify(defaultSettings),
   ]);

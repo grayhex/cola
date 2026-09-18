@@ -142,15 +142,7 @@ export default function GlobalHeader({ user, onProfile }) {
           Fallback={Users}
           active={pathname === "/feed"}
         />
-        <button
-          type="button"
-          className="global-nav-item future"
-          aria-label="Рекорды — скоро"
-          aria-disabled="true"
-          data-tooltip="Рекорды — скоро"
-        >
-          <Graphic assetId={settings.navRecordsIconId} Fallback={Trophy} />
-        </button>
+        <NavLink href="/records" label="Рекорды" assetId={settings.navRecordsIconId} Fallback={Trophy} active={pathname === "/records"}/>
         <NavLink
           href="/notifications"
           label={

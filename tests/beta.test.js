@@ -42,7 +42,7 @@ async function setup() {
     "004_garage_layout",
     "005_bike_wizard",
     "007_showcase",
-    "008_beta_limits", "009_social_core", "010_community",
+    "008_beta_limits", "009_social_core", "010_community", "011_gamification",
   ])
     await db.exec(
       await readFile(new URL("../db/" + m + ".sql", import.meta.url), "utf8"),
@@ -203,7 +203,7 @@ test("photo import uses same quota and rollback leaves neither rows nor files", 
     await rm(dir, { recursive: true, force: true });
   }
 });
-test("showcase SQL query count stays at six for a full page", async () => {
+test("showcase SQL query count stays at seven for a full page", async () => {
   const db = await setup();
   try {
     const a = await user(db),
@@ -218,7 +218,7 @@ test("showcase SQL query count stays at six for a full page", async () => {
     };
     const result = await showcase(q, a);
     assert.equal(result.bikes.length, 24);
-    assert.equal(count, 6);
+    assert.equal(count, 7);
   } finally {
     await db.close();
   }

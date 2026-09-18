@@ -224,7 +224,8 @@ async function handler(req, { params }) {
         .trim()
         .max(150)
         .parse(url.searchParams.get("q") || "");
-      return json(await showcase(db, user?.id, { page, category, search }));
+      const sort=z.enum(["new","popular","records"]).parse(url.searchParams.get("sort")||"new");
+      return json(await showcase(db, user?.id, { page, category, search, sort }));
     }
     if (!user) return fail("Войдите в аккаунт", 401);
     if (p[0] === "profile" && p.length === 1 && method === "PATCH") {
