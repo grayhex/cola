@@ -135,6 +135,55 @@
 .site-root .admin-shell {
   font-family: var(--site-font);
 }
+@media (min-width: 900px) {
+  .site-root .global-header {
+    min-height: 120px;
+    padding-top: 0;
+    padding-bottom: 0;
+    gap: 24px;
+  }
+  .site-root .global-header .brand-illustrated {
+    width: min(52vw, 1060px);
+    height: 120px;
+    min-width: 0;
+    flex: 0 1 auto;
+    position: relative;
+    overflow: hidden;
+    background: var(--paper);
+  }
+  .site-root .global-header .brand-illustrated .site-logo {
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    object-fit: cover;
+    object-position: left center;
+    mask-image: linear-gradient(to right, #000 90%, transparent);
+    -webkit-mask-image: linear-gradient(to right, #000 90%, transparent);
+  }
+  .site-root .global-nav {
+    gap: clamp(8px, 1vw, 16px);
+  }
+  .site-root .global-nav-item {
+    width: clamp(64px, 5.2vw, 76px);
+    height: clamp(64px, 5.2vw, 76px);
+    min-width: clamp(64px, 5.2vw, 76px);
+    min-height: clamp(64px, 5.2vw, 76px);
+    border-radius: clamp(18px, 1.5vw, 22px);
+  }
+  .site-root .global-nav-graphic-fallback {
+    width: clamp(40px, 3.5vw, 50px);
+    height: clamp(40px, 3.5vw, 50px);
+  }
+  .site-root .global-nav-graphic {
+    width: clamp(44px, 3.8vw, 54px);
+    height: clamp(44px, 3.8vw, 54px);
+  }
+  .site-root .global-nav-item.active::before {
+    bottom: 7px;
+    width: 6px;
+    height: 6px;
+  }
+}
 @media (max-width: 700px) {
   .site-root .global-header {
     min-height: 64px;
