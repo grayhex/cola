@@ -200,14 +200,6 @@
   color: var(--muted);
   font-size: 11px;
 }
-.card-comments {
-  font-size: 10px;
-  color: var(--muted);
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  margin-top: 7px;
-}
 .community-page .section-heading {
   margin-bottom: 18px;
 }
@@ -215,33 +207,6 @@
   margin-top: 20px;
 }
 @media (max-width: 700px) {
-  .site-root .global-header {
-    flex-wrap: wrap;
-    gap: 6px;
-    padding: 8px 14px;
-  }
-  .site-root .global-header .brand {
-    max-width: 100%;
-  }
-  .site-root .global-nav {
-    width: 100%;
-    justify-content: space-between;
-    gap: 2px;
-  }
-  .site-root .global-nav-item {
-    width: 42px;
-    min-width: 42px;
-    height: 44px;
-    min-height: 44px;
-  }
-  .site-root .global-nav-graphic {
-    width: 30px;
-    height: 30px;
-  }
-  .site-root .global-nav-graphic-fallback {
-    width: 24px;
-    height: 24px;
-  }
   .comment-replies {
     margin-left: 10px;
     padding-left: 10px;

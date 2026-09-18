@@ -43,9 +43,9 @@ jobs:
       - run: python3 scripts/test-compose.py
       - run: bash scripts/test-backup-drill.sh
       - uses: actions/upload-artifact@v4
-        if: failure()
+        if: always()
         with:
-          name: browser-failures
+          name: browser-review
           path: test-results/
           retention-days: 7
   deploy:

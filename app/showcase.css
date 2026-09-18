@@ -1,153 +1,438 @@
-/* Public exhibition and personal management share the same visual language. */
-.showcase-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-.account-link{font-size:12px;color:inherit;text-decoration:none;white-space:nowrap}
-.site-root .bike-card{display:block;text-align:left;min-width:0}
-.site-root .card-open-photo{display:block;border:0;padding:0;width:100%;background:none;cursor:pointer}
-.site-root .card-photo{position:relative}
-.site-root .card-type{padding:4px 7px;display:flex;align-items:center;pointer-events:none}
-.site-root .card-facts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;font-size:11px;color:var(--muted);min-height:17px;margin-bottom:4px}
-.card-facts span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.site-root .card-info h2{display:flex;align-items:baseline;gap:8px}
-.site-root .card-info h2 button{min-width:0;flex:1;text-align:left;background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.site-root .card-info h2 .card-author{font-size:11px;font-weight:400;color:var(--muted);max-width:35%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.site-root .like-button{position:absolute;bottom:9px;right:9px;display:flex;gap:5px;align-items:center;justify-content:center;min-width:44px;min-height:36px;padding:6px 9px;border:0;border-radius:20px;background:#fffffff0;color:#242926;font-size:12px;cursor:pointer;z-index:2}
-.site-root .like-button[aria-pressed=true]{color:var(--accent)}
-.site-root .like-button:disabled{cursor:default;opacity:.8}
-.private-badge{position:absolute;bottom:10px;right:10px;background:var(--paper);padding:5px;border-radius:50%}
-.bike-meters{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:9px}
-.bike-meter>span{display:flex;justify-content:space-between;font-size:9px;color:var(--muted);gap:4px}
-.bike-meter small{font:inherit}
-.bike-meter [role=progressbar]{height:3px;background:var(--line);border-radius:3px;overflow:hidden;margin-top:4px}
-.bike-meter i{display:block;height:100%;background:var(--accent);transform-origin:left;animation:meter-fill .6s ease-out;transition:width .35s ease}
-.bike-meter.complete i{background:var(--muted)}
-.feed-pages{display:flex;align-items:center;justify-content:center;gap:18px;margin:18px 0;font-size:13px}
-@keyframes meter-fill{from{transform:scaleX(0)}to{transform:scaleX(1)}}
-@media(prefers-reduced-motion:reduce){.bike-meter i{animation:none;transition:none}}
-@media(min-width:900px){
- .site-root .header{padding-top:0;padding-bottom:0;min-height:120px;gap:24px}
- .site-root .brand-illustrated{width:min(52vw,1060px);height:120px;min-width:0;flex-shrink:1;position:relative;overflow:hidden;background:#fff}
- .site-root .brand-illustrated .site-logo{width:100%;height:100%;max-width:none;object-fit:cover;object-position:left center;mask-image:linear-gradient(to right,#000 90%,transparent);-webkit-mask-image:linear-gradient(to right,#000 90%,transparent)}
- .site-root .header-right{margin-left:auto;flex-shrink:0}
+/* Shared photo-first cards: showcase, subscriptions and rider collections. */
+.site-root .bike-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: start;
 }
-@media(max-width:600px){
- .site-root .account-link{font-size:11px}
- .site-root .header-right{gap:8px}
- .site-root .card-info h2{font-size:16px}
- .site-root .card-info h2 .card-author{font-size:10px}
- .site-root .card-facts{font-size:10px}
- .site-root .bike-meters{margin-top:7px}
- .showcase-actions{gap:8px}
-}
-
-.site-root .card-photo{overflow:hidden}
-.site-root .card-open-photo{position:absolute;inset:0;height:100%}
-.site-root .card-open-photo>img{display:block;width:100%;height:100%;object-fit:cover;padding:0}
-
-
-/* Configurable showcase actions and transparent photo overlays. */
-.site-root .showcase-actions {
-  flex-wrap: nowrap;
-  justify-content: flex-end;
-}
-.site-root .showcase-icon-action {
-  width: 52px;
-  height: 52px;
-  min-width: 52px;
-  min-height: 52px;
-  padding: 8px;
-  border-radius: 14px;
+.site-root .bike-card {
+  container-type: inline-size;
+  display: block;
+  min-width: 0;
+  padding: 0;
+  text-align: left;
+  border: 1px solid var(--line);
+  border-radius: min(var(--radius), var(--radius-md));
   background: var(--paper);
+  overflow: hidden;
+  box-shadow: none;
+  transform: none;
+  transition: border-color var(--motion-fast);
 }
-.site-root .showcase-icon-action.active {
-  border-color: var(--accent);
+.site-root .bike-card:hover,
+.site-root .bike-card:focus-within {
+  border-color: var(--line-strong);
+  transform: none;
+  box-shadow: none;
+}
+.site-root .card-photo {
+  position: relative;
+  height: auto;
+  aspect-ratio: 4/3;
+  overflow: hidden;
+  background: var(--wash);
+}
+.site-root .card-open-photo {
+  display: block;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+.site-root .card-open-photo > img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  padding: 0;
+  transition: transform var(--motion-image);
+}
+.site-root .card-open-photo:focus-visible {
+  outline-offset: -4px;
+  z-index: 1;
+}
+.site-root .card-photo .photo-empty {
+  height: 100%;
+  min-height: 0;
+  font-size: 12px;
+}
+@media (hover: hover) {
+  .site-root .card-open-photo:hover > img {
+    transform: scale(1.012);
+  }
+}
+.site-root .private-badge {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xs);
+}
+.site-root .card-info {
+  padding: var(--space-3);
+}
+.site-root .card-facts {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.site-root .card-facts span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.site-root .card-facts span + span::before {
+  content: "·";
+  margin: 0 6px;
+  color: var(--subtle);
+}
+.site-root .card-facts .fact-category {
+  flex: 0 1 auto;
+}
+.site-root .card-info h2 {
+  display: block;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.35px;
+  margin: 0 0 4px;
+  min-width: 0;
+}
+.site-root .card-info h2 button {
+  display: block;
+  width: 100%;
+  font: inherit;
+  text-align: left;
+  color: var(--ink);
+  padding: 0;
+  border: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background: transparent;
+  transition: color var(--motion-fast);
+}
+.site-root .card-info h2 button:hover {
   color: var(--accent);
-  background: var(--soft);
+}
+.site-root .card-social {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 32px;
+}
+.site-root .card-social .author-link {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+  flex: 1;
+  min-width: 0;
+  max-width: none;
+}
+.site-root .card-social .author-link:hover {
+  color: var(--ink);
+}
+.site-root .card-social .social-avatar.tiny {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+}
+.card-social-stats {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.site-root .social-stat {
+  display: inline-flex;
+  position: static;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 32px;
+  min-width: 32px;
+  margin: 0;
+  padding: 4px;
+  border: 0;
+  border-radius: var(--radius-xs);
+  color: var(--muted);
+  background: transparent;
+  font-size: 12px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  text-shadow: none;
+  filter: none;
+  transform: none;
+  transition:
+    color var(--motion-fast),
+    background var(--motion-fast);
+}
+.site-root .social-stat:hover {
+  color: var(--ink);
+  background: var(--wash);
+  transform: none;
+}
+.site-root .like-button[aria-pressed="true"] {
+  color: var(--accent);
+}
+.site-root .social-stat .like-graphic {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  filter: none;
+  transform: none;
+}
+.site-root .social-stat:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+.card-signals {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  justify-content: space-between;
+}
+.micro-metrics {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.micro-metric {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 28px;
+  padding: 0;
+  color: var(--muted);
+}
+.micro-segments {
+  display: flex;
+  gap: 2px;
+}
+.micro-segments i {
+  width: 4px;
+  height: 8px;
+  border-radius: 1px;
+  background: var(--line);
+}
+.micro-segments i[data-filled="true"] {
+  background: var(--muted);
+}
+.upgrade .micro-segments i[data-filled="true"] {
+  background: var(--accent);
+}
+.important-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  color: var(--ink);
+  font-size: 11px;
+  padding: 3px 4px;
+  border-left: 2px solid var(--accent);
+  line-height: 1.2;
+}
+.important-badge span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.site-root .garage-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  text-align: left;
+  margin: 20px 0 16px;
+}
+.site-root .garage-heading h1 {
+  font-size: clamp(28px, 3vw, 40px);
+  line-height: 1.15;
+  font-weight: 700;
+  letter-spacing: -1px;
+  margin: 0;
+}
+.showcase-heading-copy {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.result-count {
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.showcase-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+.filter-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: -4px 0 16px;
+}
+.filter-chips button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xs);
+  font-size: 12px;
+  padding: 4px 8px;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.filter-chips button:hover {
+  border-color: var(--line-strong);
+}
+.feed-pages {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin: 24px 0;
+  font-size: 13px;
+}
+.bike-meters {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 8px;
+}
+.bike-meter > span {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--muted);
+  gap: 4px;
+}
+.bike-meter small {
+  font: inherit;
+}
+.bike-meter [role="progressbar"] {
+  height: 3px;
+  background: var(--line);
+  overflow: hidden;
+  margin-top: 4px;
+}
+.bike-meter i {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition: width var(--motion-image);
+}
+.bike-meter.complete i {
+  background: var(--muted);
 }
 .site-root .site-asset-icon,
 .site-root .site-asset-icon-fallback {
   display: block;
-  flex: 0 0 auto;
+  flex-shrink: 0;
   object-fit: contain;
 }
-.site-root .showcase-icon-action .site-asset-icon,
-.site-root .showcase-icon-action .site-asset-icon-fallback {
-  width: 34px;
-  height: 34px;
+@media (min-width: 700px) {
+  .site-root .bike-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
-.site-root .showcase-search-field {
-  margin-left: auto;
+@media (min-width: 1100px) {
+  .site-root .bike-grid {
+    grid-template-columns: repeat(var(--desktop-columns, 3), minmax(0, 1fr));
+  }
 }
-.site-root .card-type {
-  padding: 0;
-  background: transparent;
-  border-radius: 0;
-  color: var(--ink);
+@container (max-width:250px) {
+  .card-facts .fact-size {
+    display: none;
+  }
+  .site-root .card-info {
+    padding: 8px;
+  }
+  .site-root .card-info h2 {
+    font-size: 17px;
+  }
+  .micro-metrics {
+    gap: 6px;
+  }
+  .micro-segments i {
+    width: 3px;
+  }
+  .important-badge {
+    font-size: 11px;
+  }
 }
-.site-root .card-type .bike-category-graphic {
-  display: block;
-  object-fit: contain;
-  background: transparent;
-  filter:
-    drop-shadow(0 1px 2px #ffffffcc)
-    drop-shadow(0 1px 3px #00000028);
-}
-.site-root .filters .bike-category-graphic,
-.site-root .bike-meta-line .bike-category-graphic {
-  display: block;
-  object-fit: contain;
-  background: transparent;
-}
-.site-root .like-button {
-  min-width: 0;
-  min-height: 0;
-  padding: 3px;
-  gap: 4px;
-  border-radius: 0;
-  background: transparent;
-  color: var(--accent);
-  font-size: 12px;
-  font-weight: 800;
-  text-shadow:
-    0 1px 2px #fff,
-    0 1px 3px #0006;
-}
-.site-root .like-button:hover,
-.site-root .like-button:focus-visible {
-  background: transparent;
-  transform: scale(1.06);
-}
-.site-root .like-button .like-graphic {
-  width: 30px;
-  height: 30px;
-  object-fit: contain;
-  filter:
-    drop-shadow(0 1px 2px #ffffffcc)
-    drop-shadow(0 1px 3px #00000035);
-}
-.site-root .like-button[aria-pressed="true"] .like-graphic {
-  transform: scale(1.08);
-}
-
-@media (max-width: 600px) {
-  .site-root .showcase-icon-action {
-    width: 44px;
-    height: 44px;
-    min-width: 44px;
+@media (max-width: 700px) {
+  .site-root .garage-heading {
+    gap: 12px;
+    margin: 12px 0;
+  }
+  .showcase-heading-copy {
+    gap: 8px;
+  }
+  .site-root .garage-heading h1 {
+    font-size: 28px;
+  }
+  .showcase-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  .site-root .card-photo {
+    height: auto;
+    aspect-ratio: 3/2;
+  }
+  .site-root .card-info {
+    padding: 12px;
+  }
+  .site-root .card-info h2 {
+    font-size: 18px;
+  }
+  .site-root .social-stat,
+  .micro-metric {
     min-height: 44px;
-    padding: 6px;
-    border-radius: 12px;
   }
-  .site-root .showcase-icon-action .site-asset-icon,
-  .site-root .showcase-icon-action .site-asset-icon-fallback {
-    width: 30px;
-    height: 30px;
+  .micro-metric {
+    min-width: 44px;
   }
-  .site-root .card-type .bike-category-graphic {
-    width: 34px;
-    height: 34px;
+  .card-signals {
+    margin-top: -4px;
   }
-  .site-root .like-button .like-graphic {
-    width: 28px;
-    height: 28px;
+  .site-root .card-facts {
+    font-size: 12px;
+  }
+  .filter-chips button {
+    min-height: 36px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .site-root .bike-card,
+  .site-root .card-open-photo > img,
+  .bike-meter i {
+    transition: none;
+  }
+  .site-root .card-open-photo:hover > img {
+    transform: none;
   }
 }

@@ -1,4 +1,5 @@
 "use client";
+import { GlobalSearch } from "./compact-ui.jsx";
 import { useState, useEffect } from "react";
 import {
   Home,
@@ -142,7 +143,13 @@ export default function GlobalHeader({ user, onProfile }) {
           Fallback={Users}
           active={pathname === "/feed"}
         />
-        <NavLink href="/records" label="Рекорды" assetId={settings.navRecordsIconId} Fallback={Trophy} active={pathname === "/records"}/>
+        <NavLink
+          href="/records"
+          label="Рекорды"
+          assetId={settings.navRecordsIconId}
+          Fallback={Trophy}
+          active={pathname === "/records"}
+        />
         <NavLink
           href="/notifications"
           label={
@@ -156,6 +163,7 @@ export default function GlobalHeader({ user, onProfile }) {
           active={pathname === "/notifications"}
           badge={unread}
         />
+        <GlobalSearch assetId={settings.searchIconId} />
         {user?.role === "admin" && (
           <NavLink
             href="/admin"

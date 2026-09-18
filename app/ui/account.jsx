@@ -1,4 +1,5 @@
 "use client";
+import BikeGrid from "./bike-grid.jsx";
 import { BadgeShelf } from "./achievements.jsx";
 import { useEffect, useState } from "react";
 import { Plus, ExternalLink, LogOut } from "lucide-react";
@@ -418,7 +419,7 @@ export default function Account() {
                       Все велосипеды
                     </button>
                   </div>
-                  <div className="bike-grid">
+                  <BikeGrid bikes={bikes.slice(0, 3)}>
                     {bikes.slice(0, 3).map((b) => (
                       <BikeCard
                         key={b.id}
@@ -430,7 +431,7 @@ export default function Account() {
                         }}
                       />
                     ))}
-                  </div>
+                  </BikeGrid>
                   {!bikes.length && (
                     <p className="help">
                       Добавьте первый велосипед и начните свою коллекцию.
@@ -439,7 +440,9 @@ export default function Account() {
                 </section>
               </>
             )}
-            {tab === "achievements" && <BadgeShelf endpoint="game/me" account/>}
+            {tab === "achievements" && (
+              <BadgeShelf endpoint="game/me" account />
+            )}
             {tab === "profile" && (
               <section className="social-panel">
                 <h2>Мой профиль</h2>

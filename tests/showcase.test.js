@@ -59,6 +59,8 @@ test("showcase privacy, owner/voter permissions, duplicate votes, revocation, bl
     assert.equal((await vote(db,id,viewer,false)).likes,0);
     assert.equal((await showcase(db,null,{search:"Author"})).total,1);
     assert.equal((await showcase(db,null,{category:"mtb"})).total,0);
+    assert.equal((await showcase(db,null,{category:"mtb,road"})).total,1);
+    assert.equal((await showcase(db,null,{category:"mtb,gravel"})).total,0);
     await vote(db,id,viewer,true);
     await db.query("UPDATE bikes SET is_public=false WHERE id=$1",[id]);
     assert.equal((await showcase(db,null)).total,0);

@@ -1,11 +1,13 @@
 "use client";
-import {BikeGame} from "./achievements.jsx";
+import BikeGrid from "./bike-grid.jsx";
+import { FilterControl, FilterChips } from "./compact-ui.jsx";
+import { BikeGame } from "./achievements.jsx";
 import Discussion from "./discussion.jsx";
 import BikeCategoryIcon from "./bike-category-icon.jsx";
 import BikeMeters from "./bike-meters.jsx";
 import Photo from "./bike-photo.jsx";
 import BikeCard from "./bike-card.jsx";
-import {AuthorLink} from "./social-primitives.jsx";
+import { AuthorLink } from "./social-primitives.jsx";
 import GlobalHeader from "./global-header.jsx";
 import SiteAssetIcon from "./site-asset-icon.jsx";
 
@@ -213,7 +215,14 @@ function Field({ label, children }) {
   );
 }
 
-export default function Garage({ share, account = false, embedded = false, startCreate = false, initialBikeId = null, onAuthenticated }) {
+export default function Garage({
+  share,
+  account = false,
+  embedded = false,
+  startCreate = false,
+  initialBikeId = null,
+  onAuthenticated,
+}) {
   const { personalSettings: settings, catalog, t, setPreferences } = useSite();
   const { categories, models, parts, partCategories, manufacturers } = catalog;
   const [user, setUser] = useState(null),
@@ -226,42 +235,71 @@ export default function Garage({ share, account = false, embedded = false, start
     [busy, setBusy] = useState(false),
     [tab, setTab] = useState("build"),
     [sort, setSort] = useState("new"),
-    [filter, setFilter] = useState("all"),
+    [filters, setFilters] = useState([]),
     [query, setQuery] = useState(""),
-    [searchOpen, setSearchOpen] = useState(false),
     [photo, setPhoto] = useState(null);
-  const [page, setPage] = useState(1), [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1),
+    [total, setTotal] = useState(0);
   const requestId = useRef(0);
   const initialSelection = useRef(initialBikeId);
   const file = useRef();
+  useEffect(() => {
+    if (!account && !share)
+      setQuery(new URLSearchParams(window.location.search).get("q") || "");
+  }, [account, share]);
   async function load() {
     const sequence = ++requestId.current;
     const { user: u } = await api("me");
     if (sequence !== requestId.current) return;
     setUser(u);
-    if(u && onAuthenticated) onAuthenticated();
+    if (u && onAuthenticated) onAuthenticated();
     setPreferences(u?.preferences || {});
     if (share) {
       const data = await api("shared/" + share);
       if (sequence === requestId.current) setSelected(data.bike);
     } else {
       const data = account
-        ? u ? await api("bikes") : {bikes:[]}
-        : await api("showcase?sort="+sort+"&page=" + page + "&category=" + (filter === "all" ? "" : filter) + "&q=" + encodeURIComponent(query));
+        ? u
+          ? await api("bikes")
+          : { bikes: [] }
+        : await api(
+            "showcase?sort=" +
+              sort +
+              "&page=" +
+              page +
+              "&category=" +
+              encodeURIComponent(filters.join(",")) +
+              "&q=" +
+              encodeURIComponent(query),
+          );
       if (sequence !== requestId.current) return;
       setBikes(data.bikes);
       setTotal(data.total ?? data.bikes.length);
       const requested = initialSelection.current;
       initialSelection.current = null;
-      setSelected(prev => prev ? data.bikes.find(b => b.id === prev.id) || null : requested ? data.bikes.find(b=>b.id===requested)||null : null);
+      setSelected((prev) =>
+        prev
+          ? data.bikes.find((b) => b.id === prev.id) || null
+          : requested
+            ? data.bikes.find((b) => b.id === requested) || null
+            : null,
+      );
     }
   }
   useEffect(() => {
-    const timer = setTimeout(() => {
-      load().catch(e => setError(e.message)).finally(() => setLoading(false));
-    }, query ? 200 : 0);
-    return () => { clearTimeout(timer); requestId.current++; };
-  }, [share, account, page, filter, query, sort]);
+    const timer = setTimeout(
+      () => {
+        load()
+          .catch((e) => setError(e.message))
+          .finally(() => setLoading(false));
+      },
+      query ? 200 : 0,
+    );
+    return () => {
+      clearTimeout(timer);
+      requestId.current++;
+    };
+  }, [share, account, page, filters, query, sort]);
   useEffect(() => {
     if (notice) {
       const t = setTimeout(() => setNotice(""), 4000);
@@ -279,7 +317,9 @@ export default function Garage({ share, account = false, embedded = false, start
       setBusy(false);
     }
   }
-  useEffect(()=>{if(startCreate && user) setModal({type:"bike"});},[startCreate,user?.id]);
+  useEffect(() => {
+    if (startCreate && user) setModal({ type: "bike" });
+  }, [startCreate, user?.id]);
   const Main = embedded ? "section" : "main";
   const bike = selected;
   const blocks = settings.detailBlocks || defaultBlocks;
@@ -292,7 +332,10 @@ export default function Garage({ share, account = false, embedded = false, start
   });
   const editable = account && !!user && !share && bike?.is_owner === true;
   function openBike(b) {
-    if (!account) { window.location.assign("/b/" + b.share_id); return; }
+    if (!account) {
+      window.location.assign("/b/" + b.share_id);
+      return;
+    }
     setSelected(b);
     setPhoto(null);
     setTab("build");
@@ -311,11 +354,19 @@ export default function Garage({ share, account = false, embedded = false, start
     }
   }
   async function like(b) {
-    if (!user) { auth(); return; }
+    if (!user) {
+      auth();
+      return;
+    }
     await run(async () => {
-      const result = await api("bikes/" + b.id + "/like", b.liked ? "DELETE" : "PUT");
-      setBikes(all => all.map(x => x.id === b.id ? {...x,...result} : x));
-      setSelected(x => x?.id === b.id ? {...x,...result} : x);
+      const result = await api(
+        "bikes/" + b.id + "/like",
+        b.liked ? "DELETE" : "PUT",
+      );
+      setBikes((all) =>
+        all.map((x) => (x.id === b.id ? { ...x, ...result } : x)),
+      );
+      setSelected((x) => (x?.id === b.id ? { ...x, ...result } : x));
     });
   }
   async function refresh() {
@@ -325,16 +376,23 @@ export default function Garage({ share, account = false, embedded = false, start
     setError("");
     setModal({ type: "auth", mode });
   }
-  const filtered = account ? bikes.filter(
-    (b) =>
-      (filter === "all" || b.category === filter) &&
-      `${b.name} ${b.brand} ${b.model}`
-        .toLowerCase()
-        .includes(query.toLowerCase()),
-  ) : bikes;
+  const filtered = account
+    ? bikes.filter(
+        (b) =>
+          (!filters.length || filters.includes(b.category)) &&
+          `${b.name} ${b.brand} ${b.model}`
+            .toLowerCase()
+            .includes(query.toLowerCase()),
+      )
+    : bikes;
   return (
     <>
-      {!embedded && <GlobalHeader user={user} onProfile={!user ? () => auth() : undefined} />}
+      {!embedded && (
+        <GlobalHeader
+          user={user}
+          onProfile={!user ? () => auth() : undefined}
+        />
+      )}
       {notice && (
         <div className="toast" role="status">
           <Check size={18} />
@@ -379,9 +437,11 @@ export default function Garage({ share, account = false, embedded = false, start
               </button>
             ) : (
               <span>
-                {share
-                  ? <AuthorLink author={bike.author}/>
-                  : t("Пример вашего будущего гаража")}
+                {share ? (
+                  <AuthorLink author={bike.author} />
+                ) : (
+                  t("Пример вашего будущего гаража")
+                )}
               </span>
             )}
             <ChevronRight size={14} />
@@ -400,7 +460,7 @@ export default function Garage({ share, account = false, embedded = false, start
               </h1>
             </div>
             <div className="detail-actions">
-              {share && <AuthorLink author={bike.author}/>}
+              {share && <AuthorLink author={bike.author} />}
               {editable ? (
                 <>
                   <button
@@ -442,7 +502,12 @@ export default function Garage({ share, account = false, embedded = false, start
             hidden={!block("heading").enabled}
             style={{ order: blocks.findIndex((b) => b.id === "heading") + 1 }}
           >
-            <span className="category-tag"><BikeCategoryIcon category={bike.category} label={categories[bike.category]} /></span>
+            <span className="category-tag">
+              <BikeCategoryIcon
+                category={bike.category}
+                label={categories[bike.category]}
+              />
+            </span>
             <span>{bike.year}</span>
             {bike.color && <span>{bike.color}</span>}
             {bike.size && <span>{bike.size}</span>}
@@ -784,8 +849,25 @@ export default function Garage({ share, account = false, embedded = false, start
                 </div>
               )}
           </section>
-          {bike.is_public && <BikeGame key={JSON.stringify([bike.id,bike.likes,bike.weight,bike.category,bike.show_bike_price,bike.price,bike.scores,bike.photos.length])} bike={bike} user={user}/>}
-          {bike.is_public && <Discussion key={bike.id} bike={bike} user={user}/>}
+          {bike.is_public && (
+            <BikeGame
+              key={JSON.stringify([
+                bike.id,
+                bike.likes,
+                bike.weight,
+                bike.category,
+                bike.show_bike_price,
+                bike.price,
+                bike.scores,
+                bike.photos.length,
+              ])}
+              bike={bike}
+              user={user}
+            />
+          )}
+          {bike.is_public && (
+            <Discussion key={bike.id} bike={bike} user={user} />
+          )}
         </Main>
       ) : (
         <Main className="garage">
@@ -797,101 +879,119 @@ export default function Garage({ share, account = false, embedded = false, start
             />
           )}
           <div className="garage-heading">
-            <div>
+            <div className="showcase-heading-copy">
               <h1>
                 {account
                   ? "Мои велосипеды"
-                  : settings.showcaseTitle || "Витрина"}
-                <span className="count">{total}</span>
+                  : settings.showcaseTitle === "Витрина"
+                    ? "Наши велосипеды"
+                    : settings.showcaseTitle || "Наши велосипеды"}
               </h1>
+              <span className="result-count">
+                {account ? filtered.length : total} велосипедов
+              </span>
             </div>
-            {!account&&<div className="showcase-sort" aria-label="Порядок витрины">{[["new","Новые"],["popular","Популярные"],["records","Рекордсмены"]].map(([key,label])=><button key={key} aria-pressed={sort===key} onClick={()=>{setSort(key);setPage(1)}}>{label}</button>)}</div>}
             <div className="showcase-actions" aria-label="Действия витрины">
-              <div
-                className="filters showcase-category-filters"
-                aria-label="Фильтр по типу велосипеда"
-              >
-                {Object.entries(categories).map(([key, label]) => (
-                  <button
-                    key={key}
-                    type="button"
-                    className={
-                      "icon bordered showcase-icon-action showcase-filter-action" +
-                      (filter === key ? " active" : "")
-                    }
-                    aria-label={label}
-                    aria-pressed={filter === key}
-                    onClick={() => {
-                      setFilter((current) => (current === key ? "all" : key));
+              {!account && (
+                <label className="compact-selector">
+                  <span className="sr-only">Порядок витрины</span>
+                  <select
+                    aria-label="Порядок витрины"
+                    value={sort}
+                    onChange={(e) => {
+                      setSort(e.target.value);
                       setPage(1);
                     }}
                   >
-                    <BikeCategoryIcon
-                      category={key}
-                      label={label}
-                      size={34}
-                    />
-                  </button>
-                ))}
-              </div>
-              <button
-                className={
-                  "icon bordered showcase-icon-action" +
-                  (searchOpen ? " active" : "")
-                }
-                aria-label="Поиск велосипедов"
-                aria-expanded={searchOpen}
-                onClick={() => {
-                  if (searchOpen) setQuery("");
-                  setSearchOpen((v) => !v);
+                    <option value="new">Новые</option>
+                    <option value="popular">Популярные</option>
+                    <option value="records">Рекордсмены</option>
+                  </select>
+                </label>
+              )}
+              <FilterControl
+                categories={categories}
+                selected={filters}
+                onChange={(values) => {
+                  setFilters(values);
+                  setPage(1);
                 }}
-              >
-                <SiteAssetIcon
-                  assetId={settings.searchIconId}
-                  Fallback={Search}
-                  size={28}
-                />
-              </button>
-              <button
-                className="icon bordered showcase-icon-action"
-                aria-label="Добавить велосипед"
-                onClick={() =>
-                  user ? setModal({ type: "bike" }) : auth("register")
-                }
-              >
-                <SiteAssetIcon
-                  assetId={settings.addBikeIconId}
-                  Fallback={Plus}
-                  size={28}
-                />
-              </button>
+              />
+              {user && (
+                <button
+                  type="button"
+                  className="compact-icon add-bike"
+                  aria-label="Добавить велосипед"
+                  title="Добавить велосипед"
+                  onClick={() => setModal({ type: "bike" })}
+                >
+                  <SiteAssetIcon
+                    assetId={settings.addBikeIconId}
+                    Fallback={Plus}
+                    size={18}
+                  />
+                </button>
+              )}
             </div>
           </div>
           {account && !user && (
             <p>Войдите, чтобы управлять своими велосипедами и оформлением.</p>
           )}
-          {searchOpen && (
-            <div className="garage-tools showcase-search-row">
-              <label className="search showcase-search-field">
-                <input
-                  aria-label={t("Найти велосипед")}
-                  value={query}
-                  onChange={(e) => {
-                    setQuery(e.target.value);
-                    setPage(1);
-                  }}
-                  autoFocus
-                  placeholder="Найти велосипед или автора"
-                />
-              </label>
-            </div>
+          <FilterChips
+            categories={categories}
+            selected={filters}
+            onChange={(values) => {
+              setFilters(values);
+              setPage(1);
+            }}
+            query={query}
+            onClearSearch={() => {
+              setQuery("");
+              setPage(1);
+              if (!account) window.history.replaceState(null, "", "/");
+            }}
+          />
+          <BikeGrid bikes={filtered}>
+            {filtered.map((b) => (
+              <BikeCard
+                key={b.id}
+                bike={b}
+                onOpen={() => openBike(b)}
+                onLike={() => like(b)}
+                busy={busy}
+                ownerView={account}
+              />
+            ))}
+          </BikeGrid>
+          {!account && total > 24 && (
+            <nav className="feed-pages" aria-label="Страницы витрины">
+              <button
+                className="quiet"
+                disabled={page <= 1}
+                onClick={() => setPage((p) => p - 1)}
+              >
+                Назад
+              </button>
+              <span>
+                {page} / {Math.ceil(total / 24)}
+              </span>
+              <button
+                className="quiet"
+                disabled={page * 24 >= total}
+                onClick={() => setPage((p) => p + 1)}
+              >
+                Далее
+              </button>
+            </nav>
           )}
-          <div className="bike-grid">
-            {filtered.map(b => <BikeCard key={b.id} bike={b} onOpen={()=>openBike(b)} onLike={()=>like(b)} busy={busy} ownerView={account}/>)}
-          </div>
-          {!account && total > 24 && <nav className="feed-pages" aria-label="Страницы витрины"><button className="quiet" disabled={page<=1} onClick={()=>setPage(p=>p-1)}>Назад</button><span>{page} / {Math.ceil(total/24)}</span><button className="quiet" disabled={page*24>=total} onClick={()=>setPage(p=>p+1)}>Далее</button></nav>}
-          {!filtered.length && !query && filter === "all" && <p className="help">{account ? "Добавьте свой первый велосипед." : "Пока нет публичных велосипедов. Опубликуйте свой!"}</p>}
-          {!filtered.length && (query || filter !== "all") && (
+          {!filtered.length && !query && !filters.length && (
+            <p className="help">
+              {account
+                ? "Добавьте свой первый велосипед."
+                : "Пока нет публичных велосипедов. Опубликуйте свой!"}
+            </p>
+          )}
+          {!filtered.length && (query || filters.length > 0) && (
             <div className="empty-parts">
               <Search />
               <h3>{t("Ничего не найдено")}</h3>
@@ -899,7 +999,7 @@ export default function Garage({ share, account = false, embedded = false, start
                 className="quiet"
                 onClick={() => {
                   setQuery("");
-                  setFilter("all");
+                  setFilters([]);
                 }}
               >
                 {t("Сбросить фильтры")}
@@ -908,14 +1008,16 @@ export default function Garage({ share, account = false, embedded = false, start
           )}
         </Main>
       )}
-      {!embedded && <footer className="footer">
-        <span className="footer-logo">
-          {settings.siteName}
-          <span>© {new Date().getFullYear()}</span>
-        </span>
-        <span>{t("Ваш велосипед. В деталях.")}</span>
-        <Versions />
-      </footer>}
+      {!embedded && (
+        <footer className="footer">
+          <span className="footer-logo">
+            {settings.siteName}
+            <span>© {new Date().getFullYear()}</span>
+          </span>
+          <span>{t("Ваш велосипед. В деталях.")}</span>
+          <Versions />
+        </footer>
+      )}
       <input
         ref={file}
         type="file"
@@ -1018,7 +1120,10 @@ export default function Garage({ share, account = false, embedded = false, start
             <BikeWizard
               onBusy={setBusy}
               onCreated={async (id) => {
-                if (!account) { window.location.assign("/account"); return; }
+                if (!account) {
+                  window.location.assign("/account");
+                  return;
+                }
                 await refresh();
                 const { bike: b } = await api("bikes/" + id);
                 openBike(b);
