@@ -97,6 +97,18 @@ async function handler(req, { params }) {
             "navMessagesIconId",
             "navAdminIconId",
             "navLogoutIconId",
+            "addBikeIconId",
+            "searchIconId",
+            "likeIconId",
+            "mtbTypeIconId",
+            "roadTypeIconId",
+            "gravelTypeIconId",
+            "addBikeIconId",
+            "searchIconId",
+            "likeIconId",
+            "mtbTypeIconId",
+            "roadTypeIconId",
+            "gravelTypeIconId",
           ])
             if (value[key]) {
               const a = await q.query(
