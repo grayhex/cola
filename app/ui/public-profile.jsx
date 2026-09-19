@@ -1,6 +1,7 @@
 "use client";
-import {BadgeShelf} from "./achievements.jsx";
-import {ReportButton} from "./community-controls.jsx";
+import BikeGrid from "./bike-grid.jsx";
+import { BadgeShelf } from "./achievements.jsx";
+import { ReportButton } from "./community-controls.jsx";
 import { useEffect, useState } from "react";
 import { MapPin, Calendar, ArrowLeft } from "lucide-react";
 import {
@@ -120,8 +121,14 @@ export default function PublicProfile({ username }) {
                 </div>
               </div>
               <FollowButton profile={profile} user={user} onChange={refresh} />
-              {!profile.relationship.isSelf && <ReportButton entityType="profile" targetId={profile.id} user={user}/>}
-                <div className="social-stats">
+              {!profile.relationship.isSelf && (
+                <ReportButton
+                  entityType="profile"
+                  targetId={profile.id}
+                  user={user}
+                />
+              )}
+              <div className="social-stats">
                 <button onClick={() => setPeople("")} aria-pressed={!people}>
                   <strong>{profile.counts.bikes}</strong>Велосипеды
                 </button>
@@ -145,7 +152,7 @@ export default function PublicProfile({ username }) {
                 </button>
               </div>
             </section>
-            <BadgeShelf endpoint={"game/profiles/"+profile.username}/>
+            <BadgeShelf endpoint={"game/profiles/" + profile.username} />
             {people ? (
               <section className="social-panel">
                 <button className="quiet" onClick={() => setPeople("")}>
@@ -180,7 +187,7 @@ export default function PublicProfile({ username }) {
                 </h2>
                 {feed ? (
                   <>
-                    <div className="bike-grid">
+                    <BikeGrid bikes={feed.bikes}>
                       {feed.bikes.map((b) => (
                         <BikeCard
                           key={b.id}
@@ -189,7 +196,7 @@ export default function PublicProfile({ username }) {
                           onLike={() => like(b)}
                         />
                       ))}
-                    </div>
+                    </BikeGrid>
                     {!feed.bikes.length && (
                       <p className="help">
                         Владелец ещё не опубликовал велосипеды.

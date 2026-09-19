@@ -1,0 +1,235 @@
+import { test, expect } from "@playwright/test";
+import { randomUUID } from "node:crypto";
+import pg from "pg";
+import sharp from "sharp";
+
+const origin = process.env.TEST_ORIGIN || "http://localhost:3100";
+test("dense visual system: shared cards, filters, search, themes and responsive grids", async ({
+  page,
+  isMobile,
+}, info) => {
+  const db = new pg.Client({ connectionString: process.env.DATABASE_URL });
+  await db.connect();
+  const suffix = randomUUID().slice(0, 8),
+    name = "Design " + suffix;
+  const register = await page.request.post("/api/auth/register", {
+    headers: { origin },
+    data: {
+      name,
+      email: suffix + "@example.test",
+      password: "design-browser-secret-123",
+    },
+  });
+  expect(register.status()).toBe(201);
+  const user = (await (await page.request.get("/api/me")).json()).user;
+  await db.query("UPDATE users SET role='admin' WHERE id=$1", [user.id]);
+  const overview = await (await page.request.get("/api/admin/overview")).json();
+  const original = overview.settings;
+  const originalCatalog = overview.catalog;
+  const bikes = [];
+  let asset;
+  async function settings(value) {
+    const latest = await (await page.request.get("/api/admin/overview")).json();
+    const r = await page.request.put("/api/admin/settings", {
+      headers: { origin },
+      data: {
+        value: { ...original, ...value },
+        version: latest.settingsVersion,
+      },
+    });
+    expect(r.status()).toBe(200);
+  }
+  async function screenshot(label) {
+    await page.screenshot({
+      path: info.outputPath(label + ".png"),
+      fullPage: true,
+      animations: "disabled",
+    });
+  }
+  async function noOverflow() {
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth + 1,
+      ),
+    ).toBe(true);
+  }
+  try {
+    const image = await sharp({
+      create: { width: 800, height: 600, channels: 3, background: "#c0d4cd" },
+    })
+      .png()
+      .toBuffer();
+    const uploaded = await page.request.post(
+      "/api/admin/assets?name=Design-fixture",
+      { headers: { origin, "Content-Type": "image/png" }, data: image },
+    );
+    expect(uploaded.status()).toBe(201);
+    asset = (await uploaded.json()).id;
+    for (let i = 0; i < 5; i++) {
+      const category = ["road", "mtb", "gravel"][i % 3];
+      const r = await page.request.post("/api/bikes", {
+        headers: { origin },
+        data: {
+          name:
+            name + " — " + i + " Long bicycle model with an expressive name",
+          brand: "Cube",
+          model: "Travel",
+          year: 2020,
+          category,
+          description: "",
+          color: "",
+          size: i ? "" : "M",
+          weight: i ? null : 12,
+          is_public: true,
+        },
+      });
+      expect(r.status()).toBe(201);
+      bikes.push((await r.json()).id);
+    }
+    await settings({
+      roadImageId: asset,
+      mtbImageId: asset,
+      gravelImageId: asset,
+      searchIconId: asset,
+    });
+    if (!isMobile) await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.goto("/?q=" + encodeURIComponent(name));
+    await expect(page.locator(".bike-card")).toHaveCount(5);
+    const card = page.locator(".bike-card").first();
+    await expect(card.locator(".card-social .author-link")).toBeVisible();
+    await expect(card.locator(".card-photo .like-button")).toHaveCount(0);
+    expect(await card.locator(".important-badge").count()).toBeLessThanOrEqual(
+      1,
+    );
+    expect(
+      await card
+        .locator(".card-info > h2")
+        .evaluate((el) => getComputedStyle(el).fontSize),
+    ).toBe("18px");
+    await card.locator(".micro-metric").first().click();
+    await expect(
+      page.getByRole("dialog", { name: "Показатели велосипеда" }),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Закрыть панель" }).click();
+    await page.getByRole("button", { name: /^Фильтры/ }).click();
+    const panel = page.getByRole("dialog", { name: "Фильтры", exact: true });
+    await panel.getByRole("checkbox").nth(0).check();
+    await panel.getByRole("checkbox").nth(1).check();
+    await screenshot("filters");
+    await panel.getByRole("button", { name: "Применить" }).click();
+    await expect(
+      page.locator('.filter-chips button[aria-label^="Убрать фильтр"]'),
+    ).toHaveCount(2);
+    await expect
+      .poll(async () => page.locator(".bike-card").count())
+      .toBeLessThan(5);
+    const invalid = await page.request.get("/api/showcase?category=unknown");
+    expect(invalid.status()).toBe(400);
+    while (
+      await page
+        .locator('.filter-chips button[aria-label^="Убрать фильтр"]')
+        .count()
+    )
+      await page
+        .locator('.filter-chips button[aria-label^="Убрать фильтр"]')
+        .first()
+        .click();
+    await expect(page.locator(".bike-card")).toHaveCount(5);
+    await page
+      .getByRole("combobox", { name: "Порядок витрины" })
+      .selectOption("popular");
+    await expect(page.locator(".bike-card")).toHaveCount(5);
+    await page
+      .getByRole("button", { name: "Поиск велосипедов", exact: true })
+      .click();
+    await page.getByRole("searchbox").fill(name);
+    await page.getByRole("button", { name: "Найти", exact: true }).click();
+    await expect(page.locator(".bike-card")).toHaveCount(5);
+    // Simulate a future larger catalogue in the disposable database only.
+    // Production taxonomy and its database constraint remain unchanged.
+    const expanded = structuredClone(originalCatalog);
+    for (let i = 0; i < 20; i++)
+      expanded.categories["future-" + i] = "Дополнительная категория " + i;
+    await db.query("UPDATE site_catalog SET value=$1 WHERE id=1", [
+      JSON.stringify(expanded),
+    ]);
+    await page.reload();
+    await page.getByRole("button", { name: /^Фильтры/ }).click();
+    await expect(panel.getByRole("checkbox")).toHaveCount(23);
+    await panel.getByRole("checkbox").last().check();
+    await noOverflow();
+    await screenshot("long-filter-catalog");
+    await page.keyboard.press("Escape");
+    await expect(panel).not.toBeVisible();
+    await expect(page.getByRole("button", { name: /^Фильтры/ })).toBeFocused();
+    await db.query("UPDATE site_catalog SET value=$1 WHERE id=1", [
+      JSON.stringify(originalCatalog),
+    ]);
+    for (const columns of [3, 4, 5]) {
+      await settings({
+        desktopColumns: columns,
+        roadImageId: asset,
+        mtbImageId: asset,
+        gravelImageId: asset,
+      });
+      await page.reload();
+      await expect(page.locator(".bike-card")).toHaveCount(5);
+      const count = await page
+        .locator(".bike-grid")
+        .evaluate(
+          (el) => getComputedStyle(el).gridTemplateColumns.split(" ").length,
+        );
+      expect(count).toBe(isMobile ? 1 : columns);
+      await noOverflow();
+      await screenshot("grid-" + columns);
+    }
+    for (const mode of ["tile", "cover"]) {
+      await settings({
+        theme: "dark",
+        backgroundMode: mode,
+        backgroundImageId: asset,
+        backgroundOpacity: 15,
+        desktopColumns: 4,
+        roadImageId: asset,
+        mtbImageId: asset,
+        gravelImageId: asset,
+      });
+      await page.reload();
+      await expect(page.locator(".site-root")).toHaveAttribute(
+        "data-background-mode",
+        mode,
+      );
+      await expect(page.locator(".bike-card")).toHaveCount(5);
+      await noOverflow();
+      await screenshot("dark-" + mode);
+    }
+    await page.goto("/u/" + user.username);
+    await expect(page.locator(".bike-card")).toHaveCount(5);
+    await noOverflow();
+    await screenshot("profile");
+    await page.goto("/account");
+    await expect(page.locator(".recent-bikes .bike-card")).toHaveCount(3);
+    await noOverflow();
+    await screenshot("account");
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    expect(
+      await page
+        .locator(".bike-card")
+        .first()
+        .evaluate((el) => getComputedStyle(el).transitionDuration),
+    ).toBe("0s");
+  } finally {
+    await db.query("UPDATE site_catalog SET value=$1 WHERE id=1", [
+      JSON.stringify(originalCatalog),
+    ]);
+    await settings({});
+    for (const id of bikes)
+      await page.request.delete("/api/bikes/" + id, { headers: { origin } });
+    if (asset)
+      await page.request.delete("/api/admin/assets/" + asset, {
+        headers: { origin },
+      });
+    await db.query("DELETE FROM users WHERE id=$1", [user.id]);
+    await db.end();
+  }
+});

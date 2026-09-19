@@ -1,11 +1,11 @@
 "use client";
 import { Heart, Lock, MessageCircle } from "lucide-react";
 import Photo from "./bike-photo.jsx";
-import BikeCategoryIcon from "./bike-category-icon.jsx";
-import BikeMeters from "./bike-meters.jsx";
 import { AuthorLink } from "./social-primitives.jsx";
 import { useSite } from "./site-provider.jsx";
 import SiteAssetIcon from "./site-asset-icon.jsx";
+import { MicroMetrics, ImportantBadge } from "./compact-ui.jsx";
+import { useGridRecords } from "./bike-grid.jsx";
 export default function BikeCard({
   bike: b,
   onOpen,
@@ -13,8 +13,19 @@ export default function BikeCard({
   busy = false,
   ownerView = false,
 }) {
-  const { catalog, personalSettings: settings } = useSite();
+  const { catalog, personalSettings: settings } = useSite(),
+    records = useGridRecords();
+  const title = b.name || [b.brand, b.model].join(" ");
   const open = onOpen || (() => window.location.assign("/b/" + b.share_id));
+  const facts = [
+    b.year && { key: "year", text: b.year },
+    catalog.categories[b.category] && {
+      key: "category",
+      text: catalog.categories[b.category],
+    },
+    b.weight && { key: "weight", text: Number(b.weight) + " кг" },
+    b.size && { key: "size", text: b.size },
+  ].filter(Boolean);
   return (
     <article className="bike-card">
       <div className="card-photo">
@@ -22,58 +33,73 @@ export default function BikeCard({
           className="card-open-photo"
           type="button"
           onClick={open}
-          aria-label={"Открыть " + b.name}
+          aria-label={"Открыть " + title}
         >
           <Photo bike={b} />
         </button>
-        <span className="card-type">
-          <BikeCategoryIcon
-            category={b.category}
-            label={catalog.categories[b.category]}
-            size={38}
-          />
-        </span>
-        {b.is_public && (
-          <button
-            type="button"
-            className="like-button"
-            disabled={busy || b.is_owner || !onLike}
-            aria-label={"Нравится: " + (b.likes || 0)}
-            aria-pressed={!!b.liked}
-            onClick={onLike}
-          >
-            <SiteAssetIcon
-              assetId={settings.likeIconId}
-              Fallback={Heart}
-              size={28}
-              className="like-graphic"
-              fallbackProps={{ fill: b.liked ? "currentColor" : "none" }}
-            />
-            <span>{b.likes || 0}</span>
-          </button>
-        )}
         {ownerView && !b.is_public && (
-          <span className="private-badge" title="Личный велосипед">
+          <span
+            className="private-badge"
+            title="Личный велосипед"
+            aria-label="Личный велосипед"
+          >
             <Lock size={14} />
           </span>
         )}
       </div>
       <div className="card-info">
         <div className="card-facts">
-          <span>{b.year || ""}</span>
-          <span>{b.color || ""}</span>
-          <span>{b.size || ""}</span>
-          <span>{b.weight ? Number(b.weight) + " кг" : ""}</span>
+          {facts.map((f) => (
+            <span
+              key={f.key}
+              className={"fact-" + f.key}
+              title={String(f.text)}
+            >
+              {f.text}
+            </span>
+          ))}
         </div>
         <h2>
-          <button type="button" onClick={open}>
-            {b.name || [b.brand, b.model].join(" ")}
+          <button type="button" onClick={open} title={title}>
+            {title}
           </button>
-          <AuthorLink author={b.author} />
         </h2>
-        <BikeMeters scores={b.scores} />
-        {b.badges?.length>0&&<div className="card-awards">{b.badges.slice(0,2).map(a=><span key={a.key}>{a.name}</span>)}</div>}
-        {b.is_public && <a className="card-comments" href={"/b/"+b.share_id+"#discussion"} aria-label={"Комментарии: "+(b.comments||0)}><MessageCircle size={12}/>{b.comments||0}</a>}
+        <div className="card-social">
+          <AuthorLink author={b.author} />
+          {b.is_public && (
+            <div className="card-social-stats">
+              <button
+                type="button"
+                className="social-stat like-button"
+                disabled={busy || b.is_owner || !onLike}
+                aria-label={"Нравится: " + (b.likes || 0)}
+                aria-pressed={!!b.liked}
+                onClick={onLike}
+              >
+                <SiteAssetIcon
+                  assetId={settings.likeIconId}
+                  Fallback={Heart}
+                  size={16}
+                  className="like-graphic"
+                  fallbackProps={{ fill: b.liked ? "currentColor" : "none" }}
+                />
+                <span>{b.likes || 0}</span>
+              </button>
+              <a
+                className="social-stat card-comments"
+                href={"/b/" + b.share_id + "#discussion"}
+                aria-label={"Комментарии: " + (b.comments || 0)}
+              >
+                <MessageCircle size={15} />
+                <span>{b.comments || 0}</span>
+              </a>
+            </div>
+          )}
+        </div>
+        <div className="card-signals">
+          <MicroMetrics scores={b.scores} />
+          <ImportantBadge bike={b} records={records} />
+        </div>
       </div>
     </article>
   );

@@ -1,4 +1,5 @@
 "use client";
+import BikeGrid from "./bike-grid.jsx";
 import { useEffect, useState } from "react";
 import {
   SocialHeader,
@@ -102,7 +103,7 @@ export default function CommunityPage({ kind }) {
             <p className="help">
               Новые публикации владельцев, на которых вы подписаны.
             </p>
-            <div className="bike-grid">
+            <BikeGrid bikes={data.bikes}>
               {data.bikes.map((b) => (
                 <BikeCard
                   key={b.id}
@@ -124,7 +125,7 @@ export default function CommunityPage({ kind }) {
                   }}
                 />
               ))}
-            </div>
+            </BikeGrid>
             {!data.bikes.length && (
               <section className="social-empty">
                 <h2>Велосипеды знакомых появятся здесь</h2>
