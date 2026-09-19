@@ -87,15 +87,15 @@ bulk distance totals. No gamification rules are changed here. Future Garmin or
 Strava imports should feed the same normalized ingestion/ownership/privacy path;
 no integration credentials, FIT, TCX or remote sync are included.
 Synthetic fixtures cover parsing, metric gaps, privacy reentry and social lifecycle.
-The real Zepp GPX is used only for manual acceptance, not committed to Git.
+The user-authorized demo migration 013 includes the supplied Zepp GPX as a compact gzip fixture in this private repository (outside public assets). It is copied into the server-only rides volume through the normal ingestion path. Do not publish the repository or this fixture as public assets.
 
 ## Explicit demo import
 
 `node scripts/seed-hagsy-ride.js /private/path/Zepp.gpx [category]` creates
 `hagsy_test`, Giant Tourer GTS (2024) with parsed VeloPort provenance, and a public
-ride with default-radius start/end privacy. The original real GPX is supplied
-privately and never committed. The script is idempotent, refuses to take over an
-unrelated existing username, and is never invoked by migration/startup. It uses
+ride with 500 m start/end privacy. The script is idempotent and refuses to take over an unrelated existing username. Migration `013_hagsy_demo` invokes the shared importer once under the migration transaction/lock and records completion in `schema_migrations`. Later restarts do not recreate deleted demo data. The original bytes are checksum-verified before import. It uses
 a random, undisclosed password for a non-login test account. Category defaults
 to the existing `road` key; pass the site's city/touring category if configured.
 The retained source warning explains contradictory retailer brake specifications.
+
+After deployment of the `[hagsy-demo]` fix, the self-hosted runner verifies the public profile, bike and ride through `http://127.0.0.1:3000` and prints their paths. This one-time verification does not run on unrelated future deployments. No domain or incoming access to the LAN is required.

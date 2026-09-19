@@ -68,3 +68,10 @@ jobs:
           fi
           grep -q "COLA_VERIFIED_DEPLOY_V1" /usr/local/sbin/deploy-cola || { echo "Install ops/deploy-cola on the VM first (see docs/OPERATIONS.md)"; exit 1; }
           sudo -n /usr/local/sbin/deploy-cola "$CHECKED_SHA"
+      - uses: actions/setup-node@v4
+        if: contains(github.event.head_commit.message, '[hagsy-demo]')
+        with:
+          node-version: 22
+      - name: Verify deployed demo profile and ride
+        if: contains(github.event.head_commit.message, '[hagsy-demo]')
+        run: node scripts/verify-hagsy-demo.js
