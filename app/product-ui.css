@@ -549,3 +549,187 @@ html {
     transition: none !important;
   }
 }
+
+/* Wizard refinement: one content scroller, compact editing and explicit fallback. */
+.wizard-choice-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 12px 0;
+}
+.wizard-manual {
+  border: 1px solid var(--line);
+  padding: 12px;
+  background: var(--wash);
+}
+.wizard-suggestions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 8px 0;
+}
+.bike-wizard .wizard-part-group {
+  max-height: none;
+  overflow: visible;
+}
+.bike-wizard .wizard-part {
+  padding: 8px 0;
+}
+.bike-wizard .wizard-privacy {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 12px;
+}
+.bike-wizard .wizard-privacy .admin-toggle {
+  font-size: 12px;
+  padding: 6px 0;
+  gap: 8px;
+}
+.bike-wizard .wizard-privacy input {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+.bike-wizard .wizard-privacy .help {
+  grid-column: 1/-1;
+}
+.bike-wizard .wizard-stock-preview img {
+  height: 100px;
+  object-fit: contain;
+}
+.bike-wizard .photo-candidates {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.bike-wizard .photo-candidates img {
+  height: 90px;
+  object-fit: contain;
+}
+.bike-wizard .wizard-optional {
+  margin: 8px 0;
+  padding: 8px 0;
+}
+.bike-wizard .wizard-optional textarea {
+  min-height: 70px;
+}
+.nav-order-editor > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.nav-order-editor > div > span {
+  flex: 1;
+}
+.global-nav[data-icon-size="small"] {
+  --nav-graphic-size: 20px;
+}
+.global-nav[data-icon-size="medium"] {
+  --nav-graphic-size: 28px;
+}
+.global-nav[data-icon-size="large"] {
+  --nav-graphic-size: 36px;
+}
+.site-root .global-nav[data-icon-size] .global-nav-graphic,
+.site-root .global-nav[data-icon-size] .global-nav-graphic-fallback {
+  width: var(--nav-graphic-size);
+  height: var(--nav-graphic-size);
+  max-width: 100%;
+  object-fit: contain;
+}
+.like-button:disabled {
+  cursor: pointer;
+}
+@media (min-width: 901px) {
+  .site-root .detail {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 12px 24px;
+    align-items: start;
+  }
+  .site-root .detail > * {
+    grid-column: 1/-1;
+  }
+  .site-root .detail > .showcase {
+    grid-column: 1;
+    grid-row: 4;
+    margin: 0;
+  }
+  .site-root .detail > .specifications {
+    grid-column: 2;
+    grid-row: 4 / span 3;
+    margin: 0;
+    min-width: 0;
+  }
+  .site-root .detail > .gallery-details,
+  .site-root .detail > .bike-summary {
+    grid-column: 1;
+  }
+  .site-root .detail .photo-stage .hero-photo:not(.photo-empty) {
+    aspect-ratio: 1;
+    height: auto !important;
+    width: 100%;
+    object-fit: contain;
+  }
+  .site-root .detail .photo-stage {
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm, 5px);
+  }
+  .site-root .detail .component-groups {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .site-root .detail .part {
+    padding-top: 6px;
+    padding-bottom: 6px;
+  }
+}
+@media (max-width: 500px) {
+  .bike-wizard .wizard-choice-actions {
+    flex-direction: column;
+  }
+  .bike-wizard .wizard-privacy {
+    grid-template-columns: 1fr;
+  }
+}
+
+.site-root dialog:has(.bike-wizard) .modal-head {
+  padding-bottom: 8px;
+  margin-bottom: 4px;
+}
+.site-root dialog:has(.bike-wizard) .modal-head h2 {
+  font-size: 20px;
+}
+.site-root .bike-wizard > h3 {
+  font-size: 18px;
+  margin: 8px 0;
+}
+.site-root .bike-wizard .wizard-steps {
+  margin: 4px 0 8px;
+  gap: 4px;
+}
+.site-root .bike-wizard .wizard-steps button {
+  padding: 4px;
+}
+.site-root .bike-wizard .wizard-content h4 {
+  margin: 8px 0;
+  font-size: 14px;
+}
+.site-root .bike-wizard .wizard-content p.help {
+  margin: 6px 0;
+  font-size: 12px;
+}
+.site-root .bike-wizard .wizard-local-photos img {
+  height: 70px;
+}
+.site-root .bike-wizard .resolver-review dl {
+  max-height: none;
+  overflow: visible;
+}
+.site-root .detail .bike-heading h1 {
+  font-size: 24px;
+  line-height: 1.2;
+}
+@media (min-width: 901px) {
+  .site-root .detail {
+    grid-template-columns: minmax(0, min(42%, 420px)) minmax(0, 1fr);
+  }
+}

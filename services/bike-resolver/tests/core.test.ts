@@ -1,3 +1,4 @@
+import { SettingsStore } from "../src/settings.js";
 import { describe, it, expect, vi } from "vitest";
 import pino from "pino";
 import { readFileSync } from "node:fs";
@@ -255,7 +256,9 @@ it("API health, readiness, exact ten brands and invalid input", async () => {
       cache,
       logger,
     ),
-    app = buildApp(r, cache);
+    settings = new SettingsStore();
+  settings.value.retailerSearch = false;
+  const app = buildApp(r, cache, settings);
   try {
     expect((await app.inject("/health")).statusCode).toBe(200);
     expect((await app.inject("/ready")).statusCode).toBe(200);
@@ -407,7 +410,9 @@ it("Giant deterministic discovery resolves a real fixture through HTTP API, then
   } as unknown as ManufacturerHttpClient;
   const cache = new MemoryCache(),
     r = new Resolver(createAdapters(transport), cache, logger),
-    app = buildApp(r, cache);
+    settings = new SettingsStore();
+  settings.value.retailerSearch = false;
+  const app = buildApp(r, cache, settings);
   try {
     for (const cached of [false, true]) {
       const response = await app.inject({

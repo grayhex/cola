@@ -23,6 +23,7 @@ export const settingsSchema = z
       .max(40)
       .default([]),
     photoSearch: z.boolean().default(true),
+    retailerSearch: z.boolean().default(true),
     timeoutMs: z.number().int().min(3000).max(20000),
     requestIntervalMs: z.number().int().min(500).max(5000),
     successTtlDays: z.number().int().min(30).max(730),
@@ -42,6 +43,7 @@ export const defaultSettings: Settings = {
   autoResolve: true,
   blockedDomains: [],
   photoSearch: true,
+  retailerSearch: true,
   timeoutMs: 10000,
   requestIntervalMs: 700,
   successTtlDays: 90,

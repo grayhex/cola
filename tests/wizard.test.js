@@ -132,6 +132,20 @@ test("wizard atomically saves edited components, trusted provenance, mileage/pri
       (await db.query("SELECT count(*)::int AS n FROM bikes")).rows[0].n,
       1,
     );
+    await db.query(
+      "UPDATE resolver_previews SET response=response || $1::jsonb WHERE id=$2",
+      [JSON.stringify({ warnings: ["identity_mismatch"] }), preview],
+    );
+    await assert.rejects(
+      createWizardBike(db, owner, { ...input, requestId: randomUUID() }),
+      /Подтвердите/,
+    );
+    const acknowledged = await createWizardBike(db, owner, {
+      ...input,
+      requestId: randomUUID(),
+      identityConfirmed: true,
+    });
+    assert(acknowledged.id);
   } finally {
     await db.close();
   }

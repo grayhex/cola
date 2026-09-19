@@ -1,6 +1,7 @@
 "use client";
 import { Check, LoaderCircle, TriangleAlert } from "lucide-react";
 const labels = {
+  retailer_search_started: "Ищем комплектацию в магазинах",
   resolve_started: "Начинаем поиск",
   cache_checked: "Проверяем кеш",
   cache_hit: "Найдено в кеше",

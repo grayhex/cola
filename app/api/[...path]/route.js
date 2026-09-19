@@ -621,8 +621,8 @@ async function handler(req, { params }) {
         let image;
         try {
           image = await preparePhoto(Buffer.concat(chunks));
-        } catch {
-          return fail("Не удалось прочитать изображение");
+        } catch (e) {
+          return fail(e.message?.startsWith("Фото слишком") ? e.message : "Не удалось прочитать изображение");
         }
         const id = randomUUID(),
           filename = id + ".webp";

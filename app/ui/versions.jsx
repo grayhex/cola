@@ -16,9 +16,18 @@ export default function Versions() {
   }, []);
   return (
     <small className="build-versions">
+      Альфа ·
       {v
         ? `ColaBike ${v.app.version} (${v.app.build}) · Parser ${v.resolver?.version || "недоступен"}${v.resolver?.build ? " (" + v.resolver.build + ")" : ""}`
         : "Версии загружаются…"}
+      {" · "}
+      <a
+        href="https://github.com/grayhex/cola"
+        target="_blank"
+        rel="noreferrer"
+      >
+        GitHub
+      </a>
     </small>
   );
 }

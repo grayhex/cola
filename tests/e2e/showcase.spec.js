@@ -33,7 +33,7 @@ test("registration, touch autocomplete, bike/photo, public feed, like and revoke
     .click();
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel("Тип велосипеда").selectOption("mtb");
-  await expect(dialog.getByLabel("Год", { exact: true })).toHaveValue("");
+  await expect(dialog.getByLabel("Год", { exact: true })).toHaveValue(String(new Date().getFullYear()));
   const brand = dialog.getByRole("combobox", {
     name: "Производитель",
     exact: true,
@@ -97,7 +97,7 @@ test("registration, touch autocomplete, bike/photo, public feed, like and revoke
   await dialog.getByRole("button", { name: "Далее", exact: true }).click();
   await dialog.getByRole("button", { name: "Далее", exact: true }).click();
   const bytes = await sharp({
-    create: { width: 40, height: 30, channels: 3, background: "#ff6633" },
+    create: { width: 600, height: 400, channels: 3, background: "#ff6633" },
   })
     .png()
     .toBuffer();

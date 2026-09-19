@@ -6,6 +6,7 @@ import { timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 import pino from "pino";
 import { ManualSources } from "./manual.js";
+import { RetailerSearch } from "./retailer-search.js";
 import { ManufacturerHttpClient } from "./http.js";
 import { querySchema } from "./domain.js";
 import { buildVersion } from "./version.js";
@@ -38,12 +39,11 @@ export function buildApp(
       return reply.code(401).send({ error: "unauthorized" });
   });
   const store = settings ?? new SettingsStore();
-  const manual = new ManualSources(
+  const http =
     sourceClient ??
-      new ManufacturerHttpClient(pino(), 700, 10000, () => store.value),
-    resolver.adapters,
-    store,
-  );
+    new ManufacturerHttpClient(pino(), 700, 10000, () => store.value);
+  const manual = new ManualSources(http, resolver.adapters, store);
+  const retailers = new RetailerSearch(http, manual, store);
   const planner = new SourcePlanner(),
     diagnostics = new Diagnostics();
   const combined = requestSchema.extend({
@@ -81,6 +81,12 @@ export function buildApp(
           kind: "manual",
           resolve: () =>
             manual.resolve(query, sourceUrl) as Promise<ResolveResult>,
+        });
+      if (!sourceUrl && !candidateId && store.value.retailerSearch)
+        providers.push({
+          id: "retailer-search",
+          kind: "retailer",
+          resolve: () => retailers.resolve(query),
         });
     }
     const result = await planner.resolve(

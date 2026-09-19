@@ -80,6 +80,14 @@ export default function FactorySpecification({
       if (!response.ok) throw new Error();
       const data = await response.json();
       if (abort.signal.aborted || !mounted.current) return;
+      if (
+        data.status === "resolved" &&
+        data.warnings?.includes("identity_mismatch") &&
+        !window.confirm(
+          `Источник: «${data.bike.canonicalName}»${data.sourceYear ? ` (${data.sourceYear})` : ""}. Вы указали «${bike.brand} ${bike.model} ${bike.trim || ""} ${bike.year}». Модель или год отличаются. Использовать эту комплектацию?`,
+        )
+      )
+        return;
       setResult({ ...data, candidateId });
       if (data.status === "resolved" && automatic && !sourceUrl)
         callbacks.current.onImport(candidateId, true);

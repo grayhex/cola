@@ -818,3 +818,5 @@ PostgreSQL/PGlite: 500 владельцев, 2 000 байков, 42 000 комп
 Актуальные рекорды загружаются одним дополнительным запросом на сетку, не на
 карточку; условия наград, privacy и API социальных действий не изменены.
 Архитектура, ограничения и ручной чек-лист: [docs/DENSE_UI.md](docs/DENSE_UI.md).
+
+The bike creation wizard now has explicit source fallback, identity confirmation, seven quick component starters, compact metadata/photo review and account-only creation. [Resolver and wizard changes, settings and acceptance checks](docs/RESOLVER_WIZARD_REFINEMENT.md).

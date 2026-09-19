@@ -37,7 +37,7 @@ assert.equal(created.filter((r) => r.status === 409).length, 1);
 const bikes = created.filter((r) => r.status === 201).map((r) => r.body.id),
   id = bikes[0];
 const bytes = await sharp({
-  create: { width: 3, height: 3, channels: 3, background: "white" },
+  create: { width: 600, height: 400, channels: 3, background: "white" },
 })
   .png()
   .toBuffer();
