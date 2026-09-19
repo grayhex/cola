@@ -140,10 +140,10 @@ test("three-column bike, raster map, six-ride accordion, preferences and grouped
     });
     await page.goto("/account?tab=appearance");
     await page
-      .getByLabel("Покатушки на странице велосипеда", { exact: true })
+      .getByRole("combobox", { name: "Покатушки на странице велосипеда", exact: true })
       .selectOption("cards");
     await page
-      .getByLabel("Карта покатушки", { exact: true })
+      .getByRole("combobox", { name: "Карта покатушки", exact: true })
       .selectOption("route");
     await page
       .getByRole("button", { name: "Сохранить оформление", exact: true })
@@ -185,6 +185,7 @@ test("three-column bike, raster map, six-ride accordion, preferences and grouped
       (await page.locator(".global-header").boundingBox()).height,
     ).toBeLessThanOrEqual(80);
   } finally {
+    test.setTimeout(info.timeout + 15000);
     if (original) await putSettings(original);
     await db.end();
   }

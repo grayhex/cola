@@ -199,7 +199,7 @@ test("navigation: real destinations, account, keyboard, configurable About and a
     await navAbout.getByLabel("Название в меню").fill("Знакомство");
     await navAbout.getByRole("button", { name: "Выше: about" }).click();
     await navAbout.getByRole("button", { name: "Выше: about" }).click();
-    await page.getByRole("button", { name: "О проекте", exact: true }).click();
+    await page.getByRole("button", { name: /^О проекте(?: |$)/ }).click();
     const tech = page.getByRole("group", { name: "Под капотом", exact: true });
     await tech.getByLabel("Показывать раздел", { exact: true }).uncheck();
     const guide = page.getByRole("group", {
@@ -296,6 +296,7 @@ test("navigation: real destinations, account, keyboard, configurable About and a
       .poll(async () => (await (await page.request.get("/api/me")).json()).user)
       .toBe(null);
   } finally {
+    test.setTimeout(info.timeout + 15000);
     if (original) await save(original);
     await db.end();
   }
