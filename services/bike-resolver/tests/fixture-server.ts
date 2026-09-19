@@ -7,6 +7,7 @@ import { MemoryCache } from "../src/cache.js";
 import { SettingsStore } from "../src/settings.js";
 import { createAdapters } from "../src/adapters/index.js";
 import { ResolverError } from "../src/domain.js";
+import { abortable, resolutionContext, trace } from "../src/context.js";
 import type { ManufacturerHttpClient } from "../src/http.js";
 const source = JSON.parse(
   readFileSync(
@@ -27,6 +28,19 @@ const transport = {
     contentType: "image/png",
   }),
   get: async (url: string) => {
+    if (url === "https://www.velo-port.ru/slow-bike") {
+      trace("document_fetch_started", { host: "www.velo-port.ru" });
+      await abortable(
+        new Promise((r) => setTimeout(r, 5000)),
+        resolutionContext.getStore()?.signal,
+      );
+      throw new ResolverError(
+        "upstream_unavailable",
+        "Fixture timeout",
+        true,
+        "timeout",
+      );
+    }
     if (url === "https://www.velo-port.ru/test-bike")
       return {
         url,

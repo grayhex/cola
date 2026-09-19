@@ -1,3 +1,5 @@
+import { checkAbort } from "../context.js";
+import { sourceIdentity } from "../source-url.js";
 import { load } from "cheerio";
 import { normalize } from "../normalize.js";
 import { extractMetadata, parseDocument } from "../extract.js";
@@ -33,6 +35,8 @@ export abstract class CatalogueAdapter implements BikeManufacturerAdapter {
     return [];
   }
   protected async document(url: string): Promise<SourceDocument> {
+    checkAbort();
+    url = sourceIdentity(url);
     const hit = this.documents.get(url);
     if (hit && hit.expires > Date.now()) return hit.doc;
     const doc = await this.http.get(url, this.allowedDomains);
@@ -50,6 +54,7 @@ export abstract class CatalogueAdapter implements BikeManufacturerAdapter {
   async discover(q: BikeQuery): Promise<BikeCandidate[]> {
     const deadline = Date.now() + 60000;
     const budget = () => {
+      checkAbort();
       if (Date.now() > deadline)
         throw new ResolverError(
           "upstream_unavailable",
@@ -68,9 +73,13 @@ export abstract class CatalogueAdapter implements BikeManufacturerAdapter {
         u.hash = "";
         if (
           this.productPath.test(u.pathname) &&
-          normalize(decodeURIComponent(u.pathname)).includes(
-            normalize(q.model + " " + (q.trim || "")),
-          )
+          normalize(q.model)
+            .split(" ")
+            .every((token) =>
+              normalize(decodeURIComponent(u.pathname))
+                .split(" ")
+                .includes(token),
+            )
         )
           urls.add(u.href);
         else if (
@@ -145,7 +154,7 @@ export abstract class CatalogueAdapter implements BikeManufacturerAdapter {
       }
     }
     // An incomplete catalogue must not become a negatively cached assertion of absence.
-    if (failure || queue.length || urls.size > 12)
+    if (!candidates.length && (failure || queue.length || urls.size > 12))
       throw (
         failure ||
         new ResolverError(

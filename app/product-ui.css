@@ -430,6 +430,66 @@ html {
     min-height: 44px !important;
   }
 }
+.resolver-timeline {
+  margin: 8px 0;
+  font-size: 12px;
+  min-width: 0;
+}
+.resolver-timeline ol {
+  list-style: none;
+  padding: 0;
+  margin: 6px 0;
+}
+.resolver-timeline li {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 3px 0;
+}
+.resolver-timeline li > span {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.resolver-timeline small {
+  display: block;
+  opacity: 0.65;
+}
+.resolver-timeline time {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  opacity: 0.6;
+}
+.resolver-timeline p {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.resolver-timeline details > ol {
+  max-height: 240px;
+  overflow: auto;
+}
+.resolver-review,
+.resolver-inspector {
+  margin: 10px 0;
+  min-width: 0;
+}
+.resolver-review dl,
+.resolver-inspector dl {
+  font-size: 12px;
+  max-height: 320px;
+  overflow: auto;
+}
+.resolver-review dl > div,
+.resolver-inspector dl > div {
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border);
+  overflow-wrap: anywhere;
+}
+.resolver-review dd,
+.resolver-inspector dd {
+  margin: 2px 0 0;
+}
 @media (prefers-reduced-motion: reduce) {
   .site-root *,
   .site-root *::before,

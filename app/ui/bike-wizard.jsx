@@ -8,6 +8,8 @@ import { factoryComponent } from "../../lib/factory-components.js";
 import { groupedComponents } from "../../lib/garage-layout.js";
 import { bicycleName, draftId } from "../../lib/wizard-options.js";
 import { bikeInput, componentInput } from "../../lib/validation.js";
+import { resolveWithTrace } from "../../lib/resolver-stream.js";
+import ResolverTimeline from "./resolver-timeline.jsx";
 const steps = ["Модель", "Поиск комплектации", "Компоненты", "Детали и фото"];
 const failures = {
   unsupported_brand: "Этот производитель пока не поддерживается.",
@@ -62,6 +64,7 @@ export default function BikeWizard({ onCreated, onBusy }) {
       show_accessory_prices: false,
     });
   const [parts, setParts] = useState([]),
+    [trace, setTrace] = useState([]),
     [result, setResult] = useState(null),
     [url, setUrl] = useState(""),
     [message, setMessage] = useState(""),
@@ -133,6 +136,7 @@ export default function BikeWizard({ onCreated, onBusy }) {
     const controller = new AbortController();
     resolveAbort.current = controller;
     setResolving(true);
+    setTrace([]);
     setError("");
     setMessage(
       sourceUrl
@@ -140,19 +144,24 @@ export default function BikeWizard({ onCreated, onBusy }) {
         : "Производитель поддерживается. Ищем заводскую комплектацию…",
     );
     try {
-      const d = await api(
-        "resolve",
+      const d = await resolveWithTrace(
         {
           ...query,
           ...(sourceUrl ? { sourceUrl } : candidateId ? { candidateId } : {}),
         },
         AbortSignal.any([controller.signal, AbortSignal.timeout(95000)]),
+        (event) => {
+          if (!controller.signal.aborted && alive.current)
+            setTrace((events) => [...events, event]);
+        },
       );
       if (controller.signal.aborted || !alive.current) return;
       setResult(d);
       setMessage(
         d.status === "resolved"
-          ? "Комплектация найдена. На следующем шаге её можно изменить."
+          ? d.quality?.level === "partial"
+            ? "Найдена часть комплектации. Проверьте и дополните её на следующем шаге."
+            : "Комплектация найдена. На следующем шаге её можно изменить."
           : failures[d.status] || "Нужно уточнить вариант модели.",
       );
       if (d.status === "resolved") {
@@ -466,7 +475,12 @@ export default function BikeWizard({ onCreated, onBusy }) {
                 label="Модель"
                 value={bike.model}
                 onChange={(v) => update("model", v)}
-                options={Object.entries(catalog.models[bike.category]||{}).filter(([brand])=>brand.toLowerCase()===bike.brand.trim().toLowerCase()).flatMap(([,models])=>models)}
+                options={Object.entries(catalog.models[bike.category] || {})
+                  .filter(
+                    ([brand]) =>
+                      brand.toLowerCase() === bike.brand.trim().toLowerCase(),
+                  )
+                  .flatMap(([, models]) => models)}
                 required
                 maxLength={100}
               />
@@ -515,9 +529,9 @@ export default function BikeWizard({ onCreated, onBusy }) {
                 .join(" ")}
             </p>
             <p role="status">{message}</p>
+            <ResolverTimeline events={trace} running={resolving} />
             {resolving ? (
               <>
-                <Progress text="Идентификация и парсинг…" />
                 <button
                   type="button"
                   className="quiet"
@@ -538,6 +552,12 @@ export default function BikeWizard({ onCreated, onBusy }) {
                     <span>
                       {result.components.length} компонентов ·{" "}
                       {result.bike.canonicalName}
+                      {result.quality && (
+                        <small>
+                          {result.quality.recognizedComponents} из{" "}
+                          {result.quality.totalFields} характеристик распознаны
+                        </small>
+                      )}
                       <small>
                         <a
                           href={result.source.url}
@@ -562,7 +582,7 @@ export default function BikeWizard({ onCreated, onBusy }) {
                       type="button"
                       className="wizard-candidate"
                       key={c.candidateId}
-                      disabled={c.year !== query.year}
+                      disabled={c.year !== null && c.year !== query.year}
                       onClick={() => resolve("", c.candidateId)}
                     >
                       {c.canonicalName} · {c.year || "год не подтверждён"}
@@ -610,6 +630,71 @@ export default function BikeWizard({ onCreated, onBusy }) {
         )}
         {step === 2 && (
           <>
+            {!!result?.unknownFields?.length && (
+              <details className="resolver-review">
+                <summary>
+                  Проверить характеристики · {result.unknownFields.length}
+                </summary>
+                <dl>
+                  {result.unknownFields.map((f, i) => (
+                    <div key={i}>
+                      <dt>{f.label}</dt>
+                      <dd>{f.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+                <p className="help">
+                  Эти строки сохранены в источнике. При необходимости добавьте
+                  компонент в подходящую группу.
+                </p>
+              </details>
+            )}
+            {!!result?.suggestedMetadata &&
+              Object.keys(result.suggestedMetadata).length > 0 && (
+                <details className="resolver-review">
+                  <summary>Данные велосипеда из источника</summary>
+                  <dl>
+                    {Object.entries(result.suggestedMetadata).map(
+                      ([key, value]) => (
+                        <div key={key}>
+                          <dt>
+                            {{
+                              weight: "Вес, кг",
+                              weightText: "Вес в источнике",
+                              sizes: "Размеры",
+                              wheelSize: "Колёса",
+                              color: "Цвет",
+                              manufacturerProductId: "Артикул",
+                            }[key] || key}
+                          </dt>
+                          <dd>{value}</dd>
+                        </div>
+                      ),
+                    )}
+                  </dl>
+                  <button
+                    type="button"
+                    className="quiet"
+                    onClick={() =>
+                      setBike((b) => ({
+                        ...b,
+                        ...(result.suggestedMetadata.weight && !b.weight
+                          ? { weight: result.suggestedMetadata.weight }
+                          : {}),
+                        ...(result.suggestedMetadata.color && !b.color
+                          ? {
+                              color: String(
+                                result.suggestedMetadata.color,
+                              ).slice(0, 50),
+                            }
+                          : {}),
+                      }))
+                    }
+                  >
+                    Использовать вес и цвет в пустых полях
+                  </button>
+                </details>
+              )}
             <p className="help">
               Проверьте найденные компоненты или добавьте свои по группам. Можно
               оставить комплектацию пустой и дополнить позже.

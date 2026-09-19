@@ -444,3 +444,33 @@ it("explicit confirmed-year variant can be chosen when trim was omitted", async 
     ).toBe("resolved");
   }
 });
+it("missing year requires candidate confirmation and never appears as a verified source year", async () => {
+  const a = adapter({
+    discover: async () => [{ ...candidate, year: null }],
+    parse: async () => ({ ...parsed, year: null }),
+  });
+  const r = new Resolver([a], new MemoryCache(), logger);
+  const first = await r.resolve(q);
+  expect(first.status).toBe("ambiguous");
+  if (first.status === "ambiguous") {
+    const confirmed = await r.resolve({
+      ...q,
+      candidateId: first.candidates[0].candidateId,
+    });
+    expect(confirmed.status).toBe("resolved");
+    if (confirmed.status === "resolved") {
+      expect(confirmed.sourceYear).toBeNull();
+      expect(confirmed.manualSelection).toBe(true);
+      expect(confirmed.bike.canonicalName).not.toContain("2020");
+      expect(confirmed.warnings).toContain("identity_mismatch");
+    }
+  }
+});
+it("matching tolerates token order without confusing SL and SLX", () => {
+  expect(
+    scoreCandidate(q, { ...candidate, canonicalName: "SL Travel" }),
+  ).toBeGreaterThanOrEqual(MATCH_THRESHOLD);
+  expect(scoreCandidate(q, { ...candidate, canonicalName: "Travel SLX" })).toBe(
+    0,
+  );
+});

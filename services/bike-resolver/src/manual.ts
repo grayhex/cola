@@ -1,7 +1,9 @@
+import { EXTRACTOR_VERSION, trace, checkAbort } from "./context.js";
+import { sourceIdentity } from "./source-url.js";
 import { load } from "cheerio";
 import { randomUUID } from "node:crypto";
 import { ManufacturerHttpClient, validateUrl } from "./http.js";
-import { parseDocument, jsonObjects } from "./extract.js";
+import { parseDocument, jsonObjects, QUALITY } from "./extract.js";
 import { normalizeSpecification } from "./normalize.js";
 import {
   ResolverError,
@@ -24,13 +26,37 @@ export function parseCubePayload(product: any, features: any[]) {
     if (typeof label === "string" && typeof value === "string")
       raw[label] = value;
   }
-  const components = normalizeSpecification(raw);
+  const normalized = normalizeSpecification(raw),
+    components = normalized.filter((c) => c.type !== "other");
+  const unknownFields = normalized
+    .filter((c) => c.type === "other")
+    .map((c) => ({
+      label: c.raw.label,
+      value: c.raw.value,
+      strategy: "cube-public-data",
+      confidence: 1,
+    }));
   if (components.filter((c) => c.type !== "other").length < 3)
     throw new ResolverError(
       "parse_error",
       "CUBE portal has no recognizable specification",
     );
   return {
+    quality: {
+      level:
+        components.length >= QUALITY.completeComponents &&
+        components.length / normalized.length >= QUALITY.completeCoverage
+          ? ("complete" as const)
+          : ("partial" as const),
+      totalFields: normalized.length,
+      recognizedComponents: components.length,
+      unknownFields: unknownFields.length,
+      coverage: components.length / normalized.length,
+      strategies: ["cube-public-data"],
+    },
+    warnings: [],
+    unknownFields,
+    suggestedMetadata: {},
     canonicalName: [product.description, product.description2]
       .filter(Boolean)
       .join(" "),
@@ -136,7 +162,8 @@ export class ManualSources {
   }
   async resolve(query: BikeQuery, url: string) {
     try {
-      const doc = await this.document(url);
+      checkAbort();
+      const doc = await this.document(sourceIdentity(url));
       const parsed =
         new URL(doc.url).hostname === "info.cube.eu"
           ? (await this.cube(doc)).parsed
@@ -146,6 +173,13 @@ export class ManualSources {
       // A URL is an explicit user-selected source, never a verified identity match.
       return {
         status: "resolved",
+        quality: parsed.quality,
+        suggestedMetadata: parsed.suggestedMetadata,
+        unknownFields: parsed.unknownFields,
+        warnings: [
+          ...(parsed.warnings || []),
+          ...(parsed.year !== query.year ? ["identity_mismatch" as const] : []),
+        ],
         query,
         bike: {
           ...query,
@@ -156,7 +190,16 @@ export class ManualSources {
         confidence: 0,
         manualSelection: true,
         sourceYear: parsed.year,
-        components: parsed.components,
+        components: parsed.components.map((c) => ({
+          ...c,
+          provenance: c.provenance || {
+            sourceUrl: doc.url,
+            strategy: "cube-public-data",
+            confidence: 1,
+            rawLabel: c.raw.label,
+            rawValue: c.raw.value,
+          },
+        })),
         rawSpecification: parsed.rawSpecification,
         source: {
           manufacturer: new URL(doc.url).hostname,
@@ -164,12 +207,14 @@ export class ManualSources {
           fetchedAt: doc.fetchedAt,
           adapter: "manual-url",
           adapterVersion: 1,
+          extractorVersion: EXTRACTOR_VERSION,
         },
         cached: false,
       };
     } catch (e) {
       return {
         status: e instanceof ResolverError ? e.status : "parse_error",
+        reason: e instanceof ResolverError ? e.reason : "spec_fields_not_found",
         query,
         brand: query.brand,
         retryable: e instanceof ResolverError && e.retryable,

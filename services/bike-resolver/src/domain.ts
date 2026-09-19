@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { Reason } from "./context.js";
 export const querySchema = z
   .object({
     brand: z.string().trim().min(1).max(60),
@@ -40,6 +41,9 @@ export const componentTypes = [
   "front_rotor",
   "rear_rotor",
   "front_hub",
+  "hub",
+  "spokes",
+  "inner_tube",
   "rear_hub",
   "rim",
   "front_rim",
@@ -75,6 +79,13 @@ export const componentTypes = [
 ] as const;
 export type ComponentType = (typeof componentTypes)[number];
 export interface BikeComponent {
+  provenance?: {
+    sourceUrl: string;
+    strategy: string;
+    confidence: number;
+    rawLabel: string;
+    rawValue: string;
+  };
   type: ComponentType;
   position?: string | null;
   brand?: string | null;
@@ -94,12 +105,19 @@ export interface BikeCandidate {
   score?: number;
 }
 export interface SourceDocument {
+  contentType?: string;
+  charset?: string;
+  byteLength?: number;
   url: string;
   body: string;
   fetchedAt: string;
   hash: string;
 }
 export interface ParsedBike {
+  quality?: ExtractionQuality;
+  suggestedMetadata?: Record<string, string | number>;
+  unknownFields?: RawField[];
+  warnings?: Reason[];
   canonicalName: string;
   year: number | null;
   manufacturerProductId?: string;
@@ -107,6 +125,7 @@ export interface ParsedBike {
   components: BikeComponent[];
 }
 export interface Source {
+  extractorVersion?: number;
   manufacturer: string;
   url: string;
   fetchedAt: string;
@@ -114,7 +133,13 @@ export interface Source {
   adapterVersion: number;
 }
 export interface Resolved {
+  quality?: ExtractionQuality;
+  suggestedMetadata?: Record<string, string | number>;
+  unknownFields?: RawField[];
+  warnings?: Reason[];
   status: "resolved";
+  manualSelection?: boolean;
+  sourceYear?: number | null;
   query: BikeQuery;
   bike: BikeQuery & {
     canonicalName: string;
@@ -146,6 +171,7 @@ export type ResolveResult =
       retryable: boolean;
       cached: boolean;
       message?: string;
+      reason?: Reason;
     };
 export interface BikeManufacturerAdapter {
   readonly id: string;
@@ -162,7 +188,25 @@ export class ResolverError extends Error {
     public status: "upstream_unavailable" | "parse_error",
     message: string,
     public retryable = false,
+    public reason: Reason = status === "parse_error"
+      ? "spec_fields_not_found"
+      : "connection_failed",
   ) {
     super(message);
   }
+}
+export interface RawField {
+  label: string;
+  value: string;
+  section?: string;
+  strategy: string;
+  confidence: number;
+}
+export interface ExtractionQuality {
+  level: "complete" | "partial";
+  totalFields: number;
+  recognizedComponents: number;
+  unknownFields: number;
+  coverage: number;
+  strategies: string[];
 }

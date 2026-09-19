@@ -1,10 +1,14 @@
 import { traced, logError } from "../../../../lib/observability.js";
-import { bikeResolverClient } from "../../../../lib/bike-resolver-client.js";
+import {
+  bikeResolverClient,
+  resolverQuery,
+} from "../../../../lib/bike-resolver-client.js";
+import { resolverProxy } from "../../../../lib/resolver-proxy.js";
 import { randomUUID } from "node:crypto";
 import { mkdir, writeFile, unlink } from "node:fs/promises";
 import path from "node:path";
 import { db, transaction } from "../../../../lib/db.js";
-import { currentUser, startSession } from "../../../../lib/auth.js";
+import { currentUser, startSession, rateLimit } from "../../../../lib/auth.js";
 import {
   json,
   fail,
@@ -34,6 +38,20 @@ async function handler(req, { params }) {
       method = req.method;
     if (p[0] === "resolver") {
       try {
+        if (p.length === 2 && p[1] === "inspect" && method === "POST") {
+          if (!(await rateLimit("resolver:" + user.id, 30)))
+            return fail("Слишком много запросов поиска", 429);
+          return resolverProxy(
+            req,
+            resolverQuery.parse(await readJson(req)),
+            user.id,
+            false,
+          );
+        }
+        if (p.length === 2 && p[1] === "diagnostics" && method === "GET")
+          return json(
+            await bikeResolverClient.request("/internal/diagnostics"),
+          );
         if (p.length === 1 && method === "GET")
           return json(await bikeResolverClient.request("/internal/settings"));
         if (p.length === 1 && method === "PUT") {
@@ -200,7 +218,8 @@ async function handler(req, { params }) {
               [p[1]],
             )
           ).rows;
-          if(rows[0].avatar_id) files.push({filename:"avatar-"+rows[0].avatar_id+".webp"});
+          if (rows[0].avatar_id)
+            files.push({ filename: "avatar-" + rows[0].avatar_id + ".webp" });
           await q.query("DELETE FROM users WHERE id=$1", [p[1]]);
           await audit(q, user.id, "user.delete", p[1]);
           return { ok: true };

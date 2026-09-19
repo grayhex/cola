@@ -1,3 +1,6 @@
+import { decodeDocument } from "./charset.js";
+import { resolutionContext, trace, checkAbort, abortable } from "./context.js";
+import { sourceIdentity } from "./source-url.js";
 import { lookup } from "node:dns/promises";
 import { createHash } from "node:crypto";
 import { Agent, fetch } from "undici";
@@ -27,6 +30,8 @@ export function validateUrl(input: string, allowed: UrlPolicy): URL {
     throw new ResolverError(
       "upstream_unavailable",
       "URL rejected by manufacturer allowlist",
+      false,
+      "blocked_source",
     );
   return u;
 }
@@ -37,7 +42,21 @@ export const publicAddress = (s: string) => {
     return false;
   }
 };
-const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
+const pause = (ms: number) => {
+  const signal = resolutionContext.getStore()?.signal;
+  signal?.throwIfAborted();
+  return new Promise<void>((resolve, reject) => {
+    const stop = () => {
+      clearTimeout(timer);
+      reject(signal?.reason);
+    };
+    const timer = setTimeout(() => {
+      signal?.removeEventListener("abort", stop);
+      resolve();
+    }, ms);
+    signal?.addEventListener("abort", stop, { once: true });
+  });
+};
 export class ManufacturerHttpClient {
   private queues = new Map<string, Promise<unknown>>();
   private next = new Map<string, number>();
@@ -52,20 +71,46 @@ export class ManufacturerHttpClient {
     domains: UrlPolicy,
     headers: Record<string, string> = {},
   ): Promise<SourceDocument> {
-    const d = await this.getBytes(url, domains, headers);
-    return { ...d, body: d.bytes.toString("utf8") };
+    checkAbort();
+    url = sourceIdentity(validateUrl(url, domains).href);
+    const ctx = resolutionContext.getStore(),
+      key = JSON.stringify([url, domains, headers]);
+    const existing = ctx?.documents.get(key);
+    if (existing) return existing;
+    const task = (async () => {
+      trace("document_fetch_started", { host: new URL(url).hostname });
+      const d = await this.getBytes(url, domains, headers);
+      const decoded = decodeDocument(d.bytes, d.contentType);
+      trace("document_fetched", {
+        host: new URL(d.url).hostname,
+        count: d.bytes.length,
+      });
+      return {
+        url: d.url,
+        hash: d.hash,
+        fetchedAt: d.fetchedAt,
+        contentType: d.contentType,
+        byteLength: d.bytes.length,
+        ...decoded,
+      };
+    })();
+    ctx?.documents.set(key, task);
+    return task;
   }
   async getBytes(
     url: string,
     domains: UrlPolicy,
     headers: Record<string, string> = {},
   ) {
+    checkAbort();
     const host = validateUrl(url, domains).hostname;
     const prior = this.queues.get(host) || Promise.resolve();
     const task = prior
       .catch(() => {})
       .then(async () => {
+        checkAbort();
         await pause(Math.max(0, (this.next.get(host) || 0) - Date.now()));
+        checkAbort();
         try {
           return await this.request(url, domains, headers);
         } finally {
@@ -77,7 +122,7 @@ export class ManufacturerHttpClient {
       });
     this.queues.set(host, task);
     try {
-      return await task;
+      return await abortable(task, resolutionContext.getStore()?.signal);
     } finally {
       if (this.queues.get(host) === task) this.queues.delete(host);
     }
@@ -96,24 +141,25 @@ export class ManufacturerHttpClient {
     let url = input;
     for (let redirects = 0; redirects <= 4; redirects++) {
       const u = validateUrl(url, domains);
+      if (this.settings)
+        validateUrl(u.href, { blockedDomains: this.settings().blockedDomains });
       for (let attempt = 0; attempt < 3; attempt++) {
+        checkAbort();
         const controller = new AbortController();
+        const external = resolutionContext.getStore()?.signal;
+        const signal = external
+          ? AbortSignal.any([controller.signal, external])
+          : controller.signal;
         const timer = setTimeout(
           () => controller.abort(),
           this.settings?.().timeoutMs ?? this.timeout,
         );
         let dispatcher: Agent | undefined;
         try {
-          const addresses = await Promise.race([
+          const addresses = await abortable(
             lookup(u.hostname, { all: true }),
-            new Promise<never>((_, reject) =>
-              controller.signal.addEventListener(
-                "abort",
-                () => reject(new Error("DNS timeout")),
-                { once: true },
-              ),
-            ),
-          ]);
+            signal,
+          );
           if (
             !addresses.length ||
             addresses.some((a) => !publicAddress(a.address))
@@ -121,6 +167,8 @@ export class ManufacturerHttpClient {
             throw new ResolverError(
               "upstream_unavailable",
               "Non-public manufacturer address rejected",
+              false,
+              "blocked_source",
             );
           const address = addresses[0];
           // Pin the checked address to this connection: no second DNS lookup/rebinding window.
@@ -138,15 +186,16 @@ export class ManufacturerHttpClient {
           const response = await fetch(u, {
             dispatcher,
             redirect: "manual",
-            signal: controller.signal,
+            signal,
             headers: {
               ...(u.hostname === new URL(input).hostname ? headers : {}),
               "User-Agent":
-                "ColaBikeResolver/1.0 (factory specifications; low-rate public catalogue client)",
+                "ColaBikeResolver/2.0 (factory specifications; low-rate public catalogue client)",
               "Accept-Language": "en",
               Accept: "text/html,application/json,application/xml;q=0.9",
             },
           });
+          trace("source_connected", { host: u.hostname });
           this.logger.info({
             event: "resolver_upstream_requests_total",
             sourceHost: u.hostname,
@@ -177,6 +226,13 @@ export class ManufacturerHttpClient {
               "upstream_unavailable",
               `Manufacturer HTTP ${response.status}`,
               response.status === 429 || response.status >= 500,
+              response.status === 403
+                ? "http_403"
+                : response.status === 404
+                  ? "http_404"
+                  : response.status === 429
+                    ? "http_429"
+                    : "http_error",
             );
           }
           const reader = response.body!.getReader();
@@ -191,6 +247,8 @@ export class ManufacturerHttpClient {
               throw new ResolverError(
                 "parse_error",
                 "Manufacturer document exceeds 8 MiB",
+                false,
+                "body_too_large",
               );
             }
             chunks.push(value);
@@ -205,21 +263,40 @@ export class ManufacturerHttpClient {
             throw new ResolverError(
               "upstream_unavailable",
               "Manufacturer access challenge",
+              false,
+              "access_challenge",
             );
           return {
             url: u.href,
             bytes,
             contentType: response.headers.get("content-type") || "",
             fetchedAt: new Date().toISOString(),
-            hash: createHash("sha256").update(body).digest("hex"),
+            hash: createHash("sha256").update(bytes).digest("hex"),
           };
         } catch (e) {
+          if (external?.aborted)
+            throw new ResolverError(
+              "upstream_unavailable",
+              "Request cancelled",
+              false,
+              "aborted",
+            );
+          if (controller.signal.aborted)
+            throw new ResolverError(
+              "upstream_unavailable",
+              "Upstream timeout",
+              true,
+              "timeout",
+            );
           if (e instanceof ResolverError) throw e;
           if (attempt === 2)
             throw new ResolverError(
               "upstream_unavailable",
               "Manufacturer connection failed",
               true,
+              ["ENOTFOUND", "EAI_AGAIN"].includes((e as any)?.code)
+                ? "dns_failed"
+                : "connection_failed",
             );
           await pause(500 * 2 ** attempt);
         } finally {

@@ -8,8 +8,55 @@ vi.mock("undici", async () => {
 import { lookup } from "node:dns/promises";
 import { fetch } from "undici";
 import { ManufacturerHttpClient } from "../src/http.js";
+import { withResolution } from "../src/context.js";
 const client = () =>
   new ManufacturerHttpClient(pino({ level: "silent" }), 0, 1000);
+it("request-scoped cache fetches a tracking-equivalent document once", async () => {
+  vi.mocked(fetch).mockResolvedValue(new Response("<h1>Bike</h1>") as any);
+  const http = client();
+  await withResolution(new AbortController().signal, undefined, async () => {
+    await http.get("https://cube.eu/?a=1&utm_source=x", ["cube.eu"]);
+    await http.get("https://cube.eu/?a=1", ["cube.eu"]);
+  });
+  expect(fetch).toHaveBeenCalledTimes(1);
+});
+it("propagates cancellation to the active fetch without retrying", async () => {
+  const controller = new AbortController();
+  vi.mocked(fetch).mockImplementation(
+    async (_url, options: any) =>
+      new Promise((_resolve, reject) => {
+        options.signal.addEventListener(
+          "abort",
+          () => reject(new Error("abort")),
+          { once: true },
+        );
+        controller.abort();
+      }),
+  );
+  await expect(
+    withResolution(controller.signal, undefined, () =>
+      client().get("https://cube.eu/", ["cube.eu"]),
+    ),
+  ).rejects.toBeDefined();
+  expect(fetch).toHaveBeenCalledTimes(1);
+});
+it("reports upstream timeout and does not leave retries running", async () => {
+  vi.mocked(fetch).mockImplementation(
+    async (_url, options: any) =>
+      new Promise((_resolve, reject) =>
+        options.signal.addEventListener(
+          "abort",
+          () => reject(new Error("timeout")),
+          { once: true },
+        ),
+      ),
+  );
+  const http = new ManufacturerHttpClient(pino({ level: "silent" }), 0, 20);
+  await expect(http.get("https://cube.eu/", ["cube.eu"])).rejects.toMatchObject(
+    { reason: "timeout" },
+  );
+  expect(fetch).toHaveBeenCalledTimes(1);
+});
 beforeEach(() => {
   vi.resetAllMocks();
   vi.mocked(lookup).mockResolvedValue([
@@ -96,22 +143,56 @@ it("per-host queue prevents overlapping requests", async () => {
   expect(max).toBe(1);
 });
 
-it('manual pages allow unlisted public shops and cross-domain redirects', async()=>{
- vi.mocked(fetch).mockResolvedValueOnce(new Response('',{status:302,headers:{location:'https://cdn.shop.example/page'}}) as any).mockResolvedValueOnce(new Response('<h1>Shop</h1>') as any);
- const doc=await client().get('https://new.shop.example/bike',{blockedDomains:[]});
- expect(doc.url).toBe('https://cdn.shop.example/page');expect(fetch).toHaveBeenCalledTimes(2);
+it("manual pages allow unlisted public shops and cross-domain redirects", async () => {
+  vi.mocked(fetch)
+    .mockResolvedValueOnce(
+      new Response("", {
+        status: 302,
+        headers: { location: "https://cdn.shop.example/page" },
+      }) as any,
+    )
+    .mockResolvedValueOnce(new Response("<h1>Shop</h1>") as any);
+  const doc = await client().get("https://new.shop.example/bike", {
+    blockedDomains: [],
+  });
+  expect(doc.url).toBe("https://cdn.shop.example/page");
+  expect(fetch).toHaveBeenCalledTimes(2);
 });
-it('manual blacklist blocks root, subdomains and trailing-dot bypass before fetch',async()=>{
- for(const url of ['https://shop.example/','https://www.shop.example/','https://shop.example./']) await expect(client().get(url,{blockedDomains:['shop.example']})).rejects.toThrow();
- expect(fetch).not.toHaveBeenCalled();
+it("manual blacklist blocks root, subdomains and trailing-dot bypass before fetch", async () => {
+  for (const url of [
+    "https://shop.example/",
+    "https://www.shop.example/",
+    "https://shop.example./",
+  ])
+    await expect(
+      client().get(url, { blockedDomains: ["shop.example"] }),
+    ).rejects.toThrow();
+  expect(fetch).not.toHaveBeenCalled();
 });
-it('manual redirects cannot reach forbidden domains or private addresses',async()=>{
- for(const location of ['https://blocked.example/','http://169.254.169.254/latest/meta-data/','http://127.0.0.1/']){
- vi.mocked(fetch).mockClear();vi.mocked(fetch).mockResolvedValue(new Response('',{status:302,headers:{location}}) as any);
- await expect(client().get('https://shop.example/',{blockedDomains:['blocked.example']})).rejects.toThrow();expect(fetch).toHaveBeenCalledTimes(1);
- }
+it("manual redirects cannot reach forbidden domains or private addresses", async () => {
+  for (const location of [
+    "https://blocked.example/",
+    "http://169.254.169.254/latest/meta-data/",
+    "http://127.0.0.1/",
+  ]) {
+    vi.mocked(fetch).mockClear();
+    vi.mocked(fetch).mockResolvedValue(
+      new Response("", { status: 302, headers: { location } }) as any,
+    );
+    await expect(
+      client().get("https://shop.example/", {
+        blockedDomains: ["blocked.example"],
+      }),
+    ).rejects.toThrow();
+    expect(fetch).toHaveBeenCalledTimes(1);
+  }
 });
-it('manual domains with private DNS remain forbidden',async()=>{
- vi.mocked(lookup).mockResolvedValue([{address:'192.168.1.200',family:4}] as any);
- await expect(client().get('https://shop.example/',{blockedDomains:[]})).rejects.toThrow('Non-public');expect(fetch).not.toHaveBeenCalled();
+it("manual domains with private DNS remain forbidden", async () => {
+  vi.mocked(lookup).mockResolvedValue([
+    { address: "192.168.1.200", family: 4 },
+  ] as any);
+  await expect(
+    client().get("https://shop.example/", { blockedDomains: [] }),
+  ).rejects.toThrow("Non-public");
+  expect(fetch).not.toHaveBeenCalled();
 });
