@@ -195,6 +195,7 @@ export default function BikeWizard({ onCreated, onBusy }) {
               "Нужно уточнить вариант модели.",
       );
       if (d.status === "resolved") {
+        setManualMode(false);
         photoAbort.current?.abort();
         setPhotoBusy(false);
         setParts(

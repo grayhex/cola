@@ -189,7 +189,7 @@ test("wizard quick setup, identity confirmation, image size and successful save"
   await expect(dialog).not.toBeVisible();
   expect(prompts).toHaveLength(beforeSave);
   await expect(
-    page.getByRole("heading", { name: "Giant Contend AR 1", exact: true }),
+    page.getByRole("heading", { name: "Giant Contend AR 1 2024", exact: true }),
   ).toBeVisible();
   await page.screenshot({
     path: info.outputPath("bike-detail.png"),

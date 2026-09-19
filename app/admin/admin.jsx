@@ -1562,6 +1562,7 @@ function CatalogEditor({ value: c, onChange }) {
       )}
       {kind === "sizes" && (
         <ListEditor
+          label="Ростовка"
           values={c.sizes || ["XS", "S", "M", "L", "XL"]}
           onChange={(a) => onChange({ ...c, sizes: a })}
         />

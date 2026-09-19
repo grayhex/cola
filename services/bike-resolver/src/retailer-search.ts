@@ -6,15 +6,20 @@ import { trace, checkAbort } from "./context.js";
 import { ResolverError, type BikeQuery, type ResolveResult } from "./domain.js";
 import type { SettingsStore } from "./settings.js";
 
-export function searchLinks(xml: string): string[] {
+export function searchLinks(xml: string, query?: BikeQuery): string[] {
   const $ = load(xml, { xml: true });
-  return [
-    ...new Set(
-      $("item > link")
-        .map((_, e) => $(e).text().trim())
-        .get(),
-    ),
-  ].slice(0, 3);
+  const model = query ? normalize(query.model).split(" ") : [];
+  const entries = $("item")
+    .toArray()
+    .slice(0, 30)
+    .map((e) => {
+      const url = $(e).find("link").text().trim();
+      const text = normalize($(e).find("title,description").text() + " " + url);
+      return { url, score: model.filter((t) => text.includes(t)).length };
+    })
+    .filter((e) => e.url.length <= 2048)
+    .sort((a, b) => b.score - a.score);
+  return [...new Set(entries.map((e) => e.url))].slice(0, 3);
 }
 // One public search request, at most three product pages. Never parse search snippets as specs.
 export class RetailerSearch {
@@ -57,7 +62,10 @@ export class RetailerSearch {
         ]);
         if (!/<rss[\s>]/i.test(doc.body))
           throw new ResolverError("upstream_unavailable", "Search unavailable");
-        entry = { urls: searchLinks(doc.body), expires: Date.now() + 3600000 };
+        entry = {
+          urls: searchLinks(doc.body, query),
+          expires: Date.now() + 3600000,
+        };
         if (this.cache.size >= 100)
           this.cache.delete(this.cache.keys().next().value!);
         this.cache.set(key, entry);
