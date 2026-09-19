@@ -17,7 +17,7 @@ import {
   Plus,
   Heart,
 } from "lucide-react";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useSite } from "./site-provider.jsx";
 import { Avatar } from "./avatar.jsx";
 import NavPopover from "./nav-popover.jsx";
@@ -64,16 +64,16 @@ function Graphic({ name, settings }) {
 export default function GlobalHeader({ user, onProfile }) {
   const { personalSettings: settings } = useSite(),
     pathname = usePathname() || "/";
+  const params = useSearchParams();
+  const search = params?.toString() ? "?" + params.toString() : "";
   const [loggingOut, setLoggingOut] = useState(false),
     [unread, setUnread] = useState(0),
     [mobile, setMobile] = useState(false),
-    [search, setSearch] = useState(""),
     [stats, setStats] = useState(null);
   const statsRequest = useRef(false);
   useEffect(() => {
-    setSearch(location.search);
     setMobile(false);
-  }, [pathname]);
+  }, [pathname, search]);
   useEffect(() => {
     let active = true;
     setUnread(0);

@@ -67,7 +67,10 @@ test("ride upload, SVG, privacy, profile and bike; works without tiles", async (
     fullPage: true,
   });
   await page.goto("/u/" + data.rides[0].author.username);
-  await page.getByRole("button", { name: "Покатушки", exact: true }).click();
+  await page
+    .locator("main")
+    .getByRole("button", { name: "Покатушки", exact: true })
+    .click();
   await expect(page.locator(".ride-card")).toHaveCount(1);
   await page.goto("/b/" + data.rides[0].bike.shareId);
   await expect(page.locator(".ride-list .ride-card")).toHaveCount(1);

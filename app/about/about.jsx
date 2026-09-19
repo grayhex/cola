@@ -1,4 +1,5 @@
 "use client";
+import { useEffect } from "react";
 import {
   Bike,
   ScanLine,
@@ -34,8 +35,9 @@ const illustrations = {
   history: "aboutHistoryImageId",
 };
 export default function About({ user }) {
-  const { settings } = useSite(),
+  const { settings, setPreferences } = useSite(),
     config = settings.about || aboutDefaults;
+  useEffect(() => setPreferences(user?.preferences || {}), [user?.id]);
   const visible = config.sections.filter((s) => s.visible);
   return (
     <>

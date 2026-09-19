@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import sharp from "sharp";
 async function register(page, name) {
   await page.goto("/");
+  await expect(page.locator(".global-header")).toBeVisible();
   if (await page.getByRole("button", { name: "Открыть меню" }).isVisible())
     await page.getByRole("button", { name: "Открыть меню" }).click();
   await page.getByRole("button", { name: "Войти", exact: true }).click();

@@ -138,3 +138,6 @@
     min-height: 44px;
   }
 }
+.site-root .about-card:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}

@@ -142,6 +142,7 @@ test("navigation: real destinations, account, keyboard, configurable About and a
     await page.screenshot({
       path: info.outputPath("account-menu.png"),
       fullPage: true,
+      animations: "disabled",
     });
     await page.keyboard.press("Escape");
     if (isMobile)
@@ -255,6 +256,7 @@ test("navigation: real destinations, account, keyboard, configurable About and a
     await page.screenshot({
       path: info.outputPath("configured-about.png"),
       fullPage: true,
+      animations: "disabled",
     });
     await page.emulateMedia({ reducedMotion: "reduce" });
     account = await openAccount();
@@ -272,6 +274,15 @@ test("navigation: real destinations, account, keyboard, configurable About and a
     await page.screenshot({
       path: info.outputPath("narrow-menu.png"),
       fullPage: true,
+      animations: "disabled",
+    });
+    const drawerAccount = page.locator(".navigation-drawer .mobile-account");
+    await drawerAccount
+      .getByRole("button", { name: "Выйти", exact: true })
+      .scrollIntoViewIfNeeded();
+    await page.screenshot({
+      path: info.outputPath("mobile-account.png"),
+      animations: "disabled",
     });
     await page.keyboard.press("Escape");
     await save(original);

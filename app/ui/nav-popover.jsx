@@ -61,6 +61,7 @@ export default function NavPopover({
         className={"nav-trigger" + (active ? " active" : "")}
         type="button"
         aria-label={label}
+        title={label}
         aria-expanded={open}
         aria-controls={id}
         onClick={() => (open ? close() : show())}
