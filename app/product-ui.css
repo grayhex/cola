@@ -483,7 +483,7 @@ html {
 .resolver-review dl > div,
 .resolver-inspector dl > div {
   padding: 5px 0;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--line);
   overflow-wrap: anywhere;
 }
 .resolver-review dd,
