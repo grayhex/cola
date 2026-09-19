@@ -3,9 +3,15 @@ import { randomUUID } from "node:crypto";
 import sharp from "sharp";
 async function register(page, name) {
   await page.goto("/");
+  await expect(page.locator(".global-header")).toBeVisible();
+  if (await page.getByRole("button", { name: "Открыть меню" }).isVisible())
+    await page.getByRole("button", { name: "Открыть меню" }).click();
   await page.getByRole("button", { name: "Войти", exact: true }).click();
   await page
-    .getByRole("button", { name: "Нет аккаунта? Зарегистрироваться", exact: true })
+    .getByRole("button", {
+      name: "Нет аккаунта? Зарегистрироваться",
+      exact: true,
+    })
     .click();
   await page.locator("input[name=name]").fill(name);
   await page.locator("input[name=email]").fill(name + "@example.test");
@@ -13,9 +19,11 @@ async function register(page, name) {
   await page
     .getByRole("button", { name: "Создать аккаунт", exact: true })
     .click();
-  await expect(
-    page.getByRole("link", { name: "Профиль — " + name, exact: true }),
-  ).toBeVisible();
+  await expect
+    .poll(
+      async () => (await (await page.request.get("/api/me")).json()).user?.name,
+    )
+    .toBe(name);
 }
 test("registration, touch autocomplete, bike/photo, public feed, like and revoke", async ({
   page,
@@ -25,15 +33,15 @@ test("registration, touch autocomplete, bike/photo, public feed, like and revoke
   const name = "e2e-" + randomUUID(),
     bikeName = "Bike " + name;
   await register(page, name);
-  await page
-    .getByRole("link", { name: "Профиль — " + name, exact: true })
-    .click();
+  await page.goto("/account?tab=bikes");
   await page
     .getByRole("button", { name: "Добавить велосипед", exact: true })
     .click();
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel("Тип велосипеда").selectOption("mtb");
-  await expect(dialog.getByLabel("Год", { exact: true })).toHaveValue(String(new Date().getFullYear()));
+  await expect(dialog.getByLabel("Год", { exact: true })).toHaveValue(
+    String(new Date().getFullYear()),
+  );
   const brand = dialog.getByRole("combobox", {
     name: "Производитель",
     exact: true,

@@ -8,6 +8,7 @@ import "./gamification.css";
 import "./product-ui.css";
 import "./showcase.css";
 import "./header.css";
+import "./about.css";
 import SiteProvider from "./ui/site-provider.jsx";
 import { getSite } from "../lib/site.js";
 export const dynamic = "force-dynamic";

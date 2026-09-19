@@ -1,6 +1,6 @@
 "use client";
-import { GlobalSearch } from "./compact-ui.jsx";
-import { Children, useState, useEffect } from "react";
+import { GlobalSearch, CompactDialog } from "./compact-ui.jsx";
+import { useState, useEffect, useRef } from "react";
 import {
   Home,
   UserRound,
@@ -9,94 +9,78 @@ import {
   Trophy,
   Shield,
   LogOut,
+  Bike,
+  Route,
+  Info,
+  ChevronDown,
+  Menu,
+  Plus,
+  Heart,
 } from "lucide-react";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useSite } from "./site-provider.jsx";
-
-function Graphic({ assetId, Fallback }) {
-  return assetId ? (
-    <img className="global-nav-graphic" src={"/api/assets/" + assetId} alt="" />
+import { Avatar } from "./avatar.jsx";
+import NavPopover from "./nav-popover.jsx";
+import {
+  navigationSections,
+  sectionLinks,
+  activeSection,
+} from "../../lib/navigation.js";
+const icons = {
+  home: Home,
+  profile: UserRound,
+  notifications: Bell,
+  subscriptions: Users,
+  records: Trophy,
+  admin: Shield,
+  logout: LogOut,
+  bike: Bike,
+  rides: Route,
+  about: Info,
+  add: Plus,
+  heart: Heart,
+};
+const slots = {
+  home: "navHomeIconId",
+  profile: "navProfileIconId",
+  notifications: "navMessagesIconId",
+  subscriptions: "navSubscriptionsIconId",
+  records: "navRecordsIconId",
+  admin: "navAdminIconId",
+  logout: "navLogoutIconId",
+  rides: "navRidesIconId",
+  about: "navAboutIconId",
+  add: "addBikeIconId",
+};
+function Graphic({ name, settings }) {
+  const id = settings[slots[name]],
+    Icon = icons[name] || Bike;
+  return id ? (
+    <img className="global-nav-graphic" src={"/api/assets/" + id} alt="" />
   ) : (
-    <Fallback className="global-nav-graphic-fallback" aria-hidden="true" />
-  );
-}
-
-function NavLink({
-  href,
-  label,
-  tooltip = label,
-  assetId,
-  Fallback,
-  active = false,
-  badge = 0,
-}) {
-  return (
-    <a
-      className={"global-nav-item" + (active ? " active" : "")}
-      href={href}
-      aria-label={label}
-      aria-current={active ? "page" : undefined}
-      data-tooltip={tooltip}
-    >
-      <Graphic assetId={assetId} Fallback={Fallback} />
-      {badge > 0 && (
-        <span className="notification-badge">
-          {badge >= 100 ? "99+" : badge}
-        </span>
-      )}
-    </a>
-  );
-}
-
-function OrderedNavigation({ children, settings }) {
-  const order = settings.navOrder || [
-    "home",
-    "profile",
-    "subscriptions",
-    "records",
-    "messages",
-    "search",
-    "admin",
-    "logout",
-  ];
-  const id = (child) =>
-    ({
-      "/": "home",
-      "/account": "profile",
-      "/feed": "subscriptions",
-      "/records": "records",
-      "/notifications": "messages",
-      "/admin": "admin",
-    })[child.props.href] ||
-    (child.type === GlobalSearch
-      ? "search"
-      : child.props["aria-label"] === "Выйти"
-        ? "logout"
-        : "profile");
-  return (
-    <nav
-      className="global-nav"
-      data-icon-size={settings.navIconSize || "medium"}
-      aria-label="Основная навигация"
-    >
-      {Children.toArray(children).sort(
-        (a, b) => order.indexOf(id(a)) - order.indexOf(id(b)),
-      )}
-    </nav>
+    <Icon className="global-nav-graphic-fallback" aria-hidden="true" />
   );
 }
 export default function GlobalHeader({ user, onProfile }) {
-  const { personalSettings: settings } = useSite();
-  const pathname = usePathname() || "/";
-  const [loggingOut, setLoggingOut] = useState(false);
-  const [unread, setUnread] = useState(0);
+  const { personalSettings: settings } = useSite(),
+    pathname = usePathname() || "/";
+  const params = useSearchParams();
+  const search = params?.toString() ? "?" + params.toString() : "";
+  const [loggingOut, setLoggingOut] = useState(false),
+    [unread, setUnread] = useState(0),
+    [mobile, setMobile] = useState(false),
+    [stats, setStats] = useState(null);
+  const statsRequest = useRef(false);
+  useEffect(() => {
+    setMobile(false);
+  }, [pathname, search]);
   useEffect(() => {
     let active = true;
+    setUnread(0);
+    setStats(null);
+    statsRequest.current = false;
     async function update() {
-      if (!user) {
-        setUnread(0);
-        return;
-      }
+      if (!user) return;
       try {
         const r = await fetch("/api/community/notifications/count", {
           cache: "no-store",
@@ -111,27 +95,134 @@ export default function GlobalHeader({ user, onProfile }) {
       window.removeEventListener("cola:notifications", update);
     };
   }, [user?.id, pathname]);
-  const profileTooltip = user ? `Профиль — ${user.name}` : "Войти";
-
+  async function loadStats() {
+    if (!user || statsRequest.current) return;
+    statsRequest.current = true;
+    const results = await Promise.allSettled(
+      ["social/account", "rides?own=1"].map(async (path) => {
+        const r = await fetch("/api/" + path, { cache: "no-store" });
+        if (!r.ok) throw Error();
+        return r.json();
+      }),
+    );
+    const account = results[0].status === "fulfilled" ? results[0].value : null;
+    const rides = results[1].status === "fulfilled" ? results[1].value : null;
+    setStats({
+      bikes: account?.stats?.bikes,
+      rides: rides?.total,
+      distance: rides?.totalDistanceM,
+    });
+  }
   async function logout() {
     if (loggingOut) return;
     setLoggingOut(true);
     try {
-      await fetch("/api/auth/logout", { method: "POST" });
-    } finally {
+      const r = await fetch("/api/auth/logout", { method: "POST" });
+      if (!r.ok) {
+        setLoggingOut(false);
+        return;
+      }
       window.location.assign("/");
+    } catch {
+      setLoggingOut(false);
     }
   }
-
-  const hasIllustratedHeader = Boolean(settings.logoId);
-
+  const sections = navigationSections(settings).filter((s) => s.visible),
+    active = activeSection(pathname, search);
+  const graphic = (name) => <Graphic name={name} settings={settings} />;
+  const link = (item) => (
+    <a
+      key={item.href}
+      className="nav-menu-link"
+      href={item.href}
+      aria-current={pathname + search === item.href ? "page" : undefined}
+    >
+      {graphic(item.icon)}
+      <span>{item.label}</span>
+    </a>
+  );
+  const account = (
+    <>
+      <div className="nav-account-identity">
+        <Avatar person={user} />
+        <div>
+          <strong>{user?.name}</strong>
+          {user?.username && <small>@{user.username}</small>}
+        </div>
+      </div>
+      {stats && (
+        <dl className="nav-account-stats">
+          {[
+            ["Велосипеды", stats.bikes],
+            ["Покатушки", stats.rides],
+            [
+              "км",
+              Number.isFinite(stats.distance)
+                ? Math.round(stats.distance / 1000).toLocaleString("ru-RU")
+                : undefined,
+            ],
+          ]
+            .filter(([, v]) => v !== undefined)
+            .map(([k, v]) => (
+              <div key={k}>
+                <dt>{k}</dt>
+                <dd>{v}</dd>
+              </div>
+            ))}
+        </dl>
+      )}
+      {[
+        {
+          href: user?.username ? "/u/" + user.username : "/account?tab=profile",
+          label: "Мой профиль",
+          icon: "profile",
+        },
+        { href: "/account?tab=bikes", label: "Мои велосипеды", icon: "bike" },
+        { href: "/account?tab=rides", label: "Мои покатушки", icon: "rides" },
+        {
+          href: "/account?tab=achievements",
+          label: "Достижения",
+          icon: "records",
+        },
+        { href: "/feed", label: "Подписки", icon: "subscriptions" },
+        { href: "/notifications", label: "Уведомления", icon: "notifications" },
+        ...(user?.role === "admin"
+          ? [{ href: "/admin", label: "Админка", icon: "admin" }]
+          : []),
+      ].map(link)}
+      <button
+        className="nav-menu-link"
+        type="button"
+        disabled={loggingOut}
+        onClick={logout}
+      >
+        {graphic("logout")}
+        <span>{loggingOut ? "Выходим…" : "Выйти"}</span>
+      </button>
+    </>
+  );
+  const login = onProfile ? (
+    <button
+      className="nav-trigger"
+      onClick={() => {
+        setMobile(false);
+        onProfile();
+      }}
+    >
+      {graphic("profile")}Войти
+    </button>
+  ) : (
+    <a className="nav-trigger" href="/account">
+      {graphic("profile")}Войти
+    </a>
+  );
   return (
     <header
       className={
-        "header global-header" + (hasIllustratedHeader ? " has-banner" : "")
+        "header global-header" + (settings.logoId ? " has-banner" : "")
       }
     >
-      {hasIllustratedHeader && (
+      {settings.logoId && (
         <div className="global-header-banner" aria-hidden="true">
           <img
             className="global-header-banner-image"
@@ -140,13 +231,12 @@ export default function GlobalHeader({ user, onProfile }) {
           />
         </div>
       )}
-
       <a
-        className={"brand" + (hasIllustratedHeader ? " brand-illustrated" : "")}
+        className={"brand" + (settings.logoId ? " brand-illustrated" : "")}
         href="/"
         aria-label="ColaBike — главная"
       >
-        {hasIllustratedHeader ? (
+        {settings.logoId ? (
           <img
             className="site-logo"
             src={"/api/assets/" + settings.logoId}
@@ -159,87 +249,125 @@ export default function GlobalHeader({ user, onProfile }) {
           </>
         )}
       </a>
-
-      <OrderedNavigation settings={settings}>
-        <NavLink
-          href="/"
-          label={settings.showcaseTitle || "Витрина"}
-          tooltip={settings.showcaseTitle || "Витрина"}
-          assetId={settings.navHomeIconId}
-          Fallback={Home}
-          active={pathname === "/"}
-        />
-        {!user && onProfile ? (
+      <div
+        className="global-nav"
+        data-icon-size={settings.navIconSize || "medium"}
+      >
+        <nav className="primary-navigation" aria-label="Основная навигация">
+          {sections.map((section) =>
+            section.id === "about" ? (
+              <a
+                key={section.id}
+                className={
+                  "nav-trigger" + (active === "about" ? " active" : "")
+                }
+                href="/about"
+                aria-current={active === "about" ? "page" : undefined}
+              >
+                {graphic("about")}
+                <span>{section.label}</span>
+              </a>
+            ) : (
+              <NavPopover
+                key={section.id}
+                label={section.label}
+                active={active === section.id}
+                trigger={
+                  <>
+                    {graphic(section.id === "bikes" ? "home" : "rides")}
+                    <span>{section.label}</span>
+                    <ChevronDown size={13} aria-hidden="true" />
+                  </>
+                }
+              >
+                {sectionLinks(section.id, user).map(link)}
+              </NavPopover>
+            ),
+          )}
+        </nav>
+        <div className="nav-utilities">
+          <GlobalSearch assetId={settings.searchIconId} />
+          {user && (
+            <a
+              className={
+                "global-nav-item" +
+                (pathname === "/notifications" ? " active" : "")
+              }
+              href="/notifications"
+              aria-label={"Уведомления: " + unread + " непрочитанных"}
+              data-tooltip="Уведомления"
+            >
+              {graphic("notifications")}
+              {unread > 0 && (
+                <span className="notification-badge">
+                  {unread >= 100 ? "99+" : unread}
+                </span>
+              )}
+            </a>
+          )}
+          <div className="desktop-account">
+            {user ? (
+              <NavPopover
+                label={"Аккаунт — " + user.name}
+                className="account-disclosure"
+                onOpen={loadStats}
+                active={pathname.startsWith("/account")}
+                trigger={<Avatar person={user} size="small" />}
+              >
+                {account}
+              </NavPopover>
+            ) : (
+              login
+            )}
+          </div>
           <button
+            className="global-nav-item mobile-nav-toggle"
             type="button"
-            className="global-nav-item"
-            aria-label="Войти"
-            data-tooltip="Профиль — войти"
-            onClick={onProfile}
+            aria-label="Открыть меню"
+            aria-haspopup="dialog"
+            aria-expanded={mobile}
+            onClick={() => {
+              setMobile(true);
+              loadStats();
+            }}
           >
-            <Graphic assetId={settings.navProfileIconId} Fallback={UserRound} />
+            <Menu size={22} />
           </button>
-        ) : (
-          <NavLink
-            href="/account"
-            label={profileTooltip}
-            tooltip={profileTooltip}
-            assetId={settings.navProfileIconId}
-            Fallback={UserRound}
-            active={pathname.startsWith("/account")}
-          />
-        )}
-        <NavLink
-          href="/feed"
-          label="Подписки"
-          assetId={settings.navSubscriptionsIconId}
-          Fallback={Users}
-          active={pathname === "/feed"}
-        />
-        <NavLink
-          href="/records"
-          label="Рекорды"
-          assetId={settings.navRecordsIconId}
-          Fallback={Trophy}
-          active={pathname === "/records"}
-        />
-        <NavLink
-          href="/notifications"
-          label={
-            "Уведомления: " +
-            (unread >= 100 ? "99+" : unread) +
-            " непрочитанных"
-          }
-          tooltip="Уведомления"
-          assetId={settings.navMessagesIconId}
-          Fallback={Bell}
-          active={pathname === "/notifications"}
-          badge={unread}
-        />
-        <GlobalSearch assetId={settings.searchIconId} />
-        {user?.role === "admin" && (
-          <NavLink
-            href="/admin"
-            label="Админка"
-            tooltip="Админка"
-            assetId={settings.navAdminIconId}
-            Fallback={Shield}
-            active={pathname.startsWith("/admin")}
-          />
-        )}
-        {user && (
-          <button
-            type="button"
-            className="global-nav-item"
-            aria-label="Выйти"
-            data-tooltip={loggingOut ? "Выходим…" : "Выйти"}
-            disabled={loggingOut}
-            onClick={logout}
-          >
-            <Graphic assetId={settings.navLogoutIconId} Fallback={LogOut} />
-          </button>
-        )}
-      </OrderedNavigation>
+        </div>
+      </div>
+      <CompactDialog
+        open={mobile}
+        onClose={() => setMobile(false)}
+        title="Меню ColaBike"
+        className="navigation-drawer"
+      >
+        <nav aria-label="Разделы сайта">
+          {sections.map((section) => (
+            <section className="mobile-nav-section" key={section.id}>
+              {section.id === "about" ? (
+                <a
+                  className="nav-menu-link"
+                  href="/about"
+                  aria-current={active === "about" ? "page" : undefined}
+                >
+                  {graphic("about")}
+                  {section.label}
+                </a>
+              ) : (
+                <>
+                  <h3 className={active === section.id ? "active" : ""}>
+                    {section.label}
+                  </h3>
+                  {sectionLinks(section.id, user).map(link)}
+                </>
+              )}
+            </section>
+          ))}
+        </nav>
+        <section className="mobile-account" aria-label="Аккаунт">
+          {user ? account : login}
+        </section>
+      </CompactDialog>
     </header>
   );
 }

@@ -122,6 +122,12 @@ test("rides ownership, previews, privacy, social, feed, moderation, delete and s
       [other, owner],
     );
     assert.ok((await rideFeed(db, other)).items.some((r) => r.kind === "ride"));
+    const onlyRides = await rideFeed(db, other, 1, "rides");
+    assert.equal(onlyRides.total, 1);
+    assert.equal(onlyRides.items.length, 1);
+    assert.equal(onlyRides.items[0].kind, "ride");
+    assert.equal(onlyRides.bikes.length, 0);
+    assert.equal((await rideFeed(db, owner, 1, "rides")).total, 0);
     await db.query("UPDATE bikes SET is_public=false WHERE id=$1", [bike]);
     await assert.rejects(rideDetail(db, saved.shareId, other), /недоступна/);
     assert.equal((await rideList(db, other)).total, 0);

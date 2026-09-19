@@ -17,6 +17,7 @@ async function register(request, name) {
 test("account profile/avatar editing, public garage, author links and mutual mobile subscriptions", async ({
   page,
   browser,
+  isMobile,
 }, testInfo) => {
   const nonce = randomUUID().slice(0, 8),
     username = "social-" + nonce;
@@ -48,10 +49,21 @@ test("account profile/avatar editing, public garage, author links and mutual mob
   ).toBeVisible();
   const header = page.locator(".global-header");
   await expect(header).toBeVisible();
-  await expect(header.getByRole("link", { name: "Витрина", exact: true })).toBeVisible();
-  await expect(header.getByRole("link", { name: /Профиль — owner-/ })).toBeVisible();
-  await expect(header.getByRole("link", { name: /Уведомления:/ })).toBeVisible();
-  await expect(header.getByRole("button", { name: "Выйти", exact: true })).toBeVisible();
+  await expect(
+    header.getByRole("link", { name: /Уведомления:/ }),
+  ).toBeVisible();
+  await header
+    .getByRole("button", {
+      name: isMobile ? "Открыть меню" : /Аккаунт — owner-/,
+    })
+    .click();
+  await expect(
+    header.getByRole("link", { name: "Мой профиль", exact: true }),
+  ).toBeVisible();
+  await expect(
+    header.getByRole("button", { name: "Выйти", exact: true }),
+  ).toBeVisible();
+  await page.keyboard.press("Escape");
   await page.getByRole("button", { name: "Мой профиль", exact: true }).click();
   await page.getByLabel("Username", { exact: true }).fill(username);
   await page.getByLabel("Отображаемое имя").fill("Велосипедист Сергей");
@@ -74,14 +86,18 @@ test("account profile/avatar editing, public garage, author links and mutual mob
   await expect(page.getByRole("status")).toHaveText("Аватар обновлён");
   await expect(page.locator(".avatar-editor img")).toBeVisible();
   await page.getByRole("button", { name: "Оформление", exact: true }).click();
-  await page.getByRole("combobox", { name: "Тема", exact: true }).selectOption("dark");
+  await page
+    .getByRole("combobox", { name: "Тема", exact: true })
+    .selectOption("dark");
   await page.getByRole("button", { name: "Сохранить оформление" }).click();
   await expect(page.getByRole("status")).toHaveText("Оформление сохранено");
   await expect(page.locator(".site-root")).toHaveAttribute(
     "data-theme",
     "dark",
   );
-  await page.getByRole("combobox", { name: "Тема", exact: true }).selectOption("light");
+  await page
+    .getByRole("combobox", { name: "Тема", exact: true })
+    .selectOption("light");
   await page.getByRole("button", { name: "Сохранить оформление" }).click();
   await expect(page.locator(".site-root")).toHaveAttribute(
     "data-theme",

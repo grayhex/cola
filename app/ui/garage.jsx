@@ -245,8 +245,12 @@ export default function Garage({
   const initialSelection = useRef(initialBikeId);
   const file = useRef();
   useEffect(() => {
-    if (!account && !share)
-      setQuery(new URLSearchParams(window.location.search).get("q") || "");
+    if (!account && !share) {
+      const params = new URLSearchParams(window.location.search);
+      setQuery(params.get("q") || "");
+      if (["new", "popular"].includes(params.get("sort")))
+        setSort(params.get("sort"));
+    }
   }, [account, share]);
   async function load() {
     const sequence = ++requestId.current;

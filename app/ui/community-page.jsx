@@ -22,6 +22,16 @@ const eventText = {
   reply: "ответил вам",
 };
 export default function CommunityPage({ kind }) {
+  const [feedType, setFeedType] = useState(null);
+  useEffect(
+    () =>
+      setFeedType(
+        new URLSearchParams(location.search).get("type") === "rides"
+          ? "rides"
+          : "all",
+      ),
+    [],
+  );
   const [user, setUser] = useState(undefined),
     [data, setData] = useState(null),
     [page, setPage] = useState(1),
@@ -29,7 +39,13 @@ export default function CommunityPage({ kind }) {
     [busy, setBusy] = useState(false);
   const { setPreferences } = useSite();
   async function refresh() {
-    const d = await socialApi("community/" + kind + "?page=" + page);
+    const d = await socialApi(
+      "community/" +
+        kind +
+        "?page=" +
+        page +
+        (feedType === "rides" ? "&type=rides" : ""),
+    );
     setData(d);
     setError("");
     if (kind === "notifications")
@@ -44,8 +60,8 @@ export default function CommunityPage({ kind }) {
       .catch((e) => setError(e.message));
   }, []);
   useEffect(() => {
-    if (user) refresh().catch((e) => setError(e.message));
-  }, [user?.id, page]);
+    if (user && feedType !== null) refresh().catch((e) => setError(e.message));
+  }, [user?.id, page, feedType]);
   useEffect(() => {
     if (!user || kind !== "notifications") return;
     const timer = setInterval(() => {
@@ -63,7 +79,13 @@ export default function CommunityPage({ kind }) {
       <SocialHeader user={user} />
       <main className="social-page community-page">
         <div className="section-heading">
-          <h1>{kind === "feed" ? "Подписки" : "Уведомления"}</h1>
+          <h1>
+            {kind === "feed"
+              ? feedType === "rides"
+                ? "Покатушки подписок"
+                : "Подписки"
+              : "Уведомления"}
+          </h1>
           {kind === "notifications" && !!data?.unread && (
             <button
               className="quiet"
@@ -92,10 +114,7 @@ export default function CommunityPage({ kind }) {
         {user === null ? (
           <p>
             Войдите, чтобы увидеть{" "}
-            {kind === "feed"
-              ? "новые велосипеды ваших подписок"
-              : "уведомления"}
-            .{" "}
+            {kind === "feed" ? "публикации ваших подписок" : "уведомления"}.{" "}
             <a className="button small" href="/account">
               Войти
             </a>
@@ -136,7 +155,7 @@ export default function CommunityPage({ kind }) {
             </BikeGrid>
             {!(data.items || data.bikes).length && (
               <section className="social-empty">
-                <h2>Велосипеды знакомых появятся здесь</h2>
+                <h2>Публикации знакомых появятся здесь</h2>
                 <p>
                   Найдите интересных владельцев на общей витрине и подпишитесь
                   на них.
