@@ -88,3 +88,14 @@ Strava imports should feed the same normalized ingestion/ownership/privacy path;
 no integration credentials, FIT, TCX or remote sync are included.
 Synthetic fixtures cover parsing, metric gaps, privacy reentry and social lifecycle.
 The real Zepp GPX is used only for manual acceptance, not committed to Git.
+
+## Explicit demo import
+
+`node scripts/seed-hagsy-ride.js /private/path/Zepp.gpx [category]` creates
+`hagsy_test`, Giant Tourer GTS (2024) with parsed VeloPort provenance, and a public
+ride with default-radius start/end privacy. The original real GPX is supplied
+privately and never committed. The script is idempotent, refuses to take over an
+unrelated existing username, and is never invoked by migration/startup. It uses
+a random, undisclosed password for a non-login test account. Category defaults
+to the existing `road` key; pass the site's city/touring category if configured.
+The retained source warning explains contradictory retailer brake specifications.
