@@ -58,6 +58,11 @@ test("wizard live trace, stop, partial import and mobile review", async ({
   await expect(dialog.locator(".wizard-found")).toContainText("3 из 3");
   await dialog.getByRole("button", { name: "Далее", exact: true }).click();
   await expect(dialog.locator(".wizard-part")).toHaveCount(3);
+  const contentBox = await dialog.locator(".wizard-content").boundingBox();
+  const actionsBox = await dialog.locator(".wizard-actions").boundingBox();
+  expect(contentBox.y + contentBox.height).toBeLessThanOrEqual(
+    actionsBox.y + 1,
+  );
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth + 1,

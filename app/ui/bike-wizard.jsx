@@ -415,12 +415,13 @@ export default function BikeWizard({ onCreated, onBusy }) {
           <button
             type="button"
             key={s}
+            aria-label={`Шаг ${i + 1}: ${s}`}
             aria-current={step === i ? "step" : undefined}
             disabled={i > step || resolving || saving || !!savedId}
             onClick={() => setStep(i)}
           >
             <span>{i < step ? <Check size={14} /> : i + 1}</span>
-            <small>{s}</small>
+            <small>{["Модель", "Поиск", "Сборка", "Детали"][i]}</small>
           </button>
         ))}
       </nav>
@@ -703,20 +704,23 @@ export default function BikeWizard({ onCreated, onBusy }) {
               Проверьте найденные компоненты или добавьте свои по группам. Можно
               оставить комплектацию пустой и дополнить позже.
             </p>
-            <div className="wizard-group-add">
-              {catalog.componentGroups.map((g) => (
-                <button
-                  type="button"
-                  className="quiet"
-                  key={g.id}
-                  onClick={() => addPart(g)}
-                >
-                  <PartIcon name={g.icon} size={16} />
-                  <Plus size={12} />
-                  {g.name}
-                </button>
-              ))}
-            </div>
+            <details className="wizard-add-picker" open={!parts.length}>
+              <summary>Добавить компонент</summary>
+              <div className="wizard-group-add">
+                {catalog.componentGroups.map((g) => (
+                  <button
+                    type="button"
+                    className="quiet"
+                    key={g.id}
+                    onClick={() => addPart(g)}
+                  >
+                    <PartIcon name={g.icon} size={16} />
+                    <Plus size={12} />
+                    {g.name}
+                  </button>
+                ))}
+              </div>
+            </details>
             {groups.map((g) => (
               <details
                 key={g.id}
