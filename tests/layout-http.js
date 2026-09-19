@@ -122,7 +122,7 @@ assert(bike.photos[0].is_cover);
 assert.equal(bike.photos[0].source_page_url, sourceUrl);
 const version = await a("versions");
 assert.equal(version.data.app.version, "0.3.1");
-assert.equal(version.data.resolver.version, "1.2.0");
+assert.equal(version.data.resolver.version, "2.0.0");
 await a("bikes/" + id, "DELETE");
 console.log(
   "Layout HTTP integration: URL import, persisted order, ownership, partial edits, image token ownership, download, duplicate rollback and versions passed.",
