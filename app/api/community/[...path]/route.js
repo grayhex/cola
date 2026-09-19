@@ -1,3 +1,4 @@
+import { rideFeed } from "../../../../lib/ride-feed.js";
 import { audit } from "../../../../lib/site.js";
 import { db, transaction } from "../../../../lib/db.js";
 import { currentUser, rateLimit } from "../../../../lib/auth.js";
@@ -96,9 +97,7 @@ async function handler(req, { params }) {
       );
     }
     if (p[0] === "feed" && p.length === 1 && m === "GET")
-      return json(
-        await showcase(db, user.id, { page: page(), followingId: user.id }),
-      );
+      return json(await rideFeed(db, user.id, page()));
     if (p[0] === "notifications") {
       if (p.length === 1 && m === "GET")
         return json(await notificationPage(db, user.id, page()));

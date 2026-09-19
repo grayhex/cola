@@ -1,4 +1,5 @@
 "use client";
+import RideList from "./ride-list.jsx";
 import BikeGrid from "./bike-grid.jsx";
 import { BadgeShelf } from "./achievements.jsx";
 import { ReportButton } from "./community-controls.jsx";
@@ -21,6 +22,7 @@ export default function PublicProfile({ username }) {
     [feed, setFeed] = useState(null),
     [page, setPage] = useState(1),
     [people, setPeople] = useState(""),
+    [collection, setCollection] = useState("bikes"),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
     [actionError, setActionError] = useState("");
@@ -182,30 +184,52 @@ export default function PublicProfile({ username }) {
                     {actionError}
                   </p>
                 )}
-                <h2>
-                  Коллекция велосипедов <span>{profile.counts.bikes}</span>
-                </h2>
-                {feed ? (
-                  <>
-                    <BikeGrid bikes={feed.bikes}>
-                      {feed.bikes.map((b) => (
-                        <BikeCard
-                          key={b.id}
-                          bike={b}
-                          busy={busy}
-                          onLike={() => like(b)}
-                        />
-                      ))}
-                    </BikeGrid>
-                    {!feed.bikes.length && (
-                      <p className="help">
-                        Владелец ещё не опубликовал велосипеды.
-                      </p>
-                    )}
-                    <Pagination {...feed} onPage={setPage} />
-                  </>
+                <div className="social-switch">
+                  <button
+                    className="quiet"
+                    aria-pressed={collection === "bikes"}
+                    onClick={() => setCollection("bikes")}
+                  >
+                    Велосипеды
+                  </button>
+                  <button
+                    className="quiet"
+                    aria-pressed={collection === "rides"}
+                    onClick={() => setCollection("rides")}
+                  >
+                    Покатушки
+                  </button>
+                </div>
+                {collection === "rides" ? (
+                  <RideList username={username} />
                 ) : (
-                  <p role="status">Загружаем велосипеды…</p>
+                  <>
+                    <h2>
+                      Коллекция велосипедов <span>{profile.counts.bikes}</span>
+                    </h2>
+                    {feed ? (
+                      <>
+                        <BikeGrid bikes={feed.bikes}>
+                          {feed.bikes.map((b) => (
+                            <BikeCard
+                              key={b.id}
+                              bike={b}
+                              busy={busy}
+                              onLike={() => like(b)}
+                            />
+                          ))}
+                        </BikeGrid>
+                        {!feed.bikes.length && (
+                          <p className="help">
+                            Владелец ещё не опубликовал велосипеды.
+                          </p>
+                        )}
+                        <Pagination {...feed} onPage={setPage} />
+                      </>
+                    ) : (
+                      <p role="status">Загружаем велосипеды…</p>
+                    )}
+                  </>
                 )}
               </section>
             )}

@@ -291,3 +291,16 @@ currency would require a deliberate data conversion policy, not relabeling amoun
 Reproduce the synthetic plan with `node scripts/explain-records.js` (isolated PGlite,
 no production connection). Leaderboards scan eligible public builds in a bulk query;
 monitor duration as the site grows. Normal cards add only one batch awards query.
+
+## GPX ride storage
+
+Compose now persists `/app/rides` separately from photos. Keep this volume in
+backups; `scripts/backup.py` writes backup v2 with `rides.tar.gz` and checksums.
+Restore checks both empty volumes and accepts older v1 archives. Run the backup
+drill before promotion; it checks ride DB/original/geometry and restored pages.
+Schedule `docker compose exec -T app node scripts/cleanup-rides.js` hourly to
+expire previews and retry the file deletion outbox even when nobody uploads.
+Configure trusted `MAP_STYLE_URL` in the app environment for tiles;
+without it the page deliberately renders its offline SVG route. User-uploaded
+style URLs are not accepted. Admin → Покатушки manages upload quotas and privacy
+radii. GPX originals are private; never expose the rides volume through nginx.

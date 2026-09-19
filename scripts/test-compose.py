@@ -15,4 +15,6 @@ assert len(s['app']['ports'])==1
 assert s['app']['ports'][0]['host_ip']=='127.0.0.1'
 assert str(s['app']['ports'][0]['published'])=='3000'
 assert s['app']['environment']['DEPLOYMENT_MODE']=='production'
+assert any(v.get('target')=='/app/rides' for v in s['app']['volumes'])
+assert s['app']['environment']['RIDES_DIR']=='/app/rides'
 print('Compose: local remains simple; production requires secrets and publishes only loopback app port.')

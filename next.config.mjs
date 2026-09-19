@@ -4,7 +4,8 @@ export default {
     process.env.COLABIKE_WORKER_THREADS === "1"
       ? { workerThreads: true, webpackBuildWorker: false }
       : {},
-  serverExternalPackages: ["pg"],
+  // Operator/backup scripts import these directly outside Next's server bundle.
+  serverExternalPackages: ["pg", "zod", "fast-xml-parser"],
   async headers() {
     return [
       {

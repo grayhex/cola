@@ -1,4 +1,5 @@
 "use client";
+import RideAccount from "./ride-account.jsx";
 import BikeGrid from "./bike-grid.jsx";
 import { BadgeShelf } from "./achievements.jsx";
 import { useEffect, useState } from "react";
@@ -17,6 +18,7 @@ const tabs = {
   overview: "Обзор",
   profile: "Мой профиль",
   bikes: "Мои велосипеды",
+  rides: "Покатушки",
   social: "Социальное",
   achievements: "Достижения",
   appearance: "Оформление",
@@ -440,6 +442,7 @@ export default function Account() {
                 </section>
               </>
             )}
+            {tab === "rides" && <RideAccount bikes={bikes} />}
             {tab === "achievements" && (
               <BadgeShelf endpoint="game/me" account />
             )}

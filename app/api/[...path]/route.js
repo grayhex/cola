@@ -445,14 +445,34 @@ async function handler(req, { params }) {
         return json({ ok: true });
       }
       if (method === "DELETE") {
+        if (
+          (
+            await db.query("SELECT 1 FROM rides WHERE bike_id=$1 LIMIT 1", [
+              bike.id,
+            ])
+          ).rowCount
+        )
+          return fail(
+            "У велосипеда есть покатушки. Сначала удалите их или перенесите на другой велосипед.",
+            409,
+          );
         const { rows } = await db.query(
           "SELECT filename FROM photos WHERE bike_id=$1",
           [bike.id],
         );
-        await db.query("DELETE FROM bikes WHERE id=$1 AND owner_id=$2", [
-          bike.id,
-          user.id,
-        ]);
+        try {
+          await db.query("DELETE FROM bikes WHERE id=$1 AND owner_id=$2", [
+            bike.id,
+            user.id,
+          ]);
+        } catch (e) {
+          if (e.code === "23503")
+            return fail(
+              "У велосипеда есть покатушки. Сначала удалите их или перенесите на другой велосипед.",
+              409,
+            );
+          throw e;
+        }
         await Promise.all(
           rows.map((p) =>
             unlink(path.join(uploads(), p.filename)).catch(() => {}),
@@ -622,7 +642,11 @@ async function handler(req, { params }) {
         try {
           image = await preparePhoto(Buffer.concat(chunks));
         } catch (e) {
-          return fail(e.message?.startsWith("Фото слишком") ? e.message : "Не удалось прочитать изображение");
+          return fail(
+            e.message?.startsWith("Фото слишком")
+              ? e.message
+              : "Не удалось прочитать изображение",
+          );
         }
         const id = randomUUID(),
           filename = id + ".webp";

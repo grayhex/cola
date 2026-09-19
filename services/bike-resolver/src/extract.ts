@@ -20,7 +20,7 @@ const sectionName =
 const excluded =
   /^(geometry|shipping|delivery|warranty|reviews|description|sizing guide|доставка|гарантия|отзывы|геометрия)$/i;
 const metadataName =
-  /^(weight|net weight|вес|weight size|available sizes|sizes|размеры|wheel size|диаметр кол[её]с|color|colour|bike color|цвет|product id|model year|year|сезон|год)$/i;
+  /^(weight|net weight|вес|weight size|available sizes|sizes|размеры|wheel size|диаметр кол[её]с|color|colour|bike color|цвет|product id|model year|year|сезон|год|год выпуска)$/i;
 type Rows = { row: string; label: string; value: string };
 export function jsonObjects($: CheerioAPI): any[] {
   const out: any[] = [];
@@ -114,7 +114,7 @@ function pipeline(doc: SourceDocument, rows?: Rows) {
     objects = jsonObjects($),
     profile = profileFor(doc.url, doc.body);
   // Explanatory popovers are not part of a specification label/value.
-  $('[role="tooltip"], .tooltip, script, style')
+  $('[role="tooltip"], .tooltip, .hint, script, style')
     .filter((_, el) => !$(el).is("script"))
     .remove();
   let primarySpecTable: any = null;
@@ -317,7 +317,12 @@ function pipeline(doc: SourceDocument, rows?: Rows) {
       if (anchor.is("b,strong") && anchor.parent().is("p"))
         anchor = anchor.parent();
       const next = anchor.next();
-      if (!next.length || next.is("script,style,h1,h2,h3,h4,h5,h6")) return;
+      if (
+        !next.length ||
+        next.is("script,style,h1,h2,h3,h4,h5,h6,table") ||
+        next.find("table").length
+      )
+        return;
       if (next.is("ul,ol")) {
         add(
           label,
@@ -494,8 +499,24 @@ export function parseDocument(
     count: components.length,
     total: totalFields,
   });
+  const extractedMeta = metadata(doc, result.$, result.objects, meta);
+  const specYear = result.chosen.find((f) =>
+    /^(model year|year|год|год выпуска|сезон)$/i.test(f.label),
+  );
+  if (!extractedMeta.year && specYear && /^(19|20)\d{2}$/.test(specYear.value))
+    extractedMeta.year = Number(specYear.value);
+  if (profileFor(doc.url, doc.body).id === "veloport") {
+    const kind = rawSpecification["Тип тормозов"] || "",
+      brakes = rawSpecification["Тормоза"] || "";
+    if (
+      /ободн|ножн|v-brake/i.test(kind) &&
+      /hydraulic|rotors|дисков/i.test(brakes) &&
+      !warnings.includes("conflicting_sources")
+    )
+      warnings.push("conflicting_sources");
+  }
   return {
-    ...metadata(doc, result.$, result.objects, meta),
+    ...extractedMeta,
     rawSpecification,
     components,
     quality,

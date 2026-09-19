@@ -1,0 +1,171 @@
+.ride-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.ride-card {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--paper);
+  overflow: hidden;
+}
+.ride-route {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: var(--wash);
+}
+.ride-card-body {
+  padding: 12px;
+}
+.ride-card h3 {
+  font-size: 18px;
+  margin: 0 0 4px;
+  overflow-wrap: anywhere;
+}
+.ride-card .help {
+  margin: 4px 0;
+}
+.ride-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  margin: 16px 0;
+  font-variant-numeric: tabular-nums;
+}
+.ride-metrics div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ride-metrics dt {
+  font-size: 12px;
+  color: var(--muted);
+}
+.ride-metrics dd {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+}
+.ride-metrics.compact {
+  gap: 8px 16px;
+  margin: 12px 0;
+}
+.ride-metrics.compact dd {
+  font-size: 15px;
+}
+.ride-metrics.compact dt {
+  font-size: 11px;
+}
+.ride-social,
+.ride-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+}
+.ride-actions {
+  margin-top: 12px;
+}
+.ride-map-wrap {
+  position: relative;
+  min-height: 260px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  overflow: hidden;
+}
+.ride-map {
+  height: 420px;
+  width: 100%;
+  position: absolute;
+  inset: 0;
+  visibility: hidden;
+}
+.ride-map.ready {
+  position: relative;
+  visibility: visible;
+}
+.ride-map-wrap > .ride-route {
+  min-height: 260px;
+}
+.ride-description {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.ride-page h1 {
+  font-size: 36px;
+  margin: 12px 0;
+}
+.ride-page > .quiet {
+  display: inline-flex;
+  margin: 12px 12px 0 0;
+}
+.ride-form {
+  max-width: 720px;
+  border-block: 1px solid var(--line);
+  padding: 16px 0;
+  margin-bottom: 24px;
+}
+.ride-drop {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 24px;
+  border: 1px dashed var(--line);
+  background: var(--wash);
+}
+.ride-drop input {
+  max-width: 100%;
+}
+.ride-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0;
+}
+.ride-toggle input {
+  width: auto;
+}
+.ride-list {
+  margin-block: 24px;
+}
+.ride-form .button,
+.ride-form > .quiet {
+  margin: 12px 8px 0 0;
+}
+.maplibregl-canvas {
+  outline: none;
+}
+@media (max-width: 1100px) {
+  .ride-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 600px) {
+  .ride-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ride-map {
+    height: 320px;
+  }
+  .ride-page h1 {
+    font-size: 28px;
+  }
+  .ride-metrics {
+    gap: 12px 20px;
+  }
+  .ride-metrics dd {
+    font-size: 20px;
+  }
+  .ride-toggle {
+    min-height: 44px;
+  }
+  .ride-form button {
+    min-height: 44px;
+  }
+  .ride-drop {
+    padding: 16px;
+  }
+}

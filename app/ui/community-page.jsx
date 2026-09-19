@@ -1,4 +1,5 @@
 "use client";
+import RideCard from "./ride-card.jsx";
 import BikeGrid from "./bike-grid.jsx";
 import { useEffect, useState } from "react";
 import {
@@ -12,6 +13,9 @@ import { PageControls } from "./community-controls.jsx";
 import BikeCard from "./bike-card.jsx";
 import { useSite } from "./site-provider.jsx";
 const eventText = {
+  ride_like: "понравилась ваша покатушка",
+  ride_comment: "прокомментировал покатушку",
+  ride_reply: "ответил вам",
   follow: "подписался на вас",
   like: "понравился ваш велосипед",
   comment: "прокомментировал",
@@ -104,29 +108,33 @@ export default function CommunityPage({ kind }) {
               Новые публикации владельцев, на которых вы подписаны.
             </p>
             <BikeGrid bikes={data.bikes}>
-              {data.bikes.map((b) => (
-                <BikeCard
-                  key={b.id}
-                  bike={b}
-                  busy={busy}
-                  onLike={async () => {
-                    setBusy(true);
-                    try {
-                      await socialApi(
-                        "bikes/" + b.id + "/like",
-                        b.liked ? "DELETE" : "PUT",
-                      );
-                      await refresh();
-                    } catch (e) {
-                      setError(e.message);
-                    } finally {
-                      setBusy(false);
-                    }
-                  }}
-                />
-              ))}
+              {(data.items || data.bikes).map((b) =>
+                b.kind === "ride" ? (
+                  <RideCard key={b.id} ride={b} />
+                ) : (
+                  <BikeCard
+                    key={b.id}
+                    bike={b}
+                    busy={busy}
+                    onLike={async () => {
+                      setBusy(true);
+                      try {
+                        await socialApi(
+                          "bikes/" + b.id + "/like",
+                          b.liked ? "DELETE" : "PUT",
+                        );
+                        await refresh();
+                      } catch (e) {
+                        setError(e.message);
+                      } finally {
+                        setBusy(false);
+                      }
+                    }}
+                  />
+                ),
+              )}
             </BikeGrid>
-            {!data.bikes.length && (
+            {!(data.items || data.bikes).length && (
               <section className="social-empty">
                 <h2>Велосипеды знакомых появятся здесь</h2>
                 <p>

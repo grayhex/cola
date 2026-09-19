@@ -91,3 +91,30 @@ it("searches once, verifies product identity, skips blocked sources and reuses d
   expect(products).toBe(2);
   expect((result as any).manualSelection).toBe(false);
 });
+it("extracts VeloPort separate specification tables and retains conflicting brake evidence", () => {
+  const parsed = parseDocument({
+    url: "https://www.velo-port.ru/catalog/gorodskie/velosiped_giant_tourer_gts/",
+    body: readFileSync(
+      new URL("./fixtures/layouts/veloport.html", import.meta.url),
+      "utf8",
+    ),
+    hash: "fixture",
+    fetchedAt: "2026-09-19",
+  });
+  expect(parsed.year).toBe(2024);
+  expect(parsed.components.length).toBeGreaterThanOrEqual(15);
+  for (const type of [
+    "frame",
+    "fork",
+    "shifter",
+    "front_hub",
+    "rear_hub",
+    "seatpost",
+    "saddle",
+  ])
+    expect(parsed.components.some((c) => c.type === type)).toBe(true);
+  expect(parsed.warnings).toContain("conflicting_sources");
+  expect(
+    parsed.components.some((c) => c.provenance?.rawLabel === "Колёса"),
+  ).toBe(false);
+});

@@ -58,6 +58,8 @@ export default function Reports({ onManageUser }) {
               {
                 {
                   comment: "Комментарий",
+                  ride: "Покатушка",
+                  ride_comment: "Комментарий к покатушке",
                   profile: "Профиль",
                   bike: "Велосипед",
                 }[r.entityType]
@@ -106,15 +108,25 @@ export default function Reports({ onManageUser }) {
                 >
                   Закрыть жалобу
                 </button>
-                {r.entityType === "comment" && !r.target.commentDeleted && (
+                {r.entityType === "ride" && (
                   <button
                     className="quiet"
                     disabled={busy}
-                    onClick={() => act(r.id, "delete_comment")}
+                    onClick={() => act(r.id, "hide_ride")}
                   >
-                    Удалить комментарий
+                    Скрыть покатушку
                   </button>
                 )}
+                {["comment", "ride_comment"].includes(r.entityType) &&
+                  !r.target.commentDeleted && (
+                    <button
+                      className="quiet"
+                      disabled={busy}
+                      onClick={() => act(r.id, "delete_comment")}
+                    >
+                      Удалить комментарий
+                    </button>
+                  )}
               </>
             )}
           </div>

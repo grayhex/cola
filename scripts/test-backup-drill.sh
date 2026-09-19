@@ -29,6 +29,7 @@ docker compose -f "$tmp/compose.json" exec -T db psql -U colabike -d colabike -v
 docker compose -f "$tmp/compose.json" exec -T app sh -c 'printf restore-marker > /app/uploads/drill.webp'
 docker compose -f "$tmp/compose.json" exec -T db psql -U colabike -d colabike -v ON_ERROR_STOP=1 -c "UPDATE users SET avatar_id='00000000-0000-4000-8000-000000000002',avatar_size_bytes=13 WHERE email='restore@example.test'"
 docker compose -f "$tmp/compose.json" exec -T app sh -c 'printf avatar-marker > /app/uploads/avatar-00000000-0000-4000-8000-000000000002.webp'
+docker compose -f "$tmp/compose.json" exec -T app node scripts/ride-backup-drill.js --seed
 bash scripts/backup-colabike.sh --destination "$tmp/backups" --keep 2
 backup=$(find "$tmp/backups" -maxdepth 1 -type d -name 'colabike-*' | head -1)
 python3 scripts/backup.py verify --backup "$backup"
@@ -44,7 +45,9 @@ avatar=$(docker run --rm --volumes-from "$app:ro" --entrypoint cat "$image" /app
 [ "$avatar" = avatar-marker ]
 avatar_id=$(docker compose -f "$tmp/compose.json" exec -T db psql -U colabike -d colabike -Atc "SELECT avatar_id FROM users WHERE email='restore@example.test'")
 [ "$avatar_id" = 00000000-0000-4000-8000-000000000002 ]
+docker compose -f "$tmp/compose.json" up -d --wait --wait-timeout 180
+docker compose -f "$tmp/compose.json" exec -T app node scripts/ride-backup-drill.js --verify
 if bash scripts/restore-colabike.sh --backup "$backup" --yes; then echo 'Restore unexpectedly overwrote existing DB' >&2; exit 1; fi
 printf corrupt >> "$backup/photos.tar.gz"
 if python3 scripts/backup.py verify --backup "$backup"; then echo 'Corruption undetected' >&2; exit 1; fi
-echo 'Backup drill: DB/photos/avatars restored into separate project; overwrite and corrupt backup rejected.'
+echo 'Backup drill: DB/photos/avatars/rides restored into separate project; overwrite and corrupt backup rejected.'

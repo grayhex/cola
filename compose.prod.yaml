@@ -32,6 +32,8 @@ services:
       TRUSTED_PROXY_KEY: ${TRUSTED_PROXY_KEY:?Set TRUSTED_PROXY_KEY}
       BIKE_RESOLVER_TOKEN: ${BIKE_RESOLVER_TOKEN:?Set BIKE_RESOLVER_TOKEN}
       UPLOAD_DIR: /app/uploads
+      RIDES_DIR: /app/rides
+      MAP_STYLE_URL: ${MAP_STYLE_URL:-}
       MAX_BIKES_PER_USER: ${MAX_BIKES_PER_USER:-}
       MAX_PHOTOS_PER_USER: ${MAX_PHOTOS_PER_USER:-}
       MAX_PHOTO_BYTES_PER_USER: ${MAX_PHOTO_BYTES_PER_USER:-}
@@ -40,6 +42,7 @@ services:
       BIKE_RESOLVER_URL: http://bike-resolver:8080
     volumes:
       - photos:/app/uploads
+      - rides:/app/rides
     depends_on:
       db:
         condition: service_healthy
@@ -93,3 +96,4 @@ services:
 volumes:
   database:
   photos:
+  rides:

@@ -2,6 +2,7 @@
 import BikeGrid from "./bike-grid.jsx";
 import { FilterControl, FilterChips } from "./compact-ui.jsx";
 import { BikeGame } from "./achievements.jsx";
+import RideList from "./ride-list.jsx";
 import Discussion from "./discussion.jsx";
 import BikeCategoryIcon from "./bike-category-icon.jsx";
 import BikeMeters from "./bike-meters.jsx";
@@ -503,7 +504,6 @@ export default function Garage({
             hidden={!block("heading").enabled}
             style={{ order: blocks.findIndex((b) => b.id === "heading") + 1 }}
           >
-
             {bike.color && <span>{bike.color}</span>}
             {bike.size && <span>{bike.size}</span>}
             {bike.weight && <span>{Number(bike.weight)} кг</span>}
@@ -860,6 +860,7 @@ export default function Garage({
               user={user}
             />
           )}
+          {bike.is_public && <RideList bikeId={bike.id} latest />}
           {bike.is_public && (
             <Discussion key={bike.id} bike={bike} user={user} />
           )}
