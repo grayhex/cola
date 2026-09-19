@@ -25,7 +25,22 @@ test("demo migration imports original, preserves privacy, runs once and does not
     await db.query("INSERT INTO site_catalog(id,value) VALUES(1,$1)", [
       defaultCatalog,
     ]);
+    const restricted = {
+      enabled: false,
+      maxGpxBytes: 1024,
+      maxPoints: 2,
+      privacyRadii: [300],
+      defaultRadius: 300,
+    };
+    await db.query("UPDATE ride_settings SET value=$1 WHERE id=1", [
+      restricted,
+    ]);
     const result = await db.transaction((q) => migrateHagsyDemo(q));
+    assert.deepEqual(
+      (await db.query("SELECT value FROM ride_settings WHERE id=1")).rows[0]
+        .value,
+      restricted,
+    );
     const raw = (await db.query("SELECT * FROM rides WHERE id=$1", [result.id]))
       .rows[0];
     assert.equal(raw.privacy_enabled, true);

@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { gunzipSync } from "node:zlib";
 import { createHash } from "node:crypto";
 import { seedHagsyRide } from "../scripts/hagsy-demo.js";
+import { rideDefaults } from "../lib/rides.js";
 
 export const demoVersion = "013_hagsy_demo";
 export const demoHash =
@@ -21,7 +22,17 @@ export async function migrateHagsyDemo(q) {
   );
   if (createHash("sha256").update(bytes).digest("hex") !== demoHash)
     throw Error("Demo GPX checksum mismatch");
-  const ride = await seedHagsyRide(q, bytes);
+  // This fixed, checksum-verified fixture must not prevent startup when an admin
+  // changes upload policy. The site's live settings remain untouched.
+  const ride = await seedHagsyRide(q, bytes, "road", {
+    ...rideDefaults,
+    enabled: true,
+    maxGpxBytes: 10 * 1024 * 1024,
+    maxPoints: 200000,
+    maxRides: 2000,
+    privacyRadii: [500],
+    defaultRadius: 500,
+  });
   await q.query("INSERT INTO schema_migrations(version) VALUES($1)", [
     demoVersion,
   ]);

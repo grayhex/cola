@@ -6,7 +6,12 @@ import { saveFactorySpecification } from "../lib/factory-import.js";
 import { parseGpx } from "../lib/ride-gpx.js";
 import { previewRide, saveRide, rideSettings } from "../lib/rides.js";
 const marker = "Тестовый профиль покатушек ColaBike · hagsy_test";
-export async function seedHagsyRide(q, bytes, category = "road") {
+export async function seedHagsyRide(
+  q,
+  bytes,
+  category = "road",
+  migrationSettings = null,
+) {
   const parsed = parseGpx(bytes);
   const spec = JSON.parse(
     await readFile(
@@ -66,7 +71,7 @@ export async function seedHagsyRide(q, bytes, category = "road") {
     bike = await ownedBike(q, id, user.id);
     await saveFactorySpecification(q, bike, user.id, spec, true);
   }
-  const config = await rideSettings(q),
+  const config = migrationSettings || (await rideSettings(q)),
     preview = await previewRide(q, user.id, bytes, config);
   return saveRide(
     q,
