@@ -86,14 +86,30 @@ export default function GlobalHeader({ user, onProfile }) {
     }
   }
 
+  const hasIllustratedHeader = Boolean(settings.logoId);
+
   return (
-    <header className="header global-header">
+    <header
+      className={
+        "header global-header" + (hasIllustratedHeader ? " has-banner" : "")
+      }
+    >
+      {hasIllustratedHeader && (
+        <div className="global-header-banner" aria-hidden="true">
+          <img
+            className="global-header-banner-image"
+            src={"/api/assets/" + settings.logoId}
+            alt=""
+          />
+        </div>
+      )}
+
       <a
-        className={"brand" + (settings.logoId ? " brand-illustrated" : "")}
+        className={"brand" + (hasIllustratedHeader ? " brand-illustrated" : "")}
         href="/"
         aria-label="ColaBike — главная"
       >
-        {settings.logoId ? (
+        {hasIllustratedHeader ? (
           <img
             className="site-logo"
             src={"/api/assets/" + settings.logoId}
