@@ -1,4 +1,5 @@
 .site-root .global-header {
+  position: relative;
   min-height: 88px;
   height: auto;
   padding: 8px max(24px, calc((100% - var(--showcase-shell-max)) / 2));
@@ -6,6 +7,16 @@
   background: var(--paper);
   border-bottom: 1px solid var(--line);
   font-family: var(--site-font);
+}
+.site-root .global-header-banner {
+  display: none;
+}
+.site-root .global-header-banner-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: left center;
 }
 .site-root .global-header .brand {
   min-width: 0;
@@ -128,21 +139,42 @@
     padding-top: 0;
     padding-bottom: 0;
   }
-  .site-root .global-header .brand-illustrated {
-    width: min(52vw, 1060px);
-    height: 120px;
+  .site-root .global-header.has-banner {
+    min-height: clamp(120px, 8.59375vw, 176px);
+    height: clamp(120px, 8.59375vw, 176px);
+    overflow: visible;
+    background: #f7f7f5;
+  }
+  .site-root .global-header.has-banner .global-header-banner {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    display: block;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  .site-root .global-header.has-banner .brand-illustrated {
+    position: absolute;
+    inset: 0 auto 0 0;
+    z-index: 1;
+    width: 65%;
+    height: 100%;
     min-width: 0;
     overflow: hidden;
-    background: var(--paper);
+    background: transparent;
   }
-  .site-root .global-header .brand-illustrated .site-logo {
+  .site-root .global-header.has-banner .brand-illustrated .site-logo {
     width: 100%;
     height: 100%;
     max-width: none;
+    opacity: 0;
     object-fit: cover;
     object-position: left center;
-    mask-image: linear-gradient(to right, #000 90%, transparent);
-    -webkit-mask-image: linear-gradient(to right, #000 90%, transparent);
+    pointer-events: none;
+  }
+  .site-root .global-header.has-banner .global-nav {
+    position: relative;
+    z-index: 2;
   }
 }
 @media (max-width: 700px) {
