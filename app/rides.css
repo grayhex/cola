@@ -98,6 +98,10 @@
   font-size: 36px;
   margin: 12px 0;
 }
+.ride-page > .quiet {
+  display: inline-flex;
+  margin: 12px 12px 0 0;
+}
 .ride-form {
   max-width: 720px;
   border-block: 1px solid var(--line);

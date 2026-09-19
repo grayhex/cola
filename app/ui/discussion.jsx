@@ -310,7 +310,9 @@ export default function Discussion({ bike, user, entityType = "bike" }) {
         {!data && !error && <p role="status">Загружаем обсуждение…</p>}
         {data && !data.comments.length && (
           <p className="help">
-            Первый вопрос о сборке может стать началом знакомства.
+            {entityType === "ride"
+              ? "Поделитесь впечатлениями о маршруте."
+              : "Первый вопрос о сборке может стать началом знакомства."}
           </p>
         )}
         {data && <PageControls {...data} onPage={setPage} />}

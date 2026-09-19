@@ -11,8 +11,9 @@ export default function RideMap({ geometry, styleUrl }) {
     setReady(false);
     if (!styleUrl || !geometry.length) return;
     import("maplibre-gl")
-      .then(({ default: lib }) => {
+      .then((lib) => {
         if (disposed) return;
+        lib.setWorkerUrl("/maplibre/maplibre-gl-worker.mjs");
         map = new lib.Map({
           container: ref.current,
           style: styleUrl,
@@ -58,7 +59,9 @@ export default function RideMap({ geometry, styleUrl }) {
           ])
             new lib.Marker({ color }).setLngLat(point).addTo(map);
           map.addControl(new lib.NavigationControl());
-          setReady(true);
+          map.once("idle", () => {
+            if (!disposed) setReady(true);
+          });
         });
       })
       .catch(() => {});

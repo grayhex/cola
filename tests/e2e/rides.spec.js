@@ -4,7 +4,7 @@ import { gpx, loop } from "../ride-fixtures.js";
 test("ride upload, SVG, privacy, profile and bike; works without tiles", async ({
   page,
 }, info) => {
-  await page.route("**/test-map-style.json",route=>route.abort());
+  await page.route("**/test-map-style.json", (route) => route.abort());
   const nonce = randomUUID().slice(0, 8),
     base = process.env.TEST_ORIGIN || "http://localhost:3100";
   await page.request.post(base + "/api/auth/register", {
@@ -36,13 +36,11 @@ test("ride upload, SVG, privacy, profile and bike; works without tiles", async (
   await page
     .getByRole("button", { name: "Добавить покатушку", exact: true })
     .click();
-  await page
-    .locator("input[type=file]")
-    .setInputFiles({
-      name: "ride.gpx",
-      mimeType: "application/gpx+xml",
-      buffer: gpx([loop]),
-    });
+  await page.locator("input[type=file]").setInputFiles({
+    name: "ride.gpx",
+    mimeType: "application/gpx+xml",
+    buffer: gpx([loop]),
+  });
   await expect(page.getByLabel("Название", { exact: true })).toBeVisible();
   await page.getByLabel("Название", { exact: true }).fill("Вечерняя покатушка");
   await page.getByLabel("Опубликовать", { exact: true }).check();
@@ -75,13 +73,81 @@ test("ride upload, SVG, privacy, profile and bike; works without tiles", async (
   await expect(page.locator(".ride-list .ride-card")).toHaveCount(1);
 });
 
- test('MapLibre initializes with local style, with no external tiles',async({page,browserName})=>{
- test.skip(browserName!=='chromium','WebGL support differs in headless WebKit; mobile fallback is covered');
- const base=process.env.TEST_ORIGIN||'http://localhost:3100',nonce=randomUUID().slice(0,8);
- await page.route('**/test-map-style.json',route=>route.fulfill({json:{version:8,sources:{},layers:[{id:'background',type:'background',paint:{'background-color':'#eeeeee'}}]}}));
- await page.request.post(base+'/api/auth/register',{headers:{origin:base},data:{name:'Map Test',email:'map-'+nonce+'@example.test',password:'map-test-secret-123'}});
- const bike=await(await page.request.post(base+'/api/bikes',{headers:{origin:base},data:{name:'Map bike',brand:'Giant',model:'Tourer',year:2024,category:'road',description:'',color:'',size:'',weight:null,is_public:true}})).json();
- const preview=await(await page.request.post(base+'/api/rides/preview',{headers:{origin:base},data:gpx([loop])})).json();
- const ride=await(await page.request.post(base+'/api/rides',{headers:{origin:base},data:{previewId:preview.previewId,bikeId:bike.id,title:'Local map',description:'',isPublic:true,privacyEnabled:false,privacyRadiusM:500}})).json();
- await page.goto('/r/'+ride.shareId);await expect(page.locator('.ride-map.ready')).toBeVisible();await expect(page.locator('.maplibregl-canvas')).toBeVisible();
- });
+test("MapLibre initializes with local style, with no external tiles", async ({
+  page,
+  browserName,
+}, info) => {
+  test.skip(
+    browserName !== "chromium",
+    "WebGL support differs in headless WebKit; mobile fallback is covered",
+  );
+  const base = process.env.TEST_ORIGIN || "http://localhost:3100",
+    nonce = randomUUID().slice(0, 8);
+  await page.route("**/test-map-style.json", (route) =>
+    route.fulfill({
+      json: {
+        version: 8,
+        sources: {},
+        layers: [
+          {
+            id: "background",
+            type: "background",
+            paint: { "background-color": "#eeeeee" },
+          },
+        ],
+      },
+    }),
+  );
+  await page.request.post(base + "/api/auth/register", {
+    headers: { origin: base },
+    data: {
+      name: "Map Test",
+      email: "map-" + nonce + "@example.test",
+      password: "map-test-secret-123",
+    },
+  });
+  const bike = await (
+    await page.request.post(base + "/api/bikes", {
+      headers: { origin: base },
+      data: {
+        name: "Map bike",
+        brand: "Giant",
+        model: "Tourer",
+        year: 2024,
+        category: "road",
+        description: "",
+        color: "",
+        size: "",
+        weight: null,
+        is_public: true,
+      },
+    })
+  ).json();
+  const preview = await (
+    await page.request.post(base + "/api/rides/preview", {
+      headers: { origin: base },
+      data: gpx([loop]),
+    })
+  ).json();
+  const ride = await (
+    await page.request.post(base + "/api/rides", {
+      headers: { origin: base },
+      data: {
+        previewId: preview.previewId,
+        bikeId: bike.id,
+        title: "Local map",
+        description: "",
+        isPublic: true,
+        privacyEnabled: false,
+        privacyRadiusM: 500,
+      },
+    })
+  ).json();
+  await page.goto("/r/" + ride.shareId);
+  await expect(page.locator(".ride-map.ready")).toBeVisible({ timeout: 15000 });
+  await expect(page.locator(".maplibregl-canvas")).toBeVisible();
+  await page.screenshot({
+    path: info.outputPath("ride-map.png"),
+    fullPage: true,
+  });
+});
