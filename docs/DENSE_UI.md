@@ -66,3 +66,10 @@ hardware and production artwork remain useful manual acceptance checks.
 5. Inspect profile, subscriptions, notifications, account and discussion.
 6. Try light/dark themes, custom icons/logo, stock photo, photo ratio, no background,
    tiled and cover artwork; check narrow layouts and reduced motion.
+
+## Two-level navigation and About
+
+The global header now has bike/ride disclosures, a direct About link, and separate
+search/notifications/account controls. Mobile moves sections and account into a
+native dialog. See [ABOUT.md](ABOUT.md) for compatibility, settings, keyboard
+behavior and the mandatory major-release content review checklist.

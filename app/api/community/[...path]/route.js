@@ -97,7 +97,14 @@ async function handler(req, { params }) {
       );
     }
     if (p[0] === "feed" && p.length === 1 && m === "GET")
-      return json(await rideFeed(db, user.id, page()));
+      return json(
+        await rideFeed(
+          db,
+          user.id,
+          page(),
+          url.searchParams.get("type") === "rides" ? "rides" : "all",
+        ),
+      );
     if (p[0] === "notifications") {
       if (p.length === 1 && m === "GET")
         return json(await notificationPage(db, user.id, page()));

@@ -1,4 +1,5 @@
 "use client";
+import { NavigationSettings, AboutSettings } from "./navigation-settings.jsx";
 import RideSettings from "./ride-settings.jsx";
 import Gamification from "./gamification.jsx";
 import Reports from "./reports.jsx";
@@ -778,60 +779,7 @@ export default function Admin() {
                           <option value="large">Большие</option>
                         </select>
                       </label>
-                      <div className="nav-order-editor">
-                        {(
-                          draft.navOrder || [
-                            "home",
-                            "profile",
-                            "subscriptions",
-                            "records",
-                            "messages",
-                            "search",
-                            "admin",
-                            "logout",
-                          ]
-                        ).map((id, i, all) => (
-                          <div key={id}>
-                            <span>
-                              {
-                                {
-                                  home: "Витрина",
-                                  profile: "Профиль",
-                                  subscriptions: "Подписки",
-                                  records: "Рекорды",
-                                  messages: "Уведомления",
-                                  search: "Поиск",
-                                  admin: "Админка",
-                                  logout: "Выход",
-                                }[id]
-                              }
-                            </span>
-                            {[-1, 1].map((delta) => (
-                              <button
-                                type="button"
-                                className="quiet"
-                                key={delta}
-                                disabled={
-                                  i + delta < 0 || i + delta >= all.length
-                                }
-                                aria-label={
-                                  (delta < 0 ? "Выше: " : "Ниже: ") + id
-                                }
-                                onClick={() => {
-                                  const order = [...all];
-                                  [order[i], order[i + delta]] = [
-                                    order[i + delta],
-                                    order[i],
-                                  ];
-                                  setDraft((d) => ({ ...d, navOrder: order }));
-                                }}
-                              >
-                                {delta < 0 ? "↑" : "↓"}
-                              </button>
-                            ))}
-                          </div>
-                        ))}
-                      </div>
+                      <NavigationSettings settings={draft} onChange={update} />
                       <p>
                         Прозрачные PNG/WebP подходят лучше всего. Без файла
                         остаётся встроенный Lucide-плейсхолдер.
@@ -839,6 +787,12 @@ export default function Admin() {
                     </div>
                     <div className="asset-picker-grid icon-slots">
                       {assetPicker("navHomeIconId", "Главная", {
+                        previewClassName: "icon",
+                      })}
+                      {assetPicker("navRidesIconId", "Покатушки", {
+                        previewClassName: "icon",
+                      })}
+                      {assetPicker("navAboutIconId", "О проекте", {
                         previewClassName: "icon",
                       })}
                       {assetPicker("navProfileIconId", "Профиль", {
@@ -861,6 +815,12 @@ export default function Admin() {
                       })}
                     </div>
                   </section>
+
+                  <AboutSettings
+                    settings={draft}
+                    onChange={update}
+                    assetPicker={assetPicker}
+                  />
 
                   <section className="graphics-group">
                     <div className="graphics-group-heading">

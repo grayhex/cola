@@ -315,6 +315,11 @@ export default function Account() {
   useEffect(() => {
     const requested = new URLSearchParams(window.location.search).get("tab");
     if (tabs[requested]) setTab(requested);
+    if (
+      requested === "bikes" &&
+      new URLSearchParams(window.location.search).get("action") === "add"
+    )
+      setCreate(true);
     refresh().catch((e) => setError(e.message));
   }, []);
   function navigate(next) {

@@ -117,6 +117,15 @@ test("two riders discuss a bike, receive notifications, reply and discover new p
       visitor.locator(".global-nav .notification-badge"),
     ).toHaveCount(0);
     const second = await bike(page.request, "New publication " + nonce);
+    await visitor
+      .getByRole("button", {
+        name: (await visitor
+          .getByRole("button", { name: "Открыть меню" })
+          .isVisible())
+          ? "Открыть меню"
+          : /Аккаунт —/,
+      })
+      .click();
     await visitor.getByRole("link", { name: "Подписки", exact: true }).click();
     await expect(visitor.locator(".bike-card").first()).toContainText(
       second.name,

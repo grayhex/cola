@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { socialApi, Pagination } from "./social-primitives.jsx";
 import RideCard, { RideRoutePreview, RideMetrics } from "./ride-card.jsx";
 export default function RideAccount({ bikes }) {
@@ -19,6 +19,19 @@ export default function RideAccount({ bikes }) {
       privacyEnabled: false,
       privacyRadiusM: 500,
     });
+  const autoOpened = useRef(false);
+  useEffect(() => {
+    if (autoOpened.current || !config?.enabled || !bikes.length) return;
+    autoOpened.current = true;
+    if (new URLSearchParams(location.search).get("action") === "add") {
+      setForm((f) => ({
+        ...f,
+        bikeId: bikes[0].id,
+        privacyRadiusM: config.defaultRadius,
+      }));
+      setOpen(true);
+    }
+  }, [config, bikes]);
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
   const refresh = () => socialApi("rides?own=1&page=" + page).then(setData);
   useEffect(() => {
