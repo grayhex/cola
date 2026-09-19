@@ -7,7 +7,7 @@ RUN pnpm install --frozen-lockfile
 FROM dependencies AS builder
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN pnpm build
+RUN pnpm build && rm -rf .next/standalone/node_modules
 
 FROM node:22-alpine AS runtime-dependencies
 WORKDIR /app
