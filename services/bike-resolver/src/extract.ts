@@ -282,7 +282,7 @@ function pipeline(doc: SourceDocument, rows?: Rows) {
         children.last().find("input,button,select").length
       )
         return;
-      const label = clean(children.first().text());
+      const label = clean(children.first().text()).replace(/[:：]\s*$/, "");
       if (metadataName.test(label) && !inSection(el)) return;
       if (
         metadataName.test(label) &&

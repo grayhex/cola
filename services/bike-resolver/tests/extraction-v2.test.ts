@@ -73,6 +73,18 @@ it("extracts real Trial-Sport Russian table including separate brakes", () => {
     ]),
   );
 });
+it("does not mix related-product metadata into a primary specification table", () => {
+  const body =
+    "<h2>Specifications</h2><section><table>" +
+    [...pairs, ["Сезон", "2026"]]
+      .map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`)
+      .join("") +
+    "</table><aside><div><span>Сезон:</span><span>2024</span></div></aside></section>";
+  const result = parseDocument(doc(body));
+  expect(result.rawSpecification["Сезон"]).toBe("2026");
+  expect(result.unknownFields).toEqual([]);
+  expect(result.warnings).toEqual([]);
+});
 it("extracts generic Shopify heading/bullet lists without product URL rules", () => {
   const result = parseDocument(
     doc(fixture("twitter"), "https://another-shop.example/products/bike"),
