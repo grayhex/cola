@@ -1,6 +1,12 @@
+import sharp from "sharp";
 import { test, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import { gpx, loop } from "../ride-fixtures.js";
+test.beforeEach(async ({ page }) => {
+  await page.route("https://tile.openstreetmap.org/**", (route) =>
+    route.abort(),
+  );
+});
 test("ride upload, SVG, privacy, profile and bike; works without tiles", async ({
   page,
 }, info) => {
@@ -76,7 +82,7 @@ test("ride upload, SVG, privacy, profile and bike; works without tiles", async (
   await expect(page.locator(".ride-list .ride-card")).toHaveCount(1);
 });
 
-test("MapLibre initializes with local style, with no external tiles", async ({
+test("MapLibre initializes with intercepted OSM tiles, no external traffic", async ({
   page,
   browserName,
 }, info) => {
@@ -146,6 +152,14 @@ test("MapLibre initializes with local style, with no external tiles", async ({
       },
     })
   ).json();
+  const tile = await sharp({
+    create: { width: 256, height: 256, channels: 3, background: "#dae1d4" },
+  })
+    .png()
+    .toBuffer();
+  await page.route("https://tile.openstreetmap.org/**", (route) =>
+    route.fulfill({ contentType: "image/png", body: tile }),
+  );
   await page.goto("/r/" + ride.shareId);
   await expect(page.locator(".ride-map.ready")).toBeVisible({ timeout: 15000 });
   await expect(page.locator(".maplibregl-canvas")).toBeVisible();

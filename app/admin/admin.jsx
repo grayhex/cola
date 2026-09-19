@@ -1,5 +1,6 @@
 "use client";
 import { NavigationSettings, AboutSettings } from "./navigation-settings.jsx";
+import MapSettings from "./map-settings.jsx";
 import RideSettings from "./ride-settings.jsx";
 import Gamification from "./gamification.jsx";
 import Reports from "./reports.jsx";
@@ -11,6 +12,7 @@ import AssetPicker from "./asset-picker.jsx";
 import GlobalHeader from "../ui/global-header.jsx";
 import { useEffect, useState, useRef } from "react";
 import {
+  Trophy,
   ArrowLeft,
   Check,
   Plus,
@@ -170,6 +172,8 @@ const sections = [
   ["gamification", "Награды и рекорды", Settings2],
   ["rides", "Покатушки", Settings2],
   ["resolver", "Bike Resolver", Settings2],
+  ["map", "Карта", Settings2],
+  ["about", "О проекте", BookOpen],
   ["design", "Оформление", Palette],
   ["blocks", "Блоки карточки", Settings2],
   ["groups", "Группы деталей", BookOpen],
@@ -179,6 +183,38 @@ const sections = [
   ["reports", "Жалобы", ShieldCheck],
   ["media", "Медиа", Image],
   ["audit", "Журнал", History],
+];
+const adminGroups = [
+  {
+    id: "system",
+    name: "Система",
+    icon: Settings2,
+    sections: ["overview", "resolver", "map", "rides", "audit"],
+  },
+  {
+    id: "design",
+    name: "Дизайн",
+    icon: Palette,
+    sections: ["design", "blocks", "copy", "about", "media"],
+  },
+  {
+    id: "people",
+    name: "Пользователи",
+    icon: Users,
+    sections: ["users", "reports"],
+  },
+  {
+    id: "mechanics",
+    name: "Механики",
+    icon: Trophy,
+    sections: ["scoring", "gamification"],
+  },
+  {
+    id: "catalog",
+    name: "Каталог",
+    icon: BookOpen,
+    sections: ["catalog", "groups"],
+  },
 ];
 export default function Admin() {
   const { settings, catalog, setSite, setPreferences } = useSite();
@@ -375,35 +411,91 @@ export default function Admin() {
         </main>
       </>
     );
+  const group = adminGroups.find((g) => g.sections.includes(tab));
   return (
     <div className="admin-shell">
       <GlobalHeader user={user} />
-      <div className="admin-layout">
+      <div
+        className="admin-group-tabs"
+        role="tablist"
+        aria-label="Группы админки"
+      >
+        {adminGroups.map((g, i) => (
+          <button
+            key={g.id}
+            id={"admin-group-" + g.id}
+            role="tab"
+            aria-selected={g.id === group.id}
+            aria-controls="admin-group-panel"
+            tabIndex={g.id === group.id ? 0 : -1}
+            onClick={() => {
+              setTab(g.sections[0]);
+              setError("");
+              setNotice("");
+            }}
+            onKeyDown={(e) => {
+              if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key))
+                return;
+              e.preventDefault();
+              const n =
+                e.key === "Home"
+                  ? 0
+                  : e.key === "End"
+                    ? adminGroups.length - 1
+                    : (i +
+                        (e.key === "ArrowRight" ? 1 : -1) +
+                        adminGroups.length) %
+                      adminGroups.length;
+              setTab(adminGroups[n].sections[0]);
+              document
+                .getElementById("admin-group-" + adminGroups[n].id)
+                ?.focus();
+            }}
+          >
+            <g.icon size={17} />
+            {g.name}
+          </button>
+        ))}
+      </div>
+      <div
+        className="admin-layout"
+        id="admin-group-panel"
+        role="tabpanel"
+        aria-labelledby={"admin-group-" + group.id}
+      >
         <nav className="admin-nav" aria-label="Разделы админки">
-          {sections.map(([id, label, Icon]) => (
-            <button
-              key={id}
-              className={tab === id ? "active" : ""}
-              onClick={() => {
-                setTab(id);
-                setError("");
-                setNotice("");
-              }}
-            >
-              <Icon size={19} />
-              {label}
-              {((["design", "copy", "overview", "blocks", "scoring"].includes(
-                id,
-              ) &&
-                dirtySettings) ||
-                (["catalog", "groups"].includes(id) && dirtyCatalog)) && (
-                <span
-                  className="unsaved-dot"
-                  aria-label="Есть несохранённые изменения"
-                />
-              )}
-            </button>
-          ))}
+          {sections
+            .filter(([id]) => group.sections.includes(id))
+            .map(([id, label, Icon]) => (
+              <button
+                key={id}
+                className={tab === id ? "active" : ""}
+                onClick={() => {
+                  setTab(id);
+                  setError("");
+                  setNotice("");
+                }}
+              >
+                <Icon size={19} />
+                {label}
+                {(([
+                  "design",
+                  "copy",
+                  "overview",
+                  "blocks",
+                  "scoring",
+                  "map",
+                  "about",
+                ].includes(id) &&
+                  dirtySettings) ||
+                  (["catalog", "groups"].includes(id) && dirtyCatalog)) && (
+                  <span
+                    className="unsaved-dot"
+                    aria-label="Есть несохранённые изменения"
+                  />
+                )}
+              </button>
+            ))}
         </nav>
         <main className="admin-content">
           <div className="admin-title">
@@ -439,6 +531,14 @@ export default function Admin() {
           {tab === "resolver" && <ResolverSettings />}
           {tab === "gamification" && <Gamification />}
           {tab === "rides" && <RideSettings />}
+          {tab === "map" && <MapSettings settings={draft} onChange={update} />}
+          {tab === "about" && (
+            <AboutSettings
+              settings={draft}
+              onChange={update}
+              assetPicker={assetPicker}
+            />
+          )}
           {tab === "reports" && (
             <Reports
               onManageUser={(username) => {
@@ -815,12 +915,6 @@ export default function Admin() {
                       })}
                     </div>
                   </section>
-
-                  <AboutSettings
-                    settings={draft}
-                    onChange={update}
-                    assetPicker={assetPicker}
-                  />
 
                   <section className="graphics-group">
                     <div className="graphics-group-heading">
@@ -1215,9 +1309,15 @@ export default function Admin() {
               {!events.length && <p>Действий пока нет.</p>}
             </section>
           )}
-          {["overview", "design", "copy", "catalog", "scoring"].includes(
-            tab,
-          ) && (
+          {[
+            "overview",
+            "design",
+            "copy",
+            "catalog",
+            "scoring",
+            "map",
+            "about",
+          ].includes(tab) && (
             <div className="admin-save">
               <span>
                 {(tab === "catalog" ? dirtyCatalog : dirtySettings)

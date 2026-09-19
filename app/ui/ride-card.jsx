@@ -1,4 +1,8 @@
 "use client";
+import dynamic from "next/dynamic";
+import { useSite } from "./site-provider.jsx";
+import RideBasemap from "./ride-basemap.jsx";
+const RideMap = dynamic(() => import("./ride-map.jsx"), { ssr: false });
 import { routePaths } from "../../lib/ride-geometry.js";
 export function RideRoutePreview({ geometry = [], className = "" }) {
   const paths = routePaths(geometry);
@@ -79,11 +83,16 @@ export function RideMetrics({ metrics: m, compact = false }) {
   );
 }
 export default function RideCard({ ride: r, owner = false, onEdit }) {
+  const { personalSettings: settings } = useSite();
   return (
     <article className="ride-card">
-      <a href={"/r/" + r.shareId + (owner ? "?owner=1" : "")}>
-        <RideRoutePreview geometry={r.geometry} />
-      </a>
+      {settings.rideMapView !== "hidden" &&
+        (settings.map?.provider === "style" &&
+        settings.rideMapView === "map" ? (
+          <RideMap geometry={r.geometry} />
+        ) : (
+          <RideBasemap geometry={r.geometry} />
+        ))}
       <div className="ride-card-body">
         <h3>
           <a href={"/r/" + r.shareId + (owner ? "?owner=1" : "")}>{r.title}</a>

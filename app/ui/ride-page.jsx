@@ -3,9 +3,11 @@ import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { SocialHeader, SocialFooter, socialApi } from "./social-primitives.jsx";
 import { RideMetrics, rideDate } from "./ride-card.jsx";
+import { useSite } from "./site-provider.jsx";
 import Discussion from "./discussion.jsx";
 const RideMap = dynamic(() => import("./ride-map.jsx"), { ssr: false });
 export default function RidePage({ share, styleUrl }) {
+  const { setPreferences } = useSite();
   const [ride, setRide] = useState(null),
     [user, setUser] = useState(null),
     [error, setError] = useState(""),
@@ -25,6 +27,7 @@ export default function RidePage({ share, styleUrl }) {
       .then(([m, d]) => {
         if (active) {
           setUser(m.user);
+          setPreferences(m.user?.preferences || {});
           setRide(d.ride);
         }
       })

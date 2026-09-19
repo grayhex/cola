@@ -428,7 +428,7 @@ export default function Garage({
           </a>
         </Main>
       ) : bike ? (
-        <Main className="detail">
+        <Main className="detail bike-detail">
           <div className="breadcrumbs">
             {!share ? (
               <button
