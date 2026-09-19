@@ -690,3 +690,46 @@ html {
     grid-template-columns: 1fr;
   }
 }
+
+.site-root dialog:has(.bike-wizard) .modal-head {
+  padding-bottom: 8px;
+  margin-bottom: 4px;
+}
+.site-root dialog:has(.bike-wizard) .modal-head h2 {
+  font-size: 20px;
+}
+.site-root .bike-wizard > h3 {
+  font-size: 18px;
+  margin: 8px 0;
+}
+.site-root .bike-wizard .wizard-steps {
+  margin: 4px 0 8px;
+  gap: 4px;
+}
+.site-root .bike-wizard .wizard-steps button {
+  padding: 4px;
+}
+.site-root .bike-wizard .wizard-content h4 {
+  margin: 8px 0;
+  font-size: 14px;
+}
+.site-root .bike-wizard .wizard-content p.help {
+  margin: 6px 0;
+  font-size: 12px;
+}
+.site-root .bike-wizard .wizard-local-photos img {
+  height: 70px;
+}
+.site-root .bike-wizard .resolver-review dl {
+  max-height: none;
+  overflow: visible;
+}
+.site-root .detail .bike-heading h1 {
+  font-size: 24px;
+  line-height: 1.2;
+}
+@media (min-width: 901px) {
+  .site-root .detail {
+    grid-template-columns: minmax(0, min(42%, 420px)) minmax(0, 1fr);
+  }
+}

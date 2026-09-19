@@ -941,8 +941,7 @@ export default function BikeWizard({ onCreated, onBusy }) {
                 </div>
               )}
               <p className="help">
-                Ищем автоматически по модели или найденной странице. Проверьте,
-                что на фото ваш велосипед; выберите до 3 изображений.
+                Выберите до 3 фото вашей модели или загрузите свои.
               </p>
               {photoBusy && <Progress text="Ищем фотографии…" />}
               {photoError && <p role="status">{photoError}</p>}
@@ -1038,6 +1037,7 @@ export default function BikeWizard({ onCreated, onBusy }) {
                       return;
                     }
                     if (!alive.current) return;
+                    setError("");
                     setFiles((a) => [
                       ...a,
                       ...added.map((file) => ({

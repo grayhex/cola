@@ -33,11 +33,11 @@ async function create(request, name, weight) {
   });
   expect(r.status()).toBe(201);
   const id = (await r.json()).id;
-  // Real tiny PNG is decoded by existing safe photo upload.
+  // Real PNG meets the bike-photo minimum and is decoded by safe photo upload.
   const upload = await request.post("/api/bikes/" + id + "/photos", {
     headers: { origin, "Content-Type": "image/png" },
     data: await sharp({
-      create: { width: 16, height: 16, channels: 3, background: "#e7482f" },
+      create: { width: 600, height: 400, channels: 3, background: "#e7482f" },
     })
       .png()
       .toBuffer(),
