@@ -11,3 +11,5 @@ services/bike-resolver/dist/
 .env.production
 playwright-report/
 __pycache__/
+
+/rides/

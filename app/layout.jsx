@@ -1,3 +1,5 @@
+import "maplibre-gl/dist/maplibre-gl.css";
+import "./rides.css";
 import "./globals.css";
 import "./mobile.css";
 import "./social.css";

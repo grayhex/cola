@@ -1,7 +1,16 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, createContext, useContext } from "react";
 import { Avatar, socialApi } from "./social-primitives.jsx";
 import { ReportButton, PageControls } from "./community-controls.jsx";
+const DiscussionKind = createContext("bike");
+const paths = (kind) =>
+  kind === "ride"
+    ? { items: "rides/", comments: "rides/comments/", report: "ride_comment" }
+    : {
+        items: "community/bikes/",
+        comments: "community/comments/",
+        report: "comment",
+      };
 function Editor({ initial = "", label, onSave, onCancel }) {
   const [body, setBody] = useState(initial),
     [busy, setBusy] = useState(false),
@@ -25,7 +34,7 @@ function Editor({ initial = "", label, onSave, onCancel }) {
     >
       <textarea
         aria-label={label}
-        placeholder="О сборке, деталях или впечатлениях от велосипеда…"
+        placeholder="Поделитесь впечатлениями или задайте вопрос…"
         required
         maxLength={1000}
         rows={3}
@@ -58,6 +67,7 @@ function Editor({ initial = "", label, onSave, onCancel }) {
   );
 }
 function Comment({ comment: c, user, bikeId, refresh, reply = false }) {
+  const api = paths(useContext(DiscussionKind));
   const [editing, setEditing] = useState(false),
     [answer, setAnswer] = useState(false),
     [confirm, setConfirm] = useState(false),
@@ -90,7 +100,7 @@ function Comment({ comment: c, user, bikeId, refresh, reply = false }) {
           label="Изменить комментарий"
           onCancel={() => setEditing(false)}
           onSave={async (body) => {
-            await socialApi("community/comments/" + c.id, "PATCH", { body });
+            await socialApi(api.comments + c.id, "PATCH", { body });
             setEditing(false);
             await refresh();
           }}
@@ -115,7 +125,11 @@ function Comment({ comment: c, user, bikeId, refresh, reply = false }) {
               </button>
             )}
             {!c.unavailable && c.author?.id !== user?.id && (
-              <ReportButton user={user} entityType="comment" targetId={c.id} />
+              <ReportButton
+                user={user}
+                entityType={api.report}
+                targetId={c.id}
+              />
             )}
           </div>
         </>
@@ -130,7 +144,7 @@ function Comment({ comment: c, user, bikeId, refresh, reply = false }) {
               setBusy(true);
               setError("");
               try {
-                await socialApi("community/comments/" + c.id, "DELETE");
+                await socialApi(api.comments + c.id, "DELETE");
                 setConfirm(false);
                 await refresh();
               } catch (e) {
@@ -152,7 +166,7 @@ function Comment({ comment: c, user, bikeId, refresh, reply = false }) {
           label="Ваш ответ"
           onCancel={() => setAnswer(false)}
           onSave={async (body) => {
-            await socialApi("community/bikes/" + bikeId + "/comments", "POST", {
+            await socialApi(api.items + bikeId + "/comments", "POST", {
               body,
               parentId: c.id,
             });
@@ -170,6 +184,7 @@ function Comment({ comment: c, user, bikeId, refresh, reply = false }) {
   );
 }
 function Thread({ root, user, bikeId, refresh }) {
+  const api = paths(useContext(DiscussionKind));
   const [page, setPage] = useState(1),
     [expanded, setExpanded] = useState(false),
     [data, setData] = useState(null),
@@ -178,12 +193,7 @@ function Thread({ root, user, bikeId, refresh }) {
     if (!expanded) return;
     let alive = true;
     socialApi(
-      "community/bikes/" +
-        bikeId +
-        "/comments/" +
-        root.id +
-        "/replies?page=" +
-        page,
+      api.items + bikeId + "/comments/" + root.id + "/replies?page=" + page,
     )
       .then((d) => {
         if (alive) setData(d);
@@ -223,7 +233,8 @@ function Thread({ root, user, bikeId, refresh }) {
     </div>
   );
 }
-export default function Discussion({ bike, user }) {
+export default function Discussion({ bike, user, entityType = "bike" }) {
+  const api = paths(entityType);
   const [data, setData] = useState(null),
     [page, setPage] = useState(1),
     [focus, setFocus] = useState(null),
@@ -235,7 +246,7 @@ export default function Discussion({ bike, user }) {
   }, []);
   async function refresh() {
     const d = await socialApi(
-      "community/bikes/" +
+      api.items +
         bike.id +
         "/comments?page=" +
         page +
@@ -252,67 +263,75 @@ export default function Discussion({ bike, user }) {
       document.getElementById("discussion")?.scrollIntoView({ block: "start" });
   }, [focus, !!data]);
   return (
-    <section className="discussion" id="discussion">
-      <div className="section-heading">
-        <div>
-          <h2>Обсуждение сборки</h2>
-          <p className="help">Детали, идеи и опыт владельцев.</p>
+    <DiscussionKind.Provider value={entityType}>
+      <section className="discussion" id="discussion">
+        <div className="section-heading">
+          <div>
+            <h2>
+              {entityType === "ride"
+                ? "Обсуждение покатушки"
+                : "Обсуждение сборки"}
+            </h2>
+            <p className="help">Детали, идеи и опыт владельцев.</p>
+          </div>
+          {bike.author?.id !== user?.id && (
+            <ReportButton
+              entityType={entityType}
+              targetId={bike.id}
+              user={user}
+            />
+          )}
         </div>
-        {bike.author?.id !== user?.id && (
-          <ReportButton entityType="bike" targetId={bike.id} user={user} />
+        {focus && (
+          <button
+            className="quiet"
+            onClick={() => {
+              setFocus(null);
+              setPage(1);
+            }}
+          >
+            Все комментарии
+          </button>
         )}
-      </div>
-      {focus && (
-        <button
-          className="quiet"
-          onClick={() => {
-            setFocus(null);
-            setPage(1);
-          }}
-        >
-          Все комментарии
-        </button>
-      )}
-      {error && (
-        <p role="alert" className="error">
-          {error}
-        </p>
-      )}
-      {data?.comments.map((c) => (
-        <Thread
-          key={c.id}
-          root={c}
-          user={user}
-          bikeId={bike.id}
-          refresh={refresh}
-        />
-      ))}
-      {!data && !error && <p role="status">Загружаем обсуждение…</p>}
-      {data && !data.comments.length && (
-        <p className="help">
-          Первый вопрос о сборке может стать началом знакомства.
-        </p>
-      )}
-      {data && <PageControls {...data} onPage={setPage} />}
-      {user ? (
-        <Editor
-          label="Ваш комментарий"
-          onSave={async (body) => {
-            await socialApi(
-              "community/bikes/" + bike.id + "/comments",
-              "POST",
-              { body },
-            );
-            setFocus(null);
-            setPage(1);
-            await refresh();
-          }}
-        />
-      ) : (
-        <a className="button secondary small" href="/account">
-          Войти, чтобы обсудить велосипед
-        </a>
-      )}
-    </section>
+        {error && (
+          <p role="alert" className="error">
+            {error}
+          </p>
+        )}
+        {data?.comments.map((c) => (
+          <Thread
+            key={c.id}
+            root={c}
+            user={user}
+            bikeId={bike.id}
+            refresh={refresh}
+          />
+        ))}
+        {!data && !error && <p role="status">Загружаем обсуждение…</p>}
+        {data && !data.comments.length && (
+          <p className="help">
+            Первый вопрос о сборке может стать началом знакомства.
+          </p>
+        )}
+        {data && <PageControls {...data} onPage={setPage} />}
+        {user ? (
+          <Editor
+            label="Ваш комментарий"
+            onSave={async (body) => {
+              await socialApi(api.items + bike.id + "/comments", "POST", {
+                body,
+              });
+              setFocus(null);
+              setPage(1);
+              await refresh();
+            }}
+          />
+        ) : (
+          <a className="button secondary small" href="/account">
+            Войти, чтобы обсудить велосипед
+          </a>
+        )}
+      </section>
+    </DiscussionKind.Provider>
   );
 }

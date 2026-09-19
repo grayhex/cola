@@ -1,4 +1,5 @@
 "use client";
+import RideSettings from "./ride-settings.jsx";
 import Gamification from "./gamification.jsx";
 import Reports from "./reports.jsx";
 import ScoringSettings from "./scoring-settings.jsx";
@@ -166,6 +167,7 @@ const sections = [
   ["overview", "Обзор", Settings2],
   ["scoring", "Оценка велосипедов", Settings2],
   ["gamification", "Награды и рекорды", Settings2],
+  ["rides", "Покатушки", Settings2],
   ["resolver", "Bike Resolver", Settings2],
   ["design", "Оформление", Palette],
   ["blocks", "Блоки карточки", Settings2],
@@ -435,6 +437,7 @@ export default function Admin() {
           )}
           {tab === "resolver" && <ResolverSettings />}
           {tab === "gamification" && <Gamification />}
+          {tab === "rides" && <RideSettings />}
           {tab === "reports" && (
             <Reports
               onManageUser={(username) => {

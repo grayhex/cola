@@ -29,11 +29,12 @@ def valid_archive(file):
             if len(p.parts)>1: raise RuntimeError('Unexpected nested photo path')
 def validate(folder):
     m=json.loads((folder/'manifest.json').read_text())
-    if m.get('format')!='colabike-backup-v1': raise RuntimeError('Unknown backup format')
-    for name in ['database.dump','photos.tar.gz']:
+    if m.get('format') not in ('colabike-backup-v1','colabike-backup-v2'): raise RuntimeError('Unknown backup format')
+    for name in ['database.dump','photos.tar.gz'] + (['rides.tar.gz'] if m['format']=='colabike-backup-v2' else []):
         file=folder/name
         if file.is_symlink() or sha(file)!=m['sha256'][name]: raise RuntimeError('Backup checksum mismatch: '+name)
     valid_archive(folder/'photos.tar.gz')
+    if m['format']=='colabike-backup-v2': valid_archive(folder/'rides.tar.gz')
     return m
 def backup(dest,keep):
     dest.mkdir(parents=True,exist_ok=True)
@@ -50,7 +51,9 @@ def backup(dest,keep):
             compose('exec','-T','db','pg_dump','-U','colabike','-d','colabike','-Fc',stdout=file)
         with open(temporary/'photos.tar.gz','wb') as file:
             run(['docker','run','--rm','--user','0','--volumes-from',container+':ro','--entrypoint','tar',image(container),'-C','/app/uploads','-czf','-','.'],stdout=file)
-        manifest={'format':'colabike-backup-v1','createdAt':stamp,'appImage':image(container),'appImageId':output(['docker','inspect','--format','{{.Image}}',container]),'sha256':{n:sha(temporary/n) for n in ['database.dump','photos.tar.gz']}}
+        with open(temporary/'rides.tar.gz','wb') as file:
+            run(['docker','run','--rm','--user','0','--volumes-from',container+':ro','--entrypoint','tar',image(container),'-C','/app/rides','-czf','-','.'],stdout=file)
+        manifest={'format':'colabike-backup-v2','createdAt':stamp,'appImage':image(container),'appImageId':output(['docker','inspect','--format','{{.Image}}',container]),'sha256':{n:sha(temporary/n) for n in ['database.dump','photos.tar.gz','rides.tar.gz']}}
         (temporary/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
         validate(temporary)
         temporary.rename(final)
@@ -69,7 +72,7 @@ def backup(dest,keep):
     print(str(final))
 def restore(folder,yes):
     if not yes: raise RuntimeError('Restore requires --yes into an EMPTY Compose environment')
-    validate(folder)  # Verify every byte before touching the destination.
+    manifest=validate(folder)  # Verify every byte before touching the destination.
     compose('stop','app','bike-resolver')
     compose('up','-d','--wait','db')
     count=output(COMPOSE+['exec','-T','db','psql','-U','colabike','-d','colabike','-Atc',"SELECT count(*) FROM pg_tables WHERE schemaname IN ('public','bike_resolver')"])
@@ -78,11 +81,16 @@ def restore(folder,yes):
     container=app_id()
     names=output(['docker','run','--rm','--volumes-from',container+':ro','--entrypoint','ls',image(container),'-A','/app/uploads'])
     if names: raise RuntimeError('Destination photos volume is not empty; restore refused')
+    ride_names=output(['docker','run','--rm','--volumes-from',container+':ro','--entrypoint','ls',image(container),'-A','/app/rides'])
+    if ride_names: raise RuntimeError('Destination rides volume is not empty; restore refused')
     with open(folder/'database.dump','rb') as file:
         compose('exec','-T','db','pg_restore','-U','colabike','-d','colabike','--no-owner','--exit-on-error','--single-transaction',stdin=file)
     with open(folder/'photos.tar.gz','rb') as file:
         run(['docker','run','--rm','-i','--user','0','--volumes-from',container,'--entrypoint','tar',image(container),'-C','/app/uploads','-xzf','-'],stdin=file)
-    print('Restored DB and photos. Services remain stopped; run compose up -d --wait and smoke checks.')
+    if manifest['format']=='colabike-backup-v2':
+        with open(folder/'rides.tar.gz','rb') as file:
+            run(['docker','run','--rm','-i','--user','0','--volumes-from',container,'--entrypoint','tar',image(container),'-C','/app/rides','-xzf','-'],stdin=file)
+    print('Restored DB, rides and photos. Services remain stopped; run compose up -d --wait and smoke checks.')
 if __name__=='__main__':
     parser=argparse.ArgumentParser()
     parser.add_argument('action',choices=['backup','restore','verify'])

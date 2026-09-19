@@ -820,3 +820,12 @@ PostgreSQL/PGlite: 500 владельцев, 2 000 байков, 42 000 комп
 Архитектура, ограничения и ручной чек-лист: [docs/DENSE_UI.md](docs/DENSE_UI.md).
 
 The bike creation wizard now has explicit source fallback, identity confirmation, seven quick component starters, compact metadata/photo review and account-only creation. [Resolver and wizard changes, settings and acceptance checks](docs/RESOLVER_WIZARD_REFINEMENT.md).
+
+### Покатушки из GPX
+
+Кабинет → **Покатушки**: загрузите GPX, проверьте метрики, выберите свой велосипед
+и сохраните приватно или опубликуйте. Начало и конец можно скрыть в радиусе
+300/500/1000 м. Покатушки появляются в профиле, на странице велосипеда и в ленте
+подписок; доступны лайки, обсуждения и уведомления. Без настроенных карт маршрут
+остаётся виден как SVG. См. [RIDES.md](docs/RIDES.md) и инструкции резервирования
+отдельного GPX volume в [OPERATIONS.md](docs/OPERATIONS.md).
