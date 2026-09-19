@@ -50,6 +50,31 @@ test("XML validation, entities, coordinates, nesting, point/body limits and rout
   );
   assert.equal(parseGpx(route).geometry.length, 1);
 });
+test("GPS discontinuity preserves a two-point leg for timed and untimed tracks", () => {
+  const legs = [
+    [
+      [0, 0, 0],
+      [0.001, 0, 30],
+      [1, 0, 60],
+      [1.001, 0, 90],
+    ],
+  ];
+  for (const time of [true, false]) {
+    const parsed = parseGpx(gpx(legs, { time }));
+    assert.deepEqual(parsed.geometry, [
+      [
+        [0, 0],
+        [0.001, 0],
+      ],
+      [
+        [1, 0],
+        [1.001, 0],
+      ],
+    ]);
+    assert.ok(Math.abs(parsed.metrics.distanceM - 222) < 2);
+    assert.equal(parsed.metrics.movingTimeS, time ? 60 : null);
+  }
+});
 test("duplicates, backwards timestamps, GPS spikes and elevation noise are safe", () => {
   const p = parseGpx(
     gpx([
