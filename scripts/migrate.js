@@ -2,6 +2,7 @@ import { logError } from "../lib/observability.js";
 import pg from "pg";
 import { readFile } from "node:fs/promises";
 import { defaultSettings, defaultCatalog } from "../lib/site-defaults.js";
+import { migrateHagsyDemo, demoVersion } from "../db/013_hagsy_demo.js";
 const client = new pg.Client({ connectionString: process.env.DATABASE_URL });
 try {
   await client.connect();
@@ -49,7 +50,10 @@ try {
     "INSERT INTO site_catalog(id,value) VALUES(1,$1) ON CONFLICT(id) DO NOTHING",
     [JSON.stringify(defaultCatalog)],
   );
+  const demo = await migrateHagsyDemo(client);
   await client.query("COMMIT");
+  if (demo)
+    console.log(`Applied ${demoVersion}: /u/hagsy_test /r/${demo.shareId}`);
 } catch (error) {
   await client.query("ROLLBACK").catch(() => {});
   logError("migration_failed", error);
