@@ -15,9 +15,4 @@ export class SpecializedAdapter extends CatalogueAdapter {
   protected seeds() {
     return [this.origin + "/us/en/sitemap.xml"];
   }
-  protected rows = {
-    row: '[id="technical-specifications"] [class*="SpecContainer_componentContainer"]',
-    label: "p:first-child",
-    value: "p:nth-child(2)",
-  };
 }

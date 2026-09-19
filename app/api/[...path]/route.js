@@ -1,4 +1,5 @@
 import { traced, logError } from "../../../lib/observability.js";
+import { resolverProxy } from "../../../lib/resolver-proxy.js";
 import { allowAuth } from "../../../lib/auth-limits.js";
 import { limits, QuotaError } from "../../../lib/limits.js";
 import { savePhotos } from "../../../lib/photo-storage.js";
@@ -293,6 +294,11 @@ async function handler(req, { params }) {
       } catch {
         return json({ brands: [], autoResolve: false });
       }
+    }
+    if (p.length === 2 && p[1] === "resolve-stream" && method === "POST") {
+      if (!(await rateLimit("resolver:" + user.id, 30)))
+        return fail("Слишком много запросов поиска", 429);
+      return resolverProxy(req, resolverQuery.parse(await body(req)), user.id);
     }
     if (p.length === 2 && p[1] === "resolve" && method === "POST") {
       if (!(await rateLimit("resolver:" + user.id, 30)))

@@ -1,3 +1,7 @@
+import { PassThrough } from "node:stream";
+import { SourcePlanner, Diagnostics, type SourceProvider } from "./planner.js";
+import { withResolution, trace, EXTRACTOR_VERSION } from "./context.js";
+import type { ResolveResult } from "./domain.js";
 import { timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 import pino from "pino";
@@ -40,6 +44,122 @@ export function buildApp(
     resolver.adapters,
     store,
   );
+  const planner = new SourcePlanner(),
+    diagnostics = new Diagnostics();
+  const combined = requestSchema.extend({
+    sourceUrl: z.string().url().max(2048).optional(),
+  });
+  async function execute(
+    input: z.infer<typeof combined>,
+    id: string,
+    manualOnly = false,
+  ): Promise<ResolveResult> {
+    trace("resolve_started");
+    const { sourceUrl, ...request } = input;
+    const { candidateId, ...identity } = request;
+    const query = querySchema.parse(identity);
+    const adapter = resolver.adapters.find((a) =>
+      [a.brand, ...a.aliases].some(
+        (b) => normalize(b) === normalize(query.brand),
+      ),
+    );
+    const providers: SourceProvider[] = [];
+    if (store.value.enabled) {
+      if (
+        !(manualOnly && sourceUrl) &&
+        (!adapter || store.value.adapters[adapter.id])
+      )
+        providers.push({
+          id: adapter?.id || "generic",
+          kind: "manufacturer",
+          resolve: () => resolver.resolve(request, id),
+        });
+      // A supplied fallback is tried after official discovery; explicit URL actions skip discovery.
+      if (sourceUrl)
+        providers.push({
+          id: "manual-url",
+          kind: "manual",
+          resolve: () =>
+            manual.resolve(query, sourceUrl) as Promise<ResolveResult>,
+        });
+    }
+    const result = await planner.resolve(
+      query,
+      providers.map((provider) => ({
+        ...provider,
+        resolve: async () => {
+          const start = Date.now();
+          const value = await provider.resolve();
+          diagnostics.record(provider.id, value, Date.now() - start);
+          return value;
+        },
+      })),
+    );
+    trace(
+      result.status === "resolved"
+        ? result.quality?.level === "partial"
+          ? "partial"
+          : "resolved"
+        : "failed",
+    );
+    trace("completed");
+    return result;
+  }
+  app.get("/internal/diagnostics", async () => ({
+    extractorVersion: EXTRACTOR_VERSION,
+    since: "process-start",
+    sources: diagnostics.snapshot(),
+  }));
+  app.post("/v1/resolve/stream", async (req, reply) => {
+    const input = combined.safeParse(req.body);
+    if (!input.success) return reply.code(400).send({ error: "invalid_input" });
+    const controller = new AbortController(),
+      signal = AbortSignal.any([controller.signal, AbortSignal.timeout(90000)]);
+    const output = new PassThrough({ highWaterMark: 65536 });
+    reply.raw.on("close", () => {
+      if (!reply.raw.writableEnded) controller.abort();
+    });
+    req.raw.on("aborted", () => controller.abort());
+    reply
+      .header("Content-Type", "application/x-ndjson; charset=utf-8")
+      .header("Cache-Control", "no-store")
+      .header("X-Accel-Buffering", "no");
+    void withResolution(
+      signal,
+      (event) => {
+        if (!output.destroyed) output.write(JSON.stringify(event) + "\n");
+      },
+      () => execute(input.data, req.id, true),
+    )
+      .then((result) => {
+        if (!signal.aborted && !output.destroyed)
+          output.end(JSON.stringify({ type: "result", result }) + "\n");
+        else output.destroy();
+      })
+      .catch(() => {
+        if (!output.destroyed && !controller.signal.aborted)
+          output.end(
+            JSON.stringify({
+              type: "result",
+              result: {
+                status: "upstream_unavailable",
+                query: {
+                  brand: input.data.brand,
+                  model: input.data.model,
+                  trim: input.data.trim,
+                  year: input.data.year,
+                },
+                brand: input.data.brand,
+                cached: false,
+                retryable: true,
+                reason: signal.aborted ? "timeout" : "connection_failed",
+              },
+            }) + "\n",
+          );
+        else output.destroy();
+      });
+    return reply.send(output);
+  });
   app.get("/version", async () => buildVersion);
   app.post("/v1/resolve-url", async (req, reply) => {
     const data = querySchema
@@ -47,7 +167,9 @@ export function buildApp(
       .safeParse(req.body);
     if (!data.success) return reply.code(400).send({ error: "invalid_input" });
     const { sourceUrl, ...query } = data.data;
-    return manual.resolve(query, sourceUrl);
+    return withResolution(AbortSignal.timeout(90000), undefined, () =>
+      execute({ ...query, sourceUrl }, req.id, true),
+    );
   });
   app.post("/v1/photos/search", async (req, reply) => {
     const data = querySchema
@@ -120,7 +242,7 @@ export function buildApp(
     return { ok: true };
   });
   app.post("/v1/resolve", async (req, reply) => {
-    const input = requestSchema.safeParse(req.body);
+    const input = combined.safeParse(req.body);
     if (!input.success)
       return reply
         .code(400)
@@ -130,7 +252,10 @@ export function buildApp(
         (b) => normalize(b) === normalize(input.data.brand),
       ),
     );
-    if (!store.value.enabled || (a && !store.value.adapters[a.id]))
+    if (
+      !store.value.enabled ||
+      (a && !store.value.adapters[a.id] && !input.data.sourceUrl)
+    )
       return {
         status: "unsupported_brand",
         query: input.data,
@@ -138,7 +263,9 @@ export function buildApp(
         cached: false,
         retryable: false,
       };
-    return resolver.resolve(input.data, req.id);
+    return withResolution(AbortSignal.timeout(90000), undefined, () =>
+      execute(input.data, req.id),
+    );
   });
   return app;
 }

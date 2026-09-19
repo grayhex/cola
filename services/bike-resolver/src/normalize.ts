@@ -98,6 +98,36 @@ for (const [type, values] of Object.entries(russian))
     ...values,
   ];
 const labels = new Map<string, ComponentType>();
+const variants: Partial<Record<ComponentType, string[]>> = {
+  hub: ["hubs", "втулки"],
+  spokes: ["spoke", "спицы"],
+  inner_tube: ["inner tubes", "камеры"],
+  shifter: [
+    "shift lever",
+    "handle lever",
+    "манетка",
+    "переключатели скоростей",
+  ],
+  crankset: ["cranksets", "система шатунов"],
+  cassette: ["cassettes"],
+  rear_shock: ["задний амортизатор", "амортизатор"],
+  front_brake: ["brake front", "передний тормоз", "тормоз передний"],
+  rear_brake: ["brake rear", "задний тормоз", "тормоз задний"],
+  brake: ["тормоз", "тормоза дисковые", "тормоза ободные"],
+  brake_lever: ["тормозные ручки", "ручки тормоза"],
+  front_tire: ["tyre front", "tire front", "передняя покрышка"],
+  rear_tire: ["tyre rear", "tire rear", "задняя покрышка"],
+  seat_clamp: ["seat clamp", "подседельный зажим"],
+  handlebar: ["handlebar sets"],
+  tire: ["покрышка"],
+  seatpost: ["подседельный", "подседельный штырь с амортизатором"],
+  wheel: ["колеса", "колёса", "комплект колес"],
+};
+for (const [type, values] of Object.entries(variants))
+  aliases[type as ComponentType] = [
+    ...(aliases[type as ComponentType] || []),
+    ...values,
+  ];
 for (const type of componentTypes) {
   labels.set(normalize(type), type);
   for (const a of aliases[type] || []) labels.set(normalize(a), type);

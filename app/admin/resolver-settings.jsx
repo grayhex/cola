@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Versions from "../ui/versions.jsx";
+import ResolverInspector from "./resolver-inspector.jsx";
 async function request(method = "GET", body, path = "") {
   const r = await fetch("/api/admin/resolver" + path, {
     method,
@@ -59,6 +60,7 @@ export default function ResolverSettings() {
     <section className="admin-panel">
       <h2>Bike Resolver</h2>
       <Versions />
+      <ResolverInspector />
       <p className="help">
         Поиск заводской комплектации на официальных сайтах. Изменения
         применяются без перезапуска. Текущие компоненты пользователей не

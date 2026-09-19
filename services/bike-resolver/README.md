@@ -1,12 +1,14 @@
-# Bike Resolver
+# Bike Resolver 2.0
 
 Optional deterministic factory-spec enrichment service for ColaBike. Node 22+, TypeScript, Fastify, Zod, Cheerio, PostgreSQL. No LLM or browser dependency.
+
+Version 2 adds multi-strategy extraction, useful partial results, per-component provenance, charset decoding, cancellable NDJSON progress and an admin inspector. See [Resolver 2 architecture and extension guide](RESOLVER_2.md) and [live acceptance investigation](ACCEPTANCE_2.md). Existing manufacturer adapters remain discovery providers; arbitrary public product pages can be supplied explicitly, subject to the existing SSRF checks and admin blocklist.
 
 ## Architecture and integration
 
 Browser → authenticated ColaBike API → single `lib/bike-resolver-client.js` transport → internal resolver → manufacturer adapter → normalized specification + original raw values. Resolver owns `bike_resolver` schema and migrations on the existing PostgreSQL server. It never reads app tables. The app owns `bikes.factory_spec` and current components separately.
 
-New bike: enter `Giant Contend AR 1 2024` in its name and leave the field, or fill brand/model/trim/year separately. After 1.4 seconds without changes, an enabled adapter runs automatically. The animated indeterminate progress bar reports ongoing parsing, with elapsed time and a manual continuation option. Only a resolved identity is queued for import. Saving persists the bike first, then imports its specification through the server. Failure leaves a usable manually editable bike and a warning.
+New bike: the four-step wizard collects identity, resolves specification, edits components, then adds personal details/photos. Step 2 streams actual events and counts with no fake percentage. Partial extraction remains editable; unknown fields and suggested metadata can be reviewed. The authenticated gateway issues an owner-bound preview, and wizard creation saves the bike and edited draft atomically. Failure leaves manual creation available.
 
 Existing bike: editing does not automatically import factory parts. Use Find and Import explicitly. Import may seed an **empty** current configuration; any existing components are preserved. Repeated imports are idempotent and locked against concurrent component insertion. Changed bike identity invalidates the saved factory spec. Raw data and source provenance remain in `factory_spec` even when display names are shortened to existing component field limits.
 
@@ -23,18 +25,18 @@ Results distinguish `resolved`, `ambiguous`, `not_found`, `unsupported_brand`, `
 
 ## Brand status
 
-| Adapter | Default | Evidence / limitation |
-| --- | --- | --- |
-| Specialized | enabled | Real Diverge Comp Carbon 2023 reduced HTML fixture; official sitemap discovery |
-| Canyon | enabled | Real Grail CF SLX 8 AXS 2026 reduced HTML fixture; official locale sitemap discovery |
-| Giant | enabled | Contend AR 1 2024; deterministic official URL discovery, parser/API/cache integration tested |
-| CUBE | disabled | Old archive redirects to portal without accessible catalogue/specification |
-| Trek | disabled | Captured page has no parseable specification |
-| Scott | disabled | Captured page has no parseable specification |
-| Orbea | disabled | Site access challenge; no bypass |
-| Cannondale | disabled | Topstone 1 specs parse, but model year unconfirmed |
-| Merida | disabled | Silex 400 specs parse, but model year unconfirmed |
-| BMC | disabled | Specs parse, but model year unconfirmed |
+| Adapter     | Default  | Evidence / limitation                                                                        |
+| ----------- | -------- | -------------------------------------------------------------------------------------------- |
+| Specialized | enabled  | Real Diverge Comp Carbon 2023 reduced HTML fixture; official sitemap discovery               |
+| Canyon      | enabled  | Real Grail CF SLX 8 AXS 2026 reduced HTML fixture; official locale sitemap discovery         |
+| Giant       | enabled  | Contend AR 1 2024; deterministic official URL discovery, parser/API/cache integration tested |
+| CUBE        | disabled | Old archive redirects to portal without accessible catalogue/specification                   |
+| Trek        | disabled | Captured page has no parseable specification                                                 |
+| Scott       | disabled | Captured page has no parseable specification                                                 |
+| Orbea       | disabled | Site access challenge; no bypass                                                             |
+| Cannondale  | disabled | Topstone 1 specs parse, but model year unconfirmed                                           |
+| Merida      | disabled | Silex 400 specs parse, but model year unconfirmed                                            |
+| BMC         | disabled | Specs parse, but model year unconfirmed                                                      |
 
 **CUBE Travel SL 2020 live acceptance is not fulfilled.** The archive-data normalization regression fixture is not evidence of live discovery. Unreliable manufacturers are skipped per the updated scope. Admin may enable them for diagnostics. Fixtures document original URLs and capture metadata. Live availability can differ by date, region and IP; offline fixture tests are not live availability guarantees. Catalogue discovery is bounded and reports unavailable rather than caching a false absence when it cannot finish.
 

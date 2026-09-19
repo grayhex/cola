@@ -9,21 +9,36 @@ export function scoreCandidate(q: BikeQuery, c: BikeCandidate): number {
     (c.year !== null && q.year !== c.year)
   )
     return 0;
-  const strip = (s: string) =>
-    normalize(s)
-      .replace(new RegExp("^" + normalize(q.brand) + "\\s+"), "")
+  const strip = (s: string) => {
+    const normalized = normalize(s),
+      prefix = normalize(q.brand) + " ";
+    return (
+      normalized.startsWith(prefix)
+        ? normalized.slice(prefix.length)
+        : normalized
+    )
       .replace(/\b(?:19|20)\d{2}\b/g, "")
       .replace(/\s+/g, " ")
       .trim();
+  };
   const actual = strip(c.canonicalName),
     model = normalize(q.model),
     wanted = normalize([q.model, q.trim].filter(Boolean).join(" "));
-  if (actual !== model && !actual.startsWith(model + " ")) return 0;
-  if (q.trim && actual !== wanted) return 0;
+  const words = new Set(actual.split(" ")),
+    wantedWords = wanted.split(" ");
+  if (!model.split(" ").every((t) => words.has(t))) return 0;
+  if (
+    q.trim &&
+    (!wantedWords.every((t) => words.has(t)) ||
+      [...words].some((t) => !wantedWords.includes(t)))
+  )
+    return 0;
+  const exact =
+    words.size === new Set(wantedWords).size &&
+    wantedWords.every((t) => words.has(t));
   return (
     Math.round(
-      ((c.year === q.year ? 0.7 : 0.35) + (actual === wanted ? 0.29 : 0.18)) *
-        100,
+      ((c.year === q.year ? 0.7 : 0.35) + (exact ? 0.29 : 0.18)) * 100,
     ) / 100
   );
 }
