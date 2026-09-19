@@ -670,36 +670,38 @@ export default function BikeWizard({ onCreated, onBusy }) {
                     {settings.wizardManualLabel || "Заполнить вручную"}
                   </button>
                 </div>
-                <details
-                  className="wizard-manual"
-                  open={manualMode}
-                  onToggle={(e) => setManualMode(e.currentTarget.open)}
-                >
-                  <summary>Распознать по странице магазина</summary>
-                  <p className="help">
-                    Вставьте ссылку на товар с таблицей характеристик. Если
-                    страница не распознаётся, попробуйте другой магазин. Все
-                    публичные сайты доступны, кроме запрещённых администратором.
-                  </p>
-                  <label className="field">
-                    <span>Страница велосипеда</span>
-                    <input
-                      type="url"
-                      value={url}
-                      maxLength={2048}
-                      onChange={(e) => setUrl(e.target.value)}
-                      placeholder="https://…"
-                    />
-                  </label>
-                  <button
-                    className="button secondary"
-                    type="button"
-                    disabled={!/^https?:\/\//i.test(url)}
-                    onClick={() => resolve(url)}
+                {manualMode && (
+                  <section
+                    className="wizard-manual"
+                    aria-label="Распознавание по ссылке"
                   >
-                    Распознать страницу
-                  </button>
-                </details>
+                    <h4>Комплектация по вашей ссылке</h4>
+                    <p className="help">
+                      Вставьте ссылку на товар с таблицей характеристик. Если
+                      страница не распознаётся, попробуйте другой магазин. Все
+                      публичные сайты доступны, кроме запрещённых
+                      администратором.
+                    </p>
+                    <label className="field">
+                      <span>Страница велосипеда</span>
+                      <input
+                        type="url"
+                        value={url}
+                        maxLength={2048}
+                        onChange={(e) => setUrl(e.target.value)}
+                        placeholder="https://…"
+                      />
+                    </label>
+                    <button
+                      className="button secondary"
+                      type="button"
+                      disabled={!/^https?:\/\//i.test(url)}
+                      onClick={() => resolve(url)}
+                    >
+                      Распознать страницу
+                    </button>
+                  </section>
+                )}
               </>
             )}
           </>
