@@ -45,8 +45,9 @@ test("navigation: real destinations, account, keyboard, configurable About and a
     await expect(
       page.getByRole("heading", { name: "О проекте", exact: true }),
     ).toBeVisible();
-    await expect(page.locator("#history")).toContainText("недоступны");
-    await expect(page.locator(".about-section")).toHaveCount(3);
+    await expect(page.locator("#history")).toHaveCount(0);
+    await expect(page.locator(".about-actions")).toHaveCount(0);
+    await expect(page.locator(".about-section")).toHaveCount(2);
     if (isMobile) {
       await page.getByRole("button", { name: "Открыть меню" }).click();
       const drawer = page.getByRole("dialog", { name: "Меню ColaBike" });
@@ -190,6 +191,7 @@ test("navigation: real destinations, account, keyboard, configurable About and a
       aboutGuideImageId: asset,
     });
     await page.goto("/admin");
+    await page.getByRole("tab", { name: "Дизайн", exact: true }).click();
     await page.getByRole("button", { name: "Оформление", exact: true }).click();
     const navAbout = page
       .locator(".navigation-settings")
@@ -197,6 +199,7 @@ test("navigation: real destinations, account, keyboard, configurable About and a
     await navAbout.getByLabel("Название в меню").fill("Знакомство");
     await navAbout.getByRole("button", { name: "Выше: about" }).click();
     await navAbout.getByRole("button", { name: "Выше: about" }).click();
+    await page.getByRole("button", { name: "О проекте", exact: true }).click();
     const tech = page.getByRole("group", { name: "Под капотом", exact: true });
     await tech.getByLabel("Показывать раздел", { exact: true }).uncheck();
     const guide = page.getByRole("group", {

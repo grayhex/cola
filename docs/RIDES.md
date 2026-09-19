@@ -99,3 +99,26 @@ to the existing `road` key; pass the site's city/touring category if configured.
 The retained source warning explains contradictory retailer brake specifications.
 
 After deployment of the `[hagsy-demo]` fix, the self-hosted runner verifies the public profile, bike and ride through `http://127.0.0.1:3000` and prints their paths. This one-time verification does not run on unrelated future deployments. No domain or incoming access to the LAN is required.
+
+## Map configuration and display
+
+Admin → Система → Карта selects OpenStreetMap (default, no key), a compatible
+HTTPS XYZ raster endpoint, or a MapLibre style. Optional `{key}` is a **public
+browser token**, never a server secret; all map configuration is public. Custom
+provider attribution is plain text. URLs are fetched by the browser, not proxied
+through the application server. Existing MAP_STYLE_URL is used as a legacy
+fallback only when no map settings have been saved. New defaults use OSM.
+
+Compact raster maps use visible SVG image tiles and Mercator route coordinates,
+including on browsers without WebGL. No offscreen or closed-list tile prefetch,
+no bulk/offline download, no cache bypass. Attribution remains visible below the
+map. The site's referrer policy is strict-origin-when-cross-origin so external
+map requests receive the origin, not private page paths or query strings, per
+[OSM tile policy](https://operations.osmfoundation.org/policies/tiles/).
+Interactive detail maps reuse MapLibre; absent/failed tiles retain a route preview.
+The supplied geometry remains the authorized API DTO; separate privacy segments
+are never connected by the basemap rendering code.
+
+Account → Оформление saves auto/cards/list presentation on bike detail, map/route/
+hidden display and optional wheel zoom for interactive maps. These are viewer
+preferences and do not change GPX privacy, geometry or calculated metrics.

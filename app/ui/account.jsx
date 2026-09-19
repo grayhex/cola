@@ -230,6 +230,24 @@ function Appearance({ initial, onSaved }) {
           ],
         ],
         [
+          "rideListMode",
+          "Покатушки на странице велосипеда",
+          [
+            ["auto", "Авто: больше 5 — раскрываемый список"],
+            ["cards", "Карточки"],
+            ["list", "Раскрываемый список"],
+          ],
+        ],
+        [
+          "rideMapView",
+          "Карта покатушки",
+          [
+            ["map", "Карта с подложкой"],
+            ["route", "Только линия маршрута"],
+            ["hidden", "Не показывать карту"],
+          ],
+        ],
+        [
           "font",
           "Шрифт",
           [
@@ -270,6 +288,14 @@ function Appearance({ initial, onSaved }) {
           type="checkbox"
           checked={prefs.showMileage || false}
           onChange={(e) => set("showMileage", e.target.checked)}
+        />
+      </label>
+      <label className="admin-toggle">
+        Масштабировать интерактивную карту колесом
+        <input
+          type="checkbox"
+          checked={prefs.mapScrollZoom || false}
+          onChange={(e) => set("mapScrollZoom", e.target.checked)}
         />
       </label>
       <div className="form-actions">

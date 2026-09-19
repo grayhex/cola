@@ -35,7 +35,7 @@ test("legacy navigation settings retain ordering intent; known destinations resp
 test("admin schema accepts missing legacy configuration but rejects unknown destinations and duplicate IDs", () => {
   const legacy = { ...defaultSettings };
   delete legacy.about;
-  assert.equal(settingsInput.parse(legacy).about.sections.length, 3);
+  assert.equal(settingsInput.parse(legacy).about.sections.length, 2);
   const value = { ...defaultSettings, navigation: sectionDefaults };
   assert.equal(settingsInput.safeParse(value).success, true);
   for (const navigation of [

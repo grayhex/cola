@@ -1,8 +1,10 @@
 "use client";
 import { useEffect, useState } from "react";
 import { socialApi, Pagination } from "./social-primitives.jsx";
-import RideCard from "./ride-card.jsx";
+import RideCard, { rideDate } from "./ride-card.jsx";
+import { useSite } from "./site-provider.jsx";
 export default function RideList({ username, bikeId, latest = false }) {
+  const { personalSettings: settings } = useSite();
   const [data, setData] = useState(null),
     [page, setPage] = useState(1),
     [error, setError] = useState("");
@@ -26,8 +28,12 @@ export default function RideList({ username, bikeId, latest = false }) {
       active = false;
     };
   }, [username, bikeId, page]);
+  const list =
+    latest &&
+    (settings.rideListMode === "list" ||
+      (settings.rideListMode === "auto" && data?.total > 5));
   return (
-    <section className="ride-list">
+    <section className={"ride-list" + (latest ? " bike-rides" : "")}>
       <h2>Покатушки</h2>
       {error && <p role="alert">{error}</p>}
       {data ? (
@@ -39,18 +45,28 @@ export default function RideList({ username, bikeId, latest = false }) {
             })}{" "}
             км
           </p>
-          <div className="ride-grid">
-            {(latest ? data.rides.slice(0, 3) : data.rides).map((r) => (
-              <RideCard key={r.id} ride={r} />
-            ))}
+          <div className={list ? "ride-accordion" : "ride-grid"}>
+            {data.rides.map((r) =>
+              list ? (
+                <details className="ride-list-item" key={r.id}>
+                  <summary>
+                    <strong>{r.title}</strong>
+                    <small>
+                      {rideDate(r.date)} ·{" "}
+                      {(r.metrics.distanceM / 1000).toLocaleString("ru-RU", {
+                        maximumFractionDigits: 1,
+                      })}{" "}
+                      км
+                    </small>
+                  </summary>
+                  <RideCard ride={r} />
+                </details>
+              ) : (
+                <RideCard key={r.id} ride={r} />
+              ),
+            )}
           </div>
-          {latest && data.total > 3 ? (
-            <a href={"/rides?bikeId=" + bikeId}>
-              Все покатушки на этом велосипеде
-            </a>
-          ) : (
-            !latest && <Pagination {...data} onPage={setPage} />
-          )}
+          <Pagination {...data} onPage={setPage} />
         </>
       ) : (
         !error && <p role="status">Загружаем покатушки…</p>

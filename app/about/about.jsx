@@ -38,7 +38,9 @@ export default function About({ user }) {
   const { settings, setPreferences } = useSite(),
     config = settings.about || aboutDefaults;
   useEffect(() => setPreferences(user?.preferences || {}), [user?.id]);
-  const visible = config.sections.filter((s) => s.visible);
+  const visible = config.sections.filter(
+    (s) => s.visible && s.id !== "history",
+  );
   return (
     <>
       <SocialHeader user={user} />
@@ -112,17 +114,6 @@ export default function About({ user }) {
             </section>
           );
         })}
-        <div className="about-actions">
-          <a
-            className="button small"
-            href={user ? "/account?tab=bikes&action=add" : "/account"}
-          >
-            Добавить свой велосипед
-          </a>
-          <a className="quiet" href="/rides">
-            Посмотреть покатушки
-          </a>
-        </div>
       </main>
       <SocialFooter />
     </>

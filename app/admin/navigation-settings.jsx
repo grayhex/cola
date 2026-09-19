@@ -76,71 +76,73 @@ export function AboutSettings({ settings, onChange, assetPicker }) {
       <div className="graphics-group-heading">
         <h3>О проекте — содержание</h3>
         <p>
-          Три раздела страницы /about. Выключение пункта меню не скрывает саму
+          Два раздела страницы /about. Выключение пункта меню не скрывает саму
           страницу. Тексты обновляются вместе с кодом; здесь можно настроить
           заголовки, видимость информации и иллюстрации.
         </p>
       </div>
-      {config.sections.map((section) => (
-        <fieldset className="layout-block-editor" key={section.id}>
-          <legend>
-            {aboutSections.find((s) => s.id === section.id).title}
-          </legend>
-          <label className="field">
-            <span>Заголовок раздела</span>
-            <input
-              maxLength={150}
-              value={section.title}
-              onChange={(e) => set(section.id, "title", e.target.value)}
-            />
-          </label>
-          <label className="admin-toggle">
-            Показывать раздел
-            <input
-              type="checkbox"
-              checked={section.visible}
-              onChange={(e) => set(section.id, "visible", e.target.checked)}
-            />
-          </label>
-          <label className="admin-toggle">
-            Показывать иллюстрацию
-            <input
-              type="checkbox"
-              checked={section.showIllustration}
-              onChange={(e) =>
-                set(section.id, "showIllustration", e.target.checked)
-              }
-            />
-          </label>
-          {aboutSections
-            .find((s) => s.id === section.id)
-            .items.map((item) => (
-              <label className="admin-toggle" key={item.id}>
-                {item.title}
-                <input
-                  type="checkbox"
-                  checked={!config.hiddenItems.includes(item.id)}
-                  onChange={(e) =>
-                    onChange("about", {
-                      ...config,
-                      hiddenItems: e.target.checked
-                        ? config.hiddenItems.filter((id) => id !== item.id)
-                        : [...config.hiddenItems, item.id],
-                    })
-                  }
-                />
-              </label>
-            ))}
-          {assetPicker(
-            {
-              guide: "aboutGuideImageId",
-              technology: "aboutTechnologyImageId",
-              history: "aboutHistoryImageId",
-            }[section.id],
-            "Иллюстрация: " + section.title,
-          )}
-        </fieldset>
-      ))}
+      {config.sections
+        .filter((s) => s.id !== "history")
+        .map((section) => (
+          <fieldset className="layout-block-editor" key={section.id}>
+            <legend>
+              {aboutSections.find((s) => s.id === section.id).title}
+            </legend>
+            <label className="field">
+              <span>Заголовок раздела</span>
+              <input
+                maxLength={150}
+                value={section.title}
+                onChange={(e) => set(section.id, "title", e.target.value)}
+              />
+            </label>
+            <label className="admin-toggle">
+              Показывать раздел
+              <input
+                type="checkbox"
+                checked={section.visible}
+                onChange={(e) => set(section.id, "visible", e.target.checked)}
+              />
+            </label>
+            <label className="admin-toggle">
+              Показывать иллюстрацию
+              <input
+                type="checkbox"
+                checked={section.showIllustration}
+                onChange={(e) =>
+                  set(section.id, "showIllustration", e.target.checked)
+                }
+              />
+            </label>
+            {aboutSections
+              .find((s) => s.id === section.id)
+              .items.map((item) => (
+                <label className="admin-toggle" key={item.id}>
+                  {item.title}
+                  <input
+                    type="checkbox"
+                    checked={!config.hiddenItems.includes(item.id)}
+                    onChange={(e) =>
+                      onChange("about", {
+                        ...config,
+                        hiddenItems: e.target.checked
+                          ? config.hiddenItems.filter((id) => id !== item.id)
+                          : [...config.hiddenItems, item.id],
+                      })
+                    }
+                  />
+                </label>
+              ))}
+            {assetPicker(
+              {
+                guide: "aboutGuideImageId",
+                technology: "aboutTechnologyImageId",
+                history: "aboutHistoryImageId",
+              }[section.id],
+              "Иллюстрация: " + section.title,
+            )}
+          </fieldset>
+        ))}
     </section>
   );
 }
