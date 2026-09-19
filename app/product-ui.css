@@ -1,4 +1,7 @@
 /* Shared product primitives; theme colors and admin accent remain authoritative. */
+html {
+  scrollbar-gutter: stable;
+}
 .site-root {
   --space-1: 4px;
   --space-2: 8px;

@@ -1092,9 +1092,6 @@ dialog::backdrop {
     display: block;
     margin-bottom: 25px;
   }
-  .garage-heading .button {
-    margin-top: 10px;
-  }
   .garage h1 {
     font-size: 42px;
   }

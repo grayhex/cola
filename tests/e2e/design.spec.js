@@ -115,6 +115,11 @@ test("dense visual system: shared cards, filters, search, themes and responsive 
     const panel = page.getByRole("dialog", { name: "Фильтры", exact: true });
     await panel.getByRole("checkbox").nth(0).check();
     await panel.getByRole("checkbox").nth(1).check();
+    expect(
+      await panel
+        .getByRole("button", { name: "Применить" })
+        .evaluate((el) => el.scrollWidth <= el.clientWidth),
+    ).toBe(true);
     await screenshot("filters");
     await panel.getByRole("button", { name: "Применить" }).click();
     await expect(

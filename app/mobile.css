@@ -529,9 +529,6 @@
 .garage-heading p {
   font-size: 15px;
 }
-.garage-heading .button {
-  margin-top: 10px;
-}
 .garage-tools {
   display: flex;
   flex-direction: column;
@@ -1386,12 +1383,6 @@
   .garage-heading .count {
     font-size: 17px;
     margin-left: 8px;
-  }
-  .garage-heading .button {
-    margin: 0;
-    width: 44px;
-    padding: 10px;
-    flex-shrink: 0;
   }
   .add-bike-label {
     position: absolute;
