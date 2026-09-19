@@ -121,11 +121,12 @@ export class ManufacturerHttpClient {
         }
       });
     this.queues.set(host, task);
-    try {
-      return await abortable(task, resolutionContext.getStore()?.signal);
-    } finally {
+    const release = () => {
       if (this.queues.get(host) === task) this.queues.delete(host);
-    }
+    };
+    // A cancelled waiter must not release the host while its predecessor is active.
+    void task.then(release, release);
+    return await abortable(task, resolutionContext.getStore()?.signal);
   }
   private async request(
     input: string,

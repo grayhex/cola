@@ -71,6 +71,9 @@ it("client disconnect aborts server work", async () => {
     await reader.cancel().catch(() => {});
     await vi.waitFor(() => expect(cancelled).toBe(true));
   } finally {
+    // Node 22's fetch pool may open an idle replacement socket after abort.
+    // Assert server cancellation first, then close only this test server's sockets.
+    app.server.closeAllConnections();
     await app.close();
   }
 });

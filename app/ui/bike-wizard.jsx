@@ -561,10 +561,14 @@ export default function BikeWizard({ onCreated, onBusy }) {
                       <small>
                         <a
                           href={result.source.url}
+                          aria-label="Источник комплектации"
                           target="_blank"
                           rel="noreferrer"
                         >
-                          Источник комплектации
+                          {result.source.manufacturer} ·{" "}
+                          {result.source.adapter === "manual-url"
+                            ? "страница по ссылке"
+                            : "официальный источник"}
                         </a>
                       </small>
                     </span>

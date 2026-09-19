@@ -142,6 +142,33 @@ it("per-host queue prevents overlapping requests", async () => {
   ]);
   expect(max).toBe(1);
 });
+it("cancelling a queued request preserves the active host queue", async () => {
+  let release!: () => void;
+  const gate = new Promise<void>((r) => {
+    release = r;
+  });
+  vi.mocked(fetch)
+    .mockImplementationOnce(async () => {
+      await gate;
+      return new Response("first") as any;
+    })
+    .mockResolvedValue(new Response("third") as any);
+  const http = client(),
+    first = http.get("https://cube.eu/first", ["cube.eu"]);
+  await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
+  const cancel = new AbortController();
+  const second = withResolution(cancel.signal, undefined, () =>
+    http.get("https://cube.eu/second", ["cube.eu"]),
+  );
+  cancel.abort();
+  await expect(second).rejects.toBeDefined();
+  const third = http.get("https://cube.eu/third", ["cube.eu"]);
+  await new Promise((r) => setTimeout(r, 20));
+  expect(fetch).toHaveBeenCalledTimes(1);
+  release();
+  await Promise.all([first, third]);
+  expect(fetch).toHaveBeenCalledTimes(2);
+});
 
 it("manual pages allow unlisted public shops and cross-domain redirects", async () => {
   vi.mocked(fetch)
