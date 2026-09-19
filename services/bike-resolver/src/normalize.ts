@@ -79,7 +79,7 @@ const russian: Partial<Record<ComponentType, string[]>> = {
   tire: ["покрышки", "шины"],
   rim: ["обода"],
   front_hub: ["передняя втулка"],
-  rear_hub: ["задняя втулка"],
+  rear_hub: ["задняя втулка", "втулка задняя"],
   handlebar: ["руль"],
   stem: ["вынос"],
   seatpost: ["подседельный штырь"],
@@ -99,7 +99,7 @@ for (const [type, values] of Object.entries(russian))
   ];
 const labels = new Map<string, ComponentType>();
 const variants: Partial<Record<ComponentType, string[]>> = {
-  hub: ["hubs", "втулки"],
+  hub: ["hubs", "втулки", "втулка"],
   spokes: ["spoke", "спицы"],
   inner_tube: ["inner tubes", "камеры"],
   shifter: [

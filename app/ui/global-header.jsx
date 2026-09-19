@@ -1,6 +1,6 @@
 "use client";
 import { GlobalSearch } from "./compact-ui.jsx";
-import { useState, useEffect } from "react";
+import { Children, useState, useEffect } from "react";
 import {
   Home,
   UserRound,
@@ -48,6 +48,43 @@ function NavLink({
   );
 }
 
+function OrderedNavigation({ children, settings }) {
+  const order = settings.navOrder || [
+    "home",
+    "profile",
+    "subscriptions",
+    "records",
+    "messages",
+    "search",
+    "admin",
+    "logout",
+  ];
+  const id = (child) =>
+    ({
+      "/": "home",
+      "/account": "profile",
+      "/feed": "subscriptions",
+      "/records": "records",
+      "/notifications": "messages",
+      "/admin": "admin",
+    })[child.props.href] ||
+    (child.type === GlobalSearch
+      ? "search"
+      : child.props["aria-label"] === "Выйти"
+        ? "logout"
+        : "profile");
+  return (
+    <nav
+      className="global-nav"
+      data-icon-size={settings.navIconSize || "medium"}
+      aria-label="Основная навигация"
+    >
+      {Children.toArray(children).sort(
+        (a, b) => order.indexOf(id(a)) - order.indexOf(id(b)),
+      )}
+    </nav>
+  );
+}
 export default function GlobalHeader({ user, onProfile }) {
   const { personalSettings: settings } = useSite();
   const pathname = usePathname() || "/";
@@ -123,7 +160,7 @@ export default function GlobalHeader({ user, onProfile }) {
         )}
       </a>
 
-      <nav className="global-nav" aria-label="Основная навигация">
+      <OrderedNavigation settings={settings}>
         <NavLink
           href="/"
           label={settings.showcaseTitle || "Витрина"}
@@ -202,7 +239,7 @@ export default function GlobalHeader({ user, onProfile }) {
             <Graphic assetId={settings.navLogoutIconId} Fallback={LogOut} />
           </button>
         )}
-      </nav>
+      </OrderedNavigation>
     </header>
   );
 }

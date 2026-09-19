@@ -248,7 +248,7 @@ async function handler(req, { params }) {
         const bytes = await readBytes(req, 10 * 1024 * 1024);
         let image;
         try {
-          image = await preparePhoto(bytes);
+          image = await preparePhoto(bytes, { bikePhoto: false });
         } catch {
           return fail("Выберите изображение JPEG, PNG или WebP до 10 МБ");
         }

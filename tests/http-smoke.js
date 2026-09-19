@@ -97,7 +97,7 @@ try {
   assert.equal(privateBike.components.length, 2);
   const { cookie } = await owner("me");
   const bytes = await sharp({
-    create: { width: 12, height: 12, channels: 3, background: "#ffffff" },
+    create: { width: 600, height: 400, channels: 3, background: "#ffffff" },
   })
     .png()
     .toBuffer();

@@ -113,6 +113,10 @@ function pipeline(doc: SourceDocument, rows?: Rows) {
   const $ = load(doc.body),
     objects = jsonObjects($),
     profile = profileFor(doc.url, doc.body);
+  // Explanatory popovers are not part of a specification label/value.
+  $('[role="tooltip"], .tooltip, script, style')
+    .filter((_, el) => !$(el).is("script"))
+    .remove();
   let primarySpecTable: any = null;
   const fields: RawField[] = [],
     sections = new Set<any>();
@@ -242,7 +246,12 @@ function pipeline(doc: SourceDocument, rows?: Rows) {
     const primary = tables[0]?.score >= 3 ? tables[0].table : null;
     primarySpecTable = primary;
     $("tr").each((_, el) => {
-      if (primary && $(el).closest("table").get(0) !== primary) return;
+      if (
+        primary &&
+        $(el).closest("table").get(0) !== primary &&
+        !inSection(el)
+      )
+        return;
       const cols = $(el).children("td,th");
       if (
         cols.length !== 2 ||

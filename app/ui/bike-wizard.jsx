@@ -1,8 +1,9 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { LoaderCircle, Check, Plus, Trash2 } from "lucide-react";
+import { LoaderCircle, Check, Plus, Trash2, Link, Pencil } from "lucide-react";
 import { useSite } from "./site-provider.jsx";
 import CompactCombo from "./compact-combo.jsx";
+import SiteAssetIcon from "./site-asset-icon.jsx";
 import PartIcon from "./part-icon.jsx";
 import { factoryComponent } from "../../lib/factory-components.js";
 import { groupedComponents } from "../../lib/garage-layout.js";
@@ -48,7 +49,7 @@ export default function BikeWizard({ onCreated, onBusy }) {
       brand: "",
       model: "",
       trim: "",
-      year: "",
+      year: String(new Date().getFullYear()),
       name: "",
       category: "gravel",
       description: "",
@@ -64,6 +65,8 @@ export default function BikeWizard({ onCreated, onBusy }) {
       show_accessory_prices: false,
     });
   const [parts, setParts] = useState([]),
+    [manualMode, setManualMode] = useState(false),
+    [identityConfirmed, setIdentityConfirmed] = useState(false),
     [trace, setTrace] = useState([]),
     [result, setResult] = useState(null),
     [url, setUrl] = useState(""),
@@ -92,7 +95,8 @@ export default function BikeWizard({ onCreated, onBusy }) {
     photoAbort = useRef(),
     heading = useRef(),
     fileRefs = useRef([]),
-    alive = useRef(true);
+    alive = useRef(true),
+    completed = useRef(false);
   useEffect(() => {
     alive.current = true;
     requestId.current ||= draftId();
@@ -115,7 +119,7 @@ export default function BikeWizard({ onCreated, onBusy }) {
   }, [saving, onBusy]);
   useEffect(() => {
     const warn = (e) => {
-      if (bike.brand || parts.length) {
+      if (!completed.current && (bike.brand || parts.length)) {
         e.preventDefault();
         e.returnValue = "";
       }
@@ -141,7 +145,7 @@ export default function BikeWizard({ onCreated, onBusy }) {
     setMessage(
       sourceUrl
         ? "Читаем страницу магазина…"
-        : "Производитель поддерживается. Ищем заводскую комплектацию…",
+        : "Ищем комплектацию: сначала производитель, затем подходящие магазины…",
     );
     try {
       const d = await resolveWithTrace(
@@ -156,13 +160,39 @@ export default function BikeWizard({ onCreated, onBusy }) {
         },
       );
       if (controller.signal.aborted || !alive.current) return;
+      if (
+        d.status === "resolved" &&
+        d.warnings?.includes("identity_mismatch")
+      ) {
+        const accepted = window.confirm(
+          `Источник описывает «${d.bike.canonicalName}»${d.sourceYear ? ` (${d.sourceYear})` : ""}. Вы указали «${query.brand} ${query.model} ${query.trim || ""} ${query.year}». Модель или год отличаются. Использовать эту комплектацию?`,
+        );
+        if (!accepted) {
+          setMessage(
+            "Импорт отменён. Выберите другую страницу или заполните вручную.",
+          );
+          return;
+        }
+        setIdentityConfirmed(true);
+      } else setIdentityConfirmed(false);
       setResult(d);
       setMessage(
         d.status === "resolved"
           ? d.quality?.level === "partial"
             ? "Найдена часть комплектации. Проверьте и дополните её на следующем шаге."
             : "Комплектация найдена. На следующем шаге её можно изменить."
-          : failures[d.status] || "Нужно уточнить вариант модели.",
+          : {
+              dns_failed:
+                "Не удалось определить адрес сайта (DNS). Попробуйте другой источник.",
+              http_403:
+                "Сайт отклонил автоматический запрос. Попробуйте страницу магазина.",
+              access_challenge:
+                "Сайт требует проверку посетителя. Попробуйте другой источник.",
+              timeout:
+                "Сайт не ответил вовремя. Повторите поиск или выберите другой источник.",
+            }[d.reason] ||
+              failures[d.status] ||
+              "Нужно уточнить вариант модели.",
       );
       if (d.status === "resolved") {
         photoAbort.current?.abort();
@@ -183,7 +213,13 @@ export default function BikeWizard({ onCreated, onBusy }) {
         setOpenGroup(null);
       } else if (sourceUrl)
         setMessage(
-          (failures[d.status] || "Не удалось распознать страницу.") +
+          ({
+            dns_failed: "Не удалось определить адрес сайта (DNS).",
+            http_403: "Сайт отклонил автоматический запрос (HTTP 403).",
+            access_challenge: "Сайт требует проверку посетителя.",
+          }[d.reason] ||
+            failures[d.status] ||
+            "Не удалось распознать страницу.") +
             " Попробуйте другую страницу магазина или заполните компоненты вручную.",
         );
     } catch (e) {
@@ -211,11 +247,7 @@ export default function BikeWizard({ onCreated, onBusy }) {
       .then((config) => {
         if (cancelled || controller.signal.aborted) return;
         setResolving(false);
-        const supported = config.brands?.some(
-          (b) =>
-            b.enabled && b.name.toLowerCase() === query.brand.toLowerCase(),
-        );
-        if (supported) resolve();
+        if (config.autoResolve !== false) resolve();
         else
           setMessage(
             "Этот производитель пока не поддерживается или отключён. Укажите страницу магазина — попробуем прочитать её комплектацию.",
@@ -253,7 +285,7 @@ export default function BikeWizard({ onCreated, onBusy }) {
         AbortSignal.any([controller.signal, AbortSignal.timeout(95000)]),
       );
       if (!controller.signal.aborted && alive.current) {
-        setPhotos(d.photos);
+        setPhotos(d.photos.slice(0, 3));
         setChosen([]);
       }
     } catch (e) {
@@ -271,8 +303,9 @@ export default function BikeWizard({ onCreated, onBusy }) {
     if (step === 3 && photos === null && !photoBusy) searchPhotos();
   }, [step]);
   const groups = groupedComponents(parts, catalog.componentGroups);
-  function addPart(group) {
-    const category = group.categories[0] || catalog.partCategories.build[0];
+  function addPart(group, chosenCategory) {
+    const category =
+      chosenCategory || group.categories[0] || catalog.partCategories.build[0];
     setParts((p) => [
       ...p,
       {
@@ -366,6 +399,7 @@ export default function BikeWizard({ onCreated, onBusy }) {
       if (!id) {
         const data = await api("wizard", {
           requestId: requestId.current,
+          identityConfirmed,
           previewId: result?.status === "resolved" ? result.previewId : null,
           bike: fields,
           components: parts.map(({ id, ...p }) => ({
@@ -393,6 +427,7 @@ export default function BikeWizard({ onCreated, onBusy }) {
         URL.revokeObjectURL(item.preview);
         setFiles((f) => f.filter((x) => x.id !== item.id));
       }
+      completed.current = true;
       await onCreated(id);
     } catch (e) {
       setError((id ? "Велосипед уже сохранён. " : "") + e.message);
@@ -492,11 +527,20 @@ export default function BikeWizard({ onCreated, onBusy }) {
                   type="number"
                   min={1900}
                   max={2100}
+                  list="recent-bike-years"
                   value={bike.year}
                   onChange={(e) => update("year", e.target.value)}
                 />
               </label>
               <label className="field">
+                <datalist id="recent-bike-years">
+                  {Array.from(
+                    { length: 10 },
+                    (_, i) => new Date().getFullYear() - i,
+                  ).map((y) => (
+                    <option key={y} value={y} />
+                  ))}
+                </datalist>
                 <span>Комплектация / версия</span>
                 <input
                   maxLength={100}
@@ -569,7 +613,9 @@ export default function BikeWizard({ onCreated, onBusy }) {
                           {result.source.manufacturer} ·{" "}
                           {result.source.adapter === "manual-url"
                             ? "страница по ссылке"
-                            : "официальный источник"}
+                            : result.source.adapter === "retailer-search"
+                              ? "найденный магазин"
+                              : "официальный источник"}
                         </a>
                       </small>
                     </span>
@@ -593,7 +639,41 @@ export default function BikeWizard({ onCreated, onBusy }) {
                       {c.canonicalName} · {c.year || "год не подтверждён"}
                     </button>
                   ))}
-                <details open={result?.status !== "resolved"}>
+                <div className="wizard-choice-actions">
+                  <button
+                    type="button"
+                    className="button secondary"
+                    onClick={() => setManualMode((v) => !v)}
+                  >
+                    <SiteAssetIcon
+                      assetId={settings.wizardLinkIconId}
+                      Fallback={Link}
+                      size={18}
+                    />
+                    {settings.wizardLinkLabel ||
+                      "Распознать по странице магазина"}
+                  </button>
+                  <button
+                    type="button"
+                    className="button secondary"
+                    onClick={() => {
+                      setResult(null);
+                      setStep(2);
+                    }}
+                  >
+                    <SiteAssetIcon
+                      assetId={settings.wizardManualIconId}
+                      Fallback={Pencil}
+                      size={18}
+                    />
+                    {settings.wizardManualLabel || "Заполнить вручную"}
+                  </button>
+                </div>
+                <details
+                  className="wizard-manual"
+                  open={manualMode}
+                  onToggle={(e) => setManualMode(e.currentTarget.open)}
+                >
                   <summary>Распознать по странице магазина</summary>
                   <p className="help">
                     Вставьте ссылку на товар с таблицей характеристик. Если
@@ -619,16 +699,6 @@ export default function BikeWizard({ onCreated, onBusy }) {
                     Распознать страницу
                   </button>
                 </details>
-                <button
-                  type="button"
-                  className="quiet"
-                  onClick={() => {
-                    setResult(null);
-                    setStep(2);
-                  }}
-                >
-                  Заполнить без парсера
-                </button>
               </>
             )}
           </>
@@ -707,18 +777,36 @@ export default function BikeWizard({ onCreated, onBusy }) {
             <details className="wizard-add-picker" open={!parts.length}>
               <summary>Добавить компонент</summary>
               <div className="wizard-group-add">
-                {catalog.componentGroups.map((g) => (
-                  <button
-                    type="button"
-                    className="quiet"
-                    key={g.id}
-                    onClick={() => addPart(g)}
-                  >
-                    <PartIcon name={g.icon} size={16} />
-                    <Plus size={12} />
-                    {g.name}
-                  </button>
-                ))}
+                {[
+                  "Групсет",
+                  "Тормоза",
+                  "Покрышки",
+                  "Вилка",
+                  "Седло",
+                  "Руль",
+                  "Педали",
+                ].map((category) => {
+                  const g = catalog.componentGroups.find((g) =>
+                    g.categories.includes(category),
+                  ) || {
+                    id: "other",
+                    icon: "wrench",
+                    name: category,
+                    categories: [category],
+                  };
+                  return (
+                    <button
+                      type="button"
+                      className="quiet"
+                      key={category}
+                      onClick={() => addPart(g, category)}
+                    >
+                      <PartIcon name={g.icon} size={16} />
+                      <Plus size={12} />
+                      {category === "Групсет" ? "Трансмиссия" : category}
+                    </button>
+                  );
+                })}
               </div>
             </details>
             {groups.map((g) => (
@@ -883,6 +971,10 @@ export default function BikeWizard({ onCreated, onBusy }) {
                     <img
                       src={"/api/bikes/photo-candidates/" + p.id}
                       alt="Вариант фотографии велосипеда"
+                      onError={() => {
+                        setPhotos((a) => a.filter((x) => x.id !== p.id));
+                        setChosen((a) => a.filter((id) => id !== p.id));
+                      }}
                     />
                     <a href={p.sourceUrl} target="_blank" rel="noreferrer">
                       Источник
@@ -899,13 +991,16 @@ export default function BikeWizard({ onCreated, onBusy }) {
                 Повторить поиск фото
               </button>
               <label className="field">
-                <span>Или загрузите свои · JPEG, PNG, WebP · до 10 МБ</span>
+                <span>
+                  Или загрузите свои · JPEG, PNG, WebP · до 10 МБ · от 600 × 400
+                </span>
                 <input
                   type="file"
                   multiple
                   accept="image/jpeg,image/png,image/webp"
-                  onChange={(e) => {
-                    const added = Array.from(e.target.files);
+                  onChange={async (e) => {
+                    const input = e.target;
+                    const added = Array.from(input.files);
                     if (
                       added.some(
                         (f) =>
@@ -919,9 +1014,27 @@ export default function BikeWizard({ onCreated, onBusy }) {
                       setError(
                         "Допустимо до 12 фото JPEG/PNG/WebP, каждое до 10 МБ.",
                       );
-                      e.target.value = "";
+                      input.value = "";
                       return;
                     }
+                    try {
+                      for (const file of added) {
+                        const bitmap = await createImageBitmap(file);
+                        const valid =
+                          Math.min(bitmap.width, bitmap.height) >= 400 &&
+                          Math.max(bitmap.width, bitmap.height) >= 600;
+                        bitmap.close();
+                        if (!valid)
+                          throw new Error(
+                            "Фото слишком маленькое: минимум 600 × 400 пикселей",
+                          );
+                      }
+                    } catch (err) {
+                      setError(err.message || "Не удалось прочитать фото");
+                      input.value = "";
+                      return;
+                    }
+                    if (!alive.current) return;
                     setFiles((a) => [
                       ...a,
                       ...added.map((file) => ({
@@ -930,7 +1043,7 @@ export default function BikeWizard({ onCreated, onBusy }) {
                         preview: URL.createObjectURL(file),
                       })),
                     ]);
-                    e.target.value = "";
+                    input.value = "";
                   }}
                 />
               </label>
@@ -953,19 +1066,54 @@ export default function BikeWizard({ onCreated, onBusy }) {
                 ))}
               </div>
             </section>
+            <div className="wizard-suggestions">
+              {result?.suggestedMetadata?.weight && (
+                <button
+                  type="button"
+                  className="quiet"
+                  onClick={() =>
+                    update("weight", result.suggestedMetadata.weight)
+                  }
+                >
+                  Вес из источника: {result.suggestedMetadata.weight} кг
+                </button>
+              )}
+              {(result?.suggestedMetadata?.manufacturerUrl ||
+                (result?.source &&
+                  result.source.adapter !== "manual-url" &&
+                  result.source.adapter !== "retailer-search")) && (
+                <button
+                  type="button"
+                  className="quiet"
+                  onClick={() =>
+                    update(
+                      "manufacturer_url",
+                      result.suggestedMetadata?.manufacturerUrl ||
+                        result.source.url,
+                    )
+                  }
+                >
+                  Использовать страницу производителя
+                </button>
+              )}
+            </div>
             <div className="form-grid">
               {[
                 ["color", "Цвет"],
                 ["size", "Ростовка"],
               ].map(([k, label]) => (
-                <label className="field" key={k}>
-                  <span>{label}</span>
-                  <input
-                    maxLength={k === "size" ? 30 : 60}
-                    value={bike[k]}
-                    onChange={(e) => update(k, e.target.value)}
-                  />
-                </label>
+                <CompactCombo
+                  key={k}
+                  label={label}
+                  value={bike[k]}
+                  onChange={(v) => update(k, v)}
+                  maxLength={k === "size" ? 30 : 50}
+                  options={
+                    k === "size"
+                      ? catalog.sizes || ["XS", "S", "M", "L", "XL"]
+                      : [result?.suggestedMetadata?.color].filter(Boolean)
+                  }
+                />
               ))}
               {[
                 ["price", "Стоимость, ₽", 999999999],
@@ -985,14 +1133,17 @@ export default function BikeWizard({ onCreated, onBusy }) {
                 </label>
               ))}
             </div>
-            <label className="field">
-              <span>О велосипеде</span>
-              <textarea
-                maxLength={2000}
-                value={bike.description}
-                onChange={(e) => update("description", e.target.value)}
-              />
-            </label>
+            <details className="wizard-optional">
+              <summary>Описание · необязательно</summary>
+              <label className="field">
+                <span>О велосипеде</span>
+                <textarea
+                  maxLength={2000}
+                  value={bike.description}
+                  onChange={(e) => update("description", e.target.value)}
+                />
+              </label>
+            </details>
             <label className="field">
               <span>Сайт производителя</span>
               <input
@@ -1031,7 +1182,10 @@ export default function BikeWizard({ onCreated, onBusy }) {
         <button
           type="button"
           className="quiet"
-          onClick={() => onCreated(savedId)}
+          onClick={() => {
+            completed.current = true;
+            onCreated(savedId);
+          }}
         >
           Открыть сохранённый велосипед без оставшихся фото
         </button>

@@ -1,5 +1,6 @@
 import { EXTRACTOR_VERSION, trace, checkAbort } from "./context.js";
 import { sourceIdentity } from "./source-url.js";
+import { identityConflict } from "./identity.js";
 import { load } from "cheerio";
 import { randomUUID } from "node:crypto";
 import { ManufacturerHttpClient, validateUrl } from "./http.js";
@@ -174,11 +175,20 @@ export class ManualSources {
       return {
         status: "resolved",
         quality: parsed.quality,
-        suggestedMetadata: parsed.suggestedMetadata,
+        suggestedMetadata: {
+          ...parsed.suggestedMetadata,
+          ...(this.adapters.some((a) =>
+            a.allowedDomains.includes(new URL(doc.url).hostname),
+          )
+            ? { manufacturerUrl: doc.url }
+            : {}),
+        },
         unknownFields: parsed.unknownFields,
         warnings: [
           ...(parsed.warnings || []),
-          ...(parsed.year !== query.year ? ["identity_mismatch" as const] : []),
+          ...(identityConflict(query, parsed.canonicalName, parsed.year)
+            ? ["identity_mismatch" as const]
+            : []),
         ],
         query,
         bike: {

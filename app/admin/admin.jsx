@@ -322,11 +322,7 @@ export default function Admin() {
   function assetPicker(
     key,
     label,
-    {
-      emptyLabel = "Плейсхолдер",
-      help = "",
-      previewClassName = "",
-    } = {},
+    { emptyLabel = "Плейсхолдер", help = "", previewClassName = "" } = {},
   ) {
     return (
       <AssetPicker
@@ -339,9 +335,7 @@ export default function Admin() {
         busy={busy}
         previewClassName={previewClassName}
         onChange={(value) => update(key, value)}
-        onUpload={(selectedFile) =>
-          run(() => uploadAsset(selectedFile, key))
-        }
+        onUpload={(selectedFile) => run(() => uploadAsset(selectedFile, key))}
       />
     );
   }
@@ -395,7 +389,9 @@ export default function Admin() {
             >
               <Icon size={19} />
               {label}
-              {((["design", "copy", "overview", "blocks", "scoring"].includes(id) &&
+              {((["design", "copy", "overview", "blocks", "scoring"].includes(
+                id,
+              ) &&
                 dirtySettings) ||
                 (["catalog", "groups"].includes(id) && dirtyCatalog)) && (
                 <span
@@ -430,10 +426,24 @@ export default function Admin() {
               {notice}
             </div>
           )}
-          {tab === "scoring" && <ScoringSettings value={draft.scoring} catalog={catalog} onChange={v=>update("scoring",v)}/>}
+          {tab === "scoring" && (
+            <ScoringSettings
+              value={draft.scoring}
+              catalog={catalog}
+              onChange={(v) => update("scoring", v)}
+            />
+          )}
           {tab === "resolver" && <ResolverSettings />}
-          {tab === "gamification" && <Gamification/>}
-          {tab === "reports" && <Reports onManageUser={username=>{setUserSearch(username);setPage(1);setTab("users");}}/>}
+          {tab === "gamification" && <Gamification />}
+          {tab === "reports" && (
+            <Reports
+              onManageUser={(username) => {
+                setUserSearch(username);
+                setPage(1);
+                setTab("users");
+              }}
+            />
+          )}
           {tab === "overview" && (
             <>
               <div className="admin-stats">
@@ -656,9 +666,10 @@ export default function Admin() {
                   <div>
                     <h2>Графика сайта</h2>
                     <p>
-                      Каждое изображение можно выбрать из медиатеки или загрузить
-                      прямо здесь. После загрузки оно сразу назначается выбранному
-                      слоту; для публикации нажмите «Сохранить».
+                      Каждое изображение можно выбрать из медиатеки или
+                      загрузить прямо здесь. После загрузки оно сразу
+                      назначается выбранному слоту; для публикации нажмите
+                      «Сохранить».
                     </p>
                   </div>
                   <button
@@ -748,6 +759,76 @@ export default function Admin() {
                   <section className="graphics-group">
                     <div className="graphics-group-heading">
                       <h3>Верхнее меню</h3>
+                      <label className="field">
+                        <span>Размер значков</span>
+                        <select
+                          value={draft.navIconSize || "medium"}
+                          onChange={(e) =>
+                            setDraft((d) => ({
+                              ...d,
+                              navIconSize: e.target.value,
+                            }))
+                          }
+                        >
+                          <option value="small">Маленькие</option>
+                          <option value="medium">Средние</option>
+                          <option value="large">Большие</option>
+                        </select>
+                      </label>
+                      <div className="nav-order-editor">
+                        {(
+                          draft.navOrder || [
+                            "home",
+                            "profile",
+                            "subscriptions",
+                            "records",
+                            "messages",
+                            "search",
+                            "admin",
+                            "logout",
+                          ]
+                        ).map((id, i, all) => (
+                          <div key={id}>
+                            <span>
+                              {
+                                {
+                                  home: "Витрина",
+                                  profile: "Профиль",
+                                  subscriptions: "Подписки",
+                                  records: "Рекорды",
+                                  messages: "Уведомления",
+                                  search: "Поиск",
+                                  admin: "Админка",
+                                  logout: "Выход",
+                                }[id]
+                              }
+                            </span>
+                            {[-1, 1].map((delta) => (
+                              <button
+                                type="button"
+                                className="quiet"
+                                key={delta}
+                                disabled={
+                                  i + delta < 0 || i + delta >= all.length
+                                }
+                                aria-label={
+                                  (delta < 0 ? "Выше: " : "Ниже: ") + id
+                                }
+                                onClick={() => {
+                                  const order = [...all];
+                                  [order[i], order[i + delta]] = [
+                                    order[i + delta],
+                                    order[i],
+                                  ];
+                                  setDraft((d) => ({ ...d, navOrder: order }));
+                                }}
+                              >
+                                {delta < 0 ? "↑" : "↓"}
+                              </button>
+                            ))}
+                          </div>
+                        ))}
+                      </div>
                       <p>
                         Прозрачные PNG/WebP подходят лучше всего. Без файла
                         остаётся встроенный Lucide-плейсхолдер.
@@ -787,6 +868,28 @@ export default function Admin() {
                       </p>
                     </div>
                     <div className="asset-picker-grid icon-slots">
+                      {assetPicker("wizardLinkIconId", "Мастер — по ссылке", {
+                        previewClassName: "icon",
+                      })}
+                      {assetPicker("wizardManualIconId", "Мастер — вручную", {
+                        previewClassName: "icon",
+                      })}
+                      {["wizardLinkLabel", "wizardManualLabel"].map((k) => (
+                        <label className="field" key={k}>
+                          <span>
+                            {k === "wizardLinkLabel"
+                              ? "Кнопка: по ссылке"
+                              : "Кнопка: вручную"}
+                          </span>
+                          <input
+                            value={draft[k] || ""}
+                            maxLength={150}
+                            onChange={(e) =>
+                              setDraft((d) => ({ ...d, [k]: e.target.value }))
+                            }
+                          />
+                        </label>
+                      ))}
                       {assetPicker("addBikeIconId", "Добавить велосипед", {
                         previewClassName: "icon",
                       })}
@@ -805,7 +908,8 @@ export default function Admin() {
                       <h3>Тип велосипеда</h3>
                       <p>
                         Иконка типа накладывается прямо на фотографию без
-                        фоновой плашки. Можно использовать прозрачные изображения.
+                        фоновой плашки. Можно использовать прозрачные
+                        изображения.
                       </p>
                     </div>
                     <div className="asset-picker-grid icon-slots">
@@ -959,32 +1063,64 @@ export default function Admin() {
                     run(() => uploadAsset(selectedFile));
                   }}
                 />
-                <div className="asset-grid">
-                  {assets.map((a) => (
-                    <article key={a.id}>
-                      <img src={"/api/assets/" + a.id} alt={a.name} />
-                      <strong>{a.name}</strong>
-                      <button
-                        className="quiet danger"
-                        disabled={busy}
-                        onClick={() =>
-                          ask(
-                            "Удалить изображение?",
-                            "Действие нельзя отменить. Изображения, используемые сайтом, удалить нельзя.",
-                            async () => {
-                              await request("admin/assets/" + a.id, "DELETE");
-                              setAssets((await request("admin/assets")).assets);
-                              setNotice("Изображение удалено");
-                            },
-                          )
-                        }
-                      >
-                        <Trash2 size={16} />
-                        Удалить
-                      </button>
-                    </article>
-                  ))}
-                </div>
+                {[
+                  ["Значки меню и кнопок", (k) => /IconId$/.test(k)],
+                  [
+                    "Логотипы и баннеры",
+                    (k) => ["logoId", "faviconId", "garageImageId"].includes(k),
+                  ],
+                  ["Фон", (k) => k === "backgroundImageId"],
+                  [
+                    "Велосипеды и иллюстрации",
+                    (k) =>
+                      /ImageId$/.test(k) &&
+                      !["backgroundImageId", "garageImageId"].includes(k),
+                  ],
+                  ["Не назначены", null],
+                ].map(([title, match]) => (
+                  <section key={title}>
+                    <h3>{title}</h3>
+                    <div className="asset-grid">
+                      {assets
+                        .filter((a) =>
+                          match
+                            ? Object.entries(draft).some(
+                                ([k, v]) => match(k) && v === a.id,
+                              )
+                            : !Object.values(draft).includes(a.id),
+                        )
+                        .map((a) => (
+                          <article key={a.id}>
+                            <img src={"/api/assets/" + a.id} alt={a.name} />
+                            <strong>{a.name}</strong>
+                            <button
+                              className="quiet danger"
+                              disabled={busy}
+                              onClick={() =>
+                                ask(
+                                  "Удалить изображение?",
+                                  "Действие нельзя отменить. Изображения, используемые сайтом, удалить нельзя.",
+                                  async () => {
+                                    await request(
+                                      "admin/assets/" + a.id,
+                                      "DELETE",
+                                    );
+                                    setAssets(
+                                      (await request("admin/assets")).assets,
+                                    );
+                                    setNotice("Изображение удалено");
+                                  },
+                                )
+                              }
+                            >
+                              <Trash2 size={16} />
+                              Удалить
+                            </button>
+                          </article>
+                        ))}
+                    </div>
+                  </section>
+                ))}
                 {!assets.length && (
                   <p className="empty-parts">Загрузите первое изображение.</p>
                 )}
@@ -1116,7 +1252,9 @@ export default function Admin() {
               {!events.length && <p>Действий пока нет.</p>}
             </section>
           )}
-          {["overview", "design", "copy", "catalog", "scoring"].includes(tab) && (
+          {["overview", "design", "copy", "catalog", "scoring"].includes(
+            tab,
+          ) && (
             <div className="admin-save">
               <span>
                 {(tab === "catalog" ? dirtyCatalog : dirtySettings)
@@ -1309,6 +1447,7 @@ function CatalogEditor({ value: c, onChange }) {
       <div className="catalog-tabs">
         {[
           ["bikes", "Марки и модели"],
+          ["sizes", "Ростовки"],
           ["manufacturers", "Производители"],
           ["categories", "Категории навески"],
           ["parts", "Модели компонентов"],
@@ -1420,6 +1559,12 @@ function CatalogEditor({ value: c, onChange }) {
             </>
           )}
         </>
+      )}
+      {kind === "sizes" && (
+        <ListEditor
+          values={c.sizes || ["XS", "S", "M", "L", "XL"]}
+          onChange={(a) => onChange({ ...c, sizes: a })}
+        />
       )}
       {kind === "manufacturers" && (
         <ListEditor

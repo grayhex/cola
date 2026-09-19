@@ -6,6 +6,8 @@ export interface ExtractionProfile {
 }
 export function profileFor(url: string, body: string): ExtractionProfile {
   const host = new URL(url).hostname;
+  if (host === "velostrana.ru" || host.endsWith(".velostrana.ru"))
+    return { id: "velostrana", sections: [".productfull-specification"] };
   if (host === "specialized.com" || host.endsWith(".specialized.com"))
     return {
       id: "specialized",

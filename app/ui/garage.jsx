@@ -354,6 +354,7 @@ export default function Garage({
     }
   }
   async function like(b) {
+    if (b.is_owner) return;
     if (!user) {
       auth();
       return;
@@ -502,13 +503,7 @@ export default function Garage({
             hidden={!block("heading").enabled}
             style={{ order: blocks.findIndex((b) => b.id === "heading") + 1 }}
           >
-            <span className="category-tag">
-              <BikeCategoryIcon
-                category={bike.category}
-                label={categories[bike.category]}
-              />
-            </span>
-            <span>{bike.year}</span>
+
             {bike.color && <span>{bike.color}</span>}
             {bike.size && <span>{bike.size}</span>}
             {bike.weight && <span>{Number(bike.weight)} кг</span>}
@@ -543,7 +538,7 @@ export default function Garage({
                 <button
                   className="like-button"
                   type="button"
-                  disabled={busy || bike.is_owner}
+                  disabled={busy}
                   aria-label={"Нравится: " + bike.likes}
                   aria-pressed={!!bike.liked}
                   onClick={() => like(bike)}
@@ -917,7 +912,7 @@ export default function Garage({
                   setPage(1);
                 }}
               />
-              {user && (
+              {user && account && (
                 <button
                   type="button"
                   className="compact-icon add-bike"

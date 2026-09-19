@@ -61,7 +61,7 @@ export default function PhotoSearch({ bike, onDone }) {
               year: Number(bike.year),
               ...(sourceUrl ? { sourceUrl } : {}),
             });
-            setPhotos(d.photos);
+            setPhotos(d.photos.slice(0, 3));
           })
         }
       >
@@ -112,6 +112,10 @@ export default function PhotoSearch({ bike, onDone }) {
               />
               <img
                 src={"/api/bikes/photo-candidates/" + p.id}
+                onError={() => {
+                  setPhotos((a) => a.filter((x) => x.id !== p.id));
+                  setSelected((a) => a.filter((id) => id !== p.id));
+                }}
                 alt="Фотография из каталога"
                 onError={(e) => {
                   e.currentTarget.alt = "Фото недоступно";

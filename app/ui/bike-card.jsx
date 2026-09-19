@@ -71,10 +71,12 @@ export default function BikeCard({
               <button
                 type="button"
                 className="social-stat like-button"
-                disabled={busy || b.is_owner || !onLike}
+                disabled={busy || !onLike}
                 aria-label={"Нравится: " + (b.likes || 0)}
                 aria-pressed={!!b.liked}
-                onClick={onLike}
+                onClick={() => {
+                  if (!b.is_owner) onLike?.();
+                }}
               >
                 <SiteAssetIcon
                   assetId={settings.likeIconId}

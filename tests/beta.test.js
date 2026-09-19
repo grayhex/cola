@@ -153,7 +153,7 @@ test("photo import uses same quota and rollback leaves neither rows nor files", 
       [id, owner],
     );
     const bytes = await sharp({
-      create: { width: 2, height: 2, channels: 3, background: "white" },
+      create: { width: 600, height: 400, channels: 3, background: "white" },
     })
       .png()
       .toBuffer();

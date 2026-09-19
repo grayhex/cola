@@ -171,7 +171,7 @@ export class ManufacturerHttpClient {
               false,
               "blocked_source",
             );
-          const address = addresses[0];
+          const address = addresses[attempt % addresses.length];
           // Pin the checked address to this connection: no second DNS lookup/rebinding window.
           dispatcher = new Agent({
             connect: {

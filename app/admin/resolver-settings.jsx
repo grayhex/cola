@@ -107,6 +107,14 @@ export default function ResolverSettings() {
               onChange={(e) => set("autoResolve", e.target.checked)}
             />
           </label>
+          <label className="admin-toggle">
+            Резервный поиск магазинов в интернете
+            <input
+              type="checkbox"
+              checked={draft.retailerSearch ?? true}
+              onChange={(e) => set("retailerSearch", e.target.checked)}
+            />
+          </label>
           <div className="admin-form-grid">
             {[
               ["timeoutMs", "Таймаут запроса, мс", 3000, 20000],
