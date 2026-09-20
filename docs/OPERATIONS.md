@@ -16,42 +16,71 @@ Do not run `down -v` on an environment containing user data. PostgreSQL and phot
 remain in the existing named volumes. Migration 008 only adds nullable `size_bytes`
 and indexes; it does not rewrite existing files, bikes, settings or resolver cache.
 
-## Checked deployment
+## CI and deployment workflows
 
-`check.yml` runs unit/DB, builds, HTTP on PostgreSQL 17, Chromium + mobile WebKit,
-Compose assertions and a disposable backup/restore drill. Its `deploy` job needs
-all checks to succeed and targets only a self-hosted runner carrying the
-`cola-production` label. The `cola-production` concurrency group serializes deploys.
-The job passes the exact checked commit SHA to `/usr/local/sbin/deploy-cola`.
-The root-owned script fetches `origin/main` using the repository owner's read-only
-SSH deploy key and refuses the deployment if the requested SHA is no longer the
-current remote `main`. This prevents a stale checked job from replacing newer code.
+GitHub Actions is deliberately split into three visible workflows:
 
-**One-time VM update before merging this PR:** install the reviewed script from
-this branch (root-owned, not writable by the runner):
+| Workflow | Trigger | Target |
+| --- | --- | --- |
+| **CI · ColaBike** | PR, push to `main`, manual | Hosted GitHub runner; no deployment |
+| **Deploy · Staging** | Manual, with branch/tag/SHA input | `192.168.1.200` via `cola-staging` |
+| **Deploy · Production** | Automatically after successful CI push to `main`, or manual redeploy from `main` | `colabike.ru` via `cola-production` |
+
+`CI · ColaBike` runs unit/DB tests, builds, HTTP tests on PostgreSQL 17,
+Chromium + mobile WebKit, Compose assertions and the disposable backup/restore
+drill. PR code runs only on GitHub-hosted runners.
+
+Production deploy receives the exact SHA from the successful `main` CI run. The
+root-owned `/usr/local/sbin/deploy-cola` fetches `origin/main` using the repository
+owner's read-only SSH deploy key and refuses a stale/non-main SHA. If
+`.env.production` exists it uses `compose.prod.yaml` with that env file.
+
+Staging is intentionally manual. Run **Deploy · Staging** from the workflow's
+`main` definition and enter the feature branch, tag or SHA in the `ref` field.
+That exact commit is resolved on a hosted runner, passes the same CI, then is
+deployed to the internal VM by `/usr/local/sbin/deploy-cola-staging`. Clicking the
+currently active category of deployment is not relevant here: the staging wrapper
+simply records the deployed SHA in `/var/lib/colabike/staging-sha`.
+
+### One-time production runner setup
+
+Production runner labels must include `self-hosted` and `cola-production`.
+Install the reviewed wrapper root-owned:
 
 ```bash
 sudo install -o root -g root -m 755 ops/deploy-cola /usr/local/sbin/deploy-cola
 ```
 
-CI checks the `COLA_VERIFIED_DEPLOY_V2` protocol marker and refuses deployment if
-an older script is installed. Grant the runner only this sudo command:
-`github-runner ALL=(root) NOPASSWD: /usr/local/sbin/deploy-cola`.
-Do **not** add `github-runner` to the Docker group. The script refuses tracked local
-edits, keeps the checkout owned by its normal repository user, serializes with
-backups, and never removes volumes. If `/opt/stacks/cola/.env.production` exists it
-uses the standalone `compose.prod.yaml` together with that env file; staging without
-`.env.production` continues to use `compose.yaml`. First CI deployment records a
-successful SHA in `/var/lib/colabike/verified-sha`. Thereafter
-`sudo -n /usr/local/sbin/deploy-cola` redeploys that last successful SHA.
-Use Actions → **Recheck and redeploy Cola** → Run workflow on main to retest and
-deploy a newer commit. Never pass an untested SHA manually.
+Grant only:
+
+```text
+github-runner ALL=(root) NOPASSWD: /usr/local/sbin/deploy-cola
+```
+
+Do **not** add `github-runner` to the Docker group.
+
+### One-time staging runner setup
+
+The runner on `192.168.1.200` must have custom label `cola-staging`. Install:
+
+```bash
+sudo install -o root -g root -m 755 ops/deploy-cola-staging /usr/local/sbin/deploy-cola-staging
+```
+
+Grant only:
+
+```text
+github-runner ALL=(root) NOPASSWD: /usr/local/sbin/deploy-cola-staging
+```
+
+The staging repository stays at `/opt/stacks/cola`, uses `compose.yaml`, and is
+checked out onto a local `staging-deploy` branch at the verified SHA. It must keep
+its own database and volumes; staging data is never promoted automatically.
 
 In GitHub branch protection for `main`, require the **check** job from
-**Check ColaBike and resolver**, require the branch to be up to date, disallow
-force pushes, and require PR review. These repository administration settings are
-not applied by this PR. Only trusted administrators may modify workflow files or
-operate the self-hosted runner. Do not run PR code on that runner.
+**CI · ColaBike**, require the branch to be up to date, disallow force pushes, and
+require PR review. Only trusted administrators should modify workflow files or
+operate self-hosted runners.
 
 ## Limits and existing photo sizes
 
