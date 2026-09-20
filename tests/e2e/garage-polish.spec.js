@@ -9,6 +9,7 @@ test("grouped icon overrides, local fonts, auth illustrations and public statist
   isMobile,
 }, info) => {
   const db = new pg.Client({ connectionString: process.env.DATABASE_URL });
+  page.setDefaultTimeout(15000);
   await db.connect();
   const nonce = randomUUID();
   let original, asset, visitor;
@@ -122,8 +123,15 @@ test("grouped icon overrides, local fonts, auth illustrations and public statist
       animations: "disabled",
     });
     visitor = await browser.newContext({ baseURL: origin });
+    visitor.setDefaultTimeout(15000);
     const auth = await visitor.newPage();
     await auth.goto("/");
+    await expect(auth.locator(".global-header")).toBeVisible();
+    const menu = auth.getByRole("button", {
+      name: "Открыть меню",
+      exact: true,
+    });
+    if (await menu.isVisible()) await menu.click();
     await auth.getByRole("button", { name: "Войти", exact: true }).click();
     await expect(auth.locator(".auth-illustration")).toHaveAttribute(
       "src",
