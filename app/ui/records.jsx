@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Trophy, ArrowUpRight } from "lucide-react";
+import { Trophy, ArrowUpRight } from "./icons.jsx";
 import {
   socialApi,
   SocialHeader,

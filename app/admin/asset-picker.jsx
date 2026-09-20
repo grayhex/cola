@@ -1,5 +1,5 @@
 "use client";
-import { Image as ImageIcon, Upload, RotateCcw } from "lucide-react";
+import { Image as ImageIcon, Upload, RotateCcw } from "../ui/icons.jsx";
 
 export default function AssetPicker({
   label,
@@ -11,6 +11,7 @@ export default function AssetPicker({
   onChange,
   onUpload,
   previewClassName = "",
+  Fallback = ImageIcon,
 }) {
   const selected = assets.find((asset) => asset.id === value);
 
@@ -21,7 +22,7 @@ export default function AssetPicker({
           <img src={"/api/assets/" + value} alt="" />
         ) : (
           <div className="asset-picker-placeholder">
-            <ImageIcon size={28} strokeWidth={1.5} />
+            <Fallback size={28} strokeWidth={1.5} />
             <span>{emptyLabel}</span>
           </div>
         )}
@@ -69,7 +70,9 @@ export default function AssetPicker({
             Сбросить
           </button>
         </div>
-        {selected && <small className="asset-picker-name">{selected.name}</small>}
+        {selected && (
+          <small className="asset-picker-name">{selected.name}</small>
+        )}
       </div>
     </article>
   );

@@ -5,7 +5,7 @@ import {
   Pencil,
   Trash2,
   ExternalLink,
-} from "lucide-react";
+} from "./icons.jsx";
 import { groupedComponents } from "../../lib/garage-layout.js";
 import PartIcon from "./part-icon.jsx";
 export default function GroupedComponents({

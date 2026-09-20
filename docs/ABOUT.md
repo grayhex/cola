@@ -31,3 +31,10 @@ rides are no longer cut off at three. Hidden accordion maps load only when opene
 
 See RIDES.md for map providers and privacy. PR validation covers Chromium and
 WebKit mobile, settings persistence, map loading/fallback and responsive columns.
+
+The bike journal now lives below those columns; see JOURNAL.md for publication,
+snapshots and inherited media privacy. About includes aggregate public garage
+statistics (users exclude blocked accounts), controlled by `showAboutStats`.
+Graphics settings group navigation, social/utility icons, component icons and
+login/registration illustrations. Ten locally hosted modern fonts supplement
+legacy system choices; family licenses accompany the files in `public/fonts`.

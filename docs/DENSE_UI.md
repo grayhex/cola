@@ -1,5 +1,11 @@
 # Dense public UI
 
+Journal update: showcase cards use two footer rows, with title and compact
+type/color/size/weight labels above author/social/progress/achievement indicators.
+Year is not repeated. Photos use `object-fit: contain`, including hover. Mobile
+showcase heading and controls remain on one row; filter/sort text gives way to
+accessible icons. Bike journals span the full width below photo/build/ride columns.
+
 Implementation of [VISUAL_DESIGN_SYSTEM.md](VISUAL_DESIGN_SYSTEM.md).
 
 ## Components and ownership

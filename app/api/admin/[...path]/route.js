@@ -1,3 +1,4 @@
+import { siteAssetIds } from "../../../../lib/site-assets.js";
 import { traced, logError } from "../../../../lib/observability.js";
 import {
   bikeResolverClient,
@@ -102,45 +103,17 @@ async function handler(req, { params }) {
       const table = p[0] === "settings" ? "site_settings" : "site_catalog";
       const result = await transaction(async (q) => {
         if (p[0] === "settings")
-          for (const key of [
-            "logoId",
-            "faviconId",
-            "demoImageId",
-            "garageImageId",
-            "backgroundImageId",
-            "mtbImageId",
-            "roadImageId",
-            "gravelImageId",
-            "navHomeIconId",
-            "navRidesIconId",
-            "navAboutIconId",
-            "aboutGuideImageId",
-            "aboutTechnologyImageId",
-            "aboutHistoryImageId",
-            "navProfileIconId",
-            "navMessagesIconId",
-            "navSubscriptionsIconId",
-            "navRecordsIconId",
-            "navAdminIconId",
-            "navLogoutIconId",
-            "addBikeIconId",
-            "searchIconId",
-            "likeIconId",
-            "mtbTypeIconId",
-            "roadTypeIconId",
-            "gravelTypeIconId",
-          ])
-            if (value[key]) {
-              const a = await q.query(
-                "SELECT id FROM site_assets WHERE id=$1 FOR SHARE",
-                [value[key]],
-              );
-              if (!a.rows.length)
-                return {
-                  error: "Выбранное изображение удалено. Обновите страницу.",
-                  status: 409,
-                };
-            }
+          for (const id of siteAssetIds(value)) {
+            const a = await q.query(
+              "SELECT id FROM site_assets WHERE id=$1 FOR SHARE",
+              [id],
+            );
+            if (!a.rows.length)
+              return {
+                error: "Выбранное изображение удалено. Обновите страницу.",
+                status: 409,
+              };
+          }
         const r = await q.query(
           `UPDATE ${table} SET value=$1,version=version+1,updated_at=now() WHERE id=1 AND version=$2 RETURNING version`,
           [JSON.stringify(value), input.version],
@@ -294,36 +267,7 @@ async function handler(req, { params }) {
           const config = (
             await q.query("SELECT value FROM site_settings WHERE id=1")
           ).rows[0].value;
-          if (
-            [
-              "logoId",
-              "faviconId",
-              "demoImageId",
-              "garageImageId",
-              "backgroundImageId",
-              "mtbImageId",
-              "roadImageId",
-              "gravelImageId",
-              "navHomeIconId",
-              "navRidesIconId",
-              "navAboutIconId",
-              "aboutGuideImageId",
-              "aboutTechnologyImageId",
-              "aboutHistoryImageId",
-              "navProfileIconId",
-              "navMessagesIconId",
-              "navSubscriptionsIconId",
-              "navRecordsIconId",
-              "navAdminIconId",
-              "navLogoutIconId",
-              "addBikeIconId",
-              "searchIconId",
-              "likeIconId",
-              "mtbTypeIconId",
-              "roadTypeIconId",
-              "gravelTypeIconId",
-            ].some((k) => config[k] === p[1])
-          )
+          if (siteAssetIds(config).includes(p[1]))
             return {
               error:
                 "Изображение используется на сайте. Сначала замените его в оформлении.",

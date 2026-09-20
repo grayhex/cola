@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Trophy, Medal, Flame, Sparkles, Star } from "lucide-react";
+import { Trophy, Medal, Flame, Sparkles, Star } from "./icons.jsx";
 import { socialApi } from "./social-primitives.jsx";
 export function BadgeShelf({ endpoint, account = false }) {
   const [data, setData] = useState(null),

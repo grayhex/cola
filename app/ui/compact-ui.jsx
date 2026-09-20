@@ -12,7 +12,7 @@ import {
   Zap,
   Medal,
   Trophy,
-} from "lucide-react";
+} from "./icons.jsx";
 
 export function CompactIconButton({
   label,
@@ -91,6 +91,8 @@ export function FilterControl({ categories, selected, onChange }) {
       <button
         type="button"
         className="compact-button"
+        aria-label="Фильтры"
+        title="Фильтры"
         aria-haspopup="dialog"
         aria-expanded={open}
         onClick={() => {
@@ -99,7 +101,7 @@ export function FilterControl({ categories, selected, onChange }) {
         }}
       >
         <SlidersHorizontal size={16} />
-        Фильтры
+        <span className="control-label">Фильтры</span>
         {selected.length > 0 && (
           <span className="control-count">{selected.length}</span>
         )}

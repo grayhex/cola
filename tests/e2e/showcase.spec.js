@@ -17,6 +17,17 @@ async function register(page, name) {
   await page.locator("input[name=email]").fill(name + "@example.test");
   await page.locator("input[name=password]").fill("colabike-e2e-secret-123");
   await page
+    .locator("input[name=confirmPassword]")
+    .fill("different-secret-123");
+  await page
+    .getByRole("button", { name: "Создать аккаунт", exact: true })
+    .click();
+  await expect(page.getByRole("alert")).toContainText("Пароли не совпадают");
+  expect((await (await page.request.get("/api/me")).json()).user).toBeNull();
+  await page
+    .locator("input[name=confirmPassword]")
+    .fill("colabike-e2e-secret-123");
+  await page
     .getByRole("button", { name: "Создать аккаунт", exact: true })
     .click();
   await expect

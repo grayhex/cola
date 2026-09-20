@@ -3,6 +3,7 @@ import BikeGrid from "./bike-grid.jsx";
 import { FilterControl, FilterChips } from "./compact-ui.jsx";
 import { BikeGame } from "./achievements.jsx";
 import RideList from "./ride-list.jsx";
+import JournalList from "./journal-list.jsx";
 import Discussion from "./discussion.jsx";
 import BikeCategoryIcon from "./bike-category-icon.jsx";
 import BikeMeters from "./bike-meters.jsx";
@@ -22,6 +23,7 @@ import FactorySpecification from "./factory-specification.jsx";
 import { useEffect, useRef, useState } from "react";
 import {
   Bike,
+  Trophy,
   Heart,
   Plus,
   ArrowUpRight,
@@ -40,7 +42,7 @@ import {
   Package,
   Settings2,
   LoaderCircle,
-} from "lucide-react";
+} from "./icons.jsx";
 import { useSite } from "./site-provider.jsx";
 import PartIcon from "./part-icon.jsx";
 
@@ -865,6 +867,14 @@ export default function Garage({
             />
           )}
           {bike.is_public && <RideList bikeId={bike.id} latest />}
+          {bike.id !== "demo" && (
+            <JournalList
+              key={bike.id}
+              bike={bike}
+              owner={bike.is_owner}
+              editable={editable}
+            />
+          )}
           {bike.is_public && (
             <Discussion key={bike.id} bike={bike} user={user} />
           )}
@@ -882,133 +892,148 @@ export default function Garage({
           )}
           <Main className="garage">
             <div className="garage-heading">
-            <div className="showcase-heading-copy">
-              <h1>
-                {account
-                  ? "Мои велосипеды"
-                  : settings.showcaseTitle === "Витрина"
-                    ? "Наши велосипеды"
-                    : settings.showcaseTitle || "Наши велосипеды"}
-              </h1>
-              <span className="result-count">
-                {account ? filtered.length : total} велосипедов
-              </span>
-            </div>
-            <div className="showcase-actions" aria-label="Действия витрины">
-              {!account && (
-                <label className="compact-selector">
-                  <span className="sr-only">Порядок витрины</span>
-                  <select
-                    aria-label="Порядок витрины"
-                    value={sort}
-                    onChange={(e) => {
-                      setSort(e.target.value);
-                      setPage(1);
-                    }}
+              <div className="showcase-heading-copy">
+                <h1>
+                  {account
+                    ? "Мои велосипеды"
+                    : settings.showcaseTitle === "Витрина"
+                      ? "Наши велосипеды"
+                      : settings.showcaseTitle || "Наши велосипеды"}
+                </h1>
+              </div>
+              <div className="showcase-actions" aria-label="Действия витрины">
+                {!account && (
+                  <label className="compact-selector">
+                    <SiteAssetIcon
+                      assetId={
+                        sort === "popular"
+                          ? settings.navPopularIconId
+                          : sort === "records"
+                            ? settings.navRecordsIconId
+                            : settings.navNewIconId
+                      }
+                      Fallback={
+                        sort === "popular"
+                          ? Heart
+                          : sort === "records"
+                            ? Trophy
+                            : Bike
+                      }
+                      size={18}
+                      className="sort-control-icon"
+                    />
+                    <span className="sr-only">Порядок витрины</span>
+                    <select
+                      aria-label="Порядок витрины"
+                      value={sort}
+                      onChange={(e) => {
+                        setSort(e.target.value);
+                        setPage(1);
+                      }}
+                    >
+                      <option value="new">Новые</option>
+                      <option value="popular">Популярные</option>
+                      <option value="records">Рекордсмены</option>
+                    </select>
+                  </label>
+                )}
+                <FilterControl
+                  categories={categories}
+                  selected={filters}
+                  onChange={(values) => {
+                    setFilters(values);
+                    setPage(1);
+                  }}
+                />
+                {user && account && (
+                  <button
+                    type="button"
+                    className="compact-icon add-bike"
+                    aria-label="Добавить велосипед"
+                    title="Добавить велосипед"
+                    onClick={() => setModal({ type: "bike" })}
                   >
-                    <option value="new">Новые</option>
-                    <option value="popular">Популярные</option>
-                    <option value="records">Рекордсмены</option>
-                  </select>
-                </label>
-              )}
-              <FilterControl
-                categories={categories}
-                selected={filters}
-                onChange={(values) => {
-                  setFilters(values);
-                  setPage(1);
-                }}
-              />
-              {user && account && (
+                    <SiteAssetIcon
+                      assetId={settings.addBikeIconId}
+                      Fallback={Plus}
+                      size={18}
+                    />
+                  </button>
+                )}
+              </div>
+            </div>
+            {account && !user && (
+              <p>Войдите, чтобы управлять своими велосипедами и оформлением.</p>
+            )}
+            <FilterChips
+              categories={categories}
+              selected={filters}
+              onChange={(values) => {
+                setFilters(values);
+                setPage(1);
+              }}
+              query={query}
+              onClearSearch={() => {
+                setQuery("");
+                setPage(1);
+                if (!account) window.history.replaceState(null, "", "/");
+              }}
+            />
+            <BikeGrid bikes={filtered}>
+              {filtered.map((b) => (
+                <BikeCard
+                  key={b.id}
+                  bike={b}
+                  onOpen={() => openBike(b)}
+                  onLike={() => like(b)}
+                  busy={busy}
+                  ownerView={account}
+                />
+              ))}
+            </BikeGrid>
+            {!account && total > 24 && (
+              <nav className="feed-pages" aria-label="Страницы витрины">
                 <button
-                  type="button"
-                  className="compact-icon add-bike"
-                  aria-label="Добавить велосипед"
-                  title="Добавить велосипед"
-                  onClick={() => setModal({ type: "bike" })}
+                  className="quiet"
+                  disabled={page <= 1}
+                  onClick={() => setPage((p) => p - 1)}
                 >
-                  <SiteAssetIcon
-                    assetId={settings.addBikeIconId}
-                    Fallback={Plus}
-                    size={18}
-                  />
+                  Назад
                 </button>
-              )}
-            </div>
-          </div>
-          {account && !user && (
-            <p>Войдите, чтобы управлять своими велосипедами и оформлением.</p>
-          )}
-          <FilterChips
-            categories={categories}
-            selected={filters}
-            onChange={(values) => {
-              setFilters(values);
-              setPage(1);
-            }}
-            query={query}
-            onClearSearch={() => {
-              setQuery("");
-              setPage(1);
-              if (!account) window.history.replaceState(null, "", "/");
-            }}
-          />
-          <BikeGrid bikes={filtered}>
-            {filtered.map((b) => (
-              <BikeCard
-                key={b.id}
-                bike={b}
-                onOpen={() => openBike(b)}
-                onLike={() => like(b)}
-                busy={busy}
-                ownerView={account}
-              />
-            ))}
-          </BikeGrid>
-          {!account && total > 24 && (
-            <nav className="feed-pages" aria-label="Страницы витрины">
-              <button
-                className="quiet"
-                disabled={page <= 1}
-                onClick={() => setPage((p) => p - 1)}
-              >
-                Назад
-              </button>
-              <span>
-                {page} / {Math.ceil(total / 24)}
-              </span>
-              <button
-                className="quiet"
-                disabled={page * 24 >= total}
-                onClick={() => setPage((p) => p + 1)}
-              >
-                Далее
-              </button>
-            </nav>
-          )}
-          {!filtered.length && !query && !filters.length && (
-            <p className="help">
-              {account
-                ? "Добавьте свой первый велосипед."
-                : "Пока нет публичных велосипедов. Опубликуйте свой!"}
-            </p>
-          )}
-          {!filtered.length && (query || filters.length > 0) && (
-            <div className="empty-parts">
-              <Search />
-              <h3>{t("Ничего не найдено")}</h3>
-              <button
-                className="quiet"
-                onClick={() => {
-                  setQuery("");
-                  setFilters([]);
-                }}
-              >
-                {t("Сбросить фильтры")}
-              </button>
-            </div>
-          )}
+                <span>
+                  {page} / {Math.ceil(total / 24)}
+                </span>
+                <button
+                  className="quiet"
+                  disabled={page * 24 >= total}
+                  onClick={() => setPage((p) => p + 1)}
+                >
+                  Далее
+                </button>
+              </nav>
+            )}
+            {!filtered.length && !query && !filters.length && (
+              <p className="help">
+                {account
+                  ? "Добавьте свой первый велосипед."
+                  : "Пока нет публичных велосипедов. Опубликуйте свой!"}
+              </p>
+            )}
+            {!filtered.length && (query || filters.length > 0) && (
+              <div className="empty-parts">
+                <Search />
+                <h3>{t("Ничего не найдено")}</h3>
+                <button
+                  className="quiet"
+                  onClick={() => {
+                    setQuery("");
+                    setFilters([]);
+                  }}
+                >
+                  {t("Сбросить фильтры")}
+                </button>
+              </div>
+            )}
           </Main>
         </>
       )}
@@ -1318,15 +1343,36 @@ export default function Garage({
 }
 function AuthForm({ mode, busy, onSubmit, switchMode }) {
   const { settings, catalog, t } = useSite();
+  const [authError, setAuthError] = useState("");
+  useEffect(() => setAuthError(""), [mode]);
   const { categories, models, parts, partCategories, manufacturers } = catalog;
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault();
         const d = new FormData(e.currentTarget);
+        if (
+          mode === "register" &&
+          d.get("password") !== d.get("confirmPassword")
+        ) {
+          setAuthError("Пароли не совпадают");
+          return;
+        }
+        setAuthError("");
+        d.delete("confirmPassword");
         onSubmit(Object.fromEntries(d));
       }}
     >
+      {settings[mode === "register" ? "registerImageId" : "loginImageId"] && (
+        <img
+          className="auth-illustration"
+          src={
+            "/api/assets/" +
+            settings[mode === "register" ? "registerImageId" : "loginImageId"]
+          }
+          alt=""
+        />
+      )}
       <p className="form-intro">
         {mode === "register"
           ? t("Сохраните комплектацию и фотографии своих велосипедов.")
@@ -1350,6 +1396,11 @@ function AuthForm({ mode, busy, onSubmit, switchMode }) {
           required
           maxLength={254}
           autoComplete="email"
+          inputMode="email"
+          autoCapitalize="none"
+          spellCheck={false}
+          placeholder="name@example.com"
+          pattern={"[^\\s@]+@[^\\s@]+\\.[^\\s@]+"}
           autoFocus={mode === "login"}
         />
       </Field>
@@ -1366,6 +1417,20 @@ function AuthForm({ mode, busy, onSubmit, switchMode }) {
         />
       </Field>
       <p className="help">{t("Минимум 10 символов.")}</p>
+      {mode === "register" && (
+        <Field label="Подтвердите пароль">
+          <input
+            name="confirmPassword"
+            type="password"
+            minLength={10}
+            maxLength={128}
+            required
+            autoComplete="new-password"
+            onChange={() => setAuthError("")}
+          />
+        </Field>
+      )}
+      {authError && <p role="alert">{authError}</p>}
       <button className="button full" disabled={busy}>
         {busy
           ? t("Подождите…")

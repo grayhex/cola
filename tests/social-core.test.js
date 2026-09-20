@@ -42,6 +42,7 @@ async function setup(social = true) {
     await db.exec(await sql("010_community"));
     await db.exec(await sql("011_gamification"));
     await db.exec(await sql("012_rides"));
+    await db.exec(await sql("014_journal"));
   }
   await db.query("INSERT INTO site_settings(id,value) VALUES(1,$1)", [
     JSON.stringify(defaultSettings),

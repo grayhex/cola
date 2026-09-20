@@ -16,7 +16,7 @@ import {
   Menu,
   Plus,
   Heart,
-} from "lucide-react";
+} from "./icons.jsx";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useSite } from "./site-provider.jsx";
 import { Avatar } from "./avatar.jsx";
@@ -42,6 +42,8 @@ const icons = {
 };
 const slots = {
   home: "navHomeIconId",
+  bike: "navNewIconId",
+  heart: "navPopularIconId",
   profile: "navProfileIconId",
   notifications: "navMessagesIconId",
   subscriptions: "navSubscriptionsIconId",

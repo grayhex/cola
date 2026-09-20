@@ -1,0 +1,154 @@
+.bike-journal {
+  grid-column: 1/-1;
+  min-width: 0;
+  border-top: 1px solid var(--line);
+  padding-top: 20px;
+  margin-top: 12px;
+}
+.bike-journal h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 22px;
+}
+.journal-list-entry {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+}
+.journal-list-entry h3 {
+  margin: 6px 0;
+  font-size: 18px;
+}
+.journal-list-entry p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin: 6px 0;
+  color: var(--muted);
+}
+.journal-entry-meta,
+.journal-prompt {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.journal-prompt {
+  background: var(--wash);
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+}
+.journal-page {
+  max-width: 960px !important;
+}
+.journal-page h1,
+.journal-page h2,
+.journal-page a {
+  overflow-wrap: anywhere;
+}
+.journal-body {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.65;
+  margin: 24px 0;
+}
+.journal-editor {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.journal-editor details {
+  border-block: 1px solid var(--line);
+  padding: 12px 0;
+}
+.journal-editor summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.journal-editor .field {
+  min-width: 0;
+}
+.journal-editor input[type="file"] {
+  max-width: 100%;
+}
+.journal-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.journal-photos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: 12px;
+}
+.journal-photos figure {
+  margin: 0;
+  min-width: 0;
+}
+.journal-photos img {
+  display: block;
+  width: 100%;
+  max-height: 620px;
+  object-fit: contain;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+}
+.journal-part {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--line);
+  padding: 12px 0;
+  font-size: 13px;
+}
+.journal-part p {
+  flex-basis: 100%;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin: 0;
+}
+.journal-part small {
+  color: var(--muted);
+}
+.journal-attached-ride {
+  display: block;
+  padding: 12px;
+  margin-block: 16px;
+  border: 1px solid var(--line);
+}
+@media (min-width: 1200px) {
+  .site-root .detail.bike-detail > .bike-journal {
+    grid-row: 7;
+  }
+  .site-root .detail.bike-detail > .bike-game {
+    grid-row: 8;
+  }
+  .site-root .detail.bike-detail > .discussion {
+    grid-row: 9;
+  }
+}
+@media (max-width: 1199px) {
+  .site-root .detail.bike-detail > .bike-journal {
+    order: 8 !important;
+  }
+  .site-root .detail.bike-detail > .bike-game {
+    order: 9 !important;
+  }
+  .site-root .detail.bike-detail > .discussion {
+    order: 10 !important;
+  }
+}
+@media (max-width: 600px) {
+  .journal-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .bike-journal .section-heading {
+    gap: 8px;
+  }
+  .bike-journal h2 {
+    font-size: 19px;
+  }
+}

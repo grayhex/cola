@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { Flag } from "lucide-react";
+import { Flag } from "./icons.jsx";
 import { socialApi } from "./social-primitives.jsx";
 export function PageControls({ page, hasMore, onPage }) {
   return (

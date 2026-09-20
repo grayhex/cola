@@ -91,6 +91,8 @@ test("dense visual system: shared cards, filters, search, themes and responsive 
       mtbImageId: asset,
       gravelImageId: asset,
       searchIconId: asset,
+      navNewIconId: asset,
+      uiIcons: { Heart: asset },
     });
     if (!isMobile) await page.setViewportSize({ width: 1440, height: 1000 });
     await page.goto("/?q=" + encodeURIComponent(name));
@@ -103,9 +105,34 @@ test("dense visual system: shared cards, filters, search, themes and responsive 
     );
     expect(
       await card
-        .locator(".card-info > h2")
+        .locator(".card-identity-row h2")
         .evaluate((el) => getComputedStyle(el).fontSize),
-    ).toBe("18px");
+    ).toBe("14px");
+    await expect(card.locator(".card-info > *")).toHaveCount(2);
+    await expect(card.locator(".like-button img")).toHaveAttribute(
+      "src",
+      "/api/assets/" + asset,
+    );
+    expect(
+      await card
+        .locator(".card-open-photo > img")
+        .evaluate((el) => getComputedStyle(el).objectFit),
+    ).toBe("contain");
+    await expect(card.locator(".card-facts")).not.toContainText("2020");
+    const heading = await page.locator(".garage-heading h1").boundingBox();
+    const controls = await page.locator(".showcase-actions").boundingBox();
+    expect(
+      Math.abs(
+        heading.y + heading.height / 2 - controls.y - controls.height / 2,
+      ),
+    ).toBeLessThan(3);
+    if (isMobile)
+      await expect(
+        page.locator(".showcase-actions .control-label").first(),
+      ).toBeHidden();
+    await expect(page.locator(".showcase-heading-copy")).not.toContainText(
+      "велосипедов",
+    );
     await card.locator(".micro-metric").first().click();
     await expect(
       page.getByRole("dialog", { name: "Показатели велосипеда" }),
@@ -224,6 +251,7 @@ test("dense visual system: shared cards, filters, search, themes and responsive 
         .evaluate((el) => getComputedStyle(el).transitionDuration),
     ).toBe("0s");
   } finally {
+    test.setTimeout(info.timeout + 15000);
     await db.query("UPDATE site_catalog SET value=$1 WHERE id=1", [
       JSON.stringify(originalCatalog),
     ]);

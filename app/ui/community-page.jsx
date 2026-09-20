@@ -13,6 +13,9 @@ import { PageControls } from "./community-controls.jsx";
 import BikeCard from "./bike-card.jsx";
 import { useSite } from "./site-provider.jsx";
 const eventText = {
+  journal_like: "понравилась ваша запись",
+  journal_comment: "прокомментировал запись",
+  journal_reply: "ответил вам в журнале",
   ride_like: "понравилась ваша покатушка",
   ride_comment: "прокомментировал покатушку",
   ride_reply: "ответил вам",

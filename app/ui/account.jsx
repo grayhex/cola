@@ -1,9 +1,10 @@
 "use client";
 import RideAccount from "./ride-account.jsx";
+import { fontLabels } from "../../lib/fonts.js";
 import BikeGrid from "./bike-grid.jsx";
 import { BadgeShelf } from "./achievements.jsx";
 import { useEffect, useState } from "react";
-import { Plus, ExternalLink, LogOut } from "lucide-react";
+import { Plus, ExternalLink, LogOut } from "./icons.jsx";
 import Garage from "./garage.jsx";
 import BikeCard from "./bike-card.jsx";
 import {
@@ -247,17 +248,7 @@ function Appearance({ initial, onSaved }) {
             ["hidden", "Не показывать карту"],
           ],
         ],
-        [
-          "font",
-          "Шрифт",
-          [
-            ["manrope", "Manrope"],
-            ["system", "Системный"],
-            ["arial", "Arial"],
-            ["georgia", "Georgia"],
-            ["mono", "Моноширинный"],
-          ],
-        ],
+        ["font", "Шрифт", Object.entries(fontLabels)],
       ].map(([key, label, options]) => (
         <label className="field" key={key}>
           <span>{label}</span>
@@ -341,6 +332,8 @@ export default function Account() {
   useEffect(() => {
     const requested = new URLSearchParams(window.location.search).get("tab");
     if (tabs[requested]) setTab(requested);
+    if (requested === "bikes")
+      setSelected(new URLSearchParams(window.location.search).get("bike"));
     if (
       requested === "bikes" &&
       new URLSearchParams(window.location.search).get("action") === "add"
