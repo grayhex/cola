@@ -46,7 +46,9 @@ CI создаёт временную обёртку над `playwright.config.js
 - Новый commit в PR отменяет предыдущий CI того же PR.
 - Новый push в `main` отменяет предыдущий CI ветки `main`.
 - Событие закрытия/merge PR отменяет его оставшийся CI через ту же concurrency
-  group. Вместо тестов выполняется только короткий job-подтверждение закрытия.
+  group через отдельный workflow `CI · Closed PR cleanup`. Он не запускает код
+  PR и не публикует статус `check`, чтобы не создать ложный зелёный gate для
+  merge-коммита. Только короткое подтверждение отмены.
 - Разные PR не отменяют друг друга. На feature-ветки нет отдельного push-trigger:
   они проверяются по PR, без дублирующего branch-push запуска.
 - Ручные запуски, в том числе CI из production/staging workflow, изолированы по
@@ -61,6 +63,9 @@ root-owned wrapper и отказ от устаревшего/non-main SHA. `work
 
 Существующие прогоны старой версии workflow не получают новую concurrency group
 задним числом. Автоматическая отмена действует для запусков обновлённого workflow.
+
+При переименовании `CI · ColaBike` нужно синхронно обновить concurrency key
+в `ci-pr-cleanup.yml` и имя workflow в production-trigger.
 
 ## Объём изменения
 
