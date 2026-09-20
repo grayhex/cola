@@ -31,9 +31,12 @@ Chromium + mobile WebKit, Compose assertions and the disposable backup/restore
 drill. PR code runs only on GitHub-hosted runners.
 
 Production deploy receives the exact SHA from the successful `main` CI run. The
-root-owned `/usr/local/sbin/deploy-cola` fetches `origin/main` using the repository
-owner's read-only SSH deploy key and refuses a stale/non-main SHA. If
-`.env.production` exists it uses `compose.prod.yaml` with that env file.
+self-hosted production job deliberately does not run `actions/checkout` or other
+Marketplace actions: it only invokes the root-owned deployment wrapper. That
+wrapper fetches `origin/main` using the repository owner's read-only SSH deploy key
+and refuses a stale/non-main SHA. If `.env.production` exists it uses
+`compose.prod.yaml` with that env file. Optional `[hagsy-demo]` verification runs
+inside the deployed app container after a successful rollout.
 
 Staging is intentionally manual. Run **Deploy · Staging** from the workflow's
 `main` definition and enter the feature branch, tag or SHA in the `ref` field.
