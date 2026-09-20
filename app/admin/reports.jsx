@@ -60,6 +60,8 @@ export default function Reports({ onManageUser }) {
                   comment: "Комментарий",
                   ride: "Покатушка",
                   ride_comment: "Комментарий к покатушке",
+                  journal: "Запись журнала",
+                  journal_comment: "Комментарий к записи",
                   profile: "Профиль",
                   bike: "Велосипед",
                 }[r.entityType]
@@ -117,7 +119,18 @@ export default function Reports({ onManageUser }) {
                     Скрыть покатушку
                   </button>
                 )}
-                {["comment", "ride_comment"].includes(r.entityType) &&
+                {r.entityType === "journal" && (
+                  <button
+                    className="quiet"
+                    disabled={busy}
+                    onClick={() => act(r.id, "hide_journal")}
+                  >
+                    Скрыть запись
+                  </button>
+                )}
+                {["comment", "ride_comment", "journal_comment"].includes(
+                  r.entityType,
+                ) &&
                   !r.target.commentDeleted && (
                     <button
                       className="quiet"

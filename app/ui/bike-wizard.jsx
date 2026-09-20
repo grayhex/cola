@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { LoaderCircle, Check, Plus, Trash2, Link, Pencil } from "lucide-react";
+import { LoaderCircle, Check, Plus, Trash2, Link, Pencil } from "./icons.jsx";
 import { useSite } from "./site-provider.jsx";
 import CompactCombo from "./compact-combo.jsx";
 import SiteAssetIcon from "./site-asset-icon.jsx";

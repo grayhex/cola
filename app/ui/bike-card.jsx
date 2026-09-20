@@ -1,5 +1,5 @@
 "use client";
-import { Heart, Lock, MessageCircle } from "lucide-react";
+import { Heart, Lock, MessageCircle } from "./icons.jsx";
 import Photo from "./bike-photo.jsx";
 import { AuthorLink } from "./social-primitives.jsx";
 import { useSite } from "./site-provider.jsx";
@@ -18,13 +18,13 @@ export default function BikeCard({
   const title = b.name || [b.brand, b.model].join(" ");
   const open = onOpen || (() => window.location.assign("/b/" + b.share_id));
   const facts = [
-    b.year && { key: "year", text: b.year },
     catalog.categories[b.category] && {
       key: "category",
       text: catalog.categories[b.category],
     },
     b.weight && { key: "weight", text: Number(b.weight) + " кг" },
     b.size && { key: "size", text: b.size },
+    b.color && { key: "color", text: b.color },
   ].filter(Boolean);
   return (
     <article className="bike-card">
@@ -48,22 +48,24 @@ export default function BikeCard({
         )}
       </div>
       <div className="card-info">
-        <div className="card-facts">
-          {facts.map((f) => (
-            <span
-              key={f.key}
-              className={"fact-" + f.key}
-              title={String(f.text)}
-            >
-              {f.text}
-            </span>
-          ))}
+        <div className="card-identity-row">
+          <h2>
+            <button type="button" onClick={open} title={title}>
+              {title}
+            </button>
+          </h2>
+          <div className="card-facts">
+            {facts.map((f) => (
+              <span
+                key={f.key}
+                className={"fact-" + f.key}
+                title={String(f.text)}
+              >
+                {f.text}
+              </span>
+            ))}
+          </div>
         </div>
-        <h2>
-          <button type="button" onClick={open} title={title}>
-            {title}
-          </button>
-        </h2>
         <div className="card-social">
           <AuthorLink author={b.author} />
           {b.is_public && (
@@ -97,10 +99,10 @@ export default function BikeCard({
               </a>
             </div>
           )}
-        </div>
-        <div className="card-signals">
-          <MicroMetrics scores={b.scores} />
-          <ImportantBadge bike={b} records={records} />
+          <div className="card-signals">
+            <MicroMetrics scores={b.scores} />
+            <ImportantBadge bike={b} records={records} />
+          </div>
         </div>
       </div>
     </article>

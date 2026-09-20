@@ -1,5 +1,11 @@
 # ColaBike Visual Design System
 
+Current card refinement: two footer rows (identity/facts and author/social/game),
+no separate year, uncropped contained photo. Compact mobile showcase controls use
+icons with accessible names alongside the heading. The bike journal sits below
+the compact photos/build/rides layout. Admin icon overrides apply to navigation,
+Lucide UI icons and component glyphs; graphics are organized in searchable groups.
+
 > Status: target direction for the public/social UI.  
 > Scope: visual system, interaction patterns and presentation rules.  
 > This document is intentionally product- and implementation-oriented. It is not a pixel-perfect mockup.

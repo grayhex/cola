@@ -42,7 +42,12 @@ async function setup() {
     "004_garage_layout",
     "005_bike_wizard",
     "007_showcase",
-    "008_beta_limits", "009_social_core", "010_community", "011_gamification",
+    "008_beta_limits",
+    "009_social_core",
+    "010_community",
+    "011_gamification",
+    "012_rides",
+    "014_journal",
   ])
     await db.exec(
       await readFile(new URL("../db/" + m + ".sql", import.meta.url), "utf8"),

@@ -4,13 +4,19 @@ import { Avatar, socialApi } from "./social-primitives.jsx";
 import { ReportButton, PageControls } from "./community-controls.jsx";
 const DiscussionKind = createContext("bike");
 const paths = (kind) =>
-  kind === "ride"
-    ? { items: "rides/", comments: "rides/comments/", report: "ride_comment" }
-    : {
-        items: "community/bikes/",
-        comments: "community/comments/",
-        report: "comment",
-      };
+  kind === "journal"
+    ? {
+        items: "journal/",
+        comments: "journal/comments/",
+        report: "journal_comment",
+      }
+    : kind === "ride"
+      ? { items: "rides/", comments: "rides/comments/", report: "ride_comment" }
+      : {
+          items: "community/bikes/",
+          comments: "community/comments/",
+          report: "comment",
+        };
 function Editor({ initial = "", label, onSave, onCancel }) {
   const [body, setBody] = useState(initial),
     [busy, setBusy] = useState(false),
@@ -268,9 +274,11 @@ export default function Discussion({ bike, user, entityType = "bike" }) {
         <div className="section-heading">
           <div>
             <h2>
-              {entityType === "ride"
-                ? "Обсуждение покатушки"
-                : "Обсуждение сборки"}
+              {entityType === "journal"
+                ? "Обсуждение записи"
+                : entityType === "ride"
+                  ? "Обсуждение покатушки"
+                  : "Обсуждение сборки"}
             </h2>
             <p className="help">Детали, идеи и опыт владельцев.</p>
           </div>
@@ -330,7 +338,7 @@ export default function Discussion({ bike, user, entityType = "bike" }) {
           />
         ) : (
           <a className="button secondary small" href="/account">
-            Войти, чтобы обсудить велосипед
+            Войти, чтобы участвовать в обсуждении
           </a>
         )}
       </section>

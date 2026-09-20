@@ -1,5 +1,5 @@
 "use client";
-import { Check, LoaderCircle, TriangleAlert } from "lucide-react";
+import { Check, LoaderCircle, TriangleAlert } from "./icons.jsx";
 const labels = {
   retailer_search_started: "Ищем комплектацию в магазинах",
   resolve_started: "Начинаем поиск",

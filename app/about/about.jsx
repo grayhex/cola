@@ -12,7 +12,7 @@ import {
   ShieldCheck,
   Settings2,
   History,
-} from "lucide-react";
+} from "../ui/icons.jsx";
 import { useSite } from "../ui/site-provider.jsx";
 import { SocialHeader, SocialFooter } from "../ui/social-primitives.jsx";
 import { aboutSections, aboutDefaults } from "../../lib/about-content.js";
@@ -34,7 +34,7 @@ const illustrations = {
   technology: "aboutTechnologyImageId",
   history: "aboutHistoryImageId",
 };
-export default function About({ user }) {
+export default function About({ user, statistics }) {
   const { settings, setPreferences } = useSite(),
     config = settings.about || aboutDefaults;
   useEffect(() => setPreferences(user?.preferences || {}), [user?.id]);
@@ -50,6 +50,34 @@ export default function About({ user }) {
           <h1>О проекте</h1>
           <p>Соберите велосипед. Покажите сборку. Добавьте приключения.</p>
         </div>
+        {statistics && settings.showAboutStats !== false && (
+          <section className="about-statistics" aria-label="ColaBike в цифрах">
+            <h2>Гараж растёт вместе с нами</h2>
+            <dl>
+              {[
+                [Users, statistics.users, "Участников"],
+                [Bike, statistics.bikes, "Велосипедов"],
+                [Route, statistics.rides, "Покатушек"],
+                [History, statistics.entries, "Записей журнала"],
+                [
+                  Gauge,
+                  Math.round(Number(statistics.distance) / 1000),
+                  "Километров",
+                ],
+              ].map(([Icon, n, label]) => (
+                <div key={label}>
+                  <Icon size={18} />
+                  <dt>{label}</dt>
+                  <dd>{Number(n).toLocaleString("ru-RU")}</dd>
+                </div>
+              ))}
+            </dl>
+            <p className="help">
+              Велосипеды, записи, покатушки и километры — только из публичного
+              гаража.
+            </p>
+          </section>
+        )}
         {!!visible.length && (
           <nav className="about-index" aria-label="На этой странице">
             {visible.map((s, i) => (

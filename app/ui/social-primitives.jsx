@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Heart } from "lucide-react";
+import { Heart } from "./icons.jsx";
 import GlobalHeader from "./global-header.jsx";
 import { useSite } from "./site-provider.jsx";
 import Versions from "./versions.jsx";

@@ -9,6 +9,8 @@ import { BlockSettings, GroupSettings } from "./layout-settings.jsx";
 import { copyBlocks } from "../../lib/copy-blocks.js";
 import ResolverSettings from "./resolver-settings.jsx";
 import AssetPicker from "./asset-picker.jsx";
+import IconSettings from "./icon-settings.jsx";
+import { fontLabels } from "../../lib/fonts.js";
 import GlobalHeader from "../ui/global-header.jsx";
 import { useEffect, useState, useRef } from "react";
 import {
@@ -32,7 +34,7 @@ import {
   ShieldCheck,
   X,
   LoaderCircle,
-} from "lucide-react";
+} from "../ui/icons.jsx";
 import { useSite } from "../ui/site-provider.jsx";
 import PartIcon from "../ui/part-icon.jsx";
 import { iconNames, categoryIcons } from "../../lib/part-icons.js";
@@ -263,7 +265,7 @@ export default function Admin() {
     setError("");
     setNotice("");
     try {
-      await fn();
+      return await fn();
     } catch (e) {
       setError(e.message);
     } finally {
@@ -622,13 +624,7 @@ export default function Admin() {
                     label="Шрифт"
                     value={draft.font}
                     onChange={(v) => update("font", v)}
-                    options={[
-                      ["manrope", "Manrope"],
-                      ["system", "Системный"],
-                      ["arial", "Arial"],
-                      ["georgia", "Georgia"],
-                      ["mono", "Моноширинный"],
-                    ]}
+                    options={Object.entries(fontLabels)}
                   />
                   <Field label="Акцентный цвет">
                     <input
@@ -787,11 +783,38 @@ export default function Admin() {
                 </div>
 
                 <div className="graphics-groups">
-                  <section className="graphics-group">
-                    <div className="graphics-group-heading">
+                  <details className="graphics-group">
+                    <summary>Вход и регистрация</summary>
+                    <div className="asset-picker-grid">
+                      {assetPicker("loginImageId", "Иллюстрация входа", {
+                        emptyLabel: "Без иллюстрации",
+                      })}
+                      {assetPicker(
+                        "registerImageId",
+                        "Иллюстрация регистрации",
+                        { emptyLabel: "Без иллюстрации" },
+                      )}
+                    </div>
+                  </details>
+                  <details className="graphics-group">
+                    <summary>Новые и популярные велосипеды</summary>
+                    <div className="asset-picker-grid">
+                      {assetPicker("navNewIconId", "Новые велосипеды")}
+                      {assetPicker("navPopularIconId", "Популярные велосипеды")}
+                    </div>
+                  </details>
+                  <IconSettings
+                    settings={draft}
+                    assets={assets}
+                    busy={busy}
+                    onChange={update}
+                    onUpload={(file) => run(() => uploadAsset(file))}
+                  />
+                  <details className="graphics-group">
+                    <summary className="graphics-group-heading">
                       <h3>Брендинг</h3>
                       <p>Основная айдентика и крупная графика страниц.</p>
-                    </div>
+                    </summary>
                     <div className="asset-picker-grid">
                       {assetPicker("logoId", "Логотип в шапке", {
                         emptyLabel: "Текстовый логотип",
@@ -806,17 +829,17 @@ export default function Admin() {
                         previewClassName: "wide",
                       })}
                     </div>
-                  </section>
+                  </details>
 
-                  <section className="graphics-group">
-                    <div className="graphics-group-heading">
+                  <details className="graphics-group">
+                    <summary className="graphics-group-heading">
                       <h3>Общий фон сайта</h3>
                       <p>
                         Фоновое изображение применяется ко всем страницам сайта.
                         Для паттернов используйте замощение, для крупных
                         иллюстраций — масштабирование.
                       </p>
-                    </div>
+                    </summary>
                     <div className="asset-picker-grid">
                       {assetPicker("backgroundImageId", "Фоновое изображение", {
                         emptyLabel: "Без фонового изображения",
@@ -858,10 +881,10 @@ export default function Admin() {
                         />
                       </Field>
                     </div>
-                  </section>
+                  </details>
 
-                  <section className="graphics-group">
-                    <div className="graphics-group-heading">
+                  <details className="graphics-group">
+                    <summary className="graphics-group-heading">
                       <h3>Верхнее меню</h3>
                       <label className="field">
                         <span>Размер значков</span>
@@ -884,7 +907,7 @@ export default function Admin() {
                         Прозрачные PNG/WebP подходят лучше всего. Без файла
                         остаётся встроенный Lucide-плейсхолдер.
                       </p>
-                    </div>
+                    </summary>
                     <div className="asset-picker-grid icon-slots">
                       {assetPicker("navHomeIconId", "Главная", {
                         previewClassName: "icon",
@@ -914,16 +937,16 @@ export default function Admin() {
                         previewClassName: "icon",
                       })}
                     </div>
-                  </section>
+                  </details>
 
-                  <section className="graphics-group">
-                    <div className="graphics-group-heading">
+                  <details className="graphics-group">
+                    <summary className="graphics-group-heading">
                       <h3>Действия витрины</h3>
                       <p>
                         Кнопки в правой части заголовка витрины и лайк поверх
                         фотографии.
                       </p>
-                    </div>
+                    </summary>
                     <div className="asset-picker-grid icon-slots">
                       {assetPicker("wizardLinkIconId", "Мастер — по ссылке", {
                         previewClassName: "icon",
@@ -958,17 +981,17 @@ export default function Admin() {
                         previewClassName: "icon transparent",
                       })}
                     </div>
-                  </section>
+                  </details>
 
-                  <section className="graphics-group">
-                    <div className="graphics-group-heading">
+                  <details className="graphics-group">
+                    <summary className="graphics-group-heading">
                       <h3>Тип велосипеда</h3>
                       <p>
                         Иконка типа накладывается прямо на фотографию без
                         фоновой плашки. Можно использовать прозрачные
                         изображения.
                       </p>
-                    </div>
+                    </summary>
                     <div className="asset-picker-grid icon-slots">
                       {assetPicker("mtbTypeIconId", "MTB / ATB", {
                         previewClassName: "icon transparent",
@@ -980,16 +1003,16 @@ export default function Admin() {
                         previewClassName: "icon transparent",
                       })}
                     </div>
-                  </section>
+                  </details>
 
-                  <section className="graphics-group">
-                    <div className="graphics-group-heading">
+                  <details className="graphics-group">
+                    <summary className="graphics-group-heading">
                       <h3>Стоковые изображения</h3>
                       <p>
                         Используются как подстановка, когда у велосипеда ещё нет
                         собственной фотографии.
                       </p>
-                    </div>
+                    </summary>
                     <div className="asset-picker-grid">
                       {assetPicker("mtbImageId", "Сток — MTB", {
                         emptyLabel: "Без изображения",
@@ -1012,7 +1035,7 @@ export default function Admin() {
                         },
                       )}
                     </div>
-                  </section>
+                  </details>
                 </div>
               </section>
             </>

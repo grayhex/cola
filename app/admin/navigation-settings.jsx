@@ -81,6 +81,14 @@ export function AboutSettings({ settings, onChange, assetPicker }) {
           заголовки, видимость информации и иллюстрации.
         </p>
       </div>
+      <label className="admin-toggle">
+        <span>Показывать статистику проекта</span>
+        <input
+          type="checkbox"
+          checked={settings.showAboutStats !== false}
+          onChange={(e) => onChange("showAboutStats", e.target.checked)}
+        />
+      </label>
       {config.sections
         .filter((s) => s.id !== "history")
         .map((section) => (

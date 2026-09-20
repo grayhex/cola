@@ -1,4 +1,5 @@
 "use client";
+import { Heart } from "./icons.jsx";
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { SocialHeader, SocialFooter, socialApi } from "./social-primitives.jsx";
@@ -90,7 +91,7 @@ export default function RidePage({ share, styleUrl }) {
                     }
                   }}
                 >
-                  ♡ {ride.likes}
+                  <Heart size={14} /> {ride.likes}
                 </button>
                 <Discussion bike={ride} user={user} entityType="ride" />
               </>

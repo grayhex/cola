@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Camera } from "lucide-react";
+import { Camera } from "./icons.jsx";
 import { useSite } from "./site-provider.jsx";
 const demoImage =
   "https://dma.canyon.com/image/upload/w_930%2Ch_487%2Cc_fit/f_auto/q_auto/v1760425750/2025_FULL_grizl_al-7-raw_4527_R075_P08_ujmfyh";

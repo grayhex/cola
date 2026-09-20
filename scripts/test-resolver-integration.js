@@ -28,7 +28,9 @@ const environment = {
   MAX_PHOTOS_PER_USER: "20",
   UPLOAD_DIR: path.join(dir, "uploads"),
   RIDES_DIR: path.join(dir, "rides"),
-  MAP_STYLE_URL: process.argv.includes("--e2e") ? base+"/test-map-style.json" : "",
+  MAP_STYLE_URL: process.argv.includes("--e2e")
+    ? base + "/test-map-style.json"
+    : "",
 };
 function start(args, cwd = root) {
   const log = path.join(dir, logs.length + ".log");
@@ -115,6 +117,7 @@ try {
         "tests/social-http.js",
         "tests/community-http.js",
         "tests/rides-http.js",
+        "tests/journal-http.js",
         "tests/gamification-http.js",
         ...(externalDatabase ? ["tests/quota-http.js"] : []),
       ])

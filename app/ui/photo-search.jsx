@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { LoaderCircle } from "lucide-react";
+import { LoaderCircle } from "./icons.jsx";
 export default function PhotoSearch({ bike, onDone }) {
   const [sourceUrl, setSourceUrl] = useState(
       bike.factory_spec?.source?.url || "",

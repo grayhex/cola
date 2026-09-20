@@ -1,5 +1,5 @@
 "use client";
-import { Plus, Trash2, ChevronUp, ChevronDown } from "lucide-react";
+import { Plus, Trash2, ChevronUp, ChevronDown } from "../ui/icons.jsx";
 import PartIcon from "../ui/part-icon.jsx";
 import { iconNames } from "../../lib/part-icons.js";
 import {

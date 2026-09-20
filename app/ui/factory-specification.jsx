@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { LoaderCircle, Check, RefreshCw } from "lucide-react";
+import { LoaderCircle, Check, RefreshCw } from "./icons.jsx";
 import { factoryComponent } from "../../lib/factory-components.js";
 const messages = {
   not_found: "Комплектация не найдена. Продолжите вручную.",

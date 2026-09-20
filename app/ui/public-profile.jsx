@@ -4,7 +4,7 @@ import BikeGrid from "./bike-grid.jsx";
 import { BadgeShelf } from "./achievements.jsx";
 import { ReportButton } from "./community-controls.jsx";
 import { useEffect, useState } from "react";
-import { MapPin, Calendar, ArrowLeft } from "lucide-react";
+import { MapPin, Calendar, ArrowLeft } from "./icons.jsx";
 import {
   Avatar,
   SocialHeader,

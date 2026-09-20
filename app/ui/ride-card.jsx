@@ -1,4 +1,5 @@
 "use client";
+import { Heart } from "./icons.jsx";
 import dynamic from "next/dynamic";
 import { useSite } from "./site-provider.jsx";
 import RideBasemap from "./ride-basemap.jsx";
@@ -105,7 +106,8 @@ export default function RideCard({ ride: r, owner = false, onEdit }) {
         <div className="ride-social">
           <a href={"/u/" + r.author.username}>@{r.author.username}</a>
           <span>
-            ♡ {r.likes} · Комментарии {r.comments}
+            <Heart size={12} aria-label="Лайки" /> {r.likes} · Комментарии{" "}
+            {r.comments}
           </span>
         </div>
         {owner && (
