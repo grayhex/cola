@@ -870,15 +870,18 @@ export default function Garage({
           )}
         </Main>
       ) : (
-        <Main className="garage">
+        <>
           {settings.garageImageId && (
-            <img
-              className="garage-banner"
-              src={"/api/assets/" + settings.garageImageId}
-              alt=""
-            />
+            <div className="garage-banner-shell">
+              <img
+                className="garage-banner"
+                src={"/api/assets/" + settings.garageImageId}
+                alt=""
+              />
+            </div>
           )}
-          <div className="garage-heading">
+          <Main className="garage">
+            <div className="garage-heading">
             <div className="showcase-heading-copy">
               <h1>
                 {account
@@ -1006,7 +1009,8 @@ export default function Garage({
               </button>
             </div>
           )}
-        </Main>
+          </Main>
+        </>
       )}
       {!embedded && (
         <footer className="footer">
