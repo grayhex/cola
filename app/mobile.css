@@ -573,12 +573,18 @@
 .add-card p {
   font-size: 15px;
 }
+.garage-banner-shell {
+  width: 100%;
+  overflow: hidden;
+  background: var(--paper);
+}
 .garage-banner {
+  display: block;
   width: 100%;
   max-height: 240px;
   object-fit: cover;
-  border-radius: var(--radius);
-  margin-bottom: 24px;
+  border-radius: 0;
+  margin: 0;
 }
 .footer {
   padding: 24px 16px;
@@ -2101,15 +2107,6 @@
 .site-root .showcase-search-row .showcase-search-field {
   width: min(360px, 100%);
   margin-left: auto;
-}
-@media (min-width: 900px) {
-  .site-root .garage-banner {
-    width: min(var(--showcase-shell-max), calc(100vw - 48px));
-    max-width: none;
-    margin-left: 50%;
-    margin-right: 0;
-    transform: translateX(-50%);
-  }
 }
 @media (max-width: 700px) {
   .site-root .garage-heading {
