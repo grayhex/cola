@@ -507,49 +507,57 @@
   }
 }
 
-/* On phones the illustrated header is a full-bleed surface, not a floating logo. */
-@media (max-width: 700px) {
+/*
+ * Keep the collapsed header identical in portrait and landscape.
+ * The source artwork is much wider than a phone header, so preserve its
+ * branded left edge and crop only the decorative skyline.
+ */
+@media (max-width: 1099px) {
   .site-root .global-header.has-banner {
-    height: clamp(64px, 18vw, 76px);
-    min-height: clamp(64px, 18vw, 76px);
-    padding: 0 8px;
+    display: flex;
+    align-items: stretch;
+    height: 56px;
+    min-height: 56px;
+    padding: 0;
+    gap: 0;
     overflow: hidden;
     border-bottom: 0;
   }
   .site-root .global-header.has-banner .global-header-banner {
-    position: absolute;
-    inset: 0;
-    z-index: 0;
-    display: block;
-    overflow: hidden;
-    pointer-events: none;
-  }
-  .site-root .global-header.has-banner .global-header-banner-image {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    object-position: left center;
+    display: none;
   }
   .site-root .global-header.has-banner .brand-illustrated {
-    position: absolute;
-    inset: 0;
-    z-index: 1;
-    width: 100%;
-    height: 100%;
+    position: static;
+    inset: auto;
+    z-index: auto;
+    flex: 1 1 auto;
+    width: auto;
+    height: 56px;
+    min-width: 0;
+    overflow: hidden;
   }
   .site-root .global-header.has-banner .brand-illustrated .site-logo {
+    display: block;
     width: 100%;
     height: 100%;
     max-width: none;
-    opacity: 0;
+    opacity: 1;
+    object-fit: cover;
+    object-position: left center;
     pointer-events: none;
   }
   .site-root .global-header.has-banner .global-nav {
-    position: relative;
-    z-index: 2;
-    margin-left: auto;
+    position: static;
+    z-index: auto;
+    flex: 0 0 auto;
+    width: auto;
+    height: 56px;
+    margin: 0;
+    padding: 0 4px;
+    gap: 2px;
+    background: var(--paper);
   }
   .site-root .global-header.has-banner + .garage-banner-shell {
-    border-top: 10px solid var(--paper);
+    border-top: 4px solid var(--paper);
   }
 }
