@@ -117,7 +117,11 @@ export default function JournalEditor({
       </p>
       <label className="field">
         <span>Тип записи</span>
-        <select value={form.kind} onChange={(e) => set("kind", e.target.value)}>
+        <select
+          aria-label="Тип записи"
+          value={form.kind}
+          onChange={(e) => set("kind", e.target.value)}
+        >
           {Object.entries(journalKinds).map(([v, l]) => (
             <option key={v} value={v}>
               {l}
@@ -199,6 +203,7 @@ export default function JournalEditor({
         <label className="field">
           <span>Покатушка этого велосипеда</span>
           <select
+            aria-label="Покатушка этого велосипеда"
             value={form.rideId || ""}
             onChange={(e) => set("rideId", e.target.value || null)}
           >

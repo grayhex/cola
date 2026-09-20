@@ -70,9 +70,12 @@ test("grouped icon overrides, local fonts, auth illustrations and public statist
       ).status(),
     ).toBe(409);
     await page.goto("/admin");
+    await page.getByRole("tab", { name: "Дизайн", exact: true }).click();
     await page.getByRole("button", { name: "Оформление", exact: true }).click();
     await expect(
-      page.getByLabel("Шрифт", { exact: true }).locator("option"),
+      page
+        .getByRole("combobox", { name: "Шрифт", exact: true })
+        .locator("option"),
     ).toHaveCount(14);
     await page
       .locator("summary")

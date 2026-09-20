@@ -22,7 +22,9 @@ async function register(page, name) {
   await page
     .getByRole("button", { name: "Создать аккаунт", exact: true })
     .click();
-  await expect(page.getByRole("alert")).toContainText("Пароли не совпадают");
+  await expect(page.getByRole("dialog").getByRole("alert")).toContainText(
+    "Пароли не совпадают",
+  );
   expect((await (await page.request.get("/api/me")).json()).user).toBeNull();
   await page
     .locator("input[name=confirmPassword]")

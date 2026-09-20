@@ -121,6 +121,7 @@ test("dense visual system: shared cards, filters, search, themes and responsive 
     await expect(card.locator(".card-facts")).not.toContainText("2020");
     const heading = await page.locator(".garage-heading h1").boundingBox();
     const controls = await page.locator(".showcase-actions").boundingBox();
+    expect(heading.width).toBeGreaterThan(100);
     expect(
       Math.abs(
         heading.y + heading.height / 2 - controls.y - controls.height / 2,

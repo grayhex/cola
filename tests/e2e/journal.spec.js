@@ -230,7 +230,7 @@ test("journal: draft, publication, photo, discussion and inherited privacy", asy
     ])
       expect((await visitor.request.get(url)).status()).toBe(404);
     await other.reload();
-    await expect(other.getByRole("alert")).toBeVisible();
+    await expect(other.locator("main").getByRole("alert")).toBeVisible();
     await expect(
       other.locator(".journal-body,.journal-photos img"),
     ).toHaveCount(0);
