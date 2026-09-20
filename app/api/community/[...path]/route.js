@@ -1,4 +1,9 @@
 import { rideFeed } from "../../../../lib/ride-feed.js";
+import {
+  bikeFollowing,
+  setBikeFollow,
+  savedPage,
+} from "../../../../lib/journal-discovery.js";
 import { audit } from "../../../../lib/site.js";
 import { db, transaction } from "../../../../lib/db.js";
 import { currentUser, rateLimit } from "../../../../lib/auth.js";
@@ -75,7 +80,36 @@ async function handler(req, { params }) {
         );
       }
     }
+    if (p[0] === "feed" && p.length === 1 && m === "GET") {
+      const type = url.searchParams.get("type") || "all",
+        mode = url.searchParams.get("mode") || "following";
+      if (
+        !["all", "rides", "journal"].includes(type) ||
+        !["new", "following"].includes(mode)
+      )
+        return fail("Неизвестный режим");
+      if (!user && !(type === "journal" && mode === "new"))
+        return fail("Войдите в аккаунт", 401);
+      return json(await rideFeed(db, user?.id || null, page(), type, mode));
+    }
+    if (p[0] === "bikes" && p.length === 3 && p[2] === "follow" && m === "GET")
+      return json(await bikeFollowing(db, uuid.parse(p[1]), user?.id || null));
     if (!user) return fail("Войдите в аккаунт", 401);
+    if (p[0] === "saved" && p.length === 1 && m === "GET")
+      return json(await savedPage(db, user.id, page()));
+    if (
+      p[0] === "bikes" &&
+      p.length === 3 &&
+      p[2] === "follow" &&
+      ["PUT", "DELETE"].includes(m)
+    ) {
+      await limited("bike-follow", 30);
+      return json(
+        await transaction((q) =>
+          setBikeFollow(q, uuid.parse(p[1]), user.id, m === "PUT"),
+        ),
+      );
+    }
     if (
       p[0] === "comments" &&
       p.length === 2 &&
@@ -96,15 +130,6 @@ async function handler(req, { params }) {
         }),
       );
     }
-    if (p[0] === "feed" && p.length === 1 && m === "GET")
-      return json(
-        await rideFeed(
-          db,
-          user.id,
-          page(),
-          url.searchParams.get("type") === "rides" ? "rides" : "all",
-        ),
-      );
     if (p[0] === "notifications") {
       if (p.length === 1 && m === "GET")
         return json(await notificationPage(db, user.id, page()));
@@ -158,6 +183,7 @@ async function handler(req, { params }) {
   }
 }
 export const GET = traced(handler),
+  PUT = traced(handler),
   POST = traced(handler),
   PATCH = traced(handler),
   DELETE = traced(handler);

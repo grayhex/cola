@@ -23,6 +23,7 @@ import {
   journalBikeLock,
 } from "../../../../lib/journal.js";
 import { journalSocial } from "../../../../lib/journal-social.js";
+import { setSaved, setSolution } from "../../../../lib/journal-discovery.js";
 import { preparePhoto } from "../../../../lib/images.js";
 import { limits, QuotaError } from "../../../../lib/limits.js";
 import {
@@ -113,6 +114,21 @@ async function handler(req, { params }) {
       return json(
         await transaction((q) => saveJournal(q, user.id, input)),
         201,
+      );
+    }
+    if (p.length === 2 && p[1] === "save" && ["PUT", "DELETE"].includes(m))
+      return json(
+        await transaction((q) =>
+          setSaved(q, uuid.parse(p[0]), user.id, m === "PUT"),
+        ),
+      );
+    if (p.length === 2 && p[1] === "solution" && m === "PUT") {
+      const input = await readJson(req, 2048);
+      const comment = uuid.nullable().parse(input?.commentId);
+      return json(
+        await transaction((q) =>
+          setSolution(q, uuid.parse(p[0]), user.id, comment),
+        ),
       );
     }
     if (p.length === 1 && m === "PATCH") {

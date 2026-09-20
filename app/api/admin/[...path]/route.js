@@ -25,6 +25,7 @@ import {
 } from "../../../../lib/admin-validation.js";
 import { preparePhoto } from "../../../../lib/images.js";
 import { uuid } from "../../../../lib/validation.js";
+import { participationSummary } from "../../../../lib/participation.js";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 async function handler(req, { params }) {
@@ -87,7 +88,12 @@ async function handler(req, { params }) {
       const stats = await db.query(
         "SELECT (SELECT count(*)::int FROM users) AS users,(SELECT count(*)::int FROM bikes) AS bikes,(SELECT count(*)::int FROM photos) AS photos",
       );
-      return json({ ...(await getSite()), stats: stats.rows[0], user });
+      return json({
+        ...(await getSite()),
+        stats: stats.rows[0],
+        participation: await participationSummary(db),
+        user,
+      });
     }
     if (
       ["settings", "catalog"].includes(p[0]) &&

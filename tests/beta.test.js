@@ -48,6 +48,7 @@ async function setup() {
     "011_gamification",
     "012_rides",
     "014_journal",
+    "015_discovery",
   ])
     await db.exec(
       await readFile(new URL("../db/" + m + ".sql", import.meta.url), "utf8"),

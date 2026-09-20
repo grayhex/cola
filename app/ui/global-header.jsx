@@ -16,6 +16,8 @@ import {
   Menu,
   Plus,
   Heart,
+  BookOpen,
+  Save,
 } from "./icons.jsx";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useSite } from "./site-provider.jsx";
@@ -27,6 +29,8 @@ import {
   activeSection,
 } from "../../lib/navigation.js";
 const icons = {
+  journal: BookOpen,
+  saved: Save,
   home: Home,
   profile: UserRound,
   notifications: Bell,
@@ -41,6 +45,7 @@ const icons = {
   heart: Heart,
 };
 const slots = {
+  journal: "navJournalIconId",
   home: "navHomeIconId",
   bike: "navNewIconId",
   heart: "navPopularIconId",
@@ -187,6 +192,7 @@ export default function GlobalHeader({ user, onProfile }) {
           icon: "records",
         },
         { href: "/feed", label: "Подписки", icon: "subscriptions" },
+        { href: "/saved", label: "Сохранённое", icon: "saved" },
         { href: "/notifications", label: "Уведомления", icon: "notifications" },
         ...(user?.role === "admin"
           ? [{ href: "/admin", label: "Админка", icon: "admin" }]
@@ -276,7 +282,7 @@ export default function GlobalHeader({ user, onProfile }) {
                 active={active === section.id}
                 trigger={
                   <>
-                    {graphic(section.id === "bikes" ? "home" : "rides")}
+                    {graphic(section.id === "bikes" ? "home" : section.id)}
                     <span>{section.label}</span>
                     <ChevronDown size={13} aria-hidden="true" />
                   </>

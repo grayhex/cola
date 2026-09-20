@@ -88,7 +88,9 @@ test("navigation: real destinations, account, keyboard, configurable About and a
       await page.keyboard.press("Escape");
       await expect(bikes).toBeFocused();
       await bikes.click();
-      await page.locator("h1").click();
+      // Click the actual heading text outside the menu, not its full-width box
+      // centre, which can legitimately sit beneath a desktop dropdown.
+      await page.locator("h1").click({ position: { x: 10, y: 10 } });
       await expect(bikes).toHaveAttribute("aria-expanded", "false");
       await bikes.click();
       await page.getByRole("link", { name: "Популярные", exact: true }).click();
@@ -197,6 +199,7 @@ test("navigation: real destinations, account, keyboard, configurable About and a
       .locator(".navigation-settings")
       .getByRole("group", { name: "О проекте", exact: true });
     await navAbout.getByLabel("Название в меню").fill("Знакомство");
+    await navAbout.getByRole("button", { name: "Выше: about" }).click();
     await navAbout.getByRole("button", { name: "Выше: about" }).click();
     await navAbout.getByRole("button", { name: "Выше: about" }).click();
     await page.getByRole("button", { name: /^О проекте(?: |$)/ }).click();

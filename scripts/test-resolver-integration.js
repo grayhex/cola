@@ -118,6 +118,7 @@ try {
         "tests/community-http.js",
         "tests/rides-http.js",
         "tests/journal-http.js",
+        "tests/discovery-http.js",
         "tests/gamification-http.js",
         ...(externalDatabase ? ["tests/quota-http.js"] : []),
       ])

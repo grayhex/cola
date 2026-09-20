@@ -1,8 +1,9 @@
 "use client";
 import RideCard from "./ride-card.jsx";
+import JournalCard from "./journal-card.jsx";
 import { Check } from "./icons.jsx";
 import BikeGrid from "./bike-grid.jsx";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   SocialHeader,
   SocialFooter,
@@ -26,6 +27,16 @@ const eventText = {
   reply: "ответил вам",
 };
 export default function CommunityPage({ kind }) {
+  const [mode, setMode] = useState("new");
+  useEffect(
+    () =>
+      setMode(
+        new URLSearchParams(location.search).get("mode") === "following"
+          ? "following"
+          : "new",
+      ),
+    [],
+  );
   const [feedType, setFeedType] = useState(null);
   useEffect(
     () =>
@@ -42,14 +53,21 @@ export default function CommunityPage({ kind }) {
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false);
   const { setPreferences } = useSite();
+  const requestRevision = useRef(0);
   async function refresh() {
+    const revision = ++requestRevision.current;
     const d = await socialApi(
       "community/" +
-        kind +
+        (kind === "journal" ? "feed" : kind) +
         "?page=" +
         page +
-        (feedType === "rides" ? "&type=rides" : ""),
+        (kind === "journal"
+          ? "&type=journal&mode=" + mode
+          : feedType === "rides"
+            ? "&type=rides"
+            : ""),
     );
+    if (revision !== requestRevision.current) return;
     setData(d);
     setError("");
     if (kind === "notifications")
@@ -64,8 +82,12 @@ export default function CommunityPage({ kind }) {
       .catch((e) => setError(e.message));
   }, []);
   useEffect(() => {
-    if (user && feedType !== null) refresh().catch((e) => setError(e.message));
-  }, [user?.id, page, feedType]);
+    if ((user || (kind === "journal" && mode === "new")) && feedType !== null)
+      refresh().catch((e) => setError(e.message));
+    return () => {
+      requestRevision.current++;
+    };
+  }, [user?.id, page, feedType, mode]);
   useEffect(() => {
     if (!user || kind !== "notifications") return;
     const timer = setInterval(() => {
@@ -84,11 +106,15 @@ export default function CommunityPage({ kind }) {
       <main className="social-page community-page">
         <div className="section-heading">
           <h1>
-            {kind === "feed"
-              ? feedType === "rides"
-                ? "Покатушки подписок"
-                : "Подписки"
-              : "Уведомления"}
+            {kind === "journal"
+              ? "Журнал"
+              : kind === "saved"
+                ? "Сохранённое"
+                : kind === "feed"
+                  ? feedType === "rides"
+                    ? "Покатушки подписок"
+                    : "Подписки"
+                  : "Уведомления"}
           </h1>
           {kind === "notifications" && !!data?.unread && (
             <button
@@ -110,21 +136,90 @@ export default function CommunityPage({ kind }) {
             </button>
           )}
         </div>
+        {kind === "journal" && (
+          <nav className="journal-modes" aria-label="Режим журнала">
+            {[
+              ["new", "Новые"],
+              ["following", "Подписки"],
+            ].map(([id, label]) => (
+              <button
+                key={id}
+                className="quiet"
+                aria-pressed={mode === id}
+                onClick={() => {
+                  setMode(id);
+                  setPage(1);
+                  setData(null);
+                  setError("");
+                  history.replaceState(
+                    null,
+                    "",
+                    id === "new" ? "/journal" : "/journal?mode=following",
+                  );
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </nav>
+        )}
         {error && (
           <p role="alert" className="error">
             {error}
           </p>
         )}
-        {user === null ? (
+        {user === null && !(kind === "journal" && mode === "new") ? (
           <p>
             Войдите, чтобы увидеть{" "}
-            {kind === "feed" ? "публикации ваших подписок" : "уведомления"}.{" "}
+            {kind === "feed" || kind === "journal"
+              ? "публикации ваших подписок"
+              : kind === "saved"
+                ? "сохранённые записи"
+                : "уведомления"}
+            .{" "}
             <a className="button small" href="/account">
               Войти
             </a>
           </p>
         ) : !data ? (
           <p role="status">Загружаем…</p>
+        ) : kind === "journal" || kind === "saved" ? (
+          <>
+            <div className="journal-feed">
+              {(data.entries || data.items).map((e) => (
+                <JournalCard
+                  key={e.id}
+                  entry={e}
+                  onSaved={() => {
+                    if (kind === "saved")
+                      refresh().catch((e) => setError(e.message));
+                  }}
+                />
+              ))}
+            </div>
+            {!(data.entries || data.items).length && (
+              <section className="social-empty">
+                <h2>
+                  {kind === "saved"
+                    ? "Пока ничего не сохранено"
+                    : "Здесь пока нет историй"}
+                </h2>
+                <p>
+                  {kind === "saved"
+                    ? "Сохраняйте полезные записи, чтобы вернуться к ним."
+                    : mode === "following"
+                      ? "Подпишитесь на интересного автора или велосипед — свой велосипед для этого не нужен."
+                      : "Истории владельцев появятся после публикации."}
+                </p>
+                <a href={kind === "saved" ? "/journal" : "/"}>
+                  {kind === "saved"
+                    ? "Открыть журнал"
+                    : "Посмотреть велосипеды"}
+                </a>
+              </section>
+            )}
+            <Pagination {...data} onPage={setPage} />
+          </>
         ) : kind === "feed" ? (
           <>
             <p className="help">
@@ -132,7 +227,9 @@ export default function CommunityPage({ kind }) {
             </p>
             <BikeGrid bikes={data.bikes}>
               {(data.items || data.bikes).map((b) =>
-                b.kind === "ride" ? (
+                b.kind === "journal" ? (
+                  <JournalCard key={b.id} entry={b} />
+                ) : b.kind === "ride" ? (
                   <RideCard key={b.id} ride={b} />
                 ) : (
                   <BikeCard

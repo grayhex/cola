@@ -11,6 +11,7 @@ export default function JournalEditor({
   const [form, setForm] = useState({
     bikeId: entry?.bike.id || bikeId,
     kind: entry?.kind || "story",
+    installationResult: entry?.installationResult || null,
     title: entry?.title || "",
     body: entry?.body || "",
     status: entry?.status || "draft",
@@ -137,6 +138,24 @@ export default function JournalEditor({
           onChange={(e) => set("title", e.target.value)}
         />
       </label>
+      {form.kind === "build" && (
+        <label className="field">
+          <span>Результат установки — необязательно</span>
+          <select
+            aria-label="Результат установки"
+            value={form.installationResult || ""}
+            onChange={(e) => set("installationResult", e.target.value || null)}
+          >
+            <option value="">Не указан</option>
+            <option value="direct">Без доработок</option>
+            <option value="modified">С доработками</option>
+            <option value="failed">Не подошло</option>
+          </select>
+          <small>
+            Ваш опыт в этой сборке, не гарантия совместимости или безопасности.
+          </small>
+        </label>
+      )}
       <label className="field">
         <span>Текст записи</span>
         <textarea

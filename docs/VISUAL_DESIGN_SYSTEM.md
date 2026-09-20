@@ -1,5 +1,10 @@
 # ColaBike Visual Design System
 
+Journal discovery: compact title/excerpt/photo/context/social cards, two feed modes,
+personal saved items, and shared search/model-experience results. Filters are in a
+compact modal/sheet, never a permanent taxonomy wall. Four primary sections remain
+separate from search, notifications and account. All new icons use configurable wrappers.
+
 Current card refinement: two footer rows (identity/facts and author/social/game),
 no separate year, uncropped contained photo. Compact mobile showcase controls use
 icons with accessible names alongside the heading. The bike journal sits below

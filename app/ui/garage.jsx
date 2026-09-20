@@ -453,9 +453,18 @@ export default function Garage({
               </span>
             )}
             <ChevronRight size={14} />
-            <span>
+            <a
+              href={
+                "/experience?" +
+                new URLSearchParams({
+                  brand: bike.brand || "",
+                  model: bike.model || "",
+                })
+              }
+              title="Опыт владельцев этой модели"
+            >
               {bike.brand} {bike.model}
-            </span>
+            </a>
           </div>
           <div
             className="bike-heading configurable-block"
@@ -1590,6 +1599,28 @@ function BikeForm({ initial, busy, onSubmit }) {
           placeholder="SL / CF SLX 8 AXS"
         />
       </Field>
+      <fieldset className="bike-purposes">
+        <legend>Назначение — необязательно</legend>
+        {catalog.purposes
+          .filter((p) => p.enabled || (b.purposes || []).includes(p.id))
+          .map((p) => (
+            <label key={p.id}>
+              <input
+                type="checkbox"
+                checked={(b.purposes || []).includes(p.id)}
+                onChange={(e) =>
+                  update(
+                    "purposes",
+                    e.target.checked
+                      ? [...(b.purposes || []), p.id]
+                      : (b.purposes || []).filter((id) => id !== p.id),
+                  )
+                }
+              />
+              {p.name}
+            </label>
+          ))}
+      </fieldset>
       <FactorySpecification
         key={JSON.stringify([b.brand, b.model, b.trim, b.year])}
         bike={b}

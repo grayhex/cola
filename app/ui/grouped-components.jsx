@@ -8,6 +8,7 @@ import {
 } from "./icons.jsx";
 import { groupedComponents } from "../../lib/garage-layout.js";
 import PartIcon from "./part-icon.jsx";
+import { experienceHref } from "../../lib/experience-catalog.js";
 export default function GroupedComponents({
   bike,
   section,
@@ -82,7 +83,17 @@ export default function GroupedComponents({
             <div className="compact-part" key={c.id}>
               <div className="compact-part-main">
                 <small>{c.category}</small>
-                <strong>{c.name}</strong>
+                <strong>
+                  <a
+                    href={experienceHref({
+                      component: c.name,
+                      componentCategory: c.category,
+                    })}
+                    title="Сборки и записи с этим компонентом"
+                  >
+                    {c.name}
+                  </a>
+                </strong>
                 {c.notes && <span className="part-notes">{c.notes}</span>}
                 {c.url && (
                   <a

@@ -152,3 +152,179 @@
     font-size: 19px;
   }
 }
+.journal-modes,
+.journal-card-social {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.journal-modes {
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+.journal-modes [aria-pressed="true"] {
+  color: var(--accent);
+  border-bottom: 2px solid currentColor;
+}
+.journal-feed {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: 12px;
+}
+.journal-card {
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  overflow: hidden;
+  background: var(--paper);
+  min-width: 0;
+}
+.journal-card-content {
+  padding: 12px;
+  display: grid;
+  gap: 8px;
+}
+.journal-card h2 {
+  font-size: 18px;
+  line-height: 1.35;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.journal-card-photo {
+  display: block;
+  height: 180px;
+  background: var(--wash);
+}
+.journal-card-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.journal-excerpt {
+  font-size: 13px;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  margin: 0;
+  color: var(--muted);
+}
+.journal-card-social {
+  font-size: 12px;
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+}
+.journal-card-social > span,
+.journal-card-social > a {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}
+.journal-card-social .quiet {
+  font-size: 12px;
+}
+.journal-solution {
+  color: var(--accent);
+  font-size: 13px;
+}
+.experience-query {
+  display: flex;
+  align-items: end;
+  gap: 8px;
+  margin: 16px 0;
+}
+.experience-query .field {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+.experience-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.experience-chips,
+.bike-purposes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+}
+.bike-purposes {
+  border: 1px solid var(--line);
+  padding: 8px;
+}
+.bike-purposes label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+}
+.experience-users {
+  display: grid;
+  gap: 12px;
+}
+.experience-search h1 {
+  overflow-wrap: anywhere;
+  font-size: 28px;
+}
+.alias-list {
+  list-style: none;
+  padding: 0;
+  max-height: 320px;
+  overflow: auto;
+}
+.alias-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+}
+@media (max-width: 600px) {
+  .experience-filter-grid {
+    grid-template-columns: 1fr;
+  }
+  .experience-search .section-heading .quiet > span {
+    display: none;
+  }
+  .experience-search h1 {
+    font-size: 22px;
+  }
+  .experience-search .section-heading {
+    flex-wrap: nowrap;
+  }
+  .journal-modes .quiet {
+    min-height: 44px;
+  }
+  .experience-catalog .list-add {
+    flex-wrap: wrap;
+  }
+}
+.participation-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  margin: 12px 0;
+  font-size: 12px;
+}
+.participation-table th,
+.participation-table td {
+  padding: 8px 4px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  overflow-wrap: anywhere;
+}
+.bike-purposes {
+  min-width: 0;
+  grid-column: 1/-1;
+}
+.journal-card-bike {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
