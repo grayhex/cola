@@ -1,0 +1,23 @@
+.root { margin-block: 16px 28px; }
+.controls, .plan { margin: 16px 0; padding: 16px; border: 1px solid var(--line); min-width: 0; }
+.controls { display: grid; gap: 8px; }
+.upload { display: grid; gap: 6px; font-size: 12px; cursor: pointer; }
+.upload input { width: 100%; padding: 6px; font-size: 12px; background: var(--paper); color: var(--ink); }
+.notice { border-left: 3px solid var(--accent); padding: 8px 12px; background: var(--wash); color: var(--ink); }
+.search, .mode { display: grid; gap: 8px; max-width: 440px; font-size: 13px; }
+.group { margin-block: 12px; border-block-end: 1px solid var(--line); padding-block-end: 12px; }
+.group summary { cursor: pointer; padding: 8px 0; font-weight: 600; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 215px), 1fr)); gap: 12px; margin-top: 12px; }
+.tile { display: flex; flex-direction: column; align-items: stretch; gap: 8px; min-width: 0; padding: 12px; border: 1px solid var(--line); background: var(--paper); }
+.tile strong { font-size: 13px; }
+.tile code, .previewRow code { display: block; font-size: 11px; overflow-wrap: anywhere; color: var(--muted); }
+.tile select { font-size: 12px; padding: 6px; min-height: 36px; }
+.samples { display: flex; align-items: center; justify-content: center; gap: 12px; min-height: 48px; padding: 8px; background-color: #fff; background-image: linear-gradient(45deg, #eee 25%, transparent 25%), linear-gradient(-45deg, #eee 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #eee 75%), linear-gradient(-45deg, transparent 75%, #eee 75%); background-size: 12px 12px; background-position: 0 0, 0 6px, 6px -6px, -6px 0; color: #252a2e; }
+.samples img { width: 32px; height: 32px; object-fit: contain; image-rendering: pixelated; }
+.samples img[width="24"] { width: 24px; height: 24px; }
+.previewList { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 8px; max-height: 440px; overflow: auto; margin: 12px 0; }
+.previewRow { display: flex; gap: 8px; align-items: center; min-width: 0; padding: 8px; border: 1px solid var(--line); font-size: 12px; }
+.previewRow > input { width: 16px; height: 16px; flex-shrink: 0; }
+.previewRow small { display: block; }
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 12px; }
+.ignored { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 11px; max-height: 140px; overflow: auto; }

@@ -1,5 +1,7 @@
 "use client";
 import { createContext, useContext, useState } from "react";
+import styles from "./icon-pack.module.css";
+import { iconPackNames, withIconPack } from "../../lib/icon-pack.js";
 import {
   fontStacks,
   defaultSettings,
@@ -16,7 +18,7 @@ export default function SiteProvider({ initial, children }) {
     initial || { settings: defaultSettings, catalog: defaultCatalog },
   );
   const [preferences, setPreferences] = useState({});
-  const effective = { ...site.settings, ...preferences };
+  const effective = withIconPack({ ...site.settings, ...preferences });
   const backgroundStyle = effective.backgroundImageId
     ? {
         "--site-background-image": `url("/api/assets/${effective.backgroundImageId}")`,
@@ -34,7 +36,7 @@ export default function SiteProvider({ initial, children }) {
     <Context.Provider value={{ ...site, setSite, t, setPreferences, personalSettings: effective }}>
       <ThemeStyle settings={effective} />
       <div
-        className="site-root"
+        className={"site-root" + (iconPackNames.some((name) => effective.uiIcons?.[name]) ? " " + styles.pixelIcons : "")}
         data-theme={effective.theme}
         data-background-mode={effective.backgroundMode || "cover"}
         data-has-background={effective.backgroundImageId ? "true" : "false"}
