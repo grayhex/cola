@@ -1,0 +1,6 @@
+.editor { min-width: 0; padding: 8px 10px 12px; }
+.editor :global(.field) { margin: 0; }
+.editor textarea { width: 100%; min-height: 64px; resize: vertical; font: inherit; }
+.note { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
+.note small { color: var(--muted); font-size: 11px; }
+.note button { font-size: 11px; }

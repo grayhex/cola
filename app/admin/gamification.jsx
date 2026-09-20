@@ -4,6 +4,7 @@ import { socialApi } from "../ui/social-primitives.jsx";
 import { Trophy, Medal } from "../ui/icons.jsx";
 import { recordDefinitions, achievements } from "../../lib/gamification-definitions.js";
 import AssetPicker from "./asset-picker.jsx";
+import GameDescriptionEditor from "./game-description-editor.jsx";
 
 export default function Gamification() {
   const [value, setValue] = useState(null),
@@ -40,7 +41,7 @@ export default function Gamification() {
     if (!dirty) return;
     const preventLeave = (event) => { event.preventDefault(); event.returnValue = ""; };
     window.addEventListener("beforeunload", preventLeave);
-    return () => window.removeEventListener("beforeunload", preventLeave);
+    return () => { window.removeEventListener("beforeunload", preventLeave); };
   }, [dirty]);
 
   async function run(fn, success = "Сохранено") {
@@ -56,8 +57,8 @@ export default function Gamification() {
       setBusy(false);
     }
   }
-  function setImage(field, key, id) {
-    setValue((v) => ({ ...v, [field]: { ...v[field], [key]: id } }));
+  function setEntry(field, key, entry) {
+    setValue((v) => ({ ...v, [field]: { ...v[field], [key]: entry } }));
   }
   function upload(field, key, file) {
     return run(async () => {
@@ -68,30 +69,37 @@ export default function Gamification() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Не удалось загрузить иллюстрацию");
       setAssets((items) => [data, ...items.filter((item) => item.id !== data.id)]);
-      setImage(field, key, data.id);
+      setEntry(field, key, data.id);
     }, "Иллюстрация загружена. Нажмите «Сохранить правила и иллюстрации».");
   }
   function illustration(definition, field, Fallback) {
+    const kind = field === "recordImages" ? "record" : "achievement";
+    const descriptionField = kind === "record" ? "recordDescriptions" : "achievementDescriptions";
     return (
-      <AssetPicker
-        label={definition.name}
-        help={definition.description || (definition.group === "Community" ? "Голос сообщества" : definition.group)}
-        assets={assets}
-        value={value[field]?.[definition.key] || null}
-        busy={busy}
-        emptyLabel="Общая иконка"
-        Fallback={Fallback}
-        previewClassName="icon transparent"
-        onChange={(id) => setImage(field, definition.key, id)}
-        onUpload={(file) => upload(field, definition.key, file)}
-      />
+      <>
+        <AssetPicker
+          label={definition.name}
+          help={definition.description || (definition.group === "Community" ? "Голос сообщества" : definition.group)}
+          assets={assets}
+          value={value[field]?.[definition.key] || null}
+          busy={busy}
+          emptyLabel="Общая иконка"
+          Fallback={Fallback}
+          previewClassName="icon transparent"
+          onChange={(id) => setEntry(field, definition.key, id)}
+          onUpload={(file) => upload(field, definition.key, file)}
+        />
+        <GameDescriptionEditor definition={definition} kind={kind}
+          value={value[descriptionField]?.[definition.key]}
+          onChange={(text) => setEntry(descriptionField, definition.key, text)} />
+      </>
     );
   }
   if (!value) return <p role="status">{error || "Загружаем…"}</p>;
   return (
     <section className="social-panel game-admin">
       <h2>Награды и рекорды</h2>
-      <p className="help">Валюта площадки: RUB. Иллюстрации меняют оформление, но не правила получения наград.</p>
+      <p className="help">Валюта площадки: RUB. Иллюстрации и описания меняют оформление, но не правила получения наград. Описания сохраняются вместе с иллюстрациями.</p>
       <form onSubmit={(e) => {
         e.preventDefault();
         run(async () => {
@@ -101,7 +109,7 @@ export default function Gamification() {
         });
       }}>
         <fieldset disabled={busy}>
-          <legend className="sr-only">Правила и иллюстрации достижений</legend>
+          <legend className="sr-only">Правила, описания и иллюстрации достижений</legend>
           <div className="game-setting-grid">
             {[
               ["minimumCompleteness", "Минимальная заполненность, %", 0, 100],
