@@ -18,9 +18,12 @@ export function NavigationSettings({ settings, onChange }) {
         <fieldset className="layout-block-editor" key={s.id}>
           <legend>
             {
-              { bikes: "Велосипеды", rides: "Покатушки", about: "О проекте" }[
-                s.id
-              ]
+              {
+                bikes: "Велосипеды",
+                journal: "Журнал",
+                rides: "Покатушки",
+                about: "О проекте",
+              }[s.id]
             }
           </legend>
           <label className="field">

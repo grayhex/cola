@@ -3,6 +3,7 @@ import { useEffect, useState, createContext, useContext } from "react";
 import { Avatar, socialApi } from "./social-primitives.jsx";
 import { ReportButton, PageControls } from "./community-controls.jsx";
 const DiscussionKind = createContext("bike");
+const QuestionContext = createContext(null);
 const paths = (kind) =>
   kind === "journal"
     ? {
@@ -73,6 +74,7 @@ function Editor({ initial = "", label, onSave, onCancel }) {
   );
 }
 function Comment({ comment: c, user, bikeId, refresh, reply = false }) {
+  const question = useContext(QuestionContext);
   const api = paths(useContext(DiscussionKind));
   const [editing, setEditing] = useState(false),
     [answer, setAnswer] = useState(false),
@@ -115,6 +117,33 @@ function Comment({ comment: c, user, bikeId, refresh, reply = false }) {
         <>
           {!c.unavailable && <p className="comment-body">{c.body}</p>}
           <div className="comment-actions">
+            {!c.unavailable && question?.solutionId === c.id && (
+              <span className="journal-solution">Выбранный ответ · Решено</span>
+            )}
+            {!c.unavailable && question?.canSelect && (
+              <button
+                className="quiet"
+                disabled={busy}
+                onClick={async () => {
+                  setBusy(true);
+                  setError("");
+                  try {
+                    await socialApi("journal/" + bikeId + "/solution", "PUT", {
+                      commentId: question.solutionId === c.id ? null : c.id,
+                    });
+                    await question.refresh?.();
+                  } catch (e) {
+                    setError(e.message);
+                  } finally {
+                    setBusy(false);
+                  }
+                }}
+              >
+                {question.solutionId === c.id
+                  ? "Снять решение"
+                  : "Отметить решением"}
+              </button>
+            )}
             {user && !reply && !c.unavailable && (
               <button className="quiet" onClick={() => setAnswer((v) => !v)}>
                 Ответить
@@ -239,7 +268,12 @@ function Thread({ root, user, bikeId, refresh }) {
     </div>
   );
 }
-export default function Discussion({ bike, user, entityType = "bike" }) {
+export default function Discussion({
+  bike,
+  user,
+  entityType = "bike",
+  onSolution,
+}) {
   const api = paths(entityType);
   const [data, setData] = useState(null),
     [page, setPage] = useState(1),
@@ -270,78 +304,90 @@ export default function Discussion({ bike, user, entityType = "bike" }) {
   }, [focus, !!data]);
   return (
     <DiscussionKind.Provider value={entityType}>
-      <section className="discussion" id="discussion">
-        <div className="section-heading">
-          <div>
-            <h2>
-              {entityType === "journal"
-                ? "Обсуждение записи"
-                : entityType === "ride"
-                  ? "Обсуждение покатушки"
-                  : "Обсуждение сборки"}
-            </h2>
-            <p className="help">Детали, идеи и опыт владельцев.</p>
+      <QuestionContext.Provider
+        value={
+          entityType === "journal" && bike.kind === "question"
+            ? {
+                solutionId: bike.solutionId,
+                canSelect: bike.isOwner,
+                refresh: onSolution,
+              }
+            : null
+        }
+      >
+        <section className="discussion" id="discussion">
+          <div className="section-heading">
+            <div>
+              <h2>
+                {entityType === "journal"
+                  ? "Обсуждение записи"
+                  : entityType === "ride"
+                    ? "Обсуждение покатушки"
+                    : "Обсуждение сборки"}
+              </h2>
+              <p className="help">Детали, идеи и опыт владельцев.</p>
+            </div>
+            {bike.author?.id !== user?.id && (
+              <ReportButton
+                entityType={entityType}
+                targetId={bike.id}
+                user={user}
+              />
+            )}
           </div>
-          {bike.author?.id !== user?.id && (
-            <ReportButton
-              entityType={entityType}
-              targetId={bike.id}
-              user={user}
-            />
+          {focus && (
+            <button
+              className="quiet"
+              onClick={() => {
+                setFocus(null);
+                setPage(1);
+              }}
+            >
+              Все комментарии
+            </button>
           )}
-        </div>
-        {focus && (
-          <button
-            className="quiet"
-            onClick={() => {
-              setFocus(null);
-              setPage(1);
-            }}
-          >
-            Все комментарии
-          </button>
-        )}
-        {error && (
-          <p role="alert" className="error">
-            {error}
-          </p>
-        )}
-        {data?.comments.map((c) => (
-          <Thread
-            key={c.id}
-            root={c}
-            user={user}
-            bikeId={bike.id}
-            refresh={refresh}
-          />
-        ))}
-        {!data && !error && <p role="status">Загружаем обсуждение…</p>}
-        {data && !data.comments.length && (
-          <p className="help">
-            {entityType === "ride"
-              ? "Поделитесь впечатлениями о маршруте."
-              : "Первый вопрос о сборке может стать началом знакомства."}
-          </p>
-        )}
-        {data && <PageControls {...data} onPage={setPage} />}
-        {user ? (
-          <Editor
-            label="Ваш комментарий"
-            onSave={async (body) => {
-              await socialApi(api.items + bike.id + "/comments", "POST", {
-                body,
-              });
-              setFocus(null);
-              setPage(1);
-              await refresh();
-            }}
-          />
-        ) : (
-          <a className="button secondary small" href="/account">
-            Войти, чтобы участвовать в обсуждении
-          </a>
-        )}
-      </section>
+          {error && (
+            <p role="alert" className="error">
+              {error}
+            </p>
+          )}
+          {data?.comments.map((c) => (
+            <Thread
+              key={c.id}
+              root={c}
+              user={user}
+              bikeId={bike.id}
+              refresh={refresh}
+            />
+          ))}
+          {!data && !error && <p role="status">Загружаем обсуждение…</p>}
+          {data && !data.comments.length && (
+            <p className="help">
+              {entityType === "ride"
+                ? "Поделитесь впечатлениями о маршруте."
+                : "Первый вопрос о сборке может стать началом знакомства."}
+            </p>
+          )}
+          {data && <PageControls {...data} onPage={setPage} />}
+          {user ? (
+            <Editor
+              label="Ваш комментарий"
+              onSave={async (body) => {
+                await socialApi(api.items + bike.id + "/comments", "POST", {
+                  body,
+                });
+                setFocus(null);
+                setPage(1);
+                await refresh();
+              }}
+            />
+          ) : (
+            <a className="button secondary small" href="/account">
+              Войти, чтобы участвовать в обсуждении
+            </a>
+          )}
+        </section>
+      </QuestionContext.Provider>
     </DiscussionKind.Provider>
   );
 }

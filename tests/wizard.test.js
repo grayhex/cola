@@ -45,9 +45,19 @@ test("wizard atomically saves edited components, trusted provenance, mileage/pri
   try {
     for (const m of [
       "001_initial",
+      "002_admin",
       "003_factory_spec",
       "004_garage_layout",
       "005_bike_wizard",
+      "006_compact_defaults",
+      "007_showcase",
+      "008_beta_limits",
+      "009_social_core",
+      "010_community",
+      "011_gamification",
+      "012_rides",
+      "014_journal",
+      "015_discovery",
     ])
       await db.exec(
         await readFile(new URL("../db/" + m + ".sql", import.meta.url), "utf8"),

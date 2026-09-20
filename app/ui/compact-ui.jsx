@@ -207,14 +207,14 @@ export function GlobalSearch({ assetId }) {
         )}
       </button>
       <CompactDialog
-        title="Поиск велосипедов"
+        title="Поиск ColaBike"
         open={open}
         onClose={() => setOpen(false)}
         className="global-search-panel"
       >
-        <form action="/" method="get">
+        <form action="/search" method="get">
           <label className="field">
-            <span>Велосипед или владелец</span>
+            <span>Велосипед, запись или владелец</span>
             <input
               name="q"
               type="search"
@@ -225,7 +225,9 @@ export function GlobalSearch({ assetId }) {
               placeholder="Название, бренд, модель…"
             />
           </label>
-          <p className="help">Поиск по публичной витрине.</p>
+          <p className="help">
+            Сборки, изменения и решения владельцев. Только публичные материалы.
+          </p>
           <button className="button small" type="submit">
             Найти
           </button>

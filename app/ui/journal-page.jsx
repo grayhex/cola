@@ -6,6 +6,8 @@ import Discussion from "./discussion.jsx";
 import JournalEditor from "./journal-editor.jsx";
 import { journalKinds } from "../../lib/journal-kinds.js";
 import { Heart } from "./icons.jsx";
+import { SaveEntry } from "./journal-card.jsx";
+import { experienceHref } from "../../lib/experience-catalog.js";
 export default function JournalPage({ share = null }) {
   const [user, setUser] = useState(null),
     [entry, setEntry] = useState(null),
@@ -112,6 +114,30 @@ export default function JournalPage({ share = null }) {
                 @{entry.author.username}
               </a>
               <div className="journal-body">{entry.body}</div>
+              {entry.installationResult && (
+                <p>
+                  Результат установки:{" "}
+                  {
+                    {
+                      direct: "без доработок",
+                      modified: "с доработками",
+                      failed: "не подошло",
+                    }[entry.installationResult]
+                  }
+                  .{" "}
+                  <small>
+                    Опыт владельца, не гарантия совместимости или безопасности.
+                  </small>
+                </p>
+              )}
+              {entry.solutionId && (
+                <p className="journal-solution">
+                  Решено автором ·{" "}
+                  <a href={"?comment=" + entry.solutionId + "#discussion"}>
+                    Выбранный ответ
+                  </a>
+                </p>
+              )}
               <div className="journal-photos">
                 {entry.photos.map((p, i) => (
                   <a key={p.id} href={p.url} target="_blank" rel="noopener">
@@ -131,7 +157,16 @@ export default function JournalPage({ share = null }) {
                   </p>
                   {entry.components.map((c) => (
                     <article className="journal-part" key={c.id}>
-                      <strong>{c.name}</strong>
+                      <strong>
+                        <a
+                          href={experienceHref({
+                            component: c.name,
+                            componentCategory: c.category,
+                          })}
+                        >
+                          {c.name}
+                        </a>
+                      </strong>
                       <span>{c.category}</span>
                       {c.price != null && (
                         <span>{Number(c.price).toLocaleString("ru-RU")} ₽</span>
@@ -208,6 +243,7 @@ export default function JournalPage({ share = null }) {
               )}
               {visible && (
                 <>
+                  <SaveEntry entry={entry} />
                   <button
                     className="quiet"
                     aria-label={"Нравится запись: " + entry.likes}
@@ -234,7 +270,12 @@ export default function JournalPage({ share = null }) {
                   >
                     <Heart size={14} /> {entry.likes}
                   </button>
-                  <Discussion bike={entry} user={user} entityType="journal" />
+                  <Discussion
+                    bike={entry}
+                    user={user}
+                    entityType="journal"
+                    onSolution={refresh}
+                  />
                 </>
               )}
             </>

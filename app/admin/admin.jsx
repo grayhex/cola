@@ -10,6 +10,7 @@ import { copyBlocks } from "../../lib/copy-blocks.js";
 import ResolverSettings from "./resolver-settings.jsx";
 import AssetPicker from "./asset-picker.jsx";
 import IconSettings from "./icon-settings.jsx";
+import ExperienceCatalog from "./experience-catalog.jsx";
 import { fontLabels } from "../../lib/fonts.js";
 import GlobalHeader from "../ui/global-header.jsx";
 import { useEffect, useState, useRef } from "react";
@@ -231,6 +232,7 @@ export default function Admin() {
     [sv, setSv] = useState(1),
     [cv, setCv] = useState(1),
     [stats, setStats] = useState({}),
+    [participation, setParticipation] = useState([]),
     [assets, setAssets] = useState([]),
     [events, setEvents] = useState([]),
     [textSearch, setTextSearch] = useState("");
@@ -281,6 +283,7 @@ export default function Admin() {
     const r = await request("admin/overview");
     setUser(r.user);
     setStats(r.stats);
+    setParticipation(r.participation || []);
     setDraft(r.settings);
     setCat(r.catalog);
     setSv(r.settingsVersion);
@@ -564,6 +567,41 @@ export default function Admin() {
                   </div>
                 ))}
               </div>
+              <h3>Участие за 30 дней</h3>
+              <p className="help">
+                Дневные счётчики без текста, целей действий, IP и контактов.
+                Возвращающиеся — участники с действием минимум в два разных дня.
+                Это псевдонимный, не анонимный учёт; удаление аккаунта удаляет
+                его события.
+              </p>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Событие</th>
+                    <th>Действия</th>
+                    <th>Участники</th>
+                    <th>Вернулись</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {participation.map((r) => (
+                    <tr key={r.event}>
+                      <td>
+                        {
+                          {
+                            publish: "Публикация",
+                            follow: "Подписка",
+                            save: "Сохранение",
+                          }[r.event]
+                        }
+                      </td>
+                      <td>{r.actions}</td>
+                      <td>{r.participants}</td>
+                      <td>{r.returning_participants}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
               <section className="admin-panel">
                 <h2>Основные настройки</h2>
                 <Field label="Название сайта">
@@ -800,6 +838,7 @@ export default function Admin() {
                     <summary>Новые и популярные велосипеды</summary>
                     <div className="asset-picker-grid">
                       {assetPicker("navNewIconId", "Новые велосипеды")}
+                      {assetPicker("navJournalIconId", "Журнал")}
                       {assetPicker("navPopularIconId", "Популярные велосипеды")}
                     </div>
                   </details>
@@ -1538,6 +1577,7 @@ function CatalogEditor({ value: c, onChange }) {
           ["categories", "Категории навески"],
           ["parts", "Модели компонентов"],
           ["types", "Типы велосипедов"],
+          ["experience", "Поиск и опыт"],
         ].map(([k, l]) => (
           <button
             key={k}
@@ -1552,6 +1592,9 @@ function CatalogEditor({ value: c, onChange }) {
         Изменения применяются к подсказкам для новых записей. Сохранённые
         велосипеды и детали не меняются.
       </p>
+      {kind === "experience" && (
+        <ExperienceCatalog value={c} onChange={onChange} />
+      )}
       {kind === "bikes" && (
         <>
           <Select

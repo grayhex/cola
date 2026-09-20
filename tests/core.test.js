@@ -75,9 +75,38 @@ test("PostgreSQL schema: ownership, sharing privacy, revocation and cascading de
     await db.exec(
       await readFile(new URL("../db/002_admin.sql", import.meta.url), "utf8"),
     );
-    await db.exec(await readFile(new URL("../db/003_factory_spec.sql", import.meta.url), "utf8"));
-    await db.exec(await readFile(new URL("../db/004_garage_layout.sql",import.meta.url),"utf8"));
-    await db.exec(await readFile(new URL("../db/005_bike_wizard.sql",import.meta.url),"utf8"));
+    await db.exec(
+      await readFile(
+        new URL("../db/003_factory_spec.sql", import.meta.url),
+        "utf8",
+      ),
+    );
+    await db.exec(
+      await readFile(
+        new URL("../db/004_garage_layout.sql", import.meta.url),
+        "utf8",
+      ),
+    );
+    await db.exec(
+      await readFile(
+        new URL("../db/005_bike_wizard.sql", import.meta.url),
+        "utf8",
+      ),
+    );
+    for (const m of [
+      "006_compact_defaults",
+      "007_showcase",
+      "008_beta_limits",
+      "009_social_core",
+      "010_community",
+      "011_gamification",
+      "012_rides",
+      "014_journal",
+      "015_discovery",
+    ])
+      await db.exec(
+        await readFile(new URL("../db/" + m + ".sql", import.meta.url), "utf8"),
+      );
     const owner = randomUUID(),
       other = randomUUID();
     await db.query(

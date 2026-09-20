@@ -61,6 +61,9 @@ await db.exec(
 await db.exec(
   await readFile(new URL("../db/014_journal.sql", import.meta.url), "utf8"),
 );
+await db.exec(
+  await readFile(new URL("../db/015_discovery.sql", import.meta.url), "utf8"),
+);
 const server = new PGLiteSocketServer({
   db,
   host: "127.0.0.1",

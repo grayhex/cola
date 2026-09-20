@@ -1,5 +1,12 @@
 # Dense public UI
 
+Discovery update: global search now opens `/search` (bikes, journal, users).
+Journal uses the existing feed with compact cards; `/saved` is personal.
+Model experience pages reuse the same search/results rather than a new catalogue UI.
+Primary sections: bikes, journal, rides, about; utilities remain separate.
+See [DISCOVERY.md](DISCOVERY.md) for current API/migration/privacy details; historical
+implementation notes below describe the original dense-UI-only release.
+
 Journal update: showcase cards use two footer rows, with title and compact
 type/color/size/weight labels above author/social/progress/achievement indicators.
 Year is not repeated. Photos use `object-fit: contain`, including hover. Mobile

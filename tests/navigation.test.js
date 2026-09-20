@@ -11,13 +11,13 @@ import { defaultSettings } from "../lib/site-defaults.js";
 test("legacy navigation settings retain ordering intent; known destinations respect auth", () => {
   assert.deepEqual(
     navigationSections({}).map((s) => s.id),
-    ["bikes", "rides", "about"],
+    ["bikes", "journal", "rides", "about"],
   );
   assert.deepEqual(
     navigationSections({ navOrder: ["subscriptions", "home"] }).map(
       (s) => s.id,
     ),
-    ["rides", "bikes", "about"],
+    ["rides", "bikes", "journal", "about"],
   );
   assert.equal(
     sectionLinks("bikes", null).some((s) => s.href.includes("action=add")),

@@ -4,6 +4,9 @@ import { allowAuth } from "../../../lib/auth-limits.js";
 import { limits, QuotaError } from "../../../lib/limits.js";
 import { savePhotos } from "../../../lib/photo-storage.js";
 import { showcase, decorateBike, vote } from "../../../lib/showcase.js";
+import { searchExperience, searchInput } from "../../../lib/search.js";
+import { validatePurposes } from "../../../lib/repository.js";
+import { CommunityError } from "../../../lib/community-validation.js";
 import { profileInput } from "../../../lib/social-validation.js";
 import { importPhotos } from "../../../lib/photo-import.js";
 import { appVersion } from "../../../lib/version.js";
@@ -242,6 +245,14 @@ async function handler(req, { params }) {
         await showcase(db, user?.id, { page, category, search, sort }),
       );
     }
+    if (p[0] === "search" && p.length === 1 && method === "GET")
+      return json(
+        await searchExperience(
+          db,
+          user?.id || null,
+          searchInput.parse(Object.fromEntries(new URL(req.url).searchParams)),
+        ),
+      );
     if (!user) return fail("Войдите в аккаунт", 401);
     if (p[0] === "profile" && p.length === 1 && method === "PATCH") {
       const input = profileInput.parse(await body(req));
@@ -418,8 +429,9 @@ async function handler(req, { params }) {
           price: bike.price === null ? null : Number(bike.price),
           ...(await body(req)),
         });
+        await validatePurposes(db, b.purposes, bike.purposes);
         await db.query(
-          "UPDATE bikes SET name=$1,brand=$2,model=$3,year=$4,category=$5,description=$6,color=$7,size=$8,weight=$9,trim=$12,manufacturer_url=$13,price=$14,show_bike_price=$15,show_component_prices=$16,show_accessory_prices=$17,mileage=$18,is_public=$19,factory_spec=CASE WHEN brand=$2 AND model=$3 AND year=$4 AND trim=$12 THEN factory_spec ELSE NULL END,updated_at=now() WHERE id=$10 AND owner_id=$11",
+          "UPDATE bikes SET name=$1,brand=$2,model=$3,year=$4,category=$5,description=$6,color=$7,size=$8,weight=$9,trim=$12,manufacturer_url=$13,price=$14,show_bike_price=$15,show_component_prices=$16,show_accessory_prices=$17,mileage=$18,is_public=$19,purposes=$20,factory_spec=CASE WHEN brand=$2 AND model=$3 AND year=$4 AND trim=$12 THEN factory_spec ELSE NULL END,updated_at=now() WHERE id=$10 AND owner_id=$11",
           [
             b.name,
             b.brand,
@@ -440,6 +452,7 @@ async function handler(req, { params }) {
             b.show_accessory_prices,
             b.mileage,
             b.is_public,
+            b.purposes,
           ],
         );
         return json({ ok: true });
@@ -699,6 +712,7 @@ async function handler(req, { params }) {
     }
     return fail("Не найдено", 404);
   } catch (e) {
+    if (e instanceof CommunityError) return fail(e.message, e.status);
     if (e instanceof QuotaError) return fail(e.message, e.status);
     if (e.name === "ZodError")
       return fail(

@@ -4,6 +4,7 @@ import { Plus, NotebookPen, Heart, X } from "./icons.jsx";
 import { socialApi } from "./social-primitives.jsx";
 import { PageControls } from "./community-controls.jsx";
 import { journalKinds } from "../../lib/journal-kinds.js";
+import BikeFollow from "./bike-follow.jsx";
 export default function JournalList({ bike, owner = false, editable = false }) {
   const [data, setData] = useState(null),
     [page, setPage] = useState(1),
@@ -80,6 +81,7 @@ export default function JournalList({ bike, owner = false, editable = false }) {
           </a>
         )}
       </div>
+      {bike.is_public && !owner && <BikeFollow bikeId={bike.id} />}
       {change && (
         <div className="journal-prompt">
           <span>Комплектация обновлена.</span>

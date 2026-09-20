@@ -1,5 +1,5 @@
 "use client";
-import { Heart, Lock, MessageCircle } from "./icons.jsx";
+import { Heart, Lock, MessageCircle, Bike } from "./icons.jsx";
 import Photo from "./bike-photo.jsx";
 import { AuthorLink } from "./social-primitives.jsx";
 import { useSite } from "./site-provider.jsx";
@@ -100,6 +100,16 @@ export default function BikeCard({
             </div>
           )}
           <div className="card-signals">
+            {b.is_public && (
+              <a
+                className="social-stat"
+                href={"/search?similar=" + b.id}
+                aria-label="Похожие сборки"
+                title="Похожие сборки"
+              >
+                <Bike size={15} />
+              </a>
+            )}
             <MicroMetrics scores={b.scores} />
             <ImportantBadge bike={b} records={records} />
           </div>
