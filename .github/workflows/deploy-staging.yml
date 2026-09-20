@@ -49,7 +49,7 @@ jobs:
     steps:
       - name: Deploy verified ref to staging
         run: |
-          grep -q "COLA_STAGING_DEPLOY_V1" /usr/local/sbin/deploy-cola-staging || {
+          grep -q "COLA_STAGING_DEPLOY_V2" /usr/local/sbin/deploy-cola-staging || {
             echo "Install ops/deploy-cola-staging on the staging VM first"
             exit 1
           }
