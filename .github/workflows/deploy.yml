@@ -1,8 +1,68 @@
-name: Recheck and redeploy Cola
+name: Deploy · Production
+
 on:
+  workflow_run:
+    workflows: ["CI · ColaBike"]
+    types: [completed]
   workflow_dispatch:
+
 permissions:
   contents: read
+
 jobs:
-  verified-deploy:
+  verify-manual:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
     uses: ./.github/workflows/check.yml
+    with:
+      ref: ${{ github.sha }}
+
+  deploy:
+    needs: [verify-manual]
+    if: >-
+      always() &&
+      (
+        (
+          github.event_name == 'workflow_run' &&
+          github.event.workflow_run.conclusion == 'success' &&
+          github.event.workflow_run.event == 'push' &&
+          github.event.workflow_run.head_branch == 'main'
+        ) ||
+        (
+          github.event_name == 'workflow_dispatch' &&
+          github.ref == 'refs/heads/main' &&
+          needs.verify-manual.result == 'success'
+        )
+      )
+    runs-on: [self-hosted, cola-production]
+    concurrency:
+      group: cola-production
+      cancel-in-progress: false
+    env:
+      TARGET_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          fetch-depth: 1
+      - name: Deploy exactly the verified main commit
+        run: |
+          latest=$(git ls-remote origin refs/heads/main | cut -f1)
+          if [ "$latest" != "$TARGET_SHA" ]; then
+            echo "Superseded by a newer main commit; skipping stale deployment"
+            exit 0
+          fi
+          grep -q "COLA_VERIFIED_DEPLOY_V2" /usr/local/sbin/deploy-cola || {
+            echo "Install the current ops/deploy-cola on the production VPS"
+            exit 1
+          }
+          sudo -n /usr/local/sbin/deploy-cola "$TARGET_SHA"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Verify optional demo migration
+        run: |
+          if git log -1 --format=%B "$TARGET_SHA" | grep -Fq '[hagsy-demo]'; then
+            node scripts/verify-hagsy-demo.js
+          else
+            echo "No [hagsy-demo] marker; skipping demo verification"
+          fi

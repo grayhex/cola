@@ -1,0 +1,65 @@
+name: Deploy · Staging
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Branch, tag or SHA to deploy to 192.168.1.200"
+        required: true
+        default: "main"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  resolve:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.target.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+          fetch-depth: 0
+      - id: target
+        name: Resolve requested ref
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - name: Show target
+        run: |
+          echo "Requested ref: ${{ inputs.ref }}"
+          echo "Resolved SHA: ${{ steps.target.outputs.sha }}"
+
+  verify:
+    needs: resolve
+    uses: ./.github/workflows/check.yml
+    with:
+      ref: ${{ needs.resolve.outputs.sha }}
+
+  deploy:
+    needs: [resolve, verify]
+    runs-on: [self-hosted, cola-staging]
+    concurrency:
+      group: cola-staging
+      cancel-in-progress: false
+    env:
+      TARGET_SHA: ${{ needs.resolve.outputs.sha }}
+      TARGET_REF: ${{ inputs.ref }}
+    steps:
+      - name: Deploy verified ref to staging
+        run: |
+          grep -q "COLA_STAGING_DEPLOY_V2" /usr/local/sbin/deploy-cola-staging || {
+            echo "Install ops/deploy-cola-staging on the staging VM first"
+            exit 1
+          }
+          sudo -n /usr/local/sbin/deploy-cola-staging "$TARGET_SHA"
+      - name: Deployment summary
+        run: |
+          {
+            echo "### Staging deployment"
+            echo ""
+            echo "- Target: `192.168.1.200`"
+            echo "- Ref: `$TARGET_REF`"
+            echo "- SHA: `$TARGET_SHA`"
+          } >> "$GITHUB_STEP_SUMMARY"
