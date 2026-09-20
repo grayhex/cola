@@ -1,191 +1,126 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Trophy, ArrowUpRight } from "./icons.jsx";
-import {
-  socialApi,
-  SocialHeader,
-  SocialFooter,
-  Avatar,
-} from "./social-primitives.jsx";
+import { socialApi, SocialHeader, SocialFooter } from "./social-primitives.jsx";
 import { useSite } from "./site-provider.jsx";
-import Photo from "./bike-photo.jsx";
+import AchievementArt from "./achievement-art.jsx";
+
 function value(r, currency) {
   return (
     new Intl.NumberFormat("ru-RU", {
       maximumFractionDigits: 2,
+      minimumFractionDigits: 0,
       ...(r.metric === "price" ? { style: "currency", currency } : {}),
     }).format(r.holder.value) +
-    (r.metric === "weight"
-      ? " кг"
-      : ["upgrade", "completeness"].includes(r.metric)
-        ? "%"
-        : "")
+    (r.metric === "weight" ? " кг" :
+      ["upgrade", "completeness"].includes(r.metric) ? "%" : "")
   );
 }
+
 function RecordCard({ record: r, currency }) {
   const b = r.holder;
   return (
     <article
       id={r.key}
-      className={"record-card " + (!b ? "vacant" : "")}
+      className={"record-card" + (!b ? " vacant" : "")}
       data-record={r.key}
+      aria-labelledby={"record-title-" + r.key}
     >
-      <div className="record-cover">
-        {b ? (
-          <a href={"/b/" + b.shareId}>
-            <Photo
-              bike={{
-                id: b.id,
-                name: b.name,
-                category: b.category,
-                brand: "",
-                model: "",
-                photos: b.cover ? [{ id: b.cover }] : [],
-              }}
-            />
-          </a>
-        ) : (
-          <Trophy size={42} />
-        )}
-        <span className="record-title">
-          <Trophy size={16} />
-          {r.name}
-        </span>
+      <div className="record-heading">
+        <AchievementArt imageId={r.imageId} />
+        <div>
+          <span className="record-category">
+            {r.group === "Community" ? "Сообщество" : r.group}
+          </span>
+          <h2 id={"record-title-" + r.key}>{r.name}</h2>
+        </div>
       </div>
-      <div className="record-info">
-        {b ? (
-          <>
-            <strong className="record-value">{value(r, currency)}</strong>
-            <h3>
-              <a href={"/b/" + b.shareId}>
-                {b.name}
-                <ArrowUpRight size={17} />
+      {b ? (
+        <>
+          <div className="record-result">
+            {b.cover && (
+              <a className="record-bike-photo" href={"/b/" + b.shareId} tabIndex={-1} aria-hidden="true">
+                <img src={"/api/photos/" + b.cover} alt="" loading="lazy" width={56} height={40} />
               </a>
-            </h3>
-            <a className="record-owner" href={"/u/" + b.author.username}>
-              <Avatar person={b.author} />
-              <span>
-                {b.author.name}
-                <small>@{b.author.username}</small>
-              </span>
-            </a>
-            <small>{r.eligible} участников · текущий лидер</small>
-          </>
-        ) : (
-          <>
-            <h3>Первый рекорд — впереди</h3>
-            <p>Пока нет подходящих сборок.</p>
-          </>
-        )}
-      </div>
+            )}
+            <div className="record-result-text">
+              <strong className="record-value">{value(r, currency)}</strong>
+              <a className="record-bike-name" href={"/b/" + b.shareId} title={b.name}>{b.name}</a>
+            </div>
+          </div>
+          <div className="record-meta">
+            <a className="record-owner" href={"/u/" + b.author.username} title={b.author.name}>@{b.author.username}</a>
+            <small>{r.eligible} участн.</small>
+          </div>
+        </>
+      ) : (
+        <div className="record-empty">
+          <strong>Рекорд свободен</strong>
+          <p>Пока нет подходящих сборок.</p>
+        </div>
+      )}
     </article>
   );
 }
+
 export default function Records() {
   const { setPreferences } = useSite();
   const [data, setData] = useState(null),
     [user, setUser] = useState(),
     [error, setError] = useState("");
   useEffect(() => {
+    let active = true;
     Promise.all([socialApi("game/records"), socialApi("me")])
       .then(([d, m]) => {
+        if (!active) return;
         setData(d);
         setUser(m.user);
         setPreferences(m.user?.preferences || {});
       })
-      .catch((e) => setError(e.message));
+      .catch((e) => { if (active) setError(e.message); });
+    return () => { active = false; };
   }, []);
   return (
     <>
       <SocialHeader user={user} />
       <main className="social-page records-page">
         <header className="hall-heading">
-          <p className="eyebrow">ColaBike · Hall of Fame</p>
-          <h1>Сборки, о которых говорят</h1>
-          <p>Награды остаются в истории. Рекорды нужно удержать.</p>
+          <div>
+            <p className="eyebrow">ColaBike · Hall of Fame</p>
+            <h1>Сборки, о которых говорят</h1>
+          </div>
+          <p>Награды остаются. Рекорды нужно удержать.</p>
         </header>
         {error && <p role="alert">{error}</p>}
         {!data && !error && <p role="status">Ищем рекордсменов…</p>}
         {data && (
           <>
-            <div className="hall-heroes">
-              {data.records
-                .filter((r) =>
-                  ["community", "popular", "expensive"].includes(r.key),
-                )
-                .sort(
-                  (a, b) =>
-                    ["community", "popular", "expensive"].indexOf(a.key) -
-                    ["community", "popular", "expensive"].indexOf(b.key),
-                )
-                .map((r) => (
-                  <RecordCard
-                    key={r.key}
-                    record={r}
-                    currency={data.settings.currency}
-                  />
-                ))}
+            <div className="record-grid" aria-label="Все рекорды сообщества">
+              {data.records.map((r) => (
+                <RecordCard key={r.key} record={r} currency={data.settings.currency} />
+              ))}
             </div>
-            <p className="help">
-              Актуально на {new Date(data.asOf).toLocaleString("ru-RU")}. При
-              равенстве значений лидер определяется по стабильному ID
-              велосипеда.
-            </p>
+            {!data.records.length && <p className="help">Рекорды пока отключены администратором.</p>}
             <details className="hall-rules">
-              <summary>Как становятся рекордсменами</summary>
+              <summary>Условия участия и подсчёт рекордов</summary>
               <p>
-                Только публичные велосипеды незаблокированных владельцев, без
-                исключения администратором. Заполненность — от{" "}
-                {data.settings.minimumCompleteness}%. Цена участвует только при
-                включённом показе; валюта площадки — {data.settings.currency}.
+                Участвуют публичные велосипеды незаблокированных владельцев,
+                без исключения администратором. Заполненность — от {data.settings.minimumCompleteness}%.
+                Цена участвует только при включённом показе; валюта — {data.settings.currency}.
               </p>
               <p>
-                Бюджетный герой: цена строго выше {data.settings.budgetMinimum}{" "}
-                ₽, фото, производитель, модель и год. Допустимый вес:{" "}
-                {data.settings.weightMinimum}–{data.settings.weightMaximum} кг;
+                Бюджетный герой: цена строго выше {data.settings.budgetMinimum} ₽,
+                фото, производитель, модель и год. Допустимый вес:
+                {" "}{data.settings.weightMinimum}–{data.settings.weightMaximum} кг;
                 каждая категория соревнуется отдельно.
               </p>
               <p>
                 Выбор сообщества — число уникальных пользователей, поставивших
-                хотя бы одну дополнительную реакцию. Лайки — отдельный рекорд.
-                Собственные голоса и голоса заблокированных пользователей не
-                считаются. Прокаченность и заполненность используют открытые
-                правила площадки.
+                дополнительную реакцию. Лайки — отдельный рекорд. Собственные
+                голоса и голоса заблокированных пользователей не считаются.
+                При равенстве значений лидер определяется по стабильному ID велосипеда.
               </p>
             </details>
-            {["Цена", "Вес", "Популярность", "Community", "Прокаченность"].map(
-              (group) => (
-                <section className="record-group" key={group}>
-                  <h2>{group === "Community" ? "Голос сообщества" : group}</h2>
-                  <div className="record-grid">
-                    {data.records
-                      .filter(
-                        (r) =>
-                          r.group === group &&
-                          !["community", "popular", "expensive"].includes(
-                            r.key,
-                          ),
-                      )
-                      .map((r) => (
-                        <RecordCard
-                          key={r.key}
-                          record={r}
-                          currency={data.settings.currency}
-                        />
-                      ))}
-                  </div>
-                  {!data.records.some((r) => r.group === group) && (
-                    <p className="help">Рекорды этой группы отключены.</p>
-                  )}
-                  {group === "Популярность" && (
-                    <a href="#popular">Любимец публики ↑</a>
-                  )}
-                  {group === "Цена" && (
-                    <a href="#expensive">Без компромиссов ↑</a>
-                  )}
-                </section>
-              ),
-            )}
+            <p className="hall-updated">Актуально на {new Date(data.asOf).toLocaleString("ru-RU")}</p>
           </>
         )}
       </main>

@@ -1,4 +1,5 @@
 import { siteAssetIds } from "../../../../lib/site-assets.js";
+import { gameAssetInUse } from "../../../../lib/gamification-assets.js";
 import { traced, logError } from "../../../../lib/observability.js";
 import {
   bikeResolverClient,
@@ -277,6 +278,11 @@ async function handler(req, { params }) {
             return {
               error:
                 "Изображение используется на сайте. Сначала замените его в оформлении.",
+              status: 409,
+            };
+          if (await gameAssetInUse(q, p[1]))
+            return {
+              error: "Иллюстрация используется в достижениях. Сначала замените её в разделе «Награды и рекорды».",
               status: 409,
             };
           await q.query("DELETE FROM site_assets WHERE id=$1", [p[1]]);

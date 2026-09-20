@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import pg from "pg";
+import { exerciseGameArtwork } from "./gamification-artwork-http.js";
 const base = process.env.TEST_ORIGIN || "http://localhost:3100",
   q = new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 1 });
 function client() {
@@ -88,6 +89,7 @@ try {
   );
   assert.equal((await b("game/admin/settings")).status, 403);
   const settings = (await admin("game/admin/settings")).body;
+  await exerciseGameArtwork(admin, guest, a, q);
   assert.equal(
     (
       await admin("game/admin/settings", "PUT", {
