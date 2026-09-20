@@ -303,3 +303,21 @@
     flex-wrap: wrap;
   }
 }
+.participation-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  margin: 12px 0;
+  font-size: 12px;
+}
+.participation-table th,
+.participation-table td {
+  padding: 8px 4px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  overflow-wrap: anywhere;
+}
+.bike-purposes {
+  min-width: 0;
+  grid-column: 1/-1;
+}

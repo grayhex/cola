@@ -81,6 +81,12 @@ test("discovery lifecycle, aliases, custom builds, deduplicated feeds, bookmarks
       alias: "Брукс С17",
       name: "Brooks C17",
     });
+    catalog.aliases.push({
+      kind: "model",
+      scope: "Cube",
+      alias: "Тревел",
+      name: "Travel",
+    });
     await db.query("INSERT INTO site_catalog(id,value) VALUES(1,$1)", [
       JSON.stringify(catalog),
     ]);
@@ -176,6 +182,25 @@ test("discovery lifecycle, aliases, custom builds, deduplicated feeds, bookmarks
     );
     assert.equal((await search({ q: "Brooks C17" })).total, 1);
     assert.equal((await search({ component: "Brooks C17" })).total, 1);
+    assert.equal(
+      (await search({ component: "Brooks C17", exact: "1" })).total,
+      1,
+    );
+    assert.equal(
+      (await search({ component: "Brooks C1", exact: "1" })).total,
+      0,
+    );
+    assert.equal((await search({ model: "Trav", exact: "1" })).total, 0);
+    assert.equal(
+      (await search({ brand: "Куб", model: "Тревел", exact: "1" })).total,
+      1,
+    );
+    assert.equal((await search({ q: "Куб Тревел" })).total, 1);
+    await db.query("UPDATE bikes SET brand='Куб' WHERE id=$1", [bike]);
+    assert.equal(
+      (await search({ brand: "Cube", model: "Тревел", exact: "1" })).total,
+      1,
+    );
     assert.equal((await search({ purpose: "custom" })).total, 1);
     assert.equal((await search({ q: "несуществующая деталь" })).total, 0);
     assert.equal((await search({ type: "users", q: "@reader" })).total, 1);

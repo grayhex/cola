@@ -173,7 +173,7 @@ test("dense visual system: shared cards, filters, search, themes and responsive 
       .selectOption("popular");
     await expect(page.locator(".bike-card")).toHaveCount(5);
     await page
-      .getByRole("button", { name: "Поиск велосипедов", exact: true })
+      .getByRole("button", { name: "Поиск ColaBike", exact: true })
       .click();
     await page.getByRole("searchbox").fill(name);
     await page.getByRole("button", { name: "Найти", exact: true }).click();

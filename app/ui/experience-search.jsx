@@ -36,7 +36,11 @@ export default function ExperienceSearch({ modelPage = false }) {
     [error, setError] = useState(""),
     [filters, setFilters] = useState(false);
   useEffect(() => {
-    const input = { ...empty, ...Object.fromEntries(params) };
+    const input = {
+      ...empty,
+      ...Object.fromEntries(params),
+      ...(modelPage ? { exact: "1" } : {}),
+    };
     setForm(input);
     setQuery(input);
   }, [params]);
@@ -66,6 +70,7 @@ export default function ExperienceSearch({ modelPage = false }) {
   }, [query, user?.id]);
   const set = (key, value) => setForm((f) => ({ ...f, [key]: value }));
   function search(next) {
+    if (modelPage) next = { ...next, exact: "1" };
     setForm(next);
     setQuery(next);
     history.replaceState(

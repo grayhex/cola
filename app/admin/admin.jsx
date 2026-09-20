@@ -574,7 +574,7 @@ export default function Admin() {
                 Это псевдонимный, не анонимный учёт; удаление аккаунта удаляет
                 его события.
               </p>
-              <table>
+              <table className="participation-table">
                 <thead>
                   <tr>
                     <th>Событие</th>

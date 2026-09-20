@@ -124,8 +124,7 @@ async function handler(req, { params }) {
       );
     if (p.length === 2 && p[1] === "solution" && m === "PUT") {
       const input = await readJson(req, 2048);
-      const comment =
-        input.commentId === null ? null : uuid.parse(input.commentId);
+      const comment = uuid.nullable().parse(input?.commentId);
       return json(
         await transaction((q) =>
           setSolution(q, uuid.parse(p[0]), user.id, comment),

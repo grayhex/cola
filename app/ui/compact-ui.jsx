@@ -187,7 +187,7 @@ export function GlobalSearch({ assetId }) {
       <button
         className="global-nav-item"
         type="button"
-        aria-label="Поиск велосипедов"
+        aria-label="Поиск ColaBike"
         data-tooltip="Поиск"
         aria-expanded={open}
         aria-haspopup="dialog"

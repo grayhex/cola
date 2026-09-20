@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
+import sharp from "sharp";
 const origin = process.env.TEST_ORIGIN || "http://localhost:3100";
 test("journal discovery: no-bike reader subscribes, saves, searches and returns; privacy revokes every surface", async ({
   page,
@@ -54,6 +55,17 @@ test("journal discovery: no-bike reader subscribes, saves, searches and returns;
   const publicBike = (
     await (await page.request.get("/api/bikes/" + bike.id)).json()
   ).bike;
+  const photoBytes = await sharp({
+    create: { width: 900, height: 300, channels: 3, background: "#d4d8dc" },
+  })
+    .png()
+    .toBuffer();
+  const uploaded = await page.request.post(
+    "/api/journal/" + entry.id + "/photos",
+    { headers: { origin, "content-type": "image/png" }, data: photoBytes },
+  );
+  expect(uploaded.status()).toBe(201);
+  const photo = await uploaded.json();
   const reader = await browser.newContext(info.project.use),
     other = await reader.newPage();
   try {
@@ -71,6 +83,9 @@ test("journal discovery: no-bike reader subscribes, saves, searches and returns;
     await other.goto("/journal?mode=following");
     const card = other.locator(".journal-card").filter({ hasText: nonce });
     await expect(card).toHaveCount(1);
+    await expect(
+      card.getByRole("img", { name: "Фотография записи" }),
+    ).toBeVisible();
     await card
       .getByRole("button", { name: "Сохранить запись", exact: true })
       .click();
@@ -152,6 +167,9 @@ test("journal discovery: no-bike reader subscribes, saves, searches and returns;
     await expect(
       other.getByRole("heading", { name: "Пока ничего не сохранено" }),
     ).toBeVisible();
+    expect(
+      (await reader.request.get("/api/journal/media/" + photo.id)).status(),
+    ).toBe(404);
     await other.goto(
       "/search?" + new URLSearchParams({ q: nonce, type: "journal" }),
     );
