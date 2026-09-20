@@ -2,6 +2,95 @@ import { test, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import sharp from "sharp";
 const origin = process.env.TEST_ORIGIN || "http://localhost:3100";
+test("component change offers an explicit draft, never automatic publication", async ({
+  page,
+}) => {
+  const nonce = randomUUID();
+  expect(
+    (
+      await page.request.post("/api/auth/register", {
+        headers: { origin },
+        data: {
+          name: "Builder",
+          email: nonce + "@builder.test",
+          password: "builder-browser-secret",
+        },
+      })
+    ).status(),
+  ).toBe(201);
+  const bike = await (
+    await page.request.post("/api/bikes", {
+      headers: { origin },
+      data: {
+        name: "Build diary",
+        brand: "Cube",
+        model: "Travel",
+        year: 2026,
+        category: "road",
+        description: "",
+        color: "",
+        size: "",
+        weight: null,
+      },
+    })
+  ).json();
+  expect(
+    (
+      await page.request.post("/api/bikes/" + bike.id + "/components", {
+        headers: { origin },
+        data: {
+          section: "build",
+          category: "Седло",
+          name: "Original saddle",
+          notes: "",
+          price: null,
+        },
+      })
+    ).status(),
+  ).toBe(201);
+  await page.goto("/account?tab=bikes&bike=" + bike.id);
+  await expect(
+    page.getByRole("heading", { name: "Журнал велосипеда", exact: true }),
+  ).toBeVisible();
+  await page.locator('summary[aria-label="Действия: Original saddle"]').click();
+  await page
+    .getByRole("button", { name: "Изменить Original saddle", exact: true })
+    .click();
+  const editor = page.getByRole("dialog", {
+    name: "Изменить деталь",
+    exact: true,
+  });
+  await editor
+    .getByLabel("Компонент или модель", { exact: true })
+    .fill("New saddle");
+  await editor
+    .getByRole("button", { name: "Сохранить деталь", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Рассказать об изменении", exact: true }),
+  ).toBeVisible();
+  expect(
+    (await (await page.request.get("/api/journal?bikeId=" + bike.id)).json())
+      .entries,
+  ).toHaveLength(0);
+  await page
+    .getByRole("button", { name: "Рассказать об изменении", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Редактировать запись", exact: true }),
+  ).toBeVisible();
+  const entries = (
+    await (await page.request.get("/api/journal?bikeId=" + bike.id)).json()
+  ).entries;
+  expect(entries).toHaveLength(1);
+  expect(entries[0]).toMatchObject({
+    kind: "build",
+    status: "draft",
+    isPublic: false,
+    body: "",
+  });
+  expect(entries[0].components[0].name).toBe("New saddle");
+});
 test("journal: draft, publication, photo, discussion and inherited privacy", async ({
   page,
   browser,
