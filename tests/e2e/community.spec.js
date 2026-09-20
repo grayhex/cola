@@ -126,7 +126,8 @@ test("two riders discuss a bike, receive notifications, reply and discover new p
           : /Аккаунт —/,
       })
       .click();
-    await visitor.getByRole("link", { name: "Подписки", exact: true }).click();
+    // Account's mixed feed, not the journal-only subscriptions destination.
+    await visitor.locator('.nav-menu-link[href="/feed"]:visible').click();
     await expect(visitor.locator(".bike-card").first()).toContainText(
       second.name,
     );
