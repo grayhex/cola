@@ -4,6 +4,8 @@ on:
   workflow_run:
     workflows: ["CI · ColaBike"]
     types: [completed]
+    # Do not create deployment runs for CI on feature/PR branches.
+    branches: [main]
   workflow_dispatch:
 
 permissions:
