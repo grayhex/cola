@@ -104,10 +104,15 @@ test("journal lifecycle: snapshots, linked ride, reused social features, visibil
       kind: "build",
       title: "New wheels",
       body: "What changed",
+      eventDate: "2026-09-20",
       componentIds: [part],
       rideId: ride,
     });
     const saved = await q.transaction((t) => saveJournal(t, owner.id, input));
+    assert.equal(
+      (await journalDetail(q, saved.shareId, owner.id)).eventDate,
+      "2026-09-20",
+    );
     await assert.rejects(
       journalDetail(q, saved.shareId),
       (e) => e.status === 404,

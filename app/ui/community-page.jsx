@@ -1,5 +1,6 @@
 "use client";
 import RideCard from "./ride-card.jsx";
+import { Check } from "./icons.jsx";
 import BikeGrid from "./bike-grid.jsx";
 import { useEffect, useState } from "react";
 import {
@@ -220,7 +221,7 @@ export default function CommunityPage({ kind }) {
                         read(n.id).catch((e) => setError(e.message))
                       }
                     >
-                      ✓
+                      <Check size={14} />
                     </button>
                   )}
                 </li>

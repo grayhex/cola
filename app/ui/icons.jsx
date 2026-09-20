@@ -68,15 +68,14 @@ function configurable(name, Fallback) {
     return id ? (
       <img
         src={"/api/assets/" + id}
-        alt=""
-        aria-hidden="true"
+        alt={props["aria-label"] || ""}
+        aria-hidden={props["aria-hidden"] ?? !props["aria-label"]}
+        title={props.title}
         className={"configurable-icon " + className}
         width={size}
         height={size}
         style={{
           ...style,
-          width: size,
-          height: size,
           objectFit: "contain",
           flexShrink: 0,
         }}

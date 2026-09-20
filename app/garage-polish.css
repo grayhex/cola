@@ -32,6 +32,7 @@
   margin: 0;
 }
 .site-root .card-facts span {
+  display: block;
   border: 1px solid var(--line);
   border-radius: 3px;
   padding: 1px 3px;
@@ -134,6 +135,7 @@
   text-overflow: ellipsis;
 }
 .site-root .showcase-actions {
+  width: auto;
   flex-shrink: 0;
   flex-wrap: nowrap;
   gap: 4px;
