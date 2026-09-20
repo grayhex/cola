@@ -72,9 +72,13 @@ Grant only:
 github-runner ALL=(root) NOPASSWD: /usr/local/sbin/deploy-cola-staging
 ```
 
-The staging repository stays at `/opt/stacks/cola`, uses `compose.yaml`, and is
-checked out onto a local `staging-deploy` branch at the verified SHA. It must keep
-its own database and volumes; staging data is never promoted automatically.
+The staging repository stays at `/opt/stacks/cola` and is checked out onto a local
+`staging-deploy` branch at the verified SHA. The wrapper does **not** trust a
+feature branch's `compose.yaml`: it materializes `compose.yaml` from current
+`origin/main` into a root-owned temporary file and uses that trusted topology to
+build/run the selected source. This prevents a staging ref from changing host
+mounts, privileged flags or other root-level Compose controls. It must keep its own
+database and volumes; staging data is never promoted automatically.
 
 In GitHub branch protection for `main`, require the **check** job from
 **CI · ColaBike**, require the branch to be up to date, disallow force pushes, and
