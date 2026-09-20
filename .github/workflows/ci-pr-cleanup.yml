@@ -1,0 +1,24 @@
+name: CI · Closed PR cleanup
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: read
+
+# Must match check.yml's PR group. Use its workflow name, not this one's.
+# A separate workflow avoids publishing a green/skipped required "check"
+# for a merge commit before the real main verification has finished.
+concurrency:
+  group: cola-ci-CI · ColaBike-pull_request-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  cancel-pr-ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      # No checkout, secrets or execution of code from the closed PR.
+      - name: Confirm cancellation of superseded PR verification
+        run: echo "PR closed; its superseded CI cancelled. Main CI and active deployments are unaffected." >> "$GITHUB_STEP_SUMMARY"

@@ -2,6 +2,7 @@ name: CI · ColaBike
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened]
   push:
     branches: [main]
   workflow_dispatch:
@@ -20,10 +21,32 @@ on:
 permissions:
   contents: read
 
+# Only automatic runs supersede one another. Manual/reusable verification gets
+# a run-specific key: never cancel a caller that may already be deploying.
+# PR and main keys are distinct; PR success does not replace testing main.
+concurrency:
+  group: cola-ci-${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || (github.event_name == 'push' && github.ref) || github.run_id }}
+  cancel-in-progress: true
+
 jobs:
-  check:
+  prepare:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 5
+    outputs:
+      sha: ${{ steps.target.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+      - name: Freeze the tested commit for every job
+        id: target
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+  core:
+    name: Application, Resolver and HTTP
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
     services:
       postgres:
         image: postgres:17-alpine
@@ -40,26 +63,142 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.ref || github.sha }}
+          ref: ${{ needs.prepare.outputs.sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
       - run: corepack enable && corepack prepare pnpm@11.19.0 --activate
       - run: pnpm install --frozen-lockfile
-      - run: pnpm test
-      - run: pnpm build
+      - name: Application unit and database tests
+        run: pnpm test
+      - name: Production build
+        run: pnpm build
       - run: npm ci
         working-directory: services/bike-resolver
-      - run: npm test && npm run build
+      - name: Resolver tests and build
+        run: npm test && npm run build
         working-directory: services/bike-resolver
-      - run: pnpm test:integration
-      - run: pnpm exec playwright install --with-deps chromium webkit
-      - run: pnpm test:e2e
-      - run: python3 scripts/test-compose.py
-      - run: bash scripts/test-backup-drill.sh
-      - uses: actions/upload-artifact@v4
-        if: always()
+      - name: HTTP integration including PostgreSQL concurrency checks
+        run: pnpm test:integration
+
+  e2e:
+    name: Browser · ${{ matrix.project }}
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        include:
+          - project: chromium
+            browser: chromium
+          - project: webkit-mobile
+            browser: webkit
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U test -d test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgres://test:test@127.0.0.1:5432/test
+      COLA_CI_PLAYWRIGHT_PROJECT: ${{ matrix.project }}
+      COLA_CI_PLAYWRIGHT_BROWSER: ${{ matrix.browser }}
+    steps:
+      - uses: actions/checkout@v4
         with:
-          name: browser-review
+          ref: ${{ needs.prepare.outputs.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: corepack enable && corepack prepare pnpm@11.19.0 --activate
+      - run: pnpm install --frozen-lockfile
+      - run: npm ci
+        working-directory: services/bike-resolver
+      # A short local build avoids transferring a large .next artifact between
+      # runners. Unit/Resolver tests are NOT repeated in the browser jobs.
+      - name: Production build for the isolated browser environment
+        run: pnpm build
+      - name: Select one browser without changing the test harness
+        run: |
+          test ! -e .ci-playwright.base.js
+          cp playwright.config.js .ci-playwright.base.js
+          cat > playwright.config.js <<'JS'
+          import { defineConfig } from "@playwright/test";
+          import base from "./.ci-playwright.base.js";
+          const name = process.env.COLA_CI_PLAYWRIGHT_PROJECT;
+          const projects = base.projects?.filter((project) => project.name === name);
+          if (!name || projects?.length !== 1) {
+            throw new Error(`Expected exactly one Playwright project: ${name}`);
+          }
+          export default defineConfig({
+            ...base,
+            projects,
+            workers: 1,
+            fullyParallel: false,
+          });
+          JS
+      - name: Install only this job's browser and system dependencies
+        run: pnpm exec playwright install --with-deps "$COLA_CI_PLAYWRIGHT_BROWSER"
+      - name: Browser tests with an isolated database and file storage
+        run: pnpm test:e2e
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: browser-review-${{ matrix.project }}-${{ github.run_attempt }}
           path: test-results/
           retention-days: 7
+
+  operations:
+    name: Docker and backup restore
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.sha }}
+      - name: Compose assertions
+        run: python3 scripts/test-compose.py
+      - name: Disposable backup and restore drill
+        run: bash scripts/test-backup-drill.sh
+
+  # Keep the required branch-protection status named "check". An upstream skip,
+  # cancellation or failure must NEVER turn this gate green on an active run.
+  check:
+    needs: [prepare, core, e2e, operations]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Require every verification group to pass
+        env:
+          PREPARE_RESULT: ${{ needs.prepare.result }}
+          CORE_RESULT: ${{ needs.core.result }}
+          E2E_RESULT: ${{ needs.e2e.result }}
+          OPERATIONS_RESULT: ${{ needs.operations.result }}
+          TESTED_SHA: ${{ needs.prepare.outputs.sha }}
+        run: |
+          {
+            echo "### CI verification"
+            echo "Commit: $TESTED_SHA"
+            echo ""
+            echo "| Group | Result |"
+            echo "| --- | --- |"
+            echo "| Prepare | $PREPARE_RESULT |"
+            echo "| Application, Resolver, HTTP | $CORE_RESULT |"
+            echo "| Chromium and mobile WebKit | $E2E_RESULT |"
+            echo "| Docker and backup/restore | $OPERATIONS_RESULT |"
+          } >> "$GITHUB_STEP_SUMMARY"
+          for result in "$PREPARE_RESULT" "$CORE_RESULT" "$E2E_RESULT" "$OPERATIONS_RESULT"; do
+            if [[ "$result" != "success" ]]; then
+              echo "::error::All CI groups must succeed; inspect the job summary."
+              exit 1
+            fi
+          done
