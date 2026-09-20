@@ -1,10 +1,27 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import RideBasemap, { MapAttribution } from "./ride-basemap.jsx";
+import YandexRideMap from "./yandex-ride-map.jsx";
 import { useSite } from "./site-provider.jsx";
 import { mapDefaults, mapStyle } from "../../lib/map-settings.js";
 import { bounds } from "../../lib/ride-geometry.js";
 export default function RideMap({ geometry, styleUrl }) {
+  const { personalSettings: settings } = useSite();
+  const config = settings.map || mapDefaults;
+  if (settings.rideMapView === "hidden") return null;
+  if (config.provider === "yandex") {
+    return (
+      <YandexRideMap
+        geometry={geometry}
+        config={config}
+        view={settings.rideMapView || "map"}
+        scrollZoom={!!settings.mapScrollZoom}
+      />
+    );
+  }
+  return <MapLibreRideMap geometry={geometry} styleUrl={styleUrl} />;
+}
+function MapLibreRideMap({ geometry, styleUrl }) {
   const { personalSettings: settings } = useSite();
   const config = settings.map || mapDefaults;
   const style = styleUrl || mapStyle(config);
