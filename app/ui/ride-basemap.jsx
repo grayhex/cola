@@ -3,11 +3,15 @@ import { useEffect, useRef, useState } from "react";
 import {
   rasterViewport,
   tileTemplate,
+  isRasterProvider,
   mapDefaults,
   osmAttribution,
 } from "../../lib/map-settings.js";
 import { useSite } from "./site-provider.jsx";
 export function MapAttribution({ config }) {
+  // The Yandex SDK renders its own mandatory attribution; route-only previews
+  // must not claim that an OSM basemap is being displayed.
+  if (config.provider === "yandex") return null;
   return (
     <div className="ride-map-attribution">
       <a href={osmAttribution} target="_blank" rel="noopener">
@@ -38,8 +42,9 @@ export default function RideBasemap({ geometry = [], forceRoute = false }) {
     showTiles =
       !forceRoute &&
       config.enabled &&
-      config.provider !== "style" &&
-      settings.rideMapView !== "route";
+      isRasterProvider(config) &&
+      settings.rideMapView !== "route" &&
+      settings.rideMapView !== "hidden";
   return (
     <div ref={ref} className="ride-basemap">
       <svg

@@ -79,3 +79,17 @@ test("raster preview bounds visible tiles and preserves separate privacy segment
     assert.ok(t.z <= 15);
   }
 });
+
+test("Yandex settings use the existing public key and validate enabled state", () => {
+  const config = { ...mapDefaults, provider: "yandex", publicKey: " test-key " };
+  const parsed = mapInput.parse(config);
+  assert.equal(parsed.publicKey, "test-key");
+  assert.equal(mapInput.safeParse({ ...config, publicKey: "  " }).success, false);
+  assert.equal(mapInput.safeParse({ ...config, publicKey: "", enabled: false }).success, true);
+  assert.equal(mapInput.safeParse({ ...config, publicKey: "x".repeat(501) }).success, false);
+  assert.equal(mapInput.safeParse({ ...config, sdkUrl: "https://evil.test/sdk.js" }).success, false);
+  assert.equal(mapInput.safeParse({ ...config, provider: "unknown" }).success, false);
+  const settings = settingsInput.parse({ ...defaultSettings, map: parsed });
+  assert.deepEqual(JSON.parse(JSON.stringify(settings)).map, parsed);
+  assert.equal(settingsInput.safeParse(defaultSettings).success, true);
+});
