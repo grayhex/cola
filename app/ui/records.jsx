@@ -1,8 +1,11 @@
 "use client";
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import styles from "./records.module.css";
 import { socialApi, SocialHeader, SocialFooter } from "./social-primitives.jsx";
 import { useSite } from "./site-provider.jsx";
 import AchievementArt from "./achievement-art.jsx";
+import { gameDescription, groupRecords } from "../../lib/gamification-presentation.js";
 
 function value(r, currency) {
   return (
@@ -16,7 +19,7 @@ function value(r, currency) {
   );
 }
 
-function RecordCard({ record: r, currency }) {
+function RecordCard({ record: r, settings, index }) {
   const b = r.holder;
   return (
     <article
@@ -24,41 +27,61 @@ function RecordCard({ record: r, currency }) {
       className={"record-card" + (!b ? " vacant" : "")}
       data-record={r.key}
       aria-labelledby={"record-title-" + r.key}
+      aria-describedby={"record-description-" + r.key}
+      style={{ "--record-delay": `${Math.min(index, 4) * 35}ms` }}
     >
-      <div className="record-heading">
-        <AchievementArt imageId={r.imageId} />
-        <div>
-          <span className="record-category">
-            {r.group === "Community" ? "Сообщество" : r.group}
-          </span>
-          <h2 id={"record-title-" + r.key}>{r.name}</h2>
+      <div className="record-illustration">
+        <AchievementArt imageId={r.imageId} size={160} />
+      </div>
+      <div className="record-content">
+        <div className="record-heading">
+          <h3 id={"record-title-" + r.key}>{r.name}</h3>
+          <p id={"record-description-" + r.key} className="record-description">
+            {r.description || gameDescription("record", r, settings)}
+          </p>
         </div>
+        {b && (
+          <div className="record-result">
+            <Link prefetch={false} className="record-bike-name" href={"/b/" + b.shareId} title={b.name}>
+              {b.name}
+            </Link>
+            <span className="record-value">{value(r, settings.currency)}</span>
+          </div>
+        )}
       </div>
       {b ? (
-        <>
-          <div className="record-result">
-            {b.cover && (
-              <a className="record-bike-photo" href={"/b/" + b.shareId} tabIndex={-1} aria-hidden="true">
-                <img src={"/api/photos/" + b.cover} alt="" loading="lazy" width={56} height={40} />
-              </a>
-            )}
-            <div className="record-result-text">
-              <strong className="record-value">{value(r, currency)}</strong>
-              <a className="record-bike-name" href={"/b/" + b.shareId} title={b.name}>{b.name}</a>
-            </div>
-          </div>
-          <div className="record-meta">
-            <a className="record-owner" href={"/u/" + b.author.username} title={b.author.name}>@{b.author.username}</a>
-            <small>{r.eligible} участн.</small>
-          </div>
-        </>
-      ) : (
-        <div className="record-empty">
-          <strong>Рекорд свободен</strong>
-          <p>Пока нет подходящих сборок.</p>
+        <div className="record-meta">
+          <Link prefetch={false} className="record-owner" href={"/u/" + b.author.username} title={b.author.name}>
+            @{b.author.username}
+          </Link>
+          <small>{r.eligible} участн.</small>
         </div>
+      ) : (
+        <p className="record-empty" title="Рекорд свободен · Пока нет подходящих сборок.">
+          <strong>Рекорд свободен</strong>{" · Пока нет подходящих сборок."}
+        </p>
       )}
     </article>
+  );
+}
+
+export function RecordGroups({ records, settings }) {
+  return (
+    <div className="record-groups" aria-label="Все рекорды сообщества">
+      {groupRecords(records).map((group) => (
+        <section className="record-group" key={group.id} data-record-group={group.id}
+          aria-labelledby={"record-group-" + group.id}>
+          <h2 id={"record-group-" + group.id} className="record-group-title">
+            {group.name}<span aria-hidden="true">{group.records.length}</span>
+          </h2>
+          <div className="record-grid">
+            {group.records.map((r, index) => (
+              <RecordCard key={r.key} record={r} settings={settings} index={index} />
+            ))}
+          </div>
+        </section>
+      ))}
+    </div>
   );
 }
 
@@ -82,7 +105,7 @@ export default function Records() {
   return (
     <>
       <SocialHeader user={user} />
-      <main className="social-page records-page">
+      <main className={"social-page records-page " + styles.page}>
         <header className="hall-heading">
           <div>
             <p className="eyebrow">ColaBike · Hall of Fame</p>
@@ -94,11 +117,7 @@ export default function Records() {
         {!data && !error && <p role="status">Ищем рекордсменов…</p>}
         {data && (
           <>
-            <div className="record-grid" aria-label="Все рекорды сообщества">
-              {data.records.map((r) => (
-                <RecordCard key={r.key} record={r} currency={data.settings.currency} />
-              ))}
-            </div>
+            <RecordGroups records={data.records} settings={data.settings} />
             {!data.records.length && <p className="help">Рекорды пока отключены администратором.</p>}
             <details className="hall-rules">
               <summary>Условия участия и подсчёт рекордов</summary>

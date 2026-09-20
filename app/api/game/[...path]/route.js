@@ -7,10 +7,12 @@ import { CommunityError, communityPage } from "../../../../lib/community-validat
 import { records, gameShelf, accountAchievements, reactionState, reactToBike, getGameSettings, excludeBike } from "../../../../lib/gamification.js";
 import { gameSettingsInput, gameSettings, reactionKey, exclusionInput } from "../../../../lib/gamification-validation.js";
 import { gameAssetsExist, withGameArtwork } from "../../../../lib/gamification-assets.js";
+import { withGameDescriptions } from "../../../../lib/gamification-presentation.js";
 import { audit } from "../../../../lib/site.js";
 export const runtime = "nodejs", dynamic = "force-dynamic";
-async function illustratedShelf(data) {
-  return withGameArtwork(data, await getGameSettings(db));
+async function illustratedShelf(data, settings) {
+  const effective = settings || await getGameSettings(db);
+  return withGameDescriptions(withGameArtwork(data, effective), effective);
 }
 async function handler(req, { params }) {
   try {
@@ -19,7 +21,7 @@ async function handler(req, { params }) {
     const user = await currentUser();
     if (p.length === 1 && p[0] === "records" && m === "GET") {
       const data = await records(db);
-      return json(withGameArtwork(data, data.settings));
+      return json(await illustratedShelf(data, data.settings));
     }
     if (p[0] === "profiles" && p.length === 2 && m === "GET") {
       const u = (await db.query("SELECT id FROM users WHERE lower(username)=lower($1) AND NOT blocked", [p[1]])).rows[0];
@@ -50,10 +52,11 @@ async function handler(req, { params }) {
       if (p.length === 2 && p[1] === "settings") {
         if (m === "GET") return json(await getGameSettings(db));
         if (m === "PUT") {
-          const input = gameSettingsInput.parse(await readJson(req, 8192));
+          // 22 bounded descriptions plus image UUIDs can exceed 8 KiB in UTF-8.
+          const input = gameSettingsInput.parse(await readJson(req, 32768));
           return json(await transaction(async (q) => {
             const row = (await q.query("SELECT value FROM gamification_settings WHERE id=1 FOR UPDATE")).rows[0];
-            // Old clients omit the new maps: preserve already configured images.
+            // Older clients must not erase stored artwork or description maps.
             const value = gameSettings({ ...row?.value, ...input });
             if (!(await gameAssetsExist(q, value)))
               throw new CommunityError("Иллюстрация удалена. Обновите медиатеку и выберите другую.", 409);
