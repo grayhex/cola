@@ -506,3 +506,50 @@
     animation: none;
   }
 }
+
+/* On phones the illustrated header is a full-bleed surface, not a floating logo. */
+@media (max-width: 700px) {
+  .site-root .global-header.has-banner {
+    height: clamp(64px, 18vw, 76px);
+    min-height: clamp(64px, 18vw, 76px);
+    padding: 0 8px;
+    overflow: hidden;
+    border-bottom: 0;
+  }
+  .site-root .global-header.has-banner .global-header-banner {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    display: block;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  .site-root .global-header.has-banner .global-header-banner-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: left center;
+  }
+  .site-root .global-header.has-banner .brand-illustrated {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    width: 100%;
+    height: 100%;
+  }
+  .site-root .global-header.has-banner .brand-illustrated .site-logo {
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .site-root .global-header.has-banner .global-nav {
+    position: relative;
+    z-index: 2;
+    margin-left: auto;
+  }
+  .site-root .global-header.has-banner + .garage-banner-shell {
+    border-top: 10px solid var(--paper);
+  }
+}
