@@ -38,9 +38,8 @@ owner's read-only SSH deploy key and refuses a stale/non-main SHA. If
 Staging is intentionally manual. Run **Deploy · Staging** from the workflow's
 `main` definition and enter the feature branch, tag or SHA in the `ref` field.
 That exact commit is resolved on a hosted runner, passes the same CI, then is
-deployed to the internal VM by `/usr/local/sbin/deploy-cola-staging`. Clicking the
-currently active category of deployment is not relevant here: the staging wrapper
-simply records the deployed SHA in `/var/lib/colabike/staging-sha`.
+deployed to the internal VM by `/usr/local/sbin/deploy-cola-staging`. The staging
+wrapper records the deployed SHA in `/var/lib/colabike/staging-sha`.
 
 ### One-time production runner setup
 
