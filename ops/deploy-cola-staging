@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+set -euo pipefail
+# COLA_STAGING_DEPLOY_V1
+# Install as root at /usr/local/sbin/deploy-cola-staging.
+# The workflow supplies a SHA that passed CI.
+
+repo=/opt/stacks/cola
+state_dir=/var/lib/colabike
+
+exec 9>/var/lock/colabike-deploy.lock
+flock 9
+
+[[ -d "$repo/.git" ]] || { echo "Repository not found: $repo" >&2; exit 1; }
+mkdir -p "$state_dir"
+
+sha=${1:-}
+[[ "$sha" =~ ^[a-f0-9]{40}$ ]] || {
+  echo "A verified 40-character commit SHA is required" >&2
+  exit 1
+}
+
+repo_owner=$(stat -c '%U' "$repo")
+[[ "$repo_owner" =~ ^[a-z_][a-z0-9_-]*$ ]] || {
+  echo "Unsafe repository owner: $repo_owner" >&2
+  exit 1
+}
+
+git_as_owner() {
+  runuser -u "$repo_owner" -- git -C "$repo" "$@"
+}
+
+git_as_owner diff --quiet
+git_as_owner diff --cached --quiet
+
+# Refresh all normal branches and tags. The requested SHA must be reachable
+# from the repository and present after the fetch.
+git_as_owner fetch --prune origin   '+refs/heads/*:refs/remotes/origin/*'   '+refs/tags/*:refs/tags/*'
+
+if ! git_as_owner cat-file -e "$sha^{commit}" 2>/dev/null; then
+  echo "Commit $sha is not available from the staging repository" >&2
+  exit 1
+fi
+
+git_as_owner checkout -B staging-deploy "$sha"
+
+cd "$repo"
+docker compose config --quiet
+docker compose up --build -d --wait --wait-timeout 180
+docker compose ps
+
+printf '%s\n' "$sha" > "$state_dir/staging-sha"
+echo "Staging deployed verified commit $sha"
