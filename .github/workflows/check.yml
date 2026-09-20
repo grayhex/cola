@@ -51,7 +51,7 @@ jobs:
   deploy:
     needs: check
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-    runs-on: self-hosted
+    runs-on: [self-hosted, cola-production]
     concurrency:
       group: cola-production
       cancel-in-progress: false
@@ -66,7 +66,7 @@ jobs:
             echo "Superseded by a newer main commit; skipping stale deployment"
             exit 0
           fi
-          grep -q "COLA_VERIFIED_DEPLOY_V1" /usr/local/sbin/deploy-cola || { echo "Install ops/deploy-cola on the VM first (see docs/OPERATIONS.md)"; exit 1; }
+          grep -q "COLA_VERIFIED_DEPLOY_V2" /usr/local/sbin/deploy-cola || { echo "Install ops/deploy-cola on the VM first (see docs/OPERATIONS.md)"; exit 1; }
           sudo -n /usr/local/sbin/deploy-cola "$CHECKED_SHA"
       - uses: actions/setup-node@v4
         if: contains(github.event.head_commit.message, '[hagsy-demo]')

@@ -20,10 +20,12 @@ and indexes; it does not rewrite existing files, bikes, settings or resolver cac
 
 `check.yml` runs unit/DB, builds, HTTP on PostgreSQL 17, Chromium + mobile WebKit,
 Compose assertions and a disposable backup/restore drill. Its `deploy` job needs
-all checks to succeed, uses the self-hosted runner and `cola-production` concurrency,
-and passes that exact commit SHA to `/usr/local/sbin/deploy-cola`. A newer main
-skips a stale deployment. Even if main advances after that check, the script checks
-out the supplied SHA, never an untested newer main.
+all checks to succeed and targets only a self-hosted runner carrying the
+`cola-production` label. The `cola-production` concurrency group serializes deploys.
+The job passes the exact checked commit SHA to `/usr/local/sbin/deploy-cola`.
+The root-owned script fetches `origin/main` using the repository owner's read-only
+SSH deploy key and refuses the deployment if the requested SHA is no longer the
+current remote `main`. This prevents a stale checked job from replacing newer code.
 
 **One-time VM update before merging this PR:** install the reviewed script from
 this branch (root-owned, not writable by the runner):
@@ -32,13 +34,16 @@ this branch (root-owned, not writable by the runner):
 sudo install -o root -g root -m 755 ops/deploy-cola /usr/local/sbin/deploy-cola
 ```
 
-CI checks the script protocol marker and refuses deployment if the old script is
-still installed. Existing sudoers permission remains:
+CI checks the `COLA_VERIFIED_DEPLOY_V2` protocol marker and refuses deployment if
+an older script is installed. Grant the runner only this sudo command:
 `github-runner ALL=(root) NOPASSWD: /usr/local/sbin/deploy-cola`.
-The script refuses tracked local edits, keeps a normal `main` branch for later
-`git pull`, serializes with backups, and never removes volumes. First CI deployment
-records a successful SHA in `/var/lib/colabike/verified-sha`. Thereafter the existing
-`sudo -n /usr/local/sbin/deploy-cola` command redeploys that last successful SHA.
+Do **not** add `github-runner` to the Docker group. The script refuses tracked local
+edits, keeps the checkout owned by its normal repository user, serializes with
+backups, and never removes volumes. If `/opt/stacks/cola/.env.production` exists it
+uses the standalone `compose.prod.yaml` together with that env file; staging without
+`.env.production` continues to use `compose.yaml`. First CI deployment records a
+successful SHA in `/var/lib/colabike/verified-sha`. Thereafter
+`sudo -n /usr/local/sbin/deploy-cola` redeploys that last successful SHA.
 Use Actions → **Recheck and redeploy Cola** → Run workflow on main to retest and
 deploy a newer commit. Never pass an untested SHA manually.
 
@@ -169,11 +174,11 @@ overwrite and corruption, and removes only its disposable projects.
 10. Check `/api/health`, `/api/ready`, `/api/status` over HTTPS, redirects and cookies.
 11. Verify/promote the admin using the existing README admin instructions; keep
     public registration closed until smoke checks complete.
-12. Install the checked deploy script and trusted self-hosted runner if desired.
-    On the VDS, configure `COMPOSE_FILE=compose.prod.yaml` and
-    `COMPOSE_ENV_FILES=.env.production` in the root-owned deploy script before its
-    Compose invocation (or a root-owned environment file sourced by that script).
-    The staging script stays unchanged. Set the same files for backups.
+12. Install the checked deploy script and a repository-scoped self-hosted runner
+    with custom label `cola-production`. Keep the runner out of the Docker group;
+    allow only `sudo -n /usr/local/sbin/deploy-cola`. The deploy script automatically
+    selects `compose.prod.yaml` + `.env.production` when the production env file is
+    present. Set the same production Compose/env files explicitly for backups.
 13. Smoke-test registration (temporarily enabled), login, wizard/touch dropdowns,
     upload, public showcase, like, revoke, and a backup/restore drill.
 14. Open registration only for the planned beta cohort. Email verification and

@@ -1,18 +1,60 @@
 #!/usr/bin/env bash
 set -euo pipefail
-# COLA_VERIFIED_DEPLOY_V1
+# COLA_VERIFIED_DEPLOY_V2
 # Install once as root at /usr/local/sbin/deploy-cola. CI supplies its tested SHA.
+
+repo=/opt/stacks/cola
+state_dir=/var/lib/colabike
+
 exec 9>/var/lock/colabike-deploy.lock
 flock 9
-cd /opt/stacks/cola
-mkdir -p /var/lib/colabike
-sha=${1:-$(cat /var/lib/colabike/verified-sha 2>/dev/null || true)}
-[[ "$sha" =~ ^[a-f0-9]{40}$ ]] || { echo 'A tested commit SHA is required for the first deployment' >&2; exit 1; }
-git fetch origin main
-git cat-file -e "$sha^{commit}"
-git diff --quiet && git diff --cached --quiet || { echo "Tracked local changes: deployment refused" >&2; exit 1; }
-git checkout -B main "$sha"
-# Staging defaults stay unchanged. For VDS set COMPOSE_FILE and --env-file externally.
-docker compose up --build -d --wait --wait-timeout 180
-printf '%s\n' "$sha" > /var/lib/colabike/verified-sha
+
+[[ -d "$repo/.git" ]] || { echo "Repository not found: $repo" >&2; exit 1; }
+mkdir -p "$state_dir"
+
+sha=${1:-$(cat "$state_dir/verified-sha" 2>/dev/null || true)}
+[[ "$sha" =~ ^[a-f0-9]{40}$ ]] || {
+  echo "A tested commit SHA is required for the first deployment" >&2
+  exit 1
+}
+
+repo_owner=$(stat -c '%U' "$repo")
+[[ "$repo_owner" =~ ^[a-z_][a-z0-9_-]*$ ]] || {
+  echo "Unsafe repository owner: $repo_owner" >&2
+  exit 1
+}
+
+git_as_owner() {
+  runuser -u "$repo_owner" -- git -C "$repo" "$@"
+}
+
+git_as_owner fetch --prune origin main
+remote_main=$(git_as_owner rev-parse refs/remotes/origin/main)
+
+if [[ "$sha" != "$remote_main" ]]; then
+  echo "Refusing stale or non-main deployment: requested=$sha main=$remote_main" >&2
+  exit 1
+fi
+
+git_as_owner cat-file -e "$sha^{commit}"
+git_as_owner diff --quiet
+git_as_owner diff --cached --quiet
+git_as_owner checkout -B main "$sha"
+
+cd "$repo"
+compose=(docker compose)
+
+if [[ -f .env.production ]]; then
+  [[ -f compose.prod.yaml ]] || {
+    echo "compose.prod.yaml is required when .env.production exists" >&2
+    exit 1
+  }
+  compose+=(--env-file .env.production -f compose.prod.yaml)
+fi
+
+"${compose[@]}" config --quiet
+"${compose[@]}" up --build -d --wait --wait-timeout 180
+"${compose[@]}" ps
+
+printf '%s\n' "$sha" > "$state_dir/verified-sha"
 echo "Deployed tested commit $sha"
