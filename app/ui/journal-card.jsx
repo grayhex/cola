@@ -60,7 +60,13 @@ export default function JournalCard({ entry, onSaved }) {
           <a href={"/j/" + entry.shareId}>{entry.title}</a>
         </h2>
         <p className="journal-excerpt">{entry.body}</p>
-        <a href={"/b/" + entry.bike.shareId}>{entry.bike.name}</a>
+        <a
+          className="journal-card-bike"
+          title={entry.bike.name}
+          href={"/b/" + entry.bike.shareId}
+        >
+          {entry.bike.name}
+        </a>
         <div className="journal-card-social">
           <a href={"/u/" + entry.author.username}>@{entry.author.username}</a>
           <span aria-label={"Лайки: " + entry.likes}>

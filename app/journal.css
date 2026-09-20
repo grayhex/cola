@@ -321,3 +321,10 @@
   min-width: 0;
   grid-column: 1/-1;
 }
+.journal-card-bike {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
