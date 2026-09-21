@@ -1,4 +1,5 @@
 "use client";
+import { MarketCard } from "./market.jsx";
 import RideCard from "./ride-card.jsx";
 import JournalCard from "./journal-card.jsx";
 import { Check, MessagesSquare, Users } from "./icons.jsx";
@@ -18,6 +19,7 @@ const eventText = {
   journal_like: "понравилась ваша запись",
   journal_comment: "прокомментировал запись",
   journal_reply: "ответил вам в журнале",
+  ride_invite: "приглашает на покатушку",
   ride_like: "понравилась ваша покатушка",
   ride_comment: "прокомментировал покатушку",
   ride_reply: "ответил вам",
@@ -234,6 +236,8 @@ export default function CommunityPage({ kind }) {
               {(data.items || data.bikes).map((b) =>
                 b.kind === "journal" ? (
                   <JournalCard key={b.id} entry={b} />
+                ) : b.kind === "market" ? (
+                  <MarketCard key={b.id} listing={b} />
                 ) : b.kind === "ride" ? (
                   <RideCard key={b.id} ride={b} />
                 ) : (

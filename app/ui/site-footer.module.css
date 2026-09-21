@@ -47,3 +47,7 @@
     min-height: 44px;
   }
 }
+
+.inner :global(.build-versions) {
+  font-size: 12px;
+}

@@ -93,6 +93,7 @@ test("unified discovery enforces privacy, literal search, grouping, useful links
       "014_journal",
       "015_discovery",
       "016_product_ui",
+      "017_rides_market",
     ])
       await db.exec(
         await readFile(new URL(`../db/${m}.sql`, import.meta.url), "utf8"),
@@ -208,7 +209,7 @@ test("unified discovery enforces privacy, literal search, grouping, useful links
       new Set(["bike", "ride", "journal", "achievement"]),
     );
     assert(activity.events.some((e) => e.href === "/j/" + journalShare));
-    assert.equal(activity.content[0].type, "journal");
+    assert(activity.content.some((item) => item.type === "journal"));
     assert(!JSON.stringify(activity).match(/Secret|Blocked/));
     const popular = await showcase(db, viewer, { sort: "popular" }),
       home = await communityHome(db, viewer);

@@ -1,6 +1,14 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { LoaderCircle, Check, Plus, Trash2, Link, Pencil } from "./icons.jsx";
+import {
+  Bike,
+  LoaderCircle,
+  Check,
+  Plus,
+  Trash2,
+  Link,
+  Pencil,
+} from "./icons.jsx";
 import { useSite } from "./site-provider.jsx";
 import CompactCombo from "./compact-combo.jsx";
 import PartIcon from "./part-icon.jsx";
@@ -150,7 +158,11 @@ export default function BikeWizard({ onCreated, onBusy }) {
       const d = await resolveWithTrace(
         {
           ...query,
-          ...(sourceUrl ? { sourceUrl } : candidateId ? { candidateId } : {}),
+          ...(sourceUrl
+            ? { sourceUrl }
+            : candidateId
+              ? { candidateId }
+              : { chooseCandidates: true }),
         },
         AbortSignal.any([controller.signal, AbortSignal.timeout(95000)]),
         (event) => {
@@ -633,10 +645,38 @@ export default function BikeWizard({ onCreated, onBusy }) {
                       type="button"
                       className="wizard-candidate"
                       key={c.candidateId}
-                      disabled={c.year !== null && c.year !== query.year}
-                      onClick={() => resolve("", c.candidateId)}
+                      disabled={
+                        resolving ||
+                        (!c.selectable &&
+                          c.year !== null &&
+                          c.year !== query.year)
+                      }
+                      onClick={() =>
+                        c.selectable
+                          ? resolve(c.url)
+                          : resolve("", c.candidateId)
+                      }
                     >
-                      {c.canonicalName} · {c.year || "год не подтверждён"}
+                      {c.thumbnailId ? (
+                        <img
+                          src={"/api/bikes/photo-candidates/" + c.thumbnailId}
+                          alt=""
+                          loading="lazy"
+                          onError={(e) => {
+                            e.currentTarget.style.display = "none";
+                          }}
+                        />
+                      ) : (
+                        <Bike size={28} />
+                      )}
+                      <span>
+                        <strong>{c.canonicalName}</strong>
+                        <small>
+                          {c.year || "Год не подтверждён"} ·{" "}
+                          {c.sourceHost || new URL(c.url).hostname}
+                        </small>
+                        <small>Выбрать комплектацию →</small>
+                      </span>
                     </button>
                   ))}
                 <div className="wizard-choice-actions">

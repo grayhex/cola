@@ -11,6 +11,7 @@ export function NavigationSettings({ settings, onChange }) {
     bikes: "Велосипеды",
     journal: "Журнал",
     rides: "Покатушки",
+    market: "Рынок",
     about: "О проекте",
   };
   const set = (id, key, value) =>

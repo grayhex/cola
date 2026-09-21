@@ -208,9 +208,8 @@ test("navigation: real destinations, account, keyboard, configurable About and a
       name: "Выше: О проекте",
       exact: true,
     });
-    await moveAboutUp.click();
-    await moveAboutUp.click();
-    await moveAboutUp.click();
+    for (let i = 1; i < (await menu.getByRole("listitem").count()); i++)
+      await moveAboutUp.click();
     await expect(moveAboutUp).toBeDisabled();
     await expect(
       menu.getByRole("listitem").first().getByRole("textbox"),

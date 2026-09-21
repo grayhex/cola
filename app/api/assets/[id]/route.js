@@ -19,7 +19,11 @@ export async function GET(req, { params }) {
       ),
       {
         headers: {
-          "Content-Type": "image/webp",
+          "Content-Type": rows[0].filename.endsWith(".svg")
+            ? "image/svg+xml"
+            : "image/webp",
+          "Content-Security-Policy":
+            "default-src 'none'; style-src 'unsafe-inline'; sandbox",
           "Cache-Control": "no-store",
           "X-Content-Type-Options": "nosniff",
         },

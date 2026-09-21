@@ -16,6 +16,13 @@ import {
 } from "../../../../lib/community-validation.js";
 import { RideError } from "../../../../lib/ride-gpx.js";
 import {
+  importGarmin,
+  garminImportInput,
+  planRide,
+  planInput,
+  attachRideTrack,
+  respondRideInvitation,
+  cancelPlannedRide,
   rideSettings,
   rideSettingsInput,
   previewRide,
@@ -26,6 +33,8 @@ import {
   rideInput,
   rideEdit,
 } from "../../../../lib/rides.js";
+import { parseGarminCsv } from "../../../../lib/garmin-csv.js";
+import { z } from "zod";
 import { cleanupRides } from "../../../../lib/ride-storage.js";
 import {
   rideCommentPage,
@@ -66,6 +75,10 @@ async function handler(req, { params }) {
       return json(
         await rideList(db, user?.id, {
           own,
+          status: z
+            .enum(["completed", "planned", "cancelled"])
+            .nullable()
+            .parse(url.searchParams.get("status")),
           username: url.searchParams.get("username"),
           bikeId: url.searchParams.has("bikeId")
             ? uuid.parse(url.searchParams.get("bikeId"))
@@ -99,7 +112,7 @@ async function handler(req, { params }) {
         ride: await rideDetail(db, uuid.parse(p[1]), user.id, true),
       });
     const key =
-      p[0] === "preview"
+      ["preview", "import", "csv-preview"].includes(p[0]) || p[1] === "track"
         ? "ride-upload"
         : p[1] === "comments"
           ? "comments"
@@ -113,12 +126,80 @@ async function handler(req, { params }) {
       ))
     )
       return fail("Слишком много действий. Попробуйте позже.", 429);
+    if (p[0] === "csv-preview" && p.length === 1 && m === "POST") {
+      if (!config.enabled)
+        return fail("Загрузка покатушек временно выключена", 403);
+      const body = z
+        .object({
+          csv: z.string().max(2 * 1024 * 1024),
+          utcOffsetMinutes: z.number().int().min(-720).max(840),
+          units: z.enum(["metric", "imperial"]),
+        })
+        .strict()
+        .parse(await readJson(req, 3 * 1024 * 1024));
+      return json(parseGarminCsv(body.csv, body));
+    }
+    if (p[0] === "import" && p.length === 1 && m === "POST") {
+      if (!config.enabled)
+        return fail("Загрузка покатушек временно выключена", 403);
+      const input = garminImportInput.parse(
+        await readJson(req, 3 * 1024 * 1024),
+      );
+      const parsed = parseGarminCsv(input.csv, input);
+      return json(
+        await transaction((q) =>
+          importGarmin(q, user.id, input, parsed, config),
+        ),
+        201,
+      );
+    }
+    if (p[0] === "plan" && p.length === 1 && m === "POST") {
+      if (!config.enabled)
+        return fail("Загрузка покатушек временно выключена", 403);
+      const input = planInput.parse(await readJson(req, 16384));
+      const result = await transaction((q) =>
+        planRide(q, user.id, input, config),
+      );
+      await cleanupRides(db).catch(() => {});
+      return json(result, 201);
+    }
+    if (p.length === 2 && p[1] === "track" && m === "POST") {
+      if (!config.enabled)
+        return fail("Загрузка покатушек временно выключена", 403);
+      const bytes = await readBytes(req, config.maxGpxBytes);
+      return json(
+        await transaction((q) =>
+          attachRideTrack(q, user.id, uuid.parse(p[0]), bytes, config),
+        ),
+      );
+    }
+    if (p.length === 2 && p[1] === "invitation" && m === "PATCH") {
+      const input = z
+        .object({ response: z.enum(["accepted", "declined"]) })
+        .strict()
+        .parse(await readJson(req, 1024));
+      return json(
+        await transaction((q) =>
+          respondRideInvitation(q, uuid.parse(p[0]), user.id, input.response),
+        ),
+      );
+    }
+    if (p.length === 2 && p[1] === "cancel" && m === "POST")
+      return json(
+        await transaction((q) =>
+          cancelPlannedRide(q, uuid.parse(p[0]), user.id),
+        ),
+      );
     if (p[0] === "preview" && p.length === 1 && m === "POST") {
       if (!config.enabled)
         return fail("Загрузка покатушек временно выключена", 403);
       const bytes = await readBytes(req, config.maxGpxBytes);
       return json(
-        await transaction((q) => previewRide(q, user.id, bytes, config)),
+        await transaction((q) =>
+          previewRide(q, user.id, bytes, config, {
+            planned: url.searchParams.get("purpose") === "plan",
+          }),
+        ),
         201,
       );
     }

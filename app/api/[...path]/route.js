@@ -198,7 +198,8 @@ async function handler(req, { params }) {
       if (!rows[0]) return fail("Фото не найдено", 404);
       try {
         const width = new URL(req.url).searchParams.get("width");
-        if (width && !["160", "320"].includes(width)) return fail("Неверный размер фотографии");
+        if (width && !["160", "320"].includes(width))
+          return fail("Неверный размер фотографии");
         const bytes = await readFile(path.join(uploads(), rows[0].filename));
         return new NextResponse(
           width ? await prepareThumbnail(bytes, Number(width)) : bytes,
@@ -358,7 +359,12 @@ async function handler(req, { params }) {
       );
       if (!rows.length) return fail("Поиск устарел", 404);
       const photo = await bikeResolverClient.request("/v1/photos/" + id);
-      const bytes = await preparePhoto(Buffer.from(photo.data, "base64"));
+      const bytes = await prepareThumbnail(
+        await preparePhoto(Buffer.from(photo.data, "base64"), {
+          bikePhoto: false,
+        }),
+        160,
+      );
       return new NextResponse(bytes, {
         headers: {
           "Content-Type": "image/webp",

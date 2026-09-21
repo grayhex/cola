@@ -96,6 +96,9 @@ export interface BikeComponent {
   raw: { label: string; value: string };
 }
 export interface BikeCandidate {
+  thumbnailId?: string;
+  sourceHost?: string;
+  selectable?: boolean;
   candidateId?: string;
   brand: string;
   canonicalName: string;
@@ -133,6 +136,7 @@ export interface Source {
   adapterVersion: number;
 }
 export interface Resolved {
+  thumbnailId?: string;
   quality?: ExtractionQuality;
   suggestedMetadata?: Record<string, string | number>;
   unknownFields?: RawField[];

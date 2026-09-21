@@ -5,6 +5,7 @@ import { Heart } from "./icons.jsx";
 import GlobalHeader from "./global-header.jsx";
 import { useSite } from "./site-provider.jsx";
 import footerStyles from "./site-footer.module.css";
+import Versions from "./versions.jsx";
 export async function socialApi(path, method = "GET", data) {
   const response = await fetch("/api/" + path, {
     method,
@@ -47,8 +48,10 @@ export function SocialFooter() {
           <Link href="/bikes">Велосипеды</Link>
           <Link href="/journal">Журнал</Link>
           <Link href="/rides">Покатушки</Link>
+          <Link href="/market">Рынок</Link>
           <Link href="/about">О проекте</Link>
           <a href="https://github.com/grayhex/cola">GitHub</a>
+          <Versions link={false} />
         </nav>
       </div>
     </footer>

@@ -74,6 +74,7 @@ export default function SiteProvider({ initial, children }) {
         [
           "bikeLayout",
           "showMileage",
+          "componentsExpanded",
           "rideListMode",
           "rideMapView",
           "mapScrollZoom",

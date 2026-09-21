@@ -2,6 +2,8 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
+  ShoppingBag,
+  CalendarDays,
   Bike,
   ArrowRight,
   Heart,
@@ -21,6 +23,8 @@ import SearchBox from "./search-box.jsx";
 import SmallImage from "./small-image.jsx";
 import styles from "./home.module.css";
 const markers = {
+  market: ShoppingBag,
+  planned: CalendarDays,
   bike: Bike,
   journal: BookOpen,
   ride: Route,
@@ -210,7 +214,14 @@ export default function Home() {
     <>
       <GlobalHeader user={user} />
       <main className={styles.home}>
-        <section className={styles.hero} aria-labelledby="hero-title">
+        <section
+          className={styles.hero}
+          aria-labelledby="hero-title"
+          style={{
+            "--hero-light": settings.heroBackgroundLight,
+            "--hero-dark": settings.heroBackgroundDark,
+          }}
+        >
           <div className={styles.heroContent}>
             <div className={styles.heroCopy}>
               <div className={styles.heroTitle}>
@@ -247,7 +258,25 @@ export default function Home() {
               data-hero-animation
               aria-hidden="true"
             >
-              <div className={styles.routeOrbit} />
+              {settings.heroAnimationLightId && (
+                <img
+                  className={styles.animationLight}
+                  src={"/api/assets/" + settings.heroAnimationLightId}
+                  alt=""
+                />
+              )}
+              {(settings.heroAnimationDarkId ||
+                settings.heroAnimationLightId) && (
+                <img
+                  className={styles.animationDark}
+                  src={
+                    "/api/assets/" +
+                    (settings.heroAnimationDarkId ||
+                      settings.heroAnimationLightId)
+                  }
+                  alt=""
+                />
+              )}
               <span className={styles.stageLabel}>COLABIKE / В ДВИЖЕНИИ</span>
             </div>
           </div>
@@ -293,19 +322,26 @@ export default function Home() {
             <div>
               <Link href="/journal">Все записи →</Link>
               <Link href="/rides">Все покатушки →</Link>
+              <Link href="/market">Рынок →</Link>
             </div>
           </div>
           <div className={styles.contentGrid}>
             {content.content.map((item) => {
-              const Icon = { journal: BookOpen, ride: Route, bike: Bike }[
-                item.type
-              ];
+              const Icon = {
+                journal: BookOpen,
+                ride: Route,
+                bike: Bike,
+                market: ShoppingBag,
+                planned: CalendarDays,
+              }[item.type];
               return (
                 <article className={styles.story} key={item.id}>
                   <div className={styles.storyKind}>
                     <Icon size={16} />
                     {
                       {
+                        market: "Рынок",
+                        planned: "Планируемая покатушка",
                         journal: "Запись",
                         ride: "Покатушка",
                         bike: "Велосипед",

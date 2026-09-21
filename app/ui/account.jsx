@@ -292,6 +292,14 @@ function Appearance({ initial, onSaved }) {
         </label>
       ))}
       <label className="admin-toggle">
+        <span>Раскрывать группы комплектующих по умолчанию</span>
+        <input
+          type="checkbox"
+          checked={prefs.componentsExpanded || false}
+          onChange={(e) => set("componentsExpanded", e.target.checked)}
+        />
+      </label>
+      <label className="admin-toggle">
         <span>Показывать пробег</span>
         <input
           type="checkbox"

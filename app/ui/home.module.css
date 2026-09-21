@@ -5,7 +5,7 @@
   min-width: 0;
 }
 .hero {
-  background: var(--hero-bg);
+  background: var(--hero-light, var(--hero-bg));
   border: 1px solid var(--border);
   border-radius: 10px;
 }
@@ -13,8 +13,8 @@
   display: grid;
   grid-template-columns: minmax(0, 1.35fr) minmax(240px, 0.85fr);
   align-items: center;
-  gap: 48px;
-  padding: 48px;
+  gap: 32px;
+  padding: 32px;
   text-align: left;
 }
 .heroCopy {
@@ -62,32 +62,31 @@ span.heroImage svg {
 }
 .animationStage {
   position: relative;
-  min-height: 310px;
+  min-height: 260px;
   align-self: stretch;
   display: grid;
   place-items: center;
   overflow: hidden;
   isolation: isolate;
 }
-.routeOrbit {
-  width: 78%;
-  aspect-ratio: 1;
-  max-width: 320px;
-  border: 1px solid color-mix(in srgb, var(--text-subtle) 22%, transparent);
-  border-radius: 50%;
-  transform: rotate(-25deg);
+.animationLight,
+.animationDark {
+  width: 100%;
+  height: 260px;
+  object-fit: contain;
+  padding-bottom: 24px;
 }
-.routeOrbit::before,
-.routeOrbit::after {
-  content: "";
-  position: absolute;
-  border: 1px solid color-mix(in srgb, var(--text-subtle) 16%, transparent);
-  border-radius: 50%;
-  inset: 24px -28px;
+.animationDark {
+  display: none;
 }
-.routeOrbit::after {
-  inset: 64px -52px;
-  border-color: color-mix(in srgb, var(--accent) 65%, transparent);
+:global([data-theme="dark"]) .animationLight {
+  display: none;
+}
+:global([data-theme="dark"]) .animationDark {
+  display: block;
+}
+:global([data-theme="dark"]) .hero {
+  background: var(--hero-dark, var(--hero-bg));
 }
 .stageLabel {
   position: absolute;
@@ -194,7 +193,7 @@ span.heroImage svg {
   background: var(--surface-hover);
 }
 .section {
-  padding: 44px 0 0;
+  padding: 28px 0 0;
 }
 .sectionTitle {
   display: flex;
@@ -215,7 +214,7 @@ span.heroImage svg {
 }
 .sectionNote {
   text-align: center;
-  margin: 10px 0 24px;
+  margin: 8px 0 16px;
   font-size: 16px;
 }
 .trending {
@@ -429,8 +428,8 @@ span.heroImage svg {
   align-items: center;
   gap: 16px;
   border-top: 1px solid var(--border);
-  margin-top: 40px;
-  padding: 28px 0 36px;
+  margin-top: 28px;
+  padding: 20px 0 24px;
 }
 .about p {
   flex: 1;

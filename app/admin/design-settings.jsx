@@ -69,6 +69,47 @@ export function HomepageSettings({
   return (
     <section className={"admin-panel " + styles.compactPanel}>
       <h2>Главная страница</h2>
+      <div className={styles.graphicGrid}>
+        {[
+          ["heroAnimationLightId", "Анимация · светлая тема"],
+          ["heroAnimationDarkId", "Анимация · тёмная тема"],
+        ].map(([key, label]) => (
+          <AssetPicker
+            key={key}
+            label={label}
+            help="Прозрачный SVG с CSS или SMIL-анимацией · до 1 МБ. Без внешних ресурсов."
+            value={s[key]}
+            assets={assets}
+            busy={busy}
+            compact
+            accept=".svg,image/svg+xml"
+            emptyLabel={
+              key === "heroAnimationDarkId"
+                ? "Как в светлой теме"
+                : "Без анимации"
+            }
+            onChange={(v) => onChange(key, v)}
+            onUpload={async (file) => {
+              const asset = await onUpload(file, { target: "setting", key });
+              if (asset) onChange(key, asset.id);
+            }}
+          />
+        ))}
+      </div>
+      <div className="admin-form-grid">
+        {[
+          ["heroBackgroundLight", "Фон блока · светлая тема"],
+          ["heroBackgroundDark", "Фон блока · тёмная тема"],
+        ].map(([key, label]) => (
+          <Field key={key} label={label}>
+            <input
+              type="color"
+              value={s[key]}
+              onChange={(e) => onChange(key, e.target.value)}
+            />
+          </Field>
+        ))}
+      </div>
       <AssetPicker
         label="Hero image"
         help="PNG или WebP с прозрачным фоном. Рекомендуется 320 × 320 px. Одно изображение для обеих тем."
@@ -110,6 +151,24 @@ export function HomepageSettings({
         Популярные байки, события и новый контент формируются из публичных
         материалов.
       </p>
+      <div className="admin-form-grid">
+        {[
+          ["appVersionLabel", "Версия приложения"],
+          ["parserVersionLabel", "Версия парсера"],
+        ].map(([key, label]) => (
+          <Field
+            key={key}
+            label={label}
+            help="Оставьте пустым, чтобы показывать версию сборки."
+          >
+            <input
+              value={s[key]}
+              maxLength={40}
+              onChange={(e) => onChange(key, e.target.value)}
+            />
+          </Field>
+        ))}
+      </div>
     </section>
   );
 }

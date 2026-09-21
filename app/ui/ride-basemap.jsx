@@ -23,9 +23,15 @@ export function MapAttribution({ config }) {
     </div>
   );
 }
-export default function RideBasemap({ geometry = [], forceRoute = false }) {
+export default function RideBasemap({
+  geometry = [],
+  forceRoute = false,
+  thumbnail = false,
+}) {
   const { personalSettings: settings } = useSite(),
-    config = settings.map || mapDefaults;
+    config = thumbnail
+      ? { ...mapDefaults, enabled: settings.map?.enabled !== false }
+      : settings.map || mapDefaults;
   const ref = useRef(null),
     [visible, setVisible] = useState(false),
     [failed, setFailed] = useState(false);

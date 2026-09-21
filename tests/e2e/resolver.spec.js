@@ -30,6 +30,8 @@ test("wizard live trace, stop, partial import and mobile review", async ({
   await dialog.getByLabel("Год", { exact: true }).fill("2024");
   await dialog.getByRole("button", { name: "Далее", exact: true }).click();
   await expect(dialog.locator(".resolver-timeline")).toBeVisible();
+  await expect(dialog.locator(".wizard-candidate").first()).toBeVisible();
+  await dialog.locator(".wizard-candidate").first().click();
   await expect(dialog.locator(".wizard-found")).toBeVisible();
   await expect(dialog.locator(".wizard-found")).toContainText(
     "характеристик распознаны",
@@ -44,6 +46,7 @@ test("wizard live trace, stop, partial import and mobile review", async ({
   await page.screenshot({
     path: info.outputPath("resolver-result.png"),
     fullPage: true,
+    animations: "disabled",
   });
   await dialog
     .getByRole("button", {
@@ -75,6 +78,7 @@ test("wizard live trace, stop, partial import and mobile review", async ({
   await page.screenshot({
     path: info.outputPath("resolver-partial.png"),
     fullPage: true,
+    animations: "disabled",
   });
   await dialog.getByRole("button", { name: "Назад", exact: true }).click();
   await dialog
@@ -86,16 +90,24 @@ test("wizard live trace, stop, partial import and mobile review", async ({
   await dialog
     .getByLabel("Страница велосипеда", { exact: true })
     .fill("https://www.velo-port.ru/slow-bike");
-  const failed = page.waitForEvent("requestfailed", {
-    predicate: (r) => r.url().includes("/api/bikes/resolve-stream"),
-  });
+  const started = page.waitForRequest((r) =>
+    r.url().includes("/api/bikes/resolve-stream"),
+  );
+  const settled = Promise.race(
+    ["requestfinished", "requestfailed"].map((event) =>
+      page.waitForEvent(event, {
+        predicate: (r) => r.url().includes("/api/bikes/resolve-stream"),
+      }),
+    ),
+  );
   await dialog
     .getByRole("button", { name: "Распознать страницу", exact: true })
     .click();
+  await started;
   await dialog
     .getByRole("button", { name: "Остановить поиск", exact: true })
     .click();
-  await failed;
+  await settled;
   await expect(dialog).toContainText("Поиск остановлен");
   await expect(
     dialog.getByRole("button", { name: "Далее", exact: true }),
@@ -134,6 +146,8 @@ test("wizard quick setup, identity confirmation, image size and successful save"
   await dialog.getByLabel("Комплектация / версия").fill("AR 1");
   await dialog.getByLabel("Год", { exact: true }).fill("2024");
   await dialog.getByRole("button", { name: "Далее", exact: true }).click();
+  await expect(dialog.locator(".wizard-candidate").first()).toBeVisible();
+  await dialog.locator(".wizard-candidate").first().click();
   await expect(dialog.locator(".wizard-found")).toBeVisible();
   await dialog
     .getByRole("button", {
@@ -181,6 +195,7 @@ test("wizard quick setup, identity confirmation, image size and successful save"
   await page.screenshot({
     path: info.outputPath("wizard-details.png"),
     fullPage: true,
+    animations: "disabled",
   });
   const beforeSave = prompts.length;
   await dialog
@@ -194,5 +209,6 @@ test("wizard quick setup, identity confirmation, image size and successful save"
   await page.screenshot({
     path: info.outputPath("bike-detail.png"),
     fullPage: true,
+    animations: "disabled",
   });
 });

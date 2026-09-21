@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { ShoppingBag } from "lucide-react";
 import styles from "./global-header.module.css";
 import ThemeControl from "./theme-control.jsx";
 import { GlobalSearch, CompactDialog } from "./compact-ui.jsx";
@@ -32,6 +33,7 @@ import {
   activeSection,
 } from "../../lib/navigation.js";
 const icons = {
+  market: ShoppingBag,
   journal: BookOpen,
   saved: Save,
   home: Home,
@@ -247,9 +249,12 @@ export default function GlobalHeader({ user, onProfile, previewSettings }) {
                   key={section.id}
                   label={t("Подразделы") + ": " + section.label}
                   href={
-                    { bikes: "/bikes", journal: "/journal", rides: "/rides" }[
-                      section.id
-                    ]
+                    {
+                      bikes: "/bikes",
+                      journal: "/journal",
+                      rides: "/rides",
+                      market: "/market",
+                    }[section.id]
                   }
                   linkLabel={
                     <>
@@ -347,6 +352,7 @@ export default function GlobalHeader({ user, onProfile, previewSettings }) {
                             bikes: "/bikes",
                             journal: "/journal",
                             rides: "/rides",
+                            market: "/market",
                           }[section.id]
                         }
                         aria-current={

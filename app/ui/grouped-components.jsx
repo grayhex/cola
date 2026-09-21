@@ -7,6 +7,8 @@ import {
   ExternalLink,
 } from "./icons.jsx";
 import { groupedComponents } from "../../lib/garage-layout.js";
+import { useId, useState } from "react";
+import { useSite } from "./site-provider.jsx";
 import PartIcon from "./part-icon.jsx";
 import { experienceHref } from "../../lib/experience-catalog.js";
 export default function GroupedComponents({
@@ -19,6 +21,9 @@ export default function GroupedComponents({
   onOrder,
   rub,
 }) {
+  const { personalSettings } = useSite();
+  const [expanded, setExpanded] = useState({});
+  const instanceId = useId();
   const groups = groupedComponents(
     bike.components.filter((c) => c.section === section),
     catalog.componentGroups,
@@ -45,9 +50,33 @@ export default function GroupedComponents({
       {groups.map((group, gi) => (
         <section className="component-group" key={group.id}>
           <div className="component-group-title">
-            <PartIcon name={group.icon} size={20} />
-            <h3>{group.name}</h3>
-            <small>{group.components.length}</small>
+            <h3>
+              <button
+                type="button"
+                className="component-group-toggle"
+                aria-expanded={
+                  expanded[group.id] ??
+                  personalSettings.componentsExpanded ??
+                  false
+                }
+                aria-controls={instanceId + group.id}
+                onClick={() =>
+                  setExpanded((v) => ({
+                    ...v,
+                    [group.id]: !(
+                      v[group.id] ??
+                      personalSettings.componentsExpanded ??
+                      false
+                    ),
+                  }))
+                }
+              >
+                <PartIcon name={group.icon} size={18} />
+                {group.name}
+                <small>{group.components.length}</small>
+                <ChevronDown size={16} />
+              </button>
+            </h3>
             {editable && (
               <div className="order-actions">
                 <button
@@ -79,85 +108,96 @@ export default function GroupedComponents({
               </div>
             )}
           </div>
-          {group.components.map((c, i) => (
-            <div className="compact-part" key={c.id}>
-              <div className="compact-part-main">
-                <small>{c.category}</small>
-                <strong>
-                  <a
-                    href={experienceHref({
-                      component: c.name,
-                      componentCategory: c.category,
-                    })}
-                    title="Сборки и записи с этим компонентом"
-                  >
-                    {c.name}
-                  </a>
-                </strong>
-                {c.notes && <span className="part-notes">{c.notes}</span>}
-                {c.url && (
-                  <a
-                    href={c.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="part-link"
-                  >
-                    <ExternalLink size={12} />
-                    Ссылка
-                  </a>
-                )}
-              </div>
-              <div className="compact-part-actions">
-                {showPrices && c.price != null && (
-                  <span className="price">{rub(c.price)}</span>
-                )}
-                {editable && (
-                  <details>
-                    <summary aria-label={"Действия: " + c.name}>···</summary>
-                    <div className="part-menu">
-                      {[-1, 1].map((d) => (
+          <div
+            id={instanceId + group.id}
+            hidden={
+              !(
+                expanded[group.id] ??
+                personalSettings.componentsExpanded ??
+                false
+              )
+            }
+          >
+            {group.components.map((c, i) => (
+              <div className="compact-part" key={c.id}>
+                <div className="compact-part-main">
+                  <small>{c.category}</small>
+                  <strong>
+                    <a
+                      href={experienceHref({
+                        component: c.name,
+                        componentCategory: c.category,
+                      })}
+                      title="Сборки и записи с этим компонентом"
+                    >
+                      {c.name}
+                    </a>
+                  </strong>
+                  {c.notes && <span className="part-notes">{c.notes}</span>}
+                  {c.url && (
+                    <a
+                      href={c.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="part-link"
+                    >
+                      <ExternalLink size={12} />
+                      Ссылка
+                    </a>
+                  )}
+                </div>
+                <div className="compact-part-actions">
+                  {showPrices && c.price != null && (
+                    <span className="price">{rub(c.price)}</span>
+                  )}
+                  {editable && (
+                    <details>
+                      <summary aria-label={"Действия: " + c.name}>···</summary>
+                      <div className="part-menu">
+                        {[-1, 1].map((d) => (
+                          <button
+                            key={d}
+                            className="icon"
+                            aria-label={c.name + (d < 0 ? " выше" : " ниже")}
+                            disabled={
+                              i + d < 0 || i + d >= group.components.length
+                            }
+                            onClick={() => {
+                              const ids = bike.components.map((p) => p.id),
+                                a = ids.indexOf(c.id),
+                                b = ids.indexOf(group.components[i + d].id);
+                              [ids[a], ids[b]] = [ids[b], ids[a]];
+                              onOrder({ components: ids });
+                            }}
+                          >
+                            {d < 0 ? (
+                              <ChevronUp size={15} />
+                            ) : (
+                              <ChevronDown size={15} />
+                            )}
+                          </button>
+                        ))}
                         <button
-                          key={d}
                           className="icon"
-                          aria-label={c.name + (d < 0 ? " выше" : " ниже")}
-                          disabled={
-                            i + d < 0 || i + d >= group.components.length
-                          }
-                          onClick={() => {
-                            const ids = bike.components.map((p) => p.id),
-                              a = ids.indexOf(c.id),
-                              b = ids.indexOf(group.components[i + d].id);
-                            [ids[a], ids[b]] = [ids[b], ids[a]];
-                            onOrder({ components: ids });
-                          }}
+                          aria-label={"Изменить " + c.name}
+                          onClick={() => onEdit(c)}
                         >
-                          {d < 0 ? (
-                            <ChevronUp size={15} />
-                          ) : (
-                            <ChevronDown size={15} />
-                          )}
+                          <Pencil size={15} />
                         </button>
-                      ))}
-                      <button
-                        className="icon"
-                        aria-label={"Изменить " + c.name}
-                        onClick={() => onEdit(c)}
-                      >
-                        <Pencil size={15} />
-                      </button>
-                      <button
-                        className="icon danger"
-                        aria-label={"Удалить " + c.name}
-                        onClick={() => onDelete(c)}
-                      >
-                        <Trash2 size={15} />
-                      </button>
-                    </div>
-                  </details>
-                )}
+                        <button
+                          className="icon danger"
+                          aria-label={"Удалить " + c.name}
+                          onClick={() => onDelete(c)}
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                    </details>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </section>
       ))}
     </div>

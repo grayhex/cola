@@ -17,15 +17,18 @@ const env = {
   APP_ORIGIN: "http://localhost:3100",
   TEST_ORIGIN: "http://localhost:3100",
   NEXT_TELEMETRY_DISABLED: "1",
+  ...(process.env.UI_TEST_RESOLVER === "1"
+    ? { BIKE_RESOLVER_URL: "http://127.0.0.1:8081" }
+    : {}),
   RIDES_DIR: path.join(dir, "rides"),
   UPLOAD_DIR: path.join(dir, "uploads"),
 };
-function start(args) {
+function start(args, cwd = root) {
   const log = path.join(dir, logs.length + ".log"),
     fd = openSync(log, "w");
   logs.push(log);
   const child = spawn(process.execPath, args, {
-    cwd: root,
+    cwd,
     env,
     stdio: ["ignore", fd, fd],
   });
@@ -35,6 +38,11 @@ function start(args) {
 }
 try {
   start(["scripts/test-db.js"]);
+  if (process.env.UI_TEST_RESOLVER === "1")
+    start(
+      ["--import", "tsx", "tests/fixture-server.ts"],
+      path.join(root, "services/bike-resolver"),
+    );
   start([
     "node_modules/next/dist/bin/next",
     "start",

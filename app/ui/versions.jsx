@@ -1,6 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
-export default function Versions() {
+import { useSite } from "./site-provider.jsx";
+export default function Versions({ link = true }) {
+  const { settings } = useSite();
   const [v, setV] = useState(null);
   useEffect(() => {
     let active = true;
@@ -16,18 +18,20 @@ export default function Versions() {
   }, []);
   return (
     <small className="build-versions">
-      Альфа ·
-      {v
-        ? `ColaBike ${v.app.version} (${v.app.build}) · Parser ${v.resolver?.version || "недоступен"}${v.resolver?.build ? " (" + v.resolver.build + ")" : ""}`
-        : "Версии загружаются…"}
-      {" · "}
-      <a
-        href="https://github.com/grayhex/cola"
-        target="_blank"
-        rel="noreferrer"
-      >
-        GitHub
-      </a>
+      {`ColaBike ${settings.appVersionLabel || v?.app?.version || "…"} · Парсер ${settings.parserVersionLabel || v?.resolver?.version || (v ? "недоступен" : "…")}`}
+      {link && (
+        <>
+          {" "}
+          ·{" "}
+          <a
+            href="https://github.com/grayhex/cola"
+            target="_blank"
+            rel="noreferrer"
+          >
+            GitHub
+          </a>
+        </>
+      )}
     </small>
   );
 }
