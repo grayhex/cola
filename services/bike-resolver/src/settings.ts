@@ -9,7 +9,8 @@ export const adapterSupport = {
   cannondale: "Модельный год не подтверждён источником",
   scott: "Страница не содержит доступной спецификации",
   orbea: "Защита сайта ограничивает доступ",
-  merida: "Модельный год не подтверждён источником",
+  merida: "",
+  gt: "",
   bmc: "Модельный год не подтверждён источником",
 };
 export const settingsSchema = z
@@ -31,7 +32,7 @@ export const settingsSchema = z
     adapters: z
       .object(
         Object.fromEntries(
-          Object.keys(adapterSupport).map((k) => [k, z.boolean()]),
+          Object.keys(adapterSupport).map((k) => [k, k === "gt" ? z.boolean().default(true) : z.boolean()]),
         ),
       )
       .strict(),

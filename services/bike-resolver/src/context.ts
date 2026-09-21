@@ -1,6 +1,6 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import type { SourceDocument } from "./domain.js";
-export const EXTRACTOR_VERSION = 3;
+export const EXTRACTOR_VERSION = 4;
 export const RESULT_SCHEMA_VERSION = 2;
 export type Reason =
   | "dns_failed"

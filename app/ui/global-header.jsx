@@ -1,4 +1,5 @@
 "use client";
+import SiteEmoji from "./site-emoji.jsx";
 import Link from "next/link";
 import { ShoppingBag } from "lucide-react";
 import styles from "./global-header.module.css";
@@ -32,27 +33,6 @@ import {
   sectionLinks,
   activeSection,
 } from "../../lib/navigation.js";
-const icons = {
-  market: ShoppingBag,
-  journal: BookOpen,
-  saved: Save,
-  home: Home,
-  profile: UserRound,
-  notifications: Bell,
-  subscriptions: Users,
-  records: Trophy,
-  admin: Shield,
-  logout: LogOut,
-  bike: Bike,
-  rides: Route,
-  about: Info,
-  add: Plus,
-  heart: Heart,
-};
-function Graphic({ name }) {
-  const Icon = icons[name] || Bike;
-  return <Icon className="global-nav-graphic" size={22} />;
-}
 export default function GlobalHeader({ user, onProfile, previewSettings }) {
   const { personalSettings, t } = useSite();
   const settings = previewSettings || personalSettings;
@@ -132,7 +112,9 @@ export default function GlobalHeader({ user, onProfile, previewSettings }) {
               : s.label,
       })),
     active = activeSection(pathname, search);
-  const graphic = (name) => <Graphic name={name} settings={settings} />;
+  const graphic = (name) => (
+    <SiteEmoji name={name} settings={settings} className="global-nav-graphic" />
+  );
   const link = (item) => (
     <Link
       key={item.href}
@@ -182,6 +164,7 @@ export default function GlobalHeader({ user, onProfile, previewSettings }) {
         },
         { href: "/account?tab=bikes", label: "Мои велосипеды", icon: "bike" },
         { href: "/account?tab=rides", label: "Мои покатушки", icon: "rides" },
+        { href: "/articles?own=1", label: "Мои статьи", icon: "articles" },
         {
           href: "/account?tab=achievements",
           label: "Достижения",
@@ -252,13 +235,14 @@ export default function GlobalHeader({ user, onProfile, previewSettings }) {
                     {
                       bikes: "/bikes",
                       journal: "/journal",
+                      articles: "/articles",
                       rides: "/rides",
                       market: "/market",
                     }[section.id]
                   }
                   linkLabel={
                     <>
-                      {graphic(section.id === "bikes" ? "home" : section.id)}
+                      {graphic(section.id === "bikes" ? "bike" : section.id)}
                       <span>{section.label}</span>
                     </>
                   }
@@ -321,7 +305,7 @@ export default function GlobalHeader({ user, onProfile, previewSettings }) {
                 loadStats();
               }}
             >
-              <Menu size={22} />
+              <SiteEmoji name="menu" />
             </button>
           </div>
         </div>
@@ -351,6 +335,7 @@ export default function GlobalHeader({ user, onProfile, previewSettings }) {
                           {
                             bikes: "/bikes",
                             journal: "/journal",
+                            articles: "/articles",
                             rides: "/rides",
                             market: "/market",
                           }[section.id]
@@ -359,6 +344,7 @@ export default function GlobalHeader({ user, onProfile, previewSettings }) {
                           active === section.id ? "page" : undefined
                         }
                       >
+                        {graphic(section.id === "bikes" ? "bike" : section.id)}
                         {section.label}
                       </Link>
                     </summary>

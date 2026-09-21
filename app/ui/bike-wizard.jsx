@@ -639,6 +639,7 @@ export default function BikeWizard({ onCreated, onBusy }) {
                     автоматическое совпадение не подтверждено.
                   </p>
                 )}
+                {result?.status === "ambiguous" && <p className="help">Нашли варианты модели. Выберите свою комплектацию: название, год и источник помогут их различить. Если год не подтверждён, сверьте его перед импортом.</p>}
                 {result?.status === "ambiguous" &&
                   result.candidates.map((c) => (
                     <button

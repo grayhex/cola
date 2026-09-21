@@ -1,4 +1,5 @@
 "use client";
+import { BikeLabels, BikeLike } from "./bike-labels.jsx";
 import Link from "next/link";
 import { Heart, Lock, MessageCircle, Bike } from "./icons.jsx";
 import Photo from "./bike-photo.jsx";
@@ -22,16 +23,6 @@ export default function BikeCard({
   const Open = ownerView && onOpen ? "button" : Link;
   const openProps =
     ownerView && onOpen ? { type: "button", onClick: onOpen } : { href };
-  const facts = ownerView
-    ? [
-        catalog.categories[b.category],
-        b.weight && `${Number(b.weight)} кг`,
-        b.size,
-        b.color,
-      ].filter(Boolean)
-    : b.weight
-      ? [`${Number(b.weight)} кг`]
-      : [];
   return (
     <article className={`bike-card ${styles.card}`} data-bike-id={b.id}>
       <div className={`card-photo ${styles.photo}`}>
@@ -53,36 +44,13 @@ export default function BikeCard({
           <h2>
             <Open {...openProps}>{title}</Open>
           </h2>
-          {facts.length > 0 && (
-            <div className={`card-facts ${styles.facts}`}>
-              {facts.map((text, i) => (
-                <span key={i}>{text}</span>
-              ))}
-            </div>
-          )}
+          <BikeLabels bike={b} />
         </div>
         <div className={`card-social ${styles.social}`}>
           <AuthorLink author={b.author} />
           {b.is_public && (
             <div className={styles.stats}>
-              <button
-                type="button"
-                className={`like-button ${styles.stat}`}
-                disabled={b.is_owner}
-                aria-label={
-                  t("Нравится") +
-                  (reaction.likes == null ? "" : ": " + reaction.likes)
-                }
-                aria-pressed={reaction.liked}
-                aria-busy={reaction.pending}
-                onClick={reaction.toggle}
-              >
-                <Heart
-                  size={18}
-                  fill={reaction.liked ? "currentColor" : "none"}
-                />
-                {reaction.likes != null && <span>{reaction.likes}</span>}
-              </button>
+              <BikeLike bike={b} reaction={reaction} t={t} />
               <Link
                 className={styles.stat}
                 href={href + "#discussion"}

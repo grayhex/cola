@@ -262,7 +262,7 @@ it("API health, readiness, exact ten brands and invalid input", async () => {
   try {
     expect((await app.inject("/health")).statusCode).toBe(200);
     expect((await app.inject("/ready")).statusCode).toBe(200);
-    expect((await app.inject("/v1/brands")).json().brands).toHaveLength(10);
+    expect((await app.inject("/v1/brands")).json().brands).toHaveLength(11);
     expect(
       (
         await app.inject({

@@ -1,4 +1,5 @@
 "use client";
+import SiteEmoji from "./site-emoji.jsx";
 import SearchBox from "./search-box.jsx";
 import styles from "./compact-ui.module.css";
 import { useEffect, useRef, useState } from "react";
@@ -108,7 +109,7 @@ export function FilterControl({ categories, selected, onChange }) {
           setOpen(true);
         }}
       >
-        <SlidersHorizontal size={16} />
+        <SiteEmoji name="filters" />
         <span className="control-label">Фильтры</span>
         {selected.length > 0 && (
           <span className="control-count">{selected.length}</span>
@@ -131,7 +132,10 @@ export function FilterControl({ categories, selected, onChange }) {
                     )
                   }
                 />
-                <span>{label}</span>
+                <span>
+                  <SiteEmoji name={key} />
+                  {label}
+                </span>
               </label>
             ))}
           </div>
@@ -142,6 +146,7 @@ export function FilterControl({ categories, selected, onChange }) {
             className="compact-button"
             onClick={() => setDraft([])}
           >
+            <SiteEmoji name="reset" />
             Сбросить
           </button>
           <button
@@ -152,6 +157,7 @@ export function FilterControl({ categories, selected, onChange }) {
               setOpen(false);
             }}
           >
+            <SiteEmoji name="apply" />
             Применить
           </button>
         </div>
@@ -217,7 +223,7 @@ export function GlobalSearch() {
         aria-haspopup="dialog"
         onClick={() => setOpen(true)}
       >
-        <Search size={20} />
+        <SiteEmoji name="search" />
       </button>
       <CompactDialog
         title="Поиск ColaBike"

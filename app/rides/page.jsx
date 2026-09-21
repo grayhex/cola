@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useSite } from "../ui/site-provider.jsx";
+import SiteEmoji from "../ui/site-emoji.jsx";
 import { Plus } from "../ui/icons.jsx";
 import RideList from "../ui/ride-list.jsx";
 import {
@@ -37,18 +38,18 @@ export default function Page() {
             <p>Маршруты, впечатления и километры сообщества.</p>
           </div>
           <a
-            className="button secondary small"
+            className="hf-button"
             href="/account?tab=rides&action=add"
           >
-            <Plus size={16} />
+            <SiteEmoji name="addRide"/>
             Добавить покатушку
           </a>
         </div>
         <div className="ride-actions">
-          <a className="quiet" href="/account?tab=rides&action=plan">
+          <a className="hf-button" href="/account?tab=rides&action=plan"><SiteEmoji name="plan"/>
             Запланировать
           </a>
-          <a className="quiet" href="/account?tab=rides&action=import">
+          <a className="hf-button" href="/account?tab=rides&action=import"><SiteEmoji name="import"/>
             Импорт Garmin CSV
           </a>
         </div>

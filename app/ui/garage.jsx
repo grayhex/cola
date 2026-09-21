@@ -1,4 +1,7 @@
 "use client";
+import SiteEmoji from "./site-emoji.jsx";
+import ChoiceMenu from "./choice-menu.jsx";
+import { BikeLabels, BikeLike } from "./bike-labels.jsx";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -515,10 +518,20 @@ export default function Garage({
             {...blockProps("heading")}
           >
             <div>
-              <h1>
-                {bike.name ||
-                  [bike.brand, bike.model, bike.trim].filter(Boolean).join(" ")}
-              </h1>
+              <div className="bike-detail-title-row">
+                <h1>
+                  {bike.name ||
+                    [bike.brand, bike.model, bike.trim]
+                      .filter(Boolean)
+                      .join(" ")}
+                </h1>
+                <div className="bike-heading-labels">
+                  <BikeLabels bike={bike} />
+                  {bike.is_public && (
+                    <BikeLike bike={bike} reaction={detailReaction} t={t} />
+                  )}
+                </div>
+              </div>
             </div>
             <div className="detail-actions">
               {share && <AuthorLink author={bike.author} />}
@@ -564,8 +577,6 @@ export default function Garage({
             style={{ order: blocks.findIndex((b) => b.id === "heading") + 1 }}
           >
             {bike.color && <span>{bike.color}</span>}
-            {bike.size && <span>{bike.size}</span>}
-            {bike.weight && <span>{Number(bike.weight)} кг</span>}
             {settings.showMileage && (
               <span>
                 {Number(bike.mileage || 0).toLocaleString("ru-RU")} км
@@ -593,33 +604,6 @@ export default function Garage({
               >
                 <Photo bike={bike} photo={photo} className="hero-photo" />
               </button>
-              {bike.is_public && (
-                <button
-                  className="like-button"
-                  type="button"
-                  disabled={bike.is_owner}
-                  aria-label={
-                    t("Нравится") +
-                    (detailReaction.likes == null
-                      ? ""
-                      : ": " + detailReaction.likes)
-                  }
-                  aria-pressed={detailReaction.liked}
-                  aria-busy={detailReaction.pending}
-                  onClick={detailReaction.toggle}
-                >
-                  <Heart
-                    size={28}
-                    className="like-graphic"
-                    {...{
-                      fill: detailReaction.liked ? "currentColor" : "none",
-                    }}
-                  />
-                  {detailReaction.likes != null && (
-                    <span>{detailReaction.likes}</span>
-                  )}
-                </button>
-              )}
               {detailReaction.error && (
                 <p role="alert">{t("Лайк не сохранился. Попробуй ещё раз")}</p>
               )}
@@ -960,22 +944,27 @@ export default function Garage({
                 aria-label={t("Действия витрины")}
               >
                 {!account && (
-                  <label className="compact-selector">
-                    <ArrowUpDown size={18} aria-hidden="true" />
-                    <span className="sr-only">Порядок витрины</span>
-                    <select
-                      aria-label="Порядок витрины"
-                      value={sort}
-                      onChange={(e) => {
-                        setSort(e.target.value);
-                        setPage(1);
-                      }}
-                    >
-                      <option value="new">Новые</option>
-                      <option value="popular">Популярные</option>
-                      <option value="records">Рекордсмены</option>
-                    </select>
-                  </label>
+                  <ChoiceMenu
+                    label="Порядок витрины"
+                    value={sort}
+                    choices={[
+                      { value: "new", label: "Новые", emoji: "new" },
+                      {
+                        value: "popular",
+                        label: "Популярные",
+                        emoji: "popular",
+                      },
+                      {
+                        value: "records",
+                        label: "Рекордсмены",
+                        emoji: "records",
+                      },
+                    ]}
+                    onChange={(value) => {
+                      setSort(value);
+                      setPage(1);
+                    }}
+                  />
                 )}
                 <FilterControl
                   categories={categories}
@@ -991,7 +980,7 @@ export default function Garage({
                     href="/account?tab=bikes&action=add"
                     aria-label={t("Добавить велосипед")}
                   >
-                    <Plus size={18} />
+                    <SiteEmoji name="addBike" />
                     <span className={styles.addLabel}>
                       {t("Добавить велосипед")}
                     </span>
@@ -1005,7 +994,7 @@ export default function Garage({
                     title="Добавить велосипед"
                     onClick={() => setModal({ type: "bike" })}
                   >
-                    <Plus size={18} />
+                    <SiteEmoji name="addBike" />
                   </button>
                 )}
               </div>

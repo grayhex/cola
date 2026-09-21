@@ -6,7 +6,7 @@ import { trace, checkAbort } from "./context.js";
 import { ResolverError, type BikeQuery, type ResolveResult } from "./domain.js";
 import type { SettingsStore } from "./settings.js";
 
-export function searchLinks(xml: string, query?: BikeQuery): string[] {
+export function searchLinks(xml: string, query?: BikeQuery, limit = 3): string[] {
   const $ = load(xml, { xml: true });
   const model = query ? normalize(query.model).split(" ") : [];
   const entries = $("item")
@@ -15,11 +15,11 @@ export function searchLinks(xml: string, query?: BikeQuery): string[] {
     .map((e) => {
       const url = $(e).find("link").text().trim();
       const text = normalize($(e).find("title,description").text() + " " + url);
-      return { url, score: model.filter((t) => text.includes(t)).length };
+      return { url, described: !!$(e).find("title,description").text().trim(), score: model.filter((t) => text.includes(t)).length };
     })
-    .filter((e) => e.url.length <= 2048)
+    .filter((e) => e.url.length <= 2048 && (!model.length || !e.described || e.score > 0))
     .sort((a, b) => b.score - a.score);
-  return [...new Set(entries.map((e) => e.url))].slice(0, 3);
+  return [...new Set(entries.map((e) => e.url))].slice(0, limit);
 }
 // One public search request, at most three product pages. Never parse search snippets as specs.
 export class RetailerSearch {

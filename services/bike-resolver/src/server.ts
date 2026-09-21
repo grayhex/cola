@@ -23,7 +23,7 @@ try {
   await client.query(
     "CREATE TABLE IF NOT EXISTS bike_resolver.schema_migrations(version text PRIMARY KEY, applied_at timestamptz DEFAULT now())",
   );
-  for (const version of ["001_cache", "002_settings", "003_source_policy"]) {
+  for (const version of ["001_cache", "002_settings", "003_source_policy", "004_catalogue_discovery"]) {
     const { rowCount } = await client.query(
       "SELECT 1 FROM bike_resolver.schema_migrations WHERE version=$1",
       [version],

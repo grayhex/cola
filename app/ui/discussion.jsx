@@ -7,19 +7,29 @@ import { MessagesSquare, Reply } from "./icons.jsx";
 const DiscussionKind = createContext("bike");
 const QuestionContext = createContext(null);
 const paths = (kind) =>
-  kind === "journal"
+  kind === "article"
     ? {
-        items: "journal/",
-        comments: "journal/comments/",
+        items: "articles/",
+        comments: "articles/comments/",
         report: "journal_comment",
       }
-    : kind === "ride"
-      ? { items: "rides/", comments: "rides/comments/", report: "ride_comment" }
-      : {
-          items: "community/bikes/",
-          comments: "community/comments/",
-          report: "comment",
-        };
+    : kind === "journal"
+      ? {
+          items: "journal/",
+          comments: "journal/comments/",
+          report: "journal_comment",
+        }
+      : kind === "ride"
+        ? {
+            items: "rides/",
+            comments: "rides/comments/",
+            report: "ride_comment",
+          }
+        : {
+            items: "community/bikes/",
+            comments: "community/comments/",
+            report: "comment",
+          };
 function Editor({ initial = "", label, onSave, onCancel }) {
   const [body, setBody] = useState(initial),
     [busy, setBusy] = useState(false),
@@ -320,17 +330,23 @@ export default function Discussion({
             <div>
               <h2>
                 <MessagesSquare size={20} aria-hidden="true" />
-                {entityType === "journal"
-                  ? "Обсуждение записи"
-                  : entityType === "ride"
-                    ? "Обсуждение покатушки"
-                    : "Обсуждение сборки"}
+                {entityType === "article"
+                  ? "Обсуждение статьи"
+                  : entityType === "journal"
+                    ? "Обсуждение записи"
+                    : entityType === "ride"
+                      ? "Обсуждение покатушки"
+                      : "Обсуждение сборки"}
               </h2>
-              <p className="help">Детали, идеи и опыт владельцев.</p>
+              <p className="help">
+                {entityType === "article"
+                  ? "Вопросы, дополнения и личный опыт."
+                  : "Детали, идеи и опыт владельцев."}
+              </p>
             </div>
             {bike.author?.id !== user?.id && (
               <ReportButton
-                entityType={entityType}
+                entityType={entityType === "article" ? "journal" : entityType}
                 targetId={bike.id}
                 user={user}
               />
@@ -366,7 +382,7 @@ export default function Discussion({
             <p className="help">
               {entityType === "ride"
                 ? "Поделитесь впечатлениями о маршруте."
-                : entityType === "journal"
+                : entityType === "journal" || entityType === "article"
                   ? "Задайте вопрос или поделитесь своим опытом."
                   : "Первый вопрос о сборке может стать началом знакомства."}
             </p>

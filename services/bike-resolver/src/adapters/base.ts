@@ -16,7 +16,7 @@ export abstract class CatalogueAdapter implements BikeManufacturerAdapter {
   abstract readonly brand: string;
   abstract readonly allowedDomains: string[];
   readonly aliases: string[] = [];
-  readonly adapterVersion = 1;
+  readonly adapterVersion: number = 1;
   abstract readonly origin: string;
   abstract productPath: RegExp;
   protected rows?: { row: string; label: string; value: string };
@@ -51,6 +51,13 @@ export abstract class CatalogueAdapter implements BikeManufacturerAdapter {
   async parse(doc: SourceDocument, _q: BikeQuery) {
     return parseDocument(doc, this.rows);
   }
+  protected matchesModel(value: string, q: BikeQuery) {
+    const words = new Set(normalize(value).split(" "));
+    return normalize(q.model)
+      .split(" ")
+      .filter(Boolean)
+      .every((w) => words.has(w));
+  }
   async discover(q: BikeQuery): Promise<BikeCandidate[]> {
     const deadline = Date.now() + 60000;
     const budget = () => {
@@ -73,13 +80,7 @@ export abstract class CatalogueAdapter implements BikeManufacturerAdapter {
         u.hash = "";
         if (
           this.productPath.test(u.pathname) &&
-          normalize(q.model)
-            .split(" ")
-            .every((token) =>
-              normalize(decodeURIComponent(u.pathname))
-                .split(" ")
-                .includes(token),
-            )
+          this.matchesModel(decodeURIComponent(u.pathname), q)
         )
           urls.add(u.href);
         else if (
@@ -126,10 +127,8 @@ export abstract class CatalogueAdapter implements BikeManufacturerAdapter {
               );
               if (
                 this.productPath.test(u.pathname) &&
-                (name.includes(normalize(q.model)) ||
-                  normalize(decodeURIComponent(u.pathname)).includes(
-                    normalize(q.model + " " + (q.trim || "")),
-                  ))
+                (this.matchesModel(name, q) ||
+                  this.matchesModel(decodeURIComponent(u.pathname), q))
               )
                 urls.add(u.href);
             } catch {}

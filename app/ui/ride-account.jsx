@@ -1,4 +1,5 @@
 "use client";
+import SiteEmoji from "./site-emoji.jsx";
 import { useEffect, useState, useRef } from "react";
 import { socialApi, Pagination } from "./social-primitives.jsx";
 import RideCard, { RideRoutePreview, RideMetrics } from "./ride-card.jsx";
@@ -15,6 +16,8 @@ const blank = {
   features: "",
   meetingPoint: "",
   invitations: "",
+  recurrence: "none",
+  recurrenceTimezone: "Europe/Moscow",
 };
 const localDate = (v) => {
   if (!v) return "";
@@ -47,6 +50,7 @@ export default function RideAccount({ bikes }) {
     setVisibleMetrics(null);
     setForm({
       ...blank,
+      recurrenceTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       bikeId: bikes[0]?.id || "",
       privacyRadiusM: config?.defaultRadius || 500,
     });
@@ -115,7 +119,9 @@ export default function RideAccount({ bikes }) {
         isPublic: ride.isPublic,
         privacyEnabled: ride.privacyEnabled,
         privacyRadiusM: ride.privacyRadiusM,
-        scheduledAt: localDate(ride.scheduledAt),
+        scheduledAt: localDate(ride.startedAt || ride.scheduledAt),
+        recurrence: ride.recurrence,
+        recurrenceTimezone: ride.recurrenceTimezone,
         features: ride.features.join(", "),
         meetingPoint: ride.meetingPoint,
         invitations: ride.invitations.map((i) => i.username).join(", "),
@@ -140,10 +146,11 @@ export default function RideAccount({ bikes }) {
           ].map(([key, label]) => (
             <button
               key={key}
-              className={key === "add" ? "button small" : "quiet"}
+              className="hf-button"
               disabled={busy || !config?.enabled || !bikes.length}
               onClick={() => start(key)}
             >
+              <SiteEmoji name={key === "add" ? "addRide" : key} />
               {label}
             </button>
           ))}
@@ -389,6 +396,58 @@ export default function RideAccount({ bikes }) {
                   </label>
                 </>
               )}
+              {mode === "plan" && (
+                <label className="ride-toggle">
+                  <input
+                    type="checkbox"
+                    checked={form.recurrence === "weekly"}
+                    onChange={(e) =>
+                      set("recurrence", e.target.checked ? "weekly" : "none")
+                    }
+                  />
+                  <SiteEmoji name="repeat" /> Повторять каждую неделю
+                  {form.scheduledAt && (
+                    <small>
+                      {" "}
+                      ·{" "}
+                      {new Date(form.scheduledAt).toLocaleDateString("ru-RU", {
+                        weekday: "long",
+                      })}
+                    </small>
+                  )}
+                </label>
+              )}
+              {mode === "plan" && (
+                <label className="field">
+                  <span>Часовой пояс</span>
+                  <input
+                    required
+                    maxLength={80}
+                    value={form.recurrenceTimezone}
+                    onChange={(e) => set("recurrenceTimezone", e.target.value)}
+                    list="ride-timezones"
+                  />
+                  <datalist id="ride-timezones">
+                    {[
+                      "Europe/Moscow",
+                      "Europe/Kaliningrad",
+                      "Asia/Yekaterinburg",
+                      "Asia/Novosibirsk",
+                      "Asia/Vladivostok",
+                      "Europe/Berlin",
+                      "UTC",
+                    ].map((zone) => (
+                      <option key={zone} value={zone} />
+                    ))}
+                  </datalist>
+                  <small>
+                    Время выше указано в{" "}
+                    {Intl.DateTimeFormat().resolvedOptions().timeZone};
+                    повторение сохраняет местное время выбранного часового
+                    пояса.
+                  </small>
+                </label>
+              )}
               <label className="ride-toggle">
                 <input
                   type="checkbox"
@@ -502,7 +561,7 @@ export default function RideAccount({ bikes }) {
           </button>
         </form>
       )}
-      {data && (
+      {data && !mode && (
         <>
           <div className="ride-grid">
             {data.rides.map((r) => (

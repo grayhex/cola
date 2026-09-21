@@ -165,11 +165,14 @@ function ProfileEditor({ profile, onSaved }) {
         <label className="field">
           <span>О себе</span>
           <textarea
+            aria-label="О себе"
             rows={3}
             maxLength={500}
+            placeholder="Как и где катаетесь, ваш уровень, любимые маршруты и предпочтения"
             value={form.bio}
             onChange={(e) => set("bio", e.target.value)}
           />
+          <small>Публичная заметка в профиле · {form.bio.length}/500</small>
         </label>
         <label className="field">
           <span>Местоположение</span>

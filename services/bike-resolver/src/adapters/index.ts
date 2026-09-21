@@ -1,3 +1,4 @@
+import { GtAdapter } from "./gt.js";
 import { CubeAdapter } from "./cube.js";
 import { SpecializedAdapter } from "./specialized.js";
 import { CanyonAdapter } from "./canyon.js";
@@ -21,4 +22,5 @@ export const createAdapters = (http: ManufacturerHttpClient) =>
     OrbeaAdapter,
     MeridaAdapter,
     BmcAdapter,
+    GtAdapter,
   ].map((Adapter) => new Adapter(http));

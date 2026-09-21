@@ -1,3 +1,4 @@
+import type { BikeQuery } from "../domain.js";
 import { CatalogueAdapter } from "./base.js";
 export class SpecializedAdapter extends CatalogueAdapter {
   readonly id = "specialized";
@@ -8,11 +9,18 @@ export class SpecializedAdapter extends CatalogueAdapter {
     "media.specialized.com",
   ];
   readonly origin = "https://www.specialized.com";
-  productPath = /\/us\/en\/.*\/p\/\d+/;
+  productPath = /\/(?:us|gb)\/en\/.*\/p\/\d+/;
   protected allowSitemap(url: URL) {
-    return /US-Product-en-USD\.xml$/.test(url.pathname);
+    return /(?:US|GB)-Product-en-[A-Z]{3}\.xml$|sitemap.*product|product.*sitemap/i.test(
+      url.pathname,
+    );
   }
-  protected seeds() {
-    return [this.origin + "/us/en/sitemap.xml"];
+  protected seeds(q: BikeQuery) {
+    return [
+      this.origin +
+        "/us/en/search?text=" +
+        encodeURIComponent(q.model + " " + q.year),
+      this.origin + "/us/en/sitemap.xml",
+    ];
   }
 }

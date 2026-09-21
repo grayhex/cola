@@ -1,4 +1,5 @@
 "use client";
+import SiteEmoji from "./site-emoji.jsx";
 import { Monitor, Sun, Moon } from "lucide-react";
 import { useSite } from "./site-provider.jsx";
 import NavPopover from "./nav-popover.jsx";
@@ -14,7 +15,7 @@ export default function ThemeControl() {
     <NavPopover
       label="Цветовая тема"
       className="theme-disclosure"
-      trigger={<Icon size={19} aria-hidden="true" />}
+      trigger={<SiteEmoji name={themePreference || "system"} />}
     >
       <div role="group" aria-label="Цветовая тема">
         {options.map(([key, label, Graphic]) => (
@@ -25,7 +26,7 @@ export default function ThemeControl() {
             aria-pressed={themePreference === key}
             onClick={() => setThemePreference(key)}
           >
-            <Graphic size={18} aria-hidden="true" />
+            <SiteEmoji name={key} />
             <span>{label}</span>
             {themePreference === key && <span aria-hidden="true">✓</span>}
           </button>
