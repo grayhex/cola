@@ -19,6 +19,10 @@ bash scripts/test-backup-drill.sh
 
 Команды — перечень уровней, не требование запускать тяжёлый полный drill после каждой правки текста. CI проверяет полный набор согласно [workflow](../../.github/workflows/check.yml). Узкую регрессию сначала запускайте адресно: `node --test tests/map-settings.test.js` или нужный Resolver fixture.
 
+Для UI без изменений Resolver после production build можно запустить `node scripts/test-ui.js`. Harness поднимает disposable PGlite и Next на 3100, выполняет `pixel-club.spec.js` в Chromium и завершает процессы. Браузер должен быть установлен Playwright. Можно передать другие spec-файлы, `--project` и обычные параметры Playwright. Пример: `node scripts/test-ui.js tests/e2e/design.spec.js tests/e2e/navigation.spec.js tests/e2e/garage-polish.spec.js tests/e2e/pixel-club.spec.js`. Ни production БД, ни внешний парсер не используются. Unit-регрессии очереди реакций, URL и пресета: `node --test tests/pixel-club.test.js`.
+
+Опциональный `PIXEL_ARTWORK_DIR` указывает на локальную папку с `logo.png`, `panorama.webp`, `bike-1.webp`…`bike-3.webp` для визуального сравнения с реальными публичными ресурсами. Без него тесты создают нейтральные локальные изображения. Это входные данные теста, не новая система управления графикой сайта.
+
 ## Что означает каждый уровень
 
 | Уровень | Что доказывает | Чего не доказывает |
