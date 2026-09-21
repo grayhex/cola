@@ -87,7 +87,11 @@ import {
   EyeOff as LucideEyeOff,
 } from "lucide-react";
 import { useSite } from "./site-provider.jsx";
-import { iconPackByName, resolveIconAsset, iconPackOverride } from "../../lib/icon-pack.js";
+import {
+  iconPackByName,
+  resolveIconAsset,
+  iconPackOverride,
+} from "../../lib/icon-pack.js";
 const builtins = {
   ArrowLeft: LucideArrowLeft,
   ArrowUpRight: LucideArrowUpRight,
@@ -178,38 +182,74 @@ const builtins = {
 // A semantic icon never shares state with another slot. Missing/failed assets
 // fall back to the built-in icon, preserving the accessible action label.
 export function SiteIcon({
-  name, original = false, legacyAssetId, size = 24, className = "", style,
-  color, strokeWidth, absoluteStrokeWidth, fill, ...props
+  name,
+  original = false,
+  legacyAssetId,
+  size = 24,
+  className = "",
+  style,
+  color = "currentColor",
+  strokeWidth = 2,
+  absoluteStrokeWidth,
+  fill = "none",
+  ...props
 }) {
   const site = useSite();
   const settings = site?.personalSettings || site?.settings || {};
   const [failedId, setFailedId] = useState(null);
-  const id = original ? null : resolveIconAsset(settings, name, legacyAssetId);
+  const id =
+    original || settings.designSystem === "community"
+      ? null
+      : resolveIconAsset(settings, name, legacyAssetId);
   const img = useRef(null);
   useEffect(() => {
     if (img.current?.complete && !img.current.naturalWidth) setFailedId(id);
   }, [id]);
-  const Fallback = builtins[iconPackByName[name]?.fallback || name] || LucideInfo;
-  if (id && id !== failedId) return (
-    <img
+  const Fallback =
+    builtins[iconPackByName[name]?.fallback || name] || LucideInfo;
+  if (id && id !== failedId)
+    return (
+      <img
+        {...props}
+        ref={img}
+        src={"/api/assets/" + id}
+        alt={props["aria-label"] || ""}
+        aria-hidden={props["aria-hidden"] ?? !props["aria-label"]}
+        className={"configurable-icon " + className}
+        width={size}
+        height={size}
+        onError={(event) => {
+          setFailedId(id);
+          props.onError?.(event);
+        }}
+        style={{
+          ...style,
+          objectFit: "contain",
+          flexShrink: 0,
+          ...(iconPackOverride(settings, name)
+            ? { imageRendering: "pixelated" }
+            : {}),
+        }}
+      />
+    );
+  return (
+    <Fallback
       {...props}
-      ref={img}
-      src={"/api/assets/" + id}
-      alt={props["aria-label"] || ""}
+      size={size}
+      className={className}
+      style={style}
+      color={color}
+      strokeWidth={strokeWidth}
+      absoluteStrokeWidth={absoluteStrokeWidth}
+      fill={fill}
       aria-hidden={props["aria-hidden"] ?? !props["aria-label"]}
-      className={"configurable-icon " + className}
-      width={size} height={size}
-      onError={(event) => { setFailedId(id); props.onError?.(event); }}
-      style={{ ...style, objectFit: "contain", flexShrink: 0,
-        ...(iconPackOverride(settings, name) ? { imageRendering: "pixelated" } : {}) }}
     />
   );
-  return <Fallback {...props} size={size} className={className} style={style}
-    color={color} strokeWidth={strokeWidth} absoluteStrokeWidth={absoluteStrokeWidth}
-    fill={fill} aria-hidden={props["aria-hidden"] ?? !props["aria-label"]} />;
 }
 function configurable(name, Fallback) {
-  function Icon(props) { return <SiteIcon name={name} {...props} />; }
+  function Icon(props) {
+    return <SiteIcon name={name} {...props} />;
+  }
   Icon.displayName = name;
   Icon.Default = Fallback;
   return Icon;
@@ -261,7 +301,10 @@ export const Search = configurable("Search", LucideSearch);
 export const Settings2 = configurable("Settings2", LucideSettings2);
 export const Shield = configurable("Shield", LucideShield);
 export const ShieldCheck = configurable("ShieldCheck", LucideShieldCheck);
-export const SlidersHorizontal = configurable("SlidersHorizontal", LucideSlidersHorizontal);
+export const SlidersHorizontal = configurable(
+  "SlidersHorizontal",
+  LucideSlidersHorizontal,
+);
 export const Sparkles = configurable("Sparkles", LucideSparkles);
 export const Star = configurable("Star", LucideStar);
 export const Trash2 = configurable("Trash2", LucideTrash2);
@@ -274,7 +317,10 @@ export const Users = configurable("Users", LucideUsers);
 export const X = configurable("X", LucideX);
 export const Zap = configurable("Zap", LucideZap);
 export const NotebookPen = configurable("NotebookPen", LucideNotebookPen);
-export const MessagesSquare = configurable("MessagesSquare", LucideMessagesSquare);
+export const MessagesSquare = configurable(
+  "MessagesSquare",
+  LucideMessagesSquare,
+);
 export const Bookmark = configurable("Bookmark", LucideBookmark);
 export const BookmarkCheck = configurable("BookmarkCheck", LucideBookmarkCheck);
 export const FilePenLine = configurable("FilePenLine", LucideFilePenLine);
@@ -295,7 +341,10 @@ export const Scale = configurable("Scale", LucideScale);
 export const Cog = configurable("Cog", LucideCog);
 export const LayoutGrid = configurable("LayoutGrid", LucideLayoutGrid);
 export const Images = configurable("Images", LucideImages);
-export const ChartNoAxesColumnIncreasing = configurable("ChartNoAxesColumnIncreasing", LucideChartNoAxesColumnIncreasing);
+export const ChartNoAxesColumnIncreasing = configurable(
+  "ChartNoAxesColumnIncreasing",
+  LucideChartNoAxesColumnIncreasing,
+);
 export const Pin = configurable("Pin", LucidePin);
 export const Eye = configurable("Eye", LucideEye);
 export const EyeOff = configurable("EyeOff", LucideEyeOff);

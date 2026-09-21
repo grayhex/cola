@@ -1,5 +1,6 @@
 "use client";
-import { useRouter } from "next/navigation";
+import SearchBox from "./search-box.jsx";
+import styles from "./compact-ui.module.css";
 import { useEffect, useRef, useState } from "react";
 import {
   significantBadge,
@@ -61,6 +62,12 @@ export function CompactDialog({
       aria-label={title}
       onCancel={onClose}
       onClose={onClose}
+      onKeyDown={(e) => {
+        if (e.key === "Escape" && !e.defaultPrevented) {
+          e.preventDefault();
+          onClose();
+        }
+      }}
       onClick={(e) => {
         if (e.target === e.currentTarget) {
           const r = e.currentTarget.getBoundingClientRect();
@@ -180,60 +187,50 @@ export function FilterChips({
     </div>
   ) : null;
 }
-export function GlobalSearch({ assetId }) {
-  const router = useRouter();
-  const [open, setOpen] = useState(false),
-    [query, setQuery] = useState("");
+export function GlobalSearch() {
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    const key = (e) => {
+      if (e.target.closest('input,textarea,select,[contenteditable="true"]'))
+        return;
+      if (
+        e.key === "/" ||
+        ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k")
+      ) {
+        e.preventDefault();
+        const hero = document.querySelector("[data-home-search] input");
+        if (hero) hero.focus();
+        else setOpen(true);
+      }
+    };
+    document.addEventListener("keydown", key);
+    return () => document.removeEventListener("keydown", key);
+  }, []);
   return (
     <>
       <button
         className="global-nav-item"
         type="button"
         aria-label="Поиск ColaBike"
-        data-tooltip="Поиск"
+        title="Поиск · Ctrl/⌘ K"
         aria-expanded={open}
         aria-haspopup="dialog"
-        onClick={() => {
-          setQuery(new URLSearchParams(window.location.search).get("q") || "");
-          setOpen(true);
-        }}
+        onClick={() => setOpen(true)}
       >
-        {assetId ? (
-          <img
-            className="global-nav-graphic"
-            src={"/api/assets/" + assetId}
-            alt=""
-          />
-        ) : (
-          <Search className="global-nav-graphic-fallback" />
-        )}
+        <Search size={20} />
       </button>
       <CompactDialog
         title="Поиск ColaBike"
         open={open}
         onClose={() => setOpen(false)}
-        className="global-search-panel"
+        className={"global-search-panel " + styles.searchDialog}
       >
-        <form action="/search" method="get" onSubmit={(e) => { e.preventDefault(); setOpen(false); router.push("/search?" + new URLSearchParams({ q: query })); }}>
-          <label className="field">
-            <span>Велосипед, запись или владелец</span>
-            <input
-              name="q"
-              type="search"
-              autoFocus
-              maxLength={150}
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Название, бренд, модель…"
-            />
-          </label>
-          <p className="help">
-            Сборки, изменения и решения владельцев. Только публичные материалы.
-          </p>
-          <button className="button small" type="submit">
-            Найти
-          </button>
-        </form>
+        {open && (
+          <SearchBox contained autoFocus onNavigate={() => setOpen(false)} />
+        )}
+        <p className="help">
+          Велосипеды, компоненты и покатушки. Только публичные материалы.
+        </p>
       </CompactDialog>
     </>
   );

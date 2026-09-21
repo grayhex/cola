@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { NavigationSettings, AboutSettings } from "./navigation-settings.jsx";
-import { ThemeSettings, LayoutSettings, WizardCopy } from "./design-settings.jsx";
+import { ThemeSettings, HomepageSettings, LayoutSettings, WizardCopy } from "./design-settings.jsx";
 import { Field, Select, Toggle } from "./design-controls.jsx";
 import IconSettings from "./icon-settings.jsx";
 import IconPackSettings, { uploadIconPack } from "./icon-pack-settings.jsx";
@@ -41,11 +41,12 @@ const sections = [
   ["rides", "Покатушки", Settings2],
   ["resolver", "Bike Resolver", Settings2],
   ["map", "Карта", Settings2],
-  ["design", "Тема и шрифты", Palette],
-  ["layout", "Компоновка", Settings2],
+  ["design", "Внешний вид", Palette],
+  ["homepage", "Главная", Palette],
+  ["layout", "Legacy · компоновка", Settings2],
   ["navigation", "Меню", Menu],
   ["graphics", "Графика", Image],
-  ["icon-import", "Импорт иконок", Upload],
+  ["icon-import", "Legacy · иконки", Upload],
   ["media", "Медиатека", Image],
   ["copy", "Тексты", Type],
   ["about", "О проекте", BookOpen],
@@ -57,7 +58,7 @@ const sections = [
 ];
 const adminGroups = [
   { id: "system", name: "Система", icon: Settings2, sections: ["overview", "resolver", "map", "rides", "audit"] },
-  { id: "design", name: "Дизайн", icon: Palette, sections: ["design", "layout", "navigation", "graphics", "icon-import", "media", "copy", "about"] },
+  { id: "design", name: "Дизайн", icon: Palette, sections: ["design", "homepage", "navigation", "graphics", "media", "copy", "about", "layout", "icon-import"] },
   { id: "people", name: "Пользователи", icon: Users, sections: ["users", "reports"] },
   { id: "mechanics", name: "Механики", icon: Trophy, sections: ["scoring", "gamification"] },
   { id: "catalog", name: "Каталог", icon: BookOpen, sections: ["catalog", "groups"] },
@@ -287,6 +288,7 @@ export default function Admin() {
           </section><p className="help">Адрес сервера, доступ к БД и secure-cookie задаются в окружении Docker. Секреты не передаются в браузер.</p>
         </>}
         {tab === "design" && <ThemeSettings settings={draft} onChange={update} onPreset={setDraft} />}
+        {tab === "homepage" && <HomepageSettings settings={draft} onChange={update} assets={assets} busy={locked} onUpload={uploadGraphic} />}
         {tab === "layout" && <LayoutSettings settings={draft} onChange={update} />}
         {tab === "navigation" && <NavigationSettings settings={draft} onChange={update} />}
         {tab === "graphics" && <IconSettings settings={draft} assets={assets} busy={locked} onChange={update} onUpload={uploadGraphic} />}

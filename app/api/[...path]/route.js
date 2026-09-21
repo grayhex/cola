@@ -22,7 +22,7 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
 import { mkdir, readFile, writeFile, unlink } from "node:fs/promises";
 import path from "node:path";
-import { preparePhoto } from "../../../lib/images.js";
+import { preparePhoto, prepareThumbnail } from "../../../lib/images.js";
 import { getSite } from "../../../lib/site.js";
 import { db, transaction } from "../../../lib/db.js";
 import {
@@ -197,8 +197,11 @@ async function handler(req, { params }) {
       );
       if (!rows[0]) return fail("Фото не найдено", 404);
       try {
+        const width = new URL(req.url).searchParams.get("width");
+        if (width && !["160", "320"].includes(width)) return fail("Неверный размер фотографии");
+        const bytes = await readFile(path.join(uploads(), rows[0].filename));
         return new NextResponse(
-          await readFile(path.join(uploads(), rows[0].filename)),
+          width ? await prepareThumbnail(bytes, Number(width)) : bytes,
           {
             headers: {
               "Content-Type": "image/webp",

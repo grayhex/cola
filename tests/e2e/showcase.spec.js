@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import sharp from "sharp";
 async function register(page, name) {
-  await page.goto("/");
+  await page.goto("/bikes");
   await expect(page.locator(".global-header")).toBeVisible();
   if (await page.getByRole("button", { name: "Открыть меню" }).isVisible())
     await page.getByRole("button", { name: "Открыть меню" }).click();
@@ -164,7 +164,7 @@ test("registration, touch autocomplete, bike/photo, public feed, like and revoke
   await expect(
     visitor.getByRole("heading", { name: "Велосипед недоступен" }),
   ).toBeVisible();
-  await visitor.goto("/");
+  await visitor.goto("/bikes");
   await expect(
     visitor.locator(".bike-card").filter({ hasText: bikeName }),
   ).toHaveCount(0);

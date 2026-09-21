@@ -1,0 +1,116 @@
+/* One palette and token source. Older feature styles consume the aliases below. */
+:root {
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --surface-muted: #f6f7f9;
+  --surface-hover: #eef0f3;
+  --hero-bg: #faf8f1;
+  --text: #20242d;
+  --text-muted: #59616e;
+  --text-subtle: #687180;
+  --border: #e1e4e9;
+  --border-strong: #8b93a0;
+  --accent: #f3b51b;
+  --accent-foreground: #000000;
+  --accent-hover: var(--accent);
+  --accent-soft: color-mix(in srgb, var(--accent) 14%, var(--surface));
+  --danger: #b52f3b;
+  --danger-soft: #fff0f1;
+  --success: #20734d;
+  --success-soft: #edf8f1;
+  --focus: #4864b1;
+  --overlay: #18202b80;
+  --shadow-sm: 0 1px 2px #10121b05;
+  --shadow-popover: 0 8px 24px #10121b1a;
+  --content-width: 1320px;
+  --nav-height: 66px;
+  --hero-width: 920px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --radius: 8px;
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --control-compact: 36px;
+  --control-standard: 40px;
+  --duration-fast: 150ms;
+  --duration-normal: 180ms;
+  --ease-standard: cubic-bezier(0.2, 0.6, 0.2, 1);
+  --z-base: 0;
+  --z-sticky: 10;
+  --z-dropdown: 20;
+  --z-modal: 30;
+  --z-toast: 40;
+  --site-font: "Cola Source Sans 3", system-ui, sans-serif;
+  --display-font: var(--site-font);
+  --ink: var(--text);
+  --muted: var(--text-muted);
+  --subtle: var(--text-subtle);
+  --paper: var(--surface);
+  --wash: var(--surface-muted);
+  --soft: var(--surface-hover);
+  --field: var(--surface);
+  --line: var(--border);
+  --line-strong: var(--border-strong);
+  --control-border: var(--border-strong);
+  --accent-ink: var(--accent-foreground);
+  --button-ink: var(--accent-foreground);
+  --showcase-shell-max: var(--content-width);
+  --layer-header: var(--z-sticky);
+  --layer-popover: var(--z-dropdown);
+  --motion-fast: var(--duration-fast);
+  --motion-panel: var(--duration-normal);
+  --motion-image: var(--duration-normal);
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  --bg: #171a21;
+  --surface: #1d212a;
+  --surface-muted: #242934;
+  --surface-hover: #2e3542;
+  --hero-bg: #24252b;
+  --text: #eceef2;
+  --text-muted: #bac1cd;
+  --text-subtle: #a1abba;
+  --border: #383f4c;
+  --border-strong: #738092;
+  --danger: #ff9aa4;
+  --danger-soft: #39232c;
+  --success: #83d5ad;
+  --success-soft: #20392f;
+  --focus: #a7b9ff;
+  --shadow-popover: 0 8px 24px #00000040;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="system"] {
+    --bg: #171a21;
+    --surface: #1d212a;
+    --surface-muted: #242934;
+    --surface-hover: #2e3542;
+    --hero-bg: #24252b;
+    --text: #eceef2;
+    --text-muted: #bac1cd;
+    --text-subtle: #a1abba;
+    --border: #383f4c;
+    --border-strong: #738092;
+    --danger: #ff9aa4;
+    --danger-soft: #39232c;
+    --success: #83d5ad;
+    --success-soft: #20392f;
+    --focus: #a7b9ff;
+    --shadow-popover: 0 8px 24px #00000040;
+    color-scheme: dark;
+  }
+}
+@media (pointer: coarse), (max-width: 700px) {
+  :root {
+    --control-compact: 44px;
+    --control-standard: 44px;
+  }
+}

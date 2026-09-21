@@ -1,0 +1,132 @@
+.page {
+  max-width: 960px;
+  min-height: 65dvh;
+  padding: 36px 24px 64px;
+  margin: auto;
+}
+.heading {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px 16px;
+  margin-bottom: 20px;
+}
+.heading h1 {
+  margin: 0;
+}
+.heading > a {
+  font-size: 14px;
+  color: var(--text-muted);
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+.tabs {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--border);
+  margin: 20px 0 16px;
+}
+.tabs a {
+  padding: 10px 2px;
+  min-height: 44px;
+  font-size: 15px;
+  white-space: nowrap;
+}
+.tabs a[aria-current="page"] {
+  box-shadow: inset 0 -2px var(--accent);
+  font-weight: 700;
+}
+.summary {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+.group {
+  margin-top: 28px;
+}
+.groupHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.groupHeading h2 {
+  font-size: 22px;
+  margin: 0 0 12px;
+}
+.groupHeading h2 span {
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 400;
+}
+.groupHeading > a {
+  font-size: 14px;
+}
+.result {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 80px;
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  transition: background var(--duration-fast);
+}
+.result:hover {
+  background: var(--surface-muted);
+}
+.thumbnail {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 68px;
+  height: 50px;
+  object-fit: contain;
+  background: var(--surface-muted);
+  color: var(--text-muted);
+  border-radius: var(--radius-xs);
+}
+.identity {
+  flex: 1;
+  min-width: 0;
+}
+.identity strong {
+  display: block;
+  font-size: 17px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.identity small {
+  display: block;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 24px;
+  margin-top: 24px;
+}
+.pagination a {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+@media (max-width: 700px) {
+  .page {
+    padding: 24px 16px 40px;
+  }
+  .heading {
+    margin-bottom: 14px;
+  }
+  .tabs {
+    gap: 14px;
+  }
+  .result {
+    padding: 10px 0;
+    gap: 10px;
+  }
+}

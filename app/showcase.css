@@ -29,7 +29,7 @@
   transform: none;
 }
 .site-root .like-button[aria-pressed="true"] {
-  color: var(--accent);
+  color: var(--text);
 }
 .site-root .social-stat .like-graphic {
   width: 16px;

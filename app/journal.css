@@ -164,7 +164,7 @@
   border-bottom: 1px solid var(--line);
 }
 .journal-modes [aria-pressed="true"] {
-  color: var(--accent);
+  color: var(--text);
   border-bottom: 2px solid currentColor;
 }
 .journal-feed {
@@ -226,7 +226,7 @@
   font-size: 12px;
 }
 .journal-solution {
-  color: var(--accent);
+  color: var(--text);
   font-size: 13px;
 }
 .experience-query {

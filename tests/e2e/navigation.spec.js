@@ -77,7 +77,7 @@ test("navigation: real destinations, account, keyboard, configurable About and a
       await bikes.focus();
       await page.keyboard.press("ArrowDown");
       await expect(
-        page.getByRole("link", { name: "Витрина", exact: true }),
+        page.getByRole("link", { name: "Все велосипеды", exact: true }),
       ).toBeFocused();
       await page.keyboard.press("End");
       await expect(
@@ -85,7 +85,7 @@ test("navigation: real destinations, account, keyboard, configurable About and a
       ).toBeFocused();
       await page.keyboard.press("Home");
       await expect(
-        page.getByRole("link", { name: "Витрина", exact: true }),
+        page.getByRole("link", { name: "Все велосипеды", exact: true }),
       ).toBeFocused();
       await page.keyboard.press("Escape");
       await expect(bikes).toBeFocused();
@@ -198,16 +198,30 @@ test("navigation: real destinations, account, keyboard, configurable About and a
     await page.getByRole("tab", { name: "Дизайн", exact: true }).click();
     const adminNav = page.getByRole("navigation", { name: "Разделы админки" });
     await adminNav.getByRole("button", { name: "Меню", exact: true }).click();
-    const menu = page.getByRole("list", { name: "Порядок разделов меню", exact: true });
-    await menu.getByRole("textbox", { name: "Название в меню: О проекте", exact: true }).fill("Знакомство");
-    const moveAboutUp = menu.getByRole("button", { name: "Выше: О проекте", exact: true });
+    const menu = page.getByRole("list", {
+      name: "Порядок разделов меню",
+      exact: true,
+    });
+    await menu
+      .getByRole("textbox", { name: "Название в меню: О проекте", exact: true })
+      .fill("Знакомство");
+    const moveAboutUp = menu.getByRole("button", {
+      name: "Выше: О проекте",
+      exact: true,
+    });
     await moveAboutUp.click();
     await moveAboutUp.click();
     await moveAboutUp.click();
     await expect(moveAboutUp).toBeDisabled();
-    await expect(menu.getByRole("listitem").first().getByRole("textbox")).toHaveValue("Знакомство");
+    await expect(
+      menu.getByRole("listitem").first().getByRole("textbox"),
+    ).toHaveValue("Знакомство");
     await noOverflow();
-    await adminNav.getByRole("button", { name: /^О проекте(?:\s*Есть несохранённые изменения)?$/ }).click();
+    await adminNav
+      .getByRole("button", {
+        name: /^О проекте(?:\s*Есть несохранённые изменения)?$/,
+      })
+      .click();
     const tech = page.getByRole("group", { name: "Под капотом", exact: true });
     await tech.getByLabel("Показывать раздел", { exact: true }).uncheck();
     const guide = page.getByRole("group", {
@@ -261,7 +275,10 @@ test("navigation: real destinations, account, keyboard, configurable About and a
       ).toHaveAttribute("aria-current", "page");
       await expect(
         page.locator(".primary-navigation > :first-child img"),
-      ).toHaveAttribute("src", "/api/assets/" + asset);
+      ).toHaveCount(0);
+      await expect(
+        page.locator(".primary-navigation > :first-child svg"),
+      ).toBeVisible();
     }
     await noOverflow();
     await page.screenshot({

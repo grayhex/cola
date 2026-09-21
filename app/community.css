@@ -169,7 +169,7 @@
   font-weight: 600;
 }
 .notification-actor {
-  color: var(--accent);
+  color: var(--text);
 }
 .report-card {
   padding: 20px 0;

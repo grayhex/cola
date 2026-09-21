@@ -2,32 +2,7 @@
 html {
   scrollbar-gutter: stable;
 }
-.site-root {
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-6: 24px;
-  --space-8: 32px;
-  --radius-xs: 3px;
-  --radius-sm: 5px;
-  --radius-md: 8px;
-  --control-compact: 44px;
-  --control-standard: 44px;
-  --layer-header: 2;
-  --layer-popover: 3;
-  --control-border: var(--line-strong);
-  --motion-fast: 140ms;
-  --motion-image: 180ms;
-  --motion-panel: 200ms;
-  --line-strong: color-mix(in srgb, var(--ink) 30%, var(--line));
-  --subtle: color-mix(in srgb, var(--ink) 58%, var(--paper));
-  --accent-soft: color-mix(in srgb, var(--accent) 9%, var(--paper));
-  --danger: #c43e32;
-  --success: #287c51;
-  font-size: 16px;
-  line-height: 1.5;
-}
+.site-root { font-size: 16px; line-height: 1.5; }
 .site-root h1 {
   font-weight: 700;
   font-size: clamp(28px, 3vw, 40px);
@@ -40,9 +15,9 @@ html {
   font-weight: 600;
 }
 .site-root :is(button, a, input, select, textarea):focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
-  box-shadow: 0 0 0 4px var(--paper), 0 0 0 5px var(--ink);
+  box-shadow: none;
 }
 .site-root
   :is(.button, .quiet, .icon, .account-tabs button, .social-switch button) {
@@ -57,6 +32,9 @@ html {
   min-height: var(--control-standard);
   padding: 8px 14px;
   font-size: 13px;
+  background: var(--accent);
+  color: var(--accent-foreground);
+  border-color: var(--accent);
   box-shadow: none;
   transform: none;
 }
@@ -65,17 +43,23 @@ html {
   padding: 6px 12px;
   font-size: 13px;
 }
+.site-root .button.secondary { background: var(--surface); color: var(--text); border-color: var(--border-strong); }
+.site-root .button.secondary:hover { background: var(--surface-hover); }
 .site-root .button:hover {
+  background: var(--accent-hover);
   transform: none;
   box-shadow: none;
 }
 .site-root :is(input, select, textarea) {
+  background: var(--surface);
+  color: var(--text);
   border-radius: var(--radius-sm);
   border-color: var(--control-border);
   font-size: 16px;
   padding: 8px 10px;
   min-height: var(--control-standard);
 }
+.site-root input::placeholder, .site-root textarea::placeholder { color: var(--text-subtle); opacity: 1; }
 .site-root :is(input[type="checkbox"], input[type="radio"]) {
   width: 16px;
   min-height: 16px;
@@ -250,7 +234,7 @@ html {
 .site-root dialog.compact-panel {
   position: fixed;
   inset: 120px 24px auto auto;
-  width: min(360px, calc(100vw - 32px));
+  width: min(var(--dialog-width, 360px), calc(100vw - 32px));
   max-width: calc(100vw - 32px);
   max-height: 75dvh;
   margin: 0;
@@ -259,13 +243,13 @@ html {
   border-radius: var(--radius-md);
   background: var(--paper);
   color: var(--ink);
-  box-shadow: 0 8px 28px #00000014;
+  box-shadow: var(--shadow-popover);
   overflow: auto;
   overscroll-behavior: contain;
   animation: panel-appear var(--motion-panel) ease;
 }
 .site-root dialog.compact-panel::backdrop {
-  background: #00000018;
+  background: var(--overlay);
   backdrop-filter: none;
 }
 .compact-panel-heading {
@@ -717,12 +701,4 @@ html {
   .site-root .detail {
     grid-template-columns: minmax(0, min(42%, 420px)) minmax(0, 1fr);
   }
-}
-
-/* Explicit palette preset; dark and device themes retain their own surfaces. */
-.site-root[data-preset="pixel-club"][data-theme="light"] {
-  --wash: #EEF1F4; --paper: #FFFFFF; --field: #FFFFFF;
-  --ink: #1E2830; --muted: #52616B; --control-border: #7E8C97;
-  --line: #D7DEE4; --line-strong: #7E8C97; --soft: #E3E9F0;
-  background: var(--wash);
 }

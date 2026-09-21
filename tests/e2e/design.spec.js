@@ -109,10 +109,8 @@ test("dense visual system: shared cards, filters, search, themes and responsive 
         .evaluate((el) => getComputedStyle(el).fontSize),
     ).toBe("17px");
     await expect(card.locator(".card-info > *")).toHaveCount(2);
-    await expect(card.locator(".like-button img")).toHaveAttribute(
-      "src",
-      "/api/assets/" + asset,
-    );
+    await expect(card.locator(".like-button img")).toHaveCount(0);
+    await expect(card.locator(".like-button svg")).toBeVisible();
     expect(
       await card
         .locator(".card-open-photo > img")
@@ -122,9 +120,16 @@ test("dense visual system: shared cards, filters, search, themes and responsive 
     const heading = await page.locator(".garage-heading h1").boundingBox();
     const controls = await page.locator(".showcase-actions").boundingBox();
     expect(heading.width).toBeGreaterThan(100);
-    if (!isMobile) expect(Math.abs(heading.y + heading.height / 2 - controls.y - controls.height / 2)).toBeLessThan(3);
+    if (!isMobile)
+      expect(
+        Math.abs(
+          heading.y + heading.height / 2 - controls.y - controls.height / 2,
+        ),
+      ).toBeLessThan(3);
     await expect(card.locator(".micro-metric")).toHaveCount(0);
-    await expect(card.getByRole("link", { name: "Похожие сборки" })).toHaveCount(0);
+    await expect(
+      card.getByRole("link", { name: "Похожие сборки" }),
+    ).toHaveCount(0);
     await page.getByRole("button", { name: /^Фильтры/ }).click();
     const panel = page.getByRole("dialog", { name: "Фильтры", exact: true });
     await panel.getByRole("checkbox").nth(0).check();
@@ -161,10 +166,18 @@ test("dense visual system: shared cards, filters, search, themes and responsive 
     await page
       .getByRole("button", { name: "Поиск ColaBike", exact: true })
       .click();
-    await page.getByRole("searchbox").fill(name);
+    await page
+      .getByRole("combobox", {
+        name: "Найти велосипед, компонент или покатушку",
+      })
+      .fill(name);
     await page.getByRole("button", { name: "Найти", exact: true }).click();
-    await expect(page.locator(".bike-card")).toHaveCount(5);
     await expect(page).toHaveURL(/\/search\?/);
+    await expect(
+      page
+        .getByRole("region", { name: "Велосипеды", exact: true })
+        .locator('a[href^="/b/"]'),
+    ).toHaveCount(5);
     await page.goto("/?q=" + encodeURIComponent(name));
     // Simulate a future larger catalogue in the disposable database only.
     // Production taxonomy and its database constraint remain unchanged.
@@ -207,7 +220,7 @@ test("dense visual system: shared cards, filters, search, themes and responsive 
     }
     for (const mode of ["tile", "cover"]) {
       await settings({
-        theme: "dark",
+        appearance: { ...original.appearance, theme: "dark" },
         backgroundMode: mode,
         backgroundImageId: asset,
         backgroundOpacity: 15,
@@ -217,9 +230,9 @@ test("dense visual system: shared cards, filters, search, themes and responsive 
         gravelImageId: asset,
       });
       await page.reload();
-      await expect(page.locator(".site-root")).toHaveAttribute(
+      await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+      await expect(page.locator(".site-root")).not.toHaveAttribute(
         "data-background-mode",
-        mode,
       );
       await expect(page.locator(".bike-card")).toHaveCount(5);
       await noOverflow();

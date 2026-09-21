@@ -68,12 +68,17 @@ test("record illustration reacts to hover and keyboard focus, but reduced motion
   await page.goto("/records");
   const card = page.locator('[data-record="budget"]');
   const art = card.locator(".record-illustration");
+  await expect(art).toBeVisible();
+  await expect.poll(() => art.evaluate(el => getComputedStyle(el).transform)).toBe("none");
   await card.hover();
   await expect.poll(() => art.evaluate(el => getComputedStyle(el).transform)).not.toBe("none");
   await page.mouse.move(0,0);
+  // Finish the hover transition before testing keyboard focus independently.
+  await expect.poll(() => art.evaluate(el => getComputedStyle(el).transform)).toBe("none");
   await card.locator(".record-bike-name").focus();
   await expect.poll(() => art.evaluate(el => getComputedStyle(el).transform)).not.toBe("none");
   await page.emulateMedia({reducedMotion:"reduce"});
+  await card.hover();
   await expect.poll(() => art.evaluate(el => getComputedStyle(el).transform)).toBe("none");
 });
 
@@ -90,6 +95,8 @@ test("achievement admin preserves illustrations and edited descriptions through 
     await route.fulfill({ json: saved });
   });
   await page.route("**/api/admin/assets*", (route) => route.fulfill({ json: route.request().method() === "POST" ? { id: imageId, name: "art.png" } : { assets: [{ id: imageId, name: "art.png" }] } }));
+  // The shell loads nested usage metadata separately from the legacy list.
+  await page.route("**/api/admin/assets/library", (route) => route.fulfill({ json: { assets: [{ id: imageId, name: "art.png", usage: [] }] } }));
   await page.route("**/api/game/admin/bikes*", (route) => route.fulfill({ json: { bikes: route.request().url().endsWith("page=1") ? Array.from({ length: 25 }, (_, i) => ({ id: "bike-" + i, share_id: "bike-" + i, name: "Bike " + i, leaderboard_excluded: false })) : [] } }));
   await page.route("**/api/assets/*", (route) => route.fulfill({ contentType: "image/svg+xml", body: '<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024"><rect width="1024" height="1024" fill="#333"/></svg>' }));
   async function openSettings() {
@@ -115,10 +122,21 @@ test("achievement admin preserves illustrations and edited descriptions through 
   expect(saved.achievementDescriptions.first_public).toBe("Дебют на витрине.");
   await openSettings();
   await expect(slot.locator("textarea")).toHaveValue(text);
-  await slot.getByRole("button", { name: "Сбросить", exact: true }).click();
+  await expect(slot.locator("select")).toHaveValue(imageId);
+  const resetArtwork = slot.getByRole("button", { name: "Сбросить: Без компромиссов", exact: true });
+  await expect(resetArtwork).toBeEnabled();
+  await resetArtwork.click();
+  await expect(slot.locator("select")).toHaveValue("");
+  await expect(resetArtwork).toBeDisabled();
+  await expect(slot.locator("textarea")).toHaveValue(text);
+  // Clearing the draft must not publish it or clear the independent description.
+  expect(saved.recordImages.expensive).toBe(imageId);
   await page.getByRole("button", { name: "Сохранить правила и иллюстрации", exact: true }).click();
   await expect.poll(() => saved.recordImages.expensive).toBe(null);
   expect(saved.recordDescriptions.expensive).toBe(text);
+  await openSettings();
+  await expect(slot.locator("select")).toHaveValue("");
+  await expect(slot.locator("textarea")).toHaveValue(text);
   await page.route("**/api/game/records", route => route.fulfill({json: withGameDescriptions({records,settings:saved,asOf:"2026-09-20T12:00:00Z"},saved)}));
   await page.goto("/records");
   await expect(page.locator('[data-record="expensive"] .record-description')).toHaveText(text);
