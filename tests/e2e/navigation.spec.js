@@ -8,6 +8,8 @@ test("navigation: real destinations, account, keyboard, configurable About and a
   isMobile,
 }, info) => {
   const db = new pg.Client({ connectionString: process.env.DATABASE_URL });
+  // Fail on the missing control, with time left to restore shared settings.
+  page.setDefaultTimeout(15000);
   await db.connect();
   const suffix = randomUUID().slice(0, 8),
     name = "Nav " + suffix;
@@ -194,15 +196,18 @@ test("navigation: real destinations, account, keyboard, configurable About and a
     });
     await page.goto("/admin");
     await page.getByRole("tab", { name: "Дизайн", exact: true }).click();
-    await page.getByRole("button", { name: "Оформление", exact: true }).click();
-    const navAbout = page
-      .locator(".navigation-settings")
-      .getByRole("group", { name: "О проекте", exact: true });
-    await navAbout.getByLabel("Название в меню").fill("Знакомство");
-    await navAbout.getByRole("button", { name: "Выше: about" }).click();
-    await navAbout.getByRole("button", { name: "Выше: about" }).click();
-    await navAbout.getByRole("button", { name: "Выше: about" }).click();
-    await page.getByRole("button", { name: /^О проекте(?: |$)/ }).click();
+    const adminNav = page.getByRole("navigation", { name: "Разделы админки" });
+    await adminNav.getByRole("button", { name: "Меню", exact: true }).click();
+    const menu = page.getByRole("list", { name: "Порядок разделов меню", exact: true });
+    await menu.getByRole("textbox", { name: "Название в меню: О проекте", exact: true }).fill("Знакомство");
+    const moveAboutUp = menu.getByRole("button", { name: "Выше: О проекте", exact: true });
+    await moveAboutUp.click();
+    await moveAboutUp.click();
+    await moveAboutUp.click();
+    await expect(moveAboutUp).toBeDisabled();
+    await expect(menu.getByRole("listitem").first().getByRole("textbox")).toHaveValue("Знакомство");
+    await noOverflow();
+    await adminNav.getByRole("button", { name: /^О проекте(?:\s*Есть несохранённые изменения)?$/ }).click();
     const tech = page.getByRole("group", { name: "Под капотом", exact: true });
     await tech.getByLabel("Показывать раздел", { exact: true }).uncheck();
     const guide = page.getByRole("group", {
@@ -300,7 +305,10 @@ test("navigation: real destinations, account, keyboard, configurable About and a
       .toBe(null);
   } finally {
     test.setTimeout(info.timeout + 15000);
-    if (original) await save(original);
-    await db.end();
+    try {
+      if (original) await save(original);
+    } finally {
+      await db.end();
+    }
   }
 });
