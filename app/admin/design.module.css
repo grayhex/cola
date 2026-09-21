@@ -1,0 +1,131 @@
+.designLayout.designLayout {
+  grid-template-columns: minmax(0, 1fr);
+}
+.designLayout :global(.admin-nav) {
+  position: static;
+  display: flex;
+  flex-flow: row wrap;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  min-width: 0;
+  padding: 6px;
+  border: 1px solid var(--line);
+  background: var(--wash);
+}
+.designLayout :global(.admin-nav) button {
+  flex: 0 1 auto;
+  width: auto;
+  padding: 9px 12px;
+  min-height: 40px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.designLayout :global(.admin-content) { min-width: 0; }
+.designLayout :global(.admin-title) { margin-bottom: 16px; }
+.designLayout :global(.admin-title) h1 { font-size: clamp(24px, 3vw, 34px); letter-spacing: -.7px; }
+.designLayout [hidden], .tabPanel[hidden] { display: none !important; }
+.compactPanel.compactPanel { padding: 18px; margin-bottom: 16px; }
+.compactPanel h2 { font-size: 20px; margin-bottom: 10px; letter-spacing: -.3px; }
+.compactPanel :global(.field) { margin-bottom: 10px; }
+.compactPanel :global(.field) > span { font-size: 12px; }
+.compactPanel input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), .compactPanel select {
+  padding: 8px 10px;
+  min-height: 38px;
+  font-size: 13px;
+}
+.sectionHeading { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 12px; }
+.sectionHeading h2, .sectionHeading p { margin-bottom: 6px; }
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.tabs { display: flex; flex-wrap: wrap; gap: 4px; padding-bottom: 10px; margin-bottom: 16px; border-bottom: 1px solid var(--line); }
+.tabs button { padding: 8px 12px; min-height: 40px; font-size: 13px; border: 1px solid transparent; border-radius: 4px; }
+.tabs button[aria-selected="true"] { background: var(--wash); border-color: var(--line); font-weight: 700; }
+.tabPanel { min-width: 0; }
+.toolbar { display: grid; grid-template-columns: minmax(0, 2fr) minmax(180px, 1fr); gap: 12px; margin-bottom: 10px; }
+.graphicGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.compactPicker.compactPicker {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  min-width: 0;
+  overflow: hidden;
+}
+.compactPicker.compactPicker :global(.asset-picker-preview) {
+  width: 56px;
+  height: 56px;
+  min-height: 0;
+  max-height: 56px;
+  aspect-ratio: 1;
+  margin: 0;
+  border-radius: 3px;
+  overflow: hidden;
+  background-color: var(--wash);
+  background-image: repeating-conic-gradient(var(--paper) 0% 25%, transparent 0% 50%);
+  background-size: 12px 12px;
+}
+.compactPicker.compactPicker :global(.asset-picker-preview) img { width: 100%; height: 100%; max-width: 56px; max-height: 56px; padding: 3px; object-fit: contain; }
+.compactPicker.compactPicker :global(.asset-picker-preview.icon) img { image-rendering: pixelated; }
+.compactPicker.compactPicker :global(.asset-picker-placeholder) { min-height: 0; height: 100%; display: grid; place-items: center; padding: 0; }
+.compactPicker.compactPicker :global(.asset-picker-body) { padding: 0; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.compactPicker.compactPicker :global(.asset-picker-heading) { min-height: 0; }
+.compactPicker.compactPicker :global(.asset-picker-heading) strong { display: block; font-size: 13px; line-height: 1.35; }
+.compactPicker.compactPicker :global(.asset-picker-heading) small { display: block; font-size: 10px; color: var(--muted); overflow-wrap: anywhere; }
+.compactPicker select { width: 100%; min-height: 32px; padding: 5px 7px; font-size: 12px; text-overflow: ellipsis; }
+.compactPicker.compactPicker :global(.asset-picker-actions) { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; }
+.compactPicker.compactPicker :global(.asset-picker-actions) button { min-height: 32px; padding: 4px 6px; font-size: 11px; }
+.pager { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding-top: 12px; margin-top: 12px; border-top: 1px solid var(--line); font-size: 12px; }
+.pager > div { display: flex; gap: 10px; }
+.pager button { min-height: 36px; }
+.empty { padding: 24px 12px; margin: 0; color: var(--muted); text-align: center; }
+.themeGrid { display: grid; grid-template-columns: minmax(0, 3fr) minmax(220px, 2fr); gap: 24px; align-items: start; }
+.themePreview { padding: 22px; min-width: 0; font-size: 14px; overflow-wrap: anywhere; }
+.themePreview h2 { margin-top: 16px; font-size: 24px; }
+.themePreview :global(.preview-button) { display: inline-block; padding: 8px 12px; font-size: 12px; }
+.layoutChoices { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; border: 0; padding: 0; margin: 0 0 20px; }
+.layoutChoices legend { font-size: 13px; font-weight: 700; margin-bottom: 10px; }
+.layoutChoice { display: flex; align-items: flex-start; gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: 4px; cursor: pointer; }
+.layoutChoice:has(input:checked) { background: var(--wash); border-color: var(--accent); }
+.layoutChoice input { width: 16px; height: 16px; flex-shrink: 0; margin: 2px 0 0; accent-color: var(--accent); }
+.layoutChoice strong { display: block; font-size: 13px; }
+.layoutChoice small { display: block; color: var(--muted); font-size: 11px; line-height: 1.4; margin-top: 4px; }
+.previewDetails { padding-top: 12px; border-top: 1px solid var(--line); }
+.previewDetails summary { cursor: pointer; font-size: 13px; margin-bottom: 12px; }
+.menuList { list-style: none; padding: 0; margin: 16px 0; display: grid; gap: 6px; }
+.menuRow { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto auto; gap: 10px; align-items: center; border: 1px solid var(--line); padding: 8px 10px; border-radius: 4px; }
+.menuIndex { color: var(--muted); text-align: center; font-size: 12px; }
+.menuName { min-width: 0; display: grid; grid-template-columns: 110px minmax(0, 1fr); align-items: center; gap: 8px; font-size: 12px; }
+.menuName input { min-height: 36px; padding: 6px 8px; font-size: 13px; }
+.menuVisible { display: flex; align-items: center; gap: 6px; font-size: 12px; white-space: nowrap; }
+.menuVisible input { width: 16px; height: 16px; margin: 0; accent-color: var(--accent); }
+.menuOrder { display: flex; gap: 2px; }
+.menuOrder button { display: grid; place-items: center; width: 34px; height: 34px; padding: 0; border: 1px solid var(--line); border-radius: 3px; }
+.mediaList { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.mediaRow { display: grid; grid-template-columns: 48px minmax(0, 1fr) 34px; gap: 10px; align-items: center; padding: 10px; border: 1px solid var(--line); border-radius: 4px; min-width: 0; }
+.mediaThumb { display: grid; place-items: center; width: 48px; height: 48px; overflow: hidden; border-radius: 3px; background: var(--wash); }
+.mediaThumb img { display: block; width: 48px; height: 48px; max-width: 48px; max-height: 48px; object-fit: contain; }
+.mediaInfo { min-width: 0; }
+.mediaInfo strong, .mediaInfo small { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.mediaInfo strong { font-size: 12px; line-height: 1.4; }
+.mediaInfo small { color: var(--muted); font-size: 10px; line-height: 1.6; }
+.removeAsset.removeAsset { width: 34px; height: 34px; padding: 0; }
+.designLayout button:disabled { cursor: not-allowed; }
+@media (max-width: 900px) {
+  .themeGrid { grid-template-columns: minmax(0, 1fr); }
+  .themePreview { padding: 16px; }
+  .menuName { grid-template-columns: minmax(0, 1fr); gap: 3px; }
+}
+@media (max-width: 680px) {
+  .compactPanel.compactPanel { padding: 12px; }
+  .graphicGrid, .mediaList, .toolbar, .layoutChoices { grid-template-columns: minmax(0, 1fr); }
+  .toolbar { gap: 2px; }
+  .designLayout :global(.admin-nav) { gap: 2px; padding: 4px; }
+  .designLayout :global(.admin-nav) button { padding: 8px; font-size: 12px; }
+  .menuRow { grid-template-columns: 18px minmax(0, 1fr) auto; gap: 6px; padding: 8px; }
+  .menuVisible { grid-column: 2; grid-row: 2; }
+  .menuOrder { grid-column: 3; grid-row: 1 / span 2; flex-direction: column; }
+  .tabs button { padding: 8px; font-size: 12px; }
+}

@@ -1,1821 +1,381 @@
 "use client";
+import { useEffect, useRef, useState } from "react";
 import { NavigationSettings, AboutSettings } from "./navigation-settings.jsx";
+import { ThemeSettings, LayoutSettings, WizardCopy } from "./design-settings.jsx";
+import { Field, Select, Toggle } from "./design-controls.jsx";
+import IconSettings from "./icon-settings.jsx";
+import IconPackSettings, { uploadIconPack } from "./icon-pack-settings.jsx";
+import MediaLibrary from "./media-library.jsx";
+import CatalogEditor from "./catalog-editor.jsx";
 import MapSettings from "./map-settings.jsx";
 import RideSettings from "./ride-settings.jsx";
 import Gamification from "./gamification.jsx";
 import Reports from "./reports.jsx";
 import ScoringSettings from "./scoring-settings.jsx";
-import { BlockSettings, GroupSettings } from "./layout-settings.jsx";
-import { copyBlocks } from "../../lib/copy-blocks.js";
+import { GroupSettings } from "./layout-settings.jsx";
 import ResolverSettings from "./resolver-settings.jsx";
-import AssetPicker from "./asset-picker.jsx";
-import IconSettings from "./icon-settings.jsx";
-import ExperienceCatalog from "./experience-catalog.jsx";
-import PanoramaPreview from "./panorama-preview.jsx";
-import { applyPixelClub, accentText } from "../../lib/appearance.js";
-import { fontLabels, displayFonts } from "../../lib/fonts.js";
+import { copyBlocks } from "../../lib/copy-blocks.js";
 import GlobalHeader from "../ui/global-header.jsx";
-import { useEffect, useState, useRef } from "react";
-import {
-  Trophy,
-  ArrowLeft,
-  Check,
-  Plus,
-  Trash2,
-  ChevronUp,
-  ChevronDown,
-  Upload,
-  Settings2,
-  Palette,
-  Type,
-  BookOpen,
-  Users,
-  Image,
-  History,
-  Save,
-  Search,
-  ShieldCheck,
-  X,
-  LoaderCircle,
-} from "../ui/icons.jsx";
 import { useSite } from "../ui/site-provider.jsx";
-import PartIcon from "../ui/part-icon.jsx";
-import { iconNames, categoryIcons } from "../../lib/part-icons.js";
-import { uiCopy } from "../../lib/ui-copy.js";
-import { defaultSettings, fontStacks } from "../../lib/site-defaults.js";
+import {
+  Trophy, Check, Trash2, Upload, Settings2, Palette, Type, BookOpen,
+  Users, Image, History, Save, Search, ShieldCheck, X, LoaderCircle, Menu,
+} from "../ui/icons.jsx";
+import styles from "./design.module.css";
 
 async function request(url, method = "GET", data) {
-  const r = await fetch("/api/" + url, {
+  const response = await fetch("/api/" + url, {
     method,
     headers: data ? { "Content-Type": "application/json" } : undefined,
     body: data ? JSON.stringify(data) : undefined,
   });
-  const b = await r.json();
-  if (!r.ok) throw new Error(b.error || "Не удалось выполнить действие");
-  return b;
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.error || "Не удалось выполнить действие");
+  return result;
 }
-function Field({ label, help, children }) {
-  return (
-    <label className="field">
-      <span>{label}</span>
-      {children}
-      {help && <small>{help}</small>}
-    </label>
-  );
-}
-function Select({ label, value, onChange, options }) {
-  return (
-    <Field label={label}>
-      <select value={value} onChange={(e) => onChange(e.target.value)}>
-        {options.map(([v, l]) => (
-          <option value={v} key={v}>
-            {l}
-          </option>
-        ))}
-      </select>
-    </Field>
-  );
-}
-function Toggle({ label, checked, onChange }) {
-  return (
-    <label className="admin-toggle">
-      <span>{label}</span>
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={(e) => onChange(e.target.checked)}
-      />
-    </label>
-  );
-}
-function ListEditor({ values, onChange, label }) {
-  const [newValue, setNew] = useState("");
-  function move(i, d) {
-    const a = [...values];
-    [a[i], a[i + d]] = [a[i + d], a[i]];
-    onChange(a);
-  }
-  return (
-    <div className="list-editor">
-      <div className="list-add">
-        <input
-          aria-label={"Новое значение: " + label}
-          placeholder="Новое название"
-          value={newValue}
-          onChange={(e) => setNew(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              if (newValue.trim() && !values.includes(newValue.trim())) {
-                onChange([...values, newValue.trim()]);
-                setNew("");
-              }
-            }
-          }}
-        />
-        <button
-          type="button"
-          className="button secondary"
-          disabled={!newValue.trim() || values.includes(newValue.trim())}
-          onClick={() => {
-            onChange([...values, newValue.trim()]);
-            setNew("");
-          }}
-        >
-          <Plus size={18} />
-          Добавить
-        </button>
-      </div>
-      <p className="help">
-        {values.length} записей. Названия можно редактировать; стрелки меняют
-        порядок.
-      </p>
-      {values.map((v, i) => (
-        <div className="list-row" key={i}>
-          <input
-            aria-label={label + " " + (i + 1)}
-            value={v}
-            maxLength={150}
-            onChange={(e) =>
-              onChange(values.map((x, n) => (n === i ? e.target.value : x)))
-            }
-          />
-          <button
-            type="button"
-            className="icon"
-            aria-label="Выше"
-            disabled={i === 0}
-            onClick={() => move(i, -1)}
-          >
-            <ChevronUp size={17} />
-          </button>
-          <button
-            type="button"
-            className="icon"
-            aria-label="Ниже"
-            disabled={i === values.length - 1}
-            onClick={() => move(i, 1)}
-          >
-            <ChevronDown size={17} />
-          </button>
-          <button
-            type="button"
-            className="icon danger"
-            aria-label={"Убрать " + v}
-            onClick={() => onChange(values.filter((_, n) => n !== i))}
-          >
-            <Trash2 size={17} />
-          </button>
-        </div>
-      ))}
-    </div>
-  );
-}
+
 const sections = [
   ["overview", "Обзор", Settings2],
   ["scoring", "Оценка велосипедов", Settings2],
-  ["gamification", "Награды и рекорды", Settings2],
+  ["gamification", "Награды и рекорды", Trophy],
   ["rides", "Покатушки", Settings2],
   ["resolver", "Bike Resolver", Settings2],
   ["map", "Карта", Settings2],
-  ["about", "О проекте", BookOpen],
-  ["design", "Оформление", Palette],
-  ["blocks", "Блоки карточки", Settings2],
-  ["groups", "Группы деталей", BookOpen],
+  ["design", "Тема и шрифты", Palette],
+  ["layout", "Компоновка", Settings2],
+  ["navigation", "Меню", Menu],
+  ["graphics", "Графика", Image],
+  ["icon-import", "Импорт иконок", Upload],
+  ["media", "Медиатека", Image],
   ["copy", "Тексты", Type],
+  ["about", "О проекте", BookOpen],
+  ["groups", "Группы деталей", BookOpen],
   ["catalog", "Справочники", BookOpen],
   ["users", "Пользователи", Users],
   ["reports", "Жалобы", ShieldCheck],
-  ["media", "Медиа", Image],
-  ["audit", "Журнал", History],
+  ["audit", "Журнал действий", History],
 ];
 const adminGroups = [
-  {
-    id: "system",
-    name: "Система",
-    icon: Settings2,
-    sections: ["overview", "resolver", "map", "rides", "audit"],
-  },
-  {
-    id: "design",
-    name: "Дизайн",
-    icon: Palette,
-    sections: ["design", "blocks", "copy", "about", "media"],
-  },
-  {
-    id: "people",
-    name: "Пользователи",
-    icon: Users,
-    sections: ["users", "reports"],
-  },
-  {
-    id: "mechanics",
-    name: "Механики",
-    icon: Trophy,
-    sections: ["scoring", "gamification"],
-  },
-  {
-    id: "catalog",
-    name: "Каталог",
-    icon: BookOpen,
-    sections: ["catalog", "groups"],
-  },
+  { id: "system", name: "Система", icon: Settings2, sections: ["overview", "resolver", "map", "rides", "audit"] },
+  { id: "design", name: "Дизайн", icon: Palette, sections: ["design", "layout", "navigation", "graphics", "icon-import", "media", "copy", "about"] },
+  { id: "people", name: "Пользователи", icon: Users, sections: ["users", "reports"] },
+  { id: "mechanics", name: "Механики", icon: Trophy, sections: ["scoring", "gamification"] },
+  { id: "catalog", name: "Каталог", icon: BookOpen, sections: ["catalog", "groups"] },
 ];
+const settingsTabs = new Set(["overview", "scoring", "map", ...adminGroups.find((g) => g.id === "design").sections]);
+const catalogTabs = new Set(["catalog", "groups"]);
+
 export default function Admin() {
   const { settings, catalog, setSite, setPreferences } = useSite();
-  const [tab, setTab] = useState("overview"),
-    [user, setUser] = useState(null),
-    [loading, setLoading] = useState(true),
-    [busy, setBusy] = useState(false),
-    [error, setError] = useState(""),
-    [notice, setNotice] = useState("");
-  const [draft, setDraft] = useState(settings),
-    [cat, setCat] = useState(catalog),
-    [sv, setSv] = useState(1),
-    [cv, setCv] = useState(1),
-    [stats, setStats] = useState({}),
-    [participation, setParticipation] = useState([]),
-    [assets, setAssets] = useState([]),
-    [events, setEvents] = useState([]),
-    [textSearch, setTextSearch] = useState("");
-  const [users, setUsers] = useState([]),
-    [userSearch, setUserSearch] = useState(""),
-    [page, setPage] = useState(1),
-    [total, setTotal] = useState(0),
-    [editUser, setEditUser] = useState(null),
-    [confirm, setConfirm] = useState(null),
-    [confirmEmail, setConfirmEmail] = useState("");
-  const file = useRef(),
-    dialog = useRef();
-  const dirtySettings = JSON.stringify(draft) !== JSON.stringify(settings),
-    dirtyCatalog = JSON.stringify(cat) !== JSON.stringify(catalog),
-    dirty = dirtySettings || dirtyCatalog;
+  const [tab, setTab] = useState("overview"), [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true), [busy, setBusy] = useState(false);
+  const [uploadBusy, setUploadBusy] = useState(false);
+  const [error, setError] = useState(""), [notice, setNotice] = useState("");
+  const [draft, setDraft] = useState(settings), [cat, setCat] = useState(catalog);
+  const [sv, setSv] = useState(1), [cv, setCv] = useState(1);
+  const [stats, setStats] = useState({}), [participation, setParticipation] = useState([]);
+  const [assets, setAssets] = useState([]), [events, setEvents] = useState([]);
+  const [textSearch, setTextSearch] = useState("");
+  const [users, setUsers] = useState([]), [userSearch, setUserSearch] = useState("");
+  const [page, setPage] = useState(1), [total, setTotal] = useState(0);
+  const [editUser, setEditUser] = useState(null), [confirm, setConfirm] = useState(null);
+  const [confirmEmail, setConfirmEmail] = useState("");
+  const dialog = useRef(null);
+  const dirtySettings = JSON.stringify(draft) !== JSON.stringify(settings);
+  const dirtyCatalog = JSON.stringify(cat) !== JSON.stringify(catalog);
+  const dirty = dirtySettings || dirtyCatalog;
+  const locked = busy || uploadBusy;
+  const group = adminGroups.find((g) => g.sections.includes(tab));
+  const isCatalog = catalogTabs.has(tab);
+  const canSave = isCatalog || settingsTabs.has(tab);
+  const currentDirty = isCatalog ? dirtyCatalog : dirtySettings;
+
   useEffect(() => {
-    const warn = (e) => {
-      if (dirty) {
-        e.preventDefault();
-        e.returnValue = "";
-      }
+    const warn = (event) => {
+      if (dirty || uploadBusy) { event.preventDefault(); event.returnValue = ""; }
     };
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
-  }, [dirty]);
+  }, [dirty, uploadBusy]);
   useEffect(() => {
     if (editUser || confirm) dialog.current?.showModal();
     else dialog.current?.close();
   }, [editUser, confirm]);
-  async function run(fn) {
-    setBusy(true);
-    setError("");
-    setNotice("");
-    try {
-      return await fn();
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setBusy(false);
-    }
+
+  async function run(work) {
+    setBusy(true); setError(""); setNotice("");
+    try { return await work(); }
+    catch (e) { setError(e.message); }
+    finally { setBusy(false); }
   }
   async function loadUsers(q = userSearch, p = page) {
-    const r = await request(`admin/users?q=${encodeURIComponent(q)}&page=${p}`);
-    setUsers(r.users);
-    setTotal(r.total);
+    const result = await request(`admin/users?q=${encodeURIComponent(q)}&page=${p}`);
+    setUsers(result.users); setTotal(result.total);
+  }
+  async function refreshAssets() {
+    const result = await request("admin/assets/library");
+    setAssets(result.assets);
+  }
+  function mergeAssets(added) {
+    setAssets((before) => [...new Map([...before, ...added].map((a) => [a.id, a])).values()]);
   }
   async function reload() {
-    const r = await request("admin/overview");
-    setUser(r.user);
-    setStats(r.stats);
-    setParticipation(r.participation || []);
-    setDraft(r.settings);
-    setCat(r.catalog);
-    setSv(r.settingsVersion);
-    setCv(r.catalogVersion);
-    setSite(r);
-    setAssets((await request("admin/assets")).assets);
+    const result = await request("admin/overview");
+    setUser(result.user); setStats(result.stats);
+    setParticipation(result.participation || []);
+    setDraft(result.settings); setCat(result.catalog);
+    setSv(result.settingsVersion); setCv(result.catalogVersion);
+    setSite(result);
+    await refreshAssets();
   }
   useEffect(() => {
-    request("me")
-      .then(async (r) => {
-        setUser(r.user);
-        setPreferences(r.user?.preferences || {});
-        if (r.user?.role === "admin") await reload();
-      })
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
+    request("me").then(async (result) => {
+      setUser(result.user);
+      setPreferences(result.user?.preferences || {});
+      if (result.user?.role === "admin") await reload();
+    }).catch((e) => setError(e.message)).finally(() => setLoading(false));
   }, []);
   useEffect(() => {
     if (user?.role !== "admin") return;
     if (tab === "users") run(() => loadUsers());
-    if (tab === "media")
-      run(async () => setAssets((await request("admin/assets")).assets));
-    if (tab === "audit")
-      run(async () => setEvents((await request("admin/audit")).events));
+    if (tab === "media") run(refreshAssets);
+    if (tab === "audit") run(async () => setEvents((await request("admin/audit")).events));
   }, [tab, page]);
-  const update = (k, v) => setDraft((s) => ({ ...s, [k]: v }));
+
+  // Map updates from individual uploads/imports compose without losing other slots.
+  const update = (key, value) => setDraft((before) => ({
+    ...before, [key]: typeof value === "function" ? value(before[key]) : value,
+  }));
+  function navigate(next) {
+    if (locked) return;
+    setTab(next); setError(""); setNotice("");
+  }
   async function saveSettings() {
     await run(async () => {
-      const r = await request("admin/settings", "PUT", {
-        value: draft,
-        version: sv,
-      });
-      setSv(r.version);
-      setSite((prev) => ({
-        ...prev,
-        settings: draft,
-        settingsVersion: r.version,
-      }));
+      const result = await request("admin/settings", "PUT", { value: draft, version: sv });
+      setSv(result.version);
+      setSite((before) => ({ ...before, settings: draft, settingsVersion: result.version }));
       setNotice("Настройки опубликованы на сайте");
+      try { await refreshAssets(); }
+      catch { setError("Настройки сохранены, но медиатека не обновилась. Откройте её повторно."); }
     });
   }
   async function saveCatalog() {
     await run(async () => {
-      const r = await request("admin/catalog", "PUT", {
-        value: cat,
-        version: cv,
-      });
-      setCv(r.version);
-      setSite((prev) => ({ ...prev, catalog: cat, catalogVersion: r.version }));
+      const result = await request("admin/catalog", "PUT", { value: cat, version: cv });
+      setCv(result.version);
+      setSite((before) => ({ ...before, catalog: cat, catalogVersion: result.version }));
       setNotice("Справочники обновлены");
     });
   }
   function ask(title, description, action, email) {
-    setConfirm({ title, description, action, email });
-    setConfirmEmail("");
+    setConfirm({ title, description, action, email }); setConfirmEmail("");
   }
-  async function uploadAsset(file, assignKey = null) {
-    if (file.size > 10 * 1024 * 1024)
-      throw new Error("Максимальный размер 10 МБ");
-    const response = await fetch(
-      "/api/admin/assets?name=" + encodeURIComponent(file.name),
-      {
-        method: "POST",
-        headers: { "Content-Type": file.type },
-        body: file,
-      },
-    );
-    const uploaded = await response.json();
-    if (!response.ok)
-      throw new Error(uploaded.error || "Не удалось загрузить изображение");
-    setAssets((await request("admin/assets")).assets);
-    if (assignKey) update(assignKey, uploaded.id);
-    setNotice(
-      assignKey
-        ? "Изображение загружено и выбрано. Сохраните настройки."
-        : "Изображение загружено.",
-    );
-    return uploaded;
+  async function uploadAsset(file) {
+    if (file.size > 10 * 1024 * 1024) throw new Error("Максимальный размер 10 МБ");
+    const response = await fetch("/api/admin/assets?name=" + encodeURIComponent(file.name), {
+      method: "POST", headers: { "Content-Type": file.type }, body: file,
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || "Не удалось загрузить изображение");
+    // Do not depend on a subsequent list request to make the new file selectable.
+    mergeAssets([{ ...result, usage: [], created_at: new Date().toISOString() }]);
+    setNotice("Изображение загружено.");
+    return result;
   }
-  function assetPicker(
-    key,
-    label,
-    { emptyLabel = "Плейсхолдер", help = "", previewClassName = "" } = {},
-  ) {
-    return (
-      <AssetPicker
-        key={key}
-        label={label}
-        help={help}
-        value={draft[key] || null}
-        assets={assets}
-        emptyLabel={emptyLabel}
-        busy={busy}
-        previewClassName={previewClassName}
-        onChange={(value) => update(key, value)}
-        onUpload={(selectedFile) => run(() => uploadAsset(selectedFile, key))}
-      />
-    );
+  async function uploadGraphic(file, slot) {
+    return run(async () => {
+      let asset;
+      if (slot.target === "semantic") {
+        if (file.size > 2 * 1024 * 1024) throw new Error("Иконка должна быть не больше 2 МБ");
+        const result = await uploadIconPack(file, { action: "single", slot: slot.key });
+        mergeAssets(result.assets);
+        asset = result.assets.find((a) => a.id === result.assignments[slot.key]);
+      } else asset = await uploadAsset(file);
+      if (!asset) throw new Error("Сервер не вернул загруженное изображение");
+      setNotice("Графика загружена и выбрана. Для публикации сохраните настройки.");
+      return asset;
+    });
   }
-  if (loading)
-    return (
-      <>
-        <GlobalHeader user={null} />
-        <main className="loading">
-          <LoaderCircle className="spin" />
-          Открываем управление…
-        </main>
-      </>
-    );
-  if (user?.role !== "admin")
-    return (
-      <>
-        <GlobalHeader user={user} />
-        <main className="empty">
-          <ShieldCheck size={40} />
-          <h1>Вход для администратора</h1>
-          <p>
-            {user
-              ? "У этого аккаунта нет прав администратора."
-              : "Войдите в аккаунт администратора на главной странице."}
-          </p>
-          <a className="button" href="/">
-            Открыть ColaBike
-          </a>
-          <p className="help">
-            Первого администратора назначает владелец сервера через команду из
-            README.
-          </p>
-          {error && <p role="alert">{error}</p>}
-        </main>
-      </>
-    );
-  const group = adminGroups.find((g) => g.sections.includes(tab));
-  return (
-    <div className="admin-shell">
-      <GlobalHeader user={user} />
-      <div
-        className="admin-group-tabs"
-        role="tablist"
-        aria-label="Группы админки"
-      >
-        {adminGroups.map((g, i) => (
-          <button
-            key={g.id}
-            id={"admin-group-" + g.id}
-            role="tab"
-            aria-selected={g.id === group.id}
-            aria-controls="admin-group-panel"
-            tabIndex={g.id === group.id ? 0 : -1}
-            onClick={() => {
-              setTab(g.sections[0]);
-              setError("");
-              setNotice("");
-            }}
-            onKeyDown={(e) => {
-              if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key))
-                return;
-              e.preventDefault();
-              const n =
-                e.key === "Home"
-                  ? 0
-                  : e.key === "End"
-                    ? adminGroups.length - 1
-                    : (i +
-                        (e.key === "ArrowRight" ? 1 : -1) +
-                        adminGroups.length) %
-                      adminGroups.length;
-              setTab(adminGroups[n].sections[0]);
-              document
-                .getElementById("admin-group-" + adminGroups[n].id)
-                ?.focus();
-            }}
-          >
-            <g.icon size={17} />
-            {g.name}
-          </button>
-        ))}
-      </div>
-      <div
-        className="admin-layout"
-        id="admin-group-panel"
-        role="tabpanel"
-        aria-labelledby={"admin-group-" + group.id}
-      >
-        <nav className="admin-nav" aria-label="Разделы админки">
-          {sections
-            .filter(([id]) => group.sections.includes(id))
-            .map(([id, label, Icon]) => (
-              <button
-                key={id}
-                className={tab === id ? "active" : ""}
-                onClick={() => {
-                  setTab(id);
-                  setError("");
-                  setNotice("");
-                }}
-              >
-                <Icon size={19} />
-                {label}
-                {(([
-                  "design",
-                  "copy",
-                  "overview",
-                  "blocks",
-                  "scoring",
-                  "map",
-                  "about",
-                ].includes(id) &&
-                  dirtySettings) ||
-                  (["catalog", "groups"].includes(id) && dirtyCatalog)) && (
-                  <span
-                    className="unsaved-dot"
-                    aria-label="Есть несохранённые изменения"
-                  />
-                )}
-              </button>
-            ))}
-        </nav>
-        <main className="admin-content">
-          <div className="admin-title">
-            <div>
-              <span className="eyebrow">COLABIKE / ADMIN</span>
-              <h1>{sections.find((s) => s[0] === tab)[1]}</h1>
-            </div>
-            {busy && (
-              <LoaderCircle
-                className="spin"
-                aria-label="Выполняется действие"
-              />
-            )}
-          </div>
-          {error && (
-            <div className="error" role="alert">
-              {error}
-            </div>
-          )}
-          {notice && (
-            <div className="admin-success" role="status">
-              <Check size={18} />
-              {notice}
-            </div>
-          )}
-          {tab === "scoring" && (
-            <ScoringSettings
-              value={draft.scoring}
-              catalog={catalog}
-              onChange={(v) => update("scoring", v)}
-            />
-          )}
-          {tab === "resolver" && <ResolverSettings />}
-          {tab === "gamification" && <Gamification />}
-          {tab === "rides" && <RideSettings />}
-          {tab === "map" && <MapSettings settings={draft} onChange={update} />}
-          {tab === "about" && (
-            <AboutSettings
-              settings={draft}
-              onChange={update}
-              assetPicker={assetPicker}
-            />
-          )}
-          {tab === "reports" && (
-            <Reports
-              onManageUser={(username) => {
-                setUserSearch(username);
-                setPage(1);
-                setTab("users");
-              }}
-            />
-          )}
-          {tab === "overview" && (
-            <>
-              <div className="admin-stats">
-                {[
-                  ["Пользователей", stats.users],
-                  ["Велосипедов", stats.bikes],
-                  ["Фотографий", stats.photos],
-                ].map(([l, n]) => (
-                  <div key={l}>
-                    <span>{l}</span>
-                    <strong>{n ?? 0}</strong>
-                  </div>
-                ))}
-              </div>
-              <h3>Участие за 30 дней</h3>
-              <p className="help">
-                Дневные счётчики без текста, целей действий, IP и контактов.
-                Возвращающиеся — участники с действием минимум в два разных дня.
-                Это псевдонимный, не анонимный учёт; удаление аккаунта удаляет
-                его события.
-              </p>
-              <table className="participation-table">
-                <thead>
-                  <tr>
-                    <th>Событие</th>
-                    <th>Действия</th>
-                    <th>Участники</th>
-                    <th>Вернулись</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {participation.map((r) => (
-                    <tr key={r.event}>
-                      <td>
-                        {
-                          {
-                            publish: "Публикация",
-                            follow: "Подписка",
-                            save: "Сохранение",
-                          }[r.event]
-                        }
-                      </td>
-                      <td>{r.actions}</td>
-                      <td>{r.participants}</td>
-                      <td>{r.returning_participants}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <section className="admin-panel">
-                <h2>Основные настройки</h2>
-                <Field label="Название сайта">
-                  <input
-                    maxLength={150}
-                    value={draft.siteName}
-                    onChange={(e) => update("siteName", e.target.value)}
-                  />
-                </Field>
-                <Field label="Заголовок витрины">
-                  <input
-                    maxLength={150}
-                    value={draft.showcaseTitle || "Витрина"}
-                    onChange={(e) => update("showcaseTitle", e.target.value)}
-                  />
-                </Field>
-                <Field label="Описание сайта">
-                  <textarea
-                    maxLength={300}
-                    rows={3}
-                    value={draft.siteDescription}
-                    onChange={(e) => update("siteDescription", e.target.value)}
-                  />
-                </Field>
-                <Toggle
-                  label="Разрешить регистрацию пользователей"
-                  checked={draft.registrationOpen}
-                  onChange={(v) => update("registrationOpen", v)}
-                />
-                <Toggle
-                  label="Показывать демонстрационный велосипед гостям"
-                  checked={draft.showDemo}
-                  onChange={(v) => update("showDemo", v)}
-                />
-              </section>
-              <p className="help">
-                Адрес сервера, доступ к БД и secure-cookie задаются в окружении
-                Docker. Секреты не передаются в браузер.
-              </p>
-            </>
-          )}
-          {tab === "design" && (
-            <>
-              <section className="admin-panel">
-                <h2>Тема и типографика</h2>
-                <div className="form-actions">
-                  <button type="button" className="button" onClick={() => setDraft((value) => applyPixelClub(value))}>Применить «Пиксельный велоклуб»</button>
-                </div>
-                <p className="help">Светлая палитра, PT Sans и Unbounded для крупных заголовков. Фон отключается прозрачностью; загруженные файлы и личные предпочтения сохраняются. Для публикации нажмите «Сохранить».</p>
-                <div className="admin-form-grid">
-                  <Select
-                    label="Тема сайта"
-                    value={draft.theme}
-                    onChange={(v) => update("theme", v)}
-                    options={[
-                      ["light", "Светлая"],
-                      ["dark", "Тёмная"],
-                      ["system", "Как на устройстве"],
-                    ]}
-                  />
-                  <Select label="Палитра" value={draft.designPreset || "classic"} onChange={(v) => update("designPreset", v)} options={[["classic", "Прежняя"], ["pixel-club", "Пиксельный велоклуб"]]} />
-                  <Select label="Шрифт крупных заголовков" value={draft.displayFont || "body"} onChange={(v) => update("displayFont", v)} options={Object.entries(displayFonts)} />
-                  <Select
-                    label="Шрифт"
-                    value={draft.font}
-                    onChange={(v) => update("font", v)}
-                    options={Object.entries(fontLabels)}
-                  />
-                  <Field label="Акцентный цвет">
-                    <input
-                      type="color"
-                      value={draft.accent}
-                      onChange={(e) => update("accent", e.target.value)}
-                    />
-                  </Field>
-                  <Field label={"Скругления: " + draft.radius + " px"}>
-                    <input
-                      type="range"
-                      min="0"
-                      max="28"
-                      value={draft.radius}
-                      onChange={(e) => update("radius", Number(e.target.value))}
-                    />
-                  </Field>
-                </div>
-                <div
-                  className="design-preview"
-                  style={{
-                    fontFamily: fontStacks[draft.font],
-                    borderRadius: draft.radius,
-                    background: draft.theme === "dark" ? "#202724" : draft.designPreset === "pixel-club" ? "#EEF1F4" : "#f3f5f0",
-                    color: draft.theme === "dark" ? "#f3f5f0" : draft.designPreset === "pixel-club" ? "#1E2830" : "#202724",
-                  }}
-                >
-                  <span>Предпросмотр оформления</span>
-                  <h2 style={{ fontFamily: draft.displayFont === "unbounded" ? '"Cola Unbounded", sans-serif' : fontStacks[draft.font], fontWeight: 600 }}>{draft.siteName}</h2>
-                  <p>Ваш велосипед. Каждая деталь на своём месте.</p>
-                  <span
-                    className="preview-button"
-                    style={{ background: draft.accent, color: accentText(draft.accent) }}
-                  >
-                    Добавить велосипед
-                  </span>
-                </div>
-              </section>
-              <section className="admin-panel">
-                <h2>Расположение элементов</h2>
-                <div
-                  className="layout-presets"
-                  role="radiogroup"
-                  aria-label="Компоновка велосипеда"
-                >
-                  {[
-                    [
-                      "dense",
-                      "Максимально компактно",
-                      "Маленькое фото, мелкий шрифт, две колонки деталей.",
-                    ],
-                    [
-                      "balanced",
-                      "Сбалансированно",
-                      "Умеренные отступы и компактная комплектация.",
-                    ],
-                    [
-                      "spacious",
-                      "Подробно",
-                      "Большое фото, крупнее текст, свободная одноколоночная комплектация.",
-                    ],
-                  ].map(([value, title, description]) => (
-                    <button
-                      type="button"
-                      role="radio"
-                      aria-checked={draft.bikeLayout === value}
-                      className={"layout-preset " + value}
-                      key={value}
-                      onClick={() => update("bikeLayout", value)}
-                    >
-                      <span className="layout-mini" aria-hidden="true">
-                        <i />
-                        <b />
-                        <b />
-                        <b />
-                      </span>
-                      <strong>{title}</strong>
-                      <small>{description}</small>
-                    </button>
-                  ))}
-                </div>
-                <p className="help">
-                  Компактная схема поднимает комплектацию на первый экран;
-                  длинные списки остаются доступны прокруткой. Порядок и
-                  видимость блоков задаются отдельно.
-                </p>
-                <button className="quiet" onClick={() => setTab("blocks")}>
-                  Настроить блоки карточки →
-                </button>
-                <div className="admin-form-grid">
-                  <Select
-                    label="Выравнивание заголовков"
-                    value={draft.textAlign}
-                    onChange={(v) => update("textAlign", v)}
-                    options={[
-                      ["left", "По левому краю"],
-                      ["center", "По центру"],
-                    ]}
-                  />
-                  <Select
-                    label="Карточек в ряд на компьютере"
-                    value={String(draft.desktopColumns)}
-                    onChange={(v) => update("desktopColumns", Number(v))}
-                    options={[
-                      ["2", "Две"],
-                      ["3", "Три"],
-                      ["4", "Четыре"],
-                      ["5", "Пять"],
-                    ]}
-                  />
-                  <Select
-                    label="Отображение фотографии"
-                    value={draft.photoMode}
-                    onChange={(v) => update("photoMode", v)}
-                    options={[
-                      ["natural", "Целиком, без внешних полей"],
-                      ["cover", "Заполнить блок с кадрированием"],
-                    ]}
-                  />
-                  <Select
-                    label="Пропорции при кадрировании"
-                    value={draft.photoRatio}
-                    onChange={(v) => update("photoRatio", v)}
-                    options={[
-                      ["4/3", "4:3"],
-                      ["3/2", "3:2"],
-                      ["16/9", "16:9"],
-                      ["1/1", "Квадрат"],
-                    ]}
-                  />
-                </div>
-                <p className="help">
-                  На телефоне — одна колонка, фото на всю ширину и паспорт под
-                  ним. Любую фотографию можно открыть целиком.
-                </p>
-              </section>
-              <section className="admin-panel graphics-panel">
-                <div className="panel-heading">
-                  <div>
-                    <h2>Графика сайта</h2>
-                    <p>
-                      Каждое изображение можно выбрать из медиатеки или
-                      загрузить прямо здесь. После загрузки оно сразу
-                      назначается выбранному слоту; для публикации нажмите
-                      «Сохранить».
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    className="button secondary"
-                    onClick={() => setTab("media")}
-                  >
-                    <Image size={17} />
-                    Медиатека
-                  </button>
-                </div>
+  async function deleteAssets(ids) {
+    if (!ids.length) { setNotice("Нет неиспользуемой графики для удаления."); return; }
+    let deleted = 0, skipped = 0, cleanupWarning = false;
+    try {
+      // Only explicit IDs from the confirmation snapshot, never an unbounded delete-all.
+      for (let offset = 0; offset < ids.length; offset += 200) {
+        const result = await request("admin/assets/library", "DELETE", { ids: ids.slice(offset, offset + 200) });
+        const removed = new Set(result.deletedIds);
+        deleted += removed.size; skipped += result.skippedIds.length;
+        cleanupWarning ||= result.cleanupWarning;
+        setAssets((before) => before.filter((asset) => !removed.has(asset.id)));
+      }
+      await refreshAssets();
+      setNotice(`Удалено изображений: ${deleted}. Пропущено: ${skipped}.`);
+      if (cleanupWarning) setError("Записи удалены, но часть файлов не удалось убрать с диска. Подробности в серверном журнале.");
+    } catch (e) {
+      try { await refreshAssets(); } catch { /* Keep the successfully removed IDs out of the local list. */ }
+      throw new Error(`Удалено изображений: ${deleted}. ${e.message}`);
+    }
+  }
 
-                <div className="graphics-groups">
-                  <details className="graphics-group">
-                    <summary>Вход и регистрация</summary>
-                    <div className="asset-picker-grid">
-                      {assetPicker("loginImageId", "Иллюстрация входа", {
-                        emptyLabel: "Без иллюстрации",
-                      })}
-                      {assetPicker(
-                        "registerImageId",
-                        "Иллюстрация регистрации",
-                        { emptyLabel: "Без иллюстрации" },
-                      )}
-                    </div>
-                  </details>
-                  <details className="graphics-group">
-                    <summary>Новые и популярные велосипеды</summary>
-                    <div className="asset-picker-grid">
-                      {assetPicker("navNewIconId", "Новые велосипеды")}
-                      {assetPicker("navJournalIconId", "Журнал")}
-                      {assetPicker("navPopularIconId", "Популярные велосипеды")}
-                    </div>
-                  </details>
-                  <IconSettings
-                    settings={draft}
-                    assets={assets}
-                    busy={busy}
-                    onChange={update}
-                    onUpload={(file) => run(() => uploadAsset(file))}
-                  />
-                  <details className="graphics-group">
-                    <summary className="graphics-group-heading">
-                      <h3>Брендинг</h3>
-                      <p>Основная айдентика и крупная графика страниц.</p>
-                    </summary>
-                    <div className="asset-picker-grid">
-                      {assetPicker("logoId", "Логотип в шапке", {
-                        emptyLabel: "Текстовый логотип",
-                        previewClassName: "wide",
-                      })}
-                      {assetPicker("faviconId", "Иконка вкладки", {
-                        emptyLabel: "По умолчанию",
-                        previewClassName: "icon",
-                      })}
-                      {assetPicker("garageImageId", "Изображение над гаражом", {
-                        emptyLabel: "Без изображения",
-                        previewClassName: "wide",
-                      })}
-                    </div>
-                    <Select label="Подготовка логотипа" value={draft.headerArtworkFit || "padded-strip"} onChange={(v) => update("headerArtworkFit", v)} options={[["padded-strip", "Прежний баннер с полями сверху и снизу"], ["contain", "Обрезанный логотип целиком"]]} />
-                    <PanoramaPreview settings={draft} />
-                    <p className="help">Предпросмотр использует настоящие компоненты шапки и панорамы. Логотип без полей: 800×160 px; прежний баннер: центральная полоса с логотипом в левой трети. Панорама: 2400×270 px, лица и важные детали в центральной зоне 2400×200 px. На телефоне изображение показывается целиком.</p>
-                  </details>
+  if (loading) return <><GlobalHeader user={null} /><main className="loading"><LoaderCircle className="spin" />Открываем управление…</main></>;
+  if (user?.role !== "admin") return <><GlobalHeader user={user} /><main className="empty">
+    <ShieldCheck size={40} /><h1>Вход для администратора</h1>
+    <p>{user ? "У этого аккаунта нет прав администратора." : "Войдите в аккаунт администратора на главной странице."}</p>
+    <a className="button" href="/">Открыть ColaBike</a>
+    <p className="help">Первого администратора назначает владелец сервера через команду из README.</p>
+    {error && <p role="alert">{error}</p>}
+  </main></>;
 
-                  <details className="graphics-group">
-                    <summary className="graphics-group-heading">
-                      <h3>Общий фон сайта</h3>
-                      <p>
-                        Фоновое изображение применяется ко всем страницам сайта.
-                        Для паттернов используйте замощение, для крупных
-                        иллюстраций — масштабирование.
-                      </p>
-                    </summary>
-                    <div className="asset-picker-grid">
-                      {assetPicker("backgroundImageId", "Фоновое изображение", {
-                        emptyLabel: "Без фонового изображения",
-                        help: "JPEG, PNG или WebP. Прозрачность исходного PNG/WebP сохраняется.",
-                        previewClassName: "wide",
-                      })}
-                    </div>
-                    <div className="admin-form-grid background-settings">
-                      <Select
-                        label="Размещение фонового изображения"
-                        value={draft.backgroundMode || "cover"}
-                        onChange={(v) => update("backgroundMode", v)}
-                        options={[
-                          ["cover", "Масштабировать на экран"],
-                          ["tile", "Замостить без масштабирования"],
-                        ]}
-                      />
-                      <Field
-                        label={
-                          "Прозрачность фона: " +
-                          (100 - Number(draft.backgroundOpacity ?? 20)) +
-                          "%"
-                        }
-                        help="0% — изображение без прозрачности, 100% — полностью скрыто."
-                      >
-                        <input
-                          type="range"
-                          min="0"
-                          max="100"
-                          step="1"
-                          value={100 - Number(draft.backgroundOpacity ?? 20)}
-                          disabled={!draft.backgroundImageId}
-                          onChange={(e) =>
-                            update(
-                              "backgroundOpacity",
-                              100 - Number(e.target.value),
-                            )
-                          }
-                        />
-                      </Field>
-                    </div>
-                  </details>
-
-                  <details className="graphics-group">
-                    <summary className="graphics-group-heading">
-                      <h3>Верхнее меню</h3>
-                      <label className="field">
-                        <span>Размер значков</span>
-                        <select
-                          value={draft.navIconSize || "medium"}
-                          onChange={(e) =>
-                            setDraft((d) => ({
-                              ...d,
-                              navIconSize: e.target.value,
-                            }))
-                          }
-                        >
-                          <option value="small">Маленькие</option>
-                          <option value="medium">Средние</option>
-                          <option value="large">Большие</option>
-                        </select>
-                      </label>
-                      <NavigationSettings settings={draft} onChange={update} />
-                      <p>
-                        Прозрачные PNG/WebP подходят лучше всего. Без файла
-                        остаётся встроенный Lucide-плейсхолдер.
-                      </p>
-                    </summary>
-                    <div className="asset-picker-grid icon-slots">
-                      {assetPicker("navHomeIconId", "Главная", {
-                        previewClassName: "icon",
-                      })}
-                      {assetPicker("navRidesIconId", "Покатушки", {
-                        previewClassName: "icon",
-                      })}
-                      {assetPicker("navAboutIconId", "О проекте", {
-                        previewClassName: "icon",
-                      })}
-                      {assetPicker("navProfileIconId", "Профиль", {
-                        previewClassName: "icon",
-                      })}
-                      {assetPicker("navMessagesIconId", "Уведомления", {
-                        previewClassName: "icon",
-                      })}
-                      {assetPicker("navSubscriptionsIconId", "Подписки", {
-                        previewClassName: "icon",
-                      })}
-                      {assetPicker("navRecordsIconId", "Рекорды / ачивки", {
-                        previewClassName: "icon",
-                      })}
-                      {assetPicker("navAdminIconId", "Админка", {
-                        previewClassName: "icon",
-                      })}
-                      {assetPicker("navLogoutIconId", "Выход", {
-                        previewClassName: "icon",
-                      })}
-                    </div>
-                  </details>
-
-                  <details className="graphics-group">
-                    <summary className="graphics-group-heading">
-                      <h3>Действия витрины</h3>
-                      <p>
-                        Кнопки в правой части заголовка витрины и лайк поверх
-                        фотографии.
-                      </p>
-                    </summary>
-                    <div className="asset-picker-grid icon-slots">
-                      {assetPicker("wizardLinkIconId", "Мастер — по ссылке", {
-                        previewClassName: "icon",
-                      })}
-                      {assetPicker("wizardManualIconId", "Мастер — вручную", {
-                        previewClassName: "icon",
-                      })}
-                      {["wizardLinkLabel", "wizardManualLabel"].map((k) => (
-                        <label className="field" key={k}>
-                          <span>
-                            {k === "wizardLinkLabel"
-                              ? "Кнопка: по ссылке"
-                              : "Кнопка: вручную"}
-                          </span>
-                          <input
-                            value={draft[k] || ""}
-                            maxLength={150}
-                            onChange={(e) =>
-                              setDraft((d) => ({ ...d, [k]: e.target.value }))
-                            }
-                          />
-                        </label>
-                      ))}
-                      {assetPicker("addBikeIconId", "Добавить велосипед", {
-                        previewClassName: "icon",
-                      })}
-                      {assetPicker("searchIconId", "Поиск", {
-                        previewClassName: "icon",
-                      })}
-                      {assetPicker("likeIconId", "Лайк", {
-                        help: "Показывается прямо на фото без белой подложки.",
-                        previewClassName: "icon transparent",
-                      })}
-                    </div>
-                  </details>
-
-                  <details className="graphics-group">
-                    <summary className="graphics-group-heading">
-                      <h3>Тип велосипеда</h3>
-                      <p>
-                        Иконка типа накладывается прямо на фотографию без
-                        фоновой плашки. Можно использовать прозрачные
-                        изображения.
-                      </p>
-                    </summary>
-                    <div className="asset-picker-grid icon-slots">
-                      {assetPicker("mtbTypeIconId", "MTB / ATB", {
-                        previewClassName: "icon transparent",
-                      })}
-                      {assetPicker("roadTypeIconId", "Road", {
-                        previewClassName: "icon transparent",
-                      })}
-                      {assetPicker("gravelTypeIconId", "Gravel", {
-                        previewClassName: "icon transparent",
-                      })}
-                    </div>
-                  </details>
-
-                  <details className="graphics-group">
-                    <summary className="graphics-group-heading">
-                      <h3>Стоковые изображения</h3>
-                      <p>
-                        Используются как подстановка, когда у велосипеда ещё нет
-                        собственной фотографии.
-                      </p>
-                    </summary>
-                    <div className="asset-picker-grid">
-                      {assetPicker("mtbImageId", "Сток — MTB", {
-                        emptyLabel: "Без изображения",
-                        previewClassName: "wide",
-                      })}
-                      {assetPicker("roadImageId", "Сток — шоссе", {
-                        emptyLabel: "Без изображения",
-                        previewClassName: "wide",
-                      })}
-                      {assetPicker("gravelImageId", "Сток — гравел", {
-                        emptyLabel: "Без изображения",
-                        previewClassName: "wide",
-                      })}
-                      {assetPicker(
-                        "demoImageId",
-                        "Фото демонстрационного байка",
-                        {
-                          emptyLabel: "Внешнее демо-фото",
-                          previewClassName: "wide",
-                        },
-                      )}
-                    </div>
-                  </details>
-                </div>
-              </section>
-            </>
-          )}
-          {tab === "blocks" && (
-            <BlockSettings settings={draft} onChange={update} />
-          )}
-          {tab === "groups" && (
-            <GroupSettings catalog={cat} onChange={setCat} />
-          )}
-          {tab === "copy" && (
-            <section className="admin-panel">
-              <p>
-                Заголовки, подписи, кнопки и подсказки сайта. Пустое
-                переопределение можно сбросить отдельно. Пользовательские
-                названия велосипедов и деталей здесь не меняются.
-              </p>
-              <label className="search admin-search">
-                <Search size={18} />
-                <input
-                  aria-label="Найти текст сайта"
-                  placeholder="Найти текст"
-                  value={textSearch}
-                  onChange={(e) => setTextSearch(e.target.value)}
-                />
-              </label>
-              {copyBlocks.map((group) => {
-                const keys = group.keys.filter((k) =>
-                  (k + " " + (draft.copy[k] || ""))
-                    .toLowerCase()
-                    .includes(textSearch.toLowerCase()),
-                );
-                return keys.length ? (
-                  <details
-                    className="copy-block"
-                    key={group.id}
-                    open={!!textSearch}
-                  >
-                    <summary>
-                      {group.name} <small>{keys.length}</small>
-                    </summary>
-                    {keys.map((key) => (
-                      <div className="copy-row" key={key}>
-                        <Field label={key}>
-                          <textarea
-                            rows={2}
-                            maxLength={2000}
-                            value={draft.copy[key] ?? key}
-                            onChange={(e) =>
-                              update("copy", {
-                                ...draft.copy,
-                                [key]: e.target.value,
-                              })
-                            }
-                          />
-                        </Field>
-                        <button
-                          className="quiet"
-                          disabled={!(key in draft.copy)}
-                          onClick={() => {
-                            const next = { ...draft.copy };
-                            delete next[key];
-                            update("copy", next);
-                          }}
-                        >
-                          Сбросить
-                        </button>
-                      </div>
-                    ))}
-                  </details>
-                ) : null;
-              })}
-            </section>
-          )}
-          {tab === "catalog" && <CatalogEditor value={cat} onChange={setCat} />}
-          {tab === "media" && (
-            <>
-              <section className="admin-panel">
-                <div className="panel-heading">
-                  <div>
-                    <h2>Медиатека сайта</h2>
-                    <p>
-                      Логотипы, иконка вкладки и иллюстрации. JPEG, PNG, WebP до
-                      10 МБ. Эти изображения публичны.
-                    </p>
-                  </div>
-                  <button
-                    className="button"
-                    disabled={busy}
-                    onClick={() => file.current.click()}
-                  >
-                    <Upload size={18} />
-                    Загрузить
-                  </button>
-                </div>
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  hidden
-                  ref={file}
-                  onChange={(e) => {
-                    const selectedFile = e.target.files?.[0];
-                    e.target.value = "";
-                    if (!selectedFile) return;
-                    run(() => uploadAsset(selectedFile));
-                  }}
-                />
-                {[
-                  ["Значки меню и кнопок", (k) => /IconId$/.test(k)],
-                  [
-                    "Логотипы и баннеры",
-                    (k) => ["logoId", "faviconId", "garageImageId"].includes(k),
-                  ],
-                  ["Фон", (k) => k === "backgroundImageId"],
-                  [
-                    "Велосипеды и иллюстрации",
-                    (k) =>
-                      /ImageId$/.test(k) &&
-                      !["backgroundImageId", "garageImageId"].includes(k),
-                  ],
-                  ["Не назначены", null],
-                ].map(([title, match]) => (
-                  <section key={title}>
-                    <h3>{title}</h3>
-                    <div className="asset-grid">
-                      {assets
-                        .filter((a) =>
-                          match
-                            ? Object.entries(draft).some(
-                                ([k, v]) => match(k) && v === a.id,
-                              )
-                            : !Object.values(draft).includes(a.id),
-                        )
-                        .map((a) => (
-                          <article key={a.id}>
-                            <img src={"/api/assets/" + a.id} alt={a.name} />
-                            <strong>{a.name}</strong>
-                            <button
-                              className="quiet danger"
-                              disabled={busy}
-                              onClick={() =>
-                                ask(
-                                  "Удалить изображение?",
-                                  "Действие нельзя отменить. Изображения, используемые сайтом, удалить нельзя.",
-                                  async () => {
-                                    await request(
-                                      "admin/assets/" + a.id,
-                                      "DELETE",
-                                    );
-                                    setAssets(
-                                      (await request("admin/assets")).assets,
-                                    );
-                                    setNotice("Изображение удалено");
-                                  },
-                                )
-                              }
-                            >
-                              <Trash2 size={16} />
-                              Удалить
-                            </button>
-                          </article>
-                        ))}
-                    </div>
-                  </section>
-                ))}
-                {!assets.length && (
-                  <p className="empty-parts">Загрузите первое изображение.</p>
-                )}
-              </section>
-            </>
-          )}
-          {tab === "users" && (
-            <section className="admin-panel">
-              <form
-                className="list-add"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  setPage(1);
-                  run(() => loadUsers(userSearch, 1));
-                }}
-              >
-                <input
-                  aria-label="Поиск пользователей"
-                  placeholder="Имя или email"
-                  value={userSearch}
-                  onChange={(e) => setUserSearch(e.target.value)}
-                />
-                <button className="button secondary" disabled={busy}>
-                  <Search size={18} />
-                  Найти
-                </button>
-              </form>
-              <p className="help">Найдено: {total}</p>
-              <div className="users-list">
-                {users.map((u) => (
-                  <article key={u.id}>
-                    <div>
-                      <strong>{u.name}</strong>
-                      <span>{u.email}</span>
-                      <small>
-                        {u.role === "admin" ? "Администратор" : "Пользователь"}{" "}
-                        · {u.blocked ? "Заблокирован" : "Активен"} ·
-                        Велосипедов: {u.bikes}
-                      </small>
-                    </div>
-                    <div className="user-actions">
-                      <button
-                        className="button secondary"
-                        onClick={() => setEditUser(u)}
-                      >
-                        Изменить
-                      </button>
-                      <button
-                        className="quiet"
-                        disabled={busy}
-                        onClick={() =>
-                          ask(
-                            "Завершить все сессии?",
-                            "Пользователю потребуется войти заново.",
-                            async () => {
-                              await request(
-                                "admin/users/" + u.id + "/sessions",
-                                "DELETE",
-                              );
-                              setNotice("Сессии завершены");
-                              if (u.id === user.id) window.location.assign("/");
-                            },
-                          )
-                        }
-                      >
-                        Сессии
-                      </button>
-                      <button
-                        className="icon danger"
-                        aria-label={"Удалить пользователя " + u.email}
-                        disabled={u.id === user.id || u.role === "admin"}
-                        onClick={() =>
-                          ask(
-                            "Удалить пользователя?",
-                            "Будут удалены аккаунт, все его велосипеды и фотографии. Для подтверждения введите email.",
-                            async (email) => {
-                              await request("admin/users/" + u.id, "DELETE", {
-                                confirmEmail: email,
-                              });
-                              await loadUsers();
-                              setNotice("Пользователь удалён");
-                            },
-                            u.email,
-                          )
-                        }
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    </div>
-                  </article>
-                ))}
-              </div>
-              <div className="pagination">
-                <button
-                  className="button secondary"
-                  disabled={page === 1 || busy}
-                  onClick={() => setPage((p) => p - 1)}
-                >
-                  Назад
-                </button>
-                <span>
-                  {page} / {Math.max(1, Math.ceil(total / 20))}
-                </span>
-                <button
-                  className="button secondary"
-                  disabled={page * 20 >= total || busy}
-                  onClick={() => setPage((p) => p + 1)}
-                >
-                  Далее
-                </button>
-              </div>
-            </section>
-          )}
-          {tab === "audit" && (
-            <section className="admin-panel">
-              <p>Последние 100 действий администраторов.</p>
-              <div className="audit-list">
-                {events.map((e) => (
-                  <article key={e.id}>
-                    <strong>{e.action}</strong>
-                    <span>
-                      {e.actor || "Удалённый пользователь"} ·{" "}
-                      {new Date(e.created_at).toLocaleString("ru-RU")}
-                    </span>
-                    <code>{e.target}</code>
-                  </article>
-                ))}
-              </div>
-              {!events.length && <p>Действий пока нет.</p>}
-            </section>
-          )}
-          {[
-            "overview",
-            "design",
-            "copy",
-            "catalog",
-            "scoring",
-            "map",
-            "about",
-          ].includes(tab) && (
-            <div className="admin-save">
-              <span>
-                {(tab === "catalog" ? dirtyCatalog : dirtySettings)
-                  ? "Есть несохранённые изменения"
-                  : "Изменения сохранены"}
-              </span>
-              <div>
-                <button
-                  className="quiet"
-                  disabled={
-                    busy || !(tab === "catalog" ? dirtyCatalog : dirtySettings)
-                  }
-                  onClick={() => {
-                    if (tab === "catalog") setCat(catalog);
-                    else setDraft(settings);
-                    setError("");
-                  }}
-                >
-                  Отменить изменения
-                </button>
-                <button
-                  className="button"
-                  disabled={
-                    busy || !(tab === "catalog" ? dirtyCatalog : dirtySettings)
-                  }
-                  onClick={tab === "catalog" ? saveCatalog : saveSettings}
-                >
-                  <Save size={17} />
-                  {busy ? "Сохраняем…" : "Сохранить"}
-                </button>
-              </div>
-            </div>
-          )}
-        </main>
-      </div>
-      <dialog
-        ref={dialog}
-        onCancel={(e) => {
-          e.preventDefault();
-          if (!busy) {
-            setEditUser(null);
-            setConfirm(null);
-          }
-        }}
-        aria-labelledby="admin-dialog-title"
-      >
-        <div className="modal-head">
-          <h2 id="admin-dialog-title">
-            {editUser ? "Пользователь" : confirm?.title}
-          </h2>
-          <button
-            className="icon"
-            disabled={busy}
-            aria-label="Закрыть"
-            onClick={() => {
-              setEditUser(null);
-              setConfirm(null);
-            }}
-          >
-            <X size={20} />
-          </button>
-        </div>
-        {error && (
-          <div className="error" role="alert">
-            {error}
-          </div>
-        )}
-        {editUser && (
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              run(async () => {
-                await request("admin/users/" + editUser.id, "PATCH", editUser);
-                await loadUsers();
-                setEditUser(null);
-                setNotice("Пользователь обновлён, его сессии отозваны");
-              });
-            }}
-          >
-            <Field label="Имя">
-              <input
-                required
-                maxLength={60}
-                value={editUser.name}
-                onChange={(e) =>
-                  setEditUser({ ...editUser, name: e.target.value })
-                }
-              />
-            </Field>
-            <Field label="Email">
-              <input
-                type="email"
-                required
-                maxLength={254}
-                value={editUser.email}
-                onChange={(e) =>
-                  setEditUser({ ...editUser, email: e.target.value })
-                }
-              />
-            </Field>
-            <Select
-              label="Роль"
-              value={editUser.role}
-              onChange={(v) => setEditUser({ ...editUser, role: v })}
-              options={[
-                ["user", "Пользователь"],
-                ["admin", "Администратор"],
-              ]}
-            />
-            <Toggle
-              label="Заблокировать аккаунт"
-              checked={editUser.blocked}
-              onChange={(v) => setEditUser({ ...editUser, blocked: v })}
-            />
-            <p className="help">
-              Администратор управляет всем сайтом и пользователями. Изменение
-              профиля завершает существующие сессии.
-            </p>
-            <button className="button full" disabled={busy}>
-              Сохранить пользователя
-            </button>
-          </form>
-        )}
-        {confirm && (
-          <>
-            <p>{confirm.description}</p>
-            {confirm.email && (
-              <Field label="Email для подтверждения">
-                <input
-                  value={confirmEmail}
-                  onChange={(e) => setConfirmEmail(e.target.value)}
-                  placeholder={confirm.email}
-                />
-              </Field>
-            )}
-            <div className="form-actions">
-              <button
-                className="button secondary"
-                disabled={busy}
-                onClick={() => setConfirm(null)}
-              >
-                Отмена
-              </button>
-              <button
-                className="button"
-                disabled={
-                  busy || (confirm.email && confirmEmail !== confirm.email)
-                }
-                onClick={() =>
-                  run(async () => {
-                    await confirm.action(confirmEmail);
-                    setConfirm(null);
-                  })
-                }
-              >
-                Подтвердить
-              </button>
-            </div>
-          </>
-        )}
-      </dialog>
+  return <div className="admin-shell">
+    <GlobalHeader user={user} />
+    <div className="admin-group-tabs" role="tablist" aria-label="Группы админки">
+      {adminGroups.map((g, index) => <button key={g.id} type="button" id={"admin-group-" + g.id}
+        role="tab" aria-selected={g.id === group.id} aria-controls="admin-group-panel"
+        tabIndex={g.id === group.id ? 0 : -1} disabled={locked}
+        onClick={() => navigate(g.sections[0])}
+        onKeyDown={(event) => {
+          if (locked || !["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+          event.preventDefault();
+          const next = event.key === "Home" ? 0 : event.key === "End" ? adminGroups.length - 1
+            : (index + (event.key === "ArrowRight" ? 1 : -1) + adminGroups.length) % adminGroups.length;
+          navigate(adminGroups[next].sections[0]);
+          document.getElementById("admin-group-" + adminGroups[next].id)?.focus();
+        }}><g.icon size={17} />{g.name}</button>)}
     </div>
-  );
-}
-function CatalogEditor({ value: c, onChange }) {
-  const [kind, setKind] = useState("bikes"),
-    [type, setType] = useState("gravel"),
-    [brand, setBrand] = useState(""),
-    [newBrand, setNewBrand] = useState(""),
-    [brandName, setBrandName] = useState(""),
-    [section, setSection] = useState("build"),
-    [category, setCategory] = useState("");
-  const brands = Object.keys(c.models[type]);
-  const selectedBrand = brands.includes(brand) ? brand : brands[0] || "";
-  const allCategories = Array.from(
-    new Set([
-      ...c.partCategories.build,
-      ...c.partCategories.accessories,
-      ...Object.keys(c.parts),
-    ]),
-  );
-  const selectedCategory = allCategories.includes(category)
-    ? category
-    : allCategories[0] || "";
-  function models(next) {
-    onChange({ ...c, models: { ...c.models, [type]: next } });
-  }
-  return (
-    <section className="admin-panel">
-      <div className="catalog-tabs">
-        {[
-          ["bikes", "Марки и модели"],
-          ["sizes", "Ростовки"],
-          ["manufacturers", "Производители"],
-          ["categories", "Категории навески"],
-          ["parts", "Модели компонентов"],
-          ["types", "Типы велосипедов"],
-          ["experience", "Поиск и опыт"],
-        ].map(([k, l]) => (
-          <button
-            key={k}
-            className={kind === k ? "active" : ""}
-            onClick={() => setKind(k)}
-          >
-            {l}
-          </button>
-        ))}
-      </div>
-      <p className="help">
-        Изменения применяются к подсказкам для новых записей. Сохранённые
-        велосипеды и детали не меняются.
-      </p>
-      {kind === "experience" && (
-        <ExperienceCatalog value={c} onChange={onChange} />
-      )}
-      {kind === "bikes" && (
-        <>
-          <Select
-            label="Тип велосипеда"
-            value={type}
-            onChange={(v) => {
-              setType(v);
-              setBrand("");
-              setBrandName("");
-            }}
-            options={Object.entries(c.categories)}
-          />
-          <div className="list-add">
-            <input
-              aria-label="Новая марка"
-              value={newBrand}
-              placeholder="Новая марка велосипеда"
-              onChange={(e) => setNewBrand(e.target.value)}
-            />
-            <button
-              className="button secondary"
-              disabled={!newBrand.trim() || brands.includes(newBrand.trim())}
-              onClick={() => {
-                models({ ...c.models[type], [newBrand.trim()]: [] });
-                setBrand(newBrand.trim());
-                setNewBrand("");
-              }}
-            >
-              <Plus size={17} />
-              Добавить
-            </button>
-          </div>
-          {brands.length > 0 && (
-            <>
-              <Select
-                label="Марка"
-                value={selectedBrand}
-                onChange={(v) => {
-                  setBrand(v);
-                  setBrandName("");
-                }}
-                options={brands.map((b) => [b, b])}
-              />
-              <div className="list-add">
-                <input
-                  aria-label="Новое название марки"
-                  value={brandName}
-                  placeholder={"Переименовать " + selectedBrand}
-                  onChange={(e) => setBrandName(e.target.value)}
-                />
-                <button
-                  className="button secondary"
-                  disabled={
-                    !brandName.trim() || brands.includes(brandName.trim())
-                  }
-                  onClick={() => {
-                    models(
-                      Object.fromEntries(
-                        Object.entries(c.models[type]).map(([k, v]) => [
-                          k === selectedBrand ? brandName.trim() : k,
-                          v,
-                        ]),
-                      ),
-                    );
-                    setBrand(brandName.trim());
-                    setBrandName("");
-                  }}
-                >
-                  Переименовать
-                </button>
-              </div>
-              <h3>Модели {selectedBrand}</h3>
-              <ListEditor
-                label="Модель велосипеда"
-                values={c.models[type][selectedBrand] || []}
-                onChange={(a) =>
-                  models({ ...c.models[type], [selectedBrand]: a })
-                }
-              />
-              <button
-                className="quiet danger"
-                onClick={() => {
-                  const next = { ...c.models[type] };
-                  delete next[selectedBrand];
-                  models(next);
-                  setBrand("");
-                }}
-              >
-                Убрать марку из справочника
-              </button>
-            </>
-          )}
-        </>
-      )}
-      {kind === "sizes" && (
-        <ListEditor
-          label="Ростовка"
-          values={c.sizes || ["XS", "S", "M", "L", "XL"]}
-          onChange={(a) => onChange({ ...c, sizes: a })}
-        />
-      )}
-      {kind === "manufacturers" && (
-        <ListEditor
-          label="Производитель"
-          values={c.manufacturers}
-          onChange={(a) => onChange({ ...c, manufacturers: a })}
-        />
-      )}
-      {kind === "categories" && (
-        <>
-          <Select
-            label="Раздел"
-            value={section}
-            onChange={setSection}
-            options={[
-              ["build", "Комплектация"],
-              ["accessories", "Аксессуары"],
-            ]}
-          />
-          <ListEditor
-            label="Категория"
-            values={c.partCategories[section]}
-            onChange={(a) =>
-              onChange({
-                ...c,
-                partCategories: { ...c.partCategories, [section]: a },
-              })
-            }
-          />
-          <p className="help">
-            После переименования категории её модели останутся под прежним
-            названием. Их можно перенести в разделе «Модели компонентов».
-          </p>
-        </>
-      )}
-      {kind === "parts" && (
-        <>
-          <Select
-            label="Категория компонента"
-            value={selectedCategory}
-            onChange={setCategory}
-            options={allCategories.map((x) => [x, x])}
-          />
-          <div className="icon-picker">
-            <PartIcon category={selectedCategory} icons={c.icons} size={42} />
-            <Select
-              label="Иконка категории"
-              value={
-                c.icons[selectedCategory] ||
-                categoryIcons[selectedCategory] ||
-                "other"
-              }
-              onChange={(v) =>
-                onChange({ ...c, icons: { ...c.icons, [selectedCategory]: v } })
-              }
-              options={iconNames.map((k) => [
-                k,
-                Object.entries(categoryIcons).find(([, v]) => v === k)?.[0] ||
-                  k,
-              ])}
-            />
-          </div>
-          <ListEditor
-            label="Модель компонента"
-            values={c.parts[selectedCategory] || []}
-            onChange={(a) =>
-              onChange({ ...c, parts: { ...c.parts, [selectedCategory]: a } })
-            }
-          />
-          <Select
-            label="Скопировать модели в другую категорию"
-            value=""
-            onChange={(target) => {
-              if (target)
-                onChange({
-                  ...c,
-                  parts: {
-                    ...c.parts,
-                    [target]: Array.from(
-                      new Set([
-                        ...(c.parts[target] || []),
-                        ...(c.parts[selectedCategory] || []),
-                      ]),
-                    ),
-                  },
-                });
-            }}
-            options={[
-              ["", "Выберите категорию"],
-              ...allCategories
-                .filter((k) => k !== selectedCategory)
-                .map((k) => [k, k]),
-            ]}
-          />
-        </>
-      )}
-      {kind === "types" &&
-        Object.entries(c.categories).map(([key, label]) => (
-          <Field key={key} label={"Название типа: " + key}>
-            <input
-              value={label}
-              onChange={(e) =>
-                onChange({
-                  ...c,
-                  categories: { ...c.categories, [key]: e.target.value },
-                })
-              }
-            />
-          </Field>
-        ))}
-    </section>
-  );
+    <div className={"admin-layout " + (group.id === "design" ? styles.designLayout : "")}
+      id="admin-group-panel" role="tabpanel" aria-labelledby={"admin-group-" + group.id}>
+      <nav className="admin-nav" aria-label="Разделы админки">
+        {group.sections.map((key) => {
+          const [id, label, Icon] = sections.find((s) => s[0] === key);
+          return <button key={id} type="button" className={tab === id ? "active" : ""}
+            aria-current={tab === id ? "page" : undefined} disabled={locked} onClick={() => navigate(id)}>
+            <Icon size={18} />{label}
+            {((settingsTabs.has(id) && dirtySettings) || (catalogTabs.has(id) && dirtyCatalog)) &&
+              <span className="unsaved-dot" aria-label="Есть несохранённые изменения" />}
+          </button>;
+        })}
+      </nav>
+      <main className="admin-content">
+        <div className="admin-title"><div><span className="eyebrow">COLABIKE / ADMIN</span>
+          <h1>{sections.find((s) => s[0] === tab)[1]}</h1></div>
+          {locked && <LoaderCircle className="spin" aria-label="Выполняется действие" />}
+        </div>
+        {error && <div className="error" role="alert">{error}</div>}
+        {notice && <div className="admin-success" role="status"><Check size={18} />{notice}</div>}
+        {tab === "scoring" && <ScoringSettings value={draft.scoring} catalog={catalog} onChange={(v) => update("scoring", v)} />}
+        {tab === "resolver" && <ResolverSettings />}
+        {tab === "gamification" && <Gamification />}
+        {tab === "rides" && <RideSettings />}
+        {tab === "map" && <MapSettings settings={draft} onChange={update} />}
+        {tab === "about" && <AboutSettings settings={draft} onChange={update} />}
+        {tab === "reports" && <Reports onManageUser={(username) => { setUserSearch(username); setPage(1); setTab("users"); }} />}
+        {tab === "overview" && <>
+          <div className="admin-stats">{[["Пользователей", stats.users], ["Велосипедов", stats.bikes], ["Фотографий", stats.photos]].map(([label, count]) =>
+            <div key={label}><span>{label}</span><strong>{count ?? 0}</strong></div>)}</div>
+          <h3>Участие за 30 дней</h3>
+          <p className="help">Дневные счётчики без текста, целей действий, IP и контактов. Возвращающиеся — участники с действием минимум в два разных дня. Это псевдонимный, не анонимный учёт; удаление аккаунта удаляет его события.</p>
+          <table className="participation-table"><thead><tr><th>Событие</th><th>Действия</th><th>Участники</th><th>Вернулись</th></tr></thead>
+            <tbody>{participation.map((r) => <tr key={r.event}><td>{{ publish: "Публикация", follow: "Подписка", save: "Сохранение" }[r.event]}</td>
+              <td>{r.actions}</td><td>{r.participants}</td><td>{r.returning_participants}</td></tr>)}</tbody></table>
+          <section className="admin-panel"><h2>Основные настройки</h2>
+            <Field label="Название сайта"><input maxLength={150} value={draft.siteName} onChange={(e) => update("siteName", e.target.value)} /></Field>
+            <Field label="Заголовок витрины"><input maxLength={150} value={draft.showcaseTitle || "Витрина"} onChange={(e) => update("showcaseTitle", e.target.value)} /></Field>
+            <Field label="Описание сайта"><textarea maxLength={300} rows={3} value={draft.siteDescription} onChange={(e) => update("siteDescription", e.target.value)} /></Field>
+            <Toggle label="Разрешить регистрацию пользователей" checked={draft.registrationOpen} onChange={(v) => update("registrationOpen", v)} />
+            <Toggle label="Показывать демонстрационный велосипед гостям" checked={draft.showDemo} onChange={(v) => update("showDemo", v)} />
+          </section><p className="help">Адрес сервера, доступ к БД и secure-cookie задаются в окружении Docker. Секреты не передаются в браузер.</p>
+        </>}
+        {tab === "design" && <ThemeSettings settings={draft} onChange={update} onPreset={setDraft} />}
+        {tab === "layout" && <LayoutSettings settings={draft} onChange={update} />}
+        {tab === "navigation" && <NavigationSettings settings={draft} onChange={update} />}
+        {tab === "graphics" && <IconSettings settings={draft} assets={assets} busy={locked} onChange={update} onUpload={uploadGraphic} />}
+        {/* Keep ZIP preview and selection while moving between the design tabs. */}
+        {group.id === "design" && <div hidden={tab !== "icon-import"}>
+          <IconPackSettings settings={draft} busy={busy} onChange={update} onAssets={mergeAssets} onBusyChange={setUploadBusy} />
+        </div>}
+        {tab === "media" && <MediaLibrary assets={assets} draft={draft} saved={settings} busy={locked}
+          onUpload={(file) => run(() => uploadAsset(file))} onDelete={deleteAssets} onConfirm={ask} />}
+        {tab === "groups" && <GroupSettings catalog={cat} onChange={setCat} />}
+        {tab === "copy" && <section className="admin-panel">
+          <p>Заголовки, подписи, кнопки и подсказки сайта. Пользовательские названия велосипедов и деталей здесь не меняются.</p>
+          <WizardCopy settings={draft} onChange={update} />
+          <label className="search admin-search"><Search size={18} /><input aria-label="Найти текст сайта" placeholder="Найти текст" value={textSearch} onChange={(e) => setTextSearch(e.target.value)} /></label>
+          {copyBlocks.map((block) => {
+            const keys = block.keys.filter((key) => (key + " " + (draft.copy[key] || "")).toLowerCase().includes(textSearch.toLowerCase()));
+            return keys.length ? <details className="copy-block" key={block.id} open={!!textSearch}>
+              <summary>{block.name} <small>{keys.length}</small></summary>
+              {keys.map((key) => <div className="copy-row" key={key}>
+                <Field label={key}><textarea rows={2} maxLength={2000} value={draft.copy[key] ?? key}
+                  onChange={(e) => update("copy", { ...draft.copy, [key]: e.target.value })} /></Field>
+                <button type="button" className="quiet" disabled={!(key in draft.copy)} onClick={() => {
+                  const next = { ...draft.copy }; delete next[key]; update("copy", next);
+                }}>Сбросить</button>
+              </div>)}
+            </details> : null;
+          })}
+        </section>}
+        {tab === "catalog" && <CatalogEditor value={cat} onChange={setCat} />}
+        {tab === "users" && <section className="admin-panel">
+          <form className="list-add" onSubmit={(e) => { e.preventDefault(); setPage(1); run(() => loadUsers(userSearch, 1)); }}>
+            <input aria-label="Поиск пользователей" placeholder="Имя или email" value={userSearch} onChange={(e) => setUserSearch(e.target.value)} />
+            <button className="button secondary" disabled={locked}><Search size={18} />Найти</button>
+          </form><p className="help">Найдено: {total}</p>
+          <div className="users-list">{users.map((u) => <article key={u.id}>
+            <div><strong>{u.name}</strong><span>{u.email}</span><small>{u.role === "admin" ? "Администратор" : "Пользователь"} · {u.blocked ? "Заблокирован" : "Активен"} · Велосипедов: {u.bikes}</small></div>
+            <div className="user-actions">
+              <button className="button secondary" onClick={() => setEditUser(u)}>Изменить</button>
+              <button className="quiet" disabled={locked} onClick={() => ask("Завершить все сессии?", "Пользователю потребуется войти заново.", async () => {
+                await request("admin/users/" + u.id + "/sessions", "DELETE"); setNotice("Сессии завершены");
+                if (u.id === user.id) window.location.assign("/");
+              })}>Сессии</button>
+              <button className="icon danger" aria-label={"Удалить пользователя " + u.email} disabled={u.id === user.id || u.role === "admin" || locked}
+                onClick={() => ask("Удалить пользователя?", "Будут удалены аккаунт, все его велосипеды и фотографии. Для подтверждения введите email.", async (email) => {
+                  await request("admin/users/" + u.id, "DELETE", { confirmEmail: email }); await loadUsers(); setNotice("Пользователь удалён");
+                }, u.email)}><Trash2 size={18} /></button>
+            </div>
+          </article>)}</div>
+          <div className="pagination"><button className="button secondary" disabled={page === 1 || locked} onClick={() => setPage((p) => p - 1)}>Назад</button>
+            <span>{page} / {Math.max(1, Math.ceil(total / 20))}</span>
+            <button className="button secondary" disabled={page * 20 >= total || locked} onClick={() => setPage((p) => p + 1)}>Далее</button></div>
+        </section>}
+        {tab === "audit" && <section className="admin-panel"><p>Последние 100 действий администраторов.</p>
+          <div className="audit-list">{events.map((event) => <article key={event.id}><strong>{event.action}</strong>
+            <span>{event.actor || "Удалённый пользователь"} · {new Date(event.created_at).toLocaleString("ru-RU")}</span><code>{event.target}</code></article>)}</div>
+          {!events.length && <p>Действий пока нет.</p>}
+        </section>}
+        {canSave && <div className="admin-save"><span>{currentDirty ? "Есть несохранённые изменения" : "Изменения сохранены"}</span>
+          <div><button className="quiet" disabled={locked || !currentDirty} onClick={() => {
+            if (isCatalog) setCat(catalog); else setDraft(settings); setError("");
+          }}>Отменить изменения</button>
+            <button className="button" disabled={locked || !currentDirty} onClick={isCatalog ? saveCatalog : saveSettings}><Save size={17} />{busy ? "Сохраняем…" : "Сохранить"}</button></div>
+        </div>}
+      </main>
+    </div>
+    <dialog ref={dialog} aria-labelledby="admin-dialog-title" onCancel={(event) => {
+      event.preventDefault(); if (!locked) { setEditUser(null); setConfirm(null); }
+    }}>
+      <div className="modal-head"><h2 id="admin-dialog-title">{editUser ? "Пользователь" : confirm?.title}</h2>
+        <button className="icon" disabled={locked} aria-label="Закрыть" onClick={() => { setEditUser(null); setConfirm(null); }}><X size={20} /></button></div>
+      {error && <div className="error" role="alert">{error}</div>}
+      {editUser && <form onSubmit={(event) => { event.preventDefault(); run(async () => {
+        await request("admin/users/" + editUser.id, "PATCH", editUser); await loadUsers(); setEditUser(null);
+        setNotice("Пользователь обновлён, его сессии отозваны");
+      }); }}>
+        <Field label="Имя"><input required maxLength={60} value={editUser.name} onChange={(e) => setEditUser({ ...editUser, name: e.target.value })} /></Field>
+        <Field label="Email"><input type="email" required maxLength={254} value={editUser.email} onChange={(e) => setEditUser({ ...editUser, email: e.target.value })} /></Field>
+        <Select label="Роль" value={editUser.role} onChange={(v) => setEditUser({ ...editUser, role: v })} options={[["user", "Пользователь"], ["admin", "Администратор"]]} />
+        <Toggle label="Заблокировать аккаунт" checked={editUser.blocked} onChange={(v) => setEditUser({ ...editUser, blocked: v })} />
+        <p className="help">Администратор управляет всем сайтом и пользователями. Изменение профиля завершает существующие сессии.</p>
+        <button className="button full" disabled={locked}>Сохранить пользователя</button>
+      </form>}
+      {confirm && <><p>{confirm.description}</p>
+        {confirm.email && <Field label="Email для подтверждения"><input value={confirmEmail} onChange={(e) => setConfirmEmail(e.target.value)} placeholder={confirm.email} /></Field>}
+        <div className="form-actions"><button className="button secondary" disabled={locked} onClick={() => setConfirm(null)}>Отмена</button>
+          <button className="button" disabled={locked || (confirm.email && confirmEmail !== confirm.email)} onClick={() => run(async () => {
+            await confirm.action(confirmEmail); setConfirm(null);
+          })}>Подтвердить</button></div>
+      </>}
+    </dialog>
+  </div>;
 }
