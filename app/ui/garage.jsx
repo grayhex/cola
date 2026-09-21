@@ -1,4 +1,14 @@
 "use client";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import {
+  readShowcaseQuery,
+  writeShowcaseQuery,
+} from "../../lib/showcase-query.js";
+import { useBikeReaction } from "./use-bike-reaction.js";
+import { useShowcaseScroll } from "./showcase-scroll.js";
+import { ClubPanorama } from "./club-artwork.jsx";
+import styles from "./garage.module.css";
 import BikeGrid from "./bike-grid.jsx";
 import { FilterControl, FilterChips } from "./compact-ui.jsx";
 import { BikeGame } from "./achievements.jsx";
@@ -20,7 +30,7 @@ import { parseBikeName } from "../../lib/bike-name.js";
 import GroupedComponents from "./grouped-components.jsx";
 import { defaultBlocks } from "../../lib/garage-layout.js";
 import FactorySpecification from "./factory-specification.jsx";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Bike,
   Trophy,
@@ -237,68 +247,117 @@ export default function Garage({
     [modal, setModal] = useState(null),
     [busy, setBusy] = useState(false),
     [tab, setTab] = useState("build"),
-    [sort, setSort] = useState("new"),
-    [filters, setFilters] = useState([]),
-    [query, setQuery] = useState(""),
+    [localSort, setLocalSort] = useState("new"),
+    [localFilters, setLocalFilters] = useState([]),
+    [localQuery, setLocalQuery] = useState(""),
     [photo, setPhoto] = useState(null);
-  const [page, setPage] = useState(1),
+  const [localPage, setLocalPage] = useState(1),
     [total, setTotal] = useState(0);
-  const requestId = useRef(0);
+  const router = useRouter(),
+    params = useSearchParams();
+  const parsed = useMemo(
+    () => readShowcaseQuery(params, categories),
+    [params, categories],
+  );
+  const publicShowcase = !account && !share;
+  const rememberScroll = useShowcaseScroll(publicShowcase && !loading);
+  const { sort, filters, query, page } = publicShowcase
+    ? parsed
+    : {
+        sort: localSort,
+        filters: localFilters,
+        query: localQuery,
+        page: localPage,
+      };
+  function change(patch) {
+    const search = writeShowcaseQuery(
+      new URLSearchParams(window.location.search),
+      patch,
+    );
+    window.history.replaceState(
+      null,
+      "",
+      window.location.pathname + (search ? "?" + search : ""),
+    );
+  }
+  const setSort = (value) =>
+    publicShowcase ? change({ sort: value, page: 1 }) : setLocalSort(value);
+  const setFilters = (value) =>
+    publicShowcase
+      ? change({ filters: value, page: 1 })
+      : setLocalFilters(value);
+  const setQuery = (value) =>
+    publicShowcase ? change({ query: value, page: 1 }) : setLocalQuery(value);
+  const setPage = (value) =>
+    publicShowcase
+      ? change({ page: typeof value === "function" ? value(page) : value })
+      : setLocalPage(value);
+  const [updating, setUpdating] = useState(false),
+    [resultRevision, setResultRevision] = useState(0);
+  const requestId = useRef(0),
+    meRequest = useRef(null);
   const initialSelection = useRef(initialBikeId);
   const file = useRef();
-  useEffect(() => {
-    if (!account && !share) {
-      const params = new URLSearchParams(window.location.search);
-      setQuery(params.get("q") || "");
-      if (["new", "popular"].includes(params.get("sort")))
-        setSort(params.get("sort"));
-    }
-  }, [account, share]);
+  const filterKey = filters.join(",");
   async function load() {
     const sequence = ++requestId.current;
-    const { user: u } = await api("me");
-    if (sequence !== requestId.current) return;
-    setUser(u);
-    if (u && onAuthenticated) onAuthenticated();
-    setPreferences(u?.preferences || {});
-    if (share) {
-      const data = await api("shared/" + share);
-      if (sequence === requestId.current) setSelected(data.bike);
-    } else {
-      const data = account
-        ? u
-          ? await api("bikes")
-          : { bikes: [] }
-        : await api(
-            "showcase?sort=" +
-              sort +
-              "&page=" +
-              page +
-              "&category=" +
-              encodeURIComponent(filters.join(",")) +
-              "&q=" +
-              encodeURIComponent(query),
-          );
+    setUpdating(true);
+    setError("");
+    try {
+      const me = (meRequest.current ||= api("me").catch((e) => {
+        meRequest.current = null;
+        throw e;
+      }));
+      // The public endpoints read the same session cookie; they do not depend on /me.
+      const dataRequest = share
+        ? api("shared/" + share)
+        : publicShowcase
+          ? api(
+              "showcase?" +
+                new URLSearchParams({
+                  sort,
+                  page,
+                  category: filterKey,
+                  q: query,
+                }),
+            )
+          : null;
+      const [{ user: u }, publicData] = await Promise.all([me, dataRequest]);
+      const data = publicData || (u ? await api("bikes") : { bikes: [] });
       if (sequence !== requestId.current) return;
-      setBikes(data.bikes);
-      setTotal(data.total ?? data.bikes.length);
-      const requested = initialSelection.current;
-      initialSelection.current = null;
-      setSelected((prev) =>
-        prev
-          ? data.bikes.find((b) => b.id === prev.id) || null
-          : requested
-            ? data.bikes.find((b) => b.id === requested) || null
-            : null,
-      );
+      setUser(u);
+      if (u && onAuthenticated) onAuthenticated();
+      setPreferences(u?.preferences || {});
+      if (share) setSelected(data.bike);
+      else {
+        setBikes(data.bikes);
+        setTotal(data.total ?? data.bikes.length);
+        setResultRevision((v) => v + 1);
+        const requested = initialSelection.current;
+        initialSelection.current = null;
+        setSelected((prev) =>
+          prev
+            ? data.bikes.find((b) => b.id === prev.id) || null
+            : requested
+              ? data.bikes.find((b) => b.id === requested) || null
+              : null,
+        );
+      }
+    } catch (e) {
+      if (sequence === requestId.current) setError(e.message);
+    } finally {
+      if (sequence === requestId.current) {
+        setLoading(false);
+        setUpdating(false);
+      }
     }
   }
   useEffect(() => {
+    // Invalidate before the debounce so an old response cannot win during the delay.
+    requestId.current++;
     const timer = setTimeout(
       () => {
-        load()
-          .catch((e) => setError(e.message))
-          .finally(() => setLoading(false));
+        void load();
       },
       query ? 200 : 0,
     );
@@ -306,7 +365,7 @@ export default function Garage({
       clearTimeout(timer);
       requestId.current++;
     };
-  }, [share, account, page, filters, query, sort]);
+  }, [share, account, page, filterKey, query, sort]);
   useEffect(() => {
     if (notice) {
       const t = setTimeout(() => setNotice(""), 4000);
@@ -329,6 +388,7 @@ export default function Garage({
   }, [startCreate, user?.id]);
   const Main = embedded ? "section" : "main";
   const bike = selected;
+  const detailReaction = useBikeReaction(bike, user, () => auth());
   const blocks = settings.detailBlocks || defaultBlocks;
   const block = (id) =>
     blocks.find((b) => b.id === id) || defaultBlocks.find((b) => b.id === id);
@@ -340,7 +400,7 @@ export default function Garage({
   const editable = account && !!user && !share && bike?.is_owner === true;
   function openBike(b) {
     if (!account) {
-      window.location.assign("/b/" + b.share_id);
+      router.push("/b/" + b.share_id);
       return;
     }
     setSelected(b);
@@ -359,23 +419,6 @@ export default function Garage({
       setModal(null);
       setError("");
     }
-  }
-  async function like(b) {
-    if (b.is_owner) return;
-    if (!user) {
-      auth();
-      return;
-    }
-    await run(async () => {
-      const result = await api(
-        "bikes/" + b.id + "/like",
-        b.liked ? "DELETE" : "PUT",
-      );
-      setBikes((all) =>
-        all.map((x) => (x.id === b.id ? { ...x, ...result } : x)),
-      );
-      setSelected((x) => (x?.id === b.id ? { ...x, ...result } : x));
-    });
   }
   async function refresh() {
     await load();
@@ -415,7 +458,8 @@ export default function Garage({
           </button>
         </div>
       )}
-      {loading ? (
+      {publicShowcase && <ClubPanorama settings={settings} />}
+      {loading && !publicShowcase ? (
         <Main className="loading">
           <LoaderCircle className="spin" />
           {t("Загружаем велосипеды…")}
@@ -553,10 +597,16 @@ export default function Garage({
                 <button
                   className="like-button"
                   type="button"
-                  disabled={busy}
-                  aria-label={"Нравится: " + bike.likes}
-                  aria-pressed={!!bike.liked}
-                  onClick={() => like(bike)}
+                  disabled={bike.is_owner}
+                  aria-label={
+                    t("Нравится") +
+                    (detailReaction.likes == null
+                      ? ""
+                      : ": " + detailReaction.likes)
+                  }
+                  aria-pressed={detailReaction.liked}
+                  aria-busy={detailReaction.pending}
+                  onClick={detailReaction.toggle}
                 >
                   <SiteAssetIcon
                     assetId={settings.likeIconId}
@@ -564,11 +614,16 @@ export default function Garage({
                     size={28}
                     className="like-graphic"
                     fallbackProps={{
-                      fill: bike.liked ? "currentColor" : "none",
+                      fill: detailReaction.liked ? "currentColor" : "none",
                     }}
                   />
-                  <span>{bike.likes || 0}</span>
+                  {detailReaction.likes != null && (
+                    <span>{detailReaction.likes}</span>
+                  )}
                 </button>
+              )}
+              {detailReaction.error && (
+                <p role="alert">{t("Лайк не сохранился. Попробуй ещё раз")}</p>
               )}
               {editable && (
                 <div className="photo-tools">
@@ -890,27 +945,22 @@ export default function Garage({
         </Main>
       ) : (
         <>
-          {settings.garageImageId && (
-            <div className="garage-banner-shell">
-              <img
-                className="garage-banner"
-                src={"/api/assets/" + settings.garageImageId}
-                alt=""
-              />
-            </div>
-          )}
-          <Main className="garage">
-            <div className="garage-heading">
+          <Main
+            className={`garage ${styles.garage}`}
+            onClickCapture={publicShowcase ? rememberScroll : undefined}
+          >
+            <div className={`garage-heading ${styles.heading}`}>
               <div className="showcase-heading-copy">
-                <h1>
+                <h1 className={styles.title}>
                   {account
-                    ? "Мои велосипеды"
-                    : settings.showcaseTitle === "Витрина"
-                      ? "Наши велосипеды"
-                      : settings.showcaseTitle || "Наши велосипеды"}
+                    ? t("Мои велосипеды")
+                    : t(settings.showcaseTitle || "Наши велосипеды")}
                 </h1>
               </div>
-              <div className="showcase-actions" aria-label="Действия витрины">
+              <div
+                className={`showcase-actions ${styles.actions}`}
+                aria-label={t("Действия витрины")}
+              >
                 {!account && (
                   <label className="compact-selector">
                     <SiteAssetIcon
@@ -954,6 +1004,22 @@ export default function Garage({
                     setPage(1);
                   }}
                 />
+                {!account && (
+                  <Link
+                    className="compact-button add-bike"
+                    href="/account?tab=bikes&action=add"
+                    aria-label={t("Добавить велосипед")}
+                  >
+                    <SiteAssetIcon
+                      assetId={settings.addBikeIconId}
+                      Fallback={Plus}
+                      size={18}
+                    />
+                    <span className={styles.addLabel}>
+                      {t("Добавить велосипед")}
+                    </span>
+                  </Link>
+                )}
                 {user && account && (
                   <button
                     type="button"
@@ -971,6 +1037,14 @@ export default function Garage({
                 )}
               </div>
             </div>
+            {publicShowcase && !user && (
+              <p className={styles.invitation}>
+                {t("Твой байк тоже здесь к месту")} ·{" "}
+                <Link href="/account?tab=bikes&action=add">
+                  {t("Покажи велосипед. Расскажи, что поменял")}
+                </Link>
+              </p>
+            )}
             {account && !user && (
               <p>Войдите, чтобы управлять своими велосипедами и оформлением.</p>
             )}
@@ -985,17 +1059,31 @@ export default function Garage({
               onClearSearch={() => {
                 setQuery("");
                 setPage(1);
-                if (!account) window.history.replaceState(null, "", "/");
               }}
             />
-            <BikeGrid bikes={filtered}>
+            <span className={styles.status} role="status">
+              {loading
+                ? t("Загружаем велосипеды…")
+                : updating
+                  ? t("Обновляем велосипеды…")
+                  : ""}
+            </span>
+            <BikeGrid bikes={filtered} revision={resultRevision}>
+              {loading &&
+                [0, 1, 2].map((id) => (
+                  <div
+                    key={id}
+                    className={styles.skeleton}
+                    aria-hidden="true"
+                  />
+                ))}
               {filtered.map((b) => (
                 <BikeCard
                   key={b.id}
                   bike={b}
-                  onOpen={() => openBike(b)}
-                  onLike={() => like(b)}
-                  busy={busy}
+                  onOpen={account ? () => openBike(b) : undefined}
+                  user={user}
+                  onGuest={() => auth()}
                   ownerView={account}
                 />
               ))}
@@ -1021,17 +1109,17 @@ export default function Garage({
                 </button>
               </nav>
             )}
-            {!filtered.length && !query && !filters.length && (
+            {!loading && !filtered.length && !query && !filters.length && (
               <p className="help">
                 {account
                   ? "Добавьте свой первый велосипед."
                   : "Пока нет публичных велосипедов. Опубликуйте свой!"}
               </p>
             )}
-            {!filtered.length && (query || filters.length > 0) && (
+            {!loading && !filtered.length && (query || filters.length > 0) && (
               <div className="empty-parts">
                 <Search />
-                <h3>{t("Ничего не найдено")}</h3>
+                <h3>{t("Таких велосипедов пока не нашли")}</h3>
                 <button
                   className="quiet"
                   onClick={() => {
@@ -1132,6 +1220,7 @@ export default function Garage({
               onSubmit={(data) =>
                 run(async () => {
                   await api("auth/" + modal.mode, "POST", data);
+                  meRequest.current = null;
                   setSelected(null);
                   await refresh();
                   setModal(null);
@@ -1159,7 +1248,7 @@ export default function Garage({
               onBusy={setBusy}
               onCreated={async (id) => {
                 if (!account) {
-                  window.location.assign("/account");
+                  router.push("/account");
                   return;
                 }
                 await refresh();

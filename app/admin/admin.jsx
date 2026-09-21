@@ -11,7 +11,9 @@ import ResolverSettings from "./resolver-settings.jsx";
 import AssetPicker from "./asset-picker.jsx";
 import IconSettings from "./icon-settings.jsx";
 import ExperienceCatalog from "./experience-catalog.jsx";
-import { fontLabels } from "../../lib/fonts.js";
+import PanoramaPreview from "./panorama-preview.jsx";
+import { applyPixelClub, accentText } from "../../lib/appearance.js";
+import { fontLabels, displayFonts } from "../../lib/fonts.js";
 import GlobalHeader from "../ui/global-header.jsx";
 import { useEffect, useState, useRef } from "react";
 import {
@@ -647,6 +649,10 @@ export default function Admin() {
             <>
               <section className="admin-panel">
                 <h2>Тема и типографика</h2>
+                <div className="form-actions">
+                  <button type="button" className="button" onClick={() => setDraft((value) => applyPixelClub(value))}>Применить «Пиксельный велоклуб»</button>
+                </div>
+                <p className="help">Светлая палитра, PT Sans и Unbounded для крупных заголовков. Фон отключается прозрачностью; загруженные файлы и личные предпочтения сохраняются. Для публикации нажмите «Сохранить».</p>
                 <div className="admin-form-grid">
                   <Select
                     label="Тема сайта"
@@ -658,6 +664,8 @@ export default function Admin() {
                       ["system", "Как на устройстве"],
                     ]}
                   />
+                  <Select label="Палитра" value={draft.designPreset || "classic"} onChange={(v) => update("designPreset", v)} options={[["classic", "Прежняя"], ["pixel-club", "Пиксельный велоклуб"]]} />
+                  <Select label="Шрифт крупных заголовков" value={draft.displayFont || "body"} onChange={(v) => update("displayFont", v)} options={Object.entries(displayFonts)} />
                   <Select
                     label="Шрифт"
                     value={draft.font}
@@ -686,16 +694,16 @@ export default function Admin() {
                   style={{
                     fontFamily: fontStacks[draft.font],
                     borderRadius: draft.radius,
-                    background: draft.theme === "dark" ? "#202724" : "#f3f5f0",
-                    color: draft.theme === "dark" ? "#f3f5f0" : "#202724",
+                    background: draft.theme === "dark" ? "#202724" : draft.designPreset === "pixel-club" ? "#EEF1F4" : "#f3f5f0",
+                    color: draft.theme === "dark" ? "#f3f5f0" : draft.designPreset === "pixel-club" ? "#1E2830" : "#202724",
                   }}
                 >
                   <span>Предпросмотр оформления</span>
-                  <h2>{draft.siteName}</h2>
+                  <h2 style={{ fontFamily: draft.displayFont === "unbounded" ? '"Cola Unbounded", sans-serif' : fontStacks[draft.font], fontWeight: 600 }}>{draft.siteName}</h2>
                   <p>Ваш велосипед. Каждая деталь на своём месте.</p>
                   <span
                     className="preview-button"
-                    style={{ background: draft.accent }}
+                    style={{ background: draft.accent, color: accentText(draft.accent) }}
                   >
                     Добавить велосипед
                   </span>
@@ -868,6 +876,9 @@ export default function Admin() {
                         previewClassName: "wide",
                       })}
                     </div>
+                    <Select label="Подготовка логотипа" value={draft.headerArtworkFit || "padded-strip"} onChange={(v) => update("headerArtworkFit", v)} options={[["padded-strip", "Прежний баннер с полями сверху и снизу"], ["contain", "Обрезанный логотип целиком"]]} />
+                    <PanoramaPreview settings={draft} />
+                    <p className="help">Предпросмотр использует настоящие компоненты шапки и панорамы. Логотип без полей: 800×160 px; прежний баннер: центральная полоса с логотипом в левой трети. Панорама: 2400×270 px, лица и важные детали в центральной зоне 2400×200 px. На телефоне изображение показывается целиком.</p>
                   </details>
 
                   <details className="graphics-group">

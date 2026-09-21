@@ -1,8 +1,12 @@
 "use client";
+import Link from "next/link";
+import styles from "./global-header.module.css";
 import { useEffect, useId, useRef, useState } from "react";
 // Navigation disclosure: links retain native Tab behavior; arrows/Home/End are shortcuts.
 export default function NavPopover({
   label,
+  href,
+  linkLabel,
   trigger,
   children,
   active,
@@ -49,16 +53,29 @@ export default function NavPopover({
   }
   return (
     <div
-      className={"nav-disclosure " + className}
+      className={`nav-disclosure ${styles.disclosure} ${className}`}
       ref={root}
       onBlur={(e) => {
         if (e.relatedTarget && !e.currentTarget.contains(e.relatedTarget))
           close();
       }}
     >
+      {href && (
+        <Link
+          className={"nav-trigger" + (active ? " active" : "")}
+          href={href}
+          aria-current={active ? "page" : undefined}
+        >
+          {linkLabel}
+        </Link>
+      )}
       <button
         ref={button}
-        className={"nav-trigger" + (active ? " active" : "")}
+        className={
+          "nav-trigger" +
+          (href ? " nav-chevron" : "") +
+          (active ? " active" : "")
+        }
         type="button"
         aria-label={label}
         title={label}
@@ -77,7 +94,7 @@ export default function NavPopover({
       <div
         ref={panel}
         id={id}
-        className="nav-popover"
+        className={`nav-popover ${styles.popover}`}
         hidden={!open}
         onClick={(e) => {
           if (e.target.closest("a,button")) close();

@@ -1,4 +1,8 @@
 "use client";
+import Link from "next/link";
+import SiteAssetIcon from "./site-asset-icon.jsx";
+import styles from "./global-header.module.css";
+import { HeaderArtwork } from "./club-artwork.jsx";
 import { GlobalSearch, CompactDialog } from "./compact-ui.jsx";
 import { useState, useEffect, useRef } from "react";
 import {
@@ -62,15 +66,12 @@ const slots = {
 function Graphic({ name, settings }) {
   const id = settings[slots[name]],
     Icon = icons[name] || Bike;
-  return id ? (
-    <img className="global-nav-graphic" src={"/api/assets/" + id} alt="" />
-  ) : (
-    <Icon className="global-nav-graphic-fallback" aria-hidden="true" />
-  );
+  return <SiteAssetIcon assetId={id} Fallback={Icon} className="global-nav-graphic" size={22} />;
 }
-export default function GlobalHeader({ user, onProfile }) {
-  const { personalSettings: settings } = useSite(),
-    pathname = usePathname() || "/";
+export default function GlobalHeader({ user, onProfile, previewSettings }) {
+  const { personalSettings, t } = useSite();
+  const settings = previewSettings || personalSettings;
+  const pathname = usePathname() || "/";
   const params = useSearchParams();
   const search = params?.toString() ? "?" + params.toString() : "";
   const [loggingOut, setLoggingOut] = useState(false),
@@ -138,7 +139,7 @@ export default function GlobalHeader({ user, onProfile }) {
     active = activeSection(pathname, search);
   const graphic = (name) => <Graphic name={name} settings={settings} />;
   const link = (item) => (
-    <a
+    <Link
       key={item.href}
       className="nav-menu-link"
       href={item.href}
@@ -146,7 +147,7 @@ export default function GlobalHeader({ user, onProfile }) {
     >
       {graphic(item.icon)}
       <span>{item.label}</span>
-    </a>
+    </Link>
   );
   const account = (
     <>
@@ -220,162 +221,170 @@ export default function GlobalHeader({ user, onProfile }) {
       {graphic("profile")}Войти
     </button>
   ) : (
-    <a className="nav-trigger" href="/account">
+    <Link className="nav-trigger" href="/account">
       {graphic("profile")}Войти
-    </a>
+    </Link>
   );
   return (
-    <header
-      className={
-        "header global-header" + (settings.logoId ? " has-banner" : "")
-      }
-    >
-      {settings.logoId && (
-        <div className="global-header-banner" aria-hidden="true">
-          <img
-            className="global-header-banner-image"
-            src={"/api/assets/" + settings.logoId}
-            alt=""
-          />
-        </div>
-      )}
-      <a
-        className={"brand" + (settings.logoId ? " brand-illustrated" : "")}
-        href="/"
-        aria-label="ColaBike — главная"
+    <div className={styles.frame}>
+      <header
+        className={`global-header ${styles.header}`}
+        data-artwork={settings.headerArtworkFit || "padded-strip"}
       >
-        {settings.logoId ? (
-          <img
-            className="site-logo"
-            src={"/api/assets/" + settings.logoId}
-            alt=""
-          />
-        ) : (
-          <>
-            <span className="brand-mark">c.</span>
-            <span>{settings.siteName}</span>
-          </>
-        )}
-      </a>
-      <div
-        className="global-nav"
-        data-icon-size={settings.navIconSize || "medium"}
-      >
-        <nav className="primary-navigation" aria-label="Основная навигация">
-          {sections.map((section) =>
-            section.id === "about" ? (
-              <a
-                key={section.id}
-                className={
-                  "nav-trigger" + (active === "about" ? " active" : "")
-                }
-                href="/about"
-                aria-current={active === "about" ? "page" : undefined}
-              >
-                {graphic("about")}
-                <span>{section.label}</span>
-              </a>
-            ) : (
-              <NavPopover
-                key={section.id}
-                label={section.label}
-                active={active === section.id}
-                trigger={
-                  <>
-                    {graphic(section.id === "bikes" ? "home" : section.id)}
-                    <span>{section.label}</span>
-                    <ChevronDown size={13} aria-hidden="true" />
-                  </>
-                }
-              >
-                {sectionLinks(section.id, user).map(link)}
-              </NavPopover>
-            ),
+        <Link
+          className={"brand" + (settings.logoId ? " brand-illustrated" : "")}
+          href="/"
+          aria-label="ColaBike — главная"
+        >
+          {settings.logoId ? (
+            <HeaderArtwork settings={settings} />
+          ) : (
+            <>
+              <span className="brand-mark">c.</span>
+              <span>{settings.siteName}</span>
+            </>
           )}
-        </nav>
-        <div className="nav-utilities">
-          <GlobalSearch assetId={settings.searchIconId} />
-          {user && (
-            <a
-              className={
-                "global-nav-item" +
-                (pathname === "/notifications" ? " active" : "")
-              }
-              href="/notifications"
-              aria-label={"Уведомления: " + unread + " непрочитанных"}
-              data-tooltip="Уведомления"
-            >
-              {graphic("notifications")}
-              {unread > 0 && (
-                <span className="notification-badge">
-                  {unread >= 100 ? "99+" : unread}
-                </span>
-              )}
-            </a>
-          )}
-          <div className="desktop-account">
-            {user ? (
-              <NavPopover
-                label={"Аккаунт — " + user.name}
-                className="account-disclosure"
-                onOpen={loadStats}
-                active={pathname.startsWith("/account")}
-                trigger={<Avatar person={user} size="small" />}
-              >
-                {account}
-              </NavPopover>
-            ) : (
-              login
-            )}
-          </div>
-          <button
-            className="global-nav-item mobile-nav-toggle"
-            type="button"
-            aria-label="Открыть меню"
-            aria-haspopup="dialog"
-            aria-expanded={mobile}
-            onClick={() => {
-              setMobile(true);
-              loadStats();
-            }}
-          >
-            <Menu size={22} />
-          </button>
-        </div>
-      </div>
-      <CompactDialog
-        open={mobile}
-        onClose={() => setMobile(false)}
-        title="Меню ColaBike"
-        className="navigation-drawer"
-      >
-        <nav aria-label="Разделы сайта">
-          {sections.map((section) => (
-            <section className="mobile-nav-section" key={section.id}>
-              {section.id === "about" ? (
-                <a
-                  className="nav-menu-link"
+        </Link>
+        <div
+          className="global-nav"
+          data-icon-size={settings.navIconSize || "medium"}
+        >
+          <nav className="primary-navigation" aria-label="Основная навигация">
+            {sections.map((section) =>
+              section.id === "about" ? (
+                <Link
+                  key={section.id}
+                  className={
+                    "nav-trigger" + (active === "about" ? " active" : "")
+                  }
                   href="/about"
                   aria-current={active === "about" ? "page" : undefined}
                 >
                   {graphic("about")}
-                  {section.label}
-                </a>
+                  <span>{section.label}</span>
+                </Link>
               ) : (
-                <>
-                  <h3 className={active === section.id ? "active" : ""}>
-                    {section.label}
-                  </h3>
+                <NavPopover
+                  key={section.id}
+                  label={t("Подразделы") + ": " + section.label}
+                  href={
+                    { bikes: "/", journal: "/journal", rides: "/rides" }[
+                      section.id
+                    ]
+                  }
+                  linkLabel={
+                    <>
+                      {graphic(section.id === "bikes" ? "home" : section.id)}
+                      <span>{section.label}</span>
+                    </>
+                  }
+                  active={active === section.id}
+                  trigger={
+                    <>
+                      <ChevronDown size={13} aria-hidden="true" />
+                    </>
+                  }
+                >
                   {sectionLinks(section.id, user).map(link)}
-                </>
+                </NavPopover>
+              ),
+            )}
+          </nav>
+          <div className="nav-utilities">
+            <GlobalSearch assetId={settings.searchIconId} />
+            {user && (
+              <Link
+                className={
+                  "global-nav-item" +
+                  (pathname === "/notifications" ? " active" : "")
+                }
+                href="/notifications"
+                aria-label={"Уведомления: " + unread + " непрочитанных"}
+                data-tooltip="Уведомления"
+              >
+                {graphic("notifications")}
+                {unread > 0 && (
+                  <span className="notification-badge">
+                    {unread >= 100 ? "99+" : unread}
+                  </span>
+                )}
+              </Link>
+            )}
+            <div className="desktop-account">
+              {user ? (
+                <NavPopover
+                  label={"Аккаунт — " + user.name}
+                  className="account-disclosure"
+                  onOpen={loadStats}
+                  active={pathname.startsWith("/account")}
+                  trigger={<Avatar person={user} size="small" />}
+                >
+                  {account}
+                </NavPopover>
+              ) : (
+                login
               )}
-            </section>
-          ))}
-        </nav>
-        <section className="mobile-account" aria-label="Аккаунт">
-          {user ? account : login}
-        </section>
-      </CompactDialog>
-    </header>
+            </div>
+            <button
+              className="global-nav-item mobile-nav-toggle"
+              type="button"
+              aria-label="Открыть меню"
+              aria-haspopup="dialog"
+              aria-expanded={mobile}
+              onClick={() => {
+                setMobile(true);
+                loadStats();
+              }}
+            >
+              <Menu size={22} />
+            </button>
+          </div>
+        </div>
+        <CompactDialog
+          open={mobile}
+          onClose={() => setMobile(false)}
+          title="Меню ColaBike"
+          className={`navigation-drawer ${styles.drawer}`}
+        >
+          <nav aria-label="Разделы сайта">
+            {sections.map((section) => (
+              <section className="mobile-nav-section" key={section.id}>
+                {section.id === "about" ? (
+                  <Link
+                    className="nav-menu-link"
+                    href="/about"
+                    aria-current={active === "about" ? "page" : undefined}
+                  >
+                    {graphic("about")}
+                    {section.label}
+                  </Link>
+                ) : (
+                  <details open>
+                    <summary>
+                      <Link
+                        href={
+                          { bikes: "/", journal: "/journal", rides: "/rides" }[
+                            section.id
+                          ]
+                        }
+                        aria-current={
+                          active === section.id ? "page" : undefined
+                        }
+                      >
+                        {section.label}
+                      </Link>
+                    </summary>
+                    {sectionLinks(section.id, user).map(link)}
+                  </details>
+                )}
+              </section>
+            ))}
+          </nav>
+          <section className="mobile-account" aria-label="Аккаунт">
+            {user ? account : login}
+          </section>
+        </CompactDialog>
+      </header>
+    </div>
   );
 }

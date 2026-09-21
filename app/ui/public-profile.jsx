@@ -23,9 +23,7 @@ export default function PublicProfile({ username }) {
     [page, setPage] = useState(1),
     [people, setPeople] = useState(""),
     [collection, setCollection] = useState("bikes"),
-    [error, setError] = useState(""),
-    [busy, setBusy] = useState(false),
-    [actionError, setActionError] = useState("");
+    [error, setError] = useState("");
   const { setPreferences } = useSite();
   async function refresh() {
     const d = await socialApi("social/profiles/" + username);
@@ -63,28 +61,6 @@ export default function PublicProfile({ username }) {
       active = false;
     };
   }, [username, page]);
-  async function like(b) {
-    if (!user) {
-      window.location.assign("/account");
-      return;
-    }
-    setBusy(true);
-    setActionError("");
-    try {
-      const result = await socialApi(
-        "bikes/" + b.id + "/like",
-        b.liked ? "DELETE" : "PUT",
-      );
-      setFeed((f) => ({
-        ...f,
-        bikes: f.bikes.map((x) => (x.id === b.id ? { ...x, ...result } : x)),
-      }));
-    } catch (e) {
-      setActionError(e.message);
-    } finally {
-      setBusy(false);
-    }
-  }
   return (
     <>
       <SocialHeader user={user} />
@@ -179,11 +155,6 @@ export default function PublicProfile({ username }) {
               </section>
             ) : (
               <section className="profile-collection">
-                {actionError && (
-                  <p role="alert" className="error">
-                    {actionError}
-                  </p>
-                )}
                 <div className="social-switch">
                   <button
                     className="quiet"
@@ -211,12 +182,7 @@ export default function PublicProfile({ username }) {
                       <>
                         <BikeGrid bikes={feed.bikes}>
                           {feed.bikes.map((b) => (
-                            <BikeCard
-                              key={b.id}
-                              bike={b}
-                              busy={busy}
-                              onLike={() => like(b)}
-                            />
+                            <BikeCard key={b.id} bike={b} user={user} />
                           ))}
                         </BikeGrid>
                         {!feed.bikes.length && (

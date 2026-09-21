@@ -1,4 +1,5 @@
 "use client";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
   significantBadge,
@@ -180,6 +181,7 @@ export function FilterChips({
   ) : null;
 }
 export function GlobalSearch({ assetId }) {
+  const router = useRouter();
   const [open, setOpen] = useState(false),
     [query, setQuery] = useState("");
   return (
@@ -212,7 +214,7 @@ export function GlobalSearch({ assetId }) {
         onClose={() => setOpen(false)}
         className="global-search-panel"
       >
-        <form action="/search" method="get">
+        <form action="/search" method="get" onSubmit={(e) => { e.preventDefault(); setOpen(false); router.push("/search?" + new URLSearchParams({ q: query })); }}>
           <label className="field">
             <span>Велосипед, запись или владелец</span>
             <input

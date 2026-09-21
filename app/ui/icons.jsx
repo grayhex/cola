@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ArrowLeft as LucideArrowLeft,
   ArrowUpRight as LucideArrowUpRight,
@@ -185,10 +185,15 @@ export function SiteIcon({
   const settings = site?.personalSettings || site?.settings || {};
   const [failedId, setFailedId] = useState(null);
   const id = original ? null : resolveIconAsset(settings, name, legacyAssetId);
+  const img = useRef(null);
+  useEffect(() => {
+    if (img.current?.complete && !img.current.naturalWidth) setFailedId(id);
+  }, [id]);
   const Fallback = builtins[iconPackByName[name]?.fallback || name] || LucideInfo;
   if (id && id !== failedId) return (
     <img
       {...props}
+      ref={img}
       src={"/api/assets/" + id}
       alt={props["aria-label"] || ""}
       aria-hidden={props["aria-hidden"] ?? !props["aria-label"]}

@@ -1,4 +1,3 @@
-@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap");
 :root {
   --ink: #202423;
   --muted: #767b79;
@@ -116,32 +115,6 @@ p {
   border-bottom: 1px solid var(--line);
   gap: 16px;
 }
-.brand {
-  font-size: 27px;
-  font-weight: 800;
-  letter-spacing: -1.2px;
-  display: flex;
-  align-items: center;
-}
-.brand > span:last-child {
-  font-weight: 500;
-}
-.brand-mark {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--accent);
-  color: white;
-  width: 35px;
-  height: 35px;
-  border-radius: 9px;
-  font-size: 30px;
-  font-weight: 800;
-  margin-right: 12px;
-  letter-spacing: -4px;
-  padding-right: 4px;
-  line-height: 1;
-}
 .header-right {
   display: flex;
   align-items: center;
@@ -245,8 +218,7 @@ p {
   min-width: 48px;
   min-height: 48px;
 }
-.detail,
-.garage {
+.detail {
   max-width: 1450px;
   padding: 32px 5.5% 64px;
   margin: auto;
@@ -588,23 +560,6 @@ p {
   color: var(--muted);
   margin-left: 18px;
 }
-.garage {
-  padding-top: 52px;
-  min-height: calc(100vh - 225px);
-}
-.garage-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 25px;
-  margin-bottom: 32px;
-}
-.garage h1 {
-  font-size: 52px;
-}
-.garage-heading p {
-  font-size: 15px;
-}
 .count {
   font-size: 24px;
   font-weight: 500;
@@ -895,9 +850,6 @@ dialog::backdrop {
   .spec-row {
     grid-template-columns: 170px minmax(0, 1fr) auto;
   }
-  .garage-heading h1 {
-    font-size: 44px;
-  }
   .detail-actions .button {
     padding: 12px;
   }
@@ -909,15 +861,6 @@ dialog::backdrop {
   .header {
     height: 74px;
     padding: 0 20px;
-  }
-  .brand {
-    font-size: 22px;
-  }
-  .brand-mark {
-    width: 30px;
-    height: 30px;
-    font-size: 26px;
-    margin-right: 8px;
   }
   .header-right {
     gap: 12px;
@@ -940,8 +883,7 @@ dialog::backdrop {
   .subnav-note {
     display: none;
   }
-  .detail,
-  .garage {
+  .detail {
     padding: 25px 20px 42px;
   }
   .breadcrumbs {
@@ -1087,16 +1029,6 @@ dialog::backdrop {
   .footer-logo span {
     display: block;
     margin: 4px 0 0;
-  }
-  .garage-heading {
-    display: block;
-    margin-bottom: 25px;
-  }
-  .garage h1 {
-    font-size: 42px;
-  }
-  .garage-heading p {
-    font-size: 14px;
   }
   .garage-tools {
     flex-direction: column;

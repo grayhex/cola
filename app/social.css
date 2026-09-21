@@ -345,9 +345,6 @@
 .social-page .quiet {
   min-height: 36px;
 }
-.social-page .bike-grid {
-  margin-top: 0;
-}
 .profile-badges {
   display: flex;
   gap: 8px;
@@ -497,18 +494,9 @@
     transition: none !important;
   }
 }
-.account-content > .garage,
 .account-content > .detail {
   padding: 0;
   max-width: none;
-  margin: 0;
-}
-.account-content > .garage .garage-heading h1 {
-  font-size: 24px;
-}
-.profile-collection .card-info h2,
-.recent-bikes .card-info h2 {
-  font-size: 16px;
   margin: 0;
 }
 .profile-collection .card-author,

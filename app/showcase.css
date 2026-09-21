@@ -1,171 +1,4 @@
 /* Shared photo-first cards: showcase, subscriptions and rider collections. */
-.site-root .garage {
-  max-width: var(--showcase-shell-max);
-  padding-top: 8px;
-  padding-left: 24px;
-  padding-right: 24px;
-}
-.site-root .bike-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--space-4);
-  align-items: start;
-}
-.site-root .bike-card {
-  container-type: inline-size;
-  display: block;
-  min-width: 0;
-  padding: 0;
-  text-align: left;
-  border: 1px solid var(--line);
-  border-radius: min(var(--radius), var(--radius-md));
-  background: var(--paper);
-  overflow: hidden;
-  box-shadow: none;
-  transform: none;
-  transition: border-color var(--motion-fast);
-}
-.site-root .bike-card:hover,
-.site-root .bike-card:focus-within {
-  border-color: var(--line-strong);
-  transform: none;
-  box-shadow: none;
-}
-.site-root .card-photo {
-  position: relative;
-  height: auto;
-  aspect-ratio: var(--photo-ratio, 4/3);
-  overflow: hidden;
-  background: var(--wash);
-}
-.site-root .card-open-photo {
-  display: block;
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  border: 0;
-  padding: 0;
-  background: transparent;
-}
-.site-root .card-open-photo > img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-  padding: 0;
-  transition: transform var(--motion-image);
-}
-.site-root .card-open-photo:focus-visible {
-  outline-offset: -4px;
-  z-index: 1;
-}
-.site-root .card-photo .photo-empty {
-  height: 100%;
-  min-height: 0;
-  font-size: 12px;
-}
-@media (hover: hover) {
-  .site-root .card-open-photo:hover > img {
-    transform: scale(1.012);
-  }
-}
-.site-root .private-badge {
-  position: absolute;
-  right: 8px;
-  bottom: 8px;
-  display: grid;
-  place-items: center;
-  width: 26px;
-  height: 26px;
-  background: var(--paper);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-xs);
-}
-.site-root .card-info {
-  padding: var(--space-3);
-}
-.site-root .card-facts {
-  display: flex;
-  align-items: center;
-  gap: 0;
-  min-width: 0;
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.5;
-  margin-bottom: 4px;
-  white-space: nowrap;
-  overflow: hidden;
-}
-.site-root .card-facts span {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.site-root .card-facts span + span::before {
-  content: "·";
-  margin: 0 6px;
-  color: var(--subtle);
-}
-.site-root .card-facts .fact-category {
-  flex: 0 1 auto;
-}
-.site-root .card-info h2 {
-  display: block;
-  font-size: 18px;
-  font-weight: 600;
-  line-height: 1.3;
-  letter-spacing: -0.35px;
-  margin: 0 0 4px;
-  min-width: 0;
-}
-.site-root .card-info h2 button {
-  display: block;
-  width: 100%;
-  font: inherit;
-  text-align: left;
-  color: var(--ink);
-  padding: 0;
-  border: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  background: transparent;
-  transition: color var(--motion-fast);
-}
-.site-root .card-info h2 button:hover {
-  color: var(--accent);
-}
-.site-root .card-social {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  min-height: 32px;
-}
-.site-root .card-social .author-link {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--muted);
-  flex: 1;
-  min-width: 0;
-  max-width: none;
-}
-.site-root .card-social .author-link:hover {
-  color: var(--ink);
-}
-.site-root .card-social .social-avatar.tiny {
-  width: 20px;
-  height: 20px;
-  flex: 0 0 20px;
-}
-.card-social-stats {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin-left: auto;
-  flex-shrink: 0;
-}
 .site-root .social-stat {
   display: inline-flex;
   position: static;
@@ -208,13 +41,6 @@
 .site-root .social-stat:disabled {
   cursor: default;
   opacity: 0.6;
-}
-.card-signals {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  justify-content: space-between;
 }
 .micro-metrics {
   display: flex;
@@ -261,38 +87,10 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.site-root .garage-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-  text-align: left;
-  margin: 20px 0 16px;
-}
-.site-root .garage-heading h1 {
-  font-size: clamp(28px, 3vw, 40px);
-  line-height: 1.15;
-  font-weight: 700;
-  letter-spacing: -1px;
-  margin: 0;
-}
-.showcase-heading-copy {
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-  flex-wrap: wrap;
-}
 .result-count {
   font-size: 12px;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
-}
-.showcase-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-left: auto;
 }
 .filter-chips {
   display: flex;
@@ -360,26 +158,7 @@
   flex-shrink: 0;
   object-fit: contain;
 }
-@media (min-width: 700px) {
-  .site-root .bike-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-@media (min-width: 1100px) {
-  .site-root .bike-grid {
-    grid-template-columns: repeat(var(--desktop-columns, 3), minmax(0, 1fr));
-  }
-}
 @container (max-width:250px) {
-  .card-facts .fact-size {
-    display: none;
-  }
-  .site-root .card-info {
-    padding: 8px;
-  }
-  .site-root .card-info h2 {
-    font-size: 17px;
-  }
   .micro-metrics {
     gap: 6px;
   }
@@ -391,63 +170,23 @@
   }
 }
 @media (max-width: 700px) {
-  .site-root .garage {
-    padding-left: 12px;
-    padding-right: 12px;
-  }
-  .site-root .garage-heading {
-    gap: 12px;
-    margin: 12px 0;
-  }
-  .showcase-heading-copy {
-    gap: 8px;
-  }
-  .site-root .garage-heading h1 {
-    font-size: 28px;
-  }
-  .showcase-actions {
-    width: 100%;
-    justify-content: flex-end;
-  }
-  .site-root .card-photo {
-    height: auto;
-    aspect-ratio: var(--photo-ratio, 4/3);
-  }
-  .site-root .card-info {
-    padding: 12px;
-  }
-  .site-root .card-info h2 {
-    font-size: 18px;
-  }
   .site-root .social-stat,
   .micro-metric {
     min-height: 44px;
     min-width: 44px;
   }
-  .site-root .card-social .author-link,
   .site-root .important-badge {
     min-height: 44px;
   }
   .micro-metric {
     min-width: 44px;
   }
-  .card-signals {
-    margin-top: -4px;
-  }
-  .site-root .card-facts {
-    font-size: 12px;
-  }
   .filter-chips button {
     min-height: 44px;
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .site-root .bike-card,
-  .site-root .card-open-photo > img,
   .bike-meter i {
     transition: none;
-  }
-  .site-root .card-open-photo:hover > img {
-    transform: none;
   }
 }

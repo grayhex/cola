@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Heart } from "./icons.jsx";
 import GlobalHeader from "./global-header.jsx";
@@ -21,14 +22,14 @@ export { Avatar } from "./avatar.jsx";
 export function AuthorLink({ author }) {
   if (!author?.username) return null;
   return (
-    <a
+    <Link
       className="card-author author-link"
       href={"/u/" + author.username}
       title={author.name}
     >
       <Avatar person={author} size="tiny" />
       <span>@{author.username}</span>
-    </a>
+    </Link>
   );
 }
 export function SocialHeader({ user }) {

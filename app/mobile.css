@@ -7,8 +7,7 @@
   --line: #dce3dc;
   --field: #fff;
   --soft: #e8eee5;
-  --button-ink: #fff;
-  --showcase-shell-max: 1640px;
+  --showcase-shell-max: 1536px;
   min-height: 100dvh;
   position: relative;
   isolation: isolate;
@@ -96,7 +95,7 @@
   border-radius: var(--radius);
   font-size: 14px;
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-ink);
   border-color: var(--accent);
   padding: 12px 16px;
 }
@@ -130,28 +129,6 @@
   padding: 12px 16px;
   gap: 12px;
   flex-wrap: wrap;
-}
-.brand {
-  font-size: 23px;
-  letter-spacing: -1px;
-  white-space: nowrap;
-}
-.brand-mark {
-  background: var(--accent);
-  letter-spacing: -3px;
-  width: 32px;
-  height: 32px;
-  font-size: 27px;
-  margin-right: 8px;
-}
-.brand > span:last-child {
-  font-weight: 800;
-}
-.site-logo {
-  height: 36px;
-  max-width: 115px;
-  object-fit: contain;
-  margin-right: 10px;
 }
 .header-right {
   gap: 10px;
@@ -189,8 +166,7 @@
 .subnav-note {
   display: none;
 }
-.detail,
-.garage {
+.detail {
   padding: 24px 16px 40px;
   max-width: 1440px;
 }
@@ -513,22 +489,6 @@
   margin-top: 0;
   margin-bottom: 24px;
 }
-.garage {
-  padding-top: 30px;
-  min-height: calc(100dvh - 220px);
-}
-.garage-heading {
-  display: block;
-  text-align: var(--heading-align);
-  margin-bottom: 24px;
-}
-.garage-heading h1 {
-  font-size: 40px;
-  letter-spacing: -1.5px;
-}
-.garage-heading p {
-  font-size: 15px;
-}
 .garage-tools {
   display: flex;
   flex-direction: column;
@@ -572,19 +532,6 @@
 }
 .add-card p {
   font-size: 15px;
-}
-.garage-banner-shell {
-  width: 100%;
-  overflow: hidden;
-  background: var(--paper);
-}
-.garage-banner {
-  display: block;
-  width: 100%;
-  max-height: 240px;
-  object-fit: cover;
-  border-radius: 0;
-  margin: 0;
 }
 .footer {
   padding: 24px 16px;
@@ -1003,12 +950,6 @@
     padding: 18px 5.5%;
     min-height: 88px;
   }
-  .brand {
-    font-size: 27px;
-  }
-  .site-logo {
-    height: 40px;
-  }
   .header-right {
     gap: 20px;
   }
@@ -1030,8 +971,7 @@
     font-size: 11px;
     letter-spacing: 1.8px;
   }
-  .detail,
-  .garage {
+  .detail {
     padding: 32px 5.5% 60px;
   }
   .bike-heading {
@@ -1094,15 +1034,6 @@
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
-  }
-  .garage-heading {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 24px;
-  }
-  .garage-heading h1 {
-    font-size: 50px;
   }
   .garage-tools {
     flex-direction: row;
@@ -1356,39 +1287,14 @@
     min-height: 58px;
     padding: 7px 16px;
   }
-  .brand {
-    font-size: 23px;
-  }
-  .brand-symbol,
-  .site-logo {
+  .brand-symbol {
     height: 32px;
   }
   .subnav {
     display: none;
   }
-  .garage,
   .detail {
     padding: 16px 16px 32px;
-  }
-  .garage-heading {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    margin: 0 0 10px;
-  }
-  .garage-heading .eyebrow,
-  .garage-heading p {
-    display: none;
-  }
-  .garage-heading h1 {
-    font-size: 27px;
-    letter-spacing: -0.8px;
-    margin: 0;
-  }
-  .garage-heading .count {
-    font-size: 17px;
-    margin-left: 8px;
   }
   .add-bike-label {
     position: absolute;
@@ -1674,13 +1580,6 @@
   font-size: 9px;
   overflow-wrap: anywhere;
 }
-.site-root .site-logo {
-  width: auto;
-  max-width: min(220px, 50vw);
-  height: 38px;
-  object-fit: contain;
-  border-radius: 0;
-}
 .site-root .bike-heading {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -1904,9 +1803,6 @@
   .wizard-steps small {
     font-size: 8px;
   }
-  .site-root .garage {
-    padding-top: 12px;
-  }
   .site-root .breadcrumbs {
     margin-bottom: 6px;
     font-size: 10px;
@@ -1914,9 +1810,6 @@
   .site-root .detail {
     padding-top: 10px;
     gap: 0;
-  }
-  .site-root .garage-heading {
-    margin-bottom: 10px;
   }
 }
 
@@ -2109,13 +2002,6 @@
   margin-left: auto;
 }
 @media (max-width: 700px) {
-  .site-root .garage-heading {
-    flex-wrap: wrap;
-  }
-  .site-root .showcase-actions {
-    margin-left: auto;
-    gap: 5px;
-  }
   .site-root .showcase-category-filters {
     gap: 3px;
   }
