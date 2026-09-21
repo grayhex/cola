@@ -72,24 +72,41 @@ test("grouped icon overrides, local fonts, auth illustrations and public statist
     ).toBe(409);
     await page.goto("/admin");
     await page.getByRole("tab", { name: "Дизайн", exact: true }).click();
-    await page.getByRole("button", { name: "Оформление", exact: true }).click();
+    const adminNav = page.getByRole("navigation", { name: "Разделы админки" });
+    await adminNav.getByRole("button", { name: /^Тема и шрифты(?:\s*Есть несохранённые изменения)?$/ }).click();
     await expect(
-      page
-        .getByRole("combobox", { name: "Шрифт", exact: true })
-        .locator("option"),
+      page.getByRole("combobox", { name: "Основной шрифт", exact: true }).locator("option"),
     ).toHaveCount(15);
-    await page
-      .locator("summary")
-      .filter({ hasText: "Новые и популярные велосипеды" })
-      .click();
-    await expect(
-      page.getByLabel("Новые велосипеды", { exact: true }),
-    ).toHaveValue(asset);
-    await page.getByLabel("Найти значок", { exact: true }).fill("Heart");
-    await expect(page.locator(".all-icons .asset-picker")).toHaveCount(1);
-    await expect(page.locator(".all-icons .asset-picker select")).toHaveValue(
-      asset,
-    );
+    await adminNav.getByRole("button", { name: "Графика", exact: true }).click();
+    const graphics = page.getByRole("region", { name: "Графика сайта", exact: true });
+    const search = graphics.getByRole("searchbox", { name: "Найти графику", exact: true });
+    await search.fill("navNewIconId");
+    await expect(graphics.getByRole("combobox", { name: "Новые", exact: true })).toHaveValue(asset);
+    // The unified semantic slot must still resolve a legacy Lucide assignment.
+    await search.fill("Heart");
+    await expect(graphics.locator(".asset-picker")).toHaveCount(1);
+    await expect(graphics.getByRole("combobox", { name: "Лайк / сердце", exact: true })).toHaveValue(asset);
+    // Both formerly hard-to-find slots remain editable across section changes.
+    await search.fill("Дизайн");
+    await graphics.getByRole("combobox", { name: "Дизайн", exact: true }).selectOption(asset);
+    await graphics.getByRole("combobox", { name: "Группа", exact: true }).selectOption("Основная навигация");
+    await search.fill("Журнал");
+    await graphics.getByRole("combobox", { name: "Журнал", exact: true }).selectOption(asset);
+    await adminNav.getByRole("button", { name: /^Тема и шрифты(?:\s*Есть несохранённые изменения)?$/ }).click();
+    await expect(page.getByRole("combobox", { name: "Основной шрифт", exact: true })).toHaveValue("onest");
+    await page.getByRole("button", { name: "Сохранить", exact: true }).click();
+    await expect.poll(async () => {
+      const result = await (await page.request.get("/api/admin/overview")).json();
+      return [result.settings.uiIcons.Palette, result.settings.uiIcons.journal];
+    }).toEqual([asset, asset]);
+    await page.reload();
+    await page.getByRole("tab", { name: "Дизайн", exact: true }).click();
+    await adminNav.getByRole("button", { name: "Графика", exact: true }).click();
+    await search.fill("Дизайн");
+    await expect(graphics.getByRole("combobox", { name: "Дизайн", exact: true })).toHaveValue(asset);
+    await graphics.getByRole("combobox", { name: "Группа", exact: true }).selectOption("Основная навигация");
+    await search.fill("Журнал");
+    await expect(graphics.getByRole("combobox", { name: "Журнал", exact: true })).toHaveValue(asset);
     await page.goto("/about");
     await expect(
       page.getByRole("region", { name: "ColaBike в цифрах" }),
