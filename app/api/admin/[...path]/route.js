@@ -1,4 +1,5 @@
 import { siteAssetIds } from "../../../../lib/site-assets.js";
+import { prepareSvg } from "../../../../lib/svg-asset.js";
 import { gameAssetInUse } from "../../../../lib/gamification-assets.js";
 import { traced, logError } from "../../../../lib/observability.js";
 import {
@@ -232,13 +233,24 @@ async function handler(req, { params }) {
       if (p.length === 1 && method === "POST") {
         const bytes = await readBytes(req, 10 * 1024 * 1024);
         let image;
+        const svg =
+          req.headers.get("content-type")?.includes("image/svg+xml") ||
+          /^\s*(?:<\?xml[^>]*>\s*)?<svg[\s>]/i.test(
+            bytes.toString("utf8", 0, 500).replace(/^\uFEFF/, ""),
+          );
         try {
-          image = await preparePhoto(bytes, { bikePhoto: false });
-        } catch {
-          return fail("Выберите изображение JPEG, PNG или WebP до 10 МБ");
+          image = svg
+            ? prepareSvg(bytes)
+            : await preparePhoto(bytes, { bikePhoto: false });
+        } catch (e) {
+          return fail(
+            svg
+              ? e.message
+              : "Выберите JPEG, PNG, WebP до 10 МБ или SVG до 1 МБ",
+          );
         }
         const id = randomUUID(),
-          filename = "site-" + id + ".webp",
+          filename = "site-" + id + (svg ? ".svg" : ".webp"),
           dir = process.env.UPLOAD_DIR || "uploads";
         const name = (
           new URL(req.url).searchParams.get("name") || "Изображение"
@@ -282,7 +294,8 @@ async function handler(req, { params }) {
             };
           if (await gameAssetInUse(q, p[1]))
             return {
-              error: "Иллюстрация используется в достижениях. Сначала замените её в разделе «Награды и рекорды».",
+              error:
+                "Иллюстрация используется в достижениях. Сначала замените её в разделе «Награды и рекорды».",
               status: 409,
             };
           await q.query("DELETE FROM site_assets WHERE id=$1", [p[1]]);

@@ -1,3 +1,4 @@
+import { findCandidates } from "./candidates.js";
 import { PassThrough } from "node:stream";
 import { SourcePlanner, Diagnostics, type SourceProvider } from "./planner.js";
 import { withResolution, trace, EXTRACTOR_VERSION } from "./context.js";
@@ -47,6 +48,7 @@ export function buildApp(
   const planner = new SourcePlanner(),
     diagnostics = new Diagnostics();
   const combined = requestSchema.extend({
+    chooseCandidates: z.boolean().optional(),
     sourceUrl: z.string().url().max(2048).optional(),
   });
   async function execute(
@@ -55,9 +57,20 @@ export function buildApp(
     manualOnly = false,
   ): Promise<ResolveResult> {
     trace("resolve_started");
-    const { sourceUrl, ...request } = input;
+    const { sourceUrl, chooseCandidates, ...request } = input;
     const { candidateId, ...identity } = request;
     const query = querySchema.parse(identity);
+    if (chooseCandidates && !sourceUrl && !candidateId && store.value.enabled) {
+      const result = await findCandidates(
+        query,
+        resolver.adapters,
+        http,
+        manual,
+        store,
+      );
+      trace("completed");
+      return result;
+    }
     const adapter = resolver.adapters.find((a) =>
       [a.brand, ...a.aliases].some(
         (b) => normalize(b) === normalize(query.brand),

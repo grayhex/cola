@@ -1,9 +1,13 @@
 "use client";
+import { CalendarDays, FileSpreadsheet } from "lucide-react";
+import {
+  defaultRideFields,
+  garminFields,
+  formatRideMetric,
+} from "../../lib/garmin-fields.js";
 import { Heart } from "./icons.jsx";
-import dynamic from "next/dynamic";
 import { useSite } from "./site-provider.jsx";
 import RideBasemap from "./ride-basemap.jsx";
-const RideMap = dynamic(() => import("./ride-map.jsx"), { ssr: false });
 import { routePaths } from "../../lib/ride-geometry.js";
 export function RideRoutePreview({ geometry = [], className = "" }) {
   const paths = routePaths(geometry);
@@ -45,41 +49,20 @@ export const rideDate = (date) =>
         timeZone: "UTC",
       })
     : "Дата не указана";
-function duration(s) {
-  if (s === null || s === undefined) return null;
-  return `${Math.floor(s / 3600)}:${String(Math.floor((s % 3600) / 60)).padStart(2, "0")}`;
-}
-export function RideMetrics({ metrics: m, compact = false }) {
+export function RideMetrics({ metrics: m, compact = false, visibleMetrics }) {
+  const keys = visibleMetrics || defaultRideFields;
   return (
     <dl className={"ride-metrics" + (compact ? " compact" : "")}>
-      {[
-        [
-          "Дистанция",
-          (m.distanceM / 1000).toLocaleString("ru-RU", {
-            maximumFractionDigits: 1,
-          }) + " км",
-        ],
-        ["В движении", duration(m.movingTimeS)],
-        [
-          "Средняя скорость",
-          m.avgSpeedMps == null
-            ? null
-            : (m.avgSpeedMps * 3.6).toLocaleString("ru-RU", {
-                maximumFractionDigits: 1,
-              }) + " км/ч",
-        ],
-        [
-          "Набор высоты",
-          m.elevationGainM == null ? null : "+" + m.elevationGainM + " м",
-        ],
-      ]
-        .filter(([, v]) => v !== null)
-        .map(([k, v]) => (
-          <div key={k}>
-            <dt>{k}</dt>
-            <dd>{v}</dd>
+      {keys.map((key) => {
+        const f = garminFields.find((f) => f.key === key);
+        const value = f ? formatRideMetric(m[key], f.format) : null;
+        return value === null ? null : (
+          <div key={key}>
+            <dt>{f.label}</dt>
+            <dd>{value}</dd>
           </div>
-        ))}
+        );
+      })}
     </dl>
   );
 }
@@ -87,14 +70,22 @@ export default function RideCard({ ride: r, owner = false, onEdit }) {
   const { personalSettings: settings } = useSite();
   return (
     <article className="ride-card">
-      {settings.rideMapView !== "hidden" &&
-        (settings.map?.provider === "style" &&
-        settings.rideMapView === "map" ? (
-          <RideMap geometry={r.geometry} />
-        ) : (
-          <RideBasemap geometry={r.geometry} />
-        ))}
+      {settings.rideMapView !== "hidden" && r.geometry?.length > 0 && (
+        <RideBasemap geometry={r.geometry} thumbnail />
+      )}
       <div className="ride-card-body">
+        {r.status !== "completed" && (
+          <span className="ride-status">
+            <CalendarDays size={14} />
+            {r.status === "cancelled" ? "Отменена" : "Планируемая покатушка"}
+          </span>
+        )}
+        {r.sourceKind === "garmin" && !r.hasTrack && (
+          <span className="ride-status">
+            <FileSpreadsheet size={14} />
+            Garmin · без трека
+          </span>
+        )}
         <h3>
           <a href={"/r/" + r.shareId + (owner ? "?owner=1" : "")}>{r.title}</a>
         </h3>
@@ -102,7 +93,11 @@ export default function RideCard({ ride: r, owner = false, onEdit }) {
           {rideDate(r.date)} ·{" "}
           <a href={"/b/" + r.bike.shareId}>{r.bike.name}</a>
         </p>
-        <RideMetrics metrics={r.metrics} compact />
+        <RideMetrics
+          metrics={r.metrics}
+          visibleMetrics={r.visibleMetrics}
+          compact
+        />
         <div className="ride-social">
           <a href={"/u/" + r.author.username}>@{r.author.username}</a>
           <span>

@@ -3,7 +3,12 @@ import { useEffect, useState } from "react";
 import { socialApi, Pagination } from "./social-primitives.jsx";
 import RideCard, { rideDate } from "./ride-card.jsx";
 import { useSite } from "./site-provider.jsx";
-export default function RideList({ username, bikeId, latest = false }) {
+export default function RideList({
+  username,
+  bikeId,
+  latest = false,
+  status = null,
+}) {
   const { personalSettings: settings } = useSite();
   const [data, setData] = useState(null),
     [page, setPage] = useState(1),
@@ -14,6 +19,7 @@ export default function RideList({ username, bikeId, latest = false }) {
       "rides?" +
         new URLSearchParams({
           ...(username ? { username } : {}),
+          ...(status ? { status } : {}),
           ...(bikeId ? { bikeId } : {}),
           page,
         }),
@@ -27,7 +33,7 @@ export default function RideList({ username, bikeId, latest = false }) {
     return () => {
       active = false;
     };
-  }, [username, bikeId, page]);
+  }, [username, bikeId, page, status]);
   const list =
     latest &&
     (settings.rideListMode === "list" ||

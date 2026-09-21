@@ -161,6 +161,21 @@ export class ManualSources {
       throw new ResolverError("parse_error", "CUBE public data format changed");
     return { product, parsed: parseCubePayload(product, features) };
   }
+  rememberPhoto(url: string, page: string): string | undefined {
+    if (!this.settings.value.photoSearch) return undefined;
+    try {
+      validateUrl(url, this.domains());
+    } catch {
+      return undefined;
+    }
+    for (const [id, p] of this.photos)
+      if (p.expires < Date.now()) this.photos.delete(id);
+    if (this.photos.size >= 500)
+      this.photos.delete(this.photos.keys().next().value!);
+    const id = randomUUID();
+    this.photos.set(id, { url, page, expires: Date.now() + 15 * 60 * 1000 });
+    return id;
+  }
   async resolve(query: BikeQuery, url: string) {
     try {
       checkAbort();
@@ -174,6 +189,9 @@ export class ManualSources {
       // A URL is an explicit user-selected source, never a verified identity match.
       return {
         status: "resolved",
+        thumbnailId: extractImages(doc)[0]
+          ? this.rememberPhoto(extractImages(doc)[0], doc.url)
+          : undefined,
         quality: parsed.quality,
         suggestedMetadata: {
           ...parsed.suggestedMetadata,
@@ -186,7 +204,18 @@ export class ManualSources {
         unknownFields: parsed.unknownFields,
         warnings: [
           ...(parsed.warnings || []),
-          ...(identityConflict(query, parsed.canonicalName, parsed.year)
+          ...(identityConflict(
+            query,
+            [
+              this.adapters.find((a) =>
+                a.allowedDomains.includes(new URL(doc.url).hostname),
+              )?.brand,
+              parsed.canonicalName,
+            ]
+              .filter(Boolean)
+              .join(" "),
+            parsed.year,
+          )
             ? ["identity_mismatch" as const]
             : []),
         ],

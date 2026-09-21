@@ -52,6 +52,18 @@ test("component change offers an explicit draft, never automatic publication", a
   await expect(
     page.getByRole("heading", { name: "Журнал велосипеда", exact: true }),
   ).toBeVisible();
+  const group = page
+    .locator(".component-group")
+    .filter({ hasText: "Original saddle" });
+  await expect(group.locator(".component-group-toggle")).toHaveAttribute(
+    "aria-expanded",
+    "false",
+  );
+  await group.locator(".component-group-toggle").click();
+  await expect(group.locator(".component-group-toggle")).toHaveAttribute(
+    "aria-expanded",
+    "true",
+  );
   await page.locator('summary[aria-label="Действия: Original saddle"]').click();
   await page
     .getByRole("button", { name: "Изменить Original saddle", exact: true })

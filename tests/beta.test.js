@@ -50,6 +50,7 @@ async function setup() {
     "014_journal",
     "015_discovery",
     "016_product_ui",
+    "017_rides_market",
   ])
     await db.exec(
       await readFile(new URL("../db/" + m + ".sql", import.meta.url), "utf8"),

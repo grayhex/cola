@@ -60,9 +60,94 @@ export default function RidePage({ share, styleUrl }) {
               {rideDate(ride.date)} ·{" "}
               <a href={"/b/" + ride.bike.shareId}>{ride.bike.name}</a>
             </p>
-            <RideMetrics metrics={ride.metrics} />
-            <RideMap geometry={ride.geometry} styleUrl={styleUrl} />
-            <RideSpeedChart profile={ride.speedProfile} />
+            {ride.status !== "completed" && (
+              <p className="ride-status">
+                {ride.status === "cancelled"
+                  ? "Покатушка отменена"
+                  : "Планируемая покатушка"}{" "}
+                · {new Date(ride.scheduledAt).toLocaleString("ru-RU")}
+              </p>
+            )}
+            {ride.meetingPoint && <p>Место встречи: {ride.meetingPoint}</p>}
+            {ride.features?.length > 0 && (
+              <ul className="ride-features">
+                {ride.features.map((f) => (
+                  <li key={f}>{f}</li>
+                ))}
+              </ul>
+            )}
+            <RideMetrics
+              metrics={ride.metrics}
+              visibleMetrics={ride.visibleMetrics}
+            />
+            {!ride.hasTrack && (
+              <p className="help">
+                Трек пока не добавлен
+                {ride.sourceKind === "garmin" ? " · импорт Garmin" : ""}.
+              </p>
+            )}
+            {ride.invitation && ride.status === "planned" && (
+              <section className="ride-invitation">
+                <h2>Вы приглашены</h2>
+                <p>
+                  {
+                    {
+                      pending: "Ответьте на приглашение организатора.",
+                      accepted: "Вы участвуете в покатушке.",
+                      declined: "Вы отклонили приглашение.",
+                    }[ride.invitation]
+                  }
+                </p>
+                {["accepted", "declined"].map((response) => (
+                  <button
+                    key={response}
+                    className="quiet"
+                    disabled={busy || ride.invitation === response}
+                    onClick={async () => {
+                      setBusy(true);
+                      setError("");
+                      try {
+                        await socialApi(
+                          "rides/" + ride.id + "/invitation",
+                          "PATCH",
+                          { response },
+                        );
+                        setRide((r) => ({ ...r, invitation: response }));
+                      } catch (e) {
+                        setError(e.message);
+                      } finally {
+                        setBusy(false);
+                      }
+                    }}
+                  >
+                    {response === "accepted" ? "Поеду" : "Не смогу"}
+                  </button>
+                ))}
+              </section>
+            )}
+            {ride.isOwner && ride.invitations?.length > 0 && (
+              <section className="ride-invitation">
+                <h2>Приглашённые</h2>
+                {ride.invitations.map((i) => (
+                  <p key={i.username}>
+                    @{i.username} ·{" "}
+                    {
+                      {
+                        pending: "ожидает ответа",
+                        accepted: "поедет",
+                        declined: "не сможет",
+                      }[i.response]
+                    }
+                  </p>
+                ))}
+              </section>
+            )}
+            {ride.geometry.length > 0 && (
+              <RideMap geometry={ride.geometry} styleUrl={styleUrl} />
+            )}
+            {ride.hasTrack && ride.status === "completed" && (
+              <RideSpeedChart profile={ride.speedProfile} />
+            )}
             {ride.description && (
               <p className="ride-description">{ride.description}</p>
             )}

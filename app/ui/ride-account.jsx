@@ -2,107 +2,152 @@
 import { useEffect, useState, useRef } from "react";
 import { socialApi, Pagination } from "./social-primitives.jsx";
 import RideCard, { RideRoutePreview, RideMetrics } from "./ride-card.jsx";
+import GarminImport from "./garmin-import.jsx";
+import { garminFields } from "../../lib/garmin-fields.js";
+const blank = {
+  bikeId: "",
+  title: "",
+  description: "",
+  isPublic: false,
+  privacyEnabled: false,
+  privacyRadiusM: 500,
+  scheduledAt: "",
+  features: "",
+  meetingPoint: "",
+  invitations: "",
+};
+const localDate = (v) => {
+  if (!v) return "";
+  const d = new Date(v);
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000)
+    .toISOString()
+    .slice(0, 16);
+};
 export default function RideAccount({ bikes }) {
   const [data, setData] = useState(null),
     [config, setConfig] = useState(null),
     [page, setPage] = useState(1),
     [preview, setPreview] = useState(null),
     [editing, setEditing] = useState(null),
-    [open, setOpen] = useState(false),
+    [mode, setMode] = useState(null),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
-    [form, setForm] = useState({
-      bikeId: "",
-      title: "",
-      description: "",
-      isPublic: false,
-      privacyEnabled: false,
-      privacyRadiusM: 500,
-    });
+    [notice, setNotice] = useState(""),
+    [form, setForm] = useState(blank),
+    [visibleMetrics, setVisibleMetrics] = useState(null);
   const autoOpened = useRef(false);
-  useEffect(() => {
-    if (autoOpened.current || !config?.enabled || !bikes.length) return;
-    autoOpened.current = true;
-    if (new URLSearchParams(location.search).get("action") === "add") {
-      setForm((f) => ({
-        ...f,
-        bikeId: bikes[0].id,
-        privacyRadiusM: config.defaultRadius,
-      }));
-      setOpen(true);
-    }
-  }, [config, bikes]);
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
   const refresh = () => socialApi("rides?own=1&page=" + page).then(setData);
+  function start(next) {
+    setEditing(null);
+    setPreview(null);
+    setMode(next);
+    setError("");
+    setNotice("");
+    setVisibleMetrics(null);
+    setForm({
+      ...blank,
+      bikeId: bikes[0]?.id || "",
+      privacyRadiusM: config?.defaultRadius || 500,
+    });
+  }
   useEffect(() => {
     refresh().catch((e) => setError(e.message));
     socialApi("rides/settings")
       .then(setConfig)
       .catch((e) => setError(e.message));
   }, [page]);
-  async function upload(file) {
+  useEffect(() => {
+    if (autoOpened.current || !config?.enabled || !bikes.length) return;
+    autoOpened.current = true;
+    const action = new URLSearchParams(location.search).get("action");
+    if (["add", "plan", "import"].includes(action)) start(action);
+  }, [config, bikes]);
+  async function upload(file, attach = false) {
     if (!file) return;
     setBusy(true);
     setError("");
-    setPreview(null);
     try {
-      if (file.size > (config?.maxGpxBytes || 10485760))
+      if (file.size > config.maxGpxBytes)
         throw Error("GPX-файл слишком большой");
-      const r = await fetch("/api/rides/preview", {
-        method: "POST",
-        headers: { "Content-Type": "application/gpx+xml" },
-        body: file,
-      });
+      const r = await fetch(
+        "/api/rides/" +
+          (attach
+            ? editing.id + "/track"
+            : "preview" + (mode === "plan" ? "?purpose=plan" : "")),
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/gpx+xml" },
+          body: file,
+        },
+      );
       const d = await r.json();
       if (!r.ok) throw Error(d.error);
-      setPreview(d);
-      set("title", d.title);
+      if (attach) {
+        const detail = await socialApi("rides/owner/" + editing.shareId);
+        setEditing(detail.ride);
+        setNotice("GPX проверен и добавлен.");
+        await refresh();
+      } else {
+        setPreview(d);
+        if (!form.title) set("title", d.title);
+      }
     } catch (e) {
       setError(e.message);
     } finally {
       setBusy(false);
     }
   }
-  function edit(r) {
-    setEditing(r);
-    setPreview(null);
-    setForm({
-      bikeId: r.bike.id,
-      title: r.title,
-      description: r.description,
-      isPublic: r.isPublic,
-      privacyEnabled: r.privacyEnabled,
-      privacyRadiusM: r.privacyRadiusM,
-    });
-    setOpen(true);
+  async function edit(r) {
+    setBusy(true);
     setError("");
+    setNotice("");
+    try {
+      const { ride } = await socialApi("rides/owner/" + r.shareId);
+      setEditing(ride);
+      setPreview(null);
+      setVisibleMetrics(ride.visibleMetrics);
+      setMode(ride.status === "completed" ? "add" : "plan");
+      setForm({
+        bikeId: ride.bike.id,
+        title: ride.title,
+        description: ride.description,
+        isPublic: ride.isPublic,
+        privacyEnabled: ride.privacyEnabled,
+        privacyRadiusM: ride.privacyRadiusM,
+        scheduledAt: localDate(ride.scheduledAt),
+        features: ride.features.join(", "),
+        meetingPoint: ride.meetingPoint,
+        invitations: ride.invitations.map((i) => i.username).join(", "),
+      });
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy(false);
+    }
   }
-  const selected = bikes.find((b) => b.id === form.bikeId),
-    cannotPublish = form.isPublic && !selected?.is_public;
+  const cannotPublish =
+    form.isPublic && !bikes.find((b) => b.id === form.bikeId)?.is_public;
   return (
     <section>
       <div className="section-heading">
         <h2>Покатушки</h2>
-        <button
-          className="button small"
-          disabled={busy || !config?.enabled || !bikes.length}
-          onClick={() => {
-            setEditing(null);
-            setPreview(null);
-            setForm({
-              bikeId: bikes[0]?.id || "",
-              title: "",
-              description: "",
-              isPublic: false,
-              privacyEnabled: false,
-              privacyRadiusM: config.defaultRadius,
-            });
-            setOpen(true);
-            setError("");
-          }}
-        >
-          Добавить покатушку
-        </button>
+        <div className="ride-actions">
+          {[
+            ["add", "Добавить покатушку"],
+            ["plan", "Запланировать"],
+            ["import", "Импорт Garmin CSV"],
+          ].map(([key, label]) => (
+            <button
+              key={key}
+              className={key === "add" ? "button small" : "quiet"}
+              disabled={busy || !config?.enabled || !bikes.length}
+              onClick={() => start(key)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
       {!bikes.length && <p className="help">Сначала добавьте велосипед.</p>}
       {error && (
@@ -110,7 +155,21 @@ export default function RideAccount({ bikes }) {
           {error}
         </p>
       )}
-      {open && (
+      {notice && <p role="status">{notice}</p>}
+      {mode === "import" && (
+        <GarminImport
+          bikes={bikes}
+          onCancel={() => setMode(null)}
+          onDone={async (result) => {
+            setMode(null);
+            setNotice(
+              `Импортировано: ${result.imported.length}. Уже загружены: ${result.skipped}.`,
+            );
+            await refresh();
+          }}
+        />
+      )}
+      {mode && mode !== "import" && (
         <form
           className="ride-form"
           onSubmit={async (e) => {
@@ -118,15 +177,41 @@ export default function RideAccount({ bikes }) {
             setBusy(true);
             setError("");
             try {
+              const {
+                scheduledAt,
+                features,
+                meetingPoint,
+                invitations,
+                ...base
+              } = form;
+              const input = {
+                ...base,
+                ...(visibleMetrics ? { visibleMetrics } : {}),
+                ...(mode === "plan"
+                  ? {
+                      scheduledAt: new Date(scheduledAt).toISOString(),
+                      features: features
+                        .split(",")
+                        .map((s) => s.trim())
+                        .filter(Boolean),
+                      meetingPoint,
+                      invitations: invitations
+                        .split(/[\s,;]+/)
+                        .map((s) => s.replace(/^@/, ""))
+                        .filter(Boolean),
+                    }
+                  : {}),
+                ...(!editing && preview
+                  ? { previewId: preview.previewId }
+                  : {}),
+              };
               await socialApi(
-                "rides" + (editing ? "/" + editing.id : ""),
+                "rides" +
+                  (editing ? "/" + editing.id : mode === "plan" ? "/plan" : ""),
                 editing ? "PATCH" : "POST",
-                {
-                  ...form,
-                  ...(!editing ? { previewId: preview.previewId } : {}),
-                },
+                input,
               );
-              setOpen(false);
+              setMode(null);
               setPreview(null);
               await refresh();
             } catch (e) {
@@ -136,6 +221,13 @@ export default function RideAccount({ bikes }) {
             }
           }}
         >
+          <h2>
+            {editing
+              ? "Изменить покатушку"
+              : mode === "plan"
+                ? "Планируемая покатушка"
+                : "Прошлая покатушка"}
+          </h2>
           {!editing && (
             <label
               className="ride-drop"
@@ -145,7 +237,7 @@ export default function RideAccount({ bikes }) {
                 if (!busy) upload(e.dataTransfer.files[0]);
               }}
             >
-              GPX-файл
+              GPX-файл{mode === "plan" ? " · необязательно" : ""}
               <input
                 type="file"
                 accept=".gpx,application/gpx+xml"
@@ -158,20 +250,62 @@ export default function RideAccount({ bikes }) {
               </small>
             </label>
           )}
+          {editing && !editing.hasTrack && (
+            <label className="ride-drop">
+              Добавить GPX к поездке
+              <input
+                type="file"
+                accept=".gpx,application/gpx+xml"
+                disabled={busy}
+                onChange={(e) => upload(e.target.files[0], true)}
+              />
+              <small>
+                {editing.sourceKind === "garmin"
+                  ? "Проверим дату, дистанцию и длительность по данным Garmin."
+                  : "Трек будущего маршрута может не содержать время."}
+              </small>
+            </label>
+          )}
           {busy && <p role="status">Обрабатываем…</p>}
-          {(preview || editing) && (
+          {(preview || editing || mode === "plan") && (
             <>
-              <RideRoutePreview geometry={(preview || editing).geometry} />
-              <RideMetrics metrics={(preview || editing).metrics} />
-              {preview && (
-                <p className="help">
-                  {preview.metrics.startedAt
-                    ? new Date(preview.metrics.startedAt).toLocaleString(
-                        "ru-RU",
-                      )
-                    : "В файле нет времени"}{" "}
-                  · {preview.metrics.pointCount} точек
-                </p>
+              {(preview || editing)?.geometry?.length > 0 && (
+                <RideRoutePreview geometry={(preview || editing).geometry} />
+              )}
+              {(preview || editing) && (
+                <RideMetrics
+                  metrics={(preview || editing).metrics}
+                  visibleMetrics={
+                    mode === "plan"
+                      ? ["distanceM", "elevationGainM"]
+                      : visibleMetrics
+                  }
+                />
+              )}
+              {editing?.sourceKind === "garmin" && (
+                <fieldset className="metric-picker">
+                  <legend>Показывать показатели</legend>
+                  <div>
+                    {garminFields
+                      .filter((f) => editing.metrics[f.key] != null)
+                      .map((f) => (
+                        <label key={f.key}>
+                          <input
+                            type="checkbox"
+                            checked={visibleMetrics?.includes(f.key) || false}
+                            onChange={() =>
+                              setVisibleMetrics((v) =>
+                                (v || []).includes(f.key)
+                                  ? v.filter((k) => k !== f.key)
+                                  : [...(v || []), f.key],
+                              )
+                            }
+                          />
+                          {f.label}
+                        </label>
+                      ))}
+                  </div>
+                </fieldset>
               )}
               <label className="field">
                 <span>Велосипед</span>
@@ -183,7 +317,7 @@ export default function RideAccount({ bikes }) {
                   {bikes.map((b) => (
                     <option key={b.id} value={b.id}>
                       {b.name}
-                      {!b.is_public ? " · приватный" : ""}
+                      {b.is_public ? "" : " · приватный"}
                     </option>
                   ))}
                 </select>
@@ -205,6 +339,56 @@ export default function RideAccount({ bikes }) {
                   onChange={(e) => set("description", e.target.value)}
                 />
               </label>
+              {mode === "plan" && (
+                <>
+                  <div className="ride-form-grid">
+                    <label className="field">
+                      <span>Дата и время старта</span>
+                      <input
+                        type="datetime-local"
+                        required
+                        value={form.scheduledAt}
+                        onChange={(e) => set("scheduledAt", e.target.value)}
+                      />
+                      <small>
+                        Ваш часовой пояс:{" "}
+                        {Intl.DateTimeFormat().resolvedOptions().timeZone}
+                      </small>
+                    </label>
+                    <label className="field">
+                      <span>Место встречи</span>
+                      <input
+                        maxLength={200}
+                        value={form.meetingPoint}
+                        onChange={(e) => set("meetingPoint", e.target.value)}
+                      />
+                    </label>
+                  </div>
+                  <label className="field">
+                    <span>Особенности маршрута</span>
+                    <input
+                      maxLength={640}
+                      placeholder="Гравий, спокойный темп, кофе по пути"
+                      value={form.features}
+                      onChange={(e) => set("features", e.target.value)}
+                    />
+                    <small>До 8 особенностей через запятую</small>
+                  </label>
+                  <label className="field">
+                    <span>Пригласить пользователей</span>
+                    <input
+                      maxLength={930}
+                      placeholder="@username, @friend"
+                      value={form.invitations}
+                      onChange={(e) => set("invitations", e.target.value)}
+                    />
+                    <small>
+                      До 30 имён через запятую. Приглашённые увидят поездку и
+                      получат уведомление.
+                    </small>
+                  </label>
+                </>
+              )}
               <label className="ride-toggle">
                 <input
                   type="checkbox"
@@ -243,14 +427,47 @@ export default function RideAccount({ bikes }) {
                     ))}
                   </select>
                   <small>
-                    На публичной карте будут скрыты все участки внутри зон
-                    начала и конца. Метрики остаются полными.
+                    Скрываются все участки внутри зон начала и конца. Метрики
+                    остаются полными.
                   </small>
                 </label>
               )}
-              <button className="button" disabled={busy || cannotPublish}>
+              <button
+                className="button"
+                disabled={
+                  busy ||
+                  cannotPublish ||
+                  (!editing && mode === "add" && !preview)
+                }
+              >
                 Сохранить покатушку
               </button>
+              {editing?.status === "planned" && (
+                <button
+                  type="button"
+                  className="quiet"
+                  disabled={busy}
+                  onClick={async () => {
+                    if (!confirm("Отменить запланированную покатушку?")) return;
+                    setBusy(true);
+                    try {
+                      await socialApi(
+                        "rides/" + editing.id + "/cancel",
+                        "POST",
+                        {},
+                      );
+                      setMode(null);
+                      await refresh();
+                    } catch (e) {
+                      setError(e.message);
+                    } finally {
+                      setBusy(false);
+                    }
+                  }}
+                >
+                  Отменить поездку
+                </button>
+              )}
               {editing && (
                 <button
                   type="button"
@@ -261,7 +478,7 @@ export default function RideAccount({ bikes }) {
                     setBusy(true);
                     try {
                       await socialApi("rides/" + editing.id, "DELETE");
-                      setOpen(false);
+                      setMode(null);
                       await refresh();
                     } catch (e) {
                       setError(e.message);
@@ -279,7 +496,7 @@ export default function RideAccount({ bikes }) {
             type="button"
             className="quiet"
             disabled={busy}
-            onClick={() => setOpen(false)}
+            onClick={() => setMode(null)}
           >
             Отмена
           </button>
@@ -292,9 +509,9 @@ export default function RideAccount({ bikes }) {
               <RideCard key={r.id} ride={r} owner onEdit={edit} />
             ))}
           </div>
-          {!data.rides.length && !open && (
+          {!data.rides.length && !mode && (
             <p className="help">
-              Загрузите GPX и расскажите, где побывал ваш велосипед.
+              Загрузите GPX, импортируйте Garmin CSV или запланируйте маршрут.
             </p>
           )}
           <Pagination {...data} onPage={setPage} />
