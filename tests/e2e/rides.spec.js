@@ -92,21 +92,11 @@ test("MapLibre initializes with intercepted OSM tiles, no external traffic", asy
   );
   const base = process.env.TEST_ORIGIN || "http://localhost:3100",
     nonce = randomUUID().slice(0, 8);
-  await page.route("**/test-map-style.json", (route) =>
-    route.fulfill({
-      json: {
-        version: 8,
-        sources: {},
-        layers: [
-          {
-            id: "background",
-            type: "background",
-            paint: { "background-color": "#eeeeee" },
-          },
-        ],
-      },
-    }),
-  );
+  let releaseTiles;
+  let requestedTiles = false;
+  const tileGate = new Promise((resolve) => {
+    releaseTiles = resolve;
+  });
   await page.request.post(base + "/api/auth/register", {
     headers: { origin: base },
     data: {
@@ -157,12 +147,41 @@ test("MapLibre initializes with intercepted OSM tiles, no external traffic", asy
   })
     .png()
     .toBuffer();
-  await page.route("https://tile.openstreetmap.org/**", (route) =>
-    route.fulfill({ contentType: "image/png", body: tile }),
-  );
+  await page.route("https://tile.openstreetmap.org/**", async (route) => {
+    requestedTiles = true;
+    await tileGate;
+    await route.fulfill({ contentType: "image/png", body: tile });
+  });
   await page.goto("/r/" + ride.shareId);
+  const frame = page.locator(".ride-map-wrap");
+  let previewHeight;
+  try {
+    await expect.poll(() => requestedTiles).toBe(true);
+    previewHeight = (await frame.boundingBox()).height;
+  } finally {
+    releaseTiles();
+  }
   await expect(page.locator(".ride-map.ready")).toBeVisible({ timeout: 15000 });
+  expect((await frame.boundingBox()).height).toBe(previewHeight);
   await expect(page.locator(".maplibregl-canvas")).toBeVisible();
+  const canvas = await page.locator(".maplibregl-canvas").elementHandle();
+  const chart = page.getByRole("img", {
+    name: "График скорости по расстоянию",
+  });
+  await chart.hover();
+  await expect(page.getByRole("region", { name: "Скорость" })).toContainText(
+    /на \d+[,.]?\d* км/,
+  );
+  await page.locator("#discussion").scrollIntoViewIfNeeded();
+  await page.evaluate(
+    () =>
+      new Promise((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(resolve)),
+      ),
+  );
+  expect(await canvas.evaluate((el) => el.isConnected)).toBe(true);
+  expect((await frame.boundingBox()).height).toBe(previewHeight);
+  await frame.scrollIntoViewIfNeeded();
   await page.screenshot({
     path: info.outputPath("ride-map.png"),
     fullPage: true,

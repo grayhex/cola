@@ -2,6 +2,8 @@
 import { useEffect, useState, createContext, useContext } from "react";
 import { Avatar, socialApi } from "./social-primitives.jsx";
 import { ReportButton, PageControls } from "./community-controls.jsx";
+import PromptComposer from "./prompt-composer.jsx";
+import { MessagesSquare, Reply } from "./icons.jsx";
 const DiscussionKind = createContext("bike");
 const QuestionContext = createContext(null);
 const paths = (kind) =>
@@ -39,17 +41,14 @@ function Editor({ initial = "", label, onSave, onCancel }) {
         }
       }}
     >
-      <textarea
-        aria-label={label}
-        placeholder="Поделитесь впечатлениями или задайте вопрос…"
-        required
-        maxLength={1000}
-        rows={3}
+      <PromptComposer
+        label={label}
         value={body}
-        onChange={(e) => setBody(e.target.value)}
-      />
-      <div>
-        <span className="help">{body.length} / 1000</span>
+        onChange={setBody}
+        rows={3}
+        maxLength={1000}
+        disabled={busy}
+      >
         {onCancel && (
           <button type="button" className="quiet" onClick={onCancel}>
             Отмена
@@ -64,7 +63,7 @@ function Editor({ initial = "", label, onSave, onCancel }) {
                 ? "Отправить ответ"
                 : "Отправить комментарий"}
         </button>
-      </div>
+      </PromptComposer>
       {error && (
         <p className="error" role="alert">
           {error}
@@ -146,6 +145,7 @@ function Comment({ comment: c, user, bikeId, refresh, reply = false }) {
             )}
             {user && !reply && !c.unavailable && (
               <button className="quiet" onClick={() => setAnswer((v) => !v)}>
+                <Reply size={14} aria-hidden="true" />
                 Ответить
               </button>
             )}
@@ -319,6 +319,7 @@ export default function Discussion({
           <div className="section-heading">
             <div>
               <h2>
+                <MessagesSquare size={20} aria-hidden="true" />
                 {entityType === "journal"
                   ? "Обсуждение записи"
                   : entityType === "ride"
@@ -365,7 +366,9 @@ export default function Discussion({
             <p className="help">
               {entityType === "ride"
                 ? "Поделитесь впечатлениями о маршруте."
-                : "Первый вопрос о сборке может стать началом знакомства."}
+                : entityType === "journal"
+                  ? "Задайте вопрос или поделитесь своим опытом."
+                  : "Первый вопрос о сборке может стать началом знакомства."}
             </p>
           )}
           {data && <PageControls {...data} onPage={setPage} />}

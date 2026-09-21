@@ -103,6 +103,7 @@ test("PostgreSQL schema: ownership, sharing privacy, revocation and cascading de
       "012_rides",
       "014_journal",
       "015_discovery",
+      "016_product_ui",
     ])
       await db.exec(
         await readFile(new URL("../db/" + m + ".sql", import.meta.url), "utf8"),

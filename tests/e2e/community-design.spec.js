@@ -221,7 +221,7 @@ test("homepage rhythm, compact popular list and stable Light/Dark at every break
           };
           return [
             document.querySelector("h1"),
-            document.querySelector("h1 + p"),
+            document.querySelector("[data-home-search]").previousElementSibling,
             ...document
               .querySelector("article[data-bike-id]")
               .querySelectorAll("h3, p, button"),
@@ -431,7 +431,7 @@ test("Live is readable with reduced motion; empty, missing images and long title
   await expect(page.locator("article[data-bike-id]")).toHaveCount(9);
 });
 
-test("admin appearance is explicit; hero upload, replacement and removal preserve legacy assets", async ({
+test("admin appearance is explicit; hero upload, replacement and removal protect assigned content artwork", async ({
   page,
 }, info) => {
   await db.query("UPDATE site_settings SET value=$1 WHERE id=1", [original]);
@@ -458,7 +458,7 @@ test("admin appearance is explicit; hero upload, replacement and removal preserv
     })
       .png()
       .toBuffer();
-    for (const name of ["Legacy retained", "Replacement"]) {
+    for (const name of ["Content artwork", "Replacement"]) {
       const result = await page.request.post(
         "/api/admin/assets?name=" + encodeURIComponent(name),
         { headers: { origin, "Content-Type": "image/png" }, data: png },
@@ -467,7 +467,7 @@ test("admin appearance is explicit; hero upload, replacement and removal preserv
       assets.push((await result.json()).id);
     }
     await db.query("UPDATE site_settings SET value=$1 WHERE id=1", [
-      { ...original, logoId: assets[0] },
+      { ...original, aboutGuideImageId: assets[0] },
     ]);
     await page.goto("/admin");
     await page.getByRole("tab", { name: "Дизайн", exact: true }).click();
@@ -552,7 +552,7 @@ test("admin appearance is explicit; hero upload, replacement and removal preserv
       .toBe(null);
     expect(
       (await (await page.request.get("/api/admin/overview")).json()).settings
-        .logoId,
+        .aboutGuideImageId,
     ).toBe(assets[0]);
   } finally {
     await db.query("UPDATE site_settings SET value=$1 WHERE id=1", [original]);

@@ -1,6 +1,5 @@
 "use client";
 import Link from "next/link";
-import SiteAssetIcon from "./site-asset-icon.jsx";
 import styles from "./global-header.module.css";
 import ThemeControl from "./theme-control.jsx";
 import { GlobalSearch, CompactDialog } from "./compact-ui.jsx";
@@ -48,25 +47,9 @@ const icons = {
   add: Plus,
   heart: Heart,
 };
-const slots = {
-  journal: "navJournalIconId",
-  home: "navHomeIconId",
-  bike: "navNewIconId",
-  heart: "navPopularIconId",
-  profile: "navProfileIconId",
-  notifications: "navMessagesIconId",
-  subscriptions: "navSubscriptionsIconId",
-  records: "navRecordsIconId",
-  admin: "navAdminIconId",
-  logout: "navLogoutIconId",
-  rides: "navRidesIconId",
-  about: "navAboutIconId",
-  add: "addBikeIconId",
-};
-function Graphic({ name, settings }) {
-  const id = settings[slots[name]],
-    Icon = icons[name] || Bike;
-  return <SiteAssetIcon assetId={id} Fallback={Icon} className="global-nav-graphic" size={22} />;
+function Graphic({ name }) {
+  const Icon = icons[name] || Bike;
+  return <Icon className="global-nav-graphic" size={22} />;
 }
 export default function GlobalHeader({ user, onProfile, previewSettings }) {
   const { personalSettings, t } = useSite();
@@ -135,7 +118,17 @@ export default function GlobalHeader({ user, onProfile, previewSettings }) {
       setLoggingOut(false);
     }
   }
-  const sections = navigationSections(settings).filter((s) => s.visible).map((s) => ({ ...s, label: s.label === "Гараж" ? "Велосипеды" : s.label === "Поездки" ? "Покатушки" : s.label })),
+  const sections = navigationSections(settings)
+      .filter((s) => s.visible)
+      .map((s) => ({
+        ...s,
+        label:
+          s.label === "Гараж"
+            ? "Велосипеды"
+            : s.label === "Поездки"
+              ? "Покатушки"
+              : s.label,
+      })),
     active = activeSection(pathname, search);
   const graphic = (name) => <Graphic name={name} settings={settings} />;
   const link = (item) => (
@@ -227,22 +220,14 @@ export default function GlobalHeader({ user, onProfile, previewSettings }) {
   );
   return (
     <div className={styles.frame}>
-      <header
-        className={`global-header ${styles.header}`}
-        data-artwork={settings.headerArtworkFit || "padded-strip"}
-      >
-        <Link
-          className="brand"
-          href="/"
-          aria-label="ColaBike — главная"
-        >
-          <span className="brand-mark" aria-hidden="true"><Bike size={26} /></span>
+      <header className={`global-header ${styles.header}`}>
+        <Link className="brand" href="/" aria-label="ColaBike — главная">
+          <span className="brand-mark" aria-hidden="true">
+            <Bike size={26} />
+          </span>
           <span>ColaBike</span>
         </Link>
-        <div
-          className="global-nav"
-          data-icon-size={settings.navIconSize || "medium"}
-        >
+        <div className="global-nav">
           <nav className="primary-navigation" aria-label="Основная навигация">
             {sections.map((section) =>
               section.id === "about" ? (
@@ -358,9 +343,11 @@ export default function GlobalHeader({ user, onProfile, previewSettings }) {
                     <summary>
                       <Link
                         href={
-                          { bikes: "/bikes", journal: "/journal", rides: "/rides" }[
-                            section.id
-                          ]
+                          {
+                            bikes: "/bikes",
+                            journal: "/journal",
+                            rides: "/rides",
+                          }[section.id]
                         }
                         aria-current={
                           active === section.id ? "page" : undefined

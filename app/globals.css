@@ -52,9 +52,9 @@ input,
 select,
 textarea {
   width: 100%;
-  padding: 12px 14px;
+  padding: 9px 12px;
   background: var(--surface);
-  border: 1px solid var(--border-strong);
+  border: 1px solid var(--border);
   border-radius: 6px;
   color: var(--ink);
   min-width: 0;
@@ -81,14 +81,14 @@ h3 {
   line-height: 1.15;
 }
 h1 {
-  font-size: clamp(36px, 4.3vw, 66px);
-  font-weight: 800;
-  letter-spacing: -0.8px;
+  font-size: clamp(28px, 3vw, 36px);
+  font-weight: 700;
+  letter-spacing: -0.5px;
   margin-bottom: 12px;
 }
 h2 {
   font-size: 26px;
-  letter-spacing: -0.8px;
+  letter-spacing: -0.5px;
 }
 h3 {
   font-size: 19px;
@@ -1068,4 +1068,24 @@ dialog::backdrop {
     transition: none !important;
     scroll-behavior: auto !important;
   }
+}
+
+.auth-form .field {
+  margin-bottom: 18px;
+}
+.auth-form .form-intro {
+  margin-bottom: 24px;
+  font-size: 16px;
+}
+.auth-form .switch-auth {
+  justify-content: center;
+  width: 100%;
+  margin-top: 16px;
+  font-size: 14px;
+}
+.auth-form .full {
+  width: 100%;
+}
+.auth-form .help {
+  font-size: 13px;
 }

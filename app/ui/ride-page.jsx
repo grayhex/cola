@@ -1,4 +1,5 @@
 "use client";
+import RideSpeedChart from "./ride-speed-chart.jsx";
 import { Heart } from "./icons.jsx";
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
@@ -6,7 +7,10 @@ import { SocialHeader, SocialFooter, socialApi } from "./social-primitives.jsx";
 import { RideMetrics, rideDate } from "./ride-card.jsx";
 import { useSite } from "./site-provider.jsx";
 import Discussion from "./discussion.jsx";
-const RideMap = dynamic(() => import("./ride-map.jsx"), { ssr: false });
+const RideMap = dynamic(() => import("./ride-map.jsx"), {
+  ssr: false,
+  loading: () => <div className="ride-map-wrap" aria-busy="true" />,
+});
 export default function RidePage({ share, styleUrl }) {
   const { setPreferences } = useSite();
   const [ride, setRide] = useState(null),
@@ -58,6 +62,7 @@ export default function RidePage({ share, styleUrl }) {
             </p>
             <RideMetrics metrics={ride.metrics} />
             <RideMap geometry={ride.geometry} styleUrl={styleUrl} />
+            <RideSpeedChart profile={ride.speedProfile} />
             {ride.description && (
               <p className="ride-description">{ride.description}</p>
             )}

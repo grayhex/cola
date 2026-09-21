@@ -56,7 +56,7 @@
   font-size: 15px;
 }
 .ride-metrics.compact dt {
-  font-size: 11px;
+  font-size: 13px;
 }
 .ride-social,
 .ride-actions {
@@ -70,22 +70,37 @@
   margin-top: 12px;
 }
 .ride-map-wrap {
+  --ride-map-height: 420px;
   position: relative;
-  min-height: 260px;
+  height: calc(var(--ride-map-height) + 24px);
   border: 1px solid var(--line);
   border-radius: 5px;
   overflow: hidden;
 }
 .ride-map {
-  height: 420px;
+  height: var(--ride-map-height);
   width: 100%;
   position: absolute;
   inset: 0;
   visibility: hidden;
 }
 .ride-map.ready {
-  position: relative;
   visibility: visible;
+}
+.ride-map-wrap > .ride-map-attribution {
+  position: absolute;
+  inset: auto 0 0;
+}
+.ride-map-wrap > .ride-basemap {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+}
+.ride-map-wrap > .ride-basemap > .ride-route {
+  flex: 1;
+  min-height: 0;
+  height: 0;
 }
 .ride-map-wrap > .ride-route {
   min-height: 260px;
@@ -147,8 +162,8 @@
   .ride-grid {
     grid-template-columns: minmax(0, 1fr);
   }
-  .ride-map {
-    height: 320px;
+  .ride-map-wrap {
+    --ride-map-height: 320px;
   }
   .ride-page h1 {
     font-size: 28px;

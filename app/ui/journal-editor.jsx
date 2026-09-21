@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { socialApi } from "./social-primitives.jsx";
+import PromptComposer from "./prompt-composer.jsx";
 import { journalKinds } from "../../lib/journal-kinds.js";
 export default function JournalEditor({
   entry = null,
@@ -156,15 +157,14 @@ export default function JournalEditor({
           </small>
         </label>
       )}
-      <label className="field">
-        <span>Текст записи</span>
-        <textarea
-          rows={9}
-          maxLength={20000}
-          value={form.body}
-          onChange={(e) => set("body", e.target.value)}
-        />
-      </label>
+      <PromptComposer
+        label="Текст записи"
+        value={form.body}
+        onChange={(value) => set("body", value)}
+        rows={9}
+        maxLength={20000}
+        disabled={busy}
+      />
       <div className="journal-fields">
         <label className="field">
           <span>Дата события (необязательно)</span>

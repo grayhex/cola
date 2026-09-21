@@ -20,8 +20,8 @@ import BikeMeters from "./bike-meters.jsx";
 import Photo from "./bike-photo.jsx";
 import BikeCard from "./bike-card.jsx";
 import { SocialFooter, AuthorLink } from "./social-primitives.jsx";
+import AuthForm from "./auth-form.jsx";
 import GlobalHeader from "./global-header.jsx";
-import SiteAssetIcon from "./site-asset-icon.jsx";
 
 import PhotoSearch from "./photo-search.jsx";
 import BikeWizard from "./bike-wizard.jsx";
@@ -37,6 +37,7 @@ import {
   Heart,
   Plus,
   ArrowUpRight,
+  ArrowUpDown,
   ArrowLeft,
   X,
   Lock,
@@ -607,12 +608,10 @@ export default function Garage({
                   aria-busy={detailReaction.pending}
                   onClick={detailReaction.toggle}
                 >
-                  <SiteAssetIcon
-                    assetId={settings.likeIconId}
-                    Fallback={Heart}
+                  <Heart
                     size={28}
                     className="like-graphic"
-                    fallbackProps={{
+                    {...{
                       fill: detailReaction.liked ? "currentColor" : "none",
                     }}
                   />
@@ -962,24 +961,7 @@ export default function Garage({
               >
                 {!account && (
                   <label className="compact-selector">
-                    <SiteAssetIcon
-                      assetId={
-                        sort === "popular"
-                          ? settings.navPopularIconId
-                          : sort === "records"
-                            ? settings.navRecordsIconId
-                            : settings.navNewIconId
-                      }
-                      Fallback={
-                        sort === "popular"
-                          ? Heart
-                          : sort === "records"
-                            ? Trophy
-                            : Bike
-                      }
-                      size={18}
-                      className="sort-control-icon"
-                    />
+                    <ArrowUpDown size={18} aria-hidden="true" />
                     <span className="sr-only">Порядок витрины</span>
                     <select
                       aria-label="Порядок витрины"
@@ -1009,11 +991,7 @@ export default function Garage({
                     href="/account?tab=bikes&action=add"
                     aria-label={t("Добавить велосипед")}
                   >
-                    <SiteAssetIcon
-                      assetId={settings.addBikeIconId}
-                      Fallback={Plus}
-                      size={18}
-                    />
+                    <Plus size={18} />
                     <span className={styles.addLabel}>
                       {t("Добавить велосипед")}
                     </span>
@@ -1027,11 +1005,7 @@ export default function Garage({
                     title="Добавить велосипед"
                     onClick={() => setModal({ type: "bike" })}
                   >
-                    <SiteAssetIcon
-                      assetId={settings.addBikeIconId}
-                      Fallback={Plus}
-                      size={18}
-                    />
+                    <Plus size={18} />
                   </button>
                 )}
               </div>
@@ -1427,112 +1401,6 @@ export default function Garage({
         </Modal>
       )}
     </>
-  );
-}
-function AuthForm({ mode, busy, onSubmit, switchMode }) {
-  const { settings, catalog, t } = useSite();
-  const [authError, setAuthError] = useState("");
-  useEffect(() => setAuthError(""), [mode]);
-  const { categories, models, parts, partCategories, manufacturers } = catalog;
-  return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        const d = new FormData(e.currentTarget);
-        if (
-          mode === "register" &&
-          d.get("password") !== d.get("confirmPassword")
-        ) {
-          setAuthError("Пароли не совпадают");
-          return;
-        }
-        setAuthError("");
-        d.delete("confirmPassword");
-        onSubmit(Object.fromEntries(d));
-      }}
-    >
-      {settings[mode === "register" ? "registerImageId" : "loginImageId"] && (
-        <img
-          className="auth-illustration"
-          src={
-            "/api/assets/" +
-            settings[mode === "register" ? "registerImageId" : "loginImageId"]
-          }
-          alt=""
-        />
-      )}
-      <p className="form-intro">
-        {mode === "register"
-          ? t("Сохраните комплектацию и фотографии своих велосипедов.")
-          : t("Войдите, чтобы открыть свои велосипеды.")}
-      </p>
-      {mode === "register" && (
-        <Field label={t("Ваше имя")}>
-          <input
-            name="name"
-            required
-            maxLength={60}
-            autoComplete="name"
-            autoFocus
-          />
-        </Field>
-      )}
-      <Field label={t("Электронная почта")}>
-        <input
-          name="email"
-          type="email"
-          required
-          maxLength={254}
-          autoComplete="email"
-          inputMode="email"
-          autoCapitalize="none"
-          spellCheck={false}
-          placeholder="name@example.com"
-          pattern={"[^\\s@]+@[^\\s@]+\\.[^\\s@]+"}
-          autoFocus={mode === "login"}
-        />
-      </Field>
-      <Field label={t("Пароль")}>
-        <input
-          name="password"
-          type="password"
-          minLength={10}
-          maxLength={128}
-          required
-          autoComplete={
-            mode === "register" ? "new-password" : "current-password"
-          }
-        />
-      </Field>
-      <p className="help">{t("Минимум 10 символов.")}</p>
-      {mode === "register" && (
-        <Field label="Подтвердите пароль">
-          <input
-            name="confirmPassword"
-            type="password"
-            minLength={10}
-            maxLength={128}
-            required
-            autoComplete="new-password"
-            onChange={() => setAuthError("")}
-          />
-        </Field>
-      )}
-      {authError && <p role="alert">{authError}</p>}
-      <button className="button full" disabled={busy}>
-        {busy
-          ? t("Подождите…")
-          : mode === "register"
-            ? t("Создать аккаунт")
-            : t("Войти")}
-        <ArrowUpRight size={17} />
-      </button>
-      <button type="button" className="quiet switch-auth" onClick={switchMode}>
-        {mode === "register"
-          ? t("Уже есть аккаунт? Войти")
-          : t("Нет аккаунта? Зарегистрироваться")}
-      </button>
-    </form>
   );
 }
 function BikeForm({ initial, busy, onSubmit }) {

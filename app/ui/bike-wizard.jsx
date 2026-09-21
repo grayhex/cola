@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from "react";
 import { LoaderCircle, Check, Plus, Trash2, Link, Pencil } from "./icons.jsx";
 import { useSite } from "./site-provider.jsx";
 import CompactCombo from "./compact-combo.jsx";
-import SiteAssetIcon from "./site-asset-icon.jsx";
 import PartIcon from "./part-icon.jsx";
 import { factoryComponent } from "../../lib/factory-components.js";
 import { groupedComponents } from "../../lib/garage-layout.js";
@@ -646,11 +645,7 @@ export default function BikeWizard({ onCreated, onBusy }) {
                     className="button secondary"
                     onClick={() => setManualMode((v) => !v)}
                   >
-                    <SiteAssetIcon
-                      assetId={settings.wizardLinkIconId}
-                      Fallback={Link}
-                      size={18}
-                    />
+                    <Link size={18} />
                     {settings.wizardLinkLabel ||
                       "Распознать по странице магазина"}
                   </button>
@@ -662,11 +657,7 @@ export default function BikeWizard({ onCreated, onBusy }) {
                       setStep(2);
                     }}
                   >
-                    <SiteAssetIcon
-                      assetId={settings.wizardManualIconId}
-                      Fallback={Pencil}
-                      size={18}
-                    />
+                    <Pencil size={18} />
                     {settings.wizardManualLabel || "Заполнить вручную"}
                   </button>
                 </div>

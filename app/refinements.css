@@ -108,62 +108,21 @@
   min-width: 0;
   background: var(--wash);
 }
-.ride-map-wrap > .ride-basemap {
-  min-height: 260px;
-}
 .ride-card .ride-map-wrap {
+  --ride-map-height: 220px;
   min-height: 180px;
   border: 0;
   border-radius: 0;
-}
-.ride-card .ride-map {
-  height: 220px;
 }
 .map-status {
   display: block;
   padding: 4px 8px;
 }
-.site-root .admin-group-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  border-bottom: 1px solid var(--line);
-  padding: 12px 24px 0;
-  background: var(--paper);
-}
-.site-root .admin-group-tabs button {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 40px;
-  padding: 8px 14px;
-  border: 1px solid transparent;
-  border-bottom: 2px solid transparent;
-  border-radius: 5px 5px 0 0;
-  background: transparent;
-  color: var(--muted);
-  font-size: 13px;
-  box-shadow: none;
-}
-.site-root .admin-group-tabs button[aria-selected="true"] {
-  color: var(--ink);
-  background: var(--wash);
-  border-bottom-color: var(--accent);
-}
-.site-root .admin-group-tabs button:focus-visible,
 .ride-list-item > summary:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 @media (max-width: 700px) {
-  .site-root .admin-group-tabs {
-    padding: 8px 12px 0;
-  }
-  .site-root .admin-group-tabs button {
-    min-height: 44px;
-    padding: 8px;
-    font-size: 12px;
-  }
 }
 @media (min-width: 1200px) {
   .site-root .detail.bike-detail > * {

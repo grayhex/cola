@@ -1,7 +1,5 @@
-# Local fonts
+# Local font
 
-Manrope, Inter, Roboto, Open Sans, Source Sans 3, Noto Sans, Montserrat, Rubik, Onest and Golos Text originate from the corresponding `ofl/<family>` directories of the official [Google Fonts repository](https://github.com/google/fonts).
+Source Sans 3 is the single interface family. It includes Latin and Cyrillic glyphs and is served locally with `font-display: swap` from `app/fonts.css`.
 
-The distributed variable TTF files were converted losslessly to WOFF containers using fontTools; glyphs and names were not modified. Each family includes its original SIL Open Font License in this directory. `app/fonts.css` declares local faces with `font-display: swap`; only selected faces are downloaded by the browser. No Google Fonts service request is required.
-
-PT Sans 400/700 and Unbounded 600 use the same local pipeline. Source files: `ofl/ptsans/PT_Sans-Web-Regular.ttf`, `PT_Sans-Web-Bold.ttf` and `ofl/unbounded/Unbounded[wght].ttf` in Google Fonts. The original OFL licenses are bundled. WOFF conversion preserves every glyph (including Cyrillic and Ё/ё); only the display face uses Unbounded, never body text. Browser requests remain local.
+The variable TTF originates from `ofl/sourcesans3` in the official [Google Fonts repository](https://github.com/google/fonts/tree/main/ofl/sourcesans3). It was converted losslessly to a WOFF container with fontTools; glyphs and names were not modified. The original SIL Open Font License is included as `sourcesans3-OFL.txt`. No external font service is contacted.

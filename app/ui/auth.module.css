@@ -1,0 +1,55 @@
+.page {
+  min-height: 75vh;
+  max-width: 520px;
+  padding: 32px 24px 64px;
+  margin: auto;
+}
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  min-height: 40px;
+  font-size: 14px;
+  margin-bottom: 20px;
+}
+.back:hover {
+  color: var(--text);
+}
+.card {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 32px;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+.mark {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-muted);
+  margin-bottom: 20px;
+}
+.card h1 {
+  font-size: 28px;
+  line-height: 1.2;
+  letter-spacing: -0.5px;
+  margin: 0 0 12px;
+}
+.note {
+  text-align: center;
+  color: var(--text-subtle);
+  font-size: 14px;
+  margin: 24px 0 0;
+}
+@media (max-width: 600px) {
+  .page {
+    padding: 16px 16px 40px;
+  }
+  .card {
+    padding: 24px 20px;
+  }
+}

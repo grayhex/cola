@@ -29,9 +29,14 @@ function MapLibreRideMap({ geometry, styleUrl }) {
     [ready, setReady] = useState(false),
     [visible, setVisible] = useState(false);
   useEffect(() => {
-    const observer = new IntersectionObserver(([e]) =>
-      setVisible(e.isIntersecting),
-    );
+    // Lazy-load once. Scrolling to the chart must not destroy the map and
+    // replace it with a differently sized preview underneath the pointer.
+    const observer = new IntersectionObserver(([e]) => {
+      if (e.isIntersecting) {
+        setVisible(true);
+        observer.disconnect();
+      }
+    });
     if (ref.current) observer.observe(ref.current);
     return () => observer.disconnect();
   }, []);

@@ -45,7 +45,7 @@
 | [Источники и расширение](resolver/sources.md) | Адаптер, профиль сайта, стратегия извлечения, регрессии |
 | [Диагностика Resolver](resolver/diagnostics.md) | NDJSON, inspector, transport/parse errors, cache и CLI |
 | [Карты](integrations/maps.md) | OSM, Яндекс, raster, MapLibre, публичные ключи и fallback |
-| [Иконки и изображения](integrations/icon-packs.md) | Импорт ZIP, семантические слоты и безопасное хранение |
+| [Изображения контента](integrations/content-artwork.md) | Назначения, медиатека и безопасное хранение |
 
 ## Эксплуатация
 

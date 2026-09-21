@@ -17,6 +17,7 @@ const env = {
   APP_ORIGIN: "http://localhost:3100",
   TEST_ORIGIN: "http://localhost:3100",
   NEXT_TELEMETRY_DISABLED: "1",
+  RIDES_DIR: path.join(dir, "rides"),
   UPLOAD_DIR: path.join(dir, "uploads"),
 };
 function start(args) {
@@ -62,7 +63,7 @@ try {
       "test",
       ...(args.some((v) => v.endsWith(".spec.js"))
         ? []
-        : ["tests/e2e/pixel-club.spec.js"]),
+        : ["tests/e2e/gallery-interactions.spec.js"]),
       ...(args.some((v) => v.startsWith("--project"))
         ? []
         : ["--project=chromium"]),

@@ -1,7 +1,7 @@
 "use client";
 import RideCard from "./ride-card.jsx";
 import JournalCard from "./journal-card.jsx";
-import { Check } from "./icons.jsx";
+import { Check, MessagesSquare, Users } from "./icons.jsx";
 import BikeGrid from "./bike-grid.jsx";
 import { useEffect, useState, useRef } from "react";
 import {
@@ -137,7 +137,7 @@ export default function CommunityPage({ kind }) {
           )}
         </div>
         {kind === "journal" && (
-          <nav className="journal-modes" aria-label="Режим журнала">
+          <nav className="journal-modes ui-tabs" aria-label="Режим журнала">
             {[
               ["new", "Новые"],
               ["following", "Подписки"],
@@ -158,6 +158,11 @@ export default function CommunityPage({ kind }) {
                   );
                 }}
               >
+                {id === "new" ? (
+                  <MessagesSquare size={17} aria-hidden="true" />
+                ) : (
+                  <Users size={17} aria-hidden="true" />
+                )}
                 {label}
               </button>
             ))}
@@ -232,11 +237,7 @@ export default function CommunityPage({ kind }) {
                 ) : b.kind === "ride" ? (
                   <RideCard key={b.id} ride={b} />
                 ) : (
-                  <BikeCard
-                    key={b.id}
-                    bike={b}
-                    user={user}
-                  />
+                  <BikeCard key={b.id} bike={b} user={user} />
                 ),
               )}
             </BikeGrid>

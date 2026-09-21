@@ -4,7 +4,6 @@ import { Heart, Lock, MessageCircle, Bike } from "./icons.jsx";
 import Photo from "./bike-photo.jsx";
 import { AuthorLink } from "./social-primitives.jsx";
 import { useSite } from "./site-provider.jsx";
-import SiteAssetIcon from "./site-asset-icon.jsx";
 import { MicroMetrics } from "./compact-ui.jsx";
 import { useBikeReaction } from "./use-bike-reaction.js";
 import styles from "./bike-card.module.css";
@@ -78,13 +77,9 @@ export default function BikeCard({
                 aria-busy={reaction.pending}
                 onClick={reaction.toggle}
               >
-                <SiteAssetIcon
-                  assetId={settings.likeIconId}
-                  Fallback={Heart}
+                <Heart
                   size={18}
-                  fallbackProps={{
-                    fill: reaction.liked ? "currentColor" : "none",
-                  }}
+                  fill={reaction.liked ? "currentColor" : "none"}
                 />
                 {reaction.likes != null && <span>{reaction.likes}</span>}
               </button>

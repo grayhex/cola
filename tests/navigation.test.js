@@ -8,7 +8,7 @@ import {
 } from "../lib/navigation.js";
 import { settingsInput } from "../lib/admin-validation.js";
 import { defaultSettings } from "../lib/site-defaults.js";
-test("legacy navigation settings retain ordering intent; known destinations respect auth", () => {
+test("navigation defaults ignore retired ordering fields; known destinations respect auth", () => {
   assert.deepEqual(
     navigationSections({}).map((s) => s.id),
     ["bikes", "journal", "rides", "about"],
@@ -17,7 +17,7 @@ test("legacy navigation settings retain ordering intent; known destinations resp
     navigationSections({ navOrder: ["subscriptions", "home"] }).map(
       (s) => s.id,
     ),
-    ["rides", "bikes", "journal", "about"],
+    ["bikes", "journal", "rides", "about"],
   );
   assert.equal(
     sectionLinks("bikes", null).some((s) => s.href.includes("action=add")),

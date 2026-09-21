@@ -19,9 +19,9 @@ bash scripts/test-backup-drill.sh
 
 Команды — перечень уровней, не требование запускать тяжёлый полный drill после каждой правки текста. CI проверяет полный набор согласно [workflow](../../.github/workflows/check.yml). Узкую регрессию сначала запускайте адресно: `node --test tests/map-settings.test.js` или нужный Resolver fixture.
 
-Для UI без изменений Resolver после production build можно запустить `node scripts/test-ui.js`. Harness поднимает disposable PGlite и Next на 3100, выполняет `pixel-club.spec.js` в Chromium и завершает процессы. Браузер должен быть установлен Playwright. Можно передать другие spec-файлы, `--project` и обычные параметры Playwright. Пример: `node scripts/test-ui.js tests/e2e/design.spec.js tests/e2e/navigation.spec.js tests/e2e/garage-polish.spec.js tests/e2e/pixel-club.spec.js`. Ни production БД, ни внешний парсер не используются. Unit-регрессии очереди реакций, URL и пресета: `node --test tests/pixel-club.test.js`.
+Для UI без изменений Resolver после production build можно запустить `node scripts/test-ui.js`. Harness поднимает disposable PGlite и Next на 3100, выполняет `gallery-interactions.spec.js` в Chromium и завершает процессы. Браузер должен быть установлен Playwright. Можно передать другие spec-файлы, `--project` и обычные параметры Playwright. Пример: `node scripts/test-ui.js tests/e2e/design.spec.js tests/e2e/navigation.spec.js tests/e2e/garage-polish.spec.js tests/e2e/gallery-interactions.spec.js`. Ни production БД, ни внешний парсер не используются. Unit-регрессии очереди реакций, URL и контраста: `node --test tests/gallery-interactions.test.js`.
 
-Опциональный `PIXEL_ARTWORK_DIR` указывает на локальную папку с `logo.png`, `panorama.webp`, `bike-1.webp`…`bike-3.webp` для визуального сравнения с реальными публичными ресурсами. Без него тесты создают нейтральные локальные изображения. Это входные данные теста, не новая система управления графикой сайта.
+Опциональный `COMMUNITY_ARTWORK_DIR` указывает на локальную папку с `bike-1.webp`…`bike-3.webp` для визуального сравнения с реальными публичными ресурсами. Без него тесты создают нейтральные локальные изображения. Это входные данные теста, не новая система управления графикой сайта.
 
 ## Что означает каждый уровень
 
@@ -37,6 +37,10 @@ bash scripts/test-backup-drill.sh
 ## База и изоляция
 
 [Integration harness](../../scripts/test-resolver-integration.js) создаёт собственные временные БД/каталоги и запускает fixture Resolver. При `TEST_DATABASE_URL` используется отдельный PostgreSQL с правами создания тестовой БД. **Не передавайте production connection string.** Без этой переменной локальный harness может использовать одно соединение disposable PGlite; concurrency-тесты требуют настоящий PostgreSQL.
+
+`tests/community-concurrency.js` удерживает транзакцию лайка после блокировки велосипеда, запускает комментарий на другом соединении и через `pg_blocking_pids` подтверждает пересечение запросов. После освобождения оба запроса должны завершиться, сохранив комментарий и два уведомления. Это регрессия взаимной блокировки: операции соблюдают порядок `users → bikes`, включая внешние ключи уведомлений. Тест подключён к HTTP-набору при использовании PostgreSQL.
+
+В браузерной проверке карты ответы тайлов задерживаются до измерения предпросмотра; затем проверяются неизменная высота, наведение на график и сохранение canvas при прокрутке. Обзор всех страниц открывает каждый URL в отдельной вкладке, чтобы отмена фоновой предзагрузки при замене документа не считалась ошибкой страницы в WebKit. Ошибки JavaScript продолжают проверяться; переходы, история и восстановление прокрутки покрыты отдельным сценарием.
 
 Браузерные тесты меняют настройки сайта, поэтому `workers:1` и отсутствие внутреннего fullyParallel — часть изоляции. CI распараллеливает браузеры по **разным** runners и БД, а не по общей базе. Артефакты разных браузеров/attempt имеют разные имена.
 

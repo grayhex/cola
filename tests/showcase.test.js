@@ -78,8 +78,10 @@ test("completion needs actual photo and distinct components; input cannot inject
   });
   assert(scoreBike(b).completeness < 100);
   assert(
-    profileInput.safeParse({ name: "Nick", preferences: { theme: "dark" } })
-      .success,
+    profileInput.safeParse({
+      name: "Nick",
+      preferences: { bikeLayout: "dense" },
+    }).success,
   );
   assert(
     !profileInput.safeParse({
@@ -117,6 +119,7 @@ test("showcase privacy, owner/voter permissions, duplicate votes, revocation, bl
       "012_rides",
       "014_journal",
       "015_discovery",
+      "016_product_ui",
     ])
       await db.exec(
         await readFile(new URL("../db/" + m + ".sql", import.meta.url), "utf8"),

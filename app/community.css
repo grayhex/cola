@@ -9,6 +9,9 @@
   scroll-margin-top: 16px;
 }
 .discussion h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 21px;
   margin: 0;
 }
@@ -17,39 +20,48 @@
   margin-bottom: 14px;
 }
 .discussion .help {
-  font-size: 12px;
+  font-size: 14px;
   margin: 5px 0 12px;
 }
 .comment-thread {
-  border-bottom: 1px solid var(--line);
-  padding: 14px 0;
+  padding: 10px 0;
 }
 .comment {
   min-width: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--surface);
 }
 .comment-heading {
+  background: var(--surface-muted);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 16px;
   display: flex;
   align-items: center;
   gap: 12px;
   justify-content: space-between;
 }
 .comment-heading .person-identity {
-  font-size: 13px;
+  font-size: 14px;
 }
 .comment-heading time,
 .notification-list time {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
   white-space: nowrap;
 }
 .comment-body {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  font-size: 14px;
+  font-size: 16px;
   line-height: 1.6;
-  margin: 12px 0;
+  margin: 0;
+  padding: 18px 16px;
 }
 .comment-actions {
+  padding: 0 16px 12px;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -57,13 +69,13 @@
 }
 .comment-actions .quiet,
 .report-trigger {
-  font-size: 11px !important;
-  min-height: 32px !important;
+  font-size: 13px;
+  min-height: 32px;
   padding: 3px 0;
 }
 .comment-replies {
   margin-left: 32px;
-  border-left: 2px solid var(--line);
+  border-left: 1px solid var(--line);
   padding-left: 14px;
 }
 .comment-reply {
@@ -87,7 +99,7 @@
   font-size: 16px;
   min-height: 78px;
 }
-.comment-editor > div {
+.comment-editor > .comment-footer {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -97,7 +109,7 @@
   margin-right: auto;
 }
 .comment-editor .button {
-  margin-top: 8px;
+  margin-top: 0;
 }
 .comment-confirm {
   font-size: 12px;
@@ -194,13 +206,8 @@
     margin-left: 10px;
     padding-left: 10px;
   }
-  .comment-heading .person-identity {
-    font-size: 12px;
-  }
-  .comment-body {
-    font-size: 13px;
-  }
   .comment-actions {
+    padding: 0 16px 12px;
     gap: 12px;
   }
   .discussion {
@@ -208,9 +215,12 @@
     padding-top: 18px;
   }
   .discussion h2 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     font-size: 19px;
   }
-  .comment-editor > div {
+  .comment-editor > .comment-footer {
     flex-wrap: wrap;
     gap: 6px;
   }
