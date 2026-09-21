@@ -87,8 +87,7 @@ test("upgrade preserves existing users and bikes; settings persist and protect a
     ]);
     const value = {
       ...defaultSettings,
-      theme: "dark",
-      font: "system",
+      appearance: { theme: "dark", accent: "#F3B51B" },
       copy: { "Мой гараж": "Коллекция" },
     };
     await db.query(
@@ -96,7 +95,7 @@ test("upgrade preserves existing users and bikes; settings persist and protect a
       [JSON.stringify(value)],
     );
     const restored = await getSite(db);
-    assert.equal(restored.settings.theme, "dark");
+    assert.equal(restored.settings.appearance.theme, "dark");
     assert.equal(restored.settings.copy["Мой гараж"], "Коллекция");
     assert.equal(restored.settingsVersion, 2);
     await db.query("UPDATE users SET role='admin' WHERE id=$1", [first]);

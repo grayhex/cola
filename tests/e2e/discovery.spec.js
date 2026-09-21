@@ -86,9 +86,27 @@ test("journal discovery: no-bike reader subscribes, saves, searches and returns;
     await expect(
       card.getByRole("img", { name: "Фотография записи" }),
     ).toBeVisible();
-    await card
-      .getByRole("button", { name: "Сохранить запись", exact: true })
-      .click();
+    // A saved state must acknowledge the server before navigation can use it.
+    let releaseSave;
+    const saveGate = new Promise((resolve) => {
+      releaseSave = resolve;
+    });
+    await other.route("**/api/journal/" + entry.id + "/save", async (route) => {
+      await saveGate;
+      await route.continue();
+    });
+    const saveButton = card.getByRole("button", {
+      name: "Сохранить запись",
+      exact: true,
+    });
+    await saveButton.click();
+    try {
+      await expect(saveButton).toHaveAttribute("aria-busy", "true");
+      await expect(saveButton).toHaveAttribute("aria-pressed", "false");
+      await expect(saveButton).toBeDisabled();
+    } finally {
+      releaseSave();
+    }
     await expect(
       card.getByRole("button", { name: "Убрать из сохранённого", exact: true }),
     ).toHaveAttribute("aria-pressed", "true");

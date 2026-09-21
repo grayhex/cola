@@ -66,19 +66,22 @@ export default function SiteProvider({ initial, children }) {
       matchMedia("(prefers-color-scheme: dark)").matches,
     );
   }
-  // Preserve personal content/layout preferences; legacy UI graphics never shape the new shell.
+  // The UI uses one component system. Personal preferences only control content presentation.
   const effective = {
     ...site.settings,
-    ...preferences,
-    designSystem: "community",
-    appearance: {
-      ...site.settings.appearance,
-      ...(/^#[\da-f]{6}$/i.test(preferences.accent || "")
-        ? { accent: preferences.accent }
-        : {}),
-    },
+    ...Object.fromEntries(
+      Object.entries(preferences).filter(([key]) =>
+        [
+          "bikeLayout",
+          "showMileage",
+          "rideListMode",
+          "rideMapView",
+          "mapScrollZoom",
+        ].includes(key),
+      ),
+    ),
   };
-  const t = (text) => site.settings.copy[text] ?? text;
+  const t = (text) => site.settings.copy?.[text] ?? text;
   return (
     <Context.Provider
       value={{

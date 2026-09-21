@@ -2,11 +2,14 @@
 html {
   scrollbar-gutter: stable;
 }
-.site-root { font-size: 16px; line-height: 1.5; }
+.site-root {
+  font-size: 16px;
+  line-height: 1.5;
+}
 .site-root h1 {
   font-weight: 700;
-  font-size: clamp(28px, 3vw, 40px);
-  letter-spacing: -1px;
+  font-size: clamp(28px, 3vw, 36px);
+  letter-spacing: -0.6px;
 }
 .site-root h2 {
   font-weight: 700;
@@ -31,10 +34,10 @@ html {
 .site-root .button {
   min-height: var(--control-standard);
   padding: 8px 14px;
-  font-size: 13px;
-  background: var(--accent);
-  color: var(--accent-foreground);
-  border-color: var(--accent);
+  font-size: 14px;
+  background: var(--button-bg);
+  color: var(--button-fg);
+  border-color: var(--button-bg);
   box-shadow: none;
   transform: none;
 }
@@ -43,10 +46,16 @@ html {
   padding: 6px 12px;
   font-size: 13px;
 }
-.site-root .button.secondary { background: var(--surface); color: var(--text); border-color: var(--border-strong); }
-.site-root .button.secondary:hover { background: var(--surface-hover); }
-.site-root .button:hover {
-  background: var(--accent-hover);
+.site-root .button.secondary {
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--border);
+}
+.site-root .button.secondary:hover {
+  background: var(--surface-hover);
+}
+.site-root .button:not(.secondary):hover {
+  background: var(--button-hover);
   transform: none;
   box-shadow: none;
 }
@@ -59,7 +68,11 @@ html {
   padding: 8px 10px;
   min-height: var(--control-standard);
 }
-.site-root input::placeholder, .site-root textarea::placeholder { color: var(--text-subtle); opacity: 1; }
+.site-root input::placeholder,
+.site-root textarea::placeholder {
+  color: var(--text-subtle);
+  opacity: 1;
+}
 .site-root :is(input[type="checkbox"], input[type="radio"]) {
   width: 16px;
   min-height: 16px;
@@ -99,10 +112,10 @@ html {
 }
 .site-root .social-page {
   max-width: var(--showcase-shell-max);
-  padding: 24px;
+  padding: 32px 24px 56px;
 }
 .site-root .social-page h1 {
-  font-size: clamp(28px, 3vw, 40px);
+  font-size: clamp(28px, 3vw, 36px);
 }
 .site-root .profile-hero {
   gap: 12px;
@@ -118,8 +131,8 @@ html {
   display: none;
 }
 .site-root .profile-bio {
-  font-size: 13px;
-  margin: 8px 0;
+  font-size: 16px;
+  margin: 12px 0;
   max-width: 640px;
 }
 .site-root .profile-title h1 {
@@ -153,22 +166,6 @@ html {
 .site-root .discussion {
   padding-top: 16px;
 }
-.site-root .comment {
-  padding: 12px 0;
-}
-.site-root .comment-body {
-  font-size: 14px;
-  line-height: 1.55;
-}
-.site-root .comment-replies {
-  margin-left: 20px;
-  border-left: 1px solid var(--line);
-  padding-left: 12px;
-}
-.site-root .comment .social-avatar {
-  width: 28px;
-  height: 28px;
-}
 .site-root .record-card {
   animation: none;
 }
@@ -191,11 +188,11 @@ html {
   justify-content: center;
   gap: 6px;
   min-height: var(--control-compact);
-  border: 1px solid var(--control-border);
-  background: var(--paper);
+  border: 1px solid var(--border);
+  background: linear-gradient(var(--surface), var(--surface-muted));
   color: var(--ink);
   border-radius: var(--radius-sm);
-  font: 600 14px var(--site-font, Manrope, sans-serif);
+  font: 600 14px var(--site-font);
   padding: 6px 10px;
   transition:
     border-color var(--motion-fast),
@@ -406,13 +403,6 @@ html {
   }
   .site-root .compact-panel .compact-button {
     font-size: 14px;
-  }
-  .site-root .comment-body {
-    font-size: 14px;
-  }
-  .site-root .comment-actions .quiet,
-  .site-root .report-trigger {
-    min-height: 44px !important;
   }
 }
 .site-root dialog[open]:has(.bike-wizard) {
@@ -701,4 +691,18 @@ html {
   .site-root .detail {
     grid-template-columns: minmax(0, min(42%, 420px)) minmax(0, 1fr);
   }
+}
+
+.site-root input[type="file"]::file-selector-button {
+  margin-right: 12px;
+  padding: 7px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-muted);
+  color: var(--text);
+  font: 600 14px/1.4 var(--site-font);
+  cursor: pointer;
+}
+.site-root input[type="file"]::file-selector-button:hover {
+  background: var(--surface-hover);
 }

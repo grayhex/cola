@@ -243,33 +243,35 @@ export default function JournalPage({ share = null }) {
               )}
               {visible && (
                 <>
-                  <SaveEntry entry={entry} />
-                  <button
-                    className="quiet"
-                    aria-label={"Нравится запись: " + entry.likes}
-                    aria-pressed={entry.liked}
-                    disabled={busy || entry.isOwner}
-                    onClick={async () => {
-                      if (!user) {
-                        location.assign("/account");
-                        return;
-                      }
-                      setBusy(true);
-                      try {
-                        const r = await socialApi(
-                          "journal/" + entry.id + "/like",
-                          entry.liked ? "DELETE" : "PUT",
-                        );
-                        setEntry((e) => ({ ...e, ...r }));
-                      } catch (e) {
-                        setError(e.message);
-                      } finally {
-                        setBusy(false);
-                      }
-                    }}
-                  >
-                    <Heart size={14} /> {entry.likes}
-                  </button>
+                  <div className="journal-reactions">
+                    <SaveEntry entry={entry} />
+                    <button
+                      className="quiet"
+                      aria-label={"Нравится запись: " + entry.likes}
+                      aria-pressed={entry.liked}
+                      disabled={busy || entry.isOwner}
+                      onClick={async () => {
+                        if (!user) {
+                          location.assign("/account");
+                          return;
+                        }
+                        setBusy(true);
+                        try {
+                          const r = await socialApi(
+                            "journal/" + entry.id + "/like",
+                            entry.liked ? "DELETE" : "PUT",
+                          );
+                          setEntry((e) => ({ ...e, ...r }));
+                        } catch (e) {
+                          setError(e.message);
+                        } finally {
+                          setBusy(false);
+                        }
+                      }}
+                    >
+                      <Heart size={14} /> {entry.likes}
+                    </button>
+                  </div>
                   <Discussion
                     bike={entry}
                     user={user}

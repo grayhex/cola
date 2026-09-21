@@ -1,11 +1,18 @@
-/* Scoped above the legacy compact layout. Award shelves elsewhere stay small. */
+/* Full record cards share product surfaces; compact badge shelves remain separate. */
 :global(.site-root) .page {
   max-width: 1440px;
   padding: 20px 24px 32px;
 }
-:global(.site-root) .page :global(.hall-heading) { margin-bottom: 26px; }
-:global(.site-root) .page :global(.record-groups) { display: grid; gap: 28px; }
-:global(.site-root) .page :global(.record-group) { min-width: 0; }
+:global(.site-root) .page :global(.hall-heading) {
+  margin-bottom: 26px;
+}
+:global(.site-root) .page :global(.record-groups) {
+  display: grid;
+  gap: 28px;
+}
+:global(.site-root) .page :global(.record-group) {
+  min-width: 0;
+}
 :global(.site-root) .page :global(.record-group-title) {
   display: flex;
   align-items: center;
@@ -47,8 +54,12 @@
   width: 160px;
   height: 160px;
 }
-:global(.site-root) .page :global(.record-content) { min-width: 0; }
-:global(.site-root) .page :global(.record-heading) { display: block; }
+:global(.site-root) .page :global(.record-content) {
+  min-width: 0;
+}
+:global(.site-root) .page :global(.record-heading) {
+  display: block;
+}
 :global(.site-root) .page :global(.record-heading) h3 {
   margin: 0;
   font-size: 16px;
@@ -112,39 +123,76 @@
   line-height: 1.4;
   color: var(--muted);
 }
-:global(.site-root) .page :global(.record-empty) strong { font-size: inherit; font-weight: 500; }
+:global(.site-root) .page :global(.record-empty) strong {
+  font-size: inherit;
+  font-weight: 500;
+}
 :global(.site-root) .page :global(.record-card):focus-within,
-:global(.site-root) .page :global(.record-card):target { border-color: var(--accent); }
+:global(.site-root) .page :global(.record-card):target {
+  border-color: var(--accent);
+}
 :global(.site-root) .page :global(.record-bike-name):focus-visible,
 :global(.site-root) .page :global(.record-owner):focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 3px;
 }
-:global(.site-root) .page :global(.hall-rules) { margin-top: 24px; }
+:global(.site-root) .page :global(.hall-rules) {
+  margin-top: 24px;
+}
 @media (max-width: 1199px) {
-  :global(.site-root) .page :global(.record-grid) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  :global(.site-root) .page :global(.record-grid) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 @media (max-width: 799px) {
-  :global(.site-root) .page { padding: 16px 12px 24px; }
-  :global(.site-root) .page :global(.record-grid) { grid-template-columns: 1fr; }
-  :global(.site-root) .page :global(.record-card) { padding: 16px; gap: 12px; }
+  :global(.site-root) .page {
+    padding: 16px 12px 24px;
+  }
+  :global(.site-root) .page :global(.record-grid) {
+    grid-template-columns: 1fr;
+  }
+  :global(.site-root) .page :global(.record-card) {
+    padding: 16px;
+    gap: 12px;
+  }
 }
 @media (max-width: 379px) {
-  :global(.site-root) .page :global(.record-card) { grid-template-columns: 1fr; }
-  :global(.site-root) .page :global(.record-illustration) { justify-self: center; }
+  :global(.site-root) .page :global(.record-card) {
+    grid-template-columns: 1fr;
+  }
+  :global(.site-root) .page :global(.record-illustration) {
+    justify-self: center;
+  }
 }
 @media (hover: hover) and (pointer: fine) {
-  :global(.site-root) .page :global(.record-card):hover { border-color: var(--accent); }
+  :global(.site-root) .page :global(.record-card):hover {
+    border-color: var(--accent);
+  }
   :global(.site-root) .page :global(.record-bike-name):hover,
-  :global(.site-root) .page :global(.record-owner):hover { color: var(--text); text-decoration: underline; }
+  :global(.site-root) .page :global(.record-owner):hover {
+    color: var(--text);
+    text-decoration: underline;
+  }
 }
 /* Keep feedback on the artwork without moving the card or its hit targets. */
 @media (prefers-reduced-motion: no-preference) {
-  :global(.site-root) .page :global(.record-illustration) { transition: transform 180ms ease; }
-  :global(.site-root) .page :global(.record-card):focus-within :global(.record-illustration) { transform: translateY(-3px); }
+  :global(.site-root) .page :global(.record-illustration) {
+    transition: transform 180ms ease;
+  }
+  :global(.site-root)
+    .page
+    :global(.record-card):focus-within
+    :global(.record-illustration) {
+    transform: translateY(-3px);
+  }
 }
 @media (prefers-reduced-motion: no-preference) and (hover: hover) and (pointer: fine) {
-  :global(.site-root) .page :global(.record-card):hover :global(.record-illustration) { transform: translateY(-3px); }
+  :global(.site-root)
+    .page
+    :global(.record-card):hover
+    :global(.record-illustration) {
+    transform: translateY(-3px);
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   :global(.site-root) .page :global(.record-card),

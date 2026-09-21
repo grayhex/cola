@@ -3,6 +3,7 @@ import RideList from "./ride-list.jsx";
 import BikeGrid from "./bike-grid.jsx";
 import { BadgeShelf } from "./achievements.jsx";
 import { ReportButton } from "./community-controls.jsx";
+import { Bike, Route } from "./icons.jsx";
 import { useEffect, useState } from "react";
 import { MapPin, Calendar, ArrowLeft } from "./icons.jsx";
 import {
@@ -155,12 +156,13 @@ export default function PublicProfile({ username }) {
               </section>
             ) : (
               <section className="profile-collection">
-                <div className="social-switch">
+                <div className="social-switch ui-tabs">
                   <button
                     className="quiet"
                     aria-pressed={collection === "bikes"}
                     onClick={() => setCollection("bikes")}
                   >
+                    <Bike size={17} aria-hidden="true" />
                     Велосипеды
                   </button>
                   <button
@@ -168,6 +170,7 @@ export default function PublicProfile({ username }) {
                     aria-pressed={collection === "rides"}
                     onClick={() => setCollection("rides")}
                   >
+                    <Route size={17} aria-hidden="true" />
                     Покатушки
                   </button>
                 </div>

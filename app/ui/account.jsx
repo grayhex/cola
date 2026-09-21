@@ -3,7 +3,20 @@ import RideAccount from "./ride-account.jsx";
 import BikeGrid from "./bike-grid.jsx";
 import { BadgeShelf } from "./achievements.jsx";
 import { useEffect, useState } from "react";
-import { Plus, ExternalLink, LogOut } from "./icons.jsx";
+import {
+  Plus,
+  ExternalLink,
+  LogOut,
+  LayoutGrid,
+  UserRound,
+  Bike,
+  Route,
+  Users,
+  Trophy,
+  Palette,
+  Settings2,
+} from "./icons.jsx";
+import AuthPage from "./auth-page.jsx";
 import Garage from "./garage.jsx";
 import BikeCard from "./bike-card.jsx";
 import {
@@ -14,6 +27,16 @@ import {
   socialApi,
 } from "./social-primitives.jsx";
 import { useSite } from "./site-provider.jsx";
+const tabIcons = {
+  overview: LayoutGrid,
+  profile: UserRound,
+  bikes: Bike,
+  rides: Route,
+  social: Users,
+  achievements: Trophy,
+  appearance: Palette,
+  account: Settings2,
+};
 const tabs = {
   overview: "Обзор",
   profile: "Мой профиль",
@@ -224,19 +247,6 @@ function Appearance({ initial, onSaved }) {
           <option value="dark">Тёмная</option>
         </select>
       </label>
-      {prefs.accent && (
-        <button
-          type="button"
-          className="quiet"
-          onClick={() => {
-            const next = { ...prefs };
-            delete next.accent;
-            setPrefs(next);
-          }}
-        >
-          Использовать акцент сайта
-        </button>
-      )}
       {[
         [
           "bikeLayout",
@@ -361,7 +371,7 @@ export default function Account() {
     if (next !== "bikes") refresh().catch((e) => setError(e.message));
   }
   if (user === null)
-    return <Garage account onAuthenticated={() => window.location.reload()} />;
+    return <AuthPage onAuthenticated={() => window.location.reload()} />;
   const profile = data?.profile;
   return (
     <>
@@ -376,13 +386,20 @@ export default function Account() {
             </a>
           )}
         </div>
-        <nav className="account-tabs" aria-label="Разделы личного кабинета">
+        <nav
+          className="account-tabs ui-tabs"
+          aria-label="Разделы личного кабинета"
+        >
           {Object.entries(tabs).map(([key, label]) => (
             <button
               key={key}
               aria-current={tab === key ? "page" : undefined}
               onClick={() => navigate(key)}
             >
+              {(() => {
+                const Icon = tabIcons[key];
+                return <Icon size={17} aria-hidden="true" />;
+              })()}
               {label}
             </button>
           ))}
@@ -495,7 +512,11 @@ export default function Account() {
             {tab === "social" && (
               <section className="social-panel">
                 <h2>Социальное</h2>
-                <div className="social-switch" role="group" aria-label="Связи">
+                <div
+                  className="social-switch ui-tabs"
+                  role="group"
+                  aria-label="Связи"
+                >
                   {[
                     ["following", "Подписки"],
                     ["followers", "Подписчики"],

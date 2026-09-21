@@ -1,10 +1,13 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { NavigationSettings, AboutSettings } from "./navigation-settings.jsx";
-import { ThemeSettings, HomepageSettings, LayoutSettings, WizardCopy } from "./design-settings.jsx";
+import {
+  ThemeSettings,
+  HomepageSettings,
+  WizardCopy,
+} from "./design-settings.jsx";
 import { Field, Select, Toggle } from "./design-controls.jsx";
 import IconSettings from "./icon-settings.jsx";
-import IconPackSettings, { uploadIconPack } from "./icon-pack-settings.jsx";
 import MediaLibrary from "./media-library.jsx";
 import CatalogEditor from "./catalog-editor.jsx";
 import MapSettings from "./map-settings.jsx";
@@ -18,8 +21,23 @@ import { copyBlocks } from "../../lib/copy-blocks.js";
 import GlobalHeader from "../ui/global-header.jsx";
 import { useSite } from "../ui/site-provider.jsx";
 import {
-  Trophy, Check, Trash2, Upload, Settings2, Palette, Type, BookOpen,
-  Users, Image, History, Save, Search, ShieldCheck, X, LoaderCircle, Menu,
+  Trophy,
+  Check,
+  Trash2,
+  Upload,
+  Settings2,
+  Palette,
+  Type,
+  BookOpen,
+  Users,
+  Image,
+  History,
+  Save,
+  Search,
+  ShieldCheck,
+  X,
+  LoaderCircle,
+  Menu,
 } from "../ui/icons.jsx";
 import styles from "./design.module.css";
 
@@ -30,7 +48,8 @@ async function request(url, method = "GET", data) {
     body: data ? JSON.stringify(data) : undefined,
   });
   const result = await response.json();
-  if (!response.ok) throw new Error(result.error || "Не удалось выполнить действие");
+  if (!response.ok)
+    throw new Error(result.error || "Не удалось выполнить действие");
   return result;
 }
 
@@ -43,10 +62,8 @@ const sections = [
   ["map", "Карта", Settings2],
   ["design", "Внешний вид", Palette],
   ["homepage", "Главная", Palette],
-  ["layout", "Legacy · компоновка", Settings2],
   ["navigation", "Меню", Menu],
   ["graphics", "Графика", Image],
-  ["icon-import", "Legacy · иконки", Upload],
   ["media", "Медиатека", Image],
   ["copy", "Тексты", Type],
   ["about", "О проекте", BookOpen],
@@ -57,35 +74,82 @@ const sections = [
   ["audit", "Журнал действий", History],
 ];
 const adminGroups = [
-  { id: "system", name: "Система", icon: Settings2, sections: ["overview", "resolver", "map", "rides", "audit"] },
-  { id: "design", name: "Дизайн", icon: Palette, sections: ["design", "homepage", "navigation", "graphics", "media", "copy", "about", "layout", "icon-import"] },
-  { id: "people", name: "Пользователи", icon: Users, sections: ["users", "reports"] },
-  { id: "mechanics", name: "Механики", icon: Trophy, sections: ["scoring", "gamification"] },
-  { id: "catalog", name: "Каталог", icon: BookOpen, sections: ["catalog", "groups"] },
+  {
+    id: "system",
+    name: "Система",
+    icon: Settings2,
+    sections: ["overview", "resolver", "map", "rides", "audit"],
+  },
+  {
+    id: "design",
+    name: "Дизайн",
+    icon: Palette,
+    sections: [
+      "design",
+      "homepage",
+      "navigation",
+      "graphics",
+      "media",
+      "copy",
+      "about",
+    ],
+  },
+  {
+    id: "people",
+    name: "Пользователи",
+    icon: Users,
+    sections: ["users", "reports"],
+  },
+  {
+    id: "mechanics",
+    name: "Механики",
+    icon: Trophy,
+    sections: ["scoring", "gamification"],
+  },
+  {
+    id: "catalog",
+    name: "Каталог",
+    icon: BookOpen,
+    sections: ["catalog", "groups"],
+  },
 ];
-const settingsTabs = new Set(["overview", "scoring", "map", ...adminGroups.find((g) => g.id === "design").sections]);
+const settingsTabs = new Set([
+  "overview",
+  "scoring",
+  "map",
+  ...adminGroups.find((g) => g.id === "design").sections,
+]);
 const catalogTabs = new Set(["catalog", "groups"]);
 
 export default function Admin() {
   const { settings, catalog, setSite, setPreferences } = useSite();
-  const [tab, setTab] = useState("overview"), [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true), [busy, setBusy] = useState(false);
-  const [uploadBusy, setUploadBusy] = useState(false);
-  const [error, setError] = useState(""), [notice, setNotice] = useState("");
-  const [draft, setDraft] = useState(settings), [cat, setCat] = useState(catalog);
-  const [sv, setSv] = useState(1), [cv, setCv] = useState(1);
-  const [stats, setStats] = useState({}), [participation, setParticipation] = useState([]);
-  const [assets, setAssets] = useState([]), [events, setEvents] = useState([]);
+  const [tab, setTab] = useState("overview"),
+    [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true),
+    [busy, setBusy] = useState(false);
+  const [error, setError] = useState(""),
+    [notice, setNotice] = useState("");
+  const [draft, setDraft] = useState(settings),
+    [cat, setCat] = useState(catalog);
+  const [sv, setSv] = useState(1),
+    [cv, setCv] = useState(1);
+  const [stats, setStats] = useState({}),
+    [participation, setParticipation] = useState([]);
+  const [assets, setAssets] = useState([]),
+    [events, setEvents] = useState([]);
   const [textSearch, setTextSearch] = useState("");
-  const [users, setUsers] = useState([]), [userSearch, setUserSearch] = useState("");
-  const [page, setPage] = useState(1), [total, setTotal] = useState(0);
-  const [editUser, setEditUser] = useState(null), [confirm, setConfirm] = useState(null);
+  const [users, setUsers] = useState([]),
+    [userSearch, setUserSearch] = useState("");
+  const [page, setPage] = useState(1),
+    [total, setTotal] = useState(0);
+  const [editUser, setEditUser] = useState(null),
+    [confirm, setConfirm] = useState(null);
   const [confirmEmail, setConfirmEmail] = useState("");
   const dialog = useRef(null);
   const dirtySettings = JSON.stringify(draft) !== JSON.stringify(settings);
   const dirtyCatalog = JSON.stringify(cat) !== JSON.stringify(catalog);
   const dirty = dirtySettings || dirtyCatalog;
-  const locked = busy || uploadBusy;
+  const locked = busy;
   const group = adminGroups.find((g) => g.sections.includes(tab));
   const isCatalog = catalogTabs.has(tab);
   const canSave = isCatalog || settingsTabs.has(tab);
@@ -93,291 +157,836 @@ export default function Admin() {
 
   useEffect(() => {
     const warn = (event) => {
-      if (dirty || uploadBusy) { event.preventDefault(); event.returnValue = ""; }
+      if (dirty) {
+        event.preventDefault();
+        event.returnValue = "";
+      }
     };
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
-  }, [dirty, uploadBusy]);
+  }, [dirty]);
   useEffect(() => {
     if (editUser || confirm) dialog.current?.showModal();
     else dialog.current?.close();
   }, [editUser, confirm]);
 
   async function run(work) {
-    setBusy(true); setError(""); setNotice("");
-    try { return await work(); }
-    catch (e) { setError(e.message); }
-    finally { setBusy(false); }
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      return await work();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy(false);
+    }
   }
   async function loadUsers(q = userSearch, p = page) {
-    const result = await request(`admin/users?q=${encodeURIComponent(q)}&page=${p}`);
-    setUsers(result.users); setTotal(result.total);
+    const result = await request(
+      `admin/users?q=${encodeURIComponent(q)}&page=${p}`,
+    );
+    setUsers(result.users);
+    setTotal(result.total);
   }
   async function refreshAssets() {
     const result = await request("admin/assets/library");
     setAssets(result.assets);
   }
   function mergeAssets(added) {
-    setAssets((before) => [...new Map([...before, ...added].map((a) => [a.id, a])).values()]);
+    setAssets((before) => [
+      ...new Map([...before, ...added].map((a) => [a.id, a])).values(),
+    ]);
   }
   async function reload() {
     const result = await request("admin/overview");
-    setUser(result.user); setStats(result.stats);
+    setUser(result.user);
+    setStats(result.stats);
     setParticipation(result.participation || []);
-    setDraft(result.settings); setCat(result.catalog);
-    setSv(result.settingsVersion); setCv(result.catalogVersion);
+    setDraft(result.settings);
+    setCat(result.catalog);
+    setSv(result.settingsVersion);
+    setCv(result.catalogVersion);
     setSite(result);
     await refreshAssets();
   }
   useEffect(() => {
-    request("me").then(async (result) => {
-      setUser(result.user);
-      setPreferences(result.user?.preferences || {});
-      if (result.user?.role === "admin") await reload();
-    }).catch((e) => setError(e.message)).finally(() => setLoading(false));
+    request("me")
+      .then(async (result) => {
+        setUser(result.user);
+        setPreferences(result.user?.preferences || {});
+        if (result.user?.role === "admin") await reload();
+      })
+      .catch((e) => setError(e.message))
+      .finally(() => setLoading(false));
   }, []);
   useEffect(() => {
     if (user?.role !== "admin") return;
     if (tab === "users") run(() => loadUsers());
     if (tab === "media") run(refreshAssets);
-    if (tab === "audit") run(async () => setEvents((await request("admin/audit")).events));
+    if (tab === "audit")
+      run(async () => setEvents((await request("admin/audit")).events));
   }, [tab, page]);
 
   // Map updates from individual uploads/imports compose without losing other slots.
-  const update = (key, value) => setDraft((before) => ({
-    ...before, [key]: typeof value === "function" ? value(before[key]) : value,
-  }));
+  const update = (key, value) =>
+    setDraft((before) => ({
+      ...before,
+      [key]: typeof value === "function" ? value(before[key]) : value,
+    }));
   function navigate(next) {
     if (locked) return;
-    setTab(next); setError(""); setNotice("");
+    setTab(next);
+    setError("");
+    setNotice("");
   }
   async function saveSettings() {
     await run(async () => {
-      const result = await request("admin/settings", "PUT", { value: draft, version: sv });
+      const result = await request("admin/settings", "PUT", {
+        value: draft,
+        version: sv,
+      });
       setSv(result.version);
-      setSite((before) => ({ ...before, settings: draft, settingsVersion: result.version }));
+      setSite((before) => ({
+        ...before,
+        settings: draft,
+        settingsVersion: result.version,
+      }));
+      try {
+        await refreshAssets();
+      } catch {
+        setError(
+          "Настройки сохранены, но медиатека не обновилась. Откройте её повторно.",
+        );
+      }
       setNotice("Настройки опубликованы на сайте");
-      try { await refreshAssets(); }
-      catch { setError("Настройки сохранены, но медиатека не обновилась. Откройте её повторно."); }
     });
   }
   async function saveCatalog() {
     await run(async () => {
-      const result = await request("admin/catalog", "PUT", { value: cat, version: cv });
+      const result = await request("admin/catalog", "PUT", {
+        value: cat,
+        version: cv,
+      });
       setCv(result.version);
-      setSite((before) => ({ ...before, catalog: cat, catalogVersion: result.version }));
+      setSite((before) => ({
+        ...before,
+        catalog: cat,
+        catalogVersion: result.version,
+      }));
       setNotice("Справочники обновлены");
     });
   }
   function ask(title, description, action, email) {
-    setConfirm({ title, description, action, email }); setConfirmEmail("");
+    setConfirm({ title, description, action, email });
+    setConfirmEmail("");
   }
   async function uploadAsset(file) {
-    if (file.size > 10 * 1024 * 1024) throw new Error("Максимальный размер 10 МБ");
-    const response = await fetch("/api/admin/assets?name=" + encodeURIComponent(file.name), {
-      method: "POST", headers: { "Content-Type": file.type }, body: file,
-    });
+    if (file.size > 10 * 1024 * 1024)
+      throw new Error("Максимальный размер 10 МБ");
+    const response = await fetch(
+      "/api/admin/assets?name=" + encodeURIComponent(file.name),
+      {
+        method: "POST",
+        headers: { "Content-Type": file.type },
+        body: file,
+      },
+    );
     const result = await response.json();
-    if (!response.ok) throw new Error(result.error || "Не удалось загрузить изображение");
+    if (!response.ok)
+      throw new Error(result.error || "Не удалось загрузить изображение");
     // Do not depend on a subsequent list request to make the new file selectable.
-    mergeAssets([{ ...result, usage: [], created_at: new Date().toISOString() }]);
+    mergeAssets([
+      { ...result, usage: [], created_at: new Date().toISOString() },
+    ]);
     setNotice("Изображение загружено.");
     return result;
   }
   async function uploadGraphic(file, slot) {
     return run(async () => {
-      let asset;
-      if (slot.target === "semantic") {
-        if (file.size > 2 * 1024 * 1024) throw new Error("Иконка должна быть не больше 2 МБ");
-        const result = await uploadIconPack(file, { action: "single", slot: slot.key });
-        mergeAssets(result.assets);
-        asset = result.assets.find((a) => a.id === result.assignments[slot.key]);
-      } else asset = await uploadAsset(file);
+      const asset = await uploadAsset(file);
       if (!asset) throw new Error("Сервер не вернул загруженное изображение");
-      setNotice("Графика загружена и выбрана. Для публикации сохраните настройки.");
+      setNotice(
+        "Графика загружена и выбрана. Для публикации сохраните настройки.",
+      );
       return asset;
     });
   }
   async function deleteAssets(ids) {
-    if (!ids.length) { setNotice("Нет неиспользуемой графики для удаления."); return; }
-    let deleted = 0, skipped = 0, cleanupWarning = false;
+    if (!ids.length) {
+      setNotice("Нет неиспользуемой графики для удаления.");
+      return;
+    }
+    let deleted = 0,
+      skipped = 0,
+      cleanupWarning = false;
     try {
       // Only explicit IDs from the confirmation snapshot, never an unbounded delete-all.
       for (let offset = 0; offset < ids.length; offset += 200) {
-        const result = await request("admin/assets/library", "DELETE", { ids: ids.slice(offset, offset + 200) });
+        const result = await request("admin/assets/library", "DELETE", {
+          ids: ids.slice(offset, offset + 200),
+        });
         const removed = new Set(result.deletedIds);
-        deleted += removed.size; skipped += result.skippedIds.length;
+        deleted += removed.size;
+        skipped += result.skippedIds.length;
         cleanupWarning ||= result.cleanupWarning;
         setAssets((before) => before.filter((asset) => !removed.has(asset.id)));
       }
       await refreshAssets();
       setNotice(`Удалено изображений: ${deleted}. Пропущено: ${skipped}.`);
-      if (cleanupWarning) setError("Записи удалены, но часть файлов не удалось убрать с диска. Подробности в серверном журнале.");
+      if (cleanupWarning)
+        setError(
+          "Записи удалены, но часть файлов не удалось убрать с диска. Подробности в серверном журнале.",
+        );
     } catch (e) {
-      try { await refreshAssets(); } catch { /* Keep the successfully removed IDs out of the local list. */ }
+      try {
+        await refreshAssets();
+      } catch {
+        /* Keep the successfully removed IDs out of the local list. */
+      }
       throw new Error(`Удалено изображений: ${deleted}. ${e.message}`);
     }
   }
 
-  if (loading) return <><GlobalHeader user={null} /><main className="loading"><LoaderCircle className="spin" />Открываем управление…</main></>;
-  if (user?.role !== "admin") return <><GlobalHeader user={user} /><main className="empty">
-    <ShieldCheck size={40} /><h1>Вход для администратора</h1>
-    <p>{user ? "У этого аккаунта нет прав администратора." : "Войдите в аккаунт администратора на главной странице."}</p>
-    <a className="button" href="/">Открыть ColaBike</a>
-    <p className="help">Первого администратора назначает владелец сервера через команду из README.</p>
-    {error && <p role="alert">{error}</p>}
-  </main></>;
+  if (loading)
+    return (
+      <>
+        <GlobalHeader user={null} />
+        <main className="loading">
+          <LoaderCircle className="spin" />
+          Открываем управление…
+        </main>
+      </>
+    );
+  if (user?.role !== "admin")
+    return (
+      <>
+        <GlobalHeader user={user} />
+        <main className="empty">
+          <ShieldCheck size={40} />
+          <h1>Вход для администратора</h1>
+          <p>
+            {user
+              ? "У этого аккаунта нет прав администратора."
+              : "Войдите в аккаунт администратора на главной странице."}
+          </p>
+          <a className="button" href="/">
+            Открыть ColaBike
+          </a>
+          <p className="help">
+            Первого администратора назначает владелец сервера через команду из
+            README.
+          </p>
+          {error && <p role="alert">{error}</p>}
+        </main>
+      </>
+    );
 
-  return <div className="admin-shell">
-    <GlobalHeader user={user} />
-    <div className="admin-group-tabs" role="tablist" aria-label="Группы админки">
-      {adminGroups.map((g, index) => <button key={g.id} type="button" id={"admin-group-" + g.id}
-        role="tab" aria-selected={g.id === group.id} aria-controls="admin-group-panel"
-        tabIndex={g.id === group.id ? 0 : -1} disabled={locked}
-        onClick={() => navigate(g.sections[0])}
-        onKeyDown={(event) => {
-          if (locked || !["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
-          event.preventDefault();
-          const next = event.key === "Home" ? 0 : event.key === "End" ? adminGroups.length - 1
-            : (index + (event.key === "ArrowRight" ? 1 : -1) + adminGroups.length) % adminGroups.length;
-          navigate(adminGroups[next].sections[0]);
-          document.getElementById("admin-group-" + adminGroups[next].id)?.focus();
-        }}><g.icon size={17} />{g.name}</button>)}
-    </div>
-    <div className={"admin-layout " + (group.id === "design" ? styles.designLayout : "")}
-      id="admin-group-panel" role="tabpanel" aria-labelledby={"admin-group-" + group.id}>
-      <nav className="admin-nav" aria-label="Разделы админки">
-        {group.sections.map((key) => {
-          const [id, label, Icon] = sections.find((s) => s[0] === key);
-          return <button key={id} type="button" className={tab === id ? "active" : ""}
-            aria-current={tab === id ? "page" : undefined} disabled={locked} onClick={() => navigate(id)}>
-            <Icon size={18} />{label}
-            {((settingsTabs.has(id) && dirtySettings) || (catalogTabs.has(id) && dirtyCatalog)) &&
-              <span className="unsaved-dot" aria-label="Есть несохранённые изменения" />}
-          </button>;
-        })}
-      </nav>
-      <main className="admin-content">
-        <div className="admin-title"><div><span className="eyebrow">COLABIKE / ADMIN</span>
-          <h1>{sections.find((s) => s[0] === tab)[1]}</h1></div>
-          {locked && <LoaderCircle className="spin" aria-label="Выполняется действие" />}
-        </div>
-        {error && <div className="error" role="alert">{error}</div>}
-        {notice && <div className="admin-success" role="status"><Check size={18} />{notice}</div>}
-        {tab === "scoring" && <ScoringSettings value={draft.scoring} catalog={catalog} onChange={(v) => update("scoring", v)} />}
-        {tab === "resolver" && <ResolverSettings />}
-        {tab === "gamification" && <Gamification />}
-        {tab === "rides" && <RideSettings />}
-        {tab === "map" && <MapSettings settings={draft} onChange={update} />}
-        {tab === "about" && <AboutSettings settings={draft} onChange={update} />}
-        {tab === "reports" && <Reports onManageUser={(username) => { setUserSearch(username); setPage(1); setTab("users"); }} />}
-        {tab === "overview" && <>
-          <div className="admin-stats">{[["Пользователей", stats.users], ["Велосипедов", stats.bikes], ["Фотографий", stats.photos]].map(([label, count]) =>
-            <div key={label}><span>{label}</span><strong>{count ?? 0}</strong></div>)}</div>
-          <h3>Участие за 30 дней</h3>
-          <p className="help">Дневные счётчики без текста, целей действий, IP и контактов. Возвращающиеся — участники с действием минимум в два разных дня. Это псевдонимный, не анонимный учёт; удаление аккаунта удаляет его события.</p>
-          <table className="participation-table"><thead><tr><th>Событие</th><th>Действия</th><th>Участники</th><th>Вернулись</th></tr></thead>
-            <tbody>{participation.map((r) => <tr key={r.event}><td>{{ publish: "Публикация", follow: "Подписка", save: "Сохранение" }[r.event]}</td>
-              <td>{r.actions}</td><td>{r.participants}</td><td>{r.returning_participants}</td></tr>)}</tbody></table>
-          <section className="admin-panel"><h2>Основные настройки</h2>
-            <Field label="Название сайта"><input maxLength={150} value={draft.siteName} onChange={(e) => update("siteName", e.target.value)} /></Field>
-            <Field label="Заголовок витрины"><input maxLength={150} value={draft.showcaseTitle || "Витрина"} onChange={(e) => update("showcaseTitle", e.target.value)} /></Field>
-            <Field label="Описание сайта"><textarea maxLength={300} rows={3} value={draft.siteDescription} onChange={(e) => update("siteDescription", e.target.value)} /></Field>
-            <Toggle label="Разрешить регистрацию пользователей" checked={draft.registrationOpen} onChange={(v) => update("registrationOpen", v)} />
-            <Toggle label="Показывать демонстрационный велосипед гостям" checked={draft.showDemo} onChange={(v) => update("showDemo", v)} />
-          </section><p className="help">Адрес сервера, доступ к БД и secure-cookie задаются в окружении Docker. Секреты не передаются в браузер.</p>
-        </>}
-        {tab === "design" && <ThemeSettings settings={draft} onChange={update} onPreset={setDraft} />}
-        {tab === "homepage" && <HomepageSettings settings={draft} onChange={update} assets={assets} busy={locked} onUpload={uploadGraphic} />}
-        {tab === "layout" && <LayoutSettings settings={draft} onChange={update} />}
-        {tab === "navigation" && <NavigationSettings settings={draft} onChange={update} />}
-        {tab === "graphics" && <IconSettings settings={draft} assets={assets} busy={locked} onChange={update} onUpload={uploadGraphic} />}
-        {/* Keep ZIP preview and selection while moving between the design tabs. */}
-        {group.id === "design" && <div hidden={tab !== "icon-import"}>
-          <IconPackSettings settings={draft} busy={busy} onChange={update} onAssets={mergeAssets} onBusyChange={setUploadBusy} />
-        </div>}
-        {tab === "media" && <MediaLibrary assets={assets} draft={draft} saved={settings} busy={locked}
-          onUpload={(file) => run(() => uploadAsset(file))} onDelete={deleteAssets} onConfirm={ask} />}
-        {tab === "groups" && <GroupSettings catalog={cat} onChange={setCat} />}
-        {tab === "copy" && <section className="admin-panel">
-          <p>Заголовки, подписи, кнопки и подсказки сайта. Пользовательские названия велосипедов и деталей здесь не меняются.</p>
-          <WizardCopy settings={draft} onChange={update} />
-          <label className="search admin-search"><Search size={18} /><input aria-label="Найти текст сайта" placeholder="Найти текст" value={textSearch} onChange={(e) => setTextSearch(e.target.value)} /></label>
-          {copyBlocks.map((block) => {
-            const keys = block.keys.filter((key) => (key + " " + (draft.copy[key] || "")).toLowerCase().includes(textSearch.toLowerCase()));
-            return keys.length ? <details className="copy-block" key={block.id} open={!!textSearch}>
-              <summary>{block.name} <small>{keys.length}</small></summary>
-              {keys.map((key) => <div className="copy-row" key={key}>
-                <Field label={key}><textarea rows={2} maxLength={2000} value={draft.copy[key] ?? key}
-                  onChange={(e) => update("copy", { ...draft.copy, [key]: e.target.value })} /></Field>
-                <button type="button" className="quiet" disabled={!(key in draft.copy)} onClick={() => {
-                  const next = { ...draft.copy }; delete next[key]; update("copy", next);
-                }}>Сбросить</button>
-              </div>)}
-            </details> : null;
+  return (
+    <div className="admin-shell">
+      <GlobalHeader user={user} />
+      <div
+        className="admin-group-tabs ui-tabs"
+        role="tablist"
+        aria-label="Группы админки"
+      >
+        {adminGroups.map((g, index) => (
+          <button
+            key={g.id}
+            type="button"
+            id={"admin-group-" + g.id}
+            role="tab"
+            aria-selected={g.id === group.id}
+            aria-controls="admin-group-panel"
+            tabIndex={g.id === group.id ? 0 : -1}
+            disabled={locked}
+            onClick={() => navigate(g.sections[0])}
+            onKeyDown={(event) => {
+              if (
+                locked ||
+                !["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)
+              )
+                return;
+              event.preventDefault();
+              const next =
+                event.key === "Home"
+                  ? 0
+                  : event.key === "End"
+                    ? adminGroups.length - 1
+                    : (index +
+                        (event.key === "ArrowRight" ? 1 : -1) +
+                        adminGroups.length) %
+                      adminGroups.length;
+              navigate(adminGroups[next].sections[0]);
+              document
+                .getElementById("admin-group-" + adminGroups[next].id)
+                ?.focus();
+            }}
+          >
+            <g.icon size={17} />
+            {g.name}
+          </button>
+        ))}
+      </div>
+      <div
+        className={
+          "admin-layout " + (group.id === "design" ? styles.designLayout : "")
+        }
+        id="admin-group-panel"
+        role="tabpanel"
+        aria-labelledby={"admin-group-" + group.id}
+      >
+        <nav className="admin-nav" aria-label="Разделы админки">
+          {group.sections.map((key) => {
+            const [id, label, Icon] = sections.find((s) => s[0] === key);
+            return (
+              <button
+                key={id}
+                type="button"
+                className={tab === id ? "active" : ""}
+                aria-current={tab === id ? "page" : undefined}
+                disabled={locked}
+                onClick={() => navigate(id)}
+              >
+                <Icon size={18} />
+                {label}
+                {((settingsTabs.has(id) && dirtySettings) ||
+                  (catalogTabs.has(id) && dirtyCatalog)) && (
+                  <span
+                    className="unsaved-dot"
+                    aria-label="Есть несохранённые изменения"
+                  />
+                )}
+              </button>
+            );
           })}
-        </section>}
-        {tab === "catalog" && <CatalogEditor value={cat} onChange={setCat} />}
-        {tab === "users" && <section className="admin-panel">
-          <form className="list-add" onSubmit={(e) => { e.preventDefault(); setPage(1); run(() => loadUsers(userSearch, 1)); }}>
-            <input aria-label="Поиск пользователей" placeholder="Имя или email" value={userSearch} onChange={(e) => setUserSearch(e.target.value)} />
-            <button className="button secondary" disabled={locked}><Search size={18} />Найти</button>
-          </form><p className="help">Найдено: {total}</p>
-          <div className="users-list">{users.map((u) => <article key={u.id}>
-            <div><strong>{u.name}</strong><span>{u.email}</span><small>{u.role === "admin" ? "Администратор" : "Пользователь"} · {u.blocked ? "Заблокирован" : "Активен"} · Велосипедов: {u.bikes}</small></div>
-            <div className="user-actions">
-              <button className="button secondary" onClick={() => setEditUser(u)}>Изменить</button>
-              <button className="quiet" disabled={locked} onClick={() => ask("Завершить все сессии?", "Пользователю потребуется войти заново.", async () => {
-                await request("admin/users/" + u.id + "/sessions", "DELETE"); setNotice("Сессии завершены");
-                if (u.id === user.id) window.location.assign("/");
-              })}>Сессии</button>
-              <button className="icon danger" aria-label={"Удалить пользователя " + u.email} disabled={u.id === user.id || u.role === "admin" || locked}
-                onClick={() => ask("Удалить пользователя?", "Будут удалены аккаунт, все его велосипеды и фотографии. Для подтверждения введите email.", async (email) => {
-                  await request("admin/users/" + u.id, "DELETE", { confirmEmail: email }); await loadUsers(); setNotice("Пользователь удалён");
-                }, u.email)}><Trash2 size={18} /></button>
+        </nav>
+        <main className="admin-content">
+          <div className="admin-title">
+            <div>
+              <span className="eyebrow">COLABIKE / ADMIN</span>
+              <h1>{sections.find((s) => s[0] === tab)[1]}</h1>
             </div>
-          </article>)}</div>
-          <div className="pagination"><button className="button secondary" disabled={page === 1 || locked} onClick={() => setPage((p) => p - 1)}>Назад</button>
-            <span>{page} / {Math.max(1, Math.ceil(total / 20))}</span>
-            <button className="button secondary" disabled={page * 20 >= total || locked} onClick={() => setPage((p) => p + 1)}>Далее</button></div>
-        </section>}
-        {tab === "audit" && <section className="admin-panel"><p>Последние 100 действий администраторов.</p>
-          <div className="audit-list">{events.map((event) => <article key={event.id}><strong>{event.action}</strong>
-            <span>{event.actor || "Удалённый пользователь"} · {new Date(event.created_at).toLocaleString("ru-RU")}</span><code>{event.target}</code></article>)}</div>
-          {!events.length && <p>Действий пока нет.</p>}
-        </section>}
-        {canSave && <div className="admin-save"><span>{currentDirty ? "Есть несохранённые изменения" : "Изменения сохранены"}</span>
-          <div><button className="quiet" disabled={locked || !currentDirty} onClick={() => {
-            if (isCatalog) setCat(catalog); else setDraft(settings); setError("");
-          }}>Отменить изменения</button>
-            <button className="button" disabled={locked || !currentDirty} onClick={isCatalog ? saveCatalog : saveSettings}><Save size={17} />{busy ? "Сохраняем…" : "Сохранить"}</button></div>
-        </div>}
-      </main>
+            {locked && (
+              <LoaderCircle
+                className="spin"
+                aria-label="Выполняется действие"
+              />
+            )}
+          </div>
+          {error && (
+            <div className="error" role="alert">
+              {error}
+            </div>
+          )}
+          {notice && (
+            <div className="admin-success" role="status">
+              <Check size={18} />
+              {notice}
+            </div>
+          )}
+          {tab === "scoring" && (
+            <ScoringSettings
+              value={draft.scoring}
+              catalog={catalog}
+              onChange={(v) => update("scoring", v)}
+            />
+          )}
+          {tab === "resolver" && <ResolverSettings />}
+          {tab === "gamification" && <Gamification />}
+          {tab === "rides" && <RideSettings />}
+          {tab === "map" && <MapSettings settings={draft} onChange={update} />}
+          {tab === "about" && (
+            <AboutSettings settings={draft} onChange={update} />
+          )}
+          {tab === "reports" && (
+            <Reports
+              onManageUser={(username) => {
+                setUserSearch(username);
+                setPage(1);
+                setTab("users");
+              }}
+            />
+          )}
+          {tab === "overview" && (
+            <>
+              <div className="admin-stats">
+                {[
+                  ["Пользователей", stats.users],
+                  ["Велосипедов", stats.bikes],
+                  ["Фотографий", stats.photos],
+                ].map(([label, count]) => (
+                  <div key={label}>
+                    <span>{label}</span>
+                    <strong>{count ?? 0}</strong>
+                  </div>
+                ))}
+              </div>
+              <h3>Участие за 30 дней</h3>
+              <p className="help">
+                Дневные счётчики без текста, целей действий, IP и контактов.
+                Возвращающиеся — участники с действием минимум в два разных дня.
+                Это псевдонимный, не анонимный учёт; удаление аккаунта удаляет
+                его события.
+              </p>
+              <table className="participation-table">
+                <thead>
+                  <tr>
+                    <th>Событие</th>
+                    <th>Действия</th>
+                    <th>Участники</th>
+                    <th>Вернулись</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {participation.map((r) => (
+                    <tr key={r.event}>
+                      <td>
+                        {
+                          {
+                            publish: "Публикация",
+                            follow: "Подписка",
+                            save: "Сохранение",
+                          }[r.event]
+                        }
+                      </td>
+                      <td>{r.actions}</td>
+                      <td>{r.participants}</td>
+                      <td>{r.returning_participants}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <section className="admin-panel">
+                <h2>Основные настройки</h2>
+                <Field label="Название сайта">
+                  <input
+                    maxLength={150}
+                    value={draft.siteName}
+                    onChange={(e) => update("siteName", e.target.value)}
+                  />
+                </Field>
+                <Field label="Заголовок витрины">
+                  <input
+                    maxLength={150}
+                    value={draft.showcaseTitle || "Витрина"}
+                    onChange={(e) => update("showcaseTitle", e.target.value)}
+                  />
+                </Field>
+                <Field label="Описание сайта">
+                  <textarea
+                    maxLength={300}
+                    rows={3}
+                    value={draft.siteDescription}
+                    onChange={(e) => update("siteDescription", e.target.value)}
+                  />
+                </Field>
+                <Toggle
+                  label="Разрешить регистрацию пользователей"
+                  checked={draft.registrationOpen}
+                  onChange={(v) => update("registrationOpen", v)}
+                />
+                <Toggle
+                  label="Показывать демонстрационный велосипед гостям"
+                  checked={draft.showDemo}
+                  onChange={(v) => update("showDemo", v)}
+                />
+              </section>
+              <p className="help">
+                Адрес сервера, доступ к БД и secure-cookie задаются в окружении
+                Docker. Секреты не передаются в браузер.
+              </p>
+            </>
+          )}
+          {tab === "design" && (
+            <ThemeSettings settings={draft} onChange={update} />
+          )}
+          {tab === "homepage" && (
+            <HomepageSettings
+              settings={draft}
+              onChange={update}
+              assets={assets}
+              busy={locked}
+              onUpload={uploadGraphic}
+            />
+          )}
+          {tab === "navigation" && (
+            <NavigationSettings settings={draft} onChange={update} />
+          )}
+          {tab === "graphics" && (
+            <IconSettings
+              settings={draft}
+              assets={assets}
+              busy={locked}
+              onChange={update}
+              onUpload={uploadGraphic}
+            />
+          )}
+          {tab === "media" && (
+            <MediaLibrary
+              assets={assets}
+              draft={draft}
+              saved={settings}
+              busy={locked}
+              onUpload={(file) => run(() => uploadAsset(file))}
+              onDelete={deleteAssets}
+              onConfirm={ask}
+            />
+          )}
+          {tab === "groups" && (
+            <GroupSettings catalog={cat} onChange={setCat} />
+          )}
+          {tab === "copy" && (
+            <section className="admin-panel">
+              <p>
+                Заголовки, подписи, кнопки и подсказки сайта. Пользовательские
+                названия велосипедов и деталей здесь не меняются.
+              </p>
+              <WizardCopy settings={draft} onChange={update} />
+              <label className="search admin-search">
+                <Search size={18} />
+                <input
+                  aria-label="Найти текст сайта"
+                  placeholder="Найти текст"
+                  value={textSearch}
+                  onChange={(e) => setTextSearch(e.target.value)}
+                />
+              </label>
+              {copyBlocks.map((block) => {
+                const keys = block.keys.filter((key) =>
+                  (key + " " + (draft.copy[key] || ""))
+                    .toLowerCase()
+                    .includes(textSearch.toLowerCase()),
+                );
+                return keys.length ? (
+                  <details
+                    className="copy-block"
+                    key={block.id}
+                    open={!!textSearch}
+                  >
+                    <summary>
+                      {block.name} <small>{keys.length}</small>
+                    </summary>
+                    {keys.map((key) => (
+                      <div className="copy-row" key={key}>
+                        <Field label={key}>
+                          <textarea
+                            rows={2}
+                            maxLength={2000}
+                            value={draft.copy[key] ?? key}
+                            onChange={(e) =>
+                              update("copy", {
+                                ...draft.copy,
+                                [key]: e.target.value,
+                              })
+                            }
+                          />
+                        </Field>
+                        <button
+                          type="button"
+                          className="quiet"
+                          disabled={!(key in draft.copy)}
+                          onClick={() => {
+                            const next = { ...draft.copy };
+                            delete next[key];
+                            update("copy", next);
+                          }}
+                        >
+                          Сбросить
+                        </button>
+                      </div>
+                    ))}
+                  </details>
+                ) : null;
+              })}
+            </section>
+          )}
+          {tab === "catalog" && <CatalogEditor value={cat} onChange={setCat} />}
+          {tab === "users" && (
+            <section className="admin-panel">
+              <form
+                className="list-add"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  setPage(1);
+                  run(() => loadUsers(userSearch, 1));
+                }}
+              >
+                <input
+                  aria-label="Поиск пользователей"
+                  placeholder="Имя или email"
+                  value={userSearch}
+                  onChange={(e) => setUserSearch(e.target.value)}
+                />
+                <button className="button secondary" disabled={locked}>
+                  <Search size={18} />
+                  Найти
+                </button>
+              </form>
+              <p className="help">Найдено: {total}</p>
+              <div className="users-list">
+                {users.map((u) => (
+                  <article key={u.id}>
+                    <div>
+                      <strong>{u.name}</strong>
+                      <span>{u.email}</span>
+                      <small>
+                        {u.role === "admin" ? "Администратор" : "Пользователь"}{" "}
+                        · {u.blocked ? "Заблокирован" : "Активен"} ·
+                        Велосипедов: {u.bikes}
+                      </small>
+                    </div>
+                    <div className="user-actions">
+                      <button
+                        className="button secondary"
+                        onClick={() => setEditUser(u)}
+                      >
+                        Изменить
+                      </button>
+                      <button
+                        className="quiet"
+                        disabled={locked}
+                        onClick={() =>
+                          ask(
+                            "Завершить все сессии?",
+                            "Пользователю потребуется войти заново.",
+                            async () => {
+                              await request(
+                                "admin/users/" + u.id + "/sessions",
+                                "DELETE",
+                              );
+                              setNotice("Сессии завершены");
+                              if (u.id === user.id) window.location.assign("/");
+                            },
+                          )
+                        }
+                      >
+                        Сессии
+                      </button>
+                      <button
+                        className="icon danger"
+                        aria-label={"Удалить пользователя " + u.email}
+                        disabled={
+                          u.id === user.id || u.role === "admin" || locked
+                        }
+                        onClick={() =>
+                          ask(
+                            "Удалить пользователя?",
+                            "Будут удалены аккаунт, все его велосипеды и фотографии. Для подтверждения введите email.",
+                            async (email) => {
+                              await request("admin/users/" + u.id, "DELETE", {
+                                confirmEmail: email,
+                              });
+                              await loadUsers();
+                              setNotice("Пользователь удалён");
+                            },
+                            u.email,
+                          )
+                        }
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+              <div className="pagination">
+                <button
+                  className="button secondary"
+                  disabled={page === 1 || locked}
+                  onClick={() => setPage((p) => p - 1)}
+                >
+                  Назад
+                </button>
+                <span>
+                  {page} / {Math.max(1, Math.ceil(total / 20))}
+                </span>
+                <button
+                  className="button secondary"
+                  disabled={page * 20 >= total || locked}
+                  onClick={() => setPage((p) => p + 1)}
+                >
+                  Далее
+                </button>
+              </div>
+            </section>
+          )}
+          {tab === "audit" && (
+            <section className="admin-panel">
+              <p>Последние 100 действий администраторов.</p>
+              <div className="audit-list">
+                {events.map((event) => (
+                  <article key={event.id}>
+                    <strong>{event.action}</strong>
+                    <span>
+                      {event.actor || "Удалённый пользователь"} ·{" "}
+                      {new Date(event.created_at).toLocaleString("ru-RU")}
+                    </span>
+                    <code>{event.target}</code>
+                  </article>
+                ))}
+              </div>
+              {!events.length && <p>Действий пока нет.</p>}
+            </section>
+          )}
+          {canSave && (
+            <div className="admin-save">
+              <span>
+                {currentDirty
+                  ? "Есть несохранённые изменения"
+                  : "Изменения сохранены"}
+              </span>
+              <div>
+                <button
+                  className="quiet"
+                  disabled={locked || !currentDirty}
+                  onClick={() => {
+                    if (isCatalog) setCat(catalog);
+                    else setDraft(settings);
+                    setError("");
+                  }}
+                >
+                  Отменить изменения
+                </button>
+                <button
+                  className="button"
+                  disabled={locked || !currentDirty}
+                  onClick={isCatalog ? saveCatalog : saveSettings}
+                >
+                  <Save size={17} />
+                  {busy ? "Сохраняем…" : "Сохранить"}
+                </button>
+              </div>
+            </div>
+          )}
+        </main>
+      </div>
+      <dialog
+        ref={dialog}
+        aria-labelledby="admin-dialog-title"
+        onCancel={(event) => {
+          event.preventDefault();
+          if (!locked) {
+            setEditUser(null);
+            setConfirm(null);
+          }
+        }}
+      >
+        <div className="modal-head">
+          <h2 id="admin-dialog-title">
+            {editUser ? "Пользователь" : confirm?.title}
+          </h2>
+          <button
+            className="icon"
+            disabled={locked}
+            aria-label="Закрыть"
+            onClick={() => {
+              setEditUser(null);
+              setConfirm(null);
+            }}
+          >
+            <X size={20} />
+          </button>
+        </div>
+        {error && (
+          <div className="error" role="alert">
+            {error}
+          </div>
+        )}
+        {editUser && (
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              run(async () => {
+                await request("admin/users/" + editUser.id, "PATCH", editUser);
+                await loadUsers();
+                setEditUser(null);
+                setNotice("Пользователь обновлён, его сессии отозваны");
+              });
+            }}
+          >
+            <Field label="Имя">
+              <input
+                required
+                maxLength={60}
+                value={editUser.name}
+                onChange={(e) =>
+                  setEditUser({ ...editUser, name: e.target.value })
+                }
+              />
+            </Field>
+            <Field label="Email">
+              <input
+                type="email"
+                required
+                maxLength={254}
+                value={editUser.email}
+                onChange={(e) =>
+                  setEditUser({ ...editUser, email: e.target.value })
+                }
+              />
+            </Field>
+            <Select
+              label="Роль"
+              value={editUser.role}
+              onChange={(v) => setEditUser({ ...editUser, role: v })}
+              options={[
+                ["user", "Пользователь"],
+                ["admin", "Администратор"],
+              ]}
+            />
+            <Toggle
+              label="Заблокировать аккаунт"
+              checked={editUser.blocked}
+              onChange={(v) => setEditUser({ ...editUser, blocked: v })}
+            />
+            <p className="help">
+              Администратор управляет всем сайтом и пользователями. Изменение
+              профиля завершает существующие сессии.
+            </p>
+            <button className="button full" disabled={locked}>
+              Сохранить пользователя
+            </button>
+          </form>
+        )}
+        {confirm && (
+          <>
+            <p>{confirm.description}</p>
+            {confirm.email && (
+              <Field label="Email для подтверждения">
+                <input
+                  value={confirmEmail}
+                  onChange={(e) => setConfirmEmail(e.target.value)}
+                  placeholder={confirm.email}
+                />
+              </Field>
+            )}
+            <div className="form-actions">
+              <button
+                className="button secondary"
+                disabled={locked}
+                onClick={() => setConfirm(null)}
+              >
+                Отмена
+              </button>
+              <button
+                className="button"
+                disabled={
+                  locked || (confirm.email && confirmEmail !== confirm.email)
+                }
+                onClick={() =>
+                  run(async () => {
+                    await confirm.action(confirmEmail);
+                    setConfirm(null);
+                  })
+                }
+              >
+                Подтвердить
+              </button>
+            </div>
+          </>
+        )}
+      </dialog>
     </div>
-    <dialog ref={dialog} aria-labelledby="admin-dialog-title" onCancel={(event) => {
-      event.preventDefault(); if (!locked) { setEditUser(null); setConfirm(null); }
-    }}>
-      <div className="modal-head"><h2 id="admin-dialog-title">{editUser ? "Пользователь" : confirm?.title}</h2>
-        <button className="icon" disabled={locked} aria-label="Закрыть" onClick={() => { setEditUser(null); setConfirm(null); }}><X size={20} /></button></div>
-      {error && <div className="error" role="alert">{error}</div>}
-      {editUser && <form onSubmit={(event) => { event.preventDefault(); run(async () => {
-        await request("admin/users/" + editUser.id, "PATCH", editUser); await loadUsers(); setEditUser(null);
-        setNotice("Пользователь обновлён, его сессии отозваны");
-      }); }}>
-        <Field label="Имя"><input required maxLength={60} value={editUser.name} onChange={(e) => setEditUser({ ...editUser, name: e.target.value })} /></Field>
-        <Field label="Email"><input type="email" required maxLength={254} value={editUser.email} onChange={(e) => setEditUser({ ...editUser, email: e.target.value })} /></Field>
-        <Select label="Роль" value={editUser.role} onChange={(v) => setEditUser({ ...editUser, role: v })} options={[["user", "Пользователь"], ["admin", "Администратор"]]} />
-        <Toggle label="Заблокировать аккаунт" checked={editUser.blocked} onChange={(v) => setEditUser({ ...editUser, blocked: v })} />
-        <p className="help">Администратор управляет всем сайтом и пользователями. Изменение профиля завершает существующие сессии.</p>
-        <button className="button full" disabled={locked}>Сохранить пользователя</button>
-      </form>}
-      {confirm && <><p>{confirm.description}</p>
-        {confirm.email && <Field label="Email для подтверждения"><input value={confirmEmail} onChange={(e) => setConfirmEmail(e.target.value)} placeholder={confirm.email} /></Field>}
-        <div className="form-actions"><button className="button secondary" disabled={locked} onClick={() => setConfirm(null)}>Отмена</button>
-          <button className="button" disabled={locked || (confirm.email && confirmEmail !== confirm.email)} onClick={() => run(async () => {
-            await confirm.action(confirmEmail); setConfirm(null);
-          })}>Подтвердить</button></div>
-      </>}
-    </dialog>
-  </div>;
+  );
 }

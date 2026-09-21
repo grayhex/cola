@@ -1,4 +1,5 @@
 "use client";
+import RideSpeedChart from "./ride-speed-chart.jsx";
 import { Heart } from "./icons.jsx";
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
@@ -58,6 +59,7 @@ export default function RidePage({ share, styleUrl }) {
             </p>
             <RideMetrics metrics={ride.metrics} />
             <RideMap geometry={ride.geometry} styleUrl={styleUrl} />
+            <RideSpeedChart profile={ride.speedProfile} />
             {ride.description && (
               <p className="ride-description">{ride.description}</p>
             )}

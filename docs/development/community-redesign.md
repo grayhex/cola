@@ -1,5 +1,7 @@
 # Community homepage and neutral design system
 
+> Stage-one record. The completed UI and removal of obsolete settings are documented in [stage two](product-ui-completion.md).
+
 The homepage is now an entry point to the community: hero → unified search → Live → popular bicycles → new stories and rides → current records. The full gallery lives at `/bikes`. Existing gallery bookmarks with `sort`, `category`, `q` or `page` on `/` redirect with their query intact. Existing advanced discovery remains at `/experience` and compatible advanced `/search` URLs.
 
 ## Reference study, 21 September 2026
@@ -49,7 +51,7 @@ Small bicycle images use 160/320 px WebP derivatives. The existing photo route c
 
 Admin → Design → Appearance edits only the default theme and accent. Admin → Design → Homepage uploads/selects/replaces/removes the hero image and edits its headline/subtitle. Upload uses the existing validated asset pipeline; saved hero assets participate in the existing deletion protection. Recommended source: transparent PNG/WebP, 320×320. A neutral vector bicycle is shown when no image is assigned or loading fails. No production hero artwork was generated.
 
-Navigation preserves configured ordering/visibility/custom labels; old default labels are updated. Guest add-bike actions still continue through registration to the wizard. Like queues keep their existing optimistic rollback behavior. Save/follow labels now update immediately and roll back on failure.
+Navigation preserves configured ordering/visibility/custom labels; old default labels are updated. Guest add-bike actions still continue through registration to the wizard. Like queues keep their existing optimistic rollback behavior. Follow labels update immediately and roll back on failure. Save acknowledgement now waits for the server; see the stage-two CI fix.
 
 The ticker pauses on hover/focus and with an explicit pause control. Its single animation duplicate is both `aria-hidden` and `inert`. Mobile and reduced-motion modes use a readable static horizontal rail. Search has combobox/listbox semantics and active descendants; its keyboard selection scrolls into view. The dialog contains its results instead of clipping an absolutely positioned list. Escape dismisses suggestions first, then the dialog. Menus/dialogs retain focus handling, and touch actions have 44 px targets.
 
@@ -58,7 +60,7 @@ The ticker pauses on hover/focus and with an explicit pause control. Its single 
 Run the focused backend suite:
 
 ```sh
-node --test tests/community-discovery.test.js tests/discovery.test.js tests/admin.test.js tests/admin-design.test.js tests/navigation.test.js tests/photo-resolution.test.js tests/pixel-club.test.js tests/social-core.test.js tests/showcase.test.js tests/card-presentation.test.js
+node --test tests/community-discovery.test.js tests/discovery.test.js tests/admin.test.js tests/admin-design.test.js tests/navigation.test.js tests/photo-resolution.test.js tests/gallery-interactions.test.js tests/social-core.test.js tests/showcase.test.js tests/card-presentation.test.js
 pnpm build --webpack
 ```
 
@@ -67,7 +69,7 @@ The 40 unit tests passed. New coverage checks privacy revocation, blocked users,
 Browser scenarios run with the disposable local database/app harness, without starting the resolver:
 
 ```sh
-node scripts/test-ui.js tests/e2e/community-design.spec.js tests/e2e/pixel-club.spec.js tests/e2e/design.spec.js tests/e2e/navigation.spec.js tests/e2e/garage-polish.spec.js tests/e2e/social.spec.js tests/e2e/showcase.spec.js tests/e2e/journal.spec.js
+node scripts/test-ui.js tests/e2e/community-design.spec.js tests/e2e/gallery-interactions.spec.js tests/e2e/design.spec.js tests/e2e/navigation.spec.js tests/e2e/garage-polish.spec.js tests/e2e/social.spec.js tests/e2e/showcase.spec.js tests/e2e/journal.spec.js
 ```
 
 All 40 browser scenarios passed in the final run (3.2 minutes). The local environment uses a temporary Chromium 153 executable and a configuration outside the repository for desktop and iPhone 13 Chromium emulation. Neither that browser nor a dependency change is part of the PR. The committed Playwright configuration retains its normal Chromium/WebKit projects; WebKit results are not claimed here. No heavy resolver/parser integration suite was run.

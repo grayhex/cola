@@ -90,9 +90,6 @@ test("dense visual system: shared cards, filters, search, themes and responsive 
       roadImageId: asset,
       mtbImageId: asset,
       gravelImageId: asset,
-      searchIconId: asset,
-      navNewIconId: asset,
-      uiIcons: { Heart: asset },
     });
     if (!isMobile) await page.setViewportSize({ width: 1440, height: 1000 });
     await page.goto("/?q=" + encodeURIComponent(name));
@@ -218,12 +215,9 @@ test("dense visual system: shared cards, filters, search, themes and responsive 
       await noOverflow();
       await screenshot("grid-" + columns);
     }
-    for (const mode of ["tile", "cover"]) {
+    {
       await settings({
         appearance: { ...original.appearance, theme: "dark" },
-        backgroundMode: mode,
-        backgroundImageId: asset,
-        backgroundOpacity: 15,
         desktopColumns: 4,
         roadImageId: asset,
         mtbImageId: asset,
@@ -236,7 +230,7 @@ test("dense visual system: shared cards, filters, search, themes and responsive 
       );
       await expect(page.locator(".bike-card")).toHaveCount(5);
       await noOverflow();
-      await screenshot("dark-" + mode);
+      await screenshot("dark");
     }
     await page.goto("/u/" + user.username);
     await expect(page.locator(".bike-card")).toHaveCount(5);

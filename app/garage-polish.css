@@ -1,14 +1,6 @@
-/* Auxiliary auth, admin graphics and about-page styles. */
+/* Content controls and about-page statistics. */
 .site-root .compact-selector {
   position: relative;
-}
-.auth-illustration {
-  display: block;
-  max-width: 100%;
-  width: 180px;
-  height: 100px;
-  object-fit: contain;
-  margin: 0 auto 12px;
 }
 .about-statistics {
   padding: 20px 0;
@@ -38,62 +30,4 @@
   margin: 0;
   font-size: 26px;
   font-weight: 650;
-}
-.graphics-group > summary {
-  cursor: pointer;
-  padding: 12px;
-  border-bottom: 1px solid var(--line);
-  font-weight: 600;
-}
-.graphics-group > summary h3 {
-  display: inline;
-  font-size: 15px;
-}
-.graphics-group > summary p {
-  display: none;
-}
-.graphics-group .asset-picker-grid {
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
-  gap: 8px;
-  padding: 8px;
-}
-.graphics-group .asset-picker {
-  display: grid;
-  grid-template-columns: 48px minmax(0, 1fr);
-  gap: 8px;
-  padding: 8px;
-  align-items: start;
-}
-.graphics-group .asset-picker-preview,
-.graphics-group .asset-picker-preview.wide {
-  width: 48px;
-  height: 48px;
-  min-height: 48px;
-  aspect-ratio: 1;
-}
-.graphics-group .asset-picker-placeholder span {
-  display: none;
-}
-.graphics-group .asset-picker-body {
-  min-width: 0;
-  gap: 4px;
-}
-.graphics-group .asset-picker-heading strong {
-  font-size: 12px;
-}
-.graphics-group .asset-picker select {
-  height: 32px;
-  min-height: 32px;
-  font-size: 12px;
-}
-.graphics-group .asset-picker-actions {
-  gap: 8px;
-}
-.graphics-group .asset-picker-actions .quiet {
-  min-height: 28px;
-  font-size: 11px;
-  padding: 2px;
-}
-.graphics-group .asset-picker-name {
-  display: none;
 }

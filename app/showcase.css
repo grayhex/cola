@@ -152,12 +152,6 @@
 .bike-meter.complete i {
   background: var(--muted);
 }
-.site-root .site-asset-icon,
-.site-root .site-asset-icon-fallback {
-  display: block;
-  flex-shrink: 0;
-  object-fit: contain;
-}
 @container (max-width:250px) {
   .micro-metrics {
     gap: 6px;

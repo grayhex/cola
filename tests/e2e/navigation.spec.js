@@ -190,8 +190,7 @@ test("navigation: real destinations, account, keyboard, configurable About and a
     asset = (await upload.json()).id;
     await save({
       ...original,
-      logoId: asset,
-      navAboutIconId: asset,
+
       aboutGuideImageId: asset,
     });
     await page.goto("/admin");

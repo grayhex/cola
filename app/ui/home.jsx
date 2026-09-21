@@ -212,31 +212,43 @@ export default function Home() {
       <main className={styles.home}>
         <section className={styles.hero} aria-labelledby="hero-title">
           <div className={styles.heroContent}>
-            <SmallImage
-              src={
-                settings.heroImageId
-                  ? "/api/assets/" + settings.heroImageId
-                  : null
-              }
-              className={styles.heroImage}
-              alt=""
-              priority
-            />
-            <h1 id="hero-title">
-              {settings.heroHeadline.split("\n").map((line, i) => (
-                <span key={i}>{line}</span>
-              ))}
-            </h1>
-            <p className={styles.description}>{settings.heroDescription}</p>
-            <div className={styles.heroSearch} data-home-search>
-              <SearchBox hero />
+            <div className={styles.heroCopy}>
+              <div className={styles.heroTitle}>
+                <SmallImage
+                  src={
+                    settings.heroImageId
+                      ? "/api/assets/" + settings.heroImageId
+                      : null
+                  }
+                  className={styles.heroImage}
+                  alt=""
+                  priority
+                />
+                <h1 id="hero-title">
+                  {settings.heroHeadline.split("\n").map((line, i) => (
+                    <span key={i}>{line}</span>
+                  ))}
+                </h1>
+              </div>
+              <p className={styles.description}>{settings.heroDescription}</p>
+              <div className={styles.heroSearch} data-home-search>
+                <SearchBox hero />
+              </div>
+              <div className={styles.heroLinks}>
+                <Link href="/bikes">
+                  Смотреть велосипеды <ArrowRight size={14} />
+                </Link>
+                <span>или</span>
+                <Link href="/account?tab=bikes&action=add">добавить свой</Link>
+              </div>
             </div>
-            <div className={styles.heroLinks}>
-              <Link href="/bikes">
-                Смотреть велосипеды <ArrowRight size={14} />
-              </Link>
-              <span>или</span>
-              <Link href="/account?tab=bikes&action=add">добавить свой</Link>
+            <div
+              className={styles.animationStage}
+              data-hero-animation
+              aria-hidden="true"
+            >
+              <div className={styles.routeOrbit} />
+              <span className={styles.stageLabel}>COLABIKE / В ДВИЖЕНИИ</span>
             </div>
           </div>
           <ActivityTicker events={content.events} />

@@ -68,8 +68,7 @@ try {
   );
   const updated = {
     ...original,
-    theme: "dark",
-    font: "system",
+    appearance: { theme: "dark", accent: "#F3B51B" },
     summaryPosition: "left",
     copy: { ...original.copy, "Мой гараж": "Моя коллекция" },
   };
@@ -92,7 +91,7 @@ try {
     409,
   );
   const site = (await guest("site")).data;
-  assert.equal(site.settings.theme, "dark");
+  assert.equal(site.settings.appearance.theme, "dark");
   assert.equal(site.settings.copy["Мой гараж"], "Моя коллекция");
   const cat = structuredClone(originalCatalog);
   cat.manufacturers.push("Test Manufacturer");
@@ -128,7 +127,11 @@ try {
   assert.equal(
     (
       await admin("admin/settings", "PUT", {
-        value: { ...latest.settings, logoId: asset, registrationOpen: false },
+        value: {
+          ...latest.settings,
+          faviconId: asset,
+          registrationOpen: false,
+        },
         version: latest.settingsVersion,
       })
     ).status,
@@ -145,7 +148,7 @@ try {
       await admin("admin/settings", "PUT", {
         value: {
           ...latest.settings,
-          logoId: null,
+          faviconId: null,
           mtbImageId: asset,
           roadImageId: asset,
           gravelImageId: asset,

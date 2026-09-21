@@ -10,56 +10,95 @@
   border-radius: 10px;
 }
 .heroContent {
-  max-width: var(--hero-width);
-  margin: auto;
-  padding: 32px 24px 28px;
-  text-align: center;
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(240px, 0.85fr);
+  align-items: center;
+  gap: 48px;
+  padding: 48px;
+  text-align: left;
+}
+.heroCopy {
+  min-width: 0;
+}
+.heroTitle {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 20px;
 }
 .heroImage {
   display: grid;
   place-items: center;
   object-fit: contain;
-  width: 96px;
-  height: 96px;
-  margin: 0 auto 16px;
-  color: var(--text-muted);
-}
-span.heroImage {
-  width: 80px;
-  height: 80px;
-  margin-top: 8px;
-  margin-bottom: 24px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface);
+  flex: 0 0 72px;
+  width: 72px;
+  height: 72px;
+  color: var(--text);
 }
 span.heroImage svg {
-  width: 42px;
-  height: 42px;
+  width: 64px;
+  height: 64px;
+  stroke-width: 1.2;
 }
 .home .heroContent h1 {
-  margin: 0 0 16px;
-  font: 750 clamp(32px, 3.5vw, 48px)/1.08 var(--site-font);
-  letter-spacing: -1.1px;
+  margin: 0;
+  font: 700 clamp(30px, 2.7vw, 42px)/1.14 var(--site-font);
+  letter-spacing: -1px;
   color: var(--text);
 }
 .home .heroContent h1 span {
   display: block;
 }
 .heroContent .description {
-  max-width: 620px;
-  margin: 0 auto 24px;
+  max-width: 570px;
+  margin: 0 0 24px;
   font-size: 18px;
-  line-height: 1.4;
+  line-height: 1.5;
   color: var(--text-muted);
 }
 .heroSearch {
-  max-width: 690px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: 660px;
+}
+.animationStage {
+  position: relative;
+  min-height: 310px;
+  align-self: stretch;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  isolation: isolate;
+}
+.routeOrbit {
+  width: 78%;
+  aspect-ratio: 1;
+  max-width: 320px;
+  border: 1px solid color-mix(in srgb, var(--text-subtle) 22%, transparent);
+  border-radius: 50%;
+  transform: rotate(-25deg);
+}
+.routeOrbit::before,
+.routeOrbit::after {
+  content: "";
+  position: absolute;
+  border: 1px solid color-mix(in srgb, var(--text-subtle) 16%, transparent);
+  border-radius: 50%;
+  inset: 24px -28px;
+}
+.routeOrbit::after {
+  inset: 64px -52px;
+  border-color: color-mix(in srgb, var(--accent) 65%, transparent);
+}
+.stageLabel {
+  position: absolute;
+  bottom: 8px;
+  color: var(--text-subtle);
+  font: 600 11px/1.5 var(--site-font);
+  letter-spacing: 2px;
 }
 .heroLinks {
   display: flex;
-  justify-content: center;
+  justify-content: flex-start;
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
@@ -428,6 +467,22 @@ span.heroImage svg {
   }
 }
 @media (max-width: 1050px) {
+  .heroContent {
+    padding: 32px;
+    gap: 24px;
+    grid-template-columns: minmax(0, 1.5fr) minmax(180px, 0.7fr);
+  }
+  .heroTitle {
+    gap: 14px;
+  }
+  .heroImage {
+    width: 52px;
+    height: 52px;
+    flex-basis: 52px;
+  }
+  .animationStage {
+    min-height: 240px;
+  }
   .trending {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -443,28 +498,33 @@ span.heroImage svg {
     padding: 16px 12px 0;
   }
   .heroContent {
-    padding: 24px 14px 20px;
+    grid-template-columns: minmax(0, 1fr);
+    padding: 28px 20px;
+    gap: 0;
+  }
+  .heroTitle {
+    gap: 12px;
+    align-items: flex-start;
   }
   .heroImage {
-    width: 76px;
-    height: 76px;
-    margin-bottom: 14px;
+    width: 46px;
+    height: 50px;
+    flex-basis: 46px;
   }
-  span.heroImage {
-    width: 64px;
-    height: 64px;
-    margin: 0 auto 18px;
+  span.heroImage svg {
+    width: 46px;
+    height: 46px;
   }
   .home .heroContent h1 {
-    font-size: clamp(28px, 5.6vw, 36px);
+    font-size: clamp(26px, 5vw, 34px);
     letter-spacing: -0.65px;
-    line-height: 1.08;
   }
   .heroContent .description {
     font-size: 16px;
-    line-height: 1.35;
     margin-bottom: 20px;
-    max-width: 390px;
+  }
+  .animationStage {
+    display: none;
   }
   .heroLinks {
     gap: 4px 6px;
@@ -552,10 +612,10 @@ span.heroImage svg {
 }
 @media (max-width: 360px) {
   .heroContent {
-    padding-inline: 10px;
+    padding-inline: 14px;
   }
   .home .heroContent h1 {
-    font-size: 27px;
+    font-size: 24px;
   }
   .records {
     grid-template-columns: 1fr;

@@ -1,4 +1,4 @@
-/* One palette and token source. Older feature styles consume the aliases below. */
+/* Product color, type, spacing and interaction tokens, shared by every route. */
 :root {
   --bg: #ffffff;
   --surface: #ffffff;
@@ -12,7 +12,11 @@
   --border-strong: #8b93a0;
   --accent: #f3b51b;
   --accent-foreground: #000000;
-  --accent-hover: var(--accent);
+  --accent-hover: color-mix(in srgb, var(--accent) 85%, var(--text));
+  --button-bg: #20242d;
+  --button-fg: #ffffff;
+  --button-hover: #353b48;
+  --chart-line: #8b5cf6;
   --accent-soft: color-mix(in srgb, var(--accent) 14%, var(--surface));
   --danger: #b52f3b;
   --danger-soft: #fff0f1;
@@ -57,9 +61,9 @@
   --field: var(--surface);
   --line: var(--border);
   --line-strong: var(--border-strong);
-  --control-border: var(--border-strong);
+  --control-border: var(--border);
   --accent-ink: var(--accent-foreground);
-  --button-ink: var(--accent-foreground);
+  --button-ink: var(--button-fg);
   --showcase-shell-max: var(--content-width);
   --layer-header: var(--z-sticky);
   --layer-popover: var(--z-dropdown);
@@ -69,6 +73,10 @@
   color-scheme: light;
 }
 :root[data-theme="dark"] {
+  --button-bg: #e6eaf0;
+  --button-fg: #171a21;
+  --button-hover: #ffffff;
+  --chart-line: #a78bfa;
   --bg: #171a21;
   --surface: #1d212a;
   --surface-muted: #242934;
@@ -89,6 +97,10 @@
 }
 @media (prefers-color-scheme: dark) {
   :root[data-theme="system"] {
+    --button-bg: #e6eaf0;
+    --button-fg: #171a21;
+    --button-hover: #ffffff;
+    --chart-line: #a78bfa;
     --bg: #171a21;
     --surface: #1d212a;
     --surface-muted: #242934;

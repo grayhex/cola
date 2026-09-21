@@ -25,7 +25,6 @@ import { siteStatistics } from "../lib/site-statistics.js";
 import { settingsInput } from "../lib/admin-validation.js";
 import { defaultSettings } from "../lib/site-defaults.js";
 import { siteAssetIds } from "../lib/site-assets.js";
-import { fontNames, hostedFonts } from "../lib/fonts.js";
 test("journal validation, font catalogue and asset references", () => {
   const base = { bikeId: randomUUID(), kind: "story", title: "", body: "" };
   assert(journalInput.safeParse(base).success);
@@ -36,27 +35,15 @@ test("journal validation, font catalogue and asset references", () => {
       .success,
   );
   assert(!journalInput.safeParse({ ...base, body: "text\0" }).success);
-  assert(hostedFonts.includes("ptsans"));
-  assert.equal(hostedFonts.length, 11);
-  for (const font of fontNames)
-    assert(settingsInput.safeParse({ ...defaultSettings, font }).success);
   const id = randomUUID();
   assert(
-    settingsInput.safeParse({ ...defaultSettings, uiIcons: { Bike: id } })
-      .success,
+    settingsInput.safeParse({ ...defaultSettings, heroImageId: id }).success,
   );
   assert(
-    !settingsInput.safeParse({ ...defaultSettings, uiIcons: { arbitrary: id } })
+    !settingsInput.safeParse({ ...defaultSettings, uiIcons: { Bike: id } })
       .success,
   );
-  assert.deepEqual(
-    siteAssetIds({
-      ...defaultSettings,
-      uiIcons: { Bike: id },
-      loginImageId: id,
-    }),
-    [id],
-  );
+  assert.deepEqual(siteAssetIds({ ...defaultSettings, heroImageId: id }), [id]);
 });
 test("journal lifecycle: snapshots, linked ride, reused social features, visibility and protected media", async () => {
   const q = new PGlite(),

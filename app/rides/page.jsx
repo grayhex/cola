@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useSite } from "../ui/site-provider.jsx";
+import { Plus } from "../ui/icons.jsx";
 import RideList from "../ui/ride-list.jsx";
 import {
   SocialHeader,
@@ -24,6 +25,19 @@ export default function Page() {
     <>
       <SocialHeader user={user} />
       <main className="social-page">
+        <div className="section-heading">
+          <div>
+            <h1>Покатушки</h1>
+            <p>Маршруты, впечатления и километры сообщества.</p>
+          </div>
+          <a
+            className="button secondary small"
+            href="/account?tab=rides&action=add"
+          >
+            <Plus size={16} />
+            Добавить покатушку
+          </a>
+        </div>
         {bikeId !== null && <RideList bikeId={bikeId} />}
       </main>
       <SocialFooter />

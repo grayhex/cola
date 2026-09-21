@@ -26,6 +26,7 @@ try {
     "012_rides",
     "014_journal",
     "015_discovery",
+    "016_product_ui",
   ]) {
     const { rowCount } = await client.query(
       "SELECT 1 FROM schema_migrations WHERE version=$1",
