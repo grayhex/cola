@@ -70,7 +70,7 @@
   flex: 1 1 170px;
   min-width: 0;
   margin: 0;
-  font: 700 17px/22px var(--site-font);
+  font: 700 17px/1.3 var(--site-font);
   letter-spacing: 0;
   overflow-wrap: anywhere;
 }

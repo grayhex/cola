@@ -116,6 +116,7 @@ try {
         "tests/showcase-http.js",
         "tests/social-http.js",
         "tests/community-http.js",
+        ...(externalDatabase ? ["tests/community-concurrency.js"] : []),
         "tests/rides-http.js",
         "tests/journal-http.js",
         "tests/discovery-http.js",

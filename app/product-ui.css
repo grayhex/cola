@@ -209,6 +209,9 @@ html {
   background: var(--wash);
 }
 .site-root .compact-selector select {
+  appearance: none;
+  min-width: 0;
+  text-overflow: ellipsis;
   min-height: 44px;
   height: auto;
   width: auto;
@@ -219,6 +222,18 @@ html {
   background: var(--paper);
   border: 1px solid var(--control-border);
   border-radius: var(--radius-sm);
+}
+.site-root .compact-selector::after {
+  content: "";
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: translateY(-70%) rotate(45deg);
+  pointer-events: none;
 }
 .control-count {
   font-size: 11px;

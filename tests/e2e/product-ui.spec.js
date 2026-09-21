@@ -68,11 +68,12 @@ test("login and registration are complete forms, errors preserve input, password
 
 test("all product routes and account sections share clear light/dark UI; composer, profile menu and real speed data work", async ({
   page,
+  context,
 }, info) => {
   test.setTimeout(180000);
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
-  await page.route("https://tile.openstreetmap.org/**", (r) => r.abort());
+  await context.route("https://tile.openstreetmap.org/**", (r) => r.abort());
   await page.request.post("/api/auth/register", {
     headers: { origin },
     data: {
@@ -182,43 +183,55 @@ test("all product routes and account sections share clear light/dark UI; compose
   ];
   try {
     for (const mode of ["light", "dark"]) {
-      await page.addInitScript(
-        (mode) => localStorage.setItem("cola:theme", mode),
-        mode,
-      );
       for (const [url, ready, name] of routes) {
-        await page.goto(url);
-        await expect(page.locator(ready).first()).toBeVisible();
-        if (await page.locator(".discussion").count()) {
-          await expect(
-            page
-              .getByRole("status")
-              .filter({ hasText: "Загружаем обсуждение" }),
-          ).not.toBeVisible();
-        }
-        if (name === "ride") {
-          const chart = page.getByRole("img", {
-            name: "График скорости по расстоянию",
+        // Audit each direct URL in its own page. Replacing an active document
+        // cancels Next prefetches, which WebKit reports as fetch pageerrors.
+        // Navigation/history behavior is covered separately in gallery tests.
+        const page = await context.newPage();
+        page.on("pageerror", (e) => errors.push(e.message));
+        await page.addInitScript(
+          (mode) => localStorage.setItem("cola:theme", mode),
+          mode,
+        );
+        try {
+          await page.goto(url);
+          await expect(page.locator(ready).first()).toBeVisible();
+          if (await page.locator(".discussion").count()) {
+            await expect(
+              page
+                .getByRole("status")
+                .filter({ hasText: "Загружаем обсуждение" }),
+            ).not.toBeVisible();
+          }
+          if (name === "ride") {
+            const chart = page.getByRole("img", {
+              name: "График скорости по расстоянию",
+            });
+            await expect
+              .poll(async () => (await chart.boundingBox()).height)
+              .toBeGreaterThan(180);
+            await expect(
+              page.getByRole("region", { name: "Скорость" }),
+            ).toHaveAttribute("aria-busy", "false");
+            await chart.hover();
+            await expect(
+              page
+                .getByRole("region", { name: "Скорость" })
+                .locator('[aria-live="polite"]'),
+            ).toContainText(/на \d+[,.]?\d* км/);
+          }
+          if (name === "post")
+            await expect(page.locator(".comment-body")).toHaveCount(2);
+          await page.evaluate(() => document.fonts.ready);
+          await noOverflow(page);
+          await page.screenshot({
+            path: info.outputPath(name + "-" + mode + ".png"),
+            fullPage: true,
+            animations: "disabled",
           });
-          await expect
-            .poll(async () => (await chart.boundingBox()).height)
-            .toBeGreaterThan(180);
-          await chart.hover();
-          await expect(
-            page
-              .getByRole("region", { name: "Скорость" })
-              .locator('[aria-live="polite"]'),
-          ).toContainText(/на \d+[,.]?\d* км/);
+        } finally {
+          await page.close();
         }
-        if (name === "post")
-          await expect(page.locator(".comment-body")).toHaveCount(2);
-        await page.evaluate(() => document.fonts.ready);
-        await noOverflow(page);
-        await page.screenshot({
-          path: info.outputPath(name + "-" + mode + ".png"),
-          fullPage: true,
-          animations: "disabled",
-        });
       }
     }
     await page.goto("/j/new?bike=" + bike.id);
@@ -235,6 +248,9 @@ test("all product routes and account sections share clear light/dark UI; compose
     await expect(body).toHaveValue(
       "Мой новый маршрут <script>plain text</script>",
     );
+    await page.close();
+    page = await context.newPage();
+    page.on("pageerror", (e) => errors.push(e.message));
     await page.goto("/account");
     const menu = page.getByRole("button", {
       name: "Открыть меню",

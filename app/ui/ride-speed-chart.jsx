@@ -10,12 +10,14 @@ export default function RideSpeedChart({ profile = [] }) {
   const svgRef = useRef(null);
   const [width, setWidth] = useState(800);
   const [selected, setSelected] = useState(null);
+  const [ready, setReady] = useState(false);
   // Keep axis labels and plot height readable instead of shrinking an 800px
   // illustration down to phone width.
   useEffect(() => {
     if (!hasPoints || !svgRef.current) return;
     const observer = new ResizeObserver(([entry]) => {
       setWidth(Math.max(240, Math.round(entry.contentRect.width)));
+      setReady(true);
     });
     observer.observe(svgRef.current);
     return () => observer.disconnect();
@@ -32,8 +34,27 @@ export default function RideSpeedChart({ profile = [] }) {
     selected === null ? null : points[Math.min(selected, points.length - 1)];
   const format = (value) =>
     value.toLocaleString("ru-RU", { maximumFractionDigits: 1 });
+  function selectPoint(event) {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const km =
+      ((((event.clientX - rect.left) / rect.width) * width - 42) / plotWidth) *
+      maxDistance;
+    setSelected(
+      points.reduce(
+        (best, p, i) =>
+          Math.abs(p.distanceKm - km) < Math.abs(points[best].distanceKm - km)
+            ? i
+            : best,
+        0,
+      ),
+    );
+  }
   return (
-    <section className={styles.chart} aria-labelledby={`${id}-title`}>
+    <section
+      className={styles.chart}
+      aria-labelledby={`${id}-title`}
+      aria-busy={hasPoints && !ready}
+    >
       <div className={styles.heading}>
         <div>
           <h2 id={`${id}-title`}>
@@ -67,23 +88,9 @@ export default function RideSpeedChart({ profile = [] }) {
             viewBox={`0 0 ${width} 195`}
             role="img"
             aria-label="График скорости по расстоянию"
-            onPointerMove={(event) => {
-              const rect = event.currentTarget.getBoundingClientRect();
-              const km =
-                ((((event.clientX - rect.left) / rect.width) * width - 42) /
-                  plotWidth) *
-                maxDistance;
-              setSelected(
-                points.reduce(
-                  (best, p, i) =>
-                    Math.abs(p.distanceKm - km) <
-                    Math.abs(points[best].distanceKm - km)
-                      ? i
-                      : best,
-                  0,
-                ),
-              );
-            }}
+            onPointerEnter={selectPoint}
+            onPointerMove={selectPoint}
+            onPointerDown={selectPoint}
             onPointerLeave={() => setSelected(null)}
           >
             <defs>

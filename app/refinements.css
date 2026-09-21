@@ -108,16 +108,11 @@
   min-width: 0;
   background: var(--wash);
 }
-.ride-map-wrap > .ride-basemap {
-  min-height: 260px;
-}
 .ride-card .ride-map-wrap {
+  --ride-map-height: 220px;
   min-height: 180px;
   border: 0;
   border-radius: 0;
-}
-.ride-card .ride-map {
-  height: 220px;
 }
 .map-status {
   display: block;

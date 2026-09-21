@@ -7,7 +7,10 @@ import { SocialHeader, SocialFooter, socialApi } from "./social-primitives.jsx";
 import { RideMetrics, rideDate } from "./ride-card.jsx";
 import { useSite } from "./site-provider.jsx";
 import Discussion from "./discussion.jsx";
-const RideMap = dynamic(() => import("./ride-map.jsx"), { ssr: false });
+const RideMap = dynamic(() => import("./ride-map.jsx"), {
+  ssr: false,
+  loading: () => <div className="ride-map-wrap" aria-busy="true" />,
+});
 export default function RidePage({ share, styleUrl }) {
   const { setPreferences } = useSite();
   const [ride, setRide] = useState(null),

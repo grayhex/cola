@@ -80,11 +80,11 @@ async function fixture(page, user = viewer, items = bikes) {
   });
 }
 async function noOverflow(page) {
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= innerWidth + 1,
-    ),
-  ).toBe(true);
+  await expect
+    .poll(() =>
+      page.evaluate(() => document.documentElement.scrollWidth - innerWidth),
+    )
+    .toBeLessThanOrEqual(1);
 }
 
 test("responsive gallery, touch targets, long names and reduced motion", async ({
@@ -167,10 +167,18 @@ test("responsive gallery, touch targets, long names and reduced motion", async (
   ).toBe("0s");
   await page.setViewportSize({ width: 390, height: 844 });
   await page.evaluate(() => {
-    for (const el of document.querySelectorAll("h1,h2,button,a,select,p"))
-      el.style.fontSize = `${parseFloat(getComputedStyle(el).fontSize) * 2}px`;
+    // Read every original size first: mutating a heading before its nested
+    // link would otherwise compound inherited sizes to 400% in WebKit.
+    const sizes = [...document.querySelectorAll("h1,h2,button,a,select,p")].map(
+      (el) => [el, parseFloat(getComputedStyle(el).fontSize)],
+    );
+    for (const [el, size] of sizes) el.style.fontSize = `${size * 2}px`;
   });
   await noOverflow(page);
+  await page.screenshot({
+    path: info.outputPath("text-zoom-200.png"),
+    fullPage: true,
+  });
 });
 
 test("direct links, disclosure keyboard, return context and no document reload", async ({

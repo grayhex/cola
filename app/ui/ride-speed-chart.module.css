@@ -40,7 +40,7 @@
 .chart svg[role="img"] {
   display: block;
   width: 100%;
-  height: auto;
+  height: 195px;
   margin-top: 20px;
   overflow: visible;
 }
