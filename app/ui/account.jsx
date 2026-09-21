@@ -1,6 +1,5 @@
 "use client";
 import RideAccount from "./ride-account.jsx";
-import { fontLabels } from "../../lib/fonts.js";
 import BikeGrid from "./bike-grid.jsx";
 import { BadgeShelf } from "./achievements.jsx";
 import { useEffect, useState } from "react";
@@ -180,7 +179,7 @@ function Appearance({ initial, onSaved }) {
     [busy, setBusy] = useState(false),
     [message, setMessage] = useState(""),
     [error, setError] = useState("");
-  const { setPreferences } = useSite();
+  const { setPreferences, themePreference, setThemePreference } = useSite();
   const set = (key, value) =>
     setPrefs((p) => {
       const next = { ...p };
@@ -210,17 +209,35 @@ function Appearance({ initial, onSaved }) {
         }
       }}
     >
-      <p className="help">Личные настройки применяются только для вас.</p>
+      <p className="help">
+        Личные настройки применяются только для вас. Цветовая тема сохраняется
+        на этом устройстве сразу.
+      </p>
+      <label className="field">
+        <span>Тема</span>
+        <select
+          value={themePreference}
+          onChange={(e) => setThemePreference(e.target.value)}
+        >
+          <option value="system">Как на устройстве</option>
+          <option value="light">Светлая</option>
+          <option value="dark">Тёмная</option>
+        </select>
+      </label>
+      {prefs.accent && (
+        <button
+          type="button"
+          className="quiet"
+          onClick={() => {
+            const next = { ...prefs };
+            delete next.accent;
+            setPrefs(next);
+          }}
+        >
+          Использовать акцент сайта
+        </button>
+      )}
       {[
-        [
-          "theme",
-          "Тема",
-          [
-            ["light", "Светлая"],
-            ["dark", "Тёмная"],
-            ["system", "Как на устройстве"],
-          ],
-        ],
         [
           "bikeLayout",
           "Карточка велосипеда",
@@ -248,7 +265,6 @@ function Appearance({ initial, onSaved }) {
             ["hidden", "Не показывать карту"],
           ],
         ],
-        ["font", "Шрифт", Object.entries(fontLabels)],
       ].map(([key, label, options]) => (
         <label className="field" key={key}>
           <span>{label}</span>
@@ -265,14 +281,6 @@ function Appearance({ initial, onSaved }) {
           </select>
         </label>
       ))}
-      <label className="field">
-        <span>Цвет акцента</span>
-        <input
-          type="color"
-          value={prefs.accent || "#e7482f"}
-          onChange={(e) => set("accent", e.target.value)}
-        />
-      </label>
       <label className="admin-toggle">
         <span>Показывать пробег</span>
         <input
@@ -315,7 +323,7 @@ export default function Account() {
     [error, setError] = useState(""),
     [create, setCreate] = useState(false),
     [selected, setSelected] = useState(null);
-  const { setPreferences } = useSite();
+  const { setPreferences, themePreference, setThemePreference } = useSite();
   async function refresh() {
     const me = await socialApi("me");
     setUser(me.user);

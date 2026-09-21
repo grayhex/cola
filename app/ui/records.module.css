@@ -136,29 +136,8 @@
 @media (hover: hover) and (pointer: fine) {
   :global(.site-root) .page :global(.record-card):hover { border-color: var(--accent); }
   :global(.site-root) .page :global(.record-bike-name):hover,
-  :global(.site-root) .page :global(.record-owner):hover { color: var(--accent); text-decoration: underline; }
+  :global(.site-root) .page :global(.record-owner):hover { color: var(--text); text-decoration: underline; }
 }
-@media (prefers-reduced-motion: no-preference) {
-  :global(.site-root) .page :global(.record-card) {
-    animation: enter 320ms ease-out backwards;
-    animation-delay: var(--record-delay, 0ms);
-    transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
-  }
-  :global(.site-root) .page :global(.record-illustration) { transition: transform 220ms ease; }
-  :global(.site-root) .page :global(.record-bike-name),
-  :global(.site-root) .page :global(.record-owner) { transition: color 160ms ease; }
-  :global(.site-root) .page :global(.record-card):focus-within :global(.record-illustration) { transform: translateY(-3px) rotate(-2deg); }
-  :global(.site-root) .page :global(.record-bike-name):active { transform: translateY(1px); }
-  @media (hover: hover) and (pointer: fine) {
-    :global(.site-root) .page :global(.record-card):hover { transform: translateY(-3px); box-shadow: 0 8px 20px #0000000d; }
-    :global(.site-root) .page :global(.record-card):hover :global(.record-illustration) { transform: translateY(-3px) rotate(-2deg) scale(1.025); }
-  }
-}
-@keyframes enter {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
 @media (prefers-reduced-motion: reduce) {
   :global(.site-root) .page :global(.record-card),
   :global(.site-root) .page :global(.record-illustration),

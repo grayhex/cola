@@ -18,14 +18,16 @@ export function SaveEntry({ entry, onChange }) {
         onClick={async () => {
           setBusy(true);
           setError("");
+          const before = saved;
+          setSaved(!before);
           try {
             const r = await socialApi(
               "journal/" + entry.id + "/save",
-              saved ? "DELETE" : "PUT",
+              before ? "DELETE" : "PUT",
             );
             setSaved(r.saved);
             onChange?.(r.saved);
-          } catch (e) { setError(e.message); }
+          } catch (e) { setSaved(before); setError(e.message); }
           finally { setBusy(false); }
         }}
       >

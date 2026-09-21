@@ -25,13 +25,16 @@ export default function BikeFollow({ bikeId }) {
         onClick={async () => {
           setBusy(true);
           setError("");
+          const before = following;
+          setFollowing(!before);
           try {
             const r = await socialApi(
               "community/bikes/" + bikeId + "/follow",
-              following ? "DELETE" : "PUT",
+              before ? "DELETE" : "PUT",
             );
             setFollowing(r.following);
           } catch (e) {
+            setFollowing(before);
             setError(e.message);
           } finally {
             setBusy(false);

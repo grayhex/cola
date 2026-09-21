@@ -6,6 +6,7 @@ const assetKeys = { mtb: "mtbTypeIconId", road: "roadTypeIconId", gravel: "grave
 export default function BikeCategoryIcon({ category, label, size = 28 }) {
   const { personalSettings: settings } = useSite();
   const name = bikeIconName(category, label);
+  if (settings.designSystem === "community") return <SiteIcon name="Bike" size={size} className="bike-category-graphic" aria-label={label} />;
   if (iconPackOverride(settings, name) !== undefined)
     return <SiteIcon name={name} size={size} className="bike-category-graphic" aria-label={label} />;
   const assetId = settings?.[assetKeys[category]];

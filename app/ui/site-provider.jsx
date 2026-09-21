@@ -1,18 +1,21 @@
 "use client";
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { accentText } from "../../lib/appearance.js";
-import { useBrowseHistory } from "./showcase-scroll.js";
-import styles from "./icon-pack.module.css";
-import { iconPackNames, withIconPack } from "../../lib/icon-pack.js";
 import {
-  fontStacks,
-  defaultSettings,
-  defaultCatalog,
-} from "../../lib/site-defaults.js";
+  appearanceDefaults,
+  resolveTheme,
+  themeStorageKey,
+  validTheme,
+} from "../../lib/theme.js";
+import { useBrowseHistory } from "./showcase-scroll.js";
+import { defaultSettings, defaultCatalog } from "../../lib/site-defaults.js";
 const Context = createContext(null);
-export function ThemeStyle({ settings: s }) {
+export function ThemeStyle({ settings }) {
+  const accent = /^#[\da-f]{6}$/i.test(settings.appearance?.accent || "")
+    ? settings.appearance.accent
+    : appearanceDefaults.accent;
   return (
-    <style>{`:root{--accent:${s.accent};--accent-ink:${accentText(s.accent)};--button-ink:${accentText(s.accent)};--display-font:${s.displayFont === "unbounded" ? '"Cola Unbounded", sans-serif' : fontStacks[s.font]};--radius:${s.radius}px;--site-font:${fontStacks[s.font]};--photo-ratio:${s.photoRatio};--desktop-columns:${s.desktopColumns};--heading-align:${s.textAlign}}`}</style>
+    <style>{`:root{--accent:${accent};--accent-foreground:${accentText(accent)};--photo-ratio:${settings.photoRatio || "4/3"};--desktop-columns:${settings.desktopColumns || 3};--heading-align:${settings.textAlign || "left"}}`}</style>
   );
 }
 export default function SiteProvider({ initial, children }) {
@@ -21,35 +24,81 @@ export default function SiteProvider({ initial, children }) {
     initial || { settings: defaultSettings, catalog: defaultCatalog },
   );
   const [preferences, setPreferences] = useState({});
-  const effective = withIconPack({ ...site.settings, ...preferences });
-  const backgroundStyle = effective.backgroundImageId
-    ? {
-        "--site-background-image": `url("/api/assets/${effective.backgroundImageId}")`,
-        "--site-background-opacity": String(
-          Math.max(0, Math.min(100, Number(effective.backgroundOpacity ?? 20))) /
-            100,
-        ),
-      }
-    : {
-        "--site-background-image": "none",
-        "--site-background-opacity": "0",
-      };
+  const defaultTheme = validTheme(site.settings.appearance?.theme);
+  const [themePreference, setPreference] = useState(defaultTheme);
+  const currentPreference = useRef(defaultTheme);
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    const apply = () => {
+      let preference = currentPreference.current;
+      try {
+        preference = validTheme(
+          localStorage.getItem(themeStorageKey),
+          defaultTheme,
+        );
+      } catch {}
+      currentPreference.current = preference;
+      setPreference(preference);
+      document.documentElement.dataset.themePreference = preference;
+      document.documentElement.dataset.theme = resolveTheme(
+        preference,
+        media.matches,
+      );
+    };
+    apply();
+    media.addEventListener("change", apply);
+    window.addEventListener("storage", apply);
+    return () => {
+      media.removeEventListener("change", apply);
+      window.removeEventListener("storage", apply);
+    };
+  }, [defaultTheme]);
+  function setThemePreference(value) {
+    const preference = validTheme(value);
+    try {
+      localStorage.setItem(themeStorageKey, preference);
+    } catch {}
+    currentPreference.current = preference;
+    setPreference(preference);
+    document.documentElement.dataset.themePreference = preference;
+    document.documentElement.dataset.theme = resolveTheme(
+      preference,
+      matchMedia("(prefers-color-scheme: dark)").matches,
+    );
+  }
+  // Preserve personal content/layout preferences; legacy UI graphics never shape the new shell.
+  const effective = {
+    ...site.settings,
+    ...preferences,
+    designSystem: "community",
+    appearance: {
+      ...site.settings.appearance,
+      ...(/^#[\da-f]{6}$/i.test(preferences.accent || "")
+        ? { accent: preferences.accent }
+        : {}),
+    },
+  };
   const t = (text) => site.settings.copy[text] ?? text;
   return (
-    <Context.Provider value={{ ...site, setSite, t, setPreferences, personalSettings: effective }}>
+    <Context.Provider
+      value={{
+        ...site,
+        setSite,
+        t,
+        setPreferences,
+        personalSettings: effective,
+        themePreference,
+        setThemePreference,
+      }}
+    >
       <ThemeStyle settings={effective} />
       <div
-        className={"site-root" + (iconPackNames.some((name) => effective.uiIcons?.[name]) ? " " + styles.pixelIcons : "")}
-        data-theme={effective.theme}
-        data-preset={effective.designPreset || "classic"}
-        data-background-mode={effective.backgroundMode || "cover"}
-        data-has-background={effective.backgroundImageId ? "true" : "false"}
-        style={backgroundStyle}
+        className="site-root"
+        data-design-system="community"
         data-bike-layout={effective.bikeLayout || "balanced"}
         data-summary={site.settings.summaryPosition}
         data-detail-order={site.settings.detailOrder}
         data-photo-mode={site.settings.photoMode}
-        data-font={effective.font}
       >
         {children}
       </div>

@@ -18,6 +18,15 @@ export default function SiteAssetIcon({
     if (img.current?.complete && !img.current.naturalWidth) setFailed(assetId);
   }, [assetId]);
   const { personalSettings: settings } = useSite();
+  if (settings.designSystem === "community")
+    return (
+      <Fallback
+        className={"site-asset-icon-fallback " + className}
+        size={size}
+        aria-hidden="true"
+        {...fallbackProps}
+      />
+    );
   const semantic =
     name ||
     (Fallback.displayName === "Plus"

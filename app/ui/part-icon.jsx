@@ -10,7 +10,7 @@ export default function PartIcon({
 }) {
   const key = name || icons[category] || categoryIcons[category] || "other";
   const { personalSettings: settings } = useSite();
-  if (!original && settings.partIconAssets?.[key])
+  if (!original && settings.designSystem !== "community" && settings.partIconAssets?.[key])
     return (
       <img
         className="part-icon"

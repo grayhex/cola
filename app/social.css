@@ -122,7 +122,7 @@
   font-size: 22px;
 }
 .social-stats button[aria-pressed="true"] {
-  color: var(--accent);
+  color: var(--text);
 }
 .follow-control {
   display: flex;
@@ -140,7 +140,7 @@
   align-items: center;
   gap: 4px;
   font-size: 12px;
-  color: var(--accent);
+  color: var(--text);
 }
 .social-panel {
   padding: 24px;
@@ -307,7 +307,7 @@
   margin-bottom: 12px;
 }
 .social-switch [aria-pressed="true"] {
-  color: var(--accent);
+  color: var(--text);
   box-shadow: inset 0 -2px var(--accent);
 }
 .account-private dl {

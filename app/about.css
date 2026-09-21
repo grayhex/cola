@@ -33,7 +33,7 @@
   overflow-wrap: anywhere;
 }
 .site-root .about-index span {
-  color: var(--accent);
+  color: var(--text);
   font-variant-numeric: tabular-nums;
 }
 .site-root .about-section {
@@ -65,7 +65,7 @@
   place-items: center;
   flex: 0 0 144px;
   height: 112px;
-  color: var(--accent);
+  color: var(--text);
 }
 .site-root .about-illustration img {
   width: 100%;
