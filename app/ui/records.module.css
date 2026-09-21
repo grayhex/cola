@@ -138,6 +138,14 @@
   :global(.site-root) .page :global(.record-bike-name):hover,
   :global(.site-root) .page :global(.record-owner):hover { color: var(--text); text-decoration: underline; }
 }
+/* Keep feedback on the artwork without moving the card or its hit targets. */
+@media (prefers-reduced-motion: no-preference) {
+  :global(.site-root) .page :global(.record-illustration) { transition: transform 180ms ease; }
+  :global(.site-root) .page :global(.record-card):focus-within :global(.record-illustration) { transform: translateY(-3px); }
+}
+@media (prefers-reduced-motion: no-preference) and (hover: hover) and (pointer: fine) {
+  :global(.site-root) .page :global(.record-card):hover :global(.record-illustration) { transform: translateY(-3px); }
+}
 @media (prefers-reduced-motion: reduce) {
   :global(.site-root) .page :global(.record-card),
   :global(.site-root) .page :global(.record-illustration),
