@@ -1,156 +1,105 @@
 .frame {
   position: relative;
-  z-index: var(--layer-header, 2);
-  container: club-header / inline-size;
+  z-index: var(--z-sticky);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
 }
 .header {
-  position: relative;
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  min-height: 64px;
-  gap: 8px 16px;
-  padding: 8px max(24px, calc((100% - 1488px) / 2));
-  background: var(--paper);
-  color: var(--ink);
-  border-bottom: 1px solid var(--line);
-}
-.artwork {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
+  min-height: var(--nav-height);
+  max-width: var(--content-width);
+  padding: 10px 24px;
+  margin: auto;
+  gap: 24px;
+  color: var(--text);
 }
 .header :global(.brand) {
   display: flex;
   align-items: center;
-  flex: 0 1 250px;
-  min-width: 0;
-  color: var(--ink);
-  font: 700 26px/1.2 var(--site-font);
-  overflow-wrap: anywhere;
-}
-.header :global(.brand-illustrated) {
-  height: 48px;
-}
-.header :global(.brand-illustrated) .artwork {
-  object-fit: cover;
-  object-position: left center;
-  width: 100%;
-  height: 48px;
-}
-/* Legacy logo resources contain a central strip surrounded by blank canvas.
-   The explicit setting preserves that strip; tightly trimmed uploads use contain. */
-.header[data-artwork="padded-strip"] :global(.brand-illustrated) {
-  position: relative;
-  overflow: hidden;
-}
-.header[data-artwork="padded-strip"] .artwork {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 270%;
-  max-width: none;
-  height: auto;
-}
-.header[data-artwork="contain"] .artwork {
-  object-fit: contain;
-}
-.header :global(.brand-illustrated):has(.wordmark) {
-  height: auto;
-  min-height: 48px;
-  overflow: visible;
+  gap: 8px;
+  flex-shrink: 0;
+  font: 700 23px/1.2 var(--site-font);
+  letter-spacing: -0.5px;
 }
 .header :global(.brand-mark) {
-  margin-right: 6px;
-  color: var(--accent);
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  color: var(--text);
+  background: var(--accent);
+  border-radius: 8px;
+}
+.header :global(.brand-mark) svg {
+  color: var(--accent-foreground);
 }
 .header :global(.global-nav) {
   display: flex;
   align-items: center;
-  flex: 1 1 auto;
+  flex: 1;
   justify-content: flex-end;
-  gap: 12px;
+  gap: 20px;
   min-width: 0;
 }
 .header :global(.primary-navigation),
 .header :global(.nav-utilities) {
   display: flex;
   align-items: center;
-  gap: 4px;
-  min-width: 0;
+  gap: 6px;
 }
 .header :global(.nav-utilities) {
   flex-shrink: 0;
 }
 .header :global(.nav-trigger),
-.header :global(.global-nav-item),
-.header :global(.nav-menu-link) {
+.header :global(.global-nav-item) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  min-height: 44px;
-  padding: 8px;
+  min-height: 38px;
+  padding: 6px 8px;
   border: 1px solid transparent;
-  border-radius: 4px;
-  font: 700 14px/20px var(--site-font);
-  color: var(--ink);
-  background: var(--paper);
-  box-shadow: none;
+  border-radius: var(--radius-sm);
+  font: 600 15px/20px var(--site-font);
+  color: var(--text);
+  background: transparent;
+  transition:
+    background var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast);
+}
+.header :global(.primary-navigation) :global(.global-nav-graphic) {
+  width: 17px;
+  height: 17px;
+  color: var(--text-muted);
 }
 .header :global(.global-nav-item) {
   position: relative;
-  width: 44px;
-  min-width: 44px;
-  padding: 8px;
+  width: 38px;
+  flex-shrink: 0;
 }
 .header :global(.nav-trigger.active),
 .header :global(.nav-trigger[aria-expanded="true"]),
 .header :global(.global-nav-item.active) {
-  border-bottom: 2px solid var(--accent);
-  background: var(--wash);
+  background: var(--surface-muted);
+  box-shadow: inset 0 -2px var(--accent);
 }
 .header :global(.nav-trigger):hover,
+.header :global(.global-nav-item):hover,
 .header :global(.nav-menu-link):hover,
-.header :global(.global-nav-item):hover {
-  background: var(--wash);
-}
-.header :global(.global-nav-graphic),
-.header :global(.global-nav-graphic-fallback) {
-  width: 22px;
-  height: 22px;
-  flex-shrink: 0;
-  object-fit: contain;
-}
-.header
-  :global(.global-nav[data-icon-size="small"])
-  :is(img, svg):global(.global-nav-graphic),
-.header
-  :global(.global-nav[data-icon-size="small"])
-  :global(.global-nav-graphic-fallback) {
-  width: 18px;
-  height: 18px;
-}
-.header
-  :global(.global-nav[data-icon-size="large"])
-  :is(img, svg):global(.global-nav-graphic),
-.header
-  :global(.global-nav[data-icon-size="large"])
-  :global(.global-nav-graphic-fallback) {
-  width: 26px;
-  height: 26px;
+.drawer :global(.nav-menu-link):hover {
+  background: var(--surface-hover);
 }
 .header :global(.notification-badge) {
   position: absolute;
   right: 0;
   top: 0;
-  min-width: 18px;
+  min-width: 16px;
   padding: 0 3px;
-  border-radius: 8px;
+  border-radius: 6px;
   background: var(--accent);
-  color: var(--accent-ink);
-  font: 700 12px/18px var(--site-font);
+  color: var(--accent-foreground);
+  font: 700 11px/16px var(--site-font);
 }
 .header :global(.mobile-nav-toggle) {
   display: none;
@@ -161,45 +110,51 @@
   align-items: stretch;
 }
 .disclosure > :global(.nav-chevron) {
-  min-width: 28px;
-  padding-inline: 4px;
+  min-width: 24px;
+  padding-inline: 3px;
+  margin-left: -4px;
 }
 .popover {
   position: absolute;
-  top: calc(100% + 6px);
+  top: calc(100% + 8px);
   left: 0;
-  z-index: var(--layer-popover, 3);
-  width: 260px;
+  z-index: var(--z-dropdown);
+  width: 254px;
   padding: 6px;
-  border: 1px solid var(--control-border);
-  border-radius: 4px;
-  background: var(--paper);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-popover);
+  animation: menu-in var(--duration-fast) var(--ease-standard);
 }
 .popover[hidden] {
   display: none;
 }
-:global(.account-disclosure) .popover {
+:global(.account-disclosure) .popover,
+:global(.theme-disclosure) .popover {
   left: auto;
   right: 0;
-  width: 284px;
 }
 .header :global(.nav-menu-link),
 .drawer :global(.nav-menu-link) {
+  display: flex;
+  align-items: center;
   justify-content: flex-start;
   width: 100%;
-  min-height: 44px;
-  padding: 8px;
+  min-height: 40px;
   gap: 10px;
-  display: flex;
-  font: 400 14px/20px var(--site-font);
-  color: var(--ink);
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  font: 400 15px/20px var(--site-font);
+  color: var(--text);
   text-align: left;
-  border-radius: 3px;
 }
 .header :global(.nav-menu-link[aria-current="page"]),
+.header :global(.nav-menu-link[aria-pressed="true"]),
 .drawer :global(.nav-menu-link[aria-current="page"]) {
+  background: var(--accent-soft);
   box-shadow: inset 2px 0 var(--accent);
-  background: var(--wash);
+  font-weight: 600;
 }
 .header :global(.nav-menu-link span) {
   min-width: 0;
@@ -211,27 +166,27 @@
   align-items: center;
   gap: 12px;
   padding: 8px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--border);
 }
 .header :global(.nav-account-identity small),
 .drawer :global(.nav-account-identity small) {
   display: block;
-  color: var(--muted);
+  color: var(--text-muted);
   font-size: 13px;
 }
 .header :global(.nav-account-stats),
 .drawer :global(.nav-account-stats) {
   display: flex;
+  gap: 14px;
   flex-wrap: wrap;
-  gap: 12px;
   margin: 0;
   padding: 12px 8px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--border);
 }
 .header :global(.nav-account-stats dt),
 .drawer :global(.nav-account-stats dt) {
+  color: var(--text-muted);
   font-size: 13px;
-  color: var(--muted);
 }
 .header :global(.nav-account-stats dd),
 .drawer :global(.nav-account-stats dd) {
@@ -239,17 +194,17 @@
   font-weight: 700;
 }
 .header .drawer {
-  inset: 12px 12px auto auto;
-  width: min(420px, calc(100% - 24px));
-  max-width: calc(100% - 24px);
-  max-height: calc(100dvh - 24px);
+  inset: 8px 8px auto auto;
+  width: min(400px, calc(100% - 16px));
+  max-width: calc(100% - 16px);
+  max-height: calc(100dvh - 16px);
   margin: 0;
   overflow-y: auto;
-  border-radius: 4px;
-  box-shadow: none;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-popover);
 }
 .drawer :global(.mobile-nav-section) {
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--border);
   padding: 4px 0;
 }
 .drawer summary {
@@ -258,7 +213,7 @@
   min-height: 44px;
   cursor: pointer;
   padding: 8px;
-  font-size: 14px;
+  font-size: 16px;
 }
 .drawer summary::after {
   content: "⌄";
@@ -266,31 +221,32 @@
 }
 .drawer summary a {
   flex: 1;
-  font-weight: 700;
+  font-weight: 600;
 }
 .drawer :global(.mobile-account) {
   margin-top: 8px;
 }
-.panorama {
-  container: club-panorama / inline-size;
-  border-top: 6px solid var(--paper);
-  width: 100%;
-  margin: 0;
-  background: var(--paper);
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
-.panorama img {
-  display: block;
-  width: 100%;
-  height: auto;
-  aspect-ratio: 9/1;
-  object-fit: cover;
-  object-position: center;
-}
-@container club-header (max-width: 1099px) {
+@media (max-width: 1050px) {
   .header {
-    padding: 8px 12px;
-    flex-wrap: nowrap;
-    gap: 8px;
+    padding: 8px 16px;
+    gap: 12px;
+  }
+  .header :global(.brand) {
+    margin-right: auto;
+    min-height: 44px;
+  }
+  .header :global(.global-nav) {
+    flex: 0;
   }
   .header :global(.primary-navigation),
   .header :global(.desktop-account) {
@@ -299,29 +255,35 @@
   .header :global(.mobile-nav-toggle) {
     display: inline-flex;
   }
-  .header :global(.brand) {
-    flex: 1 1 auto;
-    font-size: 24px;
+  .header :global(.nav-trigger),
+  .header :global(.global-nav-item) {
+    min-height: 44px;
+    min-width: 44px;
   }
-  .header :global(.global-nav) {
-    flex: 0 0 auto;
-  }
-  .header :global(.brand-illustrated) {
-    height: 48px;
-    max-width: 240px;
-  }
-  .header[data-artwork="padded-strip"] .artwork {
-    width: 270%;
+  .header :global(.nav-utilities) {
+    gap: 0;
   }
 }
-@container club-panorama (max-width: 599px) {
-  .panorama img {
-    aspect-ratio: 2400/487;
-    object-fit: contain;
+@media (max-width: 360px) {
+  .header {
+    padding-inline: 10px;
+    gap: 4px;
+  }
+  .header :global(.brand) {
+    font-size: 21px;
+    gap: 5px;
   }
 }
 @media (pointer: coarse) {
   .disclosure > :global(.nav-chevron) {
     min-width: 44px;
+  }
+  .header :global(.nav-menu-link) {
+    min-height: 44px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .popover {
+    animation: none;
   }
 }

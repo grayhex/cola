@@ -7,7 +7,7 @@ import {
 } from "../../lib/showcase-query.js";
 import { useBikeReaction } from "./use-bike-reaction.js";
 import { useShowcaseScroll } from "./showcase-scroll.js";
-import { ClubPanorama } from "./club-artwork.jsx";
+
 import styles from "./garage.module.css";
 import BikeGrid from "./bike-grid.jsx";
 import { FilterControl, FilterChips } from "./compact-ui.jsx";
@@ -19,7 +19,7 @@ import BikeCategoryIcon from "./bike-category-icon.jsx";
 import BikeMeters from "./bike-meters.jsx";
 import Photo from "./bike-photo.jsx";
 import BikeCard from "./bike-card.jsx";
-import { AuthorLink } from "./social-primitives.jsx";
+import { SocialFooter, AuthorLink } from "./social-primitives.jsx";
 import GlobalHeader from "./global-header.jsx";
 import SiteAssetIcon from "./site-asset-icon.jsx";
 
@@ -458,7 +458,6 @@ export default function Garage({
           </button>
         </div>
       )}
-      {publicShowcase && <ClubPanorama settings={settings} />}
       {loading && !publicShowcase ? (
         <Main className="loading">
           <LoaderCircle className="spin" />
@@ -1134,16 +1133,7 @@ export default function Garage({
           </Main>
         </>
       )}
-      {!embedded && (
-        <footer className="footer">
-          <span className="footer-logo">
-            {settings.siteName}
-            <span>© {new Date().getFullYear()}</span>
-          </span>
-          <span>{t("Ваш велосипед. В деталях.")}</span>
-          <Versions />
-        </footer>
-      )}
+      {!embedded && <SocialFooter />}
       <input
         ref={file}
         type="file"

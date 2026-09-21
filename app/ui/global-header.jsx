@@ -2,7 +2,7 @@
 import Link from "next/link";
 import SiteAssetIcon from "./site-asset-icon.jsx";
 import styles from "./global-header.module.css";
-import { HeaderArtwork } from "./club-artwork.jsx";
+import ThemeControl from "./theme-control.jsx";
 import { GlobalSearch, CompactDialog } from "./compact-ui.jsx";
 import { useState, useEffect, useRef } from "react";
 import {
@@ -135,7 +135,7 @@ export default function GlobalHeader({ user, onProfile, previewSettings }) {
       setLoggingOut(false);
     }
   }
-  const sections = navigationSections(settings).filter((s) => s.visible),
+  const sections = navigationSections(settings).filter((s) => s.visible).map((s) => ({ ...s, label: s.label === "Гараж" ? "Велосипеды" : s.label === "Поездки" ? "Покатушки" : s.label })),
     active = activeSection(pathname, search);
   const graphic = (name) => <Graphic name={name} settings={settings} />;
   const link = (item) => (
@@ -232,18 +232,12 @@ export default function GlobalHeader({ user, onProfile, previewSettings }) {
         data-artwork={settings.headerArtworkFit || "padded-strip"}
       >
         <Link
-          className={"brand" + (settings.logoId ? " brand-illustrated" : "")}
+          className="brand"
           href="/"
           aria-label="ColaBike — главная"
         >
-          {settings.logoId ? (
-            <HeaderArtwork settings={settings} />
-          ) : (
-            <>
-              <span className="brand-mark">c.</span>
-              <span>{settings.siteName}</span>
-            </>
-          )}
+          <span className="brand-mark" aria-hidden="true"><Bike size={26} /></span>
+          <span>ColaBike</span>
         </Link>
         <div
           className="global-nav"
@@ -268,7 +262,7 @@ export default function GlobalHeader({ user, onProfile, previewSettings }) {
                   key={section.id}
                   label={t("Подразделы") + ": " + section.label}
                   href={
-                    { bikes: "/", journal: "/journal", rides: "/rides" }[
+                    { bikes: "/bikes", journal: "/journal", rides: "/rides" }[
                       section.id
                     ]
                   }
@@ -291,7 +285,8 @@ export default function GlobalHeader({ user, onProfile, previewSettings }) {
             )}
           </nav>
           <div className="nav-utilities">
-            <GlobalSearch assetId={settings.searchIconId} />
+            <GlobalSearch />
+            <ThemeControl />
             {user && (
               <Link
                 className={
@@ -363,7 +358,7 @@ export default function GlobalHeader({ user, onProfile, previewSettings }) {
                     <summary>
                       <Link
                         href={
-                          { bikes: "/", journal: "/journal", rides: "/rides" }[
+                          { bikes: "/bikes", journal: "/journal", rides: "/rides" }[
                             section.id
                           ]
                         }

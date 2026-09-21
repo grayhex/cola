@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Heart } from "./icons.jsx";
 import GlobalHeader from "./global-header.jsx";
 import { useSite } from "./site-provider.jsx";
-import Versions from "./versions.jsx";
+import footerStyles from "./site-footer.module.css";
 export async function socialApi(path, method = "GET", data) {
   const response = await fetch("/api/" + path, {
     method,
@@ -36,18 +36,29 @@ export function SocialHeader({ user }) {
   return <GlobalHeader user={user} />;
 }
 export function SocialFooter() {
-  const { settings } = useSite();
   return (
-    <footer className="footer">
-      <span className="footer-logo">{settings.siteName}</span>
-      <span>Люди. Велосипеды. Истории.</span>
-      <Versions />
+    <footer className={footerStyles.footer}>
+      <div className={footerStyles.inner}>
+        <Link className={footerStyles.brand} href="/">
+          ColaBike
+        </Link>
+        <span>Люди. Велосипеды. Истории.</span>
+        <nav aria-label="Нижняя навигация">
+          <Link href="/bikes">Велосипеды</Link>
+          <Link href="/journal">Журнал</Link>
+          <Link href="/rides">Покатушки</Link>
+          <Link href="/about">О проекте</Link>
+          <a href="https://github.com/grayhex/cola">GitHub</a>
+        </nav>
+      </div>
     </footer>
   );
 }
 export function FollowButton({ profile, user, onChange }) {
   const [busy, setBusy] = useState(false),
+    [optimisticFollowing, setOptimisticFollowing] = useState(null),
     [error, setError] = useState("");
+  const following = optimisticFollowing ?? profile.relationship?.following;
   if (profile.relationship?.isSelf)
     return (
       <a className="button secondary small" href="/account?tab=profile">
@@ -63,31 +74,29 @@ export function FollowButton({ profile, user, onChange }) {
   return (
     <div className="follow-control">
       <button
-        className={
-          "button small " + (profile.relationship?.following ? "secondary" : "")
-        }
+        className={"button small " + (following ? "secondary" : "")}
         disabled={busy}
         onClick={async () => {
           setBusy(true);
           setError("");
+          const before = following;
+          setOptimisticFollowing(!before);
           try {
             const result = await socialApi(
               "social/profiles/" + profile.username + "/follow",
-              profile.relationship?.following ? "DELETE" : "PUT",
+              before ? "DELETE" : "PUT",
             );
+            setOptimisticFollowing(result.relationship.following);
             await onChange(result.relationship);
           } catch (e) {
+            setOptimisticFollowing(before);
             setError(e.message);
           } finally {
             setBusy(false);
           }
         }}
       >
-        {busy
-          ? "Сохраняем…"
-          : profile.relationship?.following
-            ? "Отписаться"
-            : "Подписаться"}
+        {following ? "Отписаться" : "Подписаться"}
       </button>
       {profile.relationship?.friends && (
         <span className="friend-status">

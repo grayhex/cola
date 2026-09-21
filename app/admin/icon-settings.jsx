@@ -10,7 +10,7 @@ import styles from "./design.module.css";
 const catalogs = { illustrations: illustrationSlots, icons: interfaceSlots, components: componentSlots };
 const pageSize = 8;
 export default function IconSettings({ settings, assets, busy, onChange, onUpload }) {
-  const [kind, setKind] = useState("icons");
+  const [kind, setKind] = useState("illustrations");
   const [search, setSearch] = useState(""), [group, setGroup] = useState("all"), [page, setPage] = useState(1);
   const slots = catalogs[kind];
   const visible = filterGraphicSlots(slots, search, group);
@@ -21,8 +21,8 @@ export default function IconSettings({ settings, assets, busy, onChange, onUploa
     else onChange(slot.target === "semantic" ? "uiIcons" : slot.target, (before) => ({ ...before, [slot.key]: id }));
   }
   return <section className={"admin-panel " + styles.compactPanel} aria-label="Графика сайта">
-    <p className="help">Выбор и точечная замена графики. Изменения публикуются кнопкой «Сохранить». Первичная загрузка ZIP находится во вкладке «Импорт иконок».</p>
-    <SectionTabs label="Виды графики" items={[["icons", "Иконки интерфейса"], ["illustrations", "Иллюстрации"], ["components", "Компоненты"]]}
+    <p className="help">Контентные иллюстрации сохраняются. Иконки, старые баннеры и фон находятся в Legacy и не используются новым интерфейсом. Hero меняется во вкладке «Главная».</p>
+    <SectionTabs label="Виды графики" items={[["illustrations", "Контентная графика"], ["icons", "Legacy · иконки"], ["components", "Legacy · компоненты"]]}
       value={kind} onChange={(next) => { setKind(next); setGroup("all"); setSearch(""); setPage(1); }}>
       {() => <>
         <div className={styles.toolbar}>
