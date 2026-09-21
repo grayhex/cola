@@ -155,22 +155,69 @@ test("three-column bike, raster map, six-ride accordion, preferences and grouped
     ).toHaveCount(6);
     await expect(page.locator(".bike-rides .ride-route image")).toHaveCount(0);
     await page.goto("/admin");
-    await expect(
-      page.getByRole("tablist", { name: "Группы админки" }).getByRole("tab"),
-    ).toHaveCount(5);
+    const adminGroups = page.getByRole("tablist", { name: "Группы админки" });
+    await expect(adminGroups).toHaveAttribute("aria-orientation", "vertical");
+    await expect(adminGroups.getByRole("tab")).toHaveCount(5);
     await page.getByRole("button", { name: "Карта", exact: true }).click();
     await page.getByLabel("Подключать подложку").uncheck();
     await page.getByRole("button", { name: "Сохранить", exact: true }).click();
     await expect(page.getByRole("status")).toHaveText(
       "Настройки опубликованы на сайте",
     );
-    const system = page.getByRole("tab", { name: "Система", exact: true });
+    const system = adminGroups.getByRole("tab", { name: "Система", exact: true });
+    const design = adminGroups.getByRole("tab", { name: "Дизайн", exact: true });
+    const catalog = adminGroups.getByRole("tab", { name: "Каталог", exact: true });
+    const panel = page.locator("#admin-group-panel");
     await system.focus();
-    await page.keyboard.press("ArrowRight");
+    // The sidebar is vertical and uses manual activation: arrows move focus,
+    // while Enter/Space open a group. Moving focus must not discard its content.
+    await page.keyboard.press("ArrowDown");
+    await expect(design).toBeFocused();
+    await expect(system).toHaveAttribute("aria-selected", "true");
+    await expect(design).toHaveAttribute("aria-selected", "false");
+    await expect(panel).toHaveAttribute("aria-labelledby", "admin-group-system");
     await expect(
-      page.getByRole("tab", { name: "Дизайн", exact: true }),
-    ).toBeFocused();
-    await page.getByRole("button", { name: "О проекте", exact: true }).click();
+      panel.getByRole("heading", { name: "Карта", exact: true, level: 1 }),
+    ).toBeVisible();
+    for (const [key, target] of [
+      ["ArrowUp", system],
+      ["End", catalog],
+      ["ArrowDown", system],
+      ["ArrowUp", catalog],
+      ["Home", system],
+      ["ArrowDown", design],
+    ]) {
+      await page.keyboard.press(key);
+      await expect(target).toBeFocused();
+      await expect(system).toHaveAttribute("aria-selected", "true");
+    }
+    await page.keyboard.press("Enter");
+    await expect(design).toHaveAttribute("aria-selected", "true");
+    await expect(panel).toHaveAttribute("aria-labelledby", "admin-group-design");
+    await expect(
+      panel.getByRole("heading", { name: "Внешний вид", exact: true, level: 1 }),
+    ).toBeVisible();
+    await page.keyboard.press("End");
+    await expect(catalog).toBeFocused();
+    await expect(design).toHaveAttribute("aria-selected", "true");
+    await page.keyboard.press("Space");
+    await expect(catalog).toHaveAttribute("aria-selected", "true");
+    await expect(panel).toHaveAttribute("aria-labelledby", "admin-group-catalog");
+    await expect(
+      panel.getByRole("heading", { name: "Справочники", exact: true, level: 1 }),
+    ).toBeVisible();
+    await page.keyboard.press("Home");
+    await page.keyboard.press("ArrowDown");
+    await expect(design).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(design).toHaveAttribute("aria-selected", "true");
+    await page
+      .getByRole("navigation", { name: "Разделы админки" })
+      .getByRole("button", { name: "О проекте", exact: true })
+      .click();
+    await expect(
+      panel.getByRole("heading", { name: "О проекте", exact: true, level: 1 }),
+    ).toBeVisible();
     await expect(
       page.getByRole("group", { name: "История AI-разработки", exact: true }),
     ).toHaveCount(0);
