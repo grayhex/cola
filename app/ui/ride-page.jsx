@@ -1,4 +1,5 @@
 "use client";
+import RideRsvp, { RecurringRideLabel } from "./ride-rsvp.jsx";
 import RideSpeedChart from "./ride-speed-chart.jsx";
 import { Heart } from "./icons.jsx";
 import { useEffect, useState } from "react";
@@ -86,45 +87,11 @@ export default function RidePage({ share, styleUrl }) {
                 {ride.sourceKind === "garmin" ? " · импорт Garmin" : ""}.
               </p>
             )}
-            {ride.invitation && ride.status === "planned" && (
-              <section className="ride-invitation">
-                <h2>Вы приглашены</h2>
-                <p>
-                  {
-                    {
-                      pending: "Ответьте на приглашение организатора.",
-                      accepted: "Вы участвуете в покатушке.",
-                      declined: "Вы отклонили приглашение.",
-                    }[ride.invitation]
-                  }
-                </p>
-                {["accepted", "declined"].map((response) => (
-                  <button
-                    key={response}
-                    className="quiet"
-                    disabled={busy || ride.invitation === response}
-                    onClick={async () => {
-                      setBusy(true);
-                      setError("");
-                      try {
-                        await socialApi(
-                          "rides/" + ride.id + "/invitation",
-                          "PATCH",
-                          { response },
-                        );
-                        setRide((r) => ({ ...r, invitation: response }));
-                      } catch (e) {
-                        setError(e.message);
-                      } finally {
-                        setBusy(false);
-                      }
-                    }}
-                  >
-                    {response === "accepted" ? "Поеду" : "Не смогу"}
-                  </button>
-                ))}
-              </section>
+            <RecurringRideLabel ride={ride} />
+            {ride.invitation && (
+              <p className="help">Вы приглашены организатором.</p>
             )}
+            <RideRsvp ride={ride} />
             {ride.isOwner && ride.invitations?.length > 0 && (
               <section className="ride-invitation">
                 <h2>Приглашённые</h2>
@@ -136,6 +103,7 @@ export default function RidePage({ share, styleUrl }) {
                         pending: "ожидает ответа",
                         accepted: "поедет",
                         declined: "не сможет",
+                        maybe: "возможно",
                       }[i.response]
                     }
                   </p>

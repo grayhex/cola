@@ -72,6 +72,7 @@ function metadata(
       products.find((p) => p["@type"] === "ProductGroup") || products[0];
   const name = clean(
     options.name ||
+      (/^(?:www\.)?bikepedia\.com$|^bikepedia\.azurewebsites\.net$/.test(new URL(doc.url).hostname) ? $("#ContentPlaceHolder1_ProductTitle").text() : "") ||
       $("h1").first().text() ||
       product?.name ||
       $('meta[property="og:title"]').attr("content") ||

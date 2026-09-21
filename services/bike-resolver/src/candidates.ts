@@ -1,7 +1,8 @@
+import { archiveLinks } from "./archive-search.js";
 import { createHash } from "node:crypto";
 import { normalize } from "./normalize.js";
 import { sourceIdentity } from "./source-url.js";
-import { trace, checkAbort } from "./context.js";
+import { trace, checkAbort, resolutionContext } from "./context.js";
 import { searchLinks } from "./retailer-search.js";
 import type {
   BikeQuery,
@@ -13,6 +14,17 @@ import type {
 import type { ManufacturerHttpClient } from "./http.js";
 import type { ManualSources } from "./manual.js";
 import type { SettingsStore } from "./settings.js";
+async function withinBudget<T>(ms: number, task: () => Promise<T>): Promise<T> {
+  const context = resolutionContext.getStore();
+  if (!context) return task();
+  return resolutionContext.run(
+    {
+      ...context,
+      signal: AbortSignal.any([context.signal, AbortSignal.timeout(ms)]),
+    },
+    task,
+  );
+}
 export function partialScore(
   query: BikeQuery,
   name: string,
@@ -55,31 +67,29 @@ export async function findCandidates(
       (b) => normalize(b) === normalize(query.brand),
     ),
   );
+  let unavailable = false;
   trace("discovery_started");
-  if (adapter && settings.value.adapters[adapter.id]) {
-    try {
+  // Independent indexes share the request's cancellation/deadline.
+  const results = await Promise.allSettled([
+    withinBudget(20000, async () => {
+      if (!adapter || !settings.value.adapters[adapter.id]) return [];
       const found = await adapter.discover(query);
-      urls.push(
-        ...found
-          .filter(
-            (c) =>
-              partialScore(query, query.brand + " " + c.canonicalName, c.year) >
-              0,
-          )
-          .sort(
-            (a, b) =>
-              partialScore(query, query.brand + " " + b.canonicalName, b.year) -
-              partialScore(query, query.brand + " " + a.canonicalName, a.year),
-          )
-          .slice(0, 3)
-          .map((c) => c.url),
-      );
-    } catch {
-      checkAbort();
-    }
-  }
-  if (settings.value.retailerSearch) {
-    try {
+      return found
+        .filter(
+          (c) =>
+            partialScore(query, query.brand + " " + c.canonicalName, c.year) >
+            0,
+        )
+        .sort(
+          (a, b) =>
+            partialScore(query, query.brand + " " + b.canonicalName, b.year) -
+            partialScore(query, query.brand + " " + a.canonicalName, a.year),
+        )
+        .slice(0, 6)
+        .map((c) => c.url);
+    }),
+    withinBudget(12000, async () => {
+      if (!settings.value.retailerSearch) return [];
       trace("retailer_search_started");
       const search = new URL("https://www.bing.com/search");
       search.searchParams.set("format", "rss");
@@ -96,51 +106,77 @@ export async function findCandidates(
           .join(" "),
       );
       const doc = await http.get(search.href, ["www.bing.com", "bing.com"]);
-      if (/<rss[\s>]/i.test(doc.body))
-        urls.push(...searchLinks(doc.body, query));
-    } catch {
-      checkAbort();
-    }
+      if (!/<rss[\s>]/i.test(doc.body)) throw Error("Search unavailable");
+      return searchLinks(doc.body, query, 6);
+    }),
+    withinBudget(12000, async () =>
+      settings.value.retailerSearch && query.year < new Date().getUTCFullYear()
+        ? archiveLinks(http, query)
+        : [],
+    ),
+  ]);
+  for (const result of results) {
+    if (result.status === "fulfilled") urls.push(...result.value);
+    else unavailable = true;
   }
+  checkAbort();
   const candidates: BikeCandidate[] = [];
-  for (const url of [...new Set(urls.map(sourceIdentity))].slice(0, 6)) {
+  const unique = [...new Set(urls.map(sourceIdentity))].slice(0, 12);
+  for (let offset = 0; offset < unique.length; offset += 3) {
     checkAbort();
-    const result = (await manual.resolve(query, url)) as ResolveResult;
-    if (result.status !== "resolved" || result.components.length < 3) continue;
-    const official = adapter?.allowedDomains.includes(
-      new URL(result.source.url).hostname,
+    await Promise.all(
+      unique.slice(offset, offset + 3).map(async (url) => {
+        let result: ResolveResult;
+        try {
+          result = (await withinBudget(12000, () =>
+            manual.resolve(query, url),
+          )) as ResolveResult;
+        } catch {
+          unavailable = true;
+          return;
+        }
+        if (result.status !== "resolved" || result.components.length < 3)
+          return;
+        const official = adapter?.allowedDomains.includes(
+          new URL(result.source.url).hostname,
+        );
+        const score = partialScore(
+          query,
+          (official ? query.brand + " " : "") + result.bike.canonicalName,
+          result.sourceYear ?? null,
+        );
+        if (!score) return;
+        candidates.push({
+          candidateId: createHash("sha256")
+            .update(result.source.url)
+            .digest("hex"),
+          brand: query.brand,
+          canonicalName: result.bike.canonicalName,
+          url: result.source.url,
+          year: result.sourceYear ?? null,
+          score,
+          thumbnailId: (result as Resolved).thumbnailId,
+          sourceHost: new URL(result.source.url).hostname,
+          selectable: true,
+        });
+      }),
     );
-    const score = partialScore(
-      query,
-      (official ? query.brand + " " : "") + result.bike.canonicalName,
-      result.sourceYear ?? null,
-    );
-    if (!score) continue;
-    candidates.push({
-      candidateId: createHash("sha256").update(result.source.url).digest("hex"),
-      brand: query.brand,
-      canonicalName: result.bike.canonicalName,
-      url: result.source.url,
-      year: result.sourceYear ?? null,
-      score,
-      thumbnailId: (result as Resolved).thumbnailId,
-      sourceHost: new URL(result.source.url).hostname,
-      selectable: true,
-    });
   }
   trace("candidate_found", { count: candidates.length });
   return candidates.length
     ? {
         status: "ambiguous",
         query,
-        candidates: candidates.sort((a, b) => (b.score || 0) - (a.score || 0)),
+        candidates: candidates
+          .sort((a, b) => (b.score || 0) - (a.score || 0))
+          .slice(0, 8),
         cached: false,
       }
     : {
-        status: "not_found",
+        status: unavailable ? "upstream_unavailable" : "not_found",
         query,
         brand: query.brand,
-        retryable: false,
+        retryable: unavailable,
         cached: false,
       };
 }

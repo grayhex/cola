@@ -97,8 +97,8 @@ test("navigation: real destinations, account, keyboard, configurable About and a
       await bikes.click();
       await page.getByRole("link", { name: "Популярные", exact: true }).click();
       await expect(
-        page.getByRole("combobox", { name: "Порядок витрины" }),
-      ).toHaveValue("popular");
+        page.getByRole("button", { name: "Порядок витрины" }),
+      ).toContainText("Популярные");
       await page.goto("/about");
     }
     const registered = await page.request.post("/api/auth/register", {
@@ -267,7 +267,7 @@ test("navigation: real destinations, account, keyboard, configurable About and a
     } else {
       await expect(
         page.locator(".primary-navigation > :first-child"),
-      ).toHaveText("Знакомство");
+      ).toContainText("Знакомство");
       await expect(
         page.locator(".primary-navigation > :first-child"),
       ).toHaveAttribute("aria-current", "page");
@@ -275,7 +275,7 @@ test("navigation: real destinations, account, keyboard, configurable About and a
         page.locator(".primary-navigation > :first-child img"),
       ).toHaveCount(0);
       await expect(
-        page.locator(".primary-navigation > :first-child svg"),
+        page.locator(".primary-navigation > :first-child .site-emoji"),
       ).toBeVisible();
     }
     await noOverflow();

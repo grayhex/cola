@@ -1,4 +1,5 @@
 "use client";
+import RideRsvp, { RecurringRideLabel } from "./ride-rsvp.jsx";
 import { CalendarDays, FileSpreadsheet } from "lucide-react";
 import {
   defaultRideFields,
@@ -93,6 +94,8 @@ export default function RideCard({ ride: r, owner = false, onEdit }) {
           {rideDate(r.date)} ·{" "}
           <a href={"/b/" + r.bike.shareId}>{r.bike.name}</a>
         </p>
+        <RecurringRideLabel ride={r} />
+        <RideRsvp ride={r} />
         <RideMetrics
           metrics={r.metrics}
           visibleMetrics={r.visibleMetrics}

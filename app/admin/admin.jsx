@@ -40,6 +40,8 @@ import {
   Menu,
 } from "../ui/icons.jsx";
 import styles from "./design.module.css";
+import ArticleTopicSettings from "./article-topics.jsx";
+import EmojiSettings from "./emoji-settings.jsx";
 
 async function request(url, method = "GET", data) {
   const response = await fetch("/api/" + url, {
@@ -64,6 +66,8 @@ const sections = [
   ["homepage", "Главная", Palette],
   ["navigation", "Меню", Menu],
   ["graphics", "Графика", Image],
+  ["emojis", "Эмодзи", Palette],
+  ["articles", "Разделы статей", BookOpen],
   ["media", "Медиатека", Image],
   ["copy", "Тексты", Type],
   ["about", "О проекте", BookOpen],
@@ -89,6 +93,7 @@ const adminGroups = [
       "homepage",
       "navigation",
       "graphics",
+      "emojis",
       "media",
       "copy",
       "about",
@@ -110,13 +115,14 @@ const adminGroups = [
     id: "catalog",
     name: "Каталог",
     icon: BookOpen,
-    sections: ["catalog", "groups"],
+    sections: ["catalog", "groups", "articles"],
   },
 ];
 const settingsTabs = new Set([
   "overview",
   "scoring",
   "map",
+  "articles",
   ...adminGroups.find((g) => g.id === "design").sections,
 ]);
 const catalogTabs = new Set(["catalog", "groups"]);
@@ -385,83 +391,87 @@ export default function Admin() {
   return (
     <div className="admin-shell">
       <GlobalHeader user={user} />
-      <div
-        className="admin-group-tabs ui-tabs"
-        role="tablist"
-        aria-label="Группы админки"
-      >
-        {adminGroups.map((g, index) => (
-          <button
-            key={g.id}
-            type="button"
-            id={"admin-group-" + g.id}
-            role="tab"
-            aria-selected={g.id === group.id}
-            aria-controls="admin-group-panel"
-            tabIndex={g.id === group.id ? 0 : -1}
-            disabled={locked}
-            onClick={() => navigate(g.sections[0])}
-            onKeyDown={(event) => {
+      <div className="admin-layout admin-sidebar-layout">
+        <aside className="admin-sidebar" aria-label="Управление сайтом">
+          <div
+            className="admin-group-list"
+            role="tablist"
+            aria-orientation="vertical"
+            aria-label="Группы админки"
+            onKeyDown={(e) => {
               if (
-                locked ||
-                !["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)
+                !["ArrowDown", "ArrowUp", "Home", "End"].includes(e.key) ||
+                e.target.getAttribute("role") !== "tab"
               )
                 return;
-              event.preventDefault();
+              const tabs = [
+                  ...e.currentTarget.querySelectorAll('[role="tab"]'),
+                ],
+                i = tabs.indexOf(e.target);
               const next =
-                event.key === "Home"
+                e.key === "Home"
                   ? 0
-                  : event.key === "End"
-                    ? adminGroups.length - 1
-                    : (index +
-                        (event.key === "ArrowRight" ? 1 : -1) +
-                        adminGroups.length) %
-                      adminGroups.length;
-              navigate(adminGroups[next].sections[0]);
-              document
-                .getElementById("admin-group-" + adminGroups[next].id)
-                ?.focus();
+                  : e.key === "End"
+                    ? tabs.length - 1
+                    : (i + (e.key === "ArrowDown" ? 1 : -1) + tabs.length) %
+                      tabs.length;
+              e.preventDefault();
+              tabs[next]?.focus();
             }}
           >
-            <g.icon size={17} />
-            {g.name}
-          </button>
-        ))}
-      </div>
-      <div
-        className={
-          "admin-layout " + (group.id === "design" ? styles.designLayout : "")
-        }
-        id="admin-group-panel"
-        role="tabpanel"
-        aria-labelledby={"admin-group-" + group.id}
-      >
-        <nav className="admin-nav" aria-label="Разделы админки">
-          {group.sections.map((key) => {
-            const [id, label, Icon] = sections.find((s) => s[0] === key);
-            return (
-              <button
-                key={id}
-                type="button"
-                className={tab === id ? "active" : ""}
-                aria-current={tab === id ? "page" : undefined}
-                disabled={locked}
-                onClick={() => navigate(id)}
-              >
-                <Icon size={18} />
-                {label}
-                {((settingsTabs.has(id) && dirtySettings) ||
-                  (catalogTabs.has(id) && dirtyCatalog)) && (
-                  <span
-                    className="unsaved-dot"
-                    aria-label="Есть несохранённые изменения"
-                  />
+            {adminGroups.map((g) => (
+              <div key={g.id} className="admin-sidebar-group">
+                <button
+                  type="button"
+                  role="tab"
+                  id={"admin-group-" + g.id}
+                  aria-selected={g.id === group.id}
+                  aria-controls="admin-group-panel"
+                  disabled={locked}
+                  onClick={() => navigate(g.sections[0])}
+                >
+                  <g.icon size={18} />
+                  {g.name}
+                </button>
+                {g.id === group.id && (
+                  <nav className="admin-nav" aria-label="Разделы админки">
+                    {g.sections.map((key) => {
+                      const [id, label, Icon] = sections.find(
+                        (s) => s[0] === key,
+                      );
+                      return (
+                        <button
+                          key={id}
+                          type="button"
+                          className={tab === id ? "active" : ""}
+                          aria-current={tab === id ? "page" : undefined}
+                          disabled={locked}
+                          onClick={() => navigate(id)}
+                        >
+                          <Icon size={16} />
+                          {label}
+                          {((settingsTabs.has(id) && dirtySettings) ||
+                            (catalogTabs.has(id) && dirtyCatalog)) && (
+                            <span
+                              className="unsaved-dot"
+                              aria-label="Есть несохранённые изменения"
+                            />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </nav>
                 )}
-              </button>
-            );
-          })}
-        </nav>
-        <main className="admin-content">
+              </div>
+            ))}
+          </div>
+        </aside>
+        <main
+          className="admin-content"
+          id="admin-group-panel"
+          role="tabpanel"
+          aria-labelledby={"admin-group-" + group.id}
+        >
           <div className="admin-title">
             <div>
               <span className="eyebrow">COLABIKE / ADMIN</span>
@@ -484,6 +494,18 @@ export default function Admin() {
               <Check size={18} />
               {notice}
             </div>
+          )}
+          {tab === "emojis" && (
+            <EmojiSettings
+              value={draft.emojis}
+              onChange={(v) => update("emojis", v)}
+            />
+          )}
+          {tab === "articles" && (
+            <ArticleTopicSettings
+              value={draft.articleTopics}
+              onChange={(v) => update("articleTopics", v)}
+            />
           )}
           {tab === "scoring" && (
             <ScoringSettings

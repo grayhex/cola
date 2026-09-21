@@ -22,6 +22,7 @@ import {
   planInput,
   attachRideTrack,
   respondRideInvitation,
+  respondRide,
   cancelPlannedRide,
   rideSettings,
   rideSettingsInput,
@@ -173,9 +174,29 @@ async function handler(req, { params }) {
         ),
       );
     }
+    if (p.length === 2 && p[1] === "rsvp" && m === "PATCH") {
+      const input = z
+        .object({
+          response: z.enum(["accepted", "declined", "maybe"]),
+          occurrenceAt: z.iso.datetime({ offset: true }),
+        })
+        .strict()
+        .parse(await readJson(req, 1024));
+      return json(
+        await transaction((q) =>
+          respondRide(
+            q,
+            uuid.parse(p[0]),
+            user.id,
+            input.response,
+            input.occurrenceAt,
+          ),
+        ),
+      );
+    }
     if (p.length === 2 && p[1] === "invitation" && m === "PATCH") {
       const input = z
-        .object({ response: z.enum(["accepted", "declined"]) })
+        .object({ response: z.enum(["accepted", "declined", "maybe"]) })
         .strict()
         .parse(await readJson(req, 1024));
       return json(

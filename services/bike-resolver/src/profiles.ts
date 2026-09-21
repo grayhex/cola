@@ -6,6 +6,7 @@ export interface ExtractionProfile {
 }
 export function profileFor(url: string, body: string): ExtractionProfile {
   const host = new URL(url).hostname;
+  if (host === "bikepedia.azurewebsites.net" || host === "www.bikepedia.com") return {id:"bikepedia",sections:["#ContentPlaceHolder1_Specifications"]};
   if (host === "velo-port.ru" || host.endsWith(".velo-port.ru"))
     return { id: "veloport", sections: ["#tabs-2"] };
   if (host === "velostrana.ru" || host.endsWith(".velostrana.ru"))

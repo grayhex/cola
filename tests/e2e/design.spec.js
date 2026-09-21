@@ -107,7 +107,7 @@ test("dense visual system: shared cards, filters, search, themes and responsive 
     ).toBe("17px");
     await expect(card.locator(".card-info > *")).toHaveCount(2);
     await expect(card.locator(".like-button img")).toHaveCount(0);
-    await expect(card.locator(".like-button svg")).toBeVisible();
+    await expect(card.locator(".like-button .site-emoji")).toBeVisible();
     expect(
       await card
         .locator(".card-open-photo > img")
@@ -156,9 +156,8 @@ test("dense visual system: shared cards, filters, search, themes and responsive 
         .first()
         .click();
     await expect(page.locator(".bike-card")).toHaveCount(5);
-    await page
-      .getByRole("combobox", { name: "Порядок витрины" })
-      .selectOption("popular");
+    await page.getByRole("button", { name: "Порядок витрины" }).click();
+    await page.getByRole("option", { name: "Популярные", exact: true }).click();
     await expect(page.locator(".bike-card")).toHaveCount(5);
     await page
       .getByRole("button", { name: "Поиск ColaBike", exact: true })

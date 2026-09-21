@@ -47,6 +47,7 @@ export function SocialFooter() {
         <nav aria-label="Нижняя навигация">
           <Link href="/bikes">Велосипеды</Link>
           <Link href="/journal">Журнал</Link>
+          <Link href="/articles">Статьи</Link>
           <Link href="/rides">Покатушки</Link>
           <Link href="/market">Рынок</Link>
           <Link href="/about">О проекте</Link>

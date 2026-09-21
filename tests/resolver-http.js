@@ -112,7 +112,7 @@ try {
   assert.equal(inspected.items.at(-1).result.previewId, undefined);
   const diag = await api("admin/resolver/diagnostics");
   assert.equal(diag.status, 200);
-  assert.equal(diag.data.extractorVersion, 3);
+  assert.equal(diag.data.extractorVersion, 4);
   const preview = await db.query(
     "SELECT owner_id FROM resolver_previews WHERE id=$1",
     [streamed.previewId],

@@ -73,6 +73,7 @@ await db.exec(
     "utf8",
   ),
 );
+await db.exec(await readFile(new URL("../db/018_articles_rsvp.sql", import.meta.url), "utf8"));
 const server = new PGLiteSocketServer({
   db,
   host: "127.0.0.1",

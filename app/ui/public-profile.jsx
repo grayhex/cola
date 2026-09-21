@@ -82,7 +82,7 @@ export default function PublicProfile({ username }) {
                 <p className="eyebrow">Владелец коллекции</p>
                 <h1>{profile.name}</h1>
                 <span className="username">@{profile.username}</span>
-                {profile.bio && <p className="profile-bio">{profile.bio}</p>}
+                {profile.bio && <section className="profile-about"><h2>О себе</h2><p className="profile-bio">{profile.bio}</p></section>}
                 <div className="profile-meta">
                   {profile.location && (
                     <span>

@@ -12,6 +12,7 @@ export function NavigationSettings({ settings, onChange }) {
     journal: "Журнал",
     rides: "Покатушки",
     market: "Рынок",
+    articles: "Статьи",
     about: "О проекте",
   };
   const set = (id, key, value) =>

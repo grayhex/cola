@@ -142,7 +142,7 @@ test("responsive gallery, touch targets, long names and reduced motion", async (
           (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
         const card = document.querySelector(".bike-card"),
           bg = luminance(getComputedStyle(card).backgroundColor);
-        return ["h2", ".author-link", ".card-facts"].map((selector) =>
+        return ["h2", ".author-link", ".hf-label"].map((selector) =>
           ratio(
             luminance(getComputedStyle(card.querySelector(selector)).color),
             bg,
@@ -155,9 +155,8 @@ test("responsive gallery, touch targets, long names and reduced motion", async (
   await page.setViewportSize({ width: 844, height: 390 });
   await noOverflow(page);
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page
-    .getByRole("combobox", { name: "Порядок витрины" })
-    .selectOption("popular");
+  await page.getByRole("button", { name: "Порядок витрины" }).click();
+  await page.getByRole("option", { name: "Популярные", exact: true }).click();
   await expect(page).toHaveURL(/sort=popular/);
   expect(
     await page
@@ -211,8 +210,8 @@ test("direct links, disclosure keyboard, return context and no document reload",
   expect(await page.evaluate(() => performance.timeOrigin)).toBe(clock);
   await page.goBack();
   await expect(
-    page.getByRole("combobox", { name: "Порядок витрины" }),
-  ).toHaveValue("popular");
+    page.getByRole("button", { name: "Порядок витрины" }),
+  ).toContainText("Популярные");
   await expect(
     page.getByRole("button", { name: "Убрать фильтр Гравел" }),
   ).toBeVisible();
@@ -296,13 +295,17 @@ for (const status of [200, 500])
           },
         });
     });
-    const sort = page.getByRole("combobox", { name: "Порядок витрины" });
+    const sort = page.getByRole("button", { name: "Порядок витрины" });
     await sort.focus();
-    await sort.selectOption("popular");
+    await sort.click();
+    await page.getByRole("option", { name: "Популярные", exact: true }).click();
     await expect(page.locator(".bike-card")).toHaveCount(9);
-    await expect(sort).toHaveValue("popular");
+    await expect(sort).toContainText("Популярные");
     await expect.poll(() => !!release).toBe(true);
-    await sort.selectOption("records");
+    await sort.click();
+    await page
+      .getByRole("option", { name: "Рекордсмены", exact: true })
+      .click();
     await expect(
       page.getByRole("heading", { name: "Актуальная подборка" }),
     ).toBeVisible();
@@ -392,9 +395,8 @@ test("broken artwork and photos keep stable space and accessible fallbacks", asy
       },
     }),
   );
-  await page
-    .getByRole("combobox", { name: "Порядок витрины" })
-    .selectOption("popular");
+  await page.getByRole("button", { name: "Порядок витрины" }).click();
+  await page.getByRole("option", { name: "Популярные", exact: true }).click();
   const recovered = page.locator(".card-open-photo > img");
   await expect(recovered).toBeVisible();
   await expect

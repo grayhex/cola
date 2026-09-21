@@ -97,7 +97,7 @@ export default function NavPopover({
         className={`nav-popover ${styles.popover}`}
         hidden={!open}
         onClick={(e) => {
-          if (e.target.closest("a,button")) close();
+          if (e.target.closest("a,button")) close(!!e.target.closest("button"));
         }}
         onKeyDown={(e) => {
           if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(e.key)) return;
