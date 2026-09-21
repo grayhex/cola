@@ -1,5 +1,7 @@
 "use client";
 import { createContext, useContext, useState } from "react";
+import { accentText } from "../../lib/appearance.js";
+import { useBrowseHistory } from "./showcase-scroll.js";
 import styles from "./icon-pack.module.css";
 import { iconPackNames, withIconPack } from "../../lib/icon-pack.js";
 import {
@@ -10,10 +12,11 @@ import {
 const Context = createContext(null);
 export function ThemeStyle({ settings: s }) {
   return (
-    <style>{`:root{--accent:${s.accent};--radius:${s.radius}px;--site-font:${fontStacks[s.font]};--photo-ratio:${s.photoRatio};--desktop-columns:${s.desktopColumns};--heading-align:${s.textAlign}}`}</style>
+    <style>{`:root{--accent:${s.accent};--accent-ink:${accentText(s.accent)};--button-ink:${accentText(s.accent)};--display-font:${s.displayFont === "unbounded" ? '"Cola Unbounded", sans-serif' : fontStacks[s.font]};--radius:${s.radius}px;--site-font:${fontStacks[s.font]};--photo-ratio:${s.photoRatio};--desktop-columns:${s.desktopColumns};--heading-align:${s.textAlign}}`}</style>
   );
 }
 export default function SiteProvider({ initial, children }) {
+  useBrowseHistory();
   const [site, setSite] = useState(
     initial || { settings: defaultSettings, catalog: defaultCatalog },
   );
@@ -38,6 +41,7 @@ export default function SiteProvider({ initial, children }) {
       <div
         className={"site-root" + (iconPackNames.some((name) => effective.uiIcons?.[name]) ? " " + styles.pixelIcons : "")}
         data-theme={effective.theme}
+        data-preset={effective.designPreset || "classic"}
         data-background-mode={effective.backgroundMode || "cover"}
         data-has-background={effective.backgroundImageId ? "true" : "false"}
         style={backgroundStyle}

@@ -1,0 +1,327 @@
+.frame {
+  position: relative;
+  z-index: var(--layer-header, 2);
+  container: club-header / inline-size;
+}
+.header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  min-height: 64px;
+  gap: 8px 16px;
+  padding: 8px max(24px, calc((100% - 1488px) / 2));
+  background: var(--paper);
+  color: var(--ink);
+  border-bottom: 1px solid var(--line);
+}
+.artwork {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.header :global(.brand) {
+  display: flex;
+  align-items: center;
+  flex: 0 1 250px;
+  min-width: 0;
+  color: var(--ink);
+  font: 700 26px/1.2 var(--site-font);
+  overflow-wrap: anywhere;
+}
+.header :global(.brand-illustrated) {
+  height: 48px;
+}
+.header :global(.brand-illustrated) .artwork {
+  object-fit: cover;
+  object-position: left center;
+  width: 100%;
+  height: 48px;
+}
+/* Legacy logo resources contain a central strip surrounded by blank canvas.
+   The explicit setting preserves that strip; tightly trimmed uploads use contain. */
+.header[data-artwork="padded-strip"] :global(.brand-illustrated) {
+  position: relative;
+  overflow: hidden;
+}
+.header[data-artwork="padded-strip"] .artwork {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 270%;
+  max-width: none;
+  height: auto;
+}
+.header[data-artwork="contain"] .artwork {
+  object-fit: contain;
+}
+.header :global(.brand-illustrated):has(.wordmark) {
+  height: auto;
+  min-height: 48px;
+  overflow: visible;
+}
+.header :global(.brand-mark) {
+  margin-right: 6px;
+  color: var(--accent);
+}
+.header :global(.global-nav) {
+  display: flex;
+  align-items: center;
+  flex: 1 1 auto;
+  justify-content: flex-end;
+  gap: 12px;
+  min-width: 0;
+}
+.header :global(.primary-navigation),
+.header :global(.nav-utilities) {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.header :global(.nav-utilities) {
+  flex-shrink: 0;
+}
+.header :global(.nav-trigger),
+.header :global(.global-nav-item),
+.header :global(.nav-menu-link) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 8px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  font: 700 14px/20px var(--site-font);
+  color: var(--ink);
+  background: var(--paper);
+  box-shadow: none;
+}
+.header :global(.global-nav-item) {
+  position: relative;
+  width: 44px;
+  min-width: 44px;
+  padding: 8px;
+}
+.header :global(.nav-trigger.active),
+.header :global(.nav-trigger[aria-expanded="true"]),
+.header :global(.global-nav-item.active) {
+  border-bottom: 2px solid var(--accent);
+  background: var(--wash);
+}
+.header :global(.nav-trigger):hover,
+.header :global(.nav-menu-link):hover,
+.header :global(.global-nav-item):hover {
+  background: var(--wash);
+}
+.header :global(.global-nav-graphic),
+.header :global(.global-nav-graphic-fallback) {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  object-fit: contain;
+}
+.header
+  :global(.global-nav[data-icon-size="small"])
+  :is(img, svg):global(.global-nav-graphic),
+.header
+  :global(.global-nav[data-icon-size="small"])
+  :global(.global-nav-graphic-fallback) {
+  width: 18px;
+  height: 18px;
+}
+.header
+  :global(.global-nav[data-icon-size="large"])
+  :is(img, svg):global(.global-nav-graphic),
+.header
+  :global(.global-nav[data-icon-size="large"])
+  :global(.global-nav-graphic-fallback) {
+  width: 26px;
+  height: 26px;
+}
+.header :global(.notification-badge) {
+  position: absolute;
+  right: 0;
+  top: 0;
+  min-width: 18px;
+  padding: 0 3px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font: 700 12px/18px var(--site-font);
+}
+.header :global(.mobile-nav-toggle) {
+  display: none;
+}
+.disclosure {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+}
+.disclosure > :global(.nav-chevron) {
+  min-width: 28px;
+  padding-inline: 4px;
+}
+.popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: var(--layer-popover, 3);
+  width: 260px;
+  padding: 6px;
+  border: 1px solid var(--control-border);
+  border-radius: 4px;
+  background: var(--paper);
+}
+.popover[hidden] {
+  display: none;
+}
+:global(.account-disclosure) .popover {
+  left: auto;
+  right: 0;
+  width: 284px;
+}
+.header :global(.nav-menu-link),
+.drawer :global(.nav-menu-link) {
+  justify-content: flex-start;
+  width: 100%;
+  min-height: 44px;
+  padding: 8px;
+  gap: 10px;
+  display: flex;
+  font: 400 14px/20px var(--site-font);
+  color: var(--ink);
+  text-align: left;
+  border-radius: 3px;
+}
+.header :global(.nav-menu-link[aria-current="page"]),
+.drawer :global(.nav-menu-link[aria-current="page"]) {
+  box-shadow: inset 2px 0 var(--accent);
+  background: var(--wash);
+}
+.header :global(.nav-menu-link span) {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.header :global(.nav-account-identity),
+.drawer :global(.nav-account-identity) {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px;
+  border-bottom: 1px solid var(--line);
+}
+.header :global(.nav-account-identity small),
+.drawer :global(.nav-account-identity small) {
+  display: block;
+  color: var(--muted);
+  font-size: 13px;
+}
+.header :global(.nav-account-stats),
+.drawer :global(.nav-account-stats) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 0;
+  padding: 12px 8px;
+  border-bottom: 1px solid var(--line);
+}
+.header :global(.nav-account-stats dt),
+.drawer :global(.nav-account-stats dt) {
+  font-size: 13px;
+  color: var(--muted);
+}
+.header :global(.nav-account-stats dd),
+.drawer :global(.nav-account-stats dd) {
+  margin: 0;
+  font-weight: 700;
+}
+.header .drawer {
+  inset: 12px 12px auto auto;
+  width: min(420px, calc(100% - 24px));
+  max-width: calc(100% - 24px);
+  max-height: calc(100dvh - 24px);
+  margin: 0;
+  overflow-y: auto;
+  border-radius: 4px;
+  box-shadow: none;
+}
+.drawer :global(.mobile-nav-section) {
+  border-bottom: 1px solid var(--line);
+  padding: 4px 0;
+}
+.drawer summary {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  cursor: pointer;
+  padding: 8px;
+  font-size: 14px;
+}
+.drawer summary::after {
+  content: "⌄";
+  margin-left: auto;
+}
+.drawer summary a {
+  flex: 1;
+  font-weight: 700;
+}
+.drawer :global(.mobile-account) {
+  margin-top: 8px;
+}
+.panorama {
+  container: club-panorama / inline-size;
+  border-top: 6px solid var(--paper);
+  width: 100%;
+  margin: 0;
+  background: var(--paper);
+}
+.panorama img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 9/1;
+  object-fit: cover;
+  object-position: center;
+}
+@container club-header (max-width: 1099px) {
+  .header {
+    padding: 8px 12px;
+    flex-wrap: nowrap;
+    gap: 8px;
+  }
+  .header :global(.primary-navigation),
+  .header :global(.desktop-account) {
+    display: none;
+  }
+  .header :global(.mobile-nav-toggle) {
+    display: inline-flex;
+  }
+  .header :global(.brand) {
+    flex: 1 1 auto;
+    font-size: 24px;
+  }
+  .header :global(.global-nav) {
+    flex: 0 0 auto;
+  }
+  .header :global(.brand-illustrated) {
+    height: 48px;
+    max-width: 240px;
+  }
+  .header[data-artwork="padded-strip"] .artwork {
+    width: 270%;
+  }
+}
+@container club-panorama (max-width: 599px) {
+  .panorama img {
+    aspect-ratio: 2400/487;
+    object-fit: contain;
+  }
+}
+@media (pointer: coarse) {
+  .disclosure > :global(.nav-chevron) {
+    min-width: 44px;
+  }
+}

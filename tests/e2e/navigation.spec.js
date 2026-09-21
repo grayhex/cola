@@ -69,7 +69,7 @@ test("navigation: real destinations, account, keyboard, configurable About and a
       ).toBeFocused();
     } else {
       const bikes = page.getByRole("button", {
-        name: "Велосипеды",
+        name: "Подразделы: Велосипеды",
         exact: true,
       });
       await bikes.focus();
@@ -152,7 +152,7 @@ test("navigation: real destinations, account, keyboard, configurable About and a
       await page.getByRole("button", { name: "Открыть меню" }).click();
     else
       await page
-        .getByRole("button", { name: "Покатушки", exact: true })
+        .getByRole("button", { name: "Подразделы: Покатушки", exact: true })
         .click();
     await page
       .getByRole("link", { name: "Добавить покатушку", exact: true })
@@ -163,7 +163,7 @@ test("navigation: real destinations, account, keyboard, configurable About and a
       await page.getByRole("button", { name: "Открыть меню" }).click();
     else
       await page
-        .getByRole("button", { name: "Велосипеды", exact: true })
+        .getByRole("button", { name: "Подразделы: Велосипеды", exact: true })
         .click();
     await page
       .getByRole("link", { name: "Добавить велосипед", exact: true })

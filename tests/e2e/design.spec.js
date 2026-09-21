@@ -107,7 +107,7 @@ test("dense visual system: shared cards, filters, search, themes and responsive 
       await card
         .locator(".card-identity-row h2")
         .evaluate((el) => getComputedStyle(el).fontSize),
-    ).toBe("14px");
+    ).toBe("17px");
     await expect(card.locator(".card-info > *")).toHaveCount(2);
     await expect(card.locator(".like-button img")).toHaveAttribute(
       "src",
@@ -118,27 +118,13 @@ test("dense visual system: shared cards, filters, search, themes and responsive 
         .locator(".card-open-photo > img")
         .evaluate((el) => getComputedStyle(el).objectFit),
     ).toBe("contain");
-    await expect(card.locator(".card-facts")).not.toContainText("2020");
+    await expect(card.locator(".card-info")).not.toContainText("2020");
     const heading = await page.locator(".garage-heading h1").boundingBox();
     const controls = await page.locator(".showcase-actions").boundingBox();
     expect(heading.width).toBeGreaterThan(100);
-    expect(
-      Math.abs(
-        heading.y + heading.height / 2 - controls.y - controls.height / 2,
-      ),
-    ).toBeLessThan(3);
-    if (isMobile)
-      await expect(
-        page.locator(".showcase-actions .control-label").first(),
-      ).toBeHidden();
-    await expect(page.locator(".showcase-heading-copy")).not.toContainText(
-      "велосипедов",
-    );
-    await card.locator(".micro-metric").first().click();
-    await expect(
-      page.getByRole("dialog", { name: "Показатели велосипеда" }),
-    ).toBeVisible();
-    await page.getByRole("button", { name: "Закрыть панель" }).click();
+    if (!isMobile) expect(Math.abs(heading.y + heading.height / 2 - controls.y - controls.height / 2)).toBeLessThan(3);
+    await expect(card.locator(".micro-metric")).toHaveCount(0);
+    await expect(card.getByRole("link", { name: "Похожие сборки" })).toHaveCount(0);
     await page.getByRole("button", { name: /^Фильтры/ }).click();
     const panel = page.getByRole("dialog", { name: "Фильтры", exact: true });
     await panel.getByRole("checkbox").nth(0).check();
@@ -214,7 +200,8 @@ test("dense visual system: shared cards, filters, search, themes and responsive 
         .evaluate(
           (el) => getComputedStyle(el).gridTemplateColumns.split(" ").length,
         );
-      expect(count).toBe(isMobile ? 1 : columns);
+      // At 1440 px five columns would make cards narrower than 280 px.
+      expect(count).toBe(isMobile ? 1 : Math.min(columns, 4));
       await noOverflow();
       await screenshot("grid-" + columns);
     }

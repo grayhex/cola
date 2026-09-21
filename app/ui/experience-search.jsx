@@ -277,17 +277,7 @@ export default function ExperienceSearch({ modelPage = false }) {
                   <BikeCard
                     key={b.id}
                     bike={b}
-                    onLike={async () => {
-                      try {
-                        await socialApi(
-                          "bikes/" + b.id + "/like",
-                          b.liked ? "DELETE" : "PUT",
-                        );
-                        setQuery((q) => ({ ...q }));
-                      } catch (e) {
-                        setError(e.message);
-                      }
-                    }}
+                    user={user}
                   />
                 ))}
               </BikeGrid>

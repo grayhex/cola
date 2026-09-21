@@ -235,21 +235,7 @@ export default function CommunityPage({ kind }) {
                   <BikeCard
                     key={b.id}
                     bike={b}
-                    busy={busy}
-                    onLike={async () => {
-                      setBusy(true);
-                      try {
-                        await socialApi(
-                          "bikes/" + b.id + "/like",
-                          b.liked ? "DELETE" : "PUT",
-                        );
-                        await refresh();
-                      } catch (e) {
-                        setError(e.message);
-                      } finally {
-                        setBusy(false);
-                      }
-                    }}
+                    user={user}
                   />
                 ),
               )}

@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Camera } from "./icons.jsx";
 import { useSite } from "./site-provider.jsx";
 const demoImage =
@@ -7,7 +7,8 @@ const demoImage =
 export default function Photo({ bike, className = "", photo }) {
   const { settings, catalog, t } = useSite();
   const { categories, models, parts, partCategories, manufacturers } = catalog;
-  const [failed, setFailed] = useState(false);
+  const [failedSrc, setFailedSrc] = useState(null);
+  const image = useRef(null);
   const selected = photo || bike.photos?.[0];
   const src =
     bike.id === "demo"
@@ -19,13 +20,19 @@ export default function Photo({ bike, className = "", photo }) {
         : settings[bike.category + "ImageId"]
           ? "/api/assets/" + settings[bike.category + "ImageId"]
           : null;
-  useEffect(() => setFailed(false), [src]);
-  return src && !failed ? (
+  useEffect(() => {
+    // A cached/fast failure may precede hydration or this effect (notably WebKit).
+    // Key failures by source so a new photo can load without resetting an error.
+    if (image.current?.complete && !image.current.naturalWidth)
+      setFailedSrc(src);
+  }, [src]);
+  return src && failedSrc !== src ? (
     <img
+      ref={image}
       className={className}
       src={src}
       alt={`${bike.brand} ${bike.model} — ${bike.name}`}
-      onError={() => setFailed(true)}
+      onError={() => setFailedSrc(src)}
     />
   ) : (
     <div className={"photo-empty " + className}>

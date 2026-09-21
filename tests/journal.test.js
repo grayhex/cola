@@ -36,7 +36,8 @@ test("journal validation, font catalogue and asset references", () => {
       .success,
   );
   assert(!journalInput.safeParse({ ...base, body: "text\0" }).success);
-  assert.equal(hostedFonts.length, 10);
+  assert(hostedFonts.includes("ptsans"));
+  assert.equal(hostedFonts.length, 11);
   for (const font of fontNames)
     assert(settingsInput.safeParse({ ...defaultSettings, font }).success);
   const id = randomUUID();

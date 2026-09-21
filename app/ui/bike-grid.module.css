@@ -1,0 +1,55 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(
+    auto-fill,
+    minmax(
+      min(
+        100%,
+        max(
+          280px,
+          calc(
+            (100% - (var(--desktop-columns, 3) - 1) * 16px) /
+              var(--desktop-columns, 3)
+          )
+        )
+      ),
+      1fr
+    )
+  );
+  gap: 16px;
+  align-items: start;
+}
+@media (max-width: 599px) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@keyframes results-a {
+  from {
+    opacity: 0.45;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes results-b {
+  from {
+    opacity: 0.45;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.enterA {
+  animation: results-a 160ms ease-out;
+}
+.enterB {
+  animation: results-b 160ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .enterA,
+  .enterB {
+    animation: none;
+  }
+}

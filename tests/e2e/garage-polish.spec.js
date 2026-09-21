@@ -77,7 +77,7 @@ test("grouped icon overrides, local fonts, auth illustrations and public statist
       page
         .getByRole("combobox", { name: "Шрифт", exact: true })
         .locator("option"),
-    ).toHaveCount(14);
+    ).toHaveCount(15);
     await page
       .locator("summary")
       .filter({ hasText: "Новые и популярные велосипеды" })
@@ -109,8 +109,8 @@ test("grouped icon overrides, local fonts, auth illustrations and public statist
       const logo = await page
         .locator(".brand-illustrated .site-logo")
         .boundingBox();
-      expect(logo.height).toBeGreaterThanOrEqual(60);
-      expect(Math.abs(brand.width - logo.width)).toBeLessThan(2);
+      expect(brand.height).toBeGreaterThanOrEqual(44);
+      expect(logo.width).toBeGreaterThanOrEqual(brand.width);
     }
     expect(
       await page.evaluate(
