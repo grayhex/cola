@@ -174,7 +174,7 @@ test("account profile/avatar editing, public garage, author links and mutual mob
     await expect(visitor).toHaveURL("/u/" + username);
     await visitor
       .locator(".bike-card")
-      .getByRole("button", { name: bike.name, exact: true })
+      .getByRole("link", { name: bike.name, exact: true })
       .click();
     await expect(
       visitor.getByRole("heading", { name: bike.name, exact: true }),

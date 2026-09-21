@@ -401,6 +401,30 @@ test("broken artwork and photos keep stable space and accessible fallbacks", asy
   expect(
     (await page.locator(".garage-banner-shell").boundingBox()).height,
   ).toBeGreaterThan(60);
+  // Reuse the same card with a replacement image: an old failure must not stick.
+  await page.route("**/api/photos/recovered-photo", (r) =>
+    r.fulfill({ contentType: "image/png", body: photo }),
+  );
+  await page.route("**/api/showcase?**", (r) =>
+    r.fulfill({
+      json: {
+        bikes: [{ ...bikes[0], photos: [{ id: "recovered-photo" }] }],
+        total: 1,
+      },
+    }),
+  );
+  await page
+    .getByRole("combobox", { name: "Порядок витрины" })
+    .selectOption("popular");
+  const recovered = page.locator(".card-open-photo > img");
+  await expect(recovered).toBeVisible();
+  await expect
+    .poll(() => recovered.evaluate((el) => el.naturalWidth))
+    .toBe(900);
+  await expect(page.locator(".bike-card .photo-empty")).toHaveCount(0);
+  expect((await page.locator(".card-photo").boundingBox()).height).toBe(
+    photoBox.height,
+  );
   await page.getByRole("button", { name: "Открыть меню" }).click();
   await expect(
     page.getByRole("dialog", { name: "Меню ColaBike" }),
@@ -413,12 +437,15 @@ test("broken artwork and photos keep stable space and accessible fallbacks", asy
 
 test("guest sign-in continues the requested add-bike action", async ({
   page,
+  isMobile,
 }) => {
   await fixture(page, null);
   await page.unroute("**/api/me");
   await page.goto("/");
   await page.locator(".showcase-actions .add-bike").click();
   await expect(page).toHaveURL(/account\?tab=bikes&action=add/);
+  if (isMobile)
+    await page.getByRole("button", { name: "Открыть меню" }).click();
   await page.getByRole("button", { name: "Войти", exact: true }).click();
   const dialog = page.getByRole("dialog");
   await dialog
