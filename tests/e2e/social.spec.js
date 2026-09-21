@@ -91,18 +91,12 @@ test("account profile/avatar editing, public garage, author links and mutual mob
     .selectOption("dark");
   await page.getByRole("button", { name: "Сохранить оформление" }).click();
   await expect(page.getByRole("status")).toHaveText("Оформление сохранено");
-  await expect(page.locator(".site-root")).toHaveAttribute(
-    "data-theme",
-    "dark",
-  );
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await page
     .getByRole("combobox", { name: "Тема", exact: true })
     .selectOption("light");
   await page.getByRole("button", { name: "Сохранить оформление" }).click();
-  await expect(page.locator(".site-root")).toHaveAttribute(
-    "data-theme",
-    "light",
-  );
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   await page.getByRole("button", { name: "Аккаунт", exact: true }).click();
   await expect(
     page.getByText("owner-" + nonce + "@example.test", { exact: true }),
@@ -168,7 +162,7 @@ test("account profile/avatar editing, public garage, author links and mutual mob
     await expect(visitor.locator(".profile-hero .friend-status")).toHaveText(
       "Друзья",
     );
-    await visitor.goto("/");
+    await visitor.goto("/bikes");
     const card = visitor.locator(".bike-card").filter({ hasText: bike.name });
     await card.locator(".author-link").click();
     await expect(visitor).toHaveURL("/u/" + username);

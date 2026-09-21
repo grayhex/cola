@@ -123,7 +123,7 @@ test("responsive gallery, touch targets, long names and reduced motion", async (
   ]);
   for (const width of [320, 390, 768, 1024, 1440, 1920]) {
     await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
-    await page.goto("/");
+    await page.goto("/bikes");
     await expect(page.locator(".bike-card")).toHaveCount(4);
     await page.evaluate(() => document.fonts.ready);
     await noOverflow(page);
@@ -256,7 +256,7 @@ test("optimistic like, fast unlike, independent cards and rollback", async ({
       });
     } else await r.fulfill({ status: 500, json: { error: "test failure" } });
   });
-  await page.goto("/");
+  await page.goto("/bikes");
   const card = page.locator(".bike-card").first(),
     other = page.locator(".bike-card").nth(1);
   await card.getByRole("button", { name: "Нравится: 2" }).click();
@@ -288,7 +288,7 @@ for (const status of [200, 500])
     page,
   }) => {
     await fixture(page);
-    await page.goto("/");
+    await page.goto("/bikes");
     await expect(page.locator(".bike-card")).toHaveCount(9);
     let release;
     await page.route("**/api/showcase?**", async (r) => {
@@ -335,7 +335,7 @@ for (const status of [200, 500])
     await expect(sort).toBeFocused();
   });
 
-test("personal theme, font and accent remain authoritative; grid column limit is responsive", async ({
+test("persisted theme and legacy personal accent remain compatible; font and columns use the new system", async ({
   page,
 }) => {
   await fixture(page, {
@@ -347,18 +347,17 @@ test("personal theme, font and accent remain authoritative; grid column limit is
       desktopColumns: 5,
     },
   });
+  await page.addInitScript(() => localStorage.setItem("cola:theme", "dark"));
   for (const width of [768, 1024, 1440, 1920]) {
     await page.setViewportSize({ width, height: 900 });
-    await page.goto("/");
+    await page.goto("/bikes");
     await expect(page.locator(".bike-card")).toHaveCount(9);
-    await expect(page.locator(".site-root")).toHaveAttribute(
-      "data-theme",
-      "dark",
-    );
-    await expect(page.locator(".site-root")).toHaveAttribute(
-      "data-font",
-      "onest",
-    );
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+    expect(
+      await page
+        .locator("body")
+        .evaluate((el) => getComputedStyle(el).fontFamily),
+    ).toContain("Cola Source Sans 3");
     await noOverflow(page);
     expect(
       (await page.locator(".bike-card").first().boundingBox()).width,
@@ -366,10 +365,8 @@ test("personal theme, font and accent remain authoritative; grid column limit is
     expect(
       await page
         .locator(".site-root")
-        .evaluate((el) =>
-          getComputedStyle(el).getPropertyValue("--accent-ink"),
-        ),
-    ).toBe("#000000");
+        .evaluate((el) => getComputedStyle(el).getPropertyValue("--accent")),
+    ).toBe("#FFFF00");
   }
 });
 
@@ -392,15 +389,13 @@ test("broken artwork and photos keep stable space and accessible fallbacks", asy
     r.fulfill({ status: 404, body: "missing" }),
   );
   await page.setViewportSize({ width: 320, height: 740 });
-  await page.goto("/");
-  await expect(page.locator(".brand")).toContainText("Велоклуб участников");
+  await page.goto("/bikes");
+  await expect(page.locator(".brand")).toContainText("ColaBike");
   await expect(page.locator(".bike-card .photo-empty")).toHaveCount(9);
   await noOverflow(page);
   const photoBox = await page.locator(".card-photo").first().boundingBox();
   expect(Math.abs(photoBox.width - photoBox.height)).toBeLessThan(1);
-  expect(
-    (await page.locator(".garage-banner-shell").boundingBox()).height,
-  ).toBeGreaterThan(60);
+  await expect(page.locator(".garage-banner-shell")).toHaveCount(0);
   // Reuse the same card with a replacement image: an old failure must not stick.
   await page.route("**/api/photos/recovered-photo", (r) =>
     r.fulfill({ contentType: "image/png", body: photo }),
@@ -441,7 +436,7 @@ test("guest sign-in continues the requested add-bike action", async ({
 }) => {
   await fixture(page, null);
   await page.unroute("**/api/me");
-  await page.goto("/");
+  await page.goto("/bikes");
   await page.locator(".showcase-actions .add-bike").click();
   await expect(page).toHaveURL(/account\?tab=bikes&action=add/);
   if (isMobile)
@@ -465,98 +460,4 @@ test("guest sign-in continues the requested add-bike action", async ({
   ).toBeVisible();
   await expect(page).toHaveURL(/action=add/);
   await expect(page.locator(".garage-banner")).toHaveCount(0);
-});
-
-test("admin preset is explicit and artwork preview uses real desktop and mobile framing", async ({
-  page,
-}, info) => {
-  await db.query("UPDATE site_settings SET value=$1 WHERE id=1", [original]);
-  const origin = process.env.TEST_ORIGIN || "http://localhost:3100";
-  const registered = await page.request.post("/api/auth/register", {
-    headers: { origin },
-    data: {
-      name: "Club admin",
-      email: randomUUID() + "@club.test",
-      password: "club-browser-password",
-    },
-  });
-  expect(registered.status()).toBe(201);
-  const { user } = await (await page.request.get("/api/me")).json();
-  await db.query("UPDATE users SET role='admin' WHERE id=$1", [user.id]);
-  const assets = [];
-  for (const [name, body, type] of [
-    ["Logo", logo, "image/png"],
-    [
-      "Panorama",
-      panorama,
-      process.env.PIXEL_ARTWORK_DIR ? "image/webp" : "image/png",
-    ],
-  ]) {
-    const upload = await page.request.post(
-      "/api/admin/assets?name=Club-" + name,
-      { headers: { origin, "Content-Type": type }, data: body },
-    );
-    expect(upload.status()).toBe(201);
-    assets.push((await upload.json()).id);
-  }
-  const previous = {
-    ...original,
-    logoId: assets[0],
-    garageImageId: assets[1],
-    showcaseTitle: "Сборки участников",
-  };
-  await db.query("UPDATE site_settings SET value=$1 WHERE id=1", [previous]);
-  await page.goto("/admin");
-  await page.getByRole("tab", { name: "Дизайн", exact: true }).click();
-  await page.getByRole("button", { name: "Оформление", exact: true }).click();
-  await page
-    .getByRole("button", { name: "Применить «Пиксельный велоклуб»" })
-    .click();
-  await expect(
-    page
-      .getByRole("combobox")
-      .filter({ has: page.locator('option[value="ptsans"]') }),
-  ).toHaveValue("ptsans");
-  await expect(
-    page
-      .getByRole("combobox")
-      .filter({ has: page.locator('option[value="unbounded"]') }),
-  ).toHaveValue("unbounded");
-  expect(
-    (await (await page.request.get("/api/admin/overview")).json()).settings
-      .designPreset,
-  ).not.toBe("pixel-club");
-  await page.getByRole("button", { name: "Сохранить", exact: true }).click();
-  await expect
-    .poll(
-      async () =>
-        (await (await page.request.get("/api/admin/overview")).json()).settings
-          .designPreset,
-    )
-    .toBe("pixel-club");
-  const saved = (await (await page.request.get("/api/admin/overview")).json())
-    .settings;
-  expect(saved.logoId).toBe(assets[0]);
-  expect(saved.showcaseTitle).toBe("Сборки участников");
-  const group = page
-    .locator("details.graphics-group")
-    .filter({ has: page.getByText("Подготовка логотипа", { exact: true }) });
-  if (!(await group.evaluate((el) => el.open)))
-    await group.locator(":scope > summary").click();
-  const figures = group.locator("figure");
-  await expect(figures).toHaveCount(2);
-  for (const [i, width] of [1440, 390].entries()) {
-    const header = figures.nth(i).locator(".global-header");
-    expect(await header.evaluate((el) => el.offsetWidth)).toBe(width);
-    await expect(figures.nth(i).locator(".garage-banner")).toHaveAttribute(
-      "src",
-      "/api/assets/" + assets[1],
-    );
-    const nav = header.locator(".primary-navigation");
-    expect(await nav.evaluate((el) => getComputedStyle(el).display)).toBe(
-      width === 390 ? "none" : "flex",
-    );
-  }
-  await page.setViewportSize({ width: 1440, height: 1200 });
-  await group.screenshot({ path: info.outputPath("admin-preview.png") });
 });
