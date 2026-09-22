@@ -1,8 +1,6 @@
-Validation 3: finish the three remaining scenarios per browser after run 35732128101.
-Frozen base: f17a7fa65114608c949f8093c43e01c2d77f9150.
-Apply the original four commits and fix-01, fix-02 in order.
-Fix-02 patch Git blob: d7fbceeb0fdbe9586470a0b1419f11d78fcf7fa0.
-Fix: share strict asset CSP between the route and the final Next path-header rule; assert exact headers over real HTTP.
-Tests: observe the upload ID applied by the UI rather than an evictable browser response body; choose a named subset of the new category families; verify the one-shot add intent is consumed and a fresh wizard still opens after reload.
-Local checks passed: JS/JSX parsing, node checks, asset-policy unit test, git diff check, exact git-am replay with identical source tree.
-Require the unchanged full application/migration, production build, Resolver, PostgreSQL HTTP, Chromium, WebKit-mobile and disposable backup-restore checks before publishing feat/backlog-49-59. No skipped checks or timeout increases; no merge or production changes.
+Validation 4: the remaining assertions from run 35734424447.
+Frozen base f17a7fa65114608c949f8093c43e01c2d77f9150; replay original four commits and all three fix patches.
+Fix-03 blob: 377f731668cd98e8d57af3263e0732c3e9b1c6ec. Local syntax and exact git-am replay/tree comparison passed.
+The third patch changes tests only: the filter dialog must expose the six canonical families, not obsolete keys injected into the legacy catalog; invalid injected keys remain rejected by HTTP validation. The existing narrow homepage hides its decorative animation stage, so assert that state and verify the uploaded raster SVG renders in touch landscape before restoring the mobile viewport.
+Asset sandbox headers now passed real PostgreSQL HTTP checks; Chromium verified complete local SVG upload/rendering and background/theme changes in validation 3. No application or security relaxation in fix-03.
+Keep full application/migration tests, production build, Resolver tests/build, full PostgreSQL HTTP, full Chromium and WebKit-mobile sets and real disposable backup restore as mandatory gates. Publish clean feat/backlog-49-59 only after all succeed. No merge/deploy; no timeout increases or test exclusions.
