@@ -1,3 +1,4 @@
+import { testConsents } from "./fixtures/legal.js";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 const origin = process.env.TEST_ORIGIN || "http://localhost:3100";
@@ -26,6 +27,7 @@ for (const [i, c] of [owner, reader].entries())
   assert.equal(
     (
       await c("auth/register", "POST", {
+      ...testConsents,
         name: "Discovery " + i,
         email: nonce + i + "@discovery.test",
         password: "discovery-http-secret",

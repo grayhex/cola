@@ -1,3 +1,4 @@
+import { testConsents } from "../fixtures/legal.js";
 import { test, expect, devices } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import sharp from "sharp";
@@ -6,6 +7,7 @@ async function register(request, name) {
   const r = await request.post("/api/auth/register", {
     headers: { origin },
     data: {
+      ...testConsents,
       name,
       email: name + "@example.test",
       password: "gamification-browser-123",

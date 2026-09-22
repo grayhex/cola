@@ -1,3 +1,4 @@
+import { testConsents } from "../fixtures/legal.js";
 import { test, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import pg from "pg";
@@ -7,6 +8,7 @@ async function register(page) {
   const response = await page.request.post("/api/auth/register", {
     headers: { origin },
     data: {
+      ...testConsents,
       name: "Knowledge Rider",
       email: randomUUID() + "@example.test",
       password: "article-browser-secret-123",
@@ -31,10 +33,15 @@ test("article without a bike: illustrated Markdown, draft, publication, discussi
   page.on("pageerror", (e) => errors.push(e.message));
   await register(page);
   await page.goto("/articles/new");
+  const documentMarker = randomUUID();
+  await page.evaluate((marker) => {
+    window.__articleDocumentMarker = marker;
+  }, documentMarker);
   await page.getByLabel("Заголовок статьи").fill("Как выбрать покрышки");
   await page.getByLabel("Рубрика", { exact: true }).selectOption("equipment");
+  await page.getByRole("tab", { name: "Исходник", exact: true }).click();
   await page
-    .getByLabel("Текст статьи")
+    .getByLabel("Исходник: Текст статьи")
     .fill(
       "## Диаметр\n\n**Размер** нужно проверять по ободу.\n\n- 700C\n- 29 дюймов",
     );
@@ -46,14 +53,16 @@ test("article without a bike: illustrated Markdown, draft, publication, discussi
   await page
     .getByLabel("Иллюстрация", { exact: true })
     .setInputFiles({ name: "tire.png", mimeType: "image/png", buffer: png });
-  await expect(page.getByLabel("Текст статьи")).toHaveValue(/photo:/);
-  await page.getByRole("button", { name: "Предпросмотр", exact: true }).click();
-  await expect(page.locator(".article-preview strong")).toHaveText("Размер");
-  await expect(page.locator(".article-preview figure img")).toBeVisible();
+  await expect(page.getByLabel("Исходник: Текст статьи")).toHaveValue(/photo:/);
+  await page.getByRole("tab", { name: "Предпросмотр", exact: true }).click();
+  await expect(page.locator('[data-rich-editor] [role="tabpanel"]:visible strong')).toHaveText("Размер");
+  await expect(page.locator('[data-rich-editor] [role="tabpanel"]:visible img')).toBeVisible();
   await page
     .getByRole("button", { name: "Сохранить черновик", exact: true })
     .click();
   await expect(page).toHaveURL(/\/articles\/[a-f0-9-]+$/);
+  // Saving must use App Router, not tear down the document and its RSC prefetches.
+  expect(await page.evaluate(() => window.__articleDocumentMarker)).toBe(documentMarker);
   await expect(page.locator(".article-heading")).toContainText("Черновик");
   await page
     .getByRole("button", { name: "Редактировать", exact: true })
@@ -63,7 +72,7 @@ test("article without a bike: illustrated Markdown, draft, publication, discussi
   await expect(
     page.getByRole("heading", { name: "Как выбрать покрышки", exact: true }),
   ).toBeVisible();
-  await expect(page.locator(".article-prose figure img")).toBeVisible();
+  await expect(page.locator(".article-prose img")).toBeVisible();
   await page
     .getByLabel("Ваш комментарий", { exact: true })
     .fill("Добавлю таблицу совместимости.");

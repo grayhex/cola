@@ -1,3 +1,4 @@
+import { testConsents } from "../fixtures/legal.js";
 import { test, expect } from "@playwright/test";
 import pg from "pg";
 import sharp from "sharp";
@@ -11,6 +12,7 @@ test("content artwork remains editable and protected; retired interface graphics
   const register = await page.request.post("/api/auth/register", {
     headers: { origin },
     data: {
+      ...testConsents,
       name: "Graphics",
       email: randomUUID() + "@graphics.test",
       password: "graphics-browser-secret",

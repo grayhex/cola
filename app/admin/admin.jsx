@@ -41,6 +41,7 @@ import {
 } from "../ui/icons.jsx";
 import styles from "./design.module.css";
 import ArticleTopicSettings from "./article-topics.jsx";
+import LegalSettings from "./legal-settings.jsx";
 import EmojiSettings from "./emoji-settings.jsx";
 
 async function request(url, method = "GET", data) {
@@ -57,6 +58,7 @@ async function request(url, method = "GET", data) {
 
 const sections = [
   ["overview", "Обзор", Settings2],
+  ["legal", "Документы", BookOpen],
   ["scoring", "Оценка велосипедов", Settings2],
   ["gamification", "Награды и рекорды", Trophy],
   ["rides", "Покатушки", Settings2],
@@ -82,7 +84,7 @@ const adminGroups = [
     id: "system",
     name: "Система",
     icon: Settings2,
-    sections: ["overview", "resolver", "map", "rides", "audit"],
+    sections: ["overview", "legal", "resolver", "map", "rides", "audit"],
   },
   {
     id: "design",
@@ -495,6 +497,7 @@ export default function Admin() {
               {notice}
             </div>
           )}
+          <div hidden={tab !== "legal"}><LegalSettings active={tab === "legal"} /></div>
           {tab === "emojis" && (
             <EmojiSettings
               value={draft.emojis}

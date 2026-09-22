@@ -1,0 +1,39 @@
+.panel {
+  min-width: 0;
+}
+.heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.heading a {
+  font-size: 13px;
+  text-decoration: underline;
+}
+.warning {
+  padding: 12px;
+  border-left: 3px solid var(--accent);
+  background: var(--surface-muted);
+  font-size: 13px;
+}
+.upload {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+  margin: 12px 0;
+}
+.upload input {
+  max-width: 440px;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-top: 16px;
+}
+.actions small {
+  color: var(--text-muted);
+}

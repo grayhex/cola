@@ -51,6 +51,8 @@ export function SocialFooter() {
           <Link href="/rides">Покатушки</Link>
           <Link href="/market">Рынок</Link>
           <Link href="/about">О проекте</Link>
+          <Link href="/legal/terms">Соглашение</Link>
+          <Link href="/legal/privacy">Политика обработки данных</Link>
           <a href="https://github.com/grayhex/cola">GitHub</a>
           <Versions link={false} />
         </nav>

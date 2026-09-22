@@ -3,6 +3,7 @@ import { useEffect, useState, createContext, useContext } from "react";
 import { Avatar, socialApi } from "./social-primitives.jsx";
 import { ReportButton, PageControls } from "./community-controls.jsx";
 import PromptComposer from "./prompt-composer.jsx";
+import RichTextBody from "./rich-text-body.jsx";
 import { MessagesSquare, Reply } from "./icons.jsx";
 const DiscussionKind = createContext("bike");
 const QuestionContext = createContext(null);
@@ -56,6 +57,7 @@ function Editor({ initial = "", label, onSave, onCancel }) {
         value={body}
         onChange={setBody}
         rows={3}
+        required
         maxLength={1000}
         disabled={busy}
       >
@@ -124,7 +126,7 @@ function Comment({ comment: c, user, bikeId, refresh, reply = false }) {
         />
       ) : (
         <>
-          {!c.unavailable && <p className="comment-body">{c.body}</p>}
+          {!c.unavailable && <RichTextBody className="comment-body" body={c.body} />}
           <div className="comment-actions">
             {!c.unavailable && question?.solutionId === c.id && (
               <span className="journal-solution">Выбранный ответ · Решено</span>

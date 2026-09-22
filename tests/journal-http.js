@@ -1,3 +1,4 @@
+import { testConsents } from "./fixtures/legal.js";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import sharp from "sharp";
@@ -39,6 +40,7 @@ for (const [i, c] of [a, b].entries())
   assert.equal(
     (
       await c("auth/register", "POST", {
+      ...testConsents,
         name: "Journal " + i,
         email: i + nonce + "@example.test",
         password: "journal-http-secret-123",

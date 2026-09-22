@@ -1,3 +1,4 @@
+import { checkLegalAcceptance, recordLegalAcceptance, LegalError } from "../../../lib/legal-documents.js";
 import { traced, logError } from "../../../lib/observability.js";
 import { resolverProxy } from "../../../lib/resolver-proxy.js";
 import { allowAuth } from "../../../lib/auth-limits.js";
@@ -108,11 +109,12 @@ async function handler(req, { params }) {
       return json({ ok: database, database, resolver }, database ? 200 : 503);
     }
     if (
-      p[0] === "auth" &&
+      p[0] === "auth" && p.length === 2 &&
       ["login", "register"].includes(p[1]) &&
       method === "POST"
     ) {
-      const input = credentials.parse(await body(req));
+      const raw = await body(req);
+      const input = credentials.parse(raw);
       // Global and per-account limits are DB-backed and do not trust proxy headers.
       if (!(await allowAuth(req, input.email, rateLimit)))
         return fail("Слишком много попыток. Попробуйте через 15 минут.", 429);
@@ -123,10 +125,14 @@ async function handler(req, { params }) {
         const id = randomUUID();
         const hash = await hashPassword(input.password);
         try {
-          await db.query(
-            "INSERT INTO users(id,email,name,password_hash) VALUES($1,$2,$3,$4)",
-            [id, input.email, input.name, hash],
-          );
+          await transaction(async (q) => {
+            const accepted = await checkLegalAcceptance(q, raw);
+            await q.query(
+              "INSERT INTO users(id,email,name,password_hash) VALUES($1,$2,$3,$4)",
+              [id, input.email, input.name, hash],
+            );
+            await recordLegalAcceptance(q, id, accepted);
+          });
         } catch (e) {
           if (e.code === "23505")
             return fail(
@@ -721,6 +727,7 @@ async function handler(req, { params }) {
     }
     return fail("Не найдено", 404);
   } catch (e) {
+    if (e instanceof LegalError) return json({ error: e.message, code: e.code }, e.status);
     if (e instanceof CommunityError) return fail(e.message, e.status);
     if (e instanceof QuotaError) return fail(e.message, e.status);
     if (e.name === "ZodError")

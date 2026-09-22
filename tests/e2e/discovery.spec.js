@@ -1,3 +1,4 @@
+import { testConsents } from "../fixtures/legal.js";
 import { test, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import sharp from "sharp";
@@ -13,6 +14,7 @@ test("journal discovery: no-bike reader subscribes, saves, searches and returns;
         await request.post("/api/auth/register", {
           headers: { origin },
           data: {
+      ...testConsents,
             name: "Reader " + suffix,
             email: nonce + suffix + "@discovery.test",
             password: "discovery-browser-secret",

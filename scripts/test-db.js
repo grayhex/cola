@@ -3,6 +3,7 @@ import { PGlite } from "@electric-sql/pglite";
 import { PGLiteSocketServer } from "@electric-sql/pglite-socket";
 import { readFile } from "node:fs/promises";
 import { defaultSettings, defaultCatalog } from "../lib/site-defaults.js";
+import { seedLegalDocuments } from "../tests/fixtures/legal.js";
 const db = await PGlite.create();
 await db.exec(
   await readFile(new URL("../db/001_initial.sql", import.meta.url), "utf8"),
@@ -74,6 +75,8 @@ await db.exec(
   ),
 );
 await db.exec(await readFile(new URL("../db/018_articles_rsvp.sql", import.meta.url), "utf8"));
+await db.exec(await readFile(new URL("../db/019_legal_documents.sql", import.meta.url), "utf8"));
+await seedLegalDocuments(db);
 const server = new PGLiteSocketServer({
   db,
   host: "127.0.0.1",

@@ -438,6 +438,8 @@ test("guest sign-in continues the requested add-bike action", async ({
     .getByLabel("Пароль", { exact: true })
     .fill("club-browser-password");
   await dialog.getByLabel("Подтвердите пароль").fill("club-browser-password");
+  await dialog.getByRole("checkbox", { name: "Принять пользовательское соглашение" }).check();
+  await dialog.getByRole("checkbox", { name: "Согласен с политикой обработки персональных данных" }).check();
   await dialog.getByRole("button", { name: "Создать аккаунт" }).click();
   await expect(
     page.getByRole("dialog").getByLabel("Тип велосипеда"),

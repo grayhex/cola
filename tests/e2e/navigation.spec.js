@@ -1,3 +1,4 @@
+import { testConsents } from "../fixtures/legal.js";
 import { test, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import pg from "pg";
@@ -104,6 +105,7 @@ test("navigation: real destinations, account, keyboard, configurable About and a
     const registered = await page.request.post("/api/auth/register", {
       headers: { origin },
       data: {
+      ...testConsents,
         name,
         email: suffix + "@nav.example.test",
         password: "navigation-e2e-secret-123",

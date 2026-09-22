@@ -1,3 +1,4 @@
+import { testConsents } from "./fixtures/legal.js";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { gpx, loop } from "./ride-fixtures.js";
@@ -28,6 +29,7 @@ for (const [i, c] of [a, b].entries())
   assert.equal(
     (
       await c("auth/register", "POST", {
+      ...testConsents,
         name: "Ride " + i,
         email: `rides-${nonce}-${i}@example.test`,
         password: "ride-test-secret-123",

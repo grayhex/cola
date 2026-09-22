@@ -1,3 +1,4 @@
+import { testConsents } from "./fixtures/legal.js";
 // Disposable integration DB and fixture resolver only.
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
@@ -26,6 +27,7 @@ for (const api of [a, b])
   assert.equal(
     (
       await api("auth/register", "POST", {
+      ...testConsents,
         email: randomUUID() + "@example.test",
         name: "Layout",
         password: "layout-tests-12345",

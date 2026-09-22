@@ -1,3 +1,4 @@
+import { testConsents } from "../fixtures/legal.js";
 import { test, expect } from "@playwright/test";
 import pg from "pg";
 import sharp from "sharp";
@@ -438,6 +439,7 @@ test("admin appearance is explicit; hero upload, replacement and removal protect
   const register = await page.request.post("/api/auth/register", {
     headers: { origin },
     data: {
+      ...testConsents,
       name: "Community admin",
       email: randomUUID() + "@community.test",
       password: "community-browser-secret",

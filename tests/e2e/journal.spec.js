@@ -1,3 +1,4 @@
+import { testConsents } from "../fixtures/legal.js";
 import { test, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import sharp from "sharp";
@@ -11,6 +12,7 @@ test("component change offers an explicit draft, never automatic publication", a
       await page.request.post("/api/auth/register", {
         headers: { origin },
         data: {
+      ...testConsents,
           name: "Builder",
           email: nonce + "@builder.test",
           password: "builder-browser-secret",
@@ -114,6 +116,7 @@ test("journal: draft, publication, photo, discussion and inherited privacy", asy
         await request.post("/api/auth/register", {
           headers: { origin },
           data: {
+      ...testConsents,
             name: "Journal " + suffix,
             email: nonce + suffix + "@journal.test",
             password: "journal-browser-secret-123",

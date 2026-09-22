@@ -1,3 +1,4 @@
+import { testConsents } from "./fixtures/legal.js";
 // Use only with scripts/test-db.js and the app pointed to that disposable database.
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
@@ -32,6 +33,7 @@ let original, originalCatalog, asset, adminId, memberId;
 try {
   assert.equal((await guest("admin/overview")).status, 401);
   const a = await admin("auth/register", "POST", {
+      ...testConsents,
     name: "Admin test",
     email: `admin-${id}@example.test`,
     password,
@@ -45,6 +47,7 @@ try {
   );
   await db.query("UPDATE users SET role='admin' WHERE id=$1", [adminId]);
   const m = await member("auth/register", "POST", {
+      ...testConsents,
     name: "Member test",
     email: `member-${id}@example.test`,
     password,
@@ -170,6 +173,7 @@ try {
   assert.equal(
     (
       await guest("auth/register", "POST", {
+      ...testConsents,
         name: "Closed",
         email: `closed-${id}@example.test`,
         password,

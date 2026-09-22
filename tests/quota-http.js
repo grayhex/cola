@@ -1,3 +1,4 @@
+import { testConsents } from "./fixtures/legal.js";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import sharp from "sharp";
@@ -14,6 +15,7 @@ async function api(url, method = "GET", data) {
   return { status: r.status, body: await r.json() };
 }
 await api("auth/register", "POST", {
+      ...testConsents,
   name: "Quota",
   email: randomUUID() + "@example.test",
   password: "quota-tests-12345",

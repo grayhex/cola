@@ -19,6 +19,8 @@ async function register(page, name) {
   await page
     .locator("input[name=confirmPassword]")
     .fill("different-secret-123");
+  await page.getByRole("checkbox", { name: "Принять пользовательское соглашение" }).check();
+  await page.getByRole("checkbox", { name: "Согласен с политикой обработки персональных данных" }).check();
   await page
     .getByRole("button", { name: "Создать аккаунт", exact: true })
     .click();

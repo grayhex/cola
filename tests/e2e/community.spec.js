@@ -1,3 +1,4 @@
+import { testConsents } from "../fixtures/legal.js";
 import { test, expect, devices } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 const origin = process.env.TEST_ORIGIN || "http://localhost:3100";
@@ -5,6 +6,7 @@ async function register(request, name) {
   const r = await request.post("/api/auth/register", {
     headers: { origin },
     data: {
+      ...testConsents,
       name,
       email: name + "@example.test",
       password: "community-browser-123",

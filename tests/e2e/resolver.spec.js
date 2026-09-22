@@ -1,3 +1,4 @@
+import { testConsents } from "../fixtures/legal.js";
 import { test, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import sharp from "sharp";
@@ -9,6 +10,7 @@ test("wizard live trace, stop, partial import and mobile review", async ({
   const registered = await page.request.post("/api/auth/register", {
     headers: { origin },
     data: {
+      ...testConsents,
       name: "Resolver " + suffix,
       email: suffix + "@example.test",
       password: "resolver-browser-secret-123",
@@ -120,6 +122,7 @@ test("wizard quick setup, identity confirmation, image size and successful save"
   await page.request.post("/api/auth/register", {
     headers: { origin },
     data: {
+      ...testConsents,
       name: "Wizard " + suffix,
       email: suffix + "@example.test",
       password: "resolver-browser-secret-123",
