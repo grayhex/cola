@@ -1,5 +1,7 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import PromptComposer from "./prompt-composer.jsx";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   SocialHeader,
   SocialFooter,
@@ -279,6 +281,7 @@ export function ArticlePage({ share }) {
 }
 export function NewArticle() {
   const user = useReader();
+  const router = useRouter();
   return (
     <>
       <SocialHeader user={user} />
@@ -286,7 +289,7 @@ export function NewArticle() {
         <h1>Новая статья</h1>
         {user ? (
           <ArticleEditor
-            onSaved={(a) => location.assign("/articles/" + a.shareId)}
+            onSaved={(a) => router.push("/articles/" + a.shareId)}
           />
         ) : user === undefined ? (
           <p>Загружаем профиль…</p>
@@ -310,11 +313,9 @@ function ArticleEditor({ initial, onSaved, onCancel }) {
       topicId: initial?.topicId || topics[0]?.id || "",
     }),
     [photos, setPhotos] = useState(initial?.photos || []),
-    [preview, setPreview] = useState(false),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [dirty, setDirty] = useState(false);
-  const area = useRef(null);
   const set = (key, value) => {
     setForm((v) => ({ ...v, [key]: value }));
     setDirty(true);
@@ -338,28 +339,7 @@ function ArticleEditor({ initial, onSaved, onCancel }) {
     setDirty(false);
     return result;
   }
-  function insert(before, after = "") {
-    const input = area.current,
-      start = input?.selectionStart ?? form.body.length,
-      end = input?.selectionEnd ?? start;
-    const selected = form.body.slice(start, end) || (after ? "текст" : "");
-    set(
-      "body",
-      form.body.slice(0, start) +
-        before +
-        selected +
-        after +
-        form.body.slice(end),
-    );
-    setPreview(false);
-    requestAnimationFrame(() => {
-      area.current?.focus();
-      area.current?.setSelectionRange(
-        start + before.length,
-        start + before.length + selected.length,
-      );
-    });
-  }
+  function insert(text) { set("body", form.body + text); }
   return (
     <form
       className="article-editor"
@@ -406,72 +386,8 @@ function ArticleEditor({ initial, onSaved, onCancel }) {
         </select>
       </label>
       <div className="article-composer">
-        <div className="article-toolbar">
-          <button
-            className="quiet"
-            type="button"
-            aria-pressed={!preview}
-            onClick={() => setPreview(false)}
-          >
-            Текст
-          </button>
-          <button
-            className="quiet"
-            type="button"
-            aria-pressed={preview}
-            onClick={() => setPreview(true)}
-          >
-            Предпросмотр
-          </button>
-          <span className="article-tools">
-            <button
-              className="quiet"
-              type="button"
-              aria-label="Полужирный"
-              onClick={() => insert("**", "**")}
-            >
-              <strong>B</strong>
-            </button>
-            <button
-              className="quiet"
-              type="button"
-              aria-label="Курсив"
-              onClick={() => insert("*", "*")}
-            >
-              <em>I</em>
-            </button>
-            <button
-              className="quiet"
-              type="button"
-              onClick={() => insert("\n## ")}
-            >
-              Заголовок
-            </button>
-            <button
-              className="quiet"
-              type="button"
-              onClick={() => insert("\n- ")}
-            >
-              Список
-            </button>
-          </span>
-        </div>
-        {preview ? (
-          <div className="article-preview">
-            <ArticleBody body={form.body} photos={photos} />
-            {!form.body && <p className="help">Здесь появится текст статьи.</p>}
-          </div>
-        ) : (
-          <textarea
-            ref={area}
-            aria-label="Текст статьи"
-            maxLength={20000}
-            rows={16}
-            value={form.body}
-            onChange={(e) => set("body", e.target.value)}
-            placeholder="Поделитесь опытом. Используйте **полужирный**, *курсив*, ## заголовки и списки."
-          />
-        )}
+        <PromptComposer label="Текст статьи" value={form.body} onChange={(body) => set("body", body)}
+          maxLength={20000} rows={16} disabled={busy} photos={photos} />
         <div className="article-toolbar">
           <label className="hf-button">
             <SiteEmoji name="add" />

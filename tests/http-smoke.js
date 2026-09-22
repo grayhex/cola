@@ -1,3 +1,4 @@
+import { testConsents } from "./fixtures/legal.js";
 // Run against an explicitly disposable app/DB: node tests/http-smoke.js
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
@@ -31,6 +32,7 @@ try {
   assert.equal(
     (
       await owner("auth/register", "POST", {
+      ...testConsents,
         email: `owner-${nonce}@example.test`,
         name: "Smoke test",
         password: "colabike-test-12345",
@@ -41,6 +43,7 @@ try {
   assert.equal(
     (
       await stranger("auth/register", "POST", {
+      ...testConsents,
         email: `other-${nonce}@example.test`,
         name: "Other test",
         password: "colabike-test-12345",

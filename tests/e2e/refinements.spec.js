@@ -1,3 +1,4 @@
+import { testConsents } from "../fixtures/legal.js";
 import { test, expect } from "@playwright/test";
 import pg from "pg";
 import sharp from "sharp";
@@ -38,6 +39,7 @@ test("three-column bike, raster map, six-ride accordion, preferences and grouped
         await page.request.post("/api/auth/register", {
           headers: { origin },
           data: {
+      ...testConsents,
             name: "Layout " + nonce,
             email: nonce + "@layout.test",
             password: "layout-test-secret-123",

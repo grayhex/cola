@@ -1,4 +1,5 @@
 "use client";
+import RichTextBody from "./rich-text-body.jsx";
 import { useState, useEffect } from "react";
 import { SocialHeader, SocialFooter, socialApi } from "./social-primitives.jsx";
 import { useSite } from "./site-provider.jsx";
@@ -113,7 +114,7 @@ export default function JournalPage({ share = null }) {
               <a href={"/u/" + entry.author.username}>
                 @{entry.author.username}
               </a>
-              <div className="journal-body">{entry.body}</div>
+              <RichTextBody className="journal-body" body={entry.body} />
               {entry.installationResult && (
                 <p>
                   Результат установки:{" "}

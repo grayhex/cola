@@ -1,3 +1,4 @@
+import { testConsents } from "../fixtures/legal.js";
 import { test, expect } from "@playwright/test";
 import pg from "pg";
 import { randomUUID } from "node:crypto";
@@ -46,6 +47,8 @@ test("login and registration are complete forms, errors preserve input, password
   await page
     .getByLabel("Подтвердите пароль", { exact: true })
     .fill(password + "wrong");
+  await page.getByRole("checkbox", { name: "Принять пользовательское соглашение" }).check();
+  await page.getByRole("checkbox", { name: "Согласен с политикой обработки персональных данных" }).check();
   await page
     .getByRole("button", { name: "Создать аккаунт", exact: true })
     .click();
@@ -77,6 +80,7 @@ test("all product routes and account sections share clear light/dark UI; compose
   await page.request.post("/api/auth/register", {
     headers: { origin },
     data: {
+      ...testConsents,
       name: "Александр Смирнов",
       email: randomUUID() + "@ui.test",
       password,
@@ -245,7 +249,7 @@ test("all product routes and account sections share clear light/dark UI; compose
       page.getByRole("tabpanel").filter({ visible: true }),
     ).toContainText("Мой новый маршрут <script>plain text</script>");
     await page.getByRole("tab", { name: "Написать", exact: true }).click();
-    await expect(body).toHaveValue(
+    await expect(body).toHaveText(
       "Мой новый маршрут <script>plain text</script>",
     );
     await page.close();

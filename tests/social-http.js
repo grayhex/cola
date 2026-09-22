@@ -1,3 +1,4 @@
+import { testConsents } from "./fixtures/legal.js";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import sharp from "sharp";
@@ -63,6 +64,7 @@ try {
     [b, bobby],
   ]) {
     const r = await who("auth/register", "POST", {
+      ...testConsents,
       name,
       email: name + "@example.test",
       password: "colabike-social-test-123",

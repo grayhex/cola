@@ -1,3 +1,4 @@
+import { testConsents } from "./fixtures/legal.js";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import pg from "pg";
@@ -28,6 +29,7 @@ try {
     assert.equal(
       (
         await c("auth/register", "POST", {
+      ...testConsents,
           name: "gamer" + i,
           email: nonce + i + "@example.test",
           password: "games-secret-123",

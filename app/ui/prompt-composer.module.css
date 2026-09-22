@@ -89,3 +89,107 @@
     padding: 14px;
   }
 }
+.formatting {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+}
+.formatting button {
+  min-width: 34px;
+  min-height: 36px;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+}
+.formatting button[aria-pressed="true"] {
+  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 1px var(--border-strong);
+}
+.formatting select {
+  width: auto;
+  max-width: 160px;
+  padding: 4px 8px;
+  font-size: 14px;
+}
+.formatting :is(button, select):focus-visible,
+.richSurface :global(.tiptap):focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+.richSurface :global(.tiptap) {
+  min-height: var(--editor-height, 160px);
+  padding: 16px;
+  overflow-wrap: anywhere;
+  line-height: 1.6;
+  font-size: 16px;
+}
+.richSurface :global(.tiptap) p {
+  margin: 0 0 0.7em;
+}
+.richSurface :global(.tiptap) li p {
+  margin: 0;
+}
+.richSurface :global(.tiptap) :is(h1, h2, h3) {
+  font-size: 1.2em;
+  line-height: 1.4;
+  letter-spacing: normal;
+}
+.richSurface :global(.tiptap) :is(ul, ol) {
+  padding-left: 1.6em;
+}
+.richSurface :global(.tiptap) blockquote {
+  padding-left: 12px;
+  border-left: 3px solid var(--border-strong);
+  margin-left: 0;
+}
+.richSurface :global(.tiptap) pre {
+  white-space: pre-wrap;
+  background: var(--surface-muted);
+  padding: 8px;
+}
+.richSurface :global(.tiptap) a {
+  text-decoration: underline;
+}
+.richSurface :global(.rich-photo-reference) {
+  display: inline-block;
+  padding: 8px;
+  border: 1px dashed var(--border-strong);
+  background: var(--surface-muted);
+}
+.linkControls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.linkControls input {
+  flex: 1 1 220px;
+}
+.linkControls button {
+  min-height: 40px;
+  padding: 6px;
+}
+.message {
+  padding: 8px 14px;
+  font-size: 13px;
+  margin: 0;
+}
+@media (max-width: 700px) {
+  .formatting {
+    padding: 4px;
+  }
+  .formatting button,
+  .formatting select {
+    min-height: 44px;
+  }
+  .toolbar {
+    padding: 0 4px;
+  }
+  .toolbar button {
+    padding: 8px;
+    font-size: 13px;
+  }
+}

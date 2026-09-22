@@ -53,3 +53,45 @@
     padding: 24px 20px;
   }
 }
+
+.consents {
+  margin: 4px 0 16px;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+}
+.consents label {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  font-size: 12px;
+  line-height: 1.5;
+  font-weight: 400;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.consents input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  padding: 0;
+  margin: 1px 0 0;
+  accent-color: var(--accent);
+}
+.consents a {
+  color: var(--text);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.consents a:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+@media (max-width: 700px) {
+  .consents label {
+    min-height: 44px;
+    align-items: center;
+  }
+}

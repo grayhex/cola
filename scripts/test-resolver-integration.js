@@ -1,4 +1,5 @@
 import net from "node:net";
+import { seedLegalDocuments } from "../tests/fixtures/legal.js";
 import pg from "pg";
 import { randomUUID } from "node:crypto";
 // Starts an isolated, disposable DB, fixture resolver and built app in one process tree.
@@ -84,6 +85,9 @@ try {
       ),
     );
     children.splice(children.indexOf(migration), 1);
+    const fixtureDb = new pg.Client({ connectionString: environment.DATABASE_URL });
+    await fixtureDb.connect();
+    try { await seedLegalDocuments(fixtureDb); } finally { await fixtureDb.end(); }
   } else {
     start(["scripts/test-db.js"]);
     console.log(
@@ -121,6 +125,7 @@ try {
         "tests/journal-http.js",
         "tests/discovery-http.js",
         "tests/gamification-http.js",
+        "tests/legal-http.js",
         ...(externalDatabase ? ["tests/quota-http.js"] : []),
       ])
     await new Promise((resolve, reject) => {

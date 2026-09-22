@@ -1,3 +1,4 @@
+import { testConsents } from "./fixtures/legal.js";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 const base = process.env.TEST_ORIGIN;
@@ -18,6 +19,7 @@ const a = client(),
   b = client();
 for (const api of [a, b])
   await api("auth/register", "POST", {
+      ...testConsents,
     name: "Wizard",
     email: randomUUID() + "@example.test",
     password: "wizard-http-password",

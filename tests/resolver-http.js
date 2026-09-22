@@ -1,3 +1,4 @@
+import { testConsents } from "./fixtures/legal.js";
 // Requires disposable test DB + tests/fixture-server.ts; never run against production.
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
@@ -19,6 +20,7 @@ const email = "resolver-" + randomUUID() + "@example.test";
 assert.equal((await api("admin/resolver")).status, 401);
 const user = (
   await api("auth/register", "POST", {
+      ...testConsents,
     email,
     name: "Resolver test",
     password: "colabike-test-12345",

@@ -1,3 +1,4 @@
+import { testConsents } from "../fixtures/legal.js";
 import sharp from "sharp";
 import { test, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
@@ -16,6 +17,7 @@ test("ride upload, SVG, privacy, profile and bike; works without tiles", async (
   await page.request.post(base + "/api/auth/register", {
     headers: { origin: base },
     data: {
+      ...testConsents,
       name: "Ride E2E",
       email: `ride-e2e-${nonce}@example.test`,
       password: "ride-e2e-secret-123",
@@ -100,6 +102,7 @@ test("MapLibre initializes with intercepted OSM tiles, no external traffic", asy
   await page.request.post(base + "/api/auth/register", {
     headers: { origin: base },
     data: {
+      ...testConsents,
       name: "Map Test",
       email: "map-" + nonce + "@example.test",
       password: "map-test-secret-123",
