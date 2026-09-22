@@ -1,0 +1,310 @@
++`bikes.classification` — JSONB `{category, subtype, suspension, construction, uses, electric, fatbike}`. Общий справочник и безопасная нормализация: `lib/bike-classification.js`. Серверная строгая схема: `lib/classification-validation.js`. Поле `classification` принимается при создании, изменении и завершении мастера; входит в явный публичный DTO. Неизвестные ключи, неверное сочетание категории/подтипа, дубли назначений и строковые значения вместо boolean отклоняются.
++
++| Категория | Подтипы |
++| --- | --- |
++| `mtb` | XC, Trail, Enduro, Downhill, Dirt Jump |
++| `road_gravel` | Road, Endurance, Aero, Gravel, Cyclocross, TT / Triathlon, Track |
++| `urban_touring` | Commuter, Fitness / Hybrid, Trekking, Touring, Cruiser |
++| `bmx` | Race, Freestyle, Street / Park |
++| `cargo_utility` | Cargo, Longtail, Utility |
++| `special` | Tandem, Recumbent, Adaptive, Other |
++
++Амортизация: `rigid`, `hardtail`, `full_suspension`. Конструкция: `standard`, `folding`, `cargo`, `tandem`, `recumbent`. Неизвестное значение хранится как `null`, а не как уверенно угаданный Rigid или Standard. `uses` содержит до трёх уникальных ключей общего справочника; `electric` и `fatbike` не зависят от категории.
++
++## Создание, редактирование и отображение
++
++`ClassificationFields` используется и в последнем шаге мастера, и в обычном редактировании велосипеда. После категории выбирается релевантный подтип; остальные поля находятся в компактном блоке «Классификация / Особенности». Смена категории сбрасывает несовместимый подтип, сохраняя независимые особенности.
++
++`ClassificationBadges` и `classificationLabels` показывают максимум три смысловых признака: например `MTB · Trail`, `Full Suspension` или `Commuter`, `Folding`, `E-bike`. Полный набор хранится и фильтруется, но не загромождает карточку. Размер и вес остаются отдельными компактными лейблами. Назначения не дублируют автоматически подтип; это явный выбор владельца.
++
++## Фильтры и поиск
++
++`/bikes`, `/search` и расширенный `/experience` поддерживают независимые URL-поля `category`, `subtype`, `suspension`, `construction`, `use`, `electric`, `fatbike`. Boolean-фильтры имеют три состояния: отсутствует / `1` / `0`. Между разными признаками действует AND, между несколькими категориями витрины — OR. Пример: `/bikes?category=mtb&subtype=enduro&suspension=full_suspension&electric=1`.
++
++`lib/classification-sql.js` добавляет только фиксированные SQL-выражения и параметризованные значения. Счётчик, выдача и пагинация используют одинаковые условия. Фильтрация никогда не расширяет видимость приватных велосипедов или заблокированных авторов. В новом поиске признаки применяются также к велосипедам, которым принадлежат найденные компоненты и покатушки; геометрия маршрута не выдаётся.
++
++## Миграция и совместимость
++
++Миграция `020_bike_classification.sql` добавляет поле, расширяет допустимые legacy-категории и переносит существующие `road`/`gravel` в `road_gravel` с одноимённым подтипом. MTB остаётся MTB без выдуманного подтипа или подвески. Исторические `purposes` сохраняются целиком, включая пользовательские значения; известные `city`/`travel`/`sport` дополнительно сопоставляются с `commuting`/`touring`/`racing`.
++
++Старое поле `category` остаётся совместимой проекцией: Gravel → `gravel`, известный дорожный подтип → `road`, новые семейства → их canonical ID. Это сохраняет старые ссылки, изображения по умолчанию и существующие ключи весовых рекордов MTB/ROAD/GRAVEL. Новые категории не участвуют автоматически в шоссейном весовом рекорде; общие рекорды продолжают работать. Категорию фильтруют по новой модели, а не по предположениям о трёх старых значений.
++
++Legacy PATCH, не передающий `classification`, сохраняет независимые признаки; явная смена старого `category` меняет только семью/подтип. Триггер синхронизирует такую смену и для старого SQL-писателя при поэтапном обновлении. Исходная `factory_spec`, фотографии, компоненты, журнал и снимки истории миграцией не переписываются.
++
++Порядок выпуска: резервная копия → штатные миграции → обновление приложения и Resolver. Миграция аддитивна, но старый бинарник не умеет новые категории: откат только к старому UI без учёта новых данных не является корректным откатом. Для полного отката используйте согласованное восстановление до миграции в отдельном окружении.
++
++## Проверки и расширение
++
++`tests/backlog.test.js` проверяет схемы, публичный DTO, миграцию живых legacy-строк, сохранение старых тегов, SQL-фильтры/пагинацию/приватность и legacy-писателя. `tests/e2e/backlog.spec.js` проверяет ввод, сохранение и восстановление фильтров через URL. При расширении списка одновременно обновляйте справочник, DB CHECK, входную схему и миграционные тесты. Не выводите категорию, подвеску или точный год исключительно из неизвестного названия модели.
+diff --git a/docs/modules/bikes.md b/docs/modules/bikes.md
+index 5cd32ad..9f12775 100644
+--- a/docs/modules/bikes.md
++++ b/docs/modules/bikes.md
+@@ -8,7 +8,7 @@
+ 
+ ## Точки входа
+ 
+-Главная `/`, личный кабинет `/account`, публичная карточка `/b/<share>`. Основной HTTP-путь: `GET /api/showcase`, `GET/POST /api/bikes`, операции с `/api/bikes/<id>` и `/api/bikes/wizard`. Парсер: `/api/bikes/resolve`, `/api/bikes/resolve-stream`, `/api/bikes/<id>/factory-spec`.
++Витрина `/bikes`, главная сообщества `/`, личный кабинет `/account`, публичная карточка `/b/<share>`. Основной HTTP-путь: `GET /api/showcase`, `GET/POST /api/bikes`, операции с `/api/bikes/<id>` и `/api/bikes/wizard`. Парсер: `/api/bikes/resolve`, `/api/bikes/resolve-stream`, `/api/bikes/<id>/factory-spec`.
+ 
+ UI: [garage.jsx](../../app/ui/garage.jsx), [bike-wizard.jsx](../../app/ui/bike-wizard.jsx), [bike-card.jsx](../../app/ui/bike-card.jsx), [bike-grid.jsx](../../app/ui/bike-grid.jsx). HTTP: [общий route](../../app/api/%5B...path%5D/route.js).
+ 
+@@ -16,11 +16,13 @@ UI: [garage.jsx](../../app/ui/garage.jsx), [bike-wizard.jsx](../../app/ui/bike-w
+ 
+ [repository.js](../../lib/repository.js): `ownedBike`, `sharedBike`, `hydrate`, `insertBike` — загрузка и сохранение сущности с контекстом доступа. [showcase.js](../../lib/showcase.js): `showcase`, `decorateBike`, `vote` — публичная выдача, представление и лайки. [bike-wizard.js](../../lib/bike-wizard.js): `wizardInput`, `createWizardBike`. [factory-import.js](../../lib/factory-import.js): `saveFactorySpecification`.
+ 
+-`bikes`, `components`, `photos` хранят текущую сборку; `bikes.factory_spec` — заводской снимок с источником. Цены байка, деталей и аксессуаров имеют собственные флаги показа. Категории в проверенной схеме — `mtb`, `gravel`, `road`: наличие других рисунков в наборе иконок не расширяет автоматически модель данных.
++`bikes`, `components`, `photos` хранят текущую сборку; `bikes.factory_spec` — заводской снимок с источником. Цены байка, деталей и аксессуаров имеют собственные флаги показа. Новая [классификация](bike-classification.md) хранится независимо от legacy-категории: шесть семейств, подтип и отдельные особенности. Миграция `020` сохраняет старые типы, данные и заводские снимки.
+ 
+ ## Сценарий и ограничения
+ 
+-Мастер собирает идентичность → запускает поиск или ручную ссылку → предлагает проверку/редактирование компонентов → сохраняет личные поля и выбранные фото. JSON/NDJSON gateway создаёт ограниченный по времени preview, привязанный к владельцу. Нельзя принять произвольную заводскую спецификацию с клиента вместо проверенного результата.
++Мастер содержит три шага: **Поиск → Сборка → Детали**. На первом — одна свободная строка марки, модели, года и комплектации и необязательное название в гараже. Кнопки автоматического поиска/повтора, ручной ссылки и ручного заполнения находятся рядом. На последнем — год, классификация и личные поля с фотографиями. Без известного года поиск сохраняет `null`, требует явного выбора кандидата и не приписывает ему текущий год; перед сохранением велосипеда владелец обязан указать год. JSON/NDJSON gateway создаёт ограниченный по времени preview, привязанный к владельцу. Нельзя принять произвольную заводскую спецификацию с клиента вместо проверенного результата.
++
++X закрывает пустой мастер сразу, а изменённый — только после собственного компактного подтверждения. Клик по фону и Escape мастер не закрывают. Незавершённый поиск отменяется при размонтировании. Кнопки добавления из кабинета, включая повторный SPA-переход, открывают один и тот же мастер. Смена идентичности не смешивает старую комплектацию с новым результатом.
+ 
+ Повторный заводской импорт не перезаписывает уже установленные компоненты; начальное заполнение возможно для пустой комплектации. Изменение идентичности байка инвалидирует прежний заводской снимок. Неоднозначный год/модель требуют явного подтверждения; исходные данные источника не переписываются под запрос.
+ 
+diff --git a/docs/modules/journal.md b/docs/modules/journal.md
+index c96feea..433222c 100644
+--- a/docs/modules/journal.md
++++ b/docs/modules/journal.md
+@@ -31,3 +31,7 @@
+ При новом типе записи обновляйте схему, список типов, UI, поиск, соответствующий social adapter и тесты. Нельзя превращать автоподсказку «написать историю» в неявную публикацию.
+ 
+ Проверки: [journal.test.js](../../tests/journal.test.js), [journal-http.js](../../tests/journal-http.js), [journal.spec.js](../../tests/e2e/journal.spec.js). Обязательны snapshots, post→private, прямой запрос media, привязка поездки, сохранённое и отсутствие дублей в подписках. Продолжение: [поиск и опыт](discovery.md).
++
++## Создание из меню
++
++`/j/new` открывает общую форму с обязательным выбором собственного велосипеда. `?bike=UUID` предвыбирает только принадлежащий текущему пользователю байк. Смена выбора сохраняет заголовок и текст, но сбрасывает связанные компоненты/покатушку другого велосипеда. После сохранения черновика связь заблокирована. Пустой гараж предлагает перейти в мастер; чужой или недоступный ID не открывает данные. Серверная проверка владельца остаётся обязательной, приватность родителя ограничивает публикацию записи.
+diff --git a/docs/resolver/architecture.md b/docs/resolver/architecture.md
+index d24b081..98452f0 100644
+--- a/docs/resolver/architecture.md
++++ b/docs/resolver/architecture.md
+@@ -51,3 +51,7 @@ Bike Resolver — дополнительный детерминированны
+ Ключ official cache включает нормализованную идентичность, candidate, adapter version и версии extractor/schema. Кэшируются `resolved` и действительный `not_found`, но не сетевой отказ как отсутствие модели. Ручные URL читаются заново. Непотоковые совпадающие обращения могут объединяться; stream-запросы имеют собственный cancellation context.
+ 
+ Часть discovery, photo IDs и диагностики process-local. Перезапуск уничтожает временные photo IDs; `/ready` проверяет cache storage, не доступность всех производителей. Для расширения: [источники](sources.md); для ошибок: [диагностика](diagnostics.md).
++
++## Запрос без модельного года
++
++`querySchema.year` допускает `null` и по умолчанию не подставляет текущий год. Поиск с неизвестным годом возвращает варианты и требует явного выбора; архивный URL с `null`/выдуманным годом не строится. Указанный год остаётся строгим ограничением, отдельная комплектация не смешивается с соседней. После извлечения `sourceYear` заполняется только из источника. Если владелец на последнем шаге указывает другой год, сервер требует `identityConfirmed`; исходный preview/factory-снимок сохраняет первоначальный запрос и происхождение. Смена марки/модели/комплектации инвалидирует preview. Регрессия: `tests/unknown-year.test.ts`.
+diff --git a/services/bike-resolver/tests/unknown-year.test.ts b/services/bike-resolver/tests/unknown-year.test.ts
+new file mode 100644
+index 0000000..ecb669a
+--- /dev/null
++++ b/services/bike-resolver/tests/unknown-year.test.ts
+@@ -0,0 +1,36 @@
++import { it, expect, vi } from "vitest";
++import { querySchema } from "../src/domain.js";
++import { identityConflict } from "../src/identity.js";
++import { match, scoreCandidate } from "../src/matcher.js";
++import { archiveLinks } from "../src/archive-search.js";
++import { queryKey } from "../src/normalize.js";
++import type { ManufacturerHttpClient } from "../src/http.js";
++
++it("missing model year remains unknown instead of being replaced by the current year", async () => {
++  const query = querySchema.parse({
++    brand: "Cube",
++    model: "Travel",
++    trim: "SL",
++  });
++  expect(query.year).toBeNull();
++  const candidate = {
++    brand: "Cube",
++    canonicalName: "Travel SL",
++    year: 2020,
++    url: "https://archiv.cube.eu/2020/travel",
++  };
++  expect(scoreCandidate(query, candidate)).toBeGreaterThan(0);
++  // An explicit choice is required when the model year wasn't supplied.
++  expect(match(query, [candidate]).chosen).toBeNull();
++  expect(identityConflict(query, "Cube Travel SL", 2020)).toBe(false);
++  expect(
++    identityConflict({ ...query, year: 2021 }, "Cube Travel SL", 2020),
++  ).toBe(true);
++  expect(identityConflict(query, "Cube Nuroad EX", 2020)).toBe(true);
++  expect(queryKey(query)).not.toBe(queryKey({ ...query, year: 2020 }));
++  const get = vi.fn();
++  expect(
++    await archiveLinks({ get } as unknown as ManufacturerHttpClient, query),
++  ).toEqual([]);
++  expect(get).not.toHaveBeenCalled();
++});
+diff --git a/tests/admin-design.test.js b/tests/admin-design.test.js
+index ea534a1..ae0cc14 100644
+--- a/tests/admin-design.test.js
++++ b/tests/admin-design.test.js
+@@ -29,7 +29,7 @@ test("only content artwork is configurable and unknown appearance settings are r
+     ),
+   );
+   assert.equal(
+-    graphicAsset({ faviconId: "image" }, illustrationSlots[0]),
++    graphicAsset({ faviconId: "image" }, illustrationSlots.find((slot) => slot.key === "faviconId")),
+     "image",
+   );
+   assert.equal(
+diff --git a/tests/backlog.test.js b/tests/backlog.test.js
+new file mode 100644
+index 0000000..3a10c58
+--- /dev/null
++++ b/tests/backlog.test.js
+@@ -0,0 +1,338 @@
++import test from "node:test";
++import assert from "node:assert/strict";
++import { randomUUID } from "node:crypto";
++import { readFile, readdir } from "node:fs/promises";
++import sharp from "sharp";
++import { PGlite } from "@electric-sql/pglite";
++import { parseBikeSearch } from "../lib/bike-search-input.js";
++import {
++  classificationInput,
++  classificationQueryInput,
++} from "../lib/classification-validation.js";
++import {
++  classificationOf,
++  classificationLabels,
++  compatibilityCategory,
++  matchesClassification,
++} from "../lib/bike-classification.js";
++import { bikeInput } from "../lib/validation.js";
++import { publicBike } from "../lib/public-dto.js";
++import { defaultSettings, defaultCatalog } from "../lib/site-defaults.js";
++import { insertBike } from "../lib/repository.js";
++import { showcase } from "../lib/showcase.js";
++import { discoveryInput, discoverySearch } from "../lib/discovery.js";
++import { searchInput, searchExperience } from "../lib/search.js";
++import { prepareSvg } from "../lib/svg-asset.js";
++import { backgroundCss, backgroundDefaults } from "../lib/theme.js";
++import { settingsInput } from "../lib/admin-validation.js";
++import { siteAssetIds, siteAssetUsage } from "../lib/site-assets.js";
++const baseBike = {
++  name: "Fixture",
++  brand: "Cube",
++  model: "Travel",
++  year: 2021,
++  category: "road",
++  description: "",
++  color: "",
++  size: "L",
++  weight: 14,
++  is_public: true,
++};
++const classification = (extra) =>
++  classificationInput.parse({
++    category: "urban_touring",
++    subtype: "commuter",
++    ...extra,
++  });
++
++test("independent taxonomy validates facets and uses without turning features into categories", () => {
++  const c = classification({
++    construction: "folding",
++    electric: true,
++    uses: ["commuting", "touring"],
++  });
++  assert.equal(compatibilityCategory(c), "urban_touring");
++  assert.deepEqual(classificationLabels({ classification: c }), [
++    "Commuter",
++    "Folding",
++    "E-bike",
++  ]);
++  assert(
++    matchesClassification(
++      { classification: c },
++      { construction: "folding", electric: "1", use: "touring" },
++      ["urban_touring"],
++    ),
++  );
++  assert(!matchesClassification({ classification: c }, { electric: "0" }));
++  for (const bad of [
++    { category: "folding" },
++    { category: "mtb", subtype: "commuter" },
++    { category: "mtb", suspension: "air" },
++    { category: "mtb", uses: ["xc", "xc"] },
++    { category: "mtb", uses: ["xc", "trail", "enduro", "racing"] },
++    { category: "mtb", electric: "true" },
++    { category: "mtb", futureSecret: "hidden" },
++  ])
++    assert.equal(classificationInput.safeParse(bad).success, false);
++  assert.equal(
++    classificationQueryInput.safeParse({ suspension: "' OR true --" }).success,
++    false,
++  );
++  const gravel = bikeInput.parse({ ...baseBike, category: "gravel" });
++  assert.equal(gravel.classification.category, "road_gravel");
++  assert.equal(gravel.classification.subtype, "gravel");
++  assert.equal(gravel.category, "gravel");
++  assert.equal(
++    classificationOf({
++      ...baseBike,
++      classification: { ...c, secret: "hidden" },
++    }).secret,
++    undefined,
++  );
++  assert(
++    !JSON.stringify(
++      publicBike({ ...baseBike, classification: { ...c, secret: "hidden" } }),
++    ).includes("hidden"),
++  );
++  assert.equal(
++    classificationLabels({
++      classification: classificationInput.parse({
++        category: "mtb",
++        subtype: "enduro",
++        suspension: "full_suspension",
++      }),
++    })[0],
++    "MTB · Enduro",
++  );
++});
++
++test("free model entry extracts only stated facts and retains unknown trims", () => {
++  const models = {
++    gravel: { Canyon: ["Grail"] },
++    mtb: { "Santa Cruz": ["Hightower"] },
++  };
++  assert.deepEqual(parseBikeSearch("Canyon Grail CF SLX 8 AXS 2026", models), {
++    brand: "Canyon",
++    model: "Grail",
++    trim: "CF SLX 8 AXS",
++    year: 2026,
++  });
++  assert.deepEqual(parseBikeSearch("2020 Santa Cruz Hightower C S", models), {
++    brand: "Santa Cruz",
++    model: "Hightower",
++    trim: "C S",
++    year: 2020,
++  });
++  assert.deepEqual(parseBikeSearch("Unknown Trail Runner", models), {
++    brand: "Unknown",
++    model: "Trail Runner",
++    trim: null,
++    year: null,
++  });
++  assert.equal(parseBikeSearch("Canyon", models), null);
++  assert.equal(parseBikeSearch("Canyon Grail 2020 2022", models), null);
++  assert.equal(parseBikeSearch("Canyon Grail", models).year, null);
++});
++
++test("theme backgrounds are bounded safe CSS and protected asset references", () => {
++  const id = randomUUID();
++  const s = settingsInput.parse({
++    ...defaultSettings,
++    backgroundLightId: id,
++    backgroundDarkId: id,
++    backgroundLightOpacity: 35,
++    backgroundDarkOpacity: 0,
++    backgroundDarkMode: "tile",
++  });
++  assert.deepEqual(siteAssetIds(s), [id]);
++  assert(siteAssetUsage(s)[id].length);
++  assert.match(backgroundCss(s), /opacity:0\.35/);
++  assert.match(backgroundCss(s), /background-repeat:repeat;opacity:0}/);
++  assert(
++    !backgroundCss({
++      ...s,
++      backgroundLightId: '"</style><script>',
++      backgroundDarkId: null,
++    }).includes("script"),
++  );
