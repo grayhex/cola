@@ -14,7 +14,9 @@ COPY lib ./lib
 COPY db ./db
 COPY public ./public
 COPY scripts/build-version.js scripts/copy-maplibre-worker.js ./scripts/
-RUN pnpm build && rm -rf .next/standalone/node_modules
+RUN pnpm build && \
+    rm -rf .next/standalone/node_modules && \
+    rm -f .next/standalone/scripts/build-version.js .next/standalone/scripts/copy-maplibre-worker.js
 
 FROM node:22-alpine AS runtime-dependencies
 WORKDIR /app

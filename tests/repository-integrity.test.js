@@ -23,24 +23,43 @@ async function exists(file) {
     throw error;
   }
 }
+function importCandidates(file, specifier) {
+  const relative = path.normalize(path.join(path.dirname(file), specifier.split(/[?#]/)[0]));
+  const extensions = [".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx"];
+  const candidates = [
+    relative,
+    ...extensions.map((extension) => relative + extension),
+    ...extensions.map((extension) => path.join(relative, "index" + extension)),
+  ];
+  // TypeScript commonly spells source imports with the emitted .js extension.
+  if (relative.endsWith(".js"))
+    candidates.push(relative.slice(0, -3) + ".ts", relative.slice(0, -3) + ".tsx");
+  return [...new Set(candidates)];
+}
 
 test("repository path probes reject invalid candidates without masking filesystem errors", async (t) => {
   const dir = await mkdtemp(path.join(tmpdir(), "cola-import-probes-"));
   t.after(() => rm(dir, { recursive: true, force: true }));
   const file = path.join(dir, "icons.jsx");
   await writeFile(file, "export default {};\n");
-  // Probe the same candidates as the import scan, including file/index.js.
+  // Probe the same candidates as the import scan, including file/index.*.
   // A valid file must not be rejected because another candidate yields ENOTDIR.
-  assert.deepEqual(await Promise.all([
-    file, file + ".js", file + ".jsx", path.join(file, "index.js"),
-  ].map(exists)), [true, false, false, false]);
+  const jsCandidates = importCandidates(path.join(dir, "view.jsx"), "./icons.jsx");
+  assert.equal((await Promise.all(jsCandidates.map(exists))).some(Boolean), true);
   await mkdir(path.join(dir, "component"));
   await writeFile(path.join(dir, "component/index.js"), "export default {};\n");
-  assert.equal(await exists(path.join(dir, "component/index.js")), true);
+  assert.equal((await Promise.all(
+    importCandidates(path.join(dir, "view.jsx"), "./component").map(exists),
+  )).some(Boolean), true);
+  // JSDoc imports in application JS legitimately point at Resolver TypeScript sources.
+  await writeFile(path.join(dir, "domain.ts"), "export type BikeQuery = {};\n");
+  assert.equal((await Promise.all(
+    importCandidates(path.join(dir, "client.js"), "./domain").map(exists),
+  )).some(Boolean), true);
   const missing = path.join(dir, "missing");
-  assert.equal((await Promise.all([
-    missing, missing + ".js", missing + ".jsx", path.join(missing, "index.js"),
-  ].map(exists))).some(Boolean), false, "Missing imports must still fail resolution");
+  assert.equal((await Promise.all(
+    importCandidates(path.join(dir, "view.jsx"), "./missing").map(exists),
+  )).some(Boolean), false, "Missing imports must still fail resolution");
   // Only path-absence errors may be converted to false, not arbitrary failures.
   await assert.rejects(exists("\0"), { code: "ERR_INVALID_ARG_VALUE" });
 });
@@ -91,9 +110,7 @@ test("literal relative imports in application, operator and Resolver sources res
     for (const file of (await files(dir)).filter((p) => /\.(?:js|jsx|mjs|ts|tsx)$/.test(p))) {
       const source = await readFile(path.join(root, file), "utf8");
       for (const match of source.matchAll(/\b(?:from\s+|import\s*\(\s*|require\s*\(\s*|import\s*)["'](\.{1,2}\/[^"']+)["']/g)) {
-        const relative = path.normalize(path.join(path.dirname(file), match[1].split(/[?#]/)[0]));
-        const candidates = [relative, relative + ".js", relative + ".jsx", path.join(relative, "index.js")];
-        if (/\.tsx?$/.test(file) && relative.endsWith(".js")) candidates.push(relative.slice(0, -3) + ".ts");
+        const candidates = importCandidates(file, match[1]);
         if (candidates.some((p) => generated.has(p))) {
           for (const p of candidates.filter((p) => generated.has(p)))
             assert.ok(await exists(path.join(root, generated.get(p))), `Missing generator for ${p}`);
