@@ -1,0 +1,461 @@
++export function readClassificationFilters(params) {
++  return Object.fromEntries(
++    Object.entries(classificationFilterOptions).map(([key, options]) => {
++      const value = params.get(key) || "";
++      return [key, Object.hasOwn(options, value) ? value : ""];
++    }),
++  );
++}
++export function matchesClassification(bike, filters = {}, categories = []) {
++  const c = classificationOf(bike);
++  if (
++    categories.length &&
++    !categories.some(
++      (key) =>
++        key === c.category ||
++        (key === "gravel" && c.subtype === "gravel") ||
++        (key === "road" &&
++          c.category === "road_gravel" &&
++          c.subtype !== "gravel" &&
++          !!c.subtype),
++    )
++  )
++    return false;
++  return Object.entries(filters).every(
++    ([key, value]) =>
++      !value ||
++      (key === "use"
++        ? c.uses.includes(value)
++        : ["electric", "fatbike"].includes(key)
++          ? c[key] === (value === "1")
++          : c[key] === value),
++  );
++}
+diff --git a/lib/catalog.js b/lib/catalog.js
+index 7d17692..2aa7b70 100644
+--- a/lib/catalog.js
++++ b/lib/catalog.js
+@@ -1,4 +1,5 @@
+-export const categories = { gravel: "Гравел", mtb: "MTB", road: "Шоссе" };
++import { bikeCategories } from "./bike-classification.js";
++export const categories = { gravel: "Гравел", road: "Шоссе", ...bikeCategories };
+ export const models = {
+   gravel: {
+     Canyon: ["Grizl", "Grail"],
+diff --git a/lib/classification-sql.js b/lib/classification-sql.js
+new file mode 100644
+index 0000000..aa1d566
+--- /dev/null
++++ b/lib/classification-sql.js
+@@ -0,0 +1,42 @@
++// Only fixed SQL expressions; all user values are parameters. COALESCE supports
++// old rows/clients without a classification, including rolling upgrades.
++export const classificationCategorySql =
++  "coalesce(b.classification->>'category',CASE WHEN b.category IN ('road','gravel') THEN 'road_gravel' ELSE b.category END)";
++const subtypeSql =
++  "coalesce(b.classification->>'subtype',CASE WHEN b.category IN ('road','gravel') THEN b.category END)";
++export function classificationWhere(input = {}, params = [], categories = []) {
++  const add = (value) => {
++    params.push(value);
++    return "$" + params.length;
++  };
++  const clauses = [];
++  if (categories.length) {
++    const canonical = categories.filter((v) => !["road", "gravel"].includes(v));
++    const types = [];
++    if (canonical.length)
++      types.push(`${classificationCategorySql}=ANY(${add(canonical)}::text[])`);
++    if (categories.includes("gravel"))
++      types.push(
++        `(${classificationCategorySql}='road_gravel' AND ${subtypeSql}='gravel')`,
++      );
++    if (categories.includes("road"))
++      types.push(
++        `(${classificationCategorySql}='road_gravel' AND ${subtypeSql}<>'gravel')`,
++      );
++    clauses.push("(" + types.join(" OR ") + ")");
++  }
++  if (input.subtype) clauses.push(`${subtypeSql}=${add(input.subtype)}`);
++  for (const key of ["suspension", "construction"])
++    if (input[key])
++      clauses.push(`b.classification->>'${key}'=${add(input[key])}`);
++  if (input.use)
++    clauses.push(
++      `coalesce(b.classification->'uses','[]'::jsonb) @> ${add(JSON.stringify([input.use]))}::jsonb`,
++    );
++  for (const key of ["electric", "fatbike"])
++    if (input[key] === "0" || input[key] === "1")
++      clauses.push(
++        `coalesce((b.classification->>'${key}')::boolean,false)=${add(input[key] === "1")}`,
++      );
++  return clauses.length ? " AND " + clauses.join(" AND ") : "";
++}
+diff --git a/lib/classification-validation.js b/lib/classification-validation.js
+new file mode 100644
+index 0000000..14d4b6c
+--- /dev/null
++++ b/lib/classification-validation.js
+@@ -0,0 +1,45 @@
++import { z } from "zod";
++import {
++  bikeCategories,
++  bikeSubtypes,
++  subtypeLabels,
++  suspensionLabels,
++  constructionLabels,
++  useLabels,
++  classificationFilterOptions,
++} from "./bike-classification.js";
++const optionalChoice = (labels) =>
++  z.enum(Object.keys(labels)).nullable().default(null);
++export const classificationInput = z
++  .object({
++    category: z.enum(Object.keys(bikeCategories)),
++    subtype: optionalChoice(subtypeLabels),
++    suspension: optionalChoice(suspensionLabels),
++    construction: optionalChoice(constructionLabels),
++    uses: z
++      .array(z.enum(Object.keys(useLabels)))
++      .max(3)
++      .refine(
++        (v) => new Set(v).size === v.length,
++        "Назначения не должны повторяться",
++      )
++      .default([]),
++    electric: z.boolean().default(false),
++    fatbike: z.boolean().default(false),
++  })
++  .strict()
++  .superRefine((v, ctx) => {
++    if (v.subtype && !Object.hasOwn(bikeSubtypes[v.category], v.subtype))
++      ctx.addIssue({
++        code: "custom",
++        path: ["subtype"],
++        message: "Подтип не относится к выбранной категории",
++      });
++  });
++export const classificationQueryShape = Object.fromEntries(
++  Object.entries(classificationFilterOptions).map(([key, values]) => [
++    key,
++    z.enum(["", ...Object.keys(values)]).default(""),
++  ]),
++);
++export const classificationQueryInput = z.object(classificationQueryShape);
+diff --git a/lib/design-graphics.js b/lib/design-graphics.js
+index 708f7fd..4e3c7e9 100644
+--- a/lib/design-graphics.js
++++ b/lib/design-graphics.js
+@@ -1,4 +1,6 @@
+ export const illustrationSlots = [
++  ["backgroundLightId", "Фон сайта · светлая тема", "Фон сайта", "Без фона"],
++  ["backgroundDarkId", "Фон сайта · тёмная тема", "Фон сайта", "Без фона"],
+   ["faviconId", "Иконка вкладки браузера", "Брендинг", "По умолчанию"],
+   ["mtbImageId", "Стоковое фото · MTB", "Велосипеды", "Без изображения"],
+   ["roadImageId", "Стоковое фото · шоссе", "Велосипеды", "Без изображения"],
+diff --git a/lib/discovery.js b/lib/discovery.js
+index cb659cc..459467e 100644
+--- a/lib/discovery.js
++++ b/lib/discovery.js
+@@ -1,3 +1,9 @@
++import { classificationQueryShape } from "./classification-validation.js";
++import { classificationWhere } from "./classification-sql.js";
++import {
++  categoryFilterLabels,
++  classificationOf,
++} from "./bike-classification.js";
+ import { z } from "zod";
+ import { showcase } from "./showcase.js";
+ import { records } from "./gamification.js";
+@@ -5,6 +11,8 @@ import { achievements } from "./gamification-definitions.js";
+ import { journalPublic, journalFrom } from "./journal.js";
+ import { effectiveRide, rideFrom } from "./rides.js";
+ export const discoveryInput = z.object({
++  ...classificationQueryShape,
++  category: z.enum(["", ...Object.keys(categoryFilterLabels)]).default(""),
+   q: z
+     .string()
+     .trim()
+@@ -28,7 +36,13 @@ const literalMatch = (expression) =>
+ const thumb = (id) => (id ? `/api/photos/${id}?width=160` : null);
+ export async function discoverySearch(q, input) {
+   const term = input.q || input.component;
+-  if (!term)
++  const params = [term];
++  const facets = classificationWhere(
++    input,
++    params,
++    input.category ? [input.category] : [],
++  );
++  if (!term && !facets)
+     return { groups: [], total: 0, page: input.page, pageSize: 24, query: "" };
+   const limit = input.suggest === "1" ? 4 : input.type === "all" ? 8 : 24;
+   const offset =
+@@ -38,13 +52,13 @@ export async function discoverySearch(q, input) {
+   const definitions = {
+     bikes: {
+       label: "Велосипеды",
+-      sql: `SELECT b.id,b.share_id,b.name title,u.name author,b.category,b.weight,
++      sql: `SELECT b.id,b.share_id,b.name title,u.name author,b.category,b.classification,b.weight,
+         (SELECT id FROM photos WHERE bike_id=b.id ORDER BY is_cover DESC,created_at,id LIMIT 1) photo_id
+         ${publicBikes} AND ${
+           input.component
+             ? "EXISTS(SELECT 1 FROM components p WHERE p.bike_id=b.id AND lower(normalize(p.name,NFKC))=lower(normalize($1::text,NFKC)))"
+             : `(${literalMatch("b.name||' '||b.brand||' '||b.model||' '||u.name||' '||u.username")} OR EXISTS(SELECT 1 FROM components p WHERE p.bike_id=b.id AND ${literalMatch("p.name")}))`
+-        }`,
++        }${facets}`,
+       order: "title,id",
+       map: (r) => ({
+         type: "bike",
+@@ -53,12 +67,16 @@ export async function discoverySearch(q, input) {
+         subtitle: r.author,
+         href: "/b/" + r.share_id,
+         image: thumb(r.photo_id),
+-        metadata: { category: r.category, weight: r.weight },
++        metadata: {
++          category: r.category,
++          classification: classificationOf(r),
++          weight: r.weight,
++        },
+       }),
+     },
+     components: {
+       label: "Компоненты",
+-      sql: `SELECT min(p.name) title,count(DISTINCT b.id)::int bikes FROM components p JOIN bikes b ON b.id=p.bike_id JOIN users u ON u.id=b.owner_id WHERE b.is_public AND NOT u.blocked AND ${literalMatch("p.name")} GROUP BY lower(normalize(p.name,NFKC))`,
++      sql: `SELECT min(p.name) title,count(DISTINCT b.id)::int bikes FROM components p JOIN bikes b ON b.id=p.bike_id JOIN users u ON u.id=b.owner_id WHERE b.is_public AND NOT u.blocked AND ${literalMatch("p.name")}${facets} GROUP BY lower(normalize(p.name,NFKC))`,
+       order: "bikes DESC,title",
+       map: (r) => ({
+         type: "component",
+@@ -67,14 +85,25 @@ export async function discoverySearch(q, input) {
+         subtitle: `Велосипедов: ${r.bikes}`,
+         href:
+           "/search?" +
+-          new URLSearchParams({ type: "bikes", component: r.title }),
++          new URLSearchParams({
++            ...Object.fromEntries(
++              Object.entries(input).filter(
++                ([key, value]) =>
++                  (key === "category" ||
++                    Object.hasOwn(classificationQueryShape, key)) &&
++                  value,
++              ),
++            ),
++            type: "bikes",
++            component: r.title,
++          }),
+         image: null,
+         metadata: { bikes: r.bikes },
+       }),
+     },
+     rides: {
+       label: "Покатушки",
+-      sql: `SELECT r.id,r.share_id,r.title,u.name author,r.distance_m,r.started_at ${rideFrom} WHERE ${effectiveRide} AND ${literalMatch("r.title||' '||r.description||' '||u.name||' '||u.username||' '||b.name")}`,
++      sql: `SELECT r.id,r.share_id,r.title,u.name author,r.distance_m,r.started_at ${rideFrom} WHERE ${effectiveRide} AND ${literalMatch("r.title||' '||r.description||' '||u.name||' '||u.username||' '||b.name")}${facets}`,
+       order: "started_at DESC NULLS LAST,id",
+       map: (r) => ({
+         type: "ride",
+@@ -92,16 +121,16 @@ export async function discoverySearch(q, input) {
+       .filter(([key]) => input.type === "all" || input.type === key)
+       .map(async ([type, d]) => {
+         const total = (
+-          await q.query(`SELECT count(*)::int total FROM (${d.sql}) results`, [
+-            term,
+-          ])
++          await q.query(
++            `SELECT count(*)::int total FROM (${d.sql}) results`,
++            params,
++          )
+         ).rows[0].total;
+         const rows = (
+-          await q.query(`${d.sql} ORDER BY ${d.order} LIMIT $2 OFFSET $3`, [
+-            term,
+-            limit,
+-            offset,
+-          ])
++          await q.query(
++            `${d.sql} ORDER BY ${d.order} LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
++            [...params, limit, offset],
++          )
+         ).rows;
+         return { type, label: d.label, total, items: rows.map(d.map) };
+       }),
+@@ -169,6 +198,7 @@ export async function communityHome(q, viewer = null) {
+           brand,
+           model,
+           category,
++          classification,
+           weight,
+           size,
+           photos,
+@@ -186,6 +216,7 @@ export async function communityHome(q, viewer = null) {
+           brand,
+           model,
+           category,
++          classification,
+           weight,
+           size,
+           is_owner,
+diff --git a/lib/public-dto.js b/lib/public-dto.js
+index 43bc451..e89e5a3 100644
+--- a/lib/public-dto.js
++++ b/lib/public-dto.js
+@@ -1,3 +1,4 @@
++import { classificationOf } from "./bike-classification.js";
+ import { publicAuthor } from "./profile-dto.js";
+ // Deliberate DTOs: never spread database rows into public responses.
+ const fields = (row, names) =>
+@@ -12,6 +13,7 @@ export const publicBikeKeys = [
+   "trim",
+   "year",
+   "category",
++  "classification",
+   "description",
+   "color",
+   "size",
+@@ -47,6 +49,7 @@ export function publicComponent(part, visiblePrice) {
+ export function publicBike(bike) {
+   return {
+     ...fields(bike, publicBikeKeys),
++    classification: classificationOf(bike),
+     ...(bike.show_bike_price ? { price: bike.price } : {}),
+     components: (bike.components || []).map((p) =>
+       publicComponent(
+diff --git a/lib/repository.js b/lib/repository.js
+index ccd7a17..f12f58b 100644
+--- a/lib/repository.js
++++ b/lib/repository.js
+@@ -1,3 +1,4 @@
++import { classificationOf } from "./bike-classification.js";
+ import { checkBikeQuota } from "./limits.js";
+ import { randomUUID } from "node:crypto";
+ import { publicBike } from "./validation.js";
+@@ -48,7 +49,7 @@ export async function insertBike(db, owner, b) {
+   await checkBikeQuota(db, owner);
+   const id = randomUUID();
+   await db.query(
+-    "INSERT INTO bikes(id,owner_id,share_id,name,brand,model,year,category,description,color,size,weight,trim,purposes) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)",
++    "INSERT INTO bikes(id,owner_id,share_id,name,brand,model,year,category,description,color,size,weight,trim,purposes,classification) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)",
+     [
+       id,
+       owner,
+@@ -64,6 +65,7 @@ export async function insertBike(db, owner, b) {
+       b.weight,
+       b.trim || "",
+       b.purposes || [],
++      JSON.stringify(b.classification || classificationOf(b)),
+     ],
+   );
+   await db.query(
+diff --git a/lib/search.js b/lib/search.js
+index 868115c..6d0ff25 100644
+--- a/lib/search.js
++++ b/lib/search.js
+@@ -1,3 +1,6 @@
++import { classificationQueryShape } from "./classification-validation.js";
++import { classificationWhere } from "./classification-sql.js";
++import { categoryFilterLabels } from "./bike-classification.js";
+ import { z } from "zod";
+ import { getSite } from "./site.js";
+ import { showcase } from "./showcase.js";
+@@ -11,6 +14,8 @@ const term = z
+   .max(150)
+   .refine((s) => !s.includes("\0"));
+ export const searchInput = z.object({
++  ...classificationQueryShape,
++  category: z.enum(["", ...Object.keys(categoryFilterLabels)]).default(""),
+   q: term.default(""),
+   exact: z.enum(["", "1"]).default(""),
+   brand: term.default(""),
+@@ -108,7 +113,10 @@ export function experienceFilter(catalog, input, params, entry = false) {
+     );
+   }
+   if (entry && input.kind) clauses.push("e.kind=" + add(input.kind));
+-  return clauses.length ? " AND " + clauses.join(" AND ") : "";
++  return (
++    (clauses.length ? " AND " + clauses.join(" AND ") : "") +
++    classificationWhere(input, params, input.category ? [input.category] : [])
++  );
+ }
+ export async function searchExperience(q, viewer, input) {
+   const site = await getSite(q),
+diff --git a/lib/showcase.js b/lib/showcase.js
+index 49cb997..e1ef690 100644
+--- a/lib/showcase.js
++++ b/lib/showcase.js
+@@ -1,3 +1,4 @@
++import { classificationWhere } from "./classification-sql.js";
+ import { cardBadges, records } from "./gamification.js";
+ import { notify } from "./notifications.js";
+ import { visibleCommentCount } from "./comments.js";
+@@ -54,6 +55,7 @@ export async function showcase(
+   {
+     page = 1,
+     category = "",
++    classification = {},
+     search = "",
+     ownerId = null,
+     followingId = null,
+@@ -69,20 +71,21 @@ export async function showcase(
+           .filter((r) => r.holder)
+           .map((r) => r.holder.id)
+       : null);
++  const params = [search, ownerId, followingId, winners];
+   const where =
+-    " FROM bikes b JOIN users u ON u.id=b.owner_id WHERE b.is_public=true AND u.blocked=false AND ($3::uuid IS NULL OR b.owner_id=$3) AND ($4::uuid IS NULL OR EXISTS(SELECT 1 FROM user_follows f WHERE f.follower_id=$4 AND f.following_id=b.owner_id)) AND ($5::uuid[] IS NULL OR b.id=ANY($5)) AND (cardinality($1::text[])=0 OR b.category=ANY($1::text[])) AND ($2='' OR strpos(lower(b.name || ' ' || b.brand || ' ' || b.model || ' ' || u.name),lower($2))>0)";
+-  const params = [
+-    category ? category.split(",").filter(Boolean) : [],
+-    search,
+-    ownerId,
+-    followingId,
+-    winners,
+-  ];
++    " FROM bikes b JOIN users u ON u.id=b.owner_id WHERE b.is_public=true AND u.blocked=false AND ($2::uuid IS NULL OR b.owner_id=$2) AND ($3::uuid IS NULL OR EXISTS(SELECT 1 FROM user_follows f WHERE f.follower_id=$3 AND f.following_id=b.owner_id)) AND ($4::uuid[] IS NULL OR b.id=ANY($4)) AND ($1='' OR strpos(lower(b.name || ' ' || b.brand || ' ' || b.model || ' ' || u.name),lower($1))>0)" +
++    classificationWhere(
++      classification,
++      params,
++      category.split(",").filter(Boolean),
++    );
+   const count = await q.query("SELECT count(*)::int AS total" + where, params);
+   const result = await q.query(
+     "SELECT " +
+       publicBikeKeys.map((k) => "b." + k).join(",") +
+-      ",b.owner_id,b.price,u.name AS author_name,u.username AS author_username,u.avatar_id AS author_avatar_id,(SELECT count(*)::int FROM bike_likes l JOIN users lu ON lu.id=l.user_id WHERE l.bike_id=b.id AND lu.blocked=false) AS likes,EXISTS(SELECT 1 FROM bike_likes l WHERE l.bike_id=b.id AND l.user_id=$7) AS liked,(" +
++      ",b.owner_id,b.price,u.name AS author_name,u.username AS author_username,u.avatar_id AS author_avatar_id,(SELECT count(*)::int FROM bike_likes l JOIN users lu ON lu.id=l.user_id WHERE l.bike_id=b.id AND lu.blocked=false) AS likes,EXISTS(SELECT 1 FROM bike_likes l WHERE l.bike_id=b.id AND l.user_id=$" +
++      (params.length + 2) +
++      ") AS liked,(" +
+       visibleCommentCount +
+       ") AS comments" +
+       where +
+@@ -92,7 +95,8 @@ export async function showcase(
+         : sort === "popular"
+           ? "likes"
+           : "b.created_at") +
+-      " DESC,b.id LIMIT 24 OFFSET $6",
++      " DESC,b.id LIMIT 24 OFFSET $" +
++      (params.length + 1),
+     [...params, (page - 1) * 24, viewerId || null],
+   );
+   const ids = result.rows.map((b) => b.id);
+diff --git a/lib/site-defaults.js b/lib/site-defaults.js
+index c8f1521..e943a0a 100644
+--- a/lib/site-defaults.js
++++ b/lib/site-defaults.js
+@@ -1,5 +1,9 @@
+ import { defaultEmojis, defaultArticleTopics } from "./ui-emoji.js";
+-import { appearanceDefaults, heroDefaults } from "./theme.js";
++import {
++  appearanceDefaults,
++  heroDefaults,
++  backgroundDefaults,
++} from "./theme.js";
+ import { mapDefaults } from "./map-settings.js";
+ import { aboutDefaults } from "./about-content.js";
+ import { defaultScoring } from "./bike-score.js";
+@@ -16,6 +20,7 @@ export const defaultSettings = {
+   articleTopics: defaultArticleTopics,
+   appearance: appearanceDefaults,
+   ...heroDefaults,
++  ...backgroundDefaults,
+   showAboutStats: true,
+   about: aboutDefaults,
+   map: mapDefaults,
+diff --git a/lib/site.js b/lib/site.js

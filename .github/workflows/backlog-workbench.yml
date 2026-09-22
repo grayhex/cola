@@ -1,0 +1,134 @@
+name: Backlog 49–59 isolated verification
+on:
+  push:
+    branches: [work/backlog-49-59-validation]
+    paths: [.github/workflows/backlog-workbench.yml, workbench/ready.txt]
+permissions:
+  contents: read
+concurrency:
+  group: backlog-49-59-workbench
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: write
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U test -d test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgres://test:test@127.0.0.1:5432/test
+      NEXT_TELEMETRY_DISABLED: "1"
+    defaults:
+      run:
+        working-directory: source
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: f17a7fa65114608c949f8093c43e01c2d77f9150
+          path: source
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          path: workbench
+          persist-credentials: false
+      - name: Reconstruct and verify reviewed four-commit patch
+        run: |
+          set -eu
+          cat ../workbench/workbench/backlog-??.txt > /tmp/backlog.patch
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('/tmp/backlog.patch')
+          text = p.read_text()
+          # Repair two known text-transport typos, then require the original digest.
+          text = text.replace('+        Велосипед: {" "}\n', '+        Велосипед:{" "}\n')
+          text = text.replace('предположениям о трёх старых значений.', 'предположениям о трёх старых значениях.')
+          p.write_text(text)
+          PY
+          echo '36829f7980ca4012fafa836ceb28aa25ce09d716777fc9d7ab7f59ed0b2c612c  /tmp/backlog.patch' | sha256sum -c -
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git am /tmp/backlog.patch
+          for patch in ../workbench/workbench/fix-*.patch; do
+            test -e "$patch" || continue
+            git am "$patch"
+          done
+          git diff f17a7fa65114608c949f8093c43e01c2d77f9150..HEAD --check
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: corepack enable && corepack prepare pnpm@11.19.0 --activate
+      - run: pnpm install --frozen-lockfile
+      - name: All application unit and migration tests
+        run: pnpm test
+      - name: Production build
+        run: pnpm build
+      - run: npm ci
+        working-directory: source/services/bike-resolver
+      - name: Resolver tests and typechecked build
+        run: npm test && npm run build
+        working-directory: source/services/bike-resolver
+      - name: Full HTTP integration with PostgreSQL
+        run: pnpm test:integration
+      - name: Install real Chromium and mobile WebKit
+        run: pnpm exec playwright install --with-deps chromium webkit
+      - name: Complete browser regression suites with independent databases
+        run: |
+          set -o pipefail
+          mkdir -p validation-logs
+          test ! -e .backlog-playwright.base.js
+          cp playwright.config.js .backlog-playwright.base.js
+          trap 'git restore --worktree playwright.config.js' EXIT
+          cat > playwright.config.js <<'JS'
+          import { defineConfig } from '@playwright/test';
+          import base from './.backlog-playwright.base.js';
+          const name = process.env.COLA_CI_PLAYWRIGHT_PROJECT;
+          const projects = base.projects.filter(project => project.name === name);
+          if (projects.length !== 1) throw new Error('Unknown browser project');
+          export default defineConfig({ ...base, projects, outputDir: `test-results/${name}`, reporter: [['list'], ['json', { outputFile: `test-results/report-${name}.json` }]] });
+          JS
+          failed=0
+          for browser in chromium webkit-mobile; do
+            COLA_CI_PLAYWRIGHT_PROJECT="$browser" pnpm test:e2e 2>&1 | tee "validation-logs/$browser.log" || failed=1
+          done
+          exit "$failed"
+      - name: Compose and disposable backup restore
+        run: python3 scripts/test-compose.py && bash scripts/test-backup-drill.sh
+      - name: Publish tested source to feature branch only
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          git restore --worktree lib/version.js services/bike-resolver/src/version.ts
+          git diff --exit-code
+          git log -4 --oneline
+          auth=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)
+          git -c http.https://github.com/.extraheader="AUTHORIZATION: basic $auth" push origin HEAD:refs/heads/feat/backlog-49-59
+          echo "Tested and published commit: $(git rev-parse HEAD)" >> "$GITHUB_STEP_SUMMARY"
+      - name: Archive exact reviewed source
+        if: ${{ !cancelled() }}
+        run: git archive --format=tar.gz -o /tmp/backlog-tested-source.tar.gz HEAD
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: backlog-review-results
+          path: |
+            source/test-results/
+            source/validation-logs/
+          retention-days: 3
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: backlog-reviewed-source
+          path: /tmp/backlog-tested-source.tar.gz
+          retention-days: 1
+          compression-level: 0

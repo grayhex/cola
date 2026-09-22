@@ -1,0 +1,545 @@
++  assert.equal(
++    settingsInput.safeParse({ ...s, backgroundLightOpacity: 101 }).success,
++    false,
++  );
++  assert.equal(
++    settingsInput.safeParse({ ...s, backgroundDarkMode: "url(x)" }).success,
++    false,
++  );
++  assert.equal(backgroundDefaults.backgroundDarkId, null);
++});
++
++test("local animated SVG accepts embedded real rasters but rejects spoofing, external resources and active content", async () => {
++  for (const format of ["png", "jpeg", "webp"]) {
++    const bytes = await sharp({
++      create: { width: 8, height: 8, channels: 3, background: "#ff0000" },
++    })
++      [format]()
++      .toBuffer();
++    const uri = `data:image/${format};base64,${bytes.toString("base64")}`;
++    const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 8 8"><image xlink:href="${uri}" width="8" height="8"><animate attributeName="opacity" values="0.5;1;0.5" dur="1s" repeatCount="indefinite"/></image></svg>`;
++    assert.equal((await prepareSvg(Buffer.from(svg))).toString(), svg);
++    for (const href of [
++      uri.replace(format, "svg+xml"),
++      "https://example.test/image.png",
++      "/api/assets/x",
++      "data:image/png;base64," + Buffer.from("<svg/>").toString("base64"),
++      "data:image/png;base64,abcd-_",
++    ])
++      await assert.rejects(
++        prepareSvg(Buffer.from(`<svg><image href="${href}"/></svg>`)),
++      );
++    await assert.rejects(
++      prepareSvg(Buffer.from(`<svg><use href="${uri}"/></svg>`)),
++    );
++    await assert.rejects(
++      prepareSvg(
++        Buffer.from(`<svg><image href="${uri}" onload="alert(1)"/></svg>`),
++      ),
++    );
++    await assert.rejects(
++      prepareSvg(
++        Buffer.from(
++          `<svg><image href="${uri}"><set attributeName="href" to="https://example.test/a"/></image></svg>`,
++        ),
++      ),
++    );
++  }
++});
++
++test("additive taxonomy migration preserves old bikes and independent queries respect visibility", async () => {
++  const db = new PGlite();
++  try {
++    const files = (await readdir(new URL("../db/", import.meta.url)))
++      .filter((f) => f.endsWith(".sql"))
++      .sort();
++    for (const name of files.filter((f) => f < "020"))
++      await db.exec(
++        await readFile(new URL("../db/" + name, import.meta.url), "utf8"),
++      );
++    const owner = randomUUID(),
++      blocked = randomUUID(),
++      old = randomUUID();
++    for (const id of [owner, blocked])
++      await db.query(
++        "INSERT INTO users(id,email,name,password_hash) VALUES($1,$2,'Rider','hash')",
++        [id, id + "@test.example"],
++      );
++    await db.query("UPDATE users SET blocked=true WHERE id=$1", [blocked]);
++    await db.query(
++      "INSERT INTO bikes(id,share_id,owner_id,name,year,category,purposes,is_public) VALUES($1,$1,$2,'Legacy',2020,'gravel',$3,true)",
++      [old, owner, ["travel", "winter", "custom"]],
++    );
++    await db.exec(
++      await readFile(
++        new URL("../db/020_bike_classification.sql", import.meta.url),
++        "utf8",
++      ),
++    );
++    const legacy = (await db.query("SELECT * FROM bikes WHERE id=$1", [old]))
++      .rows[0];
++    assert.equal(legacy.category, "gravel");
++    assert.deepEqual(legacy.purposes, ["travel", "winter", "custom"]);
++    assert.deepEqual(legacy.classification.uses, ["touring"]);
++    assert.equal(legacy.classification.suspension, null);
++    await db.query("INSERT INTO site_settings(id,value) VALUES(1,$1)", [
++      defaultSettings,
++    ]);
++    await db.query("INSERT INTO site_catalog(id,value) VALUES(1,$1)", [
++      defaultCatalog,
++    ]);
++    const c = classification({
++      construction: "folding",
++      electric: true,
++      uses: ["commuting"],
++    });
++    const data = bikeInput.parse({
++      ...baseBike,
++      name: "Folding commuter",
++      classification: c,
++    });
++    const bike = await insertBike(db, owner, data);
++    await insertBike(db, owner, { ...data, name: "Private", is_public: false });
++    // Insert blocked owner through SQL: API explicitly forbids their mutations.
++    await db.query(
++      "INSERT INTO bikes(id,share_id,owner_id,name,year,category,classification,is_public) VALUES($1,$1,$2,'Blocked',2021,'urban_touring',$3,true)",
++      [randomUUID(), blocked, c],
++    );
++    const input = {
++      category: "urban_touring",
++      construction: "folding",
++      electric: "1",
++      use: "commuting",
++    };
++    const shelf = await showcase(db, null, {
++      category: input.category,
++      classification: input,
++    });
++    assert.deepEqual(
++      shelf.bikes.map((b) => b.id),
++      [bike],
++    );
++    const found = await discoverySearch(
++      db,
++      discoveryInput.parse({ ...input, type: "bikes" }),
++    );
++    assert.equal(found.total, 1);
++    assert.equal(found.groups[0].items[0].id, bike);
++    const experience = await searchExperience(
++      db,
++      null,
++      searchInput.parse(input),
++    );
++    assert.equal(experience.total, 1);
++    assert.equal(
++      (await showcase(db, null, { category: "gravel" })).bikes[0].id,
++      old,
++    );
++    assert.equal(
++      (await showcase(db, null, { category: "road_gravel" })).total,
++      1,
++    );
++    assert.equal(
++      (
++        await showcase(db, null, {
++          category: "urban_touring",
++          classification: { electric: "0" },
++        })
++      ).total,
++      0,
++    );
++    await db.query("UPDATE bikes SET category='mtb' WHERE id=$1", [bike]);
++    const changed = (await db.query("SELECT * FROM bikes WHERE id=$1", [bike]))
++      .rows[0];
++    assert.equal(changed.classification.category, "mtb");
++    assert.equal(changed.classification.subtype, null);
++    assert.equal(changed.classification.electric, true);
++    assert.equal(changed.classification.construction, "folding");
++    assert.deepEqual(changed.classification.uses, ["commuting"]);
++    assert.equal(
++      (
++        await showcase(db, null, {
++          category: "mtb",
++          classification: { electric: "1" },
++        })
++      ).total,
++      1,
++    );
++    assert.equal(
++      (
++        await discoverySearch(
++          db,
++          discoveryInput.parse({ category: "urban_touring", type: "bikes" }),
++        )
++      ).total,
++      0,
++    );
++  } finally {
++    await db.close();
++  }
++});
+diff --git a/tests/beta.test.js b/tests/beta.test.js
+index 12dd821..30e0fb1 100644
+--- a/tests/beta.test.js
++++ b/tests/beta.test.js
+@@ -52,6 +52,7 @@ async function setup() {
+     "016_product_ui",
+     "017_rides_market",
+     "018_articles_rsvp",
++    "020_bike_classification",
+   ])
+     await db.exec(
+       await readFile(new URL("../db/" + m + ".sql", import.meta.url), "utf8"),
+diff --git a/tests/community-discovery.test.js b/tests/community-discovery.test.js
+index 601840a..9b45f49 100644
+--- a/tests/community-discovery.test.js
++++ b/tests/community-discovery.test.js
+@@ -94,7 +94,8 @@ test("unified discovery enforces privacy, literal search, grouping, useful links
+       "015_discovery",
+       "016_product_ui",
+       "017_rides_market",
+-    "018_articles_rsvp",
++      "018_articles_rsvp",
++      "020_bike_classification",
+     ])
+       await db.exec(
+         await readFile(new URL(`../db/${m}.sql`, import.meta.url), "utf8"),
+diff --git a/tests/core.test.js b/tests/core.test.js
+index 848a044..986a3a3 100644
+--- a/tests/core.test.js
++++ b/tests/core.test.js
+@@ -105,7 +105,8 @@ test("PostgreSQL schema: ownership, sharing privacy, revocation and cascading de
+       "015_discovery",
+       "016_product_ui",
+       "017_rides_market",
+-    "018_articles_rsvp",
++      "018_articles_rsvp",
++      "020_bike_classification",
+     ])
+       await db.exec(
+         await readFile(new URL("../db/" + m + ".sql", import.meta.url), "utf8"),
+diff --git a/tests/e2e/backlog.spec.js b/tests/e2e/backlog.spec.js
+new file mode 100644
+index 0000000..8f8c6dc
+--- /dev/null
++++ b/tests/e2e/backlog.spec.js
+@@ -0,0 +1,546 @@
++import { test, expect } from "@playwright/test";
++import { randomUUID } from "node:crypto";
++import { writeFile } from "node:fs/promises";
++import pg from "pg";
++import sharp from "sharp";
++import { testConsents } from "../fixtures/legal.js";
++const origin = process.env.TEST_ORIGIN || "http://localhost:3100";
++const password = "backlog-browser-secret-123";
++async function register(page) {
++  const r = await page.request.post("/api/auth/register", {
++    headers: { origin },
++    data: {
++      ...testConsents,
++      name: "Backlog rider",
++      email: randomUUID() + "@example.test",
++      password,
++    },
++  });
++  expect(r.status()).toBe(201);
++  return (await (await page.request.get("/api/me")).json()).user;
++}
++async function createBike(page, extra = {}) {
++  const r = await page.request.post("/api/bikes", {
++    headers: { origin },
++    data: {
++      name: "Bike " + randomUUID(),
++      brand: "Cube",
++      model: "Travel",
++      year: 2021,
++      category: "road",
++      description: "",
++      color: "",
++      size: "L",
++      weight: 14,
++      is_public: true,
++      ...extra,
++    },
++  });
++  expect(r.status()).toBe(201);
++  return (
++    await (await page.request.get("/api/bikes/" + (await r.json()).id)).json()
++  ).bike;
++}
++async function noOverflow(page) {
++  expect(
++    await page.evaluate(
++      () => document.documentElement.scrollWidth <= innerWidth + 1,
++    ),
++  ).toBe(true);
++}
++async function saveSettings(page, value) {
++  const before = await (await page.request.get("/api/admin/overview")).json();
++  const result = await page.request.put("/api/admin/settings", {
++    headers: { origin },
++    data: { value, version: before.settingsVersion },
++  });
++  expect(result.status()).toBe(200);
++}
++const c = (extra = {}) => ({
++  category: "urban_touring",
++  subtype: "commuter",
++  suspension: null,
++  construction: "folding",
++  uses: ["commuting"],
++  electric: true,
++  fatbike: false,
++  ...extra,
++});
++
++test("account SPA opens the three-step wizard repeatedly; only explicit X can discard a dirty draft", async ({
++  page,
++}, info) => {
++  await register(page);
++  await page.route("**/api/bikes/photo-search", (r) =>
++    r.fulfill({ json: { photos: [] } }),
++  );
++  const native = [];
++  page.on("dialog", async (d) => {
++    native.push(d.type());
++    await d.dismiss();
++  });
++  await page.goto("/account");
++  const add = page.getByRole("button", {
++    name: "Добавить велосипед",
++    exact: true,
++  });
++  await add.click();
++  const wizard = page.getByRole("dialog", {
++    name: "Новый велосипед",
++    exact: true,
++  });
++  await expect(wizard).toBeVisible();
++  await expect(
++    wizard
++      .getByRole("navigation", { name: "Шаги добавления" })
++      .getByRole("button"),
++  ).toHaveCount(3);
++  await wizard.getByRole("button", { name: "Закрыть", exact: true }).click();
++  await expect(wizard).not.toBeVisible();
++  await expect(page.getByRole("alertdialog")).toHaveCount(0);
++  await add.click();
++  await wizard
++    .getByLabel("Модель, год и комплектация", { exact: true })
++    .fill("Cube Travel SL 2021");
++  await wizard
++    .getByLabel("Название в гараже · необязательно")
++    .fill("My folding commuter");
++  // Click the actual modal backdrop, not a child or an internal whitespace area.
++  await page.mouse.click(2, 2);
++  await expect(wizard).toBeVisible();
++  await page.keyboard.press("Escape");
++  await expect(wizard).toBeVisible();
++  await expect(page.getByRole("alertdialog")).toHaveCount(0);
++  await wizard.getByRole("button", { name: "Закрыть", exact: true }).click();
++  const confirm = page.getByRole("alertdialog", { name: "Закрыть мастер?" });
++  await expect(confirm).toBeVisible();
++  await expect(
++    confirm.getByRole("button", { name: "Продолжить редактирование" }),
++  ).toBeFocused();
++  await confirm
++    .getByRole("button", { name: "Продолжить редактирование" })
++    .click();
++  await expect(
++    wizard.getByLabel("Модель, год и комплектация", { exact: true }),
++  ).toHaveValue("Cube Travel SL 2021");
++  await wizard
++    .getByRole("button", { name: "Заполнить вручную", exact: true })
++    .click();
++  await wizard.getByRole("button", { name: "Далее", exact: true }).click();
++  await expect(wizard.getByLabel("Год", { exact: true })).toHaveValue("2021");
++  await wizard
++    .getByLabel("Категория велосипеда", { exact: true })
++    .selectOption("urban_touring");
++  await wizard
++    .getByLabel("Подтип велосипеда", { exact: true })
++    .selectOption("commuter");
++  await wizard
++    .getByText("Классификация / Особенности", { exact: true })
++    .click();
++  await wizard
++    .getByLabel("Конструкция", { exact: true })
++    .selectOption("folding");
++  await wizard
++    .getByRole("checkbox", { name: "Electric · электропривод", exact: true })
++    .check();
++  for (const name of ["Commuting", "Touring", "Bikepacking"])
++    await wizard.getByRole("checkbox", { name, exact: true }).check();
++  await expect(
++    wizard.getByRole("checkbox", { name: "Leisure", exact: true }),
++  ).toBeDisabled();
++  await wizard.getByLabel("Год", { exact: true }).fill("2020");
++  await noOverflow(page);
++  await page.screenshot({
++    path: info.outputPath("wizard-classification.png"),
++    fullPage: true,
++    animations: "disabled",
++  });
++  await wizard
++    .getByRole("button", { name: "Сохранить велосипед", exact: true })
++    .click();
++  await expect(wizard).not.toBeVisible();
++  await expect(
++    page.getByRole("heading", { name: "My folding commuter", exact: true }),
++  ).toBeVisible();
++  const bikes = (await (await page.request.get("/api/bikes")).json()).bikes;
++  expect(bikes).toHaveLength(1);
++  expect(bikes[0].year).toBe(2020);
++  expect(bikes[0].classification).toMatchObject(
++    c({ uses: ["commuting", "touring", "bikepacking"] }),
++  );
++  expect(native).toEqual([]);
++});
++
++test("journal menu offers only owned bikes and retains text when changing the selected bike", async ({
++  page,
++  browser,
++}) => {
++  await register(page);
++  const first = await createBike(page, { name: "Journal first" });
++  const second = await createBike(page, {
++    name: "Journal second",
++    is_public: false,
++  });
++  const visitor = await browser.newContext({ baseURL: origin });
++  try {
++    const other = await visitor.newPage();
++    await register(other);
++    const foreign = await createBike(other, { name: "Not my bike" });
++    await page.goto("/j/new");
++    const picker = page.getByLabel("Велосипед для записи", { exact: true });
++    await expect(picker).toHaveValue("");
++    await expect(picker.locator("option")).toHaveCount(3);
++    await expect(picker.locator(`option[value="${foreign.id}"]`)).toHaveCount(
++      0,
++    );
++    await picker.selectOption(first.id);
++    await page
++      .getByLabel("Заголовок записи", { exact: true })
++      .fill("Bike-linked story");
++    await page
++      .getByLabel("Текст записи", { exact: true })
++      .fill("This draft belongs to my own bike.");
++    await picker.selectOption(second.id);
++    await expect(page.getByLabel("Текст записи", { exact: true })).toHaveText(
++      "This draft belongs to my own bike.",
++    );
++    await page
++      .getByRole("button", { name: "Опубликовать запись", exact: true })
++      .click();
++    await expect(page).toHaveURL(/\/j\/[a-f0-9-]+$/);
++    const share = new URL(page.url()).pathname.split("/").pop();
++    const record = (
++      await (await page.request.get("/api/journal/public/" + share)).json()
++    ).entry;
++    expect(record.bike.id).toBe(second.id);
++    expect(record.bikePublic).toBe(false);
++    expect(
++      (await other.request.get("/api/journal/public/" + share)).status(),
++    ).toBe(404);
++    await page.goto("/j/new?bike=" + first.id);
++    await expect(picker).toHaveValue(first.id);
++    await page.goto("/j/new?bike=" + foreign.id);
++    await expect(picker).toHaveValue("");
++    await expect(page.getByRole("alert")).toContainText("Велосипед недоступен");
++  } finally {
++    await visitor.close();
++  }
++});
++
++test("a reader without a bike gets an actionable journal empty state", async ({
++  page,
++}) => {
++  await register(page);
++  await page.goto("/j/new");
++  await expect(
++    page.getByRole("heading", {
++      name: "Добавьте велосипед, чтобы вести его журнал",
++    }),
++  ).toBeVisible();
++  await page
++    .getByRole("link", { name: "Добавить велосипед", exact: true })
++    .click();
++  await expect(
++    page.getByRole("dialog", { name: "Новый велосипед", exact: true }),
++  ).toBeVisible();
++});
++
++test("independent classification filters survive URL reload and find electric folding commuters", async ({
++  page,
++}, info) => {
++  await register(page);
++  const bike = await createBike(page, {
++    name: "Facet commuter",
++    classification: c(),
++  });
++  await createBike(page, {
++    name: "Unpowered commuter",
++    classification: c({ electric: false }),
++  });
++  await createBike(page, {
++    name: "Hidden commuter",
++    is_public: false,
++    classification: c(),
++  });
++  await page.goto(
++    "/bikes?category=urban_touring&construction=folding&electric=1&use=commuting",
++  );
++  await expect(page.locator(".bike-card")).toHaveCount(1);
++  await expect(page.locator(".bike-card")).toContainText("Facet commuter");
++  await expect(
++    page.locator(".bike-card").getByLabel("Классификация", { exact: true }),
++  ).toHaveText("CommuterFoldingE-bike");
++  await page.reload();
++  await expect(page.locator(".bike-card")).toHaveCount(1);
++  await page.goto(
++    "/search?type=bikes&category=urban_touring&construction=folding&electric=1",
++  );
++  await expect(page.getByRole("link", { name: /Facet commuter/ })).toHaveCount(
++    1,
++  );
++  await expect(page.getByRole("link", { name: /Hidden commuter/ })).toHaveCount(
++    0,
++  );
++  const facets = page
++    .locator("details")
++    .filter({ has: page.getByText(/^Классификация/) })
++    .first();
++  await facets.locator("summary").click();
++  await facets.getByLabel("Электропривод", { exact: true }).selectOption("0");
++  await expect(
++    page.getByRole("link", { name: /Unpowered commuter/ }),
++  ).toHaveCount(1);
++  await expect(page).toHaveURL(/electric=0/);
++  await page.goto("/b/" + bike.share_id);
++  const labels = page.locator(".bike-labels");
++  await expect(labels).toContainText("L");
++  expect(
++    await labels
++      .locator(".hf-label")
++      .first()
++      .evaluate((e) => parseFloat(getComputedStyle(e).fontSize)),
++  ).toBeLessThanOrEqual(12);
++  await noOverflow(page);
++  await page.screenshot({
++    path: info.outputPath("bike-compact-labels.png"),
++    fullPage: true,
++    animations: "disabled",
++  });
++});
++
++test("admin backgrounds are independent per theme; native local SVG file upload preserves raster animation", async ({
++  page,
++}, info) => {
++  const user = await register(page);
++  const db = new pg.Client({ connectionString: process.env.DATABASE_URL });
++  await db.connect();
++  let original;
++  const assets = [];
++  try {

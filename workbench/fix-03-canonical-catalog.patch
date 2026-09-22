@@ -1,0 +1,80 @@
+From 4f6b9ca548f385a9f82c5b7f12ef24b28f08a283 Mon Sep 17 00:00:00 2001
+From: OpenAI <noreply@openai.com>
+Date: Tue, 22 Sep 2026 13:50:38 +0000
+Subject: [PATCH] test: align canonical categories and responsive hero artwork
+ coverage
+
+---
+ tests/e2e/backlog.spec.js | 17 ++++++++++++++---
+ tests/e2e/design.spec.js  | 13 +++++++++----
+ 2 files changed, 23 insertions(+), 7 deletions(-)
+
+diff --git a/tests/e2e/backlog.spec.js b/tests/e2e/backlog.spec.js
+index 834a9c0..b02fbc8 100644
+--- a/tests/e2e/backlog.spec.js
++++ b/tests/e2e/backlog.spec.js
+@@ -482,9 +482,20 @@ test("admin backgrounds are independent per theme; native local SVG file upload
+       opacity: "0.35",
+       repeat: "no-repeat",
+     });
+-    await expect(
+-      page.locator(`img[src="/api/assets/${animation}"]`).first(),
+-    ).toBeVisible();
++    const stage = page.locator("[data-hero-animation]");
++    const art = stage.locator(`img[src="/api/assets/${animation}"]`).first();
++    const viewport = page.viewportSize();
++    const compact = viewport && viewport.width <= 700;
++    // The existing compact homepage omits the decorative stage. Validate
++    // its upload/rendering in touch landscape without changing that layout.
++    if (compact) {
++      await expect(stage).toBeHidden();
++      await page.setViewportSize({ width: 844, height: 390 });
++    }
++    await expect(art).toBeVisible();
++    await expect.poll(() => art.evaluate((img) => img.naturalWidth)).toBeGreaterThan(0);
++    await noOverflow(page);
++    if (compact) await page.setViewportSize(viewport);
+     await toggle.click();
+     await expect.poll(background).toMatchObject({
+       image: `url("${origin}/api/assets/${assets[1]}")`,
+diff --git a/tests/e2e/design.spec.js b/tests/e2e/design.spec.js
+index b12f498..171324e 100644
+--- a/tests/e2e/design.spec.js
++++ b/tests/e2e/design.spec.js
+@@ -1,4 +1,5 @@
+ import { testConsents } from "../fixtures/legal.js";
++import { bikeCategories } from "../../lib/bike-classification.js";
+ import { test, expect } from "@playwright/test";
+ import { randomUUID } from "node:crypto";
+ import pg from "pg";
+@@ -181,8 +182,8 @@ test("dense visual system: shared cards, filters, search, themes and responsive
+         .locator('a[href^="/b/"]'),
+     ).toHaveCount(5);
+     await page.goto("/?q=" + encodeURIComponent(name));
+-    // Simulate a future larger catalogue in the disposable database only.
+-    // Production taxonomy and its database constraint remain unchanged.
++    // Legacy catalog keys cannot invent new families: the canonical taxonomy
++    // is versioned with its input schema and database constraint.
+     const expanded = structuredClone(originalCatalog);
+     for (let i = 0; i < 20; i++)
+       expanded.categories["future-" + i] = "Дополнительная категория " + i;
+@@ -191,10 +192,14 @@ test("dense visual system: shared cards, filters, search, themes and responsive
+     ]);
+     await page.reload();
+     await page.getByRole("button", { name: /^Фильтры/ }).click();
+-    await expect(panel.getByRole("checkbox")).toHaveCount(23);
++    await expect(panel.getByRole("checkbox")).toHaveCount(Object.keys(bikeCategories).length);
++    for (const label of Object.values(bikeCategories))
++      await expect(panel.getByRole("checkbox", { name: label, exact: true })).toBeVisible();
++    await expect(panel.getByRole("checkbox", { name: /Дополнительная категория/ })).toHaveCount(0);
++    expect((await page.request.get("/api/showcase?category=future-0")).status()).toBe(400);
+     await panel.getByRole("checkbox").last().check();
+     await noOverflow();
+-    await screenshot("long-filter-catalog");
++    await screenshot("canonical-filter-catalog");
+     await page.keyboard.press("Escape");
+     await expect(panel).not.toBeVisible();
+     await expect(page.getByRole("button", { name: /^Фильтры/ })).toBeFocused();
+-- 
+2.47.3
+

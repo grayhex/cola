@@ -1,0 +1,503 @@
+@@ -76,7 +86,19 @@ export default function DiscoverySearch() {
+             Расширенный поиск и опыт владельцев →
+           </Link>
+         </div>
+-        <SearchBox initialQuery={query} />
++        <SearchBox initialQuery={query} filters={{ ...facets, type }} />
++        <ClassificationFilters
++          withCategory
++          value={facets}
++          onChange={(next) => {
++            const url = new URLSearchParams(key);
++            Object.entries(next).forEach(([k, v]) =>
++              v ? url.set(k, v) : url.delete(k),
++            );
++            url.delete("page");
++            window.history.replaceState(null, "", "/search?" + url);
++          }}
++        />
+         <nav className={styles.tabs} aria-label="Тип результатов">
+           {tabs.map(([value, label]) => (
+             <Link
+@@ -104,7 +126,7 @@ export default function DiscoverySearch() {
+         {!data && !error && <p role="status">Ищем…</p>}
+         {data && (
+           <p className={styles.summary} role="status">
+-            {!query.trim()
++            {!query.trim() && !hasFacets
+               ? "Введите название велосипеда, компонента или маршрута."
+               : data.total
+                 ? `Найдено: ${data.total}`
+@@ -146,8 +168,7 @@ export default function DiscoverySearch() {
+                       {item.subtitle}
+                       {item.metadata.category
+                         ? " · " +
+-                          (catalog.categories[item.metadata.category] ||
+-                            item.metadata.category)
++                          classificationLabels(item.metadata).join(" · ")
+                         : ""}
+                       {item.metadata.weight
+                         ? " · " + Number(item.metadata.weight) + " кг"
+diff --git a/app/ui/experience-search.jsx b/app/ui/experience-search.jsx
+index 2903c52..894e851 100644
+--- a/app/ui/experience-search.jsx
++++ b/app/ui/experience-search.jsx
+@@ -1,4 +1,6 @@
+ "use client";
++import { ClassificationFilters } from "./bike-classification.jsx";
++import { readClassificationFilters } from "../../lib/bike-classification.js";
+ import { useState, useEffect } from "react";
+ import { useSearchParams } from "next/navigation";
+ import {
+@@ -15,6 +17,8 @@ import JournalCard from "./journal-card.jsx";
+ import { CompactDialog } from "./compact-ui.jsx";
+ import { SlidersHorizontal } from "./icons.jsx";
+ const empty = {
++  ...readClassificationFilters(new URLSearchParams()),
++  category: "",
+   q: "",
+   brand: "",
+   model: "",
+@@ -139,6 +143,14 @@ export default function ExperienceSearch({ modelPage = false }) {
+           </label>
+           <button className="button small">Найти</button>
+         </form>
++        <ClassificationFilters
++          withCategory
++          value={{
++            ...readClassificationFilters(new URLSearchParams(form)),
++            category: form.category || "",
++          }}
++          onChange={(v) => search({ ...form, ...v, page: 1 })}
++        />
+         <nav className="journal-modes" aria-label="Тип результатов">
+           {[
+             ["bikes", "Велосипеды"],
+@@ -274,11 +286,7 @@ export default function ExperienceSearch({ modelPage = false }) {
+             {data.type === "bikes" ? (
+               <BikeGrid bikes={data.items}>
+                 {data.items.map((b) => (
+-                  <BikeCard
+-                    key={b.id}
+-                    bike={b}
+-                    user={user}
+-                  />
++                  <BikeCard key={b.id} bike={b} user={user} />
+                 ))}
+               </BikeGrid>
+             ) : data.type === "journal" ? (
+diff --git a/app/ui/home.jsx b/app/ui/home.jsx
+index 13f71b6..87284aa 100644
+--- a/app/ui/home.jsx
++++ b/app/ui/home.jsx
+@@ -1,4 +1,5 @@
+ "use client";
++import { classificationLabels } from "../../lib/bike-classification.js";
+ import Link from "next/link";
+ import { useEffect, useState } from "react";
+ import {
+@@ -134,7 +135,7 @@ function TrendingBike({ bike, user }) {
+             bike.author?.name
+           )}
+           <span>·</span>
+-          {catalog.categories[bike.category] || bike.category}
++          {classificationLabels(bike).join(" · ") || bike.category}
+           {bike.weight && (
+             <>
+               <span>·</span>
+diff --git a/app/ui/search-box.jsx b/app/ui/search-box.jsx
+index 343d131..f3589f3 100644
+--- a/app/ui/search-box.jsx
++++ b/app/ui/search-box.jsx
+@@ -5,6 +5,7 @@ import { Search, ArrowRight, Bike, Route, Wrench } from "lucide-react";
+ import styles from "./search-box.module.css";
+ export default function SearchBox({
+   initialQuery = "",
++  filters = {},
+   hero = false,
+   contained = false,
+   autoFocus = false,
+@@ -20,6 +21,7 @@ export default function SearchBox({
+     root = useRef(null),
+     id = useId(),
+     router = useRouter();
++  const filterKey = new URLSearchParams(filters).toString();
+   const items = groups.flatMap((g) => g.items);
+   useEffect(() => setQuery(initialQuery), [initialQuery]);
+   useEffect(() => {
+@@ -56,7 +58,7 @@ export default function SearchBox({
+       try {
+         const response = await fetch(
+           "/api/discovery/search?" +
+-            new URLSearchParams({ q: term, suggest: "1" }),
++            new URLSearchParams({ ...filters, q: term, suggest: "1" }),
+           { signal: controller.signal, cache: "no-store" },
+         );
+         if (!response.ok) throw Error();
+@@ -77,7 +79,7 @@ export default function SearchBox({
+       clearTimeout(timer);
+       controller.abort();
+     };
+-  }, [query]);
++  }, [query, filterKey]);
+   useEffect(() => {
+     if (!open) return;
+     const outside = (e) => {
+@@ -104,7 +106,7 @@ export default function SearchBox({
+     navigate(
+       active >= 0 && items[active]
+         ? items[active].href
+-        : "/search?" + new URLSearchParams({ q: term }),
++        : "/search?" + new URLSearchParams({ ...filters, q: term }),
+     );
+   }
+   let index = -1;
+@@ -215,7 +217,10 @@ export default function SearchBox({
+             className={styles.all}
+             type="button"
+             onClick={() =>
+-              navigate("/search?" + new URLSearchParams({ q: query.trim() }))
++              navigate(
++                "/search?" +
++                  new URLSearchParams({ ...filters, q: query.trim() }),
++              )
+             }
+           >
+             Все результаты <ArrowRight size={16} />
+diff --git a/db/020_bike_classification.sql b/db/020_bike_classification.sql
+new file mode 100644
+index 0000000..1dcdb4f
+--- /dev/null
++++ b/db/020_bike_classification.sql
+@@ -0,0 +1,45 @@
++-- Additive rollout: keep category/purposes and all old snapshots untouched.
++-- Unknown discipline, suspension and construction are not guessed from a name.
++ALTER TABLE bikes ADD COLUMN classification jsonb;
++ALTER TABLE bikes DROP CONSTRAINT bikes_category_check;
++ALTER TABLE bikes ADD CONSTRAINT bikes_category_check CHECK (category IN
++  ('mtb','road','gravel','road_gravel','urban_touring','bmx','cargo_utility','special'));
++UPDATE bikes SET classification = jsonb_build_object(
++  'category', CASE WHEN category IN ('road','gravel') THEN 'road_gravel' ELSE category END,
++  'subtype', CASE WHEN category IN ('road','gravel') THEN category ELSE NULL END,
++  'suspension', NULL, 'construction', NULL, 'electric', false, 'fatbike', false,
++  'uses', to_jsonb(ARRAY(SELECT DISTINCT CASE p WHEN 'city' THEN 'commuting' WHEN 'travel' THEN 'touring' WHEN 'sport' THEN 'racing' END
++     FROM unnest(purposes) p WHERE p IN ('city','travel','sport') ORDER BY 1))
++);
++-- NULL is allowed only for compatibility with older writers; current API always
++-- validates and stores the complete classification object.
++ALTER TABLE bikes ADD CONSTRAINT bikes_classification_check CHECK (
++  classification IS NULL OR (
++    jsonb_typeof(classification)='object' AND
++    classification ?& ARRAY['category','subtype','suspension','construction','uses','electric','fatbike'] AND
++    classification->>'category' IN ('mtb','road_gravel','urban_touring','bmx','cargo_utility','special') AND
++    jsonb_typeof(classification->'uses')='array' AND jsonb_array_length(classification->'uses')<=3 AND
++    jsonb_typeof(classification->'electric')='boolean' AND jsonb_typeof(classification->'fatbike')='boolean'
++  )
++);
++CREATE INDEX bikes_classification_family ON bikes ((coalesce(classification->>'category',CASE WHEN category IN ('road','gravel') THEN 'road_gravel' ELSE category END)));
++CREATE INDEX bikes_classification_subtype ON bikes ((classification->>'subtype'));
++CREATE INDEX bikes_classification_features ON bikes USING gin (classification jsonb_path_ops);
++
++-- During a rolling update an older application writes only the legacy category.
++-- Keep its explicit category changes coherent without erasing independent facets.
++CREATE FUNCTION sync_legacy_bike_category() RETURNS trigger LANGUAGE plpgsql AS $$
++BEGIN
++  IF NEW.category IS DISTINCT FROM OLD.category AND
++     NEW.classification IS NOT DISTINCT FROM OLD.classification AND
++     NEW.classification IS NOT NULL THEN
++    NEW.classification := NEW.classification || jsonb_build_object(
++      'category', CASE WHEN NEW.category IN ('road','gravel') THEN 'road_gravel' ELSE NEW.category END,
++      'subtype', CASE WHEN NEW.category IN ('road','gravel') THEN NEW.category ELSE NULL END
++    );
++  END IF;
++  RETURN NEW;
++END;
++$$;
++CREATE TRIGGER sync_legacy_bike_category BEFORE UPDATE OF category ON bikes
++FOR EACH ROW EXECUTE FUNCTION sync_legacy_bike_category();
+diff --git a/lib/admin-validation.js b/lib/admin-validation.js
+index 46acbde..c335813 100644
+--- a/lib/admin-validation.js
++++ b/lib/admin-validation.js
+@@ -1,3 +1,4 @@
++import { bikeCategories } from "./bike-classification.js";
+ import { emojiSlots, defaultEmojis, defaultArticleTopics } from "./ui-emoji.js";
+ import { mapDefaults } from "./map-settings.js";
+ import { aboutDefaults, aboutItemIds } from "./about-content.js";
+@@ -75,8 +76,31 @@ export const mapInput = z
+   });
+ export const settingsInput = z
+   .object({
+-    emojis: z.object(Object.fromEntries(emojiSlots.map((s) => [s.key, z.string().trim().max(24).default(s.emoji)]))).strict().default(defaultEmojis),
+-    articleTopics: z.array(z.object({ id: z.string().regex(/^[a-z0-9_-]{1,40}$/), label: z.string().trim().min(1).max(60), emoji: z.string().trim().min(1).max(24) }).strict()).min(1).max(24).refine((a) => new Set(a.map((v) => v.id)).size === a.length).default(defaultArticleTopics),
++    emojis: z
++      .object(
++        Object.fromEntries(
++          emojiSlots.map((s) => [
++            s.key,
++            z.string().trim().max(24).default(s.emoji),
++          ]),
++        ),
++      )
++      .strict()
++      .default(defaultEmojis),
++    articleTopics: z
++      .array(
++        z
++          .object({
++            id: z.string().regex(/^[a-z0-9_-]{1,40}$/),
++            label: z.string().trim().min(1).max(60),
++            emoji: z.string().trim().min(1).max(24),
++          })
++          .strict(),
++      )
++      .min(1)
++      .max(24)
++      .refine((a) => new Set(a.map((v) => v.id)).size === a.length)
++      .default(defaultArticleTopics),
+     map: mapInput.default(mapDefaults),
+     rideListMode: z.enum(["auto", "cards", "list"]).default("auto"),
+     rideMapView: z.enum(["map", "route", "hidden"]).default("map"),
+@@ -85,7 +109,14 @@ export const settingsInput = z
+       .array(
+         z
+           .object({
+-            id: z.enum(["bikes", "journal", "articles", "rides", "market", "about"]),
++            id: z.enum([
++              "bikes",
++              "journal",
++              "articles",
++              "rides",
++              "market",
++              "about",
++            ]),
+             label: z.string().trim().min(1).max(32),
+             visible: z.boolean(),
+           })
+@@ -144,6 +175,12 @@ export const settingsInput = z
+       })
+       .strict()
+       .default({ theme: "system", accent: "#F3B51B" }),
++    backgroundLightId: asset.default(null),
++    backgroundDarkId: asset.default(null),
++    backgroundLightOpacity: z.number().int().min(0).max(100).default(20),
++    backgroundDarkOpacity: z.number().int().min(0).max(100).default(20),
++    backgroundLightMode: z.enum(["cover", "tile"]).default("cover"),
++    backgroundDarkMode: z.enum(["cover", "tile"]).default("cover"),
+     heroImageId: asset.default(null),
+     heroAnimationLightId: asset.default(null),
+     heroAnimationDarkId: asset.default(null),
+@@ -309,11 +346,25 @@ export const catalogInput = z
+         "Области одинаковых вариантов не должны пересекаться",
+       )
+       .default(defaultAliases),
+-    categories: z.object({ gravel: name, mtb: name, road: name }),
++    categories: z.object({
++      gravel: name,
++      road: name,
++      ...Object.fromEntries(
++        Object.entries(bikeCategories).map(([key, label]) => [
++          key,
++          name.default(label),
++        ]),
++      ),
++    }),
+     models: z.object({
+       gravel: z.record(safeKey, strings),
+       mtb: z.record(safeKey, strings),
+       road: z.record(safeKey, strings),
++      ...Object.fromEntries(
++        Object.keys(bikeCategories)
++          .filter((key) => key !== "mtb")
++          .map((key) => [key, z.record(safeKey, strings).default({})]),
++      ),
+     }),
+     parts: z.record(safeKey, strings),
+     partCategories: z.object({
+diff --git a/lib/bike-classification.js b/lib/bike-classification.js
+new file mode 100644
+index 0000000..28d6dbe
+--- /dev/null
++++ b/lib/bike-classification.js
+@@ -0,0 +1,214 @@
++// Canonical, independent facets. The old `category` remains a compatibility
++// projection for old clients, links, stock pictures and historical record keys.
++export const bikeCategories = {
++  mtb: "MTB",
++  road_gravel: "Шоссе / гравел",
++  urban_touring: "Город / туризм",
++  bmx: "BMX",
++  cargo_utility: "Грузовой / утилитарный",
++  special: "Специальный",
++};
++export const bikeSubtypes = {
++  mtb: {
++    xc: "XC",
++    trail: "Trail",
++    enduro: "Enduro",
++    downhill: "Downhill",
++    dirt_jump: "Dirt Jump",
++  },
++  road_gravel: {
++    road: "Шоссе",
++    endurance: "Endurance",
++    aero: "Aero",
++    gravel: "Gravel",
++    cyclocross: "Cyclocross",
++    tt_triathlon: "TT / Triathlon",
++    track: "Track",
++  },
++  urban_touring: {
++    commuter: "Commuter",
++    fitness_hybrid: "Fitness / Hybrid",
++    trekking: "Trekking",
++    touring: "Touring",
++    cruiser: "Cruiser",
++  },
++  bmx: {
++    bmx_race: "Race",
++    freestyle: "Freestyle",
++    street_park: "Street / Park",
++  },
++  cargo_utility: { cargo: "Cargo", longtail: "Longtail", utility: "Utility" },
++  special: {
++    tandem: "Tandem",
++    recumbent: "Recumbent",
++    adaptive: "Adaptive",
++    other: "Другое",
++  },
++};
++export const subtypeLabels = Object.assign({}, ...Object.values(bikeSubtypes));
++export const suspensionLabels = {
++  rigid: "Rigid · без амортизации",
++  hardtail: "Hardtail",
++  full_suspension: "Full Suspension",
++};
++export const constructionLabels = {
++  standard: "Обычная",
++  folding: "Folding · складной",
++  cargo: "Cargo · грузовой",
++  tandem: "Tandem · тандем",
++  recumbent: "Recumbent · лежачий",
++};
++export const useLabels = {
++  racing: "Racing",
++  xc: "XC",
++  trail: "Trail",
++  enduro: "Enduro",
++  downhill: "Downhill",
++  gravel: "Gravel",
++  cyclocross: "Cyclocross",
++  road_racing: "Road Racing",
++  audax_endurance: "Audax / Endurance",
++  commuting: "Commuting",
++  touring: "Touring",
++  bikepacking: "Bikepacking",
++  cargo: "Cargo",
++  leisure: "Leisure",
++};
++export const emptyClassification = {
++  category: "",
++  subtype: null,
++  suspension: null,
++  construction: null,
++  uses: [],
++  electric: false,
++  fatbike: false,
++};
++export const legacyCategories = { gravel: "Гравел", road: "Шоссе", mtb: "MTB" };
++export const categoryFilterLabels = { ...legacyCategories, ...bikeCategories };
++
++export function classificationOf(bike = {}) {
++  if (
++    bike.classification &&
++    Object.hasOwn(bikeCategories, bike.classification.category)
++  )
++    return {
++      category: bike.classification.category,
++      subtype: Object.hasOwn(
++        bikeSubtypes[bike.classification.category],
++        bike.classification.subtype,
++      )
++        ? bike.classification.subtype
++        : null,
++      suspension: Object.hasOwn(
++        suspensionLabels,
++        bike.classification.suspension,
++      )
++        ? bike.classification.suspension
++        : null,
++      construction: Object.hasOwn(
++        constructionLabels,
++        bike.classification.construction,
++      )
++        ? bike.classification.construction
++        : null,
++      uses: Array.isArray(bike.classification.uses)
++        ? [
++            ...new Set(
++              bike.classification.uses.filter((v) =>
++                Object.hasOwn(useLabels, v),
++              ),
++            ),
++          ].slice(0, 3)
++        : [],
++      electric: bike.classification.electric === true,
++      fatbike: bike.classification.fatbike === true,
++    };
++  const old = bike.category;
++  const category = ["road", "gravel"].includes(old)
++    ? "road_gravel"
++    : Object.hasOwn(bikeCategories, old)
++      ? old
++      : "";
++  const purposeMap = { city: "commuting", travel: "touring", sport: "racing" };
++  return {
++    ...emptyClassification,
++    category,
++    subtype: ["road", "gravel"].includes(old) ? old : null,
++    uses: [
++      ...new Set(
++        (Array.isArray(bike.purposes) ? bike.purposes : [])
++          .map((key) => purposeMap[key])
++          .filter(Boolean),
++      ),
++    ].slice(0, 3),
++  };
++}
++export function compatibilityCategory(c) {
++  if (c.category !== "road_gravel") return c.category;
++  if (c.subtype === "gravel") return "gravel";
++  return c.subtype ? "road" : "road_gravel";
++}
++export function classificationLabels(bike) {
++  const c = classificationOf(bike);
++  const primary = subtypeLabels[c.subtype] || bikeCategories[c.category];
++  if (!primary) return [];
++  const result = [
++    ["bmx", "mtb"].includes(c.category) && c.subtype
++      ? bikeCategories[c.category] + " · " + primary
++      : primary,
++  ];
++  // Identity features take priority over additional usage tags. Max three labels,
++  // never a dump of every internal field or a guessed suspension/discipline.
++  if (
++    c.construction &&
++    c.construction !== "standard" &&
++    c.construction !== c.subtype
++  )
++    result.push(constructionLabels[c.construction].split(" · ")[0]);
++  if (c.electric) result.push("E-bike");
++  if (c.fatbike) result.push("Fatbike");
++  if (c.suspension && (c.category === "mtb" || c.suspension !== "rigid"))
++    result.push(suspensionLabels[c.suspension].split(" · ")[0]);
++  return [...new Set(result)].slice(0, 3);
++}
++export const classificationFilterOptions = {
++  subtype: subtypeLabels,
++  suspension: suspensionLabels,
++  construction: constructionLabels,
++  use: useLabels,
++  electric: { 1: "Электро", 0: "Без электропривода" },
++  fatbike: { 1: "Fatbike", 0: "Не Fatbike" },
++};

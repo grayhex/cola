@@ -1,0 +1,407 @@
+From f8217888eb6549abe19fda3b60c6b6c7ec221fcf Mon Sep 17 00:00:00 2001
+From: OpenAI <noreply@openai.com>
+Date: Tue, 22 Sep 2026 13:12:17 +0000
+Subject: [PATCH] fix: stabilize backlog form labels, graphics groups and first
+ theme toggle
+
+---
+ app/admin/design-controls.jsx      |  1 +
+ app/admin/design-settings.jsx      |  1 +
+ app/admin/icon-settings.jsx        | 31 ++++++++++-----
+ app/ui/bike-classification.jsx     |  1 +
+ app/ui/bike-wizard.jsx             |  3 ++
+ app/ui/site-provider.jsx           |  3 ++
+ app/ui/theme-control.jsx           |  3 +-
+ tests/backlog.test.js              | 10 +++++
+ tests/e2e/backlog.spec.js          | 63 ++++++++++++++++++++----------
+ tests/e2e/community-design.spec.js | 35 +++++++++++++++++
+ tests/e2e/design.spec.js           |  6 ++-
+ 11 files changed, 125 insertions(+), 32 deletions(-)
+
+diff --git a/app/admin/design-controls.jsx b/app/admin/design-controls.jsx
+index b4cd4d9..cb64eea 100644
+--- a/app/admin/design-controls.jsx
++++ b/app/admin/design-controls.jsx
+@@ -15,6 +15,7 @@ export function Select({ label, value, onChange, options, disabled = false }) {
+   return (
+     <Field label={label}>
+       <select
++        aria-label={label}
+         value={value}
+         disabled={disabled}
+         onChange={(e) => onChange(e.target.value)}
+diff --git a/app/admin/design-settings.jsx b/app/admin/design-settings.jsx
+index 486a7c3..39dad1a 100644
+--- a/app/admin/design-settings.jsx
++++ b/app/admin/design-settings.jsx
+@@ -82,6 +82,7 @@ export function ThemeSettings({ settings: s, onChange }) {
+               help={`${100 - (s[`background${key}Opacity`] ?? 20)}% · 100% полностью скрывает изображение`}
+             >
+               <input
++                aria-label={"Прозрачность фона · " + label.toLowerCase()}
+                 type="range"
+                 min="0"
+                 max="100"
+diff --git a/app/admin/icon-settings.jsx b/app/admin/icon-settings.jsx
+index 3dc7972..8ae1374 100644
+--- a/app/admin/icon-settings.jsx
++++ b/app/admin/icon-settings.jsx
+@@ -16,7 +16,9 @@ export default function IconSettings({
+   onUpload,
+ }) {
+   const [search, setSearch] = useState("");
+-  const slots = filterGraphicSlots(illustrationSlots, search);
++  const [group, setGroup] = useState("all");
++  const groups = [...new Set(illustrationSlots.map((slot) => slot.group))];
++  const slots = filterGraphicSlots(illustrationSlots, search, group);
+   return (
+     <section
+       className={"admin-panel " + styles.compactPanel}
+@@ -27,15 +29,24 @@ export default function IconSettings({
+         Фотографии велосипедов, иллюстрации проекта и иконка вкладки.
+         Изображение главной меняется в разделе «Главная».
+       </p>
+-      <label className="field">
+-        <span>Найти графику</span>
+-        <input
+-          type="search"
+-          value={search}
+-          placeholder="Например: велосипед"
+-          onChange={(e) => setSearch(e.target.value)}
+-        />
+-      </label>
++      <div className={styles.toolbar}>
++        <label className="field">
++          <span>Найти графику</span>
++          <input
++            type="search"
++            value={search}
++            placeholder="Например: велосипед"
++            onChange={(e) => setSearch(e.target.value)}
++          />
++        </label>
++        <label className="field">
++          <span>Группа</span>
++          <select aria-label="Группа" value={group} onChange={(e) => setGroup(e.target.value)}>
++            <option value="all">Все группы</option>
++            {groups.map((name) => <option key={name} value={name}>{name}</option>)}
++          </select>
++        </label>
++      </div>
+       <div className={styles.graphicGrid}>
+         {slots.map((slot) => (
+           <AssetPicker
+diff --git a/app/ui/bike-classification.jsx b/app/ui/bike-classification.jsx
+index 5b3cdc2..5c549fb 100644
+--- a/app/ui/bike-classification.jsx
++++ b/app/ui/bike-classification.jsx
+@@ -24,6 +24,7 @@ function Choice({
+     <label className="field">
+       <span>{label}</span>
+       <select
++        aria-label={label}
+         value={value || ""}
+         required={required}
+         disabled={disabled}
+diff --git a/app/ui/bike-wizard.jsx b/app/ui/bike-wizard.jsx
+index a3863ae..19dca80 100644
+--- a/app/ui/bike-wizard.jsx
++++ b/app/ui/bike-wizard.jsx
+@@ -562,6 +562,7 @@ export default function BikeWizard({ onCreated, onBusy, onDirtyChange }) {
+                 <SiteEmoji name="search" /> Модель, год и комплектация
+               </span>
+               <input
++                aria-label="Модель, год и комплектация"
+                 value={searchText}
+                 disabled={resolving}
+                 maxLength={240}
+@@ -978,6 +979,7 @@ export default function BikeWizard({ onCreated, onBusy, onDirtyChange }) {
+                   <SiteEmoji name="date" /> Год
+                 </span>
+                 <input
++                  aria-label="Год"
+                   type="number"
+                   min="1900"
+                   max="2100"
+@@ -991,6 +993,7 @@ export default function BikeWizard({ onCreated, onBusy, onDirtyChange }) {
+                   <SiteEmoji name="bike" /> Марка
+                 </span>
+                 <input
++                  aria-label="Марка"
+                   maxLength={60}
+                   value={bike.brand}
+                   onChange={(e) => {
+diff --git a/app/ui/site-provider.jsx b/app/ui/site-provider.jsx
+index f522e8f..18fc115 100644
+--- a/app/ui/site-provider.jsx
++++ b/app/ui/site-provider.jsx
+@@ -28,6 +28,7 @@ export default function SiteProvider({ initial, children }) {
+   const defaultTheme = validTheme(site.settings.appearance?.theme);
+   const [themePreference, setPreference] = useState(defaultTheme);
+   const currentPreference = useRef(defaultTheme);
++  const [themeReady, setThemeReady] = useState(false);
+   const [resolvedTheme, setResolvedTheme] = useState(
+     defaultTheme === "dark" ? "dark" : "light",
+   );
+@@ -47,6 +48,7 @@ export default function SiteProvider({ initial, children }) {
+       const actual = resolveTheme(preference, media.matches);
+       document.documentElement.dataset.theme = actual;
+       setResolvedTheme(actual);
++      setThemeReady(true);
+     };
+     apply();
+     media.addEventListener("change", apply);
+@@ -98,6 +100,7 @@ export default function SiteProvider({ initial, children }) {
+         personalSettings: effective,
+         themePreference,
+         resolvedTheme,
++        themeReady,
+         setThemePreference,
+       }}
+     >
+diff --git a/app/ui/theme-control.jsx b/app/ui/theme-control.jsx
+index 0121a3f..a5821b9 100644
+--- a/app/ui/theme-control.jsx
++++ b/app/ui/theme-control.jsx
+@@ -2,13 +2,14 @@
+ import SiteEmoji from "./site-emoji.jsx";
+ import { useSite } from "./site-provider.jsx";
+ export default function ThemeControl() {
+-  const { resolvedTheme, setThemePreference } = useSite();
++  const { resolvedTheme, themeReady, setThemePreference } = useSite();
+   const next = resolvedTheme === "dark" ? "light" : "dark";
+   return (
+     <button
+       type="button"
+       className="compact-icon theme-toggle"
+       role="switch"
++      disabled={!themeReady}
+       aria-checked={resolvedTheme === "dark"}
+       aria-label="Тёмная тема"
+       title={next === "dark" ? "Включить тёмную тему" : "Включить светлую тему"}
+diff --git a/tests/backlog.test.js b/tests/backlog.test.js
+index 3a10c58..0db6582 100644
+--- a/tests/backlog.test.js
++++ b/tests/backlog.test.js
+@@ -24,6 +24,7 @@ import { discoveryInput, discoverySearch } from "../lib/discovery.js";
+ import { searchInput, searchExperience } from "../lib/search.js";
+ import { prepareSvg } from "../lib/svg-asset.js";
+ import { backgroundCss, backgroundDefaults } from "../lib/theme.js";
++import { illustrationSlots, filterGraphicSlots } from "../lib/design-graphics.js";
+ import { settingsInput } from "../lib/admin-validation.js";
+ import { siteAssetIds, siteAssetUsage } from "../lib/site-assets.js";
+ const baseBike = {
+@@ -336,3 +337,12 @@ test("additive taxonomy migration preserves old bikes and independent queries re
+     await db.close();
+   }
+ });
++
++
++test("graphics groups expose independent background slots and compose with text search", () => {
++  const backgrounds = filterGraphicSlots(illustrationSlots, "", "Фон сайта");
++  assert.deepEqual(backgrounds.map((slot) => slot.key), ["backgroundLightId", "backgroundDarkId"]);
++  assert.deepEqual(filterGraphicSlots(illustrationSlots, "светлая", "Фон сайта").map((slot) => slot.key), ["backgroundLightId"]);
++  assert.deepEqual(filterGraphicSlots(illustrationSlots, "фон", "Брендинг"), []);
++  assert.equal(filterGraphicSlots(illustrationSlots, "", "all").length, illustrationSlots.length);
++});
+diff --git a/tests/e2e/backlog.spec.js b/tests/e2e/backlog.spec.js
+index 8f8c6dc..6c219b5 100644
+--- a/tests/e2e/backlog.spec.js
++++ b/tests/e2e/backlog.spec.js
+@@ -1,4 +1,4 @@
+-import { test, expect } from "@playwright/test";
++import { test as base, expect } from "@playwright/test";
+ import { randomUUID } from "node:crypto";
+ import { writeFile } from "node:fs/promises";
+ import pg from "pg";
+@@ -56,6 +56,33 @@ async function saveSettings(page, value) {
+   });
+   expect(result.status()).toBe(200);
+ }
++// Teardown has its own runner-managed budget, so an action timeout cannot
++// skip restoration or replace the original failure with a cleanup timeout.
++const test = base.extend({
++  assetLibrary: async ({ page }, use) => {
++    const user = await register(page);
++    const db = new pg.Client({ connectionString: process.env.DATABASE_URL });
++    const assets = [];
++    let original;
++    await db.connect();
++    try {
++      await db.query("UPDATE users SET role='admin' WHERE id=$1", [user.id]);
++      original = (await (await page.request.get("/api/admin/overview")).json()).settings;
++      await use({ assets });
++    } finally {
++      try {
++        if (original) await saveSettings(page, original);
++        for (const id of assets) {
++          const response = await page.request.delete("/api/admin/assets/" + id, { headers: { origin } });
++          expect(response.status()).toBe(200);
++        }
++      } finally {
++        await db.end();
++      }
++    }
++  },
++});
++
+ const c = (extra = {}) => ({
+   category: "urban_touring",
+   subtype: "commuter",
+@@ -99,6 +126,7 @@ test("account SPA opens the three-step wizard repeatedly; only explicit X can di
+   await expect(wizard).not.toBeVisible();
+   await expect(page.getByRole("alertdialog")).toHaveCount(0);
+   await add.click();
++  await expect(wizard.getByLabel("Модель, год и комплектация", { exact: true })).toBeVisible();
+   await wizard
+     .getByLabel("Модель, год и комплектация", { exact: true })
+     .fill("Cube Travel SL 2021");
+@@ -221,7 +249,7 @@ test("journal menu offers only owned bikes and retains text when changing the se
+     await expect(picker).toHaveValue(first.id);
+     await page.goto("/j/new?bike=" + foreign.id);
+     await expect(picker).toHaveValue("");
+-    await expect(page.getByRole("alert")).toContainText("Велосипед недоступен");
++    await expect(page.getByRole("main").getByRole("alert")).toContainText("Велосипед недоступен");
+   } finally {
+     await visitor.close();
+   }
+@@ -286,6 +314,7 @@ test("independent classification filters survive URL reload and find electric fo
+     .filter({ has: page.getByText(/^Классификация/) })
+     .first();
+   await facets.locator("summary").click();
++  await expect(facets.getByRole("combobox", { name: "Электропривод", exact: true })).toBeVisible();
+   await facets.getByLabel("Электропривод", { exact: true }).selectOption("0");
+   await expect(
+     page.getByRole("link", { name: /Unpowered commuter/ }),
+@@ -310,16 +339,10 @@ test("independent classification filters survive URL reload and find electric fo
+ 
+ test("admin backgrounds are independent per theme; native local SVG file upload preserves raster animation", async ({
+   page,
++  assetLibrary,
+ }, info) => {
+-  const user = await register(page);
+-  const db = new pg.Client({ connectionString: process.env.DATABASE_URL });
+-  await db.connect();
+-  let original;
+-  const assets = [];
+-  try {
+-    await db.query("UPDATE users SET role='admin' WHERE id=$1", [user.id]);
+-    original = (await (await page.request.get("/api/admin/overview")).json())
+-      .settings;
++  const { assets } = assetLibrary;
++  await test.step("configure backgrounds and upload a local SVG file", async () => {
+     await page.goto("/admin");
+     await page.getByRole("tab", { name: "Дизайн", exact: true }).click();
+     const section = (name) =>
+@@ -327,7 +350,13 @@ test("admin backgrounds are independent per theme; native local SVG file upload
+         .getByRole("navigation", { name: "Разделы админки" })
+         .getByRole("button", { name: new RegExp("^" + name + "(?: |$)") });
+     await section("Графика").click();
+-    await page.getByLabel("Группа", { exact: true }).selectOption("Фон сайта");
++    const graphics = page.getByRole("region", { name: "Графика сайта" });
++    await expect(graphics.getByRole("combobox", { name: "Группа", exact: true })).toBeVisible();
++    await graphics.getByLabel("Группа", { exact: true }).selectOption("Фон сайта");
++    await expect(graphics.locator(".asset-picker")).toHaveCount(2);
++    await graphics.getByLabel("Найти графику", { exact: true }).fill("светлая");
++    await expect(graphics.locator(".asset-picker")).toHaveCount(1);
++    await graphics.getByLabel("Найти графику", { exact: true }).fill("");
+     for (const [kind, color] of [
+       ["светлая", "#e8ddd0"],
+       ["тёмная", "#27333f"],
+@@ -427,6 +456,7 @@ test("admin backgrounds are independent per theme; native local SVG file upload
+       name: "Тёмная тема",
+       exact: true,
+     });
++    await expect(toggle).toBeEnabled();
+     if ((await toggle.getAttribute("aria-checked")) === "true")
+       await toggle.click();
+     await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+@@ -472,14 +502,7 @@ test("admin backgrounds are independent per theme; native local SVG file upload
+       .focus();
+     await page.keyboard.press("Space");
+     await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+-  } finally {
+-    if (original) await saveSettings(page, original);
+-    for (const id of assets)
+-      await page.request.delete("/api/admin/assets/" + id, {
+-        headers: { origin },
+-      });
+-    await db.end();
+-  }
++  });
+ });
+ 
+ test("market covers bound tall and wide uploaded photos without covering title or price", async ({
+diff --git a/tests/e2e/community-design.spec.js b/tests/e2e/community-design.spec.js
+index 0d5b88e..c9fa5fc 100644
+--- a/tests/e2e/community-design.spec.js
++++ b/tests/e2e/community-design.spec.js
+@@ -185,6 +185,7 @@ async function theme(page, label) {
+   }
+   const toggle = page.getByRole("switch", { name: "Тёмная тема", exact: true });
+   const dark = label === "Тёмная";
++  await expect(toggle).toBeEnabled();
+   if ((await toggle.getAttribute("aria-checked")) !== String(dark))
+     await toggle.click();
+   await expect(toggle).toHaveAttribute("aria-checked", String(dark));
+@@ -276,6 +277,40 @@ test("homepage rhythm, compact popular list and stable Light/Dark at every break
+   }
+ });
+ 
++test("theme toggle waits for hydration and its first click inverts the actual system theme", async ({
++  page,
++  isMobile,
++}) => {
++  await fixture(page);
++  await page.emulateMedia({ colorScheme: "dark" });
++  let release;
++  const hydration = new Promise((resolve) => { release = resolve; });
++  await page.route("**/_next/static/**/*.js", async (route) => {
++    await hydration;
++    await route.continue();
++  });
++  try {
++    await page.goto("/", { waitUntil: "commit" });
++    const toggle = page.getByRole("switch", { name: "Тёмная тема", exact: true });
++    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
++    await expect(toggle).toBeVisible();
++    await expect(toggle).toBeDisabled();
++    release();
++    await expect(toggle).toBeEnabled();
++    await expect(toggle).toHaveAttribute("aria-checked", "true");
++    if (isMobile) await toggle.tap();
++    else await toggle.click();
++    await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
++    expect(await page.evaluate(() => localStorage.getItem("cola:theme"))).toBe("light");
++    await page.reload();
++    await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
++    await expect(toggle).toBeEnabled();
++    await expect(toggle).toHaveAttribute("aria-checked", "false");
++  } finally {
++    release();
++  }
++});
++
+ test("theme persists before hydration and follows system changes; dialogs use the same palette", async ({
+   page,
+ }) => {
+diff --git a/tests/e2e/design.spec.js b/tests/e2e/design.spec.js
+index 29bd18b..a318624 100644
+--- a/tests/e2e/design.spec.js
++++ b/tests/e2e/design.spec.js
+@@ -107,7 +107,11 @@ test("dense visual system: shared cards, filters, search, themes and responsive
+         .locator(".card-identity-row h2")
+         .evaluate((el) => getComputedStyle(el).fontSize),
+     ).toBe("17px");
+-    await expect(card.locator(".card-info > *")).toHaveCount(2);
++    await expect(card.locator(".card-info > *")).toHaveCount(3);
++    const classification = card.getByLabel("Классификация", { exact: true });
++    await expect(classification).toBeVisible();
++    expect(await classification.locator(":scope > span").count()).toBeGreaterThan(0);
++    expect(await classification.locator(":scope > span").count()).toBeLessThanOrEqual(3);
+     await expect(card.locator(".like-button img")).toHaveCount(0);
+     await expect(card.locator(".like-button .site-emoji")).toBeVisible();
+     expect(
+-- 
+2.47.3
+
