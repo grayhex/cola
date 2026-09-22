@@ -1,0 +1,222 @@
+From 0b3eedb40cfd4a61d4456a7e4812ab789d52fc06 Mon Sep 17 00:00:00 2001
+From: OpenAI <noreply@openai.com>
+Date: Tue, 22 Sep 2026 13:33:54 +0000
+Subject: [PATCH] fix: preserve asset sandbox headers and align remaining
+ backlog regressions
+
+---
+ app/api/assets/[id]/route.js           |  4 ++--
+ lib/asset-security.js                  |  5 +++++
+ next.config.mjs                        | 10 ++++++++++
+ tests/admin-http.js                    |  7 ++++++-
+ tests/asset-security.test.js           | 19 +++++++++++++++++++
+ tests/e2e/backlog.spec.js              | 24 ++++++++++++++++--------
+ tests/e2e/design.spec.js               | 10 +++++-----
+ tests/e2e/gallery-interactions.spec.js | 12 +++++++++++-
+ 8 files changed, 74 insertions(+), 17 deletions(-)
+ create mode 100644 lib/asset-security.js
+ create mode 100644 tests/asset-security.test.js
+
+diff --git a/app/api/assets/[id]/route.js b/app/api/assets/[id]/route.js
+index b6a5179..59ff794 100644
+--- a/app/api/assets/[id]/route.js
++++ b/app/api/assets/[id]/route.js
+@@ -1,3 +1,4 @@
++import { assetContentSecurityPolicy } from "../../../../lib/asset-security.js";
+ import { db } from "../../../../lib/db.js";
+ import { readFile } from "node:fs/promises";
+ import path from "node:path";
+@@ -22,8 +23,7 @@ export async function GET(req, { params }) {
+           "Content-Type": rows[0].filename.endsWith(".svg")
+             ? "image/svg+xml"
+             : "image/webp",
+-          "Content-Security-Policy":
+-            "default-src 'none'; img-src data:; style-src 'unsafe-inline'; sandbox",
++          "Content-Security-Policy": assetContentSecurityPolicy,
+           "Cache-Control": "no-store",
+           "X-Content-Type-Options": "nosniff",
+         },
+diff --git a/lib/asset-security.js b/lib/asset-security.js
+new file mode 100644
+index 0000000..3a889bf
+--- /dev/null
++++ b/lib/asset-security.js
+@@ -0,0 +1,5 @@
++// One policy for the asset response and Next's later path-header merge.
++// No scripts, remote resources or embedded browsing contexts; SVG may only
++// display validated data rasters and its local inline CSS/SMIL animation.
++export const assetContentSecurityPolicy =
++  "default-src 'none'; img-src data:; style-src 'unsafe-inline'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'; sandbox";
+diff --git a/next.config.mjs b/next.config.mjs
+index 2f5ba80..f6066fb 100644
+--- a/next.config.mjs
++++ b/next.config.mjs
+@@ -1,3 +1,5 @@
++import { assetContentSecurityPolicy } from "./lib/asset-security.js";
++
+ export default {
+   output: "standalone",
+   experimental:
+@@ -24,6 +26,14 @@ export default {
+           },
+         ],
+       },
++      // Keep this last: the generic page policy must not replace the asset
++      // sandbox when Next merges configured headers into a route response.
++      {
++        source: "/api/assets/:id",
++        headers: [
++          { key: "Content-Security-Policy", value: assetContentSecurityPolicy },
++        ],
++      },
+     ];
+   },
+ };
+diff --git a/tests/admin-http.js b/tests/admin-http.js
+index 8bcde94..13e6b27 100644
+--- a/tests/admin-http.js
++++ b/tests/admin-http.js
+@@ -1,3 +1,4 @@
++import { assetContentSecurityPolicy } from "../lib/asset-security.js";
+ import { testConsents } from "./fixtures/legal.js";
+ // Use only with scripts/test-db.js and the app pointed to that disposable database.
+ import assert from "node:assert/strict";
+@@ -125,7 +126,11 @@ try {
+   });
+   assert.equal(upload.status, 201);
+   asset = (await upload.json()).id;
+-  assert.equal((await fetch(base + "/api/assets/" + asset)).status, 200);
++  const servedAsset = await fetch(base + "/api/assets/" + asset);
++  assert.equal(servedAsset.status, 200);
++  assert.equal(servedAsset.headers.get("content-security-policy"), assetContentSecurityPolicy);
++  assert.equal(servedAsset.headers.get("x-content-type-options"), "nosniff");
++  await servedAsset.arrayBuffer();
+   let latest = (await admin("admin/overview")).data;
+   assert.equal(
+     (
+diff --git a/tests/asset-security.test.js b/tests/asset-security.test.js
+new file mode 100644
+index 0000000..ec1ae0d
+--- /dev/null
++++ b/tests/asset-security.test.js
+@@ -0,0 +1,19 @@
++import test from "node:test";
++import assert from "node:assert/strict";
++import config from "../next.config.mjs";
++import { assetContentSecurityPolicy } from "../lib/asset-security.js";
++
++test("asset sandbox remains the final path policy without changing page headers", async () => {
++  const rules = await config.headers();
++  const general = rules.find((rule) => rule.source === "/:path*");
++  const asset = rules.find((rule) => rule.source === "/api/assets/:id");
++  const policy = (rule) => rule.headers.find((h) => h.key === "Content-Security-Policy").value;
++  assert.ok(rules.indexOf(asset) > rules.indexOf(general));
++  assert.equal(policy(general), "base-uri 'self'; object-src 'none'; frame-ancestors 'none'");
++  assert.equal(policy(asset), assetContentSecurityPolicy);
++  assert.match(assetContentSecurityPolicy, /(?:^|; )default-src 'none';/);
++  assert.match(assetContentSecurityPolicy, /(?:^|; )img-src data:;/);
++  assert.match(assetContentSecurityPolicy, /(?:^|; )sandbox$/);
++  assert.doesNotMatch(assetContentSecurityPolicy, /allow-scripts|allow-same-origin|https?:|unsafe-eval/);
++  assert.equal(general.headers.find((h) => h.key === "X-Content-Type-Options").value, "nosniff");
++});
+diff --git a/tests/e2e/backlog.spec.js b/tests/e2e/backlog.spec.js
+index 6c219b5..834a9c0 100644
+--- a/tests/e2e/backlog.spec.js
++++ b/tests/e2e/backlog.spec.js
+@@ -381,7 +381,11 @@ test("admin backgrounds are independent per theme; native local SVG file upload
+       });
+       const r = await response;
+       expect(r.status()).toBe(201);
+-      assets.push((await r.json()).id);
++      // Verify the ID actually applied by the UI. Browser response bodies can
++      // be evicted after fetch has consumed them; the selected value is durable.
++      const picker = page.getByLabel("Фон сайта · " + kind + " тема", { exact: true });
++      await expect(picker).toHaveValue(/^[0-9a-f-]{36}$/);
++      assets.push(await picker.inputValue());
+     }
+     await section("Внешний вид").click();
+     for (const [label, target] of [
+@@ -422,19 +426,23 @@ test("admin backgrounds are independent per theme; native local SVG file upload
+       .setInputFiles(filename);
+     const r = await upload;
+     expect(r.status()).toBe(201);
+-    const animation = (await r.json()).id;
++    const animationPicker = page.getByLabel("Анимация · светлая тема", { exact: true });
++    await expect(animationPicker).toHaveValue(/^[0-9a-f-]{36}$/);
++    const animation = await animationPicker.inputValue();
+     assets.push(animation);
+-    await expect(
+-      page.getByLabel("Анимация · светлая тема", { exact: true }),
+-    ).toHaveValue(animation);
+     await page.getByRole("button", { name: "Сохранить", exact: true }).click();
+     await expect(page.getByRole("status")).toContainText(
+       "Настройки опубликованы",
+     );
+     const response = await page.request.get("/api/assets/" + animation);
+-    expect(response.headers()["content-security-policy"]).toContain(
+-      "img-src data:",
+-    );
++    expect(response.status()).toBe(200);
++    expect(response.headers()["content-type"]).toBe("image/svg+xml");
++    expect(response.headers()["content-security-policy"]).toContain("img-src data:");
++    expect(response.headers()["content-security-policy"]).toContain("default-src 'none'");
++    expect(response.headers()["content-security-policy"]).toContain("sandbox");
++    const savedSvg = await response.text();
++    expect(savedSvg).toContain("data:image/png;base64,");
++    expect(savedSvg).toContain('<animate attributeName="opacity"');
+     for (const id of assets)
+       expect(
+         (
+diff --git a/tests/e2e/design.spec.js b/tests/e2e/design.spec.js
+index a318624..b12f498 100644
+--- a/tests/e2e/design.spec.js
++++ b/tests/e2e/design.spec.js
+@@ -135,8 +135,10 @@ test("dense visual system: shared cards, filters, search, themes and responsive
+     ).toHaveCount(0);
+     await page.getByRole("button", { name: /^Фильтры/ }).click();
+     const panel = page.getByRole("dialog", { name: "Фильтры", exact: true });
+-    await panel.getByRole("checkbox").nth(0).check();
+-    await panel.getByRole("checkbox").nth(1).check();
++    // The first two new families (MTB + Road/Gravel) now cover all fixture
++    // bikes. Choose an explicit subset rather than relying on catalog order.
++    await panel.getByRole("checkbox", { name: "MTB", exact: true }).check();
++    await panel.getByRole("checkbox", { name: "Город / туризм", exact: true }).check();
+     expect(
+       await panel
+         .getByRole("button", { name: "Применить" })
+@@ -147,9 +149,7 @@ test("dense visual system: shared cards, filters, search, themes and responsive
+     await expect(
+       page.locator('.filter-chips button[aria-label^="Убрать фильтр"]'),
+     ).toHaveCount(2);
+-    await expect
+-      .poll(async () => page.locator(".bike-card").count())
+-      .toBeLessThan(5);
++    await expect(page.locator(".bike-card")).toHaveCount(2);
+     const invalid = await page.request.get("/api/showcase?category=unknown");
+     expect(invalid.status()).toBe(400);
+     while (
+diff --git a/tests/e2e/gallery-interactions.spec.js b/tests/e2e/gallery-interactions.spec.js
+index 7e54992..3b8b198 100644
+--- a/tests/e2e/gallery-interactions.spec.js
++++ b/tests/e2e/gallery-interactions.spec.js
+@@ -452,6 +452,16 @@ test("guest sign-in continues the requested add-bike action", async ({
+       .getByRole("dialog")
+       .getByLabel("Модель, год и комплектация", { exact: true }),
+   ).toBeVisible();
+-  await expect(page).toHaveURL(/action=add/);
++  // Consuming the intent prevents a reload from reopening the wizard; it
++  // must remain possible to request a fresh wizard from this same SPA page.
++  await expect(page).toHaveURL(/\/account\?tab=bikes$/);
+   await expect(page.locator(".garage-banner")).toHaveCount(0);
++  const wizard = page.getByRole("dialog", { name: "Новый велосипед", exact: true });
++  await wizard.getByRole("button", { name: "Закрыть", exact: true }).click();
++  await expect(wizard).not.toBeVisible();
++  await page.reload();
++  await expect(page.getByRole("button", { name: "Добавить велосипед", exact: true })).toBeVisible();
++  await expect(wizard).toHaveCount(0);
++  await page.getByRole("button", { name: "Добавить велосипед", exact: true }).click();
++  await expect(wizard.getByLabel("Модель, год и комплектация", { exact: true })).toHaveValue("");
+ });
+-- 
+2.47.3
+
