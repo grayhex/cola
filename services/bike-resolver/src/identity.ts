@@ -11,7 +11,7 @@ export function identityConflict(
     [query.brand, query.model, query.trim].filter(Boolean).join(" "),
   ).split(" ");
   return (
-    (year !== null && year !== query.year) ||
+    (query.year !== null && year !== null && year !== query.year) ||
     (actual.size > 1 && !wanted.every((t) => actual.has(t)))
   );
 }

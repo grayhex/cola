@@ -1,0 +1,106 @@
+.fields {
+  border: 0;
+  min-width: 0;
+  margin: 12px 0;
+  padding: 0;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 16px;
+}
+.grid :global(.field) {
+  min-width: 0;
+  margin: 0;
+}
+.grid select {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+.details,
+.filters {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin: 12px 0;
+}
+.details summary,
+.filters summary {
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+}
+.details[open] summary,
+.filters[open] summary {
+  margin-bottom: 12px;
+}
+.toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  margin-top: 10px;
+}
+.toggles label,
+.uses label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  min-height: 36px;
+}
+.toggles input,
+.uses input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  padding: 0;
+  flex: 0 0 16px;
+}
+.uses {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px 16px;
+  padding: 8px 0 0;
+  margin: 12px 0 0;
+  border: 0;
+  min-width: 0;
+}
+.uses legend {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.badges {
+  display: inline-flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  align-items: center;
+  max-width: 100%;
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--text-muted);
+}
+.badges > span {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 5px;
+  background: var(--paper);
+  white-space: nowrap;
+}
+.filters {
+  width: 100%;
+}
+@media (max-width: 600px) {
+  .grid {
+    gap: 10px;
+  }
+  .toggles label,
+  .uses label {
+    min-height: 44px;
+  }
+}
+@media (max-width: 379px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,4 +1,5 @@
 "use client";
+import { useConfirmation } from "./confirmation.jsx";
 import { useEffect, useRef, useState } from "react";
 import { LoaderCircle, Check, RefreshCw } from "./icons.jsx";
 import { factoryComponent } from "../../lib/factory-components.js";
@@ -17,6 +18,7 @@ export default function FactorySpecification({
   onBusy,
   onReset,
 }) {
+  const [ask, confirmation] = useConfirmation();
   const [result, setResult] = useState(null),
     [busy, setBusy] = useState(false),
     [elapsed, setElapsed] = useState(0),
@@ -83,9 +85,9 @@ export default function FactorySpecification({
       if (
         data.status === "resolved" &&
         data.warnings?.includes("identity_mismatch") &&
-        !window.confirm(
+        !(await ask(
           `Источник: «${data.bike.canonicalName}»${data.sourceYear ? ` (${data.sourceYear})` : ""}. Вы указали «${bike.brand} ${bike.model} ${bike.trim || ""} ${bike.year}». Модель или год отличаются. Использовать эту комплектацию?`,
-        )
+        ))
       )
         return;
       setResult({ ...data, candidateId });
@@ -120,6 +122,7 @@ export default function FactorySpecification({
       aria-label="Заводская комплектация"
       aria-busy={busy}
     >
+      {confirmation}
       <div className="resolver-title">
         <strong>Заводская комплектация</strong>
         {!busy && (

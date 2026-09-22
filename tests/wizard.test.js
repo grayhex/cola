@@ -60,7 +60,8 @@ test("wizard atomically saves edited components, trusted provenance, mileage/pri
       "015_discovery",
       "016_product_ui",
       "017_rides_market",
-    "018_articles_rsvp",
+      "018_articles_rsvp",
+      "020_bike_classification",
     ])
       await db.exec(
         await readFile(new URL("../db/" + m + ".sql", import.meta.url), "utf8"),
@@ -139,7 +140,7 @@ test("wizard atomically saves edited components, trusted provenance, mileage/pri
         requestId: randomUUID(),
         bike: { ...input.bike, year: 2021 },
       }),
-      /PREVIEW_EXPIRED/,
+      /IDENTITY_CONFIRMATION_REQUIRED/,
     );
     assert.equal(
       (await db.query("SELECT count(*)::int AS n FROM bikes")).rows[0].n,
@@ -151,7 +152,7 @@ test("wizard atomically saves edited components, trusted provenance, mileage/pri
     );
     await assert.rejects(
       createWizardBike(db, owner, { ...input, requestId: randomUUID() }),
-      /Подтвердите/,
+      /IDENTITY_CONFIRMATION_REQUIRED/,
     );
     const acknowledged = await createWizardBike(db, owner, {
       ...input,

@@ -15,6 +15,7 @@ export function Select({ label, value, onChange, options, disabled = false }) {
   return (
     <Field label={label}>
       <select
+        aria-label={label}
         value={value}
         disabled={disabled}
         onChange={(e) => onChange(e.target.value)}

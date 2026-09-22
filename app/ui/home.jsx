@@ -1,4 +1,5 @@
 "use client";
+import { classificationLabels } from "../../lib/bike-classification.js";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
@@ -134,7 +135,7 @@ function TrendingBike({ bike, user }) {
             bike.author?.name
           )}
           <span>·</span>
-          {catalog.categories[bike.category] || bike.category}
+          {classificationLabels(bike).join(" · ") || bike.category}
           {bike.weight && (
             <>
               <span>·</span>

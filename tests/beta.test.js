@@ -52,6 +52,7 @@ async function setup() {
     "016_product_ui",
     "017_rides_market",
     "018_articles_rsvp",
+    "020_bike_classification",
   ])
     await db.exec(
       await readFile(new URL("../db/" + m + ".sql", import.meta.url), "utf8"),

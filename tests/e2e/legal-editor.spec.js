@@ -194,16 +194,18 @@ test("admin imports text, edits rich content, preserves drafts across tabs, publ
         exact: true,
       }),
     ).toBeVisible();
-    page.on("dialog", (d) => d.accept());
     const source =
       "# Условия участия\n\n**Важное условие** и ++подчёркнутый текст++.\n\n1. Первый пункт\n2. Второй пункт\n\n[Наш сайт](https://example.test/rules)\n\n<script>window.legalXss=true</script>";
-    await area
-      .getByLabel(/Загрузить текст/)
-      .setInputFiles({
-        name: "terms.md",
-        mimeType: "text/markdown",
-        buffer: Buffer.from(source),
-      });
+    await area.getByLabel(/Загрузить текст/).setInputFiles({
+      name: "terms.md",
+      mimeType: "text/markdown",
+      buffer: Buffer.from(source),
+    });
+    await expect(page.getByRole("alertdialog")).toContainText("Заменить текст");
+    await page
+      .getByRole("alertdialog")
+      .getByRole("button", { name: "Продолжить", exact: true })
+      .click();
     await expect(
       area.getByRole("textbox", {
         name: "Пользовательское соглашение",
@@ -237,6 +239,11 @@ test("admin imports text, edits rich content, preserves drafts across tabs, publ
     ).toContainText("Условия участия");
     await area
       .getByRole("button", { name: "Опубликовать документ", exact: true })
+      .click();
+    await expect(page.getByRole("alertdialog")).toContainText("Опубликовать");
+    await page
+      .getByRole("alertdialog")
+      .getByRole("button", { name: "Продолжить", exact: true })
       .click();
     await expect(area.getByRole("status")).toContainText(
       "Документ опубликован",
@@ -326,7 +333,9 @@ async function selectEditorText(field, text) {
   await field.press("ArrowRight");
   for (const character of text) await field.press("Shift+ArrowLeft");
   await expect
-    .poll(() => field.evaluate((el) => el.ownerDocument.getSelection()?.toString()))
+    .poll(() =>
+      field.evaluate((el) => el.ownerDocument.getSelection()?.toString()),
+    )
     .toBe(text);
 }
 

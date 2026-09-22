@@ -129,7 +129,11 @@ try {
         ...(externalDatabase ? ["tests/quota-http.js"] : []),
       ])
     await new Promise((resolve, reject) => {
-      const p = spawn(process.execPath, e2e ? [test, "test"] : [test], {
+      const project = environment.COLA_CI_PLAYWRIGHT_PROJECT;
+      const args = e2e
+        ? [test, "test", ...(project ? ["--project", project] : [])]
+        : [test];
+      const p = spawn(process.execPath, args, {
         cwd: root,
         env: environment,
         stdio: "inherit",

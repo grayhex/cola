@@ -172,10 +172,23 @@ async function noOverflow(page) {
   ).toBe(true);
 }
 async function theme(page, label) {
-  await page
-    .getByRole("button", { name: "Цветовая тема", exact: true })
-    .click();
-  await page.getByRole("button", { name: label, exact: true }).click();
+  if (label === "Как на устройстве") {
+    // This fixture is a guest. Simulate another tab choosing System; the real
+    // account combobox is exercised by backlog.spec.js.
+    await page.evaluate(() => {
+      localStorage.setItem("cola:theme", "system");
+      window.dispatchEvent(
+        new StorageEvent("storage", { key: "cola:theme", newValue: "system" }),
+      );
+    });
+    return;
+  }
+  const toggle = page.getByRole("switch", { name: "Тёмная тема", exact: true });
+  const dark = label === "Тёмная";
+  await expect(toggle).toBeEnabled();
+  if ((await toggle.getAttribute("aria-checked")) !== String(dark))
+    await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-checked", String(dark));
 }
 
 test("homepage rhythm, compact popular list and stable Light/Dark at every breakpoint", async ({
@@ -261,6 +274,40 @@ test("homepage rhythm, compact popular list and stable Light/Dark at every break
         animations: "disabled",
       });
     }
+  }
+});
+
+test("theme toggle waits for hydration and its first click inverts the actual system theme", async ({
+  page,
+  isMobile,
+}) => {
+  await fixture(page);
+  await page.emulateMedia({ colorScheme: "dark" });
+  let release;
+  const hydration = new Promise((resolve) => { release = resolve; });
+  await page.route("**/_next/static/**/*.js", async (route) => {
+    await hydration;
+    await route.continue();
+  });
+  try {
+    await page.goto("/", { waitUntil: "commit" });
+    const toggle = page.getByRole("switch", { name: "Тёмная тема", exact: true });
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+    await expect(toggle).toBeVisible();
+    await expect(toggle).toBeDisabled();
+    release();
+    await expect(toggle).toBeEnabled();
+    await expect(toggle).toHaveAttribute("aria-checked", "true");
+    if (isMobile) await toggle.tap();
+    else await toggle.click();
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+    expect(await page.evaluate(() => localStorage.getItem("cola:theme"))).toBe("light");
+    await page.reload();
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+    await expect(toggle).toBeEnabled();
+    await expect(toggle).toHaveAttribute("aria-checked", "false");
+  } finally {
+    release();
   }
 });
 

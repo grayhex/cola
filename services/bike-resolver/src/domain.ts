@@ -5,7 +5,7 @@ export const querySchema = z
     brand: z.string().trim().min(1).max(60),
     model: z.string().trim().min(1).max(100),
     trim: z.string().trim().max(100).nullable().default(null),
-    year: z.number().int().min(1900).max(2100),
+    year: z.number().int().min(1900).max(2100).nullable().default(null),
   })
   .strict();
 export const requestSchema = querySchema

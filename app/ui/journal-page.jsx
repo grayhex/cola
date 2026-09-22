@@ -1,4 +1,6 @@
 "use client";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import RichTextBody from "./rich-text-body.jsx";
 import { useState, useEffect } from "react";
 import { SocialHeader, SocialFooter, socialApi } from "./social-primitives.jsx";
@@ -10,6 +12,8 @@ import { Heart } from "./icons.jsx";
 import { SaveEntry } from "./journal-card.jsx";
 import { experienceHref } from "../../lib/experience-catalog.js";
 export default function JournalPage({ share = null }) {
+  const router = useRouter();
+  const [bikes, setBikes] = useState([]);
   const [user, setUser] = useState(null),
     [entry, setEntry] = useState(null),
     [bike, setBike] = useState(null),
@@ -42,13 +46,20 @@ export default function JournalPage({ share = null }) {
         } else {
           if (!m.user) throw Error("Войдите в аккаунт, чтобы написать запись");
           const id = new URLSearchParams(location.search).get("bike");
-          const d = await socialApi("bikes/" + id);
+          const d = await socialApi("bikes");
           if (!active) return;
-          setBike(d.bike || d);
+          setBikes(d.bikes);
+          if (id && !d.bikes.some((b) => b.id === id))
+            throw Error(
+              "Велосипед недоступен. Выберите свой велосипед в форме новой записи.",
+            );
+          setBike(d.bikes.find((b) => b.id === id) || null);
         }
         setLoaded(true);
       } catch (e) {
         if (active) setError(e.message);
+      } finally {
+        if (active) setLoaded(true);
       }
     }
     load();
@@ -64,15 +75,35 @@ export default function JournalPage({ share = null }) {
       <main className="social-page journal-page">
         {error && <p role="alert">{error}</p>}
         {!loaded && !error && <p role="status">Загружаем запись…</p>}
-        {!share && bike && (
+        {!share && loaded && user && (
           <>
-            <a href={"/account?tab=bikes&bike=" + bike.id}>К велосипеду</a>
+            {bike && (
+              <Link href={"/account?tab=bikes&bike=" + bike.id}>
+                К велосипеду
+              </Link>
+            )}
             <h1>Новая запись</h1>
-            <JournalEditor
-              bikeId={bike.id}
-              onSaved={(r) => location.assign("/j/" + r.shareId)}
-            />
+            {bikes.length ? (
+              <JournalEditor
+                bikeId={bike?.id || ""}
+                bikes={bikes}
+                onSaved={(r) => router.push("/j/" + r.shareId)}
+              />
+            ) : (
+              <section className="empty-state">
+                <h2>Добавьте велосипед, чтобы вести его журнал</h2>
+                <p>Запись всегда связана с одним из ваших велосипедов.</p>
+                <Link className="button" href="/account?tab=bikes&action=add">
+                  Добавить велосипед
+                </Link>
+              </section>
+            )}
           </>
+        )}
+        {!share && loaded && !user && (
+          <Link className="button" href="/login?next=%2Fj%2Fnew">
+            Войти
+          </Link>
         )}
         {entry &&
           (editing ? (

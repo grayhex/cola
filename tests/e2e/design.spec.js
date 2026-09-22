@@ -1,4 +1,5 @@
 import { testConsents } from "../fixtures/legal.js";
+import { bikeCategories } from "../../lib/bike-classification.js";
 import { test, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import pg from "pg";
@@ -107,7 +108,11 @@ test("dense visual system: shared cards, filters, search, themes and responsive 
         .locator(".card-identity-row h2")
         .evaluate((el) => getComputedStyle(el).fontSize),
     ).toBe("17px");
-    await expect(card.locator(".card-info > *")).toHaveCount(2);
+    await expect(card.locator(".card-info > *")).toHaveCount(3);
+    const classification = card.getByLabel("Классификация", { exact: true });
+    await expect(classification).toBeVisible();
+    expect(await classification.locator(":scope > span").count()).toBeGreaterThan(0);
+    expect(await classification.locator(":scope > span").count()).toBeLessThanOrEqual(3);
     await expect(card.locator(".like-button img")).toHaveCount(0);
     await expect(card.locator(".like-button .site-emoji")).toBeVisible();
     expect(
@@ -131,8 +136,10 @@ test("dense visual system: shared cards, filters, search, themes and responsive 
     ).toHaveCount(0);
     await page.getByRole("button", { name: /^Фильтры/ }).click();
     const panel = page.getByRole("dialog", { name: "Фильтры", exact: true });
-    await panel.getByRole("checkbox").nth(0).check();
-    await panel.getByRole("checkbox").nth(1).check();
+    // The first two new families (MTB + Road/Gravel) now cover all fixture
+    // bikes. Choose an explicit subset rather than relying on catalog order.
+    await panel.getByRole("checkbox", { name: "MTB", exact: true }).check();
+    await panel.getByRole("checkbox", { name: "Город / туризм", exact: true }).check();
     expect(
       await panel
         .getByRole("button", { name: "Применить" })
@@ -143,9 +150,7 @@ test("dense visual system: shared cards, filters, search, themes and responsive 
     await expect(
       page.locator('.filter-chips button[aria-label^="Убрать фильтр"]'),
     ).toHaveCount(2);
-    await expect
-      .poll(async () => page.locator(".bike-card").count())
-      .toBeLessThan(5);
+    await expect(page.locator(".bike-card")).toHaveCount(2);
     const invalid = await page.request.get("/api/showcase?category=unknown");
     expect(invalid.status()).toBe(400);
     while (
@@ -177,8 +182,8 @@ test("dense visual system: shared cards, filters, search, themes and responsive 
         .locator('a[href^="/b/"]'),
     ).toHaveCount(5);
     await page.goto("/?q=" + encodeURIComponent(name));
-    // Simulate a future larger catalogue in the disposable database only.
-    // Production taxonomy and its database constraint remain unchanged.
+    // Legacy catalog keys cannot invent new families: the canonical taxonomy
+    // is versioned with its input schema and database constraint.
     const expanded = structuredClone(originalCatalog);
     for (let i = 0; i < 20; i++)
       expanded.categories["future-" + i] = "Дополнительная категория " + i;
@@ -187,10 +192,14 @@ test("dense visual system: shared cards, filters, search, themes and responsive 
     ]);
     await page.reload();
     await page.getByRole("button", { name: /^Фильтры/ }).click();
-    await expect(panel.getByRole("checkbox")).toHaveCount(23);
+    await expect(panel.getByRole("checkbox")).toHaveCount(Object.keys(bikeCategories).length);
+    for (const label of Object.values(bikeCategories))
+      await expect(panel.getByRole("checkbox", { name: label, exact: true })).toBeVisible();
+    await expect(panel.getByRole("checkbox", { name: /Дополнительная категория/ })).toHaveCount(0);
+    expect((await page.request.get("/api/showcase?category=future-0")).status()).toBe(400);
     await panel.getByRole("checkbox").last().check();
     await noOverflow();
-    await screenshot("long-filter-catalog");
+    await screenshot("canonical-filter-catalog");
     await page.keyboard.press("Escape");
     await expect(panel).not.toBeVisible();
     await expect(page.getByRole("button", { name: /^Фильтры/ })).toBeFocused();

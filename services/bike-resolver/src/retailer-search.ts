@@ -6,7 +6,11 @@ import { trace, checkAbort } from "./context.js";
 import { ResolverError, type BikeQuery, type ResolveResult } from "./domain.js";
 import type { SettingsStore } from "./settings.js";
 
-export function searchLinks(xml: string, query?: BikeQuery, limit = 3): string[] {
+export function searchLinks(
+  xml: string,
+  query?: BikeQuery,
+  limit = 3,
+): string[] {
   const $ = load(xml, { xml: true });
   const model = query ? normalize(query.model).split(" ") : [];
   const entries = $("item")
@@ -15,9 +19,16 @@ export function searchLinks(xml: string, query?: BikeQuery, limit = 3): string[]
     .map((e) => {
       const url = $(e).find("link").text().trim();
       const text = normalize($(e).find("title,description").text() + " " + url);
-      return { url, described: !!$(e).find("title,description").text().trim(), score: model.filter((t) => text.includes(t)).length };
+      return {
+        url,
+        described: !!$(e).find("title,description").text().trim(),
+        score: model.filter((t) => text.includes(t)).length,
+      };
     })
-    .filter((e) => e.url.length <= 2048 && (!model.length || !e.described || e.score > 0))
+    .filter(
+      (e) =>
+        e.url.length <= 2048 && (!model.length || !e.described || e.score > 0),
+    )
     .sort((a, b) => b.score - a.score);
   return [...new Set(entries.map((e) => e.url))].slice(0, limit);
 }
@@ -104,7 +115,8 @@ export class RetailerSearch {
           .sort()
           .join(" ");
         if (
-          result.sourceYear !== query.year ||
+          (query.year !== null && result.sourceYear !== query.year) ||
+          result.sourceYear == null ||
           actual !== wanted ||
           result.warnings?.includes("identity_mismatch")
         ) {

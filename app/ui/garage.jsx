@@ -1,5 +1,17 @@
 "use client";
+import ClassificationFields, {
+  ClassificationBadges,
+  ClassificationFilters,
+} from "./bike-classification.jsx";
+import {
+  bikeCategories,
+  classificationOf,
+  compatibilityCategory,
+  matchesClassification,
+  readClassificationFilters,
+} from "../../lib/bike-classification.js";
 import SiteEmoji from "./site-emoji.jsx";
+import { useConfirmation } from "./confirmation.jsx";
 import ChoiceMenu from "./choice-menu.jsx";
 import { BikeLabels, BikeLike } from "./bike-labels.jsx";
 import Link from "next/link";
@@ -175,7 +187,7 @@ async function api(url, method = "GET", data) {
   if (!r.ok) throw new Error(b.error || "Не удалось выполнить запрос");
   return b;
 }
-function Modal({ title, onClose, children }) {
+function Modal({ title, onClose, children, dismissible = true }) {
   const { settings, catalog, t } = useSite();
   const { categories, models, parts, partCategories, manufacturers } = catalog;
   const ref = useRef();
@@ -204,10 +216,10 @@ function Modal({ title, onClose, children }) {
       ref={ref}
       onCancel={(e) => {
         e.preventDefault();
-        onClose();
+        if (dismissible) onClose();
       }}
       onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
+        if (dismissible && e.target === e.currentTarget) onClose();
       }}
       aria-labelledby="dialog-title"
     >
@@ -239,8 +251,11 @@ export default function Garage({
   startCreate = false,
   initialBikeId = null,
   onAuthenticated,
+  onCreateOpened,
 }) {
   const { personalSettings: settings, catalog, t, setPreferences } = useSite();
+  const [ask, confirmation] = useConfirmation();
+  const [wizardDirty, setWizardDirty] = useState(false);
   const { categories, models, parts, partCategories, manufacturers } = catalog;
   const [user, setUser] = useState(null),
     [bikes, setBikes] = useState([]),
@@ -264,6 +279,20 @@ export default function Garage({
     [params, categories],
   );
   const publicShowcase = !account && !share;
+  const [localFacets, setLocalFacets] = useState(() =>
+    readClassificationFilters(new URLSearchParams()),
+  );
+  const facets = publicShowcase
+    ? readClassificationFilters(params)
+    : localFacets;
+  const facetKey = JSON.stringify(facets);
+  function setFacets(value) {
+    if (publicShowcase) change({ ...value, page: 1 });
+    else {
+      setLocalFacets((previous) => ({ ...previous, ...value }));
+      setLocalPage(1);
+    }
+  }
   const rememberScroll = useShowcaseScroll(publicShowcase && !loading);
   const { sort, filters, query, page } = publicShowcase
     ? parsed
@@ -322,6 +351,7 @@ export default function Garage({
                   sort,
                   page,
                   category: filterKey,
+                  ...facets,
                   q: query,
                 }),
             )
@@ -369,7 +399,7 @@ export default function Garage({
       clearTimeout(timer);
       requestId.current++;
     };
-  }, [share, account, page, filterKey, query, sort]);
+  }, [share, account, page, filterKey, facetKey, query, sort]);
   useEffect(() => {
     if (notice) {
       const t = setTimeout(() => setNotice(""), 4000);
@@ -388,8 +418,11 @@ export default function Garage({
     }
   }
   useEffect(() => {
-    if (startCreate && user) setModal({ type: "bike" });
-  }, [startCreate, user?.id]);
+    if (startCreate && user) {
+      setModal({ type: "bike" });
+      onCreateOpened?.();
+    }
+  }, [startCreate, user?.id, onCreateOpened]);
   const Main = embedded ? "section" : "main";
   const bike = selected;
   const detailReaction = useBikeReaction(bike, user, () => auth());
@@ -412,17 +445,23 @@ export default function Garage({
     setTab("build");
     window.scrollTo({ top: 0 });
   }
-  function close() {
-    if (!busy) {
-      if (
-        modal?.type === "bike" &&
-        !modal.bike &&
-        !window.confirm("Закрыть мастер? Несохранённые данные будут потеряны.")
-      )
-        return;
-      setModal(null);
-      setError("");
-    }
+  async function close() {
+    if (busy) return;
+    if (
+      modal?.type === "bike" &&
+      !modal.bike &&
+      wizardDirty &&
+      !(await ask("Несохранённые данные будут потеряны.", {
+        title: "Закрыть мастер?",
+        confirmLabel: "Закрыть мастер",
+        cancelLabel: "Продолжить редактирование",
+        danger: true,
+      }))
+    )
+      return;
+    setModal(null);
+    setWizardDirty(false);
+    setError("");
   }
   async function refresh() {
     await load();
@@ -434,7 +473,7 @@ export default function Garage({
   const filtered = account
     ? bikes.filter(
         (b) =>
-          (!filters.length || filters.includes(b.category)) &&
+          matchesClassification(b, facets, filters) &&
           `${b.name} ${b.brand} ${b.model}`
             .toLowerCase()
             .includes(query.toLowerCase()),
@@ -532,6 +571,7 @@ export default function Garage({
                   )}
                 </div>
               </div>
+              <ClassificationBadges bike={bike} />
             </div>
             <div className="detail-actions">
               {share && <AuthorLink author={bike.author} />}
@@ -967,7 +1007,7 @@ export default function Garage({
                   />
                 )}
                 <FilterControl
-                  categories={categories}
+                  categories={bikeCategories}
                   selected={filters}
                   onChange={(values) => {
                     setFilters(values);
@@ -1023,6 +1063,7 @@ export default function Garage({
                 setPage(1);
               }}
             />
+            <ClassificationFilters value={facets} onChange={setFacets} />
             <span className={styles.status} role="status">
               {loading
                 ? t("Загружаем велосипеды…")
@@ -1150,6 +1191,7 @@ export default function Garage({
             }[modal.type]
           }
           onClose={close}
+          dismissible={modal.type !== "bike" || !!modal.bike}
         >
           {error && (
             <div className="error" role="alert">
@@ -1198,6 +1240,7 @@ export default function Garage({
           )}
           {modal.type === "bike" && !modal.bike && (
             <BikeWizard
+              onDirtyChange={setWizardDirty}
               onBusy={setBusy}
               onCreated={async (id) => {
                 if (!account) {
@@ -1389,6 +1432,7 @@ export default function Garage({
           )}
         </Modal>
       )}
+      {confirmation}
     </>
   );
 }
@@ -1456,19 +1500,17 @@ function BikeForm({ initial, busy, onSubmit }) {
           placeholder="Canyon Grail CF SLX 8 AXS 2026"
         />
       </Field>
+      <ClassificationFields
+        value={classificationOf(b)}
+        onChange={(classification) =>
+          set((previous) => ({
+            ...previous,
+            classification,
+            category: compatibilityCategory(classification),
+          }))
+        }
+      />
       <div className="form-grid">
-        <Field label={t("Тип")}>
-          <select
-            value={b.category}
-            onChange={(e) => update("category", e.target.value)}
-          >
-            {Object.entries(categories).map(([k, v]) => (
-              <option key={k} value={k}>
-                {v}
-              </option>
-            ))}
-          </select>
-        </Field>
         <Field label={t("Год")}>
           <input
             type="number"
@@ -1536,7 +1578,7 @@ function BikeForm({ initial, busy, onSubmit }) {
         />
       </Field>
       <fieldset className="bike-purposes">
-        <legend>Назначение — необязательно</legend>
+        <legend>Метки опыта — необязательно</legend>
         {catalog.purposes
           .filter((p) => p.enabled || (b.purposes || []).includes(p.id))
           .map((p) => (

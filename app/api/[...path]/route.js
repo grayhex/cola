@@ -1,3 +1,5 @@
+import { classificationOf, categoryFilterLabels } from "../../../lib/bike-classification.js";
+import { classificationQueryInput } from "../../../lib/classification-validation.js";
 import { checkLegalAcceptance, recordLegalAcceptance, LegalError } from "../../../lib/legal-documents.js";
 import { traced, logError } from "../../../lib/observability.js";
 import { resolverProxy } from "../../../lib/resolver-proxy.js";
@@ -236,7 +238,7 @@ async function handler(req, { params }) {
         .parse(url.searchParams.get("category") || "");
       const selectedCategories = category.split(",").filter(Boolean);
       if (selectedCategories.length) {
-        const available = (await getSite()).catalog.categories;
+        const available = categoryFilterLabels;
         if (
           selectedCategories.length > 50 ||
           selectedCategories.some((key) => !Object.hasOwn(available, key))
@@ -252,7 +254,7 @@ async function handler(req, { params }) {
         .enum(["new", "popular", "records"])
         .parse(url.searchParams.get("sort") || "new");
       return json(
-        await showcase(db, user?.id, { page, category, search, sort }),
+        await showcase(db, user?.id, { page, category, search, sort, classification: classificationQueryInput.parse(Object.fromEntries(url.searchParams)) }),
       );
     }
     if (p[0] === "search" && p.length === 1 && method === "GET")
@@ -301,9 +303,11 @@ async function handler(req, { params }) {
       } catch (e) {
         if (e.message === "PREVIEW_EXPIRED")
           return fail(
-            "Результат поиска устарел. Вернитесь к шагу 2 или сохраните без привязки к источнику.",
+            "Результат поиска устарел. Вернитесь к поиску или сохраните без привязки к источнику.",
             409,
           );
+        if (e.message === "IDENTITY_CONFIRMATION_REQUIRED")
+          return json({ error: "Подтвердите отличие модели или года источника", code: "IDENTITY_CONFIRMATION_REQUIRED" }, 409);
         if (e.message === "REQUEST_CONFLICT")
           return fail("Конфликт запроса", 409);
         throw e;
@@ -438,15 +442,22 @@ async function handler(req, { params }) {
           bike: await decorateBike(db, bike, user.id, await getSite()),
         });
       if (method === "PATCH") {
+        const input = await body(req);
+        const previous = classificationOf(bike);
+        // A legacy PATCH must preserve independent features. Only an explicit
+        // old category change resets the family/subtype; missing facets never do.
+        const oldType = Object.hasOwn(input, "category") && input.category !== bike.category
+          ? classificationOf({ category: input.category }) : previous;
         const b = bikeInput.parse({
           ...bike,
+          classification: { ...previous, category: oldType.category, subtype: oldType.subtype },
           weight: bike.weight === null ? null : Number(bike.weight),
           price: bike.price === null ? null : Number(bike.price),
-          ...(await body(req)),
+          ...input,
         });
         await validatePurposes(db, b.purposes, bike.purposes);
         await db.query(
-          "UPDATE bikes SET name=$1,brand=$2,model=$3,year=$4,category=$5,description=$6,color=$7,size=$8,weight=$9,trim=$12,manufacturer_url=$13,price=$14,show_bike_price=$15,show_component_prices=$16,show_accessory_prices=$17,mileage=$18,is_public=$19,purposes=$20,factory_spec=CASE WHEN brand=$2 AND model=$3 AND year=$4 AND trim=$12 THEN factory_spec ELSE NULL END,updated_at=now() WHERE id=$10 AND owner_id=$11",
+          "UPDATE bikes SET name=$1,brand=$2,model=$3,year=$4,category=$5,description=$6,color=$7,size=$8,weight=$9,trim=$12,manufacturer_url=$13,price=$14,show_bike_price=$15,show_component_prices=$16,show_accessory_prices=$17,mileage=$18,is_public=$19,purposes=$20,classification=$21,factory_spec=CASE WHEN brand=$2 AND model=$3 AND year=$4 AND trim=$12 THEN factory_spec ELSE NULL END,updated_at=now() WHERE id=$10 AND owner_id=$11",
           [
             b.name,
             b.brand,
@@ -468,6 +479,7 @@ async function handler(req, { params }) {
             b.mileage,
             b.is_public,
             b.purposes,
+            JSON.stringify(b.classification),
           ],
         );
         return json({ ok: true });

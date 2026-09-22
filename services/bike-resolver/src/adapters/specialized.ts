@@ -19,7 +19,7 @@ export class SpecializedAdapter extends CatalogueAdapter {
     return [
       this.origin +
         "/us/en/search?text=" +
-        encodeURIComponent(q.model + " " + q.year),
+        encodeURIComponent([q.model, q.year].filter(Boolean).join(" ")),
       this.origin + "/us/en/sitemap.xml",
     ];
   }

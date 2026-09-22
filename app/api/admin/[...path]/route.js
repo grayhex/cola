@@ -1,3 +1,4 @@
+import { backgroundDefaults } from "../../../../lib/theme.js";
 import { siteAssetIds } from "../../../../lib/site-assets.js";
 import { prepareSvg } from "../../../../lib/svg-asset.js";
 import { gameAssetInUse } from "../../../../lib/gamification-assets.js";
@@ -103,8 +104,24 @@ async function handler(req, { params }) {
       method === "PUT"
     ) {
       const input = await readJson(req);
+      // Old full-settings clients must not reset newly introduced backgrounds.
+      let submitted = input.value;
+      if (p[0] === "settings" && submitted && typeof submitted === "object") {
+        const before =
+          (await db.query("SELECT value FROM site_settings WHERE id=1")).rows[0]
+            ?.value || {};
+        submitted = {
+          ...Object.fromEntries(
+            Object.keys(backgroundDefaults).map((key) => [
+              key,
+              before[key] ?? backgroundDefaults[key],
+            ]),
+          ),
+          ...submitted,
+        };
+      }
       const value = (p[0] === "settings" ? settingsInput : catalogInput).parse(
-        input.value,
+        submitted,
       );
       if (!Number.isInteger(input.version))
         return fail("Не указана версия настроек");
@@ -235,12 +252,13 @@ async function handler(req, { params }) {
         let image;
         const svg =
           req.headers.get("content-type")?.includes("image/svg+xml") ||
+          /\.svg$/i.test(new URL(req.url).searchParams.get("name") || "") ||
           /^\s*(?:<\?xml[^>]*>\s*)?<svg[\s>]/i.test(
             bytes.toString("utf8", 0, 500).replace(/^\uFEFF/, ""),
           );
         try {
           image = svg
-            ? prepareSvg(bytes)
+            ? await prepareSvg(bytes)
             : await preparePhoto(bytes, { bikePhoto: false });
         } catch (e) {
           return fail(

@@ -19,7 +19,7 @@ const a = client(),
   b = client();
 for (const api of [a, b])
   await api("auth/register", "POST", {
-      ...testConsents,
+    ...testConsents,
     name: "Wizard",
     email: randomUUID() + "@example.test",
     password: "wizard-http-password",
@@ -89,6 +89,17 @@ assert.equal(
   ).status,
   409,
 );
+const accepted = await a("bikes/wizard", "POST", {
+  ...input,
+  requestId: randomUUID(),
+  identityConfirmed: true,
+  bike: { ...input.bike, year: 2025 },
+});
+assert.equal(accepted.status, 201);
+const confirmedBike = (await a("bikes/" + accepted.data.id)).data.bike;
+assert.equal(confirmedBike.year, 2025);
+assert.equal(confirmedBike.factory_spec.query.year, 2024);
+await a("bikes/" + accepted.data.id, "DELETE");
 await a("bikes/" + id, "DELETE");
 console.log(
   "Wizard HTTP: preview ownership, edited components vs factory provenance, atomic creation, idempotent retry, mileage, privacy and validation passed.",

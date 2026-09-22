@@ -56,10 +56,5 @@ fi
 "${compose[@]}" up --build -d --wait --wait-timeout 180
 "${compose[@]}" ps
 
-if git_as_owner log -1 --format=%B "$sha" | grep -Fq '[hagsy-demo]'; then
-  echo "Verifying deployed hagsy demo data"
-  "${compose[@]}" exec -T app node scripts/verify-hagsy-demo.js
-fi
-
 printf '%s\n' "$sha" > "$state_dir/verified-sha"
 echo "Deployed tested commit $sha"

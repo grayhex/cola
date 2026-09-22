@@ -1,3 +1,5 @@
+import { assetContentSecurityPolicy } from "./lib/asset-security.js";
+
 export default {
   output: "standalone",
   experimental:
@@ -22,6 +24,14 @@ export default {
             key: "Permissions-Policy",
             value: "camera=(), microphone=(), geolocation=()",
           },
+        ],
+      },
+      // Keep this last: the generic page policy must not replace the asset
+      // sandbox when Next merges configured headers into a route response.
+      {
+        source: "/api/assets/:id",
+        headers: [
+          { key: "Content-Security-Policy", value: assetContentSecurityPolicy },
         ],
       },
     ];

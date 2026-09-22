@@ -1,3 +1,4 @@
+import { assetContentSecurityPolicy } from "../../../../lib/asset-security.js";
 import { db } from "../../../../lib/db.js";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -22,8 +23,7 @@ export async function GET(req, { params }) {
           "Content-Type": rows[0].filename.endsWith(".svg")
             ? "image/svg+xml"
             : "image/webp",
-          "Content-Security-Policy":
-            "default-src 'none'; style-src 'unsafe-inline'; sandbox",
+          "Content-Security-Policy": assetContentSecurityPolicy,
           "Cache-Control": "no-store",
           "X-Content-Type-Options": "nosniff",
         },

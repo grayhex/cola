@@ -1,4 +1,5 @@
 "use client";
+import { useConfirmation } from "../ui/confirmation.jsx";
 import { useEffect, useRef, useState } from "react";
 import PromptComposer from "../ui/prompt-composer.jsx";
 import { SectionTabs } from "./design-controls.jsx";
@@ -8,6 +9,7 @@ const titles = {
   privacy: "Политика обработки персональных данных",
 };
 export default function LegalSettings({ active }) {
+  const [ask, confirmation] = useConfirmation();
   const [documents, setDocuments] = useState(null),
     [saved, setSaved] = useState(null);
   const [kind, setKind] = useState("terms"),
@@ -28,9 +30,9 @@ export default function LegalSettings({ active }) {
     if (
       loading.current ||
       (dirty &&
-        !window.confirm(
+        !(await ask(
           "Отменить несохранённые изменения документов и загрузить опубликованные данные?",
-        ))
+        )))
     )
       return;
     loading.current = true;
@@ -76,9 +78,9 @@ export default function LegalSettings({ active }) {
     if (busy) return;
     if (
       publish &&
-      !window.confirm(
+      !(await ask(
         "Опубликовать эту редакцию? Она станет обязательной для новых регистраций; прежние принятые версии сохранятся.",
-      )
+      ))
     )
       return;
     const doc = documents[kind];
@@ -114,6 +116,7 @@ export default function LegalSettings({ active }) {
       className={"admin-panel " + styles.panel}
       aria-label="Документы сайта"
     >
+      {confirmation}
       <div className={styles.heading}>
         <h2>Документы сайта</h2>
         <button
@@ -198,9 +201,9 @@ export default function LegalSettings({ active }) {
                       if (!file) return;
                       if (
                         documents[kind].body &&
-                        !window.confirm(
+                        !(await ask(
                           "Заменить текст в редакторе содержимым файла?",
-                        )
+                        ))
                       )
                         return;
                       setBusy(true);

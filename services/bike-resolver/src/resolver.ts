@@ -129,8 +129,11 @@ export class Resolver {
       const selected = selection.ranked.find(
         (c) =>
           c.candidateId === candidateId &&
-          (c.year === q.year || c.year === null) &&
-          c.score >= (c.year === null ? 0.64 : EXPLICIT_MATCH_THRESHOLD),
+          (q.year === null || c.year === q.year || c.year === null) &&
+          c.score >=
+            (q.year === null || c.year === null
+              ? 0.64
+              : EXPLICIT_MATCH_THRESHOLD),
       );
       if (!selected)
         return {

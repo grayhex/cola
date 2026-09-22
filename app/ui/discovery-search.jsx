@@ -1,4 +1,9 @@
 "use client";
+import { ClassificationFilters } from "./bike-classification.jsx";
+import {
+  readClassificationFilters,
+  classificationLabels,
+} from "../../lib/bike-classification.js";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
@@ -25,6 +30,11 @@ export default function DiscoverySearch() {
     type = params.get("type") || "all",
     page = Math.max(1, Number(params.get("page")) || 1);
   const key = params.toString();
+  const facets = {
+    ...readClassificationFilters(params),
+    category: params.get("category") || "",
+  };
+  const hasFacets = Object.values(facets).some(Boolean);
   useEffect(() => {
     let active = true;
     fetch("/api/me")
@@ -76,7 +86,19 @@ export default function DiscoverySearch() {
             Расширенный поиск и опыт владельцев →
           </Link>
         </div>
-        <SearchBox initialQuery={query} />
+        <SearchBox initialQuery={query} filters={{ ...facets, type }} />
+        <ClassificationFilters
+          withCategory
+          value={facets}
+          onChange={(next) => {
+            const url = new URLSearchParams(key);
+            Object.entries(next).forEach(([k, v]) =>
+              v ? url.set(k, v) : url.delete(k),
+            );
+            url.delete("page");
+            window.history.replaceState(null, "", "/search?" + url);
+          }}
+        />
         <nav className={styles.tabs} aria-label="Тип результатов">
           {tabs.map(([value, label]) => (
             <Link
@@ -104,7 +126,7 @@ export default function DiscoverySearch() {
         {!data && !error && <p role="status">Ищем…</p>}
         {data && (
           <p className={styles.summary} role="status">
-            {!query.trim()
+            {!query.trim() && !hasFacets
               ? "Введите название велосипеда, компонента или маршрута."
               : data.total
                 ? `Найдено: ${data.total}`
@@ -146,8 +168,7 @@ export default function DiscoverySearch() {
                       {item.subtitle}
                       {item.metadata.category
                         ? " · " +
-                          (catalog.categories[item.metadata.category] ||
-                            item.metadata.category)
+                          classificationLabels(item.metadata).join(" · ")
                         : ""}
                       {item.metadata.weight
                         ? " · " + Number(item.metadata.weight) + " кг"

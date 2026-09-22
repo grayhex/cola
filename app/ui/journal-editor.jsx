@@ -6,11 +6,12 @@ import { journalKinds } from "../../lib/journal-kinds.js";
 export default function JournalEditor({
   entry = null,
   bikeId,
+  bikes = null,
   onSaved,
   onCancel,
 }) {
   const [form, setForm] = useState({
-    bikeId: entry?.bike.id || bikeId,
+    bikeId: entry?.bike.id || bikeId || "",
     kind: entry?.kind || "story",
     installationResult: entry?.installationResult || null,
     title: entry?.title || "",
@@ -33,6 +34,11 @@ export default function JournalEditor({
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
   useEffect(() => {
     let active = true;
+    setBike(null);
+    setRides([]);
+    setRidePage(1);
+    setRideTotal(0);
+    if (!form.bikeId) return;
     Promise.all([
       socialApi("bikes/" + form.bikeId),
       socialApi("rides?own=1&bikeId=" + form.bikeId),
@@ -64,6 +70,7 @@ export default function JournalEditor({
     let record = saved;
     try {
       const input = { ...form, status };
+      if (!input.bikeId) throw Error("Выберите велосипед для записи");
       if (status === "published" && (!input.title.trim() || !input.body.trim()))
         throw Error("Для публикации нужны заголовок и текст");
       // Save text first as a draft when new uploads are pending. Publication is last,
@@ -113,9 +120,40 @@ export default function JournalEditor({
         submit("published");
       }}
     >
+      {bikes && !entry && (
+        <label className="field">
+          <span>Велосипед для записи</span>
+          <select
+            required
+            aria-label="Велосипед для записи"
+            disabled={busy || !!saved}
+            value={form.bikeId}
+            onChange={(e) => {
+              setError("");
+              setForm((f) => ({
+                ...f,
+                bikeId: e.target.value,
+                rideId: null,
+                componentIds: [],
+              }));
+            }}
+          >
+            <option value="">Выберите свой велосипед</option>
+            {bikes.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.name}
+                {!b.is_public ? " · приватный" : ""}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       <p className="help">
-        Велосипед: {bike?.name || entry?.bike.name || "Загружаем…"}. Публичность
-        записи не может превышать публичность велосипеда.
+        Велосипед:{" "}
+        {bike?.name ||
+          entry?.bike.name ||
+          (form.bikeId ? "Загружаем…" : "не выбран")}
+        . Публичность записи не может превышать публичность велосипеда.
       </p>
       <label className="field">
         <span>Тип записи</span>

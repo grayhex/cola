@@ -85,10 +85,10 @@ test("Garmin parses quoted CSV, timezone, thousands, negatives, missing data and
   ])
     assert.throws(() => assertMatchingTrack(ride, m));
 });
-test("animated SVG keeps local CSS and SMIL and rejects active or external content", () => {
+test("animated SVG keeps local CSS and SMIL and rejects active or external content", async () => {
   const safe =
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80"><style>@keyframes spin{to{transform:rotate(360deg)}}.wheel{animation:spin 3s linear infinite}</style><circle class="wheel" cx="40" cy="40" r="20"><animate attributeName="opacity" values="0.4;1;0.4" dur="2s" repeatCount="indefinite"/></circle></svg>';
-  assert.equal(prepareSvg(Buffer.from(safe)).toString(), safe);
+  assert.equal((await prepareSvg(Buffer.from(safe))).toString(), safe);
   for (const child of [
     "<script>alert(1)</script>",
     "<foreignObject/>",
@@ -98,7 +98,9 @@ test("animated SVG keeps local CSS and SMIL and rejects active or external conte
     '<animate attributeName="href" values="javascript:alert(1)"/>',
     "<style>path{fill:url(https://example.test/x)}</style>",
   ])
-    assert.throws(() => prepareSvg(Buffer.from("<svg>" + child + "</svg>")));
+    await assert.rejects(() =>
+      prepareSvg(Buffer.from("<svg>" + child + "</svg>")),
+    );
 });
 test("Garmin lifecycle, safe GPX binding, planned invitations and market publication keep access boundaries", async () => {
   const db = new PGlite(),

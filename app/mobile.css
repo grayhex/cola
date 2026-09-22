@@ -1,5 +1,8 @@
 /* Feature layouts; shared colors and controls live in theme/product-ui. */
 .site-root { min-height: 100dvh; position: relative; isolation: isolate; background: var(--bg); color: var(--text); font-family: var(--site-font); }
+/* Decorative layer only. Text, photos and controls retain full opacity. */
+.site-root::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none; background-position: center; }
+
 .site-root p,
 .site-root .muted,
 .site-root .help {

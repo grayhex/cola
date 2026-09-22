@@ -110,7 +110,9 @@ export async function findCandidates(
       return searchLinks(doc.body, query, 6);
     }),
     withinBudget(12000, async () =>
-      settings.value.retailerSearch && query.year < new Date().getUTCFullYear()
+      settings.value.retailerSearch &&
+      query.year !== null &&
+      query.year < new Date().getUTCFullYear()
         ? archiveLinks(http, query)
         : [],
     ),

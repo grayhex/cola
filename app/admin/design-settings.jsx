@@ -56,6 +56,49 @@ export function ThemeSettings({ settings: s, onChange }) {
           </span>
         </div>
       </div>
+      <h3>Фон сайта</h3>
+      <p className="help">
+        Изображения выбираются отдельно в «Графика → Фон сайта». Фон меняется
+        вместе с темой; прозрачность не затрагивает текст и карточки.
+      </p>
+      <div className="admin-form-grid">
+        {[
+          ["Light", "Светлая тема"],
+          ["Dark", "Тёмная тема"],
+        ].map(([key, label]) => (
+          <fieldset key={key} className={styles.compactPanel}>
+            <legend>{label}</legend>
+            <Select
+              label={"Размещение фона · " + label.toLowerCase()}
+              value={s[`background${key}Mode`] || "cover"}
+              options={[
+                ["cover", "Масштабировать на экран"],
+                ["tile", "Замостить"],
+              ]}
+              onChange={(v) => onChange(`background${key}Mode`, v)}
+            />
+            <Field
+              label={"Прозрачность фона · " + label.toLowerCase()}
+              help={`${100 - (s[`background${key}Opacity`] ?? 20)}% · 100% полностью скрывает изображение`}
+            >
+              <input
+                aria-label={"Прозрачность фона · " + label.toLowerCase()}
+                type="range"
+                min="0"
+                max="100"
+                step="1"
+                value={100 - (s[`background${key}Opacity`] ?? 20)}
+                onChange={(e) =>
+                  onChange(
+                    `background${key}Opacity`,
+                    100 - Number(e.target.value),
+                  )
+                }
+              />
+            </Field>
+          </fieldset>
+        ))}
+      </div>
     </section>
   );
 }
@@ -77,7 +120,7 @@ export function HomepageSettings({
           <AssetPicker
             key={key}
             label={label}
-            help="Прозрачный SVG с CSS или SMIL-анимацией · до 1 МБ. Без внешних ресурсов."
+            help="Локальный SVG-файл с CSS/SMIL-анимацией · до 1 МБ. Встроенные PNG/JPEG/WebP поддерживаются; внешние файлы и Lottie JSON не поддерживаются."
             value={s[key]}
             assets={assets}
             busy={busy}

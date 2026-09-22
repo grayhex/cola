@@ -1,4 +1,6 @@
 "use client";
+import { ClassificationFilters } from "./bike-classification.jsx";
+import { readClassificationFilters } from "../../lib/bike-classification.js";
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import {
@@ -15,6 +17,8 @@ import JournalCard from "./journal-card.jsx";
 import { CompactDialog } from "./compact-ui.jsx";
 import { SlidersHorizontal } from "./icons.jsx";
 const empty = {
+  ...readClassificationFilters(new URLSearchParams()),
+  category: "",
   q: "",
   brand: "",
   model: "",
@@ -139,6 +143,14 @@ export default function ExperienceSearch({ modelPage = false }) {
           </label>
           <button className="button small">Найти</button>
         </form>
+        <ClassificationFilters
+          withCategory
+          value={{
+            ...readClassificationFilters(new URLSearchParams(form)),
+            category: form.category || "",
+          }}
+          onChange={(v) => search({ ...form, ...v, page: 1 })}
+        />
         <nav className="journal-modes" aria-label="Тип результатов">
           {[
             ["bikes", "Велосипеды"],
@@ -274,11 +286,7 @@ export default function ExperienceSearch({ modelPage = false }) {
             {data.type === "bikes" ? (
               <BikeGrid bikes={data.items}>
                 {data.items.map((b) => (
-                  <BikeCard
-                    key={b.id}
-                    bike={b}
-                    user={user}
-                  />
+                  <BikeCard key={b.id} bike={b} user={user} />
                 ))}
               </BikeGrid>
             ) : data.type === "journal" ? (
