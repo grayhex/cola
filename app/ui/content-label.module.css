@@ -56,10 +56,15 @@
   background: var(--paper);
   min-width: 0;
 }
-.photoActions button { min-height: 36px; }
+/* Beat the global .site-root .bike-card .hf-like rule after moving actions out of card-social.
+   Pointer size must remain usable at every breakpoint, not just on phones. */
+:global(.site-root) .photoActions.photoActions :is(button, a) {
+  min-width: 44px;
+  min-height: 44px;
+}
 .compactMedia { display: flex; flex-direction: column; align-items: stretch; gap: 6px; min-width: 0; }
 .compactMedia [data-bike-photo-actions] { margin-top: 0; justify-content: center; }
-.compactMedia [data-bike-photo-actions] button { min-height: 36px; min-width: 44px; justify-content: center; }
+.compactMedia [data-bike-photo-actions] button { justify-content: center; }
 .eventCard.eventCard { --event-tone: #64748b; border-inline-start: 3px solid color-mix(in srgb, var(--event-tone) 65%, var(--line)); }
 .eventCard[data-event="bike"] { --event-tone: #3b82f6; }
 .eventCard[data-event="ride"] { --event-tone: #22a35a; }
@@ -67,6 +72,3 @@
 .eventCard[data-event="market"] { --event-tone: #cf861c; }
 .eventCard[data-event="journal"], .eventCard[data-event="article"] { --event-tone: #149d96; }
 .eventCard[data-event="achievement"] { --event-tone: #d6618f; }
-@media (max-width: 600px) {
-  .photoActions button, .compactMedia [data-bike-photo-actions] button { min-height: 44px; }
-}

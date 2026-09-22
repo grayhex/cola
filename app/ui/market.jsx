@@ -355,9 +355,11 @@ export default function Market({ share = null, create = false }) {
   const filterKey = writeMarketQuery(filters);
   function changeFilters(patch) {
     const next = { ...filters, page: 1, ...patch };
-    setFilters(next);
-    setData(null);
     const queryString = writeMarketQuery(next);
+    // An unchanged request keeps its result and does not add a history entry.
+    // Only the loading effect clears data when it actually starts a request.
+    if (queryString === filterKey) return;
+    setFilters(next);
     window.history.pushState(null, "", "/market" + (queryString ? "?" + queryString : ""));
   }
   useEffect(() => {
@@ -367,7 +369,7 @@ export default function Market({ share = null, create = false }) {
       const state = readMarketQuery(p);
       setFilters(state);
       setSearch(state.query);
-      setData(null);
+      // Equivalent history URLs can have the same filterKey: keep their data.
       setEdit(create || p.get("edit") === "1");
     };
     restore();

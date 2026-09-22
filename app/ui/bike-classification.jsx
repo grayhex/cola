@@ -142,10 +142,14 @@ export function ClassificationBadges({ bike }) {
   const uses = classification.uses.map((key) => useLabels[key]);
   return (
     <>
-      {labels.slice(0, uses.length ? 2 : 3).map((text, i) => (
-        <ContentLabel key={text} tone={tone} data-bike-label={i === 0 ? "type" : "feature"}
-          title={labels.join(" · ")}>{text}</ContentLabel>
-      ))}
+      {!!labels.length && (
+        <span className={styles.badges} role="group" aria-label="Классификация">
+          {labels.map((text, i) => (
+            <ContentLabel key={text} tone={tone} data-bike-label={i === 0 ? "type" : "feature"}
+              title={labels.join(" · ")}>{text}</ContentLabel>
+          ))}
+        </span>
+      )}
       {!!uses.length && (
         <ContentLabel tone={tone} data-bike-label="use" aria-label={"Назначения: " + uses.join(", ")}>
           {uses.join(" · ")}
