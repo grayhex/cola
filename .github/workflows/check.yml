@@ -21,9 +21,8 @@ on:
 permissions:
   contents: read
 
-# Only automatic runs supersede one another. Manual/reusable verification gets
-# a run-specific key: never cancel a caller that may already be deploying.
-# PR and main keys are distinct; PR success does not replace testing main.
+# Automatic PR/main runs supersede only their own predecessors. Manual/reusable
+# verification keeps a run-specific key and cannot cancel a deploying caller.
 concurrency:
   group: cola-ci-${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || (github.event_name == 'push' && github.ref) || github.run_id }}
   cancel-in-progress: true
@@ -67,8 +66,15 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
+          cache-dependency-path: services/bike-resolver/package-lock.json
       - run: corepack enable && corepack prepare pnpm@11.19.0 --activate
-      - run: pnpm install --frozen-lockfile
+      - uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/pnpm-store
+          key: ${{ runner.os }}-node22-pnpm-${{ hashFiles('pnpm-lock.yaml', 'pnpm-workspace.yaml') }}
+          restore-keys: ${{ runner.os }}-node22-pnpm-
+      - run: pnpm install --frozen-lockfile --store-dir "$RUNNER_TEMP/pnpm-store"
       - name: Application unit and database tests
         run: pnpm test
       - name: Production build
@@ -117,33 +123,21 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
+          cache-dependency-path: services/bike-resolver/package-lock.json
       - run: corepack enable && corepack prepare pnpm@11.19.0 --activate
-      - run: pnpm install --frozen-lockfile
+      - uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/pnpm-store
+          key: ${{ runner.os }}-node22-pnpm-${{ hashFiles('pnpm-lock.yaml', 'pnpm-workspace.yaml') }}
+          restore-keys: ${{ runner.os }}-node22-pnpm-
+      - run: pnpm install --frozen-lockfile --store-dir "$RUNNER_TEMP/pnpm-store"
       - run: npm ci
         working-directory: services/bike-resolver
-      # A short local build avoids transferring a large .next artifact between
-      # runners. Unit/Resolver tests are NOT repeated in the browser jobs.
+      # Keep builds local to isolated browser runners, without repeating unit tests.
       - name: Production build for the isolated browser environment
         run: pnpm build
-      - name: Select one browser without changing the test harness
-        run: |
-          test ! -e .ci-playwright.base.js
-          cp playwright.config.js .ci-playwright.base.js
-          cat > playwright.config.js <<'JS'
-          import { defineConfig } from "@playwright/test";
-          import base from "./.ci-playwright.base.js";
-          const name = process.env.COLA_CI_PLAYWRIGHT_PROJECT;
-          const projects = base.projects?.filter((project) => project.name === name);
-          if (!name || projects?.length !== 1) {
-            throw new Error(`Expected exactly one Playwright project: ${name}`);
-          }
-          export default defineConfig({
-            ...base,
-            projects,
-            workers: 1,
-            fullyParallel: false,
-          });
-          JS
+      # The harness passes native --project; the committed config keeps workers=1.
       - name: Install only this job's browser and system dependencies
         run: pnpm exec playwright install --with-deps "$COLA_CI_PLAYWRIGHT_BROWSER"
       - name: Browser tests with an isolated database and file storage
@@ -166,11 +160,32 @@ jobs:
           ref: ${{ needs.prepare.outputs.sha }}
       - name: Compose assertions
         run: python3 scripts/test-compose.py
-      - name: Disposable backup and restore drill
+      - uses: docker/setup-buildx-action@v3
+      - name: Build final application image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          push: false
+          tags: cola-ci-app:${{ needs.prepare.outputs.sha }}
+          cache-from: type=gha,scope=cola-app
+          cache-to: type=gha,scope=cola-app,mode=max
+      - name: Build final Resolver image
+        uses: docker/build-push-action@v6
+        with:
+          context: services/bike-resolver
+          load: true
+          push: false
+          tags: cola-ci-resolver:${{ needs.prepare.outputs.sha }}
+          cache-from: type=gha,scope=cola-resolver
+          cache-to: type=gha,scope=cola-resolver,mode=max
+      - name: Final-image migrations, runtime and backup restore drill
+        env:
+          COLA_TEST_APP_IMAGE: cola-ci-app:${{ needs.prepare.outputs.sha }}
+          COLA_TEST_RESOLVER_IMAGE: cola-ci-resolver:${{ needs.prepare.outputs.sha }}
         run: bash scripts/test-backup-drill.sh
 
-  # Keep the required branch-protection status named "check". An upstream skip,
-  # cancellation or failure must NEVER turn this gate green on an active run.
+  # Preserve the required status "check": skip, cancellation and failure cannot pass.
   check:
     needs: [prepare, core, e2e, operations]
     if: always()

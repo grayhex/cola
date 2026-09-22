@@ -1,20 +1,28 @@
+# syntax=docker/dockerfile:1
 FROM node:22-alpine AS dependencies
 WORKDIR /app
 RUN corepack enable && corepack prepare pnpm@11.19.0 --activate
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-RUN pnpm install --frozen-lockfile
+RUN --mount=type=cache,id=cola-pnpm-store,target=/pnpm/store,sharing=locked \
+    pnpm install --frozen-lockfile --store-dir=/pnpm/store --package-import-method=copy
 
 FROM dependencies AS builder
-COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
+COPY next.config.mjs ./
+COPY app ./app
+COPY lib ./lib
+COPY db ./db
+COPY public ./public
+COPY scripts/build-version.js scripts/copy-maplibre-worker.js ./scripts/
 RUN pnpm build && rm -rf .next/standalone/node_modules
 
 FROM node:22-alpine AS runtime-dependencies
 WORKDIR /app
 RUN corepack enable && corepack prepare pnpm@11.19.0 --activate
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-# Keep a complete production dependency graph for unbundled operator scripts.
-RUN pnpm install --prod --frozen-lockfile
+# Unbundled migration/operator commands need the complete production graph.
+RUN --mount=type=cache,id=cola-pnpm-store,target=/pnpm/store,sharing=locked \
+    pnpm install --prod --frozen-lockfile --store-dir=/pnpm/store --package-import-method=copy
 
 FROM node:22-alpine AS runner
 WORKDIR /app
@@ -25,9 +33,14 @@ COPY --from=runtime-dependencies --chown=colabike:colabike /app/node_modules ./n
 COPY --from=builder --chown=colabike:colabike /app/.next/static ./.next/static
 COPY --from=builder --chown=colabike:colabike /app/public ./public
 COPY --from=builder --chown=colabike:colabike /app/db ./db
-COPY --from=builder --chown=colabike:colabike /app/scripts ./scripts
 COPY --from=builder --chown=colabike:colabike /app/lib ./lib
+# Host backup/restore and test/benchmark harnesses deliberately stay outside.
+COPY --chown=colabike:colabike \
+    scripts/check-runtime.js scripts/migrate.js \
+    scripts/bootstrap-admin.js scripts/set-admin.js \
+    scripts/audit-photo-files.js scripts/recalculate-photo-storage.js \
+    scripts/cleanup-rides.js ./scripts/
 RUN node --input-type=module -e "await import('./lib/rides.js'); await import('./lib/factory-import.js')"
 USER colabike
 EXPOSE 3000
-CMD ["sh", "-c", "node scripts/check-runtime.js && node scripts/migrate.js && node server.js"]
+CMD ["sh", "-c", "node scripts/check-runtime.js && node scripts/migrate.js && exec node server.js"]
