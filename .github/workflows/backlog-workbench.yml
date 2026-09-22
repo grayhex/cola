@@ -1,0 +1,42 @@
+name: Backlog 49–59 isolated workbench
+on:
+  push:
+    branches: [work/backlog-49-59-validation]
+    paths: [.github/workflows/backlog-workbench.yml, workbench/ready.txt]
+permissions:
+  contents: read
+concurrency:
+  group: backlog-49-59-workbench
+  cancel-in-progress: true
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: f17a7fa65114608c949f8093c43e01c2d77f9150
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: corepack enable && corepack prepare pnpm@11.19.0 --activate
+      - run: pnpm install --frozen-lockfile
+      - run: npm ci
+        working-directory: services/bike-resolver
+      - name: Snapshot tracked source and locked dependencies for local validation
+        run: |
+          git archive --format=tar.gz -o /tmp/cola-source.tar.gz HEAD
+          tar -czf /tmp/cola-dependencies.tar.gz node_modules services/bike-resolver/node_modules
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cola-development-source
+          path: /tmp/cola-source.tar.gz
+          retention-days: 1
+          compression-level: 0
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cola-locked-dependencies
+          path: /tmp/cola-dependencies.tar.gz
+          retention-days: 1
+          compression-level: 0
