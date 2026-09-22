@@ -1,0 +1,7 @@
+Validation 2: fix failures from run 35726813958.
+Frozen base: f17a7fa65114608c949f8093c43e01c2d77f9150.
+Keep the reviewed four-commit backlog patch and apply fix-01-backlog-regressions.patch.
+Fix patch Git blob: 39a9fa8e35b9d4f502a81466be8d1b5052ad4276.
+Local verification: exact git-am replay, JS/JSX syntax, graphics catalog assertions, Chromium label reproduction.
+Require full application/migration tests, production build, Resolver tests/build, PostgreSQL HTTP, Chromium, WebKit-mobile, Compose and backup restore before publishing feat/backlog-49-59.
+No test exclusions, timeout increases, production changes or merge.
