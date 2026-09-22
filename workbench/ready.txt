@@ -1,6 +1,0 @@
-Validation 4: the remaining assertions from run 35734424447.
-Frozen base f17a7fa65114608c949f8093c43e01c2d77f9150; replay original four commits and all three fix patches.
-Fix-03 blob: 377f731668cd98e8d57af3263e0732c3e9b1c6ec. Local syntax and exact git-am replay/tree comparison passed.
-The third patch changes tests only: the filter dialog must expose the six canonical families, not obsolete keys injected into the legacy catalog; invalid injected keys remain rejected by HTTP validation. The existing narrow homepage hides its decorative animation stage, so assert that state and verify the uploaded raster SVG renders in touch landscape before restoring the mobile viewport.
-Asset sandbox headers now passed real PostgreSQL HTTP checks; Chromium verified complete local SVG upload/rendering and background/theme changes in validation 3. No application or security relaxation in fix-03.
-Keep full application/migration tests, production build, Resolver tests/build, full PostgreSQL HTTP, full Chromium and WebKit-mobile sets and real disposable backup restore as mandatory gates. Publish clean feat/backlog-49-59 only after all succeed. No merge/deploy; no timeout increases or test exclusions.
