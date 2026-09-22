@@ -179,11 +179,14 @@ async function handler(req, { params }) {
       if (!uuid.safeParse(p[1]).success)
         return fail("Велосипед не найден", 404);
       const rows = await db.query(
-        "SELECT b.* FROM bikes b JOIN users u ON u.id=b.owner_id WHERE b.share_id=$1 AND b.is_public=true AND u.blocked=false",
-        [p[1]],
+        "SELECT b.* FROM bikes b JOIN users u ON u.id=b.owner_id WHERE b.share_id=$1 AND (b.is_public=true OR b.owner_id=$2) AND u.blocked=false",
+        [p[1], user?.id || null],
       );
-      const bike = rows.rows[0]
-        ? await decorateBike(db, rows.rows[0], user?.id, await getSite(), true)
+      const row = rows.rows[0];
+      // Only the authenticated owner receives editing fields and hidden prices.
+      // Guests and other users retain the exact public DTO allowlist.
+      const bike = row
+        ? await decorateBike(db, row, user?.id, await getSite(), row.owner_id !== user?.id)
         : null;
       return bike
         ? json({ bike })
@@ -456,8 +459,9 @@ async function handler(req, { params }) {
           ...input,
         });
         await validatePurposes(db, b.purposes, bike.purposes);
+        // Updating this row serializes with the FOR UPDATE guard in ride writes.
         await db.query(
-          "UPDATE bikes SET name=$1,brand=$2,model=$3,year=$4,category=$5,description=$6,color=$7,size=$8,weight=$9,trim=$12,manufacturer_url=$13,price=$14,show_bike_price=$15,show_component_prices=$16,show_accessory_prices=$17,mileage=$18,is_public=$19,purposes=$20,classification=$21,factory_spec=CASE WHEN brand=$2 AND model=$3 AND year=$4 AND trim=$12 THEN factory_spec ELSE NULL END,updated_at=now() WHERE id=$10 AND owner_id=$11",
+          "UPDATE bikes SET name=$1,brand=$2,model=$3,year=$4,category=$5,description=$6,color=$7,size=$8,weight=$9,trim=$12,manufacturer_url=$13,price=$14,show_bike_price=$15,show_component_prices=$16,show_accessory_prices=$17,mileage=$18,is_public=$19,purposes=$20,classification=$21,is_former=$22,factory_spec=CASE WHEN brand=$2 AND model=$3 AND year=$4 AND trim=$12 THEN factory_spec ELSE NULL END,updated_at=now() WHERE id=$10 AND owner_id=$11",
           [
             b.name,
             b.brand,
@@ -480,6 +484,7 @@ async function handler(req, { params }) {
             b.is_public,
             b.purposes,
             JSON.stringify(b.classification),
+            b.is_former,
           ],
         );
         return json({ ok: true });
