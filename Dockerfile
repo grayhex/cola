@@ -29,7 +29,11 @@ WORKDIR /app
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 HOSTNAME=0.0.0.0 PORT=3000
 RUN addgroup -S colabike && adduser -S colabike -G colabike && mkdir uploads rides && chown colabike:colabike uploads rides
 COPY --from=builder --chown=colabike:colabike /app/.next/standalone ./
-COPY --from=runtime-dependencies --chown=colabike:colabike /app/node_modules ./node_modules
+# Avoid BuildKit's cross-stage hardlink copier for pnpm license entries.
+# Copy regular files independently, retaining pnpm's relative symlinks.
+RUN --mount=type=bind,from=runtime-dependencies,source=/app/node_modules,target=/runtime-node_modules \
+    node --input-type=module -e "import { cp } from 'node:fs/promises'; await cp('/runtime-node_modules', './node_modules', { recursive: true, dereference: false, verbatimSymlinks: true, force: false, errorOnExist: true });" && \
+    chown -R colabike:colabike ./node_modules
 COPY --from=builder --chown=colabike:colabike /app/.next/static ./.next/static
 COPY --from=builder --chown=colabike:colabike /app/public ./public
 COPY --from=builder --chown=colabike:colabike /app/db ./db

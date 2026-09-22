@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { access, readFile, readdir } from "node:fs/promises";
+import { access, readFile, readdir, mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -16,8 +17,33 @@ async function files(dir) {
 }
 async function exists(file) {
   try { await access(file); return true; }
-  catch (error) { if (error.code === "ENOENT") return false; throw error; }
+  catch (error) {
+    // A candidate such as icons.jsx/index.js has a file as its parent.
+    if (error.code === "ENOENT" || error.code === "ENOTDIR") return false;
+    throw error;
+  }
 }
+
+test("repository path probes reject invalid candidates without masking filesystem errors", async (t) => {
+  const dir = await mkdtemp(path.join(tmpdir(), "cola-import-probes-"));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  const file = path.join(dir, "icons.jsx");
+  await writeFile(file, "export default {};\n");
+  // Probe the same candidates as the import scan, including file/index.js.
+  // A valid file must not be rejected because another candidate yields ENOTDIR.
+  assert.deepEqual(await Promise.all([
+    file, file + ".js", file + ".jsx", path.join(file, "index.js"),
+  ].map(exists)), [true, false, false, false]);
+  await mkdir(path.join(dir, "component"));
+  await writeFile(path.join(dir, "component/index.js"), "export default {};\n");
+  assert.equal(await exists(path.join(dir, "component/index.js")), true);
+  const missing = path.join(dir, "missing");
+  assert.equal((await Promise.all([
+    missing, missing + ".js", missing + ".jsx", path.join(missing, "index.js"),
+  ].map(exists))).some(Boolean), false, "Missing imports must still fail resolution");
+  // Only path-absence errors may be converted to false, not arbitrary failures.
+  await assert.rejects(exists("\0"), { code: "ERR_INVALID_ARG_VALUE" });
+});
 
 test("handbook manifest and relative document/image links resolve in this tree", async () => {
   const book = JSON.parse(await readFile(path.join(root, "docs/book.json"), "utf8"));
