@@ -6,7 +6,7 @@ export const EXPLICIT_MATCH_THRESHOLD = 0.88;
 export function scoreCandidate(q: BikeQuery, c: BikeCandidate): number {
   if (
     normalize(q.brand) !== normalize(c.brand) ||
-    (c.year !== null && q.year !== c.year)
+    (q.year !== null && c.year !== null && q.year !== c.year)
   )
     return 0;
   const strip = (s: string) => {
@@ -38,7 +38,9 @@ export function scoreCandidate(q: BikeQuery, c: BikeCandidate): number {
     wantedWords.every((t) => words.has(t));
   return (
     Math.round(
-      ((c.year === q.year ? 0.7 : 0.35) + (exact ? 0.29 : 0.18)) * 100,
+      ((q.year === null ? 0.6 : c.year === q.year ? 0.7 : 0.35) +
+        (exact ? 0.29 : 0.18)) *
+        100,
     ) / 100
   );
 }

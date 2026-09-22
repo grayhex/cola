@@ -438,12 +438,30 @@ test("guest sign-in continues the requested add-bike action", async ({
     .getByLabel("Пароль", { exact: true })
     .fill("club-browser-password");
   await dialog.getByLabel("Подтвердите пароль").fill("club-browser-password");
-  await dialog.getByRole("checkbox", { name: "Принять пользовательское соглашение" }).check();
-  await dialog.getByRole("checkbox", { name: "Согласен с политикой обработки персональных данных" }).check();
+  await dialog
+    .getByRole("checkbox", { name: "Принять пользовательское соглашение" })
+    .check();
+  await dialog
+    .getByRole("checkbox", {
+      name: "Согласен с политикой обработки персональных данных",
+    })
+    .check();
   await dialog.getByRole("button", { name: "Создать аккаунт" }).click();
   await expect(
-    page.getByRole("dialog").getByLabel("Тип велосипеда"),
+    page
+      .getByRole("dialog")
+      .getByLabel("Модель, год и комплектация", { exact: true }),
   ).toBeVisible();
-  await expect(page).toHaveURL(/action=add/);
+  // Consuming the intent prevents a reload from reopening the wizard; it
+  // must remain possible to request a fresh wizard from this same SPA page.
+  await expect(page).toHaveURL(/\/account\?tab=bikes$/);
   await expect(page.locator(".garage-banner")).toHaveCount(0);
+  const wizard = page.getByRole("dialog", { name: "Новый велосипед", exact: true });
+  await wizard.getByRole("button", { name: "Закрыть", exact: true }).click();
+  await expect(wizard).not.toBeVisible();
+  await page.reload();
+  await expect(page.getByRole("button", { name: "Добавить велосипед", exact: true })).toBeVisible();
+  await expect(wizard).toHaveCount(0);
+  await page.getByRole("button", { name: "Добавить велосипед", exact: true }).click();
+  await expect(wizard.getByLabel("Модель, год и комплектация", { exact: true })).toHaveValue("");
 });

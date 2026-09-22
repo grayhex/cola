@@ -5,6 +5,7 @@ import { Search, ArrowRight, Bike, Route, Wrench } from "lucide-react";
 import styles from "./search-box.module.css";
 export default function SearchBox({
   initialQuery = "",
+  filters = {},
   hero = false,
   contained = false,
   autoFocus = false,
@@ -20,6 +21,7 @@ export default function SearchBox({
     root = useRef(null),
     id = useId(),
     router = useRouter();
+  const filterKey = new URLSearchParams(filters).toString();
   const items = groups.flatMap((g) => g.items);
   useEffect(() => setQuery(initialQuery), [initialQuery]);
   useEffect(() => {
@@ -56,7 +58,7 @@ export default function SearchBox({
       try {
         const response = await fetch(
           "/api/discovery/search?" +
-            new URLSearchParams({ q: term, suggest: "1" }),
+            new URLSearchParams({ ...filters, q: term, suggest: "1" }),
           { signal: controller.signal, cache: "no-store" },
         );
         if (!response.ok) throw Error();
@@ -77,7 +79,7 @@ export default function SearchBox({
       clearTimeout(timer);
       controller.abort();
     };
-  }, [query]);
+  }, [query, filterKey]);
   useEffect(() => {
     if (!open) return;
     const outside = (e) => {
@@ -104,7 +106,7 @@ export default function SearchBox({
     navigate(
       active >= 0 && items[active]
         ? items[active].href
-        : "/search?" + new URLSearchParams({ q: term }),
+        : "/search?" + new URLSearchParams({ ...filters, q: term }),
     );
   }
   let index = -1;
@@ -215,7 +217,10 @@ export default function SearchBox({
             className={styles.all}
             type="button"
             onClick={() =>
-              navigate("/search?" + new URLSearchParams({ q: query.trim() }))
+              navigate(
+                "/search?" +
+                  new URLSearchParams({ ...filters, q: query.trim() }),
+              )
             }
           >
             Все результаты <ArrowRight size={16} />

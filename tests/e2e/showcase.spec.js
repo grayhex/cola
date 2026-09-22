@@ -19,8 +19,14 @@ async function register(page, name) {
   await page
     .locator("input[name=confirmPassword]")
     .fill("different-secret-123");
-  await page.getByRole("checkbox", { name: "Принять пользовательское соглашение" }).check();
-  await page.getByRole("checkbox", { name: "Согласен с политикой обработки персональных данных" }).check();
+  await page
+    .getByRole("checkbox", { name: "Принять пользовательское соглашение" })
+    .check();
+  await page
+    .getByRole("checkbox", {
+      name: "Согласен с политикой обработки персональных данных",
+    })
+    .check();
   await page
     .getByRole("button", { name: "Создать аккаунт", exact: true })
     .click();
@@ -53,16 +59,22 @@ test("registration, touch autocomplete, bike/photo, public feed, like and revoke
     .getByRole("button", { name: "Добавить велосипед", exact: true })
     .click();
   const dialog = page.getByRole("dialog");
-  await dialog.getByLabel("Тип велосипеда").selectOption("mtb");
-  await expect(dialog.getByLabel("Год", { exact: true })).toHaveValue(
-    String(new Date().getFullYear()),
-  );
-  const brand = dialog.getByRole("combobox", {
-    name: "Производитель",
-    exact: true,
-  });
-  await brand.fill("");
-  await brand.click();
+  await expect(dialog.getByLabel("Год", { exact: true })).toHaveCount(0);
+  await dialog
+    .getByLabel("Модель, год и комплектация", { exact: true })
+    .fill("Cube Aim 2020");
+  await dialog.getByLabel("Название в гараже · необязательно").fill(bikeName);
+  await dialog
+    .getByRole("button", { name: "Заполнить вручную", exact: true })
+    .click();
+  await dialog.getByRole("button", { name: "Далее", exact: true }).click();
+  await dialog
+    .getByLabel("Категория велосипеда", { exact: true })
+    .selectOption("mtb");
+  await expect(dialog.getByLabel("Год", { exact: true })).toHaveValue("2020");
+  const size = dialog.getByRole("combobox", { name: "Ростовка", exact: true });
+  await size.fill("");
+  await size.click();
   const popup = dialog.locator(".combo-popup").first();
   await expect(popup).toBeVisible();
   // A moving/cancelled touch must not commit a value, including its synthetic click.
@@ -89,36 +101,19 @@ test("registration, touch autocomplete, bike/photo, public feed, like and revoke
     clientY: 60,
   });
   await row.dispatchEvent("click", { detail: 1 });
-  await expect(brand).toHaveValue("");
-  await brand.fill("Cub");
-  const cube = dialog
+  await expect(size).toHaveValue("");
+  await size.fill("M");
+  const medium = dialog
     .locator(".combo-popup")
-    .getByRole("option", { name: "Cube", exact: true });
-  if (isMobile) await cube.tap();
-  else await cube.click();
-  await expect(brand).toHaveValue("Cube");
-  const model = dialog.getByRole("combobox", { name: "Модель", exact: true });
-  await model.click();
-  const option = dialog.locator(".combo-popup").getByRole("option").first();
-  const modelName = await option.textContent();
-  if (isMobile) await option.tap();
-  else await option.click();
-  await expect(model).toHaveValue(modelName);
+    .getByRole("option", { name: "M", exact: true });
+  if (isMobile) await medium.tap();
+  else await medium.click();
+  await expect(size).toHaveValue("M");
   await expect
     .poll(() =>
-      page.evaluate(
-        () => document.documentElement.scrollWidth <= window.innerWidth,
-      ),
+      page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
     )
     .toBe(true);
-  await dialog.getByLabel("Год", { exact: true }).fill("2020");
-  await dialog.getByLabel("Название в гараже · необязательно").fill(bikeName);
-  await dialog.getByRole("button", { name: "Далее", exact: true }).click();
-  await expect(
-    dialog.getByRole("button", { name: "Далее", exact: true }),
-  ).toBeEnabled();
-  await dialog.getByRole("button", { name: "Далее", exact: true }).click();
-  await dialog.getByRole("button", { name: "Далее", exact: true }).click();
   const bytes = await sharp({
     create: { width: 600, height: 400, channels: 3, background: "#ff6633" },
   })

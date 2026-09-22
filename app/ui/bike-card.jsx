@@ -1,4 +1,5 @@
 "use client";
+import { ClassificationBadges } from "./bike-classification.jsx";
 import { BikeLabels, BikeLike } from "./bike-labels.jsx";
 import Link from "next/link";
 import { Heart, Lock, MessageCircle, Bike } from "./icons.jsx";
@@ -46,6 +47,7 @@ export default function BikeCard({
           </h2>
           <BikeLabels bike={b} />
         </div>
+        <ClassificationBadges bike={b} />
         <div className={`card-social ${styles.social}`}>
           <AuthorLink author={b.author} />
           {b.is_public && (

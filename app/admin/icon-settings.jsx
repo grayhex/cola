@@ -16,7 +16,9 @@ export default function IconSettings({
   onUpload,
 }) {
   const [search, setSearch] = useState("");
-  const slots = filterGraphicSlots(illustrationSlots, search);
+  const [group, setGroup] = useState("all");
+  const groups = [...new Set(illustrationSlots.map((slot) => slot.group))];
+  const slots = filterGraphicSlots(illustrationSlots, search, group);
   return (
     <section
       className={"admin-panel " + styles.compactPanel}
@@ -27,15 +29,24 @@ export default function IconSettings({
         Фотографии велосипедов, иллюстрации проекта и иконка вкладки.
         Изображение главной меняется в разделе «Главная».
       </p>
-      <label className="field">
-        <span>Найти графику</span>
-        <input
-          type="search"
-          value={search}
-          placeholder="Например: велосипед"
-          onChange={(e) => setSearch(e.target.value)}
-        />
-      </label>
+      <div className={styles.toolbar}>
+        <label className="field">
+          <span>Найти графику</span>
+          <input
+            type="search"
+            value={search}
+            placeholder="Например: велосипед"
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </label>
+        <label className="field">
+          <span>Группа</span>
+          <select aria-label="Группа" value={group} onChange={(e) => setGroup(e.target.value)}>
+            <option value="all">Все группы</option>
+            {groups.map((name) => <option key={name} value={name}>{name}</option>)}
+          </select>
+        </label>
+      </div>
       <div className={styles.graphicGrid}>
         {slots.map((slot) => (
           <AssetPicker

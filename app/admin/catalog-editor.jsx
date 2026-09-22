@@ -1,4 +1,5 @@
 "use client";
+import { bikeCategories } from "../../lib/bike-classification.js";
 import { useState } from "react";
 import { Plus, Trash2, ChevronUp, ChevronDown } from "../ui/icons.jsx";
 import PartIcon from "../ui/part-icon.jsx";
@@ -33,7 +34,7 @@ function ListEditor({ values, onChange, label }) {
 export default function CatalogEditor({ value: c, onChange }) {
   const [kind, setKind] = useState("bikes"), [type, setType] = useState("gravel"), [brand, setBrand] = useState("");
   const [newBrand, setNewBrand] = useState(""), [brandName, setBrandName] = useState(""), [section, setSection] = useState("build"), [category, setCategory] = useState("");
-  const brands = Object.keys(c.models[type]);
+  const brands = Object.keys(c.models[type] || {});
   const selectedBrand = brands.includes(brand) ? brand : brands[0] || "";
   const allCategories = [...new Set([...c.partCategories.build, ...c.partCategories.accessories, ...Object.keys(c.parts)])];
   const selectedCategory = allCategories.includes(category) ? category : allCategories[0] || "";
@@ -57,7 +58,7 @@ export default function CatalogEditor({ value: c, onChange }) {
             models(Object.fromEntries(Object.entries(c.models[type]).map(([key, value]) => [key === selectedBrand ? brandName.trim() : key, value])));
             setBrand(brandName.trim()); setBrandName("");
           }}>Переименовать</button></div>
-        <h3>Модели {selectedBrand}</h3><ListEditor label="Модель велосипеда" values={c.models[type][selectedBrand] || []} onChange={(value) => models({ ...c.models[type], [selectedBrand]: value })} />
+        <h3>Модели {selectedBrand}</h3><ListEditor label="Модель велосипеда" values={c.models[type]?.[selectedBrand] || []} onChange={(value) => models({ ...c.models[type], [selectedBrand]: value })} />
         <button className="quiet danger" onClick={() => { const next = { ...c.models[type] }; delete next[selectedBrand]; models(next); setBrand(""); }}>Убрать марку из справочника</button>
       </>}
     </>}
@@ -79,7 +80,7 @@ export default function CatalogEditor({ value: c, onChange }) {
         if (target) onChange({ ...c, parts: { ...c.parts, [target]: [...new Set([...(c.parts[target] || []), ...(c.parts[selectedCategory] || [])])] } });
       }} options={[["", "Выберите категорию"], ...allCategories.filter((key) => key !== selectedCategory).map((key) => [key, key])]} />
     </>}
-    {kind === "types" && Object.entries(c.categories).map(([key, label]) => <Field key={key} label={"Название типа: " + key}>
+    {kind === "types" && Object.keys(bikeCategories).map((key) => [key, c.categories[key] || bikeCategories[key]]).map(([key, label]) => <Field key={key} label={"Название типа: " + key}>
       <input value={label} onChange={(e) => onChange({ ...c, categories: { ...c.categories, [key]: e.target.value } })} /></Field>)}
   </section>;
 }

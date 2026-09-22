@@ -10,7 +10,7 @@ export class GiantAdapter extends CatalogueAdapter {
   protected rows = { row: "li.datarow", label: ".label", value: ".value" };
   protected direct(q: BikeQuery) {
     return [
-      `${this.origin}/gb/${normalize(q.model + " " + (q.trim || "")).replaceAll(" ", "-")}-${q.year}`,
+      `${this.origin}/gb/${normalize(q.model + " " + (q.trim || "")).replaceAll(" ", "-")}${q.year == null ? "" : "-" + q.year}`,
     ];
   }
   protected seeds() {

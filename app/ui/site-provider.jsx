@@ -3,6 +3,7 @@ import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { accentText } from "../../lib/appearance.js";
 import {
   appearanceDefaults,
+  backgroundCss,
   resolveTheme,
   themeStorageKey,
   validTheme,
@@ -15,7 +16,7 @@ export function ThemeStyle({ settings }) {
     ? settings.appearance.accent
     : appearanceDefaults.accent;
   return (
-    <style>{`:root{--accent:${accent};--accent-foreground:${accentText(accent)};--photo-ratio:${settings.photoRatio || "4/3"};--desktop-columns:${settings.desktopColumns || 3};--heading-align:${settings.textAlign || "left"}}`}</style>
+    <style>{`:root{--accent:${accent};--accent-foreground:${accentText(accent)};--photo-ratio:${settings.photoRatio || "4/3"};--desktop-columns:${settings.desktopColumns || 3};--heading-align:${settings.textAlign || "left"}}${backgroundCss(settings)}`}</style>
   );
 }
 export default function SiteProvider({ initial, children }) {
@@ -27,6 +28,10 @@ export default function SiteProvider({ initial, children }) {
   const defaultTheme = validTheme(site.settings.appearance?.theme);
   const [themePreference, setPreference] = useState(defaultTheme);
   const currentPreference = useRef(defaultTheme);
+  const [themeReady, setThemeReady] = useState(false);
+  const [resolvedTheme, setResolvedTheme] = useState(
+    defaultTheme === "dark" ? "dark" : "light",
+  );
   useEffect(() => {
     const media = window.matchMedia("(prefers-color-scheme: dark)");
     const apply = () => {
@@ -40,10 +45,10 @@ export default function SiteProvider({ initial, children }) {
       currentPreference.current = preference;
       setPreference(preference);
       document.documentElement.dataset.themePreference = preference;
-      document.documentElement.dataset.theme = resolveTheme(
-        preference,
-        media.matches,
-      );
+      const actual = resolveTheme(preference, media.matches);
+      document.documentElement.dataset.theme = actual;
+      setResolvedTheme(actual);
+      setThemeReady(true);
     };
     apply();
     media.addEventListener("change", apply);
@@ -61,10 +66,12 @@ export default function SiteProvider({ initial, children }) {
     currentPreference.current = preference;
     setPreference(preference);
     document.documentElement.dataset.themePreference = preference;
-    document.documentElement.dataset.theme = resolveTheme(
+    const actual = resolveTheme(
       preference,
       matchMedia("(prefers-color-scheme: dark)").matches,
     );
+    document.documentElement.dataset.theme = actual;
+    setResolvedTheme(actual);
   }
   // The UI uses one component system. Personal preferences only control content presentation.
   const effective = {
@@ -92,6 +99,8 @@ export default function SiteProvider({ initial, children }) {
         setPreferences,
         personalSettings: effective,
         themePreference,
+        resolvedTheme,
+        themeReady,
         setThemePreference,
       }}
     >

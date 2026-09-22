@@ -1,3 +1,4 @@
+import { assetContentSecurityPolicy } from "../lib/asset-security.js";
 import { testConsents } from "./fixtures/legal.js";
 // Use only with scripts/test-db.js and the app pointed to that disposable database.
 import assert from "node:assert/strict";
@@ -125,7 +126,11 @@ try {
   });
   assert.equal(upload.status, 201);
   asset = (await upload.json()).id;
-  assert.equal((await fetch(base + "/api/assets/" + asset)).status, 200);
+  const servedAsset = await fetch(base + "/api/assets/" + asset);
+  assert.equal(servedAsset.status, 200);
+  assert.equal(servedAsset.headers.get("content-security-policy"), assetContentSecurityPolicy);
+  assert.equal(servedAsset.headers.get("x-content-type-options"), "nosniff");
+  await servedAsset.arrayBuffer();
   let latest = (await admin("admin/overview")).data;
   assert.equal(
     (

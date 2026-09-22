@@ -7,6 +7,7 @@ export async function archiveLinks(
   http: ManufacturerHttpClient,
   query: BikeQuery,
 ): Promise<string[]> {
+  if (query.year === null) return [];
   const origin = "https://bikepedia.azurewebsites.net";
   const url = new URL("/QuickBike/Bikes.aspx", origin);
   url.searchParams.set("year", String(query.year));

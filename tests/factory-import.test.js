@@ -33,7 +33,8 @@ test("factory import seeds empty configuration once, preserves user parts and re
       "015_discovery",
       "016_product_ui",
       "017_rides_market",
-    "018_articles_rsvp",
+      "018_articles_rsvp",
+      "020_bike_classification",
     ])
       await db.exec(
         await readFile(new URL("../db/" + f + ".sql", import.meta.url), "utf8"),

@@ -18,7 +18,7 @@ export const queryKey = (q: {
   brand: string;
   model: string;
   trim: string | null;
-  year: number;
+  year: number | null;
 }) =>
   JSON.stringify([
     normalize(q.brand),

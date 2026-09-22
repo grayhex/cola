@@ -105,7 +105,7 @@ test("navigation: real destinations, account, keyboard, configurable About and a
     const registered = await page.request.post("/api/auth/register", {
       headers: { origin },
       data: {
-      ...testConsents,
+        ...testConsents,
         name,
         email: suffix + "@nav.example.test",
         password: "navigation-e2e-secret-123",
@@ -173,7 +173,9 @@ test("navigation: real destinations, account, keyboard, configurable About and a
       .getByRole("link", { name: "Добавить велосипед", exact: true })
       .click();
     await expect(
-      page.getByRole("dialog").getByLabel("Тип велосипеда"),
+      page
+        .getByRole("dialog")
+        .getByLabel("Модель, год и комплектация", { exact: true }),
     ).toBeVisible();
     await page.goto("/about");
     await db.query("UPDATE users SET role='admin' WHERE id=$1", [user.id]);

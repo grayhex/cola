@@ -1,8 +1,9 @@
 "use client";
 import RideAccount from "./ride-account.jsx";
+import { useSearchParams } from "next/navigation";
 import BikeGrid from "./bike-grid.jsx";
 import { BadgeShelf } from "./achievements.jsx";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Plus,
   ExternalLink,
@@ -336,6 +337,7 @@ function Appearance({ initial, onSaved }) {
   );
 }
 export default function Account() {
+  const params = useSearchParams();
   const [user, setUser] = useState(undefined),
     [data, setData] = useState(null),
     [bikes, setBikes] = useState([]),
@@ -359,16 +361,22 @@ export default function Account() {
     }
   }
   useEffect(() => {
-    const requested = new URLSearchParams(window.location.search).get("tab");
-    if (tabs[requested]) setTab(requested);
-    if (requested === "bikes")
-      setSelected(new URLSearchParams(window.location.search).get("bike"));
-    if (
-      requested === "bikes" &&
-      new URLSearchParams(window.location.search).get("action") === "add"
-    )
-      setCreate(true);
     refresh().catch((e) => setError(e.message));
+  }, []);
+  // Next navigation within /account does not remount Account. Observe the URL,
+  // including a repeated add request after closing a previous wizard.
+  useEffect(() => {
+    const requested = params.get("tab");
+    setTab(tabs[requested] ? requested : "overview");
+    setSelected(requested === "bikes" ? params.get("bike") : null);
+    setCreate(requested === "bikes" && params.get("action") === "add");
+  }, [params]);
+  const createOpened = useCallback(() => {
+    setCreate(false);
+    const next = new URL(window.location.href);
+    next.searchParams.delete("action");
+    next.searchParams.set("tab", "bikes");
+    window.history.replaceState(null, "", next.pathname + next.search);
   }, []);
   function navigate(next) {
     setCreate(false);
@@ -440,8 +448,11 @@ export default function Account() {
                   <button
                     className="button small"
                     onClick={() => {
-                      setCreate(true);
-                      setTab("bikes");
+                      window.history.replaceState(
+                        null,
+                        "",
+                        "/account?tab=bikes&action=add",
+                      );
                     }}
                   >
                     <Plus size={16} />
@@ -517,6 +528,7 @@ export default function Account() {
                 account
                 embedded
                 startCreate={create}
+                onCreateOpened={createOpened}
                 initialBikeId={selected}
               />
             )}

@@ -3,6 +3,11 @@ import { test, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import sharp from "sharp";
 const origin = process.env.TEST_ORIGIN || "http://localhost:3100";
+async function confirm(page, message) {
+  const dialog = page.getByRole("alertdialog");
+  await expect(dialog).toContainText(message);
+  await dialog.getByRole("button", { name: "Продолжить", exact: true }).click();
+}
 test("wizard live trace, stop, partial import and mobile review", async ({
   page,
 }, info) => {
@@ -23,14 +28,11 @@ test("wizard live trace, stop, partial import and mobile review", async ({
     .click();
   const dialog = page.getByRole("dialog");
   await dialog
-    .getByRole("combobox", { name: "Производитель", exact: true })
-    .fill("Giant");
+    .getByLabel("Модель, год и комплектация", { exact: true })
+    .fill("Giant Contend AR 1 2024");
   await dialog
-    .getByRole("combobox", { name: "Модель", exact: true })
-    .fill("Contend");
-  await dialog.getByLabel("Комплектация / версия").fill("AR 1");
-  await dialog.getByLabel("Год", { exact: true }).fill("2024");
-  await dialog.getByRole("button", { name: "Далее", exact: true }).click();
+    .getByRole("button", { name: "Найти комплектацию", exact: true })
+    .click();
   await expect(dialog.locator(".resolver-timeline")).toBeVisible();
   await expect(dialog.locator(".wizard-candidate").first()).toBeVisible();
   await dialog.locator(".wizard-candidate").first().click();
@@ -59,10 +61,11 @@ test("wizard live trace, stop, partial import and mobile review", async ({
   await dialog
     .getByLabel("Страница велосипеда", { exact: true })
     .fill("https://www.velo-port.ru/test-bike");
-  page.on("dialog", (d) => d.accept());
   await dialog
     .getByRole("button", { name: "Распознать страницу", exact: true })
     .click();
+  await confirm(page, "Повторный поиск заменит черновик комплектации");
+  await confirm(page, "Модель или год отличаются");
   await expect(dialog).toContainText("Найдена часть комплектации");
   await expect(dialog.locator(".wizard-found")).toContainText("3 из 3");
   await dialog.getByRole("button", { name: "Далее", exact: true }).click();
@@ -105,6 +108,7 @@ test("wizard live trace, stop, partial import and mobile review", async ({
   await dialog
     .getByRole("button", { name: "Распознать страницу", exact: true })
     .click();
+  await confirm(page, "Повторный поиск заменит черновик комплектации");
   await started;
   await dialog
     .getByRole("button", { name: "Остановить поиск", exact: true })
@@ -137,18 +141,13 @@ test("wizard quick setup, identity confirmation, image size and successful save"
     .getByRole("button", { name: "Добавить велосипед", exact: true })
     .click();
   const dialog = page.getByRole("dialog");
-  await expect(dialog.getByLabel("Год", { exact: true })).toHaveValue(
-    String(new Date().getFullYear()),
-  );
+  await expect(dialog.getByLabel("Год", { exact: true })).toHaveCount(0);
   await dialog
-    .getByRole("combobox", { name: "Производитель", exact: true })
-    .fill("Giant");
+    .getByLabel("Модель, год и комплектация", { exact: true })
+    .fill("Giant Contend AR 1 2024");
   await dialog
-    .getByRole("combobox", { name: "Модель", exact: true })
-    .fill("Contend");
-  await dialog.getByLabel("Комплектация / версия").fill("AR 1");
-  await dialog.getByLabel("Год", { exact: true }).fill("2024");
-  await dialog.getByRole("button", { name: "Далее", exact: true }).click();
+    .getByRole("button", { name: "Найти комплектацию", exact: true })
+    .click();
   await expect(dialog.locator(".wizard-candidate").first()).toBeVisible();
   await dialog.locator(".wizard-candidate").first().click();
   await expect(dialog.locator(".wizard-found")).toBeVisible();
@@ -164,19 +163,25 @@ test("wizard quick setup, identity confirmation, image size and successful save"
   const prompts = [];
   page.on("dialog", async (d) => {
     prompts.push(d.message());
-    await d.accept();
+    await d.dismiss();
   });
   await dialog
     .getByRole("button", { name: "Распознать страницу", exact: true })
     .click();
+  await confirm(page, "Повторный поиск заменит черновик комплектации");
+  await confirm(page, "Модель или год отличаются");
   await expect(dialog).toContainText("Найдена часть комплектации");
-  expect(prompts.some((p) => p.includes("Модель или год отличаются"))).toBe(
-    true,
-  );
+  expect(prompts).toEqual([]);
   await dialog.getByRole("button", { name: "Далее", exact: true }).click();
   await dialog.locator(".wizard-add-picker summary").click();
   await expect(dialog.locator(".wizard-group-add button")).toHaveCount(7);
   await dialog.getByRole("button", { name: "Далее", exact: true }).click();
+  await dialog
+    .getByLabel("Категория велосипеда", { exact: true })
+    .selectOption("road_gravel");
+  await dialog
+    .getByLabel("Подтип велосипеда", { exact: true })
+    .selectOption("road");
   const small = await sharp({
     create: { width: 100, height: 100, channels: 3, background: "white" },
   })

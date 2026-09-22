@@ -1,4 +1,12 @@
 "use client";
+import { useConfirmation } from "./confirmation.jsx";
+import ClassificationFields from "./bike-classification.jsx";
+import SiteEmoji from "./site-emoji.jsx";
+import {
+  emptyClassification,
+  compatibilityCategory,
+} from "../../lib/bike-classification.js";
+import { parseBikeSearch } from "../../lib/bike-search-input.js";
 import { useEffect, useRef, useState } from "react";
 import {
   Bike,
@@ -18,7 +26,7 @@ import { bicycleName, draftId } from "../../lib/wizard-options.js";
 import { bikeInput, componentInput } from "../../lib/validation.js";
 import { resolveWithTrace } from "../../lib/resolver-stream.js";
 import ResolverTimeline from "./resolver-timeline.jsx";
-const steps = ["Модель", "Поиск комплектации", "Компоненты", "Детали и фото"];
+const steps = ["Поиск комплектации", "Компоненты", "Детали и фото"];
 const failures = {
   unsupported_brand: "Этот производитель пока не поддерживается.",
   not_found: "Комплектация не найдена.",
@@ -49,16 +57,19 @@ function Progress({ text }) {
     </div>
   );
 }
-export default function BikeWizard({ onCreated, onBusy }) {
+export default function BikeWizard({ onCreated, onBusy, onDirtyChange }) {
   const { catalog, settings } = useSite();
+  const [ask, confirmation] = useConfirmation();
+  const [searchText, setSearchText] = useState("");
   const [step, setStep] = useState(0),
     [bike, setBike] = useState({
       brand: "",
       model: "",
       trim: "",
-      year: String(new Date().getFullYear()),
+      year: "",
       name: "",
-      category: "gravel",
+      category: "",
+      classification: { ...emptyClassification },
       description: "",
       color: "",
       size: "",
@@ -92,11 +103,10 @@ export default function BikeWizard({ onCreated, onBusy }) {
       brand: bike.brand.trim(),
       model: bike.model.trim(),
       trim: bike.trim.trim() || null,
-      year: Number(bike.year),
+      year: bike.year === "" ? null : Number(bike.year),
     },
     key = JSON.stringify(query);
-  const started = useRef(""),
-    acceptedIdentity = useRef(""),
+  const acceptedIdentity = useRef(""),
     requestId = useRef(null),
     resolveAbort = useRef(),
     photoAbort = useRef(),
@@ -124,25 +134,63 @@ export default function BikeWizard({ onCreated, onBusy }) {
     onBusy?.(saving);
     return () => onBusy?.(false);
   }, [saving, onBusy]);
+  const dirty = !!(
+    searchText ||
+    bike.name ||
+    bike.brand ||
+    bike.model ||
+    bike.trim ||
+    bike.year ||
+    bike.description ||
+    bike.color ||
+    bike.size ||
+    bike.weight ||
+    bike.price ||
+    bike.mileage ||
+    bike.manufacturer_url ||
+    bike.is_public ||
+    bike.show_bike_price ||
+    bike.show_component_prices ||
+    bike.show_accessory_prices ||
+    bike.classification.category ||
+    bike.classification.subtype ||
+    bike.classification.suspension ||
+    bike.classification.construction ||
+    bike.classification.electric ||
+    bike.classification.fatbike ||
+    bike.classification.uses.length ||
+    parts.length ||
+    files.length ||
+    chosen.length ||
+    url
+  );
+  useEffect(() => {
+    onDirtyChange?.(dirty);
+  }, [dirty, onDirtyChange]);
   useEffect(() => {
     const warn = (e) => {
-      if (!completed.current && (bike.brand || parts.length)) {
+      if (!completed.current && dirty) {
         e.preventDefault();
         e.returnValue = "";
       }
     };
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
-  }, [bike.brand, parts.length]);
+  }, [dirty]);
   const update = (k, v) => setBike((b) => ({ ...b, [k]: v }));
-  async function resolve(sourceUrl = "", candidateId) {
+  async function resolve(sourceUrl = "", candidateId, identity = query) {
     if (
       parts.length &&
-      !window.confirm(
-        "Повторный поиск заменит черновик комплектации. Продолжить?",
-      )
+      !(await ask("Повторный поиск заменит черновик комплектации. Продолжить?"))
     )
       return;
+    setBike((previous) => ({
+      ...previous,
+      ...identity,
+      trim: identity.trim || "",
+      year: identity.year == null ? "" : String(identity.year),
+    }));
+    acceptedIdentity.current = JSON.stringify(identity);
     resolveAbort.current?.abort();
     const controller = new AbortController();
     resolveAbort.current = controller;
@@ -157,7 +205,7 @@ export default function BikeWizard({ onCreated, onBusy }) {
     try {
       const d = await resolveWithTrace(
         {
-          ...query,
+          ...identity,
           ...(sourceUrl
             ? { sourceUrl }
             : candidateId
@@ -175,8 +223,8 @@ export default function BikeWizard({ onCreated, onBusy }) {
         d.status === "resolved" &&
         d.warnings?.includes("identity_mismatch")
       ) {
-        const accepted = window.confirm(
-          `Источник описывает «${d.bike.canonicalName}»${d.sourceYear ? ` (${d.sourceYear})` : ""}. Вы указали «${query.brand} ${query.model} ${query.trim || ""} ${query.year}». Модель или год отличаются. Использовать эту комплектацию?`,
+        const accepted = await ask(
+          `Источник описывает «${d.bike.canonicalName}»${d.sourceYear ? ` (${d.sourceYear})` : ""}. Вы указали «${identity.brand} ${identity.model} ${identity.trim || ""} ${identity.year || ""}». Модель или год отличаются. Использовать эту комплектацию?`,
         );
         if (!accepted) {
           setMessage(
@@ -206,6 +254,8 @@ export default function BikeWizard({ onCreated, onBusy }) {
               "Нужно уточнить вариант модели.",
       );
       if (d.status === "resolved") {
+        if (identity.year == null && d.sourceYear)
+          update("year", String(d.sourceYear));
         setManualMode(false);
         photoAbort.current?.abort();
         setPhotoBusy(false);
@@ -247,36 +297,16 @@ export default function BikeWizard({ onCreated, onBusy }) {
       }
     }
   }
-  useEffect(() => {
-    if (step !== 1 || started.current === key) return;
-    started.current = key;
-    let cancelled = false;
-    const controller = new AbortController();
-    resolveAbort.current = controller;
-    setMessage("Проверяем поддержку производителя…");
-    setResolving(true);
-    api("resolver-brands", undefined, controller.signal)
-      .then((config) => {
-        if (cancelled || controller.signal.aborted) return;
-        setResolving(false);
-        if (config.autoResolve !== false) resolve();
-        else
-          setMessage(
-            "Этот производитель пока не поддерживается или отключён. Укажите страницу магазина — попробуем прочитать её комплектацию.",
-          );
-      })
-      .catch(() => {
-        if (!cancelled && !controller.signal.aborted) {
-          setResolving(false);
-          setMessage(
-            "Парсер недоступен. Можно попробовать позже или заполнить компоненты вручную.",
-          );
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [step, key]);
+  async function search(sourceUrl = "") {
+    const identity = parseBikeSearch(searchText, catalog.models);
+    if (!identity) {
+      setError(
+        "Введите марку и модель. Год и комплектацию можно добавить, если знаете.",
+      );
+      return;
+    }
+    await resolve(sourceUrl, undefined, identity);
+  }
   async function searchPhotos() {
     photoAbort.current?.abort();
     const controller = new AbortController();
@@ -312,7 +342,14 @@ export default function BikeWizard({ onCreated, onBusy }) {
     }
   }
   useEffect(() => {
-    if (step === 3 && photos === null && !photoBusy) searchPhotos();
+    if (
+      step === 2 &&
+      photos === null &&
+      !photoBusy &&
+      query.brand &&
+      query.model
+    )
+      searchPhotos();
   }, [step]);
   const groups = groupedComponents(parts, catalog.componentGroups);
   function addPart(group, chosenCategory) {
@@ -338,39 +375,45 @@ export default function BikeWizard({ onCreated, onBusy }) {
   function edit(id, k, v) {
     setParts((p) => p.map((c) => (c.id === id ? { ...c, [k]: v } : c)));
   }
-  function next() {
+  async function next() {
     setError("");
     if (step === 0) {
-      if (
-        !query.brand ||
-        !query.model ||
-        !Number.isInteger(query.year) ||
-        query.year < 1900 ||
-        query.year > 2100
-      ) {
-        setError("Укажите производителя, модель и корректный год.");
+      const identity = parseBikeSearch(searchText, catalog.models);
+      if (searchText.trim() && !identity) {
+        setError(
+          "Введите марку и модель или очистите поиск для ручного заполнения.",
+        );
         return;
       }
-      if (acceptedIdentity.current && acceptedIdentity.current !== key) {
-        if (
-          parts.length &&
-          !window.confirm(
-            "Идентификация изменилась. Сбросить предыдущую комплектацию и найденные фото?",
+      if (identity) {
+        const nextKey = JSON.stringify(identity);
+        if (acceptedIdentity.current && acceptedIdentity.current !== nextKey) {
+          if (
+            parts.length &&
+            !(await ask(
+              "Идентификация изменилась. Сбросить предыдущую комплектацию и найденные фото?",
+            ))
           )
-        )
-          return;
-        setParts([]);
-        photoAbort.current?.abort();
-        setPhotoBusy(false);
-        setResult(null);
-        setPhotos(null);
-        setChosen([]);
-        setUrl("");
-        started.current = "";
+            return;
+          setParts([]);
+          setResult(null);
+          setChosen([]);
+          setPhotos(null);
+          photoAbort.current?.abort();
+          setPhotoBusy(false);
+          setIdentityConfirmed(false);
+        }
+        if (!acceptedIdentity.current || acceptedIdentity.current !== nextKey)
+          setBike((previous) => ({
+            ...previous,
+            ...identity,
+            trim: identity.trim || "",
+            year: identity.year == null ? "" : String(identity.year),
+          }));
+        acceptedIdentity.current = nextKey;
       }
-      acceptedIdentity.current = key;
     }
-    if (step === 2) {
+    if (step === 1) {
       const invalid = parts.find((p) => !componentInput.safeParse(p).success);
       if (invalid) {
         setOpenGroup(
@@ -384,7 +427,7 @@ export default function BikeWizard({ onCreated, onBusy }) {
         return;
       }
     }
-    setStep((s) => Math.min(3, s + 1));
+    setStep((s) => Math.min(2, s + 1));
   }
   async function save() {
     const fields = {
@@ -398,11 +441,32 @@ export default function BikeWizard({ onCreated, onBusy }) {
       weight: bike.weight === "" ? null : Number(bike.weight),
       mileage: Number(bike.mileage),
     };
+    if (
+      !savedId &&
+      (!fields.classification.category || !Number.isInteger(fields.year))
+    ) {
+      setError(
+        "Выберите категорию велосипеда и укажите год на последнем шаге.",
+      );
+      return;
+    }
     if (!savedId && !bikeInput.safeParse(fields).success) {
       setError(
         "Проверьте дополнительные поля: вес должен быть больше нуля, пробег — целым неотрицательным числом, стоимость — неотрицательной, ссылка — HTTP/HTTPS.",
       );
       return;
+    }
+    let confirmed = identityConfirmed;
+    if (
+      !savedId &&
+      result?.status === "resolved" &&
+      (result.sourceYear || result.query?.year) &&
+      (result.sourceYear || result.query?.year) !== fields.year
+    ) {
+      confirmed = await ask(
+        `Год источника ${result.sourceYear || result.query?.year} отличается от года велосипеда ${fields.year}. Использовать эту комплектацию?`,
+      );
+      if (!confirmed) return;
     }
     setSaving(true);
     setError("");
@@ -411,7 +475,7 @@ export default function BikeWizard({ onCreated, onBusy }) {
       if (!id) {
         const data = await api("wizard", {
           requestId: requestId.current,
-          identityConfirmed,
+          identityConfirmed: confirmed,
           previewId: result?.status === "resolved" ? result.previewId : null,
           bike: fields,
           components: parts.map(({ id, ...p }) => ({
@@ -453,7 +517,7 @@ export default function BikeWizard({ onCreated, onBusy }) {
       className="bike-wizard"
       onSubmit={(e) => {
         e.preventDefault();
-        if (step < 3) next();
+        if (step < 2) next();
         else save();
       }}
     >
@@ -468,18 +532,18 @@ export default function BikeWizard({ onCreated, onBusy }) {
             onClick={() => setStep(i)}
           >
             <span>{i < step ? <Check size={14} /> : i + 1}</span>
-            <small>{["Модель", "Поиск", "Сборка", "Детали"][i]}</small>
+            <small>{["Поиск", "Сборка", "Детали"][i]}</small>
           </button>
         ))}
       </nav>
       <progress
         className="wizard-progress"
         value={step + 1}
-        max={4}
-        aria-label={`Шаг ${step + 1} из 4`}
+        max={3}
+        aria-label={`Шаг ${step + 1} из 3`}
       />
       <h3 ref={heading} tabIndex={-1}>
-        {steps[step]} <small>{step + 1} / 4</small>
+        {steps[step]} <small>{step + 1} / 3</small>
       </h3>
       {error && (
         <p role="alert" className="error">
@@ -490,96 +554,36 @@ export default function BikeWizard({ onCreated, onBusy }) {
         {step === 0 && (
           <>
             <p className="help">
-              Сначала определим модель и заводскую комплектацию. Обязательны
-              производитель, модель и год.
+              Введите марку и модель одной строкой. Год и комплектация уточняют
+              поиск, но не обязательны. Или продолжите вручную.
             </p>
             <label className="field">
-              <span>Тип велосипеда</span>
-              <select
-                value={bike.category}
-                onChange={(e) => update("category", e.target.value)}
-              >
-                {Object.entries(catalog.categories).map(([k, v]) => (
-                  <option value={k} key={k}>
-                    {v}
-                  </option>
-                ))}
-              </select>
+              <span>
+                <SiteEmoji name="search" /> Модель, год и комплектация
+              </span>
+              <input
+                aria-label="Модель, год и комплектация"
+                value={searchText}
+                disabled={resolving}
+                maxLength={240}
+                placeholder="Canyon Grail CF SLX 8 AXS 2026"
+                onChange={(e) => setSearchText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    search();
+                  }
+                }}
+              />
             </label>
-            <div className="form-grid">
-              <CompactCombo
-                label="Производитель"
-                value={bike.brand}
-                onChange={(v) => update("brand", v)}
-                options={[
-                  ...new Set(
-                    Object.values(catalog.models).flatMap(Object.keys),
-                  ),
-                ]}
-                required
-                maxLength={60}
-              />
-              <CompactCombo
-                label="Модель"
-                value={bike.model}
-                onChange={(v) => update("model", v)}
-                options={Object.entries(catalog.models[bike.category] || {})
-                  .filter(
-                    ([brand]) =>
-                      brand.toLowerCase() === bike.brand.trim().toLowerCase(),
-                  )
-                  .flatMap(([, models]) => models)}
-                required
+            <label className="field">
+              <span>Название в гараже · необязательно</span>
+              <input
+                value={bike.name}
                 maxLength={100}
+                onChange={(e) => update("name", e.target.value)}
               />
-              <label className="field">
-                <span>Год</span>
-                <input
-                  required
-                  type="number"
-                  min={1900}
-                  max={2100}
-                  list="recent-bike-years"
-                  value={bike.year}
-                  onChange={(e) => update("year", e.target.value)}
-                />
-              </label>
-              <label className="field">
-                <datalist id="recent-bike-years">
-                  {Array.from(
-                    { length: 10 },
-                    (_, i) => new Date().getFullYear() - i,
-                  ).map((y) => (
-                    <option key={y} value={y} />
-                  ))}
-                </datalist>
-                <span>Комплектация / версия</span>
-                <input
-                  maxLength={100}
-                  value={bike.trim}
-                  onChange={(e) => update("trim", e.target.value)}
-                  placeholder="SL / CF SLX 8 AXS"
-                />
-              </label>
-            </div>
-            <div className="wizard-optional">
-              <label className="field">
-                <span>Название в гараже · необязательно</span>
-                <input
-                  maxLength={100}
-                  value={bike.name}
-                  placeholder=""
-                  onChange={(e) => update("name", e.target.value)}
-                />
-              </label>
-              <p className="help">
-                Можно оставить пустым — используем название модели.
-              </p>
-            </div>
-          </>
-        )}
-        {step === 1 && (
-          <>
+            </label>
             <p className="wizard-identity">
               {[query.brand, query.model, query.trim, query.year]
                 .filter(Boolean)
@@ -639,7 +643,13 @@ export default function BikeWizard({ onCreated, onBusy }) {
                     автоматическое совпадение не подтверждено.
                   </p>
                 )}
-                {result?.status === "ambiguous" && <p className="help">Нашли варианты модели. Выберите свою комплектацию: название, год и источник помогут их различить. Если год не подтверждён, сверьте его перед импортом.</p>}
+                {result?.status === "ambiguous" && (
+                  <p className="help">
+                    Нашли варианты модели. Выберите свою комплектацию: название,
+                    год и источник помогут их различить. Если год не
+                    подтверждён, сверьте его перед импортом.
+                  </p>
+                )}
                 {result?.status === "ambiguous" &&
                   result.candidates.map((c) => (
                     <button
@@ -650,6 +660,7 @@ export default function BikeWizard({ onCreated, onBusy }) {
                         resolving ||
                         (!c.selectable &&
                           c.year !== null &&
+                          query.year != null &&
                           c.year !== query.year)
                       }
                       onClick={() =>
@@ -683,21 +694,25 @@ export default function BikeWizard({ onCreated, onBusy }) {
                 <div className="wizard-choice-actions">
                   <button
                     type="button"
-                    className="button secondary"
+                    className="hf-button"
+                    disabled={!searchText.trim()}
+                    onClick={() => search()}
+                  >
+                    <SiteEmoji name="search" />
+                    {result || message
+                      ? "Повторить автоматический поиск и парсинг"
+                      : "Найти комплектацию"}
+                  </button>
+                  <button
+                    type="button"
+                    className="hf-button"
                     onClick={() => setManualMode((v) => !v)}
                   >
                     <Link size={18} />
                     {settings.wizardLinkLabel ||
                       "Распознать по странице магазина"}
                   </button>
-                  <button
-                    type="button"
-                    className="button secondary"
-                    onClick={() => {
-                      setResult(null);
-                      setStep(2);
-                    }}
-                  >
+                  <button type="button" className="hf-button" onClick={next}>
                     <Pencil size={18} />
                     {settings.wizardManualLabel || "Заполнить вручную"}
                   </button>
@@ -728,7 +743,7 @@ export default function BikeWizard({ onCreated, onBusy }) {
                       className="button secondary"
                       type="button"
                       disabled={!/^https?:\/\//i.test(url)}
-                      onClick={() => resolve(url)}
+                      onClick={() => search(url)}
                     >
                       Распознать страницу
                     </button>
@@ -738,7 +753,7 @@ export default function BikeWizard({ onCreated, onBusy }) {
             )}
           </>
         )}
-        {step === 2 && (
+        {step === 1 && (
           <>
             {!!result?.unknownFields?.length && (
               <details className="resolver-review">
@@ -946,8 +961,70 @@ export default function BikeWizard({ onCreated, onBusy }) {
             ))}
           </>
         )}
-        {step === 3 && (
+        {step === 2 && (
           <>
+            <ClassificationFields
+              value={bike.classification}
+              onChange={(classification) =>
+                setBike((v) => ({
+                  ...v,
+                  classification,
+                  category: compatibilityCategory(classification),
+                }))
+              }
+            />
+            <div className="form-grid">
+              <label className="field">
+                <span>
+                  <SiteEmoji name="date" /> Год
+                </span>
+                <input
+                  aria-label="Год"
+                  type="number"
+                  min="1900"
+                  max="2100"
+                  required
+                  value={bike.year}
+                  onChange={(e) => update("year", e.target.value)}
+                />
+              </label>
+              <label className="field">
+                <span>
+                  <SiteEmoji name="bike" /> Марка
+                </span>
+                <input
+                  aria-label="Марка"
+                  maxLength={60}
+                  value={bike.brand}
+                  onChange={(e) => {
+                    update("brand", e.target.value);
+                    setResult(null);
+                  }}
+                />
+              </label>
+              <label className="field">
+                <span>Модель</span>
+                <input
+                  maxLength={100}
+                  value={bike.model}
+                  onChange={(e) => {
+                    update("model", e.target.value);
+                    setResult(null);
+                  }}
+                />
+              </label>
+              <label className="field">
+                <span>Комплектация / версия</span>
+                <input
+                  maxLength={100}
+                  value={bike.trim}
+                  onChange={(e) => {
+                    update("trim", e.target.value);
+                    setResult(null);
+                  }}
+                />
+              </label>
+            </div>
             <section>
               <h4>Фотографии</h4>
               {!files.length && !chosen.length && (
@@ -962,8 +1039,8 @@ export default function BikeWizard({ onCreated, onBusy }) {
                     />
                   ) : (
                     <div className="stock-empty">
-                      {catalog.categories[bike.category]} · стандартное
-                      изображение пока не загружено
+                      {catalog.categories[bike.category] || "Велосипед"} ·
+                      стандартное изображение пока не загружено
                     </div>
                   )}
                   <small>
@@ -1225,6 +1302,7 @@ export default function BikeWizard({ onCreated, onBusy }) {
           Открыть сохранённый велосипед без оставшихся фото
         </button>
       )}
+      {confirmation}
       <div className="wizard-actions">
         <button
           type="button"
@@ -1238,7 +1316,7 @@ export default function BikeWizard({ onCreated, onBusy }) {
           Назад
         </button>
         <button className="button" disabled={resolving || saving}>
-          {step === 3
+          {step === 2
             ? savedId
               ? "Повторить загрузку фото"
               : "Сохранить велосипед"

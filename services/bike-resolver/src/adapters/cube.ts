@@ -19,7 +19,10 @@ export class CubeAdapter extends CatalogueAdapter {
     value: ".value, .description, .spec-value",
   };
   protected seeds(q: BikeQuery) {
-    return [`${this.origin}/${q.year}/`, `${this.origin}/sitemap.xml`];
+    return [
+      ...(q.year == null ? [] : [`${this.origin}/${q.year}/`]),
+      `${this.origin}/sitemap.xml`,
+    ];
   }
   protected candidateMetadata(doc: SourceDocument, _q: BikeQuery) {
     const $ = load(doc.body);

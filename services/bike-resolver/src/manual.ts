@@ -277,7 +277,7 @@ export class ManualSources {
       const candidates = await adapter.discover(query);
       const exact = candidates.find(
         (c) =>
-          c.year === query.year &&
+          (query.year === null || c.year === query.year) &&
           c.canonicalName.toLowerCase().includes(query.model.toLowerCase()) &&
           (!query.trim ||
             c.canonicalName.toLowerCase().includes(query.trim.toLowerCase())),

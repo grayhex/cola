@@ -893,15 +893,25 @@ html {
   left: auto;
   right: 0;
 }
+.bike-detail-title-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+.bike-detail-title-row h1 {
+  min-width: 0;
+  margin: 0;
+}
 .bike-heading-labels,
 .bike-labels {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 5px;
 }
 .bike-heading-labels {
-  margin-top: 12px;
+  margin-top: 0;
 }
 .site-root .hf-label {
   display: inline-flex;
@@ -910,8 +920,8 @@ html {
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface-hover);
-  padding: 7px 11px;
-  font: 600 16px/1.2 var(--site-font);
+  padding: 4px 7px;
+  font: 600 12px/1.2 var(--site-font);
   color: var(--text);
 }
 .site-root .hf-like {
@@ -952,11 +962,11 @@ html {
   gap: 8px 12px;
 }
 .site-root .bike-card .card-identity-row h2 {
-  flex: 1 1 200px;
+  flex: 1 1 120px;
 }
 .site-root .bike-card .hf-label {
-  font-size: 14px;
-  padding: 6px 9px;
+  font-size: 11px;
+  padding: 3px 6px;
 }
 .site-root .bike-card .hf-like {
   font-size: 12px;
