@@ -1,5 +1,7 @@
 "use client";
 import SiteEmoji from "./site-emoji.jsx";
+import RideCreationActions from "./ride-creation-actions.jsx";
+import { selectableRideBikes, rideBikeStateError } from "../../lib/bike-status.js";
 import { useEffect, useState, useRef } from "react";
 import { socialApi, Pagination } from "./social-primitives.jsx";
 import RideCard, { RideRoutePreview, RideMetrics } from "./ride-card.jsx";
@@ -38,10 +40,13 @@ export default function RideAccount({ bikes }) {
     [notice, setNotice] = useState(""),
     [form, setForm] = useState(blank),
     [visibleMetrics, setVisibleMetrics] = useState(null);
+  const currentBikes = selectableRideBikes(bikes);
+  const rideBikes = selectableRideBikes(bikes, editing?.bike?.id);
   const autoOpened = useRef(false);
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
   const refresh = () => socialApi("rides?own=1&page=" + page).then(setData);
   function start(next) {
+    if (!currentBikes.length) return;
     setEditing(null);
     setPreview(null);
     setMode(next);
@@ -51,7 +56,7 @@ export default function RideAccount({ bikes }) {
     setForm({
       ...blank,
       recurrenceTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      bikeId: bikes[0]?.id || "",
+      bikeId: currentBikes[0]?.id || "",
       privacyRadiusM: config?.defaultRadius || 500,
     });
   }
@@ -62,7 +67,7 @@ export default function RideAccount({ bikes }) {
       .catch((e) => setError(e.message));
   }, [page]);
   useEffect(() => {
-    if (autoOpened.current || !config?.enabled || !bikes.length) return;
+    if (autoOpened.current || !config?.enabled || !currentBikes.length) return;
     autoOpened.current = true;
     const action = new URLSearchParams(location.search).get("action");
     if (["add", "plan", "import"].includes(action)) start(action);
@@ -72,6 +77,8 @@ export default function RideAccount({ bikes }) {
     setBusy(true);
     setError("");
     try {
+      if (!attach && !currentBikes.length)
+        throw Error("Для новой покатушки выберите текущий велосипед.");
       if (file.size > config.maxGpxBytes)
         throw Error("GPX-файл слишком большой");
       const r = await fetch(
@@ -132,31 +139,24 @@ export default function RideAccount({ bikes }) {
       setBusy(false);
     }
   }
-  const cannotPublish =
-    form.isPublic && !bikes.find((b) => b.id === form.bikeId)?.is_public;
+  const selectedBike = rideBikes.find((b) => b.id === form.bikeId);
+  const cannotPublish = form.isPublic && !selectedBike?.is_public;
+  const ownershipError = selectedBike
+    ? rideBikeStateError(selectedBike, editing
+        ? { bike_id: editing.bike.id, is_public: editing.isPublic }
+        : null, form.isPublic)
+    : "Выберите текущий велосипед для новой покатушки.";
   return (
     <section>
       <div className="section-heading">
         <h2>Покатушки</h2>
-        <div className="ride-actions">
-          {[
-            ["add", "Добавить покатушку"],
-            ["plan", "Запланировать"],
-            ["import", "Импорт Garmin CSV"],
-          ].map(([key, label]) => (
-            <button
-              key={key}
-              className="hf-button"
-              disabled={busy || !config?.enabled || !bikes.length}
-              onClick={() => start(key)}
-            >
-              <SiteEmoji name={key === "add" ? "addRide" : key} />
-              {label}
-            </button>
-          ))}
-        </div>
       </div>
+      <RideCreationActions mode={mode} onSelect={start}
+        disabled={busy || !config?.enabled || !currentBikes.length} />
       {!bikes.length && <p className="help">Сначала добавьте велосипед.</p>}
+      {!!bikes.length && !currentBikes.length && (
+        <p className="help">В гараже только бывшие велосипеды. Добавьте текущий велосипед для новых покатушек. Существующие поездки можно просматривать и редактировать.</p>
+      )}
       {error && (
         <p role="alert" className="error">
           {error}
@@ -165,7 +165,7 @@ export default function RideAccount({ bikes }) {
       {notice && <p role="status">{notice}</p>}
       {mode === "import" && (
         <GarminImport
-          bikes={bikes}
+          bikes={currentBikes}
           onCancel={() => setMode(null)}
           onDone={async (result) => {
             setMode(null);
@@ -184,6 +184,7 @@ export default function RideAccount({ bikes }) {
             setBusy(true);
             setError("");
             try {
+              if (ownershipError) throw Error(ownershipError);
               const {
                 scheduledAt,
                 features,
@@ -248,7 +249,7 @@ export default function RideAccount({ bikes }) {
               <input
                 type="file"
                 accept=".gpx,application/gpx+xml"
-                disabled={busy}
+                disabled={busy || !currentBikes.length}
                 onChange={(e) => upload(e.target.files[0])}
               />
               <small>
@@ -321,14 +322,20 @@ export default function RideAccount({ bikes }) {
                   value={form.bikeId}
                   onChange={(e) => set("bikeId", e.target.value)}
                 >
-                  {bikes.map((b) => (
+                  <option value="" disabled>Выберите велосипед</option>
+                  {rideBikes.map((b) => (
                     <option key={b.id} value={b.id}>
                       {b.name}
+                      {b.is_former ? " · бывший" : ""}
                       {b.is_public ? "" : " · приватный"}
                     </option>
                   ))}
                 </select>
               </label>
+              {selectedBike?.is_former && (
+                <p className="help">История бывшего велосипеда сохранена. Можно изменить описание и приватность или перенести поездку на текущий велосипед; новая публикация недоступна.</p>
+              )}
+              {ownershipError && <p role="alert">{ownershipError}</p>}
               <label className="field">
                 <span>Название</span>
                 <input
@@ -452,6 +459,7 @@ export default function RideAccount({ bikes }) {
                 <input
                   type="checkbox"
                   checked={form.isPublic}
+                  disabled={!!selectedBike?.is_former && !editing?.isPublic}
                   onChange={(e) => set("isPublic", e.target.checked)}
                 />
                 Опубликовать
@@ -496,6 +504,7 @@ export default function RideAccount({ bikes }) {
                 disabled={
                   busy ||
                   cannotPublish ||
+                  !!ownershipError ||
                   (!editing && mode === "add" && !preview)
                 }
               >

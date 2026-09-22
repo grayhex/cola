@@ -1,8 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useSite } from "../ui/site-provider.jsx";
-import SiteEmoji from "../ui/site-emoji.jsx";
-import { Plus } from "../ui/icons.jsx";
+import RideCreationActions from "../ui/ride-creation-actions.jsx";
 import RideList from "../ui/ride-list.jsx";
 import {
   SocialHeader,
@@ -37,22 +36,8 @@ export default function Page() {
             <h1>Покатушки</h1>
             <p>Маршруты, впечатления и километры сообщества.</p>
           </div>
-          <a
-            className="hf-button"
-            href="/account?tab=rides&action=add"
-          >
-            <SiteEmoji name="addRide"/>
-            Добавить покатушку
-          </a>
         </div>
-        <div className="ride-actions">
-          <a className="hf-button" href="/account?tab=rides&action=plan"><SiteEmoji name="plan"/>
-            Запланировать
-          </a>
-          <a className="hf-button" href="/account?tab=rides&action=import"><SiteEmoji name="import"/>
-            Импорт Garmin CSV
-          </a>
-        </div>
+        <RideCreationActions />
         <div className="ui-tabs" aria-label="Фильтр покатушек">
           {[
             [null, "Все"],

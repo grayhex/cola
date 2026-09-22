@@ -6,9 +6,12 @@ import {
   suspensionLabels,
   constructionLabels,
   useLabels,
+  classificationOf,
   classificationLabels,
   classificationFilterOptions,
 } from "../../lib/bike-classification.js";
+import { bikeCategoryTone } from "../../lib/content-labels.js";
+import { ContentLabel } from "./content-label.jsx";
 import styles from "./bike-classification.module.css";
 
 function Choice({
@@ -133,12 +136,22 @@ export default function ClassificationFields({
   );
 }
 export function ClassificationBadges({ bike }) {
+  const classification = classificationOf(bike);
+  const tone = bikeCategoryTone[classification.category] || "neutral";
+  const labels = classificationLabels(bike);
+  const uses = classification.uses.map((key) => useLabels[key]);
   return (
-    <span className={styles.badges} aria-label="Классификация">
-      {classificationLabels(bike).map((text) => (
-        <span key={text}>{text}</span>
+    <>
+      {labels.slice(0, uses.length ? 2 : 3).map((text, i) => (
+        <ContentLabel key={text} tone={tone} data-bike-label={i === 0 ? "type" : "feature"}
+          title={labels.join(" · ")}>{text}</ContentLabel>
       ))}
-    </span>
+      {!!uses.length && (
+        <ContentLabel tone={tone} data-bike-label="use" aria-label={"Назначения: " + uses.join(", ")}>
+          {uses.join(" · ")}
+        </ContentLabel>
+      )}
+    </>
   );
 }
 export function ClassificationFilters({

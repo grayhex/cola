@@ -1,8 +1,10 @@
 "use client";
 import ClassificationFields, {
-  ClassificationBadges,
   ClassificationFilters,
 } from "./bike-classification.jsx";
+import { FormerBikeField } from "./bike-fields.jsx";
+import fieldStyles from "./bike-fields.module.css";
+import { PhotoActions } from "./content-label.jsx";
 import {
   bikeCategories,
   classificationOf,
@@ -165,6 +167,7 @@ const blankBike = {
   color: "",
   size: "",
   weight: "",
+  is_former: false,
 };
 const rub = (v) =>
   new Intl.NumberFormat("ru-RU", {
@@ -184,7 +187,11 @@ async function api(url, method = "GET", data) {
   } catch {
     throw new Error("Сервер не ответил. Попробуйте ещё раз.");
   }
-  if (!r.ok) throw new Error(b.error || "Не удалось выполнить запрос");
+  if (!r.ok) {
+    const error = new Error(b.error || "Не удалось выполнить запрос");
+    error.status = r.status;
+    throw error;
+  }
   return b;
 }
 function Modal({ title, onClose, children, dismissible = true }) {
@@ -378,7 +385,10 @@ export default function Garage({
         );
       }
     } catch (e) {
-      if (sequence === requestId.current) setError(e.message);
+      if (sequence === requestId.current) {
+        setError(e.message);
+        if (share && [401, 403, 404].includes(e.status)) setSelected(null);
+      }
     } finally {
       if (sequence === requestId.current) {
         setLoading(false);
@@ -434,7 +444,7 @@ export default function Garage({
     style: { order: blocks.findIndex((b) => b.id === id) + 1 },
     "data-variant": block(id).variant,
   });
-  const editable = account && !!user && !share && bike?.is_owner === true;
+  const editable = !!user && bike?.is_owner === true;
   function openBike(b) {
     if (!account) {
       router.push("/b/" + b.share_id);
@@ -464,7 +474,26 @@ export default function Garage({
     setError("");
   }
   async function refresh() {
-    await load();
+    if (!share || !editable) return load();
+    // A revocation rotates share_id. Refresh through the owner-authorized ID
+    // endpoint, not the revoked public URL, then adopt the new canonical URL.
+    requestId.current++;
+    try {
+      const [{ user: current }, { bike: updated }] = await Promise.all([
+        api("me"), api("bikes/" + bike.id),
+      ]);
+      setUser(current);
+      setSelected(updated);
+      meRequest.current = Promise.resolve({ user: current });
+      if (updated.share_id !== share)
+        router.replace("/b/" + updated.share_id, { scroll: false });
+    } catch (e) {
+      if ([401, 403, 404].includes(e.status)) {
+        setSelected(null);
+        meRequest.current = null;
+      }
+      throw e;
+    }
   }
   function auth(mode = "login") {
     setError("");
@@ -564,14 +593,10 @@ export default function Garage({
                       .filter(Boolean)
                       .join(" ")}
                 </h1>
-                <div className="bike-heading-labels">
-                  <BikeLabels bike={bike} />
-                  {bike.is_public && (
-                    <BikeLike bike={bike} reaction={detailReaction} t={t} />
-                  )}
-                </div>
               </div>
-              <ClassificationBadges bike={bike} />
+              <div className="bike-heading-labels">
+                <BikeLabels bike={bike} />
+              </div>
             </div>
             <div className="detail-actions">
               {share && <AuthorLink author={bike.author} />}
@@ -644,9 +669,6 @@ export default function Garage({
               >
                 <Photo bike={bike} photo={photo} className="hero-photo" />
               </button>
-              {detailReaction.error && (
-                <p role="alert">{t("Лайк не сохранился. Попробуй ещё раз")}</p>
-              )}
               {editable && (
                 <div className="photo-tools">
                   <button
@@ -689,6 +711,14 @@ export default function Garage({
                 </a>
               )}
             </div>
+            {bike.is_public && (
+              <PhotoActions>
+                <BikeLike bike={bike} reaction={detailReaction} t={t} />
+                {detailReaction.error && (
+                  <p role="alert">{t("Лайк не сохранился. Попробуй ещё раз")}</p>
+                )}
+              </PhotoActions>
+            )}
           </div>
           <details
             className="bike-summary configurable-block"
@@ -1217,7 +1247,7 @@ export default function Garage({
                   await api("auth/" + modal.mode, "POST", data);
                   meRequest.current = null;
                   setSelected(null);
-                  await refresh();
+                  await load();
                   setModal(null);
                   setNotice(
                     modal.mode === "register"
@@ -1417,7 +1447,14 @@ export default function Garage({
                       if (modal.type === "deletePhoto")
                         url += "/photos/" + modal.photo.id;
                       await api(url, "DELETE");
-                      if (modal.type === "deleteBike") setSelected(null);
+                      if (modal.type === "deleteBike") {
+                        setSelected(null);
+                        if (share) {
+                          setModal(null);
+                          router.replace("/account?tab=bikes");
+                          return;
+                        }
+                      }
                       setPhoto(null);
                       await refresh();
                       setModal(null);
@@ -1497,9 +1534,11 @@ function BikeForm({ initial, busy, onSubmit }) {
                 }));
             }
           }}
-          placeholder="Canyon Grail CF SLX 8 AXS 2026"
+          className={fieldStyles.modelInput}
         />
       </Field>
+      <FormerBikeField value={b.is_former} disabled={busy}
+        onChange={(value) => update("is_former", value)} />
       <ClassificationFields
         value={classificationOf(b)}
         onChange={(classification) =>
