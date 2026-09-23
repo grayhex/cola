@@ -25,8 +25,9 @@ import {
 } from "../../lib/market-types.js";
 import { marketCategories, readMarketQuery, writeMarketQuery } from "../../lib/market-query.js";
 import styles from "./market.module.css";
-import { profilePath } from "../../lib/public-urls.js";
+import { profilePath, publicPath } from "../../lib/public-urls.js";
 import { personName, usernameLabel } from "../../lib/usernames.js";
+import ShareButton from "./share-button.jsx";
 // The link keeps the original; previews use the cached size variants.
 const marketVariants = (id, widths = [320, 640, 1280]) =>
   widths.map((w) => `/api/market/media/${id}?width=${w} ${w}w`).join(", ");
@@ -44,7 +45,7 @@ export function MarketCard({ listing: m }) {
   return (
     <article className={styles.card} data-listing-id={m.id}>
       <Link
-        href={"/market/" + m.shareId}
+        href={publicPath("market", m)}
         className={styles.cover}
         aria-label={m.title}
       >
@@ -73,7 +74,7 @@ export function MarketCard({ listing: m }) {
           </small>
         </div>
         <h3>
-          <Link href={"/market/" + m.shareId}>{m.title}</Link>
+          <Link href={publicPath("market", m)}>{m.title}</Link>
         </h3>
         <strong className={styles.price}>{listingPriceLabel(m)}</strong>
         <p>
@@ -360,7 +361,7 @@ function ListingEditor({ initial, onSaved, onCancel }) {
     </form>
   );
 }
-export default function Market({ share = null, create = false }) {
+export default function Market({ share = null, create = false, sharePath = null }) {
   const { setPreferences } = useSite();
   const [user, setUser] = useState(undefined),
     [data, setData] = useState(null),
@@ -444,7 +445,7 @@ export default function Market({ share = null, create = false }) {
     };
   }, [ready, share, create, user?.id, user === undefined, filterKey]);
   const saved = async (r) => {
-    location.assign("/market/" + r.shareId);
+    location.assign(publicPath("market", r));
   };
   async function showContact() {
     setContactError("");
@@ -509,7 +510,7 @@ export default function Market({ share = null, create = false }) {
             onSaved={saved}
             onCancel={(r) =>
               r
-                ? location.assign("/market/" + r.shareId)
+                ? location.assign(publicPath("market", r))
                 : location.assign("/market")
             }
           />
@@ -531,11 +532,14 @@ export default function Market({ share = null, create = false }) {
                   </div>
                   <h1>{listing.title}</h1>
                 </div>
-                {listing.isOwner && (
-                  <button className="quiet" onClick={() => setEdit(true)}>
-                    Изменить
-                  </button>
-                )}
+                <div className="entity-actions">
+                  <ShareButton path={sharePath} title={listing.title} />
+                  {listing.isOwner && (
+                    <button className="quiet" onClick={() => setEdit(true)}>
+                      Изменить
+                    </button>
+                  )}
+                </div>
               </div>
               {listing.status !== "active" && (
                 <p className={styles.state}>

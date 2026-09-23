@@ -10,14 +10,15 @@ import { Heart } from "./icons.jsx";
 import { SaveEntry } from "./journal-card.jsx";
 import { experienceHref } from "../../lib/experience-catalog.js";
 import dynamic from "next/dynamic";
-import { profilePath } from "../../lib/public-urls.js";
+import { profilePath, publicPath } from "../../lib/public-urls.js";
 import { personName } from "../../lib/usernames.js";
+import ShareButton from "./share-button.jsx";
 // The owner's editor and the comment composer load after the entry itself.
 const Discussion = dynamic(() => import("./discussion.jsx"), { ssr: false });
 const JournalEditor = dynamic(() => import("./journal-editor.jsx"), {
   ssr: false,
 });
-export default function JournalPage({ share = null }) {
+export default function JournalPage({ share = null, sharePath = null }) {
   const router = useRouter();
   const [bikes, setBikes] = useState([]);
   const [user, setUser] = useState(null),
@@ -93,7 +94,7 @@ export default function JournalPage({ share = null }) {
               <JournalEditor
                 bikeId={bike?.id || ""}
                 bikes={bikes}
-                onSaved={(r) => router.push("/j/" + r.shareId)}
+                onSaved={(r) => router.push(publicPath("journal", r))}
               />
             ) : (
               <section className="empty-state">
@@ -129,7 +130,7 @@ export default function JournalPage({ share = null }) {
               <a
                 href={
                   entry.bikePublic
-                    ? "/b/" + entry.bike.shareId
+                    ? publicPath("bike", entry.bike)
                     : "/account?tab=bikes&bike=" + entry.bike.id
                 }
               >
@@ -148,9 +149,15 @@ export default function JournalPage({ share = null }) {
                 )}
               </div>
               <h1>{entry.title || "Без заголовка"}</h1>
-              <a href={profilePath(entry.author.username)}>
-                {personName(entry.author)}
-              </a>
+              <div className="entity-byline">
+                <a href={profilePath(entry.author.username)}>
+                  {personName(entry.author)}
+                </a>
+                <ShareButton
+                  path={visible ? sharePath : null}
+                  title={entry.title || "Запись в Журнале ColaBike"}
+                />
+              </div>
               <RichTextBody className="journal-body" body={entry.body} />
               {entry.installationResult && (
                 <p>
@@ -233,8 +240,7 @@ export default function JournalPage({ share = null }) {
                 <a
                   className="journal-attached-ride"
                   href={
-                    "/r/" +
-                    entry.ride.shareId +
+                    publicPath("ride", entry.ride) +
                     (entry.isOwner ? "?owner=1" : "")
                   }
                 >

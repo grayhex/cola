@@ -16,6 +16,7 @@ import {
   Medal,
   Trophy,
 } from "./icons.jsx";
+import { publicPath } from "../../lib/public-urls.js";
 
 export function CompactIconButton({
   label,
@@ -299,7 +300,7 @@ export function ImportantBadge({ bike, records = [] }) {
       className="important-badge"
       title={chosen.name}
       aria-label={chosen.name}
-      href={chosen.holder ? "/records#" + chosen.key : "/b/" + bike.share_id}
+      href={chosen.holder ? "/records#" + chosen.key : publicPath("bike", bike)}
     >
       <Icon size={12} />
       <span>{chosen.name}</span>

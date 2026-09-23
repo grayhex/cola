@@ -14,7 +14,7 @@ import {
 } from "./icons.jsx";
 import { socialApi } from "./social-primitives.jsx";
 import { journalKinds } from "../../lib/journal-kinds.js";
-import { profilePath } from "../../lib/public-urls.js";
+import { profilePath, publicPath } from "../../lib/public-urls.js";
 import { personName } from "../../lib/usernames.js";
 const kindIcons = {
   story: NotebookPen,
@@ -71,7 +71,7 @@ export default function JournalCard({ entry, onSaved }) {
   return (
     <article className="journal-card">
       {entry.photo && (
-        <a href={"/j/" + entry.shareId} className="journal-card-photo">
+        <a href={publicPath("journal", entry)} className="journal-card-photo">
           <img
             src={entry.photo + "?width=640"}
             alt="Фотография записи"
@@ -92,13 +92,13 @@ export default function JournalCard({ entry, onSaved }) {
           )}
         </div>
         <h2>
-          <a href={"/j/" + entry.shareId}>{entry.title}</a>
+          <a href={publicPath("journal", entry)}>{entry.title}</a>
         </h2>
         <p className="journal-excerpt">{entry.excerpt ?? entry.body}</p>
         <a
           className="journal-card-bike"
           title={entry.bike.name}
-          href={"/b/" + entry.bike.shareId}
+          href={publicPath("bike", entry.bike)}
         >
           {entry.bike.name}
         </a>
@@ -111,7 +111,7 @@ export default function JournalCard({ entry, onSaved }) {
             {entry.likes}
           </span>
           <a
-            href={"/j/" + entry.shareId + "#discussion"}
+            href={publicPath("journal", entry) + "#discussion"}
             aria-label={"Комментарии: " + entry.comments}
           >
             <MessageCircle size={13} />

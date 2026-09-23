@@ -17,7 +17,8 @@ import {
 } from "./social-primitives.jsx";
 import BikeCard from "./bike-card.jsx";
 import { useSite } from "./site-provider.jsx";
-export default function PublicProfile({ username }) {
+import ShareButton from "./share-button.jsx";
+export default function PublicProfile({ username, sharePath = null }) {
   const [profile, setProfile] = useState(null),
     [user, setUser] = useState(null),
     [feed, setFeed] = useState(null),
@@ -100,6 +101,7 @@ export default function PublicProfile({ username }) {
                 </div>
               </div>
               <FollowButton profile={profile} user={user} onChange={refresh} />
+              <ShareButton path={sharePath} title={profile.name} />
               {!profile.relationship.isSelf && (
                 <ReportButton
                   entityType="profile"

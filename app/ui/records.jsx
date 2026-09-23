@@ -6,7 +6,7 @@ import { socialApi, SocialHeader, SocialFooter } from "./social-primitives.jsx";
 import { useSite } from "./site-provider.jsx";
 import AchievementArt from "./achievement-art.jsx";
 import { gameDescription, groupRecords } from "../../lib/gamification-presentation.js";
-import { profilePath } from "../../lib/public-urls.js";
+import { profilePath, publicPath } from "../../lib/public-urls.js";
 import { personName, usernameLabel } from "../../lib/usernames.js";
 
 function value(r, currency) {
@@ -44,7 +44,7 @@ function RecordCard({ record: r, settings, index }) {
         </div>
         {b && (
           <div className="record-result">
-            <Link prefetch={false} className="record-bike-name" href={"/b/" + b.shareId} title={b.name}>
+            <Link prefetch={false} className="record-bike-name" href={publicPath("bike", b)} title={b.name}>
               {b.name}
             </Link>
             <span className="record-value">{value(r, settings.currency)}</span>

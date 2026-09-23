@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import PublicProfile from "../ui/public-profile.jsx";
-import { metadataFor, canonicalPage } from "../../lib/social-page.js";
+import { metadataFor, canonicalPage, sharePath } from "../../lib/social-page.js";
 import { routeParam } from "../../lib/public-urls.js";
 export const runtime = "nodejs", dynamic = "force-dynamic";
 function usernameFrom(segment) {
@@ -12,6 +12,7 @@ export async function generateMetadata({ params, searchParams }) {
   return metadataFor("profile", usernameFrom((await params).profile), await searchParams);
 }
 export default async function Page({ params, searchParams }) {
-  const username = await canonicalPage("profile", usernameFrom((await params).profile), await searchParams);
-  return <PublicProfile username={username} />;
+  const reference = usernameFrom((await params).profile);
+  const username = await canonicalPage("profile", reference, await searchParams);
+  return <PublicProfile username={username} sharePath={await sharePath("profile", reference)} />;
 }

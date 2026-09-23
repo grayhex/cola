@@ -42,6 +42,7 @@ export {
   Save,
   ScanLine,
   Search,
+  Send,
   Settings2,
   Shield,
   ShieldCheck,

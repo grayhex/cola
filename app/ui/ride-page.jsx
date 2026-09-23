@@ -7,15 +7,16 @@ import dynamic from "next/dynamic";
 import { SocialHeader, SocialFooter, socialApi } from "./social-primitives.jsx";
 import { RideMetrics, rideDate } from "./ride-card.jsx";
 import { useSite } from "./site-provider.jsx";
-import { profilePath } from "../../lib/public-urls.js";
+import { profilePath, publicPath } from "../../lib/public-urls.js";
 import { personName } from "../../lib/usernames.js";
+import ShareButton from "./share-button.jsx";
 // The comment editor (Tiptap) loads after the ride itself.
 const Discussion = dynamic(() => import("./discussion.jsx"), { ssr: false });
 const RideMap = dynamic(() => import("./ride-map.jsx"), {
   ssr: false,
   loading: () => <div className="ride-map-wrap" aria-busy="true" />,
 });
-export default function RidePage({ share, styleUrl }) {
+export default function RidePage({ share, styleUrl, sharePath = null }) {
   const { setPreferences } = useSite();
   const [ride, setRide] = useState(null),
     [user, setUser] = useState(null),
@@ -58,13 +59,16 @@ export default function RidePage({ share, styleUrl }) {
         )}
         {ride ? (
           <>
-            <a href={profilePath(ride.author.username)}>
-              {personName(ride.author)}
-            </a>
+            <div className="entity-byline">
+              <a href={profilePath(ride.author.username)}>
+                {personName(ride.author)}
+              </a>
+              <ShareButton path={sharePath} title={ride.title} />
+            </div>
             <h1>{ride.title}</h1>
             <p className="help">
               {rideDate(ride.date)} ·{" "}
-              <a href={"/b/" + ride.bike.shareId}>{ride.bike.name}</a>
+              <a href={publicPath("bike", ride.bike)}>{ride.bike.name}</a>
             </p>
             {ride.status !== "completed" && (
               <p className="ride-status">

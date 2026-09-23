@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { socialApi } from "./social-primitives.jsx";
 import PromptComposer from "./prompt-composer.jsx";
 import { journalKinds } from "../../lib/journal-kinds.js";
+import { publicPath } from "../../lib/public-urls.js";
 export default function JournalEditor({
   entry = null,
   bikeId,
@@ -380,7 +381,7 @@ export default function JournalEditor({
       </p>
       {error && <p role="alert">{error}</p>}
       {saved?.shareId && (
-        <a href={"/j/" + saved.shareId}>Открыть сохранённую запись</a>
+        <a href={publicPath("journal", saved)}>Открыть сохранённую запись</a>
       )}
       <div className="form-actions">
         <button

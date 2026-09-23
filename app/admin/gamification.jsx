@@ -9,6 +9,7 @@ import {
 } from "../../lib/gamification-definitions.js";
 import AssetPicker from "./asset-picker.jsx";
 import GameDescriptionEditor from "./game-description-editor.jsx";
+import { publicPath } from "../../lib/public-urls.js";
 
 export default function Gamification() {
   const [ask, confirmation] = useConfirmation();
@@ -281,7 +282,7 @@ export default function Gamification() {
       </p>
       {bikes.map((b) => (
         <div className="game-moderation" key={b.id}>
-          <a href={"/b/" + b.share_id}>{b.name}</a>
+          <a href={publicPath("bike", b)}>{b.name}</a>
           <span>{b.leaderboard_excluded ? "Исключён" : "Участвует"}</span>
           <button
             disabled={busy}
