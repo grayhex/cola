@@ -191,7 +191,7 @@ async function theme(page, label) {
   await expect(toggle).toHaveAttribute("aria-checked", String(dark));
 }
 
-test("homepage rhythm, compact popular list and stable Light/Dark at every breakpoint", async ({
+test("homepage rhythm, photo-first popular bikes and stable Light/Dark at every breakpoint", async ({
   page,
 }, info) => {
   await fixture(page);
@@ -258,8 +258,17 @@ test("homepage rhythm, compact popular list and stable Light/Dark at every break
         line: parseFloat(getComputedStyle(el).lineHeight),
       }));
       expect(h.height / h.line).toBeLessThanOrEqual(width <= 390 ? 4.1 : 2.1);
+      // #83: the photo spans the card, the text below it stays short and
+      // tablets and phones show two builds per row.
       const first = page.locator("article[data-bike-id]").first();
-      expect((await first.boundingBox()).height).toBeLessThan(180);
+      const card = await first.boundingBox();
+      const photo = await first.locator("a").first().boundingBox();
+      expect(photo.width).toBeGreaterThanOrEqual(card.width - 2);
+      expect(card.height - photo.height).toBeLessThan(200);
+      if (width <= 1050) expect(card.width).toBeLessThan(width * 0.55);
+      // Portrait phones see the first build on the first screen.
+      if (width <= 390 && height > width)
+        expect(card.y + 120).toBeLessThanOrEqual(height);
       await expect(
         page.locator(".global-header img, .garage-banner"),
       ).toHaveCount(0);

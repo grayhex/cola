@@ -24,6 +24,7 @@ import { ContentTypeLabel } from "./content-label.jsx";
 import labelStyles from "./content-label.module.css";
 import SearchBox from "./search-box.jsx";
 import SmallImage from "./small-image.jsx";
+import { photoVariants } from "./bike-photo.jsx";
 import styles from "./home.module.css";
 const markers = {
   market: ShoppingBag,
@@ -109,38 +110,26 @@ export function ActivityTicker({ events = [] }) {
     </section>
   );
 }
+// Photo-first cards: three per row on desktop, two on tablets and phones.
+const trendingSizes = "(max-width: 1050px) 50vw, 400px";
 function TrendingBike({ bike, user }) {
   const reaction = useBikeReaction(bike, user),
-    href = "/b/" + bike.share_id;
+    href = "/b/" + bike.share_id,
+    photo = bike.photos[0];
   return (
     <article className={styles.bike} data-bike-id={bike.id}>
-      <div className={labelStyles.compactMedia}>
-        <Link
-          href={href}
-          className={styles.thumbnailLink}
-          aria-label={"Открыть " + bike.name}
-        >
-          <SmallImage
-            className={styles.thumbnail}
-            src={
-              bike.photos[0] ? `/api/photos/${bike.photos[0].id}?width=160` : null
-            }
-          />
-        </Link>
-        <div className={styles.signals} data-bike-photo-actions>
-          <button
-            type="button"
-            disabled={bike.is_owner}
-            aria-label={"Нравится: " + reaction.likes}
-            aria-pressed={reaction.liked}
-            aria-busy={reaction.pending}
-            onClick={reaction.toggle}
-          >
-            <Heart size={14} fill={reaction.liked ? "currentColor" : "none"} />
-            {reaction.likes ?? 0}
-          </button>
-        </div>
-      </div>
+      <Link
+        href={href}
+        className={styles.photoLink}
+        aria-label={"Открыть " + bike.name}
+      >
+        <SmallImage
+          className={styles.photo}
+          src={photo ? `/api/photos/${photo.id}?width=640` : null}
+          srcSet={photo ? photoVariants(photo.id) : undefined}
+          sizes={trendingSizes}
+        />
+      </Link>
       <div className={styles.bikeBody}>
         <h3>
           <Link href={href}>{bike.name}</Link>
@@ -154,6 +143,17 @@ function TrendingBike({ bike, user }) {
         </p>
         <BikeLabels bike={bike} />
         <div className={styles.signals}>
+          <button
+            type="button"
+            disabled={bike.is_owner}
+            aria-label={"Нравится: " + reaction.likes}
+            aria-pressed={reaction.liked}
+            aria-busy={reaction.pending}
+            onClick={reaction.toggle}
+          >
+            <Heart size={14} fill={reaction.liked ? "currentColor" : "none"} />
+            {reaction.likes ?? 0}
+          </button>
           <Link
             href={href + "#discussion"}
             aria-label={"Комментарии: " + (bike.comments || 0)}

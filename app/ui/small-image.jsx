@@ -6,6 +6,8 @@ export default function SmallImage({
   alt = "",
   className = "",
   priority = false,
+  srcSet,
+  sizes,
 }) {
   const [failed, setFailed] = useState(null);
   const ref = useRef(null);
@@ -17,6 +19,8 @@ export default function SmallImage({
       ref={ref}
       className={className}
       src={src}
+      srcSet={srcSet}
+      sizes={srcSet ? sizes : undefined}
       alt={alt}
       width={160}
       height={120}

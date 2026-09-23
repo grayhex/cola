@@ -224,10 +224,9 @@ span.heroImage svg {
 }
 .bike {
   display: flex;
-  align-items: flex-start;
-  gap: 12px;
+  flex-direction: column;
   min-width: 0;
-  padding: 14px;
+  overflow: hidden;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface);
@@ -236,22 +235,23 @@ span.heroImage svg {
 .bike:hover {
   border-color: var(--border-strong);
 }
-.thumbnailLink {
-  flex: 0 0 64px;
+.photoLink {
+  display: block;
 }
-.thumbnail {
+.photo {
   display: grid;
   place-items: center;
-  width: 64px;
-  height: 52px;
-  object-fit: contain;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
   background: var(--surface-muted);
   color: var(--text-subtle);
-  border-radius: var(--radius-xs);
 }
 .bikeBody {
   min-width: 0;
   flex: 1;
+  padding: 12px 14px 8px;
 }
 .bike h3 {
   font: 600 16px/1.25 var(--site-font);
@@ -275,6 +275,7 @@ span.heroImage svg {
 }
 .signals {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
   min-height: 28px;
@@ -449,7 +450,7 @@ span.heroImage svg {
   min-height: 44px;
 }
 .skeleton {
-  min-height: 116px;
+  min-height: 300px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface-muted);
@@ -496,14 +497,16 @@ span.heroImage svg {
   .home {
     padding: 16px 12px 0;
   }
+  /* A short hero keeps the first builds on the first screen. */
   .heroContent {
     grid-template-columns: minmax(0, 1fr);
-    padding: 28px 20px;
+    padding: 20px 16px 16px;
     gap: 0;
   }
   .heroTitle {
     gap: 12px;
     align-items: flex-start;
+    margin-bottom: 12px;
   }
   .heroImage {
     width: 46px;
@@ -519,8 +522,12 @@ span.heroImage svg {
     letter-spacing: -0.65px;
   }
   .heroContent .description {
-    font-size: 16px;
-    margin-bottom: 20px;
+    font-size: 15px;
+    margin-bottom: 14px;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    overflow: hidden;
   }
   .animationStage {
     display: none;
@@ -546,12 +553,14 @@ span.heroImage svg {
   .pause {
     display: none;
   }
-  .trending,
+  .trending {
+    gap: 10px;
+  }
   .contentGrid {
     grid-template-columns: 1fr;
   }
   .section {
-    padding-top: 32px;
+    padding-top: 24px;
   }
   .sectionTitle {
     gap: 10px;
@@ -572,24 +581,20 @@ span.heroImage svg {
   .sectionBar > div {
     gap: 14px;
   }
-  .bike {
-    padding: 12px;
+  .bikeBody {
+    padding: 8px 10px 6px;
   }
   .bike h3 {
-    font-size: 17px;
+    font-size: 15px;
+  }
+  .skeleton {
+    min-height: 240px;
   }
   .signals :is(button, a) {
     min-width: 44px;
     min-height: 44px;
     font-size: 13px;
     padding: 6px;
-  }
-  .thumbnailLink {
-    flex-basis: 76px;
-  }
-  .thumbnail {
-    width: 76px;
-    height: 62px;
   }
   .readMore {
     min-height: 44px;
