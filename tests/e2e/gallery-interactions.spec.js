@@ -378,9 +378,14 @@ test("broken artwork and photos keep stable space and accessible fallbacks", asy
   await page.setViewportSize({ width: 320, height: 740 });
   await page.goto("/bikes");
   await expect(page.locator(".brand")).toContainText("ColaBike");
-  // Card photos load lazily: bring each card near the viewport once.
-  for (const card of await page.locator(".bike-card").all())
+  const cards = page.locator(".bike-card");
+  await expect(cards).toHaveCount(bikes.length);
+  // Lazy images start asynchronously after entering the viewport. Wait for
+  // each error fallback before scrolling on; WebKit may defer offscreen loads.
+  for (const card of await cards.all()) {
     await card.scrollIntoViewIfNeeded();
+    await expect(card.locator(".photo-empty")).toBeVisible();
+  }
   await expect(page.locator(".bike-card .photo-empty")).toHaveCount(9);
   await page.evaluate(() => window.scrollTo(0, 0));
   await noOverflow(page);
