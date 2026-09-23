@@ -4,6 +4,7 @@ import { plainExcerpt, joinBlocks } from "../lib/excerpt.js";
 import { richExcerpt } from "../lib/rich-text.js";
 import { activityExcerpt } from "../lib/discovery.js";
 import { journalDto } from "../lib/journal.js";
+import { formatRubles, listingPriceLabel } from "../lib/market-types.js";
 
 // Intl uses no-break spaces in ru-RU prices; compare the visible text.
 const norm = (value) => value.replace(/\s/gu, " ");
@@ -37,6 +38,23 @@ test("rich excerpts contain text without Markdown markup", () => {
   assert.equal(richExcerpt(""), "");
 });
 
+test("home activity excerpts format market listings and plain text", () => {
+  const listing = (fields) =>
+    norm(activityExcerpt({ type: "market", currency: "RUB", source_text: "Пробег 2000 км,\nбез восьмёрок.", ...fields }));
+  assert.equal(listing({ listing_type: "sale", price: "35000.00" }), "35 000 ₽ · Пробег 2000 км, без восьмёрок.");
+  // Missing prices must not drop the whole preview (previously NULL || text = NULL).
+  assert.equal(listing({ listing_type: "wanted", price: null }), "Бюджет не указан · Пробег 2000 км, без восьмёрок.");
+  assert.equal(listing({ listing_type: "exchange", price: null }), "Обмен · Пробег 2000 км, без восьмёрок.");
+  assert.equal(listing({ listing_type: "free", price: "0.00" }), "Бесплатно · Пробег 2000 км, без восьмёрок.");
+  assert.equal(listing({ listing_type: "sale", price: "100.00", source_text: "" }), "100 ₽");
+  assert.equal(
+    activityExcerpt({ type: "journal", source_text: "## Итоги\n\n**1200 км** по трейлам" }),
+    "Итоги. 1200 км по трейлам",
+  );
+  assert.equal(activityExcerpt({ type: "ride", source_text: "Лёгкий темп,\n2 часа." }), "Лёгкий темп, 2 часа.");
+  assert.equal(activityExcerpt({ type: "bike", source_text: null }), "");
+});
+
 test("journal DTO exposes a plain excerpt next to the stored body", () => {
   const dto = journalDto(
     {
@@ -50,4 +68,11 @@ test("journal DTO exposes a plain excerpt next to the stored body", () => {
   );
   assert.equal(dto.body, "## Итоги\n\n- **Покрышки** Maxxis");
   assert.equal(dto.excerpt, "Итоги. Покрышки Maxxis");
+});
+
+test("ruble prices omit kopecks only for whole amounts", () => {
+  assert.equal(norm(formatRubles(35000)), "35 000 ₽");
+  assert.equal(norm(formatRubles("35000.00")), "35 000 ₽");
+  assert.equal(norm(formatRubles(12500.5)), "12 500,50 ₽");
+  assert.equal(norm(listingPriceLabel({ listingType: "sale", price: "999.99", currency: "RUB" })), "999,99 ₽");
 });

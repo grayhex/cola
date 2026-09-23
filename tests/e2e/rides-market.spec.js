@@ -192,7 +192,7 @@ test("market publishes images and price, enters home feed, and closes a listing"
   expect((await response.json()).listing).toMatchObject({
     listingType: "sale", price: 12500, currency: "RUB", status: "active",
   });
-  await expect(page.locator("aside strong")).toHaveText(/12\s500,00\s₽/);
+  await expect(page.locator("aside strong")).toHaveText(/^12\s500\s₽$/);
   await noOverflow(page);
   await page.screenshot({
     path: info.outputPath("market-detail.png"),
