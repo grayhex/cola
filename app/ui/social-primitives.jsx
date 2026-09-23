@@ -6,6 +6,8 @@ import GlobalHeader from "./global-header.jsx";
 import { useSite } from "./site-provider.jsx";
 import footerStyles from "./site-footer.module.css";
 import Versions from "./versions.jsx";
+import { profilePath } from "../../lib/public-urls.js";
+import { personName, usernameLabel } from "../../lib/usernames.js";
 // `keepalive` lets a small mutation finish when the reader leaves the page
 // right after a click; its total body size is limited, so it is opt-in.
 export async function socialApi(
@@ -33,11 +35,11 @@ export function AuthorLink({ author }) {
   return (
     <Link
       className="card-author author-link"
-      href={"/u/" + author.username}
-      title={author.name}
+      href={profilePath(author.username)}
+      title={usernameLabel(author) || undefined}
     >
       <Avatar person={author} size="tiny" />
-      <span>@{author.username}</span>
+      <span>{personName(author)}</span>
     </Link>
   );
 }
@@ -188,11 +190,13 @@ export function PeopleList({ username, kind, user, onChange }) {
       <ul className="people-list">
         {data.users.map((person) => (
           <li key={person.id}>
-            <a className="person-identity" href={"/u/" + person.username}>
+            <a className="person-identity" href={profilePath(person.username)}>
               <Avatar person={person} />
               <span>
-                <strong>{person.name}</strong>
-                <small>@{person.username}</small>
+                <strong>{personName(person)}</strong>
+                {usernameLabel(person) && (
+                  <small>{usernameLabel(person)}</small>
+                )}
               </span>
             </a>
             <FollowButton

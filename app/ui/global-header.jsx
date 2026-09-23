@@ -33,6 +33,8 @@ import {
   sectionLinks,
   activeSection,
 } from "../../lib/navigation.js";
+import { profilePath } from "../../lib/public-urls.js";
+import { usernameLabel } from "../../lib/usernames.js";
 export default function GlobalHeader({ user, onProfile, previewSettings }) {
   const { personalSettings, t } = useSite();
   const settings = previewSettings || personalSettings;
@@ -132,7 +134,7 @@ export default function GlobalHeader({ user, onProfile, previewSettings }) {
         <Avatar person={user} />
         <div>
           <strong>{user?.name}</strong>
-          {user?.username && <small>@{user.username}</small>}
+          {usernameLabel(user) && <small>{usernameLabel(user)}</small>}
         </div>
       </div>
       {stats && (
@@ -158,7 +160,9 @@ export default function GlobalHeader({ user, onProfile, previewSettings }) {
       )}
       {[
         {
-          href: user?.username ? "/u/" + user.username : "/account?tab=profile",
+          href: user?.username
+            ? profilePath(user.username)
+            : "/account?tab=profile",
           label: "Мой профиль",
           icon: "profile",
         },

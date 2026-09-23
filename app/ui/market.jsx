@@ -25,6 +25,8 @@ import {
 } from "../../lib/market-types.js";
 import { marketCategories, readMarketQuery, writeMarketQuery } from "../../lib/market-query.js";
 import styles from "./market.module.css";
+import { profilePath } from "../../lib/public-urls.js";
+import { personName, usernameLabel } from "../../lib/usernames.js";
 // The link keeps the original; previews use the cached size variants.
 const marketVariants = (id, widths = [320, 640, 1280]) =>
   widths.map((w) => `/api/market/media/${id}?width=${w} ${w}w`).join(", ");
@@ -76,7 +78,9 @@ export function MarketCard({ listing: m }) {
         <strong className={styles.price}>{listingPriceLabel(m)}</strong>
         <p>
           {m.location || "Город не указан"} ·{" "}
-          <Link href={"/u/" + m.author.username}>@{m.author.username}</Link>
+          <Link href={profilePath(m.author.username)}>
+            {personName(m.author)}
+          </Link>
         </p>
         {m.status === "active" && m.publishedAt && (
           <small className={styles.published}>
@@ -588,10 +592,12 @@ export default function Market({ share = null, create = false }) {
                       {listing.location}
                     </p>
                   )}
-                  <Link href={"/u/" + listing.author.username}>
-                    @{listing.author.username}
+                  <Link href={profilePath(listing.author.username)}>
+                    {personName(listing.author)}
                   </Link>
-                  <p>{listing.author.name}</p>
+                  {usernameLabel(listing.author) && (
+                    <p>{usernameLabel(listing.author)}</p>
+                  )}
                   {listing.hasContact &&
                     (listing.status === "active" || listing.isOwner) && (
                     <div>

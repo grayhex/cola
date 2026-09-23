@@ -7,6 +7,8 @@ import dynamic from "next/dynamic";
 import { SocialHeader, SocialFooter, socialApi } from "./social-primitives.jsx";
 import { RideMetrics, rideDate } from "./ride-card.jsx";
 import { useSite } from "./site-provider.jsx";
+import { profilePath } from "../../lib/public-urls.js";
+import { personName } from "../../lib/usernames.js";
 // The comment editor (Tiptap) loads after the ride itself.
 const Discussion = dynamic(() => import("./discussion.jsx"), { ssr: false });
 const RideMap = dynamic(() => import("./ride-map.jsx"), {
@@ -56,7 +58,9 @@ export default function RidePage({ share, styleUrl }) {
         )}
         {ride ? (
           <>
-            <a href={"/u/" + ride.author.username}>@{ride.author.username}</a>
+            <a href={profilePath(ride.author.username)}>
+              {personName(ride.author)}
+            </a>
             <h1>{ride.title}</h1>
             <p className="help">
               {rideDate(ride.date)} ·{" "}
@@ -98,7 +102,7 @@ export default function RidePage({ share, styleUrl }) {
                 <h2>Приглашённые</h2>
                 {ride.invitations.map((i) => (
                   <p key={i.username}>
-                    @{i.username} ·{" "}
+                    {personName(i)} ·{" "}
                     {
                       {
                         pending: "ожидает ответа",

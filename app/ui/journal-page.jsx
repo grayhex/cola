@@ -10,6 +10,8 @@ import { Heart } from "./icons.jsx";
 import { SaveEntry } from "./journal-card.jsx";
 import { experienceHref } from "../../lib/experience-catalog.js";
 import dynamic from "next/dynamic";
+import { profilePath } from "../../lib/public-urls.js";
+import { personName } from "../../lib/usernames.js";
 // The owner's editor and the comment composer load after the entry itself.
 const Discussion = dynamic(() => import("./discussion.jsx"), { ssr: false });
 const JournalEditor = dynamic(() => import("./journal-editor.jsx"), {
@@ -146,8 +148,8 @@ export default function JournalPage({ share = null }) {
                 )}
               </div>
               <h1>{entry.title || "Без заголовка"}</h1>
-              <a href={"/u/" + entry.author.username}>
-                @{entry.author.username}
+              <a href={profilePath(entry.author.username)}>
+                {personName(entry.author)}
               </a>
               <RichTextBody className="journal-body" body={entry.body} />
               {entry.installationResult && (

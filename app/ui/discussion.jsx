@@ -5,6 +5,8 @@ import { ReportButton, PageControls } from "./community-controls.jsx";
 import PromptComposer from "./prompt-composer.jsx";
 import RichTextBody from "./rich-text-body.jsx";
 import { MessagesSquare, Reply } from "./icons.jsx";
+import { profilePath } from "../../lib/public-urls.js";
+import { personName, usernameLabel } from "../../lib/usernames.js";
 const DiscussionKind = createContext("bike");
 const QuestionContext = createContext(null);
 const paths = (kind) =>
@@ -99,11 +101,16 @@ function Comment({ comment: c, user, bikeId, refresh, reply = false }) {
     >
       <div className="comment-heading">
         {c.author ? (
-          <a className="person-identity" href={"/u/" + c.author.username}>
+          <a
+            className="person-identity"
+            href={profilePath(c.author.username)}
+          >
             <Avatar person={c.author} size="small" />
             <span>
-              <strong>{c.author.name}</strong>
-              <small>@{c.author.username}</small>
+              <strong>{personName(c.author)}</strong>
+              {usernameLabel(c.author) && (
+                <small>{usernameLabel(c.author)}</small>
+              )}
             </span>
           </a>
         ) : (

@@ -4,25 +4,28 @@ import { randomUUID } from "node:crypto";
 const origin = process.env.TEST_ORIGIN || "http://localhost:3100";
 
 // Regression for #66: a long automatic username squeezed the title to "Мой э…".
-test("bike title stays readable next to a long author username", async ({
+test("bike title stays readable next to a long author name and username", async ({
   page,
   playwright,
 }) => {
   const owner = await playwright.request.newContext({ baseURL: origin });
+  // The longest handle and a long name must not squeeze the title (#66, #71).
+  const username = "heading-" + randomUUID().replaceAll("-", "").slice(0, 22);
+  const author = "Александра Константинопольская-Задунайская";
   try {
     const register = await owner.post("/api/auth/register", {
       headers: { origin },
       data: {
         ...testConsents,
-        name: "Heading",
+        name: author,
         email: randomUUID() + "@heading.test",
         password: "heading-browser-secret",
+        username,
       },
     });
     expect(register.status()).toBe(201);
     const { user } = await (await owner.get("/api/me")).json();
-    // The default username is "rider-" plus 24 hex characters.
-    expect(user.username.length).toBeGreaterThanOrEqual(30);
+    expect(user.username).toBe(username);
     const name = "Мой эндуро на каждый день и выходные";
     const created = await owner.post("/api/bikes", {
       headers: { origin },
@@ -49,8 +52,11 @@ test("bike title stays readable next to a long author username", async ({
     await page.goto("/b/" + bike.share_id);
     const title = page.locator(".bike-heading h1");
     await expect(title).toHaveText(name);
-    const author = page.locator(".bike-heading .detail-actions .author-link");
-    await expect(author).toBeVisible();
+    const authorLink = page.locator(
+      ".bike-heading .detail-actions .author-link",
+    );
+    await expect(authorLink).toContainText(author);
+    await expect(authorLink).not.toContainText("@");
     // #77: model and year under a custom name; description, public price and
     // the manufacturer link are visible without the optional summary block.
     await expect(page.locator(".bike-subtitle")).toHaveText(
@@ -82,7 +88,7 @@ test("bike title stays readable next to a long author username", async ({
       Math.min(geometry.viewport * 0.5, 320),
     );
     expect(geometry.overflow).toBeLessThanOrEqual(0);
-    const box = await author.boundingBox();
+    const box = await authorLink.boundingBox();
     expect(box.x + box.width).toBeLessThanOrEqual(geometry.viewport + 1);
   } finally {
     await owner.dispose();

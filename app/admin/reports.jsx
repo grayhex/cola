@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { socialApi } from "../ui/social-primitives.jsx";
 import { PageControls } from "../ui/community-controls.jsx";
+import { profilePath } from "../../lib/public-urls.js";
 export default function Reports({ onManageUser }) {
   const [status, setStatus] = useState("open"),
     [page, setPage] = useState(1),
@@ -71,7 +72,10 @@ export default function Reports({ onManageUser }) {
             <span>{new Date(r.createdAt).toLocaleString("ru-RU")}</span>
           </div>
           <p>
-            От <a href={"/u/" + r.reporter.username}>@{r.reporter.username}</a>{" "}
+            От{" "}
+            <a href={profilePath(r.reporter.username)}>
+              @{r.reporter.username}
+            </a>{" "}
             ·{" "}
             {
               {

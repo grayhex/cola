@@ -15,6 +15,8 @@ import {
 import { PageControls } from "./community-controls.jsx";
 import BikeCard from "./bike-card.jsx";
 import { useSite } from "./site-provider.jsx";
+import { profilePath } from "../../lib/public-urls.js";
+import { personName } from "../../lib/usernames.js";
 const eventText = {
   article_like: "понравилась ваша статья",
   article_comment: "прокомментировал статью",
@@ -268,8 +270,8 @@ export default function CommunityPage({ kind }) {
               {data.notifications.map((n) => (
                 <li key={n.id} className={n.readAt ? "" : "unread"}>
                   <a
-                    href={"/u/" + n.actor.username}
-                    aria-label={"Профиль @" + n.actor.username}
+                    href={profilePath(n.actor.username)}
+                    aria-label={"Профиль: " + personName(n.actor)}
                   >
                     <Avatar person={n.actor} />
                   </a>
@@ -277,9 +279,9 @@ export default function CommunityPage({ kind }) {
                     <p>
                       <a
                         className="notification-actor"
-                        href={"/u/" + n.actor.username}
+                        href={profilePath(n.actor.username)}
                       >
-                        @{n.actor.username}
+                        {personName(n.actor)}
                       </a>
                       {" " + eventText[n.type] + " "}
                       {n.type !== "follow" && (

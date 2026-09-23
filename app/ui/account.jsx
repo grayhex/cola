@@ -28,6 +28,8 @@ import {
   socialApi,
 } from "./social-primitives.jsx";
 import { useSite } from "./site-provider.jsx";
+import { profilePath } from "../../lib/public-urls.js";
+import { isGeneratedUsername } from "../../lib/usernames.js";
 const tabIcons = {
   overview: LayoutGrid,
   profile: UserRound,
@@ -99,6 +101,44 @@ function EmailStatus({ email, verified }) {
         </span>
       )}
     </>
+  );
+}
+// One-time suggestion for accounts that still have the automatic username (#71).
+function UsernamePrompt({ profile, onChoose }) {
+  const key = "cola:username-prompt:" + profile.id;
+  const [hidden, setHidden] = useState(true);
+  useEffect(() => {
+    try {
+      setHidden(localStorage.getItem(key) === "dismissed");
+    } catch {
+      setHidden(false);
+    }
+  }, [key]);
+  if (hidden || !isGeneratedUsername(profile.username)) return null;
+  return (
+    <aside className="username-prompt" aria-label="Имя пользователя">
+      <p>
+        <strong>Выберите имя пользователя.</strong> Сейчас у вас автоматическое
+        имя @{profile.username}: оно видно в адресе профиля и в ссылках на ваши
+        публикации.
+      </p>
+      <div>
+        <button className="button small" onClick={onChoose}>
+          Выбрать имя
+        </button>
+        <button
+          className="quiet"
+          onClick={() => {
+            try {
+              localStorage.setItem(key, "dismissed");
+            } catch {}
+            setHidden(true);
+          }}
+        >
+          Не сейчас
+        </button>
+      </div>
+    </aside>
   );
 }
 function ProfileEditor({ profile, onSaved }) {
@@ -460,7 +500,7 @@ export default function Account() {
         <div className="account-heading">
           <h1>Личный кабинет</h1>
           {profile && (
-            <a href={"/u/" + profile.username} className="quiet">
+            <a href={profilePath(profile.username)} className="quiet">
               <ExternalLink size={15} />
               Мой публичный профиль
             </a>
@@ -495,13 +535,17 @@ export default function Account() {
           <div className="account-content">
             {tab === "overview" && (
               <>
+                <UsernamePrompt
+                  profile={profile}
+                  onChoose={() => navigate("profile")}
+                />
                 <section className="account-overview">
                   <Avatar person={profile} size="large" />
                   <div>
                     <h2>{profile.name}</h2>
                     <span className="username">@{profile.username}</span>
                     <p>
-                      <a href={"/u/" + profile.username}>
+                      <a href={profilePath(profile.username)}>
                         Посмотреть мой публичный профиль
                       </a>
                     </p>

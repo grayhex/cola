@@ -10,7 +10,10 @@ import { showcase, decorateBike, vote } from "../../../lib/showcase.js";
 import { searchExperience, searchInput } from "../../../lib/search.js";
 import { validatePurposes } from "../../../lib/repository.js";
 import { CommunityError } from "../../../lib/community-validation.js";
-import { profileInput } from "../../../lib/social-validation.js";
+import {
+  profileInput,
+  registrationInput,
+} from "../../../lib/social-validation.js";
 import { importPhotos } from "../../../lib/photo-import.js";
 import { appVersion } from "../../../lib/version.js";
 import { mailEnabled } from "../../../lib/mail.js";
@@ -57,6 +60,7 @@ import {
   credentials,
   uuid,
 } from "../../../lib/validation.js";
+import { allocateUsername, suggestUsername } from "../../../lib/usernames.js";
 import {
   ownedBike,
   hydrate,
@@ -132,7 +136,9 @@ async function handler(req, { params }) {
       method === "POST"
     ) {
       const raw = await body(req);
-      const input = credentials.parse(raw);
+      const input = (
+        p[1] === "register" ? registrationInput : credentials
+      ).parse(raw);
       // Global and per-account limits are DB-backed and do not trust proxy headers.
       if (!(await allowAuth(req, input.email, rateLimit)))
         return fail("Слишком много попыток. Попробуйте через 15 минут.", 429);
@@ -142,22 +148,44 @@ async function handler(req, { params }) {
         if (!input.name) return fail("Введите имя");
         const id = randomUUID();
         const hash = await hashPassword(input.password);
-        try {
-          await transaction(async (q) => {
-            const accepted = await checkLegalAcceptance(q, raw);
-            await q.query(
-              "INSERT INTO users(id,email,name,password_hash) VALUES($1,$2,$3,$4)",
-              [id, input.email, input.name, hash],
-            );
-            await recordLegalAcceptance(q, id, accepted);
-          });
-        } catch (e) {
-          if (e.code === "23505")
-            return fail(
-              "Не удалось зарегистрироваться с этим адресом. Попробуйте войти.",
-              409,
-            );
-          throw e;
+        let username;
+        // A derived username that lost a race to a concurrent sign-up is
+        // allocated again; a username the person chose is reported back.
+        for (let attempt = 1; !username; attempt++) {
+          const candidate =
+            input.username ||
+            (await allocateUsername(
+              db,
+              suggestUsername(input.name, input.email),
+            ));
+          try {
+            await transaction(async (q) => {
+              const accepted = await checkLegalAcceptance(q, raw);
+              await q.query(
+                "INSERT INTO users(id,email,name,password_hash,username) VALUES($1,$2,$3,$4,$5)",
+                [id, input.email, input.name, hash, candidate],
+              );
+              await recordLegalAcceptance(q, id, accepted);
+            });
+            username = candidate;
+          } catch (e) {
+            if (e.code === "23505" && e.constraint === "users_username_ci") {
+              if (!input.username && attempt < 3) continue;
+              return json(
+                {
+                  error: "Это имя пользователя уже занято. Выберите другое.",
+                  code: "username_taken",
+                },
+                409,
+              );
+            }
+            if (e.code === "23505")
+              return fail(
+                "Не удалось зарегистрироваться с этим адресом. Попробуйте войти.",
+                409,
+              );
+            throw e;
+          }
         }
         await startSession(id);
         // Confirmation is optional for using the site; the link is sent when mail works.
@@ -173,7 +201,7 @@ async function handler(req, { params }) {
             });
         }
         return json(
-          { user: { id, email: input.email, name: input.name } },
+          { user: { id, email: input.email, name: input.name, username } },
           201,
         );
       }

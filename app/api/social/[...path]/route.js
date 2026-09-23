@@ -13,7 +13,9 @@ import {
   publicProfileInput,
   preferencesInput,
   socialPage,
+  reservedUsernames,
 } from "../../../../lib/social-validation.js";
+import { allocateUsername } from "../../../../lib/usernames.js";
 import {
   getProfile,
   updateProfile,
@@ -31,6 +33,23 @@ async function handler(req, { params }) {
       method = req.method;
     if (method !== "GET" && !sameOrigin(req))
       return fail("Недопустимый источник запроса", 403);
+    // Registration checks a handle before the account exists (#71).
+    if (p[0] === "usernames" && p.length === 2 && method === "GET") {
+      const parsed = usernameInput.safeParse(p[1]);
+      if (!parsed.success)
+        return json({
+          available: false,
+          reason: reservedUsernames.has(String(p[1]).toLowerCase())
+            ? "reserved"
+            : "format",
+        });
+      const free = await allocateUsername(db, parsed.data);
+      return json({
+        username: parsed.data,
+        available: free === parsed.data,
+        suggestion: free === parsed.data ? null : free,
+      });
+    }
     const user = await currentUser();
     if (p[0] === "profiles" && p.length >= 2 && p.length <= 3) {
       const parsed = usernameInput.safeParse(p[1]);

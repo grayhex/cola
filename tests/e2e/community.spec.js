@@ -78,9 +78,8 @@ test("two riders discuss a bike, receive notifications, reply and discover new p
     expect(await visitor.evaluate(() => window.xss)).toBeUndefined();
     await page.goto("/notifications");
     await expect(page.locator(".notification-list li")).toHaveCount(3);
-    await expect(page.locator(".notification-list")).toContainText(
-      "@" + b.username,
-    );
+    // #71: the actor is shown by name, not by the handle.
+    await expect(page.locator(".notification-list")).toContainText(b.name);
     await expect(page.locator(".notification-list")).toContainText(
       "прокомментировал",
     );
