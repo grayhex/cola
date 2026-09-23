@@ -22,12 +22,14 @@ jobs:
     needs: [verify-manual]
     if: >-
       always() &&
+      github.repository == 'grayhex/cola' &&
       (
         (
           github.event_name == 'workflow_run' &&
           github.event.workflow_run.conclusion == 'success' &&
           github.event.workflow_run.event == 'push' &&
-          github.event.workflow_run.head_branch == 'main'
+          github.event.workflow_run.head_branch == 'main' &&
+          github.event.workflow_run.head_repository.full_name == github.repository
         ) ||
         (
           github.event_name == 'workflow_dispatch' &&
@@ -35,17 +37,44 @@ jobs:
           needs.verify-manual.result == 'success'
         )
       )
-    runs-on: [self-hosted, cola-production]
+    # No runner on the production server: a GitHub-hosted job reaches it over SSH
+    # with a key that can only pass a commit SHA to deploy-cola (forced command).
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Secrets live in this environment; restrict it to the main branch in Settings.
+    environment:
+      name: production
+      url: https://colabike.ru
     concurrency:
       group: cola-production
       cancel-in-progress: false
     env:
       TARGET_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
     steps:
-      - name: Deploy exactly the verified main commit
+      - name: Validate target commit
         run: |
-          grep -q "COLA_VERIFIED_DEPLOY_V2" /usr/local/sbin/deploy-cola || {
-            echo "Install the current ops/deploy-cola on the production VPS"
-            exit 1
-          }
-          sudo -n /usr/local/sbin/deploy-cola "$TARGET_SHA"
+          [[ "$TARGET_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::Unexpected SHA: $TARGET_SHA"; exit 1; }
+
+      - name: Prepare SSH
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          install -d -m 700 ~/.ssh
+          install -m 600 /dev/null ~/.ssh/deploy_key
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+
+      - name: Deploy exactly the verified main commit
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT || '22' }}
+        run: |
+          ssh -i ~/.ssh/deploy_key -p "$DEPLOY_PORT" \
+            -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            -o ConnectTimeout=20 -o ServerAliveInterval=30 \
+            "deploy@$DEPLOY_HOST" "$TARGET_SHA"
+
+      - name: Remove key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key

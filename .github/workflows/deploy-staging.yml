@@ -1,0 +1,75 @@
+name: Deploy · Staging
+
+# WARNING for a public repository: any self-hosted runner registered here can be
+# targeted by workflows from fork pull requests. Keep the cola-staging runner
+# (home LAN VM) offline, or move this workflow to a private repository.
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Branch, tag or SHA to deploy to staging"
+        required: true
+        default: "main"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  resolve:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.target.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+          fetch-depth: 0
+      - id: target
+        name: Resolve requested ref
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - name: Show target
+        env:
+          REQUESTED_REF: ${{ inputs.ref }}
+          RESOLVED_SHA: ${{ steps.target.outputs.sha }}
+        run: |
+          echo "Requested ref: $REQUESTED_REF"
+          echo "Resolved SHA: $RESOLVED_SHA"
+
+  verify:
+    needs: resolve
+    uses: ./.github/workflows/check.yml
+    with:
+      ref: ${{ needs.resolve.outputs.sha }}
+
+  deploy:
+    needs: [resolve, verify]
+    runs-on: [self-hosted, cola-staging]
+    timeout-minutes: 20
+    concurrency:
+      group: cola-staging
+      cancel-in-progress: false
+    env:
+      TARGET_SHA: ${{ needs.resolve.outputs.sha }}
+      TARGET_REF: ${{ inputs.ref }}
+      STAGING_HOST: ${{ vars.STAGING_HOST || 'staging' }}
+    steps:
+      - name: Deploy verified ref to staging
+        run: |
+          [[ "$TARGET_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::Unexpected SHA"; exit 1; }
+          grep -q "COLA_STAGING_DEPLOY_V2" /usr/local/sbin/deploy-cola-staging || {
+            echo "Install ops/deploy-cola-staging on the staging VM first"
+            exit 1
+          }
+          sudo -n /usr/local/sbin/deploy-cola-staging "$TARGET_SHA"
+      - name: Deployment summary
+        run: |
+          {
+            echo "### Staging deployment"
+            echo ""
+            printf -- '- Target: `%s`\n' "$STAGING_HOST"
+            printf -- '- Ref: `%s`\n' "$TARGET_REF"
+            printf -- '- SHA: `%s`\n' "$TARGET_SHA"
+          } >> "$GITHUB_STEP_SUMMARY"
