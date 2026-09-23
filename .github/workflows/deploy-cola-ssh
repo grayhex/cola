@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Forced command for the GitHub Actions deploy key (user "deploy").
+# Install: /usr/local/sbin/deploy-cola-ssh, owner root, mode 0755.
+# authorized_keys:
+#   restrict,command="/usr/local/sbin/deploy-cola-ssh" ssh-ed25519 AAAA... gha-deploy
+# sudoers (/etc/sudoers.d/cola-deploy, visudo -cf):
+#   deploy ALL=(root) NOPASSWD: /usr/local/sbin/deploy-cola
+set -euo pipefail
+
+sha="${SSH_ORIGINAL_COMMAND:-}"
+
+if [[ ! "$sha" =~ ^[0-9a-f]{40}$ ]]; then
+  logger -t deploy-cola-ssh "rejected request: ${sha:0:80}"
+  echo "expected a full 40-character commit SHA" >&2
+  exit 64
+fi
+
+logger -t deploy-cola-ssh "deploy requested: $sha"
+exec sudo -n /usr/local/sbin/deploy-cola "$sha"
