@@ -34,7 +34,7 @@ jobs:
     outputs:
       sha: ${{ steps.target.outputs.sha }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.ref || github.sha }}
       - name: Freeze the tested commit for every job
@@ -60,16 +60,16 @@ jobs:
     env:
       TEST_DATABASE_URL: postgres://test:test@127.0.0.1:5432/test
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ needs.prepare.outputs.sha }}
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: services/bike-resolver/package-lock.json
       - run: corepack enable && corepack prepare pnpm@11.19.0 --activate
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: ${{ runner.temp }}/pnpm-store
           key: ${{ runner.os }}-node22-pnpm-${{ hashFiles('pnpm-lock.yaml', 'pnpm-workspace.yaml') }}
@@ -120,16 +120,16 @@ jobs:
       COLA_CI_PLAYWRIGHT_PROJECT: ${{ matrix.project }}
       COLA_CI_PLAYWRIGHT_BROWSER: ${{ matrix.browser }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ needs.prepare.outputs.sha }}
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: services/bike-resolver/package-lock.json
       - run: corepack enable && corepack prepare pnpm@11.19.0 --activate
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: ${{ runner.temp }}/pnpm-store
           key: ${{ runner.os }}-node22-pnpm-${{ hashFiles('pnpm-lock.yaml', 'pnpm-workspace.yaml') }}
@@ -145,7 +145,7 @@ jobs:
         run: pnpm exec playwright install --with-deps "$COLA_CI_PLAYWRIGHT_BROWSER"
       - name: Browser tests with an isolated database and file storage
         run: pnpm test:e2e
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: ${{ !cancelled() }}
         with:
           name: browser-review-${{ matrix.project }}-${{ github.run_attempt }}
@@ -158,14 +158,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ needs.prepare.outputs.sha }}
       - name: Compose assertions
         run: python3 scripts/test-compose.py
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
       - name: Build final application image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           load: true
@@ -174,7 +174,7 @@ jobs:
           cache-from: type=gha,scope=cola-app
           cache-to: type=gha,scope=cola-app,mode=max
       - name: Build final Resolver image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: services/bike-resolver
           load: true
