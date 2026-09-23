@@ -127,6 +127,7 @@ try {
         "tests/observability-http.js",
         "tests/http-smoke.js",
         "tests/media-http.js",
+        "tests/market-http.js",
         "tests/admin-http.js",
         "tests/resolver-http.js",
         "tests/layout-http.js",

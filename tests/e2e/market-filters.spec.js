@@ -169,3 +169,59 @@ test("a late market response cannot replace a newer search result", async ({ pag
     release();
   }
 });
+
+test("price, city and sort live in the URL and survive reload and reset", async ({ page }) => {
+  const requests = await mockMarket(page);
+  await page.goto("/market");
+  await result(page, "Колесо №1", 3);
+  const panel = page.getByRole("region", { name: "Фильтры объявлений" });
+  const range = panel.getByRole("form", { name: "Цена и город" });
+  await range.getByLabel("Цена от, ₽", { exact: true }).fill("500");
+  await range.getByLabel("Цена до, ₽", { exact: true }).fill("5000");
+  await range.getByLabel("Город", { exact: true }).fill(" Москва ");
+  await range.getByRole("button", { name: "Применить", exact: true }).click();
+  await expect(page).toHaveURL(/price_min=500&price_max=5000&city=/);
+  await panel.getByRole("combobox", { name: "Сортировка", exact: true }).selectOption("price_asc");
+  await expect(page).toHaveURL(/sort=price_asc/);
+  await result(page, "Колесо №1", 3);
+  expect(Object.fromEntries(new URLSearchParams(requests.at(-1)))).toMatchObject({
+    price_min: "500", price_max: "5000", city: "Москва", sort: "price_asc",
+  });
+  await page.reload();
+  await result(page, "Колесо №1", 3);
+  await expect(range.getByLabel("Цена от, ₽", { exact: true })).toHaveValue("500");
+  await expect(range.getByLabel("Город", { exact: true })).toHaveValue("Москва");
+  await expect(panel.getByRole("combobox", { name: "Сортировка", exact: true })).toHaveValue("price_asc");
+  await panel.getByRole("button", { name: "Сбросить фильтры" }).click();
+  await expect(page).toHaveURL(/\/market$/);
+  await expect(range.getByLabel("Цена до, ₽", { exact: true })).toHaveValue("");
+  await expect(panel.getByRole("combobox", { name: "Сортировка", exact: true })).toHaveValue("new");
+});
+
+test("market contact: guests are invited to sign in, members reveal it on request", async ({ page }) => {
+  let user = null, contacts = 0;
+  const listing = {
+    ...listings[0],
+    hasContact: true,
+    publishedAt: new Date(Date.now() - 2 * 86400000).toISOString(),
+  };
+  await page.route("**/api/me", (route) => route.fulfill({ json: { user } }));
+  await page.route((url) => url.pathname === "/api/market/public/" + listing.shareId,
+    (route) => route.fulfill({ json: { listing } }));
+  await page.route((url) => url.pathname === `/api/market/public/${listing.shareId}/contact`, (route) => {
+    contacts++;
+    return route.fulfill({ json: { contact: "+7 900 000-00-00" } });
+  });
+  await page.goto("/market/" + listing.shareId);
+  const seller = page.locator("aside").filter({ hasText: "Связаться с автором" });
+  await expect(seller.getByText("Опубликовано 2 дня назад", { exact: true })).toBeVisible();
+  await expect(seller.getByRole("link", { name: "Войти", exact: true })).toHaveAttribute(
+    "href", "/login?next=" + encodeURIComponent("/market/" + listing.shareId),
+  );
+  await expect(seller.getByRole("button", { name: "Показать контакт" })).toHaveCount(0);
+  user = { id: "30000000-0000-4000-8000-000000000001", name: "Member", username: "member", preferences: {} };
+  await page.reload();
+  await seller.getByRole("button", { name: "Показать контакт", exact: true }).click();
+  await expect(seller.getByText("+7 900 000-00-00", { exact: true })).toBeVisible();
+  expect(contacts).toBe(1);
+});

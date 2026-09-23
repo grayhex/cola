@@ -13,7 +13,7 @@ import { defaultSettings, defaultCatalog } from "../lib/site-defaults.js";
 import { previewRide, saveRide, planRide, importGarmin, rideDefaults, rideDetail, deleteRide } from "../lib/rides.js";
 import { getOriginal } from "../lib/ride-storage.js";
 import { parseGarminCsv } from "../lib/garmin-csv.js";
-import { listingInput, saveListing, marketList, marketDetail } from "../lib/market.js";
+import { listingInput, saveListing, marketList, marketDetail, marketContact } from "../lib/market.js";
 import { listingPriceLabel } from "../lib/market-types.js";
 import { garminCsv } from "./garmin-fixtures.js";
 import { gpx, loop } from "./ride-fixtures.js";
@@ -153,6 +153,61 @@ test("market intent, combined filters, pagination, rubles and ownership use the 
     await db.query("UPDATE users SET blocked=true WHERE id=$1", [owner]);
     assert.equal((await marketList(db, null, { listingType: "wanted" })).total, 0);
     await assert.rejects(marketDetail(db, created.free.shareId, null), /недоступно/);
+  } finally { await db.close(); }
+});
+
+test("market price, city and sort share one WHERE for count and page; contacts stay out of cards", async () => {
+  const db = new PGlite();
+  try {
+    await schema(db);
+    const owner = await user(db, "market_seller"), buyer = await user(db, "market_buyer");
+    const add = (extra) => db.transaction((q) => saveListing(q, owner, offer(extra)));
+    const titles = (list) => list.items.map((i) => i.title);
+    const cheap = await add({ title: "Cheap", price: 500, location: "Москва, Тушино", contact: "+7 900 000-00-01" });
+    const middle = await add({ title: "Middle", price: 5000, location: "Казань" });
+    await add({ title: "Pricey", price: 50000, location: "Москва" });
+    await add({ title: "Deal", price: null, location: "Москва" });
+    const draft = await add({ title: "Hidden", price: 700, status: "draft", contact: "draft contact" });
+    // Bounds are inclusive and skip listings without a price.
+    const ranged = await marketList(db, null, { priceMin: 500, priceMax: 5000 });
+    assert.deepEqual(titles(ranged).sort(), ["Cheap", "Middle"]);
+    assert.equal(ranged.total, 2);
+    assert.equal((await marketList(db, null, { priceMin: 0 })).total, 3);
+    assert.equal((await marketList(db, null, { priceMin: 60000 })).total, 0);
+    const moscow = await marketList(db, null, { city: "Москва" });
+    assert.deepEqual(titles(moscow).sort(), ["Cheap", "Deal", "Pricey"]);
+    assert.equal(moscow.total, 3);
+    assert.equal((await marketList(db, null, { city: "%" })).total, 0);
+    assert.deepEqual(titles(await marketList(db, null, { sort: "price_asc" })), ["Cheap", "Middle", "Pricey", "Deal"]);
+    assert.deepEqual(titles(await marketList(db, null, { sort: "price_desc" })), ["Pricey", "Middle", "Cheap", "Deal"]);
+    assert.deepEqual(titles(await marketList(db, null)), ["Deal", "Pricey", "Middle", "Cheap"]);
+    await assert.rejects(marketList(db, null, { sort: "random" }), /сортировка/);
+    await add({ title: "Northern", price: null, location: "Saint Petersburg" });
+    assert.deepEqual(titles(await marketList(db, null, { city: "PETERSBURG" })), ["Northern"]);
+    // Paging a price range: the same conditions give the total and each page.
+    for (let i = 0; i < 25; i++) await add({ title: "Bulk " + i, price: 1000 + i });
+    const range = { priceMin: 1000, priceMax: 1024, sort: "price_asc" };
+    const first = await marketList(db, null, { ...range, page: 1 });
+    const second = await marketList(db, null, { ...range, page: 2 });
+    assert.equal(first.total, 25);
+    assert.equal(second.total, 25);
+    assert.equal(first.items.length, 24);
+    assert.deepEqual(second.items.map((i) => i.price), [1024]);
+    // Contacts are never part of lists or cards, except for the owner.
+    for (const viewer of [null, buyer]) {
+      const card = await marketDetail(db, cheap.shareId, viewer);
+      assert.equal("contact" in card, false);
+      assert.equal(card.hasContact, true);
+      assert.ok((await marketList(db, viewer)).items.every((i) => !("contact" in i)));
+    }
+    assert.equal((await marketDetail(db, cheap.shareId, owner)).contact, "+7 900 000-00-01");
+    assert.equal((await marketDetail(db, middle.shareId, buyer)).hasContact, false);
+    assert.ok((await marketDetail(db, cheap.shareId, null)).publishedAt);
+    assert.equal(await marketContact(db, cheap.shareId, buyer), "+7 900 000-00-01");
+    await assert.rejects(marketContact(db, draft.shareId, buyer), /недоступно/);
+    assert.equal(await marketContact(db, draft.shareId, owner), "draft contact");
+    await db.query("UPDATE users SET blocked=true WHERE id=$1", [owner]);
+    await assert.rejects(marketContact(db, cheap.shareId, buyer), /недоступно/);
   } finally { await db.close(); }
 });
 
