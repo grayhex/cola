@@ -337,7 +337,7 @@ test("OSM thumbnails with Yandex setting, bounded design headings, SVG themes an
   }
 });
 
-test("component groups collapse by default and a saved personal preference expands them", async ({
+test("component groups follow the screen width until a personal preference is saved", async ({
   page,
 }) => {
   await register(page);
@@ -361,20 +361,23 @@ test("component groups collapse by default and a saved personal preference expan
     .locator(".component-group")
     .filter({ hasText: "Test saddle" })
     .locator(".component-group-toggle");
-  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  // Open on desktop, closed on phones; the toggle still works either way.
+  const wide = page.viewportSize().width > 700;
+  await expect(toggle).toHaveAttribute("aria-expanded", String(wide));
   await toggle.click();
-  await expect(toggle).toHaveAttribute("aria-expanded", "true");
+  await expect(toggle).toHaveAttribute("aria-expanded", String(!wide));
+  // A saved personal choice wins over the screen width.
   expect(
     (
       await page.request.patch("/api/social/preferences", {
         headers: { origin },
-        data: { preferences: { componentsExpanded: true } },
+        data: { preferences: { componentsExpanded: !wide } },
       })
     ).status(),
   ).toBe(200);
   await page.reload();
-  await expect(toggle).toHaveAttribute("aria-expanded", "true");
+  await expect(toggle).toHaveAttribute("aria-expanded", String(!wide));
   await expect(
     page.locator(".compact-part").filter({ hasText: "Test saddle" }),
-  ).toBeVisible();
+  ).toBeVisible({ visible: !wide });
 });

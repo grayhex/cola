@@ -8,7 +8,7 @@
 
 ## Точки входа
 
-Витрина `/bikes`, главная сообщества `/`, личный кабинет `/account`, публичная карточка `/b/<share>`. Основной HTTP-путь: `GET /api/showcase`, `GET/POST /api/bikes`, операции с `/api/bikes/<id>` и `/api/bikes/wizard`. Парсер: `/api/bikes/resolve`, `/api/bikes/resolve-stream`, `/api/bikes/<id>/factory-spec`.
+Витрина `/bikes`, главная сообщества `/`, личный кабинет `/account`, публичная карточка `/b/<slug>-<id>` (старые `/b/<share>` перенаправляют, см. [публичные адреса](public-urls.md)). Основной HTTP-путь: `GET /api/showcase`, `GET/POST /api/bikes`, операции с `/api/bikes/<id>` и `/api/bikes/wizard`. Парсер: `/api/bikes/resolve`, `/api/bikes/resolve-stream`, `/api/bikes/<id>/factory-spec`.
 
 UI: [garage.jsx](../../app/ui/garage.jsx), [bike-wizard.jsx](../../app/ui/bike-wizard.jsx), [bike-card.jsx](../../app/ui/bike-card.jsx), [bike-grid.jsx](../../app/ui/bike-grid.jsx). HTTP: [общий route](../../app/api/%5B...path%5D/route.js).
 

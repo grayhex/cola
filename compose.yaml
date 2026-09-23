@@ -20,6 +20,7 @@ services:
     environment:
       DATABASE_URL: postgresql://colabike:${POSTGRES_PASSWORD:-colabike-local-only}@db:5432/colabike
       APP_ORIGIN: ${APP_ORIGIN:-http://localhost:3000}
+      PUBLIC_SITE_URL: ${PUBLIC_SITE_URL:-}
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
       UPLOAD_DIR: /app/uploads
       RIDES_DIR: /app/rides

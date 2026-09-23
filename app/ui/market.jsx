@@ -17,7 +17,12 @@ import {
 } from "./social-primitives.jsx";
 import { useSite } from "./site-provider.jsx";
 import { ContentLabel } from "./content-label.jsx";
-import { listingTypes, listingPriceLabel } from "../../lib/market-types.js";
+import {
+  listingTypes,
+  listingPriceLabel,
+  marketSorts,
+  publishedLabel,
+} from "../../lib/market-types.js";
 import { marketCategories, readMarketQuery, writeMarketQuery } from "../../lib/market-query.js";
 import styles from "./market.module.css";
 // The link keeps the original; previews use the cached size variants.
@@ -73,6 +78,11 @@ export function MarketCard({ listing: m }) {
           {m.location || "Город не указан"} ·{" "}
           <Link href={"/u/" + m.author.username}>@{m.author.username}</Link>
         </p>
+        {m.status === "active" && m.publishedAt && (
+          <small className={styles.published}>
+            {publishedLabel(m.publishedAt)}
+          </small>
+        )}
       </div>
     </article>
   );
@@ -354,10 +364,17 @@ export default function Market({ share = null, create = false }) {
     [edit, setEdit] = useState(create),
     [filters, setFilters] = useState(() => readMarketQuery(new URLSearchParams())),
     [search, setSearch] = useState(""),
+    [range, setRange] = useState({ priceMin: "", priceMax: "", city: "" }),
+    [contact, setContact] = useState(null),
+    [contactError, setContactError] = useState(""),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
     [ready, setReady] = useState(false);
-  const { own, category, listingType, condition, query } = filters;
+  const { own, category, listingType, condition, query, priceMin, priceMax, city, sort } =
+    filters;
+  const filtered =
+    query || category || listingType || condition || city || sort !== "new" ||
+    priceMin !== "" || priceMax !== "";
   const filterKey = writeMarketQuery(filters);
   function changeFilters(patch) {
     const next = { ...filters, page: 1, ...patch };
@@ -375,11 +392,14 @@ export default function Market({ share = null, create = false }) {
       const state = readMarketQuery(p);
       setFilters(state);
       setSearch(state.query);
+      setRange({ priceMin: state.priceMin, priceMax: state.priceMax, city: state.city });
       // Equivalent history URLs can have the same filterKey: keep their data.
       setEdit(create || p.get("edit") === "1");
     };
     restore();
     setListing(null);
+    setContact(null);
+    setContactError("");
     setReady(true);
     window.addEventListener("popstate", restore);
     socialApi("me")
@@ -422,6 +442,15 @@ export default function Market({ share = null, create = false }) {
   const saved = async (r) => {
     location.assign("/market/" + r.shareId);
   };
+  async function showContact() {
+    setContactError("");
+    try {
+      const d = await socialApi("market/public/" + listing.shareId + "/contact");
+      setContact(d.contact);
+    } catch (e) {
+      setContactError(e.message);
+    }
+  }
   async function changeStatus(status) {
     setBusy(true);
     setError("");
@@ -548,6 +577,11 @@ export default function Market({ share = null, create = false }) {
                   <strong className={styles.detailPrice}>
                     {listingPriceLabel(listing)}
                   </strong>
+                  {listing.status === "active" && listing.publishedAt && (
+                    <small className={styles.published}>
+                      {publishedLabel(listing.publishedAt)}
+                    </small>
+                  )}
                   {listing.location && (
                     <p>
                       <MapPin size={16} />
@@ -558,10 +592,36 @@ export default function Market({ share = null, create = false }) {
                     @{listing.author.username}
                   </Link>
                   <p>{listing.author.name}</p>
-                  {listing.contact && (
+                  {listing.hasContact &&
+                    (listing.status === "active" || listing.isOwner) && (
                     <div>
                       <h3>Связаться с автором</h3>
-                      <p className={styles.description}>{listing.contact}</p>
+                      {listing.contact || contact ? (
+                        <p className={styles.description}>
+                          {listing.contact || contact}
+                        </p>
+                      ) : user ? (
+                        <button
+                          type="button"
+                          className="button secondary small"
+                          onClick={showContact}
+                        >
+                          Показать контакт
+                        </button>
+                      ) : (
+                        <p>
+                          Контакт видят участники ColaBike.{" "}
+                          <Link
+                            href={
+                              "/login?next=" +
+                              encodeURIComponent("/market/" + listing.shareId)
+                            }
+                          >
+                            Войти
+                          </Link>
+                        </p>
+                      )}
+                      {contactError && <p role="alert">{contactError}</p>}
                     </div>
                   )}
                   {listing.isOwner && (
@@ -669,17 +729,53 @@ export default function Market({ share = null, create = false }) {
                     <option value="new">Новое</option>
                   </select>
                 </label>
+                <label className="field">
+                  <span>Сортировка</span>
+                  <select value={sort} onChange={(e) => changeFilters({ sort: e.target.value })}>
+                    {Object.entries(marketSorts).map(([key, label]) => (
+                      <option key={key} value={key}>{label}</option>
+                    ))}
+                  </select>
+                </label>
               </div>
+              <form className={styles.rangeFields} aria-label="Цена и город"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const bound = (v) => (/^\d{1,10}$/.test(String(v).trim()) ? Number(v) : "");
+                  changeFilters({
+                    priceMin: bound(range.priceMin),
+                    priceMax: bound(range.priceMax),
+                    city: range.city.trim().slice(0, 100),
+                  });
+                }}>
+                {[["priceMin", "Цена от, ₽"], ["priceMax", "Цена до, ₽"]].map(([key, label]) => (
+                  <label className="field" key={key}>
+                    <span>{label}</span>
+                    <input type="number" inputMode="numeric" min="0" step="1" value={range[key]}
+                      onChange={(e) => setRange((r) => ({ ...r, [key]: e.target.value }))} />
+                  </label>
+                ))}
+                <label className="field">
+                  <span>Город</span>
+                  <input maxLength={100} value={range.city}
+                    onChange={(e) => setRange((r) => ({ ...r, city: e.target.value }))} />
+                </label>
+                <button className="button secondary">Применить</button>
+              </form>
               <div className={styles.categories} aria-label="Категории товаров">
                 {[["", "Все"], ...Object.entries(marketCategories)].map(([key, label]) => (
                   <button key={key} className="quiet" aria-pressed={category === key}
                     onClick={() => changeFilters({ category: key })}>{label}</button>
                 ))}
               </div>
-              {(query || category || listingType || condition) && (
+              {filtered && (
                 <button type="button" className="quiet" onClick={() => {
                   setSearch("");
-                  changeFilters({ query: "", category: "", listingType: "", condition: "", page: 1 });
+                  setRange({ priceMin: "", priceMax: "", city: "" });
+                  changeFilters({
+                    query: "", category: "", listingType: "", condition: "",
+                    priceMin: "", priceMax: "", city: "", sort: "new", page: 1,
+                  });
                 }}>Сбросить фильтры</button>
               )}
             </section>

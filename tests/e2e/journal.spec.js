@@ -57,15 +57,12 @@ test("component change offers an explicit draft, never automatic publication", a
   const group = page
     .locator(".component-group")
     .filter({ hasText: "Original saddle" });
-  await expect(group.locator(".component-group-toggle")).toHaveAttribute(
-    "aria-expanded",
-    "false",
-  );
-  await group.locator(".component-group-toggle").click();
-  await expect(group.locator(".component-group-toggle")).toHaveAttribute(
-    "aria-expanded",
-    "true",
-  );
+  // Groups start open on wide screens and closed on phones.
+  const wide = page.viewportSize().width > 700;
+  const toggle = group.locator(".component-group-toggle");
+  await expect(toggle).toHaveAttribute("aria-expanded", String(wide));
+  if (!wide) await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
   await page.locator('summary[aria-label="Действия: Original saddle"]').click();
   await page
     .getByRole("button", { name: "Изменить Original saddle", exact: true })
@@ -167,7 +164,8 @@ test("journal: draft, publication, photo, discussion and inherited privacy", asy
     await page
       .getByRole("button", { name: "Сохранить черновик", exact: true })
       .click();
-    await expect(page).toHaveURL(/\/j\/[a-f0-9-]+$/);
+    // The owner lands on the canonical "<slug>-<public id>" URL of the draft.
+    await expect(page).toHaveURL(/\/j\/[^/?#]+-[0-9a-z]{8}$/);
     await expect(page.locator(".journal-entry-meta")).toContainText("Черновик");
     const path = new URL(page.url()).pathname;
     const share = path.split("/").pop();

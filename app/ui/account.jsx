@@ -348,13 +348,21 @@ function Appearance({ initial, onSaved }) {
           </select>
         </label>
       ))}
-      <label className="admin-toggle">
-        <span>Раскрывать группы комплектующих по умолчанию</span>
-        <input
-          type="checkbox"
-          checked={prefs.componentsExpanded || false}
-          onChange={(e) => set("componentsExpanded", e.target.checked)}
-        />
+      <label className="field">
+        <span>Группы комплектующих</span>
+        <select
+          value={String(prefs.componentsExpanded ?? "")}
+          onChange={(e) =>
+            set(
+              "componentsExpanded",
+              e.target.value === "" ? "" : e.target.value === "true",
+            )
+          }
+        >
+          <option value="">Раскрыты на компьютере, свёрнуты на телефоне</option>
+          <option value="true">Всегда раскрыты</option>
+          <option value="false">Всегда свёрнуты</option>
+        </select>
       </label>
       <label className="admin-toggle">
         <span>Показывать пробег</span>

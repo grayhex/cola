@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { listingTypeKeys } from "../../../../lib/market-types.js";
+import { listingTypeKeys, marketSorts } from "../../../../lib/market-types.js";
 import { db, transaction } from "../../../../lib/db.js";
 import { currentUser, rateLimit } from "../../../../lib/auth.js";
 import {
@@ -18,6 +18,7 @@ import {
   listingInput,
   marketList,
   marketDetail,
+  marketContact,
   saveListing,
   deleteListing,
   saveMarketPhoto,
@@ -46,6 +47,12 @@ async function handler(req, { params }) {
       user = await currentUser();
     if (method !== "GET" && !sameOrigin(req))
       return fail("Недопустимый источник запроса", 403);
+    const price = (name) => {
+      const value = url.searchParams.get(name);
+      return value === null || value === ""
+        ? null
+        : z.coerce.number().int().min(0).max(9999999999).parse(value);
+    };
     if (method === "GET" && !p.length) {
       const own = url.searchParams.get("own") === "1";
       if (own && !user) return fail("Войдите в аккаунт", 401);
@@ -58,6 +65,16 @@ async function handler(req, { params }) {
             .parse(url.searchParams.get("category")),
           listingType: z.enum(listingTypeKeys).nullable().parse(url.searchParams.get("type")),
           condition: z.enum(["new", "used"]).nullable().parse(url.searchParams.get("condition")),
+          priceMin: price("price_min"),
+          priceMax: price("price_max"),
+          city: z
+            .string()
+            .trim()
+            .max(100)
+            .parse(url.searchParams.get("city") || ""),
+          sort: z
+            .enum(Object.keys(marketSorts))
+            .parse(url.searchParams.get("sort") || "new"),
           page: communityPage.parse(url.searchParams.get("page") || 1),
           search: z
             .string()
@@ -65,6 +82,15 @@ async function handler(req, { params }) {
             .parse(url.searchParams.get("q") || ""),
         }),
       );
+    }
+    // Contacts are shown one listing at a time to signed-in people only.
+    if (method === "GET" && p[0] === "public" && p[2] === "contact" && p.length === 3) {
+      if (!user) return fail("Войдите, чтобы увидеть контакт", 401);
+      if (!(await rateLimit("market-contact:" + user.id, 20)))
+        return fail("Слишком много запросов контактов. Попробуйте позже.", 429);
+      return json({
+        contact: await marketContact(db, uuid.parse(p[1]), user.id),
+      });
     }
     if (method === "GET" && p[0] === "public" && p.length === 2)
       return json({

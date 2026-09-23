@@ -2,6 +2,9 @@ import { assetContentSecurityPolicy } from "./lib/asset-security.js";
 
 export default {
   output: "standalone",
+  // Open Graph and canonical tags must be in the initial HTML head for every
+  // messenger, including clients not recognized by Next's built-in bot list.
+  htmlLimitedBots: /.*/,
   experimental:
     process.env.COLABIKE_WORKER_THREADS === "1"
       ? { workerThreads: true, webpackBuildWorker: false }

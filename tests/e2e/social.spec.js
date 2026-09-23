@@ -167,7 +167,7 @@ test("account profile/avatar editing, public garage, author links and mutual mob
     await visitor.goto("/bikes");
     const card = visitor.locator(".bike-card").filter({ hasText: bike.name });
     await card.locator(".author-link").click();
-    await expect(visitor).toHaveURL("/u/" + username);
+    await expect(visitor).toHaveURL("/@" + username);
     await visitor
       .locator(".bike-card")
       .getByRole("link", { name: bike.name, exact: true })
@@ -176,7 +176,7 @@ test("account profile/avatar editing, public garage, author links and mutual mob
       visitor.getByRole("heading", { name: bike.name, exact: true }),
     ).toBeVisible();
     await visitor.locator(".detail-actions .author-link").click();
-    await expect(visitor).toHaveURL("/u/" + username);
+    await expect(visitor).toHaveURL("/@" + username);
     await visitor
       .getByRole("button", { name: "Отписаться", exact: true })
       .click();

@@ -7,10 +7,18 @@ import {
   ExternalLink,
 } from "./icons.jsx";
 import { groupedComponents } from "../../lib/garage-layout.js";
-import { useId, useState } from "react";
+import { useId, useState, useSyncExternalStore } from "react";
 import { useSite } from "./site-provider.jsx";
 import PartIcon from "./part-icon.jsx";
 import { experienceHref } from "../../lib/experience-catalog.js";
+// Without a personal choice groups are open on wide screens and closed on phones.
+const wideQuery = "(min-width: 701px)";
+function subscribeWide(onChange) {
+  const media = window.matchMedia(wideQuery);
+  media.addEventListener("change", onChange);
+  return () => media.removeEventListener("change", onChange);
+}
+const wideNow = () => window.matchMedia(wideQuery).matches;
 export default function GroupedComponents({
   bike,
   section,
@@ -23,6 +31,9 @@ export default function GroupedComponents({
 }) {
   const { personalSettings } = useSite();
   const [expanded, setExpanded] = useState({});
+  const wide = useSyncExternalStore(subscribeWide, wideNow, () => false);
+  const isOpen = (id, state = expanded) =>
+    state[id] ?? personalSettings.componentsExpanded ?? wide;
   const instanceId = useId();
   const groups = groupedComponents(
     bike.components.filter((c) => c.section === section),
@@ -54,20 +65,12 @@ export default function GroupedComponents({
               <button
                 type="button"
                 className="component-group-toggle"
-                aria-expanded={
-                  expanded[group.id] ??
-                  personalSettings.componentsExpanded ??
-                  false
-                }
+                aria-expanded={isOpen(group.id)}
                 aria-controls={instanceId + group.id}
                 onClick={() =>
                   setExpanded((v) => ({
                     ...v,
-                    [group.id]: !(
-                      v[group.id] ??
-                      personalSettings.componentsExpanded ??
-                      false
-                    ),
+                    [group.id]: !isOpen(group.id, v),
                   }))
                 }
               >
@@ -108,16 +111,7 @@ export default function GroupedComponents({
               </div>
             )}
           </div>
-          <div
-            id={instanceId + group.id}
-            hidden={
-              !(
-                expanded[group.id] ??
-                personalSettings.componentsExpanded ??
-                false
-              )
-            }
-          >
+          <div id={instanceId + group.id} hidden={!isOpen(group.id)}>
             {group.components.map((c, i) => (
               <div className="compact-part" key={c.id}>
                 <div className="compact-part-main">

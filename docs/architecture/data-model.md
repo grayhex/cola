@@ -17,6 +17,7 @@
 | Поездки, объявления, статьи | [017_rides_market.sql](../../db/017_rides_market.sql), [018_articles_rsvp.sql](../../db/018_articles_rsvp.sql) | Источники поездок, планы, объявления, статьи и RSVP |
 | Документы и согласия | [019_legal_documents.sql](../../db/019_legal_documents.sql) | Версионирование документов и согласий |
 | Ссылки из писем | [022_auth_tokens.sql](../../db/022_auth_tokens.sql) | Одноразовые токены восстановления и подтверждения (только digest), `email_verified_at`, `password_changed_at` |
+| Публичные адреса | [023_public_urls.sql](../../db/023_public_urls.sql) | Неизменяемые `public_id`, изменяемые `slug`, алиасы старых UUID-ссылок, представление видимости `public_entity_links` ([подробнее](../modules/public-urls.md)) |
 | Классификация | [020_bike_classification.sql](../../db/020_bike_classification.sql) | Независимые признаки байка, индексы и совместимость старого category |
 | Resolver | [migrations](../../services/bike-resolver/migrations) | Изолированная схема `bike_resolver`: cache и настройки источников |
 

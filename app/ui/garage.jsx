@@ -445,6 +445,29 @@ export default function Garage({
     "data-variant": block(id).variant,
   });
   const editable = !!user && bike?.is_owner === true;
+  const modelName = [bike?.brand, bike?.model, bike?.trim]
+    .filter(Boolean)
+    .join(" ");
+  const named = Boolean(bike?.name) && bike.name !== modelName;
+  const subtitle = [
+    named && modelName,
+    bike?.year && (named ? bike.year : `${t("Модельный год")} ${bike.year}`),
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  // Without the "О велосипеде" block, the owner's text, public price and
+  // manufacturer link stay visible under the title.
+  const intro = bike &&
+    !block("summary").enabled && {
+      description:
+        settings.summaryFields?.description !== false && bike.description,
+      price:
+        bike.show_bike_price &&
+        bike.price != null &&
+        settings.summaryFields?.price !== false,
+      link:
+        settings.summaryFields?.manufacturer !== false && bike.manufacturer_url,
+    };
   function openBike(b) {
     if (!account) {
       router.push("/b/" + b.share_id);
@@ -587,13 +610,9 @@ export default function Garage({
           >
             <div>
               <div className="bike-detail-title-row">
-                <h1>
-                  {bike.name ||
-                    [bike.brand, bike.model, bike.trim]
-                      .filter(Boolean)
-                      .join(" ")}
-                </h1>
+                <h1>{bike.name || modelName}</h1>
               </div>
+              {subtitle && <p className="bike-subtitle">{subtitle}</p>}
               <div className="bike-heading-labels">
                 <BikeLabels bike={bike} />
               </div>
@@ -635,6 +654,31 @@ export default function Garage({
                 </button>
               ) : null}
             </div>
+            {intro && (intro.description || intro.price || intro.link) && (
+              <div className="bike-intro">
+                {intro.description && <p>{bike.description}</p>}
+                {(intro.price || intro.link) && (
+                  <p className="bike-intro-facts">
+                    {intro.price && (
+                      <span>
+                        {t("Стоимость велосипеда")}:{" "}
+                        <strong>{rub(bike.price)}</strong>
+                      </span>
+                    )}
+                    {intro.link && (
+                      <a
+                        className="part-link"
+                        href={bike.manufacturer_url}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {t("Сайт производителя")}
+                      </a>
+                    )}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
           <div
             className="bike-meta-line"

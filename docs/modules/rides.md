@@ -8,7 +8,7 @@
 
 ## Точки входа
 
-Аккаунт → Покатушки; `/r/<share>`; списки на байке и профиле; `/feed`. `POST /api/rides/preview` принимает GPX, `POST /api/rides` сохраняет выбор велосипеда и параметры. HTTP-код: `app/api/rides`; доменная логика: [lib/rides.js](../../lib/rides.js); схема: [012_rides.sql](../../db/012_rides.sql).
+Аккаунт → Покатушки; `/r/<slug>-<id>` (старые `/r/<share>` перенаправляют); списки на байке и профиле; `/feed`. `POST /api/rides/preview` принимает GPX, `POST /api/rides` сохраняет выбор велосипеда и параметры. HTTP-код: `app/api/rides`; доменная логика: [lib/rides.js](../../lib/rides.js); схема: [012_rides.sql](../../db/012_rides.sql).
 
 ## Данные и основные функции
 

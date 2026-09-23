@@ -92,12 +92,24 @@
 .filterPanel { margin-bottom: 20px; }
 .filterFields {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
-  max-width: 640px;
+  max-width: 860px;
   margin-top: 14px;
 }
 .filterFields label { min-width: 0; margin-bottom: 0; }
+.rangeFields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  align-items: end;
+  gap: 12px;
+  max-width: 860px;
+  margin-top: 12px;
+}
+.rangeFields label { min-width: 0; margin-bottom: 0; }
+.rangeFields input { width: 100%; min-width: 0; min-height: 44px; }
+.rangeFields button { min-height: 44px; }
+.published { display: block; color: var(--muted); font-size: 12px; }
 .filterFields select { width: 100%; min-width: 0; min-height: 44px; }
 .categories {
   display: flex;
@@ -256,6 +268,10 @@
   .detailGrid,
   .formGrid {
     grid-template-columns: 1fr;
+  }
+  .filterFields,
+  .rangeFields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .search { gap: 6px; padding: 6px; }
   .search > svg { display: none; }

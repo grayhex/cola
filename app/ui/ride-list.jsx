@@ -38,6 +38,13 @@ export default function RideList({
     latest &&
     (settings.rideListMode === "list" ||
       (settings.rideListMode === "auto" && data?.total > 5));
+  // An empty rides column on a bike page shrinks to one line.
+  if (latest && data?.total === 0)
+    return (
+      <section className="ride-list bike-rides bike-rides-empty">
+        <p className="help">Покатушек с этим велосипедом пока нет</p>
+      </section>
+    );
   return (
     <section className={"ride-list" + (latest ? " bike-rides" : "")}>
       <h2>Покатушки</h2>

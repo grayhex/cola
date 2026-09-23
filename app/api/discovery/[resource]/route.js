@@ -1,5 +1,6 @@
 import { db } from "../../../../lib/db.js";
 import { currentUser } from "../../../../lib/auth.js";
+import { withPublicReferences } from "../../../../lib/public-response.js";
 import {
   communityHome,
   discoveryInput,
@@ -7,8 +8,8 @@ import {
 } from "../../../../lib/discovery.js";
 import { logError, traced } from "../../../../lib/observability.js";
 export const dynamic = "force-dynamic";
-const json = (data, status = 200) =>
-  Response.json(data, {
+const json = async (data, status = 200) =>
+  Response.json(status < 400 ? await withPublicReferences(data) : data, {
     status,
     headers: { "Cache-Control": "private, no-store" },
   });
