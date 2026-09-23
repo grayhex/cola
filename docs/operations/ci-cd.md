@@ -15,7 +15,7 @@
 
 ## Проверки и кеши
 
-`prepare` один раз фиксирует SHA. Далее параллельны Application/Resolver/HTTP, Chromium, WebKit mobile и Docker/backup. Браузеры имеют отдельные базы и runners, внутри каждого один worker. `check` требует `success` от всех обязательных групп, не трактует skip/cancel как успех. Изменения приложения, схемы, зависимостей и runtime-упаковки проходят полный набор; проверки не отключаются ради ускорения.
+`prepare` один раз фиксирует SHA. Далее параллельны Application/Resolver/HTTP (первым шагом — `pnpm lint`), Chromium, WebKit mobile и Docker/backup. Браузеры имеют отдельные базы и runners, внутри каждого один worker. `check` требует `success` от всех обязательных групп, не трактует skip/cancel как успех. Изменения приложения, схемы, зависимостей и runtime-упаковки проходят полный набор; проверки не отключаются ради ускорения.
 
 pnpm store кешируется по платформе, Node и lock/workspace-файлам; npm download cache Resolver — по его `package-lock.json`. Кеш не заменяет установку с зафиксированным lock. Docker использует отдельные BuildKit layer caches для приложения и Resolver. Operations собирает оба конечных образа один раз, затем передаёт их в drill без повторной сборки. Локальный drill без готовых образов собирает их сам.
 
@@ -24,6 +24,10 @@ pnpm store кешируется по платформе, Node и lock/workspace-
 Drill проверяет чистую установку без демонстрационного контента, повтор миграций, сохранение исторической записи выведенной версии, запуск non-root и readiness, доступность операторских зависимостей, MapLibre worker и файловые права. Затем выполняет обычное восстановление БД, фото, аватаров и GPX в отдельный Compose project, проверяет отказ перезаписать БД и выявление повреждённого backup.
 
 Новый commit отменяет предыдущий автоматический CI того же PR/main. Разные PR и ручные/reusable проверки не должны отменять друг друга. Deploy сериализован своей concurrency group с `cancel-in-progress:false` и серверным lock. Переименование CI требует синхронно обновить production trigger и cleanup concurrency key.
+
+Сборка не должна выдавать предупреждений Turbopack «Dynamic filesystem access causes tracing of the whole project». Пути к данным, которые задаются при запуске (`UPLOAD_DIR`, `RIDES_DIR`, `MEDIA_CACHE_DIR`), помечаются `/*turbopackIgnore: true*/` в `path.resolve`/`path.join` и в вызове `fs`, иначе в standalone-вывод попадает весь проект. Раньше, без `node_modules`, standalone занимал 33 МБ и 1461 файл, в Docker туда дублировались исходники и `public`; теперь это 13 МБ и 794 файла.
+
+Dependabot ([dependabot.yml](../../.github/dependabot.yml)) раз в неделю предлагает обновления npm для приложения и Resolver, GitHub Actions и базовых Docker-образов. Минорные и патч-версии приходят одним PR на экосистему. CodeQL не подключён: для приватного репозитория загрузка результатов требует GitHub Advanced Security.
 
 Browser artifacts разделены по проекту/attempt и хранятся 7 дней. Fixture/live-ограничения — в [тестировании](../development/testing.md). Успех прежнего feature-run не считается результатом итогового PR; недоступные проверки перечисляются явно. Ускорение и размеры образов публикуются только после измерения.
 

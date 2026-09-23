@@ -5,12 +5,16 @@ import RichTextBody from "./rich-text-body.jsx";
 import { useState, useEffect } from "react";
 import { SocialHeader, SocialFooter, socialApi } from "./social-primitives.jsx";
 import { useSite } from "./site-provider.jsx";
-import Discussion from "./discussion.jsx";
-import JournalEditor from "./journal-editor.jsx";
 import { journalKinds } from "../../lib/journal-kinds.js";
 import { Heart } from "./icons.jsx";
 import { SaveEntry } from "./journal-card.jsx";
 import { experienceHref } from "../../lib/experience-catalog.js";
+import dynamic from "next/dynamic";
+// The owner's editor and the comment composer load after the entry itself.
+const Discussion = dynamic(() => import("./discussion.jsx"), { ssr: false });
+const JournalEditor = dynamic(() => import("./journal-editor.jsx"), {
+  ssr: false,
+});
 export default function JournalPage({ share = null }) {
   const router = useRouter();
   const [bikes, setBikes] = useState([]);

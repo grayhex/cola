@@ -75,6 +75,9 @@ jobs:
           key: ${{ runner.os }}-node22-pnpm-${{ hashFiles('pnpm-lock.yaml', 'pnpm-workspace.yaml') }}
           restore-keys: ${{ runner.os }}-node22-pnpm-
       - run: pnpm install --frozen-lockfile --store-dir "$RUNNER_TEMP/pnpm-store"
+      # Errors fail the build; warnings are the backlog shown in the log (#82).
+      - name: Lint
+        run: pnpm lint
       - name: Application unit and database tests
         run: pnpm test
       - name: Production build

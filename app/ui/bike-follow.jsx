@@ -1,15 +1,18 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { socialApi } from "./social-primitives.jsx";
 export default function BikeFollow({ bikeId }) {
   const [following, setFollowing] = useState(false),
     [busy, setBusy] = useState(false),
-    [error, setError] = useState("");
+    [error, setError] = useState(""),
+    // A status that arrives after the reader's click must not undo it.
+    touched = useRef(false);
   useEffect(() => {
     let active = true;
+    touched.current = false;
     socialApi("community/bikes/" + bikeId + "/follow")
       .then((r) => {
-        if (active) setFollowing(r.following);
+        if (active && !touched.current) setFollowing(r.following);
       })
       .catch(() => {});
     return () => {
@@ -23,6 +26,7 @@ export default function BikeFollow({ bikeId }) {
         disabled={busy}
         aria-pressed={following}
         onClick={async () => {
+          touched.current = true;
           setBusy(true);
           setError("");
           const before = following;
@@ -31,6 +35,8 @@ export default function BikeFollow({ bikeId }) {
             const r = await socialApi(
               "community/bikes/" + bikeId + "/follow",
               before ? "DELETE" : "PUT",
+              undefined,
+              { keepalive: true },
             );
             setFollowing(r.following);
           } catch (e) {

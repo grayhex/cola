@@ -76,12 +76,14 @@ test("journal discovery: no-bike reader subscribes, saves, searches and returns;
     await other
       .getByRole("button", { name: "Подписаться на велосипед", exact: true })
       .click();
-    await expect(
-      other.getByRole("button", {
-        name: "Вы подписаны на велосипед",
-        exact: true,
-      }),
-    ).toHaveAttribute("aria-pressed", "true");
+    const followed = other.getByRole("button", {
+      name: "Вы подписаны на велосипед",
+      exact: true,
+    });
+    await expect(followed).toHaveAttribute("aria-pressed", "true");
+    // The label flips optimistically; the button is enabled again only after
+    // the server stored the follow. Leaving earlier can cancel the request.
+    await expect(followed).toBeEnabled();
     await other.goto("/journal?mode=following");
     const card = other.locator(".journal-card").filter({ hasText: nonce });
     await expect(card).toHaveCount(1);

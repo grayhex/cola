@@ -231,7 +231,7 @@ async function handler(req, { params }) {
         await Promise.all(
           files.map((f) =>
             unlink(
-              path.join(process.env.UPLOAD_DIR || "uploads", f.filename),
+              path.join(/*turbopackIgnore: true*/ process.env.UPLOAD_DIR || "uploads", f.filename),
             ).catch(() => {}),
           ),
         );
@@ -322,7 +322,7 @@ async function handler(req, { params }) {
         });
         if (result.error) return fail(result.error, result.status);
         await unlink(
-          path.join(process.env.UPLOAD_DIR || "uploads", result.filename),
+          path.join(/*turbopackIgnore: true*/ process.env.UPLOAD_DIR || "uploads", result.filename),
         ).catch(() => {});
         return json({ ok: true });
       }

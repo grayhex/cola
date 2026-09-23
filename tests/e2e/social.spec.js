@@ -143,9 +143,10 @@ test("account profile/avatar editing, public garage, author links and mutual mob
     await visitor
       .getByRole("button", { name: "Подписаться", exact: true })
       .click();
+    // Enabled again only after the server stored the follow (optimistic label).
     await expect(
       visitor.getByRole("button", { name: "Отписаться", exact: true }),
-    ).toBeVisible();
+    ).toBeEnabled();
     await page.reload();
     await page
       .getByRole("button", { name: "1 Подписчики", exact: true })

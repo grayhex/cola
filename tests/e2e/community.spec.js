@@ -55,9 +55,10 @@ test("two riders discuss a bike, receive notifications, reply and discover new p
     await visitor
       .getByRole("button", { name: "Подписаться", exact: true })
       .click();
+    // Enabled again only after the server stored the follow (optimistic label).
     await expect(
       visitor.getByRole("button", { name: "Отписаться", exact: true }),
-    ).toBeVisible();
+    ).toBeEnabled();
     await visitor.goto("/b/" + first.share_id);
     await visitor
       .getByRole("button", { name: "Нравится: 0", exact: true })
