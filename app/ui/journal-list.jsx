@@ -5,6 +5,7 @@ import { socialApi } from "./social-primitives.jsx";
 import { PageControls } from "./community-controls.jsx";
 import { journalKinds } from "../../lib/journal-kinds.js";
 import BikeFollow from "./bike-follow.jsx";
+import { publicPath } from "../../lib/public-urls.js";
 export default function JournalList({ bike, owner = false, editable = false }) {
   const [data, setData] = useState(null),
     [page, setPage] = useState(1),
@@ -58,7 +59,7 @@ export default function JournalList({ bike, owner = false, editable = false }) {
         isPublic: false,
         componentIds: change.componentIds,
       });
-      location.assign("/j/" + e.shareId + "?edit=1");
+      location.assign(publicPath("journal", e) + "?edit=1");
     } catch (e) {
       setError(e.message);
     } finally {
@@ -114,7 +115,7 @@ export default function JournalList({ bike, owner = false, editable = false }) {
             ) : null}
           </div>
           <h3>
-            <a href={"/j/" + e.shareId}>{e.title || "Без заголовка"}</a>
+            <a href={publicPath("journal", e)}>{e.title || "Без заголовка"}</a>
           </h3>
           <p>{e.excerpt ?? e.body}</p>
           <small>

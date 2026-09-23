@@ -1,0 +1,68 @@
+.share {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+.button {
+  gap: 7px;
+  font-weight: 600;
+}
+.button span {
+  font-size: 14px;
+}
+.menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 40;
+  display: grid;
+  min-width: 220px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  box-shadow: var(--shadow-popover);
+}
+.menu > button,
+.menu > a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--radius-xs);
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+.menu > button:hover,
+.menu > a:hover,
+.menu > button:focus-visible,
+.menu > a:focus-visible {
+  background: var(--surface-hover);
+}
+.status:empty {
+  display: none;
+}
+.status {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 40;
+  padding: 6px 10px;
+  border-radius: var(--radius-xs);
+  background: var(--text);
+  color: var(--surface);
+  font-size: 13px;
+  white-space: nowrap;
+}
+@media (max-width: 600px) {
+  .button span {
+    display: none;
+  }
+}

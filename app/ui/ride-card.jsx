@@ -10,7 +10,7 @@ import { Heart } from "./icons.jsx";
 import { useSite } from "./site-provider.jsx";
 import RideBasemap from "./ride-basemap.jsx";
 import { routePaths } from "../../lib/ride-geometry.js";
-import { profilePath } from "../../lib/public-urls.js";
+import { profilePath, publicPath } from "../../lib/public-urls.js";
 import { personName } from "../../lib/usernames.js";
 export function RideRoutePreview({ geometry = [], className = "" }) {
   const paths = routePaths(geometry);
@@ -90,11 +90,11 @@ export default function RideCard({ ride: r, owner = false, onEdit }) {
           </span>
         )}
         <h3>
-          <a href={"/r/" + r.shareId + (owner ? "?owner=1" : "")}>{r.title}</a>
+          <a href={publicPath("ride", r) + (owner ? "?owner=1" : "")}>{r.title}</a>
         </h3>
         <p className="help">
           {rideDate(r.date)} ·{" "}
-          <a href={"/b/" + r.bike.shareId}>{r.bike.name}</a>
+          <a href={publicPath("bike", r.bike)}>{r.bike.name}</a>
         </p>
         <RecurringRideLabel ride={r} />
         <RideRsvp ride={r} />

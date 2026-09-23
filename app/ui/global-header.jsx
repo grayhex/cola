@@ -122,6 +122,8 @@ export default function GlobalHeader({ user, onProfile, previewSettings }) {
       key={item.href}
       className="nav-menu-link"
       href={item.href}
+      // Profile links are not prefetched, see AuthorLink.
+      prefetch={item.href.startsWith("/@") ? false : undefined}
       aria-current={pathname + search === item.href ? "page" : undefined}
     >
       {graphic(item.icon)}

@@ -36,6 +36,8 @@ import BikeMeters from "./bike-meters.jsx";
 import Photo from "./bike-photo.jsx";
 import BikeCard from "./bike-card.jsx";
 import { SocialFooter, AuthorLink } from "./social-primitives.jsx";
+import ShareButton from "./share-button.jsx";
+import { publicPath } from "../../lib/public-urls.js";
 import GlobalHeader from "./global-header.jsx";
 
 import Versions from "./versions.jsx";
@@ -476,7 +478,7 @@ export default function Garage({
     };
   function openBike(b) {
     if (!account) {
-      router.push("/b/" + b.share_id);
+      router.push(publicPath("bike", b));
       return;
     }
     setSelected(b);
@@ -515,7 +517,7 @@ export default function Garage({
       setSelected(updated);
       meRequest.current = Promise.resolve({ user: current });
       if (updated.share_id !== share)
-        router.replace("/b/" + updated.share_id, { scroll: false });
+        router.replace(publicPath("bike", updated), { scroll: false });
     } catch (e) {
       if ([401, 403, 404].includes(e.status)) {
         setSelected(null);
@@ -627,13 +629,20 @@ export default function Garage({
               {share && <AuthorLink author={bike.author} />}
               {editable ? (
                 <>
+                  {bike.is_public && (
+                    <ShareButton
+                      path={publicPath("bike", bike)}
+                      title={bike.name || modelName}
+                    />
+                  )}
                   <button
                     className="icon bordered share-action"
-                    aria-label={t("Поделиться")}
+                    aria-label={t("Доступ")}
+                    title={t("Кто видит велосипед")}
                     onClick={() => setModal({ type: "share" })}
                   >
                     {bike.is_public ? <Globe size={17} /> : <Lock size={17} />}
-                    <span>{t("Поделиться")}</span>
+                    <span>{t("Доступ")}</span>
                   </button>
                   <button
                     className="icon bordered"
@@ -658,7 +667,12 @@ export default function Garage({
                   {t("Добавить свой байк")}
                   <Plus size={17} />
                 </button>
-              ) : null}
+              ) : (
+                <ShareButton
+                  path={publicPath("bike", bike)}
+                  title={bike.name || modelName}
+                />
+              )}
             </div>
             {intro && (intro.description || intro.price || intro.link) && (
               <div className="bike-intro">
@@ -1268,7 +1282,7 @@ export default function Garage({
                 : modal.section === "build"
                   ? t("Добавить компонент")
                   : t("Добавить аксессуар"),
-              share: t("Поделиться велосипедом"),
+              share: t("Доступ к велосипеду"),
               photoSearch: "Выбор фотографий",
               photoView: t("Фотография велосипеда"),
               deleteBike: t("Удалить велосипед?"),
@@ -1448,7 +1462,7 @@ export default function Garage({
                     aria-label={t("Публичная ссылка")}
                     value={
                       typeof window !== "undefined"
-                        ? window.location.origin + "/b/" + bike.share_id
+                        ? window.location.origin + publicPath("bike", bike)
                         : ""
                     }
                   />
@@ -1458,7 +1472,7 @@ export default function Garage({
                     onClick={() =>
                       run(async () => {
                         await navigator.clipboard.writeText(
-                          window.location.origin + "/b/" + bike.share_id,
+                          window.location.origin + publicPath("bike", bike),
                         );
                         setNotice(t("Ссылка скопирована"));
                       })

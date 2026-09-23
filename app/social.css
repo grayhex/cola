@@ -500,3 +500,15 @@
   background: var(--paper);
   color: var(--ink);
 }
+
+/* Author and share button share a row on public entity pages (#72). */
+.entity-byline,
+.entity-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px 12px;
+  flex-wrap: wrap;
+}
+.entity-byline {
+  justify-content: space-between;
+}

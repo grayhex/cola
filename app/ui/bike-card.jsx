@@ -9,6 +9,7 @@ import { useSite } from "./site-provider.jsx";
 import { MicroMetrics } from "./compact-ui.jsx";
 import { useBikeReaction } from "./use-bike-reaction.js";
 import styles from "./bike-card.module.css";
+import { publicPath } from "../../lib/public-urls.js";
 
 export default function BikeCard({
   bike: b,
@@ -20,7 +21,7 @@ export default function BikeCard({
   const { catalog, personalSettings: settings, t } = useSite();
   const reaction = useBikeReaction(b, user, onGuest);
   const title = b.name || [b.brand, b.model].filter(Boolean).join(" ");
-  const href = "/b/" + b.share_id;
+  const href = publicPath("bike", b);
   const Open = ownerView && onOpen ? "button" : Link;
   const openProps =
     ownerView && onOpen ? { type: "button", onClick: onOpen } : { href };

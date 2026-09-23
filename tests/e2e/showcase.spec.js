@@ -129,7 +129,7 @@ test("registration, touch autocomplete, bike/photo, public feed, like and revoke
   await expect(
     page.getByRole("heading", { name: bikeName, exact: true }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Поделиться", exact: true }).click();
+  await page.getByRole("button", { name: "Доступ", exact: true }).click();
   await page
     .getByRole("button", { name: "Опубликовать на витрине", exact: true })
     .click();
@@ -139,6 +139,11 @@ test("registration, touch autocomplete, bike/photo, public feed, like and revoke
   await page.getByRole("button", { name: "Закрыть", exact: true }).click();
   const visitorContext = await browser.newContext({
     baseURL: process.env.TEST_ORIGIN || "http://localhost:3100",
+  });
+  // The menu path is checked everywhere; touch devices with Web Share open
+  // the system sheet instead.
+  await visitorContext.addInitScript(() => {
+    delete Navigator.prototype.share;
   });
   const visitor = await visitorContext.newPage();
   await register(visitor, "voter-" + randomUUID());
@@ -153,10 +158,45 @@ test("registration, touch autocomplete, bike/photo, public feed, like and revoke
     visitor.getByRole("heading", { name: bikeName, exact: true }),
   ).toBeVisible();
   await expect(visitor.locator(".hero-photo")).toBeVisible();
-  await page.getByRole("button", { name: "Поделиться", exact: true }).click();
+  // #72: visitors share the canonical address (#63) in one menu.
+  expect(new URL(publicUrl).pathname).toMatch(/^\/b\/[^/]+-[0-9a-z]{8}$/);
+  await visitor
+    .getByRole("button", { name: "Поделиться", exact: true })
+    .click();
+  const shareMenu = visitor.getByRole("menu", { name: "Поделиться" });
+  await expect(
+    shareMenu.getByRole("menuitem", { name: "Telegram" }),
+  ).toHaveAttribute(
+    "href",
+    "https://t.me/share/url?" +
+      new URLSearchParams({ url: publicUrl, text: bikeName }),
+  );
+  await expect(
+    shareMenu.getByRole("menuitem", { name: "ВКонтакте" }),
+  ).toHaveAttribute(
+    "href",
+    "https://vk.com/share.php?" +
+      new URLSearchParams({ url: publicUrl, title: bikeName }),
+  );
+  await shareMenu.getByRole("menuitem", { name: "Скопировать ссылку" }).click();
+  // Clipboard permissions differ between browsers; either answer is shown.
+  await expect(
+    visitor
+      .getByRole("status")
+      .filter({ hasText: /Ссылка скопирована|Не удалось скопировать ссылку/ }),
+  ).toBeVisible();
+  await expect(shareMenu).toHaveCount(0);
+  await page.getByRole("button", { name: "Доступ", exact: true }).click();
   await page
     .getByRole("button", { name: "Закрыть доступ", exact: true })
     .click();
+  // A private bike offers no share button: its link would not open.
+  await expect(
+    page.getByRole("button", { name: "Опубликовать на витрине", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Поделиться", exact: true }),
+  ).toHaveCount(0);
   await visitor.reload();
   await expect(
     visitor.getByRole("heading", { name: "Велосипед недоступен" }),

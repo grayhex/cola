@@ -26,7 +26,7 @@ import SearchBox from "./search-box.jsx";
 import SmallImage from "./small-image.jsx";
 import { photoVariants } from "./bike-photo.jsx";
 import styles from "./home.module.css";
-import { profilePath } from "../../lib/public-urls.js";
+import { profilePath, publicPath } from "../../lib/public-urls.js";
 const markers = {
   market: ShoppingBag,
   planned: CalendarDays,
@@ -54,7 +54,13 @@ export function ActivityTicker({ events = [] }) {
       {events.map((e) => {
         const Marker = markers[e.type] || Bike;
         return (
-          <Link key={e.id} href={e.href} tabIndex={duplicate ? -1 : undefined}>
+          <Link
+            key={e.id}
+            href={e.href}
+            // Profile links are not prefetched, see AuthorLink.
+            prefetch={e.href?.startsWith("/@") ? false : undefined}
+            tabIndex={duplicate ? -1 : undefined}
+          >
             <Marker size={14} aria-hidden="true" />
             {eventText(e)}
           </Link>
@@ -115,7 +121,7 @@ export function ActivityTicker({ events = [] }) {
 const trendingSizes = "(max-width: 1050px) 50vw, 400px";
 function TrendingBike({ bike, user }) {
   const reaction = useBikeReaction(bike, user),
-    href = "/b/" + bike.share_id,
+    href = publicPath("bike", bike),
     photo = bike.photos[0];
   return (
     <article className={styles.bike} data-bike-id={bike.id}>
@@ -137,7 +143,7 @@ function TrendingBike({ bike, user }) {
         </h3>
         <p className={styles.metadata}>
           {bike.author?.username ? (
-            <Link href={profilePath(bike.author.username)}>
+            <Link prefetch={false} href={profilePath(bike.author.username)}>
               {bike.author.name}
             </Link>
           ) : (
@@ -375,7 +381,7 @@ export default function Home() {
                 <Trophy size={19} />
                 <div>
                   <p>{record.name}</p>
-                  <Link href={"/b/" + record.holder.shareId}>
+                  <Link href={publicPath("bike", record.holder)}>
                     {record.holder.name}
                   </Link>
                   <small>

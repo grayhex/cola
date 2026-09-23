@@ -30,10 +30,15 @@ export async function socialApi(
 }
 import { Avatar } from "./avatar.jsx";
 export { Avatar } from "./avatar.jsx";
+// Links to /@username are not prefetched: Next 16 guesses the route of a
+// second profile from the first one, keys its metadata with the raw "@" while
+// the server answers for "%40", and then refetches that metadata in a tight
+// loop. Navigation on click is unaffected.
 export function AuthorLink({ author }) {
   if (!author?.username) return null;
   return (
     <Link
+      prefetch={false}
       className="card-author author-link"
       href={profilePath(author.username)}
       title={usernameLabel(author) || undefined}
