@@ -6,7 +6,8 @@ export function Avatar({ person, size = "normal" }) {
   const base =
       person?.avatar ||
       (person?.avatar_id ? "/api/avatars/" + person.avatar_id : null),
-    src = base && !base.includes("?") ? base + "?width=" + avatarWidth(size) : base,
+    src =
+      base && !base.includes("?") ? base + "?width=" + avatarWidth(size) : base,
     [failed, setFailed] = useState(false);
   useEffect(() => setFailed(false), [src]);
   return (

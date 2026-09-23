@@ -171,7 +171,8 @@ export function ResetPassword() {
             });
             setState("done");
           } catch (err) {
-            if (/недействительна|устарела/.test(err.message)) setState("invalid");
+            if (/недействительна|устарела/.test(err.message))
+              setState("invalid");
             else {
               setError(err.message);
               setState("idle");

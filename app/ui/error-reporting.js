@@ -10,7 +10,8 @@ export function reportClientError(error, kind = "error") {
     if (typeof window === "undefined" || sent >= 5) return;
     if (error?.name === "AbortError") return;
     const message = String(error?.message ?? error ?? "").slice(0, 1000);
-    const stack = typeof error?.stack === "string" ? error.stack.slice(0, 8000) : null;
+    const stack =
+      typeof error?.stack === "string" ? error.stack.slice(0, 8000) : null;
     // Extensions and cross-origin scripts are outside the application.
     if (ignored.test(message) || /-extension:\/\//.test(stack || "")) return;
     const key = kind + "|" + message + "|" + (stack || "").slice(0, 300);
@@ -33,8 +34,10 @@ export function reportClientError(error, kind = "error") {
 }
 
 export function installErrorReporting() {
-  const onError = (event) => reportClientError(event.error || event.message, "error");
-  const onRejection = (event) => reportClientError(event.reason, "unhandledrejection");
+  const onError = (event) =>
+    reportClientError(event.error || event.message, "error");
+  const onRejection = (event) =>
+    reportClientError(event.reason, "unhandledrejection");
   window.addEventListener("error", onError);
   window.addEventListener("unhandledrejection", onRejection);
   return () => {

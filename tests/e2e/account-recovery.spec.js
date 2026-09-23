@@ -8,7 +8,9 @@ const mailDir = process.env.MAIL_CAPTURE_DIR;
 
 async function mailTo(to, subject) {
   for (let i = 0; i < 60; i++) {
-    for (const file of (await readdir(mailDir).catch(() => [])).sort().reverse()) {
+    for (const file of (await readdir(mailDir).catch(() => []))
+      .sort()
+      .reverse()) {
       const mail = JSON.parse(await readFile(path.join(mailDir, file), "utf8"));
       if (mail.to === to && subject.test(mail.subject)) return mail;
     }
@@ -31,7 +33,12 @@ test("forgotten password: request, email link, new password and confirmation", a
       (
         await api.post("/api/auth/register", {
           headers: { origin },
-          data: { ...testConsents, name: "Восстановление", email, password: "first-browser-pass" },
+          data: {
+            ...testConsents,
+            name: "Восстановление",
+            email,
+            password: "first-browser-pass",
+          },
         })
       ).status(),
     ).toBe(201);
@@ -40,8 +47,12 @@ test("forgotten password: request, email link, new password and confirmation", a
   }
 
   // Confirmation link from the registration email.
-  await page.goto(link(await mailTo(email, /Подтвердите адрес/), "/verify-email"));
-  await expect(page.getByRole("main").getByRole("status")).toContainText("Адрес подтверждён");
+  await page.goto(
+    link(await mailTo(email, /Подтвердите адрес/), "/verify-email"),
+  );
+  await expect(page.getByRole("main").getByRole("status")).toContainText(
+    "Адрес подтверждён",
+  );
   expect(page.url()).not.toContain("#");
 
   await page.goto("/login");
@@ -49,20 +60,34 @@ test("forgotten password: request, email link, new password and confirmation", a
   await expect(page).toHaveURL(/\/forgot-password$/);
   await page.getByLabel("Электронная почта").fill(email);
   await page.getByRole("button", { name: "Отправить ссылку" }).click();
-  await expect(page.getByRole("main").getByRole("status")).toContainText("Если адрес зарегистрирован");
+  await expect(page.getByRole("main").getByRole("status")).toContainText(
+    "Если адрес зарегистрирован",
+  );
 
-  await page.goto(link(await mailTo(email, /Восстановление пароля/), "/reset-password"));
-  await expect(page.getByRole("heading", { name: "Новый пароль" })).toBeVisible();
+  await page.goto(
+    link(await mailTo(email, /Восстановление пароля/), "/reset-password"),
+  );
+  await expect(
+    page.getByRole("heading", { name: "Новый пароль" }),
+  ).toBeVisible();
   // The token leaves the address bar before the form is used.
   await expect.poll(() => page.url()).not.toContain("#");
   await page.locator('input[name="password"]').fill("second-browser-pass");
-  await page.locator('input[name="confirmPassword"]').fill("different-browser-pass");
+  await page
+    .locator('input[name="confirmPassword"]')
+    .fill("different-browser-pass");
   await page.getByRole("button", { name: "Сохранить пароль" }).click();
   // Next.js adds its own role="alert" route announcer outside <main>.
-  await expect(page.getByRole("main").getByRole("alert")).toHaveText("Пароли не совпадают");
-  await page.locator('input[name="confirmPassword"]').fill("second-browser-pass");
+  await expect(page.getByRole("main").getByRole("alert")).toHaveText(
+    "Пароли не совпадают",
+  );
+  await page
+    .locator('input[name="confirmPassword"]')
+    .fill("second-browser-pass");
   await page.getByRole("button", { name: "Сохранить пароль" }).click();
-  await expect(page.getByRole("heading", { name: "Пароль изменён" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Пароль изменён" }),
+  ).toBeVisible();
   await page.getByRole("link", { name: "Открыть кабинет" }).click();
   await expect(page).toHaveURL(/\/account/);
   const me = await (await page.request.get("/api/me")).json();
@@ -73,8 +98,14 @@ test("forgotten password: request, email link, new password and confirmation", a
   // A used link shows the recovery path instead of a broken form.
   await page.goto("/reset-password#" + "z".repeat(43));
   await page.locator('input[name="password"]').fill("third-browser-pass");
-  await page.locator('input[name="confirmPassword"]').fill("third-browser-pass");
+  await page
+    .locator('input[name="confirmPassword"]')
+    .fill("third-browser-pass");
   await page.getByRole("button", { name: "Сохранить пароль" }).click();
-  await expect(page.getByRole("heading", { name: "Ссылка не работает" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Запросить новую ссылку" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Ссылка не работает" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Запросить новую ссылку" }),
+  ).toBeVisible();
 });

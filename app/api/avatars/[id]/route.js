@@ -34,7 +34,9 @@ export const GET = traced(async (req, { params }) => {
         path.join(process.env.UPLOAD_DIR || "uploads", avatarFilename(id)),
       );
     return mediaResponse(
-      width ? await mediaVariant("avatar-" + id, width, original) : await original(),
+      width
+        ? await mediaVariant("avatar-" + id, width, original)
+        : await original(),
       etag,
     );
   } catch (e) {

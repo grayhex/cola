@@ -20,7 +20,10 @@ export const POST = traced(async function POST(req) {
     return fail("Слишком много попыток. Попробуйте через 15 минут.", 429);
   let token;
   try {
-    token = z.object({ token: tokenInput }).strict().parse(await readJson(req, 4096)).token;
+    token = z
+      .object({ token: tokenInput })
+      .strict()
+      .parse(await readJson(req, 4096)).token;
   } catch {
     token = null;
   }
@@ -28,7 +31,8 @@ export const POST = traced(async function POST(req) {
   if (!userId)
     return json(
       {
-        error: "Ссылка недействительна или устарела. Отправьте письмо ещё раз из кабинета.",
+        error:
+          "Ссылка недействительна или устарела. Отправьте письмо ещё раз из кабинета.",
         code: "TOKEN_INVALID",
       },
       400,

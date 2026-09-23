@@ -31,14 +31,17 @@ function capture(method, run) {
 
 test("scrub removes personal data and secrets but keeps identifiers", () => {
   const text = scrub(
-    'User alice@example.com from 203.0.113.7 token ' +
+    "User alice@example.com from 203.0.113.7 token " +
       "q2Vt3xZ8k1LmN0pQrS5tU7vW9yA_bC-dE " +
       "bike 8f6827b6-0c56-484d-9fe0-2fbe12345678 " +
-      'GET https://colabike.ru/api/photos/x?width=320&token=abc ' +
+      "GET https://colabike.ru/api/photos/x?width=320&token=abc " +
       'duplicate key value violates unique constraint "users_email_key" ' +
       'invalid input syntax for type uuid: "not a uuid <b>"',
   );
-  assert.doesNotMatch(text, /alice|203\.0\.113\.7|q2Vt3x|8f6827b6|token=abc|not a uuid/);
+  assert.doesNotMatch(
+    text,
+    /alice|203\.0\.113\.7|q2Vt3x|8f6827b6|token=abc|not a uuid/,
+  );
   assert.match(text, /\[email\]/);
   assert.match(text, /\[ip\]/);
   assert.match(text, /\[token\]/);
@@ -71,9 +74,12 @@ test("stack frames keep code locations for Node and browsers", () => {
 
 test("error details include scrubbed message, code, stack and cause", () => {
   const cause = new Error("connect ECONNREFUSED 10.0.0.5:5432");
-  const error = Object.assign(new Error("failed for bob@example.org", { cause }), {
-    code: "ECONNREFUSED",
-  });
+  const error = Object.assign(
+    new Error("failed for bob@example.org", { cause }),
+    {
+      code: "ECONNREFUSED",
+    },
+  );
   const details = errorDetails(error);
   assert.equal(details.errorType, "Error");
   assert.equal(details.code, "ECONNREFUSED");
@@ -87,7 +93,8 @@ test("traced requests carry IDs into error logs and report slow or failed reques
   const previous = process.env.SLOW_REQUEST_MS;
   process.env.SLOW_REQUEST_MS = "1";
   try {
-    const url = "http://app.test/api/bikes/8f6827b6-0c56-484d-9fe0-2fbe12345678/photos/7?x=secret";
+    const url =
+      "http://app.test/api/bikes/8f6827b6-0c56-484d-9fe0-2fbe12345678/photos/7?x=secret";
     let response;
     const errors = await capture("error", async () => {
       response = await traced(async () => {
@@ -101,7 +108,11 @@ test("traced requests carry IDs into error logs and report slow or failed reques
     assert.equal(errors[0].requestId, id);
     assert.equal(errors[0].route, "/api/bikes/:id/photos/:n");
     assert.equal(errors[0].message, "mail to [email] failed");
-    assert.ok(errors[0].stack.some((frame) => frame.includes("tests/observability.test.js")));
+    assert.ok(
+      errors[0].stack.some((frame) =>
+        frame.includes("tests/observability.test.js"),
+      ),
+    );
     assert.equal(errors[1].event, "request_failed");
     assert.equal(errors[1].status, 503);
     assert.doesNotMatch(JSON.stringify(errors), /secret|eve@/);
@@ -128,7 +139,10 @@ test("traced requests carry IDs into error logs and report slow or failed reques
         throw new TypeError("boom");
       })(new Request("http://app.test/api/crash"));
       assert.equal(res.status, 500);
-      assert.equal((await res.json()).requestId, res.headers.get("X-Request-ID"));
+      assert.equal(
+        (await res.json()).requestId,
+        res.headers.get("X-Request-ID"),
+      );
     });
     assert.equal(crashed[0].event, "unhandled_request");
     assert.equal(crashed[0].errorType, "TypeError");
@@ -139,8 +153,14 @@ test("traced requests carry IDs into error logs and report slow or failed reques
 });
 
 test("route templates hide IDs, numbers and long tokens", () => {
-  assert.equal(routeTemplate("/b/fe4c58f7-e696-491f-9bd8-dc0f633309e8?x=1"), "/b/:id");
-  assert.equal(routeTemplate("http://h/api/rides/12/comments"), "/api/rides/:n/comments");
+  assert.equal(
+    routeTemplate("/b/fe4c58f7-e696-491f-9bd8-dc0f633309e8?x=1"),
+    "/b/:id",
+  );
+  assert.equal(
+    routeTemplate("http://h/api/rides/12/comments"),
+    "/api/rides/:n/comments",
+  );
   assert.equal(routeTemplate("/reset?token=" + "a".repeat(43)), "/reset");
   assert.equal(routeTemplate("/x/" + "a1".repeat(30)), "/x/:param");
 });
@@ -155,7 +175,13 @@ test("DSN parsing, event format and envelope follow the Sentry protocol", () => 
     parseDsn("https://pub@errors.example.com/glitchtip/7").endpoint,
     "https://errors.example.com/glitchtip/api/7/envelope/",
   );
-  for (const bad of ["", "not a url", "https://errors.example.com/42", "https://pub@errors.example.com/abc", "ftp://pub@h/1"])
+  for (const bad of [
+    "",
+    "not a url",
+    "https://errors.example.com/42",
+    "https://pub@errors.example.com/abc",
+    "ftp://pub@h/1",
+  ])
     assert.equal(parseDsn(bad), null, bad);
 
   const event = trackerEvent(
@@ -165,7 +191,10 @@ test("DSN parsing, event format and envelope follow the Sentry protocol", () => 
       route: "/api/rides",
       errorType: "TypeError",
       message: "boom",
-      stack: ["saveRide (lib/rides.js:120:14)", "handler (app/api/rides/route.js:3:9)"],
+      stack: [
+        "saveRide (lib/rides.js:120:14)",
+        "handler (app/api/rides/route.js:3:9)",
+      ],
     },
     new Date("2026-09-23T00:00:00Z"),
     { DEPLOYMENT_MODE: "production" },
@@ -173,14 +202,29 @@ test("DSN parsing, event format and envelope follow the Sentry protocol", () => 
   assert.match(event.event_id, /^[0-9a-f]{32}$/);
   assert.equal(event.environment, "production");
   assert.equal(event.platform, "node");
-  assert.deepEqual(event.tags, { event: "rides_failed", source: "server", route: "/api/rides", request_id: "req-1" });
+  assert.deepEqual(event.tags, {
+    event: "rides_failed",
+    source: "server",
+    route: "/api/rides",
+    request_id: "req-1",
+  });
   const frames = event.exception.values[0].stacktrace.frames;
-  assert.equal(frames.at(-1).function, "saveRide", "Sentry frames are oldest first");
+  assert.equal(
+    frames.at(-1).function,
+    "saveRide",
+    "Sentry frames are oldest first",
+  );
   assert.deepEqual(
-    { filename: frames.at(-1).filename, lineno: frames.at(-1).lineno, colno: frames.at(-1).colno },
+    {
+      filename: frames.at(-1).filename,
+      lineno: frames.at(-1).lineno,
+      colno: frames.at(-1).colno,
+    },
     { filename: "lib/rides.js", lineno: 120, colno: 14 },
   );
-  const lines = envelopeBody(event).split("\n").map((line) => JSON.parse(line));
+  const lines = envelopeBody(event)
+    .split("\n")
+    .map((line) => JSON.parse(line));
   assert.equal(lines[0].event_id, event.event_id);
   assert.deepEqual(lines[1], { type: "event" });
   assert.equal(lines[2].exception.values[0].value, "boom");
@@ -197,11 +241,17 @@ test("reports reach a Sentry-compatible endpoint and stay rate limited", async (
     });
   });
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
-  const env = { ERROR_TRACKER_DSN: `http://public-key@127.0.0.1:${server.address().port}/9` };
+  const env = {
+    ERROR_TRACKER_DSN: `http://public-key@127.0.0.1:${server.address().port}/9`,
+  };
   try {
     assert.equal(reportError({ event: "x" }, {}), null, "no DSN, no request");
     const delivered = await reportError(
-      { event: "journal_failed", requestId: "r-9", ...errorDetails(new Error("failed for zoe@example.com")) },
+      {
+        event: "journal_failed",
+        requestId: "r-9",
+        ...errorDetails(new Error("failed for zoe@example.com")),
+      },
       env,
     );
     assert.equal(delivered, true);
@@ -215,7 +265,8 @@ test("reports reach a Sentry-compatible endpoint and stay rate limited", async (
     // The per-minute budget (30) drops the rest of a burst.
     const results = [];
     const warnings = await capture("warn", async () => {
-      for (let i = 0; i < 40; i++) results.push(reportError({ event: "burst" }, env));
+      for (let i = 0; i < 40; i++)
+        results.push(reportError({ event: "burst" }, env));
       await Promise.all(results.filter(Boolean));
     });
     assert.ok(results.filter((r) => r === null).length >= 10);
@@ -237,7 +288,23 @@ test("production requires an HTTPS tracker DSN when one is configured", () => {
     BIKE_RESOLVER_URL: "http://r",
   };
   assert.equal(validateRuntime(base).mode, "production");
-  assert.equal(validateRuntime({ ...base, ERROR_TRACKER_DSN: "https://k@errors.example.com/1" }).mode, "production");
-  assert.throws(() => validateRuntime({ ...base, ERROR_TRACKER_DSN: "http://k@errors.example.com/1" }), /ERROR_TRACKER_DSN/);
-  assert.throws(() => validateRuntime({ ...base, ERROR_TRACKER_DSN: "nonsense" }), /ERROR_TRACKER_DSN/);
+  assert.equal(
+    validateRuntime({
+      ...base,
+      ERROR_TRACKER_DSN: "https://k@errors.example.com/1",
+    }).mode,
+    "production",
+  );
+  assert.throws(
+    () =>
+      validateRuntime({
+        ...base,
+        ERROR_TRACKER_DSN: "http://k@errors.example.com/1",
+      }),
+    /ERROR_TRACKER_DSN/,
+  );
+  assert.throws(
+    () => validateRuntime({ ...base, ERROR_TRACKER_DSN: "nonsense" }),
+    /ERROR_TRACKER_DSN/,
+  );
 });

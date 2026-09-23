@@ -56,7 +56,9 @@ function EmailStatus({ email, verified }) {
     <>
       <span>{email}</span>{" "}
       <span className="help">
-        {verified || state === "verified" ? "· подтверждён" : "· не подтверждён"}
+        {verified || state === "verified"
+          ? "· подтверждён"
+          : "· не подтверждён"}
       </span>
       {!verified && state !== "verified" && (
         <>

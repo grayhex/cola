@@ -49,9 +49,14 @@ test("responses revalidate private media and keep site graphics immutable", asyn
     contentType: "image/svg+xml",
     headers: { "Content-Security-Policy": "sandbox" },
   });
-  assert.equal(asset.headers.get("Cache-Control"), "public, max-age=31536000, immutable");
+  assert.equal(
+    asset.headers.get("Cache-Control"),
+    "public, max-age=31536000, immutable",
+  );
   assert.equal(asset.headers.get("Content-Security-Policy"), "sandbox");
-  const revalidated = notModifiedResponse('"e"', { headers: { Vary: "Cookie" } });
+  const revalidated = notModifiedResponse('"e"', {
+    headers: { Vary: "Cookie" },
+  });
   assert.equal(revalidated.status, 304);
   assert.equal(revalidated.headers.get("Vary"), "Cookie");
   assert.equal(await revalidated.text(), "");
@@ -76,11 +81,21 @@ test("variants are generated once, cached, bounded and purged", async () => {
     assert.equal(meta.format, "webp");
     assert.equal(meta.width, 640);
     const again = await mediaVariant("photo-a", 640, readOriginal, env);
-    assert.equal(reads, 1, "a cached variant does not decode the original again");
+    assert.equal(
+      reads,
+      1,
+      "a cached variant does not decode the original again",
+    );
     assert.deepEqual(again, first);
     await mediaVariant("photo-a", 160, readOriginal, env);
-    await assert.rejects(mediaVariant("photo-a", 500, readOriginal, env), /INVALID_MEDIA_WIDTH/);
-    assert.deepEqual((await readdir(dir)).sort(), ["v1-photo-a-160.webp", "v1-photo-a-640.webp"]);
+    await assert.rejects(
+      mediaVariant("photo-a", 500, readOriginal, env),
+      /INVALID_MEDIA_WIDTH/,
+    );
+    assert.deepEqual((await readdir(dir)).sort(), [
+      "v1-photo-a-160.webp",
+      "v1-photo-a-640.webp",
+    ]);
 
     await purgeMediaVariants(["photo-a"], env);
     assert.deepEqual(await readdir(dir), []);
@@ -94,7 +109,10 @@ test("variants are generated once, cached, bounded and purged", async () => {
     // 1.6 MB against a 1 MB limit: remove the oldest until at most 80% remains.
     const removed = await sweepMediaCache({ ...env, MEDIA_CACHE_MAX_MB: "1" });
     assert.equal(removed, 2);
-    assert.deepEqual((await readdir(dir)).sort(), ["v1-old-2-640.webp", "v1-old-3-640.webp"]);
+    assert.deepEqual((await readdir(dir)).sort(), [
+      "v1-old-2-640.webp",
+      "v1-old-3-640.webp",
+    ]);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
@@ -110,12 +128,9 @@ test("an unwritable cache still serves the generated variant", async () => {
     })
       .png()
       .toBuffer();
-    const bytes = await mediaVariant(
-      "photo-b",
-      320,
-      async () => original,
-      { MEDIA_CACHE_DIR: path.join(blocked, "cache") },
-    );
+    const bytes = await mediaVariant("photo-b", 320, async () => original, {
+      MEDIA_CACHE_DIR: path.join(blocked, "cache"),
+    });
     assert.equal((await sharp(bytes).metadata()).width, 320);
   } finally {
     await rm(dir, { recursive: true, force: true });

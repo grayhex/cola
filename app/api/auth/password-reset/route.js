@@ -23,7 +23,10 @@ export const POST = traced(async function POST(req) {
     );
   let email;
   try {
-    email = z.object({ email: emailInput }).strict().parse(await readJson(req, 4096)).email;
+    email = z
+      .object({ email: emailInput })
+      .strict()
+      .parse(await readJson(req, 4096)).email;
   } catch {
     return fail("Введите адрес электронной почты");
   }

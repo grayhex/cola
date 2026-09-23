@@ -44,9 +44,7 @@ export default function Photo({
       ref={image}
       className={className}
       src={src}
-      {...(variant
-        ? { srcSet: photoVariants(selected.id), sizes }
-        : {})}
+      {...(variant ? { srcSet: photoVariants(selected.id), sizes } : {})}
       loading={priority ? "eager" : "lazy"}
       decoding="async"
       alt={`${bike.brand} ${bike.model} — ${bike.name}`}

@@ -3,7 +3,10 @@ import { transaction } from "../../../../lib/db.js";
 import { fail, json, sameOrigin } from "../../../../lib/http.js";
 import { mailEnabled } from "../../../../lib/mail.js";
 import { emailVerificationMail } from "../../../../lib/mail-templates.js";
-import { accountLink, requestEmailVerification } from "../../../../lib/account.js";
+import {
+  accountLink,
+  requestEmailVerification,
+} from "../../../../lib/account.js";
 import { sendAfterResponse } from "../../../../lib/account-mail.js";
 import { traced } from "../../../../lib/observability.js";
 export const runtime = "nodejs";
@@ -17,7 +20,9 @@ export const POST = traced(async function POST(req) {
   if (!mailEnabled()) return fail("Отправка писем пока не настроена", 503);
   if (!(await rateLimit("verify-send:" + user.id, 3)))
     return fail("Письмо уже отправлено. Повторить можно через 15 минут.", 429);
-  const request = await transaction((q) => requestEmailVerification(q, user.id));
+  const request = await transaction((q) =>
+    requestEmailVerification(q, user.id),
+  );
   if (!request) return json({ ok: true, verified: true });
   sendAfterResponse({
     to: request.user.email,

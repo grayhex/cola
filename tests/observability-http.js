@@ -14,7 +14,9 @@ const tracker = http.createServer((req, res) => {
     res.end("{}");
   });
 });
-await new Promise((resolve) => tracker.listen(trackerPort, "127.0.0.1", resolve));
+await new Promise((resolve) =>
+  tracker.listen(trackerPort, "127.0.0.1", resolve),
+);
 
 const post = (body, origin = base) =>
   fetch(base + "/api/client-errors", {
@@ -25,7 +27,8 @@ const post = (body, origin = base) =>
 try {
   const report = {
     kind: "boundary",
-    message: "Cannot read properties of undefined (reading 'id') for kim@example.com",
+    message:
+      "Cannot read properties of undefined (reading 'id') for kim@example.com",
     stack:
       "TypeError: boom\n    at Garage (https://colabike.ru/_next/static/chunks/0abc.js:1:2345)\n" +
       "    at renderWithHooks (https://colabike.ru/_next/static/chunks/1def.js?v=2:2:10)",
@@ -35,7 +38,10 @@ try {
   assert.equal((await post(report, "https://evil.example")).status, 403);
   assert.equal((await post("{not json")).status, 400);
   assert.equal((await post({ ...report, kind: "other" })).status, 400);
-  assert.equal((await post({ ...report, stack: "x".repeat(20000) })).status, 400);
+  assert.equal(
+    (await post({ ...report, stack: "x".repeat(20000) })).status,
+    400,
+  );
   const accepted = await post(report);
   assert.equal(accepted.status, 204);
   assert.match(accepted.headers.get("x-request-id") || "", /^[0-9a-f-]{36}$/);
@@ -51,13 +57,30 @@ try {
   assert.equal(event.tags.route, "/b/:id");
   assert.match(event.tags.request_id, /^[0-9a-f-]{36}$/);
   assert.match(event.exception.values[0].value, /\[email\]/);
-  assert.equal(event.exception.values[0].stacktrace.frames.at(-1).function, "Garage");
-  assert.doesNotMatch(received[0].body, /kim@example\.com|token=secret|colabike\.ru\/_next|cola_session/);
+  assert.equal(
+    event.exception.values[0].stacktrace.frames.at(-1).function,
+    "Garage",
+  );
+  assert.doesNotMatch(
+    received[0].body,
+    /kim@example\.com|token=secret|colabike\.ru\/_next|cola_session/,
+  );
 
   // Every API family now carries a request ID for log correlation.
-  for (const path of ["rides", "journal", "market", "articles", "discovery/home", "showcase"]) {
+  for (const path of [
+    "rides",
+    "journal",
+    "market",
+    "articles",
+    "discovery/home",
+    "showcase",
+  ]) {
     const response = await fetch(base + "/api/" + path);
-    assert.match(response.headers.get("x-request-id") || "", /^[0-9a-f-]{36}$/, path);
+    assert.match(
+      response.headers.get("x-request-id") || "",
+      /^[0-9a-f-]{36}$/,
+      path,
+    );
   }
   console.log(
     "Observability HTTP: client error intake, origin/size checks, scrubbed tracker envelope and request IDs passed.",
