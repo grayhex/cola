@@ -20,7 +20,7 @@
     "@tiptap/react": "3.31.3",
     "@tiptap/starter-kit": "3.31.3",
     "fast-xml-parser": "^5.11.1",
-    "lucide-react": "^0.468.0",
+    "lucide-react": "^1.47.0",
     "maplibre-gl": "^6.10.0",
     "marked": "17.0.6",
     "next": "^16.3.3",
