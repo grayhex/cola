@@ -79,8 +79,8 @@ test("reapplying the same market search and filters keeps results and history", 
   await find.click();
   await result(page, "Колесо №1", 2);
   await panel.getByRole("button", { name: "Комплектующие", exact: true }).click();
-  await panel.getByLabel("Тип объявления", { exact: true }).selectOption("sale");
-  await panel.getByLabel("Состояние", { exact: true }).selectOption("used");
+  await panel.getByRole("combobox", { name: "Тип объявления", exact: true }).selectOption("sale");
+  await panel.getByRole("combobox", { name: "Состояние", exact: true }).selectOption("used");
   await settle(page);
   await result(page, "Колесо №1", 2);
   await unchanged(() => find.click(), "Колесо №1", 2);
@@ -115,8 +115,8 @@ test("market back, forward and reload restore filters and page, including equiva
   await result(page, "Колесо №2", 2);
   const panel = page.getByRole("region", { name: "Фильтры объявлений" });
   await expect(panel.getByRole("button", { name: "Комплектующие", exact: true })).toHaveAttribute("aria-pressed", "true");
-  await expect(panel.getByLabel("Тип объявления", { exact: true })).toHaveValue("sale");
-  await expect(panel.getByLabel("Состояние", { exact: true })).toHaveValue("used");
+  await expect(panel.getByRole("combobox", { name: "Тип объявления", exact: true })).toHaveValue("sale");
+  await expect(panel.getByRole("combobox", { name: "Состояние", exact: true })).toHaveValue("used");
   await expect(page.getByLabel("Поиск на рынке", { exact: true })).toHaveValue("Колесо");
 
   // Old bookmarks/history may contain irrelevant parameters or duplicate states.

@@ -162,7 +162,7 @@ test("market publishes images and price, enters home feed, and closes a listing"
   await page
     .getByRole("combobox", { name: "Категория", exact: true })
     .selectOption("components");
-  await expect(page.getByLabel("Тип объявления", { exact: true })).toHaveValue("sale");
+  await expect(page.getByRole("combobox", { name: "Тип объявления", exact: true })).toHaveValue("sale");
   await expect(page.getByLabel("Валюта", { exact: true })).toHaveCount(0);
   await page.getByLabel("Цена, ₽", { exact: true }).fill("12500");
   await page.getByLabel("Город", { exact: true }).fill("Тестовый город");
