@@ -6,12 +6,20 @@ import GlobalHeader from "./global-header.jsx";
 import { useSite } from "./site-provider.jsx";
 import footerStyles from "./site-footer.module.css";
 import Versions from "./versions.jsx";
-export async function socialApi(path, method = "GET", data) {
+// `keepalive` lets a small mutation finish when the reader leaves the page
+// right after a click; its total body size is limited, so it is opt-in.
+export async function socialApi(
+  path,
+  method = "GET",
+  data,
+  { keepalive } = {},
+) {
   const response = await fetch("/api/" + path, {
     method,
     headers: data ? { "Content-Type": "application/json" } : {},
     body: data ? JSON.stringify(data) : undefined,
     cache: "no-store",
+    ...(keepalive ? { keepalive: true } : {}),
   });
   const result = await response.json();
   if (!response.ok)
@@ -91,6 +99,8 @@ export function FollowButton({ profile, user, onChange }) {
             const result = await socialApi(
               "social/profiles/" + profile.username + "/follow",
               before ? "DELETE" : "PUT",
+              undefined,
+              { keepalive: true },
             );
             setOptimisticFollowing(result.relationship.following);
             await onChange(result.relationship);
