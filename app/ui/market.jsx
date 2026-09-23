@@ -79,7 +79,7 @@ export function MarketCard({ listing: m }) {
         <strong className={styles.price}>{listingPriceLabel(m)}</strong>
         <p>
           {m.location || "Город не указан"} ·{" "}
-          <Link href={profilePath(m.author.username)}>
+          <Link prefetch={false} href={profilePath(m.author.username)}>
             {personName(m.author)}
           </Link>
         </p>
@@ -596,7 +596,10 @@ export default function Market({ share = null, create = false, sharePath = null 
                       {listing.location}
                     </p>
                   )}
-                  <Link href={profilePath(listing.author.username)}>
+                  <Link
+                    prefetch={false}
+                    href={profilePath(listing.author.username)}
+                  >
                     {personName(listing.author)}
                   </Link>
                   {usernameLabel(listing.author) && (

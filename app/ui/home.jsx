@@ -54,7 +54,13 @@ export function ActivityTicker({ events = [] }) {
       {events.map((e) => {
         const Marker = markers[e.type] || Bike;
         return (
-          <Link key={e.id} href={e.href} tabIndex={duplicate ? -1 : undefined}>
+          <Link
+            key={e.id}
+            href={e.href}
+            // Profile links are not prefetched, see AuthorLink.
+            prefetch={e.href?.startsWith("/@") ? false : undefined}
+            tabIndex={duplicate ? -1 : undefined}
+          >
             <Marker size={14} aria-hidden="true" />
             {eventText(e)}
           </Link>
@@ -137,7 +143,7 @@ function TrendingBike({ bike, user }) {
         </h3>
         <p className={styles.metadata}>
           {bike.author?.username ? (
-            <Link href={profilePath(bike.author.username)}>
+            <Link prefetch={false} href={profilePath(bike.author.username)}>
               {bike.author.name}
             </Link>
           ) : (
