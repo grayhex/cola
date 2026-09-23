@@ -5,14 +5,14 @@ import {
   discoveryInput,
   discoverySearch,
 } from "../../../../lib/discovery.js";
-import { logError } from "../../../../lib/observability.js";
+import { logError, traced } from "../../../../lib/observability.js";
 export const dynamic = "force-dynamic";
 const json = (data, status = 200) =>
   Response.json(data, {
     status,
     headers: { "Cache-Control": "private, no-store" },
   });
-export async function GET(request, context) {
+export const GET = traced(async function GET(request, context) {
   const { resource } = await context.params;
   if (!["home", "search"].includes(resource))
     return json({ error: "Не найдено" }, 404);
@@ -37,4 +37,4 @@ export async function GET(request, context) {
       500,
     );
   }
-}
+});

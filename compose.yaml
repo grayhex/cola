@@ -30,6 +30,8 @@ services:
       BIKE_CREATES_PER_15_MIN: ${BIKE_CREATES_PER_15_MIN:-}
       PHOTO_UPLOADS_PER_15_MIN: ${PHOTO_UPLOADS_PER_15_MIN:-}
       BIKE_RESOLVER_URL: http://bike-resolver:8080
+      ERROR_TRACKER_DSN: ${ERROR_TRACKER_DSN:-}
+      SLOW_REQUEST_MS: ${SLOW_REQUEST_MS:-}
     volumes:
       - photos:/app/uploads
       - rides:/app/rides

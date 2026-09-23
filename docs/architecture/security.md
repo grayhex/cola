@@ -26,6 +26,8 @@ Resolver применяет публичные адреса, проверку DN
 
 `DATABASE_URL`, `POSTGRES_PASSWORD`, `BIKE_RESOLVER_TOKEN`, `TRUSTED_PROXY_KEY` — серверные значения. Публичный ключ карт, наоборот, виден браузеру и ограничивается у провайдера. Не помещайте OAuth secret или внутренний адрес в публичные site settings.
 
+Логи и трекер ошибок получают тип, код, очищенное сообщение и кадры стека, но не SQL, заголовки, cookies и тела запросов; email, IP, UUID и токены заменяются заполнителями ([мониторинг](../operations/monitoring.md#журнал-ошибок-и-трекер)). `ERROR_TRACKER_DSN` — серверная настройка: браузер отправляет свои ошибки только в `/api/client-errors`.
+
 Приватный proxy key позволяет доверять `X-Cola-Client-IP` только от настроенного nginx. Произвольный `X-Forwarded-For` не должен менять rate-limit identity. Не включайте real-IP доверие ко всем адресам. Не публикуйте `docker compose config` с раскрытыми значениями, целый nginx-конфиг или auth headers в PR.
 
 ## Граница доверия CI и deploy

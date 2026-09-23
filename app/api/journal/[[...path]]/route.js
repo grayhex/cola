@@ -31,7 +31,7 @@ import {
   readJournalPhoto,
   cleanupJournalPhotos,
 } from "../../../../lib/journal-storage.js";
-import { logError } from "../../../../lib/observability.js";
+import { logError, traced } from "../../../../lib/observability.js";
 export const runtime = "nodejs",
   dynamic = "force-dynamic";
 async function handler(req, { params }) {
@@ -235,8 +235,9 @@ async function handler(req, { params }) {
     return fail("Не удалось обработать запись", 500);
   }
 }
-export const GET = handler,
-  POST = handler,
-  PATCH = handler,
-  DELETE = handler,
-  PUT = handler;
+const route = traced(handler);
+export const GET = route,
+  POST = route,
+  PATCH = route,
+  DELETE = route,
+  PUT = route;

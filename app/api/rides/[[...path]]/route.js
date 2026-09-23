@@ -8,6 +8,7 @@ import {
   sameOrigin,
 } from "../../../../lib/http.js";
 import { uuid } from "../../../../lib/validation.js";
+import { logError, traced } from "../../../../lib/observability.js";
 import {
   CommunityError,
   commentInput,
@@ -288,11 +289,13 @@ async function handler(req, { params }) {
     if (e.code === "23505") return fail("Эта покатушка уже загружена", 409);
     if (e.message === "Превышен допустимый размер запроса")
       return fail("GPX-файл слишком большой", 413);
+    logError("rides_failed", e);
     return fail("Не удалось обработать покатушку", 500);
   }
 }
-export const GET = handler,
-  POST = handler,
-  PATCH = handler,
-  DELETE = handler,
-  PUT = handler;
+const route = traced(handler);
+export const GET = route,
+  POST = route,
+  PATCH = route,
+  DELETE = route,
+  PUT = route;
