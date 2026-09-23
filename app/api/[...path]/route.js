@@ -26,6 +26,15 @@ import { randomUUID } from "node:crypto";
 import { mkdir, readFile, writeFile, unlink } from "node:fs/promises";
 import path from "node:path";
 import { preparePhoto, prepareThumbnail } from "../../../lib/images.js";
+import {
+  mediaEtag,
+  mediaResponse,
+  mediaVariant,
+  mediaWidth,
+  notModified,
+  notModifiedResponse,
+  purgeMediaVariants,
+} from "../../../lib/media-cache.js";
 import { getSite } from "../../../lib/site.js";
 import { db, transaction } from "../../../lib/db.js";
 import {
@@ -202,25 +211,21 @@ async function handler(req, { params }) {
     if (p[0] === "me" && method === "GET") return json({ user });
     if (p[0] === "photos" && p.length === 2 && method === "GET") {
       if (!uuid.safeParse(p[1]).success) return fail("Фото не найдено", 404);
+      const width = mediaWidth(new URL(req.url).searchParams.get("width"));
+      if (width === undefined) return fail("Неверный размер фотографии");
       const { rows } = await db.query(
         "SELECT p.filename FROM photos p JOIN bikes b ON b.id=p.bike_id JOIN users u ON u.id=b.owner_id WHERE p.id=$1 AND u.blocked=false AND (b.is_public=true OR b.owner_id=$2)",
         [p[1], user?.id || null],
       );
       if (!rows[0]) return fail("Фото не найдено", 404);
+      // Access is checked above on every request, including revalidation.
+      const etag = mediaEtag(p[1], width);
+      if (notModified(req, etag)) return notModifiedResponse(etag);
       try {
-        const width = new URL(req.url).searchParams.get("width");
-        if (width && !["160", "320"].includes(width))
-          return fail("Неверный размер фотографии");
-        const bytes = await readFile(path.join(uploads(), rows[0].filename));
-        return new NextResponse(
-          width ? await prepareThumbnail(bytes, Number(width)) : bytes,
-          {
-            headers: {
-              "Content-Type": "image/webp",
-              "Cache-Control": "private, no-store",
-              "X-Content-Type-Options": "nosniff",
-            },
-          },
+        const original = () => readFile(path.join(uploads(), rows[0].filename));
+        return mediaResponse(
+          width ? await mediaVariant(p[1], width, original) : await original(),
+          etag,
         );
       } catch (e) {
         if (e.code === "ENOENT") return fail("Фото не найдено", 404);
@@ -502,7 +507,7 @@ async function handler(req, { params }) {
             409,
           );
         const { rows } = await db.query(
-          "SELECT filename FROM photos WHERE bike_id=$1",
+          "SELECT id,filename FROM photos WHERE bike_id=$1",
           [bike.id],
         );
         try {
@@ -523,6 +528,7 @@ async function handler(req, { params }) {
             unlink(path.join(uploads(), p.filename)).catch(() => {}),
           ),
         );
+        await purgeMediaVariants(rows.map((p) => p.id));
         return json({ ok: true });
       }
     }
@@ -737,8 +743,10 @@ async function handler(req, { params }) {
               );
           }
         });
-        if (filename)
+        if (filename) {
           await unlink(path.join(uploads(), filename)).catch(() => {});
+          await purgeMediaVariants([p[3]]);
+        }
         return json({ ok: true });
       }
     }

@@ -21,11 +21,20 @@ import {
   saveListing,
   deleteListing,
   saveMarketPhoto,
-  marketPhoto,
+  marketPhotoFilename,
+  readMarketPhotoFile,
   removeMarketPhoto,
   cleanupMarketPhotos,
 } from "../../../../lib/market.js";
-import { preparePhoto, prepareThumbnail } from "../../../../lib/images.js";
+import { preparePhoto } from "../../../../lib/images.js";
+import {
+  mediaEtag,
+  mediaResponse,
+  mediaVariant,
+  mediaWidth,
+  notModified,
+  notModifiedResponse,
+} from "../../../../lib/media-cache.js";
 import { logError, traced } from "../../../../lib/observability.js";
 export const runtime = "nodejs",
   dynamic = "force-dynamic";
@@ -62,20 +71,19 @@ async function handler(req, { params }) {
         listing: await marketDetail(db, uuid.parse(p[1]), user?.id),
       });
     if (method === "GET" && p[0] === "media" && p.length === 2) {
-      const width = z
-          .enum(["160", "320"])
-          .nullable()
-          .parse(url.searchParams.get("width")),
-        bytes = await marketPhoto(db, uuid.parse(p[1]), user?.id);
-      return new Response(
-        width ? await prepareThumbnail(bytes, Number(width)) : bytes,
-        {
-          headers: {
-            "Content-Type": "image/webp",
-            "Cache-Control": "private, no-store",
-            "X-Content-Type-Options": "nosniff",
-          },
-        },
+      const id = uuid.parse(p[1]),
+        width = mediaWidth(url.searchParams.get("width"));
+      if (width === undefined) return fail("Неверный размер фото");
+      // Access is checked on every request, including revalidation.
+      const filename = await marketPhotoFilename(db, id, user?.id),
+        etag = mediaEtag(id, width),
+        headers = { Vary: "Cookie" };
+      if (notModified(req, etag)) return notModifiedResponse(etag, { headers });
+      const original = () => readMarketPhotoFile(filename);
+      return mediaResponse(
+        width ? await mediaVariant(id, width, original) : await original(),
+        etag,
+        { headers },
       );
     }
     if (!user) return fail("Войдите в аккаунт", 401);

@@ -667,7 +667,13 @@ export default function Garage({
                 aria-label={t("Открыть фото целиком")}
                 onClick={() => setModal({ type: "photoView" })}
               >
-                <Photo bike={bike} photo={photo} className="hero-photo" />
+                <Photo
+                  bike={bike}
+                  photo={photo}
+                  className="hero-photo"
+                  sizes="(max-width: 700px) 100vw, 40vw"
+                  priority
+                />
               </button>
               {editable && (
                 <div className="photo-tools">
@@ -783,7 +789,7 @@ export default function Garage({
                       aria-label={t("Показать фотографию")}
                       onClick={() => setPhoto(p)}
                     >
-                      <Photo bike={bike} photo={p} />
+                      <Photo bike={bike} photo={p} sizes="160px" />
                     </button>
                     {editable && (
                       <div className="thumb-actions">
@@ -1229,7 +1235,7 @@ export default function Garage({
             </div>
           )}
           {modal.type === "photoView" && (
-            <Photo bike={bike} photo={photo} className="full-photo" />
+            <Photo bike={bike} photo={photo} className="full-photo" full />
           )}
           {modal.type === "auth" && (
             <AuthForm

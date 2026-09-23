@@ -124,6 +124,7 @@ try {
         // First: the tracker budget is still unused right after startup.
         "tests/observability-http.js",
         "tests/http-smoke.js",
+        "tests/media-http.js",
         "tests/admin-http.js",
         "tests/resolver-http.js",
         "tests/layout-http.js",

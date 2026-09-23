@@ -33,7 +33,13 @@ export function ArticleCard({ article: a, topics }) {
     <article className="article-card">
       {a.cover && (
         <a href={"/articles/" + a.shareId} tabIndex={-1} aria-hidden="true">
-          <img className="article-cover" src={a.cover} alt="" loading="lazy" />
+          <img
+            className="article-cover"
+            src={a.cover + "?width=640"}
+            alt=""
+            loading="lazy"
+            decoding="async"
+          />
         </a>
       )}
       <div className="article-card-content">

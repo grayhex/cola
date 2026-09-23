@@ -4,19 +4,32 @@ import { Camera } from "./icons.jsx";
 import { useSite } from "./site-provider.jsx";
 const demoImage =
   "https://dma.canyon.com/image/upload/w_930%2Ch_487%2Cc_fit/f_auto/q_auto/v1760425750/2025_FULL_grizl_al-7-raw_4527_R075_P08_ujmfyh";
-export default function Photo({ bike, className = "", photo }) {
+// Card width on the showcase grid: one column on phones, two on tablets.
+const cardSizes = "(max-width: 700px) 100vw, (max-width: 1100px) 50vw, 420px";
+export const photoVariants = (id, widths = [320, 640, 1280]) =>
+  widths.map((w) => `/api/photos/${id}?width=${w} ${w}w`).join(", ");
+// `full` keeps the original (photo viewer); `priority` loads above the fold.
+export default function Photo({
+  bike,
+  className = "",
+  photo,
+  sizes = cardSizes,
+  priority = false,
+  full = false,
+}) {
   const { settings, catalog, t } = useSite();
   const { categories, models, parts, partCategories, manufacturers } = catalog;
   const [failedSrc, setFailedSrc] = useState(null);
   const image = useRef(null);
   const selected = photo || bike.photos?.[0];
+  const variant = bike.id !== "demo" && selected && !full;
   const src =
     bike.id === "demo"
       ? settings.demoImageId
         ? "/api/assets/" + settings.demoImageId
         : demoImage
       : selected
-        ? "/api/photos/" + selected.id
+        ? "/api/photos/" + selected.id + (variant ? "?width=640" : "")
         : settings[bike.category + "ImageId"]
           ? "/api/assets/" + settings[bike.category + "ImageId"]
           : null;
@@ -31,6 +44,11 @@ export default function Photo({ bike, className = "", photo }) {
       ref={image}
       className={className}
       src={src}
+      {...(variant
+        ? { srcSet: photoVariants(selected.id), sizes }
+        : {})}
+      loading={priority ? "eager" : "lazy"}
+      decoding="async"
       alt={`${bike.brand} ${bike.model} — ${bike.name}`}
       onError={() => setFailedSrc(src)}
     />

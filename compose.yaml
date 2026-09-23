@@ -32,6 +32,7 @@ services:
       BIKE_RESOLVER_URL: http://bike-resolver:8080
       ERROR_TRACKER_DSN: ${ERROR_TRACKER_DSN:-}
       SLOW_REQUEST_MS: ${SLOW_REQUEST_MS:-}
+      MEDIA_CACHE_MAX_MB: ${MEDIA_CACHE_MAX_MB:-}
     volumes:
       - photos:/app/uploads
       - rides:/app/rides
