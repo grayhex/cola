@@ -31,7 +31,7 @@ async function handler(req) {
     let cleanupWarning = false;
     await Promise.all(result.deleted.map(async (asset) => {
       try {
-        await unlink(path.join(process.env.UPLOAD_DIR || "uploads", asset.filename));
+        await unlink(/*turbopackIgnore: true*/ path.join(/*turbopackIgnore: true*/ process.env.UPLOAD_DIR || "uploads", asset.filename));
       } catch (error) {
         if (error.code !== "ENOENT") {
           cleanupWarning = true;

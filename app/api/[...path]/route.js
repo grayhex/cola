@@ -66,7 +66,7 @@ import {
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-const uploads = () => path.resolve(process.env.UPLOAD_DIR || "uploads");
+const uploads = () => path.resolve(/*turbopackIgnore: true*/ process.env.UPLOAD_DIR || "uploads");
 const json = (data, status = 200) =>
   NextResponse.json(data, { status, headers: { "Cache-Control": "no-store" } });
 const fail = (message, status = 400) => json({ error: message }, status);
@@ -241,7 +241,7 @@ async function handler(req, { params }) {
       const etag = mediaEtag(p[1], width);
       if (notModified(req, etag)) return notModifiedResponse(etag);
       try {
-        const original = () => readFile(path.join(uploads(), rows[0].filename));
+        const original = () => readFile(/*turbopackIgnore: true*/ path.join(uploads(), rows[0].filename));
         return mediaResponse(
           width ? await mediaVariant(p[1], width, original) : await original(),
           etag,
@@ -544,7 +544,7 @@ async function handler(req, { params }) {
         }
         await Promise.all(
           rows.map((p) =>
-            unlink(path.join(uploads(), p.filename)).catch(() => {}),
+            unlink(/*turbopackIgnore: true*/ path.join(uploads(), p.filename)).catch(() => {}),
           ),
         );
         await purgeMediaVariants(rows.map((p) => p.id));
@@ -763,7 +763,7 @@ async function handler(req, { params }) {
           }
         });
         if (filename) {
-          await unlink(path.join(uploads(), filename)).catch(() => {});
+          await unlink(/*turbopackIgnore: true*/ path.join(uploads(), filename)).catch(() => {});
           await purgeMediaVariants([p[3]]);
         }
         return json({ ok: true });

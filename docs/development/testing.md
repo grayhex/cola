@@ -7,6 +7,7 @@
 Выполняются из корня репозитория после установки обеих групп зависимостей:
 
 ```bash
+pnpm lint
 pnpm test
 pnpm build
 (cd services/bike-resolver && npm run typecheck && npm test && npm run build)
@@ -27,11 +28,13 @@ bash scripts/test-backup-drill.sh
 
 | Уровень | Что доказывает | Чего не доказывает |
 | --- | --- | --- |
+| `pnpm lint` | ESLint: правила хуков React, рекомендации Next и базовые ошибки JS. Ошибки блокируют CI, предупреждения — список на доработку | Корректность логики и типов |
 | `tests/*.test.js` | Чистые функции, схемы, доменная логика, PGlite-сценарии | Работу production сети и реальную конкуренцию PostgreSQL |
 | Resolver `npm test` | Matching, extraction, transport checks, fixtures, cache | Текущую доступность каждого производителя |
 | `pnpm build` | Сборку Next и границы импорта | Успешную миграцию production БД |
 | `pnpm test:integration` | HTTP, auth/Origin/DTO, цепочку app → fixture Resolver | Доступность публичного upstream |
 | Playwright | Реальный UI и взаимодействия Chromium/WebKit mobile | Все особенности физического iPhone и реальных загруженных изображений |
+| `bundle-budget.spec.js` | Сжатый JS гостя на `/` (до 220 КБ) и `/bikes` (до 250 КБ) в Chromium | Размер страниц владельца и лениво загружаемых частей |
 | Compose + backup drill | Runtime-упаковку, disposable backup/restore | Наличие операторского off-host backup и его расписания |
 
 ## База и изоляция

@@ -352,7 +352,9 @@ export default function Admin() {
       } catch {
         /* Keep the successfully removed IDs out of the local list. */
       }
-      throw new Error(`Удалено изображений: ${deleted}. ${e.message}`);
+      throw new Error(`Удалено изображений: ${deleted}. ${e.message}`, {
+        cause: e,
+      });
     }
   }
 

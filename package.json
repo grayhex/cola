@@ -7,6 +7,7 @@
     "dev": "node scripts/copy-maplibre-worker.js && next dev --hostname 0.0.0.0",
     "build": "node scripts/copy-maplibre-worker.js && node scripts/build-version.js && next build",
     "start": "next start --hostname 0.0.0.0",
+    "lint": "eslint .",
     "test": "node --test tests/*.test.js",
     "db:migrate": "node scripts/migrate.js",
     "test:integration": "node scripts/test-resolver-integration.js",
@@ -33,7 +34,12 @@
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.8",
     "@electric-sql/pglite-socket": "^0.2.11",
+    "@eslint/js": "^10.0.1",
+    "@next/eslint-plugin-next": "^16.3.5",
     "@playwright/test": "^1.63.0",
+    "eslint": "^10.11.0",
+    "eslint-plugin-react-hooks": "5.2.0",
+    "globals": "^17.12.0",
     "prettier": "^3.9.6"
   }
 }

@@ -170,11 +170,10 @@ test("theme backgrounds are bounded safe CSS and protected asset references", ()
 
 test("local animated SVG accepts embedded real rasters but rejects spoofing, external resources and active content", async () => {
   for (const format of ["png", "jpeg", "webp"]) {
-    const bytes = await sharp({
+    const image = sharp({
       create: { width: 8, height: 8, channels: 3, background: "#ff0000" },
-    })
-      [format]()
-      .toBuffer();
+    });
+    const bytes = await image[format]().toBuffer();
     const uri = `data:image/${format};base64,${bytes.toString("base64")}`;
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 8 8"><image xlink:href="${uri}" width="8" height="8"><animate attributeName="opacity" values="0.5;1;0.5" dur="1s" repeatCount="indefinite"/></image></svg>`;
     assert.equal((await prepareSvg(Buffer.from(svg))).toString(), svg);
