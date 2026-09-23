@@ -14,6 +14,8 @@ import {
 } from "./icons.jsx";
 import { socialApi } from "./social-primitives.jsx";
 import { journalKinds } from "../../lib/journal-kinds.js";
+import { profilePath } from "../../lib/public-urls.js";
+import { personName } from "../../lib/usernames.js";
 const kindIcons = {
   story: NotebookPen,
   upgrade: Wrench,
@@ -101,7 +103,9 @@ export default function JournalCard({ entry, onSaved }) {
           {entry.bike.name}
         </a>
         <div className="journal-card-social">
-          <a href={"/u/" + entry.author.username}>@{entry.author.username}</a>
+          <a href={profilePath(entry.author.username)}>
+            {personName(entry.author)}
+          </a>
           <span aria-label={"Лайки: " + entry.likes}>
             <Heart size={13} />
             {entry.likes}

@@ -26,6 +26,7 @@ import SearchBox from "./search-box.jsx";
 import SmallImage from "./small-image.jsx";
 import { photoVariants } from "./bike-photo.jsx";
 import styles from "./home.module.css";
+import { profilePath } from "../../lib/public-urls.js";
 const markers = {
   market: ShoppingBag,
   planned: CalendarDays,
@@ -136,7 +137,9 @@ function TrendingBike({ bike, user }) {
         </h3>
         <p className={styles.metadata}>
           {bike.author?.username ? (
-            <Link href={"/u/" + bike.author.username}>{bike.author.name}</Link>
+            <Link href={profilePath(bike.author.username)}>
+              {bike.author.name}
+            </Link>
           ) : (
             bike.author?.name
           )}

@@ -4,9 +4,120 @@ import { ArrowUpRight } from "./icons.jsx";
 import { useSite } from "./site-provider.jsx";
 import styles from "./auth.module.css";
 import { Field } from "../admin/design-controls.jsx";
+import {
+  reservedUsernames,
+  suggestUsername,
+  usernamePattern,
+} from "../../lib/usernames.js";
+const usernameHelp = {
+  checking: "Проверяем…",
+  invalid: "3–30 символов: латиница, цифры, точка, дефис или подчёркивание.",
+  reserved: "Это имя зарезервировано.",
+  format: "3–30 символов: латиница, цифры, точка, дефис или подчёркивание.",
+  unknown: "Не удалось проверить имя, проверим при регистрации.",
+};
+// Suggested from the name until the person edits it (#71). An untouched
+// suggestion is not sent: the server derives the same username, or the next
+// free one if it was taken in the meantime. The check is advisory, the server
+// validates a chosen username again.
+function UsernameField({ suggestion, onStatus }) {
+  const [value, setValue] = useState(suggestion),
+    [edited, setEdited] = useState(false),
+    [status, setStatus] = useState({ state: "idle" });
+  const username = value.trim().toLowerCase();
+  useEffect(() => {
+    if (!edited) setValue(suggestion);
+  }, [suggestion, edited]);
+  useEffect(() => {
+    onStatus(status.state);
+  }, [status.state, onStatus]);
+  useEffect(() => {
+    if (!username) return setStatus({ state: "idle" });
+    if (!usernamePattern.test(username)) return setStatus({ state: "invalid" });
+    if (reservedUsernames.has(username))
+      return setStatus({ state: "reserved" });
+    const controller = new AbortController();
+    setStatus({ state: "checking" });
+    const timer = setTimeout(async () => {
+      try {
+        const response = await fetch(
+          "/api/social/usernames/" + encodeURIComponent(username),
+          { cache: "no-store", signal: controller.signal },
+        );
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error);
+        if (result.available) setStatus({ state: "free" });
+        // An untouched suggestion quietly moves to the first free variant.
+        else if (!edited && result.suggestion) setValue(result.suggestion);
+        else
+          setStatus({
+            state: result.reason || "taken",
+            suggestion: result.suggestion,
+          });
+      } catch (e) {
+        if (e.name !== "AbortError") setStatus({ state: "unknown" });
+      }
+    }, 300);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [username, edited]);
+  return (
+    <>
+      <Field label="Имя пользователя">
+        <input
+          name={edited ? "username" : undefined}
+          required
+          minLength={3}
+          maxLength={30}
+          pattern={"[a-zA-Z0-9._\\-]{3,30}"}
+          autoCapitalize="none"
+          autoCorrect="off"
+          autoComplete="off"
+          spellCheck={false}
+          aria-describedby="username-help"
+          value={value}
+          onChange={(e) => {
+            setEdited(true);
+            setValue(e.target.value);
+          }}
+        />
+      </Field>
+      <p id="username-help" className="help" aria-live="polite">
+        {status.state === "taken" ? (
+          <>
+            Имя @{username} занято.
+            {status.suggestion && (
+              <>
+                {" "}
+                <button
+                  type="button"
+                  className="quiet"
+                  onClick={() => setValue(status.suggestion)}
+                >
+                  Взять @{status.suggestion}
+                </button>
+              </>
+            )}
+          </>
+        ) : (
+          usernameHelp[status.state] ||
+          (username
+            ? (status.state === "free" ? "Свободно. " : "") +
+              "Адрес профиля: /@" +
+              username
+            : "Будет в адресе профиля и в ссылках на ваши публикации.")
+        )}
+      </p>
+    </>
+  );
+}
 export default function AuthForm({ mode, busy, onSubmit, switchMode }) {
   const { settings, t } = useSite();
   const [authError, setAuthError] = useState("");
+  const [person, setPerson] = useState({ name: "", email: "" }),
+    [usernameState, setUsernameState] = useState("idle");
   const [legal, setLegal] = useState(null),
     [legalError, setLegalError] = useState("");
   const [termsAccepted, setTermsAccepted] = useState(false),
@@ -86,6 +197,10 @@ export default function AuthForm({ mode, busy, onSubmit, switchMode }) {
           setAuthError("Пароли не совпадают");
           return;
         }
+        if (mode === "register" && usernameState === "taken") {
+          setAuthError("Это имя пользователя занято. Выберите другое.");
+          return;
+        }
         setAuthError("");
         d.delete("confirmPassword");
         const data = Object.fromEntries(d);
@@ -122,15 +237,24 @@ export default function AuthForm({ mode, busy, onSubmit, switchMode }) {
           : t("Войдите, чтобы открыть свои велосипеды.")}
       </p>
       {mode === "register" && (
-        <Field label={t("Ваше имя")}>
-          <input
-            name="name"
-            required
-            maxLength={60}
-            autoComplete="name"
-            autoFocus
+        <>
+          <Field label={t("Ваше имя")}>
+            <input
+              name="name"
+              required
+              maxLength={60}
+              autoComplete="name"
+              autoFocus
+              onChange={(e) =>
+                setPerson((p) => ({ ...p, name: e.target.value }))
+              }
+            />
+          </Field>
+          <UsernameField
+            suggestion={suggestUsername(person.name, person.email, "")}
+            onStatus={setUsernameState}
           />
-        </Field>
+        </>
       )}
       <Field label={t("Электронная почта")}>
         <input
@@ -145,6 +269,10 @@ export default function AuthForm({ mode, busy, onSubmit, switchMode }) {
           placeholder="name@example.com"
           pattern={"[^\\s@]+@[^\\s@]+\\.[^\\s@]+"}
           autoFocus={mode === "login"}
+          onChange={(e) =>
+            mode === "register" &&
+            setPerson((p) => ({ ...p, email: e.target.value }))
+          }
         />
       </Field>
       <Field label={t("Пароль")}>

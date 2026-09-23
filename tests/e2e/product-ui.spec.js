@@ -15,6 +15,7 @@ async function noOverflow(page) {
 
 test("login and registration are complete forms, errors preserve input, passwords are confirmed", async ({
   page,
+  playwright,
 }, info) => {
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
@@ -38,8 +39,37 @@ test("login and registration are complete forms, errors preserve input, password
   );
   await noOverflow(page);
   await page.screenshot({ path: info.outputPath("login.png"), fullPage: true });
+  // #71: the username follows the name until edited; a taken one offers a
+  // free variant.
+  const other = await playwright.request.newContext({ baseURL: origin });
+  const taken = "taken-" + randomUUID().slice(0, 8);
+  const created = await other.post("/api/auth/register", {
+    headers: { origin },
+    data: {
+      ...testConsents,
+      name: "Занятое имя",
+      email: randomUUID() + "@product-ui.test",
+      password,
+      username: taken,
+    },
+  });
+  expect(created.status()).toBe(201);
+  await other.dispose();
   await page.goto("/register");
   await page.getByLabel("Ваше имя", { exact: true }).fill("Новый участник");
+  const username = page.getByLabel("Имя пользователя", { exact: true });
+  const usernameHelp = page.locator("#username-help");
+  await expect(username).toHaveValue(/^novyy-uchastnik(-\d+)?$/);
+  await expect(usernameHelp).toContainText(
+    "Свободно. Адрес профиля: /@novyy-uchastnik",
+  );
+  await username.fill(taken.toUpperCase());
+  await expect(usernameHelp).toContainText("Имя @" + taken + " занято.");
+  await page
+    .getByRole("button", { name: "Взять @" + taken + "-2", exact: true })
+    .click();
+  await expect(username).toHaveValue(taken + "-2");
+  await expect(usernameHelp).toContainText("Свободно");
   await page
     .getByLabel("Электронная почта", { exact: true })
     .fill(randomUUID() + "@product-ui.test");
@@ -66,7 +96,59 @@ test("login and registration are complete forms, errors preserve input, password
     .click();
   await expect(page).toHaveURL(/\/account$/);
   await expect(page.locator(".account-content")).toBeVisible();
+  const { user } = await (await page.request.get("/api/me")).json();
+  expect(user.username).toBe(taken + "-2");
   expect(errors).toEqual([]);
+});
+
+test("the cabinet offers once to replace an automatic username (#71)", async ({
+  page,
+}) => {
+  await page.request.post("/api/auth/register", {
+    headers: { origin },
+    data: {
+      ...testConsents,
+      name: "Старый аккаунт",
+      email: randomUUID() + "@ui.test",
+      password,
+    },
+  });
+  const { user } = await (await page.request.get("/api/me")).json();
+  // Accounts created before #71 kept the database default.
+  const generated = "rider-" + randomUUID().replaceAll("-", "").slice(0, 24);
+  const db = new pg.Client({ connectionString: process.env.DATABASE_URL });
+  await db.connect();
+  try {
+    await db.query("UPDATE users SET username=$2 WHERE id=$1", [
+      user.id,
+      generated,
+    ]);
+  } finally {
+    await db.end();
+  }
+  await page.goto("/account");
+  const prompt = page.locator(".username-prompt");
+  await expect(prompt).toContainText("@" + generated);
+  await prompt.getByRole("button", { name: "Не сейчас", exact: true }).click();
+  await expect(prompt).toHaveCount(0);
+  await page.reload();
+  await expect(page.locator(".account-overview")).toBeVisible();
+  await expect(prompt).toHaveCount(0);
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await prompt.getByRole("button", { name: "Выбрать имя", exact: true }).click();
+  await expect(page).toHaveURL(/tab=profile/);
+  const chosen = "renamed-" + randomUUID().slice(0, 8);
+  await page.getByRole("textbox", { name: "Username" }).fill(chosen);
+  await page
+    .getByRole("button", { name: "Сохранить профиль", exact: true })
+    .click();
+  await expect(
+    page.getByRole("status").filter({ hasText: "Профиль сохранён" }),
+  ).toBeVisible();
+  await page.goto("/account");
+  await expect(page.locator(".account-overview")).toContainText("@" + chosen);
+  await expect(prompt).toHaveCount(0);
 });
 
 test("all product routes and account sections share clear light/dark UI; composer, profile menu and real speed data work", async ({

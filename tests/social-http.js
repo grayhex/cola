@@ -72,8 +72,44 @@ try {
     assert.equal(r.status, 201);
     const me = (await who("me")).body.user;
     ids.push(me.id);
-    assert(me.username.startsWith("rider-"));
+    // Without a chosen username the server derives one from the name (#71).
+    assert.equal(me.username, name);
     assert.equal((await who("social/me", "PATCH", form(name))).status, 200);
+  }
+  const check = async (candidate) =>
+    (await guest("social/usernames/" + encodeURIComponent(candidate))).body;
+  assert.deepEqual(await check(alice.toUpperCase()), {
+    username: alice,
+    available: false,
+    suggestion: alice + "-2",
+  });
+  assert.equal((await check("free-" + nonce)).available, true);
+  assert.deepEqual(await check("admin"), {
+    available: false,
+    reason: "reserved",
+  });
+  assert.deepEqual(await check("имя"), { available: false, reason: "format" });
+  const chosen = "Carol." + nonce;
+  for (const [who, username, status] of [
+    [client(), chosen, 201],
+    [client(), chosen.toLowerCase(), 409],
+    [client(), "", 201],
+  ]) {
+    const r = await who("auth/register", "POST", {
+      ...testConsents,
+      name: "Кэрол",
+      email: randomUUID() + "@example.test",
+      password: "colabike-social-test-123",
+      username,
+    });
+    assert.equal(r.status, status);
+    if (status === 409) {
+      assert.equal(r.body.code, "username_taken");
+      continue;
+    }
+    ids.push(r.body.user.id);
+    if (username) assert.equal(r.body.user.username, chosen.toLowerCase());
+    else assert.match(r.body.user.username, /^kerol(-\d+)?$/);
   }
   assert.equal((await guest("social/account")).status, 401);
   assert.equal(

@@ -16,6 +16,8 @@ import BikeGrid from "./bike-grid.jsx";
 import JournalCard from "./journal-card.jsx";
 import { CompactDialog } from "./compact-ui.jsx";
 import { SlidersHorizontal } from "./icons.jsx";
+import { profilePath } from "../../lib/public-urls.js";
+import { personName, usernameLabel } from "../../lib/usernames.js";
 const empty = {
   ...readClassificationFilters(new URLSearchParams()),
   category: "",
@@ -300,12 +302,13 @@ export default function ExperienceSearch({ modelPage = false }) {
                 {data.items.map((u) => (
                   <a
                     className="person-identity"
-                    href={"/u/" + u.username}
+                    href={profilePath(u.username)}
                     key={u.id}
                   >
                     <Avatar person={u} />
                     <span>
-                      {u.name} · @{u.username}
+                      {personName(u)}
+                      {usernameLabel(u) && " · " + usernameLabel(u)}
                     </span>
                   </a>
                 ))}

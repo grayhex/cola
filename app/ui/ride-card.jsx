@@ -10,6 +10,8 @@ import { Heart } from "./icons.jsx";
 import { useSite } from "./site-provider.jsx";
 import RideBasemap from "./ride-basemap.jsx";
 import { routePaths } from "../../lib/ride-geometry.js";
+import { profilePath } from "../../lib/public-urls.js";
+import { personName } from "../../lib/usernames.js";
 export function RideRoutePreview({ geometry = [], className = "" }) {
   const paths = routePaths(geometry);
   return (
@@ -102,7 +104,7 @@ export default function RideCard({ ride: r, owner = false, onEdit }) {
           compact
         />
         <div className="ride-social">
-          <a href={"/u/" + r.author.username}>@{r.author.username}</a>
+          <a href={profilePath(r.author.username)}>{personName(r.author)}</a>
           <span>
             <Heart size={12} aria-label="Лайки" /> {r.likes} · Комментарии{" "}
             {r.comments}

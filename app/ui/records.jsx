@@ -6,6 +6,8 @@ import { socialApi, SocialHeader, SocialFooter } from "./social-primitives.jsx";
 import { useSite } from "./site-provider.jsx";
 import AchievementArt from "./achievement-art.jsx";
 import { gameDescription, groupRecords } from "../../lib/gamification-presentation.js";
+import { profilePath } from "../../lib/public-urls.js";
+import { personName, usernameLabel } from "../../lib/usernames.js";
 
 function value(r, currency) {
   return (
@@ -51,8 +53,8 @@ function RecordCard({ record: r, settings, index }) {
       </div>
       {b ? (
         <div className="record-meta">
-          <Link prefetch={false} className="record-owner" href={"/u/" + b.author.username} title={b.author.name}>
-            @{b.author.username}
+          <Link prefetch={false} className="record-owner" href={profilePath(b.author.username)} title={usernameLabel(b.author) || undefined}>
+            {personName(b.author)}
           </Link>
           <small>{r.eligible} участн.</small>
         </div>
