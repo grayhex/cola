@@ -33,6 +33,7 @@ try {
     "019_legal_documents",
     "020_bike_classification",
     "021_former_bikes_market_types",
+    "022_auth_tokens",
   ]) {
     const { rowCount } = await client.query(
       "SELECT 1 FROM schema_migrations WHERE version=$1",

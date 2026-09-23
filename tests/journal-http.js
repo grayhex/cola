@@ -110,7 +110,9 @@ assert.equal(
 );
 const photo = await guest(media);
 assert.equal(photo.status, 200);
-assert.match(photo.headers.get("cache-control"), /no-store/);
+// Browsers revalidate every use, so revoked access is re-checked on the server.
+assert.equal(photo.headers.get("cache-control"), "private, no-cache");
+assert.ok(photo.headers.get("etag"));
 assert.equal(photo.headers.get("content-type"), "image/webp");
 assert.equal((await b("journal/" + id + "/like", "PUT")).status, 200);
 const comment = await b("journal/" + id + "/comments", "POST", {

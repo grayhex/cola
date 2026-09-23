@@ -83,4 +83,6 @@ export {
   Pin,
   Eye,
   EyeOff,
+  KeyRound,
+  MailCheck,
 } from "lucide-react";

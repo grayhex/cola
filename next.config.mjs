@@ -7,7 +7,7 @@ export default {
       ? { workerThreads: true, webpackBuildWorker: false }
       : {},
   // Operator/backup scripts import these directly outside Next's server bundle.
-  serverExternalPackages: ["pg", "zod", "fast-xml-parser"],
+  serverExternalPackages: ["pg", "zod", "fast-xml-parser", "nodemailer"],
   async headers() {
     return [
       {

@@ -48,6 +48,59 @@ const tabs = {
   appearance: "Оформление",
   account: "Аккаунт",
 };
+// Address status and a resend link; confirmation does not limit site features.
+function EmailStatus({ email, verified }) {
+  const [state, setState] = useState("idle"),
+    [message, setMessage] = useState("");
+  return (
+    <>
+      <span>{email}</span>{" "}
+      <span className="help">
+        {verified || state === "verified"
+          ? "· подтверждён"
+          : "· не подтверждён"}
+      </span>
+      {!verified && state !== "verified" && (
+        <>
+          <br />
+          <button
+            type="button"
+            className="quiet"
+            disabled={state === "busy" || state === "sent"}
+            aria-busy={state === "busy"}
+            onClick={async () => {
+              setState("busy");
+              setMessage("");
+              try {
+                const result = await socialApi(
+                  "account/email-verification",
+                  "POST",
+                );
+                setState(result.verified ? "verified" : "sent");
+                setMessage(
+                  result.verified
+                    ? "Адрес уже подтверждён"
+                    : "Письмо отправлено. Ссылка действует 24 часа.",
+                );
+              } catch (e) {
+                setState("idle");
+                setMessage(e.message);
+              }
+            }}
+          >
+            {state === "busy" ? "Отправляем…" : "Отправить письмо ещё раз"}
+          </button>
+        </>
+      )}
+      {message && (
+        <span className="help" role="status">
+          {" "}
+          {message}
+        </span>
+      )}
+    </>
+  );
+}
 function ProfileEditor({ profile, onSaved }) {
   const [form, setForm] = useState({
       username: profile.username,
@@ -576,7 +629,12 @@ export default function Account() {
                 <p className="help">Эта информация доступна только вам.</p>
                 <dl>
                   <dt>Email</dt>
-                  <dd>{data.email}</dd>
+                  <dd>
+                    <EmailStatus
+                      email={data.email}
+                      verified={!!user?.email_verified_at}
+                    />
+                  </dd>
                   <dt>Дата регистрации</dt>
                   <dd>
                     {new Date(profile.createdAt).toLocaleDateString("ru-RU")}

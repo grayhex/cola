@@ -29,9 +29,15 @@ const environment = {
   MAX_PHOTOS_PER_USER: "20",
   UPLOAD_DIR: path.join(dir, "uploads"),
   RIDES_DIR: path.join(dir, "rides"),
+  // Emails become JSON files that account tests read (never in production).
+  MAIL_CAPTURE_DIR: path.join(dir, "mail"),
   MAP_STYLE_URL: process.argv.includes("--e2e")
     ? base + "/test-map-style.json"
     : "",
+  // HTTP runs deliver error reports to the fake tracker in observability-http.js.
+  ...(process.argv.includes("--e2e")
+    ? {}
+    : { ERROR_TRACKER_DSN: "http://integration@127.0.0.1:8099/7" }),
 };
 function start(args, cwd = root) {
   const log = path.join(dir, logs.length + ".log");
@@ -58,7 +64,12 @@ async function ready(url) {
   throw new Error("Service not ready: " + url);
 }
 try {
-  for (const port of externalDatabase ? [8081, 3100] : [5432, 8081, 3100])
+  for (const port of [
+    ...(externalDatabase ? [] : [5432]),
+    8081,
+    3100,
+    ...(process.argv.includes("--e2e") ? [] : [8099]),
+  ])
     await new Promise((resolve, reject) => {
       const probe = net.createServer();
       probe.once("error", () =>
@@ -112,7 +123,10 @@ try {
   for (const test of e2e
     ? ["node_modules/@playwright/test/cli.js"]
     : [
+        // First: the tracker budget is still unused right after startup.
+        "tests/observability-http.js",
         "tests/http-smoke.js",
+        "tests/media-http.js",
         "tests/admin-http.js",
         "tests/resolver-http.js",
         "tests/layout-http.js",
@@ -126,6 +140,7 @@ try {
         "tests/discovery-http.js",
         "tests/gamification-http.js",
         "tests/legal-http.js",
+        "tests/account-http.js",
         ...(externalDatabase ? ["tests/quota-http.js"] : []),
       ])
     await new Promise((resolve, reject) => {

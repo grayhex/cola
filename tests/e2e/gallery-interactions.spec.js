@@ -70,7 +70,7 @@ async function fixture(page, user = viewer, items = bikes) {
     r.fulfill({ json: { bike: items[0] } }),
   );
   await page.route("**/api/photos/photo-*", async (r) => {
-    const i = Number(r.request().url().split("photo-")[1]);
+    const i = Number(new URL(r.request().url()).pathname.split("photo-")[1]);
     const body = process.env.COMMUNITY_ARTWORK_DIR
       ? await readFile(
           `${process.env.COMMUNITY_ARTWORK_DIR}/bike-${[3, 2, 1][i]}.webp`,
@@ -378,13 +378,23 @@ test("broken artwork and photos keep stable space and accessible fallbacks", asy
   await page.setViewportSize({ width: 320, height: 740 });
   await page.goto("/bikes");
   await expect(page.locator(".brand")).toContainText("ColaBike");
+  const cards = page.locator(".bike-card");
+  await expect(cards).toHaveCount(bikes.length);
+  // Lazy images start asynchronously after entering the viewport. Wait for
+  // each error fallback before scrolling on; WebKit may defer offscreen loads.
+  for (const card of await cards.all()) {
+    await card.scrollIntoViewIfNeeded();
+    await expect(card.locator(".photo-empty")).toBeVisible();
+  }
   await expect(page.locator(".bike-card .photo-empty")).toHaveCount(9);
+  await page.evaluate(() => window.scrollTo(0, 0));
   await noOverflow(page);
   const photoBox = await page.locator(".card-photo").first().boundingBox();
   expect(Math.abs(photoBox.width - photoBox.height)).toBeLessThan(1);
   await expect(page.locator(".garage-banner-shell")).toHaveCount(0);
   // Reuse the same card with a replacement image: an old failure must not stick.
-  await page.route("**/api/photos/recovered-photo", (r) =>
+  // Cards request a size variant (?width=…).
+  await page.route("**/api/photos/recovered-photo*", (r) =>
     r.fulfill({ contentType: "image/png", body: photo }),
   );
   await page.route("**/api/showcase?**", (r) =>
@@ -399,9 +409,11 @@ test("broken artwork and photos keep stable space and accessible fallbacks", asy
   await page.getByRole("option", { name: "Популярные", exact: true }).click();
   const recovered = page.locator(".card-open-photo > img");
   await expect(recovered).toBeVisible();
+  // With srcset the density-corrected naturalWidth depends on DPR
+  // (900 px at 1x, 225 px on a 3x phone); loaded is what matters here.
   await expect
-    .poll(() => recovered.evaluate((el) => el.naturalWidth))
-    .toBe(900);
+    .poll(() => recovered.evaluate((el) => el.complete && el.naturalWidth))
+    .toBeGreaterThan(0);
   await expect(page.locator(".bike-card .photo-empty")).toHaveCount(0);
   expect((await page.locator(".card-photo").boundingBox()).height).toBe(
     photoBox.height,

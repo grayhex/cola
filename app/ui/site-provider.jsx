@@ -9,6 +9,7 @@ import {
   validTheme,
 } from "../../lib/theme.js";
 import { useBrowseHistory } from "./showcase-scroll.js";
+import { installErrorReporting } from "./error-reporting.js";
 import { defaultSettings, defaultCatalog } from "../../lib/site-defaults.js";
 const Context = createContext(null);
 export function ThemeStyle({ settings }) {
@@ -21,6 +22,7 @@ export function ThemeStyle({ settings }) {
 }
 export default function SiteProvider({ initial, children }) {
   useBrowseHistory();
+  useEffect(() => installErrorReporting(), []);
   const [site, setSite] = useState(
     initial || { settings: defaultSettings, catalog: defaultCatalog },
   );

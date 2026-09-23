@@ -28,10 +28,19 @@ import { preparePhoto } from "../../../../lib/images.js";
 import { limits, QuotaError } from "../../../../lib/limits.js";
 import {
   saveJournalPhoto,
-  readJournalPhoto,
+  journalPhotoFilename,
+  readJournalPhotoFile,
   cleanupJournalPhotos,
 } from "../../../../lib/journal-storage.js";
-import { logError } from "../../../../lib/observability.js";
+import {
+  mediaEtag,
+  mediaResponse,
+  mediaVariant,
+  mediaWidth,
+  notModified,
+  notModifiedResponse,
+} from "../../../../lib/media-cache.js";
+import { logError, traced } from "../../../../lib/observability.js";
 export const runtime = "nodejs",
   dynamic = "force-dynamic";
 async function handler(req, { params }) {
@@ -44,18 +53,23 @@ async function handler(req, { params }) {
       return fail("Недопустимый источник запроса", 403);
     const page = () => communityPage.parse(url.searchParams.get("page") || 1);
     if (m === "GET") {
-      if (p[0] === "media" && p.length === 2)
-        return new Response(
-          await readJournalPhoto(db, uuid.parse(p[1]), user?.id),
-          {
-            headers: {
-              "Content-Type": "image/webp",
-              "Cache-Control": "private, no-store",
-              "X-Content-Type-Options": "nosniff",
-              Vary: "Cookie",
-            },
-          },
+      if (p[0] === "media" && p.length === 2) {
+        const id = uuid.parse(p[1]),
+          width = mediaWidth(url.searchParams.get("width"));
+        if (width === undefined) return fail("Неверный размер изображения");
+        // Access is checked on every request, including revalidation.
+        const filename = await journalPhotoFilename(db, id, user?.id),
+          etag = mediaEtag(id, width),
+          headers = { Vary: "Cookie" };
+        if (notModified(req, etag))
+          return notModifiedResponse(etag, { headers });
+        const original = () => readJournalPhotoFile(filename);
+        return mediaResponse(
+          width ? await mediaVariant(id, width, original) : await original(),
+          etag,
+          { headers },
         );
+      }
       if (!p.length)
         return json(
           await journalList(
@@ -235,8 +249,9 @@ async function handler(req, { params }) {
     return fail("Не удалось обработать запись", 500);
   }
 }
-export const GET = handler,
-  POST = handler,
-  PATCH = handler,
-  DELETE = handler,
-  PUT = handler;
+const route = traced(handler);
+export const GET = route,
+  POST = route,
+  PATCH = route,
+  DELETE = route,
+  PUT = route;

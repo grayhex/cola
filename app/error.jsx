@@ -1,6 +1,11 @@
 "use client";
+import { useEffect } from "react";
 import { RefreshCw } from "./ui/icons.jsx";
-export default function Error({ reset }) {
+import { reportClientError } from "./ui/error-reporting.js";
+export default function Error({ error, reset }) {
+  useEffect(() => {
+    reportClientError(error, "boundary");
+  }, [error]);
   return (
     <main className="empty">
       <h1>Не удалось открыть страницу</h1>

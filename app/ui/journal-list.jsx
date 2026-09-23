@@ -116,7 +116,7 @@ export default function JournalList({ bike, owner = false, editable = false }) {
           <h3>
             <a href={"/j/" + e.shareId}>{e.title || "Без заголовка"}</a>
           </h3>
-          <p>{e.body}</p>
+          <p>{e.excerpt ?? e.body}</p>
           <small>
             <Heart size={12} aria-label="Лайки" /> {e.likes} · Комментарии{" "}
             {e.comments}

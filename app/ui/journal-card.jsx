@@ -70,7 +70,12 @@ export default function JournalCard({ entry, onSaved }) {
     <article className="journal-card">
       {entry.photo && (
         <a href={"/j/" + entry.shareId} className="journal-card-photo">
-          <img src={entry.photo} alt="Фотография записи" loading="lazy" />
+          <img
+            src={entry.photo + "?width=640"}
+            alt="Фотография записи"
+            loading="lazy"
+            decoding="async"
+          />
         </a>
       )}
       <div className="journal-card-content">
@@ -87,7 +92,7 @@ export default function JournalCard({ entry, onSaved }) {
         <h2>
           <a href={"/j/" + entry.shareId}>{entry.title}</a>
         </h2>
-        <p className="journal-excerpt">{entry.body}</p>
+        <p className="journal-excerpt">{entry.excerpt ?? entry.body}</p>
         <a
           className="journal-card-bike"
           title={entry.bike.name}

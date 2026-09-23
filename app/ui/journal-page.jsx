@@ -174,9 +174,12 @@ export default function JournalPage({ share = null }) {
                 {entry.photos.map((p, i) => (
                   <a key={p.id} href={p.url} target="_blank" rel="noopener">
                     <img
-                      src={p.url}
+                      src={p.url + "?width=640"}
+                      srcSet={`${p.url}?width=640 640w, ${p.url}?width=1280 1280w`}
+                      sizes="(max-width: 700px) 100vw, 50vw"
                       alt={"Фотография записи " + (i + 1)}
                       loading="lazy"
+                      decoding="async"
                     />
                   </a>
                 ))}

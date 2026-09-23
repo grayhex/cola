@@ -16,6 +16,7 @@
 | UI и скорость | [016_product_ui.sql](../../db/016_product_ui.sql) | Очистка прежних настроек и публичный профиль скорости |
 | Поездки, объявления, статьи | [017_rides_market.sql](../../db/017_rides_market.sql), [018_articles_rsvp.sql](../../db/018_articles_rsvp.sql) | Источники поездок, планы, объявления, статьи и RSVP |
 | Документы и согласия | [019_legal_documents.sql](../../db/019_legal_documents.sql) | Версионирование документов и согласий |
+| Ссылки из писем | [022_auth_tokens.sql](../../db/022_auth_tokens.sql) | Одноразовые токены восстановления и подтверждения (только digest), `email_verified_at`, `password_changed_at` |
 | Классификация | [020_bike_classification.sql](../../db/020_bike_classification.sql) | Независимые признаки байка, индексы и совместимость старого category |
 | Resolver | [migrations](../../services/bike-resolver/migrations) | Изолированная схема `bike_resolver`: cache и настройки источников |
 
@@ -49,7 +50,7 @@ Docker выполняет проверку runtime-конфигурации и �
 
 ## Хранение и совместимость
 
-Volumes: `database`, `photos`, `rides`. `photos` содержит также аватары, изображения журнала и графику сайта; `rides` хранит приватные оригиналы отдельно. JSON-настройки расширяются с backward-compatible defaults, без обхода validation и потери полей при старом PUT.
+Volumes: `database`, `photos`, `rides`. `photos` содержит также аватары, изображения журнала и графику сайта; `rides` хранит приватные оригиналы отдельно. Уменьшенные копии изображений — производный кеш вне томов ([медиа](security.md#медиа-и-кеширование)); backup и аудит файлов их не учитывают. JSON-настройки расширяются с backward-compatible defaults, без обхода validation и потери полей при старом PUT.
 
 Изменение схемы сопровождается проверкой существующих данных, backup/restore и API-приватности. Откат к старому коду после новой миграции не считается автоматически безопасным.
 

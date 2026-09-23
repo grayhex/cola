@@ -38,6 +38,9 @@ importers:
       next:
         specifier: ^16.3.3
         version: 16.3.5(@playwright/test@1.63.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      nodemailer:
+        specifier: ^10.0.10
+        version: 10.0.10
       pg:
         specifier: ^8.16.3
         version: 8.23.0
@@ -806,6 +809,10 @@ packages:
         optional: true
       sass:
         optional: true
+
+  nodemailer@10.0.10:
+    resolution: {integrity: sha512-He9XskOFms62SyAKkLu8CcGcYHAo+BSHSsORI8s4PJH8qZgZY4L4lDfvyN0twvmbpyG+eGrxpyBlskj9d9rJ8A==}
+    engines: {node: '>=20.0.0'}
 
   orderedmap@2.1.1:
     resolution: {integrity: sha512-TvAWxi0nDe1j/rtMcWcIj94+Ffe6n7zhow33h40SKxmsmozs6dz/e+EajymfoFcHd7sxNn8yHM8839uixMOV6g==}
@@ -1655,6 +1662,8 @@ snapshots:
       - '@babel/core'
       - '@types/node'
       - babel-plugin-macros
+
+  nodemailer@10.0.10: {}
 
   orderedmap@2.1.1: {}
 

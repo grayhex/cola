@@ -33,7 +33,13 @@ export function ArticleCard({ article: a, topics }) {
     <article className="article-card">
       {a.cover && (
         <a href={"/articles/" + a.shareId} tabIndex={-1} aria-hidden="true">
-          <img className="article-cover" src={a.cover} alt="" loading="lazy" />
+          <img
+            className="article-cover"
+            src={a.cover + "?width=640"}
+            alt=""
+            loading="lazy"
+            decoding="async"
+          />
         </a>
       )}
       <div className="article-card-content">
@@ -46,7 +52,7 @@ export function ArticleCard({ article: a, topics }) {
         <h2>
           <a href={"/articles/" + a.shareId}>{a.title || "Без заголовка"}</a>
         </h2>
-        <p>{a.body.replace(/[*#`]/g, "")}</p>
+        <p>{a.excerpt ?? a.body}</p>
         <div className="article-meta">
           <AuthorLink author={a.author} />
           <span>{a.comments} комментариев</span>

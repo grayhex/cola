@@ -43,7 +43,7 @@ COPY --from=builder --chown=colabike:colabike /app/lib ./lib
 # Host backup/restore and test/benchmark harnesses deliberately stay outside.
 COPY --chown=colabike:colabike \
     scripts/check-runtime.js scripts/migrate.js \
-    scripts/bootstrap-admin.js scripts/set-admin.js \
+    scripts/bootstrap-admin.js scripts/set-admin.js scripts/reset-password.js \
     scripts/audit-photo-files.js scripts/recalculate-photo-storage.js \
     scripts/cleanup-rides.js ./scripts/
 RUN node --input-type=module -e "await import('./lib/rides.js'); await import('./lib/factory-import.js')"

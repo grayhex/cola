@@ -1475,13 +1475,33 @@
 .bike-heading > div {
   min-width: 0;
 }
+/* Long names wrap (at most three lines) instead of collapsing to a few letters. */
 .site-root .bike-heading h1 {
   font-size: clamp(19px, 3vw, 28px);
   line-height: 1.2;
   margin: 0;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+}
+/* A long username must not take the title's column. */
+.site-root .bike-heading .detail-actions .author-link {
+  max-width: min(40vw, 240px);
+}
+@media (max-width: 700px) {
+  .site-root .bike-heading {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .site-root .bike-heading .detail-actions {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+  .site-root .bike-heading .detail-actions .author-link {
+    max-width: 100%;
+  }
 }
 .site-root .bike-heading .detail-actions {
   display: flex;

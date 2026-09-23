@@ -20,6 +20,9 @@ import { ContentLabel } from "./content-label.jsx";
 import { listingTypes, listingPriceLabel } from "../../lib/market-types.js";
 import { marketCategories, readMarketQuery, writeMarketQuery } from "../../lib/market-query.js";
 import styles from "./market.module.css";
+// The link keeps the original; previews use the cached size variants.
+const marketVariants = (id, widths = [320, 640, 1280]) =>
+  widths.map((w) => `/api/market/media/${id}?width=${w} ${w}w`).join(", ");
 export { marketCategories } from "../../lib/market-query.js";
 
 function ListingTypeLabel({ type = "sale" }) {
@@ -41,8 +44,11 @@ export function MarketCard({ listing: m }) {
         {m.photos[0] ? (
           <img
             src={"/api/market/media/" + m.photos[0].id + "?width=320"}
+            srcSet={marketVariants(m.photos[0].id, [320, 640])}
+            sizes="(max-width: 700px) 100vw, 320px"
             alt=""
             loading="lazy"
+            decoding="async"
           />
         ) : (
           <ShoppingBag size={32} />
@@ -517,7 +523,11 @@ export default function Market({ share = null, create = false }) {
                           rel="noreferrer"
                         >
                           <img
-                            src={"/api/market/media/" + p.id}
+                            src={"/api/market/media/" + p.id + "?width=1280"}
+                            srcSet={marketVariants(p.id)}
+                            sizes="(max-width: 700px) 100vw, 60vw"
+                            loading={i ? "lazy" : "eager"}
+                            decoding="async"
                             alt={listing.title + " · фото " + (i + 1)}
                           />
                         </a>

@@ -26,6 +26,10 @@ TRUSTED_PROXY_KEY=<другой случайный секрет>
 BIKE_RESOLVER_TOKEN=<ещё один случайный секрет>
 ```
 
+Почта нужна для восстановления пароля и подтверждения адреса: `SMTP_URL=smtps://user:password@smtp.example.com:465` (или `smtp://…:587`, STARTTLS обязателен) и `MAIL_FROM="ColaBike <noreply@colabike.ru>"`. Подойдёт SMTP почтового сервиса домена или транзакционного провайдера; настройте SPF/DKIM для домена отправителя. Без `SMTP_URL` сайт запускается, в журнале старта будет `"mail":"disabled"`, а восстановление пароля отвечает 503 — тогда владелец использует `scripts/reset-password.js` ([аккаунт](../modules/accounts.md#восстановление-пароля-и-подтверждение-почты)). `MAIL_CAPTURE_DIR` предназначен только для тестов и в production отклоняется.
+
+Необязательные `ERROR_TRACKER_DSN` (HTTPS DSN Sentry или GlitchTip) и `SLOW_REQUEST_MS` описаны в [мониторинге](monitoring.md#журнал-ошибок-и-трекер).
+
 Для каждого секрета независимо используйте `openssl rand -hex 32`; храните файл с правами 600 и не коммитьте его. Hex-пароль не требует дополнительного URL-экранирования в DATABASE_URL. Изменение `POSTGRES_PASSWORD` в env **не меняет пароль уже созданного PostgreSQL volume** — ротация требует согласованных действий в БД и конфигурации.
 
 Compose явно передаёт нужные переменные сервисам. Произвольная строка в `.env.production` не означает, что она появилась в контейнере: для новой настройки нужен соответствующий `environment`/`env_file` в Compose. Настройки UI/ключ карт и server secrets имеют разные границы публичности.
@@ -54,7 +58,7 @@ sudo ss -lntp | grep -E ':(3000|5432|8080)\b'
 
 Для webroot-сертификата сначала отдайте на HTTP `/.well-known/acme-challenge/` из `/var/www/acme`, с доступными nginx правами и исключением из запретов dot-path. Проверьте тестовый файл с внешней машины. Только затем выполните `certbot certonly --webroot -w /var/www/acme -d colabike.ru`. Процедура предполагает уже установленный Certbot/Nginx и согласованное окно настройки; на работающем сайте не заменяйте конфиг временной заглушкой без необходимости.
 
-После выпуска установите [nginx-colabike.conf](../../ops/nginx-colabike.conf), подставив точный `TRUSTED_PROXY_KEY` из env. Не отправляйте секрет в чат и не публикуйте конфиг целиком. Применение: `sudo nginx -t && sudo systemctl reload nginx`. Приложение остаётся на loopback, TLS завершается в nginx.
+После выпуска установите [nginx-colabike.conf](../../ops/nginx-colabike.conf), подставив точный `TRUSTED_PROXY_KEY` из env. Изображения (`/api/photos`, `/api/avatars`, `/api/assets`, медиа журнала и рынка) вынесены в отдельную зону `cola_media` с более мягким лимитом: одна страница запрашивает десятки картинок. При обновлении существующей установки перенесите в конфиг сервера новую зону и `location`. Не отправляйте секрет в чат и не публикуйте конфиг целиком. Применение: `sudo nginx -t && sudo systemctl reload nginx`. Приложение остаётся на loopback, TLS завершается в nginx.
 
 Проверьте HTTPS, редирект HTTP, Secure cookies и `Referrer-Policy: strict-origin-when-cross-origin` для внешних карт. Таймер Certbot и deploy hook, выполняющий `nginx -t` и reload после успешного renew, настраиваются на сервере. `certbot renew --dry-run` проверяет возможность продления; наличие/выполнение hook проверяется отдельно. Обновление репозитория не обновляет nginx или Certbot автоматически.
 

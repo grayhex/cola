@@ -14,6 +14,36 @@
 
 Внешний monitor использует HTTPS и проверяет нужные поля JSON. Внутренний healthcheck Compose и внешняя доступность DNS/TLS — разные наблюдения.
 
+## Журнал ошибок и трекер
+
+Каждый API-ответ содержит `X-Request-ID`; тот же `requestId` и шаблон маршрута (`/api/bikes/:id/photos`) пишутся в структурированный лог. Ошибка записывается событием с `errorType`, `code`, сообщением и до 12 кадров стека ([observability.js](../../lib/observability.js)). Перед записью из сообщения удаляются email, IP, UUID, токены, query-строки URL и значения в кавычках; имена ограничений PostgreSQL (`"users_email_key"`) сохраняются. SQL, заголовки, cookies и тела запросов в лог не попадают.
+
+| Событие | Когда |
+| --- | --- |
+| `request_failed` | ответ 5xx, с маршрутом, методом и длительностью |
+| `slow_request` | ответ дольше `SLOW_REQUEST_MS` (по умолчанию 1000 мс, `0` отключает) |
+| `client_error` | ошибка в браузере: error boundary, `window.onerror`, необработанный Promise |
+| `error_tracker_rejected` / `error_tracker_unreachable` / `error_tracker_dropped` | трекер отказал, недоступен или превышен лимит 30 событий в минуту |
+
+Браузер отправляет не больше пяти разных ошибок на загрузку страницы в `POST /api/client-errors` (проверка Origin, 16 КБ, лимиты частоты). Путь страницы хранится без query, ID заменяются заполнителями.
+
+`ERROR_TRACKER_DSN` (необязательно) подключает Sentry-совместимый трекер: Sentry или self-hosted GlitchTip. Сервер сам отправляет события через envelope API — SDK в браузере и публичный DSN не нужны. В production допускается только HTTPS DSN; значение проверяет `scripts/check-runtime.js`. Без DSN ошибки остаются только в логе контейнера.
+
+## Проверка и алерты
+
+[check-health.sh](../../scripts/check-health.sh) — host-side проверка для cron или push-монитора (Uptime Kuma, healthchecks.io). Скрипт только читает состояние и завершается с кодом 1, если что-то требует внимания:
+
+```bash
+sudo env \
+  COLA_URL=https://colabike.ru \
+  COLA_BACKUP_DIR=/srv/colabike-backups \
+  COLA_COMPOSE_FILES=/opt/stacks/cola/compose.prod.yaml \
+  COLA_ENV_FILE=/opt/stacks/cola/.env.production \
+  bash /opt/stacks/cola/scripts/check-health.sh
+```
+
+Проверяются `/api/status` (включая `resolver`), срок TLS-сертификата (`COLA_TLS_MIN_DAYS`, 14), заполнение диска (`COLA_DISK_PATHS`, `COLA_DISK_MAX_PERCENT`, 85), возраст последнего `colabike-*` бэкапа (`COLA_BACKUP_MAX_AGE_HOURS`, 26) и число `request_failed` за 15 минут (`COLA_5XX_MAX`, 20; нужен доступ к Docker). Пример cron раз в 5 минут с уведомлением по почте: `*/5 * * * * root /usr/bin/env COLA_URL=… bash /opt/stacks/cola/scripts/check-health.sh >/tmp/cola-health 2>&1 || mail -s 'ColaBike ALERT' ops@example.com </tmp/cola-health`. Репозиторий не включает расписание и канал доставки: их настраивает оператор.
+
 ## Базовая диагностика VPS
 
 ```bash
@@ -29,7 +59,7 @@ docker system df
 sudo ss -lntp
 ```
 
-Сопоставляйте `X-Request-ID` ответа со структурированными логами. Перед отправкой вывода удалите секреты, email и пользовательские данные. Не включайте полную выдачу `nginx -T`, rendered Compose, тела GPX или заголовки авторизации в публичный issue.
+Сопоставляйте `X-Request-ID` ответа со структурированными логами (`docker compose … logs app | grep <requestId>`). Перед отправкой вывода удалите секреты, email и пользовательские данные. Не включайте полную выдачу `nginx -T`, rendered Compose, тела GPX или заголовки авторизации в публичный issue.
 
 ## Типовые развилки
 
@@ -57,4 +87,4 @@ docker compose --env-file .env.production -f compose.prod.yaml exec -T app node 
 
 ## Что оператор должен настроить сам
 
-Оповещения о недоступности, диске, возрасте backup, TLS и провале deploy; проверку off-host копий; обновление системы/runner; защиту main и reviews; продление сертификата с reload nginx. Наличие этих глав или успешный CI не означает, что мониторинг уже включён на сервере.
+Расписание `scripts/check-health.sh` и канал уведомлений, при необходимости `ERROR_TRACKER_DSN`; оповещение о провале deploy; проверку off-host копий; обновление системы/runner; защиту main и reviews; продление сертификата с reload nginx. Наличие этих глав или успешный CI не означает, что мониторинг уже включён на сервере.
