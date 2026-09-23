@@ -87,7 +87,7 @@ export default function JournalCard({ entry, onSaved }) {
         <h2>
           <a href={"/j/" + entry.shareId}>{entry.title}</a>
         </h2>
-        <p className="journal-excerpt">{entry.body}</p>
+        <p className="journal-excerpt">{entry.excerpt ?? entry.body}</p>
         <a
           className="journal-card-bike"
           title={entry.bike.name}

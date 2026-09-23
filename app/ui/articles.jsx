@@ -46,7 +46,7 @@ export function ArticleCard({ article: a, topics }) {
         <h2>
           <a href={"/articles/" + a.shareId}>{a.title || "Без заголовка"}</a>
         </h2>
-        <p>{a.body.replace(/[*#`]/g, "")}</p>
+        <p>{a.excerpt ?? a.body}</p>
         <div className="article-meta">
           <AuthorLink author={a.author} />
           <span>{a.comments} комментариев</span>
