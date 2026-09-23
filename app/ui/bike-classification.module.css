@@ -72,21 +72,13 @@
 }
 .badges {
   display: inline-flex;
-  gap: 4px;
+  gap: 6px;
   flex-wrap: wrap;
   align-items: center;
+  min-width: 0;
   max-width: 100%;
-  font-size: 11px;
-  line-height: 1.35;
-  color: var(--text-muted);
 }
-.badges > span {
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 2px 5px;
-  background: var(--paper);
-  white-space: nowrap;
-}
+/* ContentLabel owns badge colors, typography and padding in every context. */
 .filters {
   width: 100%;
 }

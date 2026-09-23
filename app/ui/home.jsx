@@ -1,5 +1,4 @@
 "use client";
-import { classificationLabels } from "../../lib/bike-classification.js";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
@@ -20,6 +19,9 @@ import GlobalHeader from "./global-header.jsx";
 import { SocialFooter } from "./social-primitives.jsx";
 import { useSite } from "./site-provider.jsx";
 import { useBikeReaction } from "./use-bike-reaction.js";
+import { BikeLabels } from "./bike-labels.jsx";
+import { ContentTypeLabel } from "./content-label.jsx";
+import labelStyles from "./content-label.module.css";
 import SearchBox from "./search-box.jsx";
 import SmallImage from "./small-image.jsx";
 import styles from "./home.module.css";
@@ -28,6 +30,7 @@ const markers = {
   planned: CalendarDays,
   bike: Bike,
   journal: BookOpen,
+  article: BookOpen,
   ride: Route,
   achievement: Trophy,
 };
@@ -107,43 +110,24 @@ export function ActivityTicker({ events = [] }) {
   );
 }
 function TrendingBike({ bike, user }) {
-  const { catalog } = useSite(),
-    reaction = useBikeReaction(bike, user),
+  const reaction = useBikeReaction(bike, user),
     href = "/b/" + bike.share_id;
   return (
     <article className={styles.bike} data-bike-id={bike.id}>
-      <Link
-        href={href}
-        className={styles.thumbnailLink}
-        aria-label={"Открыть " + bike.name}
-      >
-        <SmallImage
-          className={styles.thumbnail}
-          src={
-            bike.photos[0] ? `/api/photos/${bike.photos[0].id}?width=160` : null
-          }
-        />
-      </Link>
-      <div className={styles.bikeBody}>
-        <h3>
-          <Link href={href}>{bike.name}</Link>
-        </h3>
-        <p className={styles.metadata}>
-          {bike.author?.username ? (
-            <Link href={"/u/" + bike.author.username}>{bike.author.name}</Link>
-          ) : (
-            bike.author?.name
-          )}
-          <span>·</span>
-          {classificationLabels(bike).join(" · ") || bike.category}
-          {bike.weight && (
-            <>
-              <span>·</span>
-              {Number(bike.weight)} кг
-            </>
-          )}
-        </p>
-        <div className={styles.signals}>
+      <div className={labelStyles.compactMedia}>
+        <Link
+          href={href}
+          className={styles.thumbnailLink}
+          aria-label={"Открыть " + bike.name}
+        >
+          <SmallImage
+            className={styles.thumbnail}
+            src={
+              bike.photos[0] ? `/api/photos/${bike.photos[0].id}?width=160` : null
+            }
+          />
+        </Link>
+        <div className={styles.signals} data-bike-photo-actions>
           <button
             type="button"
             disabled={bike.is_owner}
@@ -155,6 +139,21 @@ function TrendingBike({ bike, user }) {
             <Heart size={14} fill={reaction.liked ? "currentColor" : "none"} />
             {reaction.likes ?? 0}
           </button>
+        </div>
+      </div>
+      <div className={styles.bikeBody}>
+        <h3>
+          <Link href={href}>{bike.name}</Link>
+        </h3>
+        <p className={styles.metadata}>
+          {bike.author?.username ? (
+            <Link href={"/u/" + bike.author.username}>{bike.author.name}</Link>
+          ) : (
+            bike.author?.name
+          )}
+        </p>
+        <BikeLabels bike={bike} />
+        <div className={styles.signals}>
           <Link
             href={href + "#discussion"}
             aria-label={"Комментарии: " + (bike.comments || 0)}
@@ -328,26 +327,13 @@ export default function Home() {
           </div>
           <div className={styles.contentGrid}>
             {content.content.map((item) => {
-              const Icon = {
-                journal: BookOpen,
-                ride: Route,
-                bike: Bike,
-                market: ShoppingBag,
-                planned: CalendarDays,
-              }[item.type];
+              const Icon = markers[item.type] || BookOpen;
               return (
-                <article className={styles.story} key={item.id}>
+                <article className={`${styles.story} ${labelStyles.eventCard}`} key={item.id} data-event={item.type}>
                   <div className={styles.storyKind}>
-                    <Icon size={16} />
-                    {
-                      {
-                        market: "Рынок",
-                        planned: "Планируемая покатушка",
-                        journal: "Запись",
-                        ride: "Покатушка",
-                        bike: "Велосипед",
-                      }[item.type]
-                    }
+                    <ContentTypeLabel type={item.type}>
+                      <Icon size={16} aria-hidden="true" />
+                    </ContentTypeLabel>
                     <span>· {item.author}</span>
                   </div>
                   <h3>

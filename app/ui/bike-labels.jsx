@@ -1,24 +1,29 @@
 "use client";
 import SiteEmoji from "./site-emoji.jsx";
+import { ClassificationBadges } from "./bike-classification.jsx";
+import { ContentLabel, LabelRow } from "./content-label.jsx";
 export function BikeLabels({ bike }) {
   return (
-    <div className="bike-labels">
+    <LabelRow className="bike-labels" aria-label="Характеристики велосипеда">
+      {bike.is_former && <ContentLabel className="hf-label" data-bike-label="former">Бывший</ContentLabel>}
       {bike.size && (
-        <span className="hf-label" aria-label={"Размер рамы: " + bike.size}>
+        <ContentLabel className="hf-label" data-bike-label="size" aria-label={"Размер рамы: " + bike.size}>
           <SiteEmoji name="size" />
           <span>{bike.size}</span>
-        </span>
+        </ContentLabel>
       )}
       {bike.weight != null && Number(bike.weight) > 0 && (
-        <span
+        <ContentLabel
           className="hf-label"
+          data-bike-label="weight"
           aria-label={"Вес: " + Number(bike.weight) + " кг"}
         >
           <SiteEmoji name="weight" />
           <span>{Number(bike.weight).toLocaleString("ru-RU")} кг</span>
-        </span>
+        </ContentLabel>
       )}
-    </div>
+      <ClassificationBadges bike={bike} />
+    </LabelRow>
   );
 }
 export function BikeLike({ bike, reaction, t = (s) => s }) {

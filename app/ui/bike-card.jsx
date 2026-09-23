@@ -1,8 +1,8 @@
 "use client";
-import { ClassificationBadges } from "./bike-classification.jsx";
 import { BikeLabels, BikeLike } from "./bike-labels.jsx";
+import { PhotoActions } from "./content-label.jsx";
 import Link from "next/link";
-import { Heart, Lock, MessageCircle, Bike } from "./icons.jsx";
+import { Lock, MessageCircle, Bike } from "./icons.jsx";
 import Photo from "./bike-photo.jsx";
 import { AuthorLink } from "./social-primitives.jsx";
 import { useSite } from "./site-provider.jsx";
@@ -40,32 +40,28 @@ export default function BikeCard({
           </span>
         )}
       </div>
+      {b.is_public && (
+        <PhotoActions>
+          <BikeLike bike={b} reaction={reaction} t={t} />
+          <Link
+            className={styles.stat}
+            href={href + "#discussion"}
+            aria-label={t("Комментарии") + (b.comments == null ? "" : ": " + b.comments)}
+          >
+            <MessageCircle size={18} />
+            {b.comments != null && <span>{b.comments}</span>}
+          </Link>
+        </PhotoActions>
+      )}
       <div className={`card-info ${styles.info}`}>
         <div className={`card-identity-row ${styles.identity}`}>
           <h2>
             <Open {...openProps}>{title}</Open>
           </h2>
-          <BikeLabels bike={b} />
         </div>
-        <ClassificationBadges bike={b} />
+        <BikeLabels bike={b} />
         <div className={`card-social ${styles.social}`}>
           <AuthorLink author={b.author} />
-          {b.is_public && (
-            <div className={styles.stats}>
-              <BikeLike bike={b} reaction={reaction} t={t} />
-              <Link
-                className={styles.stat}
-                href={href + "#discussion"}
-                aria-label={
-                  t("Комментарии") +
-                  (b.comments == null ? "" : ": " + b.comments)
-                }
-              >
-                <MessageCircle size={18} />
-                {b.comments != null && <span>{b.comments}</span>}
-              </Link>
-            </div>
-          )}
         </div>
         {ownerView && (
           <div className={styles.ownerSignals}>

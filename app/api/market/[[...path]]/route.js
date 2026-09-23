@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { listingTypeKeys } from "../../../../lib/market-types.js";
 import { db, transaction } from "../../../../lib/db.js";
 import { currentUser, rateLimit } from "../../../../lib/auth.js";
 import {
@@ -46,6 +47,8 @@ async function handler(req, { params }) {
             .enum(["bikes", "components", "accessories"])
             .nullable()
             .parse(url.searchParams.get("category")),
+          listingType: z.enum(listingTypeKeys).nullable().parse(url.searchParams.get("type")),
+          condition: z.enum(["new", "used"]).nullable().parse(url.searchParams.get("condition")),
           page: communityPage.parse(url.searchParams.get("page") || 1),
           search: z
             .string()

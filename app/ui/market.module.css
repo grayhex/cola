@@ -46,30 +46,59 @@
   margin: 8px 0;
   overflow-wrap: anywhere;
 }
+.labels {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+  min-width: 0;
+}
 .price {
   font-size: 18px;
+  overflow-wrap: anywhere;
 }
 .cardBody p {
   font-size: 13px;
   margin: 8px 0 0;
   overflow-wrap: anywhere;
 }
-.filters {
+.search {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-.filters form {
-  display: flex;
-  gap: 6px;
-  max-width: 100%;
+  gap: 10px;
+  margin: 8px 0 20px;
+  padding: 10px 12px;
+  width: 100%;
   min-width: 0;
+  border: 1px solid var(--control-border, var(--line));
+  border-radius: 10px;
+  background: var(--paper);
 }
-.filters input {
+.search > svg { flex: 0 0 auto; color: var(--muted); }
+.search input {
+  flex: 1 1 auto;
+  width: 0;
   min-width: 0;
+  min-height: 48px;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink);
+  font-size: 18px;
+  box-shadow: none;
 }
+.search button { flex: 0 0 auto; min-height: 48px; }
+.filterPanel { margin-bottom: 20px; }
+.filterFields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  max-width: 640px;
+  margin-top: 14px;
+}
+.filterFields label { min-width: 0; margin-bottom: 0; }
+.filterFields select { width: 100%; min-width: 0; min-height: 44px; }
 .categories {
   display: flex;
   gap: 8px;
@@ -184,6 +213,7 @@
   display: block;
   font-size: 28px;
   margin-bottom: 20px;
+  overflow-wrap: anywhere;
 }
 .seller p:has(svg) {
   display: flex;
@@ -227,6 +257,11 @@
   .formGrid {
     grid-template-columns: 1fr;
   }
+  .search { gap: 6px; padding: 6px; }
+  .search > svg { display: none; }
+  .search input { font-size: 16px; padding: 8px; }
+  .search button { padding-inline: 12px; }
+  .filterFields { gap: 8px; }
   .gallery > a:first-child img {
     height: 280px;
   }

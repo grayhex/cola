@@ -1,0 +1,18 @@
+.ownership { margin: 12px 0 18px; }
+.check { display: flex; align-items: center; gap: 9px; min-height: 44px; font-weight: 600; }
+.check input { flex: 0 0 auto; width: 18px; height: 18px; }
+.ownership p { margin: 4px 0 0; }
+.modelInput.modelInput {
+  min-width: 0;
+  max-width: 100%;
+  border: 1px solid var(--control-border, var(--line));
+  border-radius: 8px;
+  box-shadow: none;
+}
+.modelInput.modelInput:focus,
+.modelInput.modelInput:focus-visible {
+  border-color: transparent;
+  outline: 2px solid var(--focus, var(--accent));
+  outline-offset: 1px;
+  box-shadow: none;
+}

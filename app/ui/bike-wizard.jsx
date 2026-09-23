@@ -1,6 +1,8 @@
 "use client";
 import { useConfirmation } from "./confirmation.jsx";
 import ClassificationFields from "./bike-classification.jsx";
+import { FormerBikeField } from "./bike-fields.jsx";
+import fieldStyles from "./bike-fields.module.css";
 import SiteEmoji from "./site-emoji.jsx";
 import {
   emptyClassification,
@@ -78,6 +80,7 @@ export default function BikeWizard({ onCreated, onBusy, onDirtyChange }) {
       mileage: 0,
       manufacturer_url: "",
       is_public: false,
+      is_former: false,
       show_bike_price: false,
       show_component_prices: false,
       show_accessory_prices: false,
@@ -149,6 +152,7 @@ export default function BikeWizard({ onCreated, onBusy, onDirtyChange }) {
     bike.mileage ||
     bike.manufacturer_url ||
     bike.is_public ||
+    bike.is_former ||
     bike.show_bike_price ||
     bike.show_component_prices ||
     bike.show_accessory_prices ||
@@ -566,7 +570,7 @@ export default function BikeWizard({ onCreated, onBusy, onDirtyChange }) {
                 value={searchText}
                 disabled={resolving}
                 maxLength={240}
-                placeholder="Canyon Grail CF SLX 8 AXS 2026"
+                className={fieldStyles.modelInput}
                 onChange={(e) => setSearchText(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
@@ -963,6 +967,8 @@ export default function BikeWizard({ onCreated, onBusy, onDirtyChange }) {
         )}
         {step === 2 && (
           <>
+            <FormerBikeField value={bike.is_former}
+              onChange={(value) => update("is_former", value)} />
             <ClassificationFields
               value={bike.classification}
               onChange={(classification) =>

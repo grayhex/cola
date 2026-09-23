@@ -162,7 +162,9 @@ test("market publishes images and price, enters home feed, and closes a listing"
   await page
     .getByRole("combobox", { name: "Категория", exact: true })
     .selectOption("components");
-  await page.getByLabel("Цена", { exact: true }).fill("12500");
+  await expect(page.getByRole("combobox", { name: "Тип объявления", exact: true })).toHaveValue("sale");
+  await expect(page.getByLabel("Валюта", { exact: true })).toHaveCount(0);
+  await page.getByLabel("Цена, ₽", { exact: true }).fill("12500");
   await page.getByLabel("Город", { exact: true }).fill("Тестовый город");
   await page.getByLabel("Как с вами связаться").fill("@rider");
   const photo = await sharp({
@@ -184,6 +186,13 @@ test("market publishes images and price, enters home feed, and closes a listing"
     page.getByRole("img", { name: "Gravel wheelset · фото 1" }),
   ).toBeVisible();
   const url = page.url();
+  const share = new URL(url).pathname.split("/").pop();
+  const response = await page.request.get("/api/market/public/" + share);
+  expect(response.status()).toBe(200);
+  expect((await response.json()).listing).toMatchObject({
+    listingType: "sale", price: 12500, currency: "RUB", status: "active",
+  });
+  await expect(page.locator("aside strong")).toHaveText(/12\s500,00\s₽/);
   await noOverflow(page);
   await page.screenshot({
     path: info.outputPath("market-detail.png"),
