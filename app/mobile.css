@@ -1516,7 +1516,8 @@
   padding: 6px;
   border: 0;
 }
-.detail-actions .share-action > span {
+.detail-actions .share-action > span,
+.detail-actions .share-button > span {
   display: none;
 }
 .bike-meta-line {
