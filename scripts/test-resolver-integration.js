@@ -29,6 +29,8 @@ const environment = {
   MAX_PHOTOS_PER_USER: "20",
   UPLOAD_DIR: path.join(dir, "uploads"),
   RIDES_DIR: path.join(dir, "rides"),
+  // Emails become JSON files that account tests read (never in production).
+  MAIL_CAPTURE_DIR: path.join(dir, "mail"),
   MAP_STYLE_URL: process.argv.includes("--e2e")
     ? base + "/test-map-style.json"
     : "",
@@ -138,6 +140,7 @@ try {
         "tests/discovery-http.js",
         "tests/gamification-http.js",
         "tests/legal-http.js",
+        "tests/account-http.js",
         ...(externalDatabase ? ["tests/quota-http.js"] : []),
       ])
     await new Promise((resolve, reject) => {

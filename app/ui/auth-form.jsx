@@ -162,6 +162,11 @@ export default function AuthForm({ mode, busy, onSubmit, switchMode }) {
       {mode === "register" && (
         <p className="help">{t("Минимум 10 символов.")}</p>
       )}
+      {mode === "login" && (
+        <p className={styles.forgot}>
+          <a href="/forgot-password">{t("Забыли пароль?")}</a>
+        </p>
+      )}
       {mode === "register" && (
         <Field label="Подтвердите пароль">
           <input

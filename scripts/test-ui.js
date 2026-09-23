@@ -22,6 +22,7 @@ const env = {
     : {}),
   RIDES_DIR: path.join(dir, "rides"),
   UPLOAD_DIR: path.join(dir, "uploads"),
+  MAIL_CAPTURE_DIR: path.join(dir, "mail"),
 };
 function start(args, cwd = root) {
   const log = path.join(dir, logs.length + ".log"),

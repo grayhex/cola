@@ -13,6 +13,13 @@ import { CommunityError } from "../../../lib/community-validation.js";
 import { profileInput } from "../../../lib/social-validation.js";
 import { importPhotos } from "../../../lib/photo-import.js";
 import { appVersion } from "../../../lib/version.js";
+import { mailEnabled } from "../../../lib/mail.js";
+import { emailVerificationMail } from "../../../lib/mail-templates.js";
+import {
+  accountLink,
+  requestEmailVerification,
+} from "../../../lib/account.js";
+import { sendAfterResponse } from "../../../lib/account-mail.js";
 import { z } from "zod";
 import { wizardInput, createWizardBike } from "../../../lib/bike-wizard.js";
 import { reorderComponents } from "../../../lib/component-order.js";
@@ -153,6 +160,18 @@ async function handler(req, { params }) {
           throw e;
         }
         await startSession(id);
+        // Confirmation is optional for using the site; the link is sent when mail works.
+        if (mailEnabled()) {
+          const verification = await requestEmailVerification(db, id);
+          if (verification)
+            sendAfterResponse({
+              to: input.email,
+              ...emailVerificationMail({
+                name: input.name,
+                link: accountLink("/verify-email", verification.token),
+              }),
+            });
+        }
         return json(
           { user: { id, email: input.email, name: input.name } },
           201,

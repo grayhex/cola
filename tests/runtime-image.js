@@ -17,7 +17,8 @@ const load = (file) => import(pathToFileURL(path.join(root, file)).href);
 const require = createRequire(path.join(root, "package.json"));
 const scripts = [
   "audit-photo-files.js", "bootstrap-admin.js", "check-runtime.js",
-  "cleanup-rides.js", "migrate.js", "recalculate-photo-storage.js", "set-admin.js",
+  "cleanup-rides.js", "migrate.js", "recalculate-photo-storage.js", "reset-password.js",
+  "set-admin.js",
 ];
 assert.deepEqual((await readdir("scripts")).sort(), scripts);
 for (const name of scripts) execFileSync(process.execPath, ["--check", `scripts/${name}`]);
@@ -160,6 +161,15 @@ try {
     assert.deepEqual(await counts(q), { users: 1, bikes: 1, rides: 0 });
     runScript("scripts/set-admin.js", env, ["upgrade@example.test"]);
     assert.equal((await q.query("SELECT role FROM users WHERE id=$1", [owner])).rows[0].role, "admin");
+    // Operator password reset reads stdin and ends every session of the account.
+    await q.query("INSERT INTO sessions(token_hash,user_id,expires_at) VALUES($1,$2,now()+interval '1 day')", ["f".repeat(64), owner]);
+    execFileSync(process.execPath, ["scripts/reset-password.js", "upgrade@example.test"], {
+      cwd: root, env: { ...process.env, ...env }, input: "Runtime-reset-password-123\n", encoding: "utf8",
+    });
+    const reset = (await q.query("SELECT password_hash,password_changed_at FROM users WHERE id=$1", [owner])).rows[0];
+    assert.notEqual(reset.password_hash, "hash");
+    assert.ok(reset.password_changed_at);
+    assert.equal((await q.query("SELECT count(*)::int n FROM sessions WHERE user_id=$1", [owner])).rows[0].n, 0);
     for (const file of ["audit-photo-files.js", "recalculate-photo-storage.js", "cleanup-rides.js"])
       runScript("scripts/" + file, env);
   });

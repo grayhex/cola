@@ -95,3 +95,17 @@
     align-items: center;
   }
 }
+.forgot {
+  margin: -4px 0 14px;
+  font-size: 14px;
+  text-align: right;
+}
+.forgot a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+.done {
+  margin: 0 0 16px;
+  line-height: 1.5;
+}

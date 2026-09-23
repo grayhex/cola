@@ -33,6 +33,8 @@ services:
       ERROR_TRACKER_DSN: ${ERROR_TRACKER_DSN:-}
       SLOW_REQUEST_MS: ${SLOW_REQUEST_MS:-}
       MEDIA_CACHE_MAX_MB: ${MEDIA_CACHE_MAX_MB:-}
+      SMTP_URL: ${SMTP_URL:-}
+      MAIL_FROM: ${MAIL_FROM:-}
     volumes:
       - photos:/app/uploads
       - rides:/app/rides

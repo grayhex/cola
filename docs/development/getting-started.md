@@ -58,7 +58,7 @@ pnpm install --frozen-lockfile
 (cd services/bike-resolver && npm ci)
 ```
 
-Для `pnpm dev` нужны отдельная БД, `DATABASE_URL`, правильный `APP_ORIGIN` и предварительный `pnpm db:migrate`. Standalone Node-скрипты не следует считать автоматически читающими `.env`; передайте окружение явно. Hot reload хостового Next не меняет уже собранный Compose-контейнер.
+Для `pnpm dev` нужны отдельная БД, `DATABASE_URL`, правильный `APP_ORIGIN` и предварительный `pnpm db:migrate`. Чтобы проверить письма (восстановление пароля, подтверждение) без SMTP, задайте `MAIL_CAPTURE_DIR=./mail`: каждое письмо сохранится JSON-файлом со ссылкой. Standalone Node-скрипты не следует считать автоматически читающими `.env`; передайте окружение явно. Hot reload хостового Next не меняет уже собранный Compose-контейнер.
 
 ## Куда идти по задаче
 
