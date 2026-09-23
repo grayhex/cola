@@ -76,6 +76,14 @@
     grid-column: 2;
     grid-row: 4 / span 3;
   }
+  /* Without rides the build list takes the third column. */
+  .site-root .detail.bike-detail:has(> .bike-rides-empty) {
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.85fr);
+  }
+  .site-root .detail.bike-detail > .bike-rides.bike-rides-empty {
+    grid-column: 1 / -1;
+    grid-row: auto;
+  }
 }
 @media (max-width: 1199px) {
   .site-root .detail.bike-detail {
@@ -169,4 +177,32 @@
   .site-root .detail.bike-detail > .discussion {
     order: 9 !important;
   }
+}
+.site-root .bike-rides-empty .help {
+  margin: 0;
+}
+.site-root .bike-subtitle {
+  margin: 2px 0 6px;
+  color: var(--muted);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.site-root .detail .bike-heading {
+  flex-wrap: wrap;
+}
+.site-root .bike-heading > .bike-intro {
+  flex: 1 0 100%;
+  min-width: 0;
+  max-width: 72ch;
+}
+.site-root .bike-intro p {
+  margin: 0 0 6px;
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+.site-root .bike-intro-facts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 16px;
 }

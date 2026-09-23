@@ -78,6 +78,8 @@ export default function SiteProvider({ initial, children }) {
   // The UI uses one component system. Personal preferences only control content presentation.
   const effective = {
     ...site.settings,
+    // Unset means "follow the screen": open on desktop, closed on phones.
+    componentsExpanded: site.settings.componentsExpanded || undefined,
     ...Object.fromEntries(
       Object.entries(preferences).filter(([key]) =>
         [

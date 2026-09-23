@@ -32,11 +32,14 @@ test("bike title stays readable next to a long author username", async ({
         model: "Stumpjumper EVO",
         year: 2023,
         category: "mtb",
-        description: "",
+        description: "Трейлы по выходным, в будни — до работы.",
         color: "",
         size: "S3",
         weight: 14.8,
         is_public: true,
+        price: 250000,
+        show_bike_price: true,
+        manufacturer_url: "https://www.specialized.com/",
       },
     });
     expect(created.status()).toBe(201);
@@ -48,6 +51,21 @@ test("bike title stays readable next to a long author username", async ({
     await expect(title).toHaveText(name);
     const author = page.locator(".bike-heading .detail-actions .author-link");
     await expect(author).toBeVisible();
+    // #77: model and year under a custom name; description, public price and
+    // the manufacturer link are visible without the optional summary block.
+    await expect(page.locator(".bike-subtitle")).toHaveText(
+      "Specialized Stumpjumper EVO · 2023",
+    );
+    const intro = page.locator(".bike-heading .bike-intro");
+    await expect(intro).toContainText("Трейлы по выходным");
+    await expect(intro).toContainText(/250\s000\s₽/);
+    await expect(
+      intro.getByRole("link", { name: "Сайт производителя", exact: true }),
+    ).toHaveAttribute("href", "https://www.specialized.com/");
+    // No rides yet: one compact line instead of an empty column.
+    await expect(page.locator(".bike-rides-empty")).toHaveText(
+      "Покатушек с этим велосипедом пока нет",
+    );
     const geometry = await title.evaluate((h1) => ({
       clippedX: h1.scrollWidth - h1.clientWidth,
       clippedY: h1.scrollHeight - h1.clientHeight,
