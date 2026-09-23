@@ -7,7 +7,8 @@ import dynamic from "next/dynamic";
 import { SocialHeader, SocialFooter, socialApi } from "./social-primitives.jsx";
 import { RideMetrics, rideDate } from "./ride-card.jsx";
 import { useSite } from "./site-provider.jsx";
-import Discussion from "./discussion.jsx";
+// The comment editor (Tiptap) loads after the ride itself.
+const Discussion = dynamic(() => import("./discussion.jsx"), { ssr: false });
 const RideMap = dynamic(() => import("./ride-map.jsx"), {
   ssr: false,
   loading: () => <div className="ride-map-wrap" aria-busy="true" />,

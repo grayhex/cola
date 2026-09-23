@@ -31,23 +31,19 @@ import { FilterControl, FilterChips } from "./compact-ui.jsx";
 import { BikeGame } from "./achievements.jsx";
 import RideList from "./ride-list.jsx";
 import JournalList from "./journal-list.jsx";
-import Discussion from "./discussion.jsx";
 import BikeCategoryIcon from "./bike-category-icon.jsx";
 import BikeMeters from "./bike-meters.jsx";
 import Photo from "./bike-photo.jsx";
 import BikeCard from "./bike-card.jsx";
 import { SocialFooter, AuthorLink } from "./social-primitives.jsx";
-import AuthForm from "./auth-form.jsx";
 import GlobalHeader from "./global-header.jsx";
 
-import PhotoSearch from "./photo-search.jsx";
-import BikeWizard from "./bike-wizard.jsx";
 import Versions from "./versions.jsx";
 import { parseBikeName } from "../../lib/bike-name.js";
 import GroupedComponents from "./grouped-components.jsx";
 import { defaultBlocks } from "../../lib/garage-layout.js";
-import FactorySpecification from "./factory-specification.jsx";
 import { useEffect, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import {
   Bike,
   Trophy,
@@ -73,6 +69,16 @@ import {
 } from "./icons.jsx";
 import { useSite } from "./site-provider.jsx";
 import PartIcon from "./part-icon.jsx";
+// Loaded on demand: the showcase and a guest's bike page never download the
+// comment editor (Tiptap), the wizard (form schemas) or the owner's tools.
+const Discussion = dynamic(() => import("./discussion.jsx"), { ssr: false });
+const AuthForm = dynamic(() => import("./auth-form.jsx"), { ssr: false });
+const PhotoSearch = dynamic(() => import("./photo-search.jsx"), { ssr: false });
+const BikeWizard = dynamic(() => import("./bike-wizard.jsx"), { ssr: false });
+const FactorySpecification = dynamic(
+  () => import("./factory-specification.jsx"),
+  { ssr: false },
+);
 
 const demo = {
   id: "demo",
