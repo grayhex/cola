@@ -128,6 +128,7 @@ try {
         "tests/http-smoke.js",
         "tests/media-http.js",
         "tests/market-http.js",
+        "tests/public-urls-http.js",
         "tests/admin-http.js",
         "tests/resolver-http.js",
         "tests/layout-http.js",

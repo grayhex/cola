@@ -1,8 +1,10 @@
 import { notFound } from "next/navigation";
 import PublicProfile from "../ui/public-profile.jsx";
 import { metadataFor, canonicalPage } from "../../lib/social-page.js";
+import { routeParam } from "../../lib/public-urls.js";
 export const runtime = "nodejs", dynamic = "force-dynamic";
-function usernameFrom(profile) {
+function usernameFrom(segment) {
+  const profile = routeParam(segment);
   if (!/^@[a-z0-9._-]{3,30}$/i.test(profile)) notFound();
   return profile.slice(1);
 }

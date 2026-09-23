@@ -5,6 +5,8 @@ import {
   publicOrigin, absolutePublicUrl, preserveSearch,
 } from "../lib/public-urls.js";
 import { previewText, socialMetadata } from "../lib/social-metadata.js";
+import { routeParam } from "../lib/public-urls.js";
+import { validateRuntime } from "../lib/runtime-config.js";
 
 const id = "03ab9xyz";
 const legacy = "10000000-0000-4000-8000-000000000001";
@@ -70,4 +72,30 @@ test("preview descriptions are bounded plain text without Markdown image URLs", 
   assert.equal(previewText("a".repeat(400)).length, 200);
   assert.equal(previewText("a".repeat(400)).endsWith("…"), true);
   assert.equal(previewText(null), "");
+});
+
+test("route segments are compared decoded, so Unicode slugs and @profiles do not loop", () => {
+  const segment = encodeURIComponent(`мой-байк-${id}`);
+  assert.equal(routeParam(segment), `мой-байк-${id}`);
+  assert.equal(routeParam(`мой-байк-${id}`), `мой-байк-${id}`);
+  assert.equal(routeParam("%40rider"), "@rider");
+  assert.equal(routeParam("%E0%A4%A"), "%E0%A4%A");
+  assert.equal(routeParam(undefined), "");
+});
+
+test("production accepts only a public HTTPS PUBLIC_SITE_URL", () => {
+  const base = {
+    DEPLOYMENT_MODE: "production",
+    POSTGRES_PASSWORD: "a".repeat(32),
+    APP_ORIGIN: "https://colabike.ru",
+    COOKIE_SECURE: "true",
+    TRUSTED_PROXY_KEY: "b".repeat(32),
+    BIKE_RESOLVER_TOKEN: "c".repeat(32),
+    DATABASE_URL: "postgres://x",
+    BIKE_RESOLVER_URL: "http://r",
+  };
+  for (const value of ["https://colabike.ru", "https://colabike.ru/"])
+    assert.equal(validateRuntime({ ...base, PUBLIC_SITE_URL: value }).mode, "production");
+  for (const value of ["http://colabike.ru", "https://colabike.ru/app", "https://localhost", "nonsense"])
+    assert.throws(() => validateRuntime({ ...base, PUBLIC_SITE_URL: value }), /PUBLIC_SITE_URL/, value);
 });

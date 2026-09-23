@@ -25,6 +25,7 @@
     "modules/administration.md",
     "modules/site-customization.md",
     "modules/navigation-about.md",
+    "modules/public-urls.md",
     "resolver/architecture.md",
     "resolver/sources.md",
     "resolver/diagnostics.md",

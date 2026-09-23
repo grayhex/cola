@@ -235,7 +235,8 @@ test("journal menu offers only owned bikes and retains text when changing the se
     await page
       .getByRole("button", { name: "Опубликовать запись", exact: true })
       .click();
-    await expect(page).toHaveURL(/\/j\/[a-f0-9-]+$/);
+    // Published entries land on the canonical "<slug>-<public id>" URL.
+    await expect(page).toHaveURL(/\/j\/[^/?#]+-[0-9a-z]{8}$/);
     const share = new URL(page.url()).pathname.split("/").pop();
     const record = (
       await (await page.request.get("/api/journal/public/" + share)).json()

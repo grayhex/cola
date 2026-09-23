@@ -164,7 +164,8 @@ test("journal: draft, publication, photo, discussion and inherited privacy", asy
     await page
       .getByRole("button", { name: "Сохранить черновик", exact: true })
       .click();
-    await expect(page).toHaveURL(/\/j\/[a-f0-9-]+$/);
+    // The owner lands on the canonical "<slug>-<public id>" URL of the draft.
+    await expect(page).toHaveURL(/\/j\/[^/?#]+-[0-9a-z]{8}$/);
     await expect(page.locator(".journal-entry-meta")).toContainText("Черновик");
     const path = new URL(page.url()).pathname;
     const share = path.split("/").pop();
