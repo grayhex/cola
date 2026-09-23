@@ -108,8 +108,8 @@ const image = await fetch(imageUrl);
 assert.equal(image.status, 200);
 assert.equal(image.headers.get("content-type"), "image/jpeg");
 const size = await sharp(Buffer.from(await image.arrayBuffer())).metadata();
-// The bike photo, fitted into 1200x630 without enlargement.
-assert.deepEqual([size.format, size.width, size.height], ["jpeg", 1008, 630]);
+// A branded 1200x630 card around the bike photo (#72).
+assert.deepEqual([size.format, size.width, size.height], ["jpeg", 1200, 630]);
 
 // Renaming changes the slug, not the ID; the old slug redirects.
 assert.equal(
@@ -128,6 +128,37 @@ assert.equal(
   current,
   "/b/" + encodeURIComponent(`новое-имя-${nonce}-${bike.public_id}`),
 );
+
+// A hidden journal entry leaks neither its text nor its card (#72).
+const storyForm = {
+  bikeId: bike.id,
+  kind: "story",
+  title: "Секретная история " + nonce,
+  body: "Тайное описание " + nonce,
+  status: "published",
+  isPublic: true,
+};
+const story = await owner("journal", "POST", storyForm);
+assert.equal(story.status, 201, JSON.stringify(story.body));
+const storyLegacy = await guest.page("/j/" + story.body.shareId);
+assert.equal(storyLegacy.status, 308);
+const storyPath = location(storyLegacy);
+const storyImage = `${base}/api/social-preview/journal/${storyPath.split("-").pop()}/image`;
+assert.equal((await fetch(storyImage)).status, 200);
+assert.equal(
+  (
+    await owner("journal/" + story.body.id, "PATCH", {
+      ...storyForm,
+      isPublic: false,
+    })
+  ).status,
+  200,
+);
+const hiddenStory = await (await guest.page(storyPath)).text();
+assert.match(meta(hiddenStory, "robots") || "", /noindex/);
+assert.equal(meta(hiddenStory, "og:image"), undefined);
+assert.doesNotMatch(hiddenStory, /Секретная история|Тайное описание/);
+assert.equal((await fetch(storyImage)).status, 404);
 
 // A private bike yields no preview for guests, but the owner still resolves it.
 assert.equal(
@@ -157,6 +188,24 @@ const profileHtml = await profilePage.text();
 assert.equal(meta(profileHtml, "og:type"), "profile");
 assert.equal(meta(profileHtml, "og:url"), `${base}/@${username}`);
 assert.equal((await guest.page("/not-a-profile")).status, 404);
+// A renamed profile keeps its old addresses (#71).
+const renamedUsername = "renamed-" + nonce;
+assert.equal(
+  (
+    await owner("social/me", "PATCH", {
+      username: renamedUsername,
+      name: "Preview owner",
+      bio: "",
+      location: "",
+    })
+  ).status,
+  200,
+);
+for (const old of ["/@" + username, "/u/" + username]) {
+  const moved = await guest.page(old);
+  assert.equal(moved.status, 308, old);
+  assert.equal(location(moved), "/@" + renamedUsername);
+}
 
 // Market listings resolve by the short reference through the API as well.
 const listing = await owner("market", "POST", {
@@ -182,5 +231,5 @@ assert.equal(byHandle.status, 200);
 assert.equal(byHandle.body.listing.shareId, listing.body.shareId);
 assert.equal((await guest("market/public/unknown-zzzzzzzz")).status, 404);
 console.log(
-  "Public URLs HTTP: canonical redirects, renamed slugs, previews with photos, private bikes, profiles and market references passed.",
+  "Public URLs HTTP: canonical redirects, renamed slugs, previews with photos, private bikes, hidden journal entries, renamed profiles and market references passed.",
 );
