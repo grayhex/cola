@@ -28,6 +28,10 @@ function MapLibreRideMap({ geometry, styleUrl }) {
   const ref = useRef(null),
     [ready, setReady] = useState(false),
     [visible, setVisible] = useState(false);
+  // MapLibre paints outside CSS: read the theme tokens it needs.
+  const token = (name) =>
+    getComputedStyle(ref.current).getPropertyValue(name).trim() ||
+    { "--accent": "#C2410C", "--success": "#1E8A5A" }[name];
   useEffect(() => {
     // Lazy-load once. Scrolling to the chart must not destroy the map and
     // replace it with a differently sized preview underneath the pointer.
@@ -80,10 +84,7 @@ function MapLibreRideMap({ geometry, styleUrl }) {
             type: "line",
             source: "ride",
             paint: {
-              "line-color":
-                getComputedStyle(ref.current)
-                  .getPropertyValue("--accent")
-                  .trim() || "#e7482f",
+              "line-color": token("--accent"),
               "line-width": 4,
             },
             layout: { "line-join": "round", "line-cap": "round" },
@@ -97,8 +98,8 @@ function MapLibreRideMap({ geometry, styleUrl }) {
             { padding: 36, maxZoom: 15, duration: 0 },
           );
           for (const [point, color] of [
-            [geometry[0][0], "#237d50"],
-            [geometry.at(-1).at(-1), "#e7482f"],
+            [geometry[0][0], token("--success")],
+            [geometry.at(-1).at(-1), token("--accent")],
           ])
             new lib.Marker({ color }).setLngLat(point).addTo(map);
           map.addControl(new lib.NavigationControl());

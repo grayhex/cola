@@ -1,34 +1,51 @@
-/* Product color, type, spacing and interaction tokens, shared by every route. */
+/* Design tokens (#104): colors, type, radii and spacing shared by every route.
+   The issue's names (--bg, --surface, --ink, --muted, --line, --line-soft,
+   --accent, --accent-ink, --success, --radius-*, --font-*, --space-*) are the
+   source; older names stay as aliases so every stylesheet follows them. */
 :root {
-  --bg: #ffffff;
+  --bg: #f3f0e8;
   --surface: #ffffff;
-  --surface-muted: #f6f7f9;
-  --surface-hover: #eef0f3;
-  --hero-bg: #faf8f1;
-  --text: #20242d;
-  --text-muted: #59616e;
-  --text-subtle: #687180;
-  --border: #e1e4e9;
-  --border-strong: #8b93a0;
-  --accent: #f3b51b;
-  --accent-foreground: #000000;
-  --accent-hover: color-mix(in srgb, var(--accent) 85%, var(--text));
-  --button-bg: #20242d;
+  --ink: #16181b;
+  --muted: #585b60;
+  --line: #ddd8cc;
+  --line-soft: #eeeae0;
+  --surface-hover: #e9e4d8;
+  --border-strong: #8e887a;
+  /* The admin accent; SiteProvider also sets the readable text shades. */
+  --accent: #c2410c;
+  --accent-foreground: #ffffff;
+  --accent-text: var(--accent-text-light, #b83e0b);
+  --accent-hover: color-mix(in srgb, var(--accent) 85%, #000000);
+  --accent-soft: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  --button-bg: #16181b;
   --button-fg: #ffffff;
-  --button-hover: #353b48;
-  --chart-line: #8b5cf6;
-  --accent-soft: color-mix(in srgb, var(--accent) 14%, var(--surface));
+  --button-hover: #2b2e33;
+  --chart-line: #2447b8;
+  --success: #1e8a5a;
+  --success-text: #1a754c;
+  --success-soft: #e4f2ea;
   --danger: #b52f3b;
-  --danger-soft: #fff0f1;
-  --success: #20734d;
-  --success-soft: #edf8f1;
-  --focus: #4864b1;
-  --overlay: #18202b80;
-  --shadow-sm: 0 1px 2px #10121b05;
-  --shadow-popover: 0 8px 24px #10121b1a;
-  --content-width: 1320px;
-  --nav-height: 66px;
-  --hero-width: 920px;
+  --danger-ink: #ffffff;
+  --danger-soft: #fbe9e9;
+  /* On top of photos and maps, the same in both themes. */
+  --photo-chip: #ffffffee;
+  --photo-chip-ink: #16181b;
+  --photo-scrim: #16181bd9;
+  --photo-scrim-ink: #ffffff;
+  --focus: #2447b8;
+  --overlay: #16181b80;
+  /* Thin borders instead of shadows; only floating layers keep one. */
+  --shadow-sm: none;
+  --shadow-popover: 0 12px 32px #16181b1f;
+  --radius-lg: 28px;
+  --radius-md: 20px;
+  --radius-sm: 12px;
+  --radius-xs: 8px;
+  --radius-pill: 999px;
+  --radius: var(--radius-sm);
+  --font-display: "Cola Unbounded", "Cola Manrope", system-ui, sans-serif;
+  --font-body: "Cola Manrope", system-ui, sans-serif;
+  --font-mono: "Cola JetBrains Mono", ui-monospace, monospace;
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -36,12 +53,13 @@
   --space-6: 24px;
   --space-8: 32px;
   --space-12: 48px;
-  --radius: 8px;
-  --radius-xs: 4px;
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --control-compact: 36px;
-  --control-standard: 40px;
+  --space-16: 64px;
+  --gutter: var(--space-16);
+  --content-width: 1312px;
+  --nav-height: 76px;
+  --hero-width: 920px;
+  --control-compact: 40px;
+  --control-standard: 44px;
   --duration-fast: 150ms;
   --duration-normal: 180ms;
   --ease-standard: cubic-bezier(0.2, 0.6, 0.2, 1);
@@ -50,18 +68,22 @@
   --z-dropdown: 20;
   --z-modal: 30;
   --z-toast: 40;
-  --site-font: "Cola Source Sans 3", system-ui, sans-serif;
-  --display-font: var(--site-font);
-  --ink: var(--text);
-  --muted: var(--text-muted);
-  --subtle: var(--text-subtle);
+  /* Aliases kept for existing stylesheets. */
+  --text: var(--ink);
+  --text-muted: var(--muted);
+  --text-subtle: var(--muted);
+  --subtle: var(--muted);
+  --border: var(--line);
+  --surface-muted: var(--line-soft);
+  --hero-bg: var(--bg);
+  --site-font: var(--font-body);
+  --display-font: var(--font-display);
   --paper: var(--surface);
-  --wash: var(--surface-muted);
+  --wash: var(--line-soft);
   --soft: var(--surface-hover);
   --field: var(--surface);
-  --line: var(--border);
   --line-strong: var(--border-strong);
-  --control-border: var(--border);
+  --control-border: var(--line);
   --accent-ink: var(--accent-foreground);
   --button-ink: var(--button-fg);
   --showcase-shell-max: var(--content-width);
@@ -73,51 +95,61 @@
   color-scheme: light;
 }
 :root[data-theme="dark"] {
-  --button-bg: #e6eaf0;
-  --button-fg: #171a21;
+  --bg: #111315;
+  --surface: #1b1e22;
+  --ink: #f3f0e8;
+  --muted: #a4a9b0;
+  --line: #2a2e34;
+  --line-soft: #23272d;
+  --surface-hover: #2a2e34;
+  --border-strong: #5c636c;
+  --accent-text: var(--accent-text-dark, #d47a55);
+  --button-bg: #f3f0e8;
+  --button-fg: #16181b;
   --button-hover: #ffffff;
-  --chart-line: #a78bfa;
-  --bg: #171a21;
-  --surface: #1d212a;
-  --surface-muted: #242934;
-  --surface-hover: #2e3542;
-  --hero-bg: #24252b;
-  --text: #eceef2;
-  --text-muted: #bac1cd;
-  --text-subtle: #a1abba;
-  --border: #383f4c;
-  --border-strong: #738092;
+  --chart-line: #8fa4e8;
+  --success: #4cc38a;
+  --success-text: #4cc38a;
+  --success-soft: #1d3328;
   --danger: #ff9aa4;
+  --danger-ink: #16181b;
   --danger-soft: #39232c;
-  --success: #83d5ad;
-  --success-soft: #20392f;
   --focus: #a7b9ff;
-  --shadow-popover: 0 8px 24px #00000040;
+  --overlay: #00000099;
+  --shadow-popover: 0 12px 32px #00000066;
   color-scheme: dark;
 }
 @media (prefers-color-scheme: dark) {
   :root[data-theme="system"] {
-    --button-bg: #e6eaf0;
-    --button-fg: #171a21;
+    --bg: #111315;
+    --surface: #1b1e22;
+    --ink: #f3f0e8;
+    --muted: #a4a9b0;
+    --line: #2a2e34;
+    --line-soft: #23272d;
+    --surface-hover: #2a2e34;
+    --border-strong: #5c636c;
+    --accent-text: var(--accent-text-dark, #d47a55);
+    --button-bg: #f3f0e8;
+    --button-fg: #16181b;
     --button-hover: #ffffff;
-    --chart-line: #a78bfa;
-    --bg: #171a21;
-    --surface: #1d212a;
-    --surface-muted: #242934;
-    --surface-hover: #2e3542;
-    --hero-bg: #24252b;
-    --text: #eceef2;
-    --text-muted: #bac1cd;
-    --text-subtle: #a1abba;
-    --border: #383f4c;
-    --border-strong: #738092;
+    --chart-line: #8fa4e8;
+    --success: #4cc38a;
+    --success-text: #4cc38a;
+    --success-soft: #1d3328;
     --danger: #ff9aa4;
+    --danger-ink: #16181b;
     --danger-soft: #39232c;
-    --success: #83d5ad;
-    --success-soft: #20392f;
     --focus: #a7b9ff;
-    --shadow-popover: 0 8px 24px #00000040;
+    --overlay: #00000099;
+    --shadow-popover: 0 12px 32px #00000066;
     color-scheme: dark;
+  }
+}
+@media (max-width: 767px) {
+  :root {
+    --gutter: 20px;
+    --nav-height: 64px;
   }
 }
 @media (pointer: coarse), (max-width: 700px) {

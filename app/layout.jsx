@@ -46,13 +46,17 @@ export default async function Layout({ children }) {
       suppressHydrationWarning
     >
       <head>
-        <link
-          rel="preload"
-          href="/fonts/sourcesans3.woff"
-          as="font"
-          type="font/woff"
-          crossOrigin="anonymous"
-        />
+        {/* Russian text in the body and headings: fetch before first paint. */}
+        {["manrope-cyrillic", "unbounded-cyrillic"].map((font) => (
+          <link
+            key={font}
+            rel="preload"
+            href={`/fonts/${font}.woff2`}
+            as="font"
+            type="font/woff2"
+            crossOrigin="anonymous"
+          />
+        ))}
         <script
           dangerouslySetInnerHTML={{
             __html: themeBootstrap(site.settings.appearance.theme),

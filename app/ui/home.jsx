@@ -21,7 +21,6 @@ import { useSite } from "./site-provider.jsx";
 import { useBikeReaction } from "./use-bike-reaction.js";
 import { BikeLabels } from "./bike-labels.jsx";
 import { ContentTypeLabel } from "./content-label.jsx";
-import labelStyles from "./content-label.module.css";
 import SearchBox from "./search-box.jsx";
 import SmallImage from "./small-image.jsx";
 import { photoVariants } from "./bike-photo.jsx";
@@ -331,7 +330,7 @@ export default function Home() {
             {content.content.map((item) => {
               const Icon = markers[item.type] || BookOpen;
               return (
-                <article className={`${styles.story} ${labelStyles.eventCard}`} key={item.id} data-event={item.type}>
+                <article className={styles.story} key={item.id} data-event={item.type}>
                   <div className={styles.storyKind}>
                     <ContentTypeLabel type={item.type}>
                       <Icon size={16} aria-hidden="true" />

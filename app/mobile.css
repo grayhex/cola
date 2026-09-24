@@ -156,8 +156,8 @@
 .photo-index {
   top: 12px;
   left: 12px;
-  background: #17241edb;
-  color: #fff;
+  background: var(--photo-scrim);
+  color: var(--photo-scrim-ink);
   border-radius: 6px;
   padding: 8px 10px;
   font-size: 12px;
@@ -171,12 +171,12 @@
   min-height: 40px !important;
   padding: 9px 12px;
   border-radius: 8px;
-  background: #ffffffed;
-  color: #202724;
+  background: var(--photo-chip);
+  color: var(--photo-chip-ink);
   font-size: 13px;
   line-height: 1.2;
-  border: 1px solid #ffffff8f;
-  box-shadow: 0 2px 15px #0001;
+  border: 1px solid var(--photo-chip);
+  box-shadow: none;
 }
 .photo-credit {
   bottom: 0;
@@ -184,8 +184,8 @@
   right: 0;
   padding: 8px 12px;
   font-size: 11px;
-  color: #fff;
-  background: #14251fb8;
+  color: var(--photo-scrim-ink);
+  background: var(--photo-scrim);
   line-height: 1.3;
   text-align: left;
 }
@@ -644,7 +644,7 @@
   background: var(--paper);
   border: 1px solid var(--line);
   padding: 14px;
-  box-shadow: 0 -5px 20px #00000008;
+  box-shadow: none;
   border-radius: 10px;
   display: flex;
   flex-direction: column;
@@ -1570,7 +1570,7 @@
   padding: 3px 5px;
   top: 6px;
   left: 6px;
-  background: #ffffffc0;
+  background: var(--photo-chip);
   border-radius: 4px;
 }
 .photo-tools {
@@ -1784,10 +1784,10 @@
   place-items: center;
   background-color: var(--wash);
   background-image:
-    linear-gradient(45deg, #00000008 25%, transparent 25%),
-    linear-gradient(-45deg, #00000008 25%, transparent 25%),
-    linear-gradient(45deg, transparent 75%, #00000008 75%),
-    linear-gradient(-45deg, transparent 75%, #00000008 75%);
+    linear-gradient(45deg, color-mix(in srgb, var(--ink) 4%, transparent) 25%, transparent 25%),
+    linear-gradient(-45deg, color-mix(in srgb, var(--ink) 4%, transparent) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, color-mix(in srgb, var(--ink) 4%, transparent) 75%),
+    linear-gradient(-45deg, transparent 75%, color-mix(in srgb, var(--ink) 4%, transparent) 75%);
   background-size: 16px 16px;
   background-position:
     0 0,

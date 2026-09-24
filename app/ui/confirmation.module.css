@@ -7,11 +7,11 @@
   border-radius: 12px;
   background: var(--paper);
   color: var(--text);
-  box-shadow: 0 18px 64px #0003;
+  box-shadow: var(--shadow-popover);
   overflow: auto;
 }
 .dialog::backdrop {
-  background: #0006;
+  background: var(--overlay);
 }
 .dialog h2 {
   margin: 0 0 10px;
@@ -34,7 +34,7 @@
   min-height: 44px;
 }
 .dialog .danger {
-  background: #b3261e;
-  color: #fff;
-  border-color: #b3261e;
+  background: var(--danger);
+  color: var(--danger-ink);
+  border-color: var(--danger);
 }

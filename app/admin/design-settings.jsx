@@ -10,8 +10,10 @@ export function ThemeSettings({ settings: s, onChange }) {
     <section className={"admin-panel " + styles.compactPanel}>
       <h2>Внешний вид</h2>
       <p className="help">
-        Единая нейтральная палитра и локальный Source Sans 3. Личный выбор темы
-        в шапке имеет приоритет над настройкой сайта.
+        Палитра и шрифты ColaBike: Unbounded для заголовков, Manrope для
+        текста, JetBrains Mono для цифр. Акцент — у главной кнопки, активного
+        раздела меню и одного выделенного блока. Личный выбор темы в шапке
+        имеет приоритет над настройкой сайта.
       </p>
       <div className={styles.themeGrid}>
         <div className="admin-form-grid">

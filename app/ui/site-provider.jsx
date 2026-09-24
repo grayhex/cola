@@ -7,7 +7,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { accentText } from "../../lib/appearance.js";
+import { accentText, readableAccent } from "../../lib/appearance.js";
 import {
   appearanceDefaults,
   backgroundCss,
@@ -24,7 +24,7 @@ export function ThemeStyle({ settings }) {
     ? settings.appearance.accent
     : appearanceDefaults.accent;
   return (
-    <style>{`:root{--accent:${accent};--accent-foreground:${accentText(accent)};--photo-ratio:${settings.photoRatio || "4/3"};--desktop-columns:${settings.desktopColumns || 3};--heading-align:${settings.textAlign || "left"}}${backgroundCss(settings)}`}</style>
+    <style>{`:root{--accent:${accent};--accent-foreground:${accentText(accent)};--accent-text-light:${readableAccent(accent, "light")};--accent-text-dark:${readableAccent(accent, "dark")};--photo-ratio:${settings.photoRatio || "4/3"};--desktop-columns:${settings.desktopColumns || 3};--heading-align:${settings.textAlign || "left"}}${backgroundCss(settings)}`}</style>
   );
 }
 export default function SiteProvider({

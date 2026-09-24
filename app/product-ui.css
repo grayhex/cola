@@ -7,15 +7,15 @@ html {
   line-height: 1.5;
 }
 .site-root h1 {
-  font-weight: 700;
-  font-size: clamp(28px, 3vw, 36px);
-  letter-spacing: -0.6px;
+  font-weight: 800;
+  font-size: clamp(30px, 3.4vw, 44px);
+  letter-spacing: -0.02em;
 }
 .site-root h2 {
   font-weight: 700;
 }
 .site-root h3 {
-  font-weight: 600;
+  font-weight: 700;
 }
 .site-root :is(button, a, input, select, textarea):focus-visible {
   outline: 2px solid var(--focus);
@@ -31,31 +31,45 @@ html {
     border-color var(--motion-fast);
   border-radius: var(--radius-sm);
 }
+/* Pills: dark by default, accent only for the page's main action, outline
+   for the second one. */
 .site-root .button {
   min-height: var(--control-standard);
-  padding: 8px 14px;
+  padding: 8px 20px;
   font-size: 14px;
+  font-weight: 700;
+  border-radius: var(--radius-pill);
   background: var(--button-bg);
   color: var(--button-fg);
-  border-color: var(--button-bg);
+  border: 1.5px solid var(--button-bg);
   box-shadow: none;
   transform: none;
 }
 .site-root .button.small {
   min-height: var(--control-compact);
-  padding: 6px 12px;
+  padding: 6px 14px;
   font-size: 13px;
 }
 .site-root .button.secondary {
-  background: var(--surface);
-  color: var(--text);
-  border-color: var(--border);
+  background: transparent;
+  color: var(--ink);
+  border-color: var(--ink);
 }
 .site-root .button.secondary:hover {
   background: var(--surface-hover);
 }
-.site-root .button:not(.secondary):hover {
+.site-root .button.accent {
+  background: var(--accent);
+  color: var(--accent-foreground);
+  border-color: var(--accent);
+}
+.site-root .button.accent:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+.site-root .button:not(.secondary, .accent):hover {
   background: var(--button-hover);
+  border-color: var(--button-hover);
   transform: none;
   box-shadow: none;
 }
@@ -792,16 +806,10 @@ html {
 }
 
 /* Shared HF-inspired controls: one rhythm for menu, forms and showcase. */
-.site-emoji {
-  display: inline-flex;
+.site-icon {
   flex: 0 0 auto;
-  align-items: center;
-  justify-content: center;
-  width: 1.3em;
-  line-height: 1;
-  font-family:
-    "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
-  font-size: 1.12em;
+  width: 1.15em;
+  height: 1.15em;
 }
 .site-root
   :is(
@@ -819,11 +827,8 @@ html {
   border: 1px solid var(--border);
   border-radius: 8px;
   color: var(--text);
-  background: linear-gradient(
-    var(--surface-raised, var(--surface)),
-    var(--surface)
-  );
-  box-shadow: 0 1px 2px #00000008;
+  background: var(--surface);
+  box-shadow: none;
   font: 500 14px/1.35 var(--site-font);
   white-space: nowrap;
   cursor: pointer;
@@ -858,7 +863,7 @@ html {
   border: 1px solid var(--border);
   border-radius: 12px;
   background: var(--surface);
-  box-shadow: 0 12px 32px #0002;
+  box-shadow: var(--shadow-popover);
   padding: 5px;
 }
 .site-root .nav-menu-link {
@@ -1036,25 +1041,6 @@ html {
 .site-root .admin-sidebar .admin-nav button.active {
   color: var(--accent);
   background: color-mix(in srgb, var(--accent) 9%, var(--surface));
-}
-.emoji-settings-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 8px 20px;
-  margin: 16px 0;
-}
-.emoji-settings-grid label {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  font-size: 14px;
-}
-.emoji-settings-grid input {
-  width: 68px;
-  text-align: center;
-  font-size: 22px;
-  padding: 6px;
 }
 .article-topic-row {
   display: grid;

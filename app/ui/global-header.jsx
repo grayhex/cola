@@ -1,5 +1,5 @@
 "use client";
-import SiteEmoji from "./site-emoji.jsx";
+import SiteIcon from "./site-icon.jsx";
 import Link from "next/link";
 import { ShoppingBag } from "lucide-react";
 import styles from "./global-header.module.css";
@@ -122,7 +122,7 @@ export default function GlobalHeader({
       })),
     active = activeSection(pathname, search);
   const graphic = (name) => (
-    <SiteEmoji name={name} settings={settings} className="global-nav-graphic" />
+    <SiteIcon name={name} className="global-nav-graphic" />
   );
   const link = (item) => (
     <Link
@@ -318,7 +318,7 @@ export default function GlobalHeader({
                 loadStats();
               }}
             >
-              <SiteEmoji name="menu" />
+              <SiteIcon name="menu" />
             </button>
           </div>
         </div>

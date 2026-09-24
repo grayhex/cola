@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { socialApi } from "./social-primitives.jsx";
-import SiteEmoji from "./site-emoji.jsx";
+import SiteIcon from "./site-icon.jsx";
 const choices = [
   ["accepted", "yes", "Иду"],
   ["declined", "no", "Не иду"],
@@ -20,7 +20,7 @@ export function RecurringRideLabel({ ride }) {
   });
   return (
     <p className="help recurrence-label">
-      <SiteEmoji name="repeat" /> Каждую неделю · {day}, {time} ·{" "}
+      <SiteIcon name="repeat" /> Каждую неделю · {day}, {time} ·{" "}
       {ride.recurrenceTimezone}
     </p>
   );
@@ -39,7 +39,7 @@ export default function RideRsvp({ ride }) {
   return (
     <div className="ride-rsvp">
       <div role="group" aria-label="Участие в покатушке">
-        {choices.map(([response, emoji, label]) => (
+        {choices.map(([response, icon, label]) => (
           <button
             key={response}
             type="button"
@@ -66,7 +66,7 @@ export default function RideRsvp({ ride }) {
               }
             }}
           >
-            <SiteEmoji name={emoji} />
+            <SiteIcon name={icon} />
             {label}
             <span className="rsvp-count">
               {state.rsvpCounts?.[response] || 0}
