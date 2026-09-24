@@ -29,6 +29,10 @@ html {
     color var(--motion-fast),
     background var(--motion-fast),
     border-color var(--motion-fast);
+}
+/* Kept apart: :is() takes its most specific argument, which would beat the
+   pill radius of .button below. */
+.site-root :is(.quiet, .icon, .account-tabs button, .social-switch button) {
   border-radius: var(--radius-sm);
 }
 /* Pills: dark by default, accent only for the page's main action, outline
@@ -49,6 +53,12 @@ html {
   min-height: var(--control-compact);
   padding: 6px 14px;
   font-size: 13px;
+}
+/* The hero and closing calls to action. */
+.site-root .button.large {
+  min-height: 56px;
+  padding: 0 28px;
+  font-size: 16px;
 }
 .site-root .button.secondary {
   background: transparent;

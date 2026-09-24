@@ -28,7 +28,10 @@ export default function SearchBox({
   useEffect(() => setQuery(initialQuery), [initialQuery]);
   useEffect(() => {
     if (!autoFocus) return;
-    input.current?.focus();
+    // A frame later: a surrounding dialog's showModal() runs after this
+    // effect and moves focus to its first button.
+    const frame = requestAnimationFrame(() => input.current?.focus());
+    return () => cancelAnimationFrame(frame);
   }, [autoFocus]);
   useEffect(() => {
     if (!shortcuts) return;

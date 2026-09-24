@@ -482,20 +482,12 @@ test("admin backgrounds are independent per theme; native local SVG file upload 
       opacity: "0.35",
       repeat: "no-repeat",
     });
+    // The big hero frame shows the animation on phones too (#104).
     const stage = page.locator("[data-hero-animation]");
     const art = stage.locator(`img[src="/api/assets/${animation}"]`).first();
-    const viewport = page.viewportSize();
-    const compact = viewport && viewport.width <= 700;
-    // The existing compact homepage omits the decorative stage. Validate
-    // its upload/rendering in touch landscape without changing that layout.
-    if (compact) {
-      await expect(stage).toBeHidden();
-      await page.setViewportSize({ width: 844, height: 390 });
-    }
     await expect(art).toBeVisible();
     await expect.poll(() => art.evaluate((img) => img.naturalWidth)).toBeGreaterThan(0);
     await noOverflow(page);
-    if (compact) await page.setViewportSize(viewport);
     await withThemeSwitch(page, (toggle) => toggle.click());
     await expect.poll(background).toMatchObject({
       image: `url("${origin}/api/assets/${assets[1]}")`,

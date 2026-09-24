@@ -45,13 +45,13 @@ export function ThemeSettings({ settings: s, onChange }) {
         <div className={styles.themePreview}>
           <small>Предпросмотр акцента</small>
           <h2>ColaBike</h2>
-          <p>Покажи свой велосипед.</p>
+          <p>Катаемся и возим саночки.</p>
           <span
             className="preview-button"
             style={{
               background: appearance.accent,
               color: accentText(appearance.accent),
-              borderRadius: 8,
+              borderRadius: 999,
             }}
           >
             Добавить велосипед
@@ -122,7 +122,7 @@ export function HomepageSettings({
           <AssetPicker
             key={key}
             label={label}
-            help="Локальный SVG-файл с CSS/SMIL-анимацией · до 1 МБ. Встроенные PNG/JPEG/WebP поддерживаются; внешние файлы и Lottie JSON не поддерживаются."
+            help="Большой блок справа от заголовка вместо фото популярной сборки. Локальный SVG-файл с CSS/SMIL-анимацией · до 1 МБ. Встроенные PNG/JPEG/WebP поддерживаются; внешние файлы и Lottie JSON не поддерживаются."
             value={s[key]}
             assets={assets}
             busy={busy}
@@ -143,8 +143,8 @@ export function HomepageSettings({
       </div>
       <div className="admin-form-grid">
         {[
-          ["heroBackgroundLight", "Фон блока · светлая тема"],
-          ["heroBackgroundDark", "Фон блока · тёмная тема"],
+          ["heroBackgroundLight", "Фон большого блока · светлая тема"],
+          ["heroBackgroundDark", "Фон большого блока · тёмная тема"],
         ].map(([key, label]) => (
           <Field key={key} label={label}>
             <input
@@ -157,7 +157,7 @@ export function HomepageSettings({
       </div>
       <AssetPicker
         label="Hero image"
-        help="PNG или WebP с прозрачным фоном. Рекомендуется 320 × 320 px. Одно изображение для обеих тем."
+        help="Значок в карточке «В движении» поверх большого блока. PNG или WebP с прозрачным фоном, рекомендуется 320 × 320 px, одно изображение для обеих тем."
         value={s.heroImageId}
         assets={assets}
         busy={busy}
@@ -175,10 +175,10 @@ export function HomepageSettings({
       />
       <Field
         label="Заголовок hero"
-        help="Перенос строки разделяет две строки заголовка."
+        help="Каждая строка заголовка — с новой строки. Последнее слово выделяется акцентом."
       >
         <textarea
-          rows={2}
+          rows={3}
           maxLength={150}
           value={s.heroHeadline}
           onChange={(e) => onChange("heroHeadline", e.target.value)}

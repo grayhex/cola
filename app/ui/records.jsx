@@ -5,21 +5,9 @@ import styles from "./records.module.css";
 import { socialApi, SocialHeader, SocialFooter } from "./social-primitives.jsx";
 import { useSite } from "./site-provider.jsx";
 import AchievementArt from "./achievement-art.jsx";
-import { gameDescription, groupRecords } from "../../lib/gamification-presentation.js";
+import { gameDescription, groupRecords, recordValue } from "../../lib/gamification-presentation.js";
 import { profilePath, publicPath } from "../../lib/public-urls.js";
 import { personName, usernameLabel } from "../../lib/usernames.js";
-
-function value(r, currency) {
-  return (
-    new Intl.NumberFormat("ru-RU", {
-      maximumFractionDigits: 2,
-      minimumFractionDigits: 0,
-      ...(r.metric === "price" ? { style: "currency", currency } : {}),
-    }).format(r.holder.value) +
-    (r.metric === "weight" ? " кг" :
-      ["upgrade", "completeness"].includes(r.metric) ? "%" : "")
-  );
-}
 
 function RecordCard({ record: r, settings, index }) {
   const b = r.holder;
@@ -47,7 +35,7 @@ function RecordCard({ record: r, settings, index }) {
             <Link prefetch={false} className="record-bike-name" href={publicPath("bike", b)} title={b.name}>
               {b.name}
             </Link>
-            <span className="record-value">{value(r, settings.currency)}</span>
+            <span className="record-value">{recordValue(r, settings.currency)}</span>
           </div>
         )}
       </div>
