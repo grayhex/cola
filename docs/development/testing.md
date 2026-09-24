@@ -8,6 +8,7 @@
 
 ```bash
 pnpm lint
+pnpm typecheck
 pnpm test
 pnpm build
 (cd services/bike-resolver && npm run typecheck && npm test && npm run build)
@@ -29,6 +30,7 @@ bash scripts/test-backup-drill.sh
 | Уровень | Что доказывает | Чего не доказывает |
 | --- | --- | --- |
 | `pnpm lint` | ESLint: правила хуков React, рекомендации Next и базовые ошибки JS. Ошибки блокируют CI, предупреждения — список на доработку | Корректность логики и типов |
+| `pnpm typecheck` | TypeScript по JSDoc в `lib/`: состав публичных DTO, поля разобранного ввода, вызовы функций и API Node | Типы `app/` и `scripts/`; значения, пришедшие из SQL как `any` |
 | `tests/*.test.js` | Чистые функции, схемы, доменная логика, PGlite-сценарии | Работу production сети и реальную конкуренцию PostgreSQL |
 | Resolver `npm test` | Matching, extraction, transport checks, fixtures, cache | Текущую доступность каждого производителя |
 | `pnpm build` | Сборку Next и границы импорта | Успешную миграцию production БД |

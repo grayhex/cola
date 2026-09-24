@@ -78,6 +78,9 @@ jobs:
       # Errors fail the build; warnings are the backlog shown in the log (#82).
       - name: Lint
         run: pnpm lint
+      # JSDoc types of lib/ (#82): DTOs, input schemas and their callers.
+      - name: Type check
+        run: pnpm typecheck
       - name: Application unit and database tests
         run: pnpm test
       - name: Production build
