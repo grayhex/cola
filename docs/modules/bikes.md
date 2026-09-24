@@ -14,7 +14,7 @@ UI: [garage.jsx](../../app/ui/garage.jsx), [bike-wizard.jsx](../../app/ui/bike-w
 
 ## Данные и основные функции
 
-[repository.js](../../lib/repository.js): `ownedBike`, `sharedBike`, `hydrate`, `insertBike` — загрузка и сохранение сущности с контекстом доступа. [showcase.js](../../lib/showcase.js): `showcase`, `decorateBike`, `vote` — публичная выдача, представление и лайки. [bike-wizard.js](../../lib/bike-wizard.js): `wizardInput`, `createWizardBike`. [factory-import.js](../../lib/factory-import.js): `saveFactorySpecification`.
+[repository.js](../../lib/repository.js): `ownedBike`, `sharedBike`, `hydrate`, `insertBike` — загрузка и сохранение сущности с контекстом доступа. [showcase.js](../../lib/showcase.js): `showcase`, `decorateBike`, `visibleBike`, `vote` — публичная выдача, представление, страница велосипеда (её же рисует сервер, см. [серверный рендеринг](public-urls.md#серверный-рендеринг)) и лайки. [bike-wizard.js](../../lib/bike-wizard.js): `wizardInput`, `createWizardBike`. [factory-import.js](../../lib/factory-import.js): `saveFactorySpecification`.
 
 `bikes`, `components`, `photos` хранят текущую сборку; `bikes.factory_spec` — заводской снимок с источником. Цены байка, деталей и аксессуаров имеют собственные флаги показа. Новая [классификация](bike-classification.md) хранится независимо от legacy-категории: шесть семейств, подтип и отдельные особенности. Миграция `020` сохраняет старые типы, данные и заводские снимки.
 

@@ -1412,6 +1412,8 @@
 .category-checks label {display:flex;align-items:center;gap:8px}
 .price-settings {padding:10px 0}
 @media(min-width:701px){.component-groups{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}.component-group{margin:0}.detail>.bike-summary dl{grid-template-columns:repeat(4,minmax(0,1fr))}}
+/* Server HTML before hydration: component groups open on wide screens only (#74). */
+@media(max-width:700px){[data-open-by-width]{display:none}}
 .build-versions{display:block;font-size:10px;color:var(--muted);font-weight:400;line-height:1.5}.footer{flex-wrap:wrap}.photo-search-trigger{align-self:flex-start;font-size:12px;margin:0 0 8px}.photo-candidates{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:14px 0}.photo-candidates label{position:relative;display:block}.photo-candidates img{width:100%;height:110px;object-fit:contain;background:var(--surface-muted);border-radius:6px}.photo-candidates input{position:absolute;top:5px;left:5px;z-index:1}.photo-candidates a{font-size:11px}.photo-search .field{margin:12px 0}
 @media(max-width:600px){.photo-candidates{grid-template-columns:repeat(2,minmax(0,1fr))}.build-versions{width:100%;font-size:9px}}
 @media(min-width:701px){.showcase.configurable-block[data-variant="compact"] .hero-photo,.showcase.configurable-block[data-variant="compact"] .photo-empty{height:260px;min-height:0;aspect-ratio:auto;object-fit:contain}}

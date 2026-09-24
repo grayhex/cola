@@ -242,8 +242,11 @@ test("journal: draft, publication, photo, discussion and inherited privacy", asy
       "/api/journal/" + entry.id + "/comments",
     ])
       expect((await visitor.request.get(url)).status()).toBe(404);
-    await other.reload();
-    await expect(other.locator("main").getByRole("alert")).toBeVisible();
+    // Privacy inherited from the bike turns the entry into a 404 page (#74).
+    expect((await other.reload()).status()).toBe(404);
+    await expect(
+      other.getByRole("heading", { name: "Здесь пока ничего нет" }),
+    ).toBeVisible();
     await expect(
       other.locator(".journal-body,.journal-photos img"),
     ).toHaveCount(0);

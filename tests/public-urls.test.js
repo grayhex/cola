@@ -52,6 +52,7 @@ test("metadata is a complete public descriptor with an extensible image endpoint
     const path = publicPath(kind, link);
     const metadata = socialMetadata({ kind, link, path, title: "Мой велосипед", description: "Публичное описание" }, { APP_ORIGIN: "https://colabike.example" });
     assert.equal(metadata.openGraph.title, "Мой велосипед");
+    assert.deepEqual(metadata.robots, { index: true, follow: true });
     assert.equal(metadata.openGraph.description, "Публичное описание");
     assert.equal(metadata.openGraph.siteName, "ColaBike");
     assert.equal(metadata.openGraph.url, metadata.alternates.canonical);

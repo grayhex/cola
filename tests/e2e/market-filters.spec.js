@@ -1,4 +1,8 @@
 import { test, expect } from "@playwright/test";
+import { randomUUID } from "node:crypto";
+import pg from "pg";
+import { testConsents } from "../fixtures/legal.js";
+const origin = process.env.TEST_ORIGIN || "http://localhost:3100";
 
 // Exercise the real page/effects/history without sharing mutable database data.
 const listings = [
@@ -198,30 +202,66 @@ test("price, city and sort live in the URL and survive reload and reset", async 
   await expect(panel.getByRole("combobox", { name: "Сортировка", exact: true })).toHaveValue("new");
 });
 
-test("market contact: guests are invited to sign in, members reveal it on request", async ({ page }) => {
+test("market contact: guests are invited to sign in, members reveal it on request", async ({ page, browser }) => {
+  // The listing page is rendered on the server from the database (#74), so
+  // this listing is real; only the viewer and the contact reply are mocked.
+  const nonce = randomUUID().slice(0, 8);
+  const seller = await browser.newContext();
+  expect((await seller.request.post("/api/auth/register", {
+    headers: { origin },
+    data: {
+      ...testConsents,
+      name: "Seller " + nonce,
+      email: `seller-${nonce}@example.test`,
+      password: "market-contact-secret-123",
+    },
+  })).status()).toBe(201);
+  const created = await seller.request.post("/api/market", {
+    headers: { origin },
+    data: {
+      title: "Колесо " + nonce,
+      description: "Контакт по запросу",
+      category: "components",
+      listingType: "sale",
+      condition: "used",
+      price: 1000,
+      currency: "RUB",
+      location: "Тестовый город",
+      contact: "+7 900 000-00-00",
+      status: "active",
+    },
+  });
+  expect(created.status()).toBe(201);
+  const listing = await created.json();
+  await seller.close();
+  const db = new pg.Client({ connectionString: process.env.DATABASE_URL });
+  await db.connect();
+  try {
+    await db.query(
+      "UPDATE market_listings SET published_at=now()-interval '2 days' WHERE id=$1",
+      [listing.id],
+    );
+  } finally {
+    await db.end();
+  }
   let user = null, contacts = 0;
-  const listing = {
-    ...listings[0],
-    hasContact: true,
-    publishedAt: new Date(Date.now() - 2 * 86400000).toISOString(),
-  };
   await page.route("**/api/me", (route) => route.fulfill({ json: { user } }));
-  await page.route((url) => url.pathname === "/api/market/public/" + listing.shareId,
-    (route) => route.fulfill({ json: { listing } }));
   await page.route((url) => url.pathname === `/api/market/public/${listing.shareId}/contact`, (route) => {
     contacts++;
     return route.fulfill({ json: { contact: "+7 900 000-00-00" } });
   });
   await page.goto("/market/" + listing.shareId);
-  const seller = page.locator("aside").filter({ hasText: "Связаться с автором" });
-  await expect(seller.getByText("Опубликовано 2 дня назад", { exact: true })).toBeVisible();
-  await expect(seller.getByRole("link", { name: "Войти", exact: true })).toHaveAttribute(
+  const aside = page.locator("aside").filter({ hasText: "Связаться с автором" });
+  await expect(aside.getByText("Опубликовано 2 дня назад", { exact: true })).toBeVisible();
+  await expect(aside.getByRole("link", { name: "Войти", exact: true })).toHaveAttribute(
     "href", "/login?next=" + encodeURIComponent("/market/" + listing.shareId),
   );
-  await expect(seller.getByRole("button", { name: "Показать контакт" })).toHaveCount(0);
+  await expect(aside.getByRole("button", { name: "Показать контакт" })).toHaveCount(0);
+  // The guest's HTML never carries the contact itself.
+  expect(await page.content()).not.toContain("+7 900 000-00-00");
   user = { id: "30000000-0000-4000-8000-000000000001", name: "Member", username: "member", preferences: {} };
   await page.reload();
-  await seller.getByRole("button", { name: "Показать контакт", exact: true }).click();
-  await expect(seller.getByText("+7 900 000-00-00", { exact: true })).toBeVisible();
+  await aside.getByRole("button", { name: "Показать контакт", exact: true }).click();
+  await expect(aside.getByText("+7 900 000-00-00", { exact: true })).toBeVisible();
   expect(contacts).toBe(1);
 });

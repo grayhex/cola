@@ -154,29 +154,37 @@ assert.equal(
   ).status,
   200,
 );
-const hiddenStory = await (await guest.page(storyPath)).text();
+// A hidden entry answers 404, so search engines drop it (#74).
+const hiddenStoryPage = await guest.page(storyPath);
+assert.equal(hiddenStoryPage.status, 404);
+const hiddenStory = await hiddenStoryPage.text();
 assert.match(meta(hiddenStory, "robots") || "", /noindex/);
 assert.equal(meta(hiddenStory, "og:image"), undefined);
 assert.doesNotMatch(hiddenStory, /Секретная история|Тайное описание/);
 assert.equal((await fetch(storyImage)).status, 404);
 
-// A private bike yields no preview for guests, but the owner still resolves it.
+// A private bike is a 404 without a preview for guests; the owner still opens it.
 assert.equal(
   (await owner(`bikes/${bike.id}/share`, "PATCH", { is_public: false })).status,
   200,
 );
 const hidden = await guest.page(`/b/${bike.share_id}`);
-assert.equal(hidden.status, 200);
+assert.equal(hidden.status, 404);
 const hiddenHtml = await hidden.text();
 assert.match(meta(hiddenHtml, "robots") || "", /noindex/);
 assert.equal(meta(hiddenHtml, "og:image"), undefined);
 assert.doesNotMatch(hiddenHtml, /Новое имя|гравийник/);
 assert.equal((await fetch(imageUrl)).status, 404);
-assert.equal((await guest.page(current)).status, 200);
+assert.equal((await guest.page(current)).status, 404);
 assert.equal((await fetch(base + "/api/shared/" + bike.share_id)).status, 404);
 const ownerView = await owner.page(`/b/${bike.share_id}`);
 assert.equal(ownerView.status, 308);
 assert.equal(location(ownerView), current);
+const ownerPage = await owner.page(current);
+assert.equal(ownerPage.status, 200);
+const ownerHtml = await ownerPage.text();
+assert.match(meta(ownerHtml, "robots") || "", /noindex/);
+assert.match(ownerHtml, new RegExp("<h1>Новое имя " + nonce));
 
 // Profiles move to /@username; the old /u/ path redirects.
 const profile = await guest.page("/u/" + username);

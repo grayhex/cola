@@ -18,13 +18,15 @@ import "./ui-tabs.css";
 import { themeBootstrap } from "../lib/theme.js";
 import SiteProvider from "./ui/site-provider.jsx";
 import { getSite } from "../lib/site.js";
+import { hidden } from "../lib/indexing.js";
 export const dynamic = "force-dynamic";
 export async function generateMetadata() {
   const { settings } = await getSite();
   return {
     title: settings.siteName,
     description: settings.siteDescription,
-    robots: { index: false, follow: false },
+    // Pages opt in to search engines one by one (#74).
+    robots: hidden,
     icons: {
       icon: settings.faviconId
         ? "/api/assets/" + settings.faviconId
