@@ -1,0 +1,41 @@
+name: CodeQL
+
+# Static security analysis of the app and the Resolver (#82). Code scanning
+# is free for public repositories; findings appear under Security → Code
+# scanning, and a pull request that adds an error-level finding gets a red
+# "CodeQL" check.
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  schedule:
+    # Weekly, so new queries also run over code that has not changed.
+    - cron: "27 3 * * 1"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: codeql-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: CodeQL · JavaScript and TypeScript
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v7
+      # JavaScript needs no build: CodeQL reads the sources directly.
+      - uses: github/codeql-action/init@v4
+        with:
+          languages: javascript-typescript
+          build-mode: none
+          config-file: ./.github/codeql/codeql-config.yml
+      - uses: github/codeql-action/analyze@v4
+        with:
+          category: /language:javascript-typescript

@@ -1,0 +1,7 @@
+# Code scanning looks at the code that runs in production (#82). Tests and
+# their HTML fixtures hold intentional attack strings, fake secrets and saved
+# third-party pages, which would only bury real findings.
+name: ColaBike
+paths-ignore:
+  - tests
+  - services/bike-resolver/tests
