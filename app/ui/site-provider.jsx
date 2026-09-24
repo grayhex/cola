@@ -111,7 +111,6 @@ export default function SiteProvider({
     ...Object.fromEntries(
       Object.entries(preferences).filter(([key]) =>
         [
-          "bikeLayout",
           "showMileage",
           "componentsExpanded",
           "rideListMode",
@@ -143,7 +142,6 @@ export default function SiteProvider({
       <div
         className="site-root"
         data-design-system="community"
-        data-bike-layout={effective.bikeLayout || "balanced"}
         data-summary={site.settings.summaryPosition}
         data-detail-order={site.settings.detailOrder}
         data-photo-mode={site.settings.photoMode}

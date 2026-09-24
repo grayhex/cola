@@ -1,0 +1,719 @@
+/* Bike page per the #104 mockup: gallery and facts, then the build history
+   and the latest ride, then the whole build, rides and discussion. The
+   global .bike-heading and .hero-photo keep old rules; the selectors below
+   are specific enough to win over them. */
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 56px;
+  box-sizing: border-box;
+  max-width: calc(var(--content-width) + 2 * var(--gutter));
+  margin: 0 auto;
+  padding: 28px var(--gutter) 64px;
+  min-width: 0;
+}
+/* Old page-level order rules (mobile.css) must not move these sections. */
+:global(.site-root) .page > * {
+  order: 0;
+  min-width: 0;
+}
+.lead {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.crumbs {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+.crumbs a,
+.crumbs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0;
+  color: var(--muted);
+  font: inherit;
+}
+.crumbs a:hover,
+.crumbs button:hover {
+  color: var(--accent-text);
+}
+.crumbs [aria-current="page"] {
+  overflow: hidden;
+  color: var(--ink);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.top {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  gap: 32px;
+  align-items: start;
+}
+/* Gallery */
+.gallery {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+.stage {
+  position: relative;
+  height: 560px;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  background: var(--line-soft);
+}
+.stage :global(.photo-open) {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  cursor: zoom-in;
+}
+.page .stage :global(.hero-photo) {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  padding: 0;
+  object-fit: contain;
+  mix-blend-mode: normal;
+}
+:global([data-photo-mode="cover"]) .page .stage :global(.hero-photo:not(.photo-empty)) {
+  object-fit: cover;
+}
+.page .stage :global(.photo-empty) {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--muted);
+}
+.index {
+  position: absolute;
+  right: 20px;
+  bottom: 20px;
+  padding: 8px 14px;
+  border-radius: var(--radius-pill);
+  background: var(--photo-chip);
+  color: var(--photo-chip-ink);
+  font: 400 13px/1 var(--font-mono);
+  pointer-events: none;
+}
+.tools {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: flex;
+  gap: 8px;
+}
+.page .tools :global(.icon) {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--photo-chip);
+  color: var(--photo-chip-ink);
+}
+.credit {
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  max-width: calc(100% - 140px);
+  padding: 6px 10px;
+  border-radius: var(--radius-xs);
+  background: var(--photo-scrim);
+  color: var(--photo-scrim-ink);
+  font-size: 12px;
+}
+.thumbs {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.thumb {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 96px;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 16px;
+  background: var(--line-soft);
+  color: var(--ink);
+  cursor: pointer;
+}
+.thumb img,
+.thumb :global(.photo-empty) {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.thumb :global(.photo-empty span) {
+  display: none;
+}
+.thumb[aria-pressed="true"] {
+  outline: 2.5px solid var(--accent);
+  outline-offset: 2px;
+}
+.more {
+  background: var(--surface-hover);
+  font: 700 15px/1 var(--font-body);
+}
+.thumbTools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  margin-top: 6px;
+  font-size: 12px;
+}
+/* Facts */
+.page .info {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 24px;
+  min-width: 0;
+  margin: 0;
+  text-align: left;
+}
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.badges span {
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--ink);
+  font: 700 13px/1.2 var(--font-body);
+}
+.page .info .title {
+  display: block;
+  margin: 0;
+  overflow: visible;
+  color: var(--ink);
+  font: 800 clamp(30px, 3.4vw, 48px) / 1.05 var(--font-display);
+  letter-spacing: -0.03em;
+  overflow-wrap: anywhere;
+  -webkit-line-clamp: none;
+  line-clamp: none;
+}
+.page .info :global(.bike-subtitle) {
+  margin: -12px 0 0;
+  color: var(--muted);
+  font-size: 15px;
+}
+.author {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.page .author :global(.author-link) {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  gap: 12px;
+  min-width: 0;
+  max-width: none;
+  color: var(--ink);
+  font-weight: 700;
+  font-size: 16px;
+}
+.page .author :global(.author-link .social-avatar) {
+  width: 44px;
+  height: 44px;
+  font-size: 16px;
+}
+.page .author :global(.author-link span) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.owner {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+.page .owner :global(.icon) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 44px;
+  height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--ink);
+}
+.page .owner :global(.icon.danger) {
+  color: var(--danger);
+}
+.page .info :global(.bike-intro) {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.55;
+}
+.page .info :global(.bike-intro p) {
+  margin: 0;
+}
+.page .info :global(.bike-intro-facts) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  color: var(--ink);
+}
+.tiles {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 12px;
+  margin: 0;
+}
+.tiles > div {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 4px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+.tiles dt {
+  color: var(--muted);
+  font-size: 13px;
+}
+.tiles dd {
+  margin: 0;
+  color: var(--ink);
+  font: 600 24px/1.2 var(--font-mono);
+  overflow-wrap: anywhere;
+}
+.specs {
+  margin: 0;
+  padding: 8px 22px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+.specs > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line-soft);
+  font-size: 15px;
+}
+.specs > div:last-child {
+  border-bottom: 0;
+}
+.specs dt {
+  flex: none;
+  color: var(--muted);
+}
+.specs dd {
+  margin: 0;
+  color: var(--ink);
+  font: 400 14px/1.4 var(--font-mono);
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 20px;
+  margin-top: -12px;
+}
+.links:empty {
+  display: none;
+}
+.links a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  color: var(--accent-text);
+  font-weight: 700;
+  font-size: 14px;
+}
+.likeRow {
+  display: flex;
+  gap: 12px;
+}
+/* Beats the shared .hf-like chip: the accent pill of the mockup. */
+:global(.site-root) .page .likeRow :global(.like-button) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  gap: 10px;
+  min-height: 56px;
+  padding: 0 24px;
+  overflow: visible;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  color: var(--accent-foreground);
+  font: 700 16px/1 var(--font-body);
+  cursor: pointer;
+}
+:global(.site-root) .page .likeRow :global(.like-button:hover),
+:global(.site-root) .page .likeRow :global(.like-button[aria-pressed="true"]) {
+  background: var(--accent-hover);
+  color: var(--accent-foreground);
+}
+.page .likeRow :global(.like-button[aria-pressed="true"] svg) {
+  fill: currentColor;
+}
+.page .likeRow :global(.like-button:disabled) {
+  cursor: default;
+  opacity: 0.7;
+}
+:global(.site-root) .page .likeRow :global(.like-button > span),
+:global(.site-root) .page .likeRow :global(.like-button > strong) {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0;
+  border: 0;
+  color: inherit;
+  font: inherit;
+}
+.page .likeRow :global(.like-button > strong)::before {
+  content: "·";
+}
+.page .likeRow :global(.share-button) {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  min-width: 56px;
+  height: 56px;
+  padding: 0;
+  border: 1.5px solid var(--ink);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink);
+}
+.page .likeRow :global(.share-button > span) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+/* History and the latest ride */
+.story {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  gap: 32px;
+  align-items: start;
+}
+.story > :only-child {
+  grid-column: 1 / -1;
+}
+.page .story :global(.bike-journal) {
+  grid-column: auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.page .story :global(.bike-journal h2) {
+  margin: 0;
+  color: var(--ink);
+  font: 700 30px/1.15 var(--font-display);
+  letter-spacing: -0.02em;
+}
+.page .story :global(.journal-timeline) {
+  margin: 20px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.page .story :global(.journal-list-entry) {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0 0 24px 32px;
+  border: 0;
+  background: none;
+}
+.page .story :global(.journal-list-entry)::before {
+  content: "";
+  position: absolute;
+  top: 5px;
+  left: 0;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--ink);
+}
+.page .story :global(.journal-list-entry:first-child)::before {
+  background: var(--accent);
+}
+.page .story :global(.journal-list-entry)::after {
+  content: "";
+  position: absolute;
+  top: 23px;
+  bottom: 0;
+  left: 5px;
+  width: 2px;
+  background: var(--line);
+}
+.page .story :global(.journal-list-entry:last-child)::after {
+  display: none;
+}
+.page .story :global(.journal-entry-meta) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  color: var(--muted);
+  font: 400 12px/1.4 var(--font-mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.page .story :global(.journal-list-entry h3) {
+  margin: 0;
+  font: 700 17px/1.3 var(--font-body);
+  letter-spacing: 0;
+}
+.page .story :global(.journal-list-entry h3 a) {
+  color: var(--ink);
+}
+.page .story :global(.journal-list-entry p) {
+  margin: 0;
+  color: var(--muted);
+  font-size: 15px;
+}
+.latest {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 28px;
+  border: 1px solid var(--inverse-line);
+  border-radius: var(--radius-lg);
+  background: var(--inverse);
+  color: var(--inverse-ink);
+}
+.latestHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.page .latestHead h2 {
+  margin: 0;
+  color: var(--inverse-ink);
+  font: 700 22px/1.2 var(--font-display);
+  letter-spacing: -0.01em;
+}
+.latestHead a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  color: var(--inverse-ink);
+  font: 700 14px/1 var(--font-body);
+}
+.route {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  color: var(--inverse-ink);
+}
+.route svg {
+  width: 100%;
+  height: 180px;
+  border-radius: var(--radius-md);
+  background: var(--inverse-raised);
+}
+.route path {
+  fill: none;
+  stroke: var(--inverse-accent);
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.start {
+  fill: var(--inverse-ink);
+}
+.finish {
+  fill: var(--inverse-accent);
+}
+.rideTitle {
+  font-weight: 700;
+}
+.route:hover .rideTitle {
+  text-decoration: underline;
+}
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+  font-family: var(--font-mono);
+}
+.metrics > div {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 2px;
+}
+.metrics dt {
+  color: var(--inverse-muted);
+  font-size: 12px;
+}
+.metrics dd {
+  margin: 0;
+  color: var(--inverse-ink);
+  font-size: 20px;
+}
+/* Full-width sections below: section titles like the rest of the page,
+   ride cards and component groups in columns again. */
+.page :global(.specifications),
+.page :global(.bike-rides),
+.page :global(.discussion) {
+  margin: 0;
+}
+.page :global(.bike-rides > h2),
+.page :global(.discussion h2) {
+  margin: 0 0 8px;
+  color: var(--ink);
+  font: 700 30px/1.15 var(--font-display);
+  letter-spacing: -0.02em;
+}
+:global(.site-root) .page :global(.bike-rides .ride-grid) {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+@media (min-width: 701px) {
+  :global(.site-root) .page :global(.specifications .component-groups) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 1023px) {
+  :global(.site-root) .page :global(.bike-rides .ride-grid) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .top,
+  .story {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .stage {
+    height: 420px;
+  }
+}
+@media (max-width: 767px) {
+  .page {
+    gap: 32px;
+    padding: 12px var(--gutter) 32px;
+  }
+  .lead {
+    gap: 16px;
+  }
+  .crumbs {
+    font-size: 13px;
+  }
+  .stage {
+    height: 300px;
+    border-radius: 24px;
+  }
+  .index {
+    right: 12px;
+    bottom: 12px;
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+  .thumbs {
+    gap: 8px;
+  }
+  .thumb {
+    height: 60px;
+    border-radius: 12px;
+  }
+  .page .info {
+    gap: 20px;
+  }
+  .page .info .title {
+    font-size: 32px;
+  }
+  .tiles {
+    gap: 8px;
+  }
+  .tiles > div {
+    padding: 12px;
+  }
+  .tiles dd {
+    font-size: 18px;
+  }
+  .specs {
+    padding: 4px 16px;
+  }
+  .specs > div {
+    padding: 12px 0;
+    font-size: 14px;
+  }
+  .specs dd {
+    font-size: 13px;
+  }
+  :global(.site-root) .page .likeRow :global(.like-button) {
+    min-height: 52px;
+  }
+  .page .likeRow :global(.share-button) {
+    width: 52px;
+    min-width: 52px;
+    height: 52px;
+  }
+  .page .story :global(.bike-journal h2),
+  .page :global(.bike-rides > h2),
+  .page :global(.discussion h2) {
+    font-size: 22px;
+  }
+  :global(.site-root) .page :global(.bike-rides .ride-grid) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .latest {
+    padding: 22px;
+    border-radius: 24px;
+  }
+  .route svg {
+    height: 140px;
+  }
+  .metrics dd {
+    font-size: 17px;
+  }
+}

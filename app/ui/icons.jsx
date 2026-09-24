@@ -100,4 +100,5 @@ export {
   Sun,
   Trees,
   ArrowRight,
+  ArrowDown,
 } from "lucide-react";

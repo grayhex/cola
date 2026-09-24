@@ -51,7 +51,7 @@ test("two riders discuss a bike, receive notifications, reply and discover new p
     const visitor = await context.newPage(),
       b = await register(visitor.request, "visitor-" + nonce);
     await visitor.goto("/b/" + first.share_id);
-    await visitor.locator(".detail-actions .author-link").click();
+    await visitor.locator(".bike-heading .author-link").click();
     await visitor
       .getByRole("button", { name: "Подписаться", exact: true })
       .click();

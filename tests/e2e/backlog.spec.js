@@ -323,14 +323,10 @@ test("independent classification filters survive URL reload and find electric fo
   ).toHaveCount(1);
   await expect(page).toHaveURL(/electric=0/);
   await page.goto("/b/" + bike.share_id);
-  const labels = page.locator(".bike-labels");
-  await expect(labels).toContainText("L");
-  expect(
-    await labels
-      .locator(".hf-label")
-      .first()
-      .evaluate((e) => parseFloat(getComputedStyle(e).fontSize)),
-  ).toBeLessThanOrEqual(12);
+  // The type is a badge over the title, the size a row of the summary (#104).
+  await expect(page.locator(".bike-heading")).toContainText("Commuter");
+  const specs = page.getByLabel("Комплектация кратко", { exact: true });
+  await expect(specs.locator("div").first()).toHaveText(/^Размер\s*L$/);
   await noOverflow(page);
   await page.screenshot({
     path: info.outputPath("bike-compact-labels.png"),

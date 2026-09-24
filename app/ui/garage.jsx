@@ -4,9 +4,10 @@ import ClassificationFields, {
 } from "./bike-classification.jsx";
 import { FormerBikeField } from "./bike-fields.jsx";
 import fieldStyles from "./bike-fields.module.css";
-import { PhotoActions } from "./content-label.jsx";
 import {
   bikeCategories,
+  categoryFilterLabels,
+  classificationLabels,
   classificationOf,
   compatibilityCategory,
   matchesClassification,
@@ -15,7 +16,7 @@ import {
 import SiteIcon from "./site-icon.jsx";
 import { useConfirmation } from "./confirmation.jsx";
 import ChoiceMenu from "./choice-menu.jsx";
-import { BikeLabels, BikeLike } from "./bike-labels.jsx";
+import { BikeLike } from "./bike-labels.jsx";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -43,7 +44,9 @@ import GlobalHeader from "./global-header.jsx";
 import Versions from "./versions.jsx";
 import { parseBikeName } from "../../lib/bike-name.js";
 import GroupedComponents from "./grouped-components.jsx";
-import { defaultBlocks } from "../../lib/garage-layout.js";
+import BikeFollow from "./bike-follow.jsx";
+import { BikeGallery, BikeFacts, LatestRide } from "./bike-page.jsx";
+import bikePage from "./bike-page.module.css";
 import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import {
@@ -63,7 +66,6 @@ import {
   Trash2,
   Camera,
   LogOut,
-  ChevronRight,
   Search,
   Package,
   Settings2,
@@ -448,38 +450,29 @@ export default function Garage({
   const Main = embedded ? "section" : "main";
   const bike = selected;
   const detailReaction = useBikeReaction(bike, user, () => auth());
-  const blocks = settings.detailBlocks || defaultBlocks;
-  const block = (id) =>
-    blocks.find((b) => b.id === id) || defaultBlocks.find((b) => b.id === id);
-  const blockProps = (id) => ({
-    hidden: !block(id).enabled,
-    style: { order: blocks.findIndex((b) => b.id === id) + 1 },
-    "data-variant": block(id).variant,
-  });
+  // The first page of this bike's rides: counters and the latest ride card.
+  const [rides, setRides] = useState(null);
+  useEffect(() => setRides(null), [bike?.id]);
   const editable = !!user && bike?.is_owner === true;
   const modelName = [bike?.brand, bike?.model, bike?.trim]
     .filter(Boolean)
     .join(" ");
+  // A custom name keeps the model under it; the year is a badge (#104).
   const named = Boolean(bike?.name) && bike.name !== modelName;
-  const subtitle = [
-    named && modelName,
-    bike?.year && (named ? bike.year : `${t("Модельный год")} ${bike.year}`),
-  ]
-    .filter(Boolean)
-    .join(" · ");
-  // Without the "О велосипеде" block, the owner's text, public price and
-  // manufacturer link stay visible under the title.
-  const intro = bike &&
-    !block("summary").enabled && {
-      description:
-        settings.summaryFields?.description !== false && bike.description,
-      price:
-        bike.show_bike_price &&
-        bike.price != null &&
-        settings.summaryFields?.price !== false,
-      link:
-        settings.summaryFields?.manufacturer !== false && bike.manufacturer_url,
-    };
+  // The owner's text, public price and manufacturer link sit under the
+  // title; the admin can still switch each of them off (summaryFields).
+  const intro = {
+    description:
+      settings.summaryFields?.description !== false && bike?.description,
+    price:
+      bike?.show_bike_price &&
+      bike.price != null &&
+      settings.summaryFields?.price !== false,
+    link:
+      settings.summaryFields?.manufacturer !== false && bike?.manufacturer_url,
+  };
+  const kind = bike ? compatibilityCategory(classificationOf(bike)) : "",
+    badges = bike ? classificationLabels(bike).slice(0, 2) : [];
   function openBike(b) {
     if (!account) {
       router.push(publicPath("bike", b));
@@ -573,323 +566,197 @@ export default function Garage({
           </a>
         </Main>
       ) : bike ? (
-        <Main className="detail bike-detail">
-          <div className="breadcrumbs">
-            {!share ? (
-              <button
-                className="quiet"
-                onClick={() => {
-                  setSelected(null);
-                  setPhoto(null);
-                }}
-              >
-                <ArrowLeft size={16} />
-                {t("Мои велосипеды")}
-              </button>
-            ) : (
-              <span>
-                {share ? (
-                  <AuthorLink author={bike.author} />
-                ) : (
-                  t("Пример вашего будущего гаража")
-                )}
-              </span>
-            )}
-            <ChevronRight size={14} />
-            <a
-              href={
-                "/experience?" +
-                new URLSearchParams({
-                  brand: bike.brand || "",
-                  model: bike.model || "",
-                })
-              }
-              title="Опыт владельцев этой модели"
-            >
-              {bike.brand} {bike.model}
-            </a>
-          </div>
-          <div
-            className="bike-heading configurable-block"
-            {...blockProps("heading")}
-          >
-            <div>
-              <div className="bike-detail-title-row">
-                <h1>{bike.name || modelName}</h1>
-              </div>
-              {subtitle && <p className="bike-subtitle">{subtitle}</p>}
-              <div className="bike-heading-labels">
-                <BikeLabels bike={bike} />
-              </div>
-            </div>
-            <div className="detail-actions">
-              {share && <AuthorLink author={bike.author} />}
-              {editable ? (
+        <Main className={"bike-detail " + bikePage.page}>
+          <div className={bikePage.lead}>
+            <nav className={bikePage.crumbs} aria-label={t("Навигация по разделу")}>
+              {!share ? (
+                <button
+                  type="button"
+                  className="quiet"
+                  onClick={() => {
+                    setSelected(null);
+                    setPhoto(null);
+                  }}
+                >
+                  <ArrowLeft size={16} />
+                  {t("Мои велосипеды")}
+                </button>
+              ) : (
+                <Link href="/bikes">{t("Велосипеды")}</Link>
+              )}
+              {kind && categoryFilterLabels[kind] && (
                 <>
-                  {bike.is_public && (
+                  <span aria-hidden="true">/</span>
+                  <Link href={"/bikes?category=" + kind}>
+                    {categoryFilterLabels[kind]}
+                  </Link>
+                </>
+              )}
+              <span aria-hidden="true">/</span>
+              <span aria-current="page">{bike.name || modelName}</span>
+            </nav>
+            <div className={bikePage.top}>
+              <BikeGallery
+                bike={bike}
+                photo={photo}
+                onSelect={setPhoto}
+                onOpen={() => setModal({ type: "photoView" })}
+                editable={editable}
+                busy={busy}
+                onUpload={() => file.current.click()}
+                onSearch={() => setModal({ type: "photoSearch" })}
+                onCover={(p) =>
+                  run(async () => {
+                    await api(`bikes/${bike.id}/photos/${p.id}`, "PATCH");
+                    await refresh();
+                    setNotice(t("Обложка обновлена"));
+                  })
+                }
+                onDelete={(p) => setModal({ type: "deletePhoto", photo: p })}
+                demoCredit={bike.id === "demo" && !settings.demoImageId}
+                t={t}
+              />
+              <div className={"bike-heading " + bikePage.info}>
+                {(bike.is_former || badges.length > 0 || bike.year) && (
+                  <div className={bikePage.badges}>
+                    {bike.is_former && <span>{t("Бывший")}</span>}
+                    {badges.map((label) => (
+                      <span key={label}>{label}</span>
+                    ))}
+                    {bike.year && <span>{bike.year}</span>}
+                  </div>
+                )}
+                <h1 className={bikePage.title}>{bike.name || modelName}</h1>
+                {named && <p className="bike-subtitle">{modelName}</p>}
+                <div className={bikePage.author}>
+                  {share && <AuthorLink author={bike.author} />}
+                  {editable ? (
+                    <div className={bikePage.owner}>
+                      <button
+                        className="icon bordered share-action"
+                        aria-label={t("Доступ")}
+                        title={t("Кто видит велосипед")}
+                        onClick={() => setModal({ type: "share" })}
+                      >
+                        {bike.is_public ? (
+                          <Globe size={17} />
+                        ) : (
+                          <Lock size={17} />
+                        )}
+                        <span>{t("Доступ")}</span>
+                      </button>
+                      <button
+                        className="icon bordered"
+                        aria-label={t("Редактировать велосипед")}
+                        onClick={() => setModal({ type: "bike", bike })}
+                      >
+                        <Pencil size={18} />
+                      </button>
+                      <button
+                        className="icon danger"
+                        aria-label="Удалить велосипед"
+                        onClick={() => setModal({ type: "deleteBike" })}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  ) : !share ? (
+                    <button
+                      className="button secondary"
+                      onClick={() => auth("register")}
+                    >
+                      {t("Добавить свой байк")}
+                      <Plus size={17} />
+                    </button>
+                  ) : (
+                    bike.is_public && <BikeFollow bikeId={bike.id} />
+                  )}
+                </div>
+                {(intro.description || intro.price || intro.link) && (
+                  <div className="bike-intro">
+                    {intro.description && <p>{bike.description}</p>}
+                    {(intro.price || intro.link) && (
+                      <p className="bike-intro-facts">
+                        {intro.price && (
+                          <span>
+                            {t("Стоимость велосипеда")}:{" "}
+                            <strong>{rub(bike.price)}</strong>
+                          </span>
+                        )}
+                        {intro.link && (
+                          <a
+                            className="part-link"
+                            href={bike.manufacturer_url}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            {t("Сайт производителя")}
+                          </a>
+                        )}
+                      </p>
+                    )}
+                  </div>
+                )}
+                <BikeFacts
+                  bike={bike}
+                  settings={settings}
+                  catalog={catalog}
+                  rides={rides}
+                  experience={
+                    bike.brand &&
+                    bike.model &&
+                    "/experience?" +
+                      new URLSearchParams({
+                        brand: bike.brand,
+                        model: bike.model,
+                      })
+                  }
+                />
+                {bike.is_public && (
+                  <div className={bikePage.likeRow}>
+                    <BikeLike bike={bike} reaction={detailReaction} t={t} />
                     <ShareButton
                       path={publicPath("bike", bike)}
                       title={bike.name || modelName}
                     />
-                  )}
-                  <button
-                    className="icon bordered share-action"
-                    aria-label={t("Доступ")}
-                    title={t("Кто видит велосипед")}
-                    onClick={() => setModal({ type: "share" })}
-                  >
-                    {bike.is_public ? <Globe size={17} /> : <Lock size={17} />}
-                    <span>{t("Доступ")}</span>
-                  </button>
-                  <button
-                    className="icon bordered"
-                    aria-label={t("Редактировать велосипед")}
-                    onClick={() => setModal({ type: "bike", bike })}
-                  >
-                    <Pencil size={18} />
-                  </button>
-                  <button
-                    className="icon danger"
-                    aria-label="Удалить велосипед"
-                    onClick={() => setModal({ type: "deleteBike" })}
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </>
-              ) : !share ? (
-                <button
-                  className="button secondary"
-                  onClick={() => auth("register")}
-                >
-                  {t("Добавить свой байк")}
-                  <Plus size={17} />
-                </button>
-              ) : (
-                <ShareButton
-                  path={publicPath("bike", bike)}
-                  title={bike.name || modelName}
-                />
-              )}
-            </div>
-            {intro && (intro.description || intro.price || intro.link) && (
-              <div className="bike-intro">
-                {intro.description && <p>{bike.description}</p>}
-                {(intro.price || intro.link) && (
-                  <p className="bike-intro-facts">
-                    {intro.price && (
-                      <span>
-                        {t("Стоимость велосипеда")}:{" "}
-                        <strong>{rub(bike.price)}</strong>
-                      </span>
-                    )}
-                    {intro.link && (
-                      <a
-                        className="part-link"
-                        href={bike.manufacturer_url}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        {t("Сайт производителя")}
-                      </a>
-                    )}
-                  </p>
+                  </div>
                 )}
-              </div>
-            )}
-          </div>
-          <div
-            className="bike-meta-line"
-            hidden={!block("heading").enabled}
-            style={{ order: blocks.findIndex((b) => b.id === "heading") + 1 }}
-          >
-            {bike.color && <span>{bike.color}</span>}
-            {settings.showMileage && (
-              <span>
-                {Number(bike.mileage || 0).toLocaleString("ru-RU")} км
-              </span>
-            )}
-          </div>
-          <div
-            className="showcase configurable-block"
-            {...blockProps("photos")}
-          >
-            <div className="photo-stage">
-              <span className="photo-index">
-                {String(
-                  Math.max(
-                    1,
-                    bike.photos.findIndex((p) => p.id === photo?.id) + 1,
-                  ),
-                ).padStart(2, "0")}{" "}
-                / {String(Math.max(1, bike.photos.length)).padStart(2, "0")}
-              </span>
-              <button
-                className="photo-open"
-                aria-label={t("Открыть фото целиком")}
-                onClick={() => setModal({ type: "photoView" })}
-              >
-                <Photo
-                  bike={bike}
-                  photo={photo}
-                  className="hero-photo"
-                  sizes="(max-width: 700px) 100vw, 40vw"
-                  priority
-                />
-              </button>
-              {editable && (
-                <div className="photo-tools">
-                  <button
-                    type="button"
-                    className="icon"
-                    disabled={busy}
-                    aria-label="Загрузить фото"
-                    onClick={() => file.current.click()}
-                  >
-                    <Plus size={16} />
-                  </button>
-                  <button
-                    type="button"
-                    className="icon"
-                    aria-label="Найти фотографии"
-                    onClick={() => setModal({ type: "photoSearch" })}
-                  >
-                    <Search size={16} />
-                  </button>
-                </div>
-              )}
-              {(photo || bike.photos[0])?.source_page_url && (
-                <a
-                  className="photo-credit"
-                  href={(photo || bike.photos[0]).source_page_url}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Источник фотографии
-                </a>
-              )}
-              {bike.id === "demo" && !settings.demoImageId && (
-                <a
-                  className="photo-credit"
-                  href="https://www.canyon.com/en-si/outlet-bikes/gravel-bikes/grizl-al-7-raw/50051247.html"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  {t("Фото: Canyon · пример сборки")}
-                </a>
-              )}
-            </div>
-            {bike.is_public && (
-              <PhotoActions>
-                <BikeLike bike={bike} reaction={detailReaction} t={t} />
-                {detailReaction.error && (
+                {bike.is_public && detailReaction.error && (
                   <p role="alert">{t("Лайк не сохранился. Попробуй ещё раз")}</p>
                 )}
-              </PhotoActions>
-            )}
-          </div>
-          <details
-            className="bike-summary configurable-block"
-            {...blockProps("summary")}
-            open={block("summary").open}
-          >
-            <summary>{t("О велосипеде")}</summary>
-            <span className="eyebrow">{t("ПАСПОРТ ВЕЛОСИПЕДА")}</span>
-            <h2>
-              {t("Собран")}
-              <br />
-              {t("под себя.")}
-            </h2>
-            <p hidden={settings.summaryFields?.description === false}>
-              {bike.description ||
-                t(
-                  "У каждого велосипеда своя история. Добавьте пару слов о вашем.",
+                {bike.is_public && (
+                  <BikeGame
+                    key={JSON.stringify([
+                      bike.id,
+                      bike.likes,
+                      bike.weight,
+                      bike.category,
+                      bike.show_bike_price,
+                      bike.price,
+                      bike.scores,
+                      bike.photos.length,
+                    ])}
+                    bike={bike}
+                    user={user}
+                  />
                 )}
-            </p>
-
-            <div className="summary-bottom">
-              <span>{String(bike.components.length).padStart(2, "0")}</span>
-              {t("деталей в конфигурации")}
-            </div>
-            {bike.manufacturer_url &&
-              settings.summaryFields?.manufacturer !== false && (
-                <a
-                  className="part-link"
-                  href={bike.manufacturer_url}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  {t("Сайт производителя")}
-                </a>
-              )}
-            {bike.show_bike_price &&
-              bike.price != null &&
-              settings.summaryFields?.price !== false && (
-                <p>
-                  {t("Стоимость велосипеда")}:{" "}
-                  <strong>{rub(bike.price)}</strong>
-                </p>
-              )}
-          </details>
-          {bike.photos.length > 0 && (
-            <details
-              className="gallery-details configurable-block"
-              {...blockProps("gallery")}
-              open={block("gallery").open}
-            >
-              <summary>Фотографии · {bike.photos.length}</summary>
-              <div className="gallery">
-                {bike.photos.map((p) => (
-                  <div className="thumb-wrap" key={p.id}>
-                    <button
-                      className={
-                        "thumb " +
-                        ((photo?.id || bike.photos[0].id) === p.id
-                          ? "active"
-                          : "")
-                      }
-                      aria-label={t("Показать фотографию")}
-                      onClick={() => setPhoto(p)}
-                    >
-                      <Photo bike={bike} photo={p} sizes="160px" />
-                    </button>
-                    {editable && (
-                      <div className="thumb-actions">
-                        <button
-                          className="quiet"
-                          disabled={busy || p.is_cover}
-                          onClick={() =>
-                            run(async () => {
-                              await api(
-                                `bikes/${bike.id}/photos/${p.id}`,
-                                "PATCH",
-                              );
-                              await refresh();
-                              setNotice(t("Обложка обновлена"));
-                            })
-                          }
-                        >
-                          {p.is_cover ? t("Обложка") : t("На обложку")}
-                        </button>
-                        <button
-                          className="icon"
-                          aria-label={t("Удалить фото")}
-                          onClick={() =>
-                            setModal({ type: "deletePhoto", photo: p })
-                          }
-                        >
-                          <X size={14} />
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                ))}
               </div>
-            </details>
-          )}
-          <section
-            className="specifications configurable-block"
-            {...blockProps("specifications")}
-          >
+            </div>
+          </div>
+          <div className={bikePage.story}>
+            {/* Sibling keys must differ: with two equal keys React loses one
+                fiber on update and leaves a stale copy of its DOM behind. */}
+            {bike.id !== "demo" && (
+              <JournalList
+                key={"journal:" + bike.id}
+                bike={bike}
+                owner={bike.is_owner}
+                editable={editable}
+              />
+            )}
+            {bike.is_public && <LatestRide rides={rides} />}
+          </div>
+          <section className="specifications" id="specifications">
             {bike.factory_spec && (
               <details className="factory-source">
                 <summary>
@@ -1034,31 +901,7 @@ export default function Garage({
               )}
           </section>
           {bike.is_public && (
-            <BikeGame
-              key={JSON.stringify([
-                bike.id,
-                bike.likes,
-                bike.weight,
-                bike.category,
-                bike.show_bike_price,
-                bike.price,
-                bike.scores,
-                bike.photos.length,
-              ])}
-              bike={bike}
-              user={user}
-            />
-          )}
-          {bike.is_public && <RideList bikeId={bike.id} latest />}
-          {/* Sibling keys must differ: with two equal keys React loses one
-              fiber on update and leaves a stale copy of its DOM behind. */}
-          {bike.id !== "demo" && (
-            <JournalList
-              key={"journal:" + bike.id}
-              bike={bike}
-              owner={bike.is_owner}
-              editable={editable}
-            />
+            <RideList id="rides" bikeId={bike.id} latest onLoad={setRides} />
           )}
           {bike.is_public && (
             <Discussion key={"discussion:" + bike.id} bike={bike} user={user} />

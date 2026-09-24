@@ -181,7 +181,7 @@ test("account profile/avatar editing, public garage, author links and mutual mob
     await expect(
       visitor.getByRole("heading", { name: bike.name, exact: true }),
     ).toBeVisible();
-    await visitor.locator(".detail-actions .author-link").click();
+    await visitor.locator(".bike-heading .author-link").click();
     await expect(visitor).toHaveURL("/@" + username);
     await visitor
       .getByRole("button", { name: "Отписаться", exact: true })
