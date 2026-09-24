@@ -12,6 +12,10 @@ import {
   ShieldCheck,
   Settings2,
   History,
+  Flag,
+  Package,
+  BookOpen,
+  Lock,
 } from "../ui/icons.jsx";
 import { useSite } from "../ui/site-provider.jsx";
 import { SocialHeader, SocialFooter } from "../ui/social-primitives.jsx";
@@ -28,6 +32,10 @@ const icons = {
   shield: ShieldCheck,
   settings: Settings2,
   history: History,
+  flag: Flag,
+  market: Package,
+  articles: BookOpen,
+  account: Lock,
 };
 const illustrations = {
   guide: "aboutGuideImageId",
@@ -134,6 +142,13 @@ export default function About({ user, statistics }) {
                         <div>
                           <h3>{item.title}</h3>
                           <p>{item.text}</p>
+                          {item.steps && (
+                            <ol className="about-steps">
+                              {item.steps.map((step) => (
+                                <li key={step}>{step}</li>
+                              ))}
+                            </ol>
+                          )}
                         </div>
                       </article>
                     );

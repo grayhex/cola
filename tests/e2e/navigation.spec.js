@@ -196,6 +196,8 @@ test("navigation: real destinations, account, keyboard, configurable About and a
       ...original,
 
       aboutGuideImageId: asset,
+      footerImage1Id: asset,
+      footerImage2Id: asset,
     });
     await page.goto("/admin");
     await page.getByRole("tab", { name: "Дизайн", exact: true }).click();
@@ -254,6 +256,16 @@ test("navigation: real destinations, account, keyboard, configurable About and a
     await expect(
       page.locator("#guide .about-illustration img"),
     ).toHaveAttribute("src", "/api/assets/" + asset);
+    // Both footer images from Графика → Подвал, on the left of the brand (#107).
+    const footerImages = page.locator("footer [data-footer-images] img");
+    await expect(footerImages).toHaveCount(2);
+    await expect(footerImages.first()).toHaveAttribute("src", "/api/assets/" + asset);
+    await expect(footerImages.first()).toHaveAttribute("alt", "");
+    const brand = page.locator("footer").getByRole("link", { name: "ColaBike", exact: true });
+    await footerImages.last().scrollIntoViewIfNeeded();
+    expect((await footerImages.first().boundingBox()).x).toBeLessThan(
+      (await brand.boundingBox()).x + 1,
+    );
     expect(
       (
         await page.request.delete("/api/admin/assets/" + asset, {
