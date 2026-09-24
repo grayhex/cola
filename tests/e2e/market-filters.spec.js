@@ -25,7 +25,6 @@ const listings = [
 
 async function mockMarket(page, beforeReply = async () => {}) {
   const requests = [];
-  await page.route("**/api/me", (route) => route.fulfill({ json: { user: null } }));
   await page.route((url) => url.pathname === "/api/market", async (route) => {
     const params = new URL(route.request().url()).searchParams;
     requests.push(params.toString());
@@ -203,8 +202,8 @@ test("price, city and sort live in the URL and survive reload and reset", async 
 });
 
 test("market contact: guests are invited to sign in, members reveal it on request", async ({ page, browser }) => {
-  // The listing page is rendered on the server from the database (#74), so
-  // this listing is real; only the viewer and the contact reply are mocked.
+  // The listing page and the reader both come from the server (#74), so the
+  // listing and the member are real; only the contact reply is mocked.
   const nonce = randomUUID().slice(0, 8);
   const seller = await browser.newContext();
   expect((await seller.request.post("/api/auth/register", {
@@ -244,8 +243,7 @@ test("market contact: guests are invited to sign in, members reveal it on reques
   } finally {
     await db.end();
   }
-  let user = null, contacts = 0;
-  await page.route("**/api/me", (route) => route.fulfill({ json: { user } }));
+  let contacts = 0;
   await page.route((url) => url.pathname === `/api/market/public/${listing.shareId}/contact`, (route) => {
     contacts++;
     return route.fulfill({ json: { contact: "+7 900 000-00-00" } });
@@ -259,7 +257,15 @@ test("market contact: guests are invited to sign in, members reveal it on reques
   await expect(aside.getByRole("button", { name: "Показать контакт" })).toHaveCount(0);
   // The guest's HTML never carries the contact itself.
   expect(await page.content()).not.toContain("+7 900 000-00-00");
-  user = { id: "30000000-0000-4000-8000-000000000001", name: "Member", username: "member", preferences: {} };
+  expect((await page.request.post("/api/auth/register", {
+    headers: { origin },
+    data: {
+      ...testConsents,
+      name: "Member " + nonce,
+      email: `member-${nonce}@example.test`,
+      password: "market-contact-secret-123",
+    },
+  })).status()).toBe(201);
   await page.reload();
   await aside.getByRole("button", { name: "Показать контакт", exact: true }).click();
   await expect(aside.getByText("+7 900 000-00-00", { exact: true })).toBeVisible();

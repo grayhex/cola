@@ -25,13 +25,12 @@ export default function PublicProfile({
   initial = null,
 }) {
   const [profile, setProfile] = useState(initial?.profile || null),
-    [user, setUser] = useState(null),
     [feed, setFeed] = useState(initial?.bikes || null),
     [page, setPage] = useState(1),
     [people, setPeople] = useState(""),
     [collection, setCollection] = useState("bikes"),
     [error, setError] = useState("");
-  const { setPreferences } = useSite();
+  const { viewer: user } = useSite();
   // The server rendered the profile and the first page of bikes (#74).
   const seed = useRef(initial),
     seedBikes = useRef(initial?.bikes);
@@ -45,13 +44,9 @@ export default function PublicProfile({
     const profileRequest =
       seed.current || socialApi("social/profiles/" + username);
     seed.current = null;
-    Promise.all([socialApi("me"), profileRequest])
-      .then(([me, data]) => {
-        if (active) {
-          setUser(me.user);
-          setPreferences(me.user?.preferences || {});
-          setProfile(data.profile);
-        }
+    Promise.resolve(profileRequest)
+      .then((data) => {
+        if (active) setProfile(data.profile);
       })
       .catch((e) => {
         if (active) setError(e.message);

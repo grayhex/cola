@@ -19,6 +19,7 @@ import { themeBootstrap } from "../lib/theme.js";
 import SiteProvider from "./ui/site-provider.jsx";
 import { getSite } from "../lib/site.js";
 import { hidden } from "../lib/indexing.js";
+import { currentViewer } from "../lib/viewer.js";
 export const dynamic = "force-dynamic";
 export async function generateMetadata() {
   const { settings } = await getSite();
@@ -35,7 +36,9 @@ export async function generateMetadata() {
   };
 }
 export default async function Layout({ children }) {
-  const site = await getSite();
+  const [site, user] = await Promise.all([getSite(), currentViewer()]);
+  // What /api/me would answer, in the same JSON shape (dates as strings).
+  const viewer = user ? JSON.parse(JSON.stringify(user)) : null;
   return (
     <html
       lang="ru"
@@ -57,7 +60,9 @@ export default async function Layout({ children }) {
         />
       </head>
       <body>
-        <SiteProvider initial={site}>{children}</SiteProvider>
+        <SiteProvider initial={site} viewer={viewer}>
+          {children}
+        </SiteProvider>
       </body>
     </html>
   );

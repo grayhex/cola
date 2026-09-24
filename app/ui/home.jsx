@@ -186,29 +186,22 @@ function TrendingBike({ bike, user }) {
 }
 const emptyData = { popular: [], events: [], content: [], records: [] };
 export default function Home() {
-  const { settings, setPreferences } = useSite(),
+  const { settings, viewer: user } = useSite(),
     [data, setData] = useState(null),
-    [user, setUser] = useState(null),
     [error, setError] = useState(""),
     [revision, setRevision] = useState(0);
   useEffect(() => {
     const controller = new AbortController();
-    Promise.all([
-      fetch("/api/me", { signal: controller.signal, cache: "no-store" }).then(
-        (r) => r.json(),
-      ),
-      fetch("/api/discovery/home", {
-        signal: controller.signal,
-        cache: "no-store",
-      }).then((r) => {
+    fetch("/api/discovery/home", {
+      signal: controller.signal,
+      cache: "no-store",
+    })
+      .then((r) => {
         if (!r.ok) throw Error();
         return r.json();
-      }),
-    ])
-      .then(([me, home]) => {
+      })
+      .then((home) => {
         if (controller.signal.aborted) return;
-        setUser(me.user);
-        setPreferences(me.user?.preferences || {});
         setData(home);
         setError("");
       })

@@ -142,11 +142,10 @@ test.afterAll(async () => {
   await db.query("UPDATE site_settings SET value=$1 WHERE id=1", [original]);
   await db.end();
 });
-async function fixture(page, data = home, user = null) {
+async function fixture(page, data = home) {
   await db.query("UPDATE site_settings SET value=$1 WHERE id=1", [
     { ...original, ...defaultSettings },
   ]);
-  await page.route("**/api/me", (r) => r.fulfill({ json: { user } }));
   await page.route("**/api/discovery/home", (r) => r.fulfill({ json: data }));
   await page.route("**/api/community/notifications/count", (r) =>
     r.fulfill({ json: { unread: 0 } }),

@@ -130,9 +130,9 @@ const settingsTabs = new Set([
 const catalogTabs = new Set(["catalog", "groups"]);
 
 export default function Admin() {
-  const { settings, catalog, setSite, setPreferences } = useSite();
+  const { settings, catalog, setSite, viewer } = useSite();
   const [tab, setTab] = useState("overview"),
-    [user, setUser] = useState(null);
+    [user, setUser] = useState(viewer);
   const [loading, setLoading] = useState(true),
     [busy, setBusy] = useState(false);
   const [error, setError] = useState(""),
@@ -219,12 +219,8 @@ export default function Admin() {
     await refreshAssets();
   }
   useEffect(() => {
-    request("me")
-      .then(async (result) => {
-        setUser(result.user);
-        setPreferences(result.user?.preferences || {});
-        if (result.user?.role === "admin") await reload();
-      })
+    // The server layout already knows the reader (#74).
+    (viewer?.role === "admin" ? reload() : Promise.resolve())
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, []);

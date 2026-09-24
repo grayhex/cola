@@ -1,5 +1,8 @@
 import { test, expect } from "@playwright/test";
+import { randomUUID } from "node:crypto";
+import pg from "pg";
 import sharp from "sharp";
+import { testConsents } from "../fixtures/legal.js";
 import { recordDefinitions, defaultGamification, achievements } from "../../lib/gamification-definitions.js";
 import { withGameDescriptions } from "../../lib/gamification-presentation.js";
 const imageId = "00000000-0000-4000-8000-000000000001";
@@ -83,13 +86,26 @@ test("record illustration reacts to hover and keyboard focus, but reduced motion
 });
 
 test("achievement admin preserves illustrations and edited descriptions through paging, save and reload", async ({ page }) => {
+  // The admin page trusts the reader from the server layout (#74), so the
+  // administrator is a real account; the admin API itself stays mocked.
+  const email = `layout-admin-${randomUUID()}@example.test`;
+  expect((await page.request.post("/api/auth/register", {
+    headers: { origin: process.env.TEST_ORIGIN || "http://localhost:3100" },
+    data: { ...testConsents, name: "Admin", email, password: "layout-admin-secret-123" },
+  })).status()).toBe(201);
+  const db = new pg.Client({ connectionString: process.env.DATABASE_URL });
+  await db.connect();
+  try {
+    await db.query("UPDATE users SET role='admin' WHERE email=$1", [email]);
+  } finally {
+    await db.end();
+  }
   const user = { id: "fixture-admin", role: "admin", name: "Admin", preferences: {} };
   let saved = { ...defaultGamification, recordImages: {}, achievementImages: {}, recordDescriptions: {}, achievementDescriptions: {} };
   await page.route("**/api/admin/overview", async (route) => {
     const site = await (await page.request.get("/api/site")).json();
     await route.fulfill({ json: { ...site, user, stats: {}, participation: [] } });
   });
-  await page.route("**/api/me", (route) => route.fulfill({ json: { user } }));
   await page.route("**/api/game/admin/settings", async (route) => {
     if (route.request().method() === "PUT") saved = route.request().postDataJSON();
     await route.fulfill({ json: saved });

@@ -130,6 +130,7 @@ try {
         "tests/market-http.js",
         "tests/public-urls-http.js",
         "tests/indexing-http.js",
+        "tests/viewer-http.js",
         "tests/admin-http.js",
         "tests/resolver-http.js",
         "tests/layout-http.js",

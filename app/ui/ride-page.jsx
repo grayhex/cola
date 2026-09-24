@@ -23,9 +23,8 @@ export default function RidePage({
   sharePath = null,
   initial = null,
 }) {
-  const { setPreferences } = useSite();
+  const { viewer: user } = useSite();
   const [ride, setRide] = useState(initial?.ride || null),
-    [user, setUser] = useState(null),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false);
   // The server rendered the public ride for this viewer (#74).
@@ -42,13 +41,9 @@ export default function RidePage({
           share,
       );
     seed.current = null;
-    Promise.all([socialApi("me"), rideRequest])
-      .then(([m, d]) => {
-        if (active) {
-          setUser(m.user);
-          setPreferences(m.user?.preferences || {});
-          setRide(d.ride);
-        }
+    Promise.resolve(rideRequest)
+      .then((d) => {
+        if (active) setRide(d.ride);
       })
       .catch((e) => {
         if (active) setError(e.message);

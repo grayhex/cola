@@ -3,15 +3,10 @@ import { useEffect, useState } from "react";
 import { useSite } from "../ui/site-provider.jsx";
 import RideCreationActions from "../ui/ride-creation-actions.jsx";
 import RideList from "../ui/ride-list.jsx";
-import {
-  SocialHeader,
-  SocialFooter,
-  socialApi,
-} from "../ui/social-primitives.jsx";
+import { SocialHeader, SocialFooter } from "../ui/social-primitives.jsx";
 export default function Rides() {
-  const { setPreferences } = useSite();
+  const { viewer: user } = useSite();
   const [bikeId, setBikeId] = useState(null),
-    [user, setUser] = useState(null),
     [status, setStatus] = useState(null);
   useEffect(() => {
     setBikeId(new URLSearchParams(location.search).get("bikeId") || "");
@@ -20,12 +15,6 @@ export default function Rides() {
         ? "planned"
         : null,
     );
-    socialApi("me")
-      .then((d) => {
-        setUser(d.user);
-        setPreferences(d.user?.preferences || {});
-      })
-      .catch(() => {});
   }, []);
   return (
     <>

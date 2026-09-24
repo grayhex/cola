@@ -34,10 +34,9 @@ const empty = {
 };
 export default function ExperienceSearch({ modelPage = false }) {
   const params = useSearchParams(),
-    { catalog, setPreferences } = useSite();
+    { catalog, viewer: user } = useSite();
   const [form, setForm] = useState(empty),
     [query, setQuery] = useState(null),
-    [user, setUser] = useState(null),
     [data, setData] = useState(null),
     [error, setError] = useState(""),
     [filters, setFilters] = useState(false);
@@ -50,14 +49,6 @@ export default function ExperienceSearch({ modelPage = false }) {
     setForm(input);
     setQuery(input);
   }, [params]);
-  useEffect(() => {
-    socialApi("me")
-      .then((d) => {
-        setUser(d.user);
-        setPreferences(d.user?.preferences || {});
-      })
-      .catch((e) => setError(e.message));
-  }, []);
   useEffect(() => {
     if (!query) return;
     let active = true;

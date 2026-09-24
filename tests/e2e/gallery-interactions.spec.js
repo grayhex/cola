@@ -4,12 +4,8 @@ import sharp from "sharp";
 import { readFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import { defaultSettings } from "../../lib/site-defaults.js";
-const viewer = {
-  id: "viewer",
-  name: "Участник",
-  username: "viewer",
-  preferences: {},
-};
+import { testConsents } from "../fixtures/legal.js";
+const origin = process.env.TEST_ORIGIN || "http://localhost:3100";
 const bikes = Array.from({ length: 9 }, (_, i) => ({
   id: `bike-${i}`,
   share_id: `share-${i}`,
@@ -54,9 +50,28 @@ test.afterAll(async () => {
     await db.query("UPDATE site_settings SET value=$1 WHERE id=1", [original]);
   await db?.end();
 });
-async function fixture(page, user = viewer, items = bikes) {
+// The server layout reads the session (#74), so a signed-in viewer is a real
+// account; `preferences` are written as stored, bypassing API validation.
+async function fixture(page, account = {}, items = bikes) {
   await db.query("UPDATE site_settings SET value=$1 WHERE id=1", [preset]);
-  await page.route("**/api/me", (r) => r.fulfill({ json: { user } }));
+  if (account) {
+    const email = `viewer-${randomUUID()}@example.test`;
+    const registered = await page.request.post("/api/auth/register", {
+      headers: { origin },
+      data: {
+        ...testConsents,
+        name: "Участник",
+        email,
+        password: "gallery-viewer-secret-123",
+      },
+    });
+    expect(registered.status()).toBe(201);
+    if (account.preferences)
+      await db.query("UPDATE users SET preferences=$1 WHERE email=$2", [
+        account.preferences,
+        email,
+      ]);
+  }
   await page.route("**/api/showcase?**", (r) =>
     r.fulfill({ json: { bikes: items, total: items.length } }),
   );
@@ -327,7 +342,6 @@ test("persisted theme uses a single typeface, site accent and responsive columns
   page,
 }) => {
   await fixture(page, {
-    ...viewer,
     preferences: {
       theme: "dark",
       font: "onest",
@@ -433,7 +447,6 @@ test("guest sign-in continues the requested add-bike action", async ({
   isMobile,
 }) => {
   await fixture(page, null);
-  await page.unroute("**/api/me");
   await page.goto("/bikes");
   await page.locator(".showcase-actions .add-bike").click();
   await expect(page).toHaveURL(/account\?tab=bikes&action=add/);

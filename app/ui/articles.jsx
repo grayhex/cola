@@ -15,18 +15,9 @@ import ChoiceMenu from "./choice-menu.jsx";
 import ArticleBody from "./article-body.jsx";
 import Discussion from "./discussion.jsx";
 import LocalDate from "./local-date.jsx";
+// The server layout already knows the reader (#74).
 function useReader() {
-  const [user, setUser] = useState(undefined);
-  const { setPreferences } = useSite();
-  useEffect(() => {
-    socialApi("me")
-      .then((d) => {
-        setUser(d.user);
-        setPreferences(d.user?.preferences || {});
-      })
-      .catch(() => setUser(null));
-  }, []);
-  return user;
+  return useSite().viewer;
 }
 export function ArticleCard({ article: a, topics }) {
   const topic = topics.find((t) => t.id === a.topicId);
@@ -300,8 +291,6 @@ export function NewArticle() {
           <ArticleEditor
             onSaved={(a) => router.push("/articles/" + a.shareId)}
           />
-        ) : user === undefined ? (
-          <p>Загружаем профиль…</p>
         ) : (
           <p>
             <a href="/account">Войдите</a>, чтобы написать статью.

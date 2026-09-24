@@ -35,8 +35,15 @@ import {
 } from "../../lib/navigation.js";
 import { profilePath } from "../../lib/public-urls.js";
 import { usernameLabel } from "../../lib/usernames.js";
-export default function GlobalHeader({ user, onProfile, previewSettings }) {
-  const { personalSettings, t } = useSite();
+export default function GlobalHeader({
+  user: shown,
+  onProfile,
+  previewSettings,
+}) {
+  const { personalSettings, t, viewer } = useSite();
+  // Without an explicit user (loading, sign-in and recovery pages) the header
+  // shows the reader the server layout knows (#74), never a guest by mistake.
+  const user = shown ?? viewer;
   const settings = previewSettings || personalSettings;
   const pathname = usePathname() || "/";
   const params = useSearchParams();

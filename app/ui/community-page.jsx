@@ -54,12 +54,11 @@ export default function CommunityPage({ kind }) {
       ),
     [],
   );
-  const [user, setUser] = useState(undefined),
-    [data, setData] = useState(null),
+  const [data, setData] = useState(null),
     [page, setPage] = useState(1),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false);
-  const { setPreferences } = useSite();
+  const { viewer: user } = useSite();
   const requestRevision = useRef(0);
   async function refresh() {
     const revision = ++requestRevision.current;
@@ -80,14 +79,6 @@ export default function CommunityPage({ kind }) {
     if (kind === "notifications")
       window.dispatchEvent(new Event("cola:notifications"));
   }
-  useEffect(() => {
-    socialApi("me")
-      .then((d) => {
-        setUser(d.user);
-        setPreferences(d.user?.preferences || {});
-      })
-      .catch((e) => setError(e.message));
-  }, []);
   useEffect(() => {
     if ((user || (kind === "journal" && mode === "new")) && feedType !== null)
       refresh().catch((e) => setError(e.message));

@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { db } from "../../../lib/db.js";
-import { currentUser } from "../../../lib/auth.js";
+import { currentViewer } from "../../../lib/viewer.js";
 import {
   legalKinds,
   legalTitles,
@@ -41,7 +41,7 @@ export default async function Page({ params, searchParams }) {
   if (search.revision && !document) notFound();
   return (
     <>
-      <GlobalHeader user={await currentUser()} />
+      <GlobalHeader user={await currentViewer()} />
       <main className={styles.page}>
         <h1>{legalTitles[kind]}</h1>
         {document ? (
