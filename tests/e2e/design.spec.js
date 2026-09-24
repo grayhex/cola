@@ -120,7 +120,16 @@ test("dense visual system: shared cards, filters, search, themes and responsive 
         .locator(".card-open-photo > img")
         .evaluate((el) => getComputedStyle(el).objectFit),
     ).toBe("contain");
-    await expect(card.locator(".card-info")).not.toContainText("2020");
+    // #85: the year is its own clear label, unlike the tinted type labels.
+    const year = card.locator('[data-bike-label="year"]');
+    await expect(year).toHaveText("2020");
+    const tone = (el) => {
+      const style = getComputedStyle(el);
+      return [style.color, style.backgroundColor].join(" ");
+    };
+    expect(await year.evaluate(tone)).not.toBe(
+      await classification.locator(":scope > span").first().evaluate(tone),
+    );
     const heading = await page.locator(".garage-heading h1").boundingBox();
     const controls = await page.locator(".showcase-actions").boundingBox();
     expect(heading.width).toBeGreaterThan(100);
