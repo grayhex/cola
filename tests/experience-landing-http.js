@@ -87,6 +87,19 @@ const entry = await api("journal", "POST", {
   isPublic: true,
 });
 assert.equal(entry.status, 201, JSON.stringify(entry.body));
+// An installation story: the fork is captured with the entry.
+const firstBike = (await api("bikes/" + bikes[0])).body.bike;
+const installed = await api("journal", "POST", {
+  bikeId: bikes[0],
+  kind: "build",
+  title: "Поставил вилку " + nonce,
+  body: "Новая вилка встала без переделок " + nonce,
+  status: "published",
+  isPublic: true,
+  componentIds: [firstBike.components.find((c) => c.name === fork).id],
+  installationResult: "direct",
+});
+assert.equal(installed.status, 201, JSON.stringify(installed.body));
 
 const modelPath = `/experience/orbea/occam-lt-${nonce}`,
   partPath = `/experience/parts/${encodeURIComponent("вилка")}/fox-36-${nonce}`;
@@ -97,6 +110,9 @@ assert.equal(landing.canonical, base + modelPath);
 for (const text of [
   `<h1>Orbea ${model}</h1>`,
   "3 сборки",
+  "MTB",
+  "Что ставили владельцы",
+  "Поставил вилку " + nonce,
   `Сборка 1 ${nonce}`,
   `Сборка 3 ${nonce}`,
   "Сервис вилки " + nonce,

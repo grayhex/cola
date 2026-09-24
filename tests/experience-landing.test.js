@@ -17,6 +17,7 @@ import {
   partLanding,
 } from "../lib/experience-landing.js";
 import { plural } from "../lib/plural.js";
+import { classificationLabels } from "../lib/bike-classification.js";
 
 test("landing addresses keep whole names in Latin and Cyrillic", () => {
   assert.equal(landingSlug("Stumpjumper EVO Comp"), "stumpjumper-evo-comp");
@@ -101,6 +102,19 @@ test("model and part pages count public builds under every spelling", async () =
         [randomUUID(), owner, bikes.a, distance, "landing-" + status, status],
       );
 
+    // An installation story on one build, a draft and a service entry.
+    const saddlePart = (
+      await db.query("SELECT id,name,category,section FROM components WHERE bike_id=$1", [bikes.b])
+    ).rows[0];
+    for (const [kind, status] of [
+      ["build", "published"],
+      ["build", "draft"],
+      ["service", "published"],
+    ])
+      await db.query(
+        "INSERT INTO journal_entries(id,share_id,owner_id,bike_id,kind,title,body,status,is_public,components,published_at) VALUES($1,$1,$2,$3,$4,'Седло','Поставил седло',$5,true,$6,now())",
+        [randomUUID(), owner, bikes.b, kind, status, JSON.stringify([saddlePart])],
+      );
     const cube = await modelLanding(db, null, "куб", "тревел");
     assert.equal(cube.builds, 4, "private and blocked builds stay out");
     assert.equal(cube.title, "Cube Travel");
@@ -114,6 +128,14 @@ test("model and part pages count public builds under every spelling", async () =
       cube.bikes.map((b) => b.id).sort(),
       [bikes.a, bikes.b, bikes.c, bikes.d].sort(),
     );
+    assert.deepEqual(cube.types, [
+      { label: classificationLabels({ category: "road" })[0], builds: 4 },
+    ]);
+    assert.equal(cube.installs.length, 1, "drafts and service entries are not installations");
+    assert.equal(cube.installs[0].name, "Брукс С17");
+    assert.equal(cube.installs[0].entries, 1);
+    assert.match(cube.installs[0].search, /type=journal/);
+    assert.equal(cube.entryCount, 2, "published entries only");
     assert.equal(cube.parts.length, 1, "spellings of one saddle are one part");
     assert.equal(cube.parts[0].builds, 4);
     assert.equal(cube.parts[0].path, partLandingPath(cube.parts[0].category, cube.parts[0].name));

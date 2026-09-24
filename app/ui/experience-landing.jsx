@@ -17,6 +17,11 @@ export default function ExperienceLanding({ data }) {
   const model = data.kind === "model";
   const facts = [
     count(data.builds, "сборка", "сборки", "сборок"),
+    ...(model
+      ? data.types.map((type) =>
+          data.types.length > 1 ? `${type.label}: ${type.builds}` : type.label,
+        )
+      : []),
     model && data.years.length &&
       (data.years[0] === data.years[1] ? `${data.years[0]} год` : `${data.years[0]}–${data.years[1]}`),
     model && data.weight && `в среднем ${data.weight.toLocaleString("ru-RU")} кг`,
@@ -53,6 +58,21 @@ export default function ExperienceLanding({ data }) {
                   <Link href={part.path}>{part.name}</Link>
                   <span>
                     {part.category} · {count(part.builds, "сборка", "сборки", "сборок")}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+        {model && data.installs.length > 0 && (
+          <section className={styles.section} aria-labelledby="landing-installs">
+            <h2 id="landing-installs">Что ставили владельцы</h2>
+            <ul className={styles.links}>
+              {data.installs.map((part) => (
+                <li key={part.category + part.name}>
+                  <Link href={part.search}>{part.name}</Link>
+                  <span>
+                    {part.category} · {count(part.entries, "запись", "записи", "записей")}
                   </span>
                 </li>
               ))}
