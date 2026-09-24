@@ -53,21 +53,24 @@ export function SocialHeader({ user }) {
 }
 export function SocialFooter() {
   return (
-    // One line like the mockup (#104): brand, documents, version. Sections
-    // are in the header and the phone tab bar.
     <footer className={footerStyles.footer}>
       <div className={footerStyles.inner}>
-        <p className={footerStyles.brand}>
-          <Link href="/">ColaBike</Link>
-          <span>Люди. Велосипеды. Истории.</span>
-        </p>
+        <Link className={footerStyles.brand} href="/">
+          ColaBike
+        </Link>
+        <span>Люди. Велосипеды. Истории.</span>
         <nav aria-label="Нижняя навигация">
+          <Link href="/bikes">Велосипеды</Link>
+          <Link href="/journal">Журнал</Link>
+          <Link href="/articles">Статьи</Link>
+          <Link href="/rides">Покатушки</Link>
+          <Link href="/market">Рынок</Link>
           <Link href="/about">О проекте</Link>
           <Link href="/legal/terms">Соглашение</Link>
           <Link href="/legal/privacy">Политика обработки данных</Link>
           <a href="https://github.com/grayhex/cola">GitHub</a>
+          <Versions link={false} />
         </nav>
-        <Versions link={false} />
       </div>
     </footer>
   );

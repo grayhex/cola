@@ -1,5 +1,5 @@
 "use client";
-import { defaultArticleTopics } from "../../lib/article-topics.js";
+import { defaultArticleTopics } from "../../lib/ui-emoji.js";
 export default function ArticleTopicSettings({
   value = defaultArticleTopics,
   onChange,
@@ -10,10 +10,19 @@ export default function ArticleTopicSettings({
     <section className="admin-panel">
       <h2>Темы базы знаний</h2>
       <p className="help">
-        Рубрики доступны авторам статей. Удаление рубрики не удаляет статьи.
+        Рубрики и их эмодзи доступны авторам статей. Удаление рубрики не удаляет
+        статьи.
       </p>
       {value.map((v, i) => (
         <div className="article-topic-row" key={v.id}>
+          <label className="field">
+            <span>Эмодзи рубрики</span>
+            <input
+              maxLength={24}
+              value={v.emoji}
+              onChange={(e) => set(i, "emoji", e.target.value)}
+            />
+          </label>
           <label className="field">
             <span>Название рубрики</span>
             <input
@@ -42,6 +51,7 @@ export default function ArticleTopicSettings({
             {
               id: "topic-" + crypto.randomUUID().slice(0, 8),
               label: "Новая рубрика",
+              emoji: "📖",
             },
           ])
         }

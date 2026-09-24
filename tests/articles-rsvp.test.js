@@ -68,16 +68,12 @@ test("article markup renders a small safe subset, attachment references and plai
       ],
     }).success,
   );
-  // Emoji slots gave way to fixed icons (#104): saved values still validate
-  // and are dropped, so old settings can be saved again.
-  const legacy = settingsInput.safeParse({
-    ...defaultSettings,
-    emojis: { bike: "🚲", unknown: "x" },
-    articleTopics: [{ ...defaultSettings.articleTopics[0], emoji: "🔧" }],
-  });
-  assert(legacy.success);
-  assert.equal(legacy.data.emojis, undefined);
-  assert.equal(legacy.data.articleTopics[0].emoji, undefined);
+  assert(
+    !settingsInput.safeParse({
+      ...defaultSettings,
+      emojis: { ...defaultSettings.emojis, unknown: "x" },
+    }).success,
+  );
 });
 
 test("standalone articles: draft visibility, ownership, attachments, topics, comments and moderation", async () => {

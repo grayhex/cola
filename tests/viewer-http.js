@@ -60,7 +60,7 @@ assert.equal(created.status, 201, JSON.stringify(created.body));
 const { bike } = (await reader("bikes/" + created.body.id)).body;
 const bikePath = "/b/" + encodeURIComponent(`${bike.slug}-${bike.public_id}`);
 const account = `aria-label="Аккаунт — ${name}"`;
-const guestLogin = /class="nav-login" href="\/account">[\s\S]{0,400}?Войти/;
+const guestLogin = /class="nav-trigger" href="\/account">[\s\S]{0,400}?Войти/;
 // A 404 page is not in this list: Next sends it as an empty shell and draws it
 // in the browser, where server-render.spec.js checks its header.
 for (const path of ["/", "/bikes", "/journal", "/articles", "/rides", "/market", "/records", "/about", "/legal/terms", "/account", bikePath]) {

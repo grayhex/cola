@@ -4,7 +4,7 @@ import pg from "pg";
 import sharp from "sharp";
 import { randomUUID } from "node:crypto";
 const origin = process.env.TEST_ORIGIN || "http://localhost:3100";
-test("bike page layout, raster map, six-ride accordion, preferences and grouped admin", async ({
+test("three-column bike, raster map, six-ride accordion, preferences and grouped admin", async ({
   page,
   isMobile,
 }, info) => {
@@ -117,19 +117,19 @@ test("bike page layout, raster map, six-ride accordion, preferences and grouped 
         .locator(".bike-rides .ride-list-item[open] .ride-route image")
         .first(),
     ).toBeVisible();
-    // The mockup (#104): the gallery and the facts side by side, then the
-    // whole build and the rides below them.
-    const [gallery, facts, specs, rides] = await Promise.all(
-      [".hero-photo", ".bike-heading", ".specifications", ".bike-rides"].map(
-        (c) => page.locator(".bike-detail " + c).first().boundingBox(),
+    const boxes = await Promise.all(
+      [".showcase", ".specifications", ".bike-rides"].map((c) =>
+        page.locator(".bike-detail > " + c).boundingBox(),
       ),
     );
     if (!isMobile) {
-      expect(gallery.x + gallery.width).toBeLessThanOrEqual(facts.x);
-      expect(Math.abs(gallery.y - facts.y)).toBeLessThan(40);
-    } else expect(gallery.y).toBeLessThan(facts.y);
-    expect(facts.y + facts.height).toBeLessThanOrEqual(specs.y);
-    expect(specs.y + specs.height).toBeLessThanOrEqual(rides.y);
+      expect(boxes[0].x + boxes[0].width).toBeLessThanOrEqual(boxes[1].x);
+      expect(boxes[1].x + boxes[1].width).toBeLessThanOrEqual(boxes[2].x);
+      expect(Math.abs(boxes[0].y - boxes[2].y)).toBeLessThan(3);
+    } else {
+      expect(boxes[0].y).toBeLessThan(boxes[1].y);
+      expect(boxes[1].y).toBeLessThan(boxes[2].y);
+    }
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth + 1,

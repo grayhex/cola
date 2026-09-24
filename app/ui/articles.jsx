@@ -10,7 +10,7 @@ import {
   socialApi,
 } from "./social-primitives.jsx";
 import { useSite } from "./site-provider.jsx";
-import SiteIcon from "./site-icon.jsx";
+import SiteEmoji from "./site-emoji.jsx";
 import ChoiceMenu from "./choice-menu.jsx";
 import ArticleBody from "./article-body.jsx";
 import Discussion from "./discussion.jsx";
@@ -37,7 +37,7 @@ export function ArticleCard({ article: a, topics }) {
       <div className="article-card-content">
         <div className="article-meta">
           <span>
-            {topic?.label || "Без рубрики"}
+            {topic?.emoji} {topic?.label || "Без рубрики"}
           </span>
           {a.status === "draft" && <span className="bike-label">Черновик</span>}
         </div>
@@ -101,7 +101,7 @@ export function Articles() {
             </p>
           </div>
           <a href="/articles/new" className="hf-button">
-            <SiteIcon name="write" />
+            <SiteEmoji name="write" />
             Написать статью
           </a>
         </div>
@@ -113,7 +113,7 @@ export function Articles() {
               setPage(1);
             }}
           >
-            <SiteIcon name="articles" />
+            <SiteEmoji name="articles" />
             База знаний
           </button>
           {user && (
@@ -124,7 +124,7 @@ export function Articles() {
                 setPage(1);
               }}
             >
-              <SiteIcon name="profile" />
+              <SiteEmoji name="profile" />
               Мои статьи
             </button>
           )}
@@ -138,10 +138,11 @@ export function Articles() {
               setPage(1);
             }}
             choices={[
-              { value: "", label: "Все рубрики", icon: "articles" },
+              { value: "", label: "Все рубрики", emoji: "articles" },
               ...topics.map((t) => ({
                 value: t.id,
                 label: t.label,
+                symbol: t.emoji,
               })),
             ]}
           />
@@ -161,7 +162,7 @@ export function Articles() {
               placeholder="Например, размеры покрышек"
             />
             <button className="hf-button">
-              <SiteIcon name="search" />
+              <SiteEmoji name="search" />
               Найти
             </button>
           </form>
@@ -246,7 +247,7 @@ export function ArticlePage({ share, initial = null }) {
             <>
               <header className="article-heading">
                 <p className="article-meta">
-                  {topic?.label || "Без рубрики"}
+                  {topic?.emoji} {topic?.label || "Без рубрики"}
                   {article.status === "draft" && " · Черновик"}
                 </p>
                 <h1>{article.title || "Без заголовка"}</h1>
@@ -258,7 +259,7 @@ export function ArticlePage({ share, initial = null }) {
                       className="hf-button"
                       onClick={() => setEditing(true)}
                     >
-                      <SiteIcon name="write" />
+                      <SiteEmoji name="write" />
                       Редактировать
                     </button>
                   )}
@@ -377,7 +378,7 @@ function ArticleEditor({ initial, onSaved, onCancel }) {
           )}
           {topics.map((t) => (
             <option key={t.id} value={t.id}>
-              {t.label}
+              {t.emoji} {t.label}
             </option>
           ))}
         </select>
@@ -387,7 +388,7 @@ function ArticleEditor({ initial, onSaved, onCancel }) {
           maxLength={20000} rows={16} disabled={busy} photos={photos} />
         <div className="article-toolbar">
           <label className="hf-button">
-            <SiteIcon name="add" />
+            <SiteEmoji name="add" />
             Иллюстрация
             <input
               aria-label="Иллюстрация"
@@ -493,7 +494,7 @@ function ArticleEditor({ initial, onSaved, onCancel }) {
       )}
       <div className="article-toolbar">
         <button className="hf-button" disabled={busy} value="draft">
-          <SiteIcon name="saved" />
+          <SiteEmoji name="saved" />
           Сохранить черновик
         </button>
         <button
@@ -501,7 +502,7 @@ function ArticleEditor({ initial, onSaved, onCancel }) {
           disabled={busy || !form.title.trim() || !form.body.trim()}
           value="published"
         >
-          <SiteIcon name="write" />
+          <SiteEmoji name="write" />
           {initial?.status === "published" ? "Обновить статью" : "Опубликовать"}
         </button>
         {onCancel && (

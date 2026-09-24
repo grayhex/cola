@@ -1,61 +1,53 @@
-/* One line: brand, documents, versions; stacked on phones (#104). */
 .footer {
-  border-top: 1px solid var(--line);
-  background: var(--bg);
+  border-top: 1px solid var(--border);
+  background: var(--surface);
 }
 .inner {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   flex-wrap: wrap;
-  gap: 8px 24px;
-  box-sizing: border-box;
-  max-width: calc(var(--content-width) + 2 * var(--gutter));
+  gap: 16px 28px;
+  max-width: var(--content-width);
   margin: auto;
-  padding: 32px var(--gutter);
-  color: var(--muted);
+  padding: 26px 24px;
   font-size: 14px;
+  color: var(--text-muted);
 }
 .brand {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 4px 12px;
-  margin: 0;
-}
-.brand a {
-  color: var(--ink);
-  font: 800 16px/1.2 var(--font-display);
-  letter-spacing: -0.01em;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
 }
 .inner nav {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 0 24px;
+  gap: 8px 20px;
+  margin-left: auto;
 }
-.inner nav a {
+.inner a {
   display: inline-flex;
   align-items: center;
-  min-height: 44px;
-  color: var(--muted);
+  min-height: 36px;
 }
-.inner nav a:hover {
-  color: var(--ink);
+.inner a:hover {
   text-decoration: underline;
 }
-.inner :global(.build-versions) {
-  color: var(--muted);
-  font: 400 12px/1.4 var(--font-mono);
-}
-@media (max-width: 767px) {
+@media (max-width: 700px) {
   .inner {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 4px;
-    padding: 28px var(--gutter);
+    padding: 20px 16px;
+    gap: 8px 16px;
   }
   .inner nav {
-    gap: 0 20px;
+    width: 100%;
+    margin: 0;
+    gap: 6px 20px;
   }
+  .inner a {
+    min-height: 44px;
+  }
+}
+
+.inner :global(.build-versions) {
+  font-size: 12px;
 }

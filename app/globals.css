@@ -3,14 +3,11 @@
 }
 body {
   margin: 0;
-  /* The page covers the whole screen (viewport-fit=cover): keep text out
-     of the notch in landscape. */
-  padding-inline: env(safe-area-inset-left) env(safe-area-inset-right);
-  background: var(--bg);
+  background: var(--surface);
   color: var(--ink);
-  font-family: var(--font-body);
+  font-family: var(--site-font);
   font-size: 16px;
-  line-height: 1.55;
+  line-height: 1.5;
 }
 button,
 input,
@@ -83,28 +80,18 @@ h2,
 h3 {
   line-height: 1.15;
 }
-h1,
-h2 {
-  font-family: var(--font-display);
-  letter-spacing: -0.02em;
-}
 h1 {
-  font-size: clamp(30px, 3.4vw, 44px);
-  font-weight: 800;
+  font-size: clamp(28px, 3vw, 36px);
+  font-weight: 700;
+  letter-spacing: -0.5px;
   margin-bottom: 12px;
 }
 h2 {
-  font-size: clamp(22px, 2.2vw, 30px);
-  font-weight: 700;
+  font-size: 26px;
+  letter-spacing: -0.5px;
 }
 h3 {
-  font-size: 18px;
-  font-weight: 700;
-}
-/* Numbers, specifications and records. */
-.mono {
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
+  font-size: 19px;
 }
 p {
   color: var(--muted);
@@ -746,11 +733,11 @@ dialog::backdrop {
 .toast,
 .saving {
   position: fixed;
-  bottom: calc(25px + var(--tabbar-space, 0px));
+  bottom: 25px;
   left: 50%;
   transform: translateX(-50%);
-  background: var(--button-bg);
-  color: var(--button-fg);
+  background: var(--ink);
+  color: var(--accent-foreground);
   padding: 14px 20px;
   border-radius: 8px;
   z-index: var(--z-toast);

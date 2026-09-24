@@ -359,7 +359,7 @@ test("persisted theme uses a single typeface, site accent and responsive columns
       await page
         .locator("body")
         .evaluate((el) => getComputedStyle(el).fontFamily),
-    ).toContain("Cola Manrope");
+    ).toContain("Cola Source Sans 3");
     await noOverflow(page);
     expect(
       (await page.locator(".bike-card").first().boundingBox()).width,
@@ -368,7 +368,7 @@ test("persisted theme uses a single typeface, site accent and responsive columns
       await page
         .locator(".site-root")
         .evaluate((el) => getComputedStyle(el).getPropertyValue("--accent")),
-    ).toBe("#C2410C");
+    ).toBe("#F3B51B");
   }
 });
 

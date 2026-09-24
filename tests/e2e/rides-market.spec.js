@@ -145,8 +145,6 @@ test("Garmin import without track, chosen fields, GPX mismatch and future planni
     fullPage: true,
   });
   await page.goto("/");
-  // "Что нового" shows one kind at a time (#104).
-  await page.getByRole("tab", { name: "Покатушки", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Weekend gravel plan" }),
   ).toBeVisible();
@@ -201,7 +199,6 @@ test("market publishes images and price, enters home feed, and closes a listing"
     fullPage: true,
   });
   await page.goto("/");
-  await page.getByRole("tab", { name: "Рынок", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Gravel wheelset" }),
   ).toBeVisible();
@@ -216,6 +213,7 @@ test("market publishes images and price, enters home feed, and closes a listing"
 
 test("OSM thumbnails with Yandex setting, bounded design headings, SVG themes and footer versions", async ({
   page,
+  isMobile,
 }, info) => {
   const user = await register(page),
     bikeId = await bike(page);
@@ -315,13 +313,14 @@ test("OSM thumbnails with Yandex setting, bounded design headings, SVG themes an
         document.documentElement.dataset.theme = v;
         localStorage.setItem("cola:theme", v);
       }, theme);
-      // The hero frame keeps the animation on every screen (#104).
-      const visible = page.locator("[data-hero-animation] img:visible");
-      await expect(visible).toHaveCount(1);
-      await expect(visible).toHaveAttribute(
-        "src",
-        "/api/assets/" + ids[theme === "light" ? 0 : 1],
-      );
+      if (!isMobile) {
+        const visible = page.locator("[data-hero-animation] img:visible");
+        await expect(visible).toHaveCount(1);
+        await expect(visible).toHaveAttribute(
+          "src",
+          "/api/assets/" + ids[theme === "light" ? 0 : 1],
+        );
+      }
       await noOverflow(page);
       await page.screenshot({
         path: info.outputPath("home-" + theme + ".png"),

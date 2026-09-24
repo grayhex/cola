@@ -8,8 +8,6 @@ export default function SearchBox({
   filters = {},
   hero = false,
   contained = false,
-  // The header field: a pill, Enter searches, suggestions drop below.
-  pill = false,
   autoFocus = false,
   onNavigate,
   shortcuts = false,
@@ -28,10 +26,7 @@ export default function SearchBox({
   useEffect(() => setQuery(initialQuery), [initialQuery]);
   useEffect(() => {
     if (!autoFocus) return;
-    // A frame later: a surrounding dialog's showModal() runs after this
-    // effect and moves focus to its first button.
-    const frame = requestAnimationFrame(() => input.current?.focus());
-    return () => cancelAnimationFrame(frame);
+    input.current?.focus();
   }, [autoFocus]);
   useEffect(() => {
     if (!shortcuts) return;
@@ -118,14 +113,14 @@ export default function SearchBox({
   return (
     <div
       ref={root}
-      className={`${styles.root} ${hero ? styles.hero : ""} ${contained ? styles.contained : ""} ${pill ? styles.pill : ""}`}
+      className={`${styles.root} ${hero ? styles.hero : ""} ${contained ? styles.contained : ""}`}
       onBlur={(e) => {
         if (e.relatedTarget && !e.currentTarget.contains(e.relatedTarget))
           setOpen(false);
       }}
     >
       <form role="search" onSubmit={submit} className={styles.control}>
-        <Search size={pill ? 18 : 21} aria-hidden="true" />
+        <Search size={21} aria-hidden="true" />
         <input
           ref={input}
           type="search"
@@ -141,11 +136,7 @@ export default function SearchBox({
           autoComplete="off"
           maxLength={150}
           value={query}
-          placeholder={
-            pill
-              ? "Сборки, детали, маршруты"
-              : "Найти велосипед, компонент или покатушку…"
-          }
+          placeholder="Найти велосипед, компонент или покатушку…"
           onFocus={() => setOpen(true)}
           onChange={(e) => {
             setQuery(e.target.value);
@@ -175,11 +166,9 @@ export default function SearchBox({
             }
           }}
         />
-        {!pill && (
-          <button type="submit" aria-label="Найти" disabled={!query.trim()}>
-            <ArrowRight size={20} aria-hidden="true" />
-          </button>
-        )}
+        <button type="submit" aria-label="Найти" disabled={!query.trim()}>
+          <ArrowRight size={20} aria-hidden="true" />
+        </button>
       </form>
       {open && query.trim() && (
         <div className={styles.popover}>

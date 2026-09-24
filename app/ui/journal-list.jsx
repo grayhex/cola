@@ -1,9 +1,10 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import { Plus, Heart, X } from "./icons.jsx";
+import { Plus, NotebookPen, Heart, X } from "./icons.jsx";
 import { socialApi } from "./social-primitives.jsx";
 import { PageControls } from "./community-controls.jsx";
 import { journalKinds } from "../../lib/journal-kinds.js";
+import BikeFollow from "./bike-follow.jsx";
 import { publicPath } from "../../lib/public-urls.js";
 export default function JournalList({ bike, owner = false, editable = false }) {
   const [data, setData] = useState(null),
@@ -69,7 +70,9 @@ export default function JournalList({ bike, owner = false, editable = false }) {
     <section className="bike-journal" id="journal">
       <div className="section-heading">
         <div>
-          <h2>История сборки</h2>
+          <h2>
+            <NotebookPen size={20} /> Журнал велосипеда
+          </h2>
           <p className="help">Изменения, опыт и истории владельца.</p>
         </div>
         {owner && (
@@ -79,6 +82,7 @@ export default function JournalList({ bike, owner = false, editable = false }) {
           </a>
         )}
       </div>
+      {bike.is_public && !owner && <BikeFollow bikeId={bike.id} />}
       {change && (
         <div className="journal-prompt">
           <span>Комплектация обновлена.</span>
@@ -97,36 +101,29 @@ export default function JournalList({ bike, owner = false, editable = false }) {
       )}
       {error && <p role="alert">{error}</p>}
       {!data && !error && <p role="status">Загружаем журнал…</p>}
-      {data?.entries.length > 0 && (
-        <ol className="journal-timeline">
-          {data.entries.map((e) => (
-            <li className="journal-list-entry" key={e.id}>
-              <div className="journal-entry-meta">
-                <span>{journalKinds[e.kind]}</span>
-                <time>
-                  {e.eventDate ||
-                    new Date(e.createdAt).toLocaleDateString("ru-RU")}
-                </time>
-                {e.status === "draft" ? (
-                  <span>Черновик</span>
-                ) : !e.isPublic || !e.bikePublic ? (
-                  <span>Приватная запись</span>
-                ) : null}
-              </div>
-              <h3>
-                <a href={publicPath("journal", e)}>
-                  {e.title || "Без заголовка"}
-                </a>
-              </h3>
-              <p>{e.excerpt ?? e.body}</p>
-              <small>
-                <Heart size={12} aria-label="Лайки" /> {e.likes} · Комментарии{" "}
-                {e.comments}
-              </small>
-            </li>
-          ))}
-        </ol>
-      )}
+      {data?.entries.map((e) => (
+        <article className="journal-list-entry" key={e.id}>
+          <div className="journal-entry-meta">
+            <span>{journalKinds[e.kind]}</span>
+            <time>
+              {e.eventDate || new Date(e.createdAt).toLocaleDateString("ru-RU")}
+            </time>
+            {e.status === "draft" ? (
+              <span>Черновик</span>
+            ) : !e.isPublic || !e.bikePublic ? (
+              <span>Приватная запись</span>
+            ) : null}
+          </div>
+          <h3>
+            <a href={publicPath("journal", e)}>{e.title || "Без заголовка"}</a>
+          </h3>
+          <p>{e.excerpt ?? e.body}</p>
+          <small>
+            <Heart size={12} aria-label="Лайки" /> {e.likes} · Комментарии{" "}
+            {e.comments}
+          </small>
+        </article>
+      ))}
       {data && !data.entries.length && (
         <p className="help">История этого велосипеда ещё не началась.</p>
       )}

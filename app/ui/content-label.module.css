@@ -7,32 +7,43 @@
   max-width: 100%;
   margin-top: 6px;
 }
-/* Content type as the mockup's meta line: neutral, monospaced, no color
-   coding (#104); the text says the type. */
 .label.label {
+  --label-tone: #64748b;
+  --label-ink: #475569;
   display: inline-flex;
   align-items: center;
   justify-content: flex-start;
-  gap: 6px;
+  gap: 5px;
   flex: 0 1 auto;
   min-width: 0;
   max-width: 100%;
-  min-height: 26px;
-  padding: 3px 10px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-pill);
-  background: var(--surface);
-  color: var(--muted);
-  font-family: var(--font-mono);
-  font-size: 11px;
+  min-height: 27px;
+  padding: 4px 8px;
+  border: 1px solid color-mix(in srgb, var(--label-tone) 24%, var(--line));
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--label-tone) 9%, var(--paper));
+  color: var(--label-ink);
+  font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
   line-height: 1.35;
+  font-family: inherit;
   white-space: normal;
   overflow-wrap: anywhere;
   box-shadow: none;
 }
+.label[data-tone="blue"] { --label-tone: #3b82f6; --label-ink: #1d4ed8; }
+.label[data-tone="green"] { --label-tone: #22a35a; --label-ink: #176b3b; }
+.label[data-tone="teal"] { --label-tone: #149d96; --label-ink: #0f706b; }
+.label[data-tone="purple"] { --label-tone: #9562dc; --label-ink: #7543b0; }
+.label[data-tone="amber"] { --label-tone: #cf861c; --label-ink: #8a570d; }
+.label[data-tone="rose"] { --label-tone: #d6618f; --label-ink: #a52c60; }
+:global([data-theme="dark"]) .label { --label-ink: #cbd5e1; }
+:global([data-theme="dark"]) .label[data-tone="blue"] { --label-ink: #93c5fd; }
+:global([data-theme="dark"]) .label[data-tone="green"] { --label-ink: #86dfaa; }
+:global([data-theme="dark"]) .label[data-tone="teal"] { --label-ink: #77d8d0; }
+:global([data-theme="dark"]) .label[data-tone="purple"] { --label-ink: #ccb0f3; }
+:global([data-theme="dark"]) .label[data-tone="amber"] { --label-ink: #edc37a; }
+:global([data-theme="dark"]) .label[data-tone="rose"] { --label-ink: #f1a5c6; }
 .label > svg { flex: 0 0 auto; }
 .photoActions {
   display: flex;
@@ -54,3 +65,10 @@
 .compactMedia { display: flex; flex-direction: column; align-items: stretch; gap: 6px; min-width: 0; }
 .compactMedia [data-bike-photo-actions] { margin-top: 0; justify-content: center; }
 .compactMedia [data-bike-photo-actions] button { justify-content: center; }
+.eventCard.eventCard { --event-tone: #64748b; border-inline-start: 3px solid color-mix(in srgb, var(--event-tone) 65%, var(--line)); }
+.eventCard[data-event="bike"] { --event-tone: #3b82f6; }
+.eventCard[data-event="ride"] { --event-tone: #22a35a; }
+.eventCard[data-event="planned"] { --event-tone: #9562dc; }
+.eventCard[data-event="market"] { --event-tone: #cf861c; }
+.eventCard[data-event="journal"], .eventCard[data-event="article"] { --event-tone: #149d96; }
+.eventCard[data-event="achievement"] { --event-tone: #d6618f; }

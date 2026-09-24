@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import SiteIcon from "./site-icon.jsx";
+import SiteEmoji from "./site-emoji.jsx";
 import styles from "./ride-creation-actions.module.css";
 
 // Public rides and the account use the same two entry points. CSV always
@@ -9,11 +9,11 @@ export default function RideCreationActions({ onSelect, disabled = false, mode =
   const action = (kind, text, icon) => onSelect ? (
     <button type="button" className="button secondary" disabled={disabled}
       aria-pressed={mode === kind} onClick={() => onSelect(kind)}>
-      <SiteIcon name={icon} />{text}
+      <SiteEmoji name={icon} />{text}
     </button>
   ) : (
     <Link className="button secondary" href={`/account?tab=rides&action=${kind}`}>
-      <SiteIcon name={icon} />{text}
+      <SiteEmoji name={icon} />{text}
     </Link>
   );
   return (
@@ -32,17 +32,17 @@ export default function RideCreationActions({ onSelect, disabled = false, mode =
         <span>Загрузить прошлые поездки:</span>
         {onSelect ? (
           <button type="button" className="quiet" disabled={disabled} aria-pressed={mode === "import"}
-            onClick={() => onSelect("import")}><SiteIcon name="import" />Импорт Garmin CSV</button>
+            onClick={() => onSelect("import")}><SiteEmoji name="import" />Импорт Garmin CSV</button>
         ) : (
-          <Link className="quiet" href="/account?tab=rides&action=import"><SiteIcon name="import" />Импорт Garmin CSV</Link>
+          <Link className="quiet" href="/account?tab=rides&action=import"><SiteEmoji name="import" />Импорт Garmin CSV</Link>
         )}
         {/* FIT covers Garmin, Wahoo, Magene, Bryton, iGPSport and Coros: the
             regular upload form takes it and explains how to export it. */}
         {onSelect ? (
           <button type="button" className="quiet" disabled={disabled}
-            onClick={() => onSelect("add")}><SiteIcon name="import" />Загрузить FIT</button>
+            onClick={() => onSelect("add")}><SiteEmoji name="import" />Загрузить FIT</button>
         ) : (
-          <Link className="quiet" href="/account?tab=rides&action=add"><SiteIcon name="import" />Загрузить FIT</Link>
+          <Link className="quiet" href="/account?tab=rides&action=add"><SiteEmoji name="import" />Загрузить FIT</Link>
         )}
       </div>
     </section>

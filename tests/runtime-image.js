@@ -40,8 +40,7 @@ for (const name of ["maplibre-gl-worker.mjs", "maplibre-gl-shared.mjs"]) {
   assert.deepEqual(await readFile(`public/maplibre/${name}`), await readFile(path.join(mapDist, name)));
   assert.equal((await fetch(`http://localhost:3000/maplibre/${name}`)).status, 200);
 }
-for (const font of ["unbounded", "manrope", "jetbrains-mono"])
-  await access(`public/fonts/${font}-OFL.txt`);
+await access("public/fonts/sourcesans3-OFL.txt");
 assert.equal((await fetch("http://localhost:3000/api/ready")).status, 200);
 assert.equal((await fetch(process.env.BIKE_RESOLVER_URL + "/ready")).status, 200);
 
