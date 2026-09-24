@@ -1,0 +1,19 @@
+{
+  // Type checking of lib/ from JSDoc (#82): `pnpm typecheck`, also in CI.
+  // Next.js reads only paths, baseUrl and decorator/JSX options from this file;
+  // none are set, so the build does not change. Widen "include" step by step.
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "strict": false,
+    "target": "es2024",
+    "lib": ["es2024", "dom", "dom.iterable"],
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "types": ["node"],
+    "skipLibCheck": true,
+    "maxNodeModuleJsDepth": 0
+  },
+  "include": ["lib/**/*.js"]
+}
