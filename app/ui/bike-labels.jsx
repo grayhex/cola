@@ -42,7 +42,7 @@ export function BikeLike({ bike, reaction, t = (s) => s }) {
       <span>
         <SiteIcon name="heart" />
         {t("Нравится")}
-      </span>
+      </span>{" "}
       <strong>{reaction.likes ?? 0}</strong>
     </button>
   );

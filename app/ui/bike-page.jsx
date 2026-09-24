@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import Photo from "./bike-photo.jsx";
-import { Plus, Search, X, ArrowRight, ArrowDown } from "./icons.jsx";
+import { Plus, Search, Star, X, ArrowRight, ArrowDown } from "./icons.jsx";
 import { specRows } from "../../lib/garage-layout.js";
 import { routePaths } from "../../lib/ride-geometry.js";
 import { publicPath } from "../../lib/public-urls.js";
@@ -100,7 +100,10 @@ export function BikeGallery({
         )}
       </div>
       {(photos.length > 1 || (editable && photos.length > 0)) && (
-        <ul className={styles.thumbs} aria-label="Фотографии">
+        <ul
+          className={styles.thumbs + (editable ? " " + styles.editing : "")}
+          aria-label="Фотографии"
+        >
           {shown.map((p) => (
             <li key={p.id}>
               <button
@@ -116,19 +119,27 @@ export function BikeGallery({
                 <div className={styles.thumbTools}>
                   <button
                     type="button"
-                    className="quiet"
+                    className="icon"
+                    data-cover={p.is_cover || undefined}
                     disabled={busy || p.is_cover}
+                    aria-label={p.is_cover ? t("Обложка") : t("На обложку")}
+                    title={p.is_cover ? t("Обложка") : t("На обложку")}
                     onClick={() => onCover(p)}
                   >
-                    {p.is_cover ? t("Обложка") : t("На обложку")}
+                    <Star
+                      size={16}
+                      fill={p.is_cover ? "currentColor" : "none"}
+                      aria-hidden="true"
+                    />
                   </button>
                   <button
                     type="button"
                     className="icon"
                     aria-label={t("Удалить фото")}
+                    title={t("Удалить фото")}
                     onClick={() => onDelete(p)}
                   >
-                    <X size={14} />
+                    <X size={16} aria-hidden="true" />
                   </button>
                 </div>
               )}

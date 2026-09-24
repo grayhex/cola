@@ -92,7 +92,10 @@
   object-fit: contain;
   mix-blend-mode: normal;
 }
-:global([data-photo-mode="cover"]) .page .stage :global(.hero-photo:not(.photo-empty)) {
+:global([data-photo-mode="cover"])
+  .page
+  .stage
+  :global(.hero-photo:not(.photo-empty)) {
   object-fit: cover;
 }
 .page .stage :global(.photo-empty) {
@@ -160,7 +163,7 @@
   padding: 0;
   overflow: hidden;
   border: 0;
-  border-radius: 16px;
+  border-radius: var(--radius-sm);
   background: var(--line-soft);
   color: var(--ink);
   cursor: pointer;
@@ -182,13 +185,38 @@
   background: var(--surface-hover);
   font: 700 15px/1 var(--font-body);
 }
+/* Owner tools under each thumbnail: make it the cover, delete it. */
 .thumbTools {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 4px;
-  margin-top: 6px;
-  font-size: 12px;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+.page .thumbTools :global(.icon) {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  min-height: 32px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--ink);
+}
+.page .thumbTools :global(.icon[data-cover]) {
+  border-color: var(--accent);
+  color: var(--accent-text);
+  opacity: 1;
+}
+@media (pointer: coarse), (max-width: 767px) {
+  .page .thumbTools :global(.icon) {
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    min-height: 44px;
+  }
 }
 /* Facts */
 .page .info {
@@ -633,8 +661,10 @@
   .story {
     grid-template-columns: minmax(0, 1fr);
   }
+  /* Landscape photos fill the frame instead of sitting in bands. */
   .stage {
-    height: 420px;
+    height: auto;
+    aspect-ratio: 4 / 3;
   }
 }
 @media (max-width: 767px) {
@@ -649,8 +679,7 @@
     font-size: 13px;
   }
   .stage {
-    height: 300px;
-    border-radius: 24px;
+    border-radius: var(--radius-md);
   }
   .index {
     right: 12px;
@@ -663,7 +692,21 @@
   }
   .thumb {
     height: 60px;
-    border-radius: 12px;
+  }
+  /* Owners get a scrolling strip: two 44px tools need a wider tile. */
+  .editing {
+    display: flex;
+    margin: -5px;
+    padding: 5px 5px 8px;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+  }
+  .editing > li {
+    flex: 0 0 104px;
+    scroll-snap-align: start;
+  }
+  .editing .thumb {
+    height: 78px;
   }
   .page .info {
     gap: 20px;
@@ -708,7 +751,7 @@
   }
   .latest {
     padding: 22px;
-    border-radius: 24px;
+    border-radius: var(--radius-md);
   }
   .route svg {
     height: 140px;

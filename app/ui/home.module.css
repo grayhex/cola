@@ -763,7 +763,7 @@ a.liveEvent:hover {
   }
   .visual {
     min-height: 300px;
-    border-radius: 24px;
+    border-radius: var(--radius-md);
   }
   .liveChip {
     top: 14px;
@@ -777,7 +777,7 @@ a.liveEvent:hover {
     bottom: 12px;
     gap: 12px;
     padding: 10px 12px;
-    border-radius: 16px;
+    border-radius: var(--radius-sm);
   }
   .liveIcon {
     width: 36px;
@@ -894,7 +894,7 @@ a.liveEvent:hover {
   .records {
     gap: 14px;
     padding: 22px;
-    border-radius: 24px;
+    border-radius: var(--radius-md);
   }
   .home .news h2,
   .home .records h2 {
@@ -940,7 +940,7 @@ a.liveEvent:hover {
   }
   .recordList li {
     padding: 14px;
-    border-radius: 16px;
+    border-radius: var(--radius-sm);
   }
   .recordList li:last-child:nth-child(odd) {
     grid-column: 1 / -1;
@@ -956,7 +956,7 @@ a.liveEvent:hover {
   }
   .cta {
     padding: 28px 22px;
-    border-radius: 24px;
+    border-radius: var(--radius-md);
   }
   .cta p {
     font-size: 22px;
