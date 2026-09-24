@@ -10,7 +10,11 @@ import { groupedComponents } from "../../lib/garage-layout.js";
 import { useId, useState, useSyncExternalStore } from "react";
 import { useSite } from "./site-provider.jsx";
 import PartIcon from "./part-icon.jsx";
-import { experienceHref } from "../../lib/experience-catalog.js";
+import {
+  experienceHref,
+  landingSlug,
+  partLandingPath,
+} from "../../lib/experience-catalog.js";
 import { useHydrated } from "./use-hydrated.js";
 // Without a personal choice groups are open on wide screens and closed on phones.
 const wideQuery = "(min-width: 701px)";
@@ -31,6 +35,11 @@ export default function GroupedComponents({
   rub,
 }) {
   const { personalSettings } = useSite();
+  // Parts of a public bike have their own page (#74); others open the search.
+  const partHref = (c) =>
+    bike.is_public && bike.id !== "demo" && landingSlug(c.category) && landingSlug(c.name)
+      ? partLandingPath(c.category, c.name)
+      : experienceHref({ component: c.name, componentCategory: c.category });
   const [expanded, setExpanded] = useState({});
   const wide = useSyncExternalStore(subscribeWide, wideNow, () => false);
   const hydrated = useHydrated();
@@ -131,10 +140,7 @@ export default function GroupedComponents({
                   <small>{c.category}</small>
                   <strong>
                     <a
-                      href={experienceHref({
-                        component: c.name,
-                        componentCategory: c.category,
-                      })}
+                      href={partHref(c)}
                       title="Сборки и записи с этим компонентом"
                     >
                       {c.name}

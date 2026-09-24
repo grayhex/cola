@@ -40,3 +40,86 @@ for (const [path, limitKb] of budgets)
         "Load heavy parts with next/dynamic (see issue #79).",
     ).toBeLessThanOrEqual(limitKb);
   });
+
+// #117: entries, articles and comments come parsed from the server, so a
+// reader renders them without the Markdown parser and the editor.
+test("guests read an entry, an article and comments without the editor", async ({
+  page,
+  browser,
+  browserName,
+}) => {
+  test.skip(
+    browserName !== "chromium",
+    "Bundle contents do not depend on the browser; checked once in Chromium",
+  );
+  const { testConsents } = await import("../fixtures/legal.js");
+  const origin = process.env.TEST_ORIGIN || "http://localhost:3100";
+  const author = await browser.newContext();
+  const call = async (path, data) => {
+    const response = await author.request.post(origin + "/api/" + path, {
+      headers: { origin },
+      data,
+    });
+    expect(response.ok(), path + " " + (await response.text())).toBe(true);
+    return response.json();
+  };
+  const nonce = Date.now().toString(36);
+  await call("auth/register", {
+    ...testConsents,
+    name: "Reader " + nonce,
+    email: `reader-${nonce}@example.test`,
+    password: "bundle-budget-secret-123",
+  });
+  const bike = await call("bikes", {
+    name: "Reader bike " + nonce,
+    brand: "Cube",
+    model: "Travel",
+    year: 2020,
+    category: "road",
+    description: "",
+    color: "",
+    size: "",
+    weight: null,
+    is_public: true,
+  });
+  const entry = await call("journal", {
+    bikeId: bike.id,
+    kind: "story",
+    title: "Разметка " + nonce,
+    body: "**Жирный** текст и [ссылка](https://example.com/path)\n\n- пункт",
+    status: "published",
+    isPublic: true,
+  });
+  await call("journal/" + entry.id + "/comments", { body: "*курсив* в ответе" });
+  const article = await call("articles", {
+    title: "Статья " + nonce,
+    body: "## Подзаголовок\n\n> цитата из статьи",
+    topicId: "maintenance",
+    status: "published",
+  });
+  await author.close();
+
+  const scripts = [];
+  page.on("response", (response) => {
+    if (response.request().resourceType() === "script") scripts.push(response);
+  });
+  await page.goto("/j/" + entry.shareId, { waitUntil: "networkidle" });
+  await expect(page.locator(".journal-body strong")).toHaveText("Жирный");
+  await expect(page.locator(".journal-body a")).toHaveAttribute(
+    "href",
+    "https://example.com/path",
+  );
+  await expect(page.locator(".journal-body li")).toHaveText("пункт");
+  await expect(page.locator(".comment-body em")).toHaveText("курсив");
+  await page.goto("/articles/" + article.shareId, { waitUntil: "networkidle" });
+  await expect(page.locator(".article-prose h3")).toHaveText("Подзаголовок");
+  await expect(page.locator(".article-prose blockquote")).toContainText(
+    "цитата из статьи",
+  );
+  expect(scripts.length).toBeGreaterThan(0);
+  for (const response of scripts)
+    expect(
+      await response.text(),
+      new URL(response.url()).pathname + " carries the editor",
+    ).not.toContain("ProseMirror");
+});

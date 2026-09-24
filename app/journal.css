@@ -127,13 +127,13 @@
 }
 @media (min-width: 1200px) {
   .site-root .detail.bike-detail > .bike-journal {
-    grid-row: 7;
-  }
-  .site-root .detail.bike-detail > .bike-game {
     grid-row: 8;
   }
-  .site-root .detail.bike-detail > .discussion {
+  .site-root .detail.bike-detail > .bike-game {
     grid-row: 9;
+  }
+  .site-root .detail.bike-detail > .discussion {
+    grid-row: 10;
   }
 }
 @media (max-width: 1199px) {

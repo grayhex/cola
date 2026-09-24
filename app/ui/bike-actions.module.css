@@ -1,0 +1,113 @@
+/* The bike's action row (#121): compact outlined buttons with an icon and
+   a label, a count or state in its own segment, as in the owner's
+   reference. Reader actions and owner tools are two groups of one row. */
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  min-width: 0;
+}
+.group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.group + .group {
+  padding-left: 14px;
+  border-left: 1px solid var(--line);
+}
+/* Buttons of both groups, the like and the share button alike. */
+.bar .action,
+.bar :global(.hf-like),
+.bar .share :global(.share-button) {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  min-height: 34px;
+  margin: 0;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font: 500 13px/1.2 var(--site-font);
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.bar :global(.hf-like) {
+  align-items: stretch;
+  padding: 0;
+  overflow: hidden;
+}
+.bar :global(.hf-like) > span,
+.bar :global(.hf-like) > strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+}
+.bar .action:hover:not(:disabled),
+.bar .share :global(.share-button):hover {
+  background: var(--surface-hover);
+}
+.bar .action:focus-visible,
+.bar .share :global(.share-button):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.bar .action:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.bar .action[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 9%, var(--surface));
+}
+.bar .action svg,
+.bar .share :global(.share-button) svg {
+  flex: none;
+}
+.bar .share :global(.share-button) > span {
+  display: inline;
+  font-size: inherit;
+}
+/* A count or state: a segment after a thin divider, like the like. */
+.count {
+  display: flex;
+  align-items: center;
+  align-self: stretch;
+  margin: 0 -10px 0 4px;
+  padding: 0 10px;
+  border-left: 1px solid var(--border);
+  color: var(--text-muted);
+  font-weight: 500;
+}
+.bar .danger {
+  color: var(--danger);
+}
+.bar .danger:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--border));
+}
+.alert,
+.group > [role="alert"] {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 13px;
+}
+@media (max-width: 1199px) {
+  .bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .group + .group {
+    padding: 8px 0 0;
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
+}

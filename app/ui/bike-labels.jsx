@@ -2,10 +2,16 @@
 import SiteEmoji from "./site-emoji.jsx";
 import { ClassificationBadges } from "./bike-classification.jsx";
 import { ContentLabel, LabelRow } from "./content-label.jsx";
-export function BikeLabels({ bike }) {
+// `year` is off where the title already says «Модельный год».
+export function BikeLabels({ bike, year = true }) {
   return (
     <LabelRow className="bike-labels" aria-label="Характеристики велосипеда">
       {bike.is_former && <ContentLabel className="hf-label" data-bike-label="former">Бывший</ContentLabel>}
+      {year && bike.year && (
+        <ContentLabel className="hf-label" tone="year" data-bike-label="year" aria-label={"Модельный год: " + bike.year}>
+          {bike.year}
+        </ContentLabel>
+      )}
       {bike.size && (
         <ContentLabel className="hf-label" data-bike-label="size" aria-label={"Размер рамы: " + bike.size}>
           <SiteEmoji name="size" />

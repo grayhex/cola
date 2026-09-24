@@ -2,11 +2,15 @@
 import { useEffect, useState, createContext, useContext } from "react";
 import { Avatar, socialApi } from "./social-primitives.jsx";
 import { ReportButton, PageControls } from "./community-controls.jsx";
-import PromptComposer from "./prompt-composer.jsx";
+import dynamic from "next/dynamic";
 import RichTextBody from "./rich-text-body.jsx";
 import { MessagesSquare, Reply } from "./icons.jsx";
 import { profilePath } from "../../lib/public-urls.js";
 import { personName, usernameLabel } from "../../lib/usernames.js";
+// The composer brings the editor; guests read comments without it (#117).
+const PromptComposer = dynamic(() => import("./prompt-composer.jsx"), {
+  ssr: false,
+});
 const DiscussionKind = createContext("bike");
 const QuestionContext = createContext(null);
 const paths = (kind) =>
@@ -133,7 +137,7 @@ function Comment({ comment: c, user, bikeId, refresh, reply = false }) {
         />
       ) : (
         <>
-          {!c.unavailable && <RichTextBody className="comment-body" body={c.body} />}
+          {!c.unavailable && <RichTextBody className="comment-body" doc={c.bodyDoc} />}
           <div className="comment-actions">
             {!c.unavailable && question?.solutionId === c.id && (
               <span className="journal-solution">Выбранный ответ · Решено</span>

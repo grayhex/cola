@@ -4,7 +4,6 @@ import ClassificationFields, {
 } from "./bike-classification.jsx";
 import { FormerBikeField } from "./bike-fields.jsx";
 import fieldStyles from "./bike-fields.module.css";
-import { PhotoActions } from "./content-label.jsx";
 import {
   bikeCategories,
   classificationOf,
@@ -15,7 +14,7 @@ import {
 import SiteEmoji from "./site-emoji.jsx";
 import { useConfirmation } from "./confirmation.jsx";
 import ChoiceMenu from "./choice-menu.jsx";
-import { BikeLabels, BikeLike } from "./bike-labels.jsx";
+import { BikeLabels } from "./bike-labels.jsx";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -36,13 +35,14 @@ import BikeMeters from "./bike-meters.jsx";
 import Photo from "./bike-photo.jsx";
 import BikeCard from "./bike-card.jsx";
 import { SocialFooter, AuthorLink } from "./social-primitives.jsx";
-import ShareButton from "./share-button.jsx";
 import { publicPath } from "../../lib/public-urls.js";
 import GlobalHeader from "./global-header.jsx";
 
 import Versions from "./versions.jsx";
 import { parseBikeName } from "../../lib/bike-name.js";
 import GroupedComponents from "./grouped-components.jsx";
+import BikeActions from "./bike-actions.jsx";
+import { landingSlug, modelLandingPath } from "../../lib/experience-catalog.js";
 import { defaultBlocks } from "../../lib/garage-layout.js";
 import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
@@ -59,8 +59,6 @@ import {
   Globe,
   Copy,
   Check,
-  Pencil,
-  Trash2,
   Camera,
   LogOut,
   ChevronRight,
@@ -460,13 +458,17 @@ export default function Garage({
   const modelName = [bike?.brand, bike?.model, bike?.trim]
     .filter(Boolean)
     .join(" ");
-  const named = Boolean(bike?.name) && bike.name !== modelName;
-  const subtitle = [
-    named && modelName,
-    bike?.year && (named ? bike.year : `${t("Модельный год")} ${bike.year}`),
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  // Only the year goes under the title: brand and model filled in by the
+  // parser could read as a second, different name (#121). They stay in the
+  // specification.
+  const subtitle = bike?.year ? `${t("Модельный год")} ${bike.year}` : "";
+  // A public build is counted on its model's page (#74); a private one only
+  // leads to the search.
+  const modelHref =
+    bike?.is_public && landingSlug(bike.brand) && landingSlug(bike.model)
+      ? modelLandingPath(bike.brand, bike.model)
+      : "/experience?" +
+        new URLSearchParams({ brand: bike?.brand || "", model: bike?.model || "" });
   // Without the "О велосипеде" block, the owner's text, public price and
   // manufacturer link stay visible under the title.
   const intro = bike &&
@@ -596,16 +598,7 @@ export default function Garage({
               </span>
             )}
             <ChevronRight size={14} />
-            <a
-              href={
-                "/experience?" +
-                new URLSearchParams({
-                  brand: bike.brand || "",
-                  model: bike.model || "",
-                })
-              }
-              title="Опыт владельцев этой модели"
-            >
+            <a href={modelHref} title="Опыт владельцев этой модели">
               {bike.brand} {bike.model}
             </a>
           </div>
@@ -619,44 +612,12 @@ export default function Garage({
               </div>
               {subtitle && <p className="bike-subtitle">{subtitle}</p>}
               <div className="bike-heading-labels">
-                <BikeLabels bike={bike} />
+                <BikeLabels bike={bike} year={false} />
               </div>
             </div>
             <div className="detail-actions">
               {share && <AuthorLink author={bike.author} />}
-              {editable ? (
-                <>
-                  {bike.is_public && (
-                    <ShareButton
-                      path={publicPath("bike", bike)}
-                      title={bike.name || modelName}
-                    />
-                  )}
-                  <button
-                    className="icon bordered share-action"
-                    aria-label={t("Доступ")}
-                    title={t("Кто видит велосипед")}
-                    onClick={() => setModal({ type: "share" })}
-                  >
-                    {bike.is_public ? <Globe size={17} /> : <Lock size={17} />}
-                    <span>{t("Доступ")}</span>
-                  </button>
-                  <button
-                    className="icon bordered"
-                    aria-label={t("Редактировать велосипед")}
-                    onClick={() => setModal({ type: "bike", bike })}
-                  >
-                    <Pencil size={18} />
-                  </button>
-                  <button
-                    className="icon danger"
-                    aria-label="Удалить велосипед"
-                    onClick={() => setModal({ type: "deleteBike" })}
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </>
-              ) : !share ? (
+              {!editable && !share && (
                 <button
                   className="button secondary"
                   onClick={() => auth("register")}
@@ -664,11 +625,6 @@ export default function Garage({
                   {t("Добавить свой байк")}
                   <Plus size={17} />
                 </button>
-              ) : (
-                <ShareButton
-                  path={publicPath("bike", bike)}
-                  title={bike.name || modelName}
-                />
               )}
             </div>
             {intro && (intro.description || intro.price || intro.link) && (
@@ -736,27 +692,6 @@ export default function Garage({
                   priority
                 />
               </button>
-              {editable && (
-                <div className="photo-tools">
-                  <button
-                    type="button"
-                    className="icon"
-                    disabled={busy}
-                    aria-label="Загрузить фото"
-                    onClick={() => file.current.click()}
-                  >
-                    <Plus size={16} />
-                  </button>
-                  <button
-                    type="button"
-                    className="icon"
-                    aria-label="Найти фотографии"
-                    onClick={() => setModal({ type: "photoSearch" })}
-                  >
-                    <Search size={16} />
-                  </button>
-                </div>
-              )}
               {(photo || bike.photos[0])?.source_page_url && (
                 <a
                   className="photo-credit"
@@ -778,15 +713,21 @@ export default function Garage({
                 </a>
               )}
             </div>
-            {bike.is_public && (
-              <PhotoActions>
-                <BikeLike bike={bike} reaction={detailReaction} t={t} />
-                {detailReaction.error && (
-                  <p role="alert">{t("Лайк не сохранился. Попробуй ещё раз")}</p>
-                )}
-              </PhotoActions>
-            )}
           </div>
+          {/* Outside the photos block, so hiding the photo keeps the tools. */}
+          <BikeActions
+            bike={bike}
+            title={bike.name || modelName}
+            editable={editable}
+            reaction={detailReaction}
+            busy={busy}
+            onAddPhoto={() => file.current.click()}
+            onFindPhoto={() => setModal({ type: "photoSearch" })}
+            onAccess={() => setModal({ type: "share" })}
+            onEdit={() => setModal({ type: "bike", bike })}
+            onDelete={() => setModal({ type: "deleteBike" })}
+            t={t}
+          />
           <details
             className="bike-summary configurable-block"
             {...blockProps("summary")}

@@ -101,6 +101,21 @@
   color: var(--muted);
   font-size: 13px;
 }
+/* The quick start spans the grid and numbers its steps (#107). */
+.site-root .about-card:has(.about-steps) {
+  grid-column: 1 / -1;
+}
+.site-root .about-steps {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding-left: 22px;
+  color: var(--text);
+  font-size: 14px;
+}
+.site-root .about-steps li::marker {
+  font-weight: 700;
+}
 .site-root .about-actions {
   display: flex;
   flex-wrap: wrap;

@@ -1,0 +1,74 @@
+.page {
+  display: grid;
+  gap: 28px;
+}
+.page > * {
+  min-width: 0;
+}
+.eyebrow {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 1px;
+}
+.eyebrow a {
+  color: inherit;
+}
+.facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.facts li {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  padding: 4px 10px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.note {
+  margin: 10px 0 0;
+}
+.page .section h2 {
+  margin-bottom: 12px;
+}
+.links {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.links li {
+  display: grid;
+  gap: 2px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  padding: 10px 12px;
+  min-width: 0;
+}
+.links a {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.links span {
+  color: var(--muted);
+  font-size: 13px;
+}
+.more {
+  margin: 12px 0 0;
+  font-weight: 600;
+}
+@media (max-width: 700px) {
+  .page {
+    gap: 20px;
+  }
+  .links {
+    grid-template-columns: 1fr;
+  }
+}

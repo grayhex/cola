@@ -37,7 +37,31 @@
 .label[data-tone="purple"] { --label-tone: #9562dc; --label-ink: #7543b0; }
 .label[data-tone="amber"] { --label-tone: #cf861c; --label-ink: #8a570d; }
 .label[data-tone="rose"] { --label-tone: #d6618f; --label-ink: #a52c60; }
+/* The year is plain ink on a clear outline, unlike tinted type and purpose
+   labels (#85); tabular digits keep a row of years aligned. */
+.label[data-tone="year"] {
+  --label-tone: var(--text);
+  --label-ink: var(--text);
+  border-color: color-mix(in srgb, var(--text) 40%, var(--line));
+  background: transparent;
+  font-variant-numeric: tabular-nums;
+}
+/* A former bike keeps its history: a dashed outline and hatching set the
+   label apart without motion (#85). */
+.label[data-bike-label="former"] {
+  --label-tone: #8b5a3c;
+  --label-ink: #6b4226;
+  border: 1.5px dashed color-mix(in srgb, var(--label-tone) 70%, var(--line));
+  background: repeating-linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--label-tone) 12%, var(--paper)) 0 4px,
+    var(--paper) 4px 8px
+  );
+  letter-spacing: 0.02em;
+}
 :global([data-theme="dark"]) .label { --label-ink: #cbd5e1; }
+:global([data-theme="dark"]) .label[data-tone="year"] { --label-ink: var(--text); }
+:global([data-theme="dark"]) .label[data-bike-label="former"] { --label-tone: #d6a07c; --label-ink: #efc9ad; }
 :global([data-theme="dark"]) .label[data-tone="blue"] { --label-ink: #93c5fd; }
 :global([data-theme="dark"]) .label[data-tone="green"] { --label-ink: #86dfaa; }
 :global([data-theme="dark"]) .label[data-tone="teal"] { --label-ink: #77d8d0; }

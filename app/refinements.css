@@ -58,23 +58,28 @@
   }
   .site-root .detail.bike-detail > .bike-rides {
     grid-column: 3;
-    grid-row: 4 / span 3;
+    grid-row: 5 / span 3;
+  }
+  /* The bike's actions: one row across the page under the title (#121). */
+  .site-root .detail.bike-detail > .bike-actions {
+    grid-column: 1 / -1;
+    grid-row: 4;
   }
   .site-root .detail.bike-detail > .showcase {
     grid-column: 1;
-    grid-row: 4;
+    grid-row: 5;
   }
   .site-root .detail.bike-detail > .gallery-details {
     grid-column: 1;
-    grid-row: 5;
+    grid-row: 6;
   }
   .site-root .detail.bike-detail > .bike-summary {
     grid-column: 1;
-    grid-row: 6;
+    grid-row: 7;
   }
   .site-root .detail.bike-detail > .specifications {
     grid-column: 2;
-    grid-row: 4 / span 3;
+    grid-row: 5 / span 3;
   }
   /* Without rides the build list takes the third column. */
   .site-root .detail.bike-detail:has(> .bike-rides-empty) {
@@ -157,6 +162,10 @@
     order: 2 !important;
   }
   .site-root .detail.bike-detail > .showcase {
+    order: 3 !important;
+  }
+  /* Under the photo on phones and tablets (#121). */
+  .site-root .detail.bike-detail > .bike-actions {
     order: 3 !important;
   }
   .site-root .detail.bike-detail > .gallery-details {

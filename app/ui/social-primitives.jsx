@@ -52,9 +52,30 @@ export function SocialHeader({ user }) {
   return <GlobalHeader user={user} />;
 }
 export function SocialFooter() {
+  const { settings } = useSite();
+  // Two images from Админка → Дизайн → Графика → «Подвал» (#107). They sit
+  // next to the text brand, so they are decorative for screen readers.
+  const images = [settings.footerImage1Id, settings.footerImage2Id].filter(
+    Boolean,
+  );
   return (
     <footer className={footerStyles.footer}>
       <div className={footerStyles.inner}>
+        {images.length > 0 && (
+          <div className={footerStyles.images} data-footer-images>
+            {images.map((id, i) => (
+              <img
+                key={i}
+                src={"/api/assets/" + id}
+                alt=""
+                width={160}
+                height={40}
+                loading="lazy"
+                decoding="async"
+              />
+            ))}
+          </div>
+        )}
         <Link className={footerStyles.brand} href="/">
           ColaBike
         </Link>
