@@ -1,4 +1,5 @@
 import { testConsents } from "../fixtures/legal.js";
+import { withThemeSwitch } from "../fixtures/theme-switch.js";
 import { test, expect } from "@playwright/test";
 import pg from "pg";
 import sharp from "sharp";
@@ -182,12 +183,13 @@ async function theme(page, label) {
     });
     return;
   }
-  const toggle = page.getByRole("switch", { name: "Тёмная тема", exact: true });
   const dark = label === "Тёмная";
-  await expect(toggle).toBeEnabled();
-  if ((await toggle.getAttribute("aria-checked")) !== String(dark))
-    await toggle.click();
-  await expect(toggle).toHaveAttribute("aria-checked", String(dark));
+  await withThemeSwitch(page, async (toggle) => {
+    await expect(toggle).toBeEnabled();
+    if ((await toggle.getAttribute("aria-checked")) !== String(dark))
+      await toggle.click();
+    await expect(toggle).toHaveAttribute("aria-checked", String(dark));
+  });
 }
 
 test("homepage rhythm, photo-first popular bikes and stable Light/Dark at every breakpoint", async ({
@@ -214,8 +216,9 @@ test("homepage rhythm, photo-first popular bikes and stable Light/Dark at every 
       await theme(page, label);
       await expect(page.locator("html")).toHaveAttribute("data-theme", mode);
       await noOverflow(page);
+      // 76px like the mockup, 64px on phones (#104).
       const header = await page.locator(".global-header").boundingBox();
-      expect(header.height).toBeLessThanOrEqual(68);
+      expect(header.height).toBeLessThanOrEqual(width < 768 ? 64 : 76);
       expect(await page.locator(".brand svg").getAttribute("fill")).toBe(
         "none",
       );
@@ -299,21 +302,29 @@ test("theme toggle waits for hydration and its first click inverts the actual sy
   });
   try {
     await page.goto("/", { waitUntil: "commit" });
-    const toggle = page.getByRole("switch", { name: "Тёмная тема", exact: true });
     await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-    await expect(toggle).toBeVisible();
-    await expect(toggle).toBeDisabled();
+    // Server-rendered and disabled until hydration: in the header, or in the
+    // closed menu on phones.
+    const early = page.locator(
+      isMobile ? ".navigation-drawer .theme-toggle" : ".nav-utilities .theme-toggle",
+    );
+    if (!isMobile) await expect(early).toBeVisible();
+    await expect(early).toBeDisabled();
     release();
-    await expect(toggle).toBeEnabled();
-    await expect(toggle).toHaveAttribute("aria-checked", "true");
-    if (isMobile) await toggle.tap();
-    else await toggle.click();
-    await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+    await withThemeSwitch(page, async (toggle) => {
+      await expect(toggle).toBeEnabled();
+      await expect(toggle).toHaveAttribute("aria-checked", "true");
+      if (isMobile) await toggle.tap();
+      else await toggle.click();
+      await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+    });
     expect(await page.evaluate(() => localStorage.getItem("cola:theme"))).toBe("light");
     await page.reload();
     await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
-    await expect(toggle).toBeEnabled();
-    await expect(toggle).toHaveAttribute("aria-checked", "false");
+    await withThemeSwitch(page, async (toggle) => {
+      await expect(toggle).toBeEnabled();
+      await expect(toggle).toHaveAttribute("aria-checked", "false");
+    });
   } finally {
     release();
   }

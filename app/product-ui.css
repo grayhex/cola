@@ -202,12 +202,12 @@ html {
   justify-content: center;
   gap: 6px;
   min-height: var(--control-compact);
-  border: 1px solid var(--border);
-  background: linear-gradient(var(--surface), var(--surface-muted));
+  border: 1px solid var(--line);
+  background: var(--surface);
   color: var(--ink);
-  border-radius: var(--radius-sm);
-  font: 600 14px var(--site-font);
-  padding: 6px 10px;
+  border-radius: var(--radius-pill);
+  font: 600 14px var(--font-body);
+  padding: 6px 14px;
   transition:
     border-color var(--motion-fast),
     background var(--motion-fast);
@@ -219,8 +219,8 @@ html {
 }
 .site-root .compact-button:hover,
 .site-root .compact-icon:hover {
-  border-color: var(--line-strong);
-  background: var(--wash);
+  border-color: var(--border-strong);
+  background: var(--surface-hover);
 }
 .site-root .compact-selector select {
   appearance: none;
@@ -811,70 +811,48 @@ html {
   width: 1.15em;
   height: 1.15em;
 }
-.site-root
-  :is(
-    .hf-button,
-    .compact-button,
-    .choice-menu > .nav-trigger,
-    .primary-navigation .nav-trigger
-  ) {
+/* Chips and small controls are pills, like the filters in the mockup. */
+.site-root :is(.hf-button, .compact-button, .choice-menu > .nav-trigger) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  min-height: 36px;
-  padding: 7px 12px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  color: var(--text);
+  min-height: var(--control-compact);
+  padding: 7px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  color: var(--ink);
   background: var(--surface);
   box-shadow: none;
-  font: 500 14px/1.35 var(--site-font);
+  font: 600 14px/1.35 var(--font-body);
   white-space: nowrap;
   cursor: pointer;
 }
-.site-root
-  :is(
-    .hf-button,
-    .compact-button,
-    .choice-menu > .nav-trigger,
-    .primary-navigation .nav-trigger
-  ):hover {
+.site-root :is(.hf-button, .compact-button, .choice-menu > .nav-trigger):hover {
   background: var(--surface-hover);
-  border-color: var(--text-muted);
+  border-color: var(--border-strong);
 }
 .site-root :is(.hf-button, .compact-button, .nav-trigger):focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
-.site-root .primary-navigation .nav-disclosure {
-  display: flex;
-  gap: 0;
-}
-.site-root .primary-navigation .nav-disclosure > a {
-  border-radius: 8px 0 0 8px;
-  border-right: 0;
-}
-.site-root .primary-navigation .nav-chevron {
-  border-radius: 0 8px 8px 0;
-  padding: 7px 6px;
-}
 .site-root .nav-popover {
-  border: 1px solid var(--border);
-  border-radius: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
   background: var(--surface);
   box-shadow: var(--shadow-popover);
-  padding: 5px;
+  padding: 6px;
 }
 .site-root .nav-menu-link {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 12px;
+  padding: 8px 12px;
   border: 0;
-  border-radius: 6px;
-  min-height: 40px;
-  font-size: 14px;
+  border-radius: var(--radius-sm);
+  min-height: 44px;
+  font: 500 15px/20px var(--font-body);
+  color: var(--ink);
   background: transparent;
 }
 .site-root .nav-menu-link:hover,

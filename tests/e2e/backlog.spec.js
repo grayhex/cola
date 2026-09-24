@@ -1,4 +1,5 @@
 import { test as base, expect } from "@playwright/test";
+import { withThemeSwitch } from "../fixtures/theme-switch.js";
 import { randomUUID } from "node:crypto";
 import { writeFile } from "node:fs/promises";
 import pg from "pg";
@@ -461,13 +462,11 @@ test("admin backgrounds are independent per theme; native local SVG file upload 
     );
     expect(malicious.status()).toBe(400);
     await page.goto("/");
-    const toggle = page.getByRole("switch", {
-      name: "Тёмная тема",
-      exact: true,
+    await withThemeSwitch(page, async (toggle) => {
+      await expect(toggle).toBeEnabled();
+      if ((await toggle.getAttribute("aria-checked")) === "true")
+        await toggle.click();
     });
-    await expect(toggle).toBeEnabled();
-    if ((await toggle.getAttribute("aria-checked")) === "true")
-      await toggle.click();
     await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
     const background = () =>
       page.locator(".site-root").evaluate((e) => {
@@ -497,7 +496,7 @@ test("admin backgrounds are independent per theme; native local SVG file upload 
     await expect.poll(() => art.evaluate((img) => img.naturalWidth)).toBeGreaterThan(0);
     await noOverflow(page);
     if (compact) await page.setViewportSize(viewport);
-    await toggle.click();
+    await withThemeSwitch(page, (toggle) => toggle.click());
     await expect.poll(background).toMatchObject({
       image: `url("${origin}/api/assets/${assets[1]}")`,
       opacity: "0.15",
@@ -517,11 +516,14 @@ test("admin backgrounds are independent per theme; native local SVG file upload 
     await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
     await page.emulateMedia({ colorScheme: "dark" });
     await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-    await page
-      .getByRole("switch", { name: "Тёмная тема", exact: true })
-      .focus();
-    await page.keyboard.press("Space");
-    await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+    await withThemeSwitch(page, async (toggle) => {
+      await toggle.focus();
+      await page.keyboard.press("Space");
+      await expect(page.locator("html")).toHaveAttribute(
+        "data-theme",
+        "light",
+      );
+    });
   });
 });
 

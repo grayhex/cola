@@ -205,8 +205,13 @@ export function GlobalSearch() {
         ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k")
       ) {
         e.preventDefault();
-        const hero = document.querySelector("[data-home-search] input");
-        if (hero) hero.focus();
+        // A visible search field first (the home page, the wide header).
+        const field = [
+          ...document.querySelectorAll(
+            "[data-home-search] input, [data-header-search] input",
+          ),
+        ].find((input) => input.getClientRects().length);
+        if (field) field.focus();
         else setOpen(true);
       }
     };
@@ -216,7 +221,7 @@ export function GlobalSearch() {
   return (
     <>
       <button
-        className="global-nav-item"
+        className="global-nav-item search-toggle"
         type="button"
         aria-label="Поиск ColaBike"
         title="Поиск · Ctrl/⌘ K"

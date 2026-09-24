@@ -21,6 +21,12 @@ import { getSite } from "../lib/site.js";
 import { hidden } from "../lib/indexing.js";
 import { currentViewer } from "../lib/viewer.js";
 export const dynamic = "force-dynamic";
+// "cover" exposes env(safe-area-inset-*) for the mobile tab bar (#104).
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
 export async function generateMetadata() {
   const { settings } = await getSite();
   return {

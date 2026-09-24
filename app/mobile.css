@@ -639,7 +639,7 @@
 }
 .admin-save {
   position: sticky;
-  bottom: 0;
+  bottom: var(--tabbar-space, 0px);
   z-index: 4;
   background: var(--paper);
   border: 1px solid var(--line);

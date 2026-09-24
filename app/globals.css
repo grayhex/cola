@@ -3,6 +3,9 @@
 }
 body {
   margin: 0;
+  /* The page covers the whole screen (viewport-fit=cover): keep text out
+     of the notch in landscape. */
+  padding-inline: env(safe-area-inset-left) env(safe-area-inset-right);
   background: var(--bg);
   color: var(--ink);
   font-family: var(--font-body);
@@ -743,11 +746,11 @@ dialog::backdrop {
 .toast,
 .saving {
   position: fixed;
-  bottom: 25px;
+  bottom: calc(25px + var(--tabbar-space, 0px));
   left: 50%;
   transform: translateX(-50%);
-  background: var(--ink);
-  color: var(--accent-foreground);
+  background: var(--button-bg);
+  color: var(--button-fg);
   padding: 14px 20px;
   border-radius: 8px;
   z-index: var(--z-toast);

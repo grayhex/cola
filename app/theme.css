@@ -27,6 +27,13 @@
   --danger: #b52f3b;
   --danger-ink: #ffffff;
   --danger-soft: #fbe9e9;
+  /* Dark blocks on the light page: the mobile tab bar and the records. */
+  --inverse: #16181b;
+  --inverse-raised: #23272d;
+  --inverse-ink: #f3f0e8;
+  --inverse-muted: #aeb3ba;
+  --inverse-line: #16181b;
+  --inverse-accent: var(--accent-text-dark, #d47a55);
   /* On top of photos and maps, the same in both themes. */
   --photo-chip: #ffffffee;
   --photo-chip-ink: #16181b;
@@ -54,7 +61,8 @@
   --space-8: 32px;
   --space-12: 48px;
   --space-16: 64px;
-  --gutter: var(--space-16);
+  /* 64px at 1440 like the mockup, narrower with the window. */
+  --gutter: clamp(20px, 4.45vw, var(--space-16));
   --content-width: 1312px;
   --nav-height: 76px;
   --hero-width: 920px;
@@ -107,6 +115,9 @@
   --button-bg: #f3f0e8;
   --button-fg: #16181b;
   --button-hover: #ffffff;
+  --inverse: #1b1e22;
+  --inverse-muted: #a4a9b0;
+  --inverse-line: #2a2e34;
   --chart-line: #8fa4e8;
   --success: #4cc38a;
   --success-text: #4cc38a;
@@ -133,6 +144,9 @@
     --button-bg: #f3f0e8;
     --button-fg: #16181b;
     --button-hover: #ffffff;
+    --inverse: #1b1e22;
+    --inverse-muted: #a4a9b0;
+    --inverse-line: #2a2e34;
     --chart-line: #8fa4e8;
     --success: #4cc38a;
     --success-text: #4cc38a;
@@ -150,6 +164,8 @@
   :root {
     --gutter: 20px;
     --nav-height: 64px;
+    /* The floating tab bar, its offset and a gap above it. */
+    --tabbar-space: calc(68px + max(16px, env(safe-area-inset-bottom)) + 16px);
   }
 }
 @media (pointer: coarse), (max-width: 700px) {

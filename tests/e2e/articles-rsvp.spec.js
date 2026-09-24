@@ -100,7 +100,7 @@ test("article without a bike: illustrated Markdown, draft, publication, discussi
   expect(errors).toEqual([]);
 });
 
-test("left admin navigation, configurable emoji, frame labels and one-tap weekly RSVP", async ({
+test("left admin navigation, fixed icons, frame labels and one-tap weekly RSVP", async ({
   page,
   isMobile,
 }, info) => {
@@ -130,16 +130,10 @@ test("left admin navigation, configurable emoji, frame labels and one-tap weekly
         content = await page.locator(".admin-content").boundingBox();
       expect(side.x + side.width).toBeLessThan(content.x + 1);
     }
-    await sidebar.getByRole("button", { name: "Эмодзи", exact: true }).click();
-    await page.getByLabel("Эмодзи: Запланировать", { exact: true }).fill("🌅");
-    await page.getByRole("button", { name: "Сохранить", exact: true }).click();
-    await expect
-      .poll(
-        async () =>
-          (await (await page.request.get("/api/site")).json()).settings.emojis
-            .plan,
-      )
-      .toBe("🌅");
+    // One fixed line icon set (#104): nothing to configure per emoji slot.
+    await expect(
+      sidebar.getByRole("button", { name: "Эмодзи", exact: true }),
+    ).toHaveCount(0);
     await noOverflow(page);
     await page.screenshot({
       path: info.outputPath("admin-sidebar.png"),
@@ -182,11 +176,10 @@ test("left admin navigation, configurable emoji, frame labels and one-tap weekly
     await page.goto("/account?tab=rides&action=plan");
     await expect(page.locator(".ride-form")).toBeVisible();
     await expect(page.locator(".ride-card")).toHaveCount(0);
-    await expect(
-      page
-        .getByRole("button", { name: "Запланировать", exact: true })
-        .locator(".site-emoji"),
-    ).toHaveText("🌅");
+    // One line icon set instead of emoji (#104).
+    const plan = page.getByRole("button", { name: "Запланировать", exact: true });
+    await expect(plan.locator("svg.site-icon")).toBeVisible();
+    await expect(plan).toHaveText("Запланировать");
     await expect(
       page.getByLabel("Повторять каждую неделю", { exact: false }),
     ).toBeVisible();
