@@ -242,7 +242,7 @@
   color: var(--ink);
   font: 700 13px/1.2 var(--font-body);
 }
-.page .info .title {
+:global(.site-root) .page .info h1 {
   display: block;
   margin: 0;
   overflow: visible;
@@ -711,7 +711,7 @@
   .page .info {
     gap: 20px;
   }
-  .page .info .title {
+  :global(.site-root) .page .info h1 {
     font-size: 32px;
   }
   .tiles {

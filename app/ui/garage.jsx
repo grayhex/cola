@@ -626,7 +626,7 @@ export default function Garage({
                     {bike.year && <span>{bike.year}</span>}
                   </div>
                 )}
-                <h1 className={bikePage.title}>{bike.name || modelName}</h1>
+                <h1>{bike.name || modelName}</h1>
                 {named && <p className="bike-subtitle">{modelName}</p>}
                 <div className={bikePage.author}>
                   {share && <AuthorLink author={bike.author} />}
