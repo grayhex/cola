@@ -51,7 +51,7 @@ test("two riders discuss a bike, receive notifications, reply and discover new p
     const visitor = await context.newPage(),
       b = await register(visitor.request, "visitor-" + nonce);
     await visitor.goto("/b/" + first.share_id);
-    await visitor.locator(".detail-actions .author-link").click();
+    await visitor.locator(".bike-heading .author-link").click();
     await visitor
       .getByRole("button", { name: "Подписаться", exact: true })
       .click();
@@ -106,7 +106,8 @@ test("two riders discuss a bike, receive notifications, reply and discover new p
     await expect(visitor.locator(".notification-list")).toContainText(
       "ответил вам",
     );
-    await expect(visitor.locator(".global-nav .notification-badge")).toHaveText(
+    // The header bell, or the profile tab on phones.
+    await expect(visitor.locator(".notification-badge:visible")).toHaveText(
       "1",
     );
     await visitor
@@ -115,9 +116,7 @@ test("two riders discuss a bike, receive notifications, reply and discover new p
     await expect(visitor.locator(".notification-list li.unread")).toHaveCount(
       0,
     );
-    await expect(
-      visitor.locator(".global-nav .notification-badge"),
-    ).toHaveCount(0);
+    await expect(visitor.locator(".notification-badge")).toHaveCount(0);
     const second = await bike(page.request, "New publication " + nonce);
     await visitor
       .getByRole("button", {

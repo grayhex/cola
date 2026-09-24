@@ -52,16 +52,17 @@ test("bike title stays readable next to a long author name and username", async 
     await page.goto("/b/" + bike.share_id);
     const title = page.locator(".bike-heading h1");
     await expect(title).toHaveText(name);
-    const authorLink = page.locator(
-      ".bike-heading .detail-actions .author-link",
-    );
+    const authorLink = page.locator(".bike-heading .author-link");
     await expect(authorLink).toContainText(author);
     await expect(authorLink).not.toContainText("@");
-    // #77: model and year under a custom name; description, public price and
-    // the manufacturer link are visible without the optional summary block.
+    // #77: the model under a custom name, the year as a badge (#104);
+    // description, public price and the manufacturer link under the title.
     await expect(page.locator(".bike-subtitle")).toHaveText(
-      "Specialized Stumpjumper EVO · 2023",
+      "Specialized Stumpjumper EVO",
     );
+    await expect(
+      page.locator(".bike-heading").getByText("2023", { exact: true }),
+    ).toBeVisible();
     const intro = page.locator(".bike-heading .bike-intro");
     await expect(intro).toContainText("Трейлы по выходным");
     await expect(intro).toContainText(/250\s000\s₽/);

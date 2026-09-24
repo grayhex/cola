@@ -1,5 +1,5 @@
 "use client";
-import SiteEmoji from "./site-emoji.jsx";
+import SiteIcon from "./site-icon.jsx";
 import { useSite } from "./site-provider.jsx";
 export default function ThemeControl() {
   const { resolvedTheme, themeReady, setThemePreference } = useSite();
@@ -15,7 +15,7 @@ export default function ThemeControl() {
       title={next === "dark" ? "Включить тёмную тему" : "Включить светлую тему"}
       onClick={() => setThemePreference(next)}
     >
-      <SiteEmoji name={next} />
+      <SiteIcon name={next} />
     </button>
   );
 }

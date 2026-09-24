@@ -1,4 +1,5 @@
 import { test as base, expect } from "@playwright/test";
+import { withThemeSwitch } from "../fixtures/theme-switch.js";
 import { randomUUID } from "node:crypto";
 import { writeFile } from "node:fs/promises";
 import pg from "pg";
@@ -322,14 +323,10 @@ test("independent classification filters survive URL reload and find electric fo
   ).toHaveCount(1);
   await expect(page).toHaveURL(/electric=0/);
   await page.goto("/b/" + bike.share_id);
-  const labels = page.locator(".bike-labels");
-  await expect(labels).toContainText("L");
-  expect(
-    await labels
-      .locator(".hf-label")
-      .first()
-      .evaluate((e) => parseFloat(getComputedStyle(e).fontSize)),
-  ).toBeLessThanOrEqual(12);
+  // The type is a badge over the title, the size a row of the summary (#104).
+  await expect(page.locator(".bike-heading")).toContainText("Commuter");
+  const specs = page.getByLabel("Комплектация кратко", { exact: true });
+  await expect(specs.locator("div").first()).toHaveText(/^Размер\s*L$/);
   await noOverflow(page);
   await page.screenshot({
     path: info.outputPath("bike-compact-labels.png"),
@@ -461,13 +458,11 @@ test("admin backgrounds are independent per theme; native local SVG file upload 
     );
     expect(malicious.status()).toBe(400);
     await page.goto("/");
-    const toggle = page.getByRole("switch", {
-      name: "Тёмная тема",
-      exact: true,
+    await withThemeSwitch(page, async (toggle) => {
+      await expect(toggle).toBeEnabled();
+      if ((await toggle.getAttribute("aria-checked")) === "true")
+        await toggle.click();
     });
-    await expect(toggle).toBeEnabled();
-    if ((await toggle.getAttribute("aria-checked")) === "true")
-      await toggle.click();
     await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
     const background = () =>
       page.locator(".site-root").evaluate((e) => {
@@ -483,21 +478,13 @@ test("admin backgrounds are independent per theme; native local SVG file upload 
       opacity: "0.35",
       repeat: "no-repeat",
     });
+    // The big hero frame shows the animation on phones too (#104).
     const stage = page.locator("[data-hero-animation]");
     const art = stage.locator(`img[src="/api/assets/${animation}"]`).first();
-    const viewport = page.viewportSize();
-    const compact = viewport && viewport.width <= 700;
-    // The existing compact homepage omits the decorative stage. Validate
-    // its upload/rendering in touch landscape without changing that layout.
-    if (compact) {
-      await expect(stage).toBeHidden();
-      await page.setViewportSize({ width: 844, height: 390 });
-    }
     await expect(art).toBeVisible();
     await expect.poll(() => art.evaluate((img) => img.naturalWidth)).toBeGreaterThan(0);
     await noOverflow(page);
-    if (compact) await page.setViewportSize(viewport);
-    await toggle.click();
+    await withThemeSwitch(page, (toggle) => toggle.click());
     await expect.poll(background).toMatchObject({
       image: `url("${origin}/api/assets/${assets[1]}")`,
       opacity: "0.15",
@@ -517,11 +504,14 @@ test("admin backgrounds are independent per theme; native local SVG file upload 
     await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
     await page.emulateMedia({ colorScheme: "dark" });
     await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-    await page
-      .getByRole("switch", { name: "Тёмная тема", exact: true })
-      .focus();
-    await page.keyboard.press("Space");
-    await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+    await withThemeSwitch(page, async (toggle) => {
+      await toggle.focus();
+      await page.keyboard.press("Space");
+      await expect(page.locator("html")).toHaveAttribute(
+        "data-theme",
+        "light",
+      );
+    });
   });
 });
 

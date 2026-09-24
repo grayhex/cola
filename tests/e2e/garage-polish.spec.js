@@ -80,7 +80,7 @@ test("content artwork remains editable and protected; retired interface graphics
       await page
         .locator("body")
         .evaluate((el) => getComputedStyle(el).fontFamily),
-    ).toContain("Cola Source Sans 3");
+    ).toContain("Cola Manrope");
     await expect(page.locator(".brand img")).toHaveCount(0);
     expect(
       await page.evaluate(

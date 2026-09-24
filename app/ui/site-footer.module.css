@@ -1,53 +1,61 @@
+/* One line: brand, documents, versions; stacked on phones (#104). */
 .footer {
-  border-top: 1px solid var(--border);
-  background: var(--surface);
+  border-top: 1px solid var(--line);
+  background: var(--bg);
 }
 .inner {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   flex-wrap: wrap;
-  gap: 16px 28px;
-  max-width: var(--content-width);
+  gap: 8px 24px;
+  box-sizing: border-box;
+  max-width: calc(var(--content-width) + 2 * var(--gutter));
   margin: auto;
-  padding: 26px 24px;
+  padding: 32px var(--gutter);
+  color: var(--muted);
   font-size: 14px;
-  color: var(--text-muted);
 }
 .brand {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--text);
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 0;
+}
+.brand a {
+  color: var(--ink);
+  font: 800 16px/1.2 var(--font-display);
+  letter-spacing: -0.01em;
 }
 .inner nav {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px 20px;
-  margin-left: auto;
+  gap: 0 24px;
 }
-.inner a {
+.inner nav a {
   display: inline-flex;
   align-items: center;
-  min-height: 36px;
+  min-height: 44px;
+  color: var(--muted);
 }
-.inner a:hover {
+.inner nav a:hover {
+  color: var(--ink);
   text-decoration: underline;
 }
-@media (max-width: 700px) {
+.inner :global(.build-versions) {
+  color: var(--muted);
+  font: 400 12px/1.4 var(--font-mono);
+}
+@media (max-width: 767px) {
   .inner {
-    padding: 20px 16px;
-    gap: 8px 16px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    padding: 28px var(--gutter);
   }
   .inner nav {
-    width: 100%;
-    margin: 0;
-    gap: 6px 20px;
+    gap: 0 20px;
   }
-  .inner a {
-    min-height: 44px;
-  }
-}
-
-.inner :global(.build-versions) {
-  font-size: 12px;
 }

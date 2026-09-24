@@ -51,9 +51,11 @@ test("account profile/avatar editing, public garage, author links and mutual mob
   ).toBeVisible();
   const header = page.locator(".global-header");
   await expect(header).toBeVisible();
-  await expect(
-    header.getByRole("link", { name: /Уведомления:/ }),
-  ).toBeVisible();
+  // Phones reach notifications from the menu and the profile tab (#104).
+  if (!isMobile)
+    await expect(
+      header.getByRole("link", { name: /Уведомления:/ }),
+    ).toBeVisible();
   await header
     .getByRole("button", {
       name: isMobile ? "Открыть меню" : /Аккаунт — owner-/,
@@ -61,6 +63,9 @@ test("account profile/avatar editing, public garage, author links and mutual mob
     .click();
   await expect(
     header.getByRole("link", { name: "Мой профиль", exact: true }),
+  ).toBeVisible();
+  await expect(
+    header.getByRole("link", { name: "Уведомления", exact: true }),
   ).toBeVisible();
   await expect(
     header.getByRole("button", { name: "Выйти", exact: true }),
@@ -176,7 +181,7 @@ test("account profile/avatar editing, public garage, author links and mutual mob
     await expect(
       visitor.getByRole("heading", { name: bike.name, exact: true }),
     ).toBeVisible();
-    await visitor.locator(".detail-actions .author-link").click();
+    await visitor.locator(".bike-heading .author-link").click();
     await expect(visitor).toHaveURL("/@" + username);
     await visitor
       .getByRole("button", { name: "Отписаться", exact: true })

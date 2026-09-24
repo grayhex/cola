@@ -56,7 +56,7 @@ export default function YandexRideMap({
           color:
             getComputedStyle(canvas.current)
               .getPropertyValue("--accent")
-              .trim() || "#e7482f",
+              .trim() || "#C2410C",
           scrollZoom,
           markerClass: styles.marker,
           onReady: () => {

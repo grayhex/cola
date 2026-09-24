@@ -22,7 +22,7 @@ export default function BikeFollow({ bikeId }) {
   return (
     <>
       <button
-        className="quiet"
+        className={"button small " + (following ? "" : "secondary")}
         disabled={busy}
         aria-pressed={following}
         onClick={async () => {
@@ -47,7 +47,8 @@ export default function BikeFollow({ bikeId }) {
           }
         }}
       >
-        {following ? "Вы подписаны на велосипед" : "Подписаться на велосипед"}
+        {following ? "Вы подписаны" : "Подписаться"}
+        <span className="sr-only"> на велосипед</span>
       </button>
       {error && (
         <p role="alert">

@@ -42,7 +42,6 @@ import {
 import styles from "./design.module.css";
 import ArticleTopicSettings from "./article-topics.jsx";
 import LegalSettings from "./legal-settings.jsx";
-import EmojiSettings from "./emoji-settings.jsx";
 
 async function request(url, method = "GET", data) {
   const response = await fetch("/api/" + url, {
@@ -68,7 +67,6 @@ const sections = [
   ["homepage", "Главная", Palette],
   ["navigation", "Меню", Menu],
   ["graphics", "Графика", Image],
-  ["emojis", "Эмодзи", Palette],
   ["articles", "Разделы статей", BookOpen],
   ["media", "Медиатека", Image],
   ["copy", "Тексты", Type],
@@ -95,7 +93,6 @@ const adminGroups = [
       "homepage",
       "navigation",
       "graphics",
-      "emojis",
       "media",
       "copy",
       "about",
@@ -496,12 +493,6 @@ export default function Admin() {
             </div>
           )}
           <div hidden={tab !== "legal"}><LegalSettings active={tab === "legal"} /></div>
-          {tab === "emojis" && (
-            <EmojiSettings
-              value={draft.emojis}
-              onChange={(v) => update("emojis", v)}
-            />
-          )}
           {tab === "articles" && (
             <ArticleTopicSettings
               value={draft.articleTopics}

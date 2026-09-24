@@ -1,16 +1,9 @@
 "use client";
 import NavPopover from "./nav-popover.jsx";
-import SiteEmoji from "./site-emoji.jsx";
+import SiteIcon from "./site-icon.jsx";
 import { ChevronDown, Check } from "./icons.jsx";
 export default function ChoiceMenu({ label, value, choices, onChange }) {
-  const icon = (c) =>
-    c.symbol ? (
-      <span className="site-emoji" aria-hidden="true">
-        {c.symbol}
-      </span>
-    ) : (
-      <SiteEmoji name={c.emoji} />
-    );
+  const icon = (c) => (c.icon ? <SiteIcon name={c.icon} /> : null);
   const current = choices.find((c) => c.value === value) || choices[0];
   return (
     <NavPopover

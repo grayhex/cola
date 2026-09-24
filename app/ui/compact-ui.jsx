@@ -1,5 +1,5 @@
 "use client";
-import SiteEmoji from "./site-emoji.jsx";
+import SiteIcon from "./site-icon.jsx";
 import SearchBox from "./search-box.jsx";
 import styles from "./compact-ui.module.css";
 import { useEffect, useRef, useState } from "react";
@@ -110,7 +110,7 @@ export function FilterControl({ categories, selected, onChange }) {
           setOpen(true);
         }}
       >
-        <SiteEmoji name="filters" />
+        <SiteIcon name="filters" />
         <span className="control-label">Фильтры</span>
         {selected.length > 0 && (
           <span className="control-count">{selected.length}</span>
@@ -134,7 +134,7 @@ export function FilterControl({ categories, selected, onChange }) {
                   }
                 />
                 <span>
-                  <SiteEmoji name={key} />
+                  <SiteIcon name={key} />
                   {label}
                 </span>
               </label>
@@ -147,7 +147,7 @@ export function FilterControl({ categories, selected, onChange }) {
             className="compact-button"
             onClick={() => setDraft([])}
           >
-            <SiteEmoji name="reset" />
+            <SiteIcon name="reset" />
             Сбросить
           </button>
           <button
@@ -158,7 +158,7 @@ export function FilterControl({ categories, selected, onChange }) {
               setOpen(false);
             }}
           >
-            <SiteEmoji name="apply" />
+            <SiteIcon name="apply" />
             Применить
           </button>
         </div>
@@ -205,8 +205,13 @@ export function GlobalSearch() {
         ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k")
       ) {
         e.preventDefault();
-        const hero = document.querySelector("[data-home-search] input");
-        if (hero) hero.focus();
+        // A visible search field first (the home page, the wide header).
+        const field = [
+          ...document.querySelectorAll(
+            "[data-home-search] input, [data-header-search] input",
+          ),
+        ].find((input) => input.getClientRects().length);
+        if (field) field.focus();
         else setOpen(true);
       }
     };
@@ -216,7 +221,7 @@ export function GlobalSearch() {
   return (
     <>
       <button
-        className="global-nav-item"
+        className="global-nav-item search-toggle"
         type="button"
         aria-label="Поиск ColaBike"
         title="Поиск · Ctrl/⌘ K"
@@ -224,7 +229,7 @@ export function GlobalSearch() {
         aria-haspopup="dialog"
         onClick={() => setOpen(true)}
       >
-        <SiteEmoji name="search" />
+        <SiteIcon name="search" />
       </button>
       <CompactDialog
         title="Поиск ColaBike"
