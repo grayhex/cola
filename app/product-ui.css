@@ -1315,3 +1315,44 @@ html {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+/* Cards lift by 2px under the pointer (#104); reduced motion keeps them still. */
+.site-root
+  :is(.bike-card, .journal-card, .article-card, .ride-card, [data-listing-id]) {
+  transition:
+    transform var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard);
+}
+@media (hover: hover) {
+  .site-root
+    :is(
+      .bike-card,
+      .journal-card,
+      .article-card,
+      .ride-card,
+      [data-listing-id]
+    ):hover {
+    transform: translateY(-2px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .site-root
+    :is(
+      .bike-card,
+      .journal-card,
+      .article-card,
+      .ride-card,
+      [data-listing-id]
+    ) {
+    transition: none;
+  }
+  .site-root
+    :is(
+      .bike-card,
+      .journal-card,
+      .article-card,
+      .ride-card,
+      [data-listing-id]
+    ):hover {
+    transform: none;
+  }
+}
