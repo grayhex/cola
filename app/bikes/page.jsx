@@ -1,5 +1,11 @@
 import Garage from "../ui/garage.jsx";
-export const metadata = { title: "Велосипеды · ColaBike" };
+import { indexed } from "../../lib/indexing.js";
+export const metadata = {
+  title: "Велосипеды · ColaBike",
+  description:
+    "Велосипеды участников ColaBike: сборки, компоненты, фотографии и истории владельцев.",
+  robots: indexed,
+};
 export default function Page() {
   return <Garage />;
 }

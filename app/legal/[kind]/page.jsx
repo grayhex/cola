@@ -9,11 +9,20 @@ import {
 import GlobalHeader from "../../ui/global-header.jsx";
 import { SocialFooter } from "../../ui/social-primitives.jsx";
 import RichTextBody from "../../ui/rich-text-body.jsx";
+import { indexed } from "../../../lib/indexing.js";
 import styles from "./page.module.css";
 export const dynamic = "force-dynamic";
-export async function generateMetadata({ params }) {
+export async function generateMetadata({ params, searchParams }) {
   const { kind } = await params;
-  return { title: (legalTitles[kind] || "Документ") + " · ColaBike" };
+  // Search engines index the current published revision only.
+  const current =
+    legalKinds.includes(kind) &&
+    (await searchParams).revision === undefined &&
+    (await publishedLegalDocument(db, kind));
+  return {
+    title: (legalTitles[kind] || "Документ") + " · ColaBike",
+    ...(current && { robots: indexed }),
+  };
 }
 export default async function Page({ params, searchParams }) {
   const { kind } = await params,
