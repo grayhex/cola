@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import RichTextBody from "./rich-text-body.jsx";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { SocialHeader, SocialFooter, socialApi } from "./social-primitives.jsx";
 import { useSite } from "./site-provider.jsx";
 import { journalKinds } from "../../lib/journal-kinds.js";
@@ -13,23 +13,31 @@ import dynamic from "next/dynamic";
 import { profilePath, publicPath } from "../../lib/public-urls.js";
 import { personName } from "../../lib/usernames.js";
 import ShareButton from "./share-button.jsx";
+import LocalDate from "./local-date.jsx";
 // The owner's editor and the comment composer load after the entry itself.
 const Discussion = dynamic(() => import("./discussion.jsx"), { ssr: false });
 const JournalEditor = dynamic(() => import("./journal-editor.jsx"), {
   ssr: false,
 });
-export default function JournalPage({ share = null, sharePath = null }) {
+export default function JournalPage({
+  share = null,
+  sharePath = null,
+  initial = null,
+}) {
   const router = useRouter();
   const [bikes, setBikes] = useState([]);
   const [user, setUser] = useState(null),
-    [entry, setEntry] = useState(null),
+    [entry, setEntry] = useState(initial?.entry || null),
     [bike, setBike] = useState(null),
     [editing, setEditing] = useState(false),
-    [loaded, setLoaded] = useState(false),
+    [loaded, setLoaded] = useState(!!initial),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
     [confirm, setConfirm] = useState(false);
   const { setPreferences } = useSite();
+  // The server rendered the entry for this viewer (#74): the first load
+  // reuses it instead of asking again.
+  const seed = useRef(initial);
   async function refresh() {
     const d = await socialApi("journal/public/" + share);
     setEntry(d.entry);
@@ -43,7 +51,9 @@ export default function JournalPage({ share = null, sharePath = null }) {
         setUser(m.user);
         setPreferences(m.user?.preferences || {});
         if (share) {
-          const d = await socialApi("journal/public/" + share);
+          const d =
+            seed.current || (await socialApi("journal/public/" + share));
+          seed.current = null;
           if (!active) return;
           setEntry(d.entry);
           setEditing(
@@ -230,7 +240,7 @@ export default function JournalPage({ share = null, sharePath = null }) {
                         </a>
                       )}
                       <small>
-                        {new Date(c.capturedAt).toLocaleDateString("ru-RU")}
+                        <LocalDate value={c.capturedAt} />
                       </small>
                     </article>
                   ))}

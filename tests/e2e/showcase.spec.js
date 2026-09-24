@@ -197,9 +197,10 @@ test("registration, touch autocomplete, bike/photo, public feed, like and revoke
   await expect(
     page.getByRole("button", { name: "Поделиться", exact: true }),
   ).toHaveCount(0);
-  await visitor.reload();
+  // A closed bike is a 404 page for everyone but its owner (#74).
+  expect((await visitor.reload()).status()).toBe(404);
   await expect(
-    visitor.getByRole("heading", { name: "Велосипед недоступен" }),
+    visitor.getByRole("heading", { name: "Здесь пока ничего нет" }),
   ).toBeVisible();
   await visitor.goto("/bikes");
   await expect(

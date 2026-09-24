@@ -2,7 +2,7 @@
 import RideRsvp, { RecurringRideLabel } from "./ride-rsvp.jsx";
 import RideSpeedChart from "./ride-speed-chart.jsx";
 import { Heart } from "./icons.jsx";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { SocialHeader, SocialFooter, socialApi } from "./social-primitives.jsx";
 import { RideMetrics, rideDate } from "./ride-card.jsx";
@@ -10,30 +10,39 @@ import { useSite } from "./site-provider.jsx";
 import { profilePath, publicPath } from "../../lib/public-urls.js";
 import { personName } from "../../lib/usernames.js";
 import ShareButton from "./share-button.jsx";
+import LocalDate from "./local-date.jsx";
 // The comment editor (Tiptap) loads after the ride itself.
 const Discussion = dynamic(() => import("./discussion.jsx"), { ssr: false });
 const RideMap = dynamic(() => import("./ride-map.jsx"), {
   ssr: false,
   loading: () => <div className="ride-map-wrap" aria-busy="true" />,
 });
-export default function RidePage({ share, styleUrl, sharePath = null }) {
+export default function RidePage({
+  share,
+  styleUrl,
+  sharePath = null,
+  initial = null,
+}) {
   const { setPreferences } = useSite();
-  const [ride, setRide] = useState(null),
+  const [ride, setRide] = useState(initial?.ride || null),
     [user, setUser] = useState(null),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false);
+  // The server rendered the public ride for this viewer (#74).
+  const seed = useRef(initial);
   useEffect(() => {
     let active = true;
-    Promise.all([
-      socialApi("me"),
+    const rideRequest =
+      seed.current ||
       socialApi(
         "rides/" +
           (new URLSearchParams(location.search).get("owner") === "1"
             ? "owner/"
             : "public/") +
           share,
-      ),
-    ])
+      );
+    seed.current = null;
+    Promise.all([socialApi("me"), rideRequest])
       .then(([m, d]) => {
         if (active) {
           setUser(m.user);
@@ -75,7 +84,7 @@ export default function RidePage({ share, styleUrl, sharePath = null }) {
                 {ride.status === "cancelled"
                   ? "Покатушка отменена"
                   : "Планируемая покатушка"}{" "}
-                · {new Date(ride.scheduledAt).toLocaleString("ru-RU")}
+                · <LocalDate value={ride.scheduledAt} time />
               </p>
             )}
             {ride.meetingPoint && <p>Место встречи: {ride.meetingPoint}</p>}

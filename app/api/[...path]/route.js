@@ -6,7 +6,7 @@ import { resolverProxy } from "../../../lib/resolver-proxy.js";
 import { allowAuth } from "../../../lib/auth-limits.js";
 import { limits, QuotaError } from "../../../lib/limits.js";
 import { savePhotos } from "../../../lib/photo-storage.js";
-import { showcase, decorateBike, vote } from "../../../lib/showcase.js";
+import { showcase, decorateBike, visibleBike, vote } from "../../../lib/showcase.js";
 import { searchExperience, searchInput } from "../../../lib/search.js";
 import { validatePurposes } from "../../../lib/repository.js";
 import { CommunityError } from "../../../lib/community-validation.js";
@@ -234,16 +234,8 @@ async function handler(req, { params }) {
     if (p[0] === "shared" && p.length === 2 && method === "GET") {
       if (!uuid.safeParse(p[1]).success)
         return fail("Велосипед не найден", 404);
-      const rows = await db.query(
-        "SELECT b.* FROM bikes b JOIN users u ON u.id=b.owner_id WHERE b.share_id=$1 AND (b.is_public=true OR b.owner_id=$2) AND u.blocked=false",
-        [p[1], user?.id || null],
-      );
-      const row = rows.rows[0];
-      // Only the authenticated owner receives editing fields and hidden prices.
-      // Guests and other users retain the exact public DTO allowlist.
-      const bike = row
-        ? await decorateBike(db, row, user?.id, await getSite(), row.owner_id !== user?.id)
-        : null;
+      // The bike page loads the same DTO on the server (#74).
+      const bike = await visibleBike(db, p[1], user?.id, await getSite());
       return bike
         ? json({ bike })
         : fail("Велосипед не найден или доступ закрыт", 404);

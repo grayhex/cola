@@ -261,6 +261,7 @@ function Field({ label, children }) {
 
 export default function Garage({
   share,
+  initial = null,
   account = false,
   embedded = false,
   startCreate = false,
@@ -274,8 +275,8 @@ export default function Garage({
   const { categories, models, parts, partCategories, manufacturers } = catalog;
   const [user, setUser] = useState(null),
     [bikes, setBikes] = useState([]),
-    [selected, setSelected] = useState(null),
-    [loading, setLoading] = useState(true),
+    [selected, setSelected] = useState(initial?.bike || null),
+    [loading, setLoading] = useState(!initial),
     [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
     [modal, setModal] = useState(null),
@@ -345,6 +346,9 @@ export default function Garage({
   const requestId = useRef(0),
     meRequest = useRef(null);
   const initialSelection = useRef(initialBikeId);
+  // The server rendered the shared bike for this viewer (#74): the first
+  // load reuses it and asks only who the viewer is.
+  const seed = useRef(initial);
   const file = useRef();
   const filterKey = filters.join(",");
   async function load() {
@@ -358,7 +362,7 @@ export default function Garage({
       }));
       // The public endpoints read the same session cookie; they do not depend on /me.
       const dataRequest = share
-        ? api("shared/" + share)
+        ? seed.current || api("shared/" + share)
         : publicShowcase
           ? api(
               "showcase?" +
@@ -371,6 +375,7 @@ export default function Garage({
                 }),
             )
           : null;
+      seed.current = null;
       const [{ user: u }, publicData] = await Promise.all([me, dataRequest]);
       const data = publicData || (u ? await api("bikes") : { bikes: [] });
       if (sequence !== requestId.current) return;

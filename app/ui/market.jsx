@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ShoppingBag,
   Plus,
@@ -28,6 +28,7 @@ import styles from "./market.module.css";
 import { profilePath, publicPath } from "../../lib/public-urls.js";
 import { personName, usernameLabel } from "../../lib/usernames.js";
 import ShareButton from "./share-button.jsx";
+import { useHydrated } from "./use-hydrated.js";
 // The link keeps the original; previews use the cached size variants.
 const marketVariants = (id, widths = [320, 640, 1280]) =>
   widths.map((w) => `/api/market/media/${id}?width=${w} ${w}w`).join(", ");
@@ -361,11 +362,17 @@ function ListingEditor({ initial, onSaved, onCancel }) {
     </form>
   );
 }
-export default function Market({ share = null, create = false, sharePath = null }) {
+export default function Market({
+  share = null,
+  create = false,
+  sharePath = null,
+  initial = null,
+}) {
   const { setPreferences } = useSite();
+  const hydrated = useHydrated();
   const [user, setUser] = useState(undefined),
     [data, setData] = useState(null),
-    [listing, setListing] = useState(null),
+    [listing, setListing] = useState(initial?.listing || null),
     [edit, setEdit] = useState(create),
     [filters, setFilters] = useState(() => readMarketQuery(new URLSearchParams())),
     [search, setSearch] = useState(""),
@@ -381,6 +388,9 @@ export default function Market({ share = null, create = false, sharePath = null 
     query || category || listingType || condition || city || sort !== "new" ||
     priceMin !== "" || priceMax !== "";
   const filterKey = writeMarketQuery(filters);
+  // The server rendered the listing for this viewer (#74): keep it on mount
+  // and skip the first request.
+  const seed = useRef(initial);
   function changeFilters(patch) {
     const next = { ...filters, page: 1, ...patch };
     const queryString = writeMarketQuery(next);
@@ -402,7 +412,7 @@ export default function Market({ share = null, create = false, sharePath = null 
       setEdit(create || p.get("edit") === "1");
     };
     restore();
-    setListing(null);
+    if (!seed.current) setListing(null);
     setContact(null);
     setContactError("");
     setReady(true);
@@ -421,6 +431,10 @@ export default function Market({ share = null, create = false, sharePath = null 
   }, [share, create]);
   useEffect(() => {
     if (!ready || create || user === undefined || (own && !user)) return;
+    if (seed.current) {
+      seed.current = null;
+      return;
+    }
     let active = true;
     setError("");
     setData(null);
@@ -486,7 +500,7 @@ export default function Market({ share = null, create = false, sharePath = null 
             {error}
           </p>
         )}
-        {user === undefined ? (
+        {user === undefined && !listing ? (
           <p role="status">Загружаем…</p>
         ) : (create || own) && !user ? (
           <section className={styles.empty}>
@@ -585,7 +599,7 @@ export default function Market({ share = null, create = false, sharePath = null 
                   <strong className={styles.detailPrice}>
                     {listingPriceLabel(listing)}
                   </strong>
-                  {listing.status === "active" && listing.publishedAt && (
+                  {hydrated && listing.status === "active" && listing.publishedAt && (
                     <small className={styles.published}>
                       {publishedLabel(listing.publishedAt)}
                     </small>

@@ -11,6 +11,7 @@ import { useId, useState, useSyncExternalStore } from "react";
 import { useSite } from "./site-provider.jsx";
 import PartIcon from "./part-icon.jsx";
 import { experienceHref } from "../../lib/experience-catalog.js";
+import { useHydrated } from "./use-hydrated.js";
 // Without a personal choice groups are open on wide screens and closed on phones.
 const wideQuery = "(min-width: 701px)";
 function subscribeWide(onChange) {
@@ -32,8 +33,15 @@ export default function GroupedComponents({
   const { personalSettings } = useSite();
   const [expanded, setExpanded] = useState({});
   const wide = useSyncExternalStore(subscribeWide, wideNow, () => false);
+  const hydrated = useHydrated();
   const isOpen = (id, state = expanded) =>
     state[id] ?? personalSettings.componentsExpanded ?? wide;
+  // The server does not know the screen width: until hydration CSS opens
+  // groups nobody has toggled on wide screens, so nothing jumps (#74).
+  const byWidth = (id) =>
+    !hydrated &&
+    expanded[id] === undefined &&
+    personalSettings.componentsExpanded == null;
   const instanceId = useId();
   const groups = groupedComponents(
     bike.components.filter((c) => c.section === section),
@@ -111,7 +119,12 @@ export default function GroupedComponents({
               </div>
             )}
           </div>
-          <div id={instanceId + group.id} hidden={!isOpen(group.id)}>
+          <div
+            id={instanceId + group.id}
+            {...(byWidth(group.id)
+              ? { "data-open-by-width": "" }
+              : { hidden: !isOpen(group.id) })}
+          >
             {group.components.map((c, i) => (
               <div className="compact-part" key={c.id}>
                 <div className="compact-part-main">

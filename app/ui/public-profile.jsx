@@ -4,7 +4,7 @@ import BikeGrid from "./bike-grid.jsx";
 import { BadgeShelf } from "./achievements.jsx";
 import { ReportButton } from "./community-controls.jsx";
 import { Bike, Route } from "./icons.jsx";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { MapPin, Calendar, ArrowLeft } from "./icons.jsx";
 import {
   Avatar,
@@ -18,15 +18,23 @@ import {
 import BikeCard from "./bike-card.jsx";
 import { useSite } from "./site-provider.jsx";
 import ShareButton from "./share-button.jsx";
-export default function PublicProfile({ username, sharePath = null }) {
-  const [profile, setProfile] = useState(null),
+import LocalDate from "./local-date.jsx";
+export default function PublicProfile({
+  username,
+  sharePath = null,
+  initial = null,
+}) {
+  const [profile, setProfile] = useState(initial?.profile || null),
     [user, setUser] = useState(null),
-    [feed, setFeed] = useState(null),
+    [feed, setFeed] = useState(initial?.bikes || null),
     [page, setPage] = useState(1),
     [people, setPeople] = useState(""),
     [collection, setCollection] = useState("bikes"),
     [error, setError] = useState("");
   const { setPreferences } = useSite();
+  // The server rendered the profile and the first page of bikes (#74).
+  const seed = useRef(initial),
+    seedBikes = useRef(initial?.bikes);
   async function refresh() {
     const d = await socialApi("social/profiles/" + username);
     setProfile(d.profile);
@@ -34,7 +42,10 @@ export default function PublicProfile({ username, sharePath = null }) {
   useEffect(() => {
     let active = true;
     setError("");
-    Promise.all([socialApi("me"), socialApi("social/profiles/" + username)])
+    const profileRequest =
+      seed.current || socialApi("social/profiles/" + username);
+    seed.current = null;
+    Promise.all([socialApi("me"), profileRequest])
       .then(([me, data]) => {
         if (active) {
           setUser(me.user);
@@ -51,6 +62,11 @@ export default function PublicProfile({ username, sharePath = null }) {
   }, [username]);
   useEffect(() => {
     let active = true;
+    if (seedBikes.current && page === 1) {
+      seedBikes.current = null;
+      return;
+    }
+    seedBikes.current = null;
     setFeed(null);
     socialApi("social/profiles/" + username + "/bikes?page=" + page)
       .then((d) => {
@@ -93,10 +109,10 @@ export default function PublicProfile({ username, sharePath = null }) {
                   )}
                   <span>
                     <Calendar size={14} />С нами с{" "}
-                    {new Date(profile.createdAt).toLocaleDateString("ru-RU", {
-                      month: "long",
-                      year: "numeric",
-                    })}
+                    <LocalDate
+                      value={profile.createdAt}
+                      options={{ month: "long", year: "numeric" }}
+                    />
                   </span>
                 </div>
               </div>

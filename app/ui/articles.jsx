@@ -1,6 +1,6 @@
 "use client";
 import PromptComposer from "./prompt-composer.jsx";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   SocialHeader,
@@ -14,6 +14,7 @@ import SiteEmoji from "./site-emoji.jsx";
 import ChoiceMenu from "./choice-menu.jsx";
 import ArticleBody from "./article-body.jsx";
 import Discussion from "./discussion.jsx";
+import LocalDate from "./local-date.jsx";
 function useReader() {
   const [user, setUser] = useState(undefined);
   const { setPreferences } = useSite();
@@ -205,15 +206,19 @@ export function Articles() {
     </>
   );
 }
-export function ArticlePage({ share }) {
+export function ArticlePage({ share, initial = null }) {
   const user = useReader(),
     { settings } = useSite();
-  const [article, setArticle] = useState(null),
+  const [article, setArticle] = useState(initial?.article || null),
     [editing, setEditing] = useState(false),
     [error, setError] = useState("");
+  // The server rendered the article for this viewer (#74).
+  const seed = useRef(initial);
   useEffect(() => {
     let alive = true;
-    socialApi("articles/public/" + share)
+    const request = seed.current || socialApi("articles/public/" + share);
+    seed.current = null;
+    Promise.resolve(request)
       .then((d) => {
         if (alive) setArticle(d.article);
       })
@@ -257,9 +262,7 @@ export function ArticlePage({ share }) {
                 <h1>{article.title || "Без заголовка"}</h1>
                 <div className="article-meta">
                   <AuthorLink author={article.author} />
-                  <time dateTime={article.updatedAt}>
-                    {new Date(article.updatedAt).toLocaleDateString("ru-RU")}
-                  </time>
+                  <LocalDate value={article.updatedAt} />
                   {article.isOwner && (
                     <button
                       className="hf-button"
