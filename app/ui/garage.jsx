@@ -1053,16 +1053,18 @@ export default function Garage({
             />
           )}
           {bike.is_public && <RideList bikeId={bike.id} latest />}
+          {/* Sibling keys must differ: with two equal keys React loses one
+              fiber on update and leaves a stale copy of its DOM behind. */}
           {bike.id !== "demo" && (
             <JournalList
-              key={bike.id}
+              key={"journal:" + bike.id}
               bike={bike}
               owner={bike.is_owner}
               editable={editable}
             />
           )}
           {bike.is_public && (
-            <Discussion key={bike.id} bike={bike} user={user} />
+            <Discussion key={"discussion:" + bike.id} bike={bike} user={user} />
           )}
         </Main>
       ) : (
