@@ -9,6 +9,7 @@ import {
 import GlobalHeader from "../../ui/global-header.jsx";
 import { SocialFooter } from "../../ui/social-primitives.jsx";
 import RichTextBody from "../../ui/rich-text-body.jsx";
+import { parseRichText } from "../../../lib/rich-text.js";
 import { indexed } from "../../../lib/indexing.js";
 import styles from "./page.module.css";
 export const dynamic = "force-dynamic";
@@ -54,7 +55,7 @@ export default async function Page({ params, searchParams }) {
                 })}
               </time>
             </p>
-            <RichTextBody body={document.body} />
+            <RichTextBody doc={parseRichText(document.body)} />
           </>
         ) : (
           <p>

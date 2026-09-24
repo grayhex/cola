@@ -163,7 +163,7 @@ export default function JournalPage({
                   title={entry.title || "Запись в Журнале ColaBike"}
                 />
               </div>
-              <RichTextBody className="journal-body" body={entry.body} />
+              <RichTextBody className="journal-body" doc={entry.bodyDoc} />
               {entry.installationResult && (
                 <p>
                   Результат установки:{" "}

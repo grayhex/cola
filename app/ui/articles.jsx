@@ -1,7 +1,7 @@
 "use client";
-import PromptComposer from "./prompt-composer.jsx";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import {
   SocialHeader,
   SocialFooter,
@@ -15,6 +15,10 @@ import ChoiceMenu from "./choice-menu.jsx";
 import ArticleBody from "./article-body.jsx";
 import Discussion from "./discussion.jsx";
 import LocalDate from "./local-date.jsx";
+// Only authors need the editor; readers get the parsed article (#117).
+const PromptComposer = dynamic(() => import("./prompt-composer.jsx"), {
+  ssr: false,
+});
 // The server layout already knows the reader (#74).
 function useReader() {
   return useSite().viewer;
@@ -265,7 +269,7 @@ export function ArticlePage({ share, initial = null }) {
                   )}
                 </div>
               </header>
-              <ArticleBody body={article.body} photos={article.photos} />
+              <ArticleBody doc={article.bodyDoc} photos={article.photos} />
               {article.isPublic && article.status === "published" && (
                 <Discussion bike={article} user={user} entityType="article" />
               )}

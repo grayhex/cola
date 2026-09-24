@@ -1,11 +1,10 @@
-import { parseRichText, safeRichLink } from "../../lib/rich-text.js";
+import { safeRichLink } from "../../lib/rich-link.js";
 import styles from "./rich-text.module.css";
 
-export default function RichTextBody({
-  body = "",
-  photos = [],
-  className = "",
-}) {
+// Renders a document from `parseRichText`. The server parses the Markdown
+// (entry, article and comment DTOs carry `bodyDoc`), so a reader never
+// downloads the parser or the editor (#117).
+export default function RichTextBody({ doc, photos = [], className = "" }) {
   function render(node, key) {
     if (node.type === "text") {
       let text = node.text;
@@ -76,7 +75,7 @@ export default function RichTextBody({
   }
   return (
     <div className={[styles.prose, className].filter(Boolean).join(" ")}>
-      {parseRichText(body).content.map(render)}
+      {(doc?.content || []).map(render)}
     </div>
   );
 }

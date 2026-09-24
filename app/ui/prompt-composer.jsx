@@ -395,7 +395,7 @@ export default function PromptComposer({
         tabIndex={0}
       >
         {value.trim() ? (
-          <RichTextBody body={value} photos={photos} />
+          <RichTextBody doc={parseRichText(value)} photos={photos} />
         ) : (
           <span className={styles.empty}>Здесь появится ваш текст</span>
         )}
