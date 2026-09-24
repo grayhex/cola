@@ -2,8 +2,8 @@ name: CodeQL
 
 # Static security analysis of the app and the Resolver (#82). Code scanning
 # is free for public repositories; findings appear under Security → Code
-# scanning, and a pull request that adds an error-level finding gets a red
-# "CodeQL" check.
+# scanning. By default a pull request that adds an error or a high or
+# critical security alert gets a red "CodeQL" check.
 on:
   pull_request:
     branches: [main]
