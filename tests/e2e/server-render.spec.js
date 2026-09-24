@@ -237,3 +237,35 @@ test("a hidden bike is a 404 page for guests", async ({ page, browser }) => {
     page.getByRole("heading", { level: 1, name: "Тайный " + nonce }),
   ).toBeVisible();
 });
+
+test("a signed-in reader gets the header with the page, without asking /api/me", async ({
+  page,
+}) => {
+  const nonce = randomUUID().slice(0, 8),
+    name = "Читатель " + nonce;
+  expect(
+    (
+      await page.request.post("/api/auth/register", {
+        headers: { origin },
+        data: {
+          ...testConsents,
+          name,
+          email: `reader-${nonce}@example.test`,
+          password: "server-render-secret-123",
+        },
+      })
+    ).status(),
+  ).toBe(201);
+  const me = [];
+  page.on("request", (r) => {
+    if (new URL(r.url()).pathname === "/api/me") me.push(r.url());
+  });
+  for (const path of ["/", "/bikes", "/journal", "/articles", "/rides", "/market", "/records", "/search?q=cube", "/experience", "/saved", "/account", "/b/unknown-zzzzzzzz"]) {
+    await page.goto(path);
+    // The account menu is in the first HTML; the guest "Войти" never shows.
+    await expect(page.getByLabel("Аккаунт — " + name).first()).toBeAttached();
+    await expect(page.locator('a.nav-trigger[href="/account"]')).toHaveCount(0);
+    await page.waitForLoadState("networkidle");
+  }
+  expect(me).toEqual([]);
+});

@@ -88,18 +88,14 @@ export function RecordGroups({ records, settings }) {
 }
 
 export default function Records() {
-  const { setPreferences } = useSite();
+  const { viewer: user } = useSite();
   const [data, setData] = useState(null),
-    [user, setUser] = useState(),
     [error, setError] = useState("");
   useEffect(() => {
     let active = true;
-    Promise.all([socialApi("game/records"), socialApi("me")])
-      .then(([d, m]) => {
-        if (!active) return;
-        setData(d);
-        setUser(m.user);
-        setPreferences(m.user?.preferences || {});
+    socialApi("game/records")
+      .then((d) => {
+        if (active) setData(d);
       })
       .catch((e) => { if (active) setError(e.message); });
     return () => { active = false; };

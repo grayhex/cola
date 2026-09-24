@@ -368,10 +368,9 @@ export default function Market({
   sharePath = null,
   initial = null,
 }) {
-  const { setPreferences } = useSite();
+  const { viewer: user } = useSite();
   const hydrated = useHydrated();
-  const [user, setUser] = useState(undefined),
-    [data, setData] = useState(null),
+  const [data, setData] = useState(null),
     [listing, setListing] = useState(initial?.listing || null),
     [edit, setEdit] = useState(create),
     [filters, setFilters] = useState(() => readMarketQuery(new URLSearchParams())),
@@ -401,7 +400,6 @@ export default function Market({
     window.history.pushState(null, "", "/market" + (queryString ? "?" + queryString : ""));
   }
   useEffect(() => {
-    let active = true;
     const restore = () => {
       const p = new URLSearchParams(location.search);
       const state = readMarketQuery(p);
@@ -417,20 +415,10 @@ export default function Market({
     setContactError("");
     setReady(true);
     window.addEventListener("popstate", restore);
-    socialApi("me")
-      .then((d) => {
-        if (!active) return;
-        setUser(d.user);
-        setPreferences(d.user?.preferences || {});
-      })
-      .catch((e) => { if (active) setError(e.message); });
-    return () => {
-      active = false;
-      window.removeEventListener("popstate", restore);
-    };
+    return () => window.removeEventListener("popstate", restore);
   }, [share, create]);
   useEffect(() => {
-    if (!ready || create || user === undefined || (own && !user)) return;
+    if (!ready || create || (own && !user)) return;
     if (seed.current) {
       seed.current = null;
       return;
@@ -457,7 +445,7 @@ export default function Market({
     return () => {
       active = false;
     };
-  }, [ready, share, create, user?.id, user === undefined, filterKey]);
+  }, [ready, share, create, user?.id, filterKey]);
   const saved = async (r) => {
     location.assign(publicPath("market", r));
   };
@@ -500,9 +488,7 @@ export default function Market({
             {error}
           </p>
         )}
-        {user === undefined && !listing ? (
-          <p role="status">Загружаем…</p>
-        ) : (create || own) && !user ? (
+        {(create || own) && !user ? (
           <section className={styles.empty}>
             <ShoppingBag />
             <h1>Рынок ColaBike</h1>

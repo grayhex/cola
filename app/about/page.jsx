@@ -1,4 +1,4 @@
-import { currentUser } from "../../lib/auth.js";
+import { currentViewer } from "../../lib/viewer.js";
 import About from "./about.jsx";
 import { db } from "../../lib/db.js";
 import { siteStatistics } from "../../lib/site-statistics.js";
@@ -11,6 +11,6 @@ export const metadata = {
 };
 export default async function Page() {
   return (
-    <About user={await currentUser()} statistics={await siteStatistics(db)} />
+    <About user={await currentViewer()} statistics={await siteStatistics(db)} />
   );
 }

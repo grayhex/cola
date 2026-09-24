@@ -269,12 +269,17 @@ export default function Garage({
   onAuthenticated,
   onCreateOpened,
 }) {
-  const { personalSettings: settings, catalog, t, setPreferences } = useSite();
+  const {
+    personalSettings: settings,
+    catalog,
+    t,
+    viewer: user,
+    refreshViewer,
+  } = useSite();
   const [ask, confirmation] = useConfirmation();
   const [wizardDirty, setWizardDirty] = useState(false);
   const { categories, models, parts, partCategories, manufacturers } = catalog;
-  const [user, setUser] = useState(null),
-    [bikes, setBikes] = useState([]),
+  const [bikes, setBikes] = useState([]),
     [selected, setSelected] = useState(initial?.bike || null),
     [loading, setLoading] = useState(!initial),
     [error, setError] = useState(""),
@@ -343,24 +348,20 @@ export default function Garage({
       : setLocalPage(value);
   const [updating, setUpdating] = useState(false),
     [resultRevision, setResultRevision] = useState(0);
-  const requestId = useRef(0),
-    meRequest = useRef(null);
+  const requestId = useRef(0);
   const initialSelection = useRef(initialBikeId);
   // The server rendered the shared bike for this viewer (#74): the first
-  // load reuses it and asks only who the viewer is.
+  // load reuses it instead of asking again.
   const seed = useRef(initial);
   const file = useRef();
   const filterKey = filters.join(",");
-  async function load() {
+  // The reader comes from the server layout (#74); a sign-in in the dialog
+  // passes the new one explicitly, before the context re-renders.
+  async function load(viewer = user) {
     const sequence = ++requestId.current;
     setUpdating(true);
     setError("");
     try {
-      const me = (meRequest.current ||= api("me").catch((e) => {
-        meRequest.current = null;
-        throw e;
-      }));
-      // The public endpoints read the same session cookie; they do not depend on /me.
       const dataRequest = share
         ? seed.current || api("shared/" + share)
         : publicShowcase
@@ -376,12 +377,10 @@ export default function Garage({
             )
           : null;
       seed.current = null;
-      const [{ user: u }, publicData] = await Promise.all([me, dataRequest]);
-      const data = publicData || (u ? await api("bikes") : { bikes: [] });
+      const publicData = await dataRequest;
+      const data = publicData || (viewer ? await api("bikes") : { bikes: [] });
       if (sequence !== requestId.current) return;
-      setUser(u);
-      if (u && onAuthenticated) onAuthenticated();
-      setPreferences(u?.preferences || {});
+      if (viewer && onAuthenticated) onAuthenticated();
       if (share) setSelected(data.bike);
       else {
         setBikes(data.bikes);
@@ -515,19 +514,12 @@ export default function Garage({
     // endpoint, not the revoked public URL, then adopt the new canonical URL.
     requestId.current++;
     try {
-      const [{ user: current }, { bike: updated }] = await Promise.all([
-        api("me"), api("bikes/" + bike.id),
-      ]);
-      setUser(current);
+      const { bike: updated } = await api("bikes/" + bike.id);
       setSelected(updated);
-      meRequest.current = Promise.resolve({ user: current });
       if (updated.share_id !== share)
         router.replace(publicPath("bike", updated), { scroll: false });
     } catch (e) {
-      if ([401, 403, 404].includes(e.status)) {
-        setSelected(null);
-        meRequest.current = null;
-      }
+      if ([401, 403, 404].includes(e.status)) setSelected(null);
       throw e;
     }
   }
@@ -1322,9 +1314,9 @@ export default function Garage({
               onSubmit={(data) =>
                 run(async () => {
                   await api("auth/" + modal.mode, "POST", data);
-                  meRequest.current = null;
+                  const signedIn = await refreshViewer();
                   setSelected(null);
-                  await load();
+                  await load(signedIn);
                   setModal(null);
                   setNotice(
                     modal.mode === "register"

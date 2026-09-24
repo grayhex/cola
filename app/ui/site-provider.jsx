@@ -1,5 +1,12 @@
 "use client";
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { accentText } from "../../lib/appearance.js";
 import {
   appearanceDefaults,
@@ -20,13 +27,34 @@ export function ThemeStyle({ settings }) {
     <style>{`:root{--accent:${accent};--accent-foreground:${accentText(accent)};--photo-ratio:${settings.photoRatio || "4/3"};--desktop-columns:${settings.desktopColumns || 3};--heading-align:${settings.textAlign || "left"}}${backgroundCss(settings)}`}</style>
   );
 }
-export default function SiteProvider({ initial, children }) {
+export default function SiteProvider({
+  initial,
+  viewer: initialViewer = null,
+  children,
+}) {
   useBrowseHistory();
   useEffect(() => installErrorReporting(), []);
   const [site, setSite] = useState(
     initial || { settings: defaultSettings, catalog: defaultCatalog },
   );
-  const [preferences, setPreferences] = useState({});
+  // The server layout already knows who is reading (#74): pages start with
+  // the right header and personal settings instead of asking /api/me.
+  const [viewer, setViewerState] = useState(initialViewer);
+  const [preferences, setPreferences] = useState(
+    initialViewer?.preferences || {},
+  );
+  const setViewer = useCallback((user) => {
+    setViewerState(user || null);
+    setPreferences(user?.preferences || {});
+  }, []);
+  // After signing in or editing the profile without a page load.
+  const refreshViewer = useCallback(async () => {
+    const response = await fetch("/api/me", { cache: "no-store" });
+    if (!response.ok) throw new Error("Не удалось проверить вход");
+    const { user } = await response.json();
+    setViewer(user);
+    return user;
+  }, [setViewer]);
   const defaultTheme = validTheme(site.settings.appearance?.theme);
   const [themePreference, setPreference] = useState(defaultTheme);
   const currentPreference = useRef(defaultTheme);
@@ -100,6 +128,9 @@ export default function SiteProvider({ initial, children }) {
         ...site,
         setSite,
         t,
+        viewer,
+        setViewer,
+        refreshViewer,
         setPreferences,
         personalSettings: effective,
         themePreference,

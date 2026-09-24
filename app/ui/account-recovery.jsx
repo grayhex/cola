@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArrowLeft, ArrowUpRight, KeyRound, MailCheck } from "./icons.jsx";
 import GlobalHeader from "./global-header.jsx";
 import { SocialFooter, socialApi } from "./social-primitives.jsx";
+import { useSite } from "./site-provider.jsx";
 import { Field } from "../admin/design-controls.jsx";
 import styles from "./auth.module.css";
 
@@ -116,6 +117,7 @@ export function ForgotPassword() {
 
 export function ResetPassword() {
   const token = useLinkToken();
+  const { refreshViewer } = useSite();
   const [state, setState] = useState("idle"),
     [error, setError] = useState("");
   const confirm = useRef(null);
@@ -169,6 +171,9 @@ export function ResetPassword() {
               token,
               password: data.get("password"),
             });
+            // The reset signs the reader in: the header and the account
+            // page reached by a link must know it without a reload (#74).
+            await refreshViewer().catch(() => {});
             setState("done");
           } catch (err) {
             if (/недействительна|устарела/.test(err.message))

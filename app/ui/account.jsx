@@ -439,20 +439,19 @@ function Appearance({ initial, onSaved }) {
 }
 export default function Account() {
   const params = useSearchParams();
-  const [user, setUser] = useState(undefined),
-    [data, setData] = useState(null),
+  const [data, setData] = useState(null),
     [bikes, setBikes] = useState([]),
     [tab, setTab] = useState("overview"),
     [kind, setKind] = useState("following"),
     [error, setError] = useState(""),
     [create, setCreate] = useState(false),
     [selected, setSelected] = useState(null);
-  const { setPreferences, themePreference, setThemePreference } = useSite();
-  async function refresh() {
-    const me = await socialApi("me");
-    setUser(me.user);
-    if (me.user) {
-      setPreferences(me.user.preferences || {});
+  const { viewer: user, refreshViewer } = useSite();
+  // The reader comes from the server layout (#74). A profile change reloads
+  // it too, so the header shows the new name at once.
+  async function refresh(reloadViewer = false) {
+    const current = reloadViewer ? await refreshViewer() : user;
+    if (current) {
       const [d, b] = await Promise.all([
         socialApi("social/account"),
         socialApi("bikes"),
@@ -625,7 +624,10 @@ export default function Account() {
             {tab === "profile" && (
               <section className="social-panel">
                 <h2>Мой профиль</h2>
-                <ProfileEditor profile={profile} onSaved={refresh} />
+                <ProfileEditor
+                  profile={profile}
+                  onSaved={() => refresh(true)}
+                />
               </section>
             )}
             {tab === "bikes" && (
@@ -665,14 +667,17 @@ export default function Account() {
                   username={profile.username}
                   kind={kind}
                   user={user}
-                  onChange={refresh}
+                  onChange={() => refresh()}
                 />
               </section>
             )}
             {tab === "appearance" && (
               <section className="social-panel">
                 <h2>Оформление</h2>
-                <Appearance initial={data.preferences} onSaved={refresh} />
+                <Appearance
+                  initial={data.preferences}
+                  onSaved={() => refresh()}
+                />
               </section>
             )}
             {tab === "account" && (

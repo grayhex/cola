@@ -26,15 +26,14 @@ export default function JournalPage({
 }) {
   const router = useRouter();
   const [bikes, setBikes] = useState([]);
-  const [user, setUser] = useState(null),
-    [entry, setEntry] = useState(initial?.entry || null),
+  const [entry, setEntry] = useState(initial?.entry || null),
     [bike, setBike] = useState(null),
     [editing, setEditing] = useState(false),
     [loaded, setLoaded] = useState(!!initial),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
     [confirm, setConfirm] = useState(false);
-  const { setPreferences } = useSite();
+  const { viewer: user } = useSite();
   // The server rendered the entry for this viewer (#74): the first load
   // reuses it instead of asking again.
   const seed = useRef(initial);
@@ -46,10 +45,6 @@ export default function JournalPage({
     let active = true;
     async function load() {
       try {
-        const m = await socialApi("me");
-        if (!active) return;
-        setUser(m.user);
-        setPreferences(m.user?.preferences || {});
         if (share) {
           const d =
             seed.current || (await socialApi("journal/public/" + share));
@@ -61,7 +56,7 @@ export default function JournalPage({
               new URLSearchParams(location.search).get("edit") === "1",
           );
         } else {
-          if (!m.user) throw Error("Войдите в аккаунт, чтобы написать запись");
+          if (!user) throw Error("Войдите в аккаунт, чтобы написать запись");
           const id = new URLSearchParams(location.search).get("bike");
           const d = await socialApi("bikes");
           if (!active) return;

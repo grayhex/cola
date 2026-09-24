@@ -21,9 +21,8 @@ const tabs = [
 ];
 export default function DiscoverySearch() {
   const params = useSearchParams(),
-    { setPreferences, catalog } = useSite(),
+    { viewer: user, catalog } = useSite(),
     [data, setData] = useState(null),
-    [user, setUser] = useState(null),
     [error, setError] = useState(""),
     [revision, setRevision] = useState(0);
   const query = params.get("q") || params.get("component") || "",
@@ -35,21 +34,6 @@ export default function DiscoverySearch() {
     category: params.get("category") || "",
   };
   const hasFacets = Object.values(facets).some(Boolean);
-  useEffect(() => {
-    let active = true;
-    fetch("/api/me")
-      .then((r) => r.json())
-      .then((d) => {
-        if (active) {
-          setUser(d.user);
-          setPreferences(d.user?.preferences || {});
-        }
-      })
-      .catch(() => {});
-    return () => {
-      active = false;
-    };
-  }, []);
   useEffect(() => {
     const controller = new AbortController();
     setData(null);

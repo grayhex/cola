@@ -2,9 +2,9 @@ import Link from "next/link";
 import GlobalHeader from "./ui/global-header.jsx";
 import { SocialFooter } from "./ui/social-primitives.jsx";
 import { Compass } from "./ui/icons.jsx";
-import { currentUser } from "../lib/auth.js";
+import { currentViewer } from "../lib/viewer.js";
 export default async function NotFound() {
-  const user = await currentUser();
+  const user = await currentViewer();
   return (
     <>
       <GlobalHeader user={user} />
