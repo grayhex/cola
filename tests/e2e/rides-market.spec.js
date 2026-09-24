@@ -86,21 +86,21 @@ test("Garmin import without track, chosen fields, GPX mismatch and future planni
   await expect(card).toContainText("Максимальная мощность");
   await expect(card.locator(".ride-basemap")).toHaveCount(0);
   await card.getByRole("button", { name: "Изменить" }).click();
-  await page.getByLabel("Добавить GPX к поездке").setInputFiles({
+  await page.getByLabel("Добавить трек к поездке", { exact: false }).setInputFiles({
     name: "wrong.gpx",
     mimeType: "application/gpx+xml",
     buffer: gpx([loop.map((p) => [p[0], p[1], p[2] + 86400, p[3]])]),
   });
   await expect(
-    page.getByRole("alert").filter({ hasText: "Дата или время GPX" }),
+    page.getByRole("alert").filter({ hasText: "Дата или время трека" }),
   ).toBeVisible();
-  await page.getByLabel("Добавить GPX к поездке").setInputFiles({
+  await page.getByLabel("Добавить трек к поездке", { exact: false }).setInputFiles({
     name: "matching.gpx",
     mimeType: "application/gpx+xml",
     buffer: gpx([loop]),
   });
   await expect(
-    page.getByRole("status").filter({ hasText: "GPX проверен" }),
+    page.getByRole("status").filter({ hasText: "Трек проверен" }),
   ).toBeVisible();
   await page
     .getByRole("button", { name: "Сохранить покатушку", exact: true })
@@ -108,7 +108,7 @@ test("Garmin import without track, chosen fields, GPX mismatch and future planni
   await page
     .getByRole("button", { name: "Запланировать", exact: true })
     .click();
-  await page.getByLabel("GPX-файл", { exact: false }).setInputFiles({
+  await page.getByLabel("Файл трека", { exact: false }).setInputFiles({
     name: "weekend-route.gpx",
     mimeType: "application/gpx+xml",
     buffer: gpx([loop]),

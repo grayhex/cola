@@ -161,7 +161,7 @@ test("navigation: real destinations, account, keyboard, configurable About and a
     await page
       .getByRole("link", { name: "Добавить покатушку", exact: true })
       .click();
-    await expect(page.getByLabel("GPX-файл")).toBeVisible();
+    await expect(page.getByLabel("Файл трека", { exact: false })).toBeVisible();
     await page.goto("/about");
     if (isMobile)
       await page.getByRole("button", { name: "Открыть меню" }).click();

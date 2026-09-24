@@ -6,7 +6,7 @@ import {
   rideDetail,
 } from "../lib/rides.js";
 import { getOriginal } from "../lib/ride-storage.js";
-import { parseGpx } from "../lib/ride-gpx.js";
+import { parseTrack } from "../lib/ride-track.js";
 import assert from "node:assert/strict";
 const owner = "00000000-0000-4000-8000-000000000001",
   bike = "00000000-0000-4000-8000-000000000003";
@@ -46,7 +46,7 @@ try {
     assert.ok(r);
     const original = await getOriginal(r.id);
     assert.deepEqual(original, bytes);
-    assert.ok(parseGpx(original).metrics.distanceM > 1000);
+    assert.ok(parseTrack(original).metrics.distanceM > 1000);
     const d = await rideDetail(db, r.share_id, null);
     assert.ok(d.geometry.length);
     const response = await fetch(

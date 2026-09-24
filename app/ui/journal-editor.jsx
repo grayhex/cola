@@ -307,7 +307,7 @@ export default function JournalEditor({
           </button>
         )}
         <p className="help">
-          Покатушки остаются отдельными GPX-маршрутами, без фотогалереи.
+          Покатушки остаются отдельными маршрутами, без фотогалереи.
         </p>
       </details>
       <label className="field">

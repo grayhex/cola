@@ -36,8 +36,14 @@ export default function RideCreationActions({ onSelect, disabled = false, mode =
         ) : (
           <Link className="quiet" href="/account?tab=rides&action=import"><SiteEmoji name="import" />Импорт Garmin CSV</Link>
         )}
-        <button className={styles.soon} type="button" disabled title="Импорт Magene ещё не доступен">Magene CSV · скоро</button>
-        <button className={styles.soon} type="button" disabled title="Импорт Bryton ещё не доступен">Bryton CSV · скоро</button>
+        {/* FIT covers Garmin, Wahoo, Magene, Bryton, iGPSport and Coros: the
+            regular upload form takes it and explains how to export it. */}
+        {onSelect ? (
+          <button type="button" className="quiet" disabled={disabled}
+            onClick={() => onSelect("add")}><SiteEmoji name="import" />Загрузить FIT</button>
+        ) : (
+          <Link className="quiet" href="/account?tab=rides&action=add"><SiteEmoji name="import" />Загрузить FIT</Link>
+        )}
       </div>
     </section>
   );

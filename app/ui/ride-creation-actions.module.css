@@ -6,7 +6,6 @@
 .imports { display: flex; align-items: center; gap: 6px 10px; flex-wrap: wrap; min-width: 0; font-size: 13px; }
 .imports > span { color: var(--muted); }
 .imports > button, .imports > a { min-height: 36px; display: inline-flex; gap: 6px; align-items: center; }
-.soon { border: 1px dashed var(--line); border-radius: 6px; padding: 5px 8px; background: transparent; color: var(--muted); cursor: not-allowed; font-size: 12px; }
 @media (max-width: 600px) {
   .primary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   .group > button, .group > a { min-width: 0; height: 100%; white-space: normal; font-size: 14px; }
