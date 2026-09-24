@@ -57,10 +57,14 @@ test("bike title stays readable next to a long author name and username", async 
     );
     await expect(authorLink).toContainText(author);
     await expect(authorLink).not.toContainText("@");
-    // #77: model and year under a custom name; description, public price and
-    // the manufacturer link are visible without the optional summary block.
+    // #121: only the year under a custom name, never the parser's model;
+    // description, public price and the manufacturer link are visible
+    // without the optional summary block (#77).
     await expect(page.locator(".bike-subtitle")).toHaveText(
-      "Specialized Stumpjumper EVO · 2023",
+      "Модельный год 2023",
+    );
+    await expect(page.locator(".bike-heading")).not.toContainText(
+      "Specialized Stumpjumper EVO",
     );
     const intro = page.locator(".bike-heading .bike-intro");
     await expect(intro).toContainText("Трейлы по выходным");

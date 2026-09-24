@@ -460,13 +460,10 @@ export default function Garage({
   const modelName = [bike?.brand, bike?.model, bike?.trim]
     .filter(Boolean)
     .join(" ");
-  const named = Boolean(bike?.name) && bike.name !== modelName;
-  const subtitle = [
-    named && modelName,
-    bike?.year && (named ? bike.year : `${t("Модельный год")} ${bike.year}`),
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  // Only the year goes under the title: brand and model filled in by the
+  // parser could read as a second, different name (#121). They stay in the
+  // specification.
+  const subtitle = bike?.year ? `${t("Модельный год")} ${bike.year}` : "";
   // Without the "О велосипеде" block, the owner's text, public price and
   // manufacturer link stay visible under the title.
   const intro = bike &&
@@ -619,7 +616,7 @@ export default function Garage({
               </div>
               {subtitle && <p className="bike-subtitle">{subtitle}</p>}
               <div className="bike-heading-labels">
-                <BikeLabels bike={bike} />
+                <BikeLabels bike={bike} year={false} />
               </div>
             </div>
             <div className="detail-actions">
