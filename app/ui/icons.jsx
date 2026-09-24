@@ -86,4 +86,6 @@ export {
   EyeOff,
   KeyRound,
   MailCheck,
+  ImagePlus,
+  BellRing,
 } from "lucide-react";

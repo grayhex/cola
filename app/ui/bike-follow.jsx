@@ -1,7 +1,10 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { socialApi } from "./social-primitives.jsx";
-export default function BikeFollow({ bikeId }) {
+import { Bell, BellRing } from "./icons.jsx";
+// A short label in the bike's action row (#121); the accessible name keeps
+// the whole phrase.
+export default function BikeFollow({ bikeId, className = "quiet" }) {
   const [following, setFollowing] = useState(false),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
@@ -22,9 +25,13 @@ export default function BikeFollow({ bikeId }) {
   return (
     <>
       <button
-        className="quiet"
+        type="button"
+        className={className}
         disabled={busy}
         aria-pressed={following}
+        aria-label={
+          following ? "Вы подписаны на велосипед" : "Подписаться на велосипед"
+        }
         onClick={async () => {
           touched.current = true;
           setBusy(true);
@@ -47,10 +54,15 @@ export default function BikeFollow({ bikeId }) {
           }
         }}
       >
-        {following ? "Вы подписаны на велосипед" : "Подписаться на велосипед"}
+        {following ? (
+          <BellRing size={15} aria-hidden="true" />
+        ) : (
+          <Bell size={15} aria-hidden="true" />
+        )}
+        <span>{following ? "Вы подписаны" : "Подписаться"}</span>
       </button>
       {error && (
-        <p role="alert">
+        <p role="alert" data-follow-error>
           {error} <a href="/account">Войти</a>
         </p>
       )}

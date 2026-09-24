@@ -73,8 +73,11 @@ for (const path of ["/", "/bikes", "/journal", "/articles", "/rides", "/market",
 }
 // The owner's own bike page arrives with the owner's controls.
 const own = (await reader.page(bikePath)).html;
-assert.match(own, /aria-label="Доступ"/);
-assert.doesNotMatch((await guest.page(bikePath)).html, /aria-label="Доступ"/);
+assert.match(own, /aria-label="Управление велосипедом"/);
+assert.doesNotMatch(
+  (await guest.page(bikePath)).html,
+  /aria-label="Управление велосипедом"/,
+);
 console.log(
   "Viewer HTTP: signed-in header and owner controls come with the server HTML, guests never see them.",
 );
