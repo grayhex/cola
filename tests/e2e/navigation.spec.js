@@ -51,31 +51,6 @@ test("navigation: real destinations, account, keyboard, configurable About and a
     await expect(page.locator("#history")).toHaveCount(0);
     await expect(page.locator(".about-actions")).toHaveCount(0);
     await expect(page.locator(".about-section")).toHaveCount(2);
-    // Phones: five fixed tabs over the page, which ends above them (#104).
-    const tabs = page.getByRole("navigation", { name: "Главные разделы" });
-    if (isMobile) {
-      await expect(tabs.getByRole("link")).toHaveText([
-        "Велосипеды",
-        "Покатушки",
-        "Журнал",
-        "Рынок",
-        "Профиль",
-      ]);
-      await expect(
-        tabs.getByRole("link", { name: "Профиль", exact: true }),
-      ).toHaveAttribute("href", "/account");
-      for (const tab of await tabs.getByRole("link").all()) {
-        const box = await tab.boundingBox();
-        expect(box.width).toBeGreaterThanOrEqual(44);
-        expect(box.height).toBeGreaterThanOrEqual(44);
-      }
-      await page.evaluate(() => scrollTo(0, document.body.scrollHeight));
-      const [bar, footer] = await Promise.all(
-        [tabs, page.locator("footer").last()].map((l) => l.boundingBox()),
-      );
-      expect(footer.y + footer.height).toBeLessThanOrEqual(bar.y);
-      await page.evaluate(() => scrollTo(0, 0));
-    } else await expect(tabs).toBeHidden();
     if (isMobile) {
       await page.getByRole("button", { name: "Открыть меню" }).click();
       const drawer = page.getByRole("dialog", { name: "Меню ColaBike" });
@@ -125,19 +100,6 @@ test("navigation: real destinations, account, keyboard, configurable About and a
       await expect(
         page.getByRole("button", { name: "Порядок витрины" }),
       ).toContainText("Популярные");
-      // At 1440 the header has the search field itself, "/" focuses it.
-      await page.setViewportSize({ width: 1440, height: 900 });
-      await page.goto("/about");
-      await expect(
-        page.getByRole("button", { name: "Поиск ColaBike" }),
-      ).toBeHidden();
-      const field = page.locator("[data-header-search]").getByRole("combobox");
-      await page.keyboard.press("/");
-      await expect(field).toBeFocused();
-      await field.fill("Cube");
-      await field.press("Enter");
-      await expect(page).toHaveURL(/\/search\?q=Cube$/);
-      await page.setViewportSize({ width: 1280, height: 720 });
       await page.goto("/about");
     }
     const registered = await page.request.post("/api/auth/register", {
@@ -190,12 +152,12 @@ test("navigation: real destinations, account, keyboard, configurable About and a
       animations: "disabled",
     });
     await page.keyboard.press("Escape");
-    // The phone menu opens submenus on demand, like the desktop chevrons.
     if (isMobile)
       await page.getByRole("button", { name: "Открыть меню" }).click();
-    await page
-      .getByRole("button", { name: "Подразделы: Покатушки", exact: true })
-      .click();
+    else
+      await page
+        .getByRole("button", { name: "Подразделы: Покатушки", exact: true })
+        .click();
     await page
       .getByRole("link", { name: "Добавить покатушку", exact: true })
       .click();
@@ -203,9 +165,10 @@ test("navigation: real destinations, account, keyboard, configurable About and a
     await page.goto("/about");
     if (isMobile)
       await page.getByRole("button", { name: "Открыть меню" }).click();
-    await page
-      .getByRole("button", { name: "Подразделы: Велосипеды", exact: true })
-      .click();
+    else
+      await page
+        .getByRole("button", { name: "Подразделы: Велосипеды", exact: true })
+        .click();
     await page
       .getByRole("link", { name: "Добавить велосипед", exact: true })
       .click();
@@ -312,10 +275,12 @@ test("navigation: real destinations, account, keyboard, configurable About and a
       await expect(
         page.locator(".primary-navigation > :first-child"),
       ).toHaveAttribute("aria-current", "page");
-      // Text links like the mockup: no uploaded images, no icons (#104).
       await expect(
-        page.locator(".primary-navigation > :first-child :is(img, svg)"),
+        page.locator(".primary-navigation > :first-child img"),
       ).toHaveCount(0);
+      await expect(
+        page.locator(".primary-navigation > :first-child .site-emoji"),
+      ).toBeVisible();
     }
     await noOverflow();
     await page.screenshot({

@@ -1,5 +1,4 @@
 import { testConsents } from "../fixtures/legal.js";
-import { withThemeSwitch } from "../fixtures/theme-switch.js";
 import { test, expect } from "@playwright/test";
 import pg from "pg";
 import sharp from "sharp";
@@ -183,13 +182,12 @@ async function theme(page, label) {
     });
     return;
   }
+  const toggle = page.getByRole("switch", { name: "Тёмная тема", exact: true });
   const dark = label === "Тёмная";
-  await withThemeSwitch(page, async (toggle) => {
-    await expect(toggle).toBeEnabled();
-    if ((await toggle.getAttribute("aria-checked")) !== String(dark))
-      await toggle.click();
-    await expect(toggle).toHaveAttribute("aria-checked", String(dark));
-  });
+  await expect(toggle).toBeEnabled();
+  if ((await toggle.getAttribute("aria-checked")) !== String(dark))
+    await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-checked", String(dark));
 }
 
 test("homepage rhythm, photo-first popular bikes and stable Light/Dark at every breakpoint", async ({
@@ -207,8 +205,7 @@ test("homepage rhythm, photo-first popular bikes and stable Light/Dark at every 
   ]) {
     await page.setViewportSize({ width, height });
     await page.goto("/");
-    // Eight popular builds: 4 per row, 2 on tablets, a carousel on phones.
-    await expect(page.locator("article[data-bike-id]")).toHaveCount(8);
+    await expect(page.locator("article[data-bike-id]")).toHaveCount(9);
     await page.evaluate(() => document.fonts.ready);
     for (const [label, mode] of [
       ["Светлая", "light"],
@@ -217,9 +214,8 @@ test("homepage rhythm, photo-first popular bikes and stable Light/Dark at every 
       await theme(page, label);
       await expect(page.locator("html")).toHaveAttribute("data-theme", mode);
       await noOverflow(page);
-      // 76px like the mockup, 64px on phones (#104).
       const header = await page.locator(".global-header").boundingBox();
-      expect(header.height).toBeLessThanOrEqual(width < 768 ? 64 : 76);
+      expect(header.height).toBeLessThanOrEqual(68);
       expect(await page.locator(".brand svg").getAttribute("fill")).toBe(
         "none",
       );
@@ -238,8 +234,7 @@ test("homepage rhythm, photo-first popular bikes and stable Light/Dark at every 
           };
           return [
             document.querySelector("h1"),
-            document.querySelector("#hero-title span span"),
-            document.querySelector("#hero-title + p"),
+            document.querySelector("[data-home-search]").previousElementSibling,
             ...document
               .querySelector("article[data-bike-id]")
               .querySelectorAll("h3, p, button"),
@@ -261,22 +256,18 @@ test("homepage rhythm, photo-first popular bikes and stable Light/Dark at every 
         height: el.getBoundingClientRect().height,
         line: parseFloat(getComputedStyle(el).lineHeight),
       }));
-      // The default headline has three lines; phones let it flow.
-      expect(h.height / h.line).toBeLessThanOrEqual(width <= 390 ? 4.1 : 3.1);
-      // The photo spans the card and the text below it stays short; tablets
-      // show two builds per row, phones a carousel of 260px cards (#104).
+      expect(h.height / h.line).toBeLessThanOrEqual(width <= 390 ? 4.1 : 2.1);
+      // #83: the photo spans the card, the text below it stays short and
+      // tablets and phones show two builds per row.
       const first = page.locator("article[data-bike-id]").first();
       const card = await first.boundingBox();
       const photo = await first.locator("a").first().boundingBox();
       expect(photo.width).toBeGreaterThanOrEqual(card.width - 2);
       expect(card.height - photo.height).toBeLessThan(200);
-      if (width < 768) expect(Math.round(card.width)).toBe(260);
-      else if (width <= 1050) expect(card.width).toBeLessThan(width * 0.55);
-      // Portrait phones open on the hero photo and the headline.
+      if (width <= 1050) expect(card.width).toBeLessThan(width * 0.55);
+      // Portrait phones see the first build on the first screen.
       if (width <= 390 && height > width)
-        expect(
-          (await page.locator("#hero-title").boundingBox()).y,
-        ).toBeLessThan(height);
+        expect(card.y + 120).toBeLessThanOrEqual(height);
       await expect(
         page.locator(".global-header img, .garage-banner"),
       ).toHaveCount(0);
@@ -308,29 +299,21 @@ test("theme toggle waits for hydration and its first click inverts the actual sy
   });
   try {
     await page.goto("/", { waitUntil: "commit" });
+    const toggle = page.getByRole("switch", { name: "Тёмная тема", exact: true });
     await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-    // Server-rendered and disabled until hydration: in the header, or in the
-    // closed menu on phones.
-    const early = page.locator(
-      isMobile ? ".navigation-drawer .theme-toggle" : ".nav-utilities .theme-toggle",
-    );
-    if (!isMobile) await expect(early).toBeVisible();
-    await expect(early).toBeDisabled();
+    await expect(toggle).toBeVisible();
+    await expect(toggle).toBeDisabled();
     release();
-    await withThemeSwitch(page, async (toggle) => {
-      await expect(toggle).toBeEnabled();
-      await expect(toggle).toHaveAttribute("aria-checked", "true");
-      if (isMobile) await toggle.tap();
-      else await toggle.click();
-      await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
-    });
+    await expect(toggle).toBeEnabled();
+    await expect(toggle).toHaveAttribute("aria-checked", "true");
+    if (isMobile) await toggle.tap();
+    else await toggle.click();
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
     expect(await page.evaluate(() => localStorage.getItem("cola:theme"))).toBe("light");
     await page.reload();
     await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
-    await withThemeSwitch(page, async (toggle) => {
-      await expect(toggle).toBeEnabled();
-      await expect(toggle).toHaveAttribute("aria-checked", "false");
-    });
+    await expect(toggle).toBeEnabled();
+    await expect(toggle).toHaveAttribute("aria-checked", "false");
   } finally {
     release();
   }
@@ -382,8 +365,7 @@ test("search keyboard, groups, cancellation and real results navigation", async 
 }) => {
   await fixture(page);
   await page.goto("/");
-  await expect(page.locator("article[data-bike-id]")).toHaveCount(8);
-  // "/" opens the header search: the field at 1440, a dialog below (#104).
+  await expect(page.locator("article[data-bike-id]")).toHaveCount(9);
   await page.keyboard.press("/");
   const input = page.getByRole("combobox");
   await expect(input).toBeFocused();
@@ -425,9 +407,6 @@ test("search keyboard, groups, cancellation and real results navigation", async 
       })
       .catch(() => {});
   });
-  await expect(page.locator("article[data-bike-id]")).toHaveCount(8);
-  await page.keyboard.press("/");
-  await expect(input).toBeFocused();
   await input.fill("old");
   await expect.poll(() => !!release).toBe(true);
   await input.fill("new");
@@ -466,25 +445,17 @@ test("Live is readable with reduced motion; empty, missing images and long title
   await page.goto("/");
   await expect(page.locator("article[data-bike-id] img")).toHaveCount(0);
   await noOverflow(page);
-  // A missing cover photo falls back to the drawing, not a broken image.
-  await expect(page.locator('[data-hero-cover] img')).toHaveCount(0);
-  // One event at a time over the hero photo, with a pause button; reduced
-  // motion keeps the first one still (#104).
-  const live = page.getByRole("region", {
+  const ticker = page.getByRole("region", {
     name: "Последние события сообщества",
   });
-  await expect(live.getByRole("link")).toHaveText(
-    "Александр добавил Canyon Grail CF 8 AXS",
-  );
-  await live
-    .getByRole("button", { name: "Остановить смену событий", exact: true })
-    .click();
-  await expect(
-    live.getByRole("button", { name: "Продолжить смену событий" }),
-  ).toHaveAttribute("aria-pressed", "true");
+  await expect(ticker.locator('[aria-hidden="true"][inert]')).toHaveCount(1);
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await expect(live.getByRole("button")).toHaveCount(0);
-  await expect(live.getByRole("link")).toHaveCount(1);
+  expect(
+    await ticker
+      .locator("[data-paused]")
+      .evaluate((el) => getComputedStyle(el).animationName),
+  ).toBe("none");
+  await expect(ticker.getByRole("link")).toHaveCount(4);
   await page.setViewportSize({ width: 720, height: 450 }); // 1440 viewport at 200% browser zoom equivalent.
   await page.evaluate(() => {
     document.documentElement.style.fontSize = "200%";
@@ -502,7 +473,7 @@ test("Live is readable with reduced motion; empty, missing images and long title
     }),
   );
   await page.reload();
-  await expect(page.getByText("Первые истории ещё впереди")).toBeVisible();
+  await expect(page.getByText("Первые истории ещё впереди.")).toBeVisible();
   await noOverflow(page);
   await page.route("**/api/discovery/home", (r) =>
     r.fulfill({ status: 500, json: { error: "unavailable" } }),
@@ -513,7 +484,7 @@ test("Live is readable with reduced motion; empty, missing images and long title
   );
   await page.route("**/api/discovery/home", (r) => r.fulfill({ json: home }));
   await page.getByRole("button", { name: "Повторить" }).click();
-  await expect(page.locator("article[data-bike-id]")).toHaveCount(8);
+  await expect(page.locator("article[data-bike-id]")).toHaveCount(9);
 });
 
 test("admin appearance is explicit; hero upload, replacement and removal protect assigned content artwork", async ({

@@ -230,7 +230,7 @@ test("all product routes and account sections share clear light/dark UI; compose
   ).json();
   expect(detail.ride.speedProfile.flat().length).toBeGreaterThan(0);
   const routes = [
-    ["/", "#hero-title", "home"],
+    ["/", "[data-home-search]", "home"],
     ["/bikes", ".bike-card", "bikes"],
     ["/b/" + b.share_id, ".bike-heading", "bike"],
     ["/journal", ".journal-card", "journal"],

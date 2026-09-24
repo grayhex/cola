@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { socialApi, Pagination } from "./social-primitives.jsx";
 import RideCard, { rideDate } from "./ride-card.jsx";
 import { useSite } from "./site-provider.jsx";
@@ -8,13 +8,8 @@ export default function RideList({
   bikeId,
   latest = false,
   status = null,
-  // The bike page draws its latest ride and counters from the same page.
-  onLoad,
-  id,
 }) {
   const { personalSettings: settings } = useSite();
-  const report = useRef(onLoad);
-  report.current = onLoad;
   const [data, setData] = useState(null),
     [page, setPage] = useState(1),
     [error, setError] = useState("");
@@ -30,9 +25,7 @@ export default function RideList({
         }),
     )
       .then((d) => {
-        if (!active) return;
-        setData(d);
-        if (page === 1) report.current?.(d);
+        if (active) setData(d);
       })
       .catch((e) => {
         if (active) setError(e.message);
@@ -48,12 +41,12 @@ export default function RideList({
   // An empty rides column on a bike page shrinks to one line.
   if (latest && data?.total === 0)
     return (
-      <section id={id} className="ride-list bike-rides bike-rides-empty">
+      <section className="ride-list bike-rides bike-rides-empty">
         <p className="help">Покатушек с этим велосипедом пока нет</p>
       </section>
     );
   return (
-    <section id={id} className={"ride-list" + (latest ? " bike-rides" : "")}>
+    <section className={"ride-list" + (latest ? " bike-rides" : "")}>
       <h2>Покатушки</h2>
       {error && <p role="alert">{error}</p>}
       {data ? (

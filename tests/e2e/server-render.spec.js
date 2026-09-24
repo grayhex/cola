@@ -264,7 +264,7 @@ test("a signed-in reader gets the header with the page, without asking /api/me",
     await page.goto(path);
     // The account menu is in the first HTML; the guest "Войти" never shows.
     await expect(page.getByLabel("Аккаунт — " + name).first()).toBeAttached();
-    await expect(page.locator(".nav-login")).toHaveCount(0);
+    await expect(page.locator('a.nav-trigger[href="/account"]')).toHaveCount(0);
     await page.waitForLoadState("networkidle");
   }
   expect(me).toEqual([]);

@@ -346,6 +346,15 @@ function Appearance({ initial, onSaved }) {
       </label>
       {[
         [
+          "bikeLayout",
+          "Карточка велосипеда",
+          [
+            ["dense", "Компактная"],
+            ["balanced", "Сбалансированная"],
+            ["spacious", "Подробная"],
+          ],
+        ],
+        [
           "rideListMode",
           "Покатушки на странице велосипеда",
           [

@@ -56,12 +56,12 @@
   display: block;
   width: 18px;
   height: 18px;
-  border: 3px solid var(--photo-chip);
+  border: 3px solid white;
   border-radius: 50%;
-  background: var(--success);
-  box-shadow: 0 1px 4px var(--overlay);
+  background: #237d50;
+  box-shadow: 0 1px 4px #0008;
   transform: translate(-50%, -50%);
 }
 .marker[data-kind="finish"] {
-  background: var(--accent);
+  background: #e7482f;
 }

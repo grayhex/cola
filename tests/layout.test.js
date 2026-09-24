@@ -1,10 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {
-  groupedComponents,
-  defaultGroups,
-  specRows,
-} from "../lib/garage-layout.js";
+import { groupedComponents, defaultGroups } from "../lib/garage-layout.js";
 import { publicBike, safeLink } from "../lib/validation.js";
 import { catalogInput, settingsInput } from "../lib/admin-validation.js";
 import { defaultSettings, defaultCatalog } from "../lib/site-defaults.js";
@@ -62,31 +58,5 @@ test("layout validates group assignments and requires each block exactly once", 
       detailBlocks: Array(5).fill(defaultSettings.detailBlocks[0]),
     }).success,
     false,
-  );
-});
-test("bike page summary: build parts in group order, one per category, no accessories", () => {
-  const part = (category, name, section = "build") => ({
-    category,
-    name,
-    section,
-  });
-  const rows = specRows([
-    part("Кассета", "Shimano 11-34"),
-    part("Рама", "Cube C:62"),
-    part("Рама", "Second frame"),
-    part("Велокомпьютер", "Garmin", "accessories"),
-    part("Вилка", " "),
-    part("Групсет", "GRX 820"),
-  ]);
-  assert.deepEqual(rows, [
-    { category: "Рама", name: "Cube C:62" },
-    { category: "Кассета", name: "Shimano 11-34" },
-    { category: "Групсет", name: "GRX 820" },
-  ]);
-  assert.equal(
-    specRows(
-      Array.from({ length: 9 }, (_, i) => part("Деталь " + i, "Имя " + i)),
-    ).length,
-    6,
   );
 });

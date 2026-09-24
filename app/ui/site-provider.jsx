@@ -7,7 +7,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { accentText, readableAccent } from "../../lib/appearance.js";
+import { accentText } from "../../lib/appearance.js";
 import {
   appearanceDefaults,
   backgroundCss,
@@ -24,7 +24,7 @@ export function ThemeStyle({ settings }) {
     ? settings.appearance.accent
     : appearanceDefaults.accent;
   return (
-    <style>{`:root{--accent:${accent};--accent-foreground:${accentText(accent)};--accent-text-light:${readableAccent(accent, "light")};--accent-text-dark:${readableAccent(accent, "dark")};--photo-ratio:${settings.photoRatio || "4/3"};--desktop-columns:${settings.desktopColumns || 3};--heading-align:${settings.textAlign || "left"}}${backgroundCss(settings)}`}</style>
+    <style>{`:root{--accent:${accent};--accent-foreground:${accentText(accent)};--photo-ratio:${settings.photoRatio || "4/3"};--desktop-columns:${settings.desktopColumns || 3};--heading-align:${settings.textAlign || "left"}}${backgroundCss(settings)}`}</style>
   );
 }
 export default function SiteProvider({
@@ -111,6 +111,7 @@ export default function SiteProvider({
     ...Object.fromEntries(
       Object.entries(preferences).filter(([key]) =>
         [
+          "bikeLayout",
           "showMileage",
           "componentsExpanded",
           "rideListMode",
@@ -142,6 +143,7 @@ export default function SiteProvider({
       <div
         className="site-root"
         data-design-system="community"
+        data-bike-layout={effective.bikeLayout || "balanced"}
         data-summary={site.settings.summaryPosition}
         data-detail-order={site.settings.detailOrder}
         data-photo-mode={site.settings.photoMode}

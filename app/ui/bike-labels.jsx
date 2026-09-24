@@ -1,5 +1,5 @@
 "use client";
-import SiteIcon from "./site-icon.jsx";
+import SiteEmoji from "./site-emoji.jsx";
 import { ClassificationBadges } from "./bike-classification.jsx";
 import { ContentLabel, LabelRow } from "./content-label.jsx";
 export function BikeLabels({ bike }) {
@@ -8,7 +8,7 @@ export function BikeLabels({ bike }) {
       {bike.is_former && <ContentLabel className="hf-label" data-bike-label="former">Бывший</ContentLabel>}
       {bike.size && (
         <ContentLabel className="hf-label" data-bike-label="size" aria-label={"Размер рамы: " + bike.size}>
-          <SiteIcon name="size" />
+          <SiteEmoji name="size" />
           <span>{bike.size}</span>
         </ContentLabel>
       )}
@@ -18,7 +18,7 @@ export function BikeLabels({ bike }) {
           data-bike-label="weight"
           aria-label={"Вес: " + Number(bike.weight) + " кг"}
         >
-          <SiteIcon name="weight" />
+          <SiteEmoji name="weight" />
           <span>{Number(bike.weight).toLocaleString("ru-RU")} кг</span>
         </ContentLabel>
       )}
@@ -40,9 +40,9 @@ export function BikeLike({ bike, reaction, t = (s) => s }) {
       onClick={reaction.toggle}
     >
       <span>
-        <SiteIcon name="heart" />
+        <SiteEmoji name="heart" />
         {t("Нравится")}
-      </span>{" "}
+      </span>
       <strong>{reaction.likes ?? 0}</strong>
     </button>
   );

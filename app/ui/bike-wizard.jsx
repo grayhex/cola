@@ -3,7 +3,7 @@ import { useConfirmation } from "./confirmation.jsx";
 import ClassificationFields from "./bike-classification.jsx";
 import { FormerBikeField } from "./bike-fields.jsx";
 import fieldStyles from "./bike-fields.module.css";
-import SiteIcon from "./site-icon.jsx";
+import SiteEmoji from "./site-emoji.jsx";
 import {
   emptyClassification,
   compatibilityCategory,
@@ -563,7 +563,7 @@ export default function BikeWizard({ onCreated, onBusy, onDirtyChange }) {
             </p>
             <label className="field">
               <span>
-                <SiteIcon name="search" /> Модель, год и комплектация
+                <SiteEmoji name="search" /> Модель, год и комплектация
               </span>
               <input
                 aria-label="Модель, год и комплектация"
@@ -702,7 +702,7 @@ export default function BikeWizard({ onCreated, onBusy, onDirtyChange }) {
                     disabled={!searchText.trim()}
                     onClick={() => search()}
                   >
-                    <SiteIcon name="search" />
+                    <SiteEmoji name="search" />
                     {result || message
                       ? "Повторить автоматический поиск и парсинг"
                       : "Найти комплектацию"}
@@ -982,7 +982,7 @@ export default function BikeWizard({ onCreated, onBusy, onDirtyChange }) {
             <div className="form-grid">
               <label className="field">
                 <span>
-                  <SiteIcon name="date" /> Год
+                  <SiteEmoji name="date" /> Год
                 </span>
                 <input
                   aria-label="Год"
@@ -996,7 +996,7 @@ export default function BikeWizard({ onCreated, onBusy, onDirtyChange }) {
               </label>
               <label className="field">
                 <span>
-                  <SiteIcon name="bike" /> Марка
+                  <SiteEmoji name="bike" /> Марка
                 </span>
                 <input
                   aria-label="Марка"

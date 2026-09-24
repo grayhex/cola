@@ -21,12 +21,6 @@ import { getSite } from "../lib/site.js";
 import { hidden } from "../lib/indexing.js";
 import { currentViewer } from "../lib/viewer.js";
 export const dynamic = "force-dynamic";
-// "cover" exposes env(safe-area-inset-*) for the mobile tab bar (#104).
-export const viewport = {
-  width: "device-width",
-  initialScale: 1,
-  viewportFit: "cover",
-};
 export async function generateMetadata() {
   const { settings } = await getSite();
   return {
@@ -52,17 +46,13 @@ export default async function Layout({ children }) {
       suppressHydrationWarning
     >
       <head>
-        {/* Russian text in the body and headings: fetch before first paint. */}
-        {["manrope-cyrillic", "unbounded-cyrillic"].map((font) => (
-          <link
-            key={font}
-            rel="preload"
-            href={`/fonts/${font}.woff2`}
-            as="font"
-            type="font/woff2"
-            crossOrigin="anonymous"
-          />
-        ))}
+        <link
+          rel="preload"
+          href="/fonts/sourcesans3.woff"
+          as="font"
+          type="font/woff"
+          crossOrigin="anonymous"
+        />
         <script
           dangerouslySetInnerHTML={{
             __html: themeBootstrap(site.settings.appearance.theme),
