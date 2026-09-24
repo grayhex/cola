@@ -47,8 +47,9 @@ export default function GarminImport({ bikes, onDone, onCancel }) {
     <section className="ride-form" aria-label="Импорт Garmin CSV">
       <h2>Импорт из Garmin</h2>
       <p className="help">
-        Выберите CSV из Garmin Connect. Поездки сохранятся без треков — GPX
-        можно добавить позже. Повторные строки будут пропущены.
+        Выберите CSV из Garmin Connect. Поездки сохранятся без треков — трек
+        (GPX, FIT или TCX) можно добавить позже. Повторные строки будут
+        пропущены.
       </p>
       <div className="ride-form-grid">
         <label className="field">

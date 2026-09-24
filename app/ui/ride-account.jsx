@@ -6,7 +6,7 @@ import { useEffect, useState, useRef } from "react";
 import { socialApi, Pagination } from "./social-primitives.jsx";
 import RideCard, { RideRoutePreview, RideMetrics } from "./ride-card.jsx";
 import GarminImport from "./garmin-import.jsx";
-import { garminFields } from "../../lib/garmin-fields.js";
+import { garminFields, defaultRideFields } from "../../lib/garmin-fields.js";
 const blank = {
   bikeId: "",
   title: "",
@@ -28,6 +28,40 @@ const localDate = (v) => {
     .toISOString()
     .slice(0, 16);
 };
+const trackFiles =
+  ".gpx,.fit,.tcx,application/gpx+xml,application/vnd.garmin.tcx+xml";
+// Every track has these; only sensors or Garmin CSV add something to choose.
+const trackMetrics = [
+  "distanceM",
+  "elapsedTimeS",
+  "movingTimeS",
+  "avgSpeedMps",
+  "elevationGainM",
+];
+// Where to find the FIT file; menu names differ between app versions.
+function FitHelp() {
+  return (
+    <details className="fit-help">
+      <summary>Как выгрузить FIT с велокомпьютера</summary>
+      <ul>
+        <li>
+          Garmin Connect: откройте занятие, в меню-шестерёнке выберите «Экспорт
+          оригинала» и распакуйте ZIP.
+        </li>
+        <li>Strava на сайте: занятие → «…» → «Экспорт оригинала».</li>
+        <li>
+          Magene, Bryton, Wahoo, iGPSport, Coros: в приложении откройте
+          тренировку и найдите экспорт или «Поделиться» файлом FIT.
+        </li>
+        <li>
+          По USB многие велокомпьютеры показывают файлы тренировок, у Garmin —
+          в папке Garmin/Activity.
+        </li>
+      </ul>
+      <p>Названия пунктов меню зависят от версии приложения.</p>
+    </details>
+  );
+}
 export default function RideAccount({ bikes }) {
   const [data, setData] = useState(null),
     [config, setConfig] = useState(null),
@@ -43,6 +77,16 @@ export default function RideAccount({ bikes }) {
   const currentBikes = selectableRideBikes(bikes);
   const rideBikes = selectableRideBikes(bikes, editing?.bike?.id);
   const autoOpened = useRef(false);
+  // Garmin CSV and FIT/TCX sensors bring extra metrics; the owner picks which
+  // of them the ride shows. Heart rate and power stay hidden until chosen.
+  const metricSource = mode === "plan" ? null : preview || editing,
+    shownMetrics = visibleMetrics || defaultRideFields,
+    pickable = garminFields.filter(
+      (f) => metricSource?.metrics[f.key] != null,
+    );
+  const offersPicker =
+    editing?.sourceKind === "garmin" ||
+    pickable.some((f) => !trackMetrics.includes(f.key));
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
   const refresh = () => socialApi("rides?own=1&page=" + page).then(setData);
   function start(next) {
@@ -80,7 +124,7 @@ export default function RideAccount({ bikes }) {
       if (!attach && !currentBikes.length)
         throw Error("Для новой покатушки выберите текущий велосипед.");
       if (file.size > config.maxGpxBytes)
-        throw Error("GPX-файл слишком большой");
+        throw Error("Файл слишком большой");
       const r = await fetch(
         "/api/rides/" +
           (attach
@@ -88,7 +132,9 @@ export default function RideAccount({ bikes }) {
             : "preview" + (mode === "plan" ? "?purpose=plan" : "")),
         {
           method: "POST",
-          headers: { "Content-Type": "application/gpx+xml" },
+          headers: {
+            "Content-Type": file.type || "application/octet-stream",
+          },
           body: file,
         },
       );
@@ -97,7 +143,7 @@ export default function RideAccount({ bikes }) {
       if (attach) {
         const detail = await socialApi("rides/owner/" + editing.shareId);
         setEditing(detail.ride);
-        setNotice("GPX проверен и добавлен.");
+        setNotice("Трек проверен и добавлен.");
         await refresh();
       } else {
         setPreview(d);
@@ -245,10 +291,11 @@ export default function RideAccount({ bikes }) {
                 if (!busy) upload(e.dataTransfer.files[0]);
               }}
             >
-              GPX-файл{mode === "plan" ? " · необязательно" : ""}
+              Файл трека: GPX, FIT или TCX
+              {mode === "plan" ? " · необязательно" : ""}
               <input
                 type="file"
-                accept=".gpx,application/gpx+xml"
+                accept={trackFiles}
                 disabled={busy || !currentBikes.length}
                 onChange={(e) => upload(e.target.files[0])}
               />
@@ -258,12 +305,13 @@ export default function RideAccount({ bikes }) {
               </small>
             </label>
           )}
+          {!editing && mode === "add" && !preview && <FitHelp />}
           {editing && !editing.hasTrack && (
             <label className="ride-drop">
-              Добавить GPX к поездке
+              Добавить трек к поездке: GPX, FIT или TCX
               <input
                 type="file"
-                accept=".gpx,application/gpx+xml"
+                accept={trackFiles}
                 disabled={busy}
                 onChange={(e) => upload(e.target.files[0], true)}
               />
@@ -290,28 +338,26 @@ export default function RideAccount({ bikes }) {
                   }
                 />
               )}
-              {editing?.sourceKind === "garmin" && (
+              {offersPicker && (
                 <fieldset className="metric-picker">
                   <legend>Показывать показатели</legend>
                   <div>
-                    {garminFields
-                      .filter((f) => editing.metrics[f.key] != null)
-                      .map((f) => (
-                        <label key={f.key}>
-                          <input
-                            type="checkbox"
-                            checked={visibleMetrics?.includes(f.key) || false}
-                            onChange={() =>
-                              setVisibleMetrics((v) =>
-                                (v || []).includes(f.key)
-                                  ? v.filter((k) => k !== f.key)
-                                  : [...(v || []), f.key],
-                              )
-                            }
-                          />
-                          {f.label}
-                        </label>
-                      ))}
+                    {pickable.map((f) => (
+                      <label key={f.key}>
+                        <input
+                          type="checkbox"
+                          checked={shownMetrics.includes(f.key)}
+                          onChange={() =>
+                            setVisibleMetrics(
+                              shownMetrics.includes(f.key)
+                                ? shownMetrics.filter((k) => k !== f.key)
+                                : [...shownMetrics, f.key],
+                            )
+                          }
+                        />
+                        {f.label}
+                      </label>
+                    ))}
                   </div>
                 </fieldset>
               )}
@@ -579,7 +625,8 @@ export default function RideAccount({ bikes }) {
           </div>
           {!data.rides.length && !mode && (
             <p className="help">
-              Загрузите GPX, импортируйте Garmin CSV или запланируйте маршрут.
+              Загрузите GPX, FIT или TCX, импортируйте Garmin CSV или
+              запланируйте маршрут.
             </p>
           )}
           <Pagination {...data} onPage={setPage} />

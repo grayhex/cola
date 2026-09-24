@@ -2,7 +2,7 @@ import { testConsents } from "../fixtures/legal.js";
 import sharp from "sharp";
 import { test, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
-import { gpx, loop } from "../ride-fixtures.js";
+import { gpx, fit, loop } from "../ride-fixtures.js";
 test.beforeEach(async ({ page }) => {
   await page.route("https://tile.openstreetmap.org/**", (route) =>
     route.abort(),
@@ -189,4 +189,74 @@ test("MapLibre initializes with intercepted OSM tiles, no external traffic", asy
     path: info.outputPath("ride-map.png"),
     fullPage: true,
   });
+});
+
+test("FIT upload: export hint, heart rate hidden until the owner shows it", async ({
+  page,
+  browser,
+}) => {
+  const nonce = randomUUID().slice(0, 8),
+    base = process.env.TEST_ORIGIN || "http://localhost:3100";
+  await page.request.post(base + "/api/auth/register", {
+    headers: { origin: base },
+    data: {
+      ...testConsents,
+      name: "FIT E2E",
+      email: `fit-e2e-${nonce}@example.test`,
+      password: "fit-e2e-secret-123",
+    },
+  });
+  await page.request.post(base + "/api/bikes", {
+    headers: { origin: base },
+    data: {
+      name: "Cube Nuroad",
+      brand: "Cube",
+      model: "Nuroad",
+      year: 2024,
+      category: "gravel",
+      description: "",
+      color: "",
+      size: "",
+      weight: null,
+      is_public: true,
+    },
+  });
+  await page.goto("/account?tab=rides");
+  await page
+    .getByRole("button", { name: "Загрузить FIT", exact: true })
+    .click();
+  await page.getByText("Как выгрузить FIT с велокомпьютера").click();
+  await expect(page.getByText("Экспорт оригинала").first()).toBeVisible();
+  await page.getByLabel("Файл трека", { exact: false }).setInputFiles({
+    name: "morning.fit",
+    mimeType: "application/octet-stream",
+    buffer: fit(loop),
+  });
+  const picker = page.getByRole("group", { name: "Показывать показатели" });
+  await expect(picker.getByLabel("Дистанция", { exact: true })).toBeChecked();
+  await expect(
+    picker.getByLabel("Средний пульс", { exact: true }),
+  ).not.toBeChecked();
+  await picker.getByLabel("Средний пульс", { exact: true }).check();
+  await page
+    .getByLabel("Название", { exact: true })
+    .fill("Утро с пульсометром");
+  await page.getByLabel("Опубликовать", { exact: true }).check();
+  await page.getByRole("button", { name: "Сохранить покатушку" }).click();
+  await expect(page.locator(".ride-card")).toHaveCount(1);
+  const { rides } = await (
+    await page.request.get(base + "/api/rides?own=1")
+  ).json();
+  const context = await browser.newContext();
+  const guest = await context.newPage();
+  await guest.route("https://tile.openstreetmap.org/**", (route) =>
+    route.abort(),
+  );
+  await guest.goto("/r/" + rides[0].shareId);
+  await expect(
+    guest.getByRole("heading", { name: "Утро с пульсометром" }),
+  ).toBeVisible();
+  await expect(guest.getByText("110 уд/мин")).toBeVisible();
+  await expect(guest.getByText("Максимальная мощность")).toHaveCount(0);
+  await context.close();
 });

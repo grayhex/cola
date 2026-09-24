@@ -134,6 +134,25 @@
 .ride-drop input {
   max-width: 100%;
 }
+.fit-help {
+  margin: 12px 0 0;
+  font-size: 14px;
+  color: var(--muted);
+}
+.fit-help summary {
+  cursor: pointer;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  color: var(--ink);
+}
+.fit-help ul {
+  margin: 4px 0 8px;
+  padding-left: 20px;
+}
+.fit-help p {
+  margin: 0;
+}
 .ride-toggle {
   display: flex;
   align-items: center;
