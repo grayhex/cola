@@ -43,6 +43,7 @@ import GlobalHeader from "./global-header.jsx";
 import Versions from "./versions.jsx";
 import { parseBikeName } from "../../lib/bike-name.js";
 import GroupedComponents from "./grouped-components.jsx";
+import { landingSlug, modelLandingPath } from "../../lib/experience-catalog.js";
 import { defaultBlocks } from "../../lib/garage-layout.js";
 import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
@@ -464,6 +465,13 @@ export default function Garage({
   // parser could read as a second, different name (#121). They stay in the
   // specification.
   const subtitle = bike?.year ? `${t("Модельный год")} ${bike.year}` : "";
+  // A public build is counted on its model's page (#74); a private one only
+  // leads to the search.
+  const modelHref =
+    bike?.is_public && landingSlug(bike.brand) && landingSlug(bike.model)
+      ? modelLandingPath(bike.brand, bike.model)
+      : "/experience?" +
+        new URLSearchParams({ brand: bike?.brand || "", model: bike?.model || "" });
   // Without the "О велосипеде" block, the owner's text, public price and
   // manufacturer link stay visible under the title.
   const intro = bike &&
@@ -593,16 +601,7 @@ export default function Garage({
               </span>
             )}
             <ChevronRight size={14} />
-            <a
-              href={
-                "/experience?" +
-                new URLSearchParams({
-                  brand: bike.brand || "",
-                  model: bike.model || "",
-                })
-              }
-              title="Опыт владельцев этой модели"
-            >
+            <a href={modelHref} title="Опыт владельцев этой модели">
               {bike.brand} {bike.model}
             </a>
           </div>
