@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { NavigationSettings, AboutSettings } from "./navigation-settings.jsx";
 import {
   ThemeSettings,
@@ -38,6 +39,7 @@ import {
   X,
   LoaderCircle,
   Menu,
+  LayoutGrid,
 } from "../ui/icons.jsx";
 import styles from "./design.module.css";
 import ArticleTopicSettings from "./article-topics.jsx";
@@ -68,7 +70,7 @@ const sections = [
   ["homepage", "Главная", Palette],
   ["navigation", "Меню", Menu],
   ["graphics", "Графика", Image],
-  ["emojis", "Эмодзи", Palette],
+  ["emojis", "Значки", Palette],
   ["articles", "Разделы статей", BookOpen],
   ["media", "Медиатека", Image],
   ["copy", "Тексты", Type],
@@ -460,6 +462,13 @@ export default function Admin() {
                         </button>
                       );
                     })}
+                    {g.id === "design" && (
+                      // The design system reference (#127), same access.
+                      <Link href="/admin/ui-kit">
+                        <LayoutGrid size={16} />
+                        UI Kit
+                      </Link>
+                    )}
                   </nav>
                 )}
               </div>

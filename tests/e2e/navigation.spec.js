@@ -291,7 +291,7 @@ test("navigation: real destinations, account, keyboard, configurable About and a
         page.locator(".primary-navigation > :first-child img"),
       ).toHaveCount(0);
       await expect(
-        page.locator(".primary-navigation > :first-child .site-emoji"),
+        page.locator(".primary-navigation > :first-child svg.site-icon"),
       ).toBeVisible();
     }
     await noOverflow();

@@ -1,6 +1,11 @@
+// Design system first: tokens.css declares the cascade layer order (#127).
+import "./styles/tokens.css";
+import "./styles/fonts.css";
+import "./styles/base.css";
+import "./styles/components.css";
+import "./styles/layout.css";
 import "maplibre-gl/dist/maplibre-gl.css";
 import "./rides.css";
-import "./theme.css";
 import "./globals.css";
 import "./mobile.css";
 import "./social.css";
@@ -12,7 +17,6 @@ import "./header.css";
 import "./about.css";
 import "./refinements.css";
 import "./journal.css";
-import "./fonts.css";
 import "./garage-polish.css";
 import "./ui-tabs.css";
 import { themeBootstrap } from "../lib/theme.js";

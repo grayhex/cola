@@ -1,3 +1,5 @@
+/* Legacy styles, replaced step by step by app/styles (#127). */
+@layer legacy {
 /* A single compact illustrated header, without a separate navigation plate. */
 /* Photos, compact build and rides occupy three explicit columns on wide screens. */
 .site-root .bike-detail > .bike-rides {
@@ -214,4 +216,5 @@
   flex-wrap: wrap;
   align-items: baseline;
   gap: 4px 16px;
+}
 }

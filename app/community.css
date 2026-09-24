@@ -1,3 +1,5 @@
+/* Legacy styles, replaced step by step by app/styles (#127). */
+@layer legacy {
 .discussion {
   order: 100 !important;
   flex-basis: 100%;
@@ -245,4 +247,5 @@
   .community-page .section-heading {
     flex-wrap: wrap;
   }
+}
 }

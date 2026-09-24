@@ -1,3 +1,5 @@
+/* Legacy styles, replaced step by step by app/styles (#127). */
+@layer legacy {
 /* Shared product primitives; theme colors and admin accent remain authoritative. */
 html {
   scrollbar-gutter: stable;
@@ -792,17 +794,6 @@ html {
 }
 
 /* Shared HF-inspired controls: one rhythm for menu, forms and showcase. */
-.site-emoji {
-  display: inline-flex;
-  flex: 0 0 auto;
-  align-items: center;
-  justify-content: center;
-  width: 1.3em;
-  line-height: 1;
-  font-family:
-    "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
-  font-size: 1.12em;
-}
 .site-root
   :is(
     .hf-button,
@@ -1340,4 +1331,5 @@ html {
 .hf-button:has(input:focus-visible) {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
 }

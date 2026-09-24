@@ -1,3 +1,5 @@
+/* Legacy styles, replaced step by step by app/styles (#127). */
+@layer legacy {
 /* Content controls and about-page statistics. */
 .site-root .compact-selector {
   position: relative;
@@ -30,4 +32,5 @@
   margin: 0;
   font-size: 26px;
   font-weight: 650;
+}
 }

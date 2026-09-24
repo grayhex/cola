@@ -1,3 +1,5 @@
+/* Legacy styles, replaced step by step by app/styles (#127). */
+@layer legacy {
 /* Feature layouts; shared colors and controls live in theme/product-ui. */
 .site-root { min-height: 100dvh; position: relative; isolation: isolate; background: var(--bg); color: var(--text); font-family: var(--site-font); }
 /* Decorative layer only. Text, photos and controls retain full opacity. */
@@ -1900,4 +1902,5 @@
 .background-settings .field small {
   display: block;
   margin-top: 5px;
+}
 }

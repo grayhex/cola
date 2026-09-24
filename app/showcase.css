@@ -1,3 +1,5 @@
+/* Legacy styles, replaced step by step by app/styles (#127). */
+@layer legacy {
 /* Shared photo-first cards: showcase, subscriptions and rider collections. */
 .site-root .social-stat {
   display: inline-flex;
@@ -183,4 +185,5 @@
   .bike-meter i {
     transition: none;
   }
+}
 }

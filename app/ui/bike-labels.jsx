@@ -1,5 +1,5 @@
 "use client";
-import SiteEmoji from "./site-emoji.jsx";
+import SiteIcon from "./site-icon.jsx";
 import { ClassificationBadges } from "./bike-classification.jsx";
 import { ContentLabel, LabelRow } from "./content-label.jsx";
 // `year` is off where the title already says «Модельный год».
@@ -14,7 +14,7 @@ export function BikeLabels({ bike, year = true }) {
       )}
       {bike.size && (
         <ContentLabel className="hf-label" data-bike-label="size" aria-label={"Размер рамы: " + bike.size}>
-          <SiteEmoji name="size" />
+          <SiteIcon name="size" />
           <span>{bike.size}</span>
         </ContentLabel>
       )}
@@ -24,7 +24,7 @@ export function BikeLabels({ bike, year = true }) {
           data-bike-label="weight"
           aria-label={"Вес: " + Number(bike.weight) + " кг"}
         >
-          <SiteEmoji name="weight" />
+          <SiteIcon name="weight" />
           <span>{Number(bike.weight).toLocaleString("ru-RU")} кг</span>
         </ContentLabel>
       )}
@@ -46,7 +46,7 @@ export function BikeLike({ bike, reaction, t = (s) => s }) {
       onClick={reaction.toggle}
     >
       <span>
-        <SiteEmoji name="heart" />
+        <SiteIcon name="heart" />
         {t("Нравится")}
       </span>
       <strong>{reaction.likes ?? 0}</strong>

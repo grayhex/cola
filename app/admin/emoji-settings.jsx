@@ -1,17 +1,22 @@
 "use client";
 import { useState } from "react";
-import { emojiSlots, defaultEmojis } from "../../lib/ui-emoji.js";
+import { emojiSlots, customEmoji, noCustomEmojis } from "../../lib/ui-emoji.js";
+import SiteIcon from "../ui/site-icon.jsx";
+// Interface icons are line icons; an emoji typed here replaces one of them
+// everywhere at the same size. An empty field keeps the standard icon.
 export default function EmojiSettings({ value, onChange }) {
   const [query, setQuery] = useState("");
+  const settings = { emojis: value };
   return (
     <section className="admin-panel">
-      <h2>Эмодзи меню и действий</h2>
+      <h2>Значки меню и действий</h2>
       <p className="help">
-        Общие значки для навигации, кнопок, фильтров и лейблов. Можно вставить
-        эмодзи с клавиатуры.
+        По умолчанию везде линейные иконки. Впишите эмодзи, чтобы заменить
+        значок в навигации, кнопках и фильтрах; пустое поле возвращает
+        стандартную иконку.
       </p>
       <label className="field">
-        <span>Найти эмодзи</span>
+        <span>Найти значок</span>
         <input
           type="search"
           value={query}
@@ -23,11 +28,13 @@ export default function EmojiSettings({ value, onChange }) {
           .filter((s) => s.label.toLowerCase().includes(query.toLowerCase()))
           .map((s) => (
             <label key={s.key}>
+              <SiteIcon name={s.key} settings={settings} size={18} />
               <span>{s.label}</span>
               <input
-                aria-label={"Эмодзи: " + s.label}
+                aria-label={"Эмодзи вместо значка: " + s.label}
                 maxLength={24}
-                value={value?.[s.key] ?? s.emoji}
+                placeholder="Иконка"
+                value={customEmoji(value, s.key) ?? ""}
                 onChange={(e) =>
                   onChange({ ...value, [s.key]: e.target.value })
                 }
@@ -38,9 +45,9 @@ export default function EmojiSettings({ value, onChange }) {
       <button
         type="button"
         className="quiet"
-        onClick={() => onChange(defaultEmojis)}
+        onClick={() => onChange(noCustomEmojis)}
       >
-        Вернуть стандартные эмодзи
+        Вернуть стандартные значки
       </button>
     </section>
   );

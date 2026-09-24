@@ -1,0 +1,700 @@
+/* Page layout (#127, DESIGN.md → Layout). Two modes share one grid:
+   working pages (.page …) are dense lists and forms; marketing pages
+   (.frame …) are the ruled Pricing/Storage column with free spacing. */
+@layer tokens, base, legacy, components, layout, features;
+@layer layout {
+  .site-root {
+    position: relative;
+    min-height: 100dvh;
+    isolation: isolate;
+    background: var(--bg);
+    color: var(--text);
+  }
+  /* Optional admin background picture: decoration only, behind content. */
+  .site-root::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background-position: center;
+    pointer-events: none;
+  }
+  /* ── Working pages ───────────────────────────────────────────────────
+     <main class="page"> … </main>, 1280px column with side gutters. */
+  .page {
+    width: 100%;
+    max-width: calc(var(--container) + 2 * var(--gutter));
+    margin: 0 auto;
+    padding: var(--space-6) var(--gutter) var(--space-16);
+  }
+  .page.narrow {
+    max-width: calc(var(--container-narrow) + 2 * var(--gutter));
+  }
+  .page.form {
+    max-width: calc(640px + 2 * var(--gutter));
+  }
+
+  /* Datasets' title row: name, grey count, search, then actions. */
+  .page-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-3) var(--space-4);
+    margin: 0 0 var(--space-4);
+  }
+  .page-title {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-3);
+    min-width: 0;
+  }
+  .page-title h1,
+  .page-head > h1 {
+    font-size: var(--text-xl);
+    font-weight: var(--weight-semibold);
+  }
+  .page-title .count {
+    font-size: var(--text-lg);
+  }
+  .page-head .search-pill {
+    flex: 1 1 200px;
+    max-width: 280px;
+  }
+  .page-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+    margin-left: auto;
+  }
+  .page-lead {
+    flex-basis: 100%;
+    max-width: 72ch;
+    color: var(--text-secondary);
+    font-size: var(--text-smd);
+  }
+  @media (min-width: 1024px) {
+    .page {
+      padding-top: var(--space-8);
+    }
+    .page-head {
+      margin-bottom: var(--space-6);
+    }
+  }
+
+  /* Filters beside results, as on Datasets: the filter column fades from
+     a tinted edge; on narrow screens it opens as a dialog instead. */
+  .page-split {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-6);
+  }
+  .page-aside {
+    min-width: 0;
+  }
+  @media (min-width: 1024px) {
+    .page-split {
+      grid-template-columns: 272px minmax(0, 1fr);
+      gap: 0;
+    }
+    .page-split > .page-aside {
+      margin: calc(-1 * var(--space-8)) 0 calc(-1 * var(--space-16));
+      padding: var(--space-8) var(--space-6) var(--space-16) 0;
+      border-right: 1px solid var(--line-soft);
+      background: linear-gradient(to left, var(--bg-subtle), var(--bg) 80%);
+    }
+    .page-split > :not(.page-aside) {
+      min-width: 0;
+      padding-left: var(--space-6);
+    }
+  }
+  .aside-group {
+    margin: 0 0 var(--space-6);
+  }
+  .aside-group > h2,
+  .aside-group > legend {
+    display: flex;
+    align-items: center;
+    min-height: 28px;
+    margin: 0 0 var(--space-2);
+    padding: 0;
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+  }
+  .tag-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1-5);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  /* Result grids. .list-grid is Datasets' two-column list of row cards;
+     .card-grid is the photo grid (column count comes from admin). */
+  .list-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-3);
+  }
+  @media (min-width: 1280px) {
+    .list-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: var(--space-4) var(--space-5);
+    }
+  }
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
+    gap: var(--space-5);
+  }
+
+  /* Sections inside working pages. */
+  .section {
+    margin-top: var(--space-10);
+  }
+  .section:first-child {
+    margin-top: 0;
+  }
+  .section-head,
+  .section-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2) var(--space-3);
+    margin: 0 0 var(--space-3);
+  }
+  .section-head h2,
+  .section-heading h2 {
+    font-size: var(--text-lg);
+    font-weight: var(--weight-semibold);
+  }
+  .section-head > :last-child:not(:first-child),
+  .section-heading > :last-child:not(:first-child) {
+    margin-left: auto;
+  }
+
+  /* A bordered panel with a header row (forms, settings, side blocks). */
+  .panel {
+    min-width: 0;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-xl);
+    background: var(--surface);
+  }
+  .panel-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2) var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px dashed var(--line-dashed);
+  }
+  .panel-head h2,
+  .panel-head h3 {
+    font-size: var(--text-base);
+    font-weight: var(--weight-semibold);
+  }
+  .panel-body {
+    padding: var(--space-4);
+  }
+
+  /* ── Marketing frame (Pricing / Storage) ─────────────────────────────
+     Every band spans the page with a hairline below; inside, a 1280px
+     column with hairlines left and right. Bands stack into one ruled
+     sheet; .frame-gap is the empty ruled row with four rivets. */
+  .frame {
+    position: relative;
+    width: 100%;
+    padding: 0 var(--gutter);
+    border-bottom: 1px solid var(--line);
+  }
+  .frame.dashed {
+    border-bottom-style: dashed;
+    border-bottom-color: var(--line-dashed);
+  }
+  .frame-inner {
+    position: relative;
+    max-width: var(--container);
+    margin: 0 auto;
+    border-inline: 1px solid var(--line);
+    background: var(--bg);
+  }
+  .frame-gap .frame-inner {
+    height: var(--space-16);
+  }
+  .frame-gap .frame-inner::before,
+  .frame-gap .frame-inner::after,
+  .frame-gap::before,
+  .frame-gap::after {
+    content: "";
+    position: absolute;
+    z-index: 1;
+    width: 8px;
+    height: 8px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-full);
+    background: var(--bg);
+  }
+  .frame-gap .frame-inner::before {
+    top: -4px;
+    left: -4.5px;
+  }
+  .frame-gap .frame-inner::after {
+    top: -4px;
+    right: -4.5px;
+  }
+  .frame-gap::before {
+    bottom: -4px;
+    left: calc(max(var(--gutter), (100% - var(--container)) / 2) - 4.5px);
+  }
+  .frame-gap::after {
+    right: calc(max(var(--gutter), (100% - var(--container)) / 2) - 4.5px);
+    bottom: -4px;
+  }
+  @media (max-width: 767px) {
+    .frame-gap .frame-inner {
+      height: var(--space-8);
+    }
+  }
+
+  /* Hero: centred, balanced type over a faint glyph field that fades out
+     at the edges (Pricing's ASCII background, drawn with ColaBike marks). */
+  .frame-hero {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow: hidden;
+    padding: var(--space-8) var(--space-4);
+    text-align: center;
+    text-wrap: balance;
+  }
+  @media (min-width: 640px) {
+    .frame-hero {
+      padding-block: var(--space-12);
+    }
+  }
+  @media (min-width: 1024px) {
+    .frame-hero {
+      padding-block: var(--space-16);
+    }
+  }
+  .frame-hero > * {
+    position: relative;
+    z-index: 1;
+  }
+  .frame-hero::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background:
+      linear-gradient(to right, var(--bg), transparent 56px),
+      linear-gradient(to left, var(--bg), transparent 56px),
+      linear-gradient(to top, var(--bg), transparent 56px);
+    pointer-events: none;
+  }
+  .glyph-field {
+    position: absolute !important;
+    inset: 0;
+    z-index: 0 !important;
+    overflow: hidden;
+    color: var(--glyph);
+    font: var(--weight-regular) 11px / 18px var(--font-mono);
+    letter-spacing: 0.2em;
+    white-space: pre;
+    text-align: left;
+    pointer-events: none;
+    user-select: none;
+    mask-image: radial-gradient(
+      ellipse 70% 65% at 50% 45%,
+      transparent 30%,
+      #000 75%
+    );
+  }
+  .glyph-field b {
+    color: var(--glyph-strong);
+    font-weight: inherit;
+  }
+  .glyph-field i {
+    color: var(--glyph-accent);
+    font-style: normal;
+  }
+
+  .mk-title {
+    margin: 0 0 var(--space-4);
+    color: var(--text);
+    font-size: var(--text-3xl);
+    font-weight: var(--weight-black);
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+  @media (min-width: 640px) {
+    .mk-title {
+      font-size: var(--text-4xl);
+    }
+  }
+  @media (min-width: 768px) {
+    .mk-title {
+      font-size: var(--text-5xl);
+    }
+  }
+  @media (min-width: 1024px) {
+    .mk-title.xl {
+      font-size: var(--text-6xl);
+    }
+  }
+  /* A word in the accent gradient with a soft blurred copy behind it
+     (Storage's hero). The copy is aria-hidden in markup. */
+  .mk-gradient {
+    position: relative;
+    display: inline-block;
+  }
+  .mk-gradient > span {
+    background: var(--mk-gradient);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    font-weight: 800;
+  }
+  .mk-gradient > span + span {
+    position: absolute;
+    top: 0;
+    left: 0;
+    opacity: 0.3;
+    filter: blur(24px);
+    pointer-events: none;
+  }
+  .mk-lead {
+    max-width: 44rem;
+    margin: 0 auto;
+    color: var(--text-secondary);
+    font-size: var(--text-lg);
+    line-height: var(--leading-snug);
+  }
+  @media (min-width: 768px) {
+    .mk-lead {
+      font-size: var(--text-xl);
+    }
+  }
+  .mk-h2 {
+    margin: 0 0 var(--space-4);
+    color: var(--text);
+    font-size: var(--text-3xl);
+    font-weight: var(--weight-bold);
+    line-height: var(--leading-tight);
+    text-wrap: balance;
+  }
+  @media (min-width: 768px) {
+    .mk-h2 {
+      font-size: var(--text-4xl);
+    }
+  }
+  .mk-text {
+    max-width: 36rem;
+    color: var(--text-secondary);
+    font-size: var(--text-base);
+    line-height: var(--leading-normal);
+  }
+  @media (min-width: 768px) {
+    .mk-text {
+      font-size: var(--text-lg);
+    }
+  }
+  /* Topic pill above a section heading, tinted by data-tone. */
+  .mk-eyebrow {
+    display: inline-block;
+    margin: 0 0 var(--space-6);
+    padding: var(--space-1) var(--space-4);
+    border-radius: var(--radius-full);
+    background: var(--tone-soft, var(--info-soft));
+    color: var(--tone, var(--info));
+    font-size: var(--text-smd);
+    font-weight: var(--weight-semibold);
+  }
+  @media (min-width: 1024px) {
+    .mk-eyebrow {
+      margin-bottom: var(--space-8);
+    }
+  }
+
+  /* Section tones for marketing pages: eyebrow, demo tint and blobs. */
+  [data-tone="blue"] {
+    --tone: var(--info);
+    --tone-soft: var(--info-soft);
+    --tone-2: var(--sky-400);
+  }
+  [data-tone="green"] {
+    --tone: var(--success);
+    --tone-soft: var(--success-soft);
+    --tone-2: var(--green-400);
+  }
+  [data-tone="amber"] {
+    --tone: var(--warning);
+    --tone-soft: var(--warning-soft);
+    --tone-2: var(--orange-500);
+  }
+  [data-tone="pink"] {
+    --tone: var(--tone-special);
+    --tone-soft: color-mix(in srgb, var(--tone-special) 12%, transparent);
+    --tone-2: var(--purple-600);
+  }
+  [data-tone="violet"] {
+    --tone: var(--tone-bmx);
+    --tone-soft: color-mix(in srgb, var(--tone-bmx) 12%, transparent);
+    --tone-2: var(--pink-400);
+  }
+  [data-tone="teal"] {
+    --tone: var(--tone-urban);
+    --tone-soft: color-mix(in srgb, var(--tone-urban) 12%, transparent);
+    --tone-2: var(--sky-400);
+  }
+
+  /* "Text + demonstration" article: two halves split by a hairline; the
+     demo half is tinted and carries two blurred colour blobs. */
+  .mk-split {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    overflow: hidden;
+  }
+  .mk-split > * + * {
+    border-top: 1px solid var(--line);
+  }
+  @media (min-width: 1024px) {
+    .mk-split {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .mk-split > * + * {
+      border-top: 0;
+      border-left: 1px solid var(--line);
+    }
+    .mk-split.reverse > :first-child {
+      order: 2;
+      border-left: 1px solid var(--line);
+    }
+    .mk-split.reverse > :last-child {
+      order: 1;
+      border-left: 0;
+    }
+  }
+  .mk-copy {
+    position: relative;
+    padding: var(--space-6);
+  }
+  @media (min-width: 640px) {
+    .mk-copy {
+      padding: var(--space-10);
+    }
+  }
+  @media (min-width: 1024px) {
+    .mk-copy {
+      padding: var(--space-14);
+    }
+  }
+  .mk-demo {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 280px;
+    overflow: hidden;
+    padding: var(--space-4);
+    background: color-mix(in srgb, var(--tone, var(--info)) 4%, var(--bg));
+  }
+  @media (min-width: 640px) {
+    .mk-demo {
+      padding: var(--space-6);
+    }
+  }
+  @media (min-width: 1024px) {
+    .mk-demo {
+      padding: var(--space-8);
+    }
+  }
+  .mk-demo::before,
+  .mk-demo::after {
+    content: "";
+    position: absolute;
+    border-radius: var(--radius-full);
+    filter: blur(64px);
+    pointer-events: none;
+  }
+  .mk-demo::before {
+    top: -80px;
+    left: -80px;
+    width: 288px;
+    height: 288px;
+    background: color-mix(in srgb, var(--tone, var(--info)) 9%, transparent);
+  }
+  .mk-demo::after {
+    right: -48px;
+    bottom: -48px;
+    width: 192px;
+    height: 192px;
+    background: color-mix(
+      in srgb,
+      var(--tone-2, var(--tone, var(--info))) 12%,
+      transparent
+    );
+  }
+  .mk-demo > * {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+  }
+  /* The small white cards inside demos (Pricing's storage tiers). */
+  .mk-mini {
+    min-width: 0;
+    padding: var(--space-5);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-xl);
+    background: var(--surface);
+    box-shadow: var(--shadow-xs);
+  }
+  .mk-mini-label {
+    color: var(--text-muted);
+    font: var(--weight-semibold) var(--text-xs) / var(--leading-tight)
+      var(--font-mono);
+  }
+  .mk-footnote {
+    margin: 0;
+    padding: var(--space-1-5) var(--space-2) var(--space-1-5) var(--space-3);
+    border-top: 1px dashed var(--line-dashed);
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    text-align: center;
+  }
+  @media (min-width: 640px) {
+    .mk-footnote {
+      max-width: max-content;
+      margin-left: auto;
+      border-left: 1px dashed var(--line-dashed);
+      border-top-left-radius: var(--radius-xl);
+      text-align: left;
+    }
+  }
+
+  /* Feature cards in a ruled row (Pricing's plan columns). */
+  .mk-columns {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    margin: 0 var(--space-4);
+    border-inline: 1px dashed var(--line-dashed);
+  }
+  .mk-columns > * + * {
+    border-top: 1px solid var(--line);
+  }
+  @media (min-width: 640px) {
+    .mk-columns {
+      margin: 0 var(--space-5);
+    }
+  }
+  @media (min-width: 1024px) {
+    .mk-columns {
+      grid-template-columns: repeat(var(--mk-columns, 3), minmax(0, 1fr));
+    }
+    .mk-columns > * + * {
+      border-top: 0;
+      border-left: 1px solid var(--line);
+    }
+  }
+  .mk-column > * {
+    padding: var(--space-4);
+  }
+  .mk-column > * + * {
+    border-top: 1px dashed var(--line-dashed);
+  }
+  @media (min-width: 640px) {
+    .mk-column > * {
+      padding: var(--space-6) var(--space-8);
+    }
+  }
+  /* Tick list (Pricing's plan features). */
+  .mk-list {
+    display: grid;
+    gap: var(--space-3);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .mk-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-2-5);
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+  }
+  .mk-list svg {
+    flex: none;
+    width: 16px;
+    height: 16px;
+    margin-top: 2px;
+    color: var(--text-subtle);
+  }
+
+  /* Numbered steps: round badges on a thin line (Storage's how-to). */
+  .mk-steps {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-6);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    counter-reset: mk-step;
+  }
+  @media (min-width: 768px) {
+    .mk-steps {
+      grid-template-columns: repeat(var(--mk-steps, 3), minmax(0, 1fr));
+    }
+  }
+  .mk-steps > li {
+    position: relative;
+    counter-increment: mk-step;
+  }
+  .mk-steps > li::before {
+    content: counter(mk-step);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    margin-bottom: var(--space-2);
+    border-radius: var(--radius-full);
+    background: var(--surface-hover);
+    color: var(--text-secondary);
+    font: var(--weight-semibold) var(--text-sm) / 1 var(--font-mono);
+    transition: transform var(--duration) var(--ease-out);
+  }
+  .mk-steps > li:first-child::before {
+    background: var(--primary);
+    color: var(--primary-foreground);
+  }
+  .mk-steps > li:hover::before {
+    transform: scale(1.1);
+  }
+  .mk-steps h3 {
+    margin: 0 0 var(--space-1);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+  }
+  .mk-steps p {
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+  }
+
+  /* Elements that fade in when scrolled into view (see reveal.js); the
+     content is visible without JavaScript and with reduced motion. */
+  @media (prefers-reduced-motion: no-preference) {
+    [data-reveal="pending"] {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    [data-reveal] {
+      transition:
+        opacity var(--duration-slow) var(--ease-out),
+        transform var(--duration-slow) var(--ease-out);
+    }
+  }
+}

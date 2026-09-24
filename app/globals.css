@@ -1,3 +1,5 @@
+/* Legacy styles, replaced step by step by app/styles (#127). */
+@layer legacy {
 * {
   box-sizing: border-box;
 }
@@ -1088,4 +1090,5 @@ dialog::backdrop {
 }
 .auth-form .help {
   font-size: 13px;
+}
 }

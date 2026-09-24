@@ -130,8 +130,14 @@ test("left admin navigation, configurable emoji, frame labels and one-tap weekly
         content = await page.locator(".admin-content").boundingBox();
       expect(side.x + side.width).toBeLessThan(content.x + 1);
     }
-    await sidebar.getByRole("button", { name: "Эмодзи", exact: true }).click();
-    await page.getByLabel("Эмодзи: Запланировать", { exact: true }).fill("🌅");
+    await sidebar.getByRole("button", { name: "Значки", exact: true }).click();
+    // Line icons by default; an emoji typed here replaces one (#127).
+    await expect(
+      page.getByLabel("Эмодзи вместо значка: Запланировать", { exact: true }),
+    ).toHaveValue("");
+    await page
+      .getByLabel("Эмодзи вместо значка: Запланировать", { exact: true })
+      .fill("🌅");
     await page.getByRole("button", { name: "Сохранить", exact: true }).click();
     await expect
       .poll(
@@ -185,7 +191,7 @@ test("left admin navigation, configurable emoji, frame labels and one-tap weekly
     await expect(
       page
         .getByRole("button", { name: "Запланировать", exact: true })
-        .locator(".site-emoji"),
+        .locator(".site-icon.custom"),
     ).toHaveText("🌅");
     await expect(
       page.getByLabel("Повторять каждую неделю", { exact: false }),

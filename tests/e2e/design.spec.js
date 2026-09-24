@@ -114,7 +114,7 @@ test("dense visual system: shared cards, filters, search, themes and responsive 
     expect(await classification.locator(":scope > span").count()).toBeGreaterThan(0);
     expect(await classification.locator(":scope > span").count()).toBeLessThanOrEqual(3);
     await expect(card.locator(".like-button img")).toHaveCount(0);
-    await expect(card.locator(".like-button .site-emoji")).toBeVisible();
+    await expect(card.locator(".like-button svg.site-icon")).toBeVisible();
     expect(
       await card
         .locator(".card-open-photo > img")

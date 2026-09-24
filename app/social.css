@@ -1,3 +1,5 @@
+/* Legacy styles, replaced step by step by app/styles (#127). */
+@layer legacy {
 .social-page {
   max-width: 1200px;
   margin: 0 auto;
@@ -511,4 +513,5 @@
 }
 .entity-byline {
   justify-content: space-between;
+}
 }

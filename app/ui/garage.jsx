@@ -11,7 +11,7 @@ import {
   matchesClassification,
   readClassificationFilters,
 } from "../../lib/bike-classification.js";
-import SiteEmoji from "./site-emoji.jsx";
+import SiteIcon from "./site-icon.jsx";
 import { useConfirmation } from "./confirmation.jsx";
 import ChoiceMenu from "./choice-menu.jsx";
 import { BikeLabels } from "./bike-labels.jsx";
@@ -1060,7 +1060,7 @@ export default function Garage({
                     href="/account?tab=bikes&action=add"
                     aria-label={t("Добавить велосипед")}
                   >
-                    <SiteEmoji name="addBike" />
+                    <SiteIcon name="addBike" />
                     <span className={styles.addLabel}>
                       {t("Добавить велосипед")}
                     </span>
@@ -1074,7 +1074,7 @@ export default function Garage({
                     title="Добавить велосипед"
                     onClick={() => setModal({ type: "bike" })}
                   >
-                    <SiteEmoji name="addBike" />
+                    <SiteIcon name="addBike" />
                   </button>
                 )}
               </div>

@@ -1,3 +1,5 @@
+/* Legacy styles, replaced step by step by app/styles (#127). */
+@layer legacy {
 .ride-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -301,4 +303,5 @@
   .metric-picker > div {
     grid-template-columns: 1fr;
   }
+}
 }

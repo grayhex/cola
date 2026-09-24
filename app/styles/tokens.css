@@ -1,0 +1,485 @@
+/* ColaBike design tokens (#127). Components use the semantic names below,
+   never the raw palette, so light and dark share one component structure.
+   The raw scale is Tailwind's default palette, which the reference pages
+   (huggingface.co/pricing, /storage, /datasets) are built on; gray-950 is
+   Hugging Face's own dark canvas from design.md. See DESIGN.md. */
+@layer tokens, base, legacy, components, layout, features;
+
+@layer tokens {
+  /* The brand colour lives on :root only, so the admin setting (an inline
+     :root style) reaches every themed scope below. */
+  :root {
+    --accent: #f3b51b;
+    --accent-foreground: #000000;
+  }
+
+  /* Light values. .theme-light / .theme-dark re-theme a part of the page
+     (the UI Kit shows both themes side by side). */
+  :root,
+  .theme-light,
+  .theme-dark {
+    /* Raw palette. Not for direct use in components. */
+    --gray-50: #f9fafb;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-300: #d1d5db;
+    --gray-400: #9ca3af;
+    --gray-500: #6b7280;
+    --gray-600: #4b5563;
+    --gray-700: #374151;
+    --gray-800: #1f2937;
+    --gray-850: #18212f;
+    --gray-900: #111827;
+    --gray-925: #0e1320;
+    --gray-950: #0b0f19;
+    --blue-50: #eff6ff;
+    --blue-100: #dbeafe;
+    --blue-400: #60a5fa;
+    --blue-500: #3b82f6;
+    --blue-600: #2563eb;
+    --blue-700: #1d4ed8;
+    --sky-50: #f0f9ff;
+    --sky-400: #38bdf8;
+    --green-100: #dcfce7;
+    --green-400: #4ade80;
+    --green-600: #16a34a;
+    --green-700: #15803d;
+    --amber-100: #fef3c7;
+    --amber-400: #fbbf24;
+    --amber-600: #d97706;
+    --amber-700: #b45309;
+    --red-50: #fef2f2;
+    --red-400: #f87171;
+    --red-600: #dc2626;
+    --red-700: #b91c1c;
+    --pink-400: #f472b6;
+    --pink-600: #db2777;
+    --purple-600: #9333ea;
+    --teal-600: #0d9488;
+    --orange-500: #f97316;
+
+    /* Surfaces */
+    --bg: #ffffff;
+    --bg-subtle: var(--gray-50);
+    --surface: #ffffff;
+    --surface-subtle: var(--gray-50);
+    --surface-hover: var(--gray-100);
+    --surface-inverse: var(--gray-950);
+    --overlay: rgb(11 15 25 / 0.55);
+    /* A card fading from a tinted edge to the page, as the Datasets
+       filter column and repository cards do. */
+    --surface-gradient: linear-gradient(to right, var(--gray-50), #ffffff);
+
+    /* Text */
+    --text: var(--gray-900);
+    --text-strong: #000000;
+    --text-secondary: var(--gray-600);
+    --text-muted: var(--gray-500);
+    /* Icons, separators and decoration only: too light for text. */
+    --text-subtle: var(--gray-400);
+    --text-inverse: #ffffff;
+
+    /* Lines */
+    --line: rgb(229 231 235 / 0.7);
+    --line-strong: var(--gray-200);
+    --line-soft: var(--gray-100);
+    --line-dashed: var(--gray-200);
+
+    /* Brand: ColaBike yellow (--accent above; the admin setting overrides
+       it). Soft fill and readable text are derived from it. */
+    --accent-soft: color-mix(in srgb, var(--accent) 16%, var(--surface));
+    /* The accent as readable text on the page (yellow itself is too light). */
+    --accent-text: color-mix(in srgb, var(--accent) 55%, #000000);
+
+    /* The main action is black on white, white on dark. */
+    --primary: #000000;
+    --primary-foreground: #ffffff;
+    --primary-hover: var(--gray-800);
+    --primary-ring: var(--gray-200);
+    --primary-ring-hover: #000000;
+
+    /* Ordinary buttons: a soft vertical gradient with a hairline. */
+    --control-bg: linear-gradient(to bottom, #ffffff, var(--gray-100));
+    --control-bg-hover: linear-gradient(
+      to bottom,
+      var(--gray-50),
+      var(--gray-100)
+    );
+    --control-line: var(--gray-200);
+    --control-text: var(--gray-800);
+    --field-bg: #ffffff;
+    /* One step darker than card hairlines so empty fields read as fields. */
+    --field-line: var(--gray-300);
+    --field-line-hover: var(--gray-400);
+    --field-font-size: var(--text-sm);
+    /* Filter chips (.tag) and the chosen segment of a .segmented group. */
+    --tag-bg: linear-gradient(to bottom, #ffffff, var(--gray-50));
+    --segment-active-bg: #000000;
+    --segment-active-text: #ffffff;
+    /* The "•" between metadata items. */
+    --line-dot: var(--gray-300);
+
+    /* States */
+    --info: var(--blue-600);
+    --info-soft: rgb(59 130 246 / 0.1);
+    --success: var(--green-700);
+    --success-soft: var(--green-100);
+    --warning: var(--amber-700);
+    --warning-soft: var(--amber-100);
+    --danger: var(--red-600);
+    --danger-soft: var(--red-50);
+    /* Filled destructive buttons keep white text readable in both themes. */
+    --danger-solid: var(--red-600);
+    --danger-solid-hover: var(--red-700);
+    --focus: var(--blue-500);
+    --focus-ring: 0 0 0 3px rgb(59 130 246 / 0.35);
+
+    /* Bike families, as tinted icon and label accents (signal only). */
+    --tone-mtb: var(--blue-600);
+    --tone-road: var(--green-600);
+    --tone-urban: var(--teal-600);
+    --tone-bmx: var(--purple-600);
+    --tone-cargo: var(--amber-600);
+    --tone-special: var(--pink-600);
+
+    /* Marketing decoration: glyph field and the brand gradient word. */
+    --glyph: var(--gray-300);
+    --glyph-strong: var(--gray-500);
+    --glyph-accent: var(--amber-400);
+    --mk-gradient: linear-gradient(
+      to bottom right,
+      #c2410c 10%,
+      #ea580c 45%,
+      #d97706
+    );
+
+    /* Type */
+    --font-sans:
+      "Cola Source Sans 3", "Source Sans Pro", ui-sans-serif, system-ui,
+      sans-serif;
+    --font-mono:
+      "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    --text-xs: 12px;
+    --text-sm: 14px;
+    --text-smd: 15px;
+    --text-base: 16px;
+    --text-lg: 18px;
+    --text-xl: 20px;
+    --text-2xl: 24px;
+    --text-3xl: 30px;
+    --text-4xl: 36px;
+    --text-5xl: 48px;
+    --text-6xl: 60px;
+    --text-7xl: 72px;
+    --leading-tight: 1.25;
+    --leading-snug: 1.4;
+    --leading-normal: 1.5;
+    --weight-regular: 400;
+    --weight-medium: 500;
+    --weight-semibold: 600;
+    --weight-bold: 700;
+    --weight-black: 900;
+
+    /* Space, on a 4px grid */
+    --space-0-5: 2px;
+    --space-1: 4px;
+    --space-1-5: 6px;
+    --space-2: 8px;
+    --space-2-5: 10px;
+    --space-3: 12px;
+    --space-3-5: 14px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --space-8: 32px;
+    --space-10: 40px;
+    --space-12: 48px;
+    --space-14: 56px;
+    --space-16: 64px;
+    --space-20: 80px;
+
+    /* Shape */
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 8px;
+    --radius-xl: 12px;
+    --radius-2xl: 16px;
+    --radius-full: 9999px;
+
+    /* Depth: hairlines first, shadows only for floating layers. */
+    --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    --shadow-inner: inset 0 2px 4px 0 rgb(0 0 0 / 0.05);
+    --shadow-lg:
+      0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --shadow-xl:
+      0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+
+    /* Layout */
+    --container: 1280px;
+    --container-narrow: 768px;
+    --gutter: 16px;
+    --header-height: 64px;
+    --control-sm: 28px;
+    --control-md: 36px;
+    --control-lg: 44px;
+
+    /* Motion */
+    --ease-out: cubic-bezier(0, 0, 0.2, 1);
+    --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+    --duration-fast: 150ms;
+    --duration: 200ms;
+    --duration-slow: 300ms;
+
+    /* Layers */
+    --z-sticky: 10;
+    --z-dropdown: 20;
+    --z-modal: 30;
+    --z-toast: 40;
+
+    /* Data visualisation (ride speed chart). */
+    --chart-line: var(--blue-600);
+
+    /* Transitional aliases: old names still read by styles that #127 has
+       not rewritten yet. Delete each one when nothing references it. */
+    --ink: var(--text);
+    --muted: var(--text-muted);
+    --subtle: var(--text-muted);
+    --paper: var(--surface);
+    --wash: var(--surface-subtle);
+    --soft: var(--surface-hover);
+    --field: var(--field-bg);
+    --surface-muted: var(--surface-subtle);
+    --surface-raised: var(--surface);
+    --border: var(--line-strong);
+    --border-strong: var(--field-line-hover);
+    --control-border: var(--field-line);
+    --site-font: var(--font-sans);
+    --display-font: var(--font-sans);
+    --radius: var(--radius-lg);
+    --radius-xs: var(--radius-sm);
+    --shadow-popover: var(--shadow-lg);
+    --motion-fast: var(--duration-fast);
+    --motion-panel: var(--duration);
+    --motion-image: var(--duration);
+    --duration-normal: var(--duration);
+    --ease-standard: var(--ease-out);
+    --content-width: var(--container);
+    --showcase-shell-max: var(--container);
+    --nav-height: var(--header-height);
+    --control-standard: var(--control-md);
+    --control-compact: var(--control-md);
+    --button-bg: var(--primary);
+    --button-fg: var(--primary-foreground);
+    --button-hover: var(--primary-hover);
+    --accent-hover: color-mix(in srgb, var(--accent) 85%, var(--text));
+    --accent-ink: var(--accent-foreground);
+    --hero-bg: var(--bg-subtle);
+    --layer-header: var(--z-sticky);
+    --layer-popover: var(--z-dropdown);
+
+    color-scheme: light;
+  }
+
+  :root[data-theme="dark"],
+  .theme-dark {
+    --bg: var(--gray-950);
+    --bg-subtle: var(--gray-925);
+    --surface: var(--gray-950);
+    --surface-subtle: rgb(17 24 39 / 0.5);
+    --surface-hover: var(--gray-900);
+    --surface-inverse: #ffffff;
+    --overlay: rgb(0 0 0 / 0.6);
+    --surface-gradient: linear-gradient(
+      to right,
+      var(--gray-925),
+      var(--gray-950)
+    );
+    --text: #ffffff;
+    --text-strong: #ffffff;
+    --text-secondary: var(--gray-400);
+    --text-muted: var(--gray-400);
+    --text-subtle: var(--gray-500);
+    --text-inverse: #000000;
+    --line: var(--gray-850);
+    --line-strong: var(--gray-800);
+    --line-soft: var(--gray-900);
+    --line-dashed: var(--gray-800);
+    --primary: #ffffff;
+    --primary-foreground: #000000;
+    --primary-hover: var(--gray-200);
+    --primary-ring: var(--gray-700);
+    --primary-ring-hover: #ffffff;
+    --control-bg: linear-gradient(to bottom, var(--gray-800), var(--gray-950));
+    --control-bg-hover: linear-gradient(
+      to bottom,
+      var(--gray-700),
+      var(--gray-900)
+    );
+    --control-line: var(--gray-800);
+    --control-text: var(--gray-200);
+    --field-bg: var(--gray-950);
+    --field-line: var(--gray-700);
+
+    --field-line-hover: var(--gray-600);
+
+    --tag-bg: linear-gradient(to bottom, var(--gray-900), var(--gray-950));
+
+    --segment-active-bg: var(--gray-800);
+
+    --segment-active-text: #ffffff;
+
+    --line-dot: var(--gray-500);
+
+    --accent-text: color-mix(in srgb, var(--accent) 85%, #ffffff);
+    --info: var(--blue-400);
+    --info-soft: rgb(96 165 250 / 0.15);
+    --success: var(--green-400);
+    --success-soft: rgb(20 83 45 / 0.5);
+    --warning: var(--amber-400);
+    --warning-soft: rgb(120 53 15 / 0.35);
+    --danger: var(--red-400);
+    --danger-soft: rgb(127 29 29 / 0.3);
+    --focus: var(--blue-400);
+    --focus-ring: 0 0 0 3px rgb(96 165 250 / 0.4);
+    --tone-mtb: var(--blue-400);
+    --tone-road: var(--green-400);
+    --tone-urban: #2dd4bf;
+    --tone-bmx: #c084fc;
+    --tone-cargo: var(--amber-400);
+    --tone-special: var(--pink-400);
+    --chart-line: var(--blue-400);
+
+    --glyph: var(--gray-800);
+
+    --glyph-strong: var(--gray-600);
+
+    --glyph-accent: var(--amber-600);
+
+    --mk-gradient: linear-gradient(
+      to bottom right,
+      #f59e0b 10%,
+      #fbbf24 50%,
+      #fde047
+    );
+    --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.4);
+    --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.5);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.5);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.55);
+    color-scheme: dark;
+  }
+
+  /* Without JavaScript the preference stays "system": follow the OS with
+     the same dark values as above. */
+  @media (prefers-color-scheme: dark) {
+    :root[data-theme="system"] {
+      --bg: var(--gray-950);
+      --bg-subtle: var(--gray-925);
+      --surface: var(--gray-950);
+      --surface-subtle: rgb(17 24 39 / 0.5);
+      --surface-hover: var(--gray-900);
+      --surface-inverse: #ffffff;
+      --overlay: rgb(0 0 0 / 0.6);
+      --surface-gradient: linear-gradient(
+        to right,
+        var(--gray-925),
+        var(--gray-950)
+      );
+      --text: #ffffff;
+      --text-strong: #ffffff;
+      --text-secondary: var(--gray-400);
+      --text-muted: var(--gray-400);
+      --text-subtle: var(--gray-500);
+      --text-inverse: #000000;
+      --line: var(--gray-850);
+      --line-strong: var(--gray-800);
+      --line-soft: var(--gray-900);
+      --line-dashed: var(--gray-800);
+      --primary: #ffffff;
+      --primary-foreground: #000000;
+      --primary-hover: var(--gray-200);
+      --primary-ring: var(--gray-700);
+      --primary-ring-hover: #ffffff;
+      --control-bg: linear-gradient(
+        to bottom,
+        var(--gray-800),
+        var(--gray-950)
+      );
+      --control-bg-hover: linear-gradient(
+        to bottom,
+        var(--gray-700),
+        var(--gray-900)
+      );
+      --control-line: var(--gray-800);
+      --control-text: var(--gray-200);
+      --field-bg: var(--gray-950);
+      --field-line: var(--gray-700);
+
+      --field-line-hover: var(--gray-600);
+
+      --tag-bg: linear-gradient(to bottom, var(--gray-900), var(--gray-950));
+
+      --segment-active-bg: var(--gray-800);
+
+      --segment-active-text: #ffffff;
+
+      --line-dot: var(--gray-500);
+
+      --accent-text: color-mix(in srgb, var(--accent) 85%, #ffffff);
+      --info: var(--blue-400);
+      --info-soft: rgb(96 165 250 / 0.15);
+      --success: var(--green-400);
+      --success-soft: rgb(20 83 45 / 0.5);
+      --warning: var(--amber-400);
+      --warning-soft: rgb(120 53 15 / 0.35);
+      --danger: var(--red-400);
+      --danger-soft: rgb(127 29 29 / 0.3);
+      --focus: var(--blue-400);
+      --focus-ring: 0 0 0 3px rgb(96 165 250 / 0.4);
+      --tone-mtb: var(--blue-400);
+      --tone-road: var(--green-400);
+      --tone-urban: #2dd4bf;
+      --tone-bmx: #c084fc;
+      --tone-cargo: var(--amber-400);
+      --tone-special: var(--pink-400);
+      --chart-line: var(--blue-400);
+
+      --glyph: var(--gray-800);
+
+      --glyph-strong: var(--gray-600);
+
+      --glyph-accent: var(--amber-600);
+
+      --mk-gradient: linear-gradient(
+        to bottom right,
+        #f59e0b 10%,
+        #fbbf24 50%,
+        #fde047
+      );
+      --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.4);
+      --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.5);
+      --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.5);
+      --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.55);
+      color-scheme: dark;
+    }
+  }
+
+  /* Touch screens: larger targets and 16px fields (no zoom on focus). */
+  @media (pointer: coarse) {
+    :root,
+    .theme-light,
+    .theme-dark {
+      --control-sm: 32px;
+      --control-md: 40px;
+      --control-lg: 48px;
+      --field-font-size: var(--text-base);
+    }
+  }
+  @media (min-width: 768px) {
+    :root,
+    .theme-light,
+    .theme-dark {
+      --gutter: 24px;
+    }
+  }
+}

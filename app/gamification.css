@@ -1,3 +1,5 @@
+/* Legacy styles, replaced step by step by app/styles (#127). */
+@layer legacy {
 /* Award artwork and photos have separate, explicitly bounded boxes. */
 .site-root .game-art {
   display: inline-flex;
@@ -158,4 +160,5 @@
 @media (max-width: 480px) {
   .site-root .record-grid { grid-template-columns: 1fr; }
   .site-root .record-card { padding: 10px 12px; }
+}
 }

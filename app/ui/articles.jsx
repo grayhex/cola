@@ -10,7 +10,7 @@ import {
   socialApi,
 } from "./social-primitives.jsx";
 import { useSite } from "./site-provider.jsx";
-import SiteEmoji from "./site-emoji.jsx";
+import SiteIcon from "./site-icon.jsx";
 import ChoiceMenu from "./choice-menu.jsx";
 import ArticleBody from "./article-body.jsx";
 import Discussion from "./discussion.jsx";
@@ -105,7 +105,7 @@ export function Articles() {
             </p>
           </div>
           <a href="/articles/new" className="hf-button">
-            <SiteEmoji name="write" />
+            <SiteIcon name="write" />
             Написать статью
           </a>
         </div>
@@ -117,7 +117,7 @@ export function Articles() {
               setPage(1);
             }}
           >
-            <SiteEmoji name="articles" />
+            <SiteIcon name="articles" />
             База знаний
           </button>
           {user && (
@@ -128,7 +128,7 @@ export function Articles() {
                 setPage(1);
               }}
             >
-              <SiteEmoji name="profile" />
+              <SiteIcon name="profile" />
               Мои статьи
             </button>
           )}
@@ -166,7 +166,7 @@ export function Articles() {
               placeholder="Например, размеры покрышек"
             />
             <button className="hf-button">
-              <SiteEmoji name="search" />
+              <SiteIcon name="search" />
               Найти
             </button>
           </form>
@@ -263,7 +263,7 @@ export function ArticlePage({ share, initial = null }) {
                       className="hf-button"
                       onClick={() => setEditing(true)}
                     >
-                      <SiteEmoji name="write" />
+                      <SiteIcon name="write" />
                       Редактировать
                     </button>
                   )}
@@ -392,7 +392,7 @@ function ArticleEditor({ initial, onSaved, onCancel }) {
           maxLength={20000} rows={16} disabled={busy} photos={photos} />
         <div className="article-toolbar">
           <label className="hf-button">
-            <SiteEmoji name="add" />
+            <SiteIcon name="add" />
             Иллюстрация
             <input
               aria-label="Иллюстрация"
@@ -498,7 +498,7 @@ function ArticleEditor({ initial, onSaved, onCancel }) {
       )}
       <div className="article-toolbar">
         <button className="hf-button" disabled={busy} value="draft">
-          <SiteEmoji name="saved" />
+          <SiteIcon name="saved" />
           Сохранить черновик
         </button>
         <button
@@ -506,7 +506,7 @@ function ArticleEditor({ initial, onSaved, onCancel }) {
           disabled={busy || !form.title.trim() || !form.body.trim()}
           value="published"
         >
-          <SiteEmoji name="write" />
+          <SiteIcon name="write" />
           {initial?.status === "published" ? "Обновить статью" : "Опубликовать"}
         </button>
         {onCancel && (
