@@ -201,7 +201,7 @@ for (const [kind, path] of Object.entries(pages)) {
   const body = page.html
     .slice(page.html.indexOf("<body"))
     .replace(/<script[\s\S]*?<\/script>/g, "")
-    .replaceAll(/ |&nbsp;/g, " ");
+    .replaceAll(/\u00a0|&nbsp;/g, " ");
   for (const text of content[kind]) assert.ok(body.includes(text), kind + ": " + text);
   // The page itself is ready; only side panels (awards, lists) load later.
   for (const text of loading[kind])
