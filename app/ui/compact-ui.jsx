@@ -3,6 +3,7 @@ import SiteIcon from "./site-icon.jsx";
 import SearchBox from "./search-box.jsx";
 import styles from "./compact-ui.module.css";
 import { useEffect, useRef, useState } from "react";
+import { useBackdropClose } from "./use-backdrop-close.js";
 import {
   significantBadge,
   metricSegments,
@@ -57,6 +58,7 @@ export function CompactDialog({
       document.body.style.overflow = before;
     };
   }, [open]);
+  const backdrop = useBackdropClose(onClose);
   return (
     <dialog
       ref={ref}
@@ -70,18 +72,7 @@ export function CompactDialog({
           onClose();
         }
       }}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          const r = e.currentTarget.getBoundingClientRect();
-          if (
-            e.clientX < r.left ||
-            e.clientX > r.right ||
-            e.clientY < r.top ||
-            e.clientY > r.bottom
-          )
-            onClose();
-        }
-      }}
+      {...backdrop}
     >
       <div className="sheet-head">
         <h2>{title}</h2>

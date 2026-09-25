@@ -23,6 +23,7 @@ import {
 } from "../../lib/showcase-query.js";
 import { useBikeReaction } from "./use-bike-reaction.js";
 import { useShowcaseScroll } from "./showcase-scroll.js";
+import { useBackdropClose } from "./use-backdrop-close.js";
 
 import styles from "./garage.module.css";
 import BikeGrid from "./bike-grid.jsx";
@@ -204,9 +205,11 @@ async function api(url, method = "GET", data) {
 function Modal({ title, onClose, children, dismissible = true }) {
   const { settings, catalog, t } = useSite();
   const { categories, models, parts, partCategories, manufacturers } = catalog;
-  const ref = useRef();
+  const ref = useRef(),
+    leaving = useRef(false);
   useEffect(() => {
     const el = ref.current;
+    leaving.current = false;
     const y = window.scrollY,
       body = document.body,
       previous = body.getAttribute("style");
@@ -219,22 +222,36 @@ function Modal({ title, onClose, children, dismissible = true }) {
     });
     el.showModal();
     return () => {
+      leaving.current = true;
       el.close();
       if (previous === null) body.removeAttribute("style");
       else body.setAttribute("style", previous);
       window.scrollTo({ top: y, behavior: "instant" });
     };
   }, []);
+  const request = () => {
+    if (dismissible) onClose();
+  };
+  const backdrop = useBackdropClose(request);
   return (
     <dialog
       ref={ref}
       onCancel={(e) => {
         e.preventDefault();
-        if (dismissible) onClose();
+        // An Escape the browser does not let us cancel closes the window
+        // anyway; onClose below handles it.
+        if (e.cancelable) request();
       }}
-      onClick={(e) => {
-        if (dismissible && e.target === e.currentTarget) onClose();
+      onClose={() => {
+        // Browsers close a window by themselves on a repeated Escape (close
+        // watchers). Reopen it: closing is decided here, and a window with
+        // unsaved data asks first (#129).
+        // A late event of an earlier close finds the window open again.
+        if (leaving.current || !ref.current || ref.current.open) return;
+        ref.current.showModal();
+        request();
       }}
+      {...backdrop}
       aria-labelledby="dialog-title"
     >
       <div className="modal-head">
@@ -276,7 +293,8 @@ export default function Garage({
     refreshViewer,
   } = useSite();
   const [ask, confirmation] = useConfirmation();
-  const [wizardDirty, setWizardDirty] = useState(false);
+  // Typed but unsaved data in the open window (wizard or part form).
+  const [dirty, setDirty] = useState(false);
   const { categories, models, parts, partCategories, manufacturers } = catalog;
   const [bikes, setBikes] = useState([]),
     [selected, setSelected] = useState(initial?.bike || null),
@@ -499,20 +517,29 @@ export default function Garage({
   }
   async function close() {
     if (busy) return;
+    // A window with typed data asks first: a stray click or key must not
+    // throw the input away (#129).
+    const guard =
+      dirty &&
+      (modal?.type === "bike" && !modal.bike
+        ? { title: "Закрыть мастер?", confirmLabel: "Закрыть мастер" }
+        : modal?.type === "part"
+          ? {
+              title: "Закрыть без сохранения?",
+              confirmLabel: "Закрыть без сохранения",
+            }
+          : null);
     if (
-      modal?.type === "bike" &&
-      !modal.bike &&
-      wizardDirty &&
+      guard &&
       !(await ask("Несохранённые данные будут потеряны.", {
-        title: "Закрыть мастер?",
-        confirmLabel: "Закрыть мастер",
+        ...guard,
         cancelLabel: "Продолжить редактирование",
         danger: true,
       }))
     )
       return;
     setModal(null);
-    setWizardDirty(false);
+    setDirty(false);
     setError("");
   }
   async function refresh() {
@@ -1295,7 +1322,7 @@ export default function Garage({
           )}
           {modal.type === "bike" && !modal.bike && (
             <BikeWizard
-              onDirtyChange={setWizardDirty}
+              onDirtyChange={setDirty}
               onBusy={setBusy}
               onCreated={async (id) => {
                 if (!account) {
@@ -1306,6 +1333,7 @@ export default function Garage({
                 const { bike: b } = await api("bikes/" + id);
                 openBike(b);
                 setModal(null);
+                setDirty(false);
                 setNotice("Велосипед сохранён");
               }}
             />
@@ -1362,6 +1390,7 @@ export default function Garage({
               initial={modal.part}
               section={modal.section}
               busy={busy}
+              onDirtyChange={setDirty}
               onSubmit={(data) =>
                 run(async () => {
                   await api(
@@ -1372,6 +1401,7 @@ export default function Garage({
                   );
                   await refresh();
                   setModal(null);
+                  setDirty(false);
                   setNotice(t("Деталь сохранена"));
                 })
               }
@@ -1763,10 +1793,10 @@ function BikeForm({ initial, busy, onSubmit }) {
     </form>
   );
 }
-function PartForm({ initial, section, busy, onSubmit }) {
+function PartForm({ initial, section, busy, onSubmit, onDirtyChange }) {
   const { settings, catalog, t } = useSite();
   const { categories, models, parts, partCategories, manufacturers } = catalog;
-  const [c, set] = useState(
+  const [start] = useState(() =>
     initial
       ? { ...initial, price: initial.price ?? "" }
       : {
@@ -1777,15 +1807,49 @@ function PartForm({ initial, section, busy, onSubmit }) {
           price: "",
         },
   );
+  const [c, set] = useState(start);
   const [search, setSearch] = useState("");
   const update = (k, v) => set((p) => ({ ...p, [k]: v }));
   const suggestions = (parts[c.category] || []).filter((p) =>
     p.toLowerCase().includes(search.toLowerCase()),
   );
+  const dirty = Object.keys(c).some(
+    (k) => String(c[k] ?? "") !== String(start[k] ?? ""),
+  );
+  useEffect(() => {
+    onDirtyChange?.(dirty);
+  }, [dirty, onDirtyChange]);
+  // The field where Enter is down. Enter in a field moves to the next one
+  // instead of saving: the window closes by «Сохранить деталь», not by a
+  // key pressed mid-input (#129); the manufacturer alone already fills the
+  // name. Only the implicit submission is stopped, so Enter still picks a
+  // suggestion where the browser handles it.
+  const enterIn = useRef(null);
   return (
     <form
+      onKeyDown={(e) => {
+        enterIn.current =
+          e.key === "Enter" &&
+          e.target.tagName === "INPUT" &&
+          !e.nativeEvent.isComposing
+            ? e.target
+            : null;
+      }}
+      onKeyUp={() => {
+        enterIn.current = null;
+      }}
       onSubmit={(e) => {
         e.preventDefault();
+        const field = enterIn.current;
+        enterIn.current = null;
+        if (field) {
+          const fields = [...e.currentTarget.elements].filter(
+            (el) =>
+              !el.disabled && (el.tagName !== "BUTTON" || el.type === "submit"),
+          );
+          fields[fields.indexOf(field) + 1]?.focus();
+          return;
+        }
         onSubmit({ ...c, price: c.price === "" ? null : Number(c.price) });
       }}
     >
@@ -1811,6 +1875,7 @@ function PartForm({ initial, section, busy, onSubmit }) {
       <Field label={t("Производитель")}>
         <input
           list="component-manufacturers"
+          enterKeyHint="next"
           placeholder={t("Выберите производителя")}
           onChange={(e) => {
             update("name", e.target.value + " ");
@@ -1834,6 +1899,7 @@ function PartForm({ initial, section, busy, onSubmit }) {
         <input
           required
           autoFocus
+          enterKeyHint="next"
           maxLength={150}
           value={c.name}
           onChange={(e) => {
@@ -1868,6 +1934,7 @@ function PartForm({ initial, section, busy, onSubmit }) {
       <Field label={t("Примечание")}>
         <input
           maxLength={500}
+          enterKeyHint="next"
           value={c.notes}
           onChange={(e) => update("notes", e.target.value)}
           placeholder={t("Размер, материал, передаточное отношение…")}
@@ -1889,6 +1956,7 @@ function PartForm({ initial, section, busy, onSubmit }) {
       <Field label="Ссылка на компонент или аксессуар">
         <input
           type="url"
+          enterKeyHint="next"
           value={c.url || ""}
           maxLength={2048}
           onChange={(e) => update("url", e.target.value)}
@@ -1901,6 +1969,7 @@ function PartForm({ initial, section, busy, onSubmit }) {
           min="0"
           max="999999999"
           step="0.01"
+          enterKeyHint="next"
           value={c.price}
           onChange={(e) => update("price", e.target.value)}
           placeholder={t("Необязательно")}
