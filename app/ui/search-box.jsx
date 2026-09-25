@@ -99,15 +99,14 @@ export default function SearchBox({
     onNavigate?.();
     router.push(href);
   }
+  // The button searches for the typed text. An option is picked by a click
+  // on it or by Enter while it is highlighted: a pointer passing over the
+  // list on its way to the button must not redirect the search.
   function submit(e) {
     e.preventDefault();
     const term = query.trim();
     if (!term) return;
-    navigate(
-      active >= 0 && items[active]
-        ? items[active].href
-        : "/search?" + new URLSearchParams({ ...filters, q: term }),
-    );
+    navigate("/search?" + new URLSearchParams({ ...filters, q: term }));
   }
   let index = -1;
   return (
@@ -144,6 +143,11 @@ export default function SearchBox({
           }}
           onKeyDown={(e) => {
             if (e.nativeEvent.isComposing) return;
+            if (e.key === "Enter" && open && active >= 0 && items[active]) {
+              e.preventDefault();
+              navigate(items[active].href);
+              return;
+            }
             if (e.key === "Escape" && open) {
               e.preventDefault();
               e.stopPropagation();

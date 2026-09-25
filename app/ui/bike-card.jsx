@@ -35,7 +35,8 @@ export default function BikeCard({
         <Open
           {...openProps}
           className={`card-open-photo ${styles.openPhoto}`}
-          aria-label={t("Открыть") + " " + title}
+          // The title link opens the same page; this one is for the mouse.
+          aria-hidden="true"
           tabIndex={-1}
         >
           <Photo bike={b} sizes={sizes} />

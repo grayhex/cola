@@ -37,6 +37,7 @@ bash scripts/test-backup-drill.sh
 | `pnpm test:integration` | HTTP, auth/Origin/DTO, цепочку app → fixture Resolver | Доступность публичного upstream |
 | Playwright | Реальный UI и взаимодействия Chromium/WebKit mobile | Все особенности физического iPhone и реальных загруженных изображений |
 | `bundle-budget.spec.js` | Сжатый JS гостя на `/` (до 220 КБ) и `/bikes` (до 250 КБ) в Chromium | Размер страниц владельца и лениво загружаемых частей |
+| `accessibility.spec.js` | axe (WCAG 2.1 A/AA и `label-content-name-mismatch`) на главной, витрине, велосипеде (гость и владелец), записи, покатушке, объявлении, профиле и входе в обеих темах; 1440 и 390 px в Chromium, экран телефона в WebKit; цели навигации на телефоне ≥ 44×44 px (#119) | Работу со скринридером, порядок чтения, понятность текстов; Lighthouse и CLS |
 | Compose + backup drill | Runtime-упаковку, disposable backup/restore | Наличие операторского off-host backup и его расписания |
 
 ## База и изоляция

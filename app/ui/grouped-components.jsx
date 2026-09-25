@@ -6,6 +6,7 @@ import {
   Pencil,
   Trash2,
   ExternalLink,
+  Ellipsis,
 } from "./icons.jsx";
 import { groupedComponents } from "../../lib/garage-layout.js";
 import { useId, useState, useSyncExternalStore } from "react";
@@ -38,7 +39,10 @@ export default function GroupedComponents({
   const { personalSettings } = useSite();
   // Parts of a public bike have their own page (#74); others open the search.
   const partHref = (c) =>
-    bike.is_public && bike.id !== "demo" && landingSlug(c.category) && landingSlug(c.name)
+    bike.is_public &&
+    bike.id !== "demo" &&
+    landingSlug(c.category) &&
+    landingSlug(c.name)
       ? partLandingPath(c.category, c.name)
       : experienceHref({ component: c.name, componentCategory: c.category });
   const [expanded, setExpanded] = useState({});
@@ -166,7 +170,9 @@ export default function GroupedComponents({
                   )}
                   {editable && (
                     <details>
-                      <summary aria-label={"Действия: " + c.name}>···</summary>
+                      <summary aria-label={"Действия: " + c.name}>
+                        <Ellipsis size={18} aria-hidden="true" />
+                      </summary>
                       <div className="part-menu">
                         {[-1, 1].map((d) => (
                           <button

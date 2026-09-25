@@ -210,6 +210,7 @@ export function GlobalSearch() {
         className="global-nav-item search-trigger"
         type="button"
         aria-label="Поиск ColaBike"
+        aria-keyshortcuts="Control+K Meta+K"
         title="Поиск · Ctrl/⌘ K"
         aria-expanded={open}
         aria-haspopup="dialog"
@@ -219,7 +220,8 @@ export function GlobalSearch() {
         <span className="search-trigger-label" aria-hidden="true">
           Поиск
         </span>
-        <kbd aria-hidden="true">⌘K</kbd>
+        {/* The hint is CSS content: a shortcut is not part of the name. */}
+        <kbd aria-hidden="true" />
       </button>
       <CompactDialog
         title="Поиск ColaBike"

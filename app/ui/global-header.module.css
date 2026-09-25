@@ -22,6 +22,7 @@
   flex: none;
   align-items: center;
   gap: var(--space-2);
+  min-height: 44px;
   margin-right: var(--space-2);
   color: var(--text);
   font: var(--weight-bold) var(--text-lg) / 1 var(--font-sans);
@@ -178,6 +179,9 @@
     display: inline;
     flex: 1;
     text-align: left;
+  }
+  .header :global(.search-trigger) kbd::before {
+    content: "⌘K";
   }
   .header :global(.search-trigger) kbd {
     display: inline-block;

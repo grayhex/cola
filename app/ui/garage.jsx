@@ -709,9 +709,13 @@ export default function Garage({
               </span>
               <button
                 className="photo-open"
-                aria-label={t("Открыть фото целиком")}
                 onClick={() => setModal({ type: "photoView" })}
               >
+                {/* The photo's description (or the placeholder text) ends
+                    the name, so the visible text is part of it (#119). */}
+                <span className="visually-hidden">
+                  {t("Открыть фото целиком")}:{" "}
+                </span>
                 <Photo
                   bike={bike}
                   photo={photo}

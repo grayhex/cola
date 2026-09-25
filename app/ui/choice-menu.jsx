@@ -19,7 +19,8 @@ export default function ChoiceMenu({ label, value, choices, onChange }) {
   const current = choices.find((c) => c.value === value) || choices[0];
   return (
     <NavPopover
-      label={label}
+      // The name ends with the choice shown on the button (#119).
+      label={label + ": " + current.label}
       className="choice-menu"
       trigger={
         <>

@@ -6,14 +6,27 @@ import { ContentLabel, LabelRow } from "./content-label.jsx";
 export function BikeLabels({ bike, year = true }) {
   return (
     <LabelRow className="bike-labels" aria-label="Характеристики велосипеда">
-      {bike.is_former && <ContentLabel className="hf-label" data-bike-label="former">Бывший</ContentLabel>}
+      {bike.is_former && (
+        <ContentLabel className="hf-label" data-bike-label="former">
+          Бывший
+        </ContentLabel>
+      )}
       {year && bike.year && (
-        <ContentLabel className="hf-label" tone="year" data-bike-label="year" aria-label={"Модельный год: " + bike.year}>
+        <ContentLabel
+          className="hf-label"
+          tone="year"
+          data-bike-label="year"
+          aria-label={"Модельный год: " + bike.year}
+        >
           {bike.year}
         </ContentLabel>
       )}
       {bike.size && (
-        <ContentLabel className="hf-label" data-bike-label="size" aria-label={"Размер рамы: " + bike.size}>
+        <ContentLabel
+          className="hf-label"
+          data-bike-label="size"
+          aria-label={"Размер рамы: " + bike.size}
+        >
           <SiteIcon name="size" />
           <span>{bike.size}</span>
         </ContentLabel>
@@ -50,7 +63,7 @@ export function BikeLike({ bike, reaction, t = (s) => s, compact = false }) {
       <span>
         <SiteIcon name="heart" size={compact ? 14 : 16} />
         {!compact && t("Нравится")}
-      </span>
+      </span>{" "}
       <strong>{reaction.likes ?? 0}</strong>
     </button>
   );

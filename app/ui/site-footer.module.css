@@ -80,6 +80,14 @@ a.logo:hover img {
   font-size: var(--text-lg);
   font-weight: var(--weight-bold);
 }
+/* Touch screens: the name is a 44px target like the links above (#119). */
+@media (pointer: coarse), (max-width: 700px) {
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+}
 .versions {
   min-width: 0;
   color: var(--text-muted);

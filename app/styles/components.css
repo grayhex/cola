@@ -958,6 +958,12 @@
     width: 16px;
     height: 16px;
   }
+  /* Touch screens and phones: 44px targets, the project's rule. */
+  @media (pointer: coarse), (max-width: 700px) {
+    .ui-tabs > :is(a, button) {
+      min-height: 44px;
+    }
+  }
 
   .segmented {
     display: flex;
