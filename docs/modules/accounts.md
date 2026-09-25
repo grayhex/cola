@@ -8,7 +8,7 @@
 
 ## Точки входа
 
-`/account`, `/@<username>` (старый `/u/<username>` перенаправляет), `/api/auth/register`, `/api/auth/login`, `/api/auth/logout`, `/api/me`; дополнительные операции профиля/предпочтений — в `app/api/social`. UI: [account.jsx](../../app/ui/account.jsx), [public-profile.jsx](../../app/ui/public-profile.jsx). Вход/регистрация используют существующий интерфейс гаража, а не независимую систему авторизации.
+`/account` (вкладка «Аккаунт» — `/account?tab=account`), `/@<username>` (старый `/u/<username>` перенаправляет), `/confirm-email`, `/api/auth/register`, `/api/auth/login`, `/api/auth/logout`, `/api/me`, `/api/account/*`; дополнительные операции профиля/предпочтений — в `app/api/social`. UI: [account.jsx](../../app/ui/account.jsx), [public-profile.jsx](../../app/ui/public-profile.jsx). Вход/регистрация используют существующий интерфейс гаража, а не независимую систему авторизации.
 
 ## Данные и основные функции
 
@@ -50,6 +50,18 @@ read -rsp 'Новый пароль (10–128 символов): ' NEW_PASSWORD; 
 printf '%s' "$NEW_PASSWORD" | docker compose --env-file .env.production -f compose.prod.yaml exec -T app node scripts/reset-password.js user@example.com
 unset NEW_PASSWORD
 ```
+
+## Безопасность аккаунта и данные (#70)
+
+Вкладка «Аккаунт» в кабинете (`/account?tab=account`, [account-security.jsx](../../app/ui/account-security.jsx)); серверная часть — [account-data.js](../../lib/account-data.js). Каждое изменение — `POST`/`DELETE` с проверкой сессии и `Origin` (`sameOrigin`); пароль, почта, выгрузка и удаление ограничены по частоте на аккаунт.
+
+- **Пароль** — `POST /api/account/password` (`currentPassword`, `password`): неверный текущий пароль — 403, совпадающий с текущим — 400. После смены завершаются все сессии, кроме этого браузера, и отменяются ссылки восстановления.
+- **Почта** — `POST /api/account/email` (`password`, `email`): письмо со ссылкой уходит на новый адрес, до её открытия для входа работает прежний. Ссылка (`/confirm-email#…`, назначение `email_change` в `auth_tokens`, 24 часа, одноразовая) открывается без входа — `POST /api/account/email/confirm`. Она меняет адрес, сразу считает его подтверждённым, отменяет остальные ссылки аккаунта и шлёт на прежний адрес уведомление со ссылкой на восстановление доступа. Если адрес за это время занял другой аккаунт — 409 `EMAIL_TAKEN`. Без настроенной почты смена адреса недоступна (503).
+- **Устройства** — `GET /api/account/sessions`: активные сессии (браузер и система из `User-Agent`, время входа и последней активности, отметка «Этот браузер»). `DELETE /api/account/sessions/<id>` завершает одну, `DELETE /api/account/sessions` — все, включая текущую. У сессии публичный `id` (uuid) — хеш токена наружу не выходит; `last_seen_at` обновляется при чтении сессии не чаще раза в 5 минут ([025_account_sessions.sql](../../db/025_account_sessions.sql)).
+- **Мои данные** — `POST /api/account/export` отдаёт JSON-файл `colabike-<username>-<дата>.json`: профиль, велосипеды с компонентами, записи журнала, покатушки и объявления со ссылками на фотографии и исходные треки. Трек отдаёт `GET /api/account/export/rides/<id>` — только владельцу.
+- **Удаление аккаунта** — `POST /api/account/delete` (`password`, `confirm: "УДАЛИТЬ"`). Строки удаляются каскадом: велосипеды, журнал, покатушки, объявления, подписки, сессии, уведомления. Комментарии, на которые ответили, остаются отметкой «Комментарий недоступен». Файлы покатушек, журнала и рынка уходят через очереди удаления (триггеры `ride_file_gc`, `journal_photo_gc`, `market_photo_gc`), фотографии велосипедов и аватар удаляются сразу после транзакции вместе с их вариантами в кеше. Администратор удалить себя не может (409): сначала права передаются другому.
+
+Проверки: [account-security-http.js](../../tests/account-security-http.js) (источник запроса, чужая сессия, неверный пароль, смена почты по ссылке, каскад и файлы при удалении, выгрузка и трек) и [account-security.spec.js](../../tests/e2e/account-security.spec.js).
 
 ## Расширение и проверки
 
