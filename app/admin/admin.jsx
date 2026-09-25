@@ -822,7 +822,7 @@ export default function Admin() {
                   </article>
                 ))}
               </div>
-              <div className="pagination">
+              <div className="pager">
                 <button
                   className="button secondary"
                   disabled={page === 1 || locked}

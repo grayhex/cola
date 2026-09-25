@@ -8,7 +8,7 @@
         max(
           280px,
           calc(
-            (100% - (var(--desktop-columns, 3) - 1) * 16px) /
+            (100% - (var(--desktop-columns, 3) - 1) * var(--space-4)) /
               var(--desktop-columns, 3)
           )
         )
@@ -16,8 +16,8 @@
       1fr
     )
   );
-  gap: 16px;
-  align-items: start;
+  gap: var(--space-4);
+  align-items: stretch;
 }
 @media (max-width: 599px) {
   .grid {

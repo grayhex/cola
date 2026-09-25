@@ -5,9 +5,9 @@ import { socialApi } from "./social-primitives.jsx";
 export function PageControls({ page, hasMore, onPage }) {
   return (
     (page > 1 || hasMore) && (
-      <nav className="feed-pages" aria-label="Страницы">
+      <nav className="pager" aria-label="Страницы">
         <button
-          className="quiet"
+          className="button secondary small"
           disabled={page === 1}
           onClick={() => onPage(page - 1)}
         >
@@ -15,7 +15,7 @@ export function PageControls({ page, hasMore, onPage }) {
         </button>
         <span>{page}</span>
         <button
-          className="quiet"
+          className="button secondary small"
           disabled={!hasMore}
           onClick={() => onPage(page + 1)}
         >

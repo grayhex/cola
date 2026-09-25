@@ -188,9 +188,9 @@ export function FollowButton({ profile, user, onChange }) {
 export function Pagination({ page, total, pageSize, onPage }) {
   return (
     total > pageSize && (
-      <nav className="feed-pages" aria-label="Страницы">
+      <nav className="pager" aria-label="Страницы">
         <button
-          className="quiet"
+          className="button secondary small"
           disabled={page === 1}
           onClick={() => onPage(page - 1)}
         >
@@ -200,7 +200,7 @@ export function Pagination({ page, total, pageSize, onPage }) {
           {page} / {Math.ceil(total / pageSize)}
         </span>
         <button
-          className="quiet"
+          className="button secondary small"
           disabled={page * pageSize >= total}
           onClick={() => onPage(page + 1)}
         >

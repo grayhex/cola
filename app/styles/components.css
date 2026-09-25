@@ -139,6 +139,49 @@
     cursor: progress;
   }
 
+  /* Like with a counter, as on a Hugging Face repository: heart and word,
+     a hairline, the number. Cards use the compact form (heart + number). */
+  .hf-like {
+    display: inline-flex;
+    align-items: stretch;
+    min-height: var(--control-md);
+    padding: 0;
+    overflow: hidden;
+    border: 1px solid var(--control-line);
+    border-radius: var(--radius-lg);
+    background: var(--control-bg);
+    color: var(--control-text);
+    font: var(--weight-medium) var(--text-sm) / 1 var(--font-sans);
+    cursor: pointer;
+  }
+  .hf-like > span {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1-5);
+    padding: 0 var(--space-2-5);
+  }
+  .hf-like > strong {
+    display: flex;
+    align-items: center;
+    padding: 0 var(--space-2-5);
+    border-left: 1px solid var(--control-line);
+    color: var(--text-muted);
+    font-weight: var(--weight-medium);
+    font-variant-numeric: tabular-nums;
+  }
+  .hf-like:hover {
+    box-shadow: var(--shadow-inner);
+  }
+  .hf-like[aria-pressed="true"] svg {
+    color: var(--tone-special);
+    fill: currentColor;
+  }
+  .hf-like:disabled {
+    cursor: default;
+    opacity: 1;
+    box-shadow: none;
+  }
+
   /* Text action: quiet grey until hovered. */
   .quiet {
     display: inline-flex;
@@ -640,6 +683,68 @@
     white-space: nowrap;
   }
 
+  /* Avatar: a photo or the first letter in a circle.
+     tiny 20 · small 32 · normal 44 · large 112 (64 on phones). */
+  .social-avatar {
+    display: inline-grid;
+    flex: none;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    overflow: hidden;
+    border-radius: var(--radius-full);
+    background: var(--surface-hover);
+    color: var(--text-secondary);
+    font: var(--weight-semibold) var(--text-base) / 1 var(--font-sans);
+  }
+  .social-avatar img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .social-avatar.tiny {
+    width: 20px;
+    height: 20px;
+    font-size: 10px;
+  }
+  .social-avatar.small {
+    width: 32px;
+    height: 32px;
+    font-size: var(--text-xs);
+  }
+  .social-avatar.large {
+    width: 112px;
+    height: 112px;
+    font-size: var(--text-4xl);
+  }
+  @media (max-width: 700px) {
+    .social-avatar.large {
+      width: 64px;
+      height: 64px;
+      font-size: var(--text-2xl);
+    }
+  }
+  /* Person link: avatar and name, grey until hovered. */
+  .author-link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1-5);
+    min-width: 0;
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+  }
+  .author-link > span:last-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .author-link:hover > span:last-child {
+    color: var(--text);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
   /* ── Badges and tags ─────────────────────────────────────────────────
      .badge  tiny status or count, tinted pill (Pricing's "Most popular")
      .tag    Datasets' filter chip: hairline, gradient, optional icon
@@ -856,6 +961,54 @@
   .segmented svg {
     width: 14px;
     height: 14px;
+  }
+
+  /* Choice menu (sort order and the like): a secondary button with the
+     current choice and a chevron; the list opens as a menu. */
+  .choice-menu {
+    position: relative;
+  }
+  .choice-menu > .nav-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1-5);
+    min-height: var(--control-md);
+    padding: 0 var(--space-3);
+    border: 1px solid var(--control-line);
+    border-radius: var(--radius-lg);
+    background: var(--control-bg);
+    color: var(--control-text);
+    font: var(--weight-medium) var(--text-sm) / 1 var(--font-sans);
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .choice-menu > .nav-trigger:hover,
+  .choice-menu > .nav-trigger[aria-expanded="true"] {
+    box-shadow: var(--shadow-inner);
+  }
+  .choice-menu > .nav-trigger svg {
+    width: 14px;
+    height: 14px;
+    color: var(--text-muted);
+  }
+  .choice-options {
+    display: grid;
+  }
+  .choice-options .nav-menu-link > svg:last-child {
+    margin-left: auto;
+    color: var(--text);
+  }
+
+  /* Pager: previous, "3 / 12", next. */
+  .pager {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-3);
+    margin-top: var(--space-8);
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    font-variant-numeric: tabular-nums;
   }
 
   /* ── Menus and popovers ──────────────────────────────────────────────

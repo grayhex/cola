@@ -1,22 +1,22 @@
-/* The bike's action row (#121): compact outlined buttons with an icon and
-   a label, a count or state in its own segment, as in the owner's
-   reference. Reader actions and owner tools are two groups of one row. */
+/* The bike's action row (#121, #127): compact Hugging Face buttons — a
+   gradient with a hairline, an icon and a label, a count or state in its
+   own segment. Reader actions and owner tools are two groups of one row. */
 .bar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px 14px;
+  gap: var(--space-2) var(--space-3);
   min-width: 0;
 }
 .group {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-1-5);
   min-width: 0;
 }
 .group + .group {
-  padding-left: 14px;
+  padding-left: var(--space-3);
   border-left: 1px solid var(--line);
 }
 /* Buttons of both groups, the like and the share button alike. */
@@ -25,19 +25,20 @@
 .bar .share :global(.share-button) {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-1-5);
   min-width: 0;
-  min-height: 34px;
+  min-height: 32px;
   margin: 0;
-  padding: 0 10px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface);
-  color: var(--text);
-  font: 500 13px/1.2 var(--site-font);
+  padding: 0 var(--space-2-5);
+  border: 1px solid var(--control-line);
+  border-radius: var(--radius-lg);
+  background: var(--control-bg);
+  color: var(--control-text);
+  font: var(--weight-medium) 13px / 1.2 var(--font-sans);
   text-decoration: none;
   white-space: nowrap;
   cursor: pointer;
+  transition: box-shadow var(--duration-fast) var(--ease-out);
 }
 .bar :global(.hf-like) {
   align-items: stretch;
@@ -48,66 +49,72 @@
 .bar :global(.hf-like) > strong {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 0 10px;
+  gap: var(--space-1-5);
+  padding: 0 var(--space-2-5);
+}
+.bar :global(.hf-like) > strong {
+  border-left: 1px solid var(--control-line);
+  color: var(--text-muted);
+  font-weight: var(--weight-medium);
 }
 .bar .action:hover:not(:disabled),
+.bar :global(.hf-like):hover:not(:disabled),
 .bar .share :global(.share-button):hover {
-  background: var(--surface-hover);
-}
-.bar .action:focus-visible,
-.bar .share :global(.share-button):focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+  box-shadow: var(--shadow-inner);
 }
 .bar .action:disabled {
   opacity: 0.55;
   cursor: default;
 }
 .bar .action[aria-pressed="true"] {
-  border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 9%, var(--surface));
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--control-line));
+  background: var(--accent-soft);
+  color: var(--text);
 }
 .bar .action svg,
 .bar .share :global(.share-button) svg {
   flex: none;
+  color: var(--text-muted);
 }
 .bar .share :global(.share-button) > span {
   display: inline;
   font-size: inherit;
 }
-/* A count or state: a segment after a thin divider, like the like. */
+/* A count or state: a segment after a hairline, like the like. */
 .count {
   display: flex;
-  align-items: center;
   align-self: stretch;
-  margin: 0 -10px 0 4px;
-  padding: 0 10px;
-  border-left: 1px solid var(--border);
+  align-items: center;
+  margin: 0 calc(-1 * var(--space-2-5)) 0 var(--space-1);
+  padding: 0 var(--space-2-5);
+  border-left: 1px solid var(--control-line);
   color: var(--text-muted);
-  font-weight: 500;
+  font-weight: var(--weight-medium);
+  font-variant-numeric: tabular-nums;
 }
-.bar .danger {
+.bar .danger,
+.bar .danger svg {
   color: var(--danger);
 }
 .bar .danger:hover:not(:disabled) {
-  border-color: color-mix(in srgb, var(--danger) 45%, var(--border));
+  background: var(--danger-soft);
 }
 .alert,
 .group > [role="alert"] {
   flex-basis: 100%;
   margin: 0;
+  color: var(--danger);
   font-size: 13px;
 }
 @media (max-width: 1199px) {
   .bar {
     flex-direction: column;
     align-items: stretch;
-    gap: 8px;
+    gap: var(--space-2);
   }
   .group + .group {
-    padding: 8px 0 0;
-    border-left: 0;
+    padding: var(--space-2) 0 0;
     border-top: 1px solid var(--line);
+    border-left: 0;
   }
 }

@@ -107,7 +107,7 @@ test("dense visual system: shared cards, filters, search, themes and responsive 
       await card
         .locator(".card-identity-row h2")
         .evaluate((el) => getComputedStyle(el).fontSize),
-    ).toBe("17px");
+    ).toBe("16px");
     await expect(card.locator(".card-info > *")).toHaveCount(3);
     const classification = card.getByLabel("Классификация", { exact: true });
     await expect(classification).toBeVisible();

@@ -4,6 +4,7 @@ import "./styles/fonts.css";
 import "./styles/base.css";
 import "./styles/components.css";
 import "./styles/layout.css";
+import "./styles/bike.css";
 import "maplibre-gl/dist/maplibre-gl.css";
 import "./rides.css";
 import "./globals.css";

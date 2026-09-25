@@ -253,7 +253,8 @@
   left: auto;
 }
 .header :global(.nav-menu-link),
-.drawer :global(.nav-menu-link) {
+.drawer :global(.nav-menu-link),
+.popover :global(.nav-menu-link) {
   display: flex;
   align-items: center;
   gap: var(--space-2-5);
@@ -270,18 +271,22 @@
   cursor: pointer;
 }
 .header :global(.nav-menu-link) :global(.site-icon),
-.drawer :global(.nav-menu-link) :global(.site-icon) {
+.drawer :global(.nav-menu-link) :global(.site-icon),
+.popover :global(.nav-menu-link) :global(.site-icon) {
   color: var(--text-subtle);
 }
 .header :global(.nav-menu-link):hover,
 .header :global(.nav-menu-link):focus-visible,
-.drawer :global(.nav-menu-link):hover {
+.drawer :global(.nav-menu-link):hover,
+.popover :global(.nav-menu-link):hover,
+.popover :global(.nav-menu-link):focus-visible {
   background: var(--surface-hover);
   outline-offset: -2px;
 }
 .header :global(.nav-menu-link[aria-current="page"]),
 .header :global(.nav-menu-link[aria-selected="true"]),
-.drawer :global(.nav-menu-link[aria-current="page"]) {
+.drawer :global(.nav-menu-link[aria-current="page"]),
+.popover :global(.nav-menu-link[aria-selected="true"]) {
   font-weight: var(--weight-semibold);
 }
 .header :global(.nav-menu-link[aria-current="page"]) :global(.site-icon),

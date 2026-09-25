@@ -1008,19 +1008,23 @@ export default function Garage({
       ) : (
         <>
           <Main
-            className={`garage ${styles.garage}`}
+            className={`garage ${embedded ? "" : "page"} ${styles.garage}`}
             onClickCapture={publicShowcase ? rememberScroll : undefined}
           >
-            <div className={`garage-heading ${styles.heading}`}>
-              <div className="showcase-heading-copy">
+            {/* Datasets' title row: name, grey count, then the actions. */}
+            <div className={`garage-heading page-head ${styles.heading}`}>
+              <div className="showcase-heading-copy page-title">
                 <h1 className={styles.title}>
                   {account
                     ? t("Мои велосипеды")
                     : t(settings.showcaseTitle || "Наши велосипеды")}
                 </h1>
+                {!loading && total > 0 && (
+                  <span className="count">{total.toLocaleString("ru-RU")}</span>
+                )}
               </div>
               <div
-                className={`showcase-actions ${styles.actions}`}
+                className={`showcase-actions page-actions ${styles.actions}`}
                 aria-label={t("Действия витрины")}
               >
                 {!account && (
@@ -1056,11 +1060,11 @@ export default function Garage({
                 />
                 {!account && (
                   <Link
-                    className="compact-button add-bike"
+                    className="button add-bike"
                     href="/account?tab=bikes&action=add"
                     aria-label={t("Добавить велосипед")}
                   >
-                    <SiteIcon name="addBike" />
+                    <SiteIcon name="add" />
                     <span className={styles.addLabel}>
                       {t("Добавить велосипед")}
                     </span>
@@ -1069,12 +1073,15 @@ export default function Garage({
                 {user && account && (
                   <button
                     type="button"
-                    className="compact-icon add-bike"
+                    className="button add-bike"
                     aria-label="Добавить велосипед"
                     title="Добавить велосипед"
                     onClick={() => setModal({ type: "bike" })}
                   >
-                    <SiteIcon name="addBike" />
+                    <SiteIcon name="add" />
+                    <span className={styles.addLabel}>
+                      {t("Добавить велосипед")}
+                    </span>
                   </button>
                 )}
               </div>
@@ -1116,7 +1123,7 @@ export default function Garage({
                 [0, 1, 2].map((id) => (
                   <div
                     key={id}
-                    className={styles.skeleton}
+                    className={"skeleton " + styles.skeleton}
                     aria-hidden="true"
                   />
                 ))}
@@ -1132,9 +1139,9 @@ export default function Garage({
               ))}
             </BikeGrid>
             {!account && total > 24 && (
-              <nav className="feed-pages" aria-label="Страницы витрины">
+              <nav className="pager" aria-label="Страницы витрины">
                 <button
-                  className="quiet"
+                  className="button secondary small"
                   disabled={page <= 1}
                   onClick={() => setPage((p) => p - 1)}
                 >
@@ -1144,7 +1151,7 @@ export default function Garage({
                   {page} / {Math.ceil(total / 24)}
                 </span>
                 <button
-                  className="quiet"
+                  className="button secondary small"
                   disabled={page * 24 >= total}
                   onClick={() => setPage((p) => p + 1)}
                 >
@@ -1153,18 +1160,18 @@ export default function Garage({
               </nav>
             )}
             {!loading && !filtered.length && !query && !filters.length && (
-              <p className="help">
+              <p className="empty-state">
                 {account
                   ? "Добавьте свой первый велосипед."
                   : "Пока нет публичных велосипедов. Опубликуйте свой!"}
               </p>
             )}
             {!loading && !filtered.length && (query || filters.length > 0) && (
-              <div className="empty-parts">
-                <Search />
+              <div className="empty-state">
+                <Search aria-hidden="true" />
                 <h3>{t("Таких велосипедов пока не нашли")}</h3>
                 <button
-                  className="quiet"
+                  className="button secondary small"
                   onClick={() => {
                     setQuery("");
                     setFilters([]);

@@ -32,11 +32,13 @@ export function BikeLabels({ bike, year = true }) {
     </LabelRow>
   );
 }
-export function BikeLike({ bike, reaction, t = (s) => s }) {
+// `compact`: the heart and the count only (cards); the bike page keeps the
+// word «Нравится» next to the heart (#121).
+export function BikeLike({ bike, reaction, t = (s) => s, compact = false }) {
   return (
     <button
       type="button"
-      className="like-button hf-like"
+      className={"like-button hf-like" + (compact ? " compact" : "")}
       disabled={bike.is_owner}
       aria-label={
         t("Нравится") + (reaction.likes == null ? "" : ": " + reaction.likes)
@@ -46,8 +48,8 @@ export function BikeLike({ bike, reaction, t = (s) => s }) {
       onClick={reaction.toggle}
     >
       <span>
-        <SiteIcon name="heart" />
-        {t("Нравится")}
+        <SiteIcon name="heart" size={compact ? 14 : 16} />
+        {!compact && t("Нравится")}
       </span>
       <strong>{reaction.likes ?? 0}</strong>
     </button>
