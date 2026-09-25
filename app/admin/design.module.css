@@ -379,3 +379,13 @@
 .compactPanel :global(.field) {
   margin-bottom: 10px;
 }
+/* A footer logo and its link (#124) stay one cell of the graphics grid. */
+.linkedSlot {
+  display: grid;
+  align-content: start;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.linkedSlot :global(.field) {
+  margin: 0;
+}

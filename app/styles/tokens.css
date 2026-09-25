@@ -144,7 +144,7 @@
 
     /* Marketing decoration: glyph field and the brand gradient word. */
     --glyph: var(--gray-300);
-    --glyph-strong: var(--gray-500);
+    --glyph-strong: var(--gray-600);
     --glyph-accent: var(--amber-400);
     --mk-gradient: linear-gradient(
       to bottom right,
@@ -191,6 +191,7 @@
     --space-4: 16px;
     --space-5: 20px;
     --space-6: 24px;
+    --space-7: 28px;
     --space-8: 32px;
     --space-10: 40px;
     --space-12: 48px;
@@ -349,11 +350,8 @@
     --tone-cargo: var(--amber-400);
     --tone-special: var(--pink-400);
     --chart-line: var(--blue-400);
-
-    --glyph: var(--gray-800);
-
-    --glyph-strong: var(--gray-600);
-
+    --glyph: var(--gray-700);
+    --glyph-strong: var(--gray-400);
     --glyph-accent: var(--amber-600);
 
     --mk-gradient: linear-gradient(
@@ -443,11 +441,8 @@
       --tone-cargo: var(--amber-400);
       --tone-special: var(--pink-400);
       --chart-line: var(--blue-400);
-
-      --glyph: var(--gray-800);
-
-      --glyph-strong: var(--gray-600);
-
+      --glyph: var(--gray-700);
+      --glyph-strong: var(--gray-400);
       --glyph-accent: var(--amber-600);
 
       --mk-gradient: linear-gradient(
@@ -464,13 +459,14 @@
     }
   }
 
-  /* Touch screens: larger targets and 16px fields (no zoom on focus). */
-  @media (pointer: coarse) {
+  /* Touch screens and phone widths: 44px targets (the project's rule
+     since #104) and 16px fields, so iOS does not zoom on focus. */
+  @media (pointer: coarse), (max-width: 700px) {
     :root,
     .theme-light,
     .theme-dark {
-      --control-sm: 32px;
-      --control-md: 40px;
+      --control-sm: 36px;
+      --control-md: 44px;
       --control-lg: 48px;
       --field-font-size: var(--text-base);
     }

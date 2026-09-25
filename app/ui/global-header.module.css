@@ -1,252 +1,450 @@
+/* Site header (#127): Hugging Face's 64px bar — brand, a search pill,
+   text navigation with grey line icons that take the section colour on
+   hover, then utilities. Menus use the .menu look from components.css. */
 .frame {
   position: relative;
   z-index: var(--z-sticky);
-  border-bottom: 1px solid var(--border);
-  background: var(--surface);
+  border-bottom: 1px solid var(--line-soft);
+  background: var(--bg);
 }
 .header {
   display: flex;
   align-items: center;
-  min-height: var(--nav-height);
-  max-width: var(--content-width);
-  padding: 10px 24px;
-  margin: auto;
-  gap: 24px;
+  gap: var(--space-4);
+  max-width: calc(var(--container) + 2 * var(--gutter));
+  height: var(--header-height);
+  margin: 0 auto;
+  padding: 0 var(--gutter);
   color: var(--text);
 }
 .header :global(.brand) {
   display: flex;
+  flex: none;
   align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-  font: 700 23px/1.2 var(--site-font);
-  letter-spacing: -0.5px;
+  gap: var(--space-2);
+  margin-right: var(--space-2);
+  color: var(--text);
+  font: var(--weight-bold) var(--text-lg) / 1 var(--font-sans);
+  white-space: nowrap;
 }
 .header :global(.brand-mark) {
   display: grid;
   place-items: center;
-  width: 32px;
-  height: 32px;
-  color: var(--text);
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-md);
   background: var(--accent);
-  border-radius: 8px;
+  color: var(--accent-foreground);
 }
 .header :global(.brand-mark) svg {
-  color: var(--accent-foreground);
+  width: 18px;
+  height: 18px;
 }
 .header :global(.global-nav) {
   display: flex;
-  align-items: center;
   flex: 1;
+  align-items: center;
   justify-content: flex-end;
-  gap: 20px;
+  gap: var(--space-2);
   min-width: 0;
 }
-.header :global(.primary-navigation),
-.header :global(.nav-utilities) {
+.header :global(.primary-navigation) {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-0-5);
+  margin-left: auto;
 }
 .header :global(.nav-utilities) {
-  flex-shrink: 0;
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-1);
 }
-.header :global(.nav-trigger),
-.header :global(.global-nav-item) {
+
+/* Section links: text with a grey icon; the chevron opens the section. */
+.header :global(.nav-trigger) {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 6px;
-  min-height: 38px;
-  padding: 6px 8px;
-  border: 1px solid transparent;
-  border-radius: var(--radius-sm);
-  font: 600 15px/20px var(--site-font);
-  color: var(--text);
+  gap: var(--space-1-5);
+  min-height: 32px;
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: var(--radius-md);
   background: transparent;
+  color: var(--text);
+  font: var(--weight-regular) var(--text-smd) / 1 var(--font-sans);
+  white-space: nowrap;
+  cursor: pointer;
   transition:
-    background var(--duration-fast) var(--ease-standard),
-    color var(--duration-fast);
+    color var(--duration-fast) var(--ease-out),
+    background-color var(--duration-fast) var(--ease-out);
 }
-.header :global(.primary-navigation) :global(.global-nav-graphic) {
-  width: 17px;
-  height: 17px;
-  color: var(--text-muted);
+.header :global(.nav-trigger) :global(.site-icon) {
+  color: var(--text-subtle);
+  transition: color var(--duration-fast) var(--ease-out);
 }
-.header :global(.global-nav-item) {
-  position: relative;
-  width: 38px;
-  flex-shrink: 0;
+.header :global(.nav-trigger):hover :global(.site-icon),
+.header
+  :global(.nav-disclosure):hover
+  :global(.nav-trigger)
+  :global(.site-icon) {
+  color: var(--nav-tone, var(--accent-text));
 }
 .header :global(.nav-trigger.active),
-.header :global(.nav-trigger[aria-expanded="true"]),
-.header :global(.global-nav-item.active) {
-  background: var(--surface-muted);
-  box-shadow: inset 0 -2px var(--accent);
+.header :global(.nav-trigger[aria-expanded="true"]) {
+  color: var(--text-strong);
 }
-.header :global(.nav-trigger):hover,
-.header :global(.global-nav-item):hover,
-.header :global(.nav-menu-link):hover,
-.drawer :global(.nav-menu-link):hover {
+.header :global(.nav-trigger.active) {
+  font-weight: var(--weight-semibold);
+}
+.header :global(.nav-trigger.active) :global(.site-icon) {
+  color: var(--nav-tone, var(--accent-text));
+}
+.header :global(.nav-chevron) {
+  min-width: 20px;
+  margin-left: -6px;
+  padding: 0 2px;
+  color: var(--text-subtle);
+}
+.header :global(.nav-chevron):hover,
+.header :global(.nav-chevron[aria-expanded="true"]) {
   background: var(--surface-hover);
+  color: var(--text);
+}
+/* Hover tints per section, like the coloured icons of the reference. */
+.header :global([data-section="bikes"]) {
+  --nav-tone: var(--accent-text);
+}
+.header :global([data-section="journal"]) {
+  --nav-tone: var(--info);
+}
+.header :global([data-section="articles"]) {
+  --nav-tone: var(--tone-bmx);
+}
+.header :global([data-section="rides"]) {
+  --nav-tone: var(--tone-road);
+}
+.header :global([data-section="market"]) {
+  --nav-tone: var(--tone-special);
+}
+
+/* Utilities: search pill, theme, notifications, account. */
+.header :global(.global-nav-item) {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--control-md);
+  height: var(--control-md);
+  border: 0;
+  border-radius: var(--radius-lg);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
+}
+.header :global(.global-nav-item):hover,
+.header :global(.global-nav-item.active) {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+.header :global(.search-trigger) :global(.search-trigger-label),
+.header :global(.search-trigger) kbd {
+  display: none;
+}
+@media (min-width: 1280px) {
+  .header :global(.search-trigger) {
+    justify-content: flex-start;
+    gap: var(--space-2);
+    width: 200px;
+    height: var(--control-md);
+    padding: 0 var(--space-2) 0 var(--space-3);
+    border: 1px solid var(--field-line);
+    border-radius: var(--radius-full);
+    background: var(--field-bg);
+    color: var(--text-muted);
+    box-shadow: var(--shadow-inner);
+    font-size: var(--text-sm);
+  }
+  .header :global(.search-trigger):hover {
+    border-color: var(--field-line-hover);
+    background: var(--field-bg);
+    color: var(--text-secondary);
+  }
+  .header :global(.search-trigger) :global(.search-trigger-label) {
+    display: inline;
+    flex: 1;
+    text-align: left;
+  }
+  .header :global(.search-trigger) kbd {
+    display: inline-block;
+    padding: 1px 5px;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+    font-size: 11px;
+    line-height: 16px;
+  }
 }
 .header :global(.notification-badge) {
   position: absolute;
-  right: 0;
-  top: 0;
+  top: 3px;
+  right: 2px;
   min-width: 16px;
-  padding: 0 3px;
-  border-radius: 6px;
+  padding: 0 4px;
+  border-radius: var(--radius-full);
   background: var(--accent);
   color: var(--accent-foreground);
-  font: 700 11px/16px var(--site-font);
+  font: var(--weight-bold) 10px / 16px var(--font-sans);
+  text-align: center;
+}
+.header :global(.account-disclosure) > :global(.nav-trigger) {
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-full);
+}
+.header :global(.account-disclosure) > :global(.nav-trigger):hover {
+  background: var(--surface-hover);
+}
+.header :global(.desktop-account) > :global(.nav-trigger) {
+  min-height: var(--control-md);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--control-line);
+  border-radius: var(--radius-lg);
+  background: var(--control-bg);
+  color: var(--control-text);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+.header :global(.desktop-account) > :global(.nav-trigger):hover {
+  box-shadow: var(--shadow-inner);
 }
 .header :global(.mobile-nav-toggle) {
   display: none;
 }
+
+/* Section and account menus. */
 .disclosure {
   position: relative;
   display: flex;
-  align-items: stretch;
-}
-.disclosure > :global(.nav-chevron) {
-  min-width: 24px;
-  padding-inline: 3px;
-  margin-left: -4px;
+  align-items: center;
 }
 .popover {
   position: absolute;
-  top: calc(100% + 8px);
+  top: calc(100% + 10px);
   left: 0;
   z-index: var(--z-dropdown);
-  width: 254px;
-  padding: 6px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  width: 256px;
+  padding: var(--space-1) 0;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-lg);
   background: var(--surface);
-  box-shadow: var(--shadow-popover);
-  animation: menu-in var(--duration-fast) var(--ease-standard);
+  box-shadow: var(--shadow-lg);
+  animation: menu-in var(--duration-fast) var(--ease-out);
 }
 .popover[hidden] {
   display: none;
 }
 :global(.account-disclosure) .popover,
 :global(.theme-disclosure) .popover {
-  left: auto;
   right: 0;
+  left: auto;
 }
 .header :global(.nav-menu-link),
 .drawer :global(.nav-menu-link) {
   display: flex;
   align-items: center;
-  justify-content: flex-start;
+  gap: var(--space-2-5);
   width: 100%;
-  min-height: 40px;
-  gap: 10px;
-  padding: 8px 10px;
-  border-radius: var(--radius-sm);
-  font: 400 15px/20px var(--site-font);
+  min-height: 34px;
+  padding: var(--space-1-5) var(--space-3);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   color: var(--text);
+  font: var(--weight-regular) var(--text-sm) / var(--leading-tight)
+    var(--font-sans);
   text-align: left;
+  cursor: pointer;
+}
+.header :global(.nav-menu-link) :global(.site-icon),
+.drawer :global(.nav-menu-link) :global(.site-icon) {
+  color: var(--text-subtle);
+}
+.header :global(.nav-menu-link):hover,
+.header :global(.nav-menu-link):focus-visible,
+.drawer :global(.nav-menu-link):hover {
+  background: var(--surface-hover);
+  outline-offset: -2px;
 }
 .header :global(.nav-menu-link[aria-current="page"]),
-.header :global(.nav-menu-link[aria-pressed="true"]),
+.header :global(.nav-menu-link[aria-selected="true"]),
 .drawer :global(.nav-menu-link[aria-current="page"]) {
-  background: var(--accent-soft);
-  box-shadow: inset 2px 0 var(--accent);
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
 }
-.header :global(.nav-menu-link span) {
+.header :global(.nav-menu-link[aria-current="page"]) :global(.site-icon),
+.drawer :global(.nav-menu-link[aria-current="page"]) :global(.site-icon) {
+  color: var(--accent-text);
+}
+.header :global(.nav-menu-link) span {
   min-width: 0;
   overflow-wrap: anywhere;
+}
+.header :global(.nav-menu-link):disabled {
+  color: var(--text-muted);
+  cursor: progress;
 }
 .header :global(.nav-account-identity),
 .drawer :global(.nav-account-identity) {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 8px;
-  border-bottom: 1px solid var(--border);
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3) var(--space-3);
+  border-bottom: 1px solid var(--line);
 }
-.header :global(.nav-account-identity small),
-.drawer :global(.nav-account-identity small) {
+.header :global(.nav-account-identity) strong,
+.drawer :global(.nav-account-identity) strong {
+  display: block;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  overflow-wrap: anywhere;
+}
+.header :global(.nav-account-identity) small,
+.drawer :global(.nav-account-identity) small {
   display: block;
   color: var(--text-muted);
-  font-size: 13px;
+  font-size: var(--text-xs);
 }
 .header :global(.nav-account-stats),
 .drawer :global(.nav-account-stats) {
   display: flex;
-  gap: 14px;
   flex-wrap: wrap;
-  margin: 0;
-  padding: 12px 8px;
-  border-bottom: 1px solid var(--border);
+  gap: var(--space-4);
+  margin: 0 0 var(--space-1);
+  padding: var(--space-2-5) var(--space-3);
+  border-bottom: 1px solid var(--line);
 }
-.header :global(.nav-account-stats dt),
-.drawer :global(.nav-account-stats dt) {
+.header :global(.nav-account-stats) div,
+.drawer :global(.nav-account-stats) div {
+  display: flex;
+  flex-direction: column-reverse;
+}
+.header :global(.nav-account-stats) dt,
+.drawer :global(.nav-account-stats) dt {
   color: var(--text-muted);
-  font-size: 13px;
+  font: var(--weight-semibold) 11px / 1.3 var(--font-mono);
 }
-.header :global(.nav-account-stats dd),
-.drawer :global(.nav-account-stats dd) {
+.header :global(.nav-account-stats) dd,
+.drawer :global(.nav-account-stats) dd {
   margin: 0;
-  font-weight: 700;
+  font-size: var(--text-base);
+  font-weight: var(--weight-bold);
+  font-variant-numeric: tabular-nums;
 }
-.header .drawer {
-  inset: 8px 8px auto auto;
-  width: min(400px, calc(100% - 16px));
-  max-width: calc(100% - 16px);
-  max-height: calc(100dvh - 16px);
-  margin: 0;
-  overflow-y: auto;
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-popover);
+.header :global(.nav-account-links) {
+  padding: var(--space-1) 0;
+}
+.header :global(.nav-account-links) + :global(.nav-menu-link),
+.drawer :global(.nav-account-links) + :global(.nav-menu-link) {
+  border-top: 1px solid var(--line);
+}
+
+/* Phones and tablets: brand, search, theme, bell and the menu button; the
+   sections open in a full-height sheet on the right. */
+dialog.drawer {
+  inset: 0 0 0 auto;
+  width: min(360px, calc(100vw - 32px));
+  height: 100dvh;
+  max-height: none;
+  padding: var(--space-3) var(--space-2)
+    max(var(--space-4), env(safe-area-inset-bottom));
+  border-width: 0 0 0 1px;
+  border-radius: 0;
+  animation: drawer-in var(--duration) var(--ease-out);
+}
+.drawer :global(.sheet-head) {
+  padding: 0 var(--space-1) 0 var(--space-3);
+}
+@keyframes drawer-in {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
 }
 .drawer :global(.mobile-nav-section) {
-  border-bottom: 1px solid var(--border);
-  padding: 4px 0;
+  padding: var(--space-1) 0;
+  border-bottom: 1px solid var(--line);
 }
 .drawer summary {
   display: flex;
   align-items: center;
+  gap: var(--space-2);
   min-height: 44px;
+  padding: 0 var(--space-3);
+  list-style: none;
   cursor: pointer;
-  padding: 8px;
-  font-size: 16px;
+}
+.drawer summary::-webkit-details-marker {
+  display: none;
 }
 .drawer summary::after {
-  content: "⌄";
-  margin-left: auto;
+  content: "";
+  width: 8px;
+  height: 8px;
+  margin: -4px 4px 0 auto;
+  border-right: 1.5px solid var(--text-muted);
+  border-bottom: 1.5px solid var(--text-muted);
+  transform: rotate(45deg);
+  transition: transform var(--duration-fast) var(--ease-out);
 }
-.drawer summary a {
+.drawer details[open] > summary::after {
+  margin-top: 4px;
+  transform: rotate(225deg);
+}
+.drawer summary a,
+.drawer :global(.mobile-nav-section) > :global(.nav-menu-link) {
+  display: flex;
   flex: 1;
-  font-weight: 600;
+  align-items: center;
+  gap: var(--space-2-5);
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+}
+.drawer summary a :global(.site-icon) {
+  color: var(--text-subtle);
+}
+.drawer details :global(.nav-menu-link) {
+  padding-left: var(--space-10);
 }
 .drawer :global(.mobile-account) {
-  margin-top: 8px;
+  padding-top: var(--space-2);
+}
+.drawer :global(.mobile-account) > :global(.nav-trigger) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: var(--control-lg);
+  border-radius: var(--radius-lg);
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-weight: var(--weight-semibold);
 }
 @keyframes menu-in {
   from {
     opacity: 0;
-    transform: translateY(-3px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+    transform: translateY(-2px);
   }
 }
-@media (max-width: 1050px) {
-  .header {
-    padding: 8px 16px;
-    gap: 12px;
-  }
+@media (max-width: 1100px) {
   .header :global(.brand) {
     margin-right: auto;
-    min-height: 44px;
   }
   .header :global(.global-nav) {
-    flex: 0;
+    flex: none;
   }
   .header :global(.primary-navigation),
   .header :global(.desktop-account) {
@@ -255,35 +453,18 @@
   .header :global(.mobile-nav-toggle) {
     display: inline-flex;
   }
-  .header :global(.nav-trigger),
-  .header :global(.global-nav-item) {
-    min-height: 44px;
-    min-width: 44px;
+}
+@media (max-width: 380px) {
+  .header {
+    gap: var(--space-1);
   }
   .header :global(.nav-utilities) {
     gap: 0;
   }
 }
-@media (max-width: 360px) {
-  .header {
-    padding-inline: 10px;
-    gap: 4px;
-  }
-  .header :global(.brand) {
-    font-size: 21px;
-    gap: 5px;
-  }
-}
-@media (pointer: coarse) {
-  .disclosure > :global(.nav-chevron) {
-    min-width: 44px;
-  }
-  .header :global(.nav-menu-link) {
-    min-height: 44px;
-  }
-}
 @media (prefers-reduced-motion: reduce) {
-  .popover {
+  .popover,
+  dialog.drawer {
     animation: none;
   }
 }

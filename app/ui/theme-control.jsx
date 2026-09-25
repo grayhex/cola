@@ -7,7 +7,7 @@ export default function ThemeControl() {
   return (
     <button
       type="button"
-      className="compact-icon theme-toggle"
+      className="global-nav-item theme-toggle"
       role="switch"
       disabled={!themeReady}
       aria-checked={resolvedTheme === "dark"}
@@ -15,7 +15,7 @@ export default function ThemeControl() {
       title={next === "dark" ? "Включить тёмную тему" : "Включить светлую тему"}
       onClick={() => setThemePreference(next)}
     >
-      <SiteIcon name={next} />
+      <SiteIcon name={next} size={18} />
     </button>
   );
 }

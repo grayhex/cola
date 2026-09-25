@@ -6,6 +6,7 @@ import GlobalHeader from "./global-header.jsx";
 import { useSite } from "./site-provider.jsx";
 import footerStyles from "./site-footer.module.css";
 import Versions from "./versions.jsx";
+import { footerSlots, footerLinkHref } from "../../lib/design-graphics.js";
 import { profilePath } from "../../lib/public-urls.js";
 import { personName, usernameLabel } from "../../lib/usernames.js";
 // `keepalive` lets a small mutation finish when the reader leaves the page
@@ -51,47 +52,72 @@ export function AuthorLink({ author }) {
 export function SocialHeader({ user }) {
   return <GlobalHeader user={user} />;
 }
+// A footer logo's accessible name: where the link goes.
+function logoLinkName(href) {
+  if (!/^https?:/i.test(href)) return "Страница " + href;
+  let host = href;
+  try {
+    host = new URL(href).hostname.replace(/^www\./, "");
+  } catch {}
+  return "Сайт " + host + " (откроется в новой вкладке)";
+}
+// One line (#124): up to four logos, ColaBike in the middle of the page,
+// app and parser versions. Section links live in the header only.
 export function SocialFooter() {
   const { settings } = useSite();
-  // Two images from Админка → Дизайн → Графика → «Подвал» (#107). They sit
-  // next to the text brand, so they are decorative for screen readers.
-  const images = [settings.footerImage1Id, settings.footerImage2Id].filter(
-    Boolean,
-  );
+  const logos = footerSlots
+    .map((slot) => ({
+      id: settings[slot.key],
+      href: footerLinkHref(settings[slot.linkKey]),
+    }))
+    .filter((logo) => logo.id);
   return (
     <footer className={footerStyles.footer}>
       <div className={footerStyles.inner}>
-        {images.length > 0 && (
-          <div className={footerStyles.images} data-footer-images>
-            {images.map((id, i) => (
+        <div className={footerStyles.logos} data-footer-images>
+          {logos.map(({ id, href }, i) => {
+            // Logos from Админка → Дизайн → Графика → «Подвал» (#107).
+            const image = (
               <img
-                key={i}
                 src={"/api/assets/" + id}
                 alt=""
-                width={160}
-                height={40}
+                width={200}
+                height={100}
                 loading="lazy"
                 decoding="async"
               />
-            ))}
-          </div>
-        )}
-        <Link className={footerStyles.brand} href="/">
-          ColaBike
-        </Link>
-        <span>Люди. Велосипеды. Истории.</span>
-        <nav aria-label="Нижняя навигация">
-          <Link href="/bikes">Велосипеды</Link>
-          <Link href="/journal">Журнал</Link>
-          <Link href="/articles">Статьи</Link>
-          <Link href="/rides">Покатушки</Link>
-          <Link href="/market">Рынок</Link>
-          <Link href="/about">О проекте</Link>
-          <Link href="/legal/terms">Соглашение</Link>
-          <Link href="/legal/privacy">Политика обработки данных</Link>
-          <a href="https://github.com/grayhex/cola">GitHub</a>
+            );
+            if (!href)
+              return (
+                <span key={i} className={footerStyles.logo}>
+                  {image}
+                </span>
+              );
+            const external = /^https?:/i.test(href);
+            return (
+              <a
+                key={i}
+                className={footerStyles.logo}
+                href={href}
+                aria-label={logoLinkName(href)}
+                {...(external
+                  ? { target: "_blank", rel: "noopener noreferrer" }
+                  : {})}
+              >
+                {image}
+              </a>
+            );
+          })}
+        </div>
+        <p className={footerStyles.brandLine}>
+          <Link className={footerStyles.brand} href="/">
+            ColaBike
+          </Link>
+          <span>Люди. Велосипеды. Истории.</span>
+        </p>
+        <div className={footerStyles.versions}>
           <Versions link={false} />
-        </nav>
+        </div>
       </div>
     </footer>
   );

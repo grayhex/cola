@@ -47,7 +47,10 @@ test("content artwork remains editable and protected; retired interface graphics
       .click();
     await expect(page.getByText(/Legacy|Pixel Club/)).toHaveCount(0);
     await page
-      .getByRole("combobox", { name: "О проекте · руководство", exact: true })
+      .getByRole("combobox", {
+        name: "О проекте · как устроен ColaBike",
+        exact: true,
+      })
       .selectOption(asset);
     await page.getByRole("button", { name: "Сохранить", exact: true }).click();
     await expect(page.getByRole("status")).toHaveText(

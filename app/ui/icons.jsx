@@ -25,6 +25,7 @@ export {
   Info,
   Layers,
   Link,
+  Link2,
   LoaderCircle,
   Lock,
   LogOut,

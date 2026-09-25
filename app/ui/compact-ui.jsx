@@ -27,7 +27,7 @@ export function CompactIconButton({
   return (
     <button
       type="button"
-      className={"compact-icon " + className}
+      className={"icon " + className}
       aria-label={label}
       title={label}
       {...props}
@@ -60,7 +60,7 @@ export function CompactDialog({
   return (
     <dialog
       ref={ref}
-      className={"compact-panel " + className}
+      className={"sheet " + className}
       aria-label={title}
       onCancel={onClose}
       onClose={onClose}
@@ -83,7 +83,7 @@ export function CompactDialog({
         }
       }}
     >
-      <div className="compact-panel-heading">
+      <div className="sheet-head">
         <h2>{title}</h2>
         <CompactIconButton label="Закрыть панель" onClick={onClose}>
           <X size={18} />
@@ -100,7 +100,7 @@ export function FilterControl({ categories, selected, onChange }) {
     <>
       <button
         type="button"
-        className="compact-button"
+        className="button secondary"
         aria-label="Фильтры"
         title="Фильтры"
         aria-haspopup="dialog"
@@ -113,7 +113,7 @@ export function FilterControl({ categories, selected, onChange }) {
         <SiteIcon name="filters" />
         <span className="control-label">Фильтры</span>
         {selected.length > 0 && (
-          <span className="control-count">{selected.length}</span>
+          <span className="badge">{selected.length}</span>
         )}
       </button>
       <CompactDialog open={open} onClose={() => setOpen(false)} title="Фильтры">
@@ -141,10 +141,10 @@ export function FilterControl({ categories, selected, onChange }) {
             ))}
           </div>
         </fieldset>
-        <div className="compact-panel-actions">
+        <div className="sheet-actions">
           <button
             type="button"
-            className="compact-button"
+            className="button secondary small"
             onClick={() => setDraft([])}
           >
             <SiteIcon name="reset" />
@@ -216,7 +216,7 @@ export function GlobalSearch() {
   return (
     <>
       <button
-        className="global-nav-item"
+        className="global-nav-item search-trigger"
         type="button"
         aria-label="Поиск ColaBike"
         title="Поиск · Ctrl/⌘ K"
@@ -224,7 +224,11 @@ export function GlobalSearch() {
         aria-haspopup="dialog"
         onClick={() => setOpen(true)}
       >
-        <SiteIcon name="search" />
+        <SiteIcon name="search" size={18} />
+        <span className="search-trigger-label" aria-hidden="true">
+          Поиск
+        </span>
+        <kbd aria-hidden="true">⌘K</kbd>
       </button>
       <CompactDialog
         title="Поиск ColaBike"

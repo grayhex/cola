@@ -307,10 +307,18 @@
     text-align: left;
     pointer-events: none;
     user-select: none;
-    mask-image: radial-gradient(
-      ellipse 70% 65% at 50% 45%,
-      transparent 30%,
-      #000 75%
+    /* Pricing's .hero-ascii mask, from the page's inline style. */
+    -webkit-mask-image: linear-gradient(
+      to top,
+      rgb(0 0 0 / 0.6) 0%,
+      rgb(0 0 0 / 0.2) 55%,
+      transparent 85%
+    );
+    mask-image: linear-gradient(
+      to top,
+      rgb(0 0 0 / 0.6) 0%,
+      rgb(0 0 0 / 0.2) 55%,
+      transparent 85%
     );
   }
   .glyph-field b {
@@ -634,23 +642,188 @@
     color: var(--text-subtle);
   }
 
-  /* Numbered steps: round badges on a thin line (Storage's how-to). */
+  /* Tick list with tinted round marks (Storage's feature lists). */
+  .mk-checks {
+    display: grid;
+    gap: var(--space-4);
+    margin: var(--space-8) 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  .mk-checks li {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+  }
+  @media (min-width: 640px) {
+    .mk-checks li {
+      font-size: var(--text-base);
+    }
+  }
+  .mk-checks li > :first-child {
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: var(--radius-full);
+    background: var(--tone-soft, var(--info-soft));
+    color: var(--tone, var(--info));
+  }
+  .mk-checks svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  /* Centred heading block inside the column (section intros). */
+  .mk-band {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: var(--space-12) var(--space-6) var(--space-10);
+    text-align: center;
+  }
+  @media (min-width: 640px) {
+    .mk-band {
+      padding: var(--space-16) var(--space-12) var(--space-12);
+    }
+  }
+  .mk-band > p {
+    max-width: 40rem;
+    color: var(--text-secondary);
+    font-size: var(--text-lg);
+    line-height: var(--leading-snug);
+  }
+  @media (min-width: 768px) {
+    .mk-band > p {
+      font-size: var(--text-xl);
+    }
+  }
+
+  /* A ruled grid of small feature cells (Storage's security grid): icon in
+     a rounded box, short title, one or two lines. Hairlines between cells;
+     the outer edges fall outside the clipped box. */
+  .mk-cells {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid var(--line);
+    list-style: none;
+  }
+  @media (min-width: 560px) {
+    .mk-cells {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  @media (min-width: 1024px) {
+    .mk-cells {
+      grid-template-columns: repeat(var(--mk-cells, 4), minmax(0, 1fr));
+    }
+  }
+  .mk-cells > * {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-1);
+    margin: 0 -1px -1px 0;
+    padding: var(--space-6) var(--space-4);
+    border-right: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    text-align: center;
+  }
+  @media (min-width: 640px) {
+    .mk-cells > * {
+      padding: var(--space-8);
+    }
+  }
+  .mk-cell-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    margin-bottom: var(--space-2);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-xl);
+    color: var(--text-muted);
+  }
+  .mk-cell-icon svg {
+    width: 20px;
+    height: 20px;
+  }
+  .mk-cells h3 {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+  }
+  .mk-cells p {
+    max-width: 30ch;
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    line-height: 1.6;
+  }
+  /* Phones: icon beside the text, so a column of cells stays short. */
+  @media (max-width: 559px) {
+    .mk-cells > * {
+      display: grid;
+      grid-template-columns: 44px minmax(0, 1fr);
+      align-items: start;
+      gap: var(--space-0-5) var(--space-4);
+      padding: var(--space-5) var(--space-4);
+      text-align: left;
+    }
+    .mk-cell-icon {
+      grid-row: span 2;
+      margin: 0;
+    }
+    .mk-cells p {
+      max-width: none;
+    }
+  }
+
+  /* Numbered steps in a ruled row (Storage's closing section): a round
+     number, a title and one line; the first number is black. */
   .mk-steps {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
-    gap: var(--space-6);
+    overflow: hidden;
     margin: 0;
     padding: 0;
+    border-top: 1px solid var(--line);
     list-style: none;
     counter-reset: mk-step;
   }
-  @media (min-width: 768px) {
+  @media (min-width: 640px) {
+    .mk-steps {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .mk-steps > :last-child:nth-child(odd) {
+      grid-column: 1 / -1;
+    }
+  }
+  @media (min-width: 1024px) {
     .mk-steps {
       grid-template-columns: repeat(var(--mk-steps, 3), minmax(0, 1fr));
     }
+    .mk-steps > :last-child:nth-child(odd) {
+      grid-column: auto;
+    }
   }
   .mk-steps > li {
-    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-1-5);
+    margin: 0 -1px -1px 0;
+    padding: var(--space-8) var(--space-5);
+    border-right: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    text-align: center;
     counter-increment: mk-step;
   }
   .mk-steps > li::before {
@@ -665,23 +838,36 @@
     background: var(--surface-hover);
     color: var(--text-secondary);
     font: var(--weight-semibold) var(--text-sm) / 1 var(--font-mono);
-    transition: transform var(--duration) var(--ease-out);
   }
   .mk-steps > li:first-child::before {
     background: var(--primary);
     color: var(--primary-foreground);
   }
-  .mk-steps > li:hover::before {
-    transform: scale(1.1);
-  }
-  .mk-steps h3 {
-    margin: 0 0 var(--space-1);
-    font-size: var(--text-sm);
+  .mk-steps strong {
+    color: var(--text);
+    font-size: var(--text-lg);
     font-weight: var(--weight-semibold);
   }
-  .mk-steps p {
+  .mk-steps li > span {
     color: var(--text-muted);
     font-size: var(--text-sm);
+  }
+  @media (max-width: 639px) {
+    .mk-steps > li {
+      display: grid;
+      grid-template-columns: 40px minmax(0, 1fr);
+      align-items: start;
+      gap: var(--space-0-5) var(--space-4);
+      padding: var(--space-4);
+      text-align: left;
+    }
+    .mk-steps > li::before {
+      grid-row: span 2;
+      margin: 0;
+    }
+    .mk-steps strong {
+      font-size: var(--text-base);
+    }
   }
 
   /* Elements that fade in when scrolled into view (see reveal.js); the
