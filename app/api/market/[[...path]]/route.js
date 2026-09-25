@@ -26,7 +26,13 @@ import {
   readMarketPhotoFile,
   removeMarketPhoto,
   cleanupMarketPhotos,
+  sellerListings,
+  extendListing,
+  setListingSaved,
+  savedListings,
 } from "../../../../lib/market.js";
+import { publicAuthor } from "../../../../lib/profile-dto.js";
+import { usernamePattern } from "../../../../lib/usernames.js";
 import { preparePhoto } from "../../../../lib/images.js";
 import {
   mediaEtag,
@@ -56,8 +62,24 @@ async function handler(req, { params }) {
     if (method === "GET" && !p.length) {
       const own = url.searchParams.get("own") === "1";
       if (own && !user) return fail("Войдите в аккаунт", 401);
-      return json(
-        await marketList(db, user?.id, {
+      // One seller's listings (#116): the heading names the seller even when
+      // nothing of theirs is on the market now.
+      const sellerName = z
+        .string()
+        .regex(usernamePattern)
+        .nullable()
+        .parse(url.searchParams.get("seller") || null);
+      const seller = sellerName
+        ? (
+            await db.query(
+              "SELECT id,username,name,avatar_id FROM users WHERE lower(username)=lower($1) AND NOT blocked",
+              [sellerName],
+            )
+          ).rows[0]
+        : null;
+      if (sellerName && !seller) return fail("Продавец не найден", 404);
+      const list = await marketList(db, user?.id, {
+          seller: seller?.username || "",
           own,
           category: z
             .enum(["bikes", "components", "accessories"])
@@ -80,8 +102,8 @@ async function handler(req, { params }) {
             .string()
             .max(100)
             .parse(url.searchParams.get("q") || ""),
-        }),
-      );
+        });
+      return json(seller ? { ...list, seller: publicAuthor(seller) } : list);
     }
     // Contacts are shown one listing at a time to signed-in people only.
     if (method === "GET" && p[0] === "public" && p[2] === "contact" && p.length === 3) {
@@ -92,10 +114,13 @@ async function handler(req, { params }) {
         contact: await marketContact(db, uuid.parse(p[1]), user.id),
       });
     }
-    if (method === "GET" && p[0] === "public" && p.length === 2)
+    if (method === "GET" && p[0] === "public" && p.length === 2) {
+      const listing = await marketDetail(db, uuid.parse(p[1]), user?.id);
       return json({
-        listing: await marketDetail(db, uuid.parse(p[1]), user?.id),
+        listing,
+        others: await sellerListings(db, listing.id, user?.id),
       });
+    }
     if (method === "GET" && p[0] === "media" && p.length === 2) {
       const id = uuid.parse(p[1]),
         width = mediaWidth(url.searchParams.get("width"));
@@ -113,8 +138,26 @@ async function handler(req, { params }) {
       );
     }
     if (!user) return fail("Войдите в аккаунт", 401);
+    if (method === "GET" && p.length === 1 && p[0] === "saved")
+      return json(
+        await savedListings(
+          db,
+          user.id,
+          communityPage.parse(url.searchParams.get("page") || 1),
+        ),
+      );
     if (!(await rateLimit("market-write:" + user.id, 30)))
       return fail("Слишком много действий. Попробуйте позже.", 429);
+    if (p.length === 2 && p[1] === "extend" && method === "POST")
+      return json(
+        await transaction((q) => extendListing(q, uuid.parse(p[0]), user.id)),
+      );
+    if (p.length === 2 && p[1] === "save" && ["PUT", "DELETE"].includes(method))
+      return json(
+        await transaction((q) =>
+          setListingSaved(q, uuid.parse(p[0]), user.id, method === "PUT"),
+        ),
+      );
     if (method === "POST" && !p.length) {
       const input = listingInput.parse(await readJson(req, 16384));
       return json(
@@ -169,5 +212,6 @@ async function handler(req, { params }) {
 const route = traced(handler);
 export const GET = route,
   POST = route,
+  PUT = route,
   PATCH = route,
   DELETE = route;

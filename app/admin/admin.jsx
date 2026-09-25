@@ -623,6 +623,23 @@ export default function Admin() {
                   checked={draft.showDemo}
                   onChange={(v) => update("showDemo", v)}
                 />
+                <Field
+                  label="Срок объявления на рынке, дней"
+                  help="От 7 до 365. Срок начинается при публикации и продлении. За 3 дня до конца владелец получает уведомление и продлевает объявление одной кнопкой; истёкшее уходит из поиска, ленты и sitemap. Уже опубликованные объявления сохраняют свой срок."
+                >
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    min={7}
+                    max={365}
+                    step={1}
+                    required
+                    value={draft.marketListingDays ?? 60}
+                    onChange={(e) =>
+                      update("marketListingDays", Number(e.target.value))
+                    }
+                  />
+                </Field>
               </section>
               <p className="help">
                 Адрес сервера, доступ к БД и secure-cookie задаются в окружении

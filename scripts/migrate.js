@@ -37,6 +37,7 @@ try {
     "023_public_urls",
     "024_username_history",
     "025_account_sessions",
+    "026_market_expiry",
   ]) {
     const { rowCount } = await client.query(
       "SELECT 1 FROM schema_migrations WHERE version=$1",

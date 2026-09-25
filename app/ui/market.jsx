@@ -8,6 +8,10 @@ import {
   ArrowLeft,
   Search,
   Image as ImageIcon,
+  Bookmark,
+  BookmarkCheck,
+  CalendarClock,
+  X,
 } from "lucide-react";
 import {
   SocialHeader,
@@ -22,6 +26,7 @@ import {
   listingPriceLabel,
   marketSorts,
   publishedLabel,
+  daysLabel,
 } from "../../lib/market-types.js";
 import { marketCategories, readMarketQuery, writeMarketQuery } from "../../lib/market-query.js";
 import styles from "./market.module.css";
@@ -29,6 +34,7 @@ import { profilePath, publicPath } from "../../lib/public-urls.js";
 import { personName, usernameLabel } from "../../lib/usernames.js";
 import ShareButton from "./share-button.jsx";
 import { useHydrated } from "./use-hydrated.js";
+import LocalDate from "./local-date.jsx";
 // The link keeps the original; previews use the cached size variants.
 const marketVariants = (id, widths = [320, 640, 1280]) =>
   widths.map((w) => `/api/market/media/${id}?width=${w} ${w}w`).join(", ");
@@ -71,7 +77,9 @@ export function MarketCard({ listing: m }) {
             {m.condition === "new" ? "Новое" : "С пробегом"}
             {m.status !== "active"
               ? " · " + (m.status === "sold" ? "Закрыто" : "Черновик")
-              : ""}
+              : m.expired
+                ? " · Срок истёк"
+                : ""}
           </small>
         </div>
         <h3>
@@ -84,13 +92,77 @@ export function MarketCard({ listing: m }) {
             {personName(m.author)}
           </Link>
         </p>
-        {m.status === "active" && m.publishedAt && (
+        {m.status === "active" && !m.expired && m.publishedAt && (
           <small className={styles.published}>
             {publishedLabel(m.publishedAt)}
           </small>
         )}
       </div>
     </article>
+  );
+}
+// Saved listings live in /saved → «Объявления» (#116).
+function SaveListing({ listing, onChange }) {
+  const [busy, setBusy] = useState(false),
+    [error, setError] = useState("");
+  return (
+    <>
+      <button
+        type="button"
+        className="button secondary"
+        aria-pressed={listing.saved}
+        disabled={busy}
+        aria-busy={busy}
+        onClick={async () => {
+          setBusy(true);
+          setError("");
+          try {
+            const r = await socialApi(
+              "market/" + listing.id + "/save",
+              listing.saved ? "DELETE" : "PUT",
+            );
+            onChange(r.saved);
+          } catch (e) {
+            setError(e.message);
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        {listing.saved ? (
+          <BookmarkCheck size={16} aria-hidden="true" />
+        ) : (
+          <Bookmark size={16} aria-hidden="true" />
+        )}
+        {listing.saved ? "Сохранено" : "Сохранить"}
+      </button>
+      {error && <span role="alert">{error}</span>}
+    </>
+  );
+}
+// Other listings of the seller that are on the market now (#116).
+function SellerListings({ listing, others }) {
+  if (!others?.items.length) return null;
+  const seller = listing.author;
+  return (
+    <section className={styles.others} aria-labelledby="seller-listings">
+      <div className="section-heading">
+        <h2 id="seller-listings">Другие объявления продавца</h2>
+        {seller.username && (
+          <Link
+            href={"/market?seller=" + encodeURIComponent(seller.username)}
+            className="button secondary small"
+          >
+            Все объявления продавца
+          </Link>
+        )}
+      </div>
+      <div className={styles.grid}>
+        {others.items.map((m) => (
+          <MarketCard key={m.id} listing={m} />
+        ))}
+      </div>
+    </section>
   );
 }
 const blank = {
@@ -368,10 +440,12 @@ export default function Market({
   sharePath = null,
   initial = null,
 }) {
-  const { viewer: user } = useSite();
+  const { viewer: user, settings } = useSite();
   const hydrated = useHydrated();
+  const listingDays = settings?.marketListingDays || 60;
   const [data, setData] = useState(null),
     [listing, setListing] = useState(initial?.listing || null),
+    [others, setOthers] = useState(initial?.others || null),
     [edit, setEdit] = useState(create),
     [filters, setFilters] = useState(() => readMarketQuery(new URLSearchParams())),
     [search, setSearch] = useState(""),
@@ -381,11 +455,11 @@ export default function Market({
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
     [ready, setReady] = useState(false);
-  const { own, category, listingType, condition, query, priceMin, priceMax, city, sort } =
+  const { own, seller, category, listingType, condition, query, priceMin, priceMax, city, sort } =
     filters;
   const filtered =
     query || category || listingType || condition || city || sort !== "new" ||
-    priceMin !== "" || priceMax !== "";
+    priceMin !== "" || priceMax !== "" || seller;
   const filterKey = writeMarketQuery(filters);
   // The server rendered the listing for this viewer (#74): keep it on mount
   // and skip the first request.
@@ -410,7 +484,10 @@ export default function Market({
       setEdit(create || p.get("edit") === "1");
     };
     restore();
-    if (!seed.current) setListing(null);
+    if (!seed.current) {
+      setListing(null);
+      setOthers(null);
+    }
     setContact(null);
     setContactError("");
     setReady(true);
@@ -432,8 +509,10 @@ export default function Market({
     socialApi(path)
       .then((d) => {
         if (active) {
-          if (share) setListing(d.listing);
-          else setData(d);
+          if (share) {
+            setListing(d.listing);
+            setOthers(d.others);
+          } else setData(d);
         }
       })
       .catch((e) => {
@@ -458,6 +537,19 @@ export default function Market({
       setContactError(e.message);
     }
   }
+  // One click gives the listing a new full term (#116).
+  async function extend() {
+    setBusy(true);
+    setError("");
+    try {
+      const r = await socialApi("market/" + listing.id + "/extend", "POST");
+      setListing((v) => ({ ...v, ...r }));
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
   async function changeStatus(status) {
     setBusy(true);
     setError("");
@@ -472,7 +564,10 @@ export default function Market({
         status,
       };
       await socialApi("market/" + listing.id, "PATCH", body);
-      setListing((v) => ({ ...v, status }));
+      // A new publication starts a new term: read it back.
+      const fresh = await socialApi("market/public/" + listing.shareId);
+      setListing(fresh.listing);
+      setOthers(fresh.others);
     } catch (e) {
       setError(e.message);
     } finally {
@@ -533,6 +628,17 @@ export default function Market({
                   <h1>{listing.title}</h1>
                 </div>
                 <div className="entity-actions">
+                  {user &&
+                    !listing.isOwner &&
+                    (listing.saved ||
+                      (listing.status === "active" && !listing.expired)) && (
+                      <SaveListing
+                        listing={listing}
+                        onChange={(saved) =>
+                          setListing((v) => ({ ...v, saved }))
+                        }
+                      />
+                    )}
                   <ShareButton path={sharePath} title={listing.title} />
                   {listing.isOwner && (
                     <button className="quiet" onClick={() => setEdit(true)}>
@@ -541,12 +647,20 @@ export default function Market({
                   )}
                 </div>
               </div>
-              {listing.status !== "active" && (
+              {listing.status !== "active" ? (
                 <p className={styles.state}>
                   {listing.status === "sold"
                     ? "Объявление закрыто" + (listing.listingType === "sale" ? " · продано" : "")
                     : "Черновик · виден только вам"}
                 </p>
+              ) : (
+                listing.expired && (
+                  <p className={styles.state}>
+                    {listing.isOwner
+                      ? "Срок истёк · объявления нет в поиске и ленте"
+                      : "Срок публикации истёк"}
+                  </p>
+                )
               )}
               <div className={styles.detailGrid}>
                 <div>
@@ -585,7 +699,7 @@ export default function Market({
                   <strong className={styles.detailPrice}>
                     {listingPriceLabel(listing)}
                   </strong>
-                  {hydrated && listing.status === "active" && listing.publishedAt && (
+                  {hydrated && listing.status === "active" && !listing.expired && listing.publishedAt && (
                     <small className={styles.published}>
                       {publishedLabel(listing.publishedAt)}
                     </small>
@@ -606,7 +720,8 @@ export default function Market({
                     <p>{usernameLabel(listing.author)}</p>
                   )}
                   {listing.hasContact &&
-                    (listing.status === "active" || listing.isOwner) && (
+                    ((listing.status === "active" && !listing.expired) ||
+                      listing.isOwner) && (
                     <div>
                       <h3>Связаться с автором</h3>
                       {listing.contact || contact ? (
@@ -635,6 +750,38 @@ export default function Market({
                         </p>
                       )}
                       {contactError && <p role="alert">{contactError}</p>}
+                    </div>
+                  )}
+                  {listing.isOwner && listing.status === "active" && (
+                    <div className={styles.term}>
+                      <p>
+                        <CalendarClock size={16} aria-hidden="true" />
+                        {listing.expired ? (
+                          "Срок истёк"
+                        ) : (
+                          <span>
+                            На рынке до{" "}
+                            <LocalDate
+                              value={listing.expiresAt}
+                              options={{ day: "numeric", month: "long" }}
+                            />
+                          </span>
+                        )}
+                      </p>
+                      {/* Three days before the end, like the notice. */}
+                      {(listing.expired ||
+                        (hydrated &&
+                          new Date(listing.expiresAt) - Date.now() <=
+                            3 * 86400000)) && (
+                        <button
+                          type="button"
+                          className="button small"
+                          disabled={busy}
+                          onClick={extend}
+                        >
+                          Продлить на {daysLabel(listingDays)}
+                        </button>
+                      )}
                     </div>
                   )}
                   {listing.isOwner && (
@@ -683,6 +830,7 @@ export default function Market({
                   )}
                 </aside>
               </div>
+              <SellerListings listing={listing} others={others} />
             </article>
           ) : (
             !error && <p role="status">Загружаем объявление…</p>
@@ -693,6 +841,24 @@ export default function Market({
               <div>
                 <h1>Рынок</h1>
                 <p>Продать, купить, обменять или отдать велосипед и детали.</p>
+                {seller && (
+                  <p className={styles.sellerFilter}>
+                    <span>
+                      Объявления продавца{" "}
+                      <Link prefetch={false} href={profilePath(seller)}>
+                        {data?.seller ? personName(data.seller) : "@" + seller}
+                      </Link>
+                    </span>
+                    <button
+                      type="button"
+                      className="icon quiet"
+                      aria-label="Показать объявления всех продавцов"
+                      onClick={() => changeFilters({ seller: "" })}
+                    >
+                      <X size={16} aria-hidden="true" />
+                    </button>
+                  </p>
+                )}
               </div>
               <Link className="button small" href="/market/new">
                 <Plus size={16} />
@@ -788,6 +954,7 @@ export default function Market({
                   changeFilters({
                     query: "", category: "", listingType: "", condition: "",
                     priceMin: "", priceMax: "", city: "", sort: "new", page: 1,
+                    seller: "",
                   });
                 }}>Сбросить фильтры</button>
               )}

@@ -249,11 +249,42 @@
   padding: 10px 14px;
   border-radius: 8px;
 }
+/* The owner's term and one-click extension (#116). */
+.term {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+  margin-top: 16px;
+}
+.term p {
+  color: var(--text-muted);
+}
+/* Other listings of the seller (#116). */
+.others {
+  margin-top: 40px;
+}
+.others .grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.sellerFilter {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 8px;
+  font-weight: 600;
+}
+.sellerFilter a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
 .detail h1 {
   overflow-wrap: anywhere;
 }
 @media (max-width: 900px) {
-  .grid {
+  .grid,
+  .others .grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .detailGrid {
@@ -262,7 +293,8 @@
   }
 }
 @media (max-width: 600px) {
-  .grid {
+  .grid,
+  .others .grid {
     grid-template-columns: 1fr;
   }
   .detailGrid,
