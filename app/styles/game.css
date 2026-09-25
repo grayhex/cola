@@ -35,6 +35,15 @@
     gap: var(--space-3);
     min-width: 0;
   }
+  /* Records held now and awards kept for good: two blocks (#106). */
+  .game-shelves {
+    display: grid;
+    gap: var(--space-4);
+    min-width: 0;
+  }
+  .game-shelves .badge-shelf > .help {
+    margin: 0;
+  }
   .badge-shelf {
     display: grid;
     gap: var(--space-2);
@@ -71,10 +80,14 @@
     color: var(--text-muted);
     font: var(--weight-regular) 11px / 1 var(--font-mono);
   }
-  /* A record held right now: the brand tint. */
+  /* A record held right now: the brand tint; its value stays readable on
+     the tint (4.5:1). */
   .award.current {
     border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
     background: var(--accent-soft);
+  }
+  .award.current small {
+    color: var(--text-secondary);
   }
   a.award:hover {
     box-shadow: var(--shadow-inner);
@@ -245,56 +258,150 @@
     flex: 1;
     overflow-wrap: anywhere;
   }
-  .game-art-settings {
-    margin: var(--space-6) 0;
-  }
-  .game-art-settings h3 {
+  .game-settings legend {
     margin-bottom: var(--space-3);
+    font-weight: var(--weight-semibold);
   }
-  .game-art-grid {
+  /* Awards and records as rules (#106): a collapsed row per rule with its
+     condition, opened into a form. */
+  .game-rules {
+    margin: var(--space-8) 0 var(--space-4);
+  }
+  .game-rules-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2) var(--space-4);
+  }
+  .game-rules-heading h3 {
+    margin: 0;
+  }
+  .game-rule-list {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--space-2-5);
+    gap: var(--space-2);
+    margin-top: var(--space-3);
   }
-  .game-art-slot {
+  .game-rule {
+    min-width: 0;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+  }
+  .game-rule[open] {
+    border-color: var(--line-strong);
+  }
+  .game-rule > summary {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    min-height: 56px;
+    padding: var(--space-2) var(--space-3);
+    list-style: none;
+    cursor: pointer;
+  }
+  .game-rule > summary::-webkit-details-marker {
+    display: none;
+  }
+  .game-rule-title {
+    display: grid;
+    flex: 1;
+    gap: 2px;
     min-width: 0;
   }
-  .game-art-slot .asset-picker {
+  .game-rule-title strong {
+    font-size: var(--text-sm);
+    overflow-wrap: anywhere;
+  }
+  .game-rule-title small {
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+    overflow-wrap: anywhere;
+  }
+  .game-rule-state {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: var(--space-1);
+  }
+  .game-rule-body {
+    display: grid;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-3) var(--space-4);
+    border-top: 1px solid var(--line);
+  }
+  .game-rule-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-2-5) var(--space-3);
+  }
+  .game-rule-body .field {
+    margin: 0;
+  }
+  .game-rule-body textarea {
+    width: 100%;
+    min-height: 64px;
+    resize: vertical;
+  }
+  .game-rule-body .error {
+    margin: 0;
+  }
+  .game-rule-body .asset-picker {
     grid-template-columns: 72px minmax(0, 1fr);
     height: auto;
   }
-  .game-art-slot .asset-picker-preview {
+  .game-rule-body .asset-picker-preview {
     width: 72px;
     height: 72px;
     min-height: 72px;
   }
-  .game-art-slot .asset-picker-preview img {
+  .game-rule-body .asset-picker-preview img {
     width: 100%;
     height: 100%;
     max-height: 100%;
     object-fit: contain;
   }
-  .game-art-slot .asset-picker-placeholder {
+  .game-rule-body .asset-picker-placeholder {
     gap: 2px;
     padding: var(--space-1);
   }
-  .game-art-slot .asset-picker-placeholder > :is(img, svg) {
+  .game-rule-body .asset-picker-placeholder > :is(img, svg) {
     width: 28px;
     max-width: 28px;
     height: 28px;
     max-height: 28px;
     object-fit: contain;
   }
-  .game-art-slot .asset-picker-actions :is(img, svg) {
+  .game-rule-body .asset-picker-actions :is(img, svg) {
     width: 15px;
     max-width: 15px;
     height: 15px;
     max-height: 15px;
     object-fit: contain;
   }
-  .game-art-slot > .setting-row {
-    margin-top: var(--space-1);
-    font-size: var(--text-xs);
+  .game-rule-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2) var(--space-4);
+  }
+  .game-rule-actions > .setting-row {
+    flex: 1 1 320px;
+    border-bottom: 0;
+  }
+  .game-rule-key {
+    color: var(--text-muted);
+    font: var(--weight-regular) var(--text-xs) / 1.4 var(--font-mono);
+    overflow-wrap: anywhere;
+  }
+  .game-rules-save {
+    margin-top: var(--space-4);
+  }
+  /* Three actions: on a phone they wrap instead of widening the page. */
+  .game-rules-save > div {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    min-width: 0;
   }
   .game-admin-save {
     display: flex;
@@ -307,8 +414,21 @@
   @media (max-width: 760px) {
     .locked-awards,
     .game-setting-grid,
-    .game-art-grid {
+    .game-rule-grid {
       grid-template-columns: minmax(0, 1fr);
+    }
+    .game-rule > summary {
+      flex-wrap: wrap;
+    }
+    /* Cancel and recalculate share a row; saving takes the next one. */
+    .game-rules-save > div {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      width: 100%;
+    }
+    .game-rules-save > div > .button {
+      grid-column: 1 / -1;
+      justify-content: center;
     }
     .game-moderation {
       flex-wrap: wrap;

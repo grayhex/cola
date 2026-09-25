@@ -234,6 +234,11 @@ test("additive taxonomy migration preserves old bikes and independent queries re
         "utf8",
       ),
     );
+    // The queries below run on the current schema.
+    for (const name of files.filter((f) => f >= "021"))
+      await db.exec(
+        await readFile(new URL("../db/" + name, import.meta.url), "utf8"),
+      );
     const legacy = (await db.query("SELECT * FROM bikes WHERE id=$1", [old]))
       .rows[0];
     assert.equal(legacy.category, "gravel");

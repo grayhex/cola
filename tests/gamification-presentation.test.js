@@ -1,47 +1,115 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { achievements, recordDefinitions } from "../lib/gamification-definitions.js";
-import { defaultGameDescription, gameDescription, groupRecords, withGameDescriptions, gameDescriptionLimit } from "../lib/gamification-presentation.js";
+import {
+  groupByMetric,
+  groupRecords,
+  homeRecords,
+  ruleCondition,
+} from "../lib/gamification-presentation.js";
+import { metricGroups, metricValue } from "../lib/game-metrics.js";
 
-test("every current record and achievement has a short default description", () => {
-  for (const [kind, definitions] of [["record", recordDefinitions], ["achievement", achievements]]) {
-    for (const d of definitions) {
-      const text = defaultGameDescription(kind, d.key);
-      assert.ok(text.length > 0 && text.length <= gameDescriptionLimit, d.key);
-    }
-  }
+test("records and awards come in the groups of their metrics; nothing is lost", () => {
+  const items = [
+    { key: "marathon", group: "rides" },
+    { key: "expensive", group: "price" },
+    { key: "popular", group: "community" },
+    { key: "budget", group: "price" },
+    { key: "future", group: "future" },
+  ];
+  const groups = groupByMetric(items);
+  assert.deepEqual(
+    groups.map((g) => g.id),
+    ["price", "rides", "community", "other"],
+  );
+  assert.deepEqual(
+    groups.map((g) => g.items.map((i) => i.key)),
+    [["expensive", "budget"], ["marathon"], ["popular"], ["future"]],
+  );
+  assert.equal(groups[0].name, metricGroups[0].name);
+  assert.deepEqual(groupByMetric([]), []);
+  assert.deepEqual(groupRecords(items)[0].records, [items[1], items[3]]);
 });
-test("logical groups contain each record exactly once; no empty groups or lost future records", () => {
-  const groups = groupRecords(recordDefinitions);
-  assert.deepEqual(groups.map(g => g.id), ["price", "weight", "build", "community"]);
-  assert.deepEqual(groups.map(g => g.records.length), [2, 3, 2, 5]);
-  assert.deepEqual(groups.flatMap(g => g.records.map(r => r.key)).sort(), recordDefinitions.map(r => r.key).sort());
-  assert.deepEqual(groupRecords([]), []);
-  assert.equal(groupRecords([recordDefinitions[0]]).length, 1);
-  const unknown = {key: "future", group: "Future"};
-  assert.deepEqual(groupRecords([unknown])[0].records, [unknown]);
+test("the home block keeps rides and riders next to prices and weights", () => {
+  const bike = (key) => ({ key, subject: "bike", holder: { kind: "bike" } });
+  const ride = (key) => ({ key, subject: "ride", holder: { kind: "ride" } });
+  const vacant = { key: "vacant", subject: "ride", holder: null };
+  const keys = (list) => list.map((r) => r.key);
+  const bikes = ["expensive", "budget", "light", "heavy", "veteran"].map(bike);
+  assert.deepEqual(keys(homeRecords(bikes)), [
+    "expensive",
+    "budget",
+    "light",
+    "heavy",
+  ]);
+  const all = [
+    ...bikes,
+    vacant,
+    ride("marathon"),
+    ride("climber"),
+    ride("turtle"),
+  ];
+  assert.deepEqual(keys(homeRecords(all)), [
+    "expensive",
+    "budget",
+    "marathon",
+    "climber",
+  ]);
+  assert.deepEqual(
+    keys(
+      homeRecords([
+        bikes[0],
+        ride("marathon"),
+        ride("climber"),
+        ride("turtle"),
+      ]),
+    ),
+    ["expensive", "marathon", "climber", "turtle"],
+  );
+  assert.deepEqual(homeRecords([vacant]), []);
 });
-test("custom descriptions override defaults; empty reset restores the default", () => {
-  const item = {key: "budget"};
-  assert.equal(gameDescription("record", item, {recordDescriptions:{budget:"  Самый дешёвый байк сайта.  "}}), "Самый дешёвый байк сайта.");
-  assert.equal(gameDescription("record", item, {recordDescriptions:{budget:" "}}), defaultGameDescription("record", "budget"));
-  assert.equal(gameDescription("achievement", {key:"first_public"}, {achievementDescriptions:{first_public:"Дебют на витрине."}}), "Дебют на витрине.");
+test("a rule reads as its condition", () => {
+  assert.equal(
+    ruleCondition({
+      kind: "award",
+      metric: "ride_max_speed",
+      comparison: "gte",
+      threshold: 50,
+      keywords: [],
+    }),
+    "Максимальная скорость (если владелец её показывает) ≥ 50 км/ч",
+  );
+  assert.equal(
+    ruleCondition(
+      {
+        kind: "record",
+        metric: "ride_avg_speed",
+        direction: "min",
+        minDistanceKm: 10,
+        category: "mtb",
+        keywords: [],
+      },
+      { mtb: "MTB" },
+    ),
+    "Минимум: средняя скорость покатушки · MTB · от 10 км",
+  );
+  assert.equal(
+    ruleCondition({
+      kind: "award",
+      metric: "keywords",
+      comparison: "gte",
+      threshold: 1,
+      keywords: ["Di2", "AXS"],
+    }),
+    "Детали с ключевыми словами в названии ≥ 1 шт. · Di2, AXS",
+  );
+  assert.equal(ruleCondition({ kind: "award", metric: "unknown" }), "");
 });
-test("presentation changes do not fabricate holders or unlock private awards", () => {
-  const holder = {id:"bike", value:8.2};
-  const data = {records:[{key:"budget",holder:null},{key:"lightest_gravel",holder}],awards:[],locked:[{key:"full_build",progress:null,imageId:"image"}]};
-  const settings = {recordDescriptions:{budget:"Свободно",expensive:"Invisible"},achievementDescriptions:{full_build:"Подготовить сборку"}};
-  const result = withGameDescriptions(data, settings);
-  assert.equal(result.records.length, 2);
-  assert.equal(result.records[0].holder, null);
-  assert.equal(result.records[1].holder, holder);
-  assert.deepEqual(result.awards, []);
-  assert.equal(result.locked[0].progress, null);
-  assert.equal(result.locked[0].imageId, "image");
-  assert.equal(data.records[0].description, undefined);
-  assert.deepEqual(withGameDescriptions({asOf:"today"}), {asOf:"today"});
-});
-test("descriptions remain plain text, not executable markup", () => {
-  const text = '<img src=x onerror="alert(1)">';
-  assert.equal(gameDescription("record", {key:"budget"}, {recordDescriptions:{budget:text}}), text);
+test("values carry their units", () => {
+  assert.equal(metricValue("ride_distance", 123.456), "123,46 км");
+  assert.equal(metricValue("year", 1998), "1998");
+  assert.equal(metricValue("completeness", 85), "85%");
+  assert.equal(metricValue("price", 250000).replace(/\s/g, " "), "250 000 ₽");
+  assert.equal(metricValue("followers", 12), "12");
+  assert.equal(metricValue("weight", null), "");
+  assert.equal(metricValue("unknown", 5), "");
 });

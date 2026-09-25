@@ -1,9 +1,7 @@
 // Isolated in-memory benchmark. Never connects to production or modifies its tables.
 import { PGlite } from "@electric-sql/pglite";
 import { readFile, readdir } from "node:fs/promises";
-import { leaderboardSQL, rankRecords } from "../lib/gamification.js";
-import { defaultSettings, defaultCatalog } from "../lib/site-defaults.js";
-import { defaultGamification } from "../lib/gamification-definitions.js";
+import { leaderboardSQL, records } from "../lib/gamification.js";
 const q = new PGlite();
 try {
   for (const f of (await readdir(new URL("../db", import.meta.url)))
@@ -29,16 +27,16 @@ try {
   const start = performance.now(),
     rows = (await q.query(leaderboardSQL)).rows,
     middle = performance.now();
-  const ranked = rankRecords(rows, defaultGamification, {
-    settings: defaultSettings,
-    catalog: defaultCatalog,
-  });
+  // Every enabled record rule (#106): bike records rank this snapshot, ride
+  // and rider records ask the metric functions.
+  const hall = await records(q);
   console.log(
     JSON.stringify({
       rows: rows.length,
-      records: ranked.length,
+      records: hall.records.length,
+      held: hall.records.filter((r) => r.holder).length,
       bulkQueryMs: Math.round(middle - start),
-      rankingMs: Math.round(performance.now() - middle),
+      recordsMs: Math.round(performance.now() - middle),
     }),
   );
 } finally {

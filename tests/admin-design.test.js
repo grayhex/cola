@@ -91,8 +91,18 @@ function fakeDatabase({ site = {}, game = {}, ids = [], afterLock } = {}) {
       }
       if (sql.includes("FROM site_settings"))
         return { rows: [{ value: site }] };
-      if (sql.includes("FROM gamification_settings"))
-        return { rows: [{ value: game }] };
+      // Award and record illustrations live in their rules (#106).
+      if (sql.includes("FROM game_rules"))
+        return {
+          rows: [
+            ...Object.entries(game.recordImages || {}).map(
+              ([key, image_id]) => ({ key, kind: "record", image_id }),
+            ),
+            ...Object.entries(game.achievementImages || {}).map(
+              ([key, image_id]) => ({ key, kind: "award", image_id }),
+            ),
+          ],
+        };
       if (sql.startsWith("DELETE")) {
         const deleted = args[0]
           .filter((id) => rows.has(id))
@@ -141,7 +151,7 @@ test("cleanup locks sorted explicit IDs then rechecks references before deletion
     "unused",
   ]);
   assert.match(q.calls[1].sql, /site_settings/);
-  assert.match(q.calls[2].sql, /gamification_settings/);
+  assert.match(q.calls[2].sql, /game_rules/);
   assert.deepEqual(
     result.deleted.map((r) => r.id),
     ["unused"],
