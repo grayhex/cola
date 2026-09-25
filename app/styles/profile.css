@@ -378,6 +378,7 @@
   .account-email {
     margin-bottom: var(--space-3);
     font-size: var(--text-sm);
+    overflow-wrap: anywhere;
   }
   .account-settings .form-actions {
     justify-content: flex-start;

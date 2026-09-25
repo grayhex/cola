@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { randomUUID } from "node:crypto";
 import { testConsents } from "../fixtures/legal.js";
+import { pageOverflow, describeOverflow } from "../fixtures/overflow.js";
 import { gpx, loop } from "../ride-fixtures.js";
 const origin = process.env.TEST_ORIGIN || "http://localhost:3100";
 
@@ -166,11 +167,8 @@ test("main pages pass axe in both themes", async ({
     await page.evaluate(() => document.fonts.ready);
     const width = page.viewportSize().width;
     const where = `${label} ${path} · ${theme === "dark" ? "тёмная" : "светлая"} тема · ${width} px`;
-    const overflow = await page.evaluate(
-      () => document.documentElement.scrollWidth - innerWidth,
-    );
-    if (overflow > 1)
-      problems.push(`${where} — горизонтальная прокрутка на ${overflow} px`);
+    const overflow = await pageOverflow(page);
+    if (overflow) problems.push(`${where} — ${describeOverflow(overflow)}`);
     if (phone || axeWidths.includes(width)) {
       const results = await new AxeBuilder({ page })
         .options(axeOptions)

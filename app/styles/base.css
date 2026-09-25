@@ -19,6 +19,9 @@
     line-height: var(--leading-normal);
     font-synthesis-weight: none;
     -webkit-font-smoothing: antialiased;
+    /* A long address, link or name typed by a person wraps instead of
+       widening the page on a phone. */
+    overflow-wrap: break-word;
   }
   /* A part of the page in the other theme (UI Kit). */
   .theme-light,

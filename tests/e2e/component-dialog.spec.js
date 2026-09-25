@@ -60,14 +60,22 @@ test("component window stays open while its fields are in use", async ({
   await add.click();
   await expect(dialog).toBeVisible();
 
-  // Enter in the manufacturer moves on: it does not save half a part.
+  // Enter in the manufacturer does not save half a part. Chromium moves on
+  // to the next field; WebKit lets Enter answer its open suggestion list.
   await dialog
     .getByRole("combobox", { name: "Категория", exact: true })
     .selectOption("Групсет");
-  await dialog.getByLabel("Производитель", { exact: true }).fill("Shimano");
-  await dialog.getByLabel("Производитель", { exact: true }).press("Enter");
-  await expect(name).toBeFocused();
+  const maker = dialog.getByLabel("Производитель", { exact: true });
+  await maker.fill("Shimano");
+  await maker.press("Enter");
   await expect(dialog).toBeVisible();
+  await expect(name).toHaveValue("Shimano ");
+  await expect
+    .poll(() => page.evaluate(() => document.activeElement?.placeholder))
+    .toMatch(/^(Выберите производителя|Например, Brooks C17)$/);
+  expect(
+    (await (await page.request.get("/api/bikes/" + id)).json()).bike.components,
+  ).toEqual([]);
   await name.fill("Shimano GRX");
 
   // The window's own padding is the <dialog> element as well.
