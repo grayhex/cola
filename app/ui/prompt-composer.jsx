@@ -2,13 +2,14 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import { Extension } from "@tiptap/core";
-import { Plugin } from "@tiptap/pm/state";
+import { Plugin, Selection } from "@tiptap/pm/state";
 import {
   parseRichText,
   serializeRichText,
   richExtensions,
   richPlainText,
   safeRichLink,
+  PhotoReference,
 } from "../../lib/rich-text.js";
 import RichTextBody from "./rich-text-body.jsx";
 import {
@@ -24,6 +25,77 @@ import {
 } from "./icons.jsx";
 import styles from "./prompt-composer.module.css";
 
+// In the editor an illustration shows its picture and an editable caption,
+// and can be dragged to another place in the text (#128).
+const PhotoInEditor = PhotoReference.extend({
+  draggable: true,
+  addNodeView() {
+    return ({ node: initial, getPos, editor }) => {
+      let node = initial;
+      const dom = document.createElement("span");
+      dom.className = "rich-photo-reference";
+      dom.contentEditable = "false";
+      dom.dataset.photoReference = node.attrs.id;
+      const image = document.createElement("img");
+      image.src = "/api/journal/media/" + node.attrs.id + "?width=640";
+      image.alt = "";
+      image.draggable = false;
+      image.addEventListener("error", () => image.remove());
+      const caption = document.createElement("input");
+      caption.type = "text";
+      caption.maxLength = 200;
+      caption.placeholder = "Подпись к иллюстрации";
+      caption.setAttribute("aria-label", "Подпись к иллюстрации");
+      caption.value = node.attrs.alt || "";
+      const commit = () => {
+        const position = getPos(),
+          alt = caption.value.replace(/[[\]\\\r\n]/g, " ").trim();
+        if (typeof position !== "number" || alt === node.attrs.alt) return;
+        editor.view.dispatch(
+          editor.view.state.tr.setNodeMarkup(position, undefined, {
+            ...node.attrs,
+            alt,
+          }),
+        );
+      };
+      caption.addEventListener("change", commit);
+      // Enter keeps the caption and returns to the text under the picture:
+      // it must not submit the article's form.
+      caption.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter" || event.isComposing) return;
+        event.preventDefault();
+        commit();
+        const position = getPos();
+        if (typeof position !== "number") return;
+        editor
+          .chain()
+          .focus()
+          .command(({ tr }) => {
+            const after = tr.doc.resolve(position).after();
+            tr.setSelection(Selection.near(tr.doc.resolve(after), 1));
+            return true;
+          })
+          .run();
+      });
+      dom.append(image, caption);
+      return {
+        dom,
+        // Typing in the caption belongs to the input, not to the document.
+        stopEvent: (event) => event.target === caption,
+        ignoreMutation: () => true,
+        update(updated) {
+          if (updated.type !== node.type || updated.attrs.id !== node.attrs.id)
+            return false;
+          node = updated;
+          if (document.activeElement !== caption)
+            caption.value = updated.attrs.alt || "";
+          return true;
+        },
+      };
+    };
+  },
+});
+
 // One controlled Markdown contract and one WYSIWYG surface for articles, posts,
 // discussions and legal documents. Historical bodies require no migration.
 export default function PromptComposer({
@@ -36,10 +108,14 @@ export default function PromptComposer({
   disabled = false,
   placeholder,
   photos = [],
+  // A ref the page fills in with insertPhoto(id, alt): an illustration goes
+  // where the author writes, as a paragraph of its own (#128).
+  inserter,
   children,
 }) {
   const id = useId(),
-    root = useRef(null);
+    root = useRef(null),
+    source = useRef(null);
   const toolbarSelection = useRef(null);
   const latest = useRef({ onChange, maxLength });
   latest.current = { onChange, maxLength };
@@ -50,7 +126,9 @@ export default function PromptComposer({
     [link, setLink] = useState("");
   const extensions = useMemo(
     () => [
-      ...richExtensions(),
+      ...richExtensions().map((extension) =>
+        extension.name === "photoReference" ? PhotoInEditor : extension,
+      ),
       Extension.create({
         name: "bodyLimit",
         addProseMirrorPlugins() {
@@ -112,6 +190,37 @@ export default function PromptComposer({
   useEffect(() => {
     editor?.setEditable(!disabled, false);
   }, [editor, disabled]);
+  useEffect(() => {
+    if (!inserter) return;
+    inserter.current = (photoId, alt = "") => {
+      const markdown = `![${alt}](photo:${photoId})`;
+      if (mode === "write" && editor) {
+        // The picture lands at the author's cursor as a paragraph of its own,
+        // which splits the text around it. It goes after a selection and
+        // never replaces the selected text or illustration.
+        editor
+          .chain()
+          .focus()
+          .insertContentAt(editor.state.selection.to, {
+            type: "paragraph",
+            content: [{ type: "photoReference", attrs: { id: photoId, alt } }],
+          })
+          .run();
+        return;
+      }
+      const area = source.current;
+      const at = mode === "source" && area ? area.selectionStart : value.length;
+      const before = value.slice(0, at).replace(/\s*$/, ""),
+        after = value.slice(at).replace(/^\s*/, "");
+      onChange(
+        [before, markdown, after].filter(Boolean).join("\n\n") +
+          (after ? "" : "\n"),
+      );
+    };
+    return () => {
+      inserter.current = null;
+    };
+  }, [inserter, editor, mode, value, onChange]);
   useEffect(() => {
     const form = root.current?.closest("form");
     const validate = (event) => {
@@ -431,6 +540,7 @@ export default function PromptComposer({
         hidden={mode !== "source"}
       >
         <textarea
+          ref={source}
           aria-label={"Исходник: " + label}
           value={value}
           maxLength={maxLength}

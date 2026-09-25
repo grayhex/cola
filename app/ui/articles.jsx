@@ -322,6 +322,8 @@ function ArticleEditor({ initial, onSaved, onCancel }) {
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [dirty, setDirty] = useState(false);
+  // Filled in by the editor: puts an illustration where the author writes.
+  const inserter = useRef(null);
   const set = (key, value) => {
     setForm((v) => ({ ...v, [key]: value }));
     setDirty(true);
@@ -345,7 +347,16 @@ function ArticleEditor({ initial, onSaved, onCancel }) {
     setDirty(false);
     return result;
   }
-  function insert(text) { set("body", form.body + text); }
+  // An illustration becomes a block of its own at the cursor (#128); until
+  // the editor has loaded, it goes to the end.
+  function insertPhoto(id) {
+    if (inserter.current) inserter.current(id);
+    else
+      set(
+        "body",
+        form.body.replace(/\s*$/, "") + "\n\n![](photo:" + id + ")\n",
+      );
+  }
   return (
     <form
       className="article-editor"
@@ -392,8 +403,16 @@ function ArticleEditor({ initial, onSaved, onCancel }) {
         </select>
       </label>
       <div className="article-composer">
-        <PromptComposer label="Текст статьи" value={form.body} onChange={(body) => set("body", body)}
-          maxLength={20000} rows={16} disabled={busy} photos={photos} />
+        <PromptComposer
+          label="Текст статьи"
+          value={form.body}
+          onChange={(body) => set("body", body)}
+          maxLength={20000}
+          rows={16}
+          disabled={busy}
+          photos={photos}
+          inserter={inserter}
+        />
         <div className="article-toolbar">
           <label className="button secondary">
             <SiteIcon name="add" />
@@ -423,13 +442,7 @@ function ArticleEditor({ initial, onSaved, onCancel }) {
                   const photo = await r.json();
                   if (!r.ok) throw Error(photo.error);
                   setPhotos((v) => [...v, photo]);
-                  set(
-                    "body",
-                    form.body +
-                      "\n\n![Описание иллюстрации](photo:" +
-                      photo.id +
-                      ")\n",
-                  );
+                  insertPhoto(photo.id);
                 } catch (e) {
                   setError(e.message);
                 } finally {
@@ -452,9 +465,7 @@ function ArticleEditor({ initial, onSaved, onCancel }) {
                 type="button"
                 className="quiet"
                 disabled={busy}
-                onClick={() =>
-                  insert("\n\n![Описание иллюстрации](photo:" + p.id + ")\n")
-                }
+                onClick={() => insertPhoto(p.id)}
               >
                 Вставить
               </button>

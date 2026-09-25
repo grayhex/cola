@@ -49,17 +49,79 @@
   font-family: monospace;
   background: var(--surface-subtle);
 }
+/* Illustrations (#128): a block of their own that fits the column; a click
+   opens the original over the page. */
+.figures {
+  display: grid;
+  gap: 16px;
+  margin: 20px 0;
+}
 .photo {
   display: block;
   margin: 12px 0;
+}
+.figures .photo {
+  margin: 0;
+}
+/* A picture narrower than the column sits in the middle, over its caption. */
+.figures .zoom {
+  margin-inline: auto;
 }
 .photo img {
   display: block;
   max-width: 100%;
   height: auto;
+  border-radius: var(--radius-md);
 }
-.photo > span {
+.photo > span,
+.photo figcaption {
   display: block;
+  margin-top: 6px;
   font-size: 0.85em;
   color: var(--text-muted);
+}
+.zoom {
+  display: block;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: none;
+  cursor: zoom-in;
+}
+.zoom:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.lightbox {
+  width: auto;
+  max-width: 96vw;
+  max-height: 96dvh;
+  padding: 0;
+  overflow: visible;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.lightbox::backdrop {
+  background: rgb(0 0 0 / 0.85);
+}
+.lightbox img {
+  display: block;
+  max-width: 96vw;
+  max-height: 92dvh;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: var(--radius-md);
+}
+.lightboxClose {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgb(0 0 0 / 0.55);
+  color: #ffffff;
+}
+.lightboxClose:hover {
+  background: rgb(0 0 0 / 0.75);
 }

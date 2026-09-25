@@ -155,11 +155,36 @@
 .richSurface :global(.tiptap) a {
   text-decoration: underline;
 }
+/* An illustration in the editor: its picture, a caption field, a handle to
+   drag it elsewhere (#128). */
 .richSurface :global(.rich-photo-reference) {
-  display: inline-block;
+  display: grid;
+  gap: 6px;
+  max-width: 100%;
+  margin: 4px 0;
   padding: 8px;
   border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-md);
   background: var(--surface-subtle);
+  cursor: grab;
+}
+.richSurface :global(.rich-photo-reference.ProseMirror-selectednode) {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.richSurface :global(.rich-photo-reference img) {
+  display: block;
+  max-width: 100%;
+  max-height: 240px;
+  width: auto;
+  height: auto;
+  border-radius: var(--radius-sm);
+}
+.richSurface :global(.rich-photo-reference input) {
+  width: 100%;
+  min-height: 32px;
+  font-size: 13px;
+  cursor: text;
 }
 .linkControls {
   display: flex;
