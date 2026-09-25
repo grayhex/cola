@@ -84,9 +84,13 @@
     color: inherit;
   }
   /* A select is as wide as its longest option in WebKit; never wider than
-     its container. */
+     its container, and a long chosen option is cut with an ellipsis
+     instead of pushing the page wider. */
   select {
     max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   button {
     margin: 0;

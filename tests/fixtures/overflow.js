@@ -8,8 +8,16 @@ export function pageOverflow(page) {
     const width = innerWidth;
     const scrollWidth = document.documentElement.scrollWidth;
     if (scrollWidth <= width + 1) return null;
-    const sticksOut = (element) =>
-      element.getBoundingClientRect().right > width + 1;
+    // An element's right edge, or where its content ends when that content
+    // overflows the box and is not clipped (text, a select's chosen option).
+    const sticksOut = (element) => {
+      const box = element.getBoundingClientRect();
+      const content =
+        getComputedStyle(element).overflowX === "visible"
+          ? box.left + (element.scrollWidth || box.width)
+          : box.right;
+      return Math.max(box.right, content) > width + 1;
+    };
     const clips = (element) =>
       getComputedStyle(element).overflowX !== "visible";
     const held = (element) => {

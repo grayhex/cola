@@ -400,10 +400,11 @@ function Appearance({ initial, onSaved }) {
             )
           }
         >
-          <option value="">Раскрыты на компьютере, свёрнуты на телефоне</option>
+          <option value="">Как на сайте</option>
           <option value="true">Всегда раскрыты</option>
           <option value="false">Всегда свёрнуты</option>
         </select>
+        <small>На сайте раскрыты на компьютере и свёрнуты на телефоне</small>
       </label>
       <label className="setting-row">
         <span>Показывать пробег</span>
