@@ -1,7 +1,7 @@
 /* Bike pieces shared by cards, the showcase and the bike page (#127).
    Layout of the bike page itself lives with it; these are the small parts
    several screens reuse. */
-@layer tokens, base, legacy, components, layout, features;
+@layer tokens, base, components, layout, features;
 @layer features {
   /* Owner's two game scores as four-segment bars (MicroMetrics). */
   .micro-metrics {

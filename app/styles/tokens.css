@@ -3,7 +3,7 @@
    The raw scale is Tailwind's default palette, which the reference pages
    (huggingface.co/pricing, /storage, /datasets) are built on; gray-950 is
    Hugging Face's own dark canvas from design.md. See DESIGN.md. */
-@layer tokens, base, legacy, components, layout, features;
+@layer tokens, base, components, layout, features;
 
 @layer tokens {
   /* The brand colour lives on :root only, so the admin setting (an inline
@@ -241,44 +241,6 @@
     /* Data visualisation (ride speed chart). */
     --chart-line: var(--blue-600);
 
-    /* Transitional aliases: old names still read by styles that #127 has
-       not rewritten yet. Delete each one when nothing references it. */
-    --ink: var(--text);
-    --muted: var(--text-muted);
-    --subtle: var(--text-muted);
-    --paper: var(--surface);
-    --wash: var(--surface-subtle);
-    --soft: var(--surface-hover);
-    --field: var(--field-bg);
-    --surface-muted: var(--surface-subtle);
-    --surface-raised: var(--surface);
-    --border: var(--line-strong);
-    --border-strong: var(--field-line-hover);
-    --control-border: var(--field-line);
-    --site-font: var(--font-sans);
-    --display-font: var(--font-sans);
-    --radius: var(--radius-lg);
-    --radius-xs: var(--radius-sm);
-    --shadow-popover: var(--shadow-lg);
-    --motion-fast: var(--duration-fast);
-    --motion-panel: var(--duration);
-    --motion-image: var(--duration);
-    --duration-normal: var(--duration);
-    --ease-standard: var(--ease-out);
-    --content-width: var(--container);
-    --showcase-shell-max: var(--container);
-    --nav-height: var(--header-height);
-    --control-standard: var(--control-md);
-    --control-compact: var(--control-md);
-    --button-bg: var(--primary);
-    --button-fg: var(--primary-foreground);
-    --button-hover: var(--primary-hover);
-    --accent-hover: color-mix(in srgb, var(--accent) 85%, var(--text));
-    --accent-ink: var(--accent-foreground);
-    --hero-bg: var(--bg-subtle);
-    --layer-header: var(--z-sticky);
-    --layer-popover: var(--z-dropdown);
-
     color-scheme: light;
   }
 
@@ -469,6 +431,14 @@
       --control-md: 44px;
       --control-lg: 48px;
       --field-font-size: var(--text-base);
+    }
+  }
+  /* The smallest phones keep 12 px sides so a card stays 280 px wide. */
+  @media (max-width: 359px) {
+    :root,
+    .theme-light,
+    .theme-dark {
+      --gutter: 12px;
     }
   }
   @media (min-width: 768px) {

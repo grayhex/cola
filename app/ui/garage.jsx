@@ -69,6 +69,7 @@ import {
 } from "./icons.jsx";
 import { useSite } from "./site-provider.jsx";
 import PartIcon from "./part-icon.jsx";
+import AuthWindow from "./auth-window.jsx";
 // Loaded on demand: the showcase and a guest's bike page never download the
 // comment editor (Tiptap), the wizard (form schemas) or the owner's tools.
 const Discussion = dynamic(() => import("./discussion.jsx"), { ssr: false });
@@ -449,9 +450,10 @@ export default function Garage({
   const blocks = settings.detailBlocks || defaultBlocks;
   const block = (id) =>
     blocks.find((b) => b.id === id) || defaultBlocks.find((b) => b.id === id);
+  // The page layout fixes where each block goes (#121, #127); settings
+  // switch blocks off and pick their look.
   const blockProps = (id) => ({
     hidden: !block(id).enabled,
-    style: { order: blocks.findIndex((b) => b.id === id) + 1 },
     "data-variant": block(id).variant,
   });
   const editable = !!user && bike?.is_owner === true;
@@ -468,7 +470,10 @@ export default function Garage({
     bike?.is_public && landingSlug(bike.brand) && landingSlug(bike.model)
       ? modelLandingPath(bike.brand, bike.model)
       : "/experience?" +
-        new URLSearchParams({ brand: bike?.brand || "", model: bike?.model || "" });
+        new URLSearchParams({
+          brand: bike?.brand || "",
+          model: bike?.model || "",
+        });
   // Without the "О велосипеде" block, the owner's text, public price and
   // manufacturer link stay visible under the title.
   const intro = bike &&
@@ -653,11 +658,7 @@ export default function Garage({
               </div>
             )}
           </div>
-          <div
-            className="bike-meta-line"
-            hidden={!block("heading").enabled}
-            style={{ order: blocks.findIndex((b) => b.id === "heading") + 1 }}
-          >
+          <div className="bike-meta-line" hidden={!block("heading").enabled}>
             {bike.color && <span>{bike.color}</span>}
             {settings.showMileage && (
               <span>
@@ -887,6 +888,11 @@ export default function Garage({
               {editable && (
                 <button
                   className="text-link add-component"
+                  title={
+                    tab === "build"
+                      ? t("Добавить компонент")
+                      : t("Добавить аксессуар")
+                  }
                   onClick={() => setModal({ type: "part", section: tab })}
                 >
                   <Plus size={17} />
@@ -1249,31 +1255,33 @@ export default function Garage({
             <Photo bike={bike} photo={photo} className="full-photo" full />
           )}
           {modal.type === "auth" && (
-            <AuthForm
-              mode={modal.mode}
-              busy={busy}
-              switchMode={() => {
-                setError("");
-                setModal({
-                  ...modal,
-                  mode: modal.mode === "login" ? "register" : "login",
-                });
-              }}
-              onSubmit={(data) =>
-                run(async () => {
-                  await api("auth/" + modal.mode, "POST", data);
-                  const signedIn = await refreshViewer();
-                  setSelected(null);
-                  await load(signedIn);
-                  setModal(null);
-                  setNotice(
-                    modal.mode === "register"
-                      ? t("Аккаунт готов. Добавьте свой первый байк.")
-                      : t("Добро пожаловать"),
-                  );
-                })
-              }
-            />
+            <AuthWindow>
+              <AuthForm
+                mode={modal.mode}
+                busy={busy}
+                switchMode={() => {
+                  setError("");
+                  setModal({
+                    ...modal,
+                    mode: modal.mode === "login" ? "register" : "login",
+                  });
+                }}
+                onSubmit={(data) =>
+                  run(async () => {
+                    await api("auth/" + modal.mode, "POST", data);
+                    const signedIn = await refreshViewer();
+                    setSelected(null);
+                    await load(signedIn);
+                    setModal(null);
+                    setNotice(
+                      modal.mode === "register"
+                        ? t("Аккаунт готов. Добавьте свой первый байк.")
+                        : t("Добро пожаловать"),
+                    );
+                  })
+                }
+              />
+            </AuthWindow>
           )}
           {modal.type === "photoSearch" && (
             <PhotoSearch
@@ -1454,7 +1462,7 @@ export default function Garage({
                   {t("Отмена")}
                 </button>
                 <button
-                  className="button"
+                  className="button danger"
                   disabled={busy}
                   onClick={() =>
                     run(async () => {
@@ -1554,8 +1562,11 @@ function BikeForm({ initial, busy, onSubmit }) {
           className={fieldStyles.modelInput}
         />
       </Field>
-      <FormerBikeField value={b.is_former} disabled={busy}
-        onChange={(value) => update("is_former", value)} />
+      <FormerBikeField
+        value={b.is_former}
+        disabled={busy}
+        onChange={(value) => update("is_former", value)}
+      />
       <ClassificationFields
         value={classificationOf(b)}
         onChange={(classification) =>
@@ -1703,7 +1714,7 @@ function BikeForm({ initial, busy, onSubmit }) {
           ["show_component_prices", "Компоненты"],
           ["show_accessory_prices", "Аксессуары"],
         ].map(([key, label]) => (
-          <label className="admin-toggle" key={key}>
+          <label className="setting-row" key={key}>
             {label}
             <input
               type="checkbox"
@@ -1745,7 +1756,7 @@ function BikeForm({ initial, busy, onSubmit }) {
           "Фотографии можно добавить после сохранения. Велосипед по умолчанию приватный.",
         )}
       </p>
-      <button className="button full" disabled={busy || resolving}>
+      <button className="button block" disabled={busy || resolving}>
         {busy ? t("Сохраняем…") : t("Сохранить велосипед")}
         <Check size={18} />
       </button>
@@ -1899,7 +1910,7 @@ function PartForm({ initial, section, busy, onSubmit }) {
         <Lock size={13} />
         {t("Стоимость видна только вам.")}
       </p>
-      <button className="button full" disabled={busy}>
+      <button className="button block" disabled={busy}>
         {busy ? t("Сохраняем…") : t("Сохранить деталь")}
         <Check size={18} />
       </button>

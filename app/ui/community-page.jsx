@@ -101,7 +101,7 @@ export default function CommunityPage({ kind }) {
   return (
     <>
       <SocialHeader user={user} />
-      <main className="social-page community-page">
+      <main className="page community-page">
         <div className="section-heading">
           <h1>
             {kind === "journal"

@@ -1,7 +1,7 @@
 /* Page layout (#127, DESIGN.md → Layout). Two modes share one grid:
    working pages (.page …) are dense lists and forms; marketing pages
    (.frame …) are the ruled Pricing/Storage column with free spacing. */
-@layer tokens, base, legacy, components, layout, features;
+@layer tokens, base, components, layout, features;
 @layer layout {
   .site-root {
     position: relative;

@@ -1,7 +1,7 @@
 "use client";
 import { navigationSections } from "../../lib/navigation.js";
 import { aboutSections, aboutDefaults } from "../../lib/about-content.js";
-import { ChevronUp, ChevronDown } from "../ui/icons.jsx";
+import { ArrowUp, ArrowDown } from "../ui/icons.jsx";
 import { Select } from "./design-controls.jsx";
 import styles from "./design.module.css";
 
@@ -64,7 +64,7 @@ export function NavigationSettings({ settings, onChange }) {
                 aria-label={"Выше: " + labels[section.id]}
                 onClick={() => move(index, -1)}
               >
-                <ChevronUp size={16} />
+                <ArrowUp size={16} />
               </button>
               <button
                 type="button"
@@ -72,7 +72,7 @@ export function NavigationSettings({ settings, onChange }) {
                 aria-label={"Ниже: " + labels[section.id]}
                 onClick={() => move(index, 1)}
               >
-                <ChevronDown size={16} />
+                <ArrowDown size={16} />
               </button>
             </div>
           </li>
@@ -102,7 +102,7 @@ export function AboutSettings({ settings, onChange }) {
           Иллюстрация — значок в кольцах или изображение из вкладки «Графика».
         </p>
       </div>
-      <label className="admin-toggle">
+      <label className="setting-row">
         <span>Показывать статистику проекта</span>
         <input
           type="checkbox"
@@ -125,7 +125,7 @@ export function AboutSettings({ settings, onChange }) {
                 onChange={(e) => set(section.id, "title", e.target.value)}
               />
             </label>
-            <label className="admin-toggle">
+            <label className="setting-row">
               Показывать раздел
               <input
                 type="checkbox"
@@ -133,7 +133,7 @@ export function AboutSettings({ settings, onChange }) {
                 onChange={(e) => set(section.id, "visible", e.target.checked)}
               />
             </label>
-            <label className="admin-toggle">
+            <label className="setting-row">
               Показывать иллюстрацию
               <input
                 type="checkbox"
@@ -146,7 +146,7 @@ export function AboutSettings({ settings, onChange }) {
             {aboutSections
               .find((s) => s.id === section.id)
               .items.map((item) => (
-                <label className="admin-toggle" key={item.id}>
+                <label className="setting-row" key={item.id}>
                   {item.title}
                   <input
                     type="checkbox"

@@ -43,7 +43,7 @@ export default function RideRsvp({ ride }) {
           <button
             key={response}
             type="button"
-            className="hf-button"
+            className="button secondary"
             aria-pressed={state.rsvp === response}
             disabled={busy}
             onClick={async () => {

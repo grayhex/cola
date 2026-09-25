@@ -1,11 +1,12 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { Bike, ArrowLeft } from "./icons.jsx";
+import { ArrowLeft } from "./icons.jsx";
 import GlobalHeader from "./global-header.jsx";
 import { SocialFooter, socialApi } from "./social-primitives.jsx";
 import { useSite } from "./site-provider.jsx";
 import AuthForm from "./auth-form.jsx";
+import AuthWindow from "./auth-window.jsx";
 import styles from "./auth.module.css";
 
 export default function AuthPage({ initialMode = "login", onAuthenticated }) {
@@ -22,10 +23,7 @@ export default function AuthPage({ initialMode = "login", onAuthenticated }) {
           <ArrowLeft size={16} />
           На главную
         </Link>
-        <section className={styles.card} aria-labelledby="auth-title">
-          <span className={styles.mark}>
-            <Bike size={28} strokeWidth={1.5} />
-          </span>
+        <AuthWindow as="section" aria-labelledby="auth-title">
           <h1 id="auth-title">
             {register ? "Присоединиться к ColaBike" : "С возвращением"}
           </h1>
@@ -64,10 +62,7 @@ export default function AuthPage({ initialMode = "login", onAuthenticated }) {
               }}
             />
           )}
-        </section>
-        <p className={styles.note}>
-          Ваши велосипеды, истории и маршруты — в одном месте.
-        </p>
+        </AuthWindow>
       </main>
       <SocialFooter />
     </>

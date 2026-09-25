@@ -77,7 +77,7 @@ export default function PublicProfile({
   return (
     <>
       <SocialHeader user={user} />
-      <main className="social-page public-profile">
+      <main className="page public-profile">
         {error ? (
           <section className="social-empty">
             <h1>Профиль недоступен</h1>

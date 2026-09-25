@@ -8,7 +8,7 @@
   border-radius: 10px;
   overflow: hidden;
   min-width: 0;
-  background: var(--paper);
+  background: var(--surface);
 }
 .cover {
   position: relative;
@@ -16,10 +16,10 @@
   min-width: 0;
   min-height: 0;
   height: 190px;
-  background: var(--wash);
+  background: var(--surface-subtle);
   display: grid;
   place-items: center;
-  color: var(--muted);
+  color: var(--text-muted);
 }
 .cover > img {
   position: absolute;
@@ -38,7 +38,7 @@
 }
 .cardBody small {
   font-size: 12px;
-  color: var(--muted);
+  color: var(--text-muted);
 }
 .cardBody h3 {
   font-size: 18px;
@@ -70,11 +70,11 @@
   padding: 10px 12px;
   width: 100%;
   min-width: 0;
-  border: 1px solid var(--control-border, var(--line));
+  border: 1px solid var(--field-line, var(--line));
   border-radius: 10px;
-  background: var(--paper);
+  background: var(--surface);
 }
-.search > svg { flex: 0 0 auto; color: var(--muted); }
+.search > svg { flex: 0 0 auto; color: var(--text-muted); }
 .search input {
   flex: 1 1 auto;
   width: 0;
@@ -84,7 +84,7 @@
   border: 1px solid transparent;
   border-radius: 6px;
   background: transparent;
-  color: var(--ink);
+  color: var(--text);
   font-size: 18px;
   box-shadow: none;
 }
@@ -109,7 +109,7 @@
 .rangeFields label { min-width: 0; margin-bottom: 0; }
 .rangeFields input { width: 100%; min-width: 0; min-height: 44px; }
 .rangeFields button { min-height: 44px; }
-.published { display: block; color: var(--muted); font-size: 12px; }
+.published { display: block; color: var(--text-muted); font-size: 12px; }
 .filterFields select { width: 100%; min-width: 0; min-height: 44px; }
 .categories {
   display: flex;
@@ -118,7 +118,7 @@
   margin: 16px 0;
 }
 .categories button[aria-pressed="true"] {
-  background: var(--wash);
+  background: var(--surface-subtle);
   box-shadow: inset 0 0 0 1px var(--line);
 }
 .empty {
@@ -161,7 +161,7 @@
   width: 100%;
   height: 100px;
   object-fit: contain;
-  background: var(--wash);
+  background: var(--surface-subtle);
   border-radius: 6px;
 }
 .back {
@@ -192,7 +192,7 @@
   width: 100%;
   height: 110px;
   object-fit: contain;
-  background: var(--wash);
+  background: var(--surface-subtle);
   border-radius: 8px;
 }
 .gallery > a:first-child img {
@@ -204,8 +204,8 @@
   place-items: center;
   align-content: center;
   gap: 12px;
-  background: var(--wash);
-  color: var(--muted);
+  background: var(--surface-subtle);
+  color: var(--text-muted);
   min-height: 240px;
   border-radius: 8px;
 }
@@ -245,7 +245,7 @@
   margin-top: 16px;
 }
 .state {
-  background: var(--wash);
+  background: var(--surface-subtle);
   padding: 10px 14px;
   border-radius: 8px;
 }

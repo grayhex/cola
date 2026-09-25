@@ -1,6 +1,0 @@
-/* Legacy styles, replaced step by step by app/styles (#127). */
-@layer legacy {
-.site-root .admin-shell {
-  font-family: var(--site-font);
-}
-}

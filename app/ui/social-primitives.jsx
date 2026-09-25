@@ -26,7 +26,10 @@ export async function socialApi(
   });
   const result = await response.json();
   if (!response.ok)
-    throw new Error(result.error || "Не удалось выполнить запрос");
+    throw Object.assign(
+      new Error(result.error || "Не удалось выполнить запрос"),
+      { status: response.status, code: result.code },
+    );
   return result;
 }
 import { Avatar } from "./avatar.jsx";

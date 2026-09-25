@@ -54,7 +54,7 @@ function Confirmation({ request, settle }) {
         </button>
         <button
           type="button"
-          className={"button " + (request.danger ? styles.danger : "")}
+          className={"button" + (request.danger ? " danger" : "")}
           disabled={!valid}
           onClick={() => settle(request.input ? reason.trim() : true)}
         >

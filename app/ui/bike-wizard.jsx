@@ -698,7 +698,7 @@ export default function BikeWizard({ onCreated, onBusy, onDirtyChange }) {
                 <div className="wizard-choice-actions">
                   <button
                     type="button"
-                    className="hf-button"
+                    className="button secondary"
                     disabled={!searchText.trim()}
                     onClick={() => search()}
                   >
@@ -709,14 +709,14 @@ export default function BikeWizard({ onCreated, onBusy, onDirtyChange }) {
                   </button>
                   <button
                     type="button"
-                    className="hf-button"
+                    className="button secondary"
                     onClick={() => setManualMode((v) => !v)}
                   >
                     <Link size={18} />
                     {settings.wizardLinkLabel ||
                       "Распознать по странице магазина"}
                   </button>
-                  <button type="button" className="hf-button" onClick={next}>
+                  <button type="button" className="button secondary" onClick={next}>
                     <Pencil size={18} />
                     {settings.wizardManualLabel || "Заполнить вручную"}
                   </button>
@@ -1278,7 +1278,7 @@ export default function BikeWizard({ onCreated, onBusy, onDirtyChange }) {
                 ["show_component_prices", "Показывать стоимость компонентов"],
                 ["show_accessory_prices", "Показывать стоимость аксессуаров"],
               ].map(([k, label]) => (
-                <label className="admin-toggle" key={k}>
+                <label className="setting-row" key={k}>
                   {label}
                   <input
                     type="checkbox"

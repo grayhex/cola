@@ -18,6 +18,7 @@ import {
   Settings2,
 } from "./icons.jsx";
 import AuthPage from "./auth-page.jsx";
+import AccountSecurity from "./account-security.jsx";
 import Garage from "./garage.jsx";
 import BikeCard from "./bike-card.jsx";
 import {
@@ -404,7 +405,7 @@ function Appearance({ initial, onSaved }) {
           <option value="false">Всегда свёрнуты</option>
         </select>
       </label>
-      <label className="admin-toggle">
+      <label className="setting-row">
         <span>Показывать пробег</span>
         <input
           type="checkbox"
@@ -412,7 +413,7 @@ function Appearance({ initial, onSaved }) {
           onChange={(e) => set("showMileage", e.target.checked)}
         />
       </label>
-      <label className="admin-toggle">
+      <label className="setting-row">
         Масштабировать интерактивную карту колесом
         <input
           type="checkbox"
@@ -495,7 +496,7 @@ export default function Account() {
   return (
     <>
       <SocialHeader user={user} />
-      <main className="social-page account-page">
+      <main className="page account-page">
         <div className="account-heading">
           <h1>Личный кабинет</h1>
           {profile && (
@@ -682,35 +683,35 @@ export default function Account() {
             )}
             {tab === "account" && (
               <section className="social-panel account-private">
-                <h2>Аккаунт</h2>
-                <p className="help">Эта информация доступна только вам.</p>
-                <dl>
-                  <dt>Email</dt>
-                  <dd>
+                <div className="section-heading">
+                  <h2>Аккаунт</h2>
+                  <button
+                    className="button secondary small"
+                    onClick={async () => {
+                      try {
+                        await socialApi("auth/logout", "POST");
+                        window.location.assign("/");
+                      } catch (e) {
+                        setError(e.message);
+                      }
+                    }}
+                  >
+                    <LogOut size={16} />
+                    Выйти
+                  </button>
+                </div>
+                <p className="help">
+                  Эта информация доступна только вам. С нами с{" "}
+                  {new Date(profile.createdAt).toLocaleDateString("ru-RU")}.
+                </p>
+                <AccountSecurity
+                  emailStatus={
                     <EmailStatus
                       email={data.email}
                       verified={!!user?.email_verified_at}
                     />
-                  </dd>
-                  <dt>Дата регистрации</dt>
-                  <dd>
-                    {new Date(profile.createdAt).toLocaleDateString("ru-RU")}
-                  </dd>
-                </dl>
-                <button
-                  className="quiet"
-                  onClick={async () => {
-                    try {
-                      await socialApi("auth/logout", "POST");
-                      window.location.assign("/");
-                    } catch (e) {
-                      setError(e.message);
-                    }
-                  }}
-                >
-                  <LogOut size={16} />
-                  Выйти
-                </button>
+                  }
+                />
               </section>
             )}
           </div>

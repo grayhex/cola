@@ -33,7 +33,7 @@
   text-underline-offset: 3px;
 }
 .prose blockquote {
-  border-left: 3px solid var(--border-strong);
+  border-left: 3px solid var(--line-strong);
   margin: 1em 0;
   padding-left: 1em;
   color: var(--text-muted);
@@ -43,11 +43,11 @@
   overflow: auto;
   white-space: pre-wrap;
   padding: 12px;
-  background: var(--surface-muted);
+  background: var(--surface-subtle);
 }
 .prose code {
   font-family: monospace;
-  background: var(--surface-muted);
+  background: var(--surface-subtle);
 }
 .photo {
   display: block;

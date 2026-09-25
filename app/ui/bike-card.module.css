@@ -135,14 +135,16 @@
   flex: none;
   align-items: center;
 }
+/* Counters stay 44 px targets on every screen (#83 touch targets); they
+   look like plain text until hovered. */
 .counters :global(.like-button.compact),
 .stat {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: var(--space-1);
-  min-width: var(--control-md);
-  min-height: var(--control-md);
+  min-width: 44px;
+  min-height: 44px;
   padding: 0 var(--space-1-5);
   border: 0;
   border-radius: var(--radius-md);

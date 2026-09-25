@@ -325,12 +325,18 @@ span.heroImage svg {
 }
 
 @media (max-width: 1050px) {
+  /* Tablets: the intro takes the full width, the animation follows it. */
   .heroContent {
     grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-4);
     padding: var(--space-8) var(--space-6) var(--space-6);
   }
   .animationStage {
-    display: none;
+    min-height: 0;
+  }
+  .animationLight,
+  .animationDark {
+    height: 160px;
   }
   .trending {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -338,9 +344,14 @@ span.heroImage svg {
   }
 }
 @media (max-width: 700px) {
-  /* A short intro keeps the first builds on the first screen. */
+  /* A short intro keeps the first builds on the first screen: the
+     decorative stage is left out on phones. */
   .heroContent {
+    grid-template-columns: minmax(0, 1fr);
     padding: var(--space-5) var(--space-4) var(--space-4);
+  }
+  .animationStage {
+    display: none;
   }
   .heroTitle {
     align-items: flex-start;

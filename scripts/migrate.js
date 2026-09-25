@@ -36,6 +36,7 @@ try {
     "022_auth_tokens",
     "023_public_urls",
     "024_username_history",
+    "025_account_sessions",
   ]) {
     const { rowCount } = await client.query(
       "SELECT 1 FROM schema_migrations WHERE version=$1",

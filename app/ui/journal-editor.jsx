@@ -237,7 +237,7 @@ export default function JournalEditor({
           перепишут историю.
         </p>
         {parts.map((p) => (
-          <label key={p.id} className="admin-toggle">
+          <label key={p.id} className="setting-row">
             <span>
               {p.name}
               {saved?.components.some((c) => c.id === p.id)
@@ -367,7 +367,7 @@ export default function JournalEditor({
           </figure>
         ))}
       </div>
-      <label className="admin-toggle">
+      <label className="setting-row">
         <span>Публичная запись</span>
         <input
           type="checkbox"

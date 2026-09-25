@@ -1,0 +1,279 @@
+/* Community (#127): discussions, reports, notifications and the feed pages
+   (journal, saved, subscriptions). Comments are Hugging Face discussion
+   cards: a tinted header with the author and date, the text, a row of
+   quiet actions. */
+@layer tokens, base, components, layout, features;
+@layer features {
+  /* ── Discussion ─────────────────────────────────────────────────────── */
+  .discussion > .quiet {
+    margin-bottom: var(--space-2);
+  }
+  .comment-thread {
+    padding: var(--space-2) 0;
+  }
+  .comment {
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-xl);
+    background: var(--surface);
+  }
+  .comment:target {
+    border-color: var(--focus);
+    box-shadow: var(--focus-ring);
+  }
+  .comment-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding: var(--space-2) var(--space-4);
+    border-bottom: 1px solid var(--line);
+    background: linear-gradient(to right, var(--surface-subtle), var(--surface));
+  }
+  .comment-heading .person-identity {
+    font-size: var(--text-sm);
+  }
+  .comment-heading time,
+  .notification-list time {
+    color: var(--text-muted);
+    font: var(--weight-regular) var(--text-xs) / 1.4 var(--font-mono);
+    white-space: nowrap;
+  }
+  .comment-body {
+    margin: 0;
+    padding: var(--space-3) var(--space-4);
+    font-size: var(--text-base);
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+  }
+  .comment > .help {
+    padding: var(--space-3) var(--space-4);
+  }
+  .comment-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1) var(--space-2);
+    padding: 0 var(--space-2) var(--space-2);
+  }
+  .comment-actions .quiet {
+    font-size: var(--text-sm);
+  }
+  .comment-replies {
+    margin: var(--space-3) 0 0 var(--space-6);
+    padding-left: var(--space-4);
+    border-left: 1px solid var(--line);
+  }
+  .comment-reply + .comment-reply {
+    margin-top: var(--space-3);
+  }
+  .more-replies {
+    margin: var(--space-2) 0 0 var(--space-10);
+    font-size: var(--text-sm);
+  }
+  .comment-confirm {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2) var(--space-3);
+    margin: 0 var(--space-4) var(--space-3);
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+  }
+  .comment-editor {
+    margin-top: var(--space-4);
+  }
+  .comment .comment-editor {
+    margin: var(--space-2) var(--space-4) var(--space-4);
+  }
+  .comment-editor > .error {
+    margin-top: var(--space-2);
+  }
+
+  /* ── Reports ────────────────────────────────────────────────────────── */
+  .report-control {
+    max-width: 100%;
+    font-size: var(--text-sm);
+  }
+  .report-trigger {
+    color: var(--text-muted);
+  }
+  .report-form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: var(--space-2) var(--space-3);
+    margin: var(--space-2) 0;
+    padding: var(--space-3);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    background: var(--surface-subtle);
+  }
+  .report-form label {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    font-size: var(--text-sm);
+  }
+  .report-form select {
+    max-width: 100%;
+  }
+  /* A report in the moderation queue. */
+  .report-card {
+    padding: var(--space-4) 0;
+    border-bottom: 1px solid var(--line);
+    font-size: var(--text-sm);
+  }
+  .report-card > div:first-child {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: var(--space-3);
+  }
+  .report-card > div > span {
+    color: var(--text-muted);
+    font: var(--weight-regular) var(--text-xs) / 1.4 var(--font-mono);
+  }
+
+  /* ── Notifications ──────────────────────────────────────────────────── */
+  .notification-list {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-xl);
+    list-style: none;
+  }
+  .notification-list:empty {
+    display: none;
+  }
+  .notification-list li {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--line);
+  }
+  .notification-list li:last-child {
+    border-bottom: 0;
+  }
+  .notification-list li.unread {
+    background: linear-gradient(to right, var(--accent-soft), var(--surface) 60%);
+    box-shadow: inset 3px 0 0 var(--accent);
+  }
+  .notification-list li > div {
+    flex: 1;
+    min-width: 0;
+  }
+  .notification-list p {
+    margin: 0 0 var(--space-0-5);
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    overflow-wrap: anywhere;
+  }
+  .notification-list p a {
+    color: var(--text);
+    font-weight: var(--weight-semibold);
+  }
+  .notification-list p a:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  /* ── Feed pages ─────────────────────────────────────────────────────── */
+  .community-page > .section-heading {
+    margin-bottom: var(--space-4);
+  }
+  .community-page > .ui-tabs {
+    margin-bottom: var(--space-5);
+  }
+  .community-page > .help {
+    margin-bottom: var(--space-4);
+  }
+  /* Nothing here yet: the page-wide empty state. */
+  .social-empty {
+    margin: var(--space-6) 0;
+    padding: var(--space-10) var(--space-5);
+    border: 1px dashed var(--line-dashed);
+    border-radius: var(--radius-xl);
+    color: var(--text-muted);
+    text-align: center;
+  }
+  .social-empty h2 {
+    margin-bottom: var(--space-1-5);
+    color: var(--text);
+    font-size: var(--text-lg);
+    font-weight: var(--weight-semibold);
+  }
+  .social-empty p {
+    margin: 0 auto var(--space-4);
+    max-width: 48ch;
+    font-size: var(--text-sm);
+  }
+  .social-empty > a:not(.button) {
+    color: var(--text);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  /* ── Experience search ──────────────────────────────────────────────── */
+  .experience-search > .section-heading {
+    flex-wrap: nowrap;
+  }
+  .experience-search > .help {
+    max-width: 72ch;
+    margin-bottom: var(--space-3);
+  }
+  .experience-query {
+    display: flex;
+    align-items: flex-end;
+    gap: var(--space-2);
+    margin: var(--space-3) 0 var(--space-4);
+  }
+  .experience-query .field {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+  }
+  .experience-search > .ui-tabs {
+    margin-bottom: var(--space-3);
+  }
+  .experience-filter-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 var(--space-3);
+  }
+
+  @media (max-width: 700px) {
+    .comment-heading {
+      padding: var(--space-2) var(--space-3);
+    }
+    .comment-body {
+      padding: var(--space-3);
+    }
+    .comment-replies {
+      margin-left: var(--space-2);
+      padding-left: var(--space-3);
+    }
+    .more-replies {
+      margin-left: var(--space-5);
+    }
+    .notification-list li {
+      gap: var(--space-2-5);
+      padding: var(--space-3);
+    }
+    .experience-filter-grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .experience-search > .section-heading .quiet > span {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+    }
+  }
+}

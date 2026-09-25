@@ -976,7 +976,7 @@ export default function Admin() {
               Администратор управляет всем сайтом и пользователями. Изменение
               профиля завершает существующие сессии.
             </p>
-            <button className="button full" disabled={locked}>
+            <button className="button block" disabled={locked}>
               Сохранить пользователя
             </button>
           </form>

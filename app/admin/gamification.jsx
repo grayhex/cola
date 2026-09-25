@@ -186,7 +186,7 @@ export default function Gamification() {
               </label>
             ))}
           </div>
-          <label className="admin-toggle">
+          <label className="setting-row">
             <span>Реакции сообщества</span>
             <input
               type="checkbox"
@@ -216,7 +216,7 @@ export default function Gamification() {
                   data-record-setting={r.key}
                 >
                   {illustration(r, "recordImages", Trophy)}
-                  <label className="admin-toggle">
+                  <label className="setting-row">
                     <span>Показывать рекорд</span>
                     <input
                       type="checkbox"

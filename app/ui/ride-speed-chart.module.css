@@ -1,5 +1,5 @@
 .chart {
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: var(--radius-md);
   margin: 24px 0;
   padding: 20px;
@@ -46,7 +46,7 @@
 }
 .chart text {
   fill: var(--text-subtle);
-  font: 12px var(--site-font);
+  font: 12px var(--font-sans);
 }
 .line {
   stroke: var(--chart-line);
@@ -57,7 +57,7 @@
   vector-effect: non-scaling-stroke;
 }
 .grid {
-  stroke: var(--border);
+  stroke: var(--line);
   stroke-dasharray: 3 5;
 }
 .cursor {
@@ -87,7 +87,7 @@
 .data td {
   text-align: left;
   padding: 6px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--line);
 }
 .empty {
   font-size: 14px;

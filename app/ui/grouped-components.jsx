@@ -1,6 +1,7 @@
 "use client";
 import {
-  ChevronUp,
+  ArrowUp,
+  ArrowDown,
   ChevronDown,
   Pencil,
   Trash2,
@@ -110,7 +111,7 @@ export default function GroupedComponents({
                     })
                   }
                 >
-                  <ChevronUp size={15} />
+                  <ArrowUp size={15} />
                 </button>
                 <button
                   type="button"
@@ -123,7 +124,7 @@ export default function GroupedComponents({
                     })
                   }
                 >
-                  <ChevronDown size={15} />
+                  <ArrowDown size={15} />
                 </button>
               </div>
             )}
@@ -184,9 +185,9 @@ export default function GroupedComponents({
                             }}
                           >
                             {d < 0 ? (
-                              <ChevronUp size={15} />
+                              <ArrowUp size={15} />
                             ) : (
-                              <ChevronDown size={15} />
+                              <ArrowDown size={15} />
                             )}
                           </button>
                         ))}

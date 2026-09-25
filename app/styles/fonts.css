@@ -1,6 +1,6 @@
 /* Local fonts (public/fonts/README.md). Source Sans 3 carries every text
    role; IBM Plex Mono is only for technical labels, counters and tables. */
-@layer tokens, base, legacy, components, layout, features;
+@layer tokens, base, components, layout, features;
 @font-face {
   font-family: "Cola Source Sans 3";
   src: url("/fonts/sourcesans3.woff") format("woff");

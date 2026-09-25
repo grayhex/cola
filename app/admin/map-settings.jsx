@@ -12,7 +12,7 @@ export default function MapSettings({ settings, onChange }) {
           ? "Яндекс Карты подключаются через официальный JavaScript API 3.0. Ключ используется только в браузере."
           : "OpenStreetMap работает без API-ключа. Запросы тайлов идут из браузера, с обычным кешированием и указанием авторства."}
       </p>
-      <label className="admin-toggle">
+      <label className="setting-row">
         Подключать подложку
         <input type="checkbox" checked={v.enabled} onChange={(e) => set("enabled", e.target.checked)} />
       </label>

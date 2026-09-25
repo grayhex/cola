@@ -32,7 +32,7 @@ export default function ExperienceLanding({ data }) {
   return (
     <>
       <SocialHeader user={user} />
-      <main className={`social-page experience-landing ${styles.page}`}>
+      <main className={`page experience-landing ${styles.page}`}>
         <header className={styles.head}>
           <p className={styles.eyebrow}>
             <Link href="/experience">Опыт владельцев</Link>

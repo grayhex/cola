@@ -86,7 +86,7 @@ test("registration requires two explicit consents with versioned links between p
   const positions = await page.locator(".auth-form").evaluate((form) => {
     const confirm = form.querySelector('[name="confirmPassword"]'),
       consent = form.querySelector('[name="termsAccepted"]'),
-      button = form.querySelector("button.full");
+      button = form.querySelector("button[type=submit], button:not([type])");
     return [
       !!(
         confirm.compareDocumentPosition(consent) &

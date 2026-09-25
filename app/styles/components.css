@@ -3,7 +3,7 @@
    :focus-visible (from base.css), disabled / aria-disabled, aria-busy,
    aria-invalid, aria-pressed / aria-selected / aria-current.
    data-state="hover" | "focus" pins a state for the UI Kit (/admin/ui-kit). */
-@layer tokens, base, legacy, components, layout, features;
+@layer tokens, base, components, layout, features;
 @layer components {
   /* ── Buttons ─────────────────────────────────────────────────────────
      .button            main action: black on light, white on dark
@@ -137,6 +137,11 @@
   }
   :is(.button, .icon, .quiet)[aria-busy="true"] {
     cursor: progress;
+  }
+  /* A label styled as a button around a file input shows the input's focus. */
+  label.button:has(> input:focus-visible) {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
   }
 
   /* Like with a counter, as on a Hugging Face repository: heart and word,
@@ -280,7 +285,8 @@
 
   /* Interface icons (SiteIcon): line icons at 1.75 stroke; an emoji the
      administrator chose for a slot takes exactly the same box. */
-  .site-icon {
+  .site-icon,
+  .part-icon {
     flex: none;
   }
   .site-icon.custom {
@@ -327,6 +333,7 @@
     margin: 0 0 var(--space-4);
   }
   .field > span:first-child,
+  .field > label:first-child,
   .field > legend {
     color: var(--text);
     font-size: var(--text-sm);
@@ -342,17 +349,27 @@
   .field :is(input, select, textarea) {
     width: 100%;
   }
+  /* Hint text; an icon at its start sits on the first line. Inline links
+     stay in the flow of the sentence. */
   .help {
-    display: flex;
-    align-items: center;
-    gap: var(--space-1-5);
     color: var(--text-muted);
     font-size: 13px;
     line-height: var(--leading-snug);
   }
-  .help svg {
+  .help > svg:first-child {
+    display: inline-block;
     width: 14px;
     height: 14px;
+    margin-right: var(--space-1);
+    vertical-align: -2px;
+  }
+  .help a {
+    color: var(--text-secondary);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .help a:hover {
+    color: var(--text);
   }
   .field-error {
     color: var(--danger);
@@ -514,6 +531,31 @@
     display: block;
     color: var(--text-muted);
     font-size: 13px;
+  }
+
+  /* Setting row: <label class="setting-row"><span>…</span><input></label>
+     — the words on the left, the control on the right, a hairline under
+     each row, as in a settings list. */
+  .setting-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    min-height: var(--control-md);
+    padding: var(--space-2) 0;
+    border-bottom: 1px solid var(--line);
+    color: var(--text);
+    font-size: var(--text-sm);
+    line-height: var(--leading-snug);
+    cursor: pointer;
+  }
+  .setting-row > input {
+    flex: none;
+  }
+  .setting-row small {
+    display: block;
+    color: var(--text-muted);
+    font-size: var(--text-xs);
   }
 
   /* On/off switch: <input type="checkbox" role="switch" class="toggle">. */

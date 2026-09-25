@@ -1,5 +1,5 @@
 /* Base elements (#127, DESIGN.md → Typography). */
-@layer tokens, base, legacy, components, layout, features;
+@layer tokens, base, components, layout, features;
 @layer base {
   *,
   *::before,
@@ -138,9 +138,9 @@
     *,
     *::before,
     *::after {
-      animation-duration: 0.01ms !important;
+      animation-duration: 0s !important;
       animation-iteration-count: 1 !important;
-      transition-duration: 0.01ms !important;
+      transition-duration: 0s !important;
       scroll-behavior: auto !important;
     }
   }

@@ -1,5 +1,9 @@
 export {
+  ArrowDown,
+  Download,
+  MonitorSmartphone,
   ArrowLeft,
+  ArrowUp,
   ArrowUpRight,
   Bell,
   Bike,

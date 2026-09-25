@@ -103,7 +103,7 @@ export default function Records() {
   return (
     <>
       <SocialHeader user={user} />
-      <main className={"social-page records-page " + styles.page}>
+      <main className={"page records-page " + styles.page}>
         <header className="hall-heading">
           <div>
             <p className="eyebrow">ColaBike · Hall of Fame</p>
