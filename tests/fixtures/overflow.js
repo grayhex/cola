@@ -1,7 +1,8 @@
 // What makes a page wider than the screen: null when it fits, otherwise the
-// page width and the innermost elements sticking out on the right that no
-// scrolling or clipping parent contains. Used by the e2e layout checks, so a
-// failure names the element instead of only the page.
+// page width and the elements sticking out on the right — the innermost
+// ones, and scrolling or clipping boxes that stick out themselves — that no
+// clipping parent within the screen holds. Used by the e2e layout checks, so
+// a failure names the element instead of only the page.
 export function pageOverflow(page) {
   return page.evaluate(() => {
     const width = innerWidth;
@@ -9,13 +10,15 @@ export function pageOverflow(page) {
     if (scrollWidth <= width + 1) return null;
     const sticksOut = (element) =>
       element.getBoundingClientRect().right > width + 1;
-    const contained = (element) => {
+    const clips = (element) =>
+      getComputedStyle(element).overflowX !== "visible";
+    const held = (element) => {
       for (
         let p = element.parentElement;
         p && p !== document.body;
         p = p.parentElement
       )
-        if (getComputedStyle(p).overflowX !== "visible") return true;
+        if (clips(p) && !sticksOut(p)) return true;
       return false;
     };
     const elements = [...document.body.querySelectorAll("*")]
@@ -23,8 +26,8 @@ export function pageOverflow(page) {
         (element) =>
           element.getBoundingClientRect().width > 0 &&
           sticksOut(element) &&
-          ![...element.children].some(sticksOut) &&
-          !contained(element),
+          (clips(element) || ![...element.children].some(sticksOut)) &&
+          !held(element),
       )
       .slice(0, 8)
       .map((element) => {

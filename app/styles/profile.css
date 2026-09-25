@@ -208,6 +208,9 @@
   }
   .account-content {
     display: grid;
+    /* One track that cannot grow: WebKit sizes a select by its longest
+       option, which would widen an auto track past a phone screen. */
+    grid-template-columns: minmax(0, 1fr);
     gap: var(--space-6);
     min-width: 0;
   }

@@ -83,6 +83,11 @@
     font: inherit;
     color: inherit;
   }
+  /* A select is as wide as its longest option in WebKit; never wider than
+     its container. */
+  select {
+    max-width: 100%;
+  }
   button {
     margin: 0;
     padding: 0;
