@@ -98,7 +98,7 @@ export default function ExperienceSearch({ modelPage = false }) {
   return (
     <>
       <SocialHeader user={user} />
-      <main className="social-page experience-search">
+      <main className="page experience-search">
         <div className="section-heading">
           <h1>{title}</h1>
           <button
@@ -144,7 +144,7 @@ export default function ExperienceSearch({ modelPage = false }) {
           }}
           onChange={(v) => search({ ...form, ...v, page: 1 })}
         />
-        <nav className="journal-modes" aria-label="Тип результатов">
+        <nav className="journal-modes ui-tabs" aria-label="Тип результатов">
           {[
             ["bikes", "Велосипеды"],
             ["journal", "Журнал"],
@@ -177,7 +177,7 @@ export default function ExperienceSearch({ modelPage = false }) {
             применяются.
           </p>
         )}
-        <div className="experience-chips">
+        <div className="experience-chips filter-chips">
           {["brand", "model", "year", "component", "purpose", "similar"]
             .filter((k) => form[k])
             .map((k) => (

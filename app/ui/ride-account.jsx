@@ -1,5 +1,5 @@
 "use client";
-import SiteEmoji from "./site-emoji.jsx";
+import SiteIcon from "./site-icon.jsx";
 import RideCreationActions from "./ride-creation-actions.jsx";
 import { selectableRideBikes, rideBikeStateError } from "../../lib/bike-status.js";
 import { useEffect, useState, useRef } from "react";
@@ -458,7 +458,7 @@ export default function RideAccount({ bikes }) {
                       set("recurrence", e.target.checked ? "weekly" : "none")
                     }
                   />
-                  <SiteEmoji name="repeat" /> Повторять каждую неделю
+                  <SiteIcon name="repeat" /> Повторять каждую неделю
                   {form.scheduledAt && (
                     <small>
                       {" "}

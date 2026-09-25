@@ -11,6 +11,17 @@ import {
   safeRichLink,
 } from "../../lib/rich-text.js";
 import RichTextBody from "./rich-text-body.jsx";
+import {
+  Bold,
+  Italic,
+  Underline,
+  List,
+  ListOrdered,
+  Quote,
+  Undo2,
+  Redo2,
+  RemoveFormatting,
+} from "./icons.jsx";
 import styles from "./prompt-composer.module.css";
 
 // One controlled Markdown contract and one WYSIWYG surface for articles, posts,
@@ -141,12 +152,18 @@ export default function PromptComposer({
           const { selection, doc, storedMarks } = editor.state;
           toolbarSelection.current = {
             button: event.currentTarget,
-            bookmark: selection.getBookmark(), doc, storedMarks,
+            bookmark: selection.getBookmark(),
+            doc,
+            storedMarks,
           };
           if (event.pointerType === "mouse") event.preventDefault();
         }}
-        onPointerCancel={() => { toolbarSelection.current = null; }}
-        onKeyDown={() => { toolbarSelection.current = null; }}
+        onPointerCancel={() => {
+          toolbarSelection.current = null;
+        }}
+        onKeyDown={() => {
+          toolbarSelection.current = null;
+        }}
         onMouseDown={(event) => {
           if (event.button === 0) event.preventDefault();
         }}
@@ -154,8 +171,13 @@ export default function PromptComposer({
           const saved = toolbarSelection.current;
           toolbarSelection.current = null;
           // A delayed click must not restore positions from a replaced document.
-          if (saved?.button === event.currentTarget && saved.doc === editor.state.doc) {
-            const tr = editor.state.tr.setSelection(saved.bookmark.resolve(saved.doc));
+          if (
+            saved?.button === event.currentTarget &&
+            saved.doc === editor.state.doc
+          ) {
+            const tr = editor.state.tr.setSelection(
+              saved.bookmark.resolve(saved.doc),
+            );
             if (saved.storedMarks) tr.setStoredMarks(saved.storedMarks);
             editor.view.dispatch(tr);
           }
@@ -247,37 +269,37 @@ export default function PromptComposer({
           </select>
           {action(
             "Полужирный",
-            <b>B</b>,
+            <Bold size={16} aria-hidden="true" />,
             () => editor.chain().focus().toggleBold().run(),
             editor?.isActive("bold"),
           )}
           {action(
             "Курсив",
-            <i>I</i>,
+            <Italic size={16} aria-hidden="true" />,
             () => editor.chain().focus().toggleItalic().run(),
             editor?.isActive("italic"),
           )}
           {action(
             "Подчёркнутый",
-            <u>U</u>,
+            <Underline size={16} aria-hidden="true" />,
             () => editor.chain().focus().toggleUnderline().run(),
             editor?.isActive("underline"),
           )}
           {action(
             "Маркированный список",
-            "• ≡",
+            <List size={16} aria-hidden="true" />,
             () => editor.chain().focus().toggleBulletList().run(),
             editor?.isActive("bulletList"),
           )}
           {action(
             "Нумерованный список",
-            "1. ≡",
+            <ListOrdered size={16} aria-hidden="true" />,
             () => editor.chain().focus().toggleOrderedList().run(),
             editor?.isActive("orderedList"),
           )}
           {action(
             "Цитата",
-            "❞",
+            <Quote size={16} aria-hidden="true" />,
             () => editor.chain().focus().toggleBlockquote().run(),
             editor?.isActive("blockquote"),
           )}
@@ -292,20 +314,22 @@ export default function PromptComposer({
           )}
           {action(
             "Отменить действие",
-            "↶",
+            <Undo2 size={16} aria-hidden="true" />,
             () => editor.chain().focus().undo().run(),
             false,
             editor?.can().undo(),
           )}
           {action(
             "Повторить действие",
-            "↷",
+            <Redo2 size={16} aria-hidden="true" />,
             () => editor.chain().focus().redo().run(),
             false,
             editor?.can().redo(),
           )}
-          {action("Убрать форматирование", "Tx", () =>
-            editor.chain().focus().unsetAllMarks().clearNodes().run(),
+          {action(
+            "Убрать форматирование",
+            <RemoveFormatting size={16} aria-hidden="true" />,
+            () => editor.chain().focus().unsetAllMarks().clearNodes().run(),
           )}
         </div>
         {linkOpen && (

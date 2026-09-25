@@ -1,0 +1,1694 @@
+/* The bike page (#127, DESIGN.md → Рабочий режим): a Hugging Face model
+   page — the name and labels, one row of actions, then three columns on
+   wide screens: photo, build list, rides. Journal, game and discussion run
+   full width below. Garage modals and the bike and part forms live here too. */
+@layer tokens, base, components, layout, features;
+@layer features {
+  /* ── Frame ──────────────────────────────────────────────────────────── */
+  .detail {
+    width: 100%;
+    max-width: calc(var(--container) + 2 * var(--gutter));
+    margin: 0 auto;
+    padding: var(--space-6) var(--gutter) var(--space-16);
+  }
+  /* "My bikes" in the account shows the same page inside its own frame. */
+  .account-content > .detail {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+  }
+  /* Blocks space themselves with a bottom margin rather than a gap, so a
+     block that is switched off or empty leaves no double gap behind. */
+  .bike-detail {
+    display: flex;
+    flex-direction: column;
+  }
+  .bike-detail > * {
+    min-width: 0;
+    margin: 0 0 var(--space-4);
+  }
+  .bike-detail > .gallery-details {
+    margin-top: calc(-1 * var(--space-2));
+  }
+  .bike-detail > :last-child {
+    margin-bottom: 0;
+  }
+  /* Phones and tablets: one column; the actions follow the photo (#121). */
+  .bike-detail > .breadcrumbs {
+    order: 0;
+  }
+  .bike-detail > .bike-heading {
+    order: 1;
+  }
+  .bike-detail > .bike-meta-line {
+    order: 2;
+  }
+  .bike-detail > .showcase,
+  .bike-detail > .bike-actions {
+    order: 3;
+  }
+  .bike-detail > .gallery-details {
+    order: 4;
+  }
+  .bike-detail > .bike-summary {
+    order: 5;
+  }
+  .bike-detail > .specifications {
+    order: 6;
+  }
+  .bike-detail > .bike-rides {
+    order: 7;
+  }
+  .bike-detail > .bike-journal {
+    order: 8;
+  }
+  .bike-detail > .bike-game {
+    order: 9;
+  }
+  .bike-detail > .discussion {
+    order: 10;
+  }
+  /* Wide screens: photo | build | rides start on one line. The last photo
+     row is flexible, so a long build list never pushes the gallery down. */
+  @media (min-width: 1200px) {
+    .bike-detail {
+      display: grid;
+      grid-template-columns:
+        minmax(0, 1.1fr) minmax(0, 1fr)
+        minmax(280px, 0.85fr);
+      grid-template-rows: repeat(6, auto) 1fr;
+      align-items: start;
+      column-gap: var(--space-5);
+    }
+    .bike-detail > * {
+      grid-column: 1 / -1;
+    }
+    .bike-detail > .breadcrumbs {
+      grid-row: 1;
+    }
+    .bike-detail > .bike-heading {
+      grid-row: 2;
+    }
+    .bike-detail > .bike-meta-line {
+      grid-row: 3;
+    }
+    .bike-detail > .bike-actions {
+      grid-row: 4;
+    }
+    .bike-detail > .showcase {
+      grid-column: 1;
+      grid-row: 5;
+    }
+    .bike-detail > .gallery-details {
+      grid-column: 1;
+      grid-row: 6;
+    }
+    .bike-detail > .bike-summary {
+      grid-column: 1;
+      grid-row: 7;
+    }
+    .bike-detail > .specifications {
+      grid-column: 2;
+      grid-row: 5 / span 3;
+    }
+    .bike-detail > .bike-rides {
+      grid-column: 3;
+      grid-row: 5 / span 3;
+    }
+    .bike-detail > .bike-journal {
+      grid-row: 8;
+    }
+    .bike-detail > .bike-game {
+      grid-row: 9;
+    }
+    .bike-detail > .discussion {
+      grid-row: 10;
+    }
+    /* No rides yet: the build list takes their column. */
+    .bike-detail:has(> .bike-rides-empty) {
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.85fr);
+    }
+    .bike-detail > .bike-rides.bike-rides-empty {
+      grid-column: 1 / -1;
+      grid-row: auto;
+    }
+  }
+
+  /* ── Breadcrumbs and heading ────────────────────────────────────────── */
+  .breadcrumbs {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1) var(--space-1-5);
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+  }
+  .breadcrumbs > svg {
+    flex: none;
+    color: var(--text-subtle);
+  }
+  .breadcrumbs a {
+    color: var(--text-secondary);
+    text-decoration: none;
+    overflow-wrap: anywhere;
+  }
+  .breadcrumbs a:hover {
+    color: var(--text);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .breadcrumbs .quiet {
+    margin-left: calc(-1 * var(--space-2));
+  }
+  /* Name and labels on the left, the author on the right. */
+  .bike-heading {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: var(--space-2) var(--space-4);
+    text-align: var(--heading-align, left);
+  }
+  .bike-heading > div:first-child {
+    min-width: 0;
+  }
+  .bike-detail-title-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2) var(--space-3);
+  }
+  .bike-detail-title-row h1 {
+    min-width: 0;
+    margin: 0;
+    color: var(--text-strong);
+    font-size: var(--text-3xl);
+    font-weight: var(--weight-bold);
+    line-height: var(--leading-tight);
+    letter-spacing: -0.015em;
+    overflow-wrap: anywhere;
+    text-wrap: balance;
+  }
+  .bike-subtitle {
+    margin: var(--space-1) 0 0;
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    overflow-wrap: anywhere;
+  }
+  .bike-heading-labels {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1);
+    margin-top: var(--space-2-5);
+  }
+  .bike-heading .detail-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--space-2);
+    padding-top: var(--space-1-5);
+  }
+  .bike-heading .detail-actions .author-link {
+    max-width: min(40vw, 260px);
+  }
+  .bike-intro {
+    grid-column: 1 / -1;
+    min-width: 0;
+    max-width: 72ch;
+    color: var(--text-secondary);
+    font-size: var(--text-base);
+    line-height: var(--leading-normal);
+  }
+  .bike-intro p {
+    margin: 0 0 var(--space-1-5);
+    overflow-wrap: anywhere;
+    white-space: pre-line;
+  }
+  .bike-intro-facts {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--space-1) var(--space-4);
+    font-size: var(--text-sm);
+  }
+  .bike-intro-facts strong {
+    color: var(--text);
+    font-weight: var(--weight-semibold);
+  }
+  /* Colour and mileage: a mono line of facts under the heading. */
+  .bike-meta-line {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    max-width: 100%;
+    overflow-x: auto;
+    color: var(--text-muted);
+    font: var(--weight-regular) var(--text-xs) / 1.5 var(--font-mono);
+    white-space: nowrap;
+    scrollbar-width: none;
+  }
+  .bike-meta-line:empty {
+    display: none;
+  }
+  .bike-meta-line > span + span::before {
+    content: "·";
+    margin-right: var(--space-2);
+    color: var(--text-subtle);
+  }
+
+  /* ── Photo ──────────────────────────────────────────────────────────── */
+  .photo-stage {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-xl);
+    background: var(--bg-subtle);
+  }
+  .photo-open {
+    display: block;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: inherit;
+    background: none;
+    line-height: 0;
+    cursor: zoom-in;
+  }
+  .photo-stage .hero-photo {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: var(--photo-ratio, 4 / 3);
+    object-fit: contain;
+  }
+  [data-photo-mode="cover"] .photo-stage .hero-photo:not(.photo-empty) {
+    object-fit: cover;
+  }
+  /* The placeholder keeps the photo's box and centres its line of text. */
+  .photo-stage .hero-photo.photo-empty {
+    display: flex;
+  }
+  /* No photo yet: an outline and a line of text in the same box. */
+  .photo-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-3);
+    min-height: 200px;
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    line-height: var(--leading-normal);
+  }
+  .photo-index,
+  .photo-credit {
+    position: absolute;
+    z-index: 1;
+    padding: 2px var(--space-1-5);
+    border-radius: var(--radius-sm);
+    background: color-mix(in srgb, var(--surface) 85%, transparent);
+    color: var(--text-muted);
+    font: var(--weight-regular) 11px / 1.4 var(--font-mono);
+  }
+  .photo-index {
+    top: var(--space-2);
+    left: var(--space-2);
+    pointer-events: none;
+  }
+  .photo-credit {
+    bottom: var(--space-2);
+    left: var(--space-2);
+    max-width: calc(100% - var(--space-4));
+    font-family: var(--font-sans);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    overflow-wrap: anywhere;
+  }
+  .photo-credit:hover {
+    color: var(--text);
+  }
+  /* The photo opened whole in a dialog. */
+  .full-photo {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: 75dvh;
+    border-radius: var(--radius-lg);
+    background: var(--bg-subtle);
+    object-fit: contain;
+  }
+  /* The personal layout (Appearance) sets how tall the phone photo is. */
+  @media (max-width: 700px) {
+    [data-bike-layout="dense"] .photo-stage .hero-photo {
+      aspect-ratio: 16 / 9;
+    }
+    [data-bike-layout="spacious"] .photo-stage .hero-photo {
+      aspect-ratio: 1;
+    }
+  }
+
+  /* Gallery: a disclosure with thumbnails under the photo. */
+  .gallery-details > summary,
+  .bike-summary > summary,
+  .factory-source > summary,
+  .price-settings > summary {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1-5);
+    min-height: var(--control-sm);
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+    list-style: none;
+    cursor: pointer;
+  }
+  :is(.gallery-details, .bike-summary, .factory-source, .price-settings)
+    > summary::-webkit-details-marker {
+    display: none;
+  }
+  :is(.gallery-details, .bike-summary, .factory-source, .price-settings)
+    > summary::before {
+    content: "";
+    flex: none;
+    width: 6px;
+    height: 6px;
+    margin: 0 var(--space-1) 0 2px;
+    border-right: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor;
+    transform: rotate(-45deg);
+    transition: transform var(--duration-fast) var(--ease-out);
+  }
+  :is(.gallery-details, .bike-summary, .factory-source, .price-settings)[open]
+    > summary::before {
+    transform: rotate(45deg);
+  }
+  :is(.gallery-details, .bike-summary, .factory-source, .price-settings)
+    > summary:hover {
+    color: var(--text);
+  }
+  .gallery {
+    display: flex;
+    gap: var(--space-2);
+    padding: var(--space-2) 0 var(--space-1);
+    overflow-x: auto;
+  }
+  .thumb-wrap {
+    flex: none;
+    width: 96px;
+  }
+  .thumb {
+    display: block;
+    width: 96px;
+    height: 72px;
+    padding: 0;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    background: var(--bg-subtle);
+    cursor: pointer;
+  }
+  .thumb:hover {
+    border-color: var(--line-strong);
+  }
+  .thumb.active {
+    border-color: var(--text);
+    box-shadow: 0 0 0 1px var(--text);
+  }
+  .thumb img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .thumb-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: var(--space-1);
+  }
+  .thumb-actions .quiet {
+    min-height: var(--control-sm);
+    padding: 0 var(--space-1);
+    font-size: var(--text-xs);
+  }
+  .thumb-actions .icon {
+    width: var(--control-sm);
+    min-width: var(--control-sm);
+    height: var(--control-sm);
+  }
+
+  /* "About the bike": an optional passport block (off by default). */
+  .bike-summary > .eyebrow {
+    display: block;
+    margin-top: var(--space-3);
+  }
+  .bike-summary h2 {
+    margin: var(--space-1) 0 var(--space-3);
+    font-size: var(--text-2xl);
+    font-weight: var(--weight-bold);
+    line-height: var(--leading-tight);
+  }
+  .bike-summary > p {
+    margin: 0 0 var(--space-3);
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    line-height: var(--leading-normal);
+    overflow-wrap: anywhere;
+  }
+  .summary-bottom {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2);
+    margin-bottom: var(--space-2);
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+  }
+  .summary-bottom span {
+    color: var(--text);
+    font: var(--weight-semibold) var(--text-2xl) / 1 var(--font-mono);
+  }
+
+  /* ── Build list ─────────────────────────────────────────────────────── */
+  .factory-source {
+    margin-bottom: var(--space-3);
+    padding: var(--space-1) var(--space-3);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    background: var(--surface-subtle);
+  }
+  .factory-source > .help {
+    margin: var(--space-1) 0 var(--space-2);
+  }
+  .resolver-preview {
+    margin: 0 0 var(--space-2);
+  }
+  .resolver-preview > div {
+    display: grid;
+    grid-template-columns: minmax(96px, 0.4fr) minmax(0, 1fr);
+    gap: var(--space-3);
+    padding: var(--space-1-5) 0;
+    border-top: 1px solid var(--line);
+  }
+  .resolver-preview dt {
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+  }
+  .resolver-preview dd {
+    margin: 0;
+    font-size: var(--text-sm);
+    overflow-wrap: anywhere;
+  }
+  /* Build | accessories: underlined tabs with a mono count. */
+  .tabs-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--space-1) var(--space-3);
+    margin-bottom: var(--space-3);
+    border-bottom: 1px solid var(--line);
+  }
+  .tabs {
+    display: flex;
+    gap: var(--space-1);
+    min-width: 0;
+  }
+  .tabs button {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1-5);
+    min-height: 40px;
+    margin-bottom: -1px;
+    padding: 0 var(--space-2-5);
+    border: 0;
+    border-bottom: 2px solid transparent;
+    background: none;
+    color: var(--text-muted);
+    font: var(--weight-semibold) var(--text-sm) / 1 var(--font-sans);
+    cursor: pointer;
+  }
+  .tabs button:hover {
+    color: var(--text);
+  }
+  .tabs button[aria-selected="true"] {
+    border-bottom-color: var(--text);
+    color: var(--text);
+  }
+  .tabs button span {
+    min-width: 20px;
+    padding: 2px var(--space-1-5);
+    border-radius: var(--radius-md);
+    background: var(--surface-hover);
+    color: var(--text-secondary);
+    font: var(--weight-regular) var(--text-xs) / 1.3 var(--font-mono);
+    text-align: center;
+  }
+  .tabs-row .add-component {
+    min-height: 40px;
+    margin-bottom: 2px;
+    font-size: var(--text-sm);
+  }
+  /* In a narrow column "add" keeps only its icon, next to the tabs. */
+  .specifications {
+    container-type: inline-size;
+  }
+  @container (max-width: 520px) {
+    .tabs-row {
+      flex-wrap: nowrap;
+    }
+    .tabs-row .add-component {
+      flex: none;
+      justify-content: center;
+      width: var(--control-md);
+      margin-left: auto;
+      font-size: 0;
+    }
+    .tabs-row .add-component svg {
+      width: 20px;
+      height: 20px;
+    }
+  }
+  .spec-label {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-3);
+    margin: 0 0 var(--space-2);
+    color: var(--text-muted);
+    font: var(--weight-regular) 11px / 1.5 var(--font-mono);
+    letter-spacing: 0.08em;
+  }
+  /* Groups: a file-list panel per group, rows of parts inside. */
+  .component-groups {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-2);
+  }
+  .component-group {
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+  }
+  .component-group-title {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    padding: 0 var(--space-1) 0 var(--space-3);
+    border-radius: var(--radius-lg);
+    background: linear-gradient(
+      to right,
+      var(--surface-subtle),
+      var(--surface)
+    );
+  }
+  .component-group-title h3 {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    font-size: var(--text-sm);
+  }
+  .component-group-toggle {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    width: 100%;
+    min-height: 40px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--text);
+    font: var(--weight-semibold) var(--text-sm) / var(--leading-tight)
+      var(--font-sans);
+    text-align: left;
+    cursor: pointer;
+  }
+  .component-group-toggle > svg:first-child {
+    flex: none;
+    color: var(--text-secondary);
+  }
+  .component-group-toggle small {
+    color: var(--text-muted);
+    font: var(--weight-regular) var(--text-xs) / 1 var(--font-mono);
+  }
+  .component-group-toggle > svg:last-child {
+    flex: none;
+    margin-left: auto;
+    color: var(--text-muted);
+    transition: transform var(--duration-fast) var(--ease-out);
+  }
+  .component-group-toggle[aria-expanded="true"] > svg:last-child {
+    transform: rotate(180deg);
+  }
+  .component-group > [hidden] {
+    display: none;
+  }
+  /* Before hydration groups open by width: open on wide screens only. */
+  @media (max-width: 700px) {
+    [data-open-by-width] {
+      display: none;
+    }
+  }
+  .order-actions {
+    display: flex;
+    align-items: center;
+  }
+  .order-actions .icon {
+    width: var(--control-sm);
+    min-width: var(--control-sm);
+    height: var(--control-sm);
+    border-radius: var(--radius-md);
+  }
+  .order-actions .icon svg {
+    width: 15px;
+    height: 15px;
+  }
+  .compact-part {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
+    border-top: 1px solid var(--line);
+  }
+  .compact-part-main {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+  }
+  .compact-part-main > small {
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+  }
+  .compact-part-main > strong {
+    color: var(--text);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+    line-height: var(--leading-snug);
+    overflow-wrap: anywhere;
+  }
+  .compact-part-main > strong a {
+    color: inherit;
+    text-decoration: none;
+  }
+  .compact-part-main > strong a:hover {
+    color: var(--accent-text);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .part-notes {
+    color: var(--text-secondary);
+    font-size: var(--text-xs);
+    overflow-wrap: anywhere;
+  }
+  .part-link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    width: fit-content;
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+    text-decoration: underline;
+    text-decoration-color: var(--line-strong);
+    text-underline-offset: 3px;
+  }
+  .part-link:hover {
+    color: var(--text);
+    text-decoration-color: currentColor;
+  }
+  .compact-part-actions {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: var(--space-1);
+  }
+  .compact-part-actions .price {
+    color: var(--text-secondary);
+    font: var(--weight-regular) var(--text-xs) / 1.4 var(--font-mono);
+    white-space: nowrap;
+  }
+  .compact-part-actions details {
+    position: relative;
+  }
+  .compact-part-actions summary {
+    display: grid;
+    place-items: center;
+    width: var(--control-sm);
+    height: var(--control-sm);
+    border-radius: var(--radius-md);
+    color: var(--text-muted);
+    font-size: var(--text-lg);
+    line-height: 1;
+    list-style: none;
+    cursor: pointer;
+  }
+  .compact-part-actions summary::-webkit-details-marker {
+    display: none;
+  }
+  .compact-part-actions summary:hover,
+  .compact-part-actions details[open] > summary {
+    background: var(--surface-hover);
+    color: var(--text);
+  }
+  .part-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    z-index: var(--z-dropdown);
+    display: flex;
+    gap: 2px;
+    padding: var(--space-1);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    box-shadow: var(--shadow-lg);
+  }
+  .part-menu .icon {
+    width: var(--control-sm);
+    min-width: var(--control-sm);
+    height: var(--control-sm);
+    border-radius: var(--radius-md);
+  }
+  .part-menu .icon svg {
+    width: 15px;
+    height: 15px;
+  }
+  /* Denser or roomier lists follow the personal layout. */
+  [data-bike-layout="dense"] .compact-part {
+    padding-top: var(--space-1);
+    padding-bottom: var(--space-1);
+  }
+  [data-bike-layout="spacious"] .compact-part {
+    padding-top: var(--space-3);
+    padding-bottom: var(--space-3);
+  }
+  [data-bike-layout="spacious"] .compact-part-main > strong {
+    font-size: var(--text-base);
+  }
+  @media (min-width: 701px) and (max-width: 1199px) {
+    [data-bike-layout="dense"] .component-groups {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      align-items: start;
+    }
+  }
+  .cost {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+    padding-top: var(--space-3);
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+  }
+  .cost strong {
+    margin-left: auto;
+    color: var(--text);
+    font: var(--weight-semibold) var(--text-base) / 1 var(--font-mono);
+  }
+  /* No parts in the section yet. */
+  .empty-parts {
+    padding: var(--space-8) var(--space-4);
+    border: 1px dashed var(--line-dashed);
+    border-radius: var(--radius-xl);
+    color: var(--text-muted);
+    text-align: center;
+  }
+  .empty-parts > svg {
+    color: var(--text-subtle);
+  }
+  .empty-parts h3 {
+    margin: var(--space-3) 0 var(--space-1);
+    color: var(--text);
+    font-size: var(--text-base);
+    font-weight: var(--weight-semibold);
+  }
+  .empty-parts p {
+    margin: 0 auto var(--space-3);
+    max-width: 36ch;
+    font-size: var(--text-sm);
+  }
+
+  /* ── Rides column ───────────────────────────────────────────────────── */
+  .bike-rides > h2 {
+    margin: 0 0 var(--space-1);
+    font-size: var(--text-lg);
+    font-weight: var(--weight-semibold);
+  }
+  .bike-rides > .help {
+    margin: 0 0 var(--space-3);
+  }
+  .bike-rides .ride-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-3);
+  }
+  .bike-rides-empty {
+    padding: var(--space-2) var(--space-3);
+    border: 1px dashed var(--line-dashed);
+    border-radius: var(--radius-lg);
+  }
+  .bike-rides-empty .help {
+    margin: 0;
+  }
+
+  /* Blocks the administrator can restyle or switch off. */
+  .configurable-block[hidden],
+  .configurable-block [hidden] {
+    display: none;
+  }
+  .configurable-block[data-variant="card"]:not(.showcase) {
+    padding: var(--space-4);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-xl);
+    background: var(--surface);
+    box-shadow: var(--shadow-xs);
+  }
+
+  /* The garage's page-level error with its retry button. */
+  .global-error {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2) var(--space-3);
+    max-width: var(--container);
+    margin: var(--space-4) auto 0;
+  }
+
+  /* ── Garage dialogs ─────────────────────────────────────────────────── */
+  .share-status {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
+  }
+  .share-status > svg {
+    flex: none;
+    color: var(--text-secondary);
+  }
+  .share-status h3 {
+    margin: 0 0 var(--space-1);
+    font-size: var(--text-base);
+    font-weight: var(--weight-semibold);
+  }
+  .share-status p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+  }
+  .share-copy {
+    display: flex;
+    gap: var(--space-2);
+    margin: var(--space-4) 0 var(--space-2);
+  }
+  .share-copy input {
+    flex: 1;
+    min-width: 0;
+    font: var(--weight-regular) var(--text-sm) / 1.4 var(--font-mono);
+  }
+  .delete-text {
+    margin: 0 0 var(--space-4);
+    color: var(--text-secondary);
+    font-size: var(--text-base);
+    line-height: var(--leading-normal);
+  }
+  /* Bike form: experience marks and price visibility. */
+  .bike-purposes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 var(--space-4);
+    min-width: 0;
+    margin: var(--space-3) 0;
+    padding: 0;
+    border: 0;
+  }
+  .bike-purposes legend {
+    margin-bottom: var(--space-1);
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+  }
+  .bike-purposes label {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: var(--control-md);
+    font-size: var(--text-sm);
+  }
+  .price-settings {
+    margin: var(--space-3) 0;
+    padding: var(--space-1) var(--space-3);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+  }
+  .price-settings > .help {
+    margin: 0 0 var(--space-1);
+  }
+  .price-settings .setting-row:last-child {
+    border-bottom: 0;
+  }
+  /* Part form: the chosen category's icon, suggestions from the catalog. */
+  .selected-part-icon {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin-bottom: var(--space-3);
+    color: var(--text);
+    font-weight: var(--weight-semibold);
+  }
+  .suggestions {
+    max-height: 200px;
+    margin: calc(-1 * var(--space-1)) 0 var(--space-2);
+    padding: var(--space-1) 0;
+    overflow: auto;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+  }
+  .suggestions button {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+    width: 100%;
+    min-height: var(--control-md);
+    padding: 0 var(--space-3);
+    border: 0;
+    background: none;
+    color: var(--text);
+    font-size: var(--text-sm);
+    text-align: left;
+    cursor: pointer;
+  }
+  .suggestions button:hover,
+  .suggestions button.chosen {
+    background: var(--surface-hover);
+  }
+
+  /* ── Adding a bike: the three-step wizard ───────────────────────────── */
+  /* In its dialog the steps and actions stay put and the step scrolls. */
+  dialog[open]:has(.bike-wizard) {
+    display: flex;
+    flex-direction: column;
+    max-width: 720px;
+    height: min(780px, calc(100dvh - 2 * var(--space-4)));
+    overflow: hidden;
+  }
+  dialog:has(.bike-wizard) > .modal-head {
+    flex: none;
+    margin-bottom: var(--space-3);
+  }
+  .bike-wizard {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    width: 100%;
+    min-height: 0;
+  }
+  .bike-wizard > :not(.wizard-content) {
+    flex: none;
+  }
+  /* Numbered steps: a circle and a word; the current one is black. */
+  .wizard-steps {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-2);
+    margin-bottom: var(--space-2);
+  }
+  .wizard-steps button {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
+    min-height: var(--control-md);
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--text-muted);
+    text-align: left;
+    cursor: pointer;
+  }
+  .wizard-steps button:disabled {
+    cursor: default;
+  }
+  .wizard-steps button > span {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-full);
+    font: var(--weight-semibold) var(--text-xs) / 1 var(--font-mono);
+  }
+  .wizard-steps small {
+    min-width: 0;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    white-space: nowrap;
+  }
+  .wizard-steps [aria-current="step"] {
+    color: var(--text);
+  }
+  .wizard-steps [aria-current="step"] > span {
+    border-color: var(--primary);
+    background: var(--primary);
+    color: var(--primary-foreground);
+  }
+  .wizard-progress {
+    display: block;
+    width: 100%;
+    height: 3px;
+    border: 0;
+    border-radius: var(--radius-full);
+    background: var(--line);
+    appearance: none;
+  }
+  .wizard-progress::-webkit-progress-bar {
+    border-radius: var(--radius-full);
+    background: var(--line);
+  }
+  .wizard-progress::-webkit-progress-value {
+    border-radius: var(--radius-full);
+    background: var(--primary);
+    transition: width var(--duration-slow) var(--ease-out);
+  }
+  .wizard-progress::-moz-progress-bar {
+    border-radius: var(--radius-full);
+    background: var(--primary);
+  }
+  .bike-wizard > h3 {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2);
+    margin: var(--space-3) 0 var(--space-2);
+    font-size: var(--text-lg);
+    font-weight: var(--weight-semibold);
+    outline: none;
+  }
+  .bike-wizard > h3 small {
+    color: var(--text-muted);
+    font: var(--weight-regular) var(--text-xs) / 1 var(--font-mono);
+  }
+  .wizard-content {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    margin: 0;
+    padding: 0 2px var(--space-2);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border: 0;
+    animation: wizard-enter var(--duration) var(--ease-out);
+  }
+  .wizard-content .field {
+    margin-bottom: var(--space-3);
+  }
+  .wizard-content h4 {
+    margin: var(--space-4) 0 var(--space-2);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+  }
+  .wizard-content > .help,
+  .wizard-content section > .help {
+    margin: 0 0 var(--space-2);
+  }
+  .wizard-identity {
+    margin: 0 0 var(--space-2);
+    color: var(--text-muted);
+    font: var(--weight-regular) var(--text-xs) / 1.5 var(--font-mono);
+  }
+  .wizard-identity:empty {
+    display: none;
+  }
+  .wizard-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-3);
+    margin-top: var(--space-2);
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--line);
+    background: var(--surface);
+  }
+  @keyframes wizard-enter {
+    from {
+      opacity: 0;
+      transform: translateX(6px);
+    }
+  }
+  /* Step 1: search, candidates and the link form. */
+  .wizard-choice-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin: var(--space-3) 0;
+  }
+  .wizard-found {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-2-5);
+    margin: var(--space-3) 0;
+    padding: var(--space-3);
+    border: 1px solid color-mix(in srgb, var(--success) 35%, var(--line));
+    border-radius: var(--radius-lg);
+    background: var(--success-soft);
+    font-size: var(--text-sm);
+  }
+  .wizard-found > svg {
+    flex: none;
+    color: var(--success);
+  }
+  .wizard-found small {
+    display: block;
+    margin-top: var(--space-1);
+    color: var(--text-secondary);
+  }
+  .wizard-candidate {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    width: 100%;
+    margin-bottom: var(--space-2);
+    padding: var(--space-2-5) var(--space-3);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    color: var(--text);
+    text-align: left;
+    cursor: pointer;
+    transition: box-shadow var(--duration-fast) var(--ease-out);
+  }
+  .wizard-candidate:hover:not(:disabled) {
+    border-color: var(--line-strong);
+    box-shadow: var(--shadow-inner);
+  }
+  .wizard-candidate:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+  .wizard-candidate img,
+  .wizard-candidate > svg {
+    flex: none;
+    width: 76px;
+    height: 56px;
+    border-radius: var(--radius-md);
+    background: var(--bg-subtle);
+    object-fit: contain;
+  }
+  .wizard-candidate > svg {
+    padding: var(--space-3) var(--space-5);
+    color: var(--text-subtle);
+  }
+  .wizard-candidate span {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .wizard-candidate strong {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+  }
+  .wizard-candidate small {
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+  }
+  .wizard-manual {
+    margin: var(--space-3) 0;
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    background: var(--surface-subtle);
+  }
+  .wizard-manual h4 {
+    margin-top: 0;
+  }
+  /* The factory specification panel in the bike form. */
+  .factory-resolver {
+    margin: var(--space-3) 0 var(--space-4);
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    background: var(--surface-subtle);
+    font-size: var(--text-sm);
+  }
+  .resolver-title,
+  .resolver-found {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+  .resolver-title {
+    justify-content: space-between;
+    font-weight: var(--weight-semibold);
+  }
+  .resolver-found {
+    color: var(--success);
+    font-weight: var(--weight-medium);
+  }
+  .resolver-candidates {
+    margin: var(--space-2) 0;
+    padding-left: var(--space-5);
+  }
+  .resolver-candidates li {
+    margin: var(--space-2) 0;
+  }
+  .resolver-candidates small {
+    display: block;
+    color: var(--text-muted);
+  }
+  .resolver-adapter {
+    padding: var(--space-2-5) 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .resolver-adapter p {
+    margin: var(--space-1) 0;
+  }
+  /* The resolver's progress, timeline and review. */
+  .resolver-progress {
+    margin: var(--space-3) 0;
+    font-size: var(--text-sm);
+  }
+  .resolver-progress > span {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+  .resolver-progress small {
+    margin-left: auto;
+    color: var(--text-muted);
+  }
+  .resolver-track {
+    height: 4px;
+    margin: var(--space-2) 0;
+    overflow: hidden;
+    border-radius: var(--radius-full);
+    background: var(--line);
+  }
+  .resolver-track i {
+    display: block;
+    width: 35%;
+    height: 100%;
+    border-radius: var(--radius-full);
+    background: var(--primary);
+    animation: resolver-loading 1.6s var(--ease-in-out) infinite;
+  }
+  .resolver-spinner {
+    flex: none;
+    animation: resolver-spin 1s linear infinite;
+  }
+  @keyframes resolver-loading {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(290%);
+    }
+  }
+  @keyframes resolver-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  .resolver-timeline {
+    min-width: 0;
+    margin: var(--space-2) 0;
+    color: var(--text-secondary);
+    font-size: var(--text-xs);
+  }
+  .resolver-timeline p {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1-5);
+    margin: 0;
+  }
+  .resolver-timeline summary {
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+  .resolver-timeline ol {
+    margin: var(--space-1-5) 0;
+    padding: 0;
+    list-style: none;
+  }
+  .resolver-timeline details > ol {
+    max-height: min(200px, 25dvh);
+    overflow: auto;
+  }
+  .resolver-timeline li {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-1-5);
+    padding: 3px 0;
+  }
+  .resolver-timeline li > svg {
+    flex: none;
+    color: var(--text-muted);
+  }
+  .resolver-timeline li > span {
+    flex: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .resolver-timeline small {
+    display: block;
+    color: var(--text-muted);
+  }
+  .resolver-timeline b {
+    font-weight: var(--weight-semibold);
+    font-variant-numeric: tabular-nums;
+  }
+  .resolver-timeline time {
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    white-space: nowrap;
+  }
+  .resolver-review,
+  .resolver-inspector {
+    min-width: 0;
+    margin: var(--space-2) 0;
+    font-size: var(--text-sm);
+  }
+  .resolver-review > summary {
+    color: var(--text-secondary);
+    font-weight: var(--weight-semibold);
+    cursor: pointer;
+  }
+  .resolver-review dl,
+  .resolver-inspector dl {
+    margin: var(--space-1-5) 0 0;
+    font-size: var(--text-xs);
+  }
+  .resolver-inspector dl {
+    max-height: 320px;
+    overflow: auto;
+  }
+  .resolver-review dl > div,
+  .resolver-inspector dl > div {
+    padding: var(--space-1) 0;
+    border-bottom: 1px solid var(--line);
+    overflow-wrap: anywhere;
+  }
+  .resolver-review dt,
+  .resolver-inspector dt {
+    color: var(--text-muted);
+  }
+  .resolver-review dd,
+  .resolver-inspector dd {
+    margin: 2px 0 0;
+  }
+  /* Step 2: parts by group, each a row of two combo boxes and delete. */
+  .wizard-add-picker {
+    margin: var(--space-2) 0;
+  }
+  .wizard-add-picker > summary,
+  .wizard-part-group > summary {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: 40px;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+    cursor: pointer;
+  }
+  .wizard-group-add {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1-5);
+    padding: var(--space-1) 0 var(--space-2);
+  }
+  .wizard-group-add .quiet {
+    border: 1px solid var(--control-line);
+    background: var(--control-bg);
+    color: var(--control-text);
+  }
+  .wizard-part-group {
+    border-bottom: 1px solid var(--line);
+  }
+  .wizard-part-group > summary small {
+    color: var(--text-muted);
+    font: var(--weight-regular) var(--text-xs) / 1 var(--font-mono);
+  }
+  .wizard-part {
+    display: grid;
+    grid-template-columns: minmax(90px, 1fr) minmax(130px, 2fr) auto;
+    align-items: end;
+    gap: 0 var(--space-2);
+    padding: var(--space-2) 0;
+    border-top: 1px solid var(--line);
+  }
+  .wizard-part .field {
+    margin: 0;
+  }
+  .wizard-part .field > label:first-child {
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+    font-weight: var(--weight-medium);
+  }
+  .wizard-part-extra {
+    grid-column: 1 / -1;
+    margin-top: var(--space-1-5);
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+  }
+  .wizard-part-extra > summary {
+    min-height: var(--control-sm);
+    cursor: pointer;
+  }
+  .wizard-part-extra .field {
+    margin: var(--space-2) 0;
+  }
+  /* A combo box: the field and a listbox popup under it. */
+  .compact-combo {
+    position: relative;
+  }
+  .combo-popup {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    left: 0;
+    z-index: var(--z-dropdown);
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    box-shadow: var(--shadow-lg);
+    touch-action: pan-y;
+  }
+  .combo-popup ul {
+    max-height: 192px;
+    margin: 0;
+    padding: var(--space-1);
+    overflow: auto;
+    overscroll-behavior: contain;
+    list-style: none;
+  }
+  .combo-popup li {
+    display: flex;
+    align-items: center;
+    min-height: 36px;
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-md);
+    font-size: var(--text-sm);
+    overflow-wrap: anywhere;
+    cursor: pointer;
+  }
+  .combo-popup li:hover,
+  .combo-popup [aria-selected="true"] {
+    background: var(--surface-hover);
+  }
+  .combo-popup > small {
+    display: block;
+    padding: var(--space-1) var(--space-2);
+    border-top: 1px solid var(--line);
+    color: var(--text-muted);
+    font-size: 11px;
+    overflow-wrap: anywhere;
+  }
+  /* Step 3: details, photos and privacy. */
+  .wizard-stock-preview {
+    margin: var(--space-2) 0 var(--space-3);
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+  }
+  .wizard-stock-preview img {
+    display: block;
+    width: 100%;
+    height: 140px;
+    background: var(--bg-subtle);
+    object-fit: contain;
+  }
+  .wizard-stock-preview small {
+    display: block;
+    padding: var(--space-1-5) var(--space-3);
+    border-top: 1px solid var(--line);
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+  }
+  .stock-empty {
+    padding: var(--space-8) var(--space-4);
+    background: var(--bg-subtle);
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    text-align: center;
+  }
+  .photo-candidates {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-2);
+    margin: var(--space-3) 0;
+  }
+  .photo-candidates:empty {
+    display: none;
+  }
+  .photo-candidates label {
+    position: relative;
+    display: grid;
+    gap: var(--space-1);
+    font-size: var(--text-xs);
+  }
+  .photo-candidates img {
+    width: 100%;
+    height: 96px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    background: var(--bg-subtle);
+    object-fit: contain;
+  }
+  .photo-candidates label:has(:checked) img {
+    border-color: var(--text);
+    box-shadow: 0 0 0 1px var(--text);
+  }
+  .photo-candidates input {
+    position: absolute;
+    top: var(--space-1-5);
+    left: var(--space-1-5);
+    z-index: 1;
+  }
+  .photo-candidates a {
+    color: var(--text-muted);
+  }
+  .photo-search .field {
+    margin: var(--space-3) 0;
+  }
+  .wizard-local-photos {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+  .wizard-local-photos > div {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .wizard-local-photos img {
+    width: 84px;
+    height: 64px;
+    border-radius: var(--radius-md);
+    object-fit: cover;
+  }
+  .wizard-suggestions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin: var(--space-2) 0;
+  }
+  .wizard-suggestions:empty {
+    display: none;
+  }
+  .wizard-optional {
+    margin: var(--space-3) 0;
+    padding-top: var(--space-2);
+    border-top: 1px dashed var(--line-dashed);
+  }
+  .wizard-optional > summary {
+    min-height: var(--control-sm);
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+    cursor: pointer;
+  }
+  .wizard-privacy {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 var(--space-4);
+    margin-top: var(--space-3);
+    padding-top: var(--space-2);
+    border-top: 1px solid var(--line);
+  }
+  .wizard-privacy .help {
+    grid-column: 1 / -1;
+    margin-top: var(--space-2);
+  }
+  @media (max-width: 640px) {
+    dialog[open]:has(.bike-wizard) {
+      height: calc(100dvh - 2 * var(--space-2));
+    }
+    .wizard-part {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) auto;
+    }
+    .wizard-privacy {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .photo-candidates {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .wizard-content,
+    .resolver-spinner {
+      animation: none;
+    }
+    .resolver-track i {
+      width: 100%;
+      opacity: 0.55;
+      animation: none;
+    }
+  }
+
+  /* ── Phones ─────────────────────────────────────────────────────────── */
+  @media (max-width: 700px) {
+    .detail {
+      padding-top: var(--space-3);
+    }
+    .bike-detail > * {
+      margin-bottom: var(--space-3);
+    }
+    .bike-heading {
+      grid-template-columns: minmax(0, 1fr);
+      gap: var(--space-2);
+    }
+    .bike-detail-title-row h1 {
+      font-size: var(--text-2xl);
+    }
+    .bike-heading .detail-actions {
+      justify-content: flex-start;
+      padding-top: 0;
+    }
+    .bike-heading .detail-actions .author-link {
+      max-width: 100%;
+    }
+    .spec-label {
+      display: none;
+    }
+    .tabs button {
+      min-height: 44px;
+      padding: 0 var(--space-2);
+    }
+    .tabs-row .add-component {
+      min-height: 44px;
+    }
+    .component-group-toggle {
+      min-height: 44px;
+    }
+    .compact-part-actions summary,
+    .order-actions .icon,
+    .part-menu .icon,
+    .thumb-actions .icon {
+      width: 44px;
+      min-width: 44px;
+      height: 44px;
+    }
+  }
+}

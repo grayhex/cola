@@ -1,29 +1,11 @@
 "use client";
-import SiteEmoji from "./site-emoji.jsx";
+import SiteIcon from "./site-icon.jsx";
 import Link from "next/link";
-import { ShoppingBag } from "lucide-react";
 import styles from "./global-header.module.css";
 import ThemeControl from "./theme-control.jsx";
 import { GlobalSearch, CompactDialog } from "./compact-ui.jsx";
 import { useState, useEffect, useRef } from "react";
-import {
-  Home,
-  UserRound,
-  Bell,
-  Users,
-  Trophy,
-  Shield,
-  LogOut,
-  Bike,
-  Route,
-  Info,
-  ChevronDown,
-  Menu,
-  Plus,
-  Heart,
-  BookOpen,
-  Save,
-} from "./icons.jsx";
+import { Bike, ChevronDown } from "./icons.jsx";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useSite } from "./site-provider.jsx";
 import { Avatar } from "./avatar.jsx";
@@ -122,7 +104,7 @@ export default function GlobalHeader({
       })),
     active = activeSection(pathname, search);
   const graphic = (name) => (
-    <SiteEmoji name={name} settings={settings} className="global-nav-graphic" />
+    <SiteIcon name={name} settings={settings} className="global-nav-graphic" />
   );
   const link = (item) => (
     <Link
@@ -167,29 +149,35 @@ export default function GlobalHeader({
             ))}
         </dl>
       )}
-      {[
-        {
-          href: user?.username
-            ? profilePath(user.username)
-            : "/account?tab=profile",
-          label: "Мой профиль",
-          icon: "profile",
-        },
-        { href: "/account?tab=bikes", label: "Мои велосипеды", icon: "bike" },
-        { href: "/account?tab=rides", label: "Мои покатушки", icon: "rides" },
-        { href: "/articles?own=1", label: "Мои статьи", icon: "articles" },
-        {
-          href: "/account?tab=achievements",
-          label: "Достижения",
-          icon: "records",
-        },
-        { href: "/feed", label: "Подписки", icon: "subscriptions" },
-        { href: "/saved", label: "Сохранённое", icon: "saved" },
-        { href: "/notifications", label: "Уведомления", icon: "notifications" },
-        ...(user?.role === "admin"
-          ? [{ href: "/admin", label: "Админка", icon: "admin" }]
-          : []),
-      ].map(link)}
+      <div className="nav-account-links">
+        {[
+          {
+            href: user?.username
+              ? profilePath(user.username)
+              : "/account?tab=profile",
+            label: "Мой профиль",
+            icon: "profile",
+          },
+          { href: "/account?tab=bikes", label: "Мои велосипеды", icon: "bike" },
+          { href: "/account?tab=rides", label: "Мои покатушки", icon: "rides" },
+          { href: "/articles?own=1", label: "Мои статьи", icon: "articles" },
+          {
+            href: "/account?tab=achievements",
+            label: "Достижения",
+            icon: "records",
+          },
+          { href: "/feed", label: "Подписки", icon: "subscriptions" },
+          { href: "/saved", label: "Сохранённое", icon: "saved" },
+          {
+            href: "/notifications",
+            label: "Уведомления",
+            icon: "notifications",
+          },
+          ...(user?.role === "admin"
+            ? [{ href: "/admin", label: "Админка", icon: "admin" }]
+            : []),
+        ].map(link)}
+      </div>
       <button
         className="nav-menu-link"
         type="button"
@@ -221,7 +209,7 @@ export default function GlobalHeader({
       <header className={`global-header ${styles.header}`}>
         <Link className="brand" href="/" aria-label="ColaBike — главная">
           <span className="brand-mark" aria-hidden="true">
-            <Bike size={26} />
+            <Bike size={18} strokeWidth={2} />
           </span>
           <span>ColaBike</span>
         </Link>
@@ -231,6 +219,7 @@ export default function GlobalHeader({
               section.id === "about" ? (
                 <Link
                   key={section.id}
+                  data-section="about"
                   className={
                     "nav-trigger" + (active === "about" ? " active" : "")
                   }
@@ -243,6 +232,7 @@ export default function GlobalHeader({
               ) : (
                 <NavPopover
                   key={section.id}
+                  section={section.id}
                   label={t("Подразделы") + ": " + section.label}
                   href={
                     {
@@ -260,11 +250,7 @@ export default function GlobalHeader({
                     </>
                   }
                   active={active === section.id}
-                  trigger={
-                    <>
-                      <ChevronDown size={13} aria-hidden="true" />
-                    </>
-                  }
+                  trigger={<ChevronDown size={14} aria-hidden="true" />}
                 >
                   {sectionLinks(section.id, user).map(link)}
                 </NavPopover>
@@ -318,7 +304,7 @@ export default function GlobalHeader({
                 loadStats();
               }}
             >
-              <SiteEmoji name="menu" />
+              <SiteIcon name="menu" />
             </button>
           </div>
         </div>

@@ -482,7 +482,7 @@ export default function Market({
   return (
     <>
       <SocialHeader user={user} />
-      <main className="social-page">
+      <main className="page">
         {error && (
           <p role="alert" className="error">
             {error}

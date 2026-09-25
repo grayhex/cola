@@ -377,7 +377,7 @@ export default function AuthForm({ mode, busy, onSubmit, switchMode }) {
       )}
       {authError && <p role="alert">{authError}</p>}
       <button
-        className="button full"
+        className="button block"
         disabled={busy || submitting || (mode === "register" && !legal?.ready)}
       >
         {busy

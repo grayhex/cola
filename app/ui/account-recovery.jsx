@@ -59,7 +59,7 @@ export function ForgotPassword() {
             для нового пароля. Ссылка действует 1 час. Письма нет — проверьте
             папку «Спам» или запросите ещё раз через несколько минут.
           </p>
-          <Link className="button secondary full" href="/login">
+          <Link className="button secondary block" href="/login">
             Вернуться ко входу
           </Link>
         </>
@@ -102,7 +102,7 @@ export function ForgotPassword() {
           </Field>
           {error && <p role="alert">{error}</p>}
           <button
-            className="button full"
+            className="button block"
             disabled={state === "busy"}
             aria-busy={state === "busy"}
           >
@@ -134,7 +134,7 @@ export function ResetPassword() {
           Ссылка недействительна или устарела: она работает один раз и 1 час.
           Запросите новое письмо.
         </p>
-        <Link className="button full" href="/forgot-password">
+        <Link className="button block" href="/forgot-password">
           Запросить новую ссылку
         </Link>
       </RecoveryLayout>
@@ -146,7 +146,7 @@ export function ResetPassword() {
           Готово: вы вошли с новым паролем. Остальные устройства вышли из
           аккаунта.
         </p>
-        <Link className="button full" href="/account">
+        <Link className="button block" href="/account">
           Открыть кабинет
         </Link>
       </RecoveryLayout>
@@ -215,7 +215,7 @@ export function ResetPassword() {
         </Field>
         {error && <p role="alert">{error}</p>}
         <button
-          className="button full"
+          className="button block"
           disabled={state === "busy"}
           aria-busy={state === "busy"}
         >
@@ -252,7 +252,7 @@ export function VerifyEmail() {
             Адрес подтверждён. Теперь по нему можно восстановить доступ к
             аккаунту.
           </p>
-          <Link className="button full" href="/account">
+          <Link className="button block" href="/account">
             Открыть кабинет
           </Link>
         </>
@@ -263,7 +263,58 @@ export function VerifyEmail() {
             Ссылка недействительна или устарела. Отправьте письмо ещё раз из
             кабинета: Аккаунт → Почта.
           </p>
-          <Link className="button full" href="/account?tab=account">
+          <Link className="button block" href="/account?tab=account">
+            Открыть настройки аккаунта
+          </Link>
+        </>
+      )}
+    </RecoveryLayout>
+  );
+}
+
+// The link from an address-change letter (#70): applies the new address.
+export function ConfirmEmailChange() {
+  const token = useLinkToken();
+  const [state, setState] = useState({ step: "checking" });
+  const started = useRef(false);
+  useEffect(() => {
+    if (token === undefined || started.current) return;
+    started.current = true;
+    if (!token) {
+      setState({ step: "invalid" });
+      return;
+    }
+    socialApi("account/email/confirm", "POST", { token }).then(
+      (r) => setState({ step: "done", email: r.email }),
+      (e) =>
+        setState({
+          step: e.status === 409 ? "taken" : "invalid",
+          message: e.message,
+        }),
+    );
+  }, [token]);
+  return (
+    <RecoveryLayout icon={MailCheck} title="Смена адреса почты">
+      {state.step === "checking" && <p role="status">Проверяем ссылку…</p>}
+      {state.step === "done" && (
+        <>
+          <p className={styles.done} role="status">
+            Готово: теперь аккаунт привязан к адресу {state.email}. Входите с
+            ним.
+          </p>
+          <Link className="button block" href="/account?tab=account">
+            Открыть настройки аккаунта
+          </Link>
+        </>
+      )}
+      {(state.step === "invalid" || state.step === "taken") && (
+        <>
+          <p className={styles.done} role="alert">
+            {state.step === "taken"
+              ? state.message
+              : "Ссылка недействительна или устарела. Запросите смену адреса ещё раз в кабинете: Аккаунт → Почта."}
+          </p>
+          <Link className="button block" href="/account?tab=account">
             Открыть настройки аккаунта
           </Link>
         </>

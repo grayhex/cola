@@ -1,72 +1,103 @@
+/* Site footer (#124, #127): one line under a hairline — the administrator's
+   logos on the left, ColaBike in the middle of the page, versions on the
+   right. On narrow screens the three parts stack, centred. */
 .footer {
-  border-top: 1px solid var(--border);
-  background: var(--surface);
+  border-top: 1px solid var(--line-soft);
+  background: var(--bg);
 }
 .inner {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 16px 28px;
-  max-width: var(--content-width);
-  margin: auto;
-  padding: 26px 24px;
-  font-size: 14px;
-  color: var(--text-muted);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  gap: var(--space-5);
+  max-width: calc(var(--container) + 2 * var(--gutter));
+  margin: 0 auto;
+  padding: var(--space-8) var(--gutter) var(--space-10);
+  text-align: center;
 }
-/* Admin images on the left of the footer (#107): fixed height, natural
-   width up to a limit, never stretched. */
-.images {
+@media (min-width: 1024px) {
+  .inner {
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    justify-items: stretch;
+    gap: var(--space-6);
+    padding-block: var(--space-10);
+  }
+}
+.logos {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
+  justify-content: center;
+  gap: var(--space-3);
   min-width: 0;
 }
-.images img {
+.logos:empty {
+  display: none;
+}
+@media (min-width: 1024px) {
+  .logos {
+    justify-content: flex-start;
+  }
+  .logos:empty {
+    display: flex;
+  }
+}
+.logo {
+  display: inline-flex;
+  border-radius: var(--radius-lg);
+}
+/* Fixed height, natural width up to a limit, never stretched. */
+.logo img {
   display: block;
   width: auto;
   max-width: 160px;
-  height: 40px;
+  height: 72px;
   object-fit: contain;
+  transition: opacity var(--duration-fast) var(--ease-out);
+}
+@media (min-width: 1024px) {
+  .logo img {
+    max-width: 220px;
+    height: 100px;
+  }
+}
+a.logo:hover img {
+  opacity: 0.8;
+}
+.brandLine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  gap: var(--space-1) var(--space-3);
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
 }
 .brand {
-  font-size: 18px;
-  font-weight: 700;
   color: var(--text);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
 }
-.inner nav {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px 20px;
-  margin-left: auto;
-}
-.inner a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 36px;
-}
-.inner a:hover {
-  text-decoration: underline;
-}
-@media (max-width: 700px) {
-  .inner {
-    padding: 20px 16px;
-    gap: 8px 16px;
-  }
-  .images img {
-    max-width: 120px;
-    height: 32px;
-  }
-  .inner nav {
-    width: 100%;
-    margin: 0;
-    gap: 6px 20px;
-  }
-  .inner a {
+/* Touch screens: the name is a 44px target like the links above (#119). */
+@media (pointer: coarse), (max-width: 700px) {
+  .brand {
+    display: inline-flex;
+    align-items: center;
     min-height: 44px;
   }
 }
-
-.inner :global(.build-versions) {
-  font-size: 12px;
+.versions {
+  min-width: 0;
+  color: var(--text-muted);
+}
+@media (min-width: 1024px) {
+  .versions {
+    text-align: right;
+  }
+}
+.versions :global(.build-versions) {
+  font: var(--weight-regular) var(--text-xs) / var(--leading-snug)
+    var(--font-mono);
 }

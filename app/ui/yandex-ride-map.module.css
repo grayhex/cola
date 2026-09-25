@@ -7,8 +7,8 @@
   height: clamp(280px, 45vw, 420px);
   overflow: hidden;
   border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--wash);
+  border-radius: var(--radius-lg);
+  background: var(--surface-subtle);
 }
 .canvas {
   position: absolute;
@@ -44,8 +44,8 @@
   padding: 6px 10px;
   border: 1px solid var(--line);
   border-radius: 4px;
-  color: var(--ink);
-  background: var(--paper);
+  color: var(--text);
+  background: var(--surface);
   cursor: pointer;
 }
 .controls button:focus-visible {

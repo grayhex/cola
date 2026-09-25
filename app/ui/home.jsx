@@ -6,8 +6,6 @@ import {
   CalendarDays,
   Bike,
   ArrowRight,
-  Heart,
-  MessageCircle,
   Trophy,
   BookOpen,
   Route,
@@ -18,15 +16,13 @@ import {
 import GlobalHeader from "./global-header.jsx";
 import { SocialFooter } from "./social-primitives.jsx";
 import { useSite } from "./site-provider.jsx";
-import { useBikeReaction } from "./use-bike-reaction.js";
-import { BikeLabels } from "./bike-labels.jsx";
+import BikeCard from "./bike-card.jsx";
 import { ContentTypeLabel } from "./content-label.jsx";
 import labelStyles from "./content-label.module.css";
 import SearchBox from "./search-box.jsx";
 import SmallImage from "./small-image.jsx";
-import { photoVariants } from "./bike-photo.jsx";
 import styles from "./home.module.css";
-import { profilePath, publicPath } from "../../lib/public-urls.js";
+import { publicPath } from "../../lib/public-urls.js";
 const markers = {
   market: ShoppingBag,
   planned: CalendarDays,
@@ -40,9 +36,11 @@ function eventText(e) {
   if (e.type === "bike") return `${e.author} добавил ${e.title}`;
   if (e.type === "ride")
     return `${e.author} · ${e.title}${e.distanceM ? ` · ${Math.round(e.distanceM / 1000)} км` : ""}`;
-  if (e.type === "achievement") return `${e.author} · ${e.title}`;
   return `${e.author} · ${e.title}`;
 }
+// The community's last events in a slow line (Pricing runs a similar
+// marquee): it pauses on hover, focus and the button, and stops for
+// reduced motion. The copy for the seamless loop is inert.
 export function ActivityTicker({ events = [] }) {
   const [paused, setPaused] = useState(false);
   const list = (duplicate = false) => (
@@ -105,7 +103,7 @@ export function ActivityTicker({ events = [] }) {
             aria-pressed={paused}
             onClick={() => setPaused((v) => !v)}
           >
-            {paused ? <Play size={15} /> : <Pause size={15} />}
+            {paused ? <Play size={14} /> : <Pause size={14} />}
           </button>
         </>
       ) : (
@@ -119,71 +117,7 @@ export function ActivityTicker({ events = [] }) {
 }
 // Photo-first cards: three per row on desktop, two on tablets and phones.
 const trendingSizes = "(max-width: 1050px) 50vw, 400px";
-function TrendingBike({ bike, user }) {
-  const reaction = useBikeReaction(bike, user),
-    href = publicPath("bike", bike),
-    photo = bike.photos[0];
-  return (
-    <article className={styles.bike} data-bike-id={bike.id}>
-      <Link
-        href={href}
-        className={styles.photoLink}
-        aria-label={"Открыть " + bike.name}
-      >
-        <SmallImage
-          className={styles.photo}
-          src={photo ? `/api/photos/${photo.id}?width=640` : null}
-          srcSet={photo ? photoVariants(photo.id) : undefined}
-          sizes={trendingSizes}
-        />
-      </Link>
-      <div className={styles.bikeBody}>
-        <h3>
-          <Link href={href}>{bike.name}</Link>
-        </h3>
-        <p className={styles.metadata}>
-          {bike.author?.username ? (
-            <Link prefetch={false} href={profilePath(bike.author.username)}>
-              {bike.author.name}
-            </Link>
-          ) : (
-            bike.author?.name
-          )}
-        </p>
-        <BikeLabels bike={bike} />
-        <div className={styles.signals}>
-          <button
-            type="button"
-            disabled={bike.is_owner}
-            aria-label={"Нравится: " + reaction.likes}
-            aria-pressed={reaction.liked}
-            aria-busy={reaction.pending}
-            onClick={reaction.toggle}
-          >
-            <Heart size={14} fill={reaction.liked ? "currentColor" : "none"} />
-            {reaction.likes ?? 0}
-          </button>
-          <Link
-            href={href + "#discussion"}
-            aria-label={"Комментарии: " + (bike.comments || 0)}
-          >
-            <MessageCircle size={14} />
-            {bike.comments || 0}
-          </Link>
-          {bike.badges?.[0] && (
-            <span title={bike.badges[0].name}>
-              <Trophy size={13} />
-              {bike.badges[0].name}
-            </span>
-          )}
-        </div>
-        {reaction.error && (
-          <p role="alert">Лайк не сохранился. Попробуйте ещё раз.</p>
-        )}
-      </div>
-    </article>
-  );
-}
+const units = { weight: " кг", price: " ₽", likes: " лайков" };
 const emptyData = { popular: [], events: [], content: [], records: [] };
 export default function Home() {
   const { settings, viewer: user } = useSite(),
@@ -216,202 +150,233 @@ export default function Home() {
     <>
       <GlobalHeader user={user} />
       <main className={styles.home}>
-        <section
-          className={styles.hero}
-          aria-labelledby="hero-title"
-          style={{
-            "--hero-light": settings.heroBackgroundLight,
-            "--hero-dark": settings.heroBackgroundDark,
-          }}
-        >
-          <div className={styles.heroContent}>
-            <div className={styles.heroCopy}>
-              <div className={styles.heroTitle}>
-                <SmallImage
-                  src={
-                    settings.heroImageId
-                      ? "/api/assets/" + settings.heroImageId
-                      : null
-                  }
-                  className={styles.heroImage}
-                  alt=""
-                  priority
-                />
-                <h1 id="hero-title">
-                  {settings.heroHeadline.split("\n").map((line, i) => (
-                    <span key={i}>{line}</span>
-                  ))}
-                </h1>
-              </div>
-              <p className={styles.description}>{settings.heroDescription}</p>
-              <div className={styles.heroSearch} data-home-search>
-                <SearchBox hero />
-              </div>
-              <div className={styles.heroLinks}>
-                <Link href="/bikes">
-                  Смотреть велосипеды <ArrowRight size={14} />
-                </Link>
-                <span>или</span>
-                <Link href="/account?tab=bikes&action=add">добавить свой</Link>
-              </div>
-            </div>
-            <div
-              className={styles.animationStage}
-              data-hero-animation
-              aria-hidden="true"
-            >
-              {settings.heroAnimationLightId && (
-                <img
-                  className={styles.animationLight}
-                  src={"/api/assets/" + settings.heroAnimationLightId}
-                  alt=""
-                />
-              )}
-              {(settings.heroAnimationDarkId ||
-                settings.heroAnimationLightId) && (
-                <img
-                  className={styles.animationDark}
-                  src={
-                    "/api/assets/" +
-                    (settings.heroAnimationDarkId ||
-                      settings.heroAnimationLightId)
-                  }
-                  alt=""
-                />
-              )}
-              <span className={styles.stageLabel}>COLABIKE / В ДВИЖЕНИИ</span>
-            </div>
-          </div>
-          <ActivityTicker events={content.events} />
-        </section>
-        {error && (
-          <div className={styles.loadError} role="alert">
-            {error}{" "}
-            <button className="quiet" onClick={() => setRevision((v) => v + 1)}>
-              Повторить
-            </button>
-          </div>
-        )}
-        <section className={styles.section} aria-labelledby="popular-heading">
-          <div className={styles.sectionTitle}>
-            <h2 id="popular-heading">Популярные велосипеды</h2>
-          </div>
-          <p className={styles.sectionNote}>
-            Сборки, которые отмечает сообщество
-          </p>
-          <div className={styles.trending} aria-busy={!data && !error}>
-            {content.popular.map((b) => (
-              <TrendingBike key={b.id} bike={b} user={user} />
-            ))}
-            {!data &&
-              !error &&
-              Array.from({ length: 6 }, (_, i) => (
-                <div className={styles.skeleton} key={i} aria-hidden="true" />
-              ))}
-          </div>
-          {data && !content.popular.length && (
-            <p className={styles.empty}>
-              Пока нет публичных велосипедов. Ваш может стать первым.
-            </p>
-          )}
-          <Link className={styles.sectionLink} href="/bikes?sort=popular">
-            Смотреть все велосипеды <ArrowRight size={16} />
-          </Link>
-        </section>
-        <section className={styles.section} aria-labelledby="community-heading">
-          <div className={styles.sectionBar}>
-            <h2 id="community-heading">Что нового</h2>
-            <div>
-              <Link href="/journal">Все записи →</Link>
-              <Link href="/rides">Все покатушки →</Link>
-              <Link href="/market">Рынок →</Link>
-            </div>
-          </div>
-          <div className={styles.contentGrid}>
-            {content.content.map((item) => {
-              const Icon = markers[item.type] || BookOpen;
-              return (
-                <article className={`${styles.story} ${labelStyles.eventCard}`} key={item.id} data-event={item.type}>
-                  <div className={styles.storyKind}>
-                    <ContentTypeLabel type={item.type}>
-                      <Icon size={16} aria-hidden="true" />
-                    </ContentTypeLabel>
-                    <span>· {item.author}</span>
-                  </div>
-                  <h3>
-                    <Link href={item.href}>{item.title}</Link>
-                  </h3>
-                  {item.excerpt && <p>{item.excerpt}</p>}
-                  {item.distanceM != null && (
-                    <span className={styles.distance}>
-                      {(item.distanceM / 1000).toLocaleString("ru-RU", {
-                        maximumFractionDigits: 1,
-                      })}{" "}
-                      км
-                    </span>
-                  )}
-                  <Link className={styles.readMore} href={item.href}>
-                    Открыть <ArrowRight size={14} />
-                  </Link>
-                </article>
-              );
-            })}
-          </div>
-          {data && !content.content.length && (
-            <p className={styles.empty}>
-              Здесь появятся новые истории, маршруты и сборки.
-            </p>
-          )}
-        </section>
-        <section className={styles.section} aria-labelledby="records-heading">
-          <div className={styles.sectionBar}>
-            <h2 id="records-heading">Рекорды</h2>
-            <Link href="/records">Все рекорды →</Link>
-          </div>
-          <div className={styles.records}>
-            {content.records.map((record) => (
-              <article className={styles.record} key={record.key}>
-                <Trophy size={19} />
-                <div>
-                  <p>{record.name}</p>
-                  <Link href={publicPath("bike", record.holder)}>
-                    {record.holder.name}
-                  </Link>
-                  <small>
-                    {record.holder.value.toLocaleString("ru-RU")}
-                    {record.metric === "weight"
-                      ? " кг"
-                      : record.metric === "price"
-                        ? " ₽"
-                        : record.metric === "likes"
-                          ? " лайков"
-                          : ""}
-                  </small>
+        {/* Marketing intro (DESIGN.md → Layout): the ruled column with the
+            headline, search and the administrator's pictures and colours. */}
+        <section className="frame" aria-labelledby="hero-title">
+          <div
+            className={"frame-inner " + styles.hero}
+            style={{
+              "--hero-light": settings.heroBackgroundLight,
+              "--hero-dark": settings.heroBackgroundDark,
+            }}
+          >
+            <div className={styles.heroContent}>
+              <div className={styles.heroCopy}>
+                <div className={styles.heroTitle}>
+                  <SmallImage
+                    src={
+                      settings.heroImageId
+                        ? "/api/assets/" + settings.heroImageId
+                        : null
+                    }
+                    className={styles.heroImage}
+                    alt=""
+                    priority
+                  />
+                  <h1 id="hero-title">
+                    {settings.heroHeadline.split("\n").map((line, i) => (
+                      <span key={i}>{line}</span>
+                    ))}
+                  </h1>
                 </div>
-              </article>
-            ))}
+                <p className={styles.description}>
+                  {settings.heroDescription}
+                </p>
+                <div className={styles.heroSearch} data-home-search>
+                  <SearchBox hero />
+                </div>
+                <div className={styles.heroLinks}>
+                  <Link className="text-link" href="/bikes">
+                    Смотреть велосипеды <ArrowRight size={14} />
+                  </Link>
+                  <span>или</span>
+                  <Link className="text-link" href="/account?tab=bikes&action=add">
+                    добавить свой
+                  </Link>
+                </div>
+              </div>
+              <div
+                className={styles.animationStage}
+                data-hero-animation
+                aria-hidden="true"
+              >
+                {settings.heroAnimationLightId && (
+                  <img
+                    className={styles.animationLight}
+                    src={"/api/assets/" + settings.heroAnimationLightId}
+                    alt=""
+                  />
+                )}
+                {(settings.heroAnimationDarkId ||
+                  settings.heroAnimationLightId) && (
+                  <img
+                    className={styles.animationDark}
+                    src={
+                      "/api/assets/" +
+                      (settings.heroAnimationDarkId ||
+                        settings.heroAnimationLightId)
+                    }
+                    alt=""
+                  />
+                )}
+                <span className={styles.stageLabel}>colabike / в движении</span>
+              </div>
+            </div>
+            <ActivityTicker events={content.events} />
           </div>
-          {data && !content.records.length && (
-            <p className={styles.empty}>
-              Рекорды появятся, когда велосипеды выполнят условия рейтинга.{" "}
-              <Link href="/records">Как это работает →</Link>
+        </section>
+        <div className={"page " + styles.sections}>
+          {error && (
+            <p className="error" role="alert">
+              {error}{" "}
+              <button
+                className="quiet"
+                onClick={() => setRevision((v) => v + 1)}
+              >
+                Повторить
+              </button>
             </p>
           )}
-        </section>
-        <aside className={styles.about}>
-          <Wrench size={22} />
-          <p>
-            У каждой сборки есть своя история.
-            <br />
-            <span>
-              ColaBike помогает сохранить её — от первой детали до нового
-              маршрута.
+          <section className="section" aria-labelledby="popular-heading">
+            <div className="section-head">
+              <h2 id="popular-heading">Популярные велосипеды</h2>
+              <Link className="text-link" href="/bikes?sort=popular">
+                Все велосипеды <ArrowRight size={14} />
+              </Link>
+            </div>
+            <div className={styles.trending} aria-busy={!data && !error}>
+              {content.popular.map((b) => (
+                <BikeCard
+                  key={b.id}
+                  bike={b}
+                  user={user}
+                  headingLevel={3}
+                  sizes={trendingSizes}
+                />
+              ))}
+              {!data &&
+                !error &&
+                Array.from({ length: 6 }, (_, i) => (
+                  <div
+                    className={"skeleton " + styles.skeleton}
+                    key={i}
+                    aria-hidden="true"
+                  />
+                ))}
+            </div>
+            {data && !content.popular.length && (
+              <p className="empty-state">
+                Пока нет публичных велосипедов. Ваш может стать первым.
+              </p>
+            )}
+          </section>
+          <section className="section" aria-labelledby="community-heading">
+            <div className="section-head">
+              <h2 id="community-heading">Что нового</h2>
+              <nav className={styles.sectionLinks} aria-label="Разделы">
+                <Link className="text-link" href="/journal">
+                  Журнал
+                </Link>
+                <Link className="text-link" href="/rides">
+                  Покатушки
+                </Link>
+                <Link className="text-link" href="/market">
+                  Рынок
+                </Link>
+              </nav>
+            </div>
+            <div className="list-grid">
+              {content.content.map((item) => {
+                const Icon = markers[item.type] || BookOpen;
+                return (
+                  <article
+                    className={`item-card ${styles.story} ${labelStyles.eventCard}`}
+                    key={item.id}
+                    data-event={item.type}
+                  >
+                    <div className={styles.storyHead}>
+                      <ContentTypeLabel type={item.type}>
+                        <Icon size={12} aria-hidden="true" />
+                      </ContentTypeLabel>
+                      <span className="meta">
+                        <span>{item.author}</span>
+                        {item.distanceM != null && (
+                          <span className="mono">
+                            {(item.distanceM / 1000).toLocaleString("ru-RU", {
+                              maximumFractionDigits: 1,
+                            })}{" "}
+                            км
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                    <h3>
+                      <Link className="item-link" href={item.href}>
+                        {item.title}
+                      </Link>
+                    </h3>
+                    {item.excerpt && <p>{item.excerpt}</p>}
+                  </article>
+                );
+              })}
+            </div>
+            {data && !content.content.length && (
+              <p className="empty-state">
+                Здесь появятся новые истории, маршруты и сборки.
+              </p>
+            )}
+          </section>
+          <section className="section" aria-labelledby="records-heading">
+            <div className="section-head">
+              <h2 id="records-heading">Рекорды</h2>
+              <Link className="text-link" href="/records">
+                Все рекорды <ArrowRight size={14} />
+              </Link>
+            </div>
+            <div className={styles.records}>
+              {content.records.map((record) => (
+                <article className={"item-card " + styles.record} key={record.key}>
+                  <span className={styles.recordIcon} aria-hidden="true">
+                    <Trophy size={16} />
+                  </span>
+                  <div>
+                    <p>{record.name}</p>
+                    <Link className="item-link" href={publicPath("bike", record.holder)}>
+                      {record.holder.name}
+                    </Link>
+                    <small className="mono">
+                      {record.holder.value.toLocaleString("ru-RU")}
+                      {units[record.metric] || ""}
+                    </small>
+                  </div>
+                </article>
+              ))}
+            </div>
+            {data && !content.records.length && (
+              <p className="empty-state">
+                Рекорды появятся, когда велосипеды выполнят условия рейтинга.{" "}
+                <Link className="text-link" href="/records">
+                  Как это работает
+                </Link>
+              </p>
+            )}
+          </section>
+          <aside className={styles.about}>
+            <span className="mk-cell-icon" aria-hidden="true">
+              <Wrench size={20} />
             </span>
-          </p>
-          <Link href="/about">
-            О проекте <ArrowRight size={16} />
-          </Link>
-        </aside>
+            <p>
+              <strong>У каждой сборки есть своя история.</strong>
+              <span>
+                ColaBike помогает сохранить её — от первой детали до нового
+                маршрута.
+              </span>
+            </p>
+            <Link className="button secondary" href="/about">
+              О проекте <ArrowRight size={16} />
+            </Link>
+          </aside>
+        </div>
       </main>
       <SocialFooter />
     </>

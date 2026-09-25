@@ -11,6 +11,3 @@ export function ContentTypeLabel({ type, children }) {
 export function LabelRow({ className = "", children, ...props }) {
   return <div {...props} className={`${styles.row} ${className}`}>{children}</div>;
 }
-export function PhotoActions({ children }) {
-  return <div className={styles.photoActions} data-bike-photo-actions>{children}</div>;
-}

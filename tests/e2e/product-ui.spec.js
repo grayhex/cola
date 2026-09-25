@@ -1,16 +1,17 @@
 import { testConsents } from "../fixtures/legal.js";
+import { pageOverflow, describeOverflow } from "../fixtures/overflow.js";
 import { test, expect } from "@playwright/test";
 import pg from "pg";
 import { randomUUID } from "node:crypto";
 import { gpx, loop } from "../ride-fixtures.js";
 const origin = process.env.TEST_ORIGIN || "http://localhost:3100";
 const password = "product-ui-browser-secret";
-async function noOverflow(page) {
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= innerWidth + 1,
-    ),
-  ).toBe(true);
+// The page fits the screen; a failure names what sticks out.
+async function noOverflow(page, where = page.url()) {
+  const overflow = await pageOverflow(page);
+  expect(overflow, overflow && `${where}: ${describeOverflow(overflow)}`).toBe(
+    null,
+  );
 }
 
 test("login and registration are complete forms, errors preserve input, passwords are confirmed", async ({
@@ -309,7 +310,7 @@ test("all product routes and account sections share clear light/dark UI; compose
           if (name === "post")
             await expect(page.locator(".comment-body")).toHaveCount(2);
           await page.evaluate(() => document.fonts.ready);
-          await noOverflow(page);
+          await noOverflow(page, name + " · " + mode);
           await page.screenshot({
             path: info.outputPath(name + "-" + mode + ".png"),
             fullPage: true,

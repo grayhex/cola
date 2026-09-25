@@ -19,7 +19,7 @@ export default function Rides() {
   return (
     <>
       <SocialHeader user={user} />
-      <main className="social-page">
+      <main className="page">
         <div className="section-heading">
           <div>
             <h1>Покатушки</h1>

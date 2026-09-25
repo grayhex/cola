@@ -1,0 +1,322 @@
+/* The game (#127): award art, badge shelves, community reactions, locked
+   awards, completeness meters and the Hall of Fame heading. Record cards
+   themselves live in records.module.css. */
+@layer tokens, base, components, layout, features;
+@layer features {
+  /* Award and record art owns its box: photo rules never size it. */
+  .game-art {
+    display: inline-flex;
+    flex: 0 0 var(--game-art-size, 40px);
+    align-items: center;
+    justify-content: center;
+    width: var(--game-art-size, 40px);
+    min-width: var(--game-art-size, 40px);
+    max-width: var(--game-art-size, 40px);
+    height: var(--game-art-size, 40px);
+    max-height: var(--game-art-size, 40px);
+    overflow: hidden;
+    color: var(--accent-text);
+  }
+  .game-art > img,
+  .game-art > svg {
+    display: block;
+    flex: none;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    height: 100%;
+    max-height: 100%;
+    object-fit: contain;
+  }
+
+  /* ── Awards on the bike page and in profiles ────────────────────────── */
+  .bike-game {
+    display: grid;
+    gap: var(--space-3);
+    min-width: 0;
+  }
+  .badge-shelf {
+    display: grid;
+    gap: var(--space-2);
+  }
+  .badge-shelf > details > summary {
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    cursor: pointer;
+  }
+  .badge-shelf h3 {
+    margin-top: var(--space-2);
+    font-size: var(--text-base);
+  }
+  .award-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1-5);
+  }
+  .award {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1-5);
+    min-width: 0;
+    max-width: 100%;
+    padding: var(--space-1) var(--space-2-5) var(--space-1) var(--space-1);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-full);
+    background: var(--surface);
+    color: var(--text);
+    font-size: var(--text-sm);
+    overflow-wrap: anywhere;
+  }
+  .award small {
+    color: var(--text-muted);
+    font: var(--weight-regular) 11px / 1 var(--font-mono);
+  }
+  /* A record held right now: the brand tint. */
+  .award.current {
+    border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+    background: var(--accent-soft);
+  }
+  a.award:hover {
+    box-shadow: var(--shadow-inner);
+  }
+  /* Wild / clean / dream: pill toggles with a count. */
+  .reaction-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1-5) var(--space-2);
+  }
+  .reaction-row button {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1-5);
+    min-height: var(--control-md);
+    padding: 0 var(--space-3);
+    border: 1px solid var(--control-line);
+    border-radius: var(--radius-full);
+    background: var(--control-bg);
+    color: var(--control-text);
+    font-size: var(--text-sm);
+    cursor: pointer;
+  }
+  .reaction-row button:hover:not(:disabled) {
+    box-shadow: var(--shadow-inner);
+  }
+  .reaction-row button b {
+    color: var(--text-muted);
+    font: var(--weight-semibold) var(--text-xs) / 1 var(--font-mono);
+  }
+  .reaction-row button[aria-pressed="true"] {
+    border-color: color-mix(in srgb, var(--accent) 60%, var(--control-line));
+    background: var(--accent-soft);
+  }
+  .reaction-row button:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+  .reaction-row > a {
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  /* Awards still ahead, with progress. */
+  .locked-awards,
+  .game-setting-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-2-5);
+  }
+  .locked-awards > div {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-2-5);
+    min-width: 0;
+    padding: var(--space-2-5) var(--space-3);
+    border: 1px dashed var(--line-dashed);
+    border-radius: var(--radius-lg);
+  }
+  .locked-award-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .locked-awards strong {
+    font-size: var(--text-sm);
+  }
+  .locked-awards p {
+    margin: 2px 0 var(--space-1-5);
+    color: var(--text-secondary);
+    font-size: var(--text-xs);
+  }
+  .locked-awards progress {
+    display: block;
+    width: 100%;
+    height: 4px;
+    accent-color: var(--accent);
+  }
+  .locked-awards small {
+    color: var(--text-muted);
+    font: var(--weight-regular) 11px / 1.4 var(--font-mono);
+  }
+  /* Completeness and upgrade meters. */
+  .bike-meters {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-3);
+    margin-top: var(--space-2);
+  }
+  .bike-meter > span {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-1);
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+  }
+  .bike-meter small {
+    font-family: var(--font-mono);
+  }
+  .bike-meter [role="progressbar"] {
+    height: 3px;
+    margin-top: var(--space-1);
+    overflow: hidden;
+    border-radius: var(--radius-full);
+    background: var(--line);
+  }
+  .bike-meter i {
+    display: block;
+    height: 100%;
+    background: var(--accent);
+    transition: width var(--duration-slow) var(--ease-out);
+  }
+  .bike-meter.complete i {
+    background: var(--text-muted);
+  }
+
+  /* ── Hall of Fame ───────────────────────────────────────────────────── */
+  .hall-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--space-2) var(--space-6);
+  }
+  .hall-heading h1 {
+    margin-top: var(--space-1);
+  }
+  .hall-heading p:not(.eyebrow) {
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+  }
+  .hall-rules {
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    font-size: var(--text-sm);
+  }
+  .hall-rules summary {
+    font-weight: var(--weight-semibold);
+    cursor: pointer;
+  }
+  .hall-rules p {
+    margin-top: var(--space-2);
+    color: var(--text-secondary);
+    line-height: var(--leading-normal);
+  }
+  .hall-updated {
+    margin-top: var(--space-2);
+    color: var(--text-muted);
+    font: var(--weight-regular) var(--text-xs) / 1.4 var(--font-mono);
+  }
+
+  /* ── Game settings (admin) ──────────────────────────────────────────── */
+  .game-admin fieldset {
+    min-width: 0;
+  }
+  .game-moderation {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-2-5) 0;
+    border-bottom: 1px solid var(--line);
+    font-size: var(--text-sm);
+  }
+  .game-moderation a {
+    flex: 1;
+    overflow-wrap: anywhere;
+  }
+  .game-art-settings {
+    margin: var(--space-6) 0;
+  }
+  .game-art-settings h3 {
+    margin-bottom: var(--space-3);
+  }
+  .game-art-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-2-5);
+  }
+  .game-art-slot {
+    min-width: 0;
+  }
+  .game-art-slot .asset-picker {
+    grid-template-columns: 72px minmax(0, 1fr);
+    height: auto;
+  }
+  .game-art-slot .asset-picker-preview {
+    width: 72px;
+    height: 72px;
+    min-height: 72px;
+  }
+  .game-art-slot .asset-picker-preview img {
+    width: 100%;
+    height: 100%;
+    max-height: 100%;
+    object-fit: contain;
+  }
+  .game-art-slot .asset-picker-placeholder {
+    gap: 2px;
+    padding: var(--space-1);
+  }
+  .game-art-slot .asset-picker-placeholder > :is(img, svg) {
+    width: 28px;
+    max-width: 28px;
+    height: 28px;
+    max-height: 28px;
+    object-fit: contain;
+  }
+  .game-art-slot .asset-picker-actions :is(img, svg) {
+    width: 15px;
+    max-width: 15px;
+    height: 15px;
+    max-height: 15px;
+    object-fit: contain;
+  }
+  .game-art-slot > .setting-row {
+    margin-top: var(--space-1);
+    font-size: var(--text-xs);
+  }
+  .game-admin-save {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-3);
+    margin-top: var(--space-4);
+  }
+
+  @media (max-width: 760px) {
+    .locked-awards,
+    .game-setting-grid,
+    .game-art-grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .game-moderation {
+      flex-wrap: wrap;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .bike-meter i {
+      transition: none;
+    }
+  }
+}

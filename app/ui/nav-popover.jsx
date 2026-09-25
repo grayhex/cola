@@ -12,6 +12,7 @@ export default function NavPopover({
   active,
   className = "",
   onOpen,
+  section,
 }) {
   const [open, setOpen] = useState(false),
     root = useRef(null),
@@ -54,6 +55,7 @@ export default function NavPopover({
   return (
     <div
       className={`nav-disclosure ${styles.disclosure} ${className}`}
+      data-section={section}
       ref={root}
       onBlur={(e) => {
         if (e.relatedTarget && !e.currentTarget.contains(e.relatedTarget))

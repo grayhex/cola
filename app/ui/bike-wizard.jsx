@@ -3,7 +3,7 @@ import { useConfirmation } from "./confirmation.jsx";
 import ClassificationFields from "./bike-classification.jsx";
 import { FormerBikeField } from "./bike-fields.jsx";
 import fieldStyles from "./bike-fields.module.css";
-import SiteEmoji from "./site-emoji.jsx";
+import SiteIcon from "./site-icon.jsx";
 import {
   emptyClassification,
   compatibilityCategory,
@@ -563,7 +563,7 @@ export default function BikeWizard({ onCreated, onBusy, onDirtyChange }) {
             </p>
             <label className="field">
               <span>
-                <SiteEmoji name="search" /> Модель, год и комплектация
+                <SiteIcon name="search" /> Модель, год и комплектация
               </span>
               <input
                 aria-label="Модель, год и комплектация"
@@ -698,25 +698,25 @@ export default function BikeWizard({ onCreated, onBusy, onDirtyChange }) {
                 <div className="wizard-choice-actions">
                   <button
                     type="button"
-                    className="hf-button"
+                    className="button secondary"
                     disabled={!searchText.trim()}
                     onClick={() => search()}
                   >
-                    <SiteEmoji name="search" />
+                    <SiteIcon name="search" />
                     {result || message
                       ? "Повторить автоматический поиск и парсинг"
                       : "Найти комплектацию"}
                   </button>
                   <button
                     type="button"
-                    className="hf-button"
+                    className="button secondary"
                     onClick={() => setManualMode((v) => !v)}
                   >
                     <Link size={18} />
                     {settings.wizardLinkLabel ||
                       "Распознать по странице магазина"}
                   </button>
-                  <button type="button" className="hf-button" onClick={next}>
+                  <button type="button" className="button secondary" onClick={next}>
                     <Pencil size={18} />
                     {settings.wizardManualLabel || "Заполнить вручную"}
                   </button>
@@ -982,7 +982,7 @@ export default function BikeWizard({ onCreated, onBusy, onDirtyChange }) {
             <div className="form-grid">
               <label className="field">
                 <span>
-                  <SiteEmoji name="date" /> Год
+                  <SiteIcon name="date" /> Год
                 </span>
                 <input
                   aria-label="Год"
@@ -996,7 +996,7 @@ export default function BikeWizard({ onCreated, onBusy, onDirtyChange }) {
               </label>
               <label className="field">
                 <span>
-                  <SiteEmoji name="bike" /> Марка
+                  <SiteIcon name="bike" /> Марка
                 </span>
                 <input
                   aria-label="Марка"
@@ -1278,7 +1278,7 @@ export default function BikeWizard({ onCreated, onBusy, onDirtyChange }) {
                 ["show_component_prices", "Показывать стоимость компонентов"],
                 ["show_accessory_prices", "Показывать стоимость аксессуаров"],
               ].map(([k, label]) => (
-                <label className="admin-toggle" key={k}>
+                <label className="setting-row" key={k}>
                   {label}
                   <input
                     type="checkbox"

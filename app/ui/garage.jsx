@@ -11,7 +11,7 @@ import {
   matchesClassification,
   readClassificationFilters,
 } from "../../lib/bike-classification.js";
-import SiteEmoji from "./site-emoji.jsx";
+import SiteIcon from "./site-icon.jsx";
 import { useConfirmation } from "./confirmation.jsx";
 import ChoiceMenu from "./choice-menu.jsx";
 import { BikeLabels } from "./bike-labels.jsx";
@@ -23,6 +23,7 @@ import {
 } from "../../lib/showcase-query.js";
 import { useBikeReaction } from "./use-bike-reaction.js";
 import { useShowcaseScroll } from "./showcase-scroll.js";
+import { useBackdropClose } from "./use-backdrop-close.js";
 
 import styles from "./garage.module.css";
 import BikeGrid from "./bike-grid.jsx";
@@ -69,6 +70,7 @@ import {
 } from "./icons.jsx";
 import { useSite } from "./site-provider.jsx";
 import PartIcon from "./part-icon.jsx";
+import AuthWindow from "./auth-window.jsx";
 // Loaded on demand: the showcase and a guest's bike page never download the
 // comment editor (Tiptap), the wizard (form schemas) or the owner's tools.
 const Discussion = dynamic(() => import("./discussion.jsx"), { ssr: false });
@@ -203,9 +205,11 @@ async function api(url, method = "GET", data) {
 function Modal({ title, onClose, children, dismissible = true }) {
   const { settings, catalog, t } = useSite();
   const { categories, models, parts, partCategories, manufacturers } = catalog;
-  const ref = useRef();
+  const ref = useRef(),
+    leaving = useRef(false);
   useEffect(() => {
     const el = ref.current;
+    leaving.current = false;
     const y = window.scrollY,
       body = document.body,
       previous = body.getAttribute("style");
@@ -218,22 +222,36 @@ function Modal({ title, onClose, children, dismissible = true }) {
     });
     el.showModal();
     return () => {
+      leaving.current = true;
       el.close();
       if (previous === null) body.removeAttribute("style");
       else body.setAttribute("style", previous);
       window.scrollTo({ top: y, behavior: "instant" });
     };
   }, []);
+  const request = () => {
+    if (dismissible) onClose();
+  };
+  const backdrop = useBackdropClose(request);
   return (
     <dialog
       ref={ref}
       onCancel={(e) => {
         e.preventDefault();
-        if (dismissible) onClose();
+        // An Escape the browser does not let us cancel closes the window
+        // anyway; onClose below handles it.
+        if (e.cancelable) request();
       }}
-      onClick={(e) => {
-        if (dismissible && e.target === e.currentTarget) onClose();
+      onClose={() => {
+        // Browsers close a window by themselves on a repeated Escape (close
+        // watchers). Reopen it: closing is decided here, and a window with
+        // unsaved data asks first (#129).
+        // A late event of an earlier close finds the window open again.
+        if (leaving.current || !ref.current || ref.current.open) return;
+        ref.current.showModal();
+        request();
       }}
+      {...backdrop}
       aria-labelledby="dialog-title"
     >
       <div className="modal-head">
@@ -275,7 +293,8 @@ export default function Garage({
     refreshViewer,
   } = useSite();
   const [ask, confirmation] = useConfirmation();
-  const [wizardDirty, setWizardDirty] = useState(false);
+  // Typed but unsaved data in the open window (wizard or part form).
+  const [dirty, setDirty] = useState(false);
   const { categories, models, parts, partCategories, manufacturers } = catalog;
   const [bikes, setBikes] = useState([]),
     [selected, setSelected] = useState(initial?.bike || null),
@@ -449,9 +468,10 @@ export default function Garage({
   const blocks = settings.detailBlocks || defaultBlocks;
   const block = (id) =>
     blocks.find((b) => b.id === id) || defaultBlocks.find((b) => b.id === id);
+  // The page layout fixes where each block goes (#121, #127); settings
+  // switch blocks off and pick their look.
   const blockProps = (id) => ({
     hidden: !block(id).enabled,
-    style: { order: blocks.findIndex((b) => b.id === id) + 1 },
     "data-variant": block(id).variant,
   });
   const editable = !!user && bike?.is_owner === true;
@@ -468,7 +488,10 @@ export default function Garage({
     bike?.is_public && landingSlug(bike.brand) && landingSlug(bike.model)
       ? modelLandingPath(bike.brand, bike.model)
       : "/experience?" +
-        new URLSearchParams({ brand: bike?.brand || "", model: bike?.model || "" });
+        new URLSearchParams({
+          brand: bike?.brand || "",
+          model: bike?.model || "",
+        });
   // Without the "О велосипеде" block, the owner's text, public price and
   // manufacturer link stay visible under the title.
   const intro = bike &&
@@ -494,20 +517,29 @@ export default function Garage({
   }
   async function close() {
     if (busy) return;
+    // A window with typed data asks first: a stray click or key must not
+    // throw the input away (#129).
+    const guard =
+      dirty &&
+      (modal?.type === "bike" && !modal.bike
+        ? { title: "Закрыть мастер?", confirmLabel: "Закрыть мастер" }
+        : modal?.type === "part"
+          ? {
+              title: "Закрыть без сохранения?",
+              confirmLabel: "Закрыть без сохранения",
+            }
+          : null);
     if (
-      modal?.type === "bike" &&
-      !modal.bike &&
-      wizardDirty &&
+      guard &&
       !(await ask("Несохранённые данные будут потеряны.", {
-        title: "Закрыть мастер?",
-        confirmLabel: "Закрыть мастер",
+        ...guard,
         cancelLabel: "Продолжить редактирование",
         danger: true,
       }))
     )
       return;
     setModal(null);
-    setWizardDirty(false);
+    setDirty(false);
     setError("");
   }
   async function refresh() {
@@ -653,11 +685,7 @@ export default function Garage({
               </div>
             )}
           </div>
-          <div
-            className="bike-meta-line"
-            hidden={!block("heading").enabled}
-            style={{ order: blocks.findIndex((b) => b.id === "heading") + 1 }}
-          >
+          <div className="bike-meta-line" hidden={!block("heading").enabled}>
             {bike.color && <span>{bike.color}</span>}
             {settings.showMileage && (
               <span>
@@ -681,9 +709,13 @@ export default function Garage({
               </span>
               <button
                 className="photo-open"
-                aria-label={t("Открыть фото целиком")}
                 onClick={() => setModal({ type: "photoView" })}
               >
+                {/* The photo's description (or the placeholder text) ends
+                    the name, so the visible text is part of it (#119). */}
+                <span className="visually-hidden">
+                  {t("Открыть фото целиком")}:{" "}
+                </span>
                 <Photo
                   bike={bike}
                   photo={photo}
@@ -887,6 +919,11 @@ export default function Garage({
               {editable && (
                 <button
                   className="text-link add-component"
+                  title={
+                    tab === "build"
+                      ? t("Добавить компонент")
+                      : t("Добавить аксессуар")
+                  }
                   onClick={() => setModal({ type: "part", section: tab })}
                 >
                   <Plus size={17} />
@@ -1008,19 +1045,23 @@ export default function Garage({
       ) : (
         <>
           <Main
-            className={`garage ${styles.garage}`}
+            className={`garage ${embedded ? "" : "page"} ${styles.garage}`}
             onClickCapture={publicShowcase ? rememberScroll : undefined}
           >
-            <div className={`garage-heading ${styles.heading}`}>
-              <div className="showcase-heading-copy">
+            {/* Datasets' title row: name, grey count, then the actions. */}
+            <div className={`garage-heading page-head ${styles.heading}`}>
+              <div className="showcase-heading-copy page-title">
                 <h1 className={styles.title}>
                   {account
                     ? t("Мои велосипеды")
                     : t(settings.showcaseTitle || "Наши велосипеды")}
                 </h1>
+                {!loading && total > 0 && (
+                  <span className="count">{total.toLocaleString("ru-RU")}</span>
+                )}
               </div>
               <div
-                className={`showcase-actions ${styles.actions}`}
+                className={`showcase-actions page-actions ${styles.actions}`}
                 aria-label={t("Действия витрины")}
               >
                 {!account && (
@@ -1056,11 +1097,11 @@ export default function Garage({
                 />
                 {!account && (
                   <Link
-                    className="compact-button add-bike"
+                    className="button add-bike"
                     href="/account?tab=bikes&action=add"
                     aria-label={t("Добавить велосипед")}
                   >
-                    <SiteEmoji name="addBike" />
+                    <SiteIcon name="add" />
                     <span className={styles.addLabel}>
                       {t("Добавить велосипед")}
                     </span>
@@ -1069,12 +1110,15 @@ export default function Garage({
                 {user && account && (
                   <button
                     type="button"
-                    className="compact-icon add-bike"
+                    className="button add-bike"
                     aria-label="Добавить велосипед"
                     title="Добавить велосипед"
                     onClick={() => setModal({ type: "bike" })}
                   >
-                    <SiteEmoji name="addBike" />
+                    <SiteIcon name="add" />
+                    <span className={styles.addLabel}>
+                      {t("Добавить велосипед")}
+                    </span>
                   </button>
                 )}
               </div>
@@ -1116,7 +1160,7 @@ export default function Garage({
                 [0, 1, 2].map((id) => (
                   <div
                     key={id}
-                    className={styles.skeleton}
+                    className={"skeleton " + styles.skeleton}
                     aria-hidden="true"
                   />
                 ))}
@@ -1132,9 +1176,9 @@ export default function Garage({
               ))}
             </BikeGrid>
             {!account && total > 24 && (
-              <nav className="feed-pages" aria-label="Страницы витрины">
+              <nav className="pager" aria-label="Страницы витрины">
                 <button
-                  className="quiet"
+                  className="button secondary small"
                   disabled={page <= 1}
                   onClick={() => setPage((p) => p - 1)}
                 >
@@ -1144,7 +1188,7 @@ export default function Garage({
                   {page} / {Math.ceil(total / 24)}
                 </span>
                 <button
-                  className="quiet"
+                  className="button secondary small"
                   disabled={page * 24 >= total}
                   onClick={() => setPage((p) => p + 1)}
                 >
@@ -1153,18 +1197,18 @@ export default function Garage({
               </nav>
             )}
             {!loading && !filtered.length && !query && !filters.length && (
-              <p className="help">
+              <p className="empty-state">
                 {account
                   ? "Добавьте свой первый велосипед."
                   : "Пока нет публичных велосипедов. Опубликуйте свой!"}
               </p>
             )}
             {!loading && !filtered.length && (query || filters.length > 0) && (
-              <div className="empty-parts">
-                <Search />
+              <div className="empty-state">
+                <Search aria-hidden="true" />
                 <h3>{t("Таких велосипедов пока не нашли")}</h3>
                 <button
-                  className="quiet"
+                  className="button secondary small"
                   onClick={() => {
                     setQuery("");
                     setFilters([]);
@@ -1242,31 +1286,33 @@ export default function Garage({
             <Photo bike={bike} photo={photo} className="full-photo" full />
           )}
           {modal.type === "auth" && (
-            <AuthForm
-              mode={modal.mode}
-              busy={busy}
-              switchMode={() => {
-                setError("");
-                setModal({
-                  ...modal,
-                  mode: modal.mode === "login" ? "register" : "login",
-                });
-              }}
-              onSubmit={(data) =>
-                run(async () => {
-                  await api("auth/" + modal.mode, "POST", data);
-                  const signedIn = await refreshViewer();
-                  setSelected(null);
-                  await load(signedIn);
-                  setModal(null);
-                  setNotice(
-                    modal.mode === "register"
-                      ? t("Аккаунт готов. Добавьте свой первый байк.")
-                      : t("Добро пожаловать"),
-                  );
-                })
-              }
-            />
+            <AuthWindow>
+              <AuthForm
+                mode={modal.mode}
+                busy={busy}
+                switchMode={() => {
+                  setError("");
+                  setModal({
+                    ...modal,
+                    mode: modal.mode === "login" ? "register" : "login",
+                  });
+                }}
+                onSubmit={(data) =>
+                  run(async () => {
+                    await api("auth/" + modal.mode, "POST", data);
+                    const signedIn = await refreshViewer();
+                    setSelected(null);
+                    await load(signedIn);
+                    setModal(null);
+                    setNotice(
+                      modal.mode === "register"
+                        ? t("Аккаунт готов. Добавьте свой первый байк.")
+                        : t("Добро пожаловать"),
+                    );
+                  })
+                }
+              />
+            </AuthWindow>
           )}
           {modal.type === "photoSearch" && (
             <PhotoSearch
@@ -1280,7 +1326,7 @@ export default function Garage({
           )}
           {modal.type === "bike" && !modal.bike && (
             <BikeWizard
-              onDirtyChange={setWizardDirty}
+              onDirtyChange={setDirty}
               onBusy={setBusy}
               onCreated={async (id) => {
                 if (!account) {
@@ -1291,6 +1337,7 @@ export default function Garage({
                 const { bike: b } = await api("bikes/" + id);
                 openBike(b);
                 setModal(null);
+                setDirty(false);
                 setNotice("Велосипед сохранён");
               }}
             />
@@ -1347,6 +1394,7 @@ export default function Garage({
               initial={modal.part}
               section={modal.section}
               busy={busy}
+              onDirtyChange={setDirty}
               onSubmit={(data) =>
                 run(async () => {
                   await api(
@@ -1357,6 +1405,7 @@ export default function Garage({
                   );
                   await refresh();
                   setModal(null);
+                  setDirty(false);
                   setNotice(t("Деталь сохранена"));
                 })
               }
@@ -1447,7 +1496,7 @@ export default function Garage({
                   {t("Отмена")}
                 </button>
                 <button
-                  className="button"
+                  className="button danger"
                   disabled={busy}
                   onClick={() =>
                     run(async () => {
@@ -1547,8 +1596,11 @@ function BikeForm({ initial, busy, onSubmit }) {
           className={fieldStyles.modelInput}
         />
       </Field>
-      <FormerBikeField value={b.is_former} disabled={busy}
-        onChange={(value) => update("is_former", value)} />
+      <FormerBikeField
+        value={b.is_former}
+        disabled={busy}
+        onChange={(value) => update("is_former", value)}
+      />
       <ClassificationFields
         value={classificationOf(b)}
         onChange={(classification) =>
@@ -1696,7 +1748,7 @@ function BikeForm({ initial, busy, onSubmit }) {
           ["show_component_prices", "Компоненты"],
           ["show_accessory_prices", "Аксессуары"],
         ].map(([key, label]) => (
-          <label className="admin-toggle" key={key}>
+          <label className="setting-row" key={key}>
             {label}
             <input
               type="checkbox"
@@ -1738,17 +1790,17 @@ function BikeForm({ initial, busy, onSubmit }) {
           "Фотографии можно добавить после сохранения. Велосипед по умолчанию приватный.",
         )}
       </p>
-      <button className="button full" disabled={busy || resolving}>
+      <button className="button block" disabled={busy || resolving}>
         {busy ? t("Сохраняем…") : t("Сохранить велосипед")}
         <Check size={18} />
       </button>
     </form>
   );
 }
-function PartForm({ initial, section, busy, onSubmit }) {
+function PartForm({ initial, section, busy, onSubmit, onDirtyChange }) {
   const { settings, catalog, t } = useSite();
   const { categories, models, parts, partCategories, manufacturers } = catalog;
-  const [c, set] = useState(
+  const [start] = useState(() =>
     initial
       ? { ...initial, price: initial.price ?? "" }
       : {
@@ -1759,15 +1811,49 @@ function PartForm({ initial, section, busy, onSubmit }) {
           price: "",
         },
   );
+  const [c, set] = useState(start);
   const [search, setSearch] = useState("");
   const update = (k, v) => set((p) => ({ ...p, [k]: v }));
   const suggestions = (parts[c.category] || []).filter((p) =>
     p.toLowerCase().includes(search.toLowerCase()),
   );
+  const dirty = Object.keys(c).some(
+    (k) => String(c[k] ?? "") !== String(start[k] ?? ""),
+  );
+  useEffect(() => {
+    onDirtyChange?.(dirty);
+  }, [dirty, onDirtyChange]);
+  // The field where Enter is down. Enter in a field moves to the next one
+  // instead of saving: the window closes by «Сохранить деталь», not by a
+  // key pressed mid-input (#129); the manufacturer alone already fills the
+  // name. Only the implicit submission is stopped, so Enter still picks a
+  // suggestion where the browser handles it.
+  const enterIn = useRef(null);
   return (
     <form
+      onKeyDown={(e) => {
+        enterIn.current =
+          e.key === "Enter" &&
+          e.target.tagName === "INPUT" &&
+          !e.nativeEvent.isComposing
+            ? e.target
+            : null;
+      }}
+      onKeyUp={() => {
+        enterIn.current = null;
+      }}
       onSubmit={(e) => {
         e.preventDefault();
+        const field = enterIn.current;
+        enterIn.current = null;
+        if (field) {
+          const fields = [...e.currentTarget.elements].filter(
+            (el) =>
+              !el.disabled && (el.tagName !== "BUTTON" || el.type === "submit"),
+          );
+          fields[fields.indexOf(field) + 1]?.focus();
+          return;
+        }
         onSubmit({ ...c, price: c.price === "" ? null : Number(c.price) });
       }}
     >
@@ -1793,6 +1879,7 @@ function PartForm({ initial, section, busy, onSubmit }) {
       <Field label={t("Производитель")}>
         <input
           list="component-manufacturers"
+          enterKeyHint="next"
           placeholder={t("Выберите производителя")}
           onChange={(e) => {
             update("name", e.target.value + " ");
@@ -1816,6 +1903,7 @@ function PartForm({ initial, section, busy, onSubmit }) {
         <input
           required
           autoFocus
+          enterKeyHint="next"
           maxLength={150}
           value={c.name}
           onChange={(e) => {
@@ -1850,6 +1938,7 @@ function PartForm({ initial, section, busy, onSubmit }) {
       <Field label={t("Примечание")}>
         <input
           maxLength={500}
+          enterKeyHint="next"
           value={c.notes}
           onChange={(e) => update("notes", e.target.value)}
           placeholder={t("Размер, материал, передаточное отношение…")}
@@ -1871,6 +1960,7 @@ function PartForm({ initial, section, busy, onSubmit }) {
       <Field label="Ссылка на компонент или аксессуар">
         <input
           type="url"
+          enterKeyHint="next"
           value={c.url || ""}
           maxLength={2048}
           onChange={(e) => update("url", e.target.value)}
@@ -1883,6 +1973,7 @@ function PartForm({ initial, section, busy, onSubmit }) {
           min="0"
           max="999999999"
           step="0.01"
+          enterKeyHint="next"
           value={c.price}
           onChange={(e) => update("price", e.target.value)}
           placeholder={t("Необязательно")}
@@ -1892,7 +1983,7 @@ function PartForm({ initial, section, busy, onSubmit }) {
         <Lock size={13} />
         {t("Стоимость видна только вам.")}
       </p>
-      <button className="button full" disabled={busy}>
+      <button className="button block" disabled={busy}>
         {busy ? t("Сохраняем…") : t("Сохранить деталь")}
         <Check size={18} />
       </button>

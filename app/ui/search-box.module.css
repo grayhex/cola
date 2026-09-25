@@ -1,3 +1,5 @@
+/* Search with suggestions (#127): a field with an inset icon and a black
+   go button; suggestions open as a .menu-style list under it. */
 .root {
   position: relative;
   width: 100%;
@@ -6,25 +8,39 @@
 .control {
   display: flex;
   align-items: center;
-  gap: 10px;
-  background: var(--surface);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius);
-  padding: 4px 5px 4px 14px;
-  color: var(--text-muted);
+  gap: var(--space-2);
+  padding: 3px 3px 3px var(--space-3);
+  border: 1px solid var(--field-line);
+  border-radius: var(--radius-lg);
+  background: var(--field-bg);
+  color: var(--text-subtle);
+  box-shadow: var(--shadow-inner);
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out);
+}
+.control:hover {
+  border-color: var(--field-line-hover);
 }
 .control:focus-within {
-  outline: 2px solid var(--focus);
-  outline-offset: 2px;
+  border-color: var(--focus);
+  box-shadow: var(--focus-ring);
+}
+.control > svg {
+  flex: none;
+  width: 18px;
+  height: 18px;
 }
 .control input {
+  flex: 1;
   width: 100%;
   min-width: 0;
+  min-height: 34px;
+  padding: 0;
   border: 0;
   background: transparent;
-  padding: 8px 0;
-  min-height: 40px;
-  font: 400 17px/24px var(--site-font);
+  color: var(--text);
+  font: var(--weight-regular) var(--text-base) / 1.4 var(--font-sans);
   box-shadow: none;
 }
 .control input:focus-visible {
@@ -33,72 +49,89 @@
 }
 .control button {
   display: grid;
+  flex: none;
   place-items: center;
-  border-radius: var(--radius-sm);
-  width: 42px;
-  min-height: 42px;
-  flex-shrink: 0;
-  background: var(--accent);
-  color: var(--accent-foreground);
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-md);
+  background: var(--primary);
+  color: var(--primary-foreground);
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-out);
 }
 .control button:hover {
-  background: var(--accent-hover);
+  background: var(--primary-hover);
 }
+.control button svg {
+  width: 16px;
+  height: 16px;
+}
+/* The home page's larger field (Pricing-size CTA row). */
 .hero .control {
-  padding: 7px 8px 7px 18px;
-  box-shadow: var(--shadow-sm);
+  padding: 5px 5px 5px var(--space-4);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-inner), var(--shadow-xs);
 }
 .hero .control input {
-  min-height: 42px;
-  font-size: 18px;
+  min-height: 40px;
+  font-size: var(--text-lg);
+}
+.hero .control button {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-lg);
 }
 .popover {
   position: absolute;
-  inset: calc(100% + 8px) 0 auto;
+  inset: calc(100% + 6px) 0 auto;
   z-index: var(--z-dropdown);
   max-height: min(480px, 55dvh);
   overflow: auto;
+  padding: var(--space-1) 0;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-lg);
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 6px;
   text-align: left;
-  box-shadow: var(--shadow-popover);
-  animation: appear var(--duration-fast) var(--ease-standard);
+  box-shadow: var(--shadow-lg);
+  animation: appear var(--duration-fast) var(--ease-out);
 }
 .contained .popover {
   position: relative;
   inset: auto;
-  margin-top: 8px;
+  margin-top: var(--space-2);
   max-height: min(480px, 45dvh);
+  box-shadow: none;
 }
+/* Group heading with Hugging Face's gradient label. */
 .group {
-  padding: 8px 10px 4px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-muted);
+  margin: var(--space-1) 0;
+  padding: var(--space-0-5) var(--space-4);
+  background: linear-gradient(to right, var(--info-soft), transparent);
+  color: var(--info);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
 }
 .option {
   display: flex;
-  gap: 10px;
   align-items: center;
-  padding: 8px 10px;
-  border-radius: var(--radius-sm);
+  gap: var(--space-2-5);
+  min-height: 48px;
+  padding: var(--space-1-5) var(--space-3);
   cursor: pointer;
-  min-height: 52px;
 }
+.option:hover,
 .option[aria-selected="true"] {
   background: var(--surface-hover);
-  box-shadow: inset 2px 0 var(--accent);
 }
 .option span {
   min-width: 0;
 }
 .option strong {
   display: block;
-  font-size: 15px;
-  font-weight: 600;
-  line-height: 1.25;
+  color: var(--text);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-snug);
   overflow-wrap: anywhere;
 }
 .option small {
@@ -107,51 +140,45 @@
   font-size: 13px;
 }
 .status {
-  font-size: 13px;
-  padding: 6px 10px;
   margin: 0;
+  padding: var(--space-1-5) var(--space-3);
+  color: var(--text-muted);
+  font-size: 13px;
 }
 .all {
-  width: 100%;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  text-align: left;
-  padding: 10px;
-  min-height: 44px;
-  border-top: 1px solid var(--border);
+  width: 100%;
+  min-height: 40px;
+  padding: 0 var(--space-3);
+  border-top: 1px solid var(--line);
   color: var(--text);
-  font-size: 14px;
+  font-size: var(--text-sm);
+  text-align: left;
 }
 .all:hover {
-  background: var(--surface-muted);
+  background: var(--surface-hover);
 }
 @keyframes appear {
   from {
     opacity: 0;
-    transform: translateY(-3px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+    transform: translateY(-2px);
   }
 }
 @media (max-width: 600px) {
   .hero .control {
-    padding-left: 12px;
-    gap: 8px;
+    padding-left: var(--space-3);
   }
   .hero .control input {
-    font-size: 16px;
-  }
-  .control > svg {
-    width: 18px;
+    font-size: var(--text-base);
   }
 }
 @media (pointer: coarse), (max-width: 700px) {
-  .control button {
+  .control button,
+  .hero .control button {
     width: 44px;
-    min-height: 44px;
+    height: 44px;
   }
 }
 @media (prefers-reduced-motion: reduce) {

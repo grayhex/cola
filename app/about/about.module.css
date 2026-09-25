@@ -1,0 +1,623 @@
+/* /about (#127): the reference page of the marketing mode. Frame, bands,
+   cells, steps and splits come from app/styles/layout.css; this file holds
+   the hero, the statistics row, the emblem and the four demonstrations. */
+.page {
+  overflow-x: clip;
+}
+
+/* Hero: Storage's sizes (text-5xl → 6xl → 7xl, font-black, tight). */
+.hero {
+  padding: var(--space-12) var(--space-2);
+}
+@media (min-width: 640px) {
+  .hero {
+    padding: var(--space-16) var(--space-12);
+  }
+}
+@media (min-width: 1024px) {
+  .hero {
+    padding: var(--space-20) var(--space-16);
+  }
+}
+.title {
+  margin: 0 0 var(--space-5);
+  color: var(--text);
+  font-size: 40px;
+  font-weight: var(--weight-black);
+  line-height: 1.05;
+  letter-spacing: -0.025em;
+  text-wrap: pretty;
+}
+@media (min-width: 400px) {
+  .title {
+    font-size: var(--text-5xl);
+  }
+}
+@media (min-width: 640px) {
+  .title {
+    font-size: var(--text-6xl);
+  }
+}
+@media (min-width: 768px) {
+  .title {
+    font-size: var(--text-7xl);
+  }
+}
+.lead {
+  max-width: 42rem;
+  margin: 0 auto;
+  color: var(--text-secondary);
+  font-size: var(--text-lg);
+  line-height: var(--leading-snug);
+}
+@media (min-width: 640px) {
+  .lead {
+    font-size: var(--text-xl);
+  }
+}
+@media (min-width: 768px) {
+  .lead {
+    font-size: var(--text-2xl);
+  }
+}
+
+/* Numbers row under the hero, after Storage's "Trusted by" row: hatched
+   cells that fade to the page towards the top right. */
+.stats {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--line);
+}
+@media (min-width: 768px) {
+  .stats {
+    flex-flow: row wrap;
+  }
+}
+.statsLead {
+  flex: none;
+  margin: 0;
+  padding: var(--space-5) var(--space-6);
+  color: var(--text-muted);
+  text-wrap: balance;
+}
+.statsLead span {
+  color: var(--text);
+}
+@media (min-width: 768px) {
+  .statsLead {
+    padding: var(--space-7) var(--space-10);
+    border-right: 1px solid var(--line);
+  }
+}
+.stats dl {
+  display: grid;
+  flex: 1;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  overflow: hidden;
+  margin: 0;
+  border-top: 1px solid var(--line);
+}
+@media (min-width: 768px) {
+  .stats dl {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    border-top: 0;
+  }
+}
+.stats dl > div {
+  position: relative;
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  margin: 0 -1px -1px 0;
+  padding: var(--space-4) var(--space-2);
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  background:
+    linear-gradient(to top right, transparent, var(--bg) 55%, var(--bg)),
+    repeating-linear-gradient(
+      -45deg,
+      var(--line-strong) 0 1px,
+      transparent 1px 6px
+    );
+}
+.stats dl > div:last-child {
+  grid-column: 1 / -1;
+}
+@media (min-width: 768px) {
+  .stats dl > div:last-child {
+    grid-column: auto;
+  }
+}
+.stats dd {
+  margin: 0;
+  color: var(--text);
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
+  font-variant-numeric: tabular-nums;
+}
+.stats dt {
+  color: var(--text-muted);
+  font: var(--weight-semibold) var(--text-xs) / var(--leading-tight)
+    var(--font-mono);
+}
+.statsNote {
+  flex-basis: 100%;
+  margin: 0;
+  padding: var(--space-1-5) var(--space-3);
+  border-top: 1px dashed var(--line-dashed);
+  color: var(--text-muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+/* Section intro with the emblem or the administrator's picture. */
+.band h2 {
+  margin-bottom: var(--space-3);
+}
+.emblem {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 176px;
+  margin-bottom: var(--space-6);
+  color: var(--accent-text);
+}
+.emblem span {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  border-radius: var(--radius-full);
+  transform: translate(-50%, -50%);
+}
+.emblem span:nth-child(1) {
+  width: 112px;
+  height: 112px;
+}
+.emblem span:nth-child(2) {
+  width: 176px;
+  height: 176px;
+  border-color: color-mix(in srgb, var(--accent) 28%, transparent);
+}
+.emblem span:nth-child(3) {
+  width: 240px;
+  height: 240px;
+  border-color: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+.emblem svg {
+  position: relative;
+}
+.illustration {
+  display: block;
+  width: auto;
+  max-width: min(100%, 560px);
+  max-height: 280px;
+  margin: 0 auto var(--space-6);
+  object-fit: contain;
+}
+.stepsHead {
+  padding-bottom: var(--space-8);
+}
+
+/* Legal documents at the end of the page (#124). */
+.documents {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2) var(--space-6);
+  padding: var(--space-6) var(--space-4);
+  text-align: center;
+}
+.documents h2 {
+  color: var(--text-muted);
+  font: var(--weight-semibold) var(--text-xs) / 1 var(--font-mono);
+}
+.documents ul {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-2) var(--space-6);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.documents :global(.text-link) {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+
+/* ── Demonstrations ─────────────────────────────────────────────────── */
+.demoStack {
+  display: grid;
+  gap: var(--space-3);
+  width: 100%;
+  max-width: 440px;
+  margin: 0 auto;
+}
+
+/* Bike page: link → progress → parts. */
+.resolver {
+  display: grid;
+  gap: var(--space-2-5);
+  padding: var(--space-3-5) var(--space-4);
+}
+.resolverLine {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+.resolverLine span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.track {
+  height: 6px;
+  overflow: hidden;
+  border-radius: var(--radius-full);
+  background: var(--surface-hover);
+}
+.track i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(
+    to right,
+    color-mix(in srgb, var(--accent) 70%, var(--surface)),
+    var(--accent)
+  );
+  transform-origin: left;
+}
+.resolverDone {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  color: var(--success);
+  font-size: 13px;
+  font-weight: var(--weight-semibold);
+}
+.bikeCard {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-3-5);
+}
+.bikeHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.bikeHead strong {
+  display: block;
+  color: var(--text);
+  font-size: var(--text-base);
+  font-weight: var(--weight-bold);
+}
+.bikePhoto {
+  flex: none;
+  width: 96px;
+  height: 64px;
+}
+.bikePhoto rect {
+  fill: color-mix(in srgb, var(--tone) 16%, var(--surface));
+}
+.bikePhoto g {
+  fill: none;
+  stroke: var(--tone);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.parts {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--line);
+  list-style: none;
+}
+.parts li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 7px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+}
+.parts li:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+.parts span {
+  color: var(--text-muted);
+}
+.parts b {
+  color: var(--text);
+  font-weight: var(--weight-semibold);
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+/* Journal: entries on a line, newest first, with a component snapshot. */
+.timeline {
+  position: relative;
+  display: grid;
+  gap: var(--space-3);
+  width: 100%;
+  max-width: 440px;
+  margin: 0 auto;
+  padding: 0 0 0 var(--space-6);
+  list-style: none;
+}
+.timeline::before {
+  content: "";
+  position: absolute;
+  top: var(--space-4);
+  bottom: var(--space-4);
+  left: 7px;
+  width: 2px;
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--tone) 22%, var(--surface));
+}
+.timeline li {
+  position: relative;
+}
+.timeline li::before {
+  content: "";
+  position: absolute;
+  top: 16px;
+  left: calc(-1 * var(--space-6) + 2px);
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--tone);
+  border-radius: var(--radius-full);
+  background: var(--bg);
+}
+.timeline li:first-child::before {
+  background: var(--tone);
+}
+.timeline :global(.mk-mini) {
+  display: grid;
+  gap: var(--space-1-5);
+  padding: var(--space-3) var(--space-3-5);
+}
+.timeline strong {
+  color: var(--text);
+  font-size: var(--text-smd);
+  font-weight: var(--weight-semibold);
+}
+.entryHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-1-5) var(--space-2);
+}
+.entryHead :global(.mono) {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+.snapshot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1-5);
+}
+
+/* Reading: one subscribed entry and the "no duplicates" rule. */
+.feedCard {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-2-5);
+  padding: var(--space-3-5) var(--space-4);
+}
+.feedHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2-5);
+}
+.feedHead strong {
+  display: block;
+  color: var(--text);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+.avatar {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--tone) 16%, var(--surface));
+  color: var(--tone);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+}
+.feedTitle {
+  color: var(--text);
+  font-size: var(--text-base);
+  font-weight: var(--weight-bold);
+}
+.feedText {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+.saved,
+.saved svg {
+  color: var(--tone);
+}
+.saved svg {
+  fill: currentColor;
+}
+.note {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2-5);
+  padding: var(--space-3) var(--space-3-5);
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+.note svg {
+  flex: none;
+  margin-top: 1px;
+  color: var(--tone);
+}
+
+/* Rides: a route with privacy zones, metrics and a weekly plan. */
+.rideCard {
+  display: grid;
+  gap: var(--space-2-5);
+  padding: var(--space-2-5);
+}
+.map {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--tone) 5%, var(--surface));
+}
+.mapGrid {
+  fill: url(#about-map-grid);
+}
+.gridLine {
+  fill: none;
+  stroke: var(--line-strong);
+  stroke-width: 0.6;
+}
+.hatchLine {
+  stroke: color-mix(in srgb, var(--tone) 40%, transparent);
+  stroke-width: 1.5;
+}
+.mapWater {
+  fill: color-mix(in srgb, var(--info) 14%, transparent);
+}
+.route,
+.routeHidden {
+  fill: none;
+  stroke: var(--tone);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.route {
+  stroke-width: 3.5;
+}
+.routeHidden {
+  stroke-width: 2;
+  stroke-dasharray: 0.03 0.04;
+  opacity: 0.5;
+}
+.zone {
+  fill: url(#about-map-hatch);
+  stroke: var(--tone);
+  stroke-dasharray: 4 4;
+  stroke-width: 1.5;
+}
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0;
+  border-top: 1px solid var(--line);
+}
+.metrics div {
+  padding: var(--space-2) var(--space-1) 0;
+  text-align: center;
+}
+.metrics dt {
+  color: var(--text-muted);
+  font: var(--weight-semibold) 11px / var(--leading-tight) var(--font-mono);
+}
+.metrics dd {
+  margin: 0;
+  color: var(--text);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+  font-variant-numeric: tabular-nums;
+}
+.rsvp {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-3-5);
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+.rsvp > svg {
+  color: var(--tone);
+}
+
+/* One short sequence per demo when it scrolls into view (use-reveal.js).
+   Without JavaScript or with reduced motion the final frame is shown. */
+@media (prefers-reduced-motion: no-preference) {
+  [data-reveal="shown"] .track i {
+    animation: fill 900ms var(--ease-out) both;
+  }
+  [data-reveal="shown"] .resolverDone {
+    animation: rise var(--duration-slow) var(--ease-out) 900ms both;
+  }
+  [data-reveal="shown"] .parts li,
+  [data-reveal="shown"] .timeline li {
+    animation: rise var(--duration-slow) var(--ease-out) both;
+  }
+  [data-reveal="shown"] .parts li:nth-child(1) {
+    animation-delay: 1000ms;
+  }
+  [data-reveal="shown"] .parts li:nth-child(2) {
+    animation-delay: 1100ms;
+  }
+  [data-reveal="shown"] .parts li:nth-child(3) {
+    animation-delay: 1200ms;
+  }
+  [data-reveal="shown"] .parts li:nth-child(4) {
+    animation-delay: 1300ms;
+  }
+  [data-reveal="shown"] .timeline li:nth-child(3) {
+    animation-delay: 150ms;
+  }
+  [data-reveal="shown"] .timeline li:nth-child(2) {
+    animation-delay: 350ms;
+  }
+  [data-reveal="shown"] .timeline li:nth-child(1) {
+    animation-delay: 550ms;
+  }
+  [data-reveal="shown"] .route {
+    stroke-dasharray: 1;
+    animation: draw 1400ms var(--ease-in-out) 200ms both;
+  }
+  [data-reveal="shown"] .saved {
+    animation: saved var(--duration-slow) var(--ease-out) 700ms both;
+  }
+}
+@keyframes fill {
+  from {
+    transform: scaleX(0);
+  }
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+@keyframes draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes saved {
+  from {
+    color: var(--text-muted);
+  }
+}

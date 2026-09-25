@@ -122,7 +122,7 @@ export function Pager({
 
 export function Toggle({ label, checked, onChange }) {
   return (
-    <label className="admin-toggle">
+    <label className="setting-row">
       <span>{label}</span>
       <input
         type="checkbox"

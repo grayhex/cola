@@ -84,7 +84,7 @@ export default function JournalPage({
   return (
     <>
       <SocialHeader user={user} />
-      <main className="social-page journal-page">
+      <main className="page narrow journal-page">
         {error && <p role="alert">{error}</p>}
         {!loaded && !error && <p role="status">Загружаем запись…</p>}
         {!share && loaded && user && (

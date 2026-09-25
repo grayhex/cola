@@ -1,5 +1,5 @@
 "use client";
-import { Plus, Trash2, ChevronUp, ChevronDown } from "../ui/icons.jsx";
+import { Plus, Trash2, ArrowUp, ArrowDown } from "../ui/icons.jsx";
 import PartIcon from "../ui/part-icon.jsx";
 import { iconNames } from "../../lib/part-icons.js";
 import { moveItem, defaultGroups } from "../../lib/garage-layout.js";
@@ -34,7 +34,7 @@ export function GroupSettings({ catalog, onChange }) {
               aria-label={g.name + " выше"}
               onClick={() => set(moveItem(groups, i, -1))}
             >
-              <ChevronUp size={16} />
+              <ArrowUp size={16} />
             </button>
             <button
               className="icon"
@@ -42,7 +42,7 @@ export function GroupSettings({ catalog, onChange }) {
               aria-label={g.name + " ниже"}
               onClick={() => set(moveItem(groups, i, 1))}
             >
-              <ChevronDown size={16} />
+              <ArrowDown size={16} />
             </button>
             <button
               className="icon danger"

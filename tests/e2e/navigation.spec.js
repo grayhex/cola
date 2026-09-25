@@ -45,12 +45,37 @@ test("navigation: real destinations, account, keyboard, configurable About and a
   }
   try {
     await page.goto("/about");
+    // The reference page of the marketing mode (#127): value first, no AI
+    // history and no separate "add a bike" / "see rides" buttons.
     await expect(
-      page.getByRole("heading", { name: "О проекте", exact: true }),
+      page.getByRole("heading", { level: 1, name: /есть история/ }),
     ).toBeVisible();
     await expect(page.locator("#history")).toHaveCount(0);
     await expect(page.locator(".about-actions")).toHaveCount(0);
-    await expect(page.locator(".about-section")).toHaveCount(2);
+    await expect(page.locator("#guide, #technology")).toHaveCount(2);
+    await expect(
+      page.locator("main").getByRole("link", { name: "Добавить велосипед" }),
+    ).toHaveCount(0);
+    await expect(
+      page.locator("main").getByRole("link", { name: /покатушки/i }),
+    ).toHaveCount(0);
+    // Demonstrations are pictures: nothing inside them takes focus.
+    await expect(
+      page.locator(".mk-demo").locator("a, button, input, [tabindex]"),
+    ).toHaveCount(0);
+    // The legal documents moved here from the footer (#124).
+    for (const name of [
+      "Пользовательское соглашение",
+      "Политика обработки персональных данных",
+    ])
+      await expect(
+        page.locator("main").getByRole("link", { name, exact: true }),
+      ).toBeVisible();
+    const footer = page.locator("footer");
+    await expect(footer.getByRole("link", { name: "Журнал" })).toHaveCount(0);
+    await expect(footer.getByRole("link", { name: "GitHub" })).toHaveCount(0);
+    await expect(footer).toContainText("Люди. Велосипеды. Истории.");
+    await expect(footer.locator(".build-versions")).toBeVisible();
     if (isMobile) {
       await page.getByRole("button", { name: "Открыть меню" }).click();
       const drawer = page.getByRole("dialog", { name: "Меню ColaBike" });
@@ -198,6 +223,9 @@ test("navigation: real destinations, account, keyboard, configurable About and a
       aboutGuideImageId: asset,
       footerImage1Id: asset,
       footerImage2Id: asset,
+      footerImage4Id: asset,
+      footerLink1: "/about",
+      footerLink4: "https://example.com/partner",
     });
     await page.goto("/admin");
     await page.getByRole("tab", { name: "Дизайн", exact: true }).click();
@@ -233,7 +261,7 @@ test("navigation: real destinations, account, keyboard, configurable About and a
       exact: true,
     });
     await guide.getByLabel("Заголовок раздела").fill("Быстрый старт");
-    await guide.getByLabel("02 · Меньше переписывания").uncheck();
+    await guide.getByLabel("Журнал изменений и обслуживания").uncheck();
     await page.getByRole("button", { name: "Сохранить", exact: true }).click();
     await expect
       .poll(
@@ -249,23 +277,46 @@ test("navigation: real destinations, account, keyboard, configurable About and a
     await expect(page.locator("#technology")).toHaveCount(0);
     await expect(
       page.getByRole("heading", {
-        name: "02 · Меньше переписывания",
+        name: "Журнал изменений и обслуживания",
         exact: true,
       }),
     ).toHaveCount(0);
-    await expect(
-      page.locator("#guide .about-illustration img"),
-    ).toHaveAttribute("src", "/api/assets/" + asset);
-    // Both footer images from Графика → Подвал, on the left of the brand (#107).
-    const footerImages = page.locator("footer [data-footer-images] img");
-    await expect(footerImages).toHaveCount(2);
-    await expect(footerImages.first()).toHaveAttribute("src", "/api/assets/" + asset);
-    await expect(footerImages.first()).toHaveAttribute("alt", "");
-    const brand = page.locator("footer").getByRole("link", { name: "ColaBike", exact: true });
-    await footerImages.last().scrollIntoViewIfNeeded();
-    expect((await footerImages.first().boundingBox()).x).toBeLessThan(
-      (await brand.boundingBox()).x + 1,
+    await expect(page.locator("#guide img")).toHaveAttribute(
+      "src",
+      "/api/assets/" + asset,
     );
+    // Footer logos from Графика → Подвал on the left of the brand (#107),
+    // up to four in one line, each with its own link (#124).
+    const footerImages = page.locator("footer [data-footer-images] img");
+    await expect(footerImages).toHaveCount(3);
+    const logoLinks = page.locator("footer [data-footer-images] a");
+    await expect(logoLinks).toHaveCount(2);
+    await expect(logoLinks.first()).toHaveAttribute("href", "/about");
+    await expect(logoLinks.last()).toHaveAttribute(
+      "href",
+      "https://example.com/partner",
+    );
+    await expect(logoLinks.last()).toHaveAttribute("target", "_blank");
+    await expect(logoLinks.last()).toHaveAccessibleName(/example\.com/);
+    await expect(footerImages.first()).toHaveAttribute(
+      "src",
+      "/api/assets/" + asset,
+    );
+    await expect(footerImages.first()).toHaveAttribute("alt", "");
+    // ColaBike and the tagline sit in the middle of the page; the logos are
+    // on its left on wide screens and above it on phones (#124).
+    const brandLine = page
+      .locator("footer p")
+      .filter({ hasText: "Люди. Велосипеды. Истории." });
+    await footerImages.last().scrollIntoViewIfNeeded();
+    const logo = await footerImages.first().boundingBox(),
+      line = await brandLine.boundingBox(),
+      band = await page.locator("footer").boundingBox();
+    expect(
+      Math.abs(line.x + line.width / 2 - (band.x + band.width / 2)),
+    ).toBeLessThan(2);
+    if (isMobile) expect(logo.y + logo.height).toBeLessThanOrEqual(line.y + 1);
+    else expect(logo.x + logo.width).toBeLessThanOrEqual(line.x + 1);
     expect(
       (
         await page.request.delete("/api/admin/assets/" + asset, {
@@ -291,7 +342,7 @@ test("navigation: real destinations, account, keyboard, configurable About and a
         page.locator(".primary-navigation > :first-child img"),
       ).toHaveCount(0);
       await expect(
-        page.locator(".primary-navigation > :first-child .site-emoji"),
+        page.locator(".primary-navigation > :first-child svg.site-icon"),
       ).toBeVisible();
     }
     await noOverflow();

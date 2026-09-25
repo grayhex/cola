@@ -91,7 +91,7 @@ export default function ResolverSettings() {
             });
           }}
         >
-          <label className="admin-toggle">
+          <label className="setting-row">
             Сервис включён
             <input
               type="checkbox"
@@ -99,7 +99,7 @@ export default function ResolverSettings() {
               onChange={(e) => set("enabled", e.target.checked)}
             />
           </label>
-          <label className="admin-toggle">
+          <label className="setting-row">
             Автопоиск при создании велосипеда
             <input
               type="checkbox"
@@ -107,7 +107,7 @@ export default function ResolverSettings() {
               onChange={(e) => set("autoResolve", e.target.checked)}
             />
           </label>
-          <label className="admin-toggle">
+          <label className="setting-row">
             Резервный поиск магазинов в интернете
             <input
               type="checkbox"
@@ -135,7 +135,7 @@ export default function ResolverSettings() {
               </label>
             ))}
           </div>
-          <label className="admin-toggle">
+          <label className="setting-row">
             Поиск фотографий
             <input
               type="checkbox"
@@ -171,7 +171,7 @@ export default function ResolverSettings() {
           </p>
           {data.brands.map((b) => (
             <div className="resolver-adapter" key={b.id}>
-              <label className="admin-toggle">
+              <label className="setting-row">
                 <span>
                   {b.name} <small>v{b.adapterVersion}</small>
                 </span>

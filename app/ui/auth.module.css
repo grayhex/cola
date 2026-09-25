@@ -1,111 +1,247 @@
+/* Sign-in, registration and password recovery (#125, #127). Sign-in and
+   registration open as a near-square window: the administrator's
+   illustration on the left, the form on the right. Recovery keeps a single
+   narrow card. */
 .page {
+  width: 100%;
+  max-width: calc(960px + 2 * var(--gutter));
   min-height: 75vh;
-  max-width: 520px;
-  padding: 32px 24px 64px;
-  margin: auto;
+  margin: 0 auto;
+  padding: var(--space-6) var(--gutter) var(--space-16);
 }
 .back {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  color: var(--text-muted);
+  gap: var(--space-1-5);
   min-height: 40px;
-  font-size: 14px;
-  margin-bottom: 20px;
+  margin-bottom: var(--space-4);
+  color: var(--text-muted);
+  font-size: var(--text-sm);
 }
 .back:hover {
   color: var(--text);
 }
+
+/* ── The sign-in window ─────────────────────────────────────────────── */
+.window {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  min-height: 560px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-2xl);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+.art {
+  position: relative;
+  min-width: 0;
+  border-right: 1px solid var(--line);
+  background: var(--bg-subtle);
+}
+.art img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* Without an illustration: the brand mark on a dotted field. */
+.artDefault {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: var(--space-4);
+  height: 100%;
+  padding: var(--space-8);
+  background:
+    radial-gradient(circle at 25% 20%, var(--accent-soft), transparent 55%),
+    radial-gradient(var(--line-dot) 1px, transparent 1px) 0 0 / 16px 16px,
+    var(--bg-subtle);
+}
+.artMark {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  border-radius: var(--radius-xl);
+  background: var(--accent);
+  color: var(--accent-foreground);
+  box-shadow: var(--shadow-sm);
+}
+.artDefault p {
+  max-width: 22ch;
+  color: var(--text);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-snug);
+}
+.body {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  padding: var(--space-10) var(--space-10);
+}
+.body > h1 {
+  margin-bottom: var(--space-2);
+  font-size: var(--text-2xl);
+}
+/* The same window inside the garage's sign-in dialog. */
+:global(dialog):has(.window) {
+  max-width: 880px;
+}
+:global(dialog) .window {
+  min-height: 0;
+  border: 0;
+  border-radius: var(--radius-lg);
+  box-shadow: none;
+}
+:global(dialog) .art {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+}
+:global(dialog) .body {
+  padding: 0 0 0 var(--space-6);
+}
+
+/* ── Recovery: one narrow card ──────────────────────────────────────── */
 .card {
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 32px;
+  max-width: 520px;
+  margin: 0 auto;
+  padding: var(--space-8);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-2xl);
   background: var(--surface);
   box-shadow: var(--shadow-sm);
 }
 .mark {
-  width: 48px;
-  height: 48px;
   display: grid;
   place-items: center;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--surface-muted);
-  margin-bottom: 20px;
+  width: 48px;
+  height: 48px;
+  margin-bottom: var(--space-5);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  background: var(--bg-subtle);
 }
 .card h1 {
-  font-size: 28px;
-  line-height: 1.2;
-  letter-spacing: -0.5px;
-  margin: 0 0 12px;
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-2xl);
 }
-.note {
-  text-align: center;
-  color: var(--text-subtle);
-  font-size: 14px;
-  margin: 24px 0 0;
-}
-@media (max-width: 600px) {
-  .page {
-    padding: 16px 16px 40px;
-  }
-  .card {
-    padding: 24px 20px;
-  }
+.done {
+  margin: 0 0 var(--space-4);
+  line-height: var(--leading-normal);
 }
 
+/* ── Form details ───────────────────────────────────────────────────── */
+.body :global(.form-intro) {
+  margin: 0 0 var(--space-5);
+  color: var(--text-secondary);
+}
+.body :global(.field) + :global(.help) {
+  margin: calc(-1 * var(--space-2)) 0 var(--space-4);
+}
+.body :global(.auth-form) > p[role="alert"] {
+  margin: 0 0 var(--space-3);
+  color: var(--danger);
+  font-size: var(--text-sm);
+}
+.body :global(.switch-auth) {
+  justify-content: center;
+  width: 100%;
+  min-height: var(--control-md);
+  margin-top: var(--space-3);
+}
 .consents {
-  margin: 4px 0 16px;
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+  margin: var(--space-1) 0 var(--space-4);
   padding: 0;
   border: 0;
-  min-width: 0;
-  display: grid;
-  gap: 8px;
 }
 .consents label {
   display: flex;
-  gap: 9px;
   align-items: flex-start;
-  font-size: 12px;
-  line-height: 1.5;
-  font-weight: 400;
-  color: var(--text-muted);
+  gap: var(--space-2);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-regular);
+  line-height: var(--leading-normal);
   cursor: pointer;
 }
 .consents input[type="checkbox"] {
+  flex: 0 0 16px;
   width: 16px;
   height: 16px;
-  flex: 0 0 16px;
-  padding: 0;
   margin: 1px 0 0;
-  accent-color: var(--accent);
+  padding: 0;
 }
 .consents a {
   color: var(--text);
   text-decoration: underline;
   text-underline-offset: 2px;
 }
-.consents a:focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 2px;
-}
-@media (max-width: 700px) {
-  .consents label {
-    min-height: 44px;
-    align-items: center;
-  }
-}
 .forgot {
-  margin: -4px 0 14px;
-  font-size: 14px;
+  margin: calc(-1 * var(--space-1)) 0 var(--space-3);
+  font-size: var(--text-sm);
   text-align: right;
 }
 .forgot a {
   display: inline-flex;
   align-items: center;
   min-height: 44px;
+  color: var(--text-secondary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
-.done {
-  margin: 0 0 16px;
-  line-height: 1.5;
+.forgot a:hover {
+  color: var(--text);
+}
+
+@media (max-width: 760px) {
+  .window {
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 0;
+  }
+  .art {
+    height: 128px;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .artDefault {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: var(--space-3);
+    padding: var(--space-4) var(--space-5);
+  }
+  .artMark {
+    width: 48px;
+    height: 48px;
+    flex: none;
+  }
+  .artDefault p {
+    font-size: var(--text-base);
+  }
+  .body {
+    padding: var(--space-6) var(--space-5);
+  }
+  /* In a dialog on a phone the form comes first. */
+  :global(dialog) .art {
+    display: none;
+  }
+  :global(dialog) .body {
+    padding: 0;
+  }
+  .card {
+    padding: var(--space-6) var(--space-5);
+  }
+}
+@media (max-width: 700px) {
+  .consents label {
+    align-items: center;
+    min-height: 44px;
+  }
 }

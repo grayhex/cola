@@ -1,20 +1,33 @@
 "use client";
-import SiteEmoji from "./site-emoji.jsx";
+import SiteIcon from "./site-icon.jsx";
 import { ClassificationBadges } from "./bike-classification.jsx";
 import { ContentLabel, LabelRow } from "./content-label.jsx";
 // `year` is off where the title already says «Модельный год».
 export function BikeLabels({ bike, year = true }) {
   return (
     <LabelRow className="bike-labels" aria-label="Характеристики велосипеда">
-      {bike.is_former && <ContentLabel className="hf-label" data-bike-label="former">Бывший</ContentLabel>}
+      {bike.is_former && (
+        <ContentLabel className="hf-label" data-bike-label="former">
+          Бывший
+        </ContentLabel>
+      )}
       {year && bike.year && (
-        <ContentLabel className="hf-label" tone="year" data-bike-label="year" aria-label={"Модельный год: " + bike.year}>
+        <ContentLabel
+          className="hf-label"
+          tone="year"
+          data-bike-label="year"
+          aria-label={"Модельный год: " + bike.year}
+        >
           {bike.year}
         </ContentLabel>
       )}
       {bike.size && (
-        <ContentLabel className="hf-label" data-bike-label="size" aria-label={"Размер рамы: " + bike.size}>
-          <SiteEmoji name="size" />
+        <ContentLabel
+          className="hf-label"
+          data-bike-label="size"
+          aria-label={"Размер рамы: " + bike.size}
+        >
+          <SiteIcon name="size" />
           <span>{bike.size}</span>
         </ContentLabel>
       )}
@@ -24,7 +37,7 @@ export function BikeLabels({ bike, year = true }) {
           data-bike-label="weight"
           aria-label={"Вес: " + Number(bike.weight) + " кг"}
         >
-          <SiteEmoji name="weight" />
+          <SiteIcon name="weight" />
           <span>{Number(bike.weight).toLocaleString("ru-RU")} кг</span>
         </ContentLabel>
       )}
@@ -32,11 +45,13 @@ export function BikeLabels({ bike, year = true }) {
     </LabelRow>
   );
 }
-export function BikeLike({ bike, reaction, t = (s) => s }) {
+// `compact`: the heart and the count only (cards); the bike page keeps the
+// word «Нравится» next to the heart (#121).
+export function BikeLike({ bike, reaction, t = (s) => s, compact = false }) {
   return (
     <button
       type="button"
-      className="like-button hf-like"
+      className={"like-button hf-like" + (compact ? " compact" : "")}
       disabled={bike.is_owner}
       aria-label={
         t("Нравится") + (reaction.likes == null ? "" : ": " + reaction.likes)
@@ -46,9 +61,9 @@ export function BikeLike({ bike, reaction, t = (s) => s }) {
       onClick={reaction.toggle}
     >
       <span>
-        <SiteEmoji name="heart" />
-        {t("Нравится")}
-      </span>
+        <SiteIcon name="heart" size={compact ? 14 : 16} />
+        {!compact && t("Нравится")}
+      </span>{" "}
       <strong>{reaction.likes ?? 0}</strong>
     </button>
   );

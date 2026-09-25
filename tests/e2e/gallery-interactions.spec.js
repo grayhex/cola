@@ -216,11 +216,13 @@ test("direct links, disclosure keyboard, return context and no document reload",
   const clock = await page.evaluate(() => performance.timeOrigin);
   await page.locator(".bike-card").nth(6).scrollIntoViewIfNeeded();
   const scroll = await page.evaluate(() => scrollY);
-  await page
-    .locator(".bike-card")
-    .nth(6)
-    .getByRole("link", { name: "Открыть Canyon Grail CF 8 AXS" })
-    .click();
+  // The photo is a mouse shortcut to the title link (hidden from
+  // assistive tech, #119).
+  const card = page.locator(".bike-card").nth(6);
+  await expect(
+    card.getByRole("link", { name: "Canyon Grail CF 8 AXS", exact: true }),
+  ).toBeVisible();
+  await card.locator(".card-open-photo").click();
   await expect(page).toHaveURL(/\/b\/share-6/);
   expect(await page.evaluate(() => performance.timeOrigin)).toBe(clock);
   await page.goBack();

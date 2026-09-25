@@ -10,7 +10,7 @@ import {
   socialApi,
 } from "./social-primitives.jsx";
 import { useSite } from "./site-provider.jsx";
-import SiteEmoji from "./site-emoji.jsx";
+import SiteIcon from "./site-icon.jsx";
 import ChoiceMenu from "./choice-menu.jsx";
 import ArticleBody from "./article-body.jsx";
 import Discussion from "./discussion.jsx";
@@ -43,7 +43,11 @@ export function ArticleCard({ article: a, topics }) {
           <span>
             {topic?.emoji} {topic?.label || "Без рубрики"}
           </span>
-          {a.status === "draft" && <span className="bike-label">Черновик</span>}
+          {a.status === "draft" && (
+            <span className="badge" data-tone="warning">
+              Черновик
+            </span>
+          )}
         </div>
         <h2>
           <a href={"/articles/" + a.shareId}>{a.title || "Без заголовка"}</a>
@@ -96,7 +100,7 @@ export function Articles() {
   return (
     <>
       <SocialHeader user={user} />
-      <main className="social-page articles-page">
+      <main className="page articles-page">
         <div className="section-heading">
           <div>
             <h1>Статьи</h1>
@@ -104,12 +108,12 @@ export function Articles() {
               База знаний: обслуживание, компоненты и опыт велосипедистов.
             </p>
           </div>
-          <a href="/articles/new" className="hf-button">
-            <SiteEmoji name="write" />
+          <a href="/articles/new" className="button secondary">
+            <SiteIcon name="write" />
             Написать статью
           </a>
         </div>
-        <div className="entity-tabs" role="group" aria-label="Статьи">
+        <div className="entity-tabs ui-tabs" role="group" aria-label="Статьи">
           <button
             aria-pressed={!own}
             onClick={() => {
@@ -117,7 +121,7 @@ export function Articles() {
               setPage(1);
             }}
           >
-            <SiteEmoji name="articles" />
+            <SiteIcon name="articles" />
             База знаний
           </button>
           {user && (
@@ -128,7 +132,7 @@ export function Articles() {
                 setPage(1);
               }}
             >
-              <SiteEmoji name="profile" />
+              <SiteIcon name="profile" />
               Мои статьи
             </button>
           )}
@@ -165,8 +169,8 @@ export function Articles() {
               maxLength={100}
               placeholder="Например, размеры покрышек"
             />
-            <button className="hf-button">
-              <SiteEmoji name="search" />
+            <button className="button secondary">
+              <SiteIcon name="search" />
               Найти
             </button>
           </form>
@@ -228,7 +232,7 @@ export function ArticlePage({ share, initial = null }) {
   return (
     <>
       <SocialHeader user={user} />
-      <main className="social-page article-page">
+      <main className="page narrow article-page">
         <a className="article-back" href="/articles">
           ← Все статьи
         </a>
@@ -260,10 +264,10 @@ export function ArticlePage({ share, initial = null }) {
                   <LocalDate value={article.updatedAt} />
                   {article.isOwner && (
                     <button
-                      className="hf-button"
+                      className="button secondary"
                       onClick={() => setEditing(true)}
                     >
-                      <SiteEmoji name="write" />
+                      <SiteIcon name="write" />
                       Редактировать
                     </button>
                   )}
@@ -289,7 +293,7 @@ export function NewArticle() {
   return (
     <>
       <SocialHeader user={user} />
-      <main className="social-page article-page">
+      <main className="page narrow article-page">
         <h1>Новая статья</h1>
         {user ? (
           <ArticleEditor
@@ -391,8 +395,8 @@ function ArticleEditor({ initial, onSaved, onCancel }) {
         <PromptComposer label="Текст статьи" value={form.body} onChange={(body) => set("body", body)}
           maxLength={20000} rows={16} disabled={busy} photos={photos} />
         <div className="article-toolbar">
-          <label className="hf-button">
-            <SiteEmoji name="add" />
+          <label className="button secondary">
+            <SiteIcon name="add" />
             Иллюстрация
             <input
               aria-label="Иллюстрация"
@@ -497,16 +501,16 @@ function ArticleEditor({ initial, onSaved, onCancel }) {
         </p>
       )}
       <div className="article-toolbar">
-        <button className="hf-button" disabled={busy} value="draft">
-          <SiteEmoji name="saved" />
+        <button className="button secondary" disabled={busy} value="draft">
+          <SiteIcon name="saved" />
           Сохранить черновик
         </button>
         <button
-          className="hf-button"
+          className="button secondary"
           disabled={busy || !form.title.trim() || !form.body.trim()}
           value="published"
         >
-          <SiteEmoji name="write" />
+          <SiteIcon name="write" />
           {initial?.status === "published" ? "Обновить статью" : "Опубликовать"}
         </button>
         {onCancel && (

@@ -1,47 +1,31 @@
+/* Showcase and "My bikes" (#127): the Datasets title row over the grid. */
 .garage {
-  max-width: var(--content-width);
-  padding: 32px 24px 48px;
-  margin: 0 auto;
   min-width: 0;
 }
 .heading {
-  display: flex;
-  align-items: center;
   justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin: 0 0 8px;
 }
 .heading .title {
-  font: 700 clamp(28px, 3vw, 36px)/1.15 var(--site-font);
-  letter-spacing: -1px;
   margin: 0;
   overflow-wrap: anywhere;
 }
+/* One row at normal sizes; enlarged text wraps instead of overflowing. */
 .actions {
-  display: flex;
-  align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-left: auto;
-}
-.actions label {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-.actions :global(.sort-control-icon) {
-  display: none;
 }
 .invitation {
-  margin: 0 0 8px;
-  font-size: 13px;
-  line-height: 1.4;
+  margin: calc(-1 * var(--space-2)) 0 var(--space-4);
+  color: var(--text-muted);
+  font-size: var(--text-sm);
 }
 .invitation a {
+  color: var(--text);
   text-decoration: underline;
+  text-decoration-color: var(--line-strong);
   text-underline-offset: 3px;
-  color: var(--ink);
+}
+.invitation a:hover {
+  text-decoration-color: currentColor;
 }
 .status {
   position: absolute;
@@ -52,34 +36,18 @@
 }
 .skeleton {
   aspect-ratio: var(--photo-ratio, 4/3);
-  background: var(--wash);
-  border: 1px solid var(--line);
-  border-radius: 4px;
+  border-radius: var(--radius-lg);
 }
 @media (max-width: 699px) {
-  .garage {
-    padding: 12px 12px 32px;
-  }
-  .heading {
-    gap: 8px;
-  }
-  .heading .title {
-    font-size: clamp(26px, 7vw, 30px);
-    line-height: 1.2;
-    letter-spacing: -0.5px;
-  }
   .actions {
-    width: 100%;
-    justify-content: flex-end;
+    margin-left: auto;
   }
+  /* Phones: the add button keeps its icon; the label stays for readers. */
   .addLabel {
     position: absolute;
     width: 1px;
     height: 1px;
     overflow: hidden;
     clip-path: inset(50%);
-  }
-  .invitation {
-    font-size: 13px;
   }
 }

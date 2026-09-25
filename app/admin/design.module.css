@@ -11,7 +11,7 @@
   min-width: 0;
   padding: 6px;
   border: 1px solid var(--line);
-  background: var(--wash);
+  background: var(--surface-subtle);
 }
 .designLayout :global(.admin-nav) button {
   flex: 0 1 auto;
@@ -103,9 +103,9 @@
   margin: 0;
   border-radius: 3px;
   overflow: hidden;
-  background-color: var(--wash);
+  background-color: var(--surface-subtle);
   background-image: repeating-conic-gradient(
-    var(--paper) 0% 25%,
+    var(--surface) 0% 25%,
     transparent 0% 50%
   );
   background-size: 12px 12px;
@@ -143,7 +143,7 @@
 .compactPicker.compactPicker :global(.asset-picker-heading) small {
   display: block;
   font-size: 12px;
-  color: var(--muted);
+  color: var(--text-muted);
   overflow-wrap: anywhere;
 }
 .compactPicker select {
@@ -185,7 +185,7 @@
 .empty {
   padding: 24px 12px;
   margin: 0;
-  color: var(--muted);
+  color: var(--text-muted);
   text-align: center;
 }
 .themeGrid {
@@ -226,7 +226,7 @@
   border-radius: 4px;
 }
 .menuIndex {
-  color: var(--muted);
+  color: var(--text-muted);
   text-align: center;
   font-size: 12px;
 }
@@ -291,7 +291,7 @@
   height: 48px;
   overflow: hidden;
   border-radius: 3px;
-  background: var(--wash);
+  background: var(--surface-subtle);
 }
 .mediaThumb img {
   display: block;
@@ -316,7 +316,7 @@
   line-height: 1.4;
 }
 .mediaInfo small {
-  color: var(--muted);
+  color: var(--text-muted);
   font-size: 12px;
   line-height: 1.6;
 }
@@ -378,4 +378,14 @@
 
 .compactPanel :global(.field) {
   margin-bottom: 10px;
+}
+/* A footer logo and its link (#124) stay one cell of the graphics grid. */
+.linkedSlot {
+  display: grid;
+  align-content: start;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.linkedSlot :global(.field) {
+  margin: 0;
 }

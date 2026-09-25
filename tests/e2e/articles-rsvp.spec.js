@@ -55,14 +55,20 @@ test("article without a bike: illustrated Markdown, draft, publication, discussi
     .setInputFiles({ name: "tire.png", mimeType: "image/png", buffer: png });
   await expect(page.getByLabel("Исходник: Текст статьи")).toHaveValue(/photo:/);
   await page.getByRole("tab", { name: "Предпросмотр", exact: true }).click();
-  await expect(page.locator('[data-rich-editor] [role="tabpanel"]:visible strong')).toHaveText("Размер");
-  await expect(page.locator('[data-rich-editor] [role="tabpanel"]:visible img')).toBeVisible();
+  await expect(
+    page.locator('[data-rich-editor] [role="tabpanel"]:visible strong'),
+  ).toHaveText("Размер");
+  await expect(
+    page.locator('[data-rich-editor] [role="tabpanel"]:visible img'),
+  ).toBeVisible();
   await page
     .getByRole("button", { name: "Сохранить черновик", exact: true })
     .click();
   await expect(page).toHaveURL(/\/articles\/[a-f0-9-]+$/);
   // Saving must use App Router, not tear down the document and its RSC prefetches.
-  expect(await page.evaluate(() => window.__articleDocumentMarker)).toBe(documentMarker);
+  expect(await page.evaluate(() => window.__articleDocumentMarker)).toBe(
+    documentMarker,
+  );
   await expect(page.locator(".article-heading")).toContainText("Черновик");
   await page
     .getByRole("button", { name: "Редактировать", exact: true })
@@ -93,7 +99,7 @@ test("article without a bike: illustrated Markdown, draft, publication, discussi
     page.locator(".article-card").filter({ hasText: "Как выбрать покрышки" }),
   ).toBeVisible();
   await page
-    .getByRole("button", { name: "Рубрика статей", exact: true })
+    .getByRole("button", { name: "Рубрика статей: Все рубрики", exact: true })
     .click();
   await page.getByRole("option", { name: /Компоненты и экипировка/ }).click();
   await expect(page.locator(".article-card")).toHaveCount(1);
@@ -130,8 +136,14 @@ test("left admin navigation, configurable emoji, frame labels and one-tap weekly
         content = await page.locator(".admin-content").boundingBox();
       expect(side.x + side.width).toBeLessThan(content.x + 1);
     }
-    await sidebar.getByRole("button", { name: "Эмодзи", exact: true }).click();
-    await page.getByLabel("Эмодзи: Запланировать", { exact: true }).fill("🌅");
+    await sidebar.getByRole("button", { name: "Значки", exact: true }).click();
+    // Line icons by default; an emoji typed here replaces one (#127).
+    await expect(
+      page.getByLabel("Эмодзи вместо значка: Запланировать", { exact: true }),
+    ).toHaveValue("");
+    await page
+      .getByLabel("Эмодзи вместо значка: Запланировать", { exact: true })
+      .fill("🌅");
     await page.getByRole("button", { name: "Сохранить", exact: true }).click();
     await expect
       .poll(
@@ -185,7 +197,7 @@ test("left admin navigation, configurable emoji, frame labels and one-tap weekly
     await expect(
       page
         .getByRole("button", { name: "Запланировать", exact: true })
-        .locator(".site-emoji"),
+        .locator(".site-icon.custom"),
     ).toHaveText("🌅");
     await expect(
       page.getByLabel("Повторять каждую неделю", { exact: false }),
@@ -223,11 +235,14 @@ test("left admin navigation, configurable emoji, frame labels and one-tap weekly
       tile.getByLabel("Вес: 10.4 кг", { exact: true }),
     ).toBeVisible();
     await page
-      .getByRole("button", { name: "Порядок витрины", exact: true })
+      .getByRole("button", { name: "Порядок витрины: Новые", exact: true })
       .click();
     await page.getByRole("option", { name: "Популярные", exact: true }).click();
     await expect(
-      page.getByRole("button", { name: "Порядок витрины", exact: true }),
+      page.getByRole("button", {
+        name: "Порядок витрины: Популярные",
+        exact: true,
+      }),
     ).toContainText("Популярные");
     await noOverflow(page);
     await page.screenshot({

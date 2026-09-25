@@ -1,5 +1,5 @@
 .chart {
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: var(--radius-md);
   margin: 24px 0;
   padding: 20px;
@@ -21,7 +21,7 @@
 .heading p {
   font-size: 13px;
   margin: 0;
-  color: var(--text-subtle);
+  color: var(--text-muted);
 }
 .readout {
   font-size: 14px;
@@ -34,7 +34,7 @@
 }
 .readout span {
   display: block;
-  color: var(--text-subtle);
+  color: var(--text-muted);
   font-size: 12px;
 }
 .chart svg[role="img"] {
@@ -45,8 +45,8 @@
   overflow: visible;
 }
 .chart text {
-  fill: var(--text-subtle);
-  font: 12px var(--site-font);
+  fill: var(--text-muted);
+  font: 12px var(--font-sans);
 }
 .line {
   stroke: var(--chart-line);
@@ -57,7 +57,7 @@
   vector-effect: non-scaling-stroke;
 }
 .grid {
-  stroke: var(--border);
+  stroke: var(--line);
   stroke-dasharray: 3 5;
 }
 .cursor {
@@ -87,7 +87,7 @@
 .data td {
   text-align: left;
   padding: 6px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--line);
 }
 .empty {
   font-size: 14px;

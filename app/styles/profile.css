@@ -1,0 +1,528 @@
+/* People (#127): the public profile, lists of people, following, and the
+   personal account. A profile reads like a Hugging Face user page: a large
+   avatar, the name and a mono @username, then stats and the collection. */
+@layer tokens, base, components, layout, features;
+@layer features {
+  /* ── Profile header ─────────────────────────────────────────────────── */
+  .profile-hero {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto auto auto;
+    align-items: start;
+    gap: var(--space-2) var(--space-5);
+    margin-bottom: var(--space-6);
+    padding-bottom: var(--space-5);
+    border-bottom: 1px solid var(--line);
+  }
+  .profile-hero > :is(.follow-control, .share-button, .report-control),
+  .profile-hero > div:has(> .share-button) {
+    align-self: start;
+  }
+  .profile-title {
+    min-width: 0;
+  }
+  .profile-title .eyebrow {
+    margin-bottom: var(--space-1);
+  }
+  .profile-title h1 {
+    font-size: var(--text-3xl);
+  }
+  .username {
+    color: var(--text-muted);
+    font: var(--weight-regular) var(--text-sm) / 1.5 var(--font-mono);
+    overflow-wrap: anywhere;
+  }
+  .profile-about h2 {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .profile-bio {
+    max-width: 62ch;
+    margin: var(--space-3) 0 0;
+    color: var(--text-secondary);
+    line-height: var(--leading-normal);
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+  }
+  .profile-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1) var(--space-4);
+    margin-top: var(--space-2-5);
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+  }
+  .profile-meta > span {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  /* Bikes, followers, following, friends: numbers that switch the list. */
+  .social-stats {
+    display: flex;
+    flex-wrap: wrap;
+    grid-column: 2 / -1;
+    gap: var(--space-1) var(--space-2);
+  }
+  .social-stats button {
+    display: inline-flex;
+    align-items: baseline;
+    gap: var(--space-1-5);
+    min-height: var(--control-sm);
+    padding: 0 var(--space-2-5);
+    border: 1px solid transparent;
+    border-radius: var(--radius-md);
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    cursor: pointer;
+  }
+  .social-stats button:hover {
+    background: var(--surface-hover);
+    color: var(--text);
+  }
+  .social-stats button[aria-pressed="true"] {
+    border-color: var(--line);
+    background: var(--surface-subtle);
+    color: var(--text);
+  }
+  .social-stats strong {
+    color: var(--text);
+    font: var(--weight-semibold) var(--text-base) / 1 var(--font-mono);
+  }
+  .profile-hero > .report-control {
+    grid-column: 2 / -1;
+    justify-self: start;
+  }
+  .follow-control {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+  }
+  .follow-control .error {
+    flex-basis: 100%;
+    max-width: 240px;
+  }
+  .friend-status {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+  }
+  .profile-collection > h2,
+  .recent-bikes h2 {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2);
+    margin: 0 0 var(--space-4);
+    font-size: var(--text-lg);
+    font-weight: var(--weight-semibold);
+  }
+  .profile-collection > h2 span {
+    color: var(--text-muted);
+    font: var(--weight-regular) var(--text-sm) / 1 var(--font-mono);
+  }
+  .profile-collection > .ui-tabs {
+    margin-bottom: var(--space-5);
+  }
+
+  /* ── Panels and people ──────────────────────────────────────────────── */
+  .social-panel {
+    min-width: 0;
+    padding: var(--space-5) var(--space-6);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-xl);
+    background: var(--surface);
+  }
+  .social-panel > h2 {
+    margin-bottom: var(--space-4);
+    font-size: var(--text-xl);
+    font-weight: var(--weight-semibold);
+  }
+  .social-panel > .quiet:first-child {
+    margin: 0 0 var(--space-3) calc(-1 * var(--space-2));
+  }
+  .people-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .people-list li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    padding: var(--space-3) 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .people-list li:last-child {
+    border-bottom: 0;
+  }
+  /* An avatar with a name and a mono @username under it. */
+  .person-identity {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    min-width: 0;
+    color: var(--text);
+  }
+  .person-identity > span:last-child {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .person-identity strong {
+    font-weight: var(--weight-semibold);
+  }
+  .person-identity small {
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+  }
+  a.person-identity:hover strong {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .experience-users {
+    display: grid;
+    gap: var(--space-3);
+  }
+
+  /* ── The personal account ───────────────────────────────────────────── */
+  .account-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2) var(--space-3);
+    margin-bottom: var(--space-4);
+  }
+  .account-tabs {
+    margin-bottom: var(--space-6);
+  }
+  .account-content {
+    display: grid;
+    /* One track that cannot grow: WebKit sizes a select by its longest
+       option, which would widen an auto track past a phone screen. */
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-6);
+    min-width: 0;
+  }
+  .account-content > .main {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+  }
+  /* "Choose a username" banner. */
+  .username-prompt {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-3) var(--space-4);
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line));
+    border-radius: var(--radius-lg);
+    background: var(--accent-soft);
+  }
+  .username-prompt p {
+    flex: 1 1 260px;
+    font-size: var(--text-sm);
+    overflow-wrap: anywhere;
+  }
+  .username-prompt div {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+  .account-overview {
+    display: flex;
+    align-items: center;
+    gap: var(--space-5);
+  }
+  .account-overview > div {
+    flex: 1;
+    min-width: 0;
+  }
+  .account-overview h2 {
+    font-size: var(--text-2xl);
+  }
+  .account-overview p {
+    margin-top: var(--space-2);
+    font-size: var(--text-sm);
+  }
+  .account-overview p a {
+    color: var(--text-secondary);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  /* Counters: a ruled strip of numbers, each opens its list. */
+  .account-metrics {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-xl);
+    background: var(--surface);
+  }
+  .account-metrics button {
+    display: grid;
+    gap: var(--space-1);
+    padding: var(--space-4);
+    border: 0;
+    border-right: 1px solid var(--line);
+    background: none;
+    text-align: left;
+    cursor: pointer;
+  }
+  .account-metrics button:last-child {
+    border-right: 0;
+  }
+  .account-metrics button:hover:not(:disabled) {
+    background: var(--surface-hover);
+  }
+  .account-metrics button:disabled {
+    opacity: 1;
+    cursor: default;
+  }
+  .account-metrics strong {
+    color: var(--text);
+    font: var(--weight-semibold) var(--text-2xl) / 1 var(--font-mono);
+  }
+  .account-metrics span {
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+  }
+  .recent-bikes .section-heading h2 {
+    margin: 0;
+  }
+  /* Profile editor and forms. */
+  .account-form,
+  .profile-editor {
+    max-width: 580px;
+  }
+  .avatar-editor {
+    display: flex;
+    align-items: center;
+    gap: var(--space-5);
+    margin: 0 0 var(--space-5);
+  }
+  .avatar-editor input[type="file"] {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    opacity: 0;
+  }
+  .avatar-editor label:focus-within {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+  .avatar-editor .quiet {
+    display: flex;
+    margin-top: var(--space-1);
+    padding-left: 0;
+    font-size: var(--text-xs);
+  }
+  .avatar-editor .help {
+    margin-top: var(--space-2);
+  }
+  .profile-editor .field small {
+    color: var(--text-muted);
+    font-weight: var(--weight-regular);
+  }
+  .profile-editor textarea {
+    resize: vertical;
+  }
+  .success {
+    color: var(--success);
+    font-size: var(--text-sm);
+  }
+  /* Private account facts. */
+  .account-private dl {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    gap: var(--space-3) var(--space-6);
+    margin: var(--space-4) 0;
+    font-size: var(--text-sm);
+  }
+  .account-private dt {
+    color: var(--text-muted);
+  }
+  .account-private dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+
+  /* ── Account security (#70): sections of a settings page ───────────── */
+  .account-private > .section-heading {
+    margin-bottom: var(--space-1);
+  }
+  .account-settings > section {
+    padding: var(--space-5) 0;
+    border-top: 1px solid var(--line);
+  }
+  .account-settings > section:first-child {
+    border-top: 0;
+  }
+  .account-settings h3 {
+    font-size: var(--text-base);
+    font-weight: var(--weight-semibold);
+  }
+  .account-settings > section > .help {
+    max-width: 80ch;
+    margin: var(--space-1) 0 var(--space-3);
+  }
+  .account-email {
+    margin-bottom: var(--space-3);
+    font-size: var(--text-sm);
+    overflow-wrap: anywhere;
+  }
+  .account-settings .form-actions {
+    justify-content: flex-start;
+    margin-top: var(--space-1);
+  }
+  .account-settings :is(.error, .notice) {
+    margin: var(--space-2) 0;
+  }
+  /* Signed-in devices. */
+  .session-list {
+    margin: 0 0 var(--space-3);
+    padding: 0;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    list-style: none;
+  }
+  .session-list li {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--line);
+  }
+  .session-list li:last-child {
+    border-bottom: 0;
+  }
+  .session-list li > svg {
+    flex: none;
+    color: var(--text-muted);
+  }
+  .session-list li > span {
+    display: flex;
+    flex: 1;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1) var(--space-2);
+    min-width: 0;
+  }
+  .session-list strong {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+  }
+  .session-list small {
+    flex-basis: 100%;
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+  }
+  /* The irreversible part stands apart, as on Hugging Face settings. */
+  .account-settings > .danger-zone {
+    margin-top: var(--space-3);
+    padding: var(--space-5);
+    border: 1px solid color-mix(in srgb, var(--danger) 40%, var(--line));
+    border-radius: var(--radius-xl);
+    background: color-mix(in srgb, var(--danger-soft) 45%, var(--surface));
+  }
+  .danger-zone h3 {
+    color: var(--danger);
+  }
+
+  @media (max-width: 700px) {
+    /* Avatar and name on the first line, follow / share / report on the
+       next, the numbers below. */
+    .profile-hero {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--space-3);
+      margin-bottom: var(--space-4);
+      padding-bottom: var(--space-4);
+    }
+    .profile-hero > .profile-title {
+      flex: 1 1 calc(100% - 64px - var(--space-3));
+    }
+    .profile-title .eyebrow {
+      display: none;
+    }
+    .profile-title h1 {
+      font-size: var(--text-2xl);
+    }
+    .profile-bio {
+      margin-top: var(--space-2);
+      font-size: var(--text-sm);
+    }
+    .social-stats {
+      flex-basis: 100%;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: var(--space-1);
+    }
+    .social-stats button {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 2px;
+      min-height: 44px;
+      padding: var(--space-1-5) var(--space-2);
+      font-size: var(--text-xs);
+    }
+    .social-panel {
+      padding: var(--space-4);
+    }
+    .people-list li {
+      flex-wrap: wrap;
+      gap: var(--space-2);
+    }
+    .person-identity {
+      flex: 1;
+      gap: var(--space-2);
+    }
+    .account-heading h1 {
+      font-size: var(--text-2xl);
+    }
+    .account-overview {
+      flex-wrap: wrap;
+      gap: var(--space-3);
+    }
+    .account-overview > .button {
+      flex-basis: 100%;
+    }
+    .account-metrics {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .account-metrics button {
+      padding: var(--space-3);
+      border-bottom: 1px solid var(--line);
+    }
+    .account-metrics strong {
+      font-size: var(--text-xl);
+    }
+    .account-metrics span {
+      font-size: var(--text-xs);
+    }
+    .avatar-editor {
+      gap: var(--space-3);
+    }
+    .account-private dl {
+      grid-template-columns: minmax(0, 1fr);
+      gap: var(--space-1);
+    }
+    .account-private dd {
+      margin-bottom: var(--space-2);
+    }
+  }
+}

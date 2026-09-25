@@ -1,0 +1,399 @@
+/* Journal (#127): the bike's journal on its page, entry cards in the feed,
+   the entry page and the editor. Entries read like Hugging Face posts:
+   a mono line of facts, a semibold title, grey text, a line of reactions. */
+@layer tokens, base, components, layout, features;
+@layer features {
+  /* ── Sections on the bike, entry and ride pages ─────────────────────── */
+  .bike-journal,
+  .discussion {
+    min-width: 0;
+    padding-top: var(--space-6);
+    border-top: 1px solid var(--line);
+    scroll-margin-top: calc(var(--header-height) + var(--space-4));
+  }
+  :is(.bike-journal, .discussion) > .section-heading {
+    align-items: flex-start;
+    margin-bottom: var(--space-3);
+  }
+  :is(.bike-journal, .discussion) h2 {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--text-lg);
+    font-weight: var(--weight-semibold);
+  }
+  :is(.bike-journal, .discussion) h2 > svg {
+    color: var(--text-secondary);
+  }
+  :is(.bike-journal, .discussion) .section-heading .help {
+    margin-top: var(--space-1);
+  }
+
+  /* One entry in the bike's journal: facts, title, excerpt, reactions. */
+  .journal-list-entry {
+    padding: var(--space-3) 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .journal-list-entry h3 {
+    margin: var(--space-1) 0;
+    font-size: var(--text-base);
+    font-weight: var(--weight-semibold);
+  }
+  .journal-list-entry h3 a:hover {
+    color: var(--accent-text);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .journal-list-entry p {
+    display: -webkit-box;
+    margin: 0 0 var(--space-1-5);
+    overflow: hidden;
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    line-height: var(--leading-normal);
+    overflow-wrap: anywhere;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+  }
+  .journal-list-entry > small {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+  }
+  /* Kind, date and status: a mono line with dots between. */
+  .journal-entry-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1) var(--space-2);
+    color: var(--text-muted);
+    font: var(--weight-regular) var(--text-xs) / 1.5 var(--font-mono);
+  }
+  .journal-entry-meta > * {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+  }
+  .journal-entry-meta > * + *::before {
+    content: "·";
+    margin-right: var(--space-1);
+    color: var(--text-subtle);
+  }
+  /* "The build changed — tell the story?" */
+  .journal-prompt {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1) var(--space-3);
+    margin: var(--space-2) 0;
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    background: var(--surface-subtle);
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+  }
+  .journal-prompt small {
+    color: var(--text-muted);
+  }
+  .journal-prompt > .quiet:last-child {
+    margin-left: auto;
+  }
+
+  /* ── Entry cards in the journal, saved and the feed ─────────────────── */
+  .journal-feed {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-3);
+  }
+  @media (min-width: 1280px) {
+    .journal-feed {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: var(--space-4) var(--space-5);
+    }
+  }
+  .journal-card {
+    position: relative;
+    display: flex;
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-xl);
+    background: var(--surface-gradient);
+    transition: box-shadow var(--duration-fast) var(--ease-out);
+  }
+  .journal-card:hover {
+    box-shadow: var(--shadow-inner);
+  }
+  .journal-card-photo {
+    flex: 0 0 160px;
+    min-height: 160px;
+    border-right: 1px solid var(--line);
+    background: var(--bg-subtle);
+  }
+  .journal-card-photo img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .journal-card-content {
+    display: grid;
+    flex: 1;
+    align-content: start;
+    gap: var(--space-1-5);
+    min-width: 0;
+    padding: var(--space-3) var(--space-4);
+  }
+  .journal-card h2 {
+    font-size: var(--text-base);
+    font-weight: var(--weight-semibold);
+    line-height: var(--leading-snug);
+  }
+  .journal-card h2 a:hover {
+    color: var(--accent-text);
+  }
+  .journal-excerpt {
+    display: -webkit-box;
+    overflow: hidden;
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    line-height: var(--leading-normal);
+    overflow-wrap: anywhere;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+  .journal-card-bike {
+    overflow: hidden;
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .journal-card-bike:hover {
+    color: var(--text);
+  }
+  .journal-card-social {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1) var(--space-3);
+    padding-top: var(--space-2);
+    border-top: 1px dashed var(--line-dashed);
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+  }
+  .journal-card-social > :is(span, a) {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+  }
+  .journal-card-social > a:hover {
+    color: var(--text);
+  }
+  .journal-card-social .quiet {
+    min-height: var(--control-sm);
+    margin-left: auto;
+    font-size: var(--text-xs);
+  }
+  .journal-solution {
+    color: var(--success);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+  }
+
+  /* ── The entry page ─────────────────────────────────────────────────── */
+  .journal-page > h1 {
+    margin: var(--space-2) 0 var(--space-3);
+  }
+  .journal-page > a:first-of-type {
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+  }
+  .journal-page > a:first-of-type:hover {
+    color: var(--text);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .journal-page > .journal-entry-meta {
+    margin-top: var(--space-4);
+  }
+  /* Author and share under the title. */
+  .entity-byline,
+  .entity-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2) var(--space-3);
+  }
+  .entity-byline {
+    justify-content: space-between;
+    padding-bottom: var(--space-4);
+    border-bottom: 1px solid var(--line);
+    font-size: var(--text-sm);
+  }
+  .entity-byline > a {
+    color: var(--text-secondary);
+    font-weight: var(--weight-medium);
+  }
+  .entity-byline > a:hover {
+    color: var(--text);
+  }
+  .journal-body {
+    margin: var(--space-6) 0;
+    font-size: var(--text-lg);
+    line-height: 1.65;
+    overflow-wrap: anywhere;
+  }
+  .journal-photos {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+    gap: var(--space-3);
+    margin: var(--space-4) 0;
+  }
+  .journal-photos:empty {
+    display: none;
+  }
+  .journal-photos figure {
+    min-width: 0;
+    margin: 0;
+  }
+  .journal-photos img {
+    display: block;
+    width: 100%;
+    max-height: 620px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    background: var(--bg-subtle);
+    object-fit: contain;
+  }
+  .journal-page section > h2 {
+    margin: var(--space-8) 0 var(--space-1);
+    font-size: var(--text-lg);
+    font-weight: var(--weight-semibold);
+  }
+  /* A part as it was when the entry was written. */
+  .journal-part {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--space-1) var(--space-3);
+    padding: var(--space-3) 0;
+    border-bottom: 1px solid var(--line);
+    font-size: var(--text-sm);
+  }
+  .journal-part > span {
+    color: var(--text-muted);
+  }
+  .journal-part p {
+    flex-basis: 100%;
+    color: var(--text-secondary);
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+  }
+  .journal-part a:not(:only-child) {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .journal-part small {
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+  }
+  .journal-attached-ride {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin: var(--space-4) 0;
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    background: var(--surface-gradient);
+    font-weight: var(--weight-medium);
+  }
+  .journal-attached-ride:hover {
+    box-shadow: var(--shadow-inner);
+  }
+  .journal-reactions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+    margin: var(--space-4) 0 var(--space-6);
+  }
+  .journal-reactions .quiet {
+    border: 1px solid var(--control-line);
+    background: var(--control-bg);
+    color: var(--control-text);
+  }
+  .journal-reactions .quiet[aria-pressed="true"] svg {
+    color: var(--tone-special);
+    fill: currentColor;
+  }
+
+  /* ── The editor ─────────────────────────────────────────────────────── */
+  .journal-editor {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-4);
+    min-width: 0;
+    margin-top: var(--space-4);
+    padding: var(--space-5);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-xl);
+    background: var(--surface);
+  }
+  .journal-editor .field {
+    margin: 0;
+  }
+  .journal-editor details {
+    padding: var(--space-2) 0;
+    border-block: 1px solid var(--line);
+  }
+  .journal-editor summary {
+    min-height: var(--control-sm);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+    cursor: pointer;
+  }
+  .journal-editor details > .help {
+    margin: var(--space-1) 0 var(--space-2);
+  }
+  .journal-editor input[type="file"] {
+    max-width: 100%;
+  }
+  .journal-editor .journal-photos {
+    margin: 0;
+  }
+  .journal-editor .journal-photos img {
+    max-height: 240px;
+  }
+  .journal-fields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-3) var(--space-4);
+  }
+  .journal-editor .form-actions {
+    margin-top: 0;
+  }
+
+  @media (max-width: 700px) {
+    .journal-card-photo {
+      flex-basis: 96px;
+      min-height: 120px;
+    }
+    .journal-card-content {
+      padding: var(--space-3);
+    }
+    .journal-body {
+      font-size: var(--text-base);
+    }
+    .journal-editor {
+      padding: var(--space-4);
+    }
+    .journal-fields {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+}

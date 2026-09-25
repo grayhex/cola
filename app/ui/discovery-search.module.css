@@ -26,7 +26,7 @@
   display: flex;
   gap: 16px;
   overflow-x: auto;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--line);
   margin: 20px 0 16px;
 }
 .tabs a {
@@ -70,12 +70,12 @@
   gap: 14px;
   min-height: 80px;
   padding: 12px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--line);
   border-radius: var(--radius-sm);
   transition: background var(--duration-fast);
 }
 .result:hover {
-  background: var(--surface-muted);
+  background: var(--surface-subtle);
 }
 .thumbnail {
   display: grid;
@@ -84,9 +84,9 @@
   width: 68px;
   height: 50px;
   object-fit: contain;
-  background: var(--surface-muted);
+  background: var(--surface-subtle);
   color: var(--text-muted);
-  border-radius: var(--radius-xs);
+  border-radius: var(--radius-sm);
 }
 .identity {
   flex: 1;

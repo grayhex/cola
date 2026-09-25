@@ -43,7 +43,7 @@ export default function ArticleTopicSettings({
       ))}
       <button
         type="button"
-        className="hf-button"
+        className="button secondary"
         disabled={value.length >= 24}
         onClick={() =>
           onChange([

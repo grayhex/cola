@@ -1,41 +1,35 @@
+/* Share (#72, #127): a secondary button with a menu of targets. Outside
+   the bike's action row it keeps only its icon on narrow screens. */
 .share {
   position: relative;
   display: inline-flex;
   align-items: center;
 }
-.button {
-  gap: 7px;
-  font-weight: 600;
-}
-.button span {
-  font-size: 14px;
-}
 .menu {
   position: absolute;
   top: calc(100% + 6px);
   right: 0;
-  z-index: 40;
+  z-index: var(--z-dropdown);
   display: grid;
   min-width: 220px;
-  padding: 6px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  padding: var(--space-1);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-lg);
   background: var(--surface);
-  box-shadow: var(--shadow-popover);
+  box-shadow: var(--shadow-lg);
 }
 .menu > button,
 .menu > a {
   display: flex;
   align-items: center;
-  gap: 10px;
-  min-height: 44px;
-  padding: 0 12px;
+  gap: var(--space-2-5);
+  min-height: var(--control-md);
+  padding: 0 var(--space-3);
   border: 0;
-  border-radius: var(--radius-xs);
+  border-radius: var(--radius-md);
   background: none;
   color: var(--text);
-  font: inherit;
-  font-size: 14px;
+  font: var(--weight-regular) var(--text-sm) / 1.2 var(--font-sans);
   text-align: left;
   text-decoration: none;
   cursor: pointer;
@@ -46,6 +40,10 @@
 .menu > a:focus-visible {
   background: var(--surface-hover);
 }
+.menu svg {
+  flex: none;
+  color: var(--text-muted);
+}
 .status:empty {
   display: none;
 }
@@ -53,15 +51,20 @@
   position: absolute;
   top: calc(100% + 6px);
   right: 0;
-  z-index: 40;
-  padding: 6px 10px;
-  border-radius: var(--radius-xs);
-  background: var(--text);
-  color: var(--surface);
-  font-size: 13px;
+  z-index: var(--z-toast);
+  padding: var(--space-1-5) var(--space-2-5);
+  border-radius: var(--radius-md);
+  background: var(--surface-inverse);
+  color: var(--text-inverse);
+  font-size: var(--text-sm);
   white-space: nowrap;
+  box-shadow: var(--shadow-lg);
 }
 @media (max-width: 600px) {
+  .button {
+    width: var(--control-md);
+    padding: 0;
+  }
   .button span {
     display: none;
   }

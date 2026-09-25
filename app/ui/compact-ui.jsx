@@ -1,8 +1,9 @@
 "use client";
-import SiteEmoji from "./site-emoji.jsx";
+import SiteIcon from "./site-icon.jsx";
 import SearchBox from "./search-box.jsx";
 import styles from "./compact-ui.module.css";
 import { useEffect, useRef, useState } from "react";
+import { useBackdropClose } from "./use-backdrop-close.js";
 import {
   significantBadge,
   metricSegments,
@@ -27,7 +28,7 @@ export function CompactIconButton({
   return (
     <button
       type="button"
-      className={"compact-icon " + className}
+      className={"icon " + className}
       aria-label={label}
       title={label}
       {...props}
@@ -57,10 +58,11 @@ export function CompactDialog({
       document.body.style.overflow = before;
     };
   }, [open]);
+  const backdrop = useBackdropClose(onClose);
   return (
     <dialog
       ref={ref}
-      className={"compact-panel " + className}
+      className={"sheet " + className}
       aria-label={title}
       onCancel={onClose}
       onClose={onClose}
@@ -70,20 +72,9 @@ export function CompactDialog({
           onClose();
         }
       }}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          const r = e.currentTarget.getBoundingClientRect();
-          if (
-            e.clientX < r.left ||
-            e.clientX > r.right ||
-            e.clientY < r.top ||
-            e.clientY > r.bottom
-          )
-            onClose();
-        }
-      }}
+      {...backdrop}
     >
-      <div className="compact-panel-heading">
+      <div className="sheet-head">
         <h2>{title}</h2>
         <CompactIconButton label="Закрыть панель" onClick={onClose}>
           <X size={18} />
@@ -100,7 +91,7 @@ export function FilterControl({ categories, selected, onChange }) {
     <>
       <button
         type="button"
-        className="compact-button"
+        className="button secondary"
         aria-label="Фильтры"
         title="Фильтры"
         aria-haspopup="dialog"
@@ -110,10 +101,10 @@ export function FilterControl({ categories, selected, onChange }) {
           setOpen(true);
         }}
       >
-        <SiteEmoji name="filters" />
+        <SiteIcon name="filters" />
         <span className="control-label">Фильтры</span>
         {selected.length > 0 && (
-          <span className="control-count">{selected.length}</span>
+          <span className="badge">{selected.length}</span>
         )}
       </button>
       <CompactDialog open={open} onClose={() => setOpen(false)} title="Фильтры">
@@ -134,20 +125,20 @@ export function FilterControl({ categories, selected, onChange }) {
                   }
                 />
                 <span>
-                  <SiteEmoji name={key} />
+                  <SiteIcon name={key} />
                   {label}
                 </span>
               </label>
             ))}
           </div>
         </fieldset>
-        <div className="compact-panel-actions">
+        <div className="sheet-actions">
           <button
             type="button"
-            className="compact-button"
+            className="button secondary small"
             onClick={() => setDraft([])}
           >
-            <SiteEmoji name="reset" />
+            <SiteIcon name="reset" />
             Сбросить
           </button>
           <button
@@ -158,7 +149,7 @@ export function FilterControl({ categories, selected, onChange }) {
               setOpen(false);
             }}
           >
-            <SiteEmoji name="apply" />
+            <SiteIcon name="apply" />
             Применить
           </button>
         </div>
@@ -216,15 +207,21 @@ export function GlobalSearch() {
   return (
     <>
       <button
-        className="global-nav-item"
+        className="global-nav-item search-trigger"
         type="button"
         aria-label="Поиск ColaBike"
+        aria-keyshortcuts="Control+K Meta+K"
         title="Поиск · Ctrl/⌘ K"
         aria-expanded={open}
         aria-haspopup="dialog"
         onClick={() => setOpen(true)}
       >
-        <SiteEmoji name="search" />
+        <SiteIcon name="search" size={18} />
+        <span className="search-trigger-label" aria-hidden="true">
+          Поиск
+        </span>
+        {/* The hint is CSS content: a shortcut is not part of the name. */}
+        <kbd aria-hidden="true" />
       </button>
       <CompactDialog
         title="Поиск ColaBike"

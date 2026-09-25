@@ -15,7 +15,7 @@
 .warning {
   padding: 12px;
   border-left: 3px solid var(--accent);
-  background: var(--surface-muted);
+  background: var(--surface-subtle);
   font-size: 13px;
 }
 .upload {

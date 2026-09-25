@@ -1,173 +1,194 @@
+/* Bike card (#127): the photo first, then a Datasets-style body — tinted
+   edge, hairline, inner shadow on hover, the name, a row of labels and one
+   quiet line with the owner and the counters. */
 .card {
   position: relative;
-  display: block;
+  display: flex;
+  flex-direction: column;
   min-width: 0;
-  padding: 0;
+  overflow: hidden;
   border: 1px solid var(--line);
-  border-radius: var(--radius-md);
-  background: var(--paper);
-  color: var(--ink);
-  text-align: left;
+  border-radius: var(--radius-lg);
+  background-color: var(--surface);
+  background-image: var(--surface-gradient);
+  color: var(--text);
+  transition: box-shadow var(--duration-fast) var(--ease-out);
 }
+.card:hover,
 .card:focus-within {
-  border-color: var(--control-border, var(--line-strong));
+  box-shadow: var(--shadow-inner);
 }
 .photo {
   position: relative;
   aspect-ratio: var(--photo-ratio, 4/3);
-  background: var(--wash);
-  border-radius: inherit;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-subtle);
 }
 .openPhoto {
-  display: block;
   position: absolute;
   inset: 0;
+  display: block;
   width: 100%;
   height: 100%;
   padding: 0;
   border: 0;
   background: transparent;
-  border-radius: inherit;
+  cursor: pointer;
 }
 .openPhoto > img {
   display: block;
   width: 100%;
   height: 100%;
   object-fit: contain;
-  border-radius: inherit;
-  image-rendering: auto;
 }
 .openPhoto > :global(.photo-empty) {
-  color: var(--muted);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
   height: 100%;
-  min-height: 0;
-  font-size: 13px;
-}
-.openPhoto:focus-visible {
-  outline-offset: -4px;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
 }
 .private {
   position: absolute;
-  right: 8px;
-  bottom: 8px;
+  right: var(--space-2);
+  bottom: var(--space-2);
   display: grid;
   place-items: center;
   width: 28px;
   height: 28px;
-  background: var(--paper);
-  border-radius: 3px;
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text-secondary);
+  box-shadow: var(--shadow-xs);
 }
 .info {
-  padding: 12px 12px 6px;
+  container-type: inline-size;
+  display: grid;
+  gap: var(--space-1-5);
+  min-width: 0;
+  padding: var(--space-2-5) var(--space-3) var(--space-1);
 }
 .identity {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-.card .identity h2 {
-  flex: 1 1 170px;
   min-width: 0;
+}
+.identity :is(h2, h3) {
+  display: -webkit-box;
+  overflow: hidden;
   margin: 0;
-  font: 700 17px/1.3 var(--site-font);
-  letter-spacing: 0;
+  color: var(--text-strong);
+  font: var(--weight-semibold) var(--text-base) / var(--leading-snug)
+    var(--font-sans);
   overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
-.identity h2 :is(a, button) {
-  display: block;
-  width: 100%;
+.identity :is(h2, h3) :is(a, button) {
+  display: inline;
   padding: 0;
-  text-align: left;
-  font: inherit;
+  border: 0;
+  background: none;
   color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease-out);
 }
-.identity h2 :is(a, button):hover {
-  text-decoration: underline;
-  text-underline-offset: 3px;
+/* The whole card answers the pointer, as a Datasets row does. */
+.card:hover .identity :is(a, button) {
+  color: var(--accent-text);
 }
-.facts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 18px;
+.info :global(.bike-labels) {
+  margin: 0;
 }
 .social {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 0 8px;
-  min-height: 44px;
-  margin-top: 4px;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-width: 0;
+  min-height: var(--control-md);
+  border-top: 1px dashed var(--line-dashed);
 }
 .social :global(.author-link) {
-  flex: 1 1 100px;
-  min-width: 0;
-  max-width: 100%;
-  font: 400 13px/18px var(--site-font);
-  color: var(--muted);
-  min-height: 44px;
+  flex: 1 1 auto;
+  min-height: var(--control-sm);
+  color: var(--text-muted);
+  font-size: 13px;
 }
-.social :global(.author-link) span {
-  overflow-wrap: anywhere;
-  white-space: normal;
-  overflow: visible;
+/* Narrow cards (two per row on phones): the avatar stays, the name moves
+   to assistive technology only, so the counters keep their size. */
+@container (max-width: 210px) {
+  .social :global(.author-link) > span:last-child {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
 }
-.social :global(.avatar) {
-  width: 22px;
-  height: 22px;
-  flex: 0 0 22px;
+.counters {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
 }
-.stats {
-  display: flex;
-  margin-left: auto;
-  gap: 4px;
-}
+/* Counters stay 44 px targets on every screen (#83 touch targets); they
+   look like plain text until hovered. */
+.counters :global(.like-button.compact),
 .stat {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
-  gap: 4px;
+  gap: var(--space-1);
   min-width: 44px;
   min-height: 44px;
-  padding: 6px;
-  color: var(--muted);
+  padding: 0 var(--space-1-5);
   border: 0;
-  border-radius: 3px;
+  border-radius: var(--radius-md);
   background: transparent;
-  font: 400 13px/18px var(--site-font);
+  color: var(--text-muted);
+  font: var(--weight-regular) 13px / 1 var(--font-sans);
   font-variant-numeric: tabular-nums;
+  cursor: pointer;
 }
+.counters :global(.like-button.compact) > :is(span, strong) {
+  display: inline-flex;
+  padding: 0;
+  border: 0;
+  color: inherit;
+  font-weight: var(--weight-regular);
+}
+.counters :global(.like-button.compact):hover,
 .stat:hover {
-  background: var(--wash);
-  color: var(--ink);
+  background: var(--surface-hover);
+  color: var(--text);
 }
-.stat[aria-pressed="true"] {
-  color: var(--ink);
-  background: var(--accent-soft);
-  box-shadow: inset 0 -2px currentColor;
+.counters :global(.like-button.compact[aria-pressed="true"]) {
+  color: var(--tone-special);
 }
-.stat:disabled {
-  opacity: 1;
-  cursor: default;
+.counters :global(.like-button.compact):disabled:hover {
+  background: transparent;
+  color: var(--text-muted);
 }
 .ownerSignals {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--space-2);
+  padding-bottom: var(--space-1-5);
 }
 .error {
   position: absolute;
-  inset: auto 8px 60px;
+  inset: auto var(--space-2) var(--space-12);
   margin: 0;
-  padding: 8px;
-  border: 1px solid var(--control-border, var(--line-strong));
-  background: var(--paper);
-  color: var(--ink);
+  padding: var(--space-2);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--danger);
   font-size: 13px;
-  line-height: 18px;
+  box-shadow: var(--shadow-lg);
 }

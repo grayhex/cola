@@ -1,0 +1,131 @@
+/* Presentation of the UI Kit page itself; the components it shows come
+   from app/styles. */
+.section {
+  margin-top: var(--space-12);
+  scroll-margin-top: var(--space-6);
+}
+.lead {
+  max-width: 72ch;
+  margin: 0 0 var(--space-4);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+.both {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+}
+@media (min-width: 1024px) {
+  .both:not(.wide) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+  padding: var(--space-5) var(--space-4);
+}
+.panel + .panel {
+  border-top: 1px solid var(--line);
+}
+@media (min-width: 1024px) {
+  .both:not(.wide) .panel + .panel {
+    border-top: 0;
+    border-left: 1px solid var(--line);
+  }
+}
+.panelLabel {
+  color: var(--text-muted);
+  font: var(--weight-semibold) var(--text-xs) / 1 var(--font-mono);
+}
+.row {
+  display: grid;
+  gap: var(--space-2);
+}
+.rowLabel {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+.rowItems {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+.swatch,
+.space,
+.radius,
+.shadow {
+  display: inline-flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.swatch code,
+.space code,
+.radius code,
+.shadow code {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+.swatch i {
+  width: 112px;
+  height: 36px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-lg);
+}
+.space i {
+  height: 12px;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+}
+.radius i,
+.shadow i {
+  width: 56px;
+  height: 40px;
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+}
+.shadow i {
+  border-radius: var(--radius-lg);
+}
+.menuStage {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-6);
+}
+.static {
+  position: static;
+  width: max-content;
+  transform: none;
+  animation: none;
+}
+.skeletons {
+  display: grid;
+  gap: var(--space-2);
+}
+.frameDemo {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+}
+.icons {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: var(--space-2) var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.icons li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}

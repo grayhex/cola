@@ -30,7 +30,12 @@ export default function SmallImage({
       onError={() => setFailed(src)}
     />
   ) : (
-    <span className={className} aria-label={alt || "Без фотографии"}>
+    // A named placeholder is an image for assistive technology; a decorative
+    // one (alt="") is hidden, never a bare span with a label (#119).
+    <span
+      className={className}
+      {...(alt ? { role: "img", "aria-label": alt } : { "aria-hidden": true })}
+    >
       <Bike size={28} strokeWidth={1.3} aria-hidden="true" />
     </span>
   );

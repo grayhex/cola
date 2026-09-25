@@ -55,7 +55,7 @@ export default function RidePage({
   return (
     <>
       <SocialHeader user={user} />
-      <main className="social-page ride-page">
+      <main className="page ride-page">
         {error && (
           <p role="alert" className="error">
             {error}

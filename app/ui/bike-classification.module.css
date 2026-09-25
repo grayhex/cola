@@ -1,13 +1,15 @@
+/* Bike classification (#127): the fields in bike forms and the collapsible
+   filter group of the showcase and experience search. */
 .fields {
-  border: 0;
   min-width: 0;
-  margin: 12px 0;
+  margin: var(--space-3) 0;
   padding: 0;
+  border: 0;
 }
 .grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px 16px;
+  gap: var(--space-2-5) var(--space-4);
 }
 .grid :global(.field) {
   min-width: 0;
@@ -18,81 +20,110 @@
   min-width: 0;
   max-width: 100%;
 }
-.details,
-.filters {
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 10px 12px;
-  margin: 12px 0;
+/* Details in a form: a hairline panel with a semibold summary. */
+.details {
+  margin: var(--space-3) 0;
+  padding: var(--space-2-5) var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
 }
-.details summary,
-.filters summary {
+.details summary {
+  color: var(--text);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
   cursor: pointer;
-  font-size: 14px;
-  font-weight: 600;
 }
-.details[open] summary,
-.filters[open] summary {
-  margin-bottom: 12px;
+.details[open] summary {
+  margin-bottom: var(--space-3);
+}
+/* Filter group: the summary looks like a secondary button; open, the
+   choices sit in a panel below it. */
+.filters {
+  width: 100%;
+  margin: 0 0 var(--space-4);
+}
+.filters summary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  min-height: var(--control-sm);
+  padding: 0 var(--space-2-5);
+  border: 1px solid var(--control-line);
+  border-radius: var(--radius-md);
+  background: var(--control-bg);
+  color: var(--control-text);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  list-style: none;
+  cursor: pointer;
+}
+.filters summary::-webkit-details-marker {
+  display: none;
+}
+.filters summary::after {
+  content: "";
+  width: 6px;
+  height: 6px;
+  margin: -3px 2px 0 var(--space-0-5);
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg);
+}
+.filters summary:hover {
+  box-shadow: var(--shadow-inner);
+}
+.filters[open] summary::after {
+  margin-top: 3px;
+  transform: rotate(225deg);
+}
+.filters[open] > .grid {
+  margin-top: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface-subtle);
+}
+.filters > :global(.quiet) {
+  margin-top: var(--space-1);
 }
 .toggles {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px 20px;
-  margin-top: 10px;
+  gap: var(--space-3) var(--space-5);
+  margin-top: var(--space-2-5);
 }
 .toggles label,
 .uses label {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  font-size: 13px;
-  min-height: 36px;
-}
-.toggles input,
-.uses input {
-  width: 16px;
-  height: 16px;
-  margin: 0;
-  padding: 0;
-  flex: 0 0 16px;
+  gap: var(--space-2);
+  min-height: var(--control-md);
+  font-size: var(--text-sm);
 }
 .uses {
   display: flex;
   flex-wrap: wrap;
-  gap: 3px 16px;
-  padding: 8px 0 0;
-  margin: 12px 0 0;
-  border: 0;
+  gap: var(--space-0-5) var(--space-4);
   min-width: 0;
+  margin: var(--space-3) 0 0;
+  padding: var(--space-2) 0 0;
+  border: 0;
 }
 .uses legend {
-  font-size: 13px;
   color: var(--text-muted);
+  font-size: 13px;
 }
+/* ContentLabel owns the badge colours; this only lays them out. */
 .badges {
   display: inline-flex;
-  gap: 6px;
   flex-wrap: wrap;
   align-items: center;
+  gap: var(--space-1);
   min-width: 0;
   max-width: 100%;
 }
-/* ContentLabel owns badge colors, typography and padding in every context. */
-.filters {
-  width: 100%;
-}
-@media (max-width: 600px) {
-  .grid {
-    gap: 10px;
-  }
-  .toggles label,
-  .uses label {
-    min-height: 44px;
-  }
-}
 @media (max-width: 379px) {
   .grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }

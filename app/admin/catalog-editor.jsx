@@ -1,7 +1,7 @@
 "use client";
 import { bikeCategories } from "../../lib/bike-classification.js";
 import { useState } from "react";
-import { Plus, Trash2, ChevronUp, ChevronDown } from "../ui/icons.jsx";
+import { Plus, Trash2, ArrowUp, ArrowDown } from "../ui/icons.jsx";
 import PartIcon from "../ui/part-icon.jsx";
 import { iconNames, categoryIcons } from "../../lib/part-icons.js";
 import ExperienceCatalog from "./experience-catalog.jsx";
@@ -24,8 +24,8 @@ function ListEditor({ values, onChange, label }) {
     <p className="help">{values.length} записей. Названия можно редактировать; стрелки меняют порядок.</p>
     {values.map((value, index) => <div className="list-row" key={index}>
       <input aria-label={label + " " + (index + 1)} value={value} maxLength={150} onChange={(e) => onChange(values.map((v, i) => i === index ? e.target.value : v))} />
-      <button type="button" className="icon" aria-label="Выше" disabled={index === 0} onClick={() => move(index, -1)}><ChevronUp size={17} /></button>
-      <button type="button" className="icon" aria-label="Ниже" disabled={index === values.length - 1} onClick={() => move(index, 1)}><ChevronDown size={17} /></button>
+      <button type="button" className="icon" aria-label="Выше" disabled={index === 0} onClick={() => move(index, -1)}><ArrowUp size={17} /></button>
+      <button type="button" className="icon" aria-label="Ниже" disabled={index === values.length - 1} onClick={() => move(index, 1)}><ArrowDown size={17} /></button>
       <button type="button" className="icon danger" aria-label={"Убрать " + value} onClick={() => onChange(values.filter((_, i) => i !== index))}><Trash2 size={17} /></button>
     </div>)}
   </div>;
