@@ -156,7 +156,11 @@ const bikePage = await page(
   "/b/" + encodeURIComponent(`${bike.slug}-${bike.public_id}`),
 );
 assert.equal(bikePage.status, 200);
-assert.ok(bikePage.html.includes(`href="${modelPath}"`), "bike → model page");
+const stableModelPath = "/bike-models/" + bike.catalog_model_id;
+assert.ok(bikePage.html.includes(`href="${stableModelPath}"`), "bike → stable bike model");
+const stableModel = await page(stableModelPath);
+assert.equal(stableModel.status, 308);
+assert.equal(stableModel.location, modelPath);
 const stablePartPath = "/components/" + bike.components.find((c) => c.name === fork).model_id;
 assert.ok(bikePage.html.includes(`href="${stablePartPath}"`), "bike → stable part model");
 assert.equal((await page(stablePartPath)).location, partPath);

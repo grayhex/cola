@@ -42,11 +42,12 @@ export default function CatalogEditor({ value: c, onChange }) {
   function models(next) { onChange({ ...c, models: { ...c.models, [type]: next } }); }
   return <section className="admin-panel">
     <div className="catalog-tabs">
-      {[["bikes", "Марки и модели"], ["sizes", "Ростовки"], ["manufacturers", "Производители"], ["categories", "Категории навески"], ["parts", "Модели компонентов"], ["models", "Каталог компонентов"], ["types", "Типы велосипедов"], ["experience", "Поиск и опыт"]].map(([key, label]) =>
+      {[["bikes", "Марки и модели"], ["sizes", "Ростовки"], ["manufacturers", "Производители"], ["categories", "Категории навески"], ["parts", "Модели компонентов"], ["models", "Каталог компонентов"], ["bikeModels", "Каталог велосипедов"], ["types", "Типы велосипедов"], ["experience", "Поиск и опыт"]].map(([key, label]) =>
         <button key={key} className={kind === key ? "active" : ""} onClick={() => setKind(key)}>{label}</button>)}
     </div>
-    {kind !== "models" && <p className="help">Изменения применяются к подсказкам для новых записей. Сохранённые велосипеды и детали не меняются.</p>}
-    {kind === "models" && <ComponentModels />}
+    {!["models", "bikeModels"].includes(kind) && <p className="help">Изменения применяются к подсказкам для новых записей. Сохранённые велосипеды и детали не меняются.</p>}
+    {kind === "models" && <ComponentModels key="component" />}
+    {kind === "bikeModels" && <ComponentModels kind="bike" key="bike" />}
     {kind === "experience" && <ExperienceCatalog value={c} onChange={onChange} />}
     {kind === "bikes" && <>
       <Select label="Тип велосипеда" value={type} onChange={(v) => { setType(v); setBrand(""); setBrandName(""); }} options={Object.entries(c.categories)} />

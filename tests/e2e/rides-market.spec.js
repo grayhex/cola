@@ -173,10 +173,13 @@ test("market publishes images and price, enters home feed, and closes a listing"
     await page.goto("/market/new", { waitUntil: "commit" });
     await expect(page.getByRole("heading", { name: "Новое объявление" })).toBeVisible();
     const controls = page.locator("main form input, main form textarea, main form select, main form button");
-    await expect(controls).toHaveCount(12);
+    // Three optional catalog/garage controls were added in #133.
+    await expect(controls).toHaveCount(15);
     for (const control of await controls.all()) await expect(control).toBeDisabled();
     release();
     await expect(page.getByLabel("Название", { exact: true })).toBeEnabled();
+    await expect(page.getByLabel("Найти модель велосипеда", { exact: true })).toBeEnabled();
+    await expect(page.getByRole("combobox", { name: "Мой велосипед", exact: true })).toBeEnabled();
     await expect(page.getByLabel("Добавить фото", { exact: false })).toBeEnabled();
     await expect(page.getByRole("button", { name: "Опубликовать", exact: true })).toBeEnabled();
   } finally {

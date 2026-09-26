@@ -1,7 +1,6 @@
 "use client";
 import dynamic from "next/dynamic";
 import { defaultBlocks } from "../../../lib/garage-layout.js";
-import { landingSlug, modelLandingPath } from "../../../lib/experience-catalog.js";
 import { BikeLabels } from "../bike-labels.jsx";
 import { AuthorLink } from "../social-primitives.jsx";
 import Photo from "../bike-photo.jsx";
@@ -60,8 +59,8 @@ export default function BikeDetail({
   // A public build is counted on its model's page (#74); a private one only
   // leads to the search.
   const modelHref =
-    bike?.is_public && landingSlug(bike.brand) && landingSlug(bike.model)
-      ? modelLandingPath(bike.brand, bike.model)
+    bike?.is_public && bike.catalog_model_id
+      ? "/bike-models/" + bike.catalog_model_id
       : "/experience?" +
         new URLSearchParams({
           brand: bike?.brand || "",

@@ -31,6 +31,7 @@ import { uuid } from "../../../../lib/validation.js";
 import { participationSummary } from "../../../../lib/participation.js";
 import { CommunityError } from "../../../../lib/community-validation.js";
 import { componentCatalog, componentCatalogInput, componentModelEdit, componentModelMerge, editComponentModel, mergeComponentModels } from "../../../../lib/component-catalog.js";
+import { bikeCatalog, bikeCatalogInput, bikeModelEdit, bikeModelMerge, editBikeModel, mergeBikeModels } from "../../../../lib/bike-catalog.js";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 async function handler(req, { params }) {
@@ -54,6 +55,20 @@ async function handler(req, { params }) {
       if (p.length === 3 && p[2] === "merge" && method === "POST") {
         const input = componentModelMerge.parse(await readJson(req));
         return json(await transaction((q) => mergeComponentModels(q, user.id, p[1], input)));
+      }
+      return fail("Не найдено", 404);
+    }
+    if (p[0] === "bike-models") {
+      if (p.length === 1 && method === "GET")
+        return json(await bikeCatalog(db, bikeCatalogInput.parse(Object.fromEntries(new URL(req.url).searchParams)), true));
+      if (!uuid.safeParse(p[1]).success) return fail("Модель недоступна", 404);
+      if (p.length === 2 && method === "PATCH") {
+        const input = bikeModelEdit.parse(await readJson(req));
+        return json(await transaction((q) => editBikeModel(q, user.id, p[1], input)));
+      }
+      if (p.length === 3 && p[2] === "merge" && method === "POST") {
+        const input = bikeModelMerge.parse(await readJson(req));
+        return json(await transaction((q) => mergeBikeModels(q, user.id, p[1], input)));
       }
       return fail("Не найдено", 404);
     }

@@ -3,7 +3,9 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { socialApi, Pagination } from "../ui/social-primitives.jsx";
 
-export default function ComponentModels() {
+export default function ComponentModels({ kind = "component" }) {
+  const bike = kind === "bike";
+  const endpoint = "admin/" + (bike ? "bike-models" : "component-models");
   const [query, setQuery] = useState(""),
     [search, setSearch] = useState(""),
     [page, setPage] = useState(1);
@@ -22,7 +24,7 @@ export default function ComponentModels() {
     setData(null);
     setError("");
     socialApi(
-      "admin/component-models?" +
+      endpoint + "?" +
         new URLSearchParams({ q: query, page: String(page) }),
     )
       .then((d) => {
@@ -34,7 +36,7 @@ export default function ComponentModels() {
     return () => {
       active = false;
     };
-  }, [query, page, revision]);
+  }, [query, page, revision, endpoint]);
   const field = (key, value) => setEditing((m) => ({ ...m, [key]: value }));
   async function save(merge = false) {
     setBusy(true);
@@ -43,7 +45,7 @@ export default function ComponentModels() {
     try {
       const target = targets.find((t) => t.id === targetId);
       await socialApi(
-        "admin/component-models/" + editing.id + (merge ? "/merge" : ""),
+        endpoint + "/" + editing.id + (merge ? "/merge" : ""),
         merge ? "POST" : "PATCH",
         merge
           ? {
@@ -53,7 +55,7 @@ export default function ComponentModels() {
             }
           : {
               name: editing.name,
-              category: editing.category,
+              ...(!bike ? { category: editing.category } : {}),
               brand: editing.brand,
               archived: editing.archived,
               version: editing.version,
@@ -81,7 +83,7 @@ export default function ComponentModels() {
       setTargets(
         (
           await socialApi(
-            "admin/component-models?" + new URLSearchParams({ q: targetQuery }),
+            endpoint + "?" + new URLSearchParams({ q: targetQuery }),
           )
         ).items.filter((m) => m.id !== editing.id && !m.archived),
       );
@@ -92,11 +94,11 @@ export default function ComponentModels() {
     }
   }
   return (
-    <section aria-label="Управление каталогом компонентов">
-      <h2>Каталог компонентов</h2>
+    <section aria-label={"Управление каталогом " + (bike ? "велосипедов" : "компонентов")}>
+      <h2>Каталог {bike ? "велосипедов" : "компонентов"}</h2>
       <p className="help">
         Самостоятельные страницы моделей. Изменения сохраняются здесь сразу.
-        Авторские названия деталей в гаражах и снимках журнала остаются
+        Авторские названия в гаражах, объявлениях и снимках журнала остаются
         прежними.
       </p>
       <form
@@ -130,7 +132,7 @@ export default function ComponentModels() {
               <div>
                 <Link href={m.path}>{m.name}</Link>
                 <p className="help">
-                  {m.category} · {m.brand || "Бренд не указан"}
+                  {m.category ? m.category + " · " : ""}{m.brand || "Бренд не указан"}
                   {m.archived ? " · В архиве" : ""}
                 </p>
               </div>
@@ -176,7 +178,7 @@ export default function ComponentModels() {
                   onChange={(e) => field("name", e.target.value)}
                 />
               </label>
-              <label className="field">
+              {!bike && <label className="field">
                 <span>Категория модели</span>
                 <input
                   required
@@ -184,10 +186,11 @@ export default function ComponentModels() {
                   value={editing.category}
                   onChange={(e) => field("category", e.target.value)}
                 />
-              </label>
+              </label>}
               <label className="field">
                 <span>Бренд модели</span>
                 <input
+                  required={bike}
                   maxLength={100}
                   value={editing.brand}
                   onChange={(e) => field("brand", e.target.value)}
