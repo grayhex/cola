@@ -397,4 +397,4 @@
 }
 
 .catalogSearch { display: flex; flex-wrap: wrap; align-items: end; gap: var(--space-3); margin-bottom: var(--space-3); }
-.catalogSearch > label { flex: 1 1 220px; min-width: 0; }
+.catalogSearch > label { flex: 1 1 220px; min-width: 0; margin-bottom: 0; }
