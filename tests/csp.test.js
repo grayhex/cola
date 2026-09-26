@@ -6,7 +6,7 @@ test("CSP mode and map sources cannot inject directives or weaken scripts", () =
   assert.equal(cspMode({}), "report-only");
   for (const mode of ["off", "report-only", "enforce"]) assert.equal(cspMode({ CSP_MODE: mode }), mode);
   assert.throws(() => cspMode({ CSP_MODE: "on" }));
-  for (const source of ["https:", "https://*.example.com", "https://x.test/path", "https://x.test/?key=secret", "http://x.test", "https://a:b@x.test", "'unsafe-inline'"])
+  for (const source of ["https:", "https://*.example.com", "https://x.test;report-uri", "https://x.test%3breport-uri", "https://x.test'", "https://x.test/path", "https://x.test/?key=secret", "http://x.test", "https://a:b@x.test", "'unsafe-inline'"])
     assert.throws(() => mapOrigins(source));
   assert.deepEqual(mapOrigins("https://tiles.example.test https://tiles.example.test/"), ["https://tiles.example.test"]);
   const policy = pageCsp("randomNonce", { NODE_ENV: "production" });
