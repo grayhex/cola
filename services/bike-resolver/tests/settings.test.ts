@@ -1,4 +1,4 @@
-import { it, expect } from "vitest";
+import { it, expect, vi } from "vitest";
 import { PGlite } from "@electric-sql/pglite";
 import { readFileSync } from "node:fs";
 import pino from "pino";
@@ -145,6 +145,67 @@ it("internal settings require the configured service token", async () => {
       ).statusCode,
     ).toBe(200);
   } finally {
+    await app.close();
+    if (previous === undefined) delete process.env.BIKE_RESOLVER_TOKEN;
+    else process.env.BIKE_RESOLVER_TOKEN = previous;
+  }
+});
+
+it("settings reads are bounded before database access and recover after the window", async () => {
+  const previous = process.env.BIKE_RESOLVER_TOKEN;
+  process.env.BIKE_RESOLVER_TOKEN = "test-internal-token";
+  const query = vi.fn(async () => ({ rows: [] }));
+  const settings = new SettingsStore({ query } as any);
+  const cache = new MemoryCache(),
+    logger = pino({ level: "silent" });
+  const app = buildApp(
+    new Resolver(
+      createAdapters(new ManufacturerHttpClient(logger)),
+      cache,
+      logger,
+    ),
+    cache,
+    settings,
+  );
+  const now = Date.now();
+  const clock = vi.spyOn(Date, "now").mockReturnValue(now);
+  const headers = { authorization: "Bearer test-internal-token" };
+  try {
+    // Invalid credentials cannot consume the authenticated settings budget.
+    for (let i = 0; i < 65; i++)
+      expect((await app.inject("/internal/settings")).statusCode).toBe(401);
+    expect(query).not.toHaveBeenCalled();
+    // One shared budget: changing the caller or spoofing proxy headers cannot bypass it.
+    for (let i = 0; i < 60; i++) {
+      const response = await app.inject({
+        url: "/internal/settings",
+        remoteAddress: `192.0.2.${i + 1}`,
+        headers: { ...headers, "x-forwarded-for": `198.51.100.${i + 1}` },
+      });
+      expect(response.statusCode).toBe(200);
+    }
+    const responses = await Promise.all(
+      Array.from({ length: 5 }, () =>
+        app.inject({ url: "/internal/settings", headers }),
+      ),
+    );
+    const limited = responses.filter((r) => r.statusCode === 429);
+    expect(limited).toHaveLength(5);
+    expect(limited[0].headers["retry-after"]).toBe("60");
+    expect(
+      (await app.inject({ method: "HEAD", url: "/internal/settings", headers }))
+        .statusCode,
+    ).toBe(429);
+    expect(query).toHaveBeenCalledTimes(60);
+    for (const url of ["/health", "/ready", "/v1/brands"])
+      expect((await app.inject(url)).statusCode).toBe(200);
+    clock.mockReturnValue(now + 60_001);
+    expect(
+      (await app.inject({ url: "/internal/settings", headers })).statusCode,
+    ).toBe(200);
+    expect(query).toHaveBeenCalledTimes(61);
+  } finally {
+    clock.mockRestore();
     await app.close();
     if (previous === undefined) delete process.env.BIKE_RESOLVER_TOKEN;
     else process.env.BIKE_RESOLVER_TOKEN = previous;

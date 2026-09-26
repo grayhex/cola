@@ -57,6 +57,40 @@ test("theme bootstrap chooses system, persisted preference and storage failure w
   const id = randomUUID();
   assert(siteAssetIds({ ...defaultSettings, heroImageId: id }).includes(id));
 });
+test("theme bootstrap rejects code and HTML payloads before script construction", () => {
+  // CodeQL #2/#3: JSON.stringify alone would not protect an HTML script element.
+  // The enum boundary must reject these values before serialization instead.
+  const payloads = [
+    '</script><script>throw Error("injected")</script>',
+    '</ScRiPt><img src=x onerror="alert(1)">',
+    '";throw Error("injected");//',
+    "\u2028\u2029<>&",
+    null,
+    { toString: () => "dark" },
+    ["dark"],
+  ];
+  for (const payload of payloads) {
+    const source = themeBootstrap(payload);
+    assert.equal(source, themeBootstrap("system"));
+    assert(!/[<>]/.test(source));
+    const document = { documentElement: { dataset: {} } };
+    vm.runInNewContext(source, {
+      document,
+      localStorage: {
+        getItem(key) {
+          assert.equal(key, "cola:theme");
+          return payload;
+        },
+      },
+      matchMedia: () => ({ matches: true }),
+    });
+    assert.deepEqual(document.documentElement.dataset, {
+      themePreference: "system",
+      theme: "dark",
+    });
+  }
+});
+
 test("compact photo derivatives preserve aspect ratio and bound work", async () => {
   const source = await sharp({
     create: {
