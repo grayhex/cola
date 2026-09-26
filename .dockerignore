@@ -6,6 +6,7 @@
 !pnpm-lock.yaml
 !pnpm-workspace.yaml
 !next.config.mjs
+!proxy.js
 !app/
 !app/**
 !lib/
