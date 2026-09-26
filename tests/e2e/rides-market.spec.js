@@ -183,7 +183,7 @@ test("market publishes images and price, enters home feed, and closes a listing"
   }
   await page.getByLabel("Название", { exact: true }).fill("Gravel wheelset");
   await page
-    .getByLabel("Описание", { exact: true })
+    .getByRole("textbox", { name: "Описание", exact: true })
     .fill("Tubeless wheels, ready for a new bicycle.");
   await page
     .getByRole("combobox", { name: "Категория", exact: true })
@@ -194,7 +194,7 @@ test("market publishes images and price, enters home feed, and closes a listing"
   await page.getByLabel("Город", { exact: true }).fill("Тестовый город");
   await page.getByLabel("Как с вами связаться").fill("@rider");
   await expect(page.getByLabel("Название", { exact: true })).toHaveValue("Gravel wheelset");
-  await expect(page.getByLabel("Описание", { exact: true })).toHaveValue("Tubeless wheels, ready for a new bicycle.");
+  await expect(page.getByRole("textbox", { name: "Описание", exact: true })).toHaveValue("Tubeless wheels, ready for a new bicycle.");
   const photo = await sharp({
     create: { width: 640, height: 480, channels: 3, background: "#a8b6be" },
   })
