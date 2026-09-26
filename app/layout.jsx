@@ -14,6 +14,7 @@ import "./styles/profile.css";
 import "./styles/articles.css";
 import "./styles/admin.css";
 import "maplibre-gl/dist/maplibre-gl.css";
+import { headers } from "next/headers";
 import { themeBootstrap } from "../lib/theme.js";
 import SiteProvider from "./ui/site-provider.jsx";
 import { getSite } from "../lib/site.js";
@@ -35,6 +36,7 @@ export async function generateMetadata() {
   };
 }
 export default async function Layout({ children }) {
+  const nonce = (await headers()).get("x-cola-nonce") || undefined;
   const [site, user] = await Promise.all([getSite(), currentViewer()]);
   // What /api/me would answer, in the same JSON shape (dates as strings).
   const viewer = user ? JSON.parse(JSON.stringify(user)) : null;
@@ -53,13 +55,14 @@ export default async function Layout({ children }) {
           crossOrigin="anonymous"
         />
         <script
+          nonce={nonce}
           dangerouslySetInnerHTML={{
             __html: themeBootstrap(site.settings.appearance.theme),
           }}
         />
       </head>
       <body>
-        <SiteProvider initial={site} viewer={viewer}>
+        <SiteProvider initial={site} viewer={viewer} nonce={nonce}>
           {children}
         </SiteProvider>
       </body>

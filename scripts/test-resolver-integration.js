@@ -24,6 +24,8 @@ const environment = {
   DATABASE_POOL_MAX: externalDatabase ? "10" : "1",
   BIKE_RESOLVER_URL: "http://127.0.0.1:8081",
   APP_ORIGIN: base,
+  // Exercise the full browser matrix with blocking CSP; deployment defaults to Report-Only.
+  CSP_MODE: process.env.CSP_MODE || (process.argv.includes("--e2e") ? "enforce" : "report-only"),
   TEST_ORIGIN: base,
   COOKIE_SECURE: "false",
   MAX_PHOTOS_PER_USER: "20",
@@ -125,6 +127,8 @@ try {
     : [
         // First: the tracker budget is still unused right after startup.
         "tests/observability-http.js",
+        "tests/csp-http.js",
+        "tests/csp-modes-http.js",
         "tests/email-policy-http.js",
         "tests/http-smoke.js",
         "tests/media-http.js",

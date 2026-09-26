@@ -8,7 +8,7 @@ RUN --mount=type=cache,id=cola-pnpm-store,target=/pnpm/store,sharing=locked \
 
 FROM dependencies AS builder
 ENV NEXT_TELEMETRY_DISABLED=1
-COPY next.config.mjs ./
+COPY next.config.mjs proxy.js ./
 COPY app ./app
 COPY lib ./lib
 COPY db ./db
