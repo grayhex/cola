@@ -154,6 +154,12 @@ test("market publishes images and price, enters home feed, and closes a listing"
   page,
 }, info) => {
   await register(page);
+  const marketResponses = [];
+  page.on("response", (response) => {
+    const path = new URL(response.url()).pathname;
+    if (path.startsWith("/api/market"))
+      marketResponses.push({ path, method: response.request().method(), status: response.status() });
+  });
   await page.goto("/market/new");
   await page.getByLabel("Название", { exact: true }).fill("Gravel wheelset");
   await page
@@ -178,11 +184,19 @@ test("market publishes images and price, enters home feed, and closes a listing"
     page.waitForResponse((response) =>
       response.request().method() === "POST" &&
       /^\/api\/market\/[^/]+\/photos$/.test(new URL(response.url()).pathname),
+      { timeout: 30000 },
     ),
     page.getByLabel("Добавить фото", { exact: false }).setInputFiles({
       name: "wheel.png", mimeType: "image/png", buffer: photo,
     }),
-  ]);
+  ]).catch(async (error) => {
+    console.error("Market upload state", JSON.stringify({
+      responses: marketResponses,
+      title: await page.getByLabel("Название", { exact: true }).inputValue(),
+      alerts: await page.getByRole("alert").allTextContents(),
+    }));
+    throw error;
+  });
   expect(uploaded.status(), await uploaded.text()).toBe(201);
   const preview = page.getByRole("img", { name: "Фото объявления" });
   await expect(preview).toBeVisible();
