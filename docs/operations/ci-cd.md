@@ -1,4 +1,4 @@
-# CI/CD и выбор окружения
+# CI/CD и production по SSH
 
 [Оглавление](../README.md)
 
@@ -7,12 +7,13 @@
 | Workflow | Событие | Результат |
 | --- | --- | --- |
 | `CI · ColaBike` / [check.yml](../../.github/workflows/check.yml) | PR, push в main, manual/reusable | Проверенный commit, без deploy |
-| `Deploy · Staging` / [deploy-staging.yml](../../.github/workflows/deploy-staging.yml) | Ручной запуск из main с ref | Проверка SHA → VM с label `cola-staging` |
-| `Deploy · Production` / [deploy.yml](../../.github/workflows/deploy.yml) | Успешный CI push в main или ручной recheck main | VPS с label `cola-production` |
+| `Deploy · Production` / [deploy.yml](../../.github/workflows/deploy.yml) | Успешный CI push в main или ручной recheck main | GitHub-hosted job → SSH → VPS, environment `production` |
 | `CI · Closed PR cleanup` / [ci-pr-cleanup.yml](../../.github/workflows/ci-pr-cleanup.yml) | Закрытие PR | Отмена его оставшегося CI без ложного check |
 | `CodeQL` / [codeql.yml](../../.github/workflows/codeql.yml) | PR и push в main, раз в неделю | Находки статического анализа безопасности в Security → Code scanning |
 
-Модель: feature/PR → тесты → при необходимости ручной staging → review/merge → CI итогового main → production. Feature-ветка не отправляется на production обычным workflow. `Run workflow` из старого commit не обновляет workflow задним числом.
+Модель: feature/PR → локальные проверки и CI → review/merge → CI итогового main → production по SSH. Feature-ветка не отправляется на production обычным workflow. `Run workflow` из старого commit не обновляет workflow задним числом.
+
+Staging выведен из эксплуатации 26.09.2026; workflow, скрипт и инструкции запуска удалены.
 
 ## Проверки и кеши
 
@@ -36,22 +37,20 @@ Browser artifacts разделены по проекту/attempt и хранят
 
 ## Production
 
-[ops/deploy-cola](../../ops/deploy-cola) устанавливается оператором в `/usr/local/sbin/deploy-cola` с root ownership. Self-hosted job **не выполняет `actions/checkout` или setup-node**: передаёт `TARGET_SHA` wrapper. Git выполняется от владельца `/opt/stacks/cola` с read-only SSH deploy key, Docker — wrapper от root.
+`deploy` из [deploy.yml](../../.github/workflows/deploy.yml) работает на `ubuntu-latest`, без runner на VPS. Автоматический путь принимает только успешный `CI · ColaBike` для события `push` в `main` этого репозитория. Ручной запуск доступен для `main` и сначала повторяет тот же CI через `verify-manual`. Deploy-job сам не делает checkout или сборку: он передаёт `TARGET_SHA` по SSH.
+
+Job использует environment `production` и его secrets: `DEPLOY_SSH_KEY`, `DEPLOY_KNOWN_HOSTS`, `DEPLOY_HOST`, `DEPLOY_PORT` (если не задан — порт 22). Соединение идёт пользователем `deploy` с `StrictHostKeyChecking=yes`; значения секретов в репозитории не хранятся. Ограничение environment веткой `main` настраивается отдельно в GitHub. Установка и назначение каждого секрета — в [deployment](deployment.md#ssh-доступ-для-github-actions).
+
+Оператор устанавливает [ops/deploy-cola-ssh](../../ops/deploy-cola-ssh) и [ops/deploy-cola](../../ops/deploy-cola) в `/usr/local/sbin` с root ownership. Forced-command из `authorized_keys` проверяет полный SHA из `SSH_ORIGINAL_COMMAND` и вызывает `sudo -n /usr/local/sbin/deploy-cola`. Git выполняется от владельца `/opt/stacks/cola` с read-only SSH deploy key, сборка образов и Docker — wrapper от root на VPS. Concurrency group `cola-production` сериализует выкладки; это имя группы, не label runner.
 
 Wrapper принимает 40-символьный SHA, fetch-ит main, требует точное равенство текущему remote main, отказывается от tracked edits, переключает checkout, проверяет Compose и ждёт healthchecks. При `.env.production` выбирает отдельный production file. После успеха сохраняет SHA в `/var/lib/colabike/verified-sha`. Специальных действий по созданию или проверке демонстрационных профилей нет.
 
 **`verified-sha` — журнал успешной выкладки, не свободный rollback target.** Запуск без аргумента берёт этот SHA, но всё равно требует совпадения с текущим main. Устаревший SHA завершается ошибкой; автоматического rollback и атомарной выкладки без простоя нет. Wrapper сам не получает CI-attestation: доверенная передача SHA — ответственность workflow.
 
-## Staging
-
-[ops/deploy-cola-staging](../../ops/deploy-cola-staging) принимает проверенный SHA, fetch-ит его отдельно и берёт `compose.yaml` из текущего main во временный файл. Исходники выбранной ветки разворачиваются в локальную `staging-deploy`; записываются `staging-sha` и `staging-compose-main-sha`. Это позволяет проверять feature-код без его Compose topology.
-
-На VM нужен label `cola-staging`, на VPS — `cola-production`. Labels назначаются в GitHub для конкретного runner; это не пакеты на VM. Каждому runner разрешается только его wrapper через sudo; Docker group не требуется. Это не изоляция от враждебного кода: см. [security](../architecture/security.md).
-
 ## Обслуживание и ограничения
 
-Merge файла `ops/...` **не обновляет установленную копию** в `/usr/local/sbin`. После review оператор устанавливает её отдельно. Не давайте runner право устанавливать произвольный wrapper из workspace.
+Merge файла `ops/...` **не обновляет установленную копию** в `/usr/local/sbin`. Если содержимое wrapper изменилось, после review оператор устанавливает её отдельно. Пользователь `deploy` не должен иметь права менять wrappers. Перенос исходника `deploy-cola-ssh` в `ops/` не меняет его содержимое или установленный путь: сам по себе он не требует переустановки на VPS.
 
 Перед ручным вмешательством отмените или дождитесь активного deploy и согласуйте backup lock. Не используйте `git reset --hard` как обычное обновление: wrapper намеренно сохраняет tracked edits. Branch protection, review и secrets настраиваются отдельно от исходного кода.
 
-Staging с чувствительными данными должен оставаться изолированным и без production secrets. Для восстановления используйте [backup runbook](backup-restore.md), для первого сервера — [deployment](deployment.md).
+Для восстановления используйте [backup runbook](backup-restore.md), для первого сервера — [deployment](deployment.md). Локальные и тестовые Compose-конфигурации сохраняются; они не участвуют в SSH-передаче production SHA.

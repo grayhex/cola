@@ -6,7 +6,7 @@
 
 Новому разработчику: **[первый запуск](development/getting-started.md) → [архитектура](architecture/overview.md) → [правила разработки](development/principles.md) → [нужный модуль](#модули-приложения)**. Для работы с парсером дополнительно прочитайте [устройство Resolver](resolver/architecture.md), а не только примеры запросов.
 
-Оператору: **[развёртывание](operations/deployment.md) → [CI и выбор окружения](operations/ci-cd.md) → [резервное копирование](operations/backup-restore.md) → [диагностика](operations/monitoring.md)**.
+Оператору: **[развёртывание](operations/deployment.md) → [CI/CD и production по SSH](operations/ci-cd.md) → [резервное копирование](operations/backup-restore.md) → [диагностика](operations/monitoring.md)**.
 
 ## Архитектура и разработка
 

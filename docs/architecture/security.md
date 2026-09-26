@@ -38,9 +38,9 @@ Resolver применяет публичные адреса, проверку DN
 
 ## Граница доверия CI и deploy
 
-Hosted CI и self-hosted deploy разделены. У runner нет необходимости состоять в группе Docker; ему разрешается соответствующий root-owned wrapper. **Это ограничение интерфейса, а не sandbox для недоверенного кода.** Wrapper не проверяет CI криптографически: происхождение проверенного SHA обеспечивается workflow, а production wrapper дополнительно сравнивает его с текущим `origin/main`.
+CI и production deploy выполняются на GitHub-hosted runners. Deploy-job получает SSH-секреты из environment `production` и передаёт проверенный SHA пользователю `deploy` на VPS. Ключ ограничен forced-command [ops/deploy-cola-ssh](../../ops/deploy-cola-ssh), который принимает только полный SHA и вызывает root-owned [ops/deploy-cola](../../ops/deploy-cola) через sudo. Пользователю `deploy` не нужен доступ к Docker group. **Это ограничение интерфейса, а не sandbox для недоверенного кода.** Wrapper не проверяет CI криптографически: происхождение проверенного SHA обеспечивается workflow, а production wrapper дополнительно сравнивает его с текущим `origin/main`. Установка ключа и ограничения — в [runbook](../operations/deployment.md#ssh-доступ-для-github-actions).
 
-Код из `main`, workflow, Dockerfile, миграции, env и серверный checkout должны считаться привилегированными. Staging берёт Compose из `main`, но запускает код выбранной ветки и не подходит для произвольного враждебного PR. На staging не должно быть production secrets/данных. Не доверяйте collaborator только на основании того, что ему предложено «не пушить в main»; правила ветки и review настраиваются в GitHub отдельно.
+Код из `main`, workflow, Dockerfile, миграции, env и серверный checkout должны считаться привилегированными. CI для PR не должен получать production-секреты. Не доверяйте collaborator только на основании того, что ему предложено «не пушить в main»; правила ветки, review и ограничение environment `production` веткой `main` настраиваются в GitHub отдельно. Наличие workflow в репозитории не доказывает, что эти административные ограничения уже применены.
 
 Официальная справка: [GitHub secure use](https://docs.github.com/en/actions/reference/security/secure-use).
 
