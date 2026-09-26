@@ -174,7 +174,12 @@ test("admin imports text, edits rich content, preserves drafts across tabs, publ
   const original = (
     await db.query("SELECT * FROM legal_documents ORDER BY kind")
   ).rows;
-  const admin = await user(page, db);
+  await user(page, db);
+  let documentLoads = 0;
+  await page.route("**/api/admin/legal", (route) => {
+    if (route.request().method() === "GET") documentLoads++;
+    return route.continue();
+  });
   const visitor = await context.browser().newContext({ baseURL: origin });
   const reader = await visitor.newPage();
   try {
@@ -221,6 +226,7 @@ test("admin imports text, edits rich content, preserves drafts across tabs, publ
     await expect(preview.locator("strong")).toHaveText("Важное условие");
     await expect(preview.locator("u")).toHaveText("подчёркнутый текст");
     await expect(preview.locator("ol li")).toHaveCount(2);
+    expect(documentLoads).toBe(1);
     expect(await page.evaluate(() => window.legalXss)).toBeUndefined();
     await area
       .getByRole("button", { name: "Сохранить черновик документа" })
@@ -331,7 +337,7 @@ test("admin imports text, edits rich content, preserves drafts across tabs, publ
 async function selectEditorText(field, text) {
   await expect(field).toHaveText(text);
   await field.press("ArrowRight");
-  for (const character of text) await field.press("Shift+ArrowLeft");
+  for (let i = 0; i < Array.from(text).length; i++) await field.press("Shift+ArrowLeft");
   await expect
     .poll(() =>
       field.evaluate((el) => el.ownerDocument.getSelection()?.toString()),

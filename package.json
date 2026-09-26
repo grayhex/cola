@@ -7,7 +7,7 @@
     "dev": "node scripts/copy-maplibre-worker.js && next dev --hostname 0.0.0.0",
     "build": "node scripts/copy-maplibre-worker.js && node scripts/build-version.js && next build",
     "start": "next start --hostname 0.0.0.0",
-    "lint": "eslint .",
+    "lint": "eslint . --max-warnings=0",
     "typecheck": "tsc -p jsconfig.json",
     "test": "node --test tests/*.test.js",
     "db:migrate": "node scripts/migrate.js",

@@ -1,5 +1,7 @@
 import { testConsents } from "../fixtures/legal.js";
 import sharp from "sharp";
+import pg from "pg";
+import { mapDefaults } from "../../lib/map-settings.js";
 import { test, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import { gpx, fit, loop } from "../ride-fixtures.js";
@@ -108,103 +110,126 @@ test("MapLibre initializes with intercepted OSM tiles, no external traffic", asy
     browserName !== "chromium",
     "WebGL support differs in headless WebKit; mobile fallback is covered",
   );
-  const base = process.env.TEST_ORIGIN || "http://localhost:3100",
-    nonce = randomUUID().slice(0, 8);
-  let releaseTiles;
-  let requestedTiles = false;
-  const tileGate = new Promise((resolve) => {
-    releaseTiles = resolve;
-  });
-  await page.request.post(base + "/api/auth/register", {
-    headers: { origin: base },
-    data: {
-      ...testConsents,
-      name: "Map Test",
-      email: "map-" + nonce + "@example.test",
-      password: "map-test-secret-123",
-    },
-  });
-  const bike = await (
-    await page.request.post(base + "/api/bikes", {
-      headers: { origin: base },
-      data: {
-        name: "Map bike",
-        brand: "Giant",
-        model: "Tourer",
-        year: 2024,
-        category: "road",
-        description: "",
-        color: "",
-        size: "",
-        weight: null,
-        is_public: true,
-      },
-    })
-  ).json();
-  const preview = await (
-    await page.request.post(base + "/api/rides/preview", {
-      headers: { origin: base },
-      data: gpx([loop]),
-    })
-  ).json();
-  const ride = await (
-    await page.request.post(base + "/api/rides", {
-      headers: { origin: base },
-      data: {
-        previewId: preview.previewId,
-        bikeId: bike.id,
-        title: "Local map",
-        description: "",
-        isPublic: true,
-        privacyEnabled: false,
-        privacyRadiusM: 500,
-      },
-    })
-  ).json();
-  const tile = await sharp({
-    create: { width: 256, height: 256, channels: 3, background: "#dae1d4" },
-  })
-    .png()
-    .toBuffer();
-  await page.route("https://tile.openstreetmap.org/**", async (route) => {
-    requestedTiles = true;
-    await tileGate;
-    await route.fulfill({ contentType: "image/png", body: tile });
-  });
-  await page.goto("/r/" + ride.shareId);
-  const frame = page.locator(".ride-map-wrap");
-  let previewHeight;
+  const db = new pg.Client({ connectionString: process.env.DATABASE_URL });
+  await db.connect();
+  const original = (
+    await db.query("SELECT value FROM site_settings WHERE id=1")
+  ).rows[0].value;
   try {
-    await expect.poll(() => requestedTiles).toBe(true);
-    previewHeight = (await frame.boundingBox()).height;
+    // Exercise the object-valued raster style, regardless of settings left by
+    // other UI fixtures or the harness MAP_STYLE_URL fallback.
+    await db.query(
+      "UPDATE site_settings SET value=jsonb_set(value,'{map}',$1::jsonb) WHERE id=1",
+      [JSON.stringify(mapDefaults)],
+    );
+    const base = process.env.TEST_ORIGIN || "http://localhost:3100",
+      nonce = randomUUID().slice(0, 8);
+    let releaseTiles;
+    let requestedTiles = false;
+    const tileGate = new Promise((resolve) => {
+      releaseTiles = resolve;
+    });
+    await page.request.post(base + "/api/auth/register", {
+      headers: { origin: base },
+      data: {
+        ...testConsents,
+        name: "Map Test",
+        email: "map-" + nonce + "@example.test",
+        password: "map-test-secret-123",
+      },
+    });
+    const bike = await (
+      await page.request.post(base + "/api/bikes", {
+        headers: { origin: base },
+        data: {
+          name: "Map bike",
+          brand: "Giant",
+          model: "Tourer",
+          year: 2024,
+          category: "road",
+          description: "",
+          color: "",
+          size: "",
+          weight: null,
+          is_public: true,
+        },
+      })
+    ).json();
+    const preview = await (
+      await page.request.post(base + "/api/rides/preview", {
+        headers: { origin: base },
+        data: gpx([loop]),
+      })
+    ).json();
+    const ride = await (
+      await page.request.post(base + "/api/rides", {
+        headers: { origin: base },
+        data: {
+          previewId: preview.previewId,
+          bikeId: bike.id,
+          title: "Local map",
+          description: "",
+          isPublic: true,
+          privacyEnabled: false,
+          privacyRadiusM: 500,
+        },
+      })
+    ).json();
+    const tile = await sharp({
+      create: { width: 256, height: 256, channels: 3, background: "#dae1d4" },
+    })
+      .png()
+      .toBuffer();
+    await page.route("https://tile.openstreetmap.org/**", async (route) => {
+      requestedTiles = true;
+      await tileGate;
+      await route.fulfill({ contentType: "image/png", body: tile });
+    });
+    await page.goto("/r/" + ride.shareId);
+    const frame = page.locator(".ride-map-wrap");
+    let previewHeight;
+    try {
+      await expect.poll(() => requestedTiles).toBe(true);
+      previewHeight = (await frame.boundingBox()).height;
+    } finally {
+      releaseTiles();
+    }
+    await expect(page.locator(".ride-map.ready")).toBeVisible({
+      timeout: 15000,
+    });
+    expect((await frame.boundingBox()).height).toBe(previewHeight);
+    await expect(page.locator(".maplibregl-canvas")).toBeVisible();
+    const canvas = await page.locator(".maplibregl-canvas").elementHandle();
+    // Readiness itself re-renders the map. A fresh raster style object must not
+    // tear it down, even before any user interaction or scroll (#140).
+    await page.waitForTimeout(300);
+    await expect(page.locator(".ride-map.ready")).toBeVisible();
+    expect(await canvas.evaluate((el) => el.isConnected)).toBe(true);
+    const chart = page.getByRole("img", {
+      name: "График скорости по расстоянию",
+    });
+    await chart.hover();
+    await expect(page.getByRole("region", { name: "Скорость" })).toContainText(
+      /на \d+[,.]?\d* км/,
+    );
+    await page.locator("#discussion").scrollIntoViewIfNeeded();
+    await page.evaluate(
+      () =>
+        new Promise((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(resolve)),
+        ),
+    );
+    expect(await canvas.evaluate((el) => el.isConnected)).toBe(true);
+    expect((await frame.boundingBox()).height).toBe(previewHeight);
+    await frame.scrollIntoViewIfNeeded();
+    await page.screenshot({
+      path: info.outputPath("ride-map.png"),
+      fullPage: true,
+    });
   } finally {
-    releaseTiles();
+    await db.query("UPDATE site_settings SET value=$1 WHERE id=1", [original]);
+    await db.end();
   }
-  await expect(page.locator(".ride-map.ready")).toBeVisible({ timeout: 15000 });
-  expect((await frame.boundingBox()).height).toBe(previewHeight);
-  await expect(page.locator(".maplibregl-canvas")).toBeVisible();
-  const canvas = await page.locator(".maplibregl-canvas").elementHandle();
-  const chart = page.getByRole("img", {
-    name: "График скорости по расстоянию",
-  });
-  await chart.hover();
-  await expect(page.getByRole("region", { name: "Скорость" })).toContainText(
-    /на \d+[,.]?\d* км/,
-  );
-  await page.locator("#discussion").scrollIntoViewIfNeeded();
-  await page.evaluate(
-    () =>
-      new Promise((resolve) =>
-        requestAnimationFrame(() => requestAnimationFrame(resolve)),
-      ),
-  );
-  expect(await canvas.evaluate((el) => el.isConnected)).toBe(true);
-  expect((await frame.boundingBox()).height).toBe(previewHeight);
-  await frame.scrollIntoViewIfNeeded();
-  await page.screenshot({
-    path: info.outputPath("ride-map.png"),
-    fullPage: true,
-  });
 });
 
 test("FIT upload: export hint, heart rate hidden until the owner shows it", async ({

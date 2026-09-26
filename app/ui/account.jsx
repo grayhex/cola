@@ -3,7 +3,7 @@ import RideAccount from "./ride-account.jsx";
 import { useSearchParams } from "next/navigation";
 import BikeGrid from "./bike-grid.jsx";
 import { BadgeShelf } from "./achievements.jsx";
-import { useCallback, useEffect, useState } from "react";
+import { useRef, useCallback, useEffect, useState } from "react";
 import {
   Plus,
   ExternalLink,
@@ -451,20 +451,35 @@ export default function Account() {
   const { viewer: user, refreshViewer } = useSite();
   // The reader comes from the server layout (#74). A profile change reloads
   // it too, so the header shows the new name at once.
-  async function refresh(reloadViewer = false) {
-    const current = reloadViewer ? await refreshViewer() : user;
-    if (current) {
-      const [d, b] = await Promise.all([
-        socialApi("social/account"),
-        socialApi("bikes"),
-      ]);
-      setData(d);
-      setBikes(b.bikes);
-    }
-  }
+  const userId = user?.id;
+  const requests = useRef({ revision: 0 });
+  const refresh = useCallback(
+    async (reloadViewer = false) => {
+      const revision = ++requests.current.revision;
+      const current = reloadViewer ? await refreshViewer() : userId;
+      if (current) {
+        const [d, b] = await Promise.all([
+          socialApi("social/account"),
+          socialApi("bikes"),
+        ]);
+        if (revision !== requests.current.revision) return;
+        setData(d);
+        setBikes(b.bikes);
+      }
+    },
+    [userId, refreshViewer],
+  );
   useEffect(() => {
-    refresh().catch((e) => setError(e.message));
-  }, []);
+    const pending = requests.current;
+    let active = true;
+    refresh().catch((e) => {
+      if (active) setError(e.message);
+    });
+    return () => {
+      active = false;
+      pending.revision++;
+    };
+  }, [refresh]);
   // Next navigation within /account does not remount Account. Observe the URL,
   // including a repeated add request after closing a previous wizard.
   useEffect(() => {
@@ -691,6 +706,8 @@ export default function Account() {
                     onClick={async () => {
                       try {
                         await socialApi("auth/logout", "POST");
+                        // New session: reload the server viewer and discard private client state.
+                        // eslint-disable-next-line @next/next/no-location-assign-relative-destination
                         window.location.assign("/");
                       } catch (e) {
                         setError(e.message);

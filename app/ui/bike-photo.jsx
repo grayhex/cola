@@ -17,8 +17,7 @@ export default function Photo({
   priority = false,
   full = false,
 }) {
-  const { settings, catalog, t } = useSite();
-  const { categories, models, parts, partCategories, manufacturers } = catalog;
+  const { settings, t } = useSite();
   const [failedSrc, setFailedSrc] = useState(null);
   const image = useRef(null);
   const selected = photo || bike.photos?.[0];

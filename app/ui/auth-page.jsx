@@ -54,6 +54,8 @@ export default function AuthPage({ initialMode = "login", onAuthenticated }) {
                 try {
                   await socialApi("auth/" + mode, "POST", data);
                   if (onAuthenticated) onAuthenticated();
+                  // New session: reload the server viewer and discard private client state.
+                  // eslint-disable-next-line @next/next/no-location-assign-relative-destination
                   else location.assign("/account");
                 } catch (e) {
                   setError(e.message);

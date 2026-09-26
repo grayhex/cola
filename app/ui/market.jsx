@@ -1,4 +1,5 @@
 "use client";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -442,7 +443,9 @@ export default function Market({
   sharePath = null,
   initial = null,
 }) {
+  const router = useRouter();
   const { viewer: user, settings } = useSite();
+  const userId = user?.id;
   const hydrated = useHydrated();
   const listingDays = settings?.marketListingDays || 60;
   const [data, setData] = useState(null),
@@ -497,7 +500,7 @@ export default function Market({
     return () => window.removeEventListener("popstate", restore);
   }, [share, create]);
   useEffect(() => {
-    if (!ready || create || (own && !user)) return;
+    if (!ready || create || (own && !userId)) return;
     if (seed.current) {
       seed.current = null;
       return;
@@ -526,8 +529,9 @@ export default function Market({
     return () => {
       active = false;
     };
-  }, [ready, share, create, user?.id, filterKey]);
+  }, [ready, share, create, userId, own, filterKey]);
   const saved = async (r) => {
+    // Saving can target this same URL: rebuild the server-seeded listing/editor.
     location.assign(publicPath("market", r));
   };
   async function showContact() {
@@ -608,7 +612,7 @@ export default function Market({
             onCancel={(r) =>
               r
                 ? location.assign(publicPath("market", r))
-                : location.assign("/market")
+                : router.push("/market")
             }
           />
         ) : share ? (
@@ -828,7 +832,7 @@ export default function Market({
                           setBusy(true);
                           try {
                             await socialApi("market/" + listing.id, "DELETE");
-                            location.assign("/market?own=1");
+                            router.push("/market?own=1");
                           } catch (e) {
                             setError(e.message);
                             setBusy(false);

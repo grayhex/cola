@@ -1,6 +1,6 @@
 "use client";
 import { useConfirmation } from "./confirmation.jsx";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { LoaderCircle, Check, RefreshCw } from "./icons.jsx";
 import { factoryComponent } from "../../lib/factory-components.js";
 const messages = {
@@ -57,64 +57,72 @@ export default function FactorySpecification({
     );
     return () => clearInterval(timer);
   }, [busy]);
-  async function find(candidateId) {
-    callbacks.current.onReset?.();
-    controller.current?.abort();
-    const abort = new AbortController();
-    controller.current = abort;
-    setBusy(true);
-    setElapsed(0);
-    setResult(null);
-    callbacks.current.onBusy?.(true);
-    try {
-      const response = await fetch("/api/bikes/resolve", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          brand: bike.brand,
-          model: bike.model,
-          trim: bike.trim || null,
-          year: Number(bike.year),
-          ...(sourceUrl ? { sourceUrl } : candidateId ? { candidateId } : {}),
-        }),
-        signal: AbortSignal.any([abort.signal, AbortSignal.timeout(95000)]),
-      });
-      if (!response.ok) throw new Error();
-      const data = await response.json();
-      if (abort.signal.aborted || !mounted.current) return;
-      if (
-        data.status === "resolved" &&
-        data.warnings?.includes("identity_mismatch") &&
-        !(await ask(
-          `Источник: «${data.bike.canonicalName}»${data.sourceYear ? ` (${data.sourceYear})` : ""}. Вы указали «${bike.brand} ${bike.model} ${bike.trim || ""} ${bike.year}». Модель или год отличаются. Использовать эту комплектацию?`,
-        ))
-      )
-        return;
-      setResult({ ...data, candidateId });
-      if (data.status === "resolved" && automatic && !sourceUrl)
-        callbacks.current.onImport(candidateId, true);
-    } catch {
-      if (!abort.signal.aborted && mounted.current)
-        setResult({ status: "upstream_unavailable" });
-    } finally {
-      if (controller.current === abort && mounted.current) {
-        setBusy(false);
-        callbacks.current.onBusy?.(false);
+  const { brand, model, trim, year } = bike;
+  const find = useCallback(
+    async (candidateId) => {
+      callbacks.current.onReset?.();
+      controller.current?.abort();
+      const abort = new AbortController();
+      controller.current = abort;
+      setBusy(true);
+      setElapsed(0);
+      setResult(null);
+      callbacks.current.onBusy?.(true);
+      try {
+        const response = await fetch("/api/bikes/resolve", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            brand,
+            model,
+            trim: trim || null,
+            year: Number(year),
+            ...(sourceUrl ? { sourceUrl } : candidateId ? { candidateId } : {}),
+          }),
+          signal: AbortSignal.any([abort.signal, AbortSignal.timeout(95000)]),
+        });
+        if (!response.ok) throw new Error();
+        const data = await response.json();
+        if (abort.signal.aborted || !mounted.current) return;
+        if (
+          data.status === "resolved" &&
+          data.warnings?.includes("identity_mismatch") &&
+          !(await ask(
+            `Источник: «${data.bike.canonicalName}»${data.sourceYear ? ` (${data.sourceYear})` : ""}. Вы указали «${brand} ${model} ${trim || ""} ${year}». Модель или год отличаются. Использовать эту комплектацию?`,
+          ))
+        )
+          return;
+        if (abort.signal.aborted || !mounted.current) return;
+        setResult({ ...data, candidateId });
+        if (data.status === "resolved" && automatic && !sourceUrl)
+          callbacks.current.onImport(candidateId, true);
+      } catch {
+        if (!abort.signal.aborted && mounted.current)
+          setResult({ status: "upstream_unavailable" });
+      } finally {
+        if (controller.current === abort && mounted.current) {
+          setBusy(false);
+          callbacks.current.onBusy?.(false);
+        }
       }
-    }
-  }
+    },
+    [brand, model, trim, year, sourceUrl, ask, automatic],
+  );
   useEffect(() => {
     if (!automatic || !valid || !config?.autoResolve || sourceUrl) return;
     if (
       !config.brands.some(
         (a) =>
-          a.enabled && a.name.toLowerCase() === bike.brand.trim().toLowerCase(),
+          a.enabled && a.name.toLowerCase() === brand.trim().toLowerCase(),
       )
     )
       return;
     const timer = setTimeout(() => find(), 1400);
-    return () => clearTimeout(timer);
-  }, [config, automatic, valid, sourceUrl]);
+    return () => {
+      clearTimeout(timer);
+      controller.current?.abort();
+    };
+  }, [config, automatic, valid, sourceUrl, brand, find]);
   const current = result?.status === "resolved" ? result : bike.factory_spec;
   return (
     <section

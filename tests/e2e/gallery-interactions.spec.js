@@ -284,6 +284,53 @@ test("optimistic like, fast unlike, independent cards and rollback", async ({
   ).toHaveAttribute("aria-pressed", "false");
 });
 
+test("a refreshed bike snapshot preserves the pending like writer", async ({
+  page,
+}) => {
+  await fixture(page);
+  const methods = [];
+  let release;
+  const pending = new Promise((resolve) => {
+    release = resolve;
+  });
+  await page.route("**/api/bikes/bike-0/like", async (route) => {
+    methods.push(route.request().method());
+    if (methods.length === 1) await pending;
+    const liked = route.request().method() === "PUT";
+    await route.fulfill({ json: { liked, likes: liked ? 3 : 2 } });
+  });
+  try {
+    await page.goto("/bikes");
+    const card = page.locator(".bike-card").first();
+    await card.getByRole("button", { name: "Нравится: 2" }).click();
+    await expect.poll(() => methods).toEqual(["PUT"]);
+    // The same id arrives as a new object while the server like is outstanding.
+    await page.route("**/api/showcase?**", (route) =>
+      route.fulfill({
+        json: {
+          bikes: [{ ...bikes[0], name: "Обновлённый велосипед" }],
+          total: 1,
+        },
+      }),
+    );
+    await page.getByRole("button", { name: "Порядок витрины" }).click();
+    await page.getByRole("option", { name: "Популярные", exact: true }).click();
+    await expect(card.getByRole("heading")).toHaveText("Обновлённый велосипед");
+    const liked = card.getByRole("button", { name: "Нравится: 3" });
+    await expect(liked).toHaveAttribute("aria-pressed", "true");
+    await expect(liked).toHaveAttribute("aria-busy", "true");
+    await liked.click();
+    expect(methods).toEqual(["PUT"]);
+    release();
+    await expect.poll(() => methods).toEqual(["PUT", "DELETE"]);
+    const unliked = card.getByRole("button", { name: "Нравится: 2" });
+    await expect(unliked).toHaveAttribute("aria-busy", "false");
+    await expect(unliked).toHaveAttribute("aria-pressed", "false");
+  } finally {
+    release();
+  }
+});
+
 for (const status of [200, 500])
   test(`late filter ${status} cannot replace a newer result or clear the old grid`, async ({
     page,
@@ -444,9 +491,32 @@ test("broken artwork and photos keep stable space and accessible fallbacks", asy
   ).toBeFocused();
 });
 
+test("dialog sign-in refreshes the showcase once for the new viewer", async ({ page }) => {
+  await fixture(page);
+  const { user } = await (await page.request.get("/api/me")).json();
+  await page.context().clearCookies();
+  let loads = 0;
+  await page.route("**/api/showcase?**", (route) => {
+    loads++;
+    return route.fulfill({ json: { bikes, total: bikes.length } });
+  });
+  await page.goto("/bikes");
+  await expect(page.locator(".bike-card")).toHaveCount(9);
+  expect(loads).toBe(1);
+  await page.locator(".bike-card").first().getByRole("button", { name: "Нравится: 2" }).click();
+  const form = page.locator(".auth-form");
+  await form.getByLabel("Электронная почта", { exact: true }).fill(user.email);
+  await form.getByLabel("Пароль", { exact: true }).fill("gallery-viewer-secret-123");
+  await form.getByRole("button", { name: "Войти", exact: true }).click();
+  await expect(form).toHaveCount(0);
+  await expect.poll(() => loads).toBe(2);
+  await page.waitForTimeout(300);
+  expect(loads).toBe(2);
+  await expect(page.locator(".bike-card")).toHaveCount(9);
+});
+
 test("guest sign-in continues the requested add-bike action", async ({
   page,
-  isMobile,
 }) => {
   await fixture(page, null);
   await page.goto("/bikes");

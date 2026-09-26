@@ -132,15 +132,15 @@ export function FollowButton({ profile, user, onChange }) {
   const following = optimisticFollowing ?? profile.relationship?.following;
   if (profile.relationship?.isSelf)
     return (
-      <a className="button secondary small" href="/account?tab=profile">
+      <Link className="button secondary small" href="/account?tab=profile">
         Изменить профиль
-      </a>
+      </Link>
     );
   if (!user)
     return (
-      <a className="button small" href="/account">
+      <Link className="button small" href="/account">
         Войти, чтобы подписаться
-      </a>
+      </Link>
     );
   return (
     <div className="follow-control">

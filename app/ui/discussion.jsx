@@ -1,5 +1,8 @@
 "use client";
-import { useEffect, useState, createContext, useContext } from "react";
+import Link from "next/link";
+import {
+  useCallback, useRef, useEffect, useState, createContext, useContext,
+} from "react";
 import { Avatar, socialApi } from "./social-primitives.jsx";
 import { ReportButton, PageControls } from "./community-controls.jsx";
 import dynamic from "next/dynamic";
@@ -262,7 +265,7 @@ function Thread({ root, user, bikeId, refresh }) {
     return () => {
       alive = false;
     };
-  }, [expanded, page, root]);
+  }, [expanded, page, root, api.items, bikeId]);
   return (
     <div className="comment-thread">
       <Comment comment={root} user={user} bikeId={bikeId} refresh={refresh} />
@@ -307,24 +310,36 @@ export default function Discussion({
     setFocus(new URLSearchParams(window.location.search).get("comment"));
     setLoaded(true);
   }, []);
-  async function refresh() {
-    const d = await socialApi(
-      api.items +
-        bike.id +
-        "/comments?page=" +
-        page +
-        (focus ? "&focus=" + encodeURIComponent(focus) : ""),
-    );
-    setData(d);
-    setError("");
-  }
+  const requests = useRef({ revision: 0 });
+  const refresh = useCallback(async () => {
+    const revision = ++requests.current.revision;
+    try {
+      const d = await socialApi(
+        api.items +
+          bike.id +
+          "/comments?page=" +
+          page +
+          (focus ? "&focus=" + encodeURIComponent(focus) : ""),
+      );
+      if (revision !== requests.current.revision) return;
+      setData(d);
+      setError("");
+    } catch (e) {
+      if (revision === requests.current.revision) setError(e.message);
+    }
+  }, [api.items, bike.id, page, focus]);
   useEffect(() => {
-    if (loaded) refresh().catch((e) => setError(e.message));
-  }, [bike.id, page, focus, loaded]);
+    const pending = requests.current;
+    if (loaded) void refresh();
+    return () => {
+      pending.revision++;
+    };
+  }, [refresh, loaded]);
+  const hasData = !!data;
   useEffect(() => {
-    if (focus && data)
+    if (focus && hasData)
       document.getElementById("discussion")?.scrollIntoView({ block: "start" });
-  }, [focus, !!data]);
+  }, [focus, hasData]);
   return (
     <DiscussionKind.Provider value={entityType}>
       <QuestionContext.Provider
@@ -414,9 +429,9 @@ export default function Discussion({
               }}
             />
           ) : (
-            <a className="button secondary small" href="/account">
+            <Link className="button secondary small" href="/account">
               Войти, чтобы участвовать в обсуждении
-            </a>
+            </Link>
           )}
         </section>
       </QuestionContext.Provider>

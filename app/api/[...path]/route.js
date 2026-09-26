@@ -33,7 +33,7 @@ import {
 } from "../../../lib/bike-resolver-client.js";
 import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
-import { mkdir, readFile, writeFile, unlink } from "node:fs/promises";
+import { readFile, unlink } from "node:fs/promises";
 import path from "node:path";
 import { preparePhoto, prepareThumbnail } from "../../../lib/images.js";
 import {
@@ -53,7 +53,7 @@ import {
   endSession,
   rateLimit,
 } from "../../../lib/auth.js";
-import { hashPassword, verifyPassword, digest } from "../../../lib/password.js";
+import { hashPassword, verifyPassword } from "../../../lib/password.js";
 import {
   bikeInput,
   componentInput,
@@ -63,8 +63,6 @@ import {
 import { allocateUsername, suggestUsername } from "../../../lib/usernames.js";
 import {
   ownedBike,
-  hydrate,
-  sharedBike,
   insertBike,
 } from "../../../lib/repository.js";
 

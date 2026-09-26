@@ -10,8 +10,6 @@ import {
 } from "../../lib/card-presentation.js";
 import {
   X,
-  SlidersHorizontal,
-  Search,
   CheckCheck,
   Zap,
   Medal,

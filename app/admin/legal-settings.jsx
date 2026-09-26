@@ -1,6 +1,6 @@
 "use client";
 import { useConfirmation } from "../ui/confirmation.jsx";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import PromptComposer from "../ui/prompt-composer.jsx";
 import { SectionTabs } from "./design-controls.jsx";
 import styles from "./legal-settings.module.css";
@@ -26,7 +26,7 @@ export default function LegalSettings({ active }) {
       alive.current = false;
     };
   }, []);
-  async function reload() {
+  const reload = useCallback(async () => {
     if (
       loading.current ||
       (dirty &&
@@ -50,16 +50,15 @@ export default function LegalSettings({ active }) {
         setSaved(items);
       }
     } catch (e) {
-      if (alive.current)
-        setError(e.message || "Не удалось загрузить документы");
+      if (alive.current) setError(e.message || "Не удалось загрузить документы");
     } finally {
       loading.current = false;
       if (alive.current) setBusy(false);
     }
-  }
+  }, [dirty, ask]);
   useEffect(() => {
     if (active && !documents && !loading.current) reload();
-  }, [active]);
+  }, [active, documents, reload]);
   useEffect(() => {
     const warn = (e) => {
       if (dirty) {

@@ -34,6 +34,7 @@ export default function JournalPage({
     [busy, setBusy] = useState(false),
     [confirm, setConfirm] = useState(false);
   const { viewer: user } = useSite();
+  const userId = user?.id;
   // The server rendered the entry for this viewer (#74): the first load
   // reuses it instead of asking again.
   const seed = useRef(initial);
@@ -56,7 +57,7 @@ export default function JournalPage({
               new URLSearchParams(location.search).get("edit") === "1",
           );
         } else {
-          if (!user) throw Error("Войдите в аккаунт, чтобы написать запись");
+          if (!userId) throw Error("Войдите в аккаунт, чтобы написать запись");
           const id = new URLSearchParams(location.search).get("bike");
           const d = await socialApi("bikes");
           if (!active) return;
@@ -78,7 +79,7 @@ export default function JournalPage({
     return () => {
       active = false;
     };
-  }, [share]);
+  }, [share, userId]);
   const visible =
     entry?.status === "published" && entry.isPublic && entry.bikePublic;
   return (
@@ -272,7 +273,7 @@ export default function JournalPage({
                           setBusy(true);
                           try {
                             await socialApi("journal/" + entry.id, "DELETE");
-                            location.assign(
+                            router.push(
                               "/account?tab=bikes&bike=" + entry.bike.id,
                             );
                           } catch (e) {
@@ -305,7 +306,7 @@ export default function JournalPage({
                       disabled={busy || entry.isOwner}
                       onClick={async () => {
                         if (!user) {
-                          location.assign("/account");
+                          router.push("/account");
                           return;
                         }
                         setBusy(true);

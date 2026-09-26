@@ -40,9 +40,9 @@ test("two riders discuss a bike, receive notifications, reply and discover new p
   browser,
   isMobile,
 }) => {
-  const nonce = randomUUID().slice(0, 8),
-    a = await register(page.request, "owner-" + nonce),
-    first = await bike(page.request, "First " + nonce);
+  const nonce = randomUUID().slice(0, 8);
+  await register(page.request, "owner-" + nonce);
+  const first = await bike(page.request, "First " + nonce);
   const context = await browser.newContext({
     ...(isMobile ? devices["iPhone 13"] : {}),
     baseURL: origin,

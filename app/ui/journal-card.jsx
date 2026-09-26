@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useState } from "react";
 import {
   Heart,
@@ -60,7 +61,7 @@ export function SaveEntry({ entry, onChange }) {
       </button>
       {error && (
         <span role="alert">
-          {error} <a href="/account">Войти</a>
+          {error} <Link href="/account">Войти</Link>
         </span>
       )}
     </>

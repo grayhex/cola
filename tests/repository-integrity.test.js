@@ -56,7 +56,6 @@ test("repository path probes reject invalid candidates without masking filesyste
   assert.equal((await Promise.all(
     importCandidates(path.join(dir, "client.js"), "./domain").map(exists),
   )).some(Boolean), true);
-  const missing = path.join(dir, "missing");
   assert.equal((await Promise.all(
     importCandidates(path.join(dir, "view.jsx"), "./missing").map(exists),
   )).some(Boolean), false, "Missing imports must still fail resolution");

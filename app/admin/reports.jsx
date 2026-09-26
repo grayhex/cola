@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useCallback, useRef, useEffect, useState } from "react";
 import { socialApi } from "../ui/social-primitives.jsx";
 import { PageControls } from "../ui/community-controls.jsx";
 import { profilePath } from "../../lib/public-urls.js";
@@ -9,16 +9,28 @@ export default function Reports({ onManageUser }) {
     [data, setData] = useState(null),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false);
-  async function load() {
-    setData(
-      await socialApi(
+  const requests = useRef({ revision: 0 });
+  const load = useCallback(async () => {
+    const revision = ++requests.current.revision;
+    try {
+      const result = await socialApi(
         "community/admin/reports?status=" + status + "&page=" + page,
-      ),
-    );
-  }
-  useEffect(() => {
-    load().catch((e) => setError(e.message));
+      );
+      if (revision === requests.current.revision) {
+        setData(result);
+        setError("");
+      }
+    } catch (e) {
+      if (revision === requests.current.revision) setError(e.message);
+    }
   }, [status, page]);
+  useEffect(() => {
+    const pending = requests.current;
+    void load();
+    return () => {
+      pending.revision++;
+    };
+  }, [load]);
   async function act(id, action) {
     setBusy(true);
     setError("");
