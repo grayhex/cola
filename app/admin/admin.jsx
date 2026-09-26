@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
+import dynamic from "next/dynamic";
 import { NavigationSettings, AboutSettings } from "./navigation-settings.jsx";
 import {
   ThemeSettings,
@@ -45,6 +45,11 @@ import styles from "./design.module.css";
 import ArticleTopicSettings from "./article-topics.jsx";
 import LegalSettings from "./legal-settings.jsx";
 import EmojiSettings from "./emoji-settings.jsx";
+// The design system reference (#127) stays inside the admin, next to its
+// menu (#131); loaded only when opened.
+const UiKitSections = dynamic(() =>
+  import("./ui-kit/ui-kit.jsx").then((m) => m.UiKitSections),
+);
 
 async function request(url, method = "GET", data) {
   const response = await fetch("/api/" + url, {
@@ -75,6 +80,7 @@ const sections = [
   ["media", "Медиатека", Image],
   ["copy", "Тексты", Type],
   ["about", "О проекте", BookOpen],
+  ["uikit", "Дизайн-система", LayoutGrid],
   ["groups", "Группы деталей", BookOpen],
   ["catalog", "Справочники", BookOpen],
   ["users", "Пользователи", Users],
@@ -101,6 +107,7 @@ const adminGroups = [
       "media",
       "copy",
       "about",
+      "uikit",
     ],
   },
   {
@@ -127,7 +134,10 @@ const settingsTabs = new Set([
   "scoring",
   "map",
   "articles",
-  ...adminGroups.find((g) => g.id === "design").sections,
+  // The design system reference has nothing to save.
+  ...adminGroups
+    .find((g) => g.id === "design")
+    .sections.filter((id) => id !== "uikit"),
 ]);
 const catalogTabs = new Set(["catalog", "groups"]);
 
@@ -462,13 +472,6 @@ export default function Admin() {
                         </button>
                       );
                     })}
-                    {g.id === "design" && (
-                      // The design system reference (#127), same access.
-                      <Link href="/admin/ui-kit">
-                        <LayoutGrid size={16} />
-                        UI Kit
-                      </Link>
-                    )}
                   </nav>
                 )}
               </div>
@@ -523,6 +526,17 @@ export default function Admin() {
               catalog={catalog}
               onChange={(v) => update("scoring", v)}
             />
+          )}
+          {tab === "uikit" && (
+            <>
+              <p className="help">
+                Утверждённые токены и компоненты в светлой и тёмной теме.{" "}
+                <a href="/admin/ui-kit" target="_blank" rel="noreferrer">
+                  Открыть на всю ширину
+                </a>
+              </p>
+              <UiKitSections />
+            </>
           )}
           {tab === "resolver" && <ResolverSettings />}
           {tab === "gamification" && <Gamification />}
@@ -879,7 +893,7 @@ export default function Admin() {
             </section>
           )}
           {canSave && (
-            <div className="admin-save">
+            <div className="admin-save" data-dirty={currentDirty}>
               <span>
                 {currentDirty
                   ? "Есть несохранённые изменения"

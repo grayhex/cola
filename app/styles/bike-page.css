@@ -188,12 +188,6 @@
     overflow-wrap: anywhere;
     text-wrap: balance;
   }
-  .bike-subtitle {
-    margin: var(--space-1) 0 0;
-    color: var(--text-muted);
-    font-size: var(--text-sm);
-    overflow-wrap: anywhere;
-  }
   .bike-heading-labels {
     display: flex;
     flex-wrap: wrap;

@@ -570,6 +570,22 @@
       position: static;
       max-height: none;
     }
+    /* The menu sits above the section here, and a sticky bar would stop
+       at the top of the section (#131). The bar ends the page; while there
+       is something to save it stays at the bottom of the screen. */
+    .admin-save {
+      position: static;
+      margin-top: var(--space-6);
+    }
+    .admin-save[data-dirty="true"] {
+      position: fixed;
+      right: var(--gutter);
+      bottom: calc(var(--space-3) + env(safe-area-inset-bottom));
+      left: var(--gutter);
+    }
+    .admin-sidebar-layout:has(.admin-save[data-dirty="true"]) {
+      padding-bottom: calc(var(--space-16) + 160px);
+    }
     .article-topic-row {
       grid-template-columns: 62px minmax(100px, 1fr);
     }

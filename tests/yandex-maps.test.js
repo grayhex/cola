@@ -282,10 +282,23 @@ test("renderer builds separate lines and start/finish markers, not a routing req
   const map = maps[0];
   assert.deepEqual(map.props.location, { bounds: route.bounds });
   assert.equal(map.props.behaviors.includes("scrollZoom"), false);
-  const lines = map.children.filter(
+  const features = map.children.filter(
     (entity) => entity instanceof api.YMapFeature,
   );
+  const lines = features.filter((entity) =>
+    entity.props.id.startsWith("ride-segment-"),
+  );
+  const casings = features.filter((entity) =>
+    entity.props.id.startsWith("ride-casing-"),
+  );
   assert.equal(lines.length, 2);
+  // A dark casing under every segment, drawn first (#131).
+  assert.equal(casings.length, 2);
+  assert.ok(features.indexOf(casings.at(-1)) < features.indexOf(lines[0]));
+  assert.deepEqual(
+    casings.map((entity) => entity.props.geometry.coordinates),
+    geometry,
+  );
   assert.deepEqual(
     lines.map((entity) => entity.props.geometry.coordinates),
     geometry,

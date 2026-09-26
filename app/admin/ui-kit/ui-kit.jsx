@@ -754,6 +754,77 @@ function Icons() {
   );
 }
 
+// The sections of the kit: on their own page and inside the admin, where
+// the admin menu stays next to them (#131).
+export function UiKitSections() {
+  return (
+    <>
+      <nav className="segmented" aria-label="Разделы UI Kit">
+        {sections.map(([id, label]) => (
+          <a key={id} href={"#" + id}>
+            {label}
+          </a>
+        ))}
+      </nav>
+      <Section
+        id="tokens"
+        title="Токены"
+        lead="Цвета задаются по назначению; тёмная тема меняет значения, а не компоненты."
+      >
+        <Tokens />
+      </Section>
+      <Section id="type" title="Типографика">
+        <Typography />
+      </Section>
+      <Section
+        id="buttons"
+        title="Кнопки"
+        lead="Главное действие — чёрная кнопка (белая в тёмной теме), обычные — градиент с тонкой рамкой."
+      >
+        <Buttons />
+      </Section>
+      <Section id="fields" title="Поля">
+        <Fields />
+      </Section>
+      <Section
+        id="cards"
+        title="Карточки"
+        lead="Строка-карточка по образцу Hugging Face Datasets: моноширинное имя, метаданные через «•»."
+      >
+        <Cards />
+      </Section>
+      <Section id="badges" title="Бейджи и теги">
+        <Badges />
+      </Section>
+      <Section id="tabs" title="Вкладки и фильтры">
+        <Tabs />
+      </Section>
+      <Section id="menus" title="Меню и диалоги">
+        <Menus />
+      </Section>
+      <Section id="notices" title="Уведомления">
+        <Notices />
+      </Section>
+      <Section id="states" title="Загрузка и пустые состояния">
+        <States />
+      </Section>
+      <Section id="data" title="Данные">
+        <Data />
+      </Section>
+      <Section
+        id="layout"
+        title="Компоновка"
+        lead="Рабочий режим — плотная строка заголовка с поиском; маркетинговый — разлинованная колонка."
+      >
+        <Layouts />
+      </Section>
+      <Section id="icons" title="Иконки">
+        <Icons />
+      </Section>
+    </>
+  );
+}
+
 export default function UiKit() {
   return (
     <>
@@ -769,68 +840,7 @@ export default function UiKit() {
             теме. Правила применения — в DESIGN.md в корне репозитория.
           </p>
         </div>
-        <nav className="segmented" aria-label="Разделы UI Kit">
-          {sections.map(([id, label]) => (
-            <a key={id} href={"#" + id}>
-              {label}
-            </a>
-          ))}
-        </nav>
-        <Section
-          id="tokens"
-          title="Токены"
-          lead="Цвета задаются по назначению; тёмная тема меняет значения, а не компоненты."
-        >
-          <Tokens />
-        </Section>
-        <Section id="type" title="Типографика">
-          <Typography />
-        </Section>
-        <Section
-          id="buttons"
-          title="Кнопки"
-          lead="Главное действие — чёрная кнопка (белая в тёмной теме), обычные — градиент с тонкой рамкой."
-        >
-          <Buttons />
-        </Section>
-        <Section id="fields" title="Поля">
-          <Fields />
-        </Section>
-        <Section
-          id="cards"
-          title="Карточки"
-          lead="Строка-карточка по образцу Hugging Face Datasets: моноширинное имя, метаданные через «•»."
-        >
-          <Cards />
-        </Section>
-        <Section id="badges" title="Бейджи и теги">
-          <Badges />
-        </Section>
-        <Section id="tabs" title="Вкладки и фильтры">
-          <Tabs />
-        </Section>
-        <Section id="menus" title="Меню и диалоги">
-          <Menus />
-        </Section>
-        <Section id="notices" title="Уведомления">
-          <Notices />
-        </Section>
-        <Section id="states" title="Загрузка и пустые состояния">
-          <States />
-        </Section>
-        <Section id="data" title="Данные">
-          <Data />
-        </Section>
-        <Section
-          id="layout"
-          title="Компоновка"
-          lead="Рабочий режим — плотная строка заголовка с поиском; маркетинговый — разлинованная колонка."
-        >
-          <Layouts />
-        </Section>
-        <Section id="icons" title="Иконки">
-          <Icons />
-        </Section>
+        <UiKitSections />
       </main>
       <SocialFooter />
     </>

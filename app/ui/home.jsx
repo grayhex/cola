@@ -163,10 +163,15 @@ export default function Home() {
         <section className="frame" aria-labelledby="hero-title">
           <div
             className={"frame-inner " + styles.hero}
-            style={{
-              "--hero-light": settings.heroBackgroundLight,
-              "--hero-dark": settings.heroBackgroundDark,
-            }}
+            style={
+              // Without its own colours the block takes the accent (#131).
+              settings.heroBackgroundMode === "custom"
+                ? {
+                    "--hero-light": settings.heroBackgroundLight,
+                    "--hero-dark": settings.heroBackgroundDark,
+                  }
+                : undefined
+            }
           >
             <div className={styles.heroContent}>
               <div className={styles.heroCopy}>

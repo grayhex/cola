@@ -299,6 +299,7 @@ export default function JournalPage({
                     <SaveEntry entry={entry} />
                     <button
                       className="quiet"
+                      data-hover="like"
                       aria-label={"Нравится запись: " + entry.likes}
                       aria-pressed={entry.liked}
                       disabled={busy || entry.isOwner}

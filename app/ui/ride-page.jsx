@@ -141,6 +141,7 @@ export default function RidePage({
               <>
                 <button
                   className="quiet"
+                  data-hover="like"
                   disabled={busy || ride.isOwner}
                   aria-pressed={ride.liked}
                   onClick={async () => {

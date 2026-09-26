@@ -18,6 +18,7 @@ import {
   SocialFooter,
   socialApi,
   Pagination,
+  AuthorLink,
 } from "./social-primitives.jsx";
 import { useSite } from "./site-provider.jsx";
 import { ContentLabel } from "./content-label.jsx";
@@ -110,6 +111,7 @@ function SaveListing({ listing, onChange }) {
       <button
         type="button"
         className="button secondary"
+        data-hover="save"
         aria-pressed={listing.saved}
         disabled={busy}
         aria-busy={busy}
@@ -696,36 +698,43 @@ export default function Market({
                   </p>
                 </div>
                 <aside className={styles.seller}>
-                  <strong className={styles.detailPrice}>
-                    {listingPriceLabel(listing)}
-                  </strong>
-                  {hydrated && listing.status === "active" && !listing.expired && listing.publishedAt && (
-                    <small className={styles.published}>
-                      {publishedLabel(listing.publishedAt)}
-                    </small>
-                  )}
+                  <div className={styles.priceBlock}>
+                    <strong className={styles.detailPrice}>
+                      {listingPriceLabel(listing)}
+                    </strong>
+                    {hydrated && listing.status === "active" && !listing.expired && listing.publishedAt && (
+                      <small className={styles.published}>
+                        {publishedLabel(listing.publishedAt)}
+                      </small>
+                    )}
+                  </div>
+                  <dl className={styles.facts}>
+                  <div>
+                    <dt>Продавец</dt>
+                    <dd className={styles.sellerName}>
+                      <AuthorLink author={listing.author} />
+                      {usernameLabel(listing.author) && (
+                        <small>{usernameLabel(listing.author)}</small>
+                      )}
+                    </dd>
+                  </div>
                   {listing.location && (
-                    <p>
-                      <MapPin size={16} />
-                      {listing.location}
-                    </p>
-                  )}
-                  <Link
-                    prefetch={false}
-                    href={profilePath(listing.author.username)}
-                  >
-                    {personName(listing.author)}
-                  </Link>
-                  {usernameLabel(listing.author) && (
-                    <p>{usernameLabel(listing.author)}</p>
+                    <div>
+                      <dt>Город</dt>
+                      <dd className={styles.withIcon}>
+                        <MapPin size={16} aria-hidden="true" />
+                        {listing.location}
+                      </dd>
+                    </div>
                   )}
                   {listing.hasContact &&
                     ((listing.status === "active" && !listing.expired) ||
                       listing.isOwner) && (
                     <div>
-                      <h3>Связаться с автором</h3>
+                      <dt>Связаться с автором</dt>
+                      <dd>
                       {listing.contact || contact ? (
-                        <p className={styles.description}>
+                        <p className={styles.contactValue}>
                           {listing.contact || contact}
                         </p>
                       ) : user ? (
@@ -750,8 +759,10 @@ export default function Market({
                         </p>
                       )}
                       {contactError && <p role="alert">{contactError}</p>}
+                      </dd>
                     </div>
                   )}
+                  </dl>
                   {listing.isOwner && listing.status === "active" && (
                     <div className={styles.term}>
                       <p>
@@ -860,8 +871,8 @@ export default function Market({
                   </p>
                 )}
               </div>
-              <Link className="button small" href="/market/new">
-                <Plus size={16} />
+              <Link className="button" href="/market/new">
+                <Plus size={16} aria-hidden="true" />
                 Добавить объявление
               </Link>
             </div>
@@ -870,7 +881,7 @@ export default function Market({
                 e.preventDefault();
                 changeFilters({ query: search.trim(), page: 1 });
               }}>
-              <Search size={22} aria-hidden="true" />
+              <Search size={18} aria-hidden="true" />
               <input
                 type="search"
                 aria-label="Поиск на рынке"
@@ -890,6 +901,7 @@ export default function Market({
                   Мои объявления
                 </button>
               </div>
+              <div className={styles.filterRow}>
               <div className={styles.filterFields}>
                 <label className="field">
                   <span>Тип объявления</span>
@@ -941,6 +953,7 @@ export default function Market({
                 </label>
                 <button className="button secondary">Применить</button>
               </form>
+              </div>
               <div className={styles.categories} aria-label="Категории товаров">
                 {[["", "Все"], ...Object.entries(marketCategories)].map(([key, label]) => (
                   <button key={key} className="quiet" aria-pressed={category === key}

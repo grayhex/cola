@@ -70,6 +70,7 @@ export default function ShareButton({
       <button
         type="button"
         className={"button secondary share-button " + styles.button}
+        data-hover="share"
         aria-label="Поделиться"
         aria-haspopup="menu"
         aria-expanded={open}

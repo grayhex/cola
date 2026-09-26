@@ -27,6 +27,7 @@ export default function BikeFollow({ bikeId, className = "quiet" }) {
       <button
         type="button"
         className={className}
+        data-hover="follow"
         disabled={busy}
         aria-pressed={following}
         aria-label={

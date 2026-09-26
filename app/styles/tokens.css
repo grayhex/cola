@@ -141,6 +141,8 @@
     --tone-bmx: var(--purple-600);
     --tone-cargo: var(--amber-600);
     --tone-special: var(--pink-600);
+    /* A like: red on hover and once given (#131). */
+    --like: var(--red-600);
 
     /* Marketing decoration: glyph field and the brand gradient word. */
     --glyph: var(--gray-300);
@@ -311,6 +313,7 @@
     --tone-bmx: #c084fc;
     --tone-cargo: var(--amber-400);
     --tone-special: var(--pink-400);
+    --like: var(--red-400);
     --chart-line: var(--blue-400);
     --glyph: var(--gray-700);
     --glyph-strong: var(--gray-400);
@@ -402,6 +405,7 @@
       --tone-bmx: #c084fc;
       --tone-cargo: var(--amber-400);
       --tone-special: var(--pink-400);
+      --like: var(--red-400);
       --chart-line: var(--blue-400);
       --glyph: var(--gray-700);
       --glyph-strong: var(--gray-400);

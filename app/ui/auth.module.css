@@ -39,12 +39,14 @@
   border-right: 1px solid var(--line);
   background: var(--bg-subtle);
 }
+/* The picture keeps its proportions however tall the form grows: the
+   registration form is longer than sign-in's (#131). */
 .art img {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
 }
 /* Without an illustration: the brand mark on a dotted field. */
 .artDefault {

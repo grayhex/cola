@@ -585,7 +585,7 @@ export default function Gamification() {
           </section>
         );
       })}
-      <div className="admin-save game-rules-save">
+      <div className="admin-save game-rules-save" data-dirty={!!rulesDirty}>
         <span>
           {rulesDirty
             ? "Есть несохранённые изменения"

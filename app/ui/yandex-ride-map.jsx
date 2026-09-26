@@ -95,7 +95,7 @@ export default function YandexRideMap({
       >
         <div
           ref={canvas}
-          className={styles.canvas}
+          className={styles.canvas + " map-engine"}
           data-ready={state.ready}
           aria-label="Яндекс Карта маршрута"
           aria-hidden={!state.ready}

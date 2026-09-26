@@ -167,7 +167,7 @@
   color: var(--text);
 }
 .counters :global(.like-button.compact[aria-pressed="true"]) {
-  color: var(--tone-special);
+  color: var(--like);
 }
 .counters :global(.like-button.compact):disabled:hover {
   background: transparent;

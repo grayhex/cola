@@ -31,6 +31,7 @@ export function SaveEntry({ entry, onChange }) {
     <>
       <button
         className="quiet"
+        data-hover="save"
         aria-label={saved ? "Убрать из сохранённого" : "Сохранить запись"}
         aria-pressed={saved}
         disabled={busy}

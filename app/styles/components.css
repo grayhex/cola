@@ -178,8 +178,31 @@
     box-shadow: var(--shadow-inner);
   }
   .hf-like[aria-pressed="true"] svg {
-    color: var(--tone-special);
+    color: var(--like);
     fill: currentColor;
+  }
+  /* Key actions take a colour on hover (#131): a like turns red, a
+     discussion blue, sharing green, following and saving the accent.
+     The icon reads --icon-color, so a module's own icon colour stays the
+     resting state. */
+  [data-hover="like"] {
+    --hover-tone: var(--like);
+  }
+  [data-hover="comment"] {
+    --hover-tone: var(--info);
+  }
+  [data-hover="share"] {
+    --hover-tone: var(--tone-road);
+  }
+  :is([data-hover="follow"], [data-hover="save"]) {
+    --hover-tone: var(--accent-text);
+  }
+  [data-hover]:is(:hover, :focus-visible):not(:disabled) {
+    --icon-color: var(--hover-tone);
+  }
+  [data-hover] svg {
+    color: var(--icon-color);
+    transition: color var(--duration-fast) var(--ease-out);
   }
   .hf-like:disabled {
     cursor: default;

@@ -166,6 +166,16 @@
   .maplibregl-canvas {
     outline: none;
   }
+  /* Map engines size their own tiles, canvases and layers: the page's media
+     rules (max-width: 100%) must not squeeze them (#131). */
+  .map-engine :is(img, canvas, video) {
+    max-width: none;
+  }
+  /* The dark edge under a route line in the previews (#131). */
+  .route-casing {
+    stroke: #1f2937;
+    stroke-opacity: 0.35;
+  }
   .ride-map-wrap > .ride-basemap {
     position: absolute;
     inset: 0;
