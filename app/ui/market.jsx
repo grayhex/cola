@@ -181,6 +181,8 @@ const blank = {
   status: "draft",
 };
 function ListingEditor({ initial, onSaved, onCancel }) {
+  // SSR fields must not accept input before React can retain it in form state.
+  const hydrated = useHydrated();
   const legacyCurrency = !!initial?.currency && initial.currency !== "RUB";
   const [form, setForm] = useState(() => ({
       ...Object.fromEntries(Object.keys(blank).map((k) => [k, initial?.[k] ?? blank[k]])),
@@ -226,7 +228,7 @@ function ListingEditor({ initial, onSaved, onCancel }) {
       <h1>{initial ? "Изменить объявление" : "Новое объявление"}</h1>
       <label className="field">
         <span>Тип объявления</span>
-        <select value={form.listingType} disabled={busy}
+        <select value={form.listingType} disabled={!hydrated || busy}
           onChange={(e) => set("listingType", e.target.value)}>
           {Object.entries(listingTypes).map(([key, label]) => (
             <option key={key} value={key}>{label}</option>
@@ -236,6 +238,7 @@ function ListingEditor({ initial, onSaved, onCancel }) {
       <label className="field">
         <span>Название</span>
         <input
+          disabled={!hydrated}
           required
           maxLength={120}
           value={form.title}
@@ -247,6 +250,7 @@ function ListingEditor({ initial, onSaved, onCancel }) {
         <label className="field">
           <span>Категория</span>
           <select
+            disabled={!hydrated}
             value={form.category}
             onChange={(e) => set("category", e.target.value)}
           >
@@ -260,6 +264,7 @@ function ListingEditor({ initial, onSaved, onCancel }) {
         <label className="field">
           <span>Состояние</span>
           <select
+            disabled={!hydrated}
             value={form.condition}
             onChange={(e) => set("condition", e.target.value)}
           >
@@ -271,6 +276,7 @@ function ListingEditor({ initial, onSaved, onCancel }) {
       <label className="field">
         <span>Описание</span>
         <textarea
+          disabled={!hydrated}
           required
           maxLength={6000}
           rows={6}
@@ -289,7 +295,7 @@ function ListingEditor({ initial, onSaved, onCancel }) {
           min="0"
           max="9999999999"
           step="0.01"
-          disabled={busy || form.listingType === "free"}
+          disabled={!hydrated || busy || form.listingType === "free"}
           value={form.listingType === "free" ? 0 : form.price}
           onChange={(e) => set("price", e.target.value)}
         />
@@ -302,6 +308,7 @@ function ListingEditor({ initial, onSaved, onCancel }) {
       <label className="field">
         <span>Город</span>
         <input
+          disabled={!hydrated}
           maxLength={100}
           value={form.location}
           onChange={(e) => set("location", e.target.value)}
@@ -310,6 +317,7 @@ function ListingEditor({ initial, onSaved, onCancel }) {
       <label className="field">
         <span>Как с вами связаться</span>
         <input
+          disabled={!hydrated}
           maxLength={300}
           value={form.contact}
           onChange={(e) => set("contact", e.target.value)}
@@ -329,7 +337,7 @@ function ListingEditor({ initial, onSaved, onCancel }) {
               <button
                 type="button"
                 className="quiet"
-                disabled={busy}
+                disabled={!hydrated || busy}
                 onClick={async () => {
                   setBusy(true);
                   setError("");
@@ -354,7 +362,7 @@ function ListingEditor({ initial, onSaved, onCancel }) {
             type="file"
             multiple
             accept="image/jpeg,image/png,image/webp"
-            disabled={busy || photos.length >= 8}
+            disabled={!hydrated || busy || photos.length >= 8}
             onChange={async (e) => {
               const files = Array.from(e.target.files || []);
               e.target.value = "";
@@ -404,13 +412,13 @@ function ListingEditor({ initial, onSaved, onCancel }) {
       )}
       {busy && <p role="status">Сохраняем…</p>}
       <div className="form-actions">
-        <button className="button" disabled={busy}>
+        <button className="button" disabled={!hydrated || busy}>
           {form.status === "sold" ? "Сохранить" : "Опубликовать"}
         </button>
         <button
           type="button"
           className="quiet"
-          disabled={busy || !form.title.trim()}
+          disabled={!hydrated || busy || !form.title.trim()}
           onClick={async () => {
             setBusy(true);
             setError("");
@@ -428,7 +436,7 @@ function ListingEditor({ initial, onSaved, onCancel }) {
         <button
           type="button"
           className="quiet"
-          disabled={busy}
+          disabled={!hydrated || busy}
           onClick={() => onCancel(identity)}
         >
           Отмена
