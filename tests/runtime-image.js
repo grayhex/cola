@@ -42,6 +42,9 @@ for (const name of ["maplibre-gl-worker.mjs", "maplibre-gl-shared.mjs"]) {
 }
 await access("public/fonts/sourcesans3-OFL.txt");
 assert.equal((await fetch("http://localhost:3000/api/ready")).status, 200);
+const cspPage = await fetch("http://localhost:3000/about");
+assert.match(cspPage.headers.get("content-security-policy-report-only") || "", /nonce-/);
+assert.match(cspPage.headers.get("cache-control") || "", /no-store/);
 assert.equal((await fetch(process.env.BIKE_RESOLVER_URL + "/ready")).status, 200);
 
 for (const dir of [process.env.UPLOAD_DIR, process.env.RIDES_DIR]) {

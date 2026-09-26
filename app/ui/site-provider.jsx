@@ -19,19 +19,22 @@ import { useBrowseHistory } from "./showcase-scroll.js";
 import { installErrorReporting } from "./error-reporting.js";
 import { defaultSettings, defaultCatalog } from "../../lib/site-defaults.js";
 const Context = createContext(null);
-export function ThemeStyle({ settings }) {
+export function ThemeStyle({ settings, nonce }) {
   const accent = /^#[\da-f]{6}$/i.test(settings.appearance?.accent || "")
     ? settings.appearance.accent
     : appearanceDefaults.accent;
   return (
-    <style>{`:root{--accent:${accent};--accent-foreground:${accentText(accent)};--photo-ratio:${settings.photoRatio || "4/3"};--desktop-columns:${settings.desktopColumns || 3};--heading-align:${settings.textAlign || "left"}}${backgroundCss(settings)}`}</style>
+    <style nonce={nonce}>{`:root{--accent:${accent};--accent-foreground:${accentText(accent)};--photo-ratio:${settings.photoRatio || "4/3"};--desktop-columns:${settings.desktopColumns || 3};--heading-align:${settings.textAlign || "left"}}${backgroundCss(settings)}`}</style>
   );
 }
 export default function SiteProvider({
   initial,
+  nonce,
   viewer: initialViewer = null,
   children,
 }) {
+  // A client navigation/refresh must retain the original document nonce.
+  const [documentNonce] = useState(nonce);
   useBrowseHistory();
   useEffect(() => installErrorReporting(), []);
   const [site, setSite] = useState(
@@ -136,10 +139,11 @@ export default function SiteProvider({
         themePreference,
         resolvedTheme,
         themeReady,
+        nonce: documentNonce,
         setThemePreference,
       }}
     >
-      <ThemeStyle settings={effective} />
+      <ThemeStyle settings={effective} nonce={documentNonce} />
       <div
         className="site-root"
         data-design-system="community"

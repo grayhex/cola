@@ -11,6 +11,7 @@ import {
   safeRichLink,
   PhotoReference,
 } from "../../lib/rich-text.js";
+import { useSite } from "./site-provider.jsx";
 import RichTextBody from "./rich-text-body.jsx";
 import {
   Bold,
@@ -158,7 +159,9 @@ export default function PromptComposer({
     ],
     [],
   );
+  const nonce = useSite()?.nonce;
   const editor = useEditor({
+    injectNonce: nonce,
     extensions,
     content: parseRichText(value),
     immediatelyRender: false,
