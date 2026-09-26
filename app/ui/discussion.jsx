@@ -18,7 +18,9 @@ const PromptComposer = dynamic(() => import("./prompt-composer.jsx"), {
 const DiscussionKind = createContext("bike");
 const QuestionContext = createContext(null);
 const paths = (kind) =>
-  kind === "article"
+  kind === "component" ? {
+    items: "components/", comments: "components/comments/", report: "component_comment",
+  } : kind === "article"
     ? {
         items: "articles/",
         comments: "articles/comments/",
@@ -359,7 +361,7 @@ export default function Discussion({
             <div>
               <h2>
                 <MessagesSquare size={20} aria-hidden="true" />
-                {entityType === "article"
+                {entityType === "component" ? "Обсуждение компонента" : entityType === "article"
                   ? "Обсуждение статьи"
                   : entityType === "journal"
                     ? "Обсуждение записи"
@@ -373,7 +375,7 @@ export default function Discussion({
                   : "Детали, идеи и опыт владельцев."}
               </p>
             </div>
-            {bike.author?.id !== user?.id && (
+            {entityType !== "component" && bike.author?.id !== user?.id && (
               <ReportButton
                 entityType={entityType === "article" ? "journal" : entityType}
                 targetId={bike.id}
@@ -411,7 +413,7 @@ export default function Discussion({
             <p className="help">
               {entityType === "ride"
                 ? "Поделитесь впечатлениями о маршруте."
-                : entityType === "journal" || entityType === "article"
+                : entityType === "journal" || entityType === "article" || entityType === "component"
                   ? "Задайте вопрос или поделитесь своим опытом."
                   : "Первый вопрос о сборке может стать началом знакомства."}
             </p>
