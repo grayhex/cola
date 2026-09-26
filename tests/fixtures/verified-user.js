@@ -9,7 +9,14 @@ export async function verifyCapturedEmail(email) {
   assert.ok(dir, "A disposable mail capture directory is required");
   for (let attempt = 0; attempt < 60; attempt++) {
     for (const file of (await readdir(dir).catch(() => [])).sort().reverse()) {
-      const mail = JSON.parse(await readFile(path.join(dir, file), "utf8"));
+      let mail;
+      try {
+        mail = JSON.parse(await readFile(path.join(dir, file), "utf8"));
+      } catch (error) {
+        // The capture writer may have created the file but not finished writing it.
+        if (error instanceof SyntaxError) continue;
+        throw error;
+      }
       if (mail.to !== email.trim().toLowerCase()) continue;
       const token = mail.text.match(/\/verify-email#([A-Za-z0-9_-]{43})/)?.[1];
       if (!token) continue;

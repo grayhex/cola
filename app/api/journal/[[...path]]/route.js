@@ -166,15 +166,12 @@ async function handler(req, { params }) {
     if (p.length === 2 && p[1] === "photos" && m === "POST") {
       // Authorize before decoding an image; quota is reserved again under owner lock.
       const id = uuid.parse(p[0]);
-      if (
-        !(
-          await db.query(
-            "SELECT id FROM journal_entries WHERE id=$1 AND owner_id=$2",
-            [id, user.id],
-          )
-        ).rowCount
-      )
-        return fail("Запись недоступна", 404);
+      const entry = (await db.query(
+        "SELECT status,is_public FROM journal_entries WHERE id=$1 AND owner_id=$2",
+        [id, user.id],
+      )).rows[0];
+      if (!entry) return fail("Запись недоступна", 404);
+      if (entry.status === "published" && entry.is_public) requireVerifiedEmail(user);
       const bytes = await preparePhoto(await readBytes(req, limits.fileBytes), {
         bikePhoto: false,
       });

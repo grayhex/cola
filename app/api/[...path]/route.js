@@ -455,6 +455,10 @@ async function handler(req, { params }) {
     if (!uuid.safeParse(p[1]).success) return fail("Велосипед не найден", 404);
     const bike = await ownedBike(db, p[1], user.id);
     if (!bike) return fail("Велосипед не найден", 404);
+    // New data/photos on an already public legacy bike are public writes too.
+    // Likes returned above; deletion and explicit privacy changes stay available.
+    if (bike.is_public && p.length >= 3 && p[2] !== "share" && ["POST", "PATCH", "PUT"].includes(method))
+      requireVerifiedEmail(user);
     if (p.length === 3 && p[2] === "factory-spec" && method === "POST") {
       if (!(await rateLimit("resolver:" + user.id, 30)))
         return fail("Слишком много запросов поиска", 429);

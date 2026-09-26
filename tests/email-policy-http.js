@@ -32,6 +32,10 @@ const articleId = (await call("articles", "POST", article)).body.id;
 const listingId = (await call("market", "POST", market)).body.id;
 assert.ok(entryId && articleId && listingId, "all private drafts can be saved");
 const ride = { bikeId, title: "Policy ride", isPublic: true, privacyEnabled: false, privacyRadiusM: 500 };
+const planned = await call("rides/plan", "POST", { ...ride, isPublic: false, scheduledAt: new Date(Date.now() + 86400000).toISOString() });
+assert.equal(planned.status, 201, "unverified private ride planning");
+const rideId = planned.body.id;
+
 const rejected = [
   ["bikes", "POST", { ...bike, is_public: true }],
   ["bikes/wizard", "POST", { requestId: randomUUID(), bike: { ...bike, is_public: true }, components: [] }],
@@ -73,6 +77,7 @@ assert.equal((await call(`articles/${articleId}`, "PATCH", { ...article, status:
 const listing = await call(`market/${listingId}`, "PATCH", { ...market, status: "active" });
 assert.equal(listing.status, 200);
 assert.equal((await call(`market/public/${listing.body.shareId}/contact`)).status, 200);
+assert.equal((await call(`rides/${rideId}`, "PATCH", ride)).status, 200);
 const comment = await call(`community/bikes/${bikeId}/comments`, "POST", { body: "Verified comment" });
 assert.equal(comment.status, 201);
 const other = randomUUID(), otherBike = randomUUID();
@@ -80,6 +85,10 @@ const db = new pg.Client({ connectionString: process.env.DATABASE_URL });
 await db.connect();
 try {
   await db.query("UPDATE users SET email_verified_at=NULL WHERE id=$1", [user.id]);
+  for (const path of [`bikes/${bikeId}/photos`, `bikes/${bikeId}/components`, `journal/${entryId}/photos`, `journal/${articleId}/photos`, `market/${listingId}/photos`, `rides/${rideId}/track`]) {
+    const r = await call(path, "POST", {});
+    assert.equal(r.body.code, "EMAIL_VERIFICATION_REQUIRED", path);
+  }
   assert.equal((await call(`community/bikes/${bikeId}/comments`, "POST", { body: "Denied", parentId: comment.body.id })).body.code, "EMAIL_VERIFICATION_REQUIRED");
   assert.equal((await call(`community/comments/${comment.body.id}`, "PATCH", { body: "Denied edit" })).body.code, "EMAIL_VERIFICATION_REQUIRED");
   assert.equal((await call(`community/comments/${comment.body.id}`, "DELETE")).status, 200);
@@ -92,6 +101,8 @@ try {
   assert.equal((await call(`journal/${entryId}`, "PATCH", entry)).status, 200);
   assert.equal((await call(`articles/${articleId}`, "PATCH", article)).status, 200);
   assert.equal((await call(`market/${listingId}`, "PATCH", market)).status, 200);
+  assert.equal((await call(`rides/${rideId}`, "PATCH", { ...ride, isPublic: false })).status, 200);
+  assert.equal((await call(`rides/${rideId}`, "DELETE")).status, 200);
   assert.equal((await call(`bikes/${bikeId}/share`, "PATCH", { is_public: false })).status, 200);
   await db.query("UPDATE users SET blocked=true,email_verified_at=now() WHERE id=$1", [user.id]);
   assert.equal((await call("market", "POST", { ...market, status: "active" })).status, 401);

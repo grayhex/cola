@@ -169,6 +169,9 @@ async function handler(req, { params }) {
       return json(result, 201);
     }
     if (p.length === 2 && p[1] === "track" && m === "POST") {
+      const ride = (await db.query("SELECT is_public FROM rides WHERE id=$1 AND owner_id=$2", [uuid.parse(p[0]), user.id])).rows[0];
+      if (!ride) return fail("Покатушка недоступна", 404);
+      if (ride.is_public) requireVerifiedEmail(user);
       if (!config.enabled)
         return fail("Загрузка покатушек временно выключена", 403);
       const bytes = await readBytes(req, config.maxGpxBytes);

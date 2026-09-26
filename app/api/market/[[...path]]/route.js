@@ -178,8 +178,13 @@ async function handler(req, { params }) {
       return json(result);
     }
     if (p.length === 2 && p[1] === "photos" && method === "POST") {
-      const id = uuid.parse(p[0]),
-        raw = await readBytes(req, 10 * 1024 * 1024);
+      const id = uuid.parse(p[0]);
+      const listing = (await db.query(
+        "SELECT status FROM market_listings WHERE id=$1 AND owner_id=$2", [id, user.id],
+      )).rows[0];
+      if (!listing) return fail("Объявление недоступно", 404);
+      if (listing.status === "active") requireVerifiedEmail(user);
+      const raw = await readBytes(req, 10 * 1024 * 1024);
       let bytes;
       try {
         bytes = await preparePhoto(raw, { bikePhoto: false });
