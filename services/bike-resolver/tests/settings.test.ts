@@ -195,7 +195,7 @@ it("settings reads are bounded before database access and recover after the wind
     expect(
       (await app.inject({ method: "HEAD", url: "/internal/settings", headers }))
         .statusCode,
-    ).toBe(429);
+    ).toBe(404);
     expect(query).toHaveBeenCalledTimes(60);
     for (const url of ["/health", "/ready", "/v1/brands"])
       expect((await app.inject(url)).statusCode).toBe(200);

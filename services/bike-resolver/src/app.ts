@@ -240,18 +240,23 @@ export function buildApp(
   }));
   // Internal management API: never publish this container's port; app gateway authenticates administrators.
   app.register(rateLimit, { global: false });
-  // Build one limiter after the plugin loads, shared by GET and automatic HEAD.
+  // Register after the plugin so its onRoute hook protects database reads.
   // One process-wide budget for this endpoint, independent of proxy headers/IPs.
   app.after((err) => {
     if (err) throw err;
     app.get(
       "/internal/settings",
       {
-        onRequest: app.rateLimit({
-          max: 60,
-          timeWindow: "1 minute",
-          keyGenerator: () => "internal-settings",
-        }),
+        // This JSON API supports GET only; an automatic HEAD would get a
+        // separate rate-limit bucket while still executing the DB read.
+        exposeHeadRoute: false,
+        config: {
+          rateLimit: {
+            max: 60,
+            timeWindow: "1 minute",
+            keyGenerator: () => "internal-settings",
+          },
+        },
       },
       async () => {
         await store.load();
