@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-test("CSP blocks untrusted inline scripts, keeps theme/navigation and delivers reports", async ({ page }) => {
+test("CSP blocks untrusted inline scripts, keeps theme/navigation and delivers reports", async ({ page, isMobile }) => {
   // Inject into the HTML parser, not through privileged Playwright evaluation
   // or a trusted script creating a non-parser-inserted child under strict-dynamic.
   await page.route("**/about", async route => {
@@ -19,6 +19,7 @@ test("CSP blocks untrusted inline scripts, keeps theme/navigation and delivers r
   expect(await page.evaluate(() => window.cspTrusted)).toBe(true);
   const violations = [];
   page.on("console", m => { if (/violates|Refused to|Content Security Policy/i.test(m.text())) violations.push(m.text()); });
+  if (isMobile) await page.getByRole("button", { name: "Открыть меню" }).click();
   await page.getByRole("link", { name: "Велосипеды", exact: true }).first().click();
   await expect(page).toHaveURL(/\/bikes$/);
   expect(await page.locator("style[nonce]").first().evaluate(el => el.nonce)).toBe(nonce);
