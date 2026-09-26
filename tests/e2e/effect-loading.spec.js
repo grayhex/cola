@@ -36,7 +36,7 @@ test("admin search reads the latest draft on submit without refetching on typing
     return route.fulfill({ json: { users: [], total: 0 } });
   });
   await admin(page);
-  await page.getByRole("button", { name: "Пользователи", exact: true }).click();
+  await page.getByRole("tab", { name: "Пользователи", exact: true }).click();
   await expect.poll(() => queries).toEqual([""]);
   const search = page.getByRole("textbox", { name: "Поиск пользователей" });
   await search.fill("latest query");
@@ -83,6 +83,9 @@ for (const staleStatus of [200, 500]) {
     });
     try {
       await admin(page);
+      await page
+        .getByRole("tab", { name: "Пользователи", exact: true })
+        .click();
       await page.getByRole("button", { name: "Жалобы", exact: true }).click();
       await expect(page.locator(".report-card")).toContainText(
         "Актуальная жалоба",
