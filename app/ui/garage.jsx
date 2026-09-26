@@ -478,10 +478,6 @@ export default function Garage({
   const modelName = [bike?.brand, bike?.model, bike?.trim]
     .filter(Boolean)
     .join(" ");
-  // Only the year goes under the title: brand and model filled in by the
-  // parser could read as a second, different name (#121). They stay in the
-  // specification.
-  const subtitle = bike?.year ? `${t("Модельный год")} ${bike.year}` : "";
   // A public build is counted on its model's page (#74); a private one only
   // leads to the search.
   const modelHref =
@@ -642,9 +638,11 @@ export default function Garage({
               <div className="bike-detail-title-row">
                 <h1>{bike.name || modelName}</h1>
               </div>
-              {subtitle && <p className="bike-subtitle">{subtitle}</p>}
+              {/* The name almost always carries the year: it goes into the
+                  labels next to the size and the weight (#131). Brand and
+                  model stay in the specification (#121). */}
               <div className="bike-heading-labels">
-                <BikeLabels bike={bike} year={false} />
+                <BikeLabels bike={bike} />
               </div>
             </div>
             <div className="detail-actions">
@@ -1286,7 +1284,7 @@ export default function Garage({
             <Photo bike={bike} photo={photo} className="full-photo" full />
           )}
           {modal.type === "auth" && (
-            <AuthWindow>
+            <AuthWindow mode={modal.mode}>
               <AuthForm
                 mode={modal.mode}
                 busy={busy}

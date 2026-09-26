@@ -316,7 +316,11 @@ export default function GlobalHeader({
         >
           <nav aria-label="Разделы сайта">
             {sections.map((section) => (
-              <section className="mobile-nav-section" key={section.id}>
+              <section
+                className="mobile-nav-section"
+                data-section={section.id}
+                key={section.id}
+              >
                 {section.id === "about" ? (
                   <Link
                     className="nav-menu-link"

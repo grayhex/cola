@@ -37,14 +37,14 @@ test("market labels distinguish intent, optional prices and historical foreign c
 
 test("market URL restores combined filters, pagination and literal search", () => {
   const state = {
-    own: true, category: "components", listingType: "wanted", condition: "used", query: "Колесо & рама + 29%",
+    own: true, seller: "rider.name-1", category: "components", listingType: "wanted", condition: "used", query: "Колесо & рама + 29%",
     priceMin: 0, priceMax: 150000, city: "Санкт-Петербург", sort: "price_asc", page: 2,
   };
   assert.deepEqual(readMarketQuery(new URLSearchParams(writeMarketQuery(state))), state);
   assert.deepEqual(readMarketQuery(new URLSearchParams(
-    "category=constructor&type=__proto__&condition=bad&page=-1&price_min=-5&price_max=1e3&sort=__proto__",
+    "category=constructor&type=__proto__&condition=bad&page=-1&price_min=-5&price_max=1e3&sort=__proto__&seller=../x",
   )), {
-    own: false, category: "", listingType: "", condition: "", query: "", priceMin: "", priceMax: "", city: "", sort: "new", page: 1,
+    own: false, seller: "", category: "", listingType: "", condition: "", query: "", priceMin: "", priceMax: "", city: "", sort: "new", page: 1,
   });
   assert.equal(readMarketQuery(new URLSearchParams("page=1.5")).page, 1);
   assert.equal(readMarketQuery(new URLSearchParams("page=Infinity")).page, 1);

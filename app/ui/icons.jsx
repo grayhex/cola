@@ -103,4 +103,5 @@ export {
   Redo2,
   RemoveFormatting,
   Ellipsis,
+  ShoppingBag,
 } from "lucide-react";

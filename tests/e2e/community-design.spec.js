@@ -221,15 +221,17 @@ test("homepage rhythm, photo-first popular bikes and stable Light/Dark at every 
       );
       if (width === 1440) {
         const ratios = await page.evaluate(() => {
+          // rgb(0-255) or, for color-mix() backgrounds, color(srgb 0-1).
           const luminance = (value) => {
-            const c = value
+            const numbers = value
               .match(/[\d.]+/g)
               .slice(0, 3)
-              .map(Number)
-              .map((n) => n / 255)
-              .map((n) =>
-                n <= 0.04045 ? n / 12.92 : ((n + 0.055) / 1.055) ** 2.4,
-              );
+              .map(Number);
+            const c = (
+              value.startsWith("color(") ? numbers : numbers.map((n) => n / 255)
+            ).map((n) =>
+              n <= 0.04045 ? n / 12.92 : ((n + 0.055) / 1.055) ** 2.4,
+            );
             return c[0] * 0.2126 + c[1] * 0.7152 + c[2] * 0.0722;
           };
           return [

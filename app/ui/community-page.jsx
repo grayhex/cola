@@ -1,8 +1,18 @@
 "use client";
+import Link from "next/link";
 import { MarketCard } from "./market.jsx";
 import RideCard from "./ride-card.jsx";
 import JournalCard from "./journal-card.jsx";
-import { Check, MessagesSquare, Users } from "./icons.jsx";
+import {
+  Check,
+  MessagesSquare,
+  Users,
+  NotebookPen,
+  ShoppingBag,
+  RefreshCw,
+} from "./icons.jsx";
+import LocalDate from "./local-date.jsx";
+import { daysLabel } from "../../lib/market-types.js";
 import BikeGrid from "./bike-grid.jsx";
 import { useEffect, useState, useRef } from "react";
 import {
@@ -33,6 +43,74 @@ const eventText = {
   comment: "прокомментировал",
   reply: "ответил вам",
 };
+const noticeTime = (value) =>
+  new Date(value).toLocaleString("ru-RU", {
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+// The site's notice about a listing's term (#116). The text follows the
+// listing as it is now: extended, sold or still ending.
+function MarketNotice({ notice: n, days, busy, onExtend, onRead }) {
+  const listing = (
+    <a href={n.target.href} onClick={() => !n.readAt && onRead()}>
+      {n.target.name}
+    </a>
+  );
+  const until = (
+    <LocalDate
+      value={n.target.expiresAt}
+      options={{ day: "numeric", month: "long" }}
+    />
+  );
+  return (
+    <li className={n.readAt ? "" : "unread"}>
+      <span className="notification-icon" aria-hidden="true">
+        <ShoppingBag size={18} />
+      </span>
+      <div>
+        <p>
+          {n.target.state === "expiring" ? (
+            <>
+              Объявление {listing} снимется с публикации {until}. Продлите его,
+              если оно ещё актуально.
+            </>
+          ) : n.target.state === "expired" ? (
+            <>Срок объявления {listing} истёк: его нет в поиске и ленте.</>
+          ) : n.target.state === "extended" ? (
+            <>
+              Объявление {listing} продлено до {until}.
+            </>
+          ) : (
+            <>Объявление {listing} снято с публикации.</>
+          )}
+        </p>
+        {["expiring", "expired"].includes(n.target.state) && (
+          <button
+            type="button"
+            className="button small"
+            disabled={busy}
+            onClick={onExtend}
+          >
+            <RefreshCw size={14} aria-hidden="true" />
+            Продлить на {daysLabel(days)}
+          </button>
+        )}
+        <time dateTime={n.createdAt}>{noticeTime(n.createdAt)}</time>
+      </div>
+      {!n.readAt && (
+        <button
+          className="quiet"
+          aria-label="Отметить прочитанным"
+          onClick={onRead}
+        >
+          <Check size={14} />
+        </button>
+      )}
+    </li>
+  );
+}
 export default function CommunityPage({ kind }) {
   const [mode, setMode] = useState("new");
   useEffect(
@@ -54,24 +132,37 @@ export default function CommunityPage({ kind }) {
       ),
     [],
   );
+  // /saved → «Записи» or «Объявления» (#116).
+  const [savedType, setSavedType] = useState(null);
+  useEffect(
+    () =>
+      setSavedType(
+        new URLSearchParams(location.search).get("type") === "market"
+          ? "market"
+          : "journal",
+      ),
+    [],
+  );
   const [data, setData] = useState(null),
     [page, setPage] = useState(1),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false);
-  const { viewer: user } = useSite();
+  const { viewer: user, settings } = useSite();
   const requestRevision = useRef(0);
   async function refresh() {
     const revision = ++requestRevision.current;
     const d = await socialApi(
-      "community/" +
-        (kind === "journal" ? "feed" : kind) +
-        "?page=" +
-        page +
-        (kind === "journal"
-          ? "&type=journal&mode=" + mode
-          : feedType === "rides"
-            ? "&type=rides"
-            : ""),
+      kind === "saved" && savedType === "market"
+        ? "market/saved?page=" + page
+        : "community/" +
+            (kind === "journal" ? "feed" : kind) +
+            "?page=" +
+            page +
+            (kind === "journal"
+              ? "&type=journal&mode=" + mode
+              : feedType === "rides"
+                ? "&type=rides"
+                : ""),
     );
     if (revision !== requestRevision.current) return;
     setData(d);
@@ -80,12 +171,16 @@ export default function CommunityPage({ kind }) {
       window.dispatchEvent(new Event("cola:notifications"));
   }
   useEffect(() => {
-    if ((user || (kind === "journal" && mode === "new")) && feedType !== null)
+    if (
+      (user || (kind === "journal" && mode === "new")) &&
+      feedType !== null &&
+      savedType !== null
+    )
       refresh().catch((e) => setError(e.message));
     return () => {
       requestRevision.current++;
     };
-  }, [user?.id, page, feedType, mode]);
+  }, [user?.id, page, feedType, mode, savedType]);
   useEffect(() => {
     if (!user || kind !== "notifications") return;
     const timer = setInterval(() => {
@@ -97,6 +192,21 @@ export default function CommunityPage({ kind }) {
   async function read(id) {
     await socialApi("community/notifications/" + id + "/read", "PATCH");
     await refresh();
+  }
+  // «Продлить» right in the notice: one click, a new full term (#116).
+  async function extend(n) {
+    setBusy(true);
+    setError("");
+    try {
+      await socialApi("market/" + n.target.id + "/extend", "POST");
+      if (!n.readAt)
+        await socialApi("community/notifications/" + n.id + "/read", "PATCH");
+      await refresh();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy(false);
+    }
   }
   return (
     <>
@@ -134,6 +244,35 @@ export default function CommunityPage({ kind }) {
             </button>
           )}
         </div>
+        {kind === "saved" && user && (
+          <nav className="ui-tabs" aria-label="Что сохранено">
+            {[
+              ["journal", "Записи", NotebookPen],
+              ["market", "Объявления", ShoppingBag],
+            ].map(([id, label, Icon]) => (
+              <button
+                key={id}
+                className="quiet"
+                aria-pressed={savedType === id}
+                onClick={() => {
+                  if (savedType === id) return;
+                  setSavedType(id);
+                  setPage(1);
+                  setData(null);
+                  setError("");
+                  history.replaceState(
+                    null,
+                    "",
+                    id === "market" ? "/saved?type=market" : "/saved",
+                  );
+                }}
+              >
+                <Icon size={17} aria-hidden="true" />
+                {label}
+              </button>
+            ))}
+          </nav>
+        )}
         {kind === "journal" && (
           <nav className="journal-modes ui-tabs" aria-label="Режим журнала">
             {[
@@ -177,7 +316,7 @@ export default function CommunityPage({ kind }) {
             {kind === "feed" || kind === "journal"
               ? "публикации ваших подписок"
               : kind === "saved"
-                ? "сохранённые записи"
+                ? "сохранённые записи и объявления"
                 : "уведомления"}
             .{" "}
             <a className="button small" href="/account">
@@ -186,6 +325,25 @@ export default function CommunityPage({ kind }) {
           </p>
         ) : !data ? (
           <p role="status">Загружаем…</p>
+        ) : kind === "saved" && savedType === "market" ? (
+          <>
+            <BikeGrid>
+              {data.items.map((m) => (
+                <MarketCard key={m.id} listing={m} />
+              ))}
+            </BikeGrid>
+            {!data.items.length && (
+              <section className="social-empty">
+                <h2>Сохранённых объявлений нет</h2>
+                <p>
+                  Сохраняйте объявления кнопкой «Сохранить». Проданные, снятые и
+                  истёкшие здесь не показываются.
+                </p>
+                <Link href="/market">Открыть рынок</Link>
+              </section>
+            )}
+            <Pagination {...data} onPage={setPage} />
+          </>
         ) : kind === "journal" || kind === "saved" ? (
           <>
             <div className="journal-feed">
@@ -258,58 +416,69 @@ export default function CommunityPage({ kind }) {
         ) : (
           <>
             <ul className="notification-list">
-              {data.notifications.map((n) => (
-                <li key={n.id} className={n.readAt ? "" : "unread"}>
-                  <a
-                    href={profilePath(n.actor.username)}
-                    aria-label={"Профиль: " + personName(n.actor)}
-                  >
-                    <Avatar person={n.actor} />
-                  </a>
-                  <div>
-                    <p>
-                      <a
-                        className="notification-actor"
-                        href={profilePath(n.actor.username)}
-                      >
-                        {personName(n.actor)}
-                      </a>
-                      {" " + eventText[n.type] + " "}
-                      {n.type !== "follow" && (
-                        <a
-                          href={n.target.href}
-                          onClick={() => {
-                            read(n.id).catch(() => {});
-                          }}
-                        >
-                          {n.type === "reply"
-                            ? "в обсуждении " + n.target.name
-                            : n.target.name}
-                        </a>
-                      )}
-                    </p>
-                    <time dateTime={n.createdAt}>
-                      {new Date(n.createdAt).toLocaleString("ru-RU", {
-                        day: "numeric",
-                        month: "short",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </time>
-                  </div>
-                  {!n.readAt && (
-                    <button
-                      className="quiet"
-                      aria-label="Отметить прочитанным"
-                      onClick={() =>
-                        read(n.id).catch((e) => setError(e.message))
-                      }
+              {data.notifications.map((n) =>
+                n.type === "market_expiring" ? (
+                  <MarketNotice
+                    key={n.id}
+                    notice={n}
+                    days={settings?.marketListingDays || 60}
+                    busy={busy}
+                    onExtend={() => extend(n)}
+                    onRead={() => read(n.id).catch((e) => setError(e.message))}
+                  />
+                ) : (
+                  <li key={n.id} className={n.readAt ? "" : "unread"}>
+                    <a
+                      href={profilePath(n.actor.username)}
+                      aria-label={"Профиль: " + personName(n.actor)}
                     >
-                      <Check size={14} />
-                    </button>
-                  )}
-                </li>
-              ))}
+                      <Avatar person={n.actor} />
+                    </a>
+                    <div>
+                      <p>
+                        <a
+                          className="notification-actor"
+                          href={profilePath(n.actor.username)}
+                        >
+                          {personName(n.actor)}
+                        </a>
+                        {" " + eventText[n.type] + " "}
+                        {n.type !== "follow" && (
+                          <a
+                            href={n.target.href}
+                            onClick={() => {
+                              read(n.id).catch(() => {});
+                            }}
+                          >
+                            {n.type === "reply"
+                              ? "в обсуждении " + n.target.name
+                              : n.target.name}
+                          </a>
+                        )}
+                      </p>
+                      <time dateTime={n.createdAt}>
+                        {new Date(n.createdAt).toLocaleString("ru-RU", {
+                          day: "numeric",
+                          month: "short",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </time>
+                    </div>
+                    {!n.readAt && (
+                      <button
+                        className="quiet"
+                        aria-label="Отметить прочитанным"
+                        onClick={() =>
+                          read(n.id).catch((e) => setError(e.message))
+                        }
+                      >
+                        <Check size={14} />
+                      </button>
+                    )}
+                  </li>
+                ),
+              )}
             </ul>
             {!data.notifications.length && (
               <p className="help">

@@ -5,6 +5,7 @@ import YandexRideMap from "./yandex-ride-map.jsx";
 import { useSite } from "./site-provider.jsx";
 import { mapDefaults, mapStyle } from "../../lib/map-settings.js";
 import { bounds } from "../../lib/ride-geometry.js";
+import { routeCasing } from "../../lib/yandex-ride-map.js";
 export default function RideMap({ geometry, styleUrl }) {
   const { personalSettings: settings } = useSite();
   const config = settings.map || mapDefaults;
@@ -75,6 +76,19 @@ function MapLibreRideMap({ geometry, styleUrl }) {
               geometry: { type: "MultiLineString", coordinates: geometry },
             },
           });
+          // A dark casing under the accent line keeps the route visible
+          // over yellow and orange roads of the basemap (#131).
+          map.addLayer({
+            id: "ride-casing",
+            type: "line",
+            source: "ride",
+            paint: {
+              "line-color": routeCasing,
+              "line-width": 7,
+              "line-opacity": 0.75,
+            },
+            layout: { "line-join": "round", "line-cap": "round" },
+          });
           map.addLayer({
             id: "ride",
             type: "line",
@@ -124,7 +138,7 @@ function MapLibreRideMap({ geometry, styleUrl }) {
   return (
     <div className="ride-map-wrap">
       <div
-        className={"ride-map" + (ready ? " ready" : "")}
+        className={"ride-map map-engine" + (ready ? " ready" : "")}
         ref={ref}
         aria-label="Интерактивная карта маршрута"
       />

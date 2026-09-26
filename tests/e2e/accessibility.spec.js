@@ -148,6 +148,7 @@ test("main pages pass axe in both themes", async ({
     ["покатушка", "/r/" + ride.shareId, "ride"],
     ["объявление", "/market/" + listing.shareId, "listing"],
     ["профиль", "/@" + username, "profile"],
+    ["рекорды", "/records", "records"],
     ["о проекте", "/about", "about"],
     ["вход", "/login", "login"],
   ];

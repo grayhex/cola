@@ -57,12 +57,14 @@ test("bike title stays readable next to a long author name and username", async 
     );
     await expect(authorLink).toContainText(author);
     await expect(authorLink).not.toContainText("@");
-    // #121: only the year under a custom name, never the parser's model;
-    // description, public price and the manufacturer link are visible
-    // without the optional summary block (#77).
-    await expect(page.locator(".bike-subtitle")).toHaveText(
-      "Модельный год 2023",
-    );
+    // #121, #131: never the parser's model under a custom name; the year
+    // is a label next to the size and the weight. Description, public
+    // price and the manufacturer link are visible without the optional
+    // summary block (#77).
+    await expect(page.locator(".bike-subtitle")).toHaveCount(0);
+    await expect(
+      page.locator('.bike-heading [data-bike-label="year"]'),
+    ).toHaveText("2023");
     await expect(page.locator(".bike-heading")).not.toContainText(
       "Specialized Stumpjumper EVO",
     );

@@ -65,6 +65,7 @@ export default function BikeCard({
               <BikeLike bike={b} reaction={reaction} t={t} compact />
               <Link
                 className={styles.stat}
+                data-hover="comment"
                 href={href + "#discussion"}
                 aria-label={
                   t("Комментарии") +

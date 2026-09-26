@@ -113,19 +113,24 @@
   color: var(--text);
 }
 /* Hover tints per section, like the coloured icons of the reference. */
-.header :global([data-section="bikes"]) {
+.header :global([data-section="bikes"]),
+.drawer :global([data-section="bikes"]) {
   --nav-tone: var(--accent-text);
 }
-.header :global([data-section="journal"]) {
+.header :global([data-section="journal"]),
+.drawer :global([data-section="journal"]) {
   --nav-tone: var(--info);
 }
-.header :global([data-section="articles"]) {
+.header :global([data-section="articles"]),
+.drawer :global([data-section="articles"]) {
   --nav-tone: var(--tone-bmx);
 }
-.header :global([data-section="rides"]) {
+.header :global([data-section="rides"]),
+.drawer :global([data-section="rides"]) {
   --nav-tone: var(--tone-road);
 }
-.header :global([data-section="market"]) {
+.header :global([data-section="market"]),
+.drawer :global([data-section="market"]) {
   --nav-tone: var(--tone-special);
 }
 
@@ -278,6 +283,15 @@
 .drawer :global(.nav-menu-link) :global(.site-icon),
 .popover :global(.nav-menu-link) :global(.site-icon) {
   color: var(--text-subtle);
+}
+/* Submenu icons take their section's tint on hover, like the top level
+   (#131); the account menu takes the accent. */
+.header :global(.nav-menu-link):is(:hover, :focus-visible) :global(.site-icon),
+.drawer :global(.nav-menu-link):is(:hover, :focus-visible) :global(.site-icon),
+.popover
+  :global(.nav-menu-link):is(:hover, :focus-visible)
+  :global(.site-icon) {
+  color: var(--nav-tone, var(--accent-text));
 }
 .header :global(.nav-menu-link):hover,
 .header :global(.nav-menu-link):focus-visible,

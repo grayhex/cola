@@ -2,34 +2,350 @@
 import { useConfirmation } from "../ui/confirmation.jsx";
 import { useEffect, useState } from "react";
 import { socialApi } from "../ui/social-primitives.jsx";
-import { Trophy, Medal } from "../ui/icons.jsx";
-import {
-  recordDefinitions,
-  achievements,
-} from "../../lib/gamification-definitions.js";
+import AchievementArt from "../ui/achievement-art.jsx";
+import { Medal, Plus, RefreshCw, Save, Trash2, Trophy } from "../ui/icons.jsx";
 import AssetPicker from "./asset-picker.jsx";
-import GameDescriptionEditor from "./game-description-editor.jsx";
 import { publicPath } from "../../lib/public-urls.js";
+import {
+  gameMetrics,
+  metricByKey,
+  metricGroups,
+} from "../../lib/game-metrics.js";
+import { ruleInput } from "../../lib/game-rule-validation.js";
+import { categories } from "../../lib/catalog.js";
+import {
+  gameDescriptionLimit,
+  ruleCondition,
+} from "../../lib/gamification-presentation.js";
+
+// Awards and records are rules (#106): a metric from the catalog, a
+// condition (award) or a direction (record), filters, a name, a description
+// and an illustration. The key never changes: award history refers to it.
+const inputFields = [
+  "key",
+  "kind",
+  "metric",
+  "comparison",
+  "threshold",
+  "direction",
+  "category",
+  "minDistanceKm",
+  "keywords",
+  "name",
+  "description",
+  "imageId",
+  "enabled",
+];
+const toInput = (rule) =>
+  Object.fromEntries(inputFields.map((field) => [field, rule[field]]));
+const sameRules = (a, b) =>
+  JSON.stringify(a.map(toInput)) === JSON.stringify(b.map(toInput));
+// The first problem of a rule, in the words of the server's check.
+function ruleProblem(rule) {
+  const result = ruleInput.safeParse(toInput(rule));
+  return result.success ? "" : result.error.issues[0].message;
+}
+
+function newRule(kind) {
+  const key =
+    "rule_" +
+    Array.from(crypto.getRandomValues(new Uint8Array(5)), (byte) =>
+      byte.toString(16).padStart(2, "0"),
+    ).join("");
+  return {
+    key,
+    kind,
+    subject: "ride",
+    metric: "ride_distance",
+    comparison: "gte",
+    threshold: kind === "award" ? 100 : null,
+    direction: kind === "record" ? "max" : null,
+    category: null,
+    minDistanceKm: null,
+    keywords: [],
+    name: "",
+    description: "",
+    imageId: null,
+    enabled: true,
+    builtin: false,
+    awarded: 0,
+    added: true,
+  };
+}
+// A new metric keeps only the filters it supports.
+function withMetric(rule, key) {
+  const metric = metricByKey[key];
+  return {
+    ...rule,
+    metric: key,
+    subject: metric.subject,
+    category: metric.filters.includes("category") ? rule.category : null,
+    minDistanceKm: metric.filters.includes("minDistanceKm")
+      ? rule.minDistanceKm
+      : null,
+    keywords: metric.filters.includes("keywords") ? rule.keywords : [],
+  };
+}
+const numberOrNull = (text) => (text === "" ? null : Number(text));
+
+function RuleEditor({ rule, assets, busy, onChange, onRemove, onUpload }) {
+  const metric = metricByKey[rule.metric];
+  const [keywords, setKeywords] = useState(rule.keywords.join(", "));
+  const problem = ruleProblem(rule);
+  const title = rule.name.trim() || "Без названия";
+  const set = (patch) => onChange({ ...rule, ...patch });
+  return (
+    <details
+      className="game-rule"
+      data-rule={rule.key}
+      data-kind={rule.kind}
+      open={rule.added || undefined}
+    >
+      <summary>
+        <AchievementArt
+          imageId={rule.imageId}
+          kind={rule.kind === "award" ? "achievement" : "record"}
+          size={32}
+        />
+        <span className="game-rule-title">
+          <strong>{title}</strong>
+          <small>{ruleCondition(rule, categories)}</small>
+        </span>
+        <span className="game-rule-state">
+          {problem && (
+            <span className="badge" data-tone="danger">
+              Ошибка
+            </span>
+          )}
+          {rule.kind === "award" && (
+            <span className="badge mono" title="Сколько человек получили">
+              {rule.awarded}
+            </span>
+          )}
+          <span
+            className="badge"
+            data-tone={rule.enabled ? "success" : undefined}
+          >
+            {rule.enabled ? "Включено" : "Выключено"}
+          </span>
+        </span>
+      </summary>
+      <div className="game-rule-body">
+        <div className="game-rule-grid">
+          <label className="field">
+            <span>Название</span>
+            <input
+              value={rule.name}
+              maxLength={60}
+              onChange={(e) => set({ name: e.target.value })}
+            />
+          </label>
+          <label className="field">
+            <span>Метрика</span>
+            <select
+              value={rule.metric}
+              onChange={(e) => onChange(withMetric(rule, e.target.value))}
+            >
+              {metricGroups.map((group) => {
+                const options = gameMetrics.filter(
+                  (m) => m.group === group.id && m[rule.kind],
+                );
+                return options.length ? (
+                  <optgroup key={group.id} label={group.name}>
+                    {options.map((m) => (
+                      <option key={m.key} value={m.key}>
+                        {m.label}
+                      </option>
+                    ))}
+                  </optgroup>
+                ) : null;
+              })}
+            </select>
+          </label>
+          {rule.kind === "award" ? (
+            <>
+              <label className="field">
+                <span>Условие</span>
+                <select
+                  value={rule.comparison}
+                  onChange={(e) => set({ comparison: e.target.value })}
+                >
+                  <option value="gte">Не меньше порога</option>
+                  <option value="lte">Не больше порога</option>
+                </select>
+              </label>
+              <label className="field">
+                <span>Порог{metric.unit ? ", " + metric.unit : ""}</span>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  min={0}
+                  max={metric.max}
+                  step={metric.step}
+                  value={rule.threshold ?? ""}
+                  onChange={(e) =>
+                    set({ threshold: numberOrNull(e.target.value) })
+                  }
+                />
+              </label>
+            </>
+          ) : (
+            <label className="field">
+              <span>Рекорд держит</span>
+              <select
+                value={rule.direction}
+                onChange={(e) => set({ direction: e.target.value })}
+              >
+                <option value="max">Наибольшее значение</option>
+                <option value="min">Наименьшее значение</option>
+              </select>
+            </label>
+          )}
+          {metric.filters.includes("category") && (
+            <label className="field">
+              <span>Тип велосипеда</span>
+              <select
+                value={rule.category || ""}
+                onChange={(e) => set({ category: e.target.value || null })}
+              >
+                <option value="">Любой</option>
+                {Object.entries(categories).map(([key, label]) => (
+                  <option key={key} value={key}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          {metric.filters.includes("minDistanceKm") && (
+            <label className="field">
+              <span>Только покатушки от, км</span>
+              <input
+                type="number"
+                inputMode="decimal"
+                min={0}
+                max={10000}
+                step={0.1}
+                value={rule.minDistanceKm ?? ""}
+                onChange={(e) =>
+                  set({ minDistanceKm: numberOrNull(e.target.value) })
+                }
+              />
+            </label>
+          )}
+          {metric.filters.includes("keywords") && (
+            <label className="field">
+              <span>Слова в названии детали, через запятую</span>
+              <input
+                value={keywords}
+                placeholder="Di2, AXS, eTap"
+                onChange={(e) => {
+                  setKeywords(e.target.value);
+                  set({
+                    keywords: e.target.value
+                      .split(",")
+                      .map((word) => word.trim())
+                      .filter(Boolean),
+                  });
+                }}
+              />
+            </label>
+          )}
+        </div>
+        <label className="field">
+          <span>Короткое описание</span>
+          <textarea
+            rows={2}
+            maxLength={gameDescriptionLimit}
+            value={rule.description}
+            onChange={(e) => set({ description: e.target.value })}
+          />
+          <small>
+            {rule.description.length}/{gameDescriptionLimit} · видно на странице
+            рекордов и в подсказке награды
+          </small>
+        </label>
+        <AssetPicker
+          label={"Иллюстрация «" + title + "»"}
+          help={rule.kind === "award" ? "Награда" : "Рекорд"}
+          assets={assets}
+          value={rule.imageId}
+          busy={busy}
+          emptyLabel="Общая иконка"
+          Fallback={rule.kind === "award" ? Medal : Trophy}
+          previewClassName="icon transparent"
+          onChange={(imageId) => set({ imageId })}
+          onUpload={onUpload}
+        />
+        {problem && <p className="error">{problem}</p>}
+        <div className="game-rule-actions">
+          <label className="setting-row">
+            <span>
+              Включено
+              <small>
+                {rule.kind === "award"
+                  ? "Выключенную награду не выдают и не показывают; полученные сохраняются."
+                  : "Выключенный рекорд не показывается."}
+              </small>
+            </span>
+            <input
+              type="checkbox"
+              role="switch"
+              className="toggle"
+              aria-label={"Включить «" + title + "»"}
+              checked={rule.enabled}
+              onChange={(e) => set({ enabled: e.target.checked })}
+            />
+          </label>
+          <small className="game-rule-key">
+            Ключ {rule.key}
+            {rule.builtin ? " · встроенное" : ""}
+            {rule.kind === "award" ? " · получили: " + rule.awarded : ""}
+          </small>
+          {!rule.builtin && !rule.awarded && (
+            <button
+              type="button"
+              className="quiet danger"
+              disabled={busy}
+              onClick={onRemove}
+            >
+              <Trash2 size={15} />
+              Удалить
+            </button>
+          )}
+        </div>
+      </div>
+    </details>
+  );
+}
 
 export default function Gamification() {
   const [ask, confirmation] = useConfirmation();
-  const [value, setValue] = useState(null),
-    [savedValue, setSavedValue] = useState(null),
+  const [settings, setSettings] = useState(null),
+    [savedSettings, setSavedSettings] = useState(null),
+    [rules, setRules] = useState(null),
+    [savedRules, setSavedRules] = useState(null),
     [assets, setAssets] = useState([]),
     [bikes, setBikes] = useState([]),
     [page, setPage] = useState(1),
     [busy, setBusy] = useState(false),
     [message, setMessage] = useState(""),
-    [error, setError] = useState("");
-  const dirty = value && JSON.stringify(value) !== JSON.stringify(savedValue);
+    [error, setError] = useState(""),
+    // Editors start over after saving or cancelling: typed keywords too.
+    [revision, setRevision] = useState(0);
+  const settingsDirty =
+    settings && JSON.stringify(settings) !== JSON.stringify(savedSettings);
+  const rulesDirty = rules && !sameRules(rules, savedRules);
 
   useEffect(() => {
     let active = true;
-    Promise.all([socialApi("game/admin/settings"), socialApi("admin/assets")])
-      .then(([v, media]) => {
+    Promise.all([socialApi("game/admin/rules"), socialApi("admin/assets")])
+      .then(([data, media]) => {
         if (!active) return;
-        setValue(v);
-        setSavedValue(v);
+        setSettings(data.settings);
+        setSavedSettings(data.settings);
+        setRules(data.rules);
+        setSavedRules(data.rules);
         setAssets(media.assets);
       })
       .catch((e) => {
@@ -39,7 +355,7 @@ export default function Gamification() {
       active = false;
     };
   }, []);
-  // Paging/moderation must not reload settings and discard an unsaved upload.
+  // Paging and moderation must not reload the rules and drop unsaved edits.
   useEffect(() => {
     let active = true;
     socialApi("game/admin/bikes?page=" + page)
@@ -54,7 +370,7 @@ export default function Gamification() {
     };
   }, [page]);
   useEffect(() => {
-    if (!dirty) return;
+    if (!settingsDirty && !rulesDirty) return;
     const preventLeave = (event) => {
       event.preventDefault();
       event.returnValue = "";
@@ -63,25 +379,24 @@ export default function Gamification() {
     return () => {
       window.removeEventListener("beforeunload", preventLeave);
     };
-  }, [dirty]);
+  }, [settingsDirty, rulesDirty]);
 
   async function run(fn, success = "Сохранено") {
     setBusy(true);
     setMessage("");
     setError("");
     try {
-      await fn();
-      setMessage(success);
+      const text = await fn();
+      setMessage(text || success);
     } catch (e) {
       setError(e.message);
     } finally {
       setBusy(false);
     }
   }
-  function setEntry(field, key, entry) {
-    setValue((v) => ({ ...v, [field]: { ...v[field], [key]: entry } }));
-  }
-  function upload(field, key, file) {
+  const updateRule = (rule) =>
+    setRules((list) => list.map((r) => (r.key === rule.key ? rule : r)));
+  function upload(key, file) {
     return run(async () => {
       if (file.size > 10 * 1024 * 1024)
         throw new Error("Максимальный размер 10 МБ");
@@ -100,73 +415,78 @@ export default function Gamification() {
         data,
         ...items.filter((item) => item.id !== data.id),
       ]);
-      setEntry(field, key, data.id);
-    }, "Иллюстрация загружена. Нажмите «Сохранить правила и иллюстрации».");
+      setRules((list) =>
+        list.map((r) => (r.key === key ? { ...r, imageId: data.id } : r)),
+      );
+    }, "Иллюстрация загружена. Нажмите «Сохранить награды и рекорды».");
   }
-  function illustration(definition, field, Fallback) {
-    const kind = field === "recordImages" ? "record" : "achievement";
-    const descriptionField =
-      kind === "record" ? "recordDescriptions" : "achievementDescriptions";
-    return (
-      <>
-        <AssetPicker
-          label={definition.name}
-          help={
-            definition.description ||
-            (definition.group === "Community"
-              ? "Голос сообщества"
-              : definition.group)
-          }
-          assets={assets}
-          value={value[field]?.[definition.key] || null}
-          busy={busy}
-          emptyLabel="Общая иконка"
-          Fallback={Fallback}
-          previewClassName="icon transparent"
-          onChange={(id) => setEntry(field, definition.key, id)}
-          onUpload={(file) => upload(field, definition.key, file)}
-        />
-        <GameDescriptionEditor
-          definition={definition}
-          kind={kind}
-          value={value[descriptionField]?.[definition.key]}
-          onChange={(text) => setEntry(descriptionField, definition.key, text)}
-        />
-      </>
-    );
+  function saveRules() {
+    const invalid = rules.filter((rule) => ruleProblem(rule));
+    if (invalid.length) {
+      setMessage("");
+      setError(
+        "Исправьте: " +
+          invalid
+            .map((rule) => "«" + (rule.name.trim() || "Без названия") + "»")
+            .join(", "),
+      );
+      return;
+    }
+    run(async () => {
+      const data = await socialApi("game/admin/rules", "PUT", {
+        rules: rules.map(toInput),
+      });
+      setRules(data.rules);
+      setSavedRules(data.rules);
+      setRevision((n) => n + 1);
+    }, "Награды и рекорды сохранены");
   }
-  if (!value) return <p role="status">{error || "Загружаем…"}</p>;
+  if (!settings || !rules) return <p role="status">{error || "Загружаем…"}</p>;
+  const lists = [
+    {
+      kind: "award",
+      title: "Награды",
+      add: "Добавить награду",
+      help: "Награда остаётся у человека навсегда, даже если условие потом перестало выполняться. Выдаётся сразу при событии; после нового или изменённого правила нажмите «Пересчитать награды».",
+    },
+    {
+      kind: "record",
+      title: "Рекорды",
+      add: "Добавить рекорд",
+      help: "Рекорд держит один велосипед, покатушка или участник, и лидер может смениться. Считается при каждом открытии страницы рекордов.",
+    },
+  ];
   return (
     <section className="social-panel game-admin">
       {confirmation}
       <h2>Награды и рекорды</h2>
       <p className="help">
-        Валюта площадки: RUB. Иллюстрации и описания меняют оформление, но не
-        правила получения наград. Описания сохраняются вместе с иллюстрациями.
+        Каждая награда и каждый рекорд — правило из проверенной метрики, условия
+        и фильтров. Участвуют только публичные велосипеды и покатушки
+        незаблокированных владельцев; цена — только если владелец её показывает,
+        максимальная скорость — только если владелец показывает её в покатушке.
       </p>
       <form
+        className="game-settings"
         onSubmit={(e) => {
           e.preventDefault();
           run(async () => {
-            const next = await socialApi("game/admin/settings", "PUT", value);
-            setValue(next);
-            setSavedValue(next);
-          });
+            const next = await socialApi(
+              "game/admin/settings",
+              "PUT",
+              settings,
+            );
+            setSettings(next);
+            setSavedSettings(next);
+          }, "Параметры рейтинга сохранены");
         }}
       >
         <fieldset disabled={busy}>
-          <legend className="sr-only">
-            Правила, описания и иллюстрации достижений
-          </legend>
+          <legend>Параметры рейтинга велосипедов</legend>
           <div className="game-setting-grid">
             {[
               ["minimumCompleteness", "Минимальная заполненность, %", 0, 100],
-              [
-                "budgetMinimum",
-                "Бюджетный рекорд: цена строго выше, ₽",
-                1,
-                1e9,
-              ],
+              ["budgetMinimum", "Минимальная цена: строго выше, ₽", 1, 1e9],
               ["weightMinimum", "Минимальный вес, кг", 1, 100],
               ["weightMaximum", "Максимальный вес, кг", 1, 200],
             ].map(([key, label, min, max]) => (
@@ -178,9 +498,12 @@ export default function Gamification() {
                   step="0.01"
                   min={min}
                   max={max}
-                  value={value[key]}
+                  value={settings[key]}
                   onChange={(e) =>
-                    setValue((v) => ({ ...v, [key]: Number(e.target.value) }))
+                    setSettings((v) => ({
+                      ...v,
+                      [key]: Number(e.target.value),
+                    }))
                   }
                 />
               </label>
@@ -190,85 +513,130 @@ export default function Gamification() {
             <span>Реакции сообщества</span>
             <input
               type="checkbox"
-              checked={value.reactionsEnabled}
+              role="switch"
+              className="toggle"
+              checked={settings.reactionsEnabled}
               onChange={(e) =>
-                setValue((v) => ({ ...v, reactionsEnabled: e.target.checked }))
+                setSettings((v) => ({
+                  ...v,
+                  reactionsEnabled: e.target.checked,
+                }))
               }
             />
           </label>
-          <section
-            className="game-art-settings"
-            aria-labelledby="record-art-title"
-          >
-            <h3 id="record-art-title">
-              Иллюстрации рекордов · {recordDefinitions.length}
-            </h3>
-            <p className="help">
-              Загрузите PNG, WebP или JPEG до 10 МБ либо выберите из медиатеки.
-              Прозрачные изображения отображаются без обрезки. Сброс возвращает
-              общую иконку сайта.
-            </p>
-            <div className="game-art-grid">
-              {recordDefinitions.map((r) => (
-                <div
-                  className="game-art-slot"
-                  key={r.key}
-                  data-record-setting={r.key}
-                >
-                  {illustration(r, "recordImages", Trophy)}
-                  <label className="setting-row">
-                    <span>Показывать рекорд</span>
-                    <input
-                      type="checkbox"
-                      aria-label={"Показывать «" + r.name + "»"}
-                      checked={value.enabledRecords.includes(r.key)}
-                      onChange={(e) =>
-                        setValue((v) => ({
-                          ...v,
-                          enabledRecords: e.target.checked
-                            ? [...v.enabledRecords, r.key]
-                            : v.enabledRecords.filter((k) => k !== r.key),
-                        }))
-                      }
-                    />
-                  </label>
-                </div>
-              ))}
-            </div>
-          </section>
-          <section
-            className="game-art-settings"
-            aria-labelledby="achievement-art-title"
-          >
-            <h3 id="achievement-art-title">
-              Иллюстрации достижений · {achievements.length}
-            </h3>
-            <p className="help">
-              Для полученных и будущих наград в личном кабинете, профиле и
-              карточке велосипеда. Условия получения остаются прежними.
-            </p>
-            <div className="game-art-grid">
-              {achievements.map((a) => (
-                <div
-                  className="game-art-slot"
-                  key={a.key}
-                  data-achievement-setting={a.key}
-                >
-                  {illustration(a, "achievementImages", Medal)}
-                </div>
-              ))}
-            </div>
-          </section>
           <div className="game-admin-save">
-            <button className="button" disabled={busy || !dirty}>
-              Сохранить правила и иллюстрации
+            <button className="button" disabled={busy || !settingsDirty}>
+              Сохранить параметры
             </button>
-            <span className="help">
-              {dirty ? "Есть несохранённые изменения" : "Изменения сохранены"}
-            </span>
           </div>
         </fieldset>
       </form>
+      {lists.map((list) => {
+        const items = rules.filter((rule) => rule.kind === list.kind);
+        return (
+          <section
+            className="game-rules"
+            key={list.kind}
+            aria-labelledby={"game-rules-" + list.kind}
+            data-rules={list.kind}
+          >
+            <div className="game-rules-heading">
+              <h3 id={"game-rules-" + list.kind}>
+                {list.title} · {items.length}
+              </h3>
+              <button
+                type="button"
+                className="button secondary"
+                disabled={busy}
+                onClick={() => setRules((all) => [...all, newRule(list.kind)])}
+              >
+                <Plus size={16} />
+                {list.add}
+              </button>
+            </div>
+            <p className="help">{list.help}</p>
+            <div className="game-rule-list">
+              {items.map((rule) => (
+                <RuleEditor
+                  key={rule.key + ":" + revision}
+                  rule={rule}
+                  assets={assets}
+                  busy={busy}
+                  onChange={updateRule}
+                  onUpload={(file) => upload(rule.key, file)}
+                  onRemove={async () => {
+                    if (
+                      await ask(
+                        "Правило «" +
+                          (rule.name.trim() || "Без названия") +
+                          "» удалится после сохранения.",
+                        {
+                          title: "Удалить правило?",
+                          confirmLabel: "Удалить",
+                          danger: true,
+                        },
+                      )
+                    )
+                      setRules((all) => all.filter((r) => r.key !== rule.key));
+                  }}
+                />
+              ))}
+            </div>
+          </section>
+        );
+      })}
+      <div className="admin-save game-rules-save" data-dirty={!!rulesDirty}>
+        <span>
+          {rulesDirty
+            ? "Есть несохранённые изменения"
+            : "Награды и рекорды сохранены"}
+        </span>
+        <div>
+          <button
+            type="button"
+            className="quiet"
+            disabled={busy || !rulesDirty}
+            onClick={() => {
+              setRules(savedRules);
+              setRevision((n) => n + 1);
+              setError("");
+            }}
+          >
+            Отменить изменения
+          </button>
+          <button
+            type="button"
+            className="quiet"
+            disabled={busy || rulesDirty}
+            title={
+              rulesDirty
+                ? "Сначала сохраните правила"
+                : "Выдать награды за то, что уже сделано"
+            }
+            onClick={() =>
+              run(async () => {
+                const result = await socialApi(
+                  "game/admin/recalculate",
+                  "POST",
+                );
+                return "Пересчитано. Выдано наград: " + result.awarded;
+              })
+            }
+          >
+            <RefreshCw size={16} />
+            Пересчитать награды
+          </button>
+          <button
+            type="button"
+            className="button"
+            disabled={busy || !rulesDirty}
+            onClick={saveRules}
+          >
+            <Save size={17} />
+            Сохранить награды и рекорды
+          </button>
+        </div>
+      </div>
       {error && (
         <p role="alert" className="error">
           {error}

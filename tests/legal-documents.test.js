@@ -92,6 +92,16 @@ test("authorized photo references survive source/edit round-trips; legacy plain 
   schema.nodeFromJSON(doc).check();
   assert.equal(walk(doc).find((n) => n.type === "photoReference").attrs.id, id);
   assert.deepEqual(parseRichText(serializeRichText(doc)), doc);
+  // A picture on its own line is a block between the paragraphs (#128).
+  const blocks = (source) =>
+    parseRichText(source).content.map((block) =>
+      (block.content || []).map((n) => n.text || n.type).join(","),
+    );
+  assert.deepEqual(blocks(source), ["Начало", "photoReference", "Конец"]);
+  assert.deepEqual(
+    blocks(`А\n\n![](photo:${id})\n\n![](photo:${id})\n\nБ ![](photo:${id})`),
+    ["А", "photoReference", "photoReference", "Б ,photoReference"],
+  );
   assert.equal(
     richPlainText("Первая строка\nВторая строка"),
     "Первая строка\nВторая строка",

@@ -9,7 +9,7 @@ test("card status selects one current record, then rare milestone, then communit
     badges: [{ key: "bike_likes_10" }, rare],
   };
   const record = { key: "lightest_road", group: "Вес", holder: { id: "a" } };
-  const community = { key: "dream", group: "Community", holder: { id: "a" } };
+  const community = { key: "dream", group: "community", holder: { id: "a" } };
   assert.equal(significantBadge(bike, [community, record]), record);
   assert.equal(significantBadge(bike, [community]), rare);
   assert.equal(

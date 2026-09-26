@@ -62,55 +62,69 @@
   margin: 8px 0 0;
   overflow-wrap: anywhere;
 }
+/* Search and filters on the design system (#131): the site's field height,
+   the same button for «Найти» and «Добавить объявление», and one row of
+   filters across the page instead of a narrow block. */
 .search {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin: 8px 0 20px;
-  padding: 10px 12px;
+  gap: var(--space-2);
   width: 100%;
   min-width: 0;
-  border: 1px solid var(--field-line, var(--line));
-  border-radius: 10px;
-  background: var(--surface);
+  margin: var(--space-2) 0 var(--space-5);
+  padding: 4px 4px 4px var(--space-3);
+  border: 1px solid var(--field-line);
+  border-radius: var(--radius-lg);
+  background: var(--field-bg);
+  box-shadow: var(--shadow-inner);
 }
-.search > svg { flex: 0 0 auto; color: var(--text-muted); }
+.search:focus-within {
+  border-color: var(--focus);
+  box-shadow: var(--focus-ring);
+}
+.search > svg { flex: none; color: var(--text-subtle); }
 .search input {
   flex: 1 1 auto;
   width: 0;
   min-width: 0;
-  min-height: 48px;
-  padding: 8px 10px;
-  border: 1px solid transparent;
-  border-radius: 6px;
+  min-height: var(--control-md);
+  padding: 0;
+  border: 0;
   background: transparent;
   color: var(--text);
-  font-size: 18px;
+  font-size: var(--text-base);
   box-shadow: none;
 }
-.search button { flex: 0 0 auto; min-height: 48px; }
-.filterPanel { margin-bottom: 20px; }
+.search input:focus-visible { outline: none; box-shadow: none; }
+.search button { flex: none; }
+.filterPanel { margin-bottom: var(--space-5); }
+.filterRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
 .filterFields {
   display: grid;
+  flex: 3 1 480px;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-  max-width: 860px;
-  margin-top: 14px;
+  gap: var(--space-3);
+  min-width: 0;
 }
 .filterFields label { min-width: 0; margin-bottom: 0; }
 .rangeFields {
   display: grid;
+  flex: 4 1 560px;
   grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
   align-items: end;
-  gap: 12px;
-  max-width: 860px;
-  margin-top: 12px;
+  gap: var(--space-3);
+  min-width: 0;
 }
 .rangeFields label { min-width: 0; margin-bottom: 0; }
-.rangeFields input { width: 100%; min-width: 0; min-height: 44px; }
-.rangeFields button { min-height: 44px; }
-.published { display: block; color: var(--text-muted); font-size: 12px; }
-.filterFields select { width: 100%; min-width: 0; min-height: 44px; }
+.rangeFields input { width: 100%; min-width: 0; }
+.published { display: block; color: var(--text-muted); font-size: var(--text-xs); }
+.filterFields select { width: 100%; min-width: 0; }
 .categories {
   display: flex;
   gap: 8px;
@@ -214,26 +228,78 @@
   overflow-wrap: anywhere;
   line-height: 1.6;
 }
+/* The listing's facts (#131): the price, then labelled rows — the seller,
+   the city, the contact — each with its own grey caption. */
 .seller {
   align-self: start;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 20px;
   min-width: 0;
+  padding: var(--space-5);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+}
+.priceBlock {
+  display: grid;
+  gap: var(--space-1);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--line);
 }
 .detailPrice {
   display: block;
   font-size: 28px;
-  margin-bottom: 20px;
+  line-height: 1.2;
   overflow-wrap: anywhere;
 }
-.seller p:has(svg) {
+.facts {
+  display: grid;
+  gap: var(--space-4);
+  margin: var(--space-4) 0 0;
+}
+.facts > div {
+  display: grid;
+  gap: var(--space-1-5);
+  min-width: 0;
+}
+.facts dt {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+}
+.facts dd {
+  min-width: 0;
+  margin: 0;
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
+}
+.facts dd > p {
+  margin: 0;
+}
+.sellerName {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+}
+.sellerName small {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+.withIcon {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-1-5);
 }
-.seller h3 {
-  font-size: 16px;
+.withIcon > svg {
+  flex: none;
+  color: var(--text-subtle);
+}
+.contactValue {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-subtle);
+  line-height: 1.5;
+  white-space: pre-wrap;
 }
 .ownerActions {
   display: flex;
@@ -249,11 +315,47 @@
   padding: 10px 14px;
   border-radius: 8px;
 }
+/* The owner's term and one-click extension (#116). */
+.term {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+  margin-top: 16px;
+}
+.term p {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+/* Other listings of the seller (#116). */
+.others {
+  margin-top: 40px;
+}
+.others .grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.sellerFilter {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 8px;
+  font-weight: 600;
+}
+.sellerFilter a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
 .detail h1 {
   overflow-wrap: anywhere;
 }
 @media (max-width: 900px) {
-  .grid {
+  .grid,
+  .others .grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .detailGrid {
@@ -262,7 +364,8 @@
   }
 }
 @media (max-width: 600px) {
-  .grid {
+  .grid,
+  .others .grid {
     grid-template-columns: 1fr;
   }
   .detailGrid,
@@ -273,11 +376,12 @@
   .rangeFields {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .search { gap: 6px; padding: 6px; }
+  .search { padding-left: var(--space-2); }
   .search > svg { display: none; }
-  .search input { font-size: 16px; padding: 8px; }
-  .search button { padding-inline: 12px; }
-  .filterFields { gap: 8px; }
+  .search button { padding-inline: var(--space-3); }
+  .filterRow,
+  .filterFields,
+  .rangeFields { gap: var(--space-2); }
   .gallery > a:first-child img {
     height: 280px;
   }

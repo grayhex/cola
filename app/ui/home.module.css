@@ -4,13 +4,21 @@
   min-width: 0;
 }
 
-/* Intro: the administrator's headline, picture, colours and animation. */
+/* Intro: the administrator's headline, picture, colours and animation.
+   The site's accent tints the block unless the administrator picked its
+   own colours (#131). */
 .hero {
   overflow: hidden;
-  background: var(--hero-light, var(--bg-subtle));
+  background: var(
+    --hero-light,
+    color-mix(in srgb, var(--accent) 14%, var(--bg))
+  );
 }
 :global([data-theme="dark"]) .hero {
-  background: var(--hero-dark, var(--bg-subtle));
+  background: var(
+    --hero-dark,
+    color-mix(in srgb, var(--accent) 12%, var(--bg))
+  );
 }
 .heroContent {
   display: grid;
@@ -70,7 +78,8 @@ span.heroImage svg {
   align-items: center;
   gap: var(--space-1) var(--space-2);
   margin-top: var(--space-3);
-  color: var(--text-muted);
+  /* Readable on the accent tint (4.5:1). */
+  color: var(--text-secondary);
   font-size: var(--text-sm);
 }
 .heroLinks :global(.text-link) {
@@ -104,7 +113,7 @@ span.heroImage svg {
 .stageLabel {
   position: absolute;
   bottom: var(--space-2);
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font: var(--weight-semibold) 11px / 1.5 var(--font-mono);
 }
 

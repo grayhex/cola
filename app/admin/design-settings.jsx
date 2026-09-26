@@ -139,20 +139,31 @@ export function HomepageSettings({
           />
         ))}
       </div>
-      <div className="admin-form-grid">
-        {[
-          ["heroBackgroundLight", "Фон блока · светлая тема"],
-          ["heroBackgroundDark", "Фон блока · тёмная тема"],
-        ].map(([key, label]) => (
-          <Field key={key} label={label}>
-            <input
-              type="color"
-              value={s[key]}
-              onChange={(e) => onChange(key, e.target.value)}
-            />
-          </Field>
-        ))}
-      </div>
+      <Select
+        label="Фон блока"
+        value={s.heroBackgroundMode}
+        onChange={(v) => onChange("heroBackgroundMode", v)}
+        options={[
+          ["accent", "Оттенок акцентного цвета"],
+          ["custom", "Свои цвета"],
+        ]}
+      />
+      {s.heroBackgroundMode === "custom" && (
+        <div className="admin-form-grid">
+          {[
+            ["heroBackgroundLight", "Фон блока · светлая тема"],
+            ["heroBackgroundDark", "Фон блока · тёмная тема"],
+          ].map(([key, label]) => (
+            <Field key={key} label={label}>
+              <input
+                type="color"
+                value={s[key]}
+                onChange={(e) => onChange(key, e.target.value)}
+              />
+            </Field>
+          ))}
+        </div>
+      )}
       <AssetPicker
         label="Hero image"
         help="PNG или WebP с прозрачным фоном. Рекомендуется 320 × 320 px. Одно изображение для обеих тем."

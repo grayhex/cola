@@ -22,7 +22,9 @@ import labelStyles from "./content-label.module.css";
 import SearchBox from "./search-box.jsx";
 import SmallImage from "./small-image.jsx";
 import styles from "./home.module.css";
-import { publicPath } from "../../lib/public-urls.js";
+import { profilePath, publicPath } from "../../lib/public-urls.js";
+import { metricValue } from "../../lib/game-metrics.js";
+import { personName } from "../../lib/usernames.js";
 const markers = {
   market: ShoppingBag,
   planned: CalendarDays,
@@ -117,7 +119,13 @@ export function ActivityTicker({ events = [] }) {
 }
 // Photo-first cards: three per row on desktop, two on tablets and phones.
 const trendingSizes = "(max-width: 1050px) 50vw, 400px";
-const units = { weight: " кг", price: " ₽", likes: " лайков" };
+// A record is held by a bike, a ride or a rider (#106).
+function recordHolder(holder) {
+  if (holder.kind === "ride") return [publicPath("ride", holder), holder.name];
+  if (holder.kind === "profile")
+    return [profilePath(holder.author.username), personName(holder.author)];
+  return [publicPath("bike", holder), holder.name];
+}
 const emptyData = { popular: [], events: [], content: [], records: [] };
 export default function Home() {
   const { settings, viewer: user } = useSite(),
@@ -155,10 +163,15 @@ export default function Home() {
         <section className="frame" aria-labelledby="hero-title">
           <div
             className={"frame-inner " + styles.hero}
-            style={{
-              "--hero-light": settings.heroBackgroundLight,
-              "--hero-dark": settings.heroBackgroundDark,
-            }}
+            style={
+              // Without its own colours the block takes the accent (#131).
+              settings.heroBackgroundMode === "custom"
+                ? {
+                    "--hero-light": settings.heroBackgroundLight,
+                    "--hero-dark": settings.heroBackgroundDark,
+                  }
+                : undefined
+            }
           >
             <div className={styles.heroContent}>
               <div className={styles.heroCopy}>
@@ -334,27 +347,29 @@ export default function Home() {
               </Link>
             </div>
             <div className={styles.records}>
-              {content.records.map((record) => (
-                <article className={"item-card " + styles.record} key={record.key}>
-                  <span className={styles.recordIcon} aria-hidden="true">
-                    <Trophy size={16} />
-                  </span>
-                  <div>
-                    <p>{record.name}</p>
-                    <Link className="item-link" href={publicPath("bike", record.holder)}>
-                      {record.holder.name}
-                    </Link>
-                    <small className="mono">
-                      {record.holder.value.toLocaleString("ru-RU")}
-                      {units[record.metric] || ""}
-                    </small>
-                  </div>
-                </article>
-              ))}
+              {content.records.map((record) => {
+                const [href, holder] = recordHolder(record.holder);
+                return (
+                  <article className={"item-card " + styles.record} key={record.key}>
+                    <span className={styles.recordIcon} aria-hidden="true">
+                      <Trophy size={16} />
+                    </span>
+                    <div>
+                      <p>{record.name}</p>
+                      <Link className="item-link" href={href}>
+                        {holder}
+                      </Link>
+                      <small className="mono">
+                        {metricValue(record.metric, record.holder.value)}
+                      </small>
+                    </div>
+                  </article>
+                );
+              })}
             </div>
             {data && !content.records.length && (
               <p className="empty-state">
-                Рекорды появятся, когда велосипеды выполнят условия рейтинга.{" "}
+                Рекорды появятся, когда велосипеды и покатушки выполнят условия.{" "}
                 <Link className="text-link" href="/records">
                   Как это работает
                 </Link>

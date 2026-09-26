@@ -23,7 +23,7 @@ export default function AuthPage({ initialMode = "login", onAuthenticated }) {
           <ArrowLeft size={16} />
           На главную
         </Link>
-        <AuthWindow as="section" aria-labelledby="auth-title">
+        <AuthWindow as="section" aria-labelledby="auth-title" mode={mode}>
           <h1 id="auth-title">
             {register ? "Присоединиться к ColaBike" : "С возвращением"}
           </h1>

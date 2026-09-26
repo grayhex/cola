@@ -92,17 +92,39 @@ test("Hall of Fame changes its current record holder, with profile awards and mo
     await expect(
       visitor.getByRole("button", { name: "Безумие 1", exact: true }),
     ).toHaveAttribute("aria-pressed", "true");
+    // Records held now and awards kept for good are separate blocks (#106).
     await page.goto("/u/" + a.username);
-    await expect(page.locator(".badge-shelf")).toContainText("Первый выход");
-    await expect(page.locator(".badge-shelf")).toContainText("Легче ветра");
+    const held = page.locator(".badge-shelf", {
+      has: page.getByRole("heading", { name: "Рекорды", exact: true }),
+    });
+    const kept = page.locator(".badge-shelf", {
+      has: page.getByRole("heading", { name: "Награды", exact: true }),
+    });
+    await expect(held).toContainText("Легче ветра");
+    await expect(held).not.toContainText("Первый выход");
+    await expect(kept).toContainText("Первый выход");
+    await expect(kept).not.toContainText("Легче ветра");
     await page.goto("/account?tab=achievements");
-    await expect(page.locator(".badge-shelf")).toContainText(
+    await expect(page.locator(".game-shelves")).toContainText(
       "Следующая вершина",
     );
+    await expect(page.locator(".game-shelves")).toContainText("Сотка");
     await visitor.goto("/records");
     await expect(visitor.locator('[data-record="wild"]')).toContainText(
       first.name,
     );
+    // The second tab lists every award with how many people have it.
+    await visitor.getByRole("button", { name: "Награды", exact: true }).click();
+    await expect(visitor).toHaveURL(/\/records\?tab=awards$/);
+    await expect(visitor.locator("[data-record]")).toHaveCount(0);
+    const debut = visitor.locator('[data-award="first_public"]');
+    await expect(debut).toContainText("Первый выход");
+    await expect(debut).toContainText(/Получили? \d+ человека?/);
+    await visitor.reload();
+    await expect(
+      visitor.getByRole("button", { name: "Награды", exact: true }),
+    ).toHaveAttribute("aria-pressed", "true");
+    await expect(visitor.locator('[data-award="racer"]')).toBeVisible();
     expect(
       await visitor.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth + 1,

@@ -166,6 +166,25 @@
     flex: 1;
     min-width: 0;
   }
+  /* A notice from the site itself sits where an actor's avatar would (#116). */
+  .notification-icon {
+    display: inline-grid;
+    flex: none;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius-full);
+    background: var(--surface-hover);
+    color: var(--text-secondary);
+  }
+  .notification-list li > div > .button {
+    margin: var(--space-1) 0 var(--space-1-5);
+  }
+  .notification-list p time {
+    color: inherit;
+    font: inherit;
+    white-space: normal;
+  }
   .notification-list p {
     margin: 0 0 var(--space-0-5);
     color: var(--text-secondary);

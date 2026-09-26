@@ -76,10 +76,16 @@
   min-height: 40px;
   font-size: var(--text-lg);
 }
+/* The home page's go button carries the site's accent (#131). */
 .hero .control button {
   width: 40px;
   height: 40px;
   border-radius: var(--radius-lg);
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+.hero .control button:hover {
+  background: color-mix(in srgb, var(--accent) 85%, #000000);
 }
 .popover {
   position: absolute;

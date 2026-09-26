@@ -39,9 +39,12 @@ export default function BikeActions({
         <div className={styles.group} role="group" aria-label={t("Реакции")}>
           <BikeLike bike={bike} reaction={reaction} t={t} />
           {!bike.is_owner && (
-            <BikeFollow bikeId={bike.id} className={styles.action} />
+            <BikeFollow
+              bikeId={bike.id}
+              className={`${styles.action} ${styles.iconOnly}`}
+            />
           )}
-          <a className={styles.action} href="#discussion">
+          <a className={styles.action} data-hover="comment" href="#discussion">
             <MessageCircle size={15} aria-hidden="true" />
             <span>{t("Обсуждение")}</span>
             {bike.comments != null && (
@@ -68,14 +71,20 @@ export default function BikeActions({
         >
           <button
             type="button"
-            className={styles.action}
+            className={`${styles.action} ${styles.iconOnly}`}
+            title={t("Добавить фото")}
             disabled={busy}
             onClick={onAddPhoto}
           >
             <ImagePlus size={15} aria-hidden="true" />
             <span>{t("Добавить фото")}</span>
           </button>
-          <button type="button" className={styles.action} onClick={onFindPhoto}>
+          <button
+            type="button"
+            className={`${styles.action} ${styles.iconOnly}`}
+            title={t("Найти фото")}
+            onClick={onFindPhoto}
+          >
             <Search size={15} aria-hidden="true" />
             <span>{t("Найти фото")}</span>
           </button>
@@ -96,13 +105,19 @@ export default function BikeActions({
               {bike.is_public ? t("Все") : t("Только вы")}
             </strong>
           </button>
-          <button type="button" className={styles.action} onClick={onEdit}>
+          <button
+            type="button"
+            className={`${styles.action} ${styles.iconOnly}`}
+            title={t("Редактировать")}
+            onClick={onEdit}
+          >
             <Pencil size={15} aria-hidden="true" />
             <span>{t("Редактировать")}</span>
           </button>
           <button
             type="button"
-            className={`${styles.action} ${styles.danger}`}
+            className={`${styles.action} ${styles.iconOnly} ${styles.danger}`}
+            title={t("Удалить")}
             onClick={onDelete}
           >
             <Trash2 size={15} aria-hidden="true" />

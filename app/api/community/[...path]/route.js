@@ -30,6 +30,7 @@ import {
   unreadCount,
   readNotifications,
 } from "../../../../lib/notifications.js";
+import { noticeExpiringListings } from "../../../../lib/market.js";
 import {
   createReport,
   reportPage,
@@ -131,6 +132,9 @@ async function handler(req, { params }) {
       );
     }
     if (p[0] === "notifications") {
+      // Reading notifications is when the site notices a listing's term
+      // ending (#116); the header asks for the count on every page.
+      if (m === "GET") await noticeExpiringListings(db, user.id);
       if (p.length === 1 && m === "GET")
         return json(await notificationPage(db, user.id, page()));
       if (p.length === 2 && p[1] === "count" && m === "GET")

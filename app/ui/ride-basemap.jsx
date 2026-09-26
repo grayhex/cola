@@ -81,6 +81,17 @@ export default function RideBasemap({
           ))}
         {viewport?.paths.map((d, i) => (
           <path
+            key={"casing" + i}
+            className="route-casing"
+            d={d}
+            fill="none"
+            strokeWidth="7"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        ))}
+        {viewport?.paths.map((d, i) => (
+          <path
             key={i}
             d={d}
             fill="none"

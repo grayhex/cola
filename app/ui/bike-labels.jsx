@@ -2,8 +2,9 @@
 import SiteIcon from "./site-icon.jsx";
 import { ClassificationBadges } from "./bike-classification.jsx";
 import { ContentLabel, LabelRow } from "./content-label.jsx";
-// `year` is off where the title already says «Модельный год».
-export function BikeLabels({ bike, year = true }) {
+// The year, the size and the weight in one row: on cards and under the
+// title of the bike page (#131).
+export function BikeLabels({ bike }) {
   return (
     <LabelRow className="bike-labels" aria-label="Характеристики велосипеда">
       {bike.is_former && (
@@ -11,7 +12,7 @@ export function BikeLabels({ bike, year = true }) {
           Бывший
         </ContentLabel>
       )}
-      {year && bike.year && (
+      {bike.year && (
         <ContentLabel
           className="hf-label"
           tone="year"
@@ -52,6 +53,7 @@ export function BikeLike({ bike, reaction, t = (s) => s, compact = false }) {
     <button
       type="button"
       className={"like-button hf-like" + (compact ? " compact" : "")}
+      data-hover="like"
       disabled={bike.is_owner}
       aria-label={
         t("Нравится") + (reaction.likes == null ? "" : ": " + reaction.likes)

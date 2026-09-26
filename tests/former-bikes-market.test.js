@@ -27,9 +27,11 @@ const offer = (extra = {}) => listingInput.parse({
   title: "Test wheel", description: "Synthetic listing", category: "components",
   condition: "used", price: 1000, location: "Test city", contact: "", status: "active", ...extra,
 });
+const migrations = async () => (await readdir(new URL("../db/", import.meta.url))).filter((f) => f.endsWith(".sql")).sort();
 async function schema(db, beforeNew = false) {
-  for (const f of (await readdir(new URL("../db/", import.meta.url))).filter((f) => f.endsWith(".sql")).sort()) {
-    if (beforeNew && f === "021_former_bikes_market_types.sql") continue;
+  for (const f of await migrations()) {
+    // A database from before 021 has none of the later migrations either.
+    if (beforeNew && f >= "021_former_bikes_market_types.sql") continue;
     await db.exec(await readFile(new URL("../db/" + f, import.meta.url), "utf8"));
   }
   await db.query("INSERT INTO site_settings(id,value) VALUES(1,$1)", [JSON.stringify(defaultSettings)]);
@@ -224,9 +226,12 @@ test("migration 021 keeps existing bikes, planned history and foreign-currency a
     const listing = randomUUID();
     await db.query("INSERT INTO market_listings(id,share_id,owner_id,title,category,condition,price,currency,status) VALUES($1,$1,$2,'Existing listing','bikes','used',100,'USD','active')", [listing, owner]);
     const before = (await db.query("SELECT * FROM rides WHERE id=$1", [ride.id])).rows[0];
-    await db.exec(await readFile(new URL("../db/021_former_bikes_market_types.sql", import.meta.url), "utf8"));
+    for (const f of (await migrations()).filter((f) => f >= "021_former_bikes_market_types.sql"))
+      await db.exec(await readFile(new URL("../db/" + f, import.meta.url), "utf8"));
     assert.equal((await ownedBike(db, bike, owner)).is_former, false);
-    assert.deepEqual((await db.query("SELECT * FROM rides WHERE id=$1", [ride.id])).rows[0], before);
+    // Later migrations add columns; the ones the ride had stay as they were.
+    const after = (await db.query("SELECT * FROM rides WHERE id=$1", [ride.id])).rows[0];
+    assert.deepEqual(Object.fromEntries(Object.keys(before).map((k) => [k, after[k]])), before);
     const old = await marketDetail(db, listing, null);
     assert.equal(old.listingType, "sale");
     assert.equal(old.price, 100);

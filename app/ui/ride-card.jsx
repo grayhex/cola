@@ -27,6 +27,17 @@ export function RideRoutePreview({ geometry = [], className = "" }) {
     >
       {paths.map((d, i) => (
         <path
+          key={"casing" + i}
+          className="route-casing"
+          d={d}
+          fill="none"
+          strokeWidth="5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      ))}
+      {paths.map((d, i) => (
+        <path
           key={i}
           d={d}
           fill="none"

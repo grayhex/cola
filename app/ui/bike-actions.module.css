@@ -75,7 +75,7 @@
 .bar .action svg,
 .bar .share :global(.share-button) svg {
   flex: none;
-  color: var(--text-muted);
+  color: var(--icon-color, var(--text-muted));
 }
 .bar .share :global(.share-button) > span {
   display: inline;
@@ -117,5 +117,44 @@
     padding: var(--space-2) 0 0;
     border-top: 1px solid var(--line);
     border-left: 0;
+  }
+}
+/* Phones: slightly smaller buttons in two rows, the reader's and the
+   owner's (#131). Tools, following and sharing keep their icons; their
+   names stay for screen readers and in the tooltip. */
+@media (max-width: 560px) {
+  .group {
+    gap: var(--space-1);
+  }
+  .bar .action,
+  .bar :global(.hf-like),
+  .bar .share :global(.share-button) {
+    min-height: 30px;
+    font-size: 12px;
+  }
+  .bar .action,
+  .bar .share :global(.share-button),
+  .bar :global(.hf-like) > span,
+  .bar :global(.hf-like) > strong {
+    padding: 0 var(--space-2);
+  }
+  .count {
+    margin-right: calc(-1 * var(--space-2));
+    padding: 0 var(--space-2);
+  }
+  .bar .iconOnly,
+  .bar .share :global(.share-button) {
+    justify-content: center;
+    width: 32px;
+    padding: 0;
+  }
+  .iconOnly > span,
+  .bar .share :global(.share-button) > span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 }
