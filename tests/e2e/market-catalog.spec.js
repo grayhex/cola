@@ -80,7 +80,7 @@ test("market catalog: optional models, independent listing, private bicycle and 
       .fill("Описание моего товара, не каталожная карточка");
     await page.getByLabel("Цена, ₽", { exact: true }).fill("950");
     await page
-      .getByLabel("Категория", { exact: true })
+      .getByRole("combobox", { name: "Категория", exact: true })
       .selectOption("components");
     await page
       .getByLabel("Найти модель компонента", { exact: true })
@@ -89,11 +89,11 @@ test("market catalog: optional models, independent listing, private bicycle and 
       .getByRole("button", { name: "Найти модель", exact: true })
       .click();
     await page
-      .getByLabel("Модель каталога", { exact: true })
+      .getByRole("combobox", { name: "Модель каталога", exact: true })
       .selectOption(bike.components[0].model_id);
     await expect(page.getByText("Выбрана модель:")).toContainText(partName);
     await page
-      .getByLabel("Мой велосипед", { exact: true })
+      .getByRole("combobox", { name: "Мой велосипед", exact: true })
       .selectOption(privateId);
     await page
       .getByRole("button", { name: "Опубликовать", exact: true })
@@ -119,13 +119,15 @@ test("market catalog: optional models, independent listing, private bicycle and 
     ).json();
     expect(JSON.stringify(publicJson)).not.toContain(privateId);
     await page.getByRole("button", { name: "Изменить", exact: true }).click();
-    await expect(page.getByLabel("Мой велосипед", { exact: true })).toHaveValue(
-      privateId,
-    );
+    await expect(
+      page.getByRole("combobox", { name: "Мой велосипед", exact: true }),
+    ).toHaveValue(privateId);
     await expect(page.getByLabel("Название", { exact: true })).toHaveValue(
       name,
     );
-    await page.getByLabel("Категория", { exact: true }).selectOption("bikes");
+    await page
+      .getByRole("combobox", { name: "Категория", exact: true })
+      .selectOption("bikes");
     await expect(page.getByText("Выбрана модель:")).toHaveCount(0);
     await page
       .getByLabel("Найти модель велосипеда", { exact: true })
@@ -134,10 +136,10 @@ test("market catalog: optional models, independent listing, private bicycle and 
       .getByRole("button", { name: "Найти модель", exact: true })
       .click();
     await page
-      .getByLabel("Модель каталога", { exact: true })
+      .getByRole("combobox", { name: "Модель каталога", exact: true })
       .selectOption(bike.catalog_model_id);
     await page
-      .getByLabel("Мой велосипед", { exact: true })
+      .getByRole("combobox", { name: "Мой велосипед", exact: true })
       .selectOption(bikeId);
     await page
       .getByRole("button", { name: "Опубликовать", exact: true })
@@ -163,7 +165,7 @@ test("market catalog: optional models, independent listing, private bicycle and 
           overflow ? describeOverflow(overflow) : "Page fits viewport",
         ).toBeNull();
         await expect(
-          page.getByLabel("Мой велосипед", { exact: true }),
+          page.getByRole("combobox", { name: "Мой велосипед", exact: true }),
         ).toHaveValue(bikeId);
         await page.screenshot({
           path: info.outputPath(`market-catalog-${theme}-${width}.png`),
@@ -178,7 +180,9 @@ test("market catalog: optional models, independent listing, private bicycle and 
     await page
       .getByRole("button", { name: "Убрать модель", exact: true })
       .click();
-    await page.getByLabel("Мой велосипед", { exact: true }).selectOption("");
+    await page
+      .getByRole("combobox", { name: "Мой велосипед", exact: true })
+      .selectOption("");
     await page
       .getByRole("button", { name: "Опубликовать", exact: true })
       .click();
