@@ -22,6 +22,11 @@ assert.equal((await post(report, { "Content-Type": "application/json" })).status
 assert.equal((await post({ ...report, extra: "x".repeat(17000) })).status, 400);
 assert.equal((await post({})).status, 400);
 assert.equal((await post(report)).status, 204);
+assert.equal((await post(report, { origin: "null", referer: base + "/about", "sec-fetch-site": "same-origin" })).status, 204, "WebKit CSP report");
+assert.equal((await post(report, { origin: "null", referer: "https://evil.test", "sec-fetch-site": "same-origin" })).status, 403);
+assert.equal((await post(report, { origin: "null", referer: base + "/about", "sec-fetch-site": "cross-site" })).status, 403);
+assert.equal((await post(report, { origin: "https://evil.test", referer: base + "/about", "sec-fetch-site": "same-origin" })).status, 403);
+
 assert.equal((await post([{ type: "csp-violation", body: { documentURL: base + "/about", effectiveDirective: "script-src-elem", blockedURL: "inline" } }], { "Content-Type": "application/reports+json" })).status, 204);
 let limited = false;
 for (let i = 0; i < 125; i++) {

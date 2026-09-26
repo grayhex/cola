@@ -10,7 +10,13 @@ export async function POST(req) {
   const suppliedOrigin = req.headers.get("origin");
   let referrerOrigin;
   try { referrerOrigin = new URL(req.headers.get("referer")).origin; } catch { /* absent */ }
-  if (suppliedOrigin ? suppliedOrigin !== origin : req.headers.get("sec-fetch-site") !== "same-origin" && referrerOrigin !== origin)
+  const sameSite = req.headers.get("sec-fetch-site") === "same-origin";
+  // WebKit sends CSP reports with Origin: null. Require BOTH browser signals
+  // for that case; an explicit foreign origin is still always rejected.
+  const allowed = suppliedOrigin === "null"
+    ? sameSite && referrerOrigin === origin
+    : suppliedOrigin ? suppliedOrigin === origin : sameSite || referrerOrigin === origin;
+  if (!allowed)
     return fail("Недопустимый источник отчёта", 403);
   const type = req.headers.get("content-type")?.split(";")[0].trim();
   if (!["application/csp-report", "application/reports+json"].includes(type)) return fail("Недопустимый формат отчёта", 415);
