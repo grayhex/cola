@@ -160,7 +160,27 @@ test("market publishes images and price, enters home feed, and closes a listing"
     if (path.startsWith("/api/market"))
       marketResponses.push({ path, method: response.request().method(), status: response.status() });
   });
-  await page.goto("/market/new");
+  // Hold hydration deterministically: SSR controls must not accept input that
+  // React would discard before its change handlers are attached (#162).
+  let release;
+  const hydration = new Promise((resolve) => { release = resolve; });
+  await page.route("**/_next/static/**/*.js", async (route) => {
+    await hydration;
+    await route.continue();
+  });
+  try {
+    await page.goto("/market/new", { waitUntil: "commit" });
+    await expect(page.getByRole("heading", { name: "Новое объявление" })).toBeVisible();
+    const controls = page.locator("main form input, main form textarea, main form select, main form button");
+    await expect(controls).toHaveCount(12);
+    for (const control of await controls.all()) await expect(control).toBeDisabled();
+    release();
+    await expect(page.getByLabel("Название", { exact: true })).toBeEnabled();
+    await expect(page.getByLabel("Добавить фото", { exact: false })).toBeEnabled();
+    await expect(page.getByRole("button", { name: "Опубликовать", exact: true })).toBeEnabled();
+  } finally {
+    release();
+  }
   await page.getByLabel("Название", { exact: true }).fill("Gravel wheelset");
   await page
     .getByLabel("Описание", { exact: true })
@@ -173,6 +193,8 @@ test("market publishes images and price, enters home feed, and closes a listing"
   await page.getByLabel("Цена, ₽", { exact: true }).fill("12500");
   await page.getByLabel("Город", { exact: true }).fill("Тестовый город");
   await page.getByLabel("Как с вами связаться").fill("@rider");
+  await expect(page.getByLabel("Название", { exact: true })).toHaveValue("Gravel wheelset");
+  await expect(page.getByLabel("Описание", { exact: true })).toHaveValue("Tubeless wheels, ready for a new bicycle.");
   const photo = await sharp({
     create: { width: 640, height: 480, channels: 3, background: "#a8b6be" },
   })
