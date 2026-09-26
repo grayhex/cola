@@ -92,6 +92,7 @@ test("component catalog: populated upgrade, variants, privacy, durable links and
     );
     await sql("028_component_models.sql");
     await sql("029_component_community.sql");
+    await sql("030_market_catalog_links.sql");
     const migrated = (
       await db.query("SELECT * FROM components WHERE id=$1", [original.id])
     ).rows[0];

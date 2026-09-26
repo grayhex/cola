@@ -92,6 +92,7 @@ test("component media and shared discussion: upgrade, roles, quota, merges, mode
         "utf8",
       ),
     );
+    await db.exec(await readFile(new URL("../db/030_market_catalog_links.sql", import.meta.url), "utf8"));
     assert.deepEqual(
       (await db.query("SELECT * FROM components ORDER BY id")).rows,
       snapshot,

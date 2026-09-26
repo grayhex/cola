@@ -33,6 +33,7 @@ import {
 } from "../../lib/market-types.js";
 import { marketCategories, readMarketQuery, writeMarketQuery } from "../../lib/market-query.js";
 import styles from "./market.module.css";
+import MarketLinks from "./market-links.jsx";
 import { profilePath, publicPath } from "../../lib/public-urls.js";
 import { personName, usernameLabel } from "../../lib/usernames.js";
 import ShareButton from "./share-button.jsx";
@@ -88,6 +89,7 @@ export function MarketCard({ listing: m }) {
         <h3>
           <Link href={publicPath("market", m)}>{m.title}</Link>
         </h3>
+        {(m.componentModel || m.bikeModel) && <p>Модель: <Link href={(m.componentModel || m.bikeModel).path}>{(m.componentModel || m.bikeModel).name}</Link></p>}
         <strong className={styles.price}>{listingPriceLabel(m)}</strong>
         <p>
           {m.location || "Город не указан"} ·{" "}
@@ -180,6 +182,9 @@ const blank = {
   location: "",
   contact: "",
   status: "draft",
+  componentModelId: null,
+  bikeModelId: null,
+  linkedBikeId: null,
 };
 function ListingEditor({ initial, onSaved, onCancel }) {
   // SSR fields must not accept input before React can retain it in form state.
@@ -253,7 +258,7 @@ function ListingEditor({ initial, onSaved, onCancel }) {
           <select
             disabled={!hydrated}
             value={form.category}
-            onChange={(e) => set("category", e.target.value)}
+            onChange={(e) => setForm((f) => ({ ...f, category: e.target.value, componentModelId: null, bikeModelId: null }))}
           >
             {Object.entries(marketCategories).map(([k, v]) => (
               <option value={k} key={k}>
@@ -274,6 +279,7 @@ function ListingEditor({ initial, onSaved, onCancel }) {
           </select>
         </label>
       </div>
+      <MarketLinks key={form.category} form={form} initial={identity} disabled={!hydrated || busy} onChange={set} />
       <label className="field">
         <span>Описание</span>
         <textarea
@@ -731,6 +737,9 @@ export default function Market({
                       )}
                     </dd>
                   </div>
+                  {(listing.componentModel || listing.bikeModel) && <div><dt>Модель каталога</dt><dd><Link href={(listing.componentModel || listing.bikeModel).path}>{(listing.componentModel || listing.bikeModel).name}</Link></dd></div>}
+                  {listing.linkedBike && <div><dt>Велосипед продавца</dt><dd><Link href={listing.linkedBike.path}>{listing.linkedBike.name}</Link></dd></div>}
+                  {listing.isOwner && listing.ownedBike && !listing.ownedBike.isPublic && <div><dt>Мой велосипед · видно только вам</dt><dd>{listing.ownedBike.name} · Приватный</dd></div>}
                   {listing.location && (
                     <div>
                       <dt>Город</dt>

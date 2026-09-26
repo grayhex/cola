@@ -32,6 +32,7 @@ import {
   setListingSaved,
   savedListings,
 } from "../../../../lib/market.js";
+import { listingModelChoices, listingBikeChoices } from "../../../../lib/market-links.js";
 import { publicAuthor } from "../../../../lib/profile-dto.js";
 import { usernamePattern } from "../../../../lib/usernames.js";
 import { preparePhoto } from "../../../../lib/images.js";
@@ -105,6 +106,15 @@ async function handler(req, { params }) {
             .parse(url.searchParams.get("q") || ""),
         });
       return json(seller ? { ...list, seller: publicAuthor(seller) } : list);
+    }
+    if (method === "GET" && p.length === 1 && p[0] === "models") {
+      const category = z.enum(["bikes", "components"]).parse(url.searchParams.get("category"));
+      const query = z.string().trim().max(150).refine((s) => !s.includes("\0")).parse(url.searchParams.get("q") || "");
+      return json(await listingModelChoices(db, category, query));
+    }
+    if (method === "GET" && p.length === 1 && p[0] === "owned-bikes") {
+      if (!user) return fail("Войдите в аккаунт", 401);
+      return json(await listingBikeChoices(db, user.id));
     }
     // Contacts are shown one listing at a time to signed-in people only.
     if (method === "GET" && p[0] === "public" && p[2] === "contact" && p.length === 3) {

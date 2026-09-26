@@ -61,3 +61,5 @@ Volumes: `database`, `photos`, `rides`. `photos` содержит также а�
 См. [правила разработки](../development/principles.md) и [backup/restore](../operations/backup-restore.md).
 
 Фото и обсуждения моделей — [029_component_community.sql](../../db/029_component_community.sql): `component_photos.model_id` / `component_comments.model_id` с RESTRICT, автор фото отделён от владельца установки. Объединение моделей не переписывает эти FK. Правила прав, обложки, квот и удаления — в [каталоге](../modules/discovery.md#галерея-и-обсуждение-компонента).
+
+Связи рынка — [030_market_catalog_links.sql](../../db/030_market_catalog_links.sql): устойчивые `bike_models` с историческими именами/URL и `bikes.catalog_model_id`, необязательные `market_listings.component_model_id`, `bike_model_id`, `linked_bike_id` с отдельными индексами и `ON DELETE SET NULL`. Удаление велосипеда не удаляет объявление; реестр моделей защищён RESTRICT и использует архив/merge. Внешний DTO заново проверяет публичность и владение связанным велосипедом. [Контракт и выкладка](../modules/market.md#связи-с-каталогом-и-своим-велосипедом-133).

@@ -27,6 +27,7 @@ const empty = {
   year: "",
   component: "",
   componentCategory: "",
+  bikeModelId: "",
   componentModelId: "",
   purpose: "",
   type: "bikes",
@@ -68,6 +69,7 @@ export default function ExperienceSearch({ modelPage = false }) {
   }, [query, user?.id]);
   const set = (key, value) => setForm((f) => ({
     ...f, [key]: value,
+    ...(["brand", "model"].includes(key) ? { bikeModelId: "" } : {}),
     ...(["component", "componentCategory"].includes(key) ? { componentModelId: "" } : {}),
   }));
   function search(next) {

@@ -8,14 +8,13 @@ import { routeParam, absolutePublicUrl } from "../../lib/public-urls.js";
 import { indexed, hidden } from "../../lib/indexing.js";
 import { plural } from "../../lib/plural.js";
 import { modelLanding, partLanding } from "../../lib/experience-landing.js";
-import { landingSlug } from "../../lib/experience-catalog.js";
 
 const loaders = { model: modelLanding, part: partLanding };
 const load = cache(async (kind, first, second) =>
   loaders[kind](db, (await currentViewer())?.id || null, first, second),
 );
 
-// The page data, or a 404 when no public build matches. Other spellings of
+// The page data, or a 404 for a never-public model. Other spellings of
 // the same name move permanently to the canonical address.
 export async function landing(kind, rawFirst, rawSecond) {
   const first = routeParam(rawFirst),
@@ -24,7 +23,7 @@ export async function landing(kind, rawFirst, rawSecond) {
   if (!data) notFound();
   const canonical =
     kind === "model"
-      ? [landingSlug(data.brand), landingSlug(data.model)]
+      ? [data.brandSlug, data.slug]
       : [data.categorySlug, data.slug];
   if (!canonical[0] || !canonical[1]) notFound();
   if (first !== canonical[0] || second !== canonical[1])

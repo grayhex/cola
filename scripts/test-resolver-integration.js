@@ -138,6 +138,7 @@ try {
         "tests/experience-landing-http.js",
         "tests/component-catalog-http.js",
         "tests/component-community-http.js",
+        "tests/market-catalog-http.js",
         "tests/viewer-http.js",
         "tests/admin-http.js",
         "tests/resolver-http.js",
