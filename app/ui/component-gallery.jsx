@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import ZoomablePhoto from "./zoomable-photo.jsx";
 import { socialApi } from "./social-primitives.jsx";
 import { ReportButton } from "./community-controls.jsx";
@@ -113,6 +113,8 @@ function variants(photo) {
 }
 
 export default function ComponentGallery({ model, user }) {
+  const uploadLabel = useId(),
+    uploadHint = useId();
   const [data, setData] = useState(null),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
@@ -311,15 +313,19 @@ export default function ComponentGallery({ model, user }) {
           }}
         >
           <label className="field">
-            <span>Ваше фото компонента</span>
+            <span id={uploadLabel}>Ваше фото компонента</span>
             <input
               ref={input}
               type="file"
+              aria-labelledby={uploadLabel}
+              aria-describedby={uploadHint}
               accept="image/jpeg,image/png,image/webp"
               disabled={busy}
               onChange={(e) => setFile(e.target.files?.[0] || null)}
             />
-            <small>JPEG, PNG или WebP, до 10 МБ, минимум 600 × 400 px.</small>
+            <small id={uploadHint}>
+              JPEG, PNG или WebP, до 10 МБ, минимум 600 × 400 px.
+            </small>
           </label>
           <p className="help">
             Фото будет видно всем, даже если ваш велосипед приватный. Загружайте
