@@ -1,3 +1,4 @@
+import { requireVerifiedEmail, EmailPolicyError } from "../../../../lib/email-policy.js";
 import { rideFeed } from "../../../../lib/ride-feed.js";
 import {
   bikeFollowing,
@@ -72,6 +73,7 @@ async function handler(req, { params }) {
         return json(await replyPage(db, bike, uuid.parse(p[3]), user, page()));
       if (p.length === 3 && m === "POST") {
         if (!user) return fail("Войдите, чтобы обсудить велосипед", 401);
+        requireVerifiedEmail(user);
         await limited("comments", limits.comments);
         const input = commentInput.parse(await readJson(req, 8192));
         return json(
@@ -115,6 +117,7 @@ async function handler(req, { params }) {
       p.length === 2 &&
       ["PATCH", "DELETE"].includes(m)
     ) {
+      if (m === "PATCH") requireVerifiedEmail(user);
       await limited("comment-edit", limits.commentEdits);
       const id = uuid.parse(p[1]),
         body =
@@ -175,6 +178,7 @@ async function handler(req, { params }) {
     }
     return fail("Не найдено", 404);
   } catch (e) {
+    if (e instanceof EmailPolicyError) return json({ error: e.message, code: e.code }, e.status);
     if (e instanceof CommunityError) return fail(e.message, e.status);
     if (e.name === "ZodError" || e instanceof SyntaxError)
       return fail("Проверьте поля. Текст — от 1 до 1000 символов.");

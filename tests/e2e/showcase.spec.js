@@ -1,3 +1,4 @@
+import { verifyCapturedEmail } from "../fixtures/verified-user.js";
 import { test, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import sharp from "sharp";
@@ -45,6 +46,7 @@ async function register(page, name) {
       async () => (await (await page.request.get("/api/me")).json()).user?.name,
     )
     .toBe(name);
+  await verifyCapturedEmail(name + "@example.test");
 }
 test("registration, touch autocomplete, bike/photo, public feed, like and revoke", async ({
   page,

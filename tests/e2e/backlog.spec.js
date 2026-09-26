@@ -1,3 +1,4 @@
+import { registerVerified } from "../fixtures/verified-user.js";
 import { test as base, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import { writeFile } from "node:fs/promises";
@@ -7,7 +8,7 @@ import { testConsents } from "../fixtures/legal.js";
 const origin = process.env.TEST_ORIGIN || "http://localhost:3100";
 const password = "backlog-browser-secret-123";
 async function register(page) {
-  const r = await page.request.post("/api/auth/register", {
+  const r = await registerVerified(page.request, {
     headers: { origin },
     data: {
       ...testConsents,

@@ -1,4 +1,5 @@
 "use client";
+import EmailPolicyAction from "./email-policy-action.jsx";
 import Link from "next/link";
 import {
   useCallback, useRef, useEffect, useState, createContext, useContext,
@@ -87,7 +88,7 @@ function Editor({ initial = "", label, onSave, onCancel }) {
       </PromptComposer>
       {error && (
         <p className="error" role="alert">
-          {error}
+          {error}<EmailPolicyAction message={error} />
         </p>
       )}
     </form>
@@ -238,7 +239,7 @@ function Comment({ comment: c, user, bikeId, refresh, reply = false }) {
       )}
       {error && (
         <p role="alert" className="error">
-          {error}
+          {error}<EmailPolicyAction message={error} />
         </p>
       )}
     </article>
@@ -290,7 +291,7 @@ function Thread({ root, user, bikeId, refresh }) {
         </button>
       )}
       {expanded && data && <PageControls {...data} onPage={setPage} />}
-      {error && <p role="alert">{error}</p>}
+      {error && <p role="alert">{error}<EmailPolicyAction message={error} /></p>}
     </div>
   );
 }
@@ -393,7 +394,7 @@ export default function Discussion({
           )}
           {error && (
             <p role="alert" className="error">
-              {error}
+              {error}<EmailPolicyAction message={error} />
             </p>
           )}
           {data?.comments.map((c) => (

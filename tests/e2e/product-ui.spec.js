@@ -1,3 +1,4 @@
+import { registerVerified } from "../fixtures/verified-user.js";
 import { testConsents } from "../fixtures/legal.js";
 import { pageOverflow, describeOverflow } from "../fixtures/overflow.js";
 import { test, expect } from "@playwright/test";
@@ -44,7 +45,7 @@ test("login and registration are complete forms, errors preserve input, password
   // free variant.
   const other = await playwright.request.newContext({ baseURL: origin });
   const taken = "taken-" + randomUUID().slice(0, 8);
-  const created = await other.post("/api/auth/register", {
+  const created = await registerVerified(other, {
     headers: { origin },
     data: {
       ...testConsents,
@@ -105,7 +106,7 @@ test("login and registration are complete forms, errors preserve input, password
 test("the cabinet offers once to replace an automatic username (#71)", async ({
   page,
 }) => {
-  await page.request.post("/api/auth/register", {
+  await registerVerified(page.request, {
     headers: { origin },
     data: {
       ...testConsents,
@@ -160,7 +161,7 @@ test("all product routes and account sections share clear light/dark UI; compose
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await context.route("https://tile.openstreetmap.org/**", (r) => r.abort());
-  await page.request.post("/api/auth/register", {
+  await registerVerified(page.request, {
     headers: { origin },
     data: {
       ...testConsents,

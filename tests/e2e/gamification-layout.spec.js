@@ -1,3 +1,4 @@
+import { registerVerified } from "../fixtures/verified-user.js";
 import { test, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import pg from "pg";
@@ -138,7 +139,7 @@ test("the rule editor builds «Гонщик» and «Черепаха», keeps ar
   // The admin page trusts the reader from the server layout (#74), so the
   // administrator is a real account; the admin API itself stays mocked.
   const email = `layout-admin-${randomUUID()}@example.test`;
-  expect((await page.request.post("/api/auth/register", {
+  expect((await registerVerified(page.request, {
     headers: { origin: process.env.TEST_ORIGIN || "http://localhost:3100" },
     data: { ...testConsents, name: "Admin", email, password: "layout-admin-secret-123" },
   })).status()).toBe(201);

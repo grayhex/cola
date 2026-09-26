@@ -1,3 +1,4 @@
+import { registerVerified } from "../fixtures/verified-user.js";
 import { test, expect } from "@playwright/test";
 import pg from "pg";
 import sharp from "sharp";
@@ -56,7 +57,7 @@ async function fixture(page, account = {}, items = bikes) {
   await db.query("UPDATE site_settings SET value=$1 WHERE id=1", [preset]);
   if (account) {
     const email = `viewer-${randomUUID()}@example.test`;
-    const registered = await page.request.post("/api/auth/register", {
+    const registered = await registerVerified(page.request, {
       headers: { origin },
       data: {
         ...testConsents,

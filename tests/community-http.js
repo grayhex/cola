@@ -1,3 +1,4 @@
+import { verifiedFetch as fetch } from "./fixtures/verified-user.js";
 import { testConsents } from "./fixtures/legal.js";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";

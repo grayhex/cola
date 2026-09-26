@@ -1,3 +1,4 @@
+import { verifiedFetch as fetch } from "./fixtures/verified-user.js";
 // Model and part pages of owner experience (#74) on the real app: rendered
 // on the server, one canonical address, indexed from three public builds.
 import { testConsents } from "./fixtures/legal.js";

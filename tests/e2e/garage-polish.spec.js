@@ -1,3 +1,4 @@
+import { registerVerified } from "../fixtures/verified-user.js";
 import { testConsents } from "../fixtures/legal.js";
 import { test, expect } from "@playwright/test";
 import pg from "pg";
@@ -9,7 +10,7 @@ test("content artwork remains editable and protected; retired interface graphics
 }, info) => {
   const db = new pg.Client({ connectionString: process.env.DATABASE_URL });
   await db.connect();
-  const register = await page.request.post("/api/auth/register", {
+  const register = await registerVerified(page.request, {
     headers: { origin },
     data: {
       ...testConsents,

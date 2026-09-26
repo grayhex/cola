@@ -1,3 +1,4 @@
+import { registerVerified } from "../fixtures/verified-user.js";
 import { testConsents } from "../fixtures/legal.js";
 import { test, expect } from "@playwright/test";
 import pg from "pg";
@@ -493,7 +494,7 @@ test("admin appearance is explicit; hero upload, replacement and removal protect
   page,
 }, info) => {
   await db.query("UPDATE site_settings SET value=$1 WHERE id=1", [original]);
-  const register = await page.request.post("/api/auth/register", {
+  const register = await registerVerified(page.request, {
     headers: { origin },
     data: {
       ...testConsents,

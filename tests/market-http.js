@@ -1,3 +1,4 @@
+import { verifiedFetch as fetch } from "./fixtures/verified-user.js";
 // Market contacts never reach guests; members request them one at a time.
 import { testConsents } from "./fixtures/legal.js";
 import assert from "node:assert/strict";

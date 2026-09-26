@@ -1,3 +1,4 @@
+import { registerVerified } from "../fixtures/verified-user.js";
 import { testConsents } from "../fixtures/legal.js";
 import sharp from "sharp";
 import pg from "pg";
@@ -16,7 +17,7 @@ test("ride upload, SVG, privacy, profile and bike; works without tiles", async (
   await page.route("**/test-map-style.json", (route) => route.abort());
   const nonce = randomUUID().slice(0, 8),
     base = process.env.TEST_ORIGIN || "http://localhost:3100";
-  await page.request.post(base + "/api/auth/register", {
+  await registerVerified(page.request, {
     headers: { origin: base },
     data: {
       ...testConsents,
@@ -129,7 +130,7 @@ test("MapLibre initializes with intercepted OSM tiles, no external traffic", asy
     const tileGate = new Promise((resolve) => {
       releaseTiles = resolve;
     });
-    await page.request.post(base + "/api/auth/register", {
+    await registerVerified(page.request, {
       headers: { origin: base },
       data: {
         ...testConsents,
@@ -238,7 +239,7 @@ test("FIT upload: export hint, heart rate hidden until the owner shows it", asyn
 }) => {
   const nonce = randomUUID().slice(0, 8),
     base = process.env.TEST_ORIGIN || "http://localhost:3100";
-  await page.request.post(base + "/api/auth/register", {
+  await registerVerified(page.request, {
     headers: { origin: base },
     data: {
       ...testConsents,

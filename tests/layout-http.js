@@ -1,3 +1,4 @@
+import { verifiedFetch as fetch } from "./fixtures/verified-user.js";
 import { testConsents } from "./fixtures/legal.js";
 // Disposable integration DB and fixture resolver only.
 import assert from "node:assert/strict";

@@ -1,3 +1,4 @@
+import { requireVerifiedEmail, EmailPolicyError } from "../../../../lib/email-policy.js";
 import { db, transaction } from "../../../../lib/db.js";
 import { currentUser, rateLimit } from "../../../../lib/auth.js";
 import {
@@ -147,6 +148,7 @@ async function handler(req, { params }) {
       const input = garminImportInput.parse(
         await readJson(req, 3 * 1024 * 1024),
       );
+      if (input.isPublic) requireVerifiedEmail(user);
       const parsed = parseGarminCsv(input.csv, input);
       return json(
         await transaction((q) =>
@@ -159,6 +161,7 @@ async function handler(req, { params }) {
       if (!config.enabled)
         return fail("Загрузка покатушек временно выключена", 403);
       const input = planInput.parse(await readJson(req, 16384));
+      if (input.isPublic) requireVerifiedEmail(user);
       const result = await transaction((q) =>
         planRide(q, user.id, input, config),
       );
@@ -166,6 +169,9 @@ async function handler(req, { params }) {
       return json(result, 201);
     }
     if (p.length === 2 && p[1] === "track" && m === "POST") {
+      const ride = (await db.query("SELECT is_public FROM rides WHERE id=$1 AND owner_id=$2", [uuid.parse(p[0]), user.id])).rows[0];
+      if (!ride) return fail("Покатушка недоступна", 404);
+      if (ride.is_public) requireVerifiedEmail(user);
       if (!config.enabled)
         return fail("Загрузка покатушек временно выключена", 403);
       const bytes = await readBytes(req, config.maxGpxBytes);
@@ -229,6 +235,7 @@ async function handler(req, { params }) {
       if (!config.enabled)
         return fail("Загрузка покатушек временно выключена", 403);
       const input = rideInput.parse(await readJson(req, 16384));
+      if (input.isPublic) requireVerifiedEmail(user);
       const result = await transaction((q) =>
         saveRide(q, user.id, input, config),
       );
@@ -240,6 +247,7 @@ async function handler(req, { params }) {
       p.length === 2 &&
       ["PATCH", "DELETE"].includes(m)
     ) {
+      if (m === "PATCH") requireVerifiedEmail(user);
       const body =
         m === "PATCH"
           ? commentEdit.parse(await readJson(req, 8192)).body
@@ -251,6 +259,7 @@ async function handler(req, { params }) {
       );
     }
     if (p.length === 2 && p[1] === "comments" && m === "POST") {
+      requireVerifiedEmail(user);
       const input = commentInput.parse(await readJson(req, 8192));
       return json(
         await transaction((q) =>
@@ -267,6 +276,7 @@ async function handler(req, { params }) {
       );
     if (p.length === 1 && m === "PATCH") {
       const input = rideEdit.parse(await readJson(req, 16384));
+      if (input.isPublic) requireVerifiedEmail(user);
       return json(
         await transaction((q) =>
           saveRide(q, user.id, input, config, uuid.parse(p[0])),
@@ -282,6 +292,7 @@ async function handler(req, { params }) {
     }
     return fail("Не найдено", 404);
   } catch (e) {
+    if (e instanceof EmailPolicyError) return json({ error: e.message, code: e.code }, e.status);
     if (e instanceof RideError || e instanceof CommunityError)
       return fail(e.message, e.status);
     if (e.name === "ZodError" || e instanceof SyntaxError)

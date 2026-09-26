@@ -1,3 +1,4 @@
+import { registerVerified } from "../fixtures/verified-user.js";
 import { testConsents } from "../fixtures/legal.js";
 import { test, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
@@ -9,7 +10,7 @@ import { parseGpx } from "../../lib/ride-gpx.js";
 const origin = process.env.TEST_ORIGIN || "http://localhost:3100";
 const password = "feature-browser-secret-123";
 async function register(page) {
-  const r = await page.request.post("/api/auth/register", {
+  const r = await registerVerified(page.request, {
     headers: { origin },
     data: {
       ...testConsents,

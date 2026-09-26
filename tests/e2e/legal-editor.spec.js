@@ -1,3 +1,4 @@
+import { registerVerified } from "../fixtures/verified-user.js";
 import { test, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import pg from "pg";
@@ -26,7 +27,7 @@ async function noOverflow(page) {
   ).toBe(true);
 }
 async function user(page, db) {
-  const r = await page.request.post("/api/auth/register", {
+  const r = await registerVerified(page.request, {
     headers: { origin },
     data: {
       name: "Legal editor",

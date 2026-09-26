@@ -1,4 +1,5 @@
 "use client";
+import EmailPolicyAction from "./email-policy-action.jsx";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -178,7 +179,7 @@ export function Articles() {
         </div>
         {error && (
           <p role="alert" className="error">
-            {error}
+            {error}<EmailPolicyAction message={error} />
           </p>
         )}
         {data ? (
@@ -239,7 +240,7 @@ export function ArticlePage({ share, initial = null }) {
         </Link>
         {error && (
           <p className="error" role="alert">
-            {error}
+            {error}<EmailPolicyAction message={error} />
           </p>
         )}
         {article ? (
@@ -510,7 +511,7 @@ function ArticleEditor({ initial, onSaved, onCancel }) {
       )}
       {error && (
         <p role="alert" className="error">
-          {error}
+          {error}<EmailPolicyAction message={error} />
         </p>
       )}
       <div className="article-toolbar">

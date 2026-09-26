@@ -1,3 +1,4 @@
+import { registerVerified } from "../fixtures/verified-user.js";
 import { test, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import { testConsents } from "../fixtures/legal.js";
@@ -31,7 +32,7 @@ test("public pages hydrate their server HTML and stay interactive", async ({
   };
   expect(
     (
-      await page.request.post("/api/auth/register", {
+      await registerVerified(page.request, {
         headers: { origin },
         data: {
           ...testConsents,
@@ -185,7 +186,7 @@ test("a hidden bike is a 404 page for guests", async ({ page, browser }) => {
   const nonce = randomUUID().slice(0, 8);
   expect(
     (
-      await page.request.post("/api/auth/register", {
+      await registerVerified(page.request, {
         headers: { origin },
         data: {
           ...testConsents,
@@ -245,7 +246,7 @@ test("a signed-in reader gets the header with the page, without asking /api/me",
     name = "Читатель " + nonce;
   expect(
     (
-      await page.request.post("/api/auth/register", {
+      await registerVerified(page.request, {
         headers: { origin },
         data: {
           ...testConsents,

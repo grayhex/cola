@@ -1,3 +1,4 @@
+import { registerVerified } from "../fixtures/verified-user.js";
 import { testConsents } from "../fixtures/legal.js";
 import { test, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
@@ -13,7 +14,7 @@ test("bike title stays readable next to a long author name and username", async 
   const username = "heading-" + randomUUID().replaceAll("-", "").slice(0, 22);
   const author = "Александра Константинопольская-Задунайская";
   try {
-    const register = await owner.post("/api/auth/register", {
+    const register = await registerVerified(owner, {
       headers: { origin },
       data: {
         ...testConsents,

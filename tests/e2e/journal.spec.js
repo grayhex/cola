@@ -1,3 +1,4 @@
+import { registerVerified } from "../fixtures/verified-user.js";
 import { testConsents } from "../fixtures/legal.js";
 import { test, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
@@ -9,7 +10,7 @@ test("component change offers an explicit draft, never automatic publication", a
   const nonce = randomUUID();
   expect(
     (
-      await page.request.post("/api/auth/register", {
+      await registerVerified(page.request, {
         headers: { origin },
         data: {
       ...testConsents,
@@ -110,7 +111,7 @@ test("journal: draft, publication, photo, discussion and inherited privacy", asy
   const register = async (request, suffix) =>
     expect(
       (
-        await request.post("/api/auth/register", {
+        await registerVerified(request, {
           headers: { origin },
           data: {
       ...testConsents,
