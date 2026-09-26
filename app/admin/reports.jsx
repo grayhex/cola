@@ -75,6 +75,8 @@ export default function Reports({ onManageUser }) {
                   ride_comment: "Комментарий к покатушке",
                   journal: "Запись журнала",
                   journal_comment: "Комментарий к записи",
+                  component_comment: "Комментарий к компоненту",
+                  component_photo: "Фото компонента",
                   profile: "Профиль",
                   bike: "Велосипед",
                 }[r.entityType]
@@ -144,7 +146,10 @@ export default function Reports({ onManageUser }) {
                     Скрыть запись
                   </button>
                 )}
-                {["comment", "ride_comment", "journal_comment"].includes(
+                {r.entityType === "component_photo" && !r.target.photoHidden && (
+                  <button className="quiet" disabled={busy} onClick={() => act(r.id, "hide_component_photo")}>Скрыть фото</button>
+                )}
+                {["comment", "ride_comment", "journal_comment", "component_comment"].includes(
                   r.entityType,
                 ) &&
                   !r.target.commentDeleted && (

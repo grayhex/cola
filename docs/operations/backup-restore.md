@@ -4,7 +4,7 @@
 
 ## Что сохраняется
 
-[scripts/backup.py](../../scripts/backup.py) и shell wrappers создают согласованный набор: `database.dump`, `photos.tar.gz`, `rides.tar.gz` и `manifest.json` с контрольными суммами. Полный dump включает public и данные Resolver в той же БД. Photos volume содержит фото байков, аватары, изображения журнала и графику сайта; rides — приватные GPX.
+[scripts/backup.py](../../scripts/backup.py) и shell wrappers создают согласованный набор: `database.dump`, `photos.tar.gz`, `rides.tar.gz` и `manifest.json` с контрольными суммами. Полный dump включает public и данные Resolver в той же БД. Photos volume содержит фото байков, аватары, изображения журнала, рынка, компонентов и графику сайта; rides — приватные GPX.
 
 Текущий формат — v2, восстановление понимает и старый v1 без rides archive. Архив не содержит `.env.production`, SSH credentials, nginx/Certbot-конфигурацию или экспорт Docker-образа. Эти данные сохраняйте отдельно защищённым способом, вместе с информацией о commit/image и порядке восстановления. Не публикуйте backup: в нём приватные данные.
 
@@ -60,7 +60,7 @@ sudo env \
 
 Пути и имя — пример, не команда для существующего проекта `cola`. Restore сначала проверяет архив, запускает db, проверяет пустоту public/bike_resolver, создаёт app container без запуска и проверяет пустоту файловых volumes. Затем выполняет `pg_restore` и распаковку. App/resolver остаются остановленными.
 
-Запустите цель с **теми же** env/project/files, проверьте ready/status, вход, известные байки, приватность фото/GPX, journal media и назначения иконок/наград. Только после приёмки меняйте трафик. После неуспешного restore сохраняйте оригинальный backup, диагностируйте новую цель; никогда не удаляйте production volume ради прохождения emptiness check.
+Запустите цель с **теми же** env/project/files, проверьте ready/status, вход, известные байки, приватность фото/GPX, journal/component media и назначения иконок/наград. Только после приёмки меняйте трафик. После неуспешного restore сохраняйте оригинальный backup, диагностируйте новую цель; никогда не удаляйте production volume ради прохождения emptiness check.
 
 ## Расписание и учения
 

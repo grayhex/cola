@@ -28,6 +28,7 @@ import { useSite } from "./site-provider.jsx";
 import { profilePath } from "../../lib/public-urls.js";
 import { personName } from "../../lib/usernames.js";
 const eventText = {
+  component_reply: "ответил вам в обсуждении компонента",
   article_like: "понравилась ваша статья",
   article_comment: "прокомментировал статью",
   article_reply: "ответил вам в статье",

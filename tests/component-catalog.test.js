@@ -91,6 +91,7 @@ test("component catalog: populated upgrade, variants, privacy, durable links and
       [entry, owner, publicBike, JSON.stringify(snapshot)],
     );
     await sql("028_component_models.sql");
+    await sql("029_component_community.sql");
     const migrated = (
       await db.query("SELECT * FROM components WHERE id=$1", [original.id])
     ).rows[0];

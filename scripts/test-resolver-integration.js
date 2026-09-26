@@ -137,6 +137,7 @@ try {
         "tests/indexing-http.js",
         "tests/experience-landing-http.js",
         "tests/component-catalog-http.js",
+        "tests/component-community-http.js",
         "tests/viewer-http.js",
         "tests/admin-http.js",
         "tests/resolver-http.js",

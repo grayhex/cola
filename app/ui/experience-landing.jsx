@@ -7,6 +7,9 @@ import BikeGrid from "./bike-grid.jsx";
 import JournalCard from "./journal-card.jsx";
 import { plural } from "../../lib/plural.js";
 import styles from "./experience-landing.module.css";
+import dynamic from "next/dynamic";
+const ComponentGallery = dynamic(() => import("./component-gallery.jsx"));
+const Discussion = dynamic(() => import("./discussion.jsx"), { ssr: false });
 
 const count = (n, one, few, many) => `${n.toLocaleString("ru-RU")} ${plural(n, one, few, many)}`;
 
@@ -50,6 +53,7 @@ export default function ExperienceLanding({ data }) {
             совместимости или безопасности.
           </p>
         </header>
+        {!model && <ComponentGallery model={data} user={user} />}
         {model && data.parts.length > 0 && (
           <section className={styles.section} aria-labelledby="landing-parts">
             <h2 id="landing-parts">Частые детали в этих сборках</h2>
@@ -131,6 +135,7 @@ export default function ExperienceLanding({ data }) {
             Расширенный поиск по {model ? "модели" : "детали"} →
           </Link>
         </p>
+        {!model && <Discussion key={data.id} bike={data} user={user} entityType="component" />}
       </main>
       <SocialFooter />
     </>

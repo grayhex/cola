@@ -9,7 +9,7 @@ import styles from "./rich-text.module.css";
 // keeps its own size; a click opens the original over the page. The 1280 px
 // variant has no srcset: size variants fit a square box, so a width
 // descriptor would misstate the picture's size.
-export default function ZoomablePhoto({ src, alt = "" }) {
+export default function ZoomablePhoto({ src, alt = "", srcSet, sizes }) {
   const [open, setOpen] = useState(false);
   const trigger = useRef(null);
   return (
@@ -24,6 +24,8 @@ export default function ZoomablePhoto({ src, alt = "" }) {
       >
         <img
           src={src + "?width=1280"}
+          srcSet={srcSet}
+          sizes={sizes}
           alt={alt}
           loading="lazy"
           decoding="async"
