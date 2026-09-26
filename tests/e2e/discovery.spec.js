@@ -1,3 +1,4 @@
+import { registerVerified } from "../fixtures/verified-user.js";
 import { testConsents } from "../fixtures/legal.js";
 import { test, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
@@ -11,7 +12,7 @@ test("journal discovery: no-bike reader subscribes, saves, searches and returns;
   const register = async (request, suffix) =>
     expect(
       (
-        await request.post("/api/auth/register", {
+        await registerVerified(request, {
           headers: { origin },
           data: {
       ...testConsents,

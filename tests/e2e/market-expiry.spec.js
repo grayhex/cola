@@ -1,3 +1,4 @@
+import { registerVerified } from "../fixtures/verified-user.js";
 import { test, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import pg from "pg";
@@ -8,7 +9,7 @@ const origin = process.env.TEST_ORIGIN || "http://localhost:3100";
 async function register(request, name) {
   expect(
     (
-      await request.post("/api/auth/register", {
+      await registerVerified(request, {
         headers: { origin },
         data: {
           ...testConsents,

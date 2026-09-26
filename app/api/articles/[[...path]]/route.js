@@ -1,3 +1,4 @@
+import { requireVerifiedEmail, EmailPolicyError } from "../../../../lib/email-policy.js";
 import { db, transaction } from "../../../../lib/db.js";
 import { currentUser, rateLimit } from "../../../../lib/auth.js";
 import { json, fail, readJson, sameOrigin } from "../../../../lib/http.js";
@@ -81,6 +82,7 @@ async function handler(req, { params }) {
       return fail("Слишком много действий. Попробуйте позже.", 429);
     if (!p.length && m === "POST") {
       const input = articleInput.parse(await readJson(req, 100000));
+      if (input.status === "published") requireVerifiedEmail(user);
       return json(
         await transaction((q) => saveArticle(q, user.id, input)),
         201,
@@ -88,6 +90,7 @@ async function handler(req, { params }) {
     }
     if (p.length === 1 && m === "PATCH") {
       const input = articleInput.parse(await readJson(req, 100000));
+      if (input.status === "published") requireVerifiedEmail(user);
       return json(
         await transaction((q) =>
           saveArticle(q, user.id, input, uuid.parse(p[0])),
@@ -106,6 +109,7 @@ async function handler(req, { params }) {
       p.length === 2 &&
       ["PATCH", "DELETE"].includes(m)
     ) {
+      if (m === "PATCH") requireVerifiedEmail(user);
       const body =
         m === "PATCH"
           ? commentEdit.parse(await readJson(req, 8192)).body
@@ -117,6 +121,7 @@ async function handler(req, { params }) {
       );
     }
     if (p.length === 2 && p[1] === "comments" && m === "POST") {
+      requireVerifiedEmail(user);
       const input = commentInput.parse(await readJson(req, 8192));
       return json(
         await transaction((q) =>
@@ -127,6 +132,7 @@ async function handler(req, { params }) {
     }
     return fail("Не найдено", 404);
   } catch (e) {
+    if (e instanceof EmailPolicyError) return json({ error: e.message, code: e.code }, e.status);
     if (e instanceof CommunityError) return fail(e.message, e.status);
     if (e.name === "ZodError" || e instanceof SyntaxError)
       return fail(

@@ -1,3 +1,4 @@
+import { verifyCapturedEmail } from "../fixtures/verified-user.js";
 import { test, expect } from "@playwright/test";
 
 // #79: a guest must not download the comment editor, the bike wizard or the
@@ -61,6 +62,7 @@ test("guests read an entry, an article and comments without the editor", async (
       data,
     });
     expect(response.ok(), path + " " + (await response.text())).toBe(true);
+    if (path === "auth/register") await verifyCapturedEmail(data.email);
     return response.json();
   };
   const nonce = Date.now().toString(36);

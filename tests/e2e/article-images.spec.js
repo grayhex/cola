@@ -1,3 +1,4 @@
+import { registerVerified } from "../fixtures/verified-user.js";
 import { test, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import sharp from "sharp";
@@ -21,7 +22,7 @@ test("article illustrations: blocks at the cursor, fit the column, open whole", 
   const nonce = randomUUID().slice(0, 8);
   expect(
     (
-      await page.request.post("/api/auth/register", {
+      await registerVerified(page.request, {
         headers: { origin },
         data: {
           ...testConsents,

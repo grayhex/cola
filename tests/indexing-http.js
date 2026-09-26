@@ -1,3 +1,4 @@
+import { verifiedFetch as fetch } from "./fixtures/verified-user.js";
 // Indexing (#74) on the real app: robots.txt, sitemap.xml, per-page robots,
 // public pages rendered on the server and hidden ones answering 404.
 import { testConsents } from "./fixtures/legal.js";

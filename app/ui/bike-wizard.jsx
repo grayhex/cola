@@ -1,4 +1,5 @@
 "use client";
+import EmailPolicyAction from "./email-policy-action.jsx";
 import { useConfirmation } from "./confirmation.jsx";
 import ClassificationFields from "./bike-classification.jsx";
 import { FormerBikeField } from "./bike-fields.jsx";
@@ -557,7 +558,7 @@ export default function BikeWizard({ onCreated, onBusy, onDirtyChange }) {
       </h3>
       {error && (
         <p role="alert" className="error">
-          {error}
+          {error}<EmailPolicyAction message={error} />
         </p>
       )}
       <fieldset disabled={saving || !!savedId} className="wizard-content">

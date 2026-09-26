@@ -1,3 +1,4 @@
+import { verifyCapturedEmail } from "./fixtures/verified-user.js";
 // Account security and data (#70) through the real server: devices, password
 // and address changes, export, and deletion with its cascade and file queues.
 // The harness sets MAIL_CAPTURE_DIR, UPLOAD_DIR and DATABASE_URL.
@@ -198,6 +199,8 @@ assert.equal(
 );
 assert.equal((await login(guest, bobEmail, "bob-second-secret-2")).status, 401);
 assert.equal((await login(phone, newEmail, "bob-second-secret-2")).status, 200);
+
+await verifyCapturedEmail(carolEmail);
 
 // ── Content for export and deletion ─────────────────────────────────────
 const bike = {

@@ -1,3 +1,4 @@
+import { requireVerifiedEmail, EmailPolicyError } from "../../../lib/email-policy.js";
 import { classificationOf, categoryFilterLabels } from "../../../lib/bike-classification.js";
 import { classificationQueryInput } from "../../../lib/classification-validation.js";
 import { checkLegalAcceptance, recordLegalAcceptance, LegalError } from "../../../lib/legal-documents.js";
@@ -340,6 +341,7 @@ async function handler(req, { params }) {
       if (!(await rateLimit("bike-create:" + user.id, limits.bikeCreates)))
         return fail("Слишком много созданий велосипедов", 429);
       const input = wizardInput.parse(await body(req));
+      if (input.bike.is_public) requireVerifiedEmail(user);
       try {
         return json(
           await transaction((q) => createWizardBike(q, user.id, input)),
@@ -445,6 +447,7 @@ async function handler(req, { params }) {
         if (!(await rateLimit("bike-create:" + user.id, limits.bikeCreates)))
           return fail("Слишком много созданий велосипедов", 429);
         const b = bikeInput.parse(await body(req));
+        if (b.is_public) requireVerifiedEmail(user);
         const id = await transaction((q) => insertBike(q, user.id, b));
         return json({ id }, 201);
       }
@@ -500,6 +503,7 @@ async function handler(req, { params }) {
           price: bike.price === null ? null : Number(bike.price),
           ...input,
         });
+        if (b.is_public) requireVerifiedEmail(user);
         await validatePurposes(db, b.purposes, bike.purposes);
         // Updating this row serializes with the FOR UPDATE guard in ride writes.
         await db.query(
@@ -602,6 +606,7 @@ async function handler(req, { params }) {
       const b = await body(req);
       if (typeof b.is_public !== "boolean")
         return fail("Некорректная настройка");
+      if (b.is_public) requireVerifiedEmail(user);
       // Revocation rotates the token so an old URL stays revoked after republishing.
       await db.query(
         "UPDATE bikes SET is_public=$1,share_id=CASE WHEN $1 THEN share_id ELSE $2 END WHERE id=$3",
@@ -789,6 +794,7 @@ async function handler(req, { params }) {
     }
     return fail("Не найдено", 404);
   } catch (e) {
+    if (e instanceof EmailPolicyError) return json({ error: e.message, code: e.code }, e.status);
     if (e instanceof LegalError) return json({ error: e.message, code: e.code }, e.status);
     if (e instanceof CommunityError) return fail(e.message, e.status);
     if (e instanceof QuotaError) return fail(e.message, e.status);

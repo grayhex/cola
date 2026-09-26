@@ -1,3 +1,4 @@
+import { registerVerified } from "../fixtures/verified-user.js";
 import { testConsents } from "../fixtures/legal.js";
 import { test, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
@@ -13,7 +14,7 @@ test("bike actions: labelled compact buttons in one place, none on the photo", a
   isMobile,
 }, info) => {
   const nonce = randomUUID().slice(0, 8);
-  const register = await page.request.post("/api/auth/register", {
+  const register = await registerVerified(page.request, {
     headers: { origin },
     data: {
       ...testConsents,

@@ -1,3 +1,4 @@
+import { verifiedFetch as fetch } from "./fixtures/verified-user.js";
 // The reader comes from the server layout (#74): the first HTML already has
 // the signed-in header and the owner's controls, with no guest state first.
 import { testConsents } from "./fixtures/legal.js";

@@ -1,3 +1,4 @@
+import { registerVerified } from "../fixtures/verified-user.js";
 import { testConsents } from "../fixtures/legal.js";
 import { bikeCategories } from "../../lib/bike-classification.js";
 import { test, expect } from "@playwright/test";
@@ -14,7 +15,7 @@ test("dense visual system: shared cards, filters, search, themes and responsive 
   await db.connect();
   const suffix = randomUUID().slice(0, 8),
     name = "Design " + suffix;
-  const register = await page.request.post("/api/auth/register", {
+  const register = await registerVerified(page.request, {
     headers: { origin },
     data: {
       ...testConsents,

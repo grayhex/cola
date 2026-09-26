@@ -1,3 +1,4 @@
+import { verifiedFetch as fetch } from "./fixtures/verified-user.js";
 // Canonical public URLs, legacy redirects and link previews on the real app.
 import { testConsents } from "./fixtures/legal.js";
 import assert from "node:assert/strict";

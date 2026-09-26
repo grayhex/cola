@@ -1,4 +1,5 @@
 "use client";
+import EmailPolicyAction from "./email-policy-action.jsx";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
@@ -139,7 +140,7 @@ function SaveListing({ listing, onChange }) {
         )}
         {listing.saved ? "Сохранено" : "Сохранить"}
       </button>
-      {error && <span role="alert">{error}</span>}
+      {error && <span role="alert">{error}<EmailPolicyAction message={error} /></span>}
     </>
   );
 }
@@ -407,7 +408,7 @@ function ListingEditor({ initial, onSaved, onCancel }) {
       </fieldset>
       {error && (
         <p className="error" role="alert">
-          {error}
+          {error}<EmailPolicyAction message={error} />
         </p>
       )}
       {busy && <p role="status">Сохраняем…</p>}
@@ -594,7 +595,7 @@ export default function Market({
       <main className="page">
         {error && (
           <p role="alert" className="error">
-            {error}
+            {error}<EmailPolicyAction message={error} />
           </p>
         )}
         {(create || own) && !user ? (
@@ -770,7 +771,7 @@ export default function Market({
                           </Link>
                         </p>
                       )}
-                      {contactError && <p role="alert">{contactError}</p>}
+                      {contactError && <p role="alert">{contactError}<EmailPolicyAction message={contactError} /></p>}
                       </dd>
                     </div>
                   )}

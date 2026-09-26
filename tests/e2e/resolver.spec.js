@@ -1,3 +1,4 @@
+import { registerVerified } from "../fixtures/verified-user.js";
 import { testConsents } from "../fixtures/legal.js";
 import { test, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
@@ -12,7 +13,7 @@ test("wizard live trace, stop, partial import and mobile review", async ({
   page,
 }, info) => {
   const suffix = randomUUID();
-  const registered = await page.request.post("/api/auth/register", {
+  const registered = await registerVerified(page.request, {
     headers: { origin },
     data: {
       ...testConsents,
@@ -123,7 +124,7 @@ test("wizard quick setup, identity confirmation, image size and successful save"
   page,
 }, info) => {
   const suffix = randomUUID();
-  await page.request.post("/api/auth/register", {
+  await registerVerified(page.request, {
     headers: { origin },
     data: {
       ...testConsents,

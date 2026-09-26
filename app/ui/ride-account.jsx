@@ -1,4 +1,5 @@
 "use client";
+import EmailPolicyAction from "./email-policy-action.jsx";
 import SiteIcon from "./site-icon.jsx";
 import RideCreationActions from "./ride-creation-actions.jsx";
 import { selectableRideBikes, rideBikeStateError } from "../../lib/bike-status.js";
@@ -234,7 +235,7 @@ export default function RideAccount({ bikes }) {
       )}
       {error && (
         <p role="alert" className="error">
-          {error}
+          {error}<EmailPolicyAction message={error} />
         </p>
       )}
       {notice && <p role="status">{notice}</p>}

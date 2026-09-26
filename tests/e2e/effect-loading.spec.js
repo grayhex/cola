@@ -1,3 +1,4 @@
+import { registerVerified } from "../fixtures/verified-user.js";
 import { test, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import pg from "pg";
@@ -6,7 +7,7 @@ import { testConsents } from "../fixtures/legal.js";
 const origin = process.env.TEST_ORIGIN || "http://localhost:3100";
 
 async function admin(page) {
-  const response = await page.request.post("/api/auth/register", {
+  const response = await registerVerified(page.request, {
     headers: { origin },
     data: {
       ...testConsents,

@@ -51,7 +51,7 @@ const tabs = {
   appearance: "Оформление",
   account: "Аккаунт",
 };
-// Address status and a resend link; confirmation does not limit site features.
+// Address status and resend: public contributions require a verified email.
 function EmailStatus({ email, verified }) {
   const [state, setState] = useState("idle"),
     [message, setMessage] = useState("");

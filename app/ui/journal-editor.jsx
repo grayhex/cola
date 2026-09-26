@@ -1,4 +1,5 @@
 "use client";
+import EmailPolicyAction from "./email-policy-action.jsx";
 import { useState, useEffect } from "react";
 import { socialApi } from "./social-primitives.jsx";
 import PromptComposer from "./prompt-composer.jsx";
@@ -379,7 +380,7 @@ export default function JournalEditor({
         Без галочки запись доступна только вам, даже после публикации. На
         приватном велосипеде любая запись видна только владельцу.
       </p>
-      {error && <p role="alert">{error}</p>}
+      {error && <p role="alert">{error}<EmailPolicyAction message={error} /></p>}
       {saved?.shareId && (
         <a href={publicPath("journal", saved)}>Открыть сохранённую запись</a>
       )}

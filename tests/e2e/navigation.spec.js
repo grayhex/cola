@@ -1,3 +1,4 @@
+import { registerVerified } from "../fixtures/verified-user.js";
 import { testConsents } from "../fixtures/legal.js";
 import { test, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
@@ -127,7 +128,7 @@ test("navigation: real destinations, account, keyboard, configurable About and a
       ).toContainText("Популярные");
       await page.goto("/about");
     }
-    const registered = await page.request.post("/api/auth/register", {
+    const registered = await registerVerified(page.request, {
       headers: { origin },
       data: {
         ...testConsents,

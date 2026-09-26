@@ -1,3 +1,4 @@
+import { verifiedFetch as fetch } from "./fixtures/verified-user.js";
 import { testConsents } from "./fixtures/legal.js";
 // Requires disposable test DB + tests/fixture-server.ts; never run against production.
 import assert from "node:assert/strict";

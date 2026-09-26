@@ -1,3 +1,4 @@
+import { verifiedFetch as fetch } from "./fixtures/verified-user.js";
 // Media delivery: size variants, revalidation (ETag/304) and access re-checks.
 import { testConsents } from "./fixtures/legal.js";
 import assert from "node:assert/strict";

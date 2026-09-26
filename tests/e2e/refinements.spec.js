@@ -1,3 +1,4 @@
+import { registerVerified } from "../fixtures/verified-user.js";
 import { testConsents } from "../fixtures/legal.js";
 import { test, expect } from "@playwright/test";
 import pg from "pg";
@@ -36,7 +37,7 @@ test("three-column bike, raster map, six-ride accordion, preferences and grouped
   try {
     expect(
       (
-        await page.request.post("/api/auth/register", {
+        await registerVerified(page.request, {
           headers: { origin },
           data: {
       ...testConsents,

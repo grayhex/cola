@@ -1,3 +1,4 @@
+import { verifyCapturedEmail } from "../fixtures/verified-user.js";
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { randomUUID } from "node:crypto";
@@ -76,6 +77,7 @@ test("main pages pass axe in both themes", async ({
   const post = async (path, data) => {
     const r = await api.post("/api/" + path, { data });
     expect(r.ok(), path + " " + r.status()).toBe(true);
+    if (path === "auth/register") await verifyCapturedEmail(data.email);
     return r.json();
   };
   const email = `a11y-${nonce}@example.test`,

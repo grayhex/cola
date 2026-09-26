@@ -1,3 +1,4 @@
+import { verifiedFetch as fetch } from "./fixtures/verified-user.js";
 import { testConsents } from "./fixtures/legal.js";
 // Run against an explicitly disposable app/DB: node tests/http-smoke.js
 import assert from "node:assert/strict";

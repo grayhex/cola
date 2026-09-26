@@ -1,3 +1,4 @@
+import { requireVerifiedEmail, EmailPolicyError } from "../../../../lib/email-policy.js";
 import { z } from "zod";
 import { listingTypeKeys, marketSorts } from "../../../../lib/market-types.js";
 import { db, transaction } from "../../../../lib/db.js";
@@ -108,6 +109,7 @@ async function handler(req, { params }) {
     // Contacts are shown one listing at a time to signed-in people only.
     if (method === "GET" && p[0] === "public" && p[2] === "contact" && p.length === 3) {
       if (!user) return fail("Войдите, чтобы увидеть контакт", 401);
+      requireVerifiedEmail(user);
       if (!(await rateLimit("market-contact:" + user.id, 20)))
         return fail("Слишком много запросов контактов. Попробуйте позже.", 429);
       return json({
@@ -148,10 +150,12 @@ async function handler(req, { params }) {
       );
     if (!(await rateLimit("market-write:" + user.id, 30)))
       return fail("Слишком много действий. Попробуйте позже.", 429);
-    if (p.length === 2 && p[1] === "extend" && method === "POST")
+    if (p.length === 2 && p[1] === "extend" && method === "POST") {
+      requireVerifiedEmail(user);
       return json(
         await transaction((q) => extendListing(q, uuid.parse(p[0]), user.id)),
       );
+    }
     if (p.length === 2 && p[1] === "save" && ["PUT", "DELETE"].includes(method))
       return json(
         await transaction((q) =>
@@ -160,6 +164,7 @@ async function handler(req, { params }) {
       );
     if (method === "POST" && !p.length) {
       const input = listingInput.parse(await readJson(req, 16384));
+      if (input.status === "active") requireVerifiedEmail(user);
       return json(
         await transaction((q) => saveListing(q, user.id, input)),
         201,
@@ -185,6 +190,7 @@ async function handler(req, { params }) {
     }
     if (p.length === 1 && method === "PATCH") {
       const input = listingInput.parse(await readJson(req, 16384));
+      if (input.status === "active") requireVerifiedEmail(user);
       return json(
         await transaction((q) =>
           saveListing(q, user.id, input, uuid.parse(p[0])),
@@ -200,6 +206,7 @@ async function handler(req, { params }) {
     }
     return fail("Не найдено", 404);
   } catch (e) {
+    if (e instanceof EmailPolicyError) return json({ error: e.message, code: e.code }, e.status);
     if (e instanceof CommunityError) return fail(e.message, e.status);
     if (e.name === "ZodError" || e instanceof SyntaxError)
       return fail("Проверьте поля объявления");

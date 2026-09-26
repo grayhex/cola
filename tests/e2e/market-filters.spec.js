@@ -1,3 +1,4 @@
+import { registerVerified } from "../fixtures/verified-user.js";
 import { test, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import pg from "pg";
@@ -206,7 +207,7 @@ test("market contact: guests are invited to sign in, members reveal it on reques
   // listing and the member are real; only the contact reply is mocked.
   const nonce = randomUUID().slice(0, 8);
   const seller = await browser.newContext();
-  expect((await seller.request.post("/api/auth/register", {
+  expect((await registerVerified(seller.request, {
     headers: { origin },
     data: {
       ...testConsents,
@@ -257,7 +258,7 @@ test("market contact: guests are invited to sign in, members reveal it on reques
   await expect(aside.getByRole("button", { name: "Показать контакт" })).toHaveCount(0);
   // The guest's HTML never carries the contact itself.
   expect(await page.content()).not.toContain("+7 900 000-00-00");
-  expect((await page.request.post("/api/auth/register", {
+  expect((await registerVerified(page.request, {
     headers: { origin },
     data: {
       ...testConsents,

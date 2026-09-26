@@ -1,4 +1,5 @@
 "use client";
+import EmailPolicyAction from "./email-policy-action.jsx";
 import ClassificationFields, {
   ClassificationFilters,
 } from "./bike-classification.jsx";
@@ -500,7 +501,7 @@ export default function Garage({
       )}
       {error && !modal && (
         <div className="error global-error" role="alert">
-          {error}
+          {error}<EmailPolicyAction message={error} />
           <button className="quiet" onClick={() => run(load)}>
             {t("Повторить")}
           </button>
@@ -1195,7 +1196,7 @@ export default function Garage({
         >
           {error && (
             <div className="error" role="alert">
-              {error}
+              {error}<EmailPolicyAction message={error} />
             </div>
           )}
           {modal.type === "photoView" && (
