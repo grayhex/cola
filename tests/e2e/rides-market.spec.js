@@ -154,6 +154,12 @@ test("market publishes images and price, enters home feed, and closes a listing"
   page,
 }, info) => {
   await register(page);
+  const marketResponses = [];
+  page.on("response", (response) => {
+    const path = new URL(response.url()).pathname;
+    if (path.startsWith("/api/market"))
+      marketResponses.push({ path, method: response.request().method(), status: response.status() });
+  });
   await page.goto("/market/new");
   await page.getByLabel("Название", { exact: true }).fill("Gravel wheelset");
   await page
@@ -172,12 +178,31 @@ test("market publishes images and price, enters home feed, and closes a listing"
   })
     .png()
     .toBuffer();
-  await page
-    .getByLabel("Добавить фото", { exact: false })
-    .setInputFiles({ name: "wheel.png", mimeType: "image/png", buffer: photo });
-  await expect(
-    page.getByRole("img", { name: "Фото объявления" }),
-  ).toBeVisible();
+  // Creating the draft and processing its photo precede the preview render.
+  // Observe the upload itself so a server error cannot look like a missing image.
+  const [uploaded] = await Promise.all([
+    page.waitForResponse((response) =>
+      response.request().method() === "POST" &&
+      /^\/api\/market\/[^/]+\/photos$/.test(new URL(response.url()).pathname),
+      { timeout: 30000 },
+    ),
+    page.getByLabel("Добавить фото", { exact: false }).setInputFiles({
+      name: "wheel.png", mimeType: "image/png", buffer: photo,
+    }),
+  ]).catch(async (error) => {
+    console.error("Market upload state", JSON.stringify({
+      responses: marketResponses,
+      title: await page.getByLabel("Название", { exact: true }).inputValue(),
+      alerts: await page.getByRole("alert").allTextContents(),
+    }));
+    throw error;
+  });
+  expect(uploaded.status(), await uploaded.text()).toBe(201);
+  const preview = page.getByRole("img", { name: "Фото объявления" });
+  await expect(preview).toBeVisible();
+  await expect.poll(() => preview.evaluate((img) =>
+    img.complete && img.naturalWidth > 0,
+  )).toBe(true);
   await page.getByRole("button", { name: "Опубликовать", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Gravel wheelset", exact: true }),

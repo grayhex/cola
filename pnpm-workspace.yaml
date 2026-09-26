@@ -1,2 +1,8 @@
 allowBuilds:
   sharp: true
+
+# Keep the @types/pg wildcard on the same Node major as the runtime and root types.
+overrides:
+  "@types/pg>@types/node": 24.13.6
+
+strictPeerDependencies: true

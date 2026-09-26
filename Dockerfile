@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM node:22-alpine AS dependencies
+FROM node:24.21.0-alpine AS dependencies
 WORKDIR /app
 RUN corepack enable && corepack prepare pnpm@11.19.0 --activate
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
@@ -18,7 +18,7 @@ RUN pnpm build && \
     rm -rf .next/standalone/node_modules && \
     rm -f .next/standalone/scripts/build-version.js .next/standalone/scripts/copy-maplibre-worker.js
 
-FROM node:22-alpine AS runtime-dependencies
+FROM node:24.21.0-alpine AS runtime-dependencies
 WORKDIR /app
 RUN corepack enable && corepack prepare pnpm@11.19.0 --activate
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
@@ -26,7 +26,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN --mount=type=cache,id=cola-pnpm-store,target=/pnpm/store,sharing=locked \
     pnpm install --prod --frozen-lockfile --store-dir=/pnpm/store --package-import-method=copy
 
-FROM node:22-alpine AS runner
+FROM node:24.21.0-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 HOSTNAME=0.0.0.0 PORT=3000
 RUN addgroup -S colabike && adduser -S colabike -G colabike && mkdir uploads rides && chown colabike:colabike uploads rides

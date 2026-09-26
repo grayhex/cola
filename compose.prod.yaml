@@ -1,7 +1,7 @@
 # Standalone production file; do NOT merge with compose.yaml.
 services:
   db:
-    image: postgres:17-alpine
+    image: postgres:17.11-alpine
     environment:
       POSTGRES_DB: colabike
       POSTGRES_USER: colabike

@@ -2,9 +2,8 @@
 # hour of runner time), so updates arrive grouped: one PR per ecosystem with
 # minor and patch releases. Majors are taken by hand after reading the
 # changelog and are never proposed automatically:
-# - eslint-plugin-react-hooks stays on 5.x: 7.x pulls @babel/core, which pnpm
-#   then binds to next/styled-jsx in the production install (+37 packages);
-# - @types/node follows the Node.js major of the runtime images (22);
+# - eslint-plugin-react-hooks 7.1.1 supports the existing ESLint 10; 5.x does not;
+# - @types/node follows the Node.js major of the runtime images (24);
 # - the node base image stays on the LTS line chosen in the Dockerfiles
 #   (odd majors are not LTS; Node 25 no longer ships corepack).
 version: 2

@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "engines": {
-    "node": ">=22"
+    "node": ">=24 <25"
   },
   "scripts": {
     "dev": "tsx src/server.ts",
@@ -24,7 +24,7 @@
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.8",
-    "@types/node": "^22.20.4",
+    "@types/node": "24.13.6",
     "@types/pg": "^8.15.0",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",

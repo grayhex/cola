@@ -56,7 +56,7 @@ flowchart LR
     Resolver --> Sources[Manufacturer / retailer pages]
 ```
 
-Node.js 22, Next.js 16, React 19 и PostgreSQL 17 образуют приложение; Resolver использует TypeScript/Fastify/Cheerio/Zod. Sharp обрабатывает фотографии, MapLibre — карты, fast-xml-parser — GPX. Версии и полный граф зависимостей задают package/lock-файлы.
+Node.js 24 LTS, Next.js 16, React 19 и PostgreSQL 17 образуют приложение; Resolver использует TypeScript/Fastify/Cheerio/Zod. Sharp обрабатывает фотографии, MapLibre — карты, fast-xml-parser — GPX. Версии и полный граф зависимостей задают package/lock-файлы.
 
 Публичные DTO не раскрывают email и служебные поля. Доступ к велосипеду, записи, поездке и медиа проверяется сервером на каждом чтении. Мутации защищены авторизацией, origin/CSRF-проверками, квотами и ограничениями частоты. Подробности — в [архитектуре безопасности](docs/architecture/security.md).
 

@@ -48,7 +48,7 @@ jobs:
     timeout-minutes: 25
     services:
       postgres:
-        image: postgres:17-alpine
+        image: postgres:17.11-alpine
         env:
           POSTGRES_USER: test
           POSTGRES_PASSWORD: test
@@ -65,15 +65,15 @@ jobs:
           ref: ${{ needs.prepare.outputs.sha }}
       - uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 24.21.0
           cache: npm
           cache-dependency-path: services/bike-resolver/package-lock.json
       - run: corepack enable && corepack prepare pnpm@11.19.0 --activate
       - uses: actions/cache@v6
         with:
           path: ${{ runner.temp }}/pnpm-store
-          key: ${{ runner.os }}-node22-pnpm-${{ hashFiles('pnpm-lock.yaml', 'pnpm-workspace.yaml') }}
-          restore-keys: ${{ runner.os }}-node22-pnpm-
+          key: ${{ runner.os }}-node24-pnpm-${{ hashFiles('pnpm-lock.yaml', 'pnpm-workspace.yaml') }}
+          restore-keys: ${{ runner.os }}-node24-pnpm-
       - run: pnpm install --frozen-lockfile --store-dir "$RUNNER_TEMP/pnpm-store"
       # Errors fail the build; warnings are the backlog shown in the log (#82).
       - name: Lint
@@ -109,7 +109,7 @@ jobs:
             browser: webkit
     services:
       postgres:
-        image: postgres:17-alpine
+        image: postgres:17.11-alpine
         env:
           POSTGRES_USER: test
           POSTGRES_PASSWORD: test
@@ -128,15 +128,15 @@ jobs:
           ref: ${{ needs.prepare.outputs.sha }}
       - uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 24.21.0
           cache: npm
           cache-dependency-path: services/bike-resolver/package-lock.json
       - run: corepack enable && corepack prepare pnpm@11.19.0 --activate
       - uses: actions/cache@v6
         with:
           path: ${{ runner.temp }}/pnpm-store
-          key: ${{ runner.os }}-node22-pnpm-${{ hashFiles('pnpm-lock.yaml', 'pnpm-workspace.yaml') }}
-          restore-keys: ${{ runner.os }}-node22-pnpm-
+          key: ${{ runner.os }}-node24-pnpm-${{ hashFiles('pnpm-lock.yaml', 'pnpm-workspace.yaml') }}
+          restore-keys: ${{ runner.os }}-node24-pnpm-
       - run: pnpm install --frozen-lockfile --store-dir "$RUNNER_TEMP/pnpm-store"
       - run: npm ci
         working-directory: services/bike-resolver
