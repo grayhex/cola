@@ -35,10 +35,11 @@ export default function ExperienceLanding({ data }) {
       <main className={`page experience-landing ${styles.page}`}>
         <header className={styles.head}>
           <p className={styles.eyebrow}>
-            <Link href="/experience">Опыт владельцев</Link>
+            <Link href={model ? "/experience" : "/components"}>{model ? "Опыт владельцев" : "Компоненты"}</Link>
             {model ? " · модель" : " · " + data.category}
           </p>
           <h1>{data.title}</h1>
+          {!model && data.brand && <p className="help">{data.brand}</p>}
           <ul className={styles.facts} aria-label="Коротко">
             {facts.map((fact) => (
               <li key={fact}>{fact}</li>
@@ -96,6 +97,7 @@ export default function ExperienceLanding({ data }) {
         )}
         <section className={styles.section} aria-labelledby="landing-bikes">
           <h2 id="landing-bikes">Сборки владельцев</h2>
+          {!data.bikes.length && <p className="help">Пока нет публичных сборок с этой моделью. Страница остаётся в каталоге.</p>}
           <BikeGrid>
             {data.bikes.map((bike) => (
               <BikeCard key={bike.id} bike={bike} user={user} />

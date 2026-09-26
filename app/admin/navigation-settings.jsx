@@ -8,6 +8,7 @@ export function NavigationSettings({ settings, onChange }) {
   const sections = navigationSections(settings);
   const labels = {
     bikes: "Велосипеды",
+    components: "Компоненты",
     journal: "Журнал",
     rides: "Покатушки",
     market: "Рынок",

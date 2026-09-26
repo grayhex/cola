@@ -27,6 +27,7 @@ const empty = {
   year: "",
   component: "",
   componentCategory: "",
+  componentModelId: "",
   purpose: "",
   type: "bikes",
   kind: "",
@@ -65,7 +66,10 @@ export default function ExperienceSearch({ modelPage = false }) {
       active = false;
     };
   }, [query, user?.id]);
-  const set = (key, value) => setForm((f) => ({ ...f, [key]: value }));
+  const set = (key, value) => setForm((f) => ({
+    ...f, [key]: value,
+    ...(["component", "componentCategory"].includes(key) ? { componentModelId: "" } : {}),
+  }));
   function search(next) {
     if (modelPage) next = { ...next, exact: "1" };
     setForm(next);

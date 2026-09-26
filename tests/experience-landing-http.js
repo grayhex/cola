@@ -157,7 +157,9 @@ const bikePage = await page(
 );
 assert.equal(bikePage.status, 200);
 assert.ok(bikePage.html.includes(`href="${modelPath}"`), "bike → model page");
-assert.ok(bikePage.html.includes(`href="${partPath}"`), "bike → part page");
+const stablePartPath = "/components/" + bike.components.find((c) => c.name === fork).model_id;
+assert.ok(bikePage.html.includes(`href="${stablePartPath}"`), "bike → stable part model");
+assert.equal((await page(stablePartPath)).location, partPath);
 
 async function sitemap() {
   const response = await fetch(base + "/sitemap.xml");

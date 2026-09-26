@@ -9,6 +9,7 @@ import { limits, QuotaError } from "../../../lib/limits.js";
 import { savePhotos } from "../../../lib/photo-storage.js";
 import { showcase, decorateBike, visibleBike, vote } from "../../../lib/showcase.js";
 import { searchExperience, searchInput } from "../../../lib/search.js";
+import { componentCatalog, componentCatalogInput } from "../../../lib/component-catalog.js";
 import { validatePurposes } from "../../../lib/repository.js";
 import { CommunityError } from "../../../lib/community-validation.js";
 import {
@@ -303,6 +304,8 @@ async function handler(req, { params }) {
         await showcase(db, user?.id, { page, category, search, sort, classification: classificationQueryInput.parse(Object.fromEntries(url.searchParams)) }),
       );
     }
+    if (p[0] === "components" && p.length === 1 && method === "GET")
+      return json(await componentCatalog(db, componentCatalogInput.parse(Object.fromEntries(new URL(req.url).searchParams))));
     if (p[0] === "search" && p.length === 1 && method === "GET")
       return json(
         await searchExperience(

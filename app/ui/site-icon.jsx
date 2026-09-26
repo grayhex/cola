@@ -6,6 +6,7 @@ import {
   BookOpen,
   Calendar,
   CalendarPlus,
+  Cog,
   Check,
   CircleCheck,
   CircleHelp,
@@ -46,6 +47,7 @@ import { customEmoji } from "../../lib/ui-emoji.js";
 export const slotIcons = {
   home: House,
   bike: Bike,
+  components: Cog,
   journal: NotebookPen,
   articles: BookOpen,
   rides: Route,

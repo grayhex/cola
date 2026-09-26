@@ -29,6 +29,8 @@ import {
 import { preparePhoto } from "../../../../lib/images.js";
 import { uuid } from "../../../../lib/validation.js";
 import { participationSummary } from "../../../../lib/participation.js";
+import { CommunityError } from "../../../../lib/community-validation.js";
+import { componentCatalog, componentCatalogInput, componentModelEdit, componentModelMerge, editComponentModel, mergeComponentModels } from "../../../../lib/component-catalog.js";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 async function handler(req, { params }) {
@@ -41,6 +43,20 @@ async function handler(req, { params }) {
       return fail("Недопустимый источник запроса", 403);
     const { path: p } = await params,
       method = req.method;
+    if (p[0] === "component-models") {
+      if (p.length === 1 && method === "GET")
+        return json(await componentCatalog(db, componentCatalogInput.parse(Object.fromEntries(new URL(req.url).searchParams)), true));
+      if (!uuid.safeParse(p[1]).success) return fail("Модель недоступна", 404);
+      if (p.length === 2 && method === "PATCH") {
+        const input = componentModelEdit.parse(await readJson(req));
+        return json(await transaction((q) => editComponentModel(q, user.id, p[1], input)));
+      }
+      if (p.length === 3 && p[2] === "merge" && method === "POST") {
+        const input = componentModelMerge.parse(await readJson(req));
+        return json(await transaction((q) => mergeComponentModels(q, user.id, p[1], input)));
+      }
+      return fail("Не найдено", 404);
+    }
     if (p[0] === "resolver") {
       try {
         if (p.length === 2 && p[1] === "inspect" && method === "POST") {
@@ -337,6 +353,7 @@ async function handler(req, { params }) {
       });
     return fail("Не найдено", 404);
   } catch (e) {
+    if (e instanceof CommunityError) return fail(e.message, e.status);
     if (e.name === "ZodError")
       return fail(
         "Проверьте поля: " +

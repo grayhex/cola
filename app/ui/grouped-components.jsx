@@ -43,7 +43,7 @@ export default function GroupedComponents({
     bike.id !== "demo" &&
     landingSlug(c.category) &&
     landingSlug(c.name)
-      ? partLandingPath(c.category, c.name)
+      ? c.model_id ? "/components/" + c.model_id : partLandingPath(c.category, c.name)
       : experienceHref({ component: c.name, componentCategory: c.category });
   const [expanded, setExpanded] = useState({});
   const wide = useSyncExternalStore(subscribeWide, wideNow, () => false);
