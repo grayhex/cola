@@ -128,7 +128,7 @@ function MapLibreRideMap({ geometry, styleUrl }) {
     };
   }, [
     geometry,
-    styleUrl,
+    style,
     config,
     settings.rideMapView,
     settings.mapScrollZoom,

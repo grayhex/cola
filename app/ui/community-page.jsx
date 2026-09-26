@@ -14,7 +14,7 @@ import {
 import LocalDate from "./local-date.jsx";
 import { daysLabel } from "../../lib/market-types.js";
 import BikeGrid from "./bike-grid.jsx";
-import { useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import {
   SocialHeader,
   SocialFooter,
@@ -148,47 +148,53 @@ export default function CommunityPage({ kind }) {
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false);
   const { viewer: user, settings } = useSite();
-  const requestRevision = useRef(0);
-  async function refresh() {
-    const revision = ++requestRevision.current;
-    const d = await socialApi(
-      kind === "saved" && savedType === "market"
-        ? "market/saved?page=" + page
-        : "community/" +
-            (kind === "journal" ? "feed" : kind) +
-            "?page=" +
-            page +
-            (kind === "journal"
-              ? "&type=journal&mode=" + mode
-              : feedType === "rides"
-                ? "&type=rides"
-                : ""),
-    );
-    if (revision !== requestRevision.current) return;
-    setData(d);
-    setError("");
-    if (kind === "notifications")
-      window.dispatchEvent(new Event("cola:notifications"));
-  }
+  const userId = user?.id;
+  const requestRevision = useRef({ revision: 0 });
+  const refresh = useCallback(async () => {
+    const revision = ++requestRevision.current.revision;
+    try {
+      const d = await socialApi(
+        kind === "saved" && savedType === "market"
+          ? "market/saved?page=" + page
+          : "community/" +
+              (kind === "journal" ? "feed" : kind) +
+              "?page=" +
+              page +
+              (kind === "journal"
+                ? "&type=journal&mode=" + mode
+                : feedType === "rides"
+                  ? "&type=rides"
+                  : ""),
+      );
+      if (revision !== requestRevision.current.revision) return;
+      setData(d);
+      setError("");
+      if (kind === "notifications")
+        window.dispatchEvent(new Event("cola:notifications"));
+    } catch (e) {
+      if (revision === requestRevision.current.revision) setError(e.message);
+    }
+  }, [kind, savedType, page, mode, feedType]);
   useEffect(() => {
+    const pending = requestRevision.current;
     if (
-      (user || (kind === "journal" && mode === "new")) &&
+      (userId || (kind === "journal" && mode === "new")) &&
       feedType !== null &&
       savedType !== null
     )
       refresh().catch((e) => setError(e.message));
     return () => {
-      requestRevision.current++;
+      pending.revision++;
     };
-  }, [user?.id, page, feedType, mode, savedType]);
+  }, [userId, kind, feedType, mode, savedType, refresh]);
   useEffect(() => {
-    if (!user || kind !== "notifications") return;
+    if (!userId || kind !== "notifications") return;
     const timer = setInterval(() => {
       if (document.visibilityState === "visible")
         refresh().catch((e) => setError(e.message));
     }, 30000);
     return () => clearInterval(timer);
-  }, [user?.id, page, kind]);
+  }, [userId, kind, refresh]);
   async function read(id) {
     await socialApi("community/notifications/" + id + "/read", "PATCH");
     await refresh();
@@ -319,9 +325,9 @@ export default function CommunityPage({ kind }) {
                 ? "сохранённые записи и объявления"
                 : "уведомления"}
             .{" "}
-            <a className="button small" href="/account">
+            <Link className="button small" href="/account">
               Войти
-            </a>
+            </Link>
           </p>
         ) : !data ? (
           <p role="status">Загружаем…</p>
@@ -406,9 +412,9 @@ export default function CommunityPage({ kind }) {
                   Найдите интересных владельцев на общей витрине и подпишитесь
                   на них.
                 </p>
-                <a className="button" href="/">
+                <Link className="button" href="/">
                   Открыть витрину
-                </a>
+                </Link>
               </section>
             )}
             <Pagination {...data} onPage={setPage} />

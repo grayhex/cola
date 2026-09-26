@@ -36,7 +36,6 @@ import {
   reportPage,
   moderateReport,
 } from "../../../../lib/reports.js";
-import { showcase } from "../../../../lib/showcase.js";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 async function handler(req, { params }) {

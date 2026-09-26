@@ -1,5 +1,6 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { useCallback, useEffectEvent, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { NavigationSettings, AboutSettings } from "./navigation-settings.jsx";
 import {
@@ -25,7 +26,6 @@ import {
   Trophy,
   Check,
   Trash2,
-  Upload,
   Settings2,
   Palette,
   Type,
@@ -41,7 +41,7 @@ import {
   Menu,
   LayoutGrid,
 } from "../ui/icons.jsx";
-import styles from "./design.module.css";
+import "./design.module.css";
 import ArticleTopicSettings from "./article-topics.jsx";
 import LegalSettings from "./legal-settings.jsx";
 import EmojiSettings from "./emoji-settings.jsx";
@@ -209,16 +209,16 @@ export default function Admin() {
     setUsers(result.users);
     setTotal(result.total);
   }
-  async function refreshAssets() {
+  const refreshAssets = useCallback(async () => {
     const result = await request("admin/assets/library");
     setAssets(result.assets);
-  }
+  }, []);
   function mergeAssets(added) {
     setAssets((before) => [
       ...new Map([...before, ...added].map((a) => [a.id, a])).values(),
     ]);
   }
-  async function reload() {
+  const reload = useCallback(async () => {
     const result = await request("admin/overview");
     setUser(result.user);
     setStats(result.stats);
@@ -229,20 +229,24 @@ export default function Admin() {
     setCv(result.catalogVersion);
     setSite(result);
     await refreshAssets();
-  }
+  }, [setSite, refreshAssets]);
   useEffect(() => {
     // The server layout already knows the reader (#74).
     (viewer?.role === "admin" ? reload() : Promise.resolve())
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, []);
-  useEffect(() => {
+  }, [viewer?.role, reload]);
+  // Draft search text is read only on tab/page navigation or explicit submit.
+  const loadTab = useEffectEvent(() => {
     if (user?.role !== "admin") return;
     if (tab === "users") run(() => loadUsers());
     if (tab === "media") run(refreshAssets);
     if (tab === "audit")
       run(async () => setEvents((await request("admin/audit")).events));
-  }, [tab, page]);
+  });
+  useEffect(() => {
+    loadTab();
+  }, [tab, page, user?.role]);
 
   // Map updates from individual uploads/imports compose without losing other slots.
   const update = (key, value) =>
@@ -318,7 +322,7 @@ export default function Admin() {
     setNotice("Изображение загружено.");
     return result;
   }
-  async function uploadGraphic(file, slot) {
+  async function uploadGraphic(file) {
     return run(async () => {
       const asset = await uploadAsset(file);
       if (!asset) throw new Error("Сервер не вернул загруженное изображение");
@@ -388,9 +392,9 @@ export default function Admin() {
               ? "У этого аккаунта нет прав администратора."
               : "Войдите в аккаунт администратора на главной странице."}
           </p>
-          <a className="button" href="/">
+          <Link className="button" href="/">
             Открыть ColaBike
-          </a>
+          </Link>
           <p className="help">
             Первого администратора назначает владелец сервера через команду из
             README.
@@ -819,6 +823,8 @@ export default function Admin() {
                                 "DELETE",
                               );
                               setNotice("Сессии завершены");
+                              // New session: reload the server viewer and discard private client state.
+                              // eslint-disable-next-line @next/next/no-location-assign-relative-destination
                               if (u.id === user.id) window.location.assign("/");
                             },
                           )

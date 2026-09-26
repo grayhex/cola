@@ -31,41 +31,30 @@ import { FilterControl, FilterChips } from "./compact-ui.jsx";
 import { BikeGame } from "./achievements.jsx";
 import RideList from "./ride-list.jsx";
 import JournalList from "./journal-list.jsx";
-import BikeCategoryIcon from "./bike-category-icon.jsx";
-import BikeMeters from "./bike-meters.jsx";
 import Photo from "./bike-photo.jsx";
 import BikeCard from "./bike-card.jsx";
 import { SocialFooter, AuthorLink } from "./social-primitives.jsx";
 import { publicPath } from "../../lib/public-urls.js";
 import GlobalHeader from "./global-header.jsx";
 
-import Versions from "./versions.jsx";
 import { parseBikeName } from "../../lib/bike-name.js";
 import GroupedComponents from "./grouped-components.jsx";
 import BikeActions from "./bike-actions.jsx";
 import { landingSlug, modelLandingPath } from "../../lib/experience-catalog.js";
 import { defaultBlocks } from "../../lib/garage-layout.js";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import {
-  Bike,
-  Trophy,
-  Heart,
   Plus,
-  ArrowUpRight,
-  ArrowUpDown,
   ArrowLeft,
   X,
   Lock,
   Globe,
   Copy,
   Check,
-  Camera,
-  LogOut,
   ChevronRight,
   Search,
   Package,
-  Settings2,
   LoaderCircle,
 } from "./icons.jsx";
 import { useSite } from "./site-provider.jsx";
@@ -82,89 +71,6 @@ const FactorySpecification = dynamic(
   { ssr: false },
 );
 
-const demo = {
-  id: "demo",
-  name: "Дальше асфальта",
-  brand: "Canyon",
-  model: "Grizl",
-  year: 2025,
-  category: "gravel",
-  size: "M",
-  color: "Affogato",
-  weight: 10.8,
-  description:
-    "Для тихих просёлков, длинных выходных и маршрутов, которые хочется повторить.",
-  is_public: false,
-  photos: [],
-  components: [
-    {
-      id: "1",
-      section: "build",
-      category: "Рама",
-      name: "Canyon Grizl AL",
-      notes: "Алюминий · размер M",
-    },
-    {
-      id: "2",
-      section: "build",
-      category: "Групсет",
-      name: "Shimano GRX RX820",
-      notes: "1 × 12",
-    },
-    {
-      id: "3",
-      section: "build",
-      category: "Колёса",
-      name: "DT Swiss G 1800 SPLINE",
-      notes: "700C · алюминий",
-    },
-    {
-      id: "4",
-      section: "build",
-      category: "Покрышки",
-      name: "Schwalbe G-One Bite",
-      notes: "45 мм · бескамерно",
-    },
-    {
-      id: "5",
-      section: "build",
-      category: "Седло",
-      name: "Brooks C17",
-      notes: "Чёрное",
-      price: "12500",
-    },
-    {
-      id: "6",
-      section: "build",
-      category: "Педали",
-      name: "Shimano XT PD-M8100",
-      notes: "Контактные SPD",
-    },
-    {
-      id: "7",
-      section: "accessories",
-      category: "Велокомпьютер",
-      name: "Garmin Edge 540",
-      notes: "",
-    },
-    {
-      id: "8",
-      section: "accessories",
-      category: "Рамная сумка",
-      name: "Apidura Expedition Frame Pack",
-      notes: "3 л",
-    },
-    {
-      id: "9",
-      section: "accessories",
-      category: "Задний свет",
-      name: "Garmin Varia RTL515",
-      notes: "С радаром",
-    },
-  ],
-};
-const demoImage =
-  "https://dma.canyon.com/image/upload/w_930%2Ch_487%2Cc_fit/f_auto/q_auto/v1760425750/2025_FULL_grizl_al-7-raw_4527_R075_P08_ujmfyh";
 const blankBike = {
   name: "",
   brand: "",
@@ -203,8 +109,7 @@ async function api(url, method = "GET", data) {
   return b;
 }
 function Modal({ title, onClose, children, dismissible = true }) {
-  const { settings, catalog, t } = useSite();
-  const { categories, models, parts, partCategories, manufacturers } = catalog;
+  const { t } = useSite();
   const ref = useRef(),
     leaving = useRef(false);
   useEffect(() => {
@@ -265,8 +170,6 @@ function Modal({ title, onClose, children, dismissible = true }) {
   );
 }
 function Field({ label, children }) {
-  const { settings, catalog, t } = useSite();
-  const { categories, models, parts, partCategories, manufacturers } = catalog;
   return (
     <label className="field">
       <span>{label}</span>
@@ -295,7 +198,7 @@ export default function Garage({
   const [ask, confirmation] = useConfirmation();
   // Typed but unsaved data in the open window (wizard or part form).
   const [dirty, setDirty] = useState(false);
-  const { categories, models, parts, partCategories, manufacturers } = catalog;
+  const { categories } = catalog;
   const [bikes, setBikes] = useState([]),
     [selected, setSelected] = useState(initial?.bike || null),
     [loading, setLoading] = useState(!initial),
@@ -365,7 +268,8 @@ export default function Garage({
       : setLocalPage(value);
   const [updating, setUpdating] = useState(false),
     [resultRevision, setResultRevision] = useState(0);
-  const requestId = useRef(0);
+  const userId = user?.id;
+  const requestId = useRef({ sequence: 0 });
   const initialSelection = useRef(initialBikeId);
   // The server rendered the shared bike for this viewer (#74): the first
   // load reuses it instead of asking again.
@@ -374,60 +278,74 @@ export default function Garage({
   const filterKey = filters.join(",");
   // The reader comes from the server layout (#74); a sign-in in the dialog
   // passes the new one explicitly, before the context re-renders.
-  async function load(viewer = user) {
-    const sequence = ++requestId.current;
-    setUpdating(true);
-    setError("");
-    try {
-      const dataRequest = share
-        ? seed.current || api("shared/" + share)
-        : publicShowcase
-          ? api(
-              "showcase?" +
-                new URLSearchParams({
-                  sort,
-                  page,
-                  category: filterKey,
-                  ...facets,
-                  q: query,
-                }),
-            )
-          : null;
-      seed.current = null;
-      const publicData = await dataRequest;
-      const data = publicData || (viewer ? await api("bikes") : { bikes: [] });
-      if (sequence !== requestId.current) return;
-      if (viewer && onAuthenticated) onAuthenticated();
-      if (share) setSelected(data.bike);
-      else {
-        setBikes(data.bikes);
-        setTotal(data.total ?? data.bikes.length);
-        setResultRevision((v) => v + 1);
-        const requested = initialSelection.current;
-        initialSelection.current = null;
-        setSelected((prev) =>
-          prev
-            ? data.bikes.find((b) => b.id === prev.id) || null
-            : requested
-              ? data.bikes.find((b) => b.id === requested) || null
-              : null,
-        );
+  const load = useCallback(
+    async (viewer = userId) => {
+      const sequence = ++requestId.current.sequence;
+      setUpdating(true);
+      setError("");
+      try {
+        const dataRequest = share
+          ? seed.current || api("shared/" + share)
+          : publicShowcase
+            ? api(
+                "showcase?" +
+                  new URLSearchParams({
+                    sort,
+                    page,
+                    category: filterKey,
+                    ...JSON.parse(facetKey),
+                    q: query,
+                  }),
+              )
+            : null;
+        seed.current = null;
+        const publicData = await dataRequest;
+        const data = publicData || (viewer ? await api("bikes") : { bikes: [] });
+        if (sequence !== requestId.current.sequence) return;
+        if (viewer && onAuthenticated) onAuthenticated();
+        if (share) setSelected(data.bike);
+        else {
+          setBikes(data.bikes);
+          setTotal(data.total ?? data.bikes.length);
+          setResultRevision((v) => v + 1);
+          const requested = initialSelection.current;
+          initialSelection.current = null;
+          setSelected((prev) =>
+            prev
+              ? data.bikes.find((b) => b.id === prev.id) || null
+              : requested
+                ? data.bikes.find((b) => b.id === requested) || null
+                : null,
+          );
+        }
+      } catch (e) {
+        if (sequence === requestId.current.sequence) {
+          setError(e.message);
+          if (share && [401, 403, 404].includes(e.status)) setSelected(null);
+        }
+      } finally {
+        if (sequence === requestId.current.sequence) {
+          setLoading(false);
+          setUpdating(false);
+        }
       }
-    } catch (e) {
-      if (sequence === requestId.current) {
-        setError(e.message);
-        if (share && [401, 403, 404].includes(e.status)) setSelected(null);
-      }
-    } finally {
-      if (sequence === requestId.current) {
-        setLoading(false);
-        setUpdating(false);
-      }
-    }
-  }
+    },
+    [
+      userId,
+      share,
+      publicShowcase,
+      sort,
+      page,
+      filterKey,
+      facetKey,
+      query,
+      onAuthenticated,
+    ],
+  );
   useEffect(() => {
+    const pending = requestId.current;
     // Invalidate before the debounce so an old response cannot win during the delay.
-    requestId.current++;
+    requestId.current.sequence++;
     const timer = setTimeout(
       () => {
         void load();
@@ -436,9 +354,9 @@ export default function Garage({
     );
     return () => {
       clearTimeout(timer);
-      requestId.current++;
+      pending.sequence++;
     };
-  }, [share, account, page, filterKey, facetKey, query, sort]);
+  }, [load, query]);
   useEffect(() => {
     if (notice) {
       const t = setTimeout(() => setNotice(""), 4000);
@@ -457,11 +375,11 @@ export default function Garage({
     }
   }
   useEffect(() => {
-    if (startCreate && user) {
+    if (startCreate && userId) {
       setModal({ type: "bike" });
       onCreateOpened?.();
     }
-  }, [startCreate, user?.id, onCreateOpened]);
+  }, [startCreate, userId, onCreateOpened]);
   const Main = embedded ? "section" : "main";
   const bike = selected;
   const detailReaction = useBikeReaction(bike, user, () => auth());
@@ -542,7 +460,7 @@ export default function Garage({
     if (!share || !editable) return load();
     // A revocation rotates share_id. Refresh through the owner-authorized ID
     // endpoint, not the revoked public URL, then adopt the new canonical URL.
-    requestId.current++;
+    requestId.current.sequence++;
     try {
       const { bike: updated } = await api("bikes/" + bike.id);
       setSelected(updated);
@@ -598,9 +516,9 @@ export default function Garage({
           <Lock size={36} />
           <h1>{t("Велосипед недоступен")}</h1>
           <p>{t("Владелец мог закрыть доступ или изменить ссылку.")}</p>
-          <a href="/" className="button">
+          <Link href="/" className="button">
             {t("Открыть ColaBike")}
-          </a>
+          </Link>
         </Main>
       ) : bike ? (
         <Main className="detail bike-detail">
@@ -1531,8 +1449,8 @@ export default function Garage({
   );
 }
 function BikeForm({ initial, busy, onSubmit }) {
-  const { settings, catalog, t } = useSite();
-  const { categories, models, parts, partCategories, manufacturers } = catalog;
+  const { catalog, t } = useSite();
+  const { models } = catalog;
   const [b, set] = useState(
     initial
       ? { ...initial, price: initial.price ?? "", weight: initial.weight || "" }
@@ -1796,8 +1714,8 @@ function BikeForm({ initial, busy, onSubmit }) {
   );
 }
 function PartForm({ initial, section, busy, onSubmit, onDirtyChange }) {
-  const { settings, catalog, t } = useSite();
-  const { categories, models, parts, partCategories, manufacturers } = catalog;
+  const { catalog, t } = useSite();
+  const { parts, partCategories, manufacturers } = catalog;
   const [start] = useState(() =>
     initial
       ? { ...initial, price: initial.price ?? "" }

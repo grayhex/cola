@@ -154,7 +154,7 @@ export function BikeGame({ bike, user }) {
               </button>
             );
           })}
-          {!user && <a href="/account">Войдите, чтобы оценить сборку</a>}
+          {!user && <Link href="/account">Войдите, чтобы оценить сборку</Link>}
         </div>
       )}
       {error && <p role="alert">{error}</p>}

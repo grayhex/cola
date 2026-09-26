@@ -266,6 +266,8 @@ function Devices() {
           disabled={state.busy}
           onClick={async () => {
             if (await run(() => socialApi("account/sessions", "DELETE")))
+              // New session: reload the server viewer and discard private client state.
+              // eslint-disable-next-line @next/next/no-location-assign-relative-destination
               window.location.assign("/");
           }}
         >
@@ -333,6 +335,8 @@ function AccountDeletion() {
         e.preventDefault();
         const data = Object.fromEntries(new FormData(e.currentTarget));
         if (await run(() => socialApi("account/delete", "POST", data)))
+          // New session: reload the server viewer and discard private client state.
+          // eslint-disable-next-line @next/next/no-location-assign-relative-destination
           window.location.assign("/");
       }}
     >

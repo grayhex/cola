@@ -26,6 +26,7 @@ export default function GlobalHeader({
   // Without an explicit user (loading, sign-in and recovery pages) the header
   // shows the reader the server layout knows (#74), never a guest by mistake.
   const user = shown ?? viewer;
+  const userId = user?.id;
   const settings = previewSettings || personalSettings;
   const pathname = usePathname() || "/";
   const params = useSearchParams();
@@ -44,12 +45,15 @@ export default function GlobalHeader({
     setStats(null);
     statsRequest.current = false;
     async function update() {
-      if (!user) return;
+      if (!userId) return;
       try {
         const r = await fetch("/api/community/notifications/count", {
           cache: "no-store",
         });
-        if (r.ok && active) setUnread((await r.json()).unread);
+        if (r.ok) {
+          const data = await r.json();
+          if (active) setUnread(data.unread);
+        }
       } catch {}
     }
     update();
@@ -58,7 +62,7 @@ export default function GlobalHeader({
       active = false;
       window.removeEventListener("cola:notifications", update);
     };
-  }, [user?.id, pathname]);
+  }, [userId, pathname]);
   async function loadStats() {
     if (!user || statsRequest.current) return;
     statsRequest.current = true;
@@ -86,6 +90,8 @@ export default function GlobalHeader({
         setLoggingOut(false);
         return;
       }
+      // New session: reload the server viewer and discard private client state.
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
       window.location.assign("/");
     } catch {
       setLoggingOut(false);

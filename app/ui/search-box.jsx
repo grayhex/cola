@@ -58,7 +58,11 @@ export default function SearchBox({
       try {
         const response = await fetch(
           "/api/discovery/search?" +
-            new URLSearchParams({ ...filters, q: term, suggest: "1" }),
+            new URLSearchParams({
+              ...Object.fromEntries(new URLSearchParams(filterKey)),
+              q: term,
+              suggest: "1",
+            }),
           { signal: controller.signal, cache: "no-store" },
         );
         if (!response.ok) throw Error();

@@ -21,7 +21,7 @@ const tabs = [
 ];
 export default function DiscoverySearch() {
   const params = useSearchParams(),
-    { viewer: user, catalog } = useSite(),
+    { viewer: user } = useSite(),
     [data, setData] = useState(null),
     [error, setError] = useState(""),
     [revision, setRevision] = useState(0);

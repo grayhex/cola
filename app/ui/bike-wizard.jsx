@@ -9,7 +9,7 @@ import {
   compatibilityCategory,
 } from "../../lib/bike-classification.js";
 import { parseBikeSearch } from "../../lib/bike-search-input.js";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useMemo, useEffect, useRef, useState } from "react";
 import {
   Bike,
   LoaderCircle,
@@ -102,13 +102,15 @@ export default function BikeWizard({ onCreated, onBusy, onDirtyChange }) {
     [saving, setSaving] = useState(false),
     [savedId, setSavedId] = useState(null),
     [openGroup, setOpenGroup] = useState(null);
-  const query = {
+  const query = useMemo(
+    () => ({
       brand: bike.brand.trim(),
       model: bike.model.trim(),
       trim: bike.trim.trim() || null,
       year: bike.year === "" ? null : Number(bike.year),
-    },
-    key = JSON.stringify(query);
+    }),
+    [bike.brand, bike.model, bike.trim, bike.year],
+  );
   const acceptedIdentity = useRef(""),
     requestId = useRef(null),
     resolveAbort = useRef(),
@@ -311,7 +313,7 @@ export default function BikeWizard({ onCreated, onBusy, onDirtyChange }) {
     }
     await resolve(sourceUrl, undefined, identity);
   }
-  async function searchPhotos() {
+  const searchPhotos = useCallback(async () => {
     photoAbort.current?.abort();
     const controller = new AbortController();
     photoAbort.current = controller;
@@ -344,7 +346,7 @@ export default function BikeWizard({ onCreated, onBusy, onDirtyChange }) {
     } finally {
       if (photoAbort.current === controller) setPhotoBusy(false);
     }
-  }
+  }, [query, result, url]);
   useEffect(() => {
     if (
       step === 2 &&
@@ -354,7 +356,7 @@ export default function BikeWizard({ onCreated, onBusy, onDirtyChange }) {
       query.model
     )
       searchPhotos();
-  }, [step]);
+  }, [step, photos, photoBusy, query.brand, query.model, searchPhotos]);
   const groups = groupedComponents(parts, catalog.componentGroups);
   function addPart(group, chosenCategory) {
     const category =
@@ -482,10 +484,14 @@ export default function BikeWizard({ onCreated, onBusy, onDirtyChange }) {
           identityConfirmed: confirmed,
           previewId: result?.status === "resolved" ? result.previewId : null,
           bike: fields,
-          components: parts.map(({ id, ...p }) => ({
-            ...p,
-            price: p.price === "" ? null : p.price,
-          })),
+          components: parts.map((part) => {
+            const component = {
+              ...part,
+              price: part.price === "" ? null : part.price,
+            };
+            delete component.id;
+            return component;
+          }),
         });
         id = data.id;
         setSavedId(id);

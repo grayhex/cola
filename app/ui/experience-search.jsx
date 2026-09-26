@@ -48,7 +48,7 @@ export default function ExperienceSearch({ modelPage = false }) {
     };
     setForm(input);
     setQuery(input);
-  }, [params]);
+  }, [params, modelPage]);
   useEffect(() => {
     if (!query) return;
     let active = true;

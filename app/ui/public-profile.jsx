@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import RideList from "./ride-list.jsx";
 import BikeGrid from "./bike-grid.jsx";
 import { BadgeShelf } from "./achievements.jsx";
@@ -82,7 +83,7 @@ export default function PublicProfile({
           <section className="social-empty">
             <h1>Профиль недоступен</h1>
             <p role="alert">{error}</p>
-            <a href="/">На витрину</a>
+            <Link href="/">На витрину</Link>
           </section>
         ) : !profile ? (
           <p role="status">Загружаем профиль…</p>

@@ -2,7 +2,6 @@
 import { navigationSections } from "../../lib/navigation.js";
 import { aboutSections, aboutDefaults } from "../../lib/about-content.js";
 import { ArrowUp, ArrowDown } from "../ui/icons.jsx";
-import { Select } from "./design-controls.jsx";
 import styles from "./design.module.css";
 
 export function NavigationSettings({ settings, onChange }) {

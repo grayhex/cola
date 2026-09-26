@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
@@ -108,10 +109,10 @@ export function Articles() {
               База знаний: обслуживание, компоненты и опыт велосипедистов.
             </p>
           </div>
-          <a href="/articles/new" className="button secondary">
+          <Link href="/articles/new" className="button secondary">
             <SiteIcon name="write" />
             Написать статью
-          </a>
+          </Link>
         </div>
         <div className="entity-tabs ui-tabs" role="group" aria-label="Статьи">
           <button
@@ -233,9 +234,9 @@ export function ArticlePage({ share, initial = null }) {
     <>
       <SocialHeader user={user} />
       <main className="page narrow article-page">
-        <a className="article-back" href="/articles">
+        <Link className="article-back" href="/articles">
           ← Все статьи
-        </a>
+        </Link>
         {error && (
           <p className="error" role="alert">
             {error}
@@ -301,7 +302,7 @@ export function NewArticle() {
           />
         ) : (
           <p>
-            <a href="/account">Войдите</a>, чтобы написать статью.
+            <Link href="/account">Войдите</Link>, чтобы написать статью.
           </p>
         )}
       </main>
@@ -310,6 +311,7 @@ export function NewArticle() {
   );
 }
 function ArticleEditor({ initial, onSaved, onCancel }) {
+  const router = useRouter();
   const { settings } = useSite(),
     topics = settings.articleTopics || [];
   const [record, setRecord] = useState(initial || null),
@@ -547,7 +549,7 @@ function ArticleEditor({ initial, onSaved, onCancel }) {
               try {
                 await socialApi("articles/" + record.id, "DELETE");
                 setDirty(false);
-                location.assign("/articles?own=1");
+                router.push("/articles?own=1");
               } catch (e) {
                 setError(e.message);
                 setBusy(false);

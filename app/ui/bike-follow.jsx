@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
 import { socialApi } from "./social-primitives.jsx";
 import { Bell, BellRing } from "./icons.jsx";
@@ -64,7 +65,7 @@ export default function BikeFollow({ bikeId, className = "quiet" }) {
       </button>
       {error && (
         <p role="alert" data-follow-error>
-          {error} <a href="/account">Войти</a>
+          {error} <Link href="/account">Войти</Link>
         </p>
       )}
     </>

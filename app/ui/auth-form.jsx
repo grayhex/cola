@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { ArrowUpRight } from "./icons.jsx";
 import { useSite } from "./site-provider.jsx";
@@ -292,7 +293,7 @@ export default function AuthForm({ mode, busy, onSubmit, switchMode }) {
       )}
       {mode === "login" && (
         <p className={styles.forgot}>
-          <a href="/forgot-password">{t("Забыли пароль?")}</a>
+          <Link href="/forgot-password">{t("Забыли пароль?")}</Link>
         </p>
       )}
       {mode === "register" && (

@@ -6,8 +6,6 @@ import {
   writeShowcaseQuery,
 } from "../lib/showcase-query.js";
 import { accentText } from "../lib/appearance.js";
-import { settingsInput } from "../lib/admin-validation.js";
-import { defaultSettings } from "../lib/site-defaults.js";
 const tick = () => new Promise((resolve) => setImmediate(resolve));
 const deferred = () => {
   let resolve, reject;

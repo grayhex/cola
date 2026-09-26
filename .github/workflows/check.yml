@@ -75,7 +75,7 @@ jobs:
           key: ${{ runner.os }}-node24-pnpm-${{ hashFiles('pnpm-lock.yaml', 'pnpm-workspace.yaml') }}
           restore-keys: ${{ runner.os }}-node24-pnpm-
       - run: pnpm install --frozen-lockfile --store-dir "$RUNNER_TEMP/pnpm-store"
-      # Errors fail the build; warnings are the backlog shown in the log (#82).
+      # Zero warnings: the lint debt was cleared in #140; new warnings fail CI.
       - name: Lint
         run: pnpm lint
       # JSDoc types of lib/ (#82): DTOs, input schemas and their callers.

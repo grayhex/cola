@@ -2,7 +2,7 @@
 import SiteIcon from "./site-icon.jsx";
 import RideCreationActions from "./ride-creation-actions.jsx";
 import { selectableRideBikes, rideBikeStateError } from "../../lib/bike-status.js";
-import { useEffect, useState, useRef } from "react";
+import { useCallback, useMemo, useEffect, useState, useRef } from "react";
 import { socialApi, Pagination } from "./social-primitives.jsx";
 import RideCard, { RideRoutePreview, RideMetrics } from "./ride-card.jsx";
 import GarminImport from "./garmin-import.jsx";
@@ -74,7 +74,7 @@ export default function RideAccount({ bikes }) {
     [notice, setNotice] = useState(""),
     [form, setForm] = useState(blank),
     [visibleMetrics, setVisibleMetrics] = useState(null);
-  const currentBikes = selectableRideBikes(bikes);
+  const currentBikes = useMemo(() => selectableRideBikes(bikes), [bikes]);
   const rideBikes = selectableRideBikes(bikes, editing?.bike?.id);
   const autoOpened = useRef(false);
   // Garmin CSV and FIT/TCX sensors bring extra metrics; the owner picks which
@@ -88,34 +88,63 @@ export default function RideAccount({ bikes }) {
     editing?.sourceKind === "garmin" ||
     pickable.some((f) => !trackMetrics.includes(f.key));
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
-  const refresh = () => socialApi("rides?own=1&page=" + page).then(setData);
-  function start(next) {
-    if (!currentBikes.length) return;
-    setEditing(null);
-    setPreview(null);
-    setMode(next);
-    setError("");
-    setNotice("");
-    setVisibleMetrics(null);
-    setForm({
-      ...blank,
-      recurrenceTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      bikeId: currentBikes[0]?.id || "",
-      privacyRadiusM: config?.defaultRadius || 500,
-    });
-  }
-  useEffect(() => {
-    refresh().catch((e) => setError(e.message));
-    socialApi("rides/settings")
-      .then(setConfig)
-      .catch((e) => setError(e.message));
+  const requests = useRef({ revision: 0 });
+  const refresh = useCallback(async () => {
+    const revision = ++requests.current.revision;
+    try {
+      const result = await socialApi("rides?own=1&page=" + page);
+      if (revision === requests.current.revision) {
+        setData(result);
+        setError("");
+      }
+    } catch (e) {
+      if (revision === requests.current.revision) setError(e.message);
+    }
   }, [page]);
+  const start = useCallback(
+    (next) => {
+      if (!currentBikes.length) return;
+      setEditing(null);
+      setPreview(null);
+      setMode(next);
+      setError("");
+      setNotice("");
+      setVisibleMetrics(null);
+      setForm({
+        ...blank,
+        recurrenceTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        bikeId: currentBikes[0]?.id || "",
+        privacyRadiusM: config?.defaultRadius || 500,
+      });
+    },
+    [currentBikes, config?.defaultRadius],
+  );
+  useEffect(() => {
+    const pending = requests.current;
+    void refresh();
+    return () => {
+      pending.revision++;
+    };
+  }, [refresh]);
+  useEffect(() => {
+    let active = true;
+    socialApi("rides/settings")
+      .then((result) => {
+        if (active) setConfig(result);
+      })
+      .catch((e) => {
+        if (active) setError(e.message);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
   useEffect(() => {
     if (autoOpened.current || !config?.enabled || !currentBikes.length) return;
     autoOpened.current = true;
     const action = new URLSearchParams(location.search).get("action");
     if (["add", "plan", "import"].includes(action)) start(action);
-  }, [config, bikes]);
+  }, [config?.enabled, currentBikes.length, start]);
   async function upload(file, attach = false) {
     if (!file) return;
     setBusy(true);

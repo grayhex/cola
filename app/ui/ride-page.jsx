@@ -1,4 +1,6 @@
 "use client";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 import RideRsvp, { RecurringRideLabel } from "./ride-rsvp.jsx";
 import RideSpeedChart from "./ride-speed-chart.jsx";
 import { Heart } from "./icons.jsx";
@@ -23,6 +25,7 @@ export default function RidePage({
   sharePath = null,
   initial = null,
 }) {
+  const router = useRouter();
   const { viewer: user } = useSite();
   const [ride, setRide] = useState(initial?.ride || null),
     [error, setError] = useState(""),
@@ -133,9 +136,9 @@ export default function RidePage({
               <p className="ride-description">{ride.description}</p>
             )}
             {ride.isOwner && (
-              <a className="quiet" href="/account?tab=rides">
+              <Link className="quiet" href="/account?tab=rides">
                 Управлять покатушками
-              </a>
+              </Link>
             )}
             {ride.isPublic !== false && ride.bikePublic !== false && (
               <>
@@ -146,7 +149,7 @@ export default function RidePage({
                   aria-pressed={ride.liked}
                   onClick={async () => {
                     if (!user) {
-                      location.assign("/account");
+                      router.push("/account");
                       return;
                     }
                     setBusy(true);

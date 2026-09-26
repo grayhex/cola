@@ -424,7 +424,10 @@ function Gap() {
 export default function About({ user, statistics }) {
   const { settings, setPreferences } = useSite(),
     config = settings.about || aboutDefaults;
-  useEffect(() => setPreferences(user?.preferences || {}), [user?.id]);
+  useEffect(() => setPreferences(user?.preferences || {}), [
+    setPreferences,
+    user?.preferences,
+  ]);
   const root = useReveal();
   const shown = (id) =>
     config.sections.find((s) => s.id === id) ||

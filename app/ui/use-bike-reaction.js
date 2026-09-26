@@ -14,6 +14,9 @@ export function useBikeReaction(bike, user, onGuest) {
         if (!response.ok) throw new Error("Reaction rejected");
         return response.json();
       }),
+    // Keep this serialized writer across list refreshes while a like is pending.
+    // Only changing the bike/viewer starts a new server-seeded reaction.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [bike?.id, user?.id],
   );
   const state = useSyncExternalStore(

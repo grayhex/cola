@@ -17,7 +17,6 @@ import {
   likeRide,
   createRideComment,
   rideCommentPage,
-  changeRideComment,
 } from "../lib/ride-comments.js";
 import { notificationPage } from "../lib/notifications.js";
 import { createReport, moderateReport, reportPage } from "../lib/reports.js";
