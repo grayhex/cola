@@ -49,7 +49,7 @@ Resolver и внешние карты могут быть недоступны �
 
 ## Работа с исходниками
 
-Для host-side разработки установите версии Node/pnpm, совместимые с [Dockerfile](../../Dockerfile) и [CI](../../.github/workflows/check.yml). В проверенном snapshot это Node 22 и pnpm 11.19.0. В корне используется pnpm, у Resolver отдельный npm lockfile:
+Для host-side разработки установите версии Node/pnpm, совместимые с [Dockerfile](../../Dockerfile) и [CI](../../.github/workflows/check.yml). Закреплённые версии — Node 24.21.0 LTS и pnpm 11.19.0; `engines` допускает только Node 24.x. В корне используется pnpm, у Resolver отдельный npm lockfile:
 
 ```bash
 corepack enable

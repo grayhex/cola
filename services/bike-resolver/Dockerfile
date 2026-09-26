@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM node:22-alpine AS build
+FROM node:24.21.0-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN --mount=type=cache,id=cola-resolver-npm,target=/root/.npm,sharing=locked npm ci
@@ -9,7 +9,7 @@ COPY scripts/build-version.js ./scripts/build-version.js
 RUN --mount=type=cache,id=cola-resolver-npm,target=/root/.npm,sharing=locked \
     npm run build && npm prune --omit=dev
 
-FROM node:22-alpine
+FROM node:24.21.0-alpine
 WORKDIR /app
 ENV NODE_ENV=production PORT=8080
 COPY --from=build /app/node_modules ./node_modules
