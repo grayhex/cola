@@ -12,6 +12,7 @@ import { ManufacturerHttpClient } from "./http.js";
 import { querySchema } from "./domain.js";
 import { buildVersion } from "./version.js";
 import Fastify from "fastify";
+import rateLimit from "@fastify/rate-limit";
 import { requestSchema } from "./domain.js";
 import type { Resolver } from "./resolver.js";
 import type { Cache } from "./cache.js";
@@ -238,9 +239,30 @@ export function buildApp(
     autoResolve: store.value.enabled && store.value.autoResolve,
   }));
   // Internal management API: never publish this container's port; app gateway authenticates administrators.
-  app.get("/internal/settings", async () => {
-    await store.load();
-    return { value: store.value, version: store.version, brands: brands() };
+  app.register(rateLimit, { global: false });
+  // Register after the plugin so its onRoute hook protects database reads.
+  // One process-wide budget for this endpoint, independent of proxy headers/IPs.
+  app.after((err) => {
+    if (err) throw err;
+    app.get(
+      "/internal/settings",
+      {
+        // This JSON API supports GET only; an automatic HEAD would get a
+        // separate rate-limit bucket while still executing the DB read.
+        exposeHeadRoute: false,
+        config: {
+          rateLimit: {
+            max: 60,
+            timeWindow: "1 minute",
+            keyGenerator: () => "internal-settings",
+          },
+        },
+      },
+      async () => {
+        await store.load();
+        return { value: store.value, version: store.version, brands: brands() };
+      },
+    );
   });
   app.put("/internal/settings", async (req, reply) => {
     const input = req.body as { value?: unknown; version?: number };

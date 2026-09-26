@@ -192,6 +192,24 @@ test("wizard quick setup, identity confirmation, image size and successful save"
     .locator('input[type="file"]')
     .setInputFiles({ name: "small.png", mimeType: "image/png", buffer: small });
   await expect(dialog).toContainText("Фото слишком маленькое");
+  // CodeQL #4: file input is untrusted, but only a decoded image gets
+  // a browser-created blob URL. Neither its bytes nor its name become HTML.
+  const payload =
+    '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400" onload="alert(141)"/>';
+  await dialog.locator('input[type="file"]').setInputFiles({
+    name: "payload.svg",
+    mimeType: "image/svg+xml",
+    buffer: Buffer.from(payload),
+  });
+  await expect(dialog).toContainText("Допустимо до 12 фото JPEG/PNG/WebP");
+  await expect(dialog.locator(".wizard-local-photos img")).toHaveCount(0);
+  await dialog.locator('input[type="file"]').setInputFiles({
+    name: "payload.png",
+    mimeType: "image/png",
+    buffer: Buffer.from('<img src=x onerror="alert(141)">'),
+  });
+  await expect(dialog.locator('input[type="file"]')).toHaveValue("");
+  await expect(dialog.locator(".wizard-local-photos img")).toHaveCount(0);
   const good = await sharp({
     create: { width: 600, height: 400, channels: 3, background: "white" },
   })
@@ -199,8 +217,23 @@ test("wizard quick setup, identity confirmation, image size and successful save"
     .toBuffer();
   await dialog
     .locator('input[type="file"]')
-    .setInputFiles({ name: "bike.png", mimeType: "image/png", buffer: good });
+    .setInputFiles({
+      name: '<img src=x onerror="alert(141)">.png',
+      mimeType: "image/png",
+      buffer: good,
+    });
   await expect(dialog.locator(".wizard-local-photos img")).toHaveCount(1);
+  const preview = dialog.locator(".wizard-local-photos img");
+  await expect(preview).toHaveAttribute("src", /^blob:/);
+  await expect(preview).toHaveAttribute(
+    "alt",
+    '<img src=x onerror="alert(141)">.png',
+  );
+  await expect(preview).not.toHaveAttribute("onerror");
+  await expect
+    .poll(() => preview.evaluate((img) => img.naturalWidth))
+    .toBe(600);
+  expect(prompts).toEqual([]);
   await page.screenshot({
     path: info.outputPath("wizard-details.png"),
     fullPage: true,
