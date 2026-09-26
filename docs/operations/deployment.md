@@ -4,7 +4,7 @@
 
 ## Окружения и предварительные условия
 
-Локальная разработка описана в [первом запуске](../development/getting-started.md). Production — отдельный VPS, Docker Engine/Compose, PostgreSQL в Compose и Nginx на хосте. В текущей установке checkout находится в `/opt/stacks/cola`, административный пользователь — `grayhex`, отдельный runner — `github-runner`. Для другого сервера адаптируйте пути и пользователей явно.
+Локальная разработка описана в [первом запуске](../development/getting-started.md). Production — отдельный VPS, Docker Engine/Compose, PostgreSQL в Compose и Nginx на хосте. Checkout находится в `/opt/stacks/cola`, административный пользователь — `grayhex`, SSH-пользователь автоматической выкладки — `deploy`. Actions выполняются на GitHub-hosted runners; runner на VPS не нужен. Для другого сервера адаптируйте пути и пользователей явно.
 
 До запуска настройте SSH по ключу, рабочий sudo и доступ через консоль провайдера. Запрет root/password SSH применяйте только после проверки новой сессии по ключу. Проверяйте effective `sshd -T`: порядок drop-in файлов влияет на фактически принятые значения. Firewall должен разрешать SSH и HTTP/HTTPS, не PostgreSQL или Resolver. Docker-публикация портов требует отдельной проверки, не полагайтесь только на список UFW.
 
@@ -12,7 +12,7 @@
 
 ## Репозиторий и конфигурация
 
-Клонируйте репозиторий с отдельным read-only deploy key в `/opt/stacks/cola`. Ключ GitHub, SSH-ключ входа на сервер и registration token Actions runner — разные credentials. Git должен работать от владельца checkout. Не передавайте личный GitHub-ключ runner и не добавляйте его в Docker group.
+Клонируйте репозиторий с отдельным read-only deploy key в `/opt/stacks/cola`. Ключ чтения GitHub у владельца checkout и ключ Actions для входа на VPS пользователем `deploy` — разные credentials. Git должен работать от владельца checkout. Пользователю `deploy` не нужны личный GitHub-ключ или Docker group.
 
 Production использует **самостоятельный** [compose.prod.yaml](../../compose.prod.yaml). Не объединяйте его через несколько `-f` с локальным `compose.yaml`: настройки портов могут сложиться. Создайте `.env.production` из [примера](../../.env.production.example), только если файла ещё нет; не перегенерируйте значения для работающей БД.
 
@@ -75,6 +75,49 @@ cd /opt/stacks/cola
 docker compose --env-file .env.production -f compose.prod.yaml exec app node scripts/set-admin.js your-email@example.com
 ```
 
-Email — пример. Скрипт работает только с существующим пользователем и также снимает блокировку. Не открывайте регистрацию всей аудитории до smoke-проверок и backup. Установите root-owned wrapper и repository-scoped runner по [CI/CD](ci-cd.md), затем проверьте тестовую выкладку точного прошедшего CI SHA.
+Email — пример. Скрипт работает только с существующим пользователем и также снимает блокировку. Не открывайте регистрацию всей аудитории до smoke-проверок и backup. Настройте SSH-доступ ниже и сверьте [CI/CD](ci-cd.md). Первую production-выкладку точного прошедшего CI SHA выполняет оператор после согласования.
 
-**После настройки обычные обновления идут через PR → main → CI → Deploy · Production**, а не через ручной `pull` произвольной новой версии. Сервисы обновляются на месте; автоматического rollback, гарантии zero-downtime и переноса данных со staging нет. Перед рисковой миграцией нужен [backup](backup-restore.md).
+**После настройки обычные обновления идут через PR → main → CI → Deploy · Production по SSH**, а не через ручной `pull` произвольной новой версии. Сервисы обновляются на месте; автоматического rollback и гарантии zero-downtime нет. Перед рисковой миграцией нужен [backup](backup-restore.md).
+
+## SSH-доступ для GitHub Actions
+
+Это инструкция первоначальной настройки оператором. Перенос исходника `deploy-cola-ssh` в `ops/` не меняет его байты, установленный путь или `authorized_keys`; для уже работающей SSH-выкладки переустановка из-за одного переноса не требуется.
+
+1. Подготовьте отдельного пользователя `deploy` с рабочей оболочкой для forced-command, без входа по паролю и без Docker group. У владельца `/opt/stacks/cola` должен работать read-only доступ к репозиторию; `deploy` не должен изменять checkout и `.env.production`.
+2. Из проверенного checkout установите оба root-owned скрипта (каталог назначения также не должен быть доступен `deploy` на запись):
+
+   ```bash
+   sudo install -o root -g root -m 0755 ops/deploy-cola /usr/local/sbin/deploy-cola
+   sudo install -o root -g root -m 0755 ops/deploy-cola-ssh /usr/local/sbin/deploy-cola-ssh
+   ```
+
+3. Через `sudo visudo -f /etc/sudoers.d/cola-deploy` разрешите единственную команду и проверьте файл:
+
+   ```sudoers
+   deploy ALL=(root) NOPASSWD: /usr/local/sbin/deploy-cola
+   ```
+
+   ```bash
+   sudo chown root:root /etc/sudoers.d/cola-deploy
+   sudo chmod 0440 /etc/sudoers.d/cola-deploy
+   sudo visudo -cf /etc/sudoers.d/cola-deploy
+   ```
+
+4. Для отдельного ключа Actions добавьте в `~deploy/.ssh/authorized_keys` строку с ограничениями. Ниже шаблон: замените `PUBLIC_KEY_BASE64` публичной частью этого ключа; приватную часть на VPS не копируйте. Права каталога `.ssh` — 700, файла — 600; сохраните чужие действующие ключи.
+
+   ```text
+   restrict,command="/usr/local/sbin/deploy-cola-ssh" ssh-ed25519 PUBLIC_KEY_BASE64 gha-deploy
+   ```
+
+5. В Settings → Environments → `production` ограничьте deployment branches веткой `main` и добавьте environment secrets:
+
+   | Имя | Назначение |
+   | --- | --- |
+   | `DEPLOY_SSH_KEY` | Приватная часть отдельного ключа Actions, соответствующая ограниченной строке выше |
+   | `DEPLOY_KNOWN_HOSTS` | Проверенные записи host key VPS в формате `known_hosts`; для нестандартного порта — с `[host]:port` |
+   | `DEPLOY_HOST` | SSH-адрес VPS без имени пользователя; workflow использует `deploy` |
+   | `DEPLOY_PORT` | SSH-порт; при отсутствии workflow использует 22 |
+
+   Host key сверяйте через доверенный канал (например, консоль провайдера); не считайте непроверенный результат `ssh-keyscan` подтверждением подлинности. Настройки защиты `main` и environment проверяются отдельно: файлы репозитория их не применяют.
+
+Forced-command отклоняет всё, кроме 40-символьного SHA. Затем `deploy-cola` требует, чтобы SHA совпадал с текущим `origin/main`, проверяет чистоту tracked-файлов, собирает Compose и ждёт healthchecks. Даже корректный SHA запускает реальную выкладку: не используйте его как безвредный тест SSH. При разрешённой оператором выкладке проверьте Actions, healthchecks и `/var/lib/colabike/verified-sha`; недоступную production-проверку отмечайте отдельно.

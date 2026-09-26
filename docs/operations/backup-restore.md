@@ -20,7 +20,7 @@ sudo env \
   --destination /srv/colabike-backups --keep 7
 ```
 
-Если работающий стек использует явный `COMPOSE_PROJECT_NAME`, передайте такое же значение через `sudo env`. Не угадывайте новое имя проекта. Для staging после feature deploy нужна topology, соответствующая использованной доверенной версии main; обычный `compose.yaml` выбранной feature-ветки может отличаться. Сохранённый `staging-compose-main-sha` помогает восстановить эту конфигурацию до backup.
+Если работающий стек использует явный `COMPOSE_PROJECT_NAME`, передайте такое же значение через `sudo env`. Не угадывайте новое имя проекта.
 
 `COLA_ENV_FILE` и `COLA_COMPOSE_FILES` переданы после sudo намеренно: экспорт в интерактивной сессии может быть очищен sudo. Обычный local Compose по умолчанию — **не production fallback**.
 
