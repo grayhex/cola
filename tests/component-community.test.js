@@ -377,7 +377,7 @@ test("component media and shared discussion: upgrade, roles, quota, merges, mode
     );
     await assert.rejects(
       tx((q) => q.query("DELETE FROM component_models WHERE id=$1", [model])),
-      e => e.code === "23503",
+      /violates RESTRICT setting of foreign key constraint/,
     ); // FK RESTRICT.
     await db.query("UPDATE users SET email_verified_at=NULL WHERE id=$1", [
       owner.id,
