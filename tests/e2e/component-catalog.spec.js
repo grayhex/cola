@@ -59,9 +59,11 @@ test("component catalog: real filters, pagination, themes, mobile and durable mo
     const filters = page.getByRole("form", { name: "Фильтры компонентов" });
     await filters.getByLabel("Поиск модели").fill(prefix);
     await filters
-      .getByLabel("Категория", { exact: true })
+      .getByRole("combobox", { name: "Категория", exact: true })
       .selectOption("Седло");
-    await filters.getByLabel("Бренд", { exact: true }).selectOption("Brooks");
+    await filters
+      .getByRole("combobox", { name: "Бренд", exact: true })
+      .selectOption("Brooks");
     await filters.getByRole("button", { name: "Показать" }).click();
     const results = page.getByRole("region", { name: "Модели компонентов" });
     await expect(results.getByRole("heading", { level: 2 })).toHaveCount(24);
