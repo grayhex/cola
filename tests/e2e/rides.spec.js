@@ -184,6 +184,11 @@ test("MapLibre initializes with intercepted OSM tiles, no external traffic", asy
   expect((await frame.boundingBox()).height).toBe(previewHeight);
   await expect(page.locator(".maplibregl-canvas")).toBeVisible();
   const canvas = await page.locator(".maplibregl-canvas").elementHandle();
+  // Readiness itself re-renders the map. A fresh raster style object must not
+  // tear it down, even before any user interaction or scroll (#140).
+  await page.waitForTimeout(300);
+  await expect(page.locator(".ride-map.ready")).toBeVisible();
+  expect(await canvas.evaluate((el) => el.isConnected)).toBe(true);
   const chart = page.getByRole("img", {
     name: "График скорости по расстоянию",
   });

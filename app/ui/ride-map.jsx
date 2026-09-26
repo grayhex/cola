@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import RideBasemap, { MapAttribution } from "./ride-basemap.jsx";
 import YandexRideMap from "./yandex-ride-map.jsx";
 import { useSite } from "./site-provider.jsx";
@@ -25,7 +25,9 @@ export default function RideMap({ geometry, styleUrl }) {
 function MapLibreRideMap({ geometry, styleUrl }) {
   const { personalSettings: settings } = useSite();
   const config = settings.map || mapDefaults;
-  const style = styleUrl || mapStyle(config);
+  // Raster providers produce an object: keep it stable through ready/visible
+  // renders so that the map effect does not recreate its own canvas (#140).
+  const style = useMemo(() => styleUrl || mapStyle(config), [styleUrl, config]);
   const ref = useRef(null),
     [ready, setReady] = useState(false),
     [visible, setVisible] = useState(false);
