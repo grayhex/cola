@@ -35,8 +35,11 @@ test("article illustrations: blocks at the cursor, fit the column, open whole", 
   ).toBe(201);
   const title = "Протектор " + nonce;
   await page.goto("/articles/new");
-  await page.getByLabel("Заголовок статьи").fill(title);
   const editor = page.locator('[data-rich-editor="Текст статьи"] .tiptap');
+  // The title exists in SSR before React handles input. The mounted rich
+  // editor is the readiness signal; a pre-hydration fill can be discarded.
+  await expect(editor).toBeVisible();
+  await page.getByLabel("Заголовок статьи").fill(title);
   await editor.click();
   await page.keyboard.type("Первый абзац.");
   await page.keyboard.press("Enter");
@@ -88,6 +91,7 @@ test("article illustrations: blocks at the cursor, fit the column, open whole", 
   await expect(source).toHaveValue(
     /^Первый абзац\.\n\n!\[[^\]]*\]\(photo:[a-f0-9-]{36}\)\n\n!\[\]\(photo:[a-f0-9-]{36}\)\n\nВторой абзац\.\s*$/,
   );
+  await expect(page.getByLabel("Заголовок статьи")).toHaveValue(title);
   await page.getByRole("button", { name: "Опубликовать", exact: true }).click();
   await expect(page).toHaveURL(/\/articles\/[a-f0-9-]+$/);
 
