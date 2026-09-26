@@ -276,8 +276,8 @@ export default function Garage({
   const seed = useRef(initial);
   const file = useRef();
   const filterKey = filters.join(",");
-  // The reader comes from the server layout (#74); a sign-in in the dialog
-  // passes the new one explicitly, before the context re-renders.
+  // The reader comes from the server layout (#74). Signing in updates userId
+  // and lets the loading effect fetch once with the new viewer.
   const load = useCallback(
     async (viewer = userId) => {
       const sequence = ++requestId.current.sequence;
@@ -1216,9 +1216,8 @@ export default function Garage({
                 onSubmit={(data) =>
                   run(async () => {
                     await api("auth/" + modal.mode, "POST", data);
-                    const signedIn = await refreshViewer();
+                    await refreshViewer();
                     setSelected(null);
-                    await load(signedIn);
                     setModal(null);
                     setNotice(
                       modal.mode === "register"

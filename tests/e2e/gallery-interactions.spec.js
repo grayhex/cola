@@ -491,6 +491,30 @@ test("broken artwork and photos keep stable space and accessible fallbacks", asy
   ).toBeFocused();
 });
 
+test("dialog sign-in refreshes the showcase once for the new viewer", async ({ page }) => {
+  await fixture(page);
+  const { user } = await (await page.request.get("/api/me")).json();
+  await page.context().clearCookies();
+  let loads = 0;
+  await page.route("**/api/showcase?**", (route) => {
+    loads++;
+    return route.fulfill({ json: { bikes, total: bikes.length } });
+  });
+  await page.goto("/bikes");
+  await expect(page.locator(".bike-card")).toHaveCount(9);
+  expect(loads).toBe(1);
+  await page.locator(".bike-card").first().getByRole("button", { name: "Нравится: 2" }).click();
+  const form = page.locator(".auth-form");
+  await form.getByLabel("Электронная почта", { exact: true }).fill(user.email);
+  await form.getByLabel("Пароль", { exact: true }).fill("gallery-viewer-secret-123");
+  await form.getByRole("button", { name: "Войти", exact: true }).click();
+  await expect(form).toHaveCount(0);
+  await expect.poll(() => loads).toBe(2);
+  await page.waitForTimeout(300);
+  expect(loads).toBe(2);
+  await expect(page.locator(".bike-card")).toHaveCount(9);
+});
+
 test("guest sign-in continues the requested add-bike action", async ({
   page,
 }) => {
