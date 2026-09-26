@@ -11,13 +11,13 @@ import { defaultSettings } from "../lib/site-defaults.js";
 test("navigation defaults ignore retired ordering fields; known destinations respect auth", () => {
   assert.deepEqual(
     navigationSections({}).map((s) => s.id),
-    ["bikes", "journal", "articles", "rides", "market", "about"],
+    ["bikes", "components", "journal", "articles", "rides", "market", "about"],
   );
   assert.deepEqual(
     navigationSections({ navOrder: ["subscriptions", "home"] }).map(
       (s) => s.id,
     ),
-    ["bikes", "journal", "articles", "rides", "market", "about"],
+    ["bikes", "components", "journal", "articles", "rides", "market", "about"],
   );
   assert.equal(
     sectionLinks("bikes", null).some((s) => s.href.includes("action=add")),

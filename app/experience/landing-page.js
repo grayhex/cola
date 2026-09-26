@@ -25,7 +25,7 @@ export async function landing(kind, rawFirst, rawSecond) {
   const canonical =
     kind === "model"
       ? [landingSlug(data.brand), landingSlug(data.model)]
-      : [landingSlug(data.category), landingSlug(data.name)];
+      : [data.categorySlug, data.slug];
   if (!canonical[0] || !canonical[1]) notFound();
   if (first !== canonical[0] || second !== canonical[1])
     permanentRedirect(data.path);

@@ -84,6 +84,7 @@ await db.exec(await readFile(new URL("../db/024_username_history.sql", import.me
 await db.exec(await readFile(new URL("../db/025_account_sessions.sql", import.meta.url), "utf8"));
 await db.exec(await readFile(new URL("../db/026_market_expiry.sql", import.meta.url), "utf8"));
 await db.exec(await readFile(new URL("../db/027_game_rules.sql", import.meta.url), "utf8"));
+await db.exec(await readFile(new URL("../db/028_component_models.sql", import.meta.url), "utf8"));
 await seedLegalDocuments(db);
 const server = new PGLiteSocketServer({
   db,

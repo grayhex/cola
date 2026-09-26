@@ -124,6 +124,7 @@ test("showcase privacy, owner/voter permissions, duplicate votes, revocation, bl
       "018_articles_rsvp",
       "020_bike_classification",
       "027_game_rules",
+    "028_component_models",
     ])
       await db.exec(
         await readFile(new URL("../db/" + m + ".sql", import.meta.url), "utf8"),

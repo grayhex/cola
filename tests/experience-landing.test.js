@@ -58,6 +58,7 @@ test("model and part pages count public builds under every spelling", async () =
       alias: "Брукс С17",
       name: "Brooks C17",
     });
+    catalog.aliases.push({ kind: "component", scope: "Седло", alias: "brooks c-17", name: "Brooks C17" });
     catalog.aliases.push({ kind: "model", scope: "Cube", alias: "Тревел", name: "Travel" });
     await db.query("INSERT INTO site_catalog(id,value) VALUES(1,$1)", [JSON.stringify(catalog)]);
     await db.query("INSERT INTO site_settings(id,value) VALUES(1,$1)", [JSON.stringify(defaultSettings)]);
