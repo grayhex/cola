@@ -74,12 +74,28 @@ test("ride upload, SVG, privacy, profile and bike; works without tiles", async (
     path: info.outputPath("ride-page.png"),
     fullPage: true,
   });
+  // The profile comes as server HTML, and a click that lands before
+  // hydration does nothing (seen in WebKit in CI): click until the tab is on.
+  // A hydration error loses clicks too, so it fails the test by name.
+  const errors = [];
+  page.on("console", (m) => {
+    if (m.type() === "error") errors.push(m.text());
+  });
+  page.on("pageerror", (e) => errors.push(e.message));
   await page.goto("/u/" + data.rides[0].author.username);
-  await page
+  const ridesTab = page
     .locator("main")
-    .getByRole("button", { name: "Покатушки", exact: true })
-    .click();
+    .getByRole("button", { name: "Покатушки", exact: true });
+  await expect(async () => {
+    await ridesTab.click();
+    await expect(ridesTab).toHaveAttribute("aria-pressed", "true", {
+      timeout: 1000,
+    });
+  }).toPass({ timeout: 15000 });
   await expect(page.locator(".ride-card")).toHaveCount(1);
+  expect(
+    errors.filter((e) => /hydrat|did not match|#41[89]|#42[1-5]/i.test(e)),
+  ).toEqual([]);
   await page.goto("/b/" + data.rides[0].bike.shareId);
   await expect(page.locator(".ride-list .ride-card")).toHaveCount(1);
 });
