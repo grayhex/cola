@@ -90,6 +90,10 @@ for (const staleStatus of [200, 500]) {
       await expect(page.locator(".report-card")).toContainText(
         "Актуальная жалоба",
       );
+      // Next's document-level route announcer also has role=alert. Check all
+      // application errors, without counting that always-present live region.
+      const errors = page.locator(".admin-shell").getByRole("alert");
+      await expect(errors).toHaveText([]);
       const filter = page.getByRole("combobox", { name: "Статус жалоб" });
       await filter.selectOption("closed");
       await expect.poll(() => waiting).toBe(true);
@@ -113,7 +117,8 @@ for (const staleStatus of [200, 500]) {
         "Актуальная жалоба",
       );
       await expect(page.getByText("Устаревшая жалоба")).toHaveCount(0);
-      await expect(page.getByRole("alert")).toHaveCount(0);
+      await expect(errors).toHaveText([]);
+      await expect(page.getByText("Устаревшая ошибка", { exact: true })).toHaveCount(0);
     } finally {
       release();
     }
