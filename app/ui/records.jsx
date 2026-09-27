@@ -36,7 +36,7 @@ function RecordCard({ record: r, index }) {
       style={{ "--record-delay": `${Math.min(index, 4) * 35}ms` }}
     >
       <div className="record-illustration">
-        <AchievementArt imageId={r.imageId} size={160} />
+        <AchievementArt imageId={r.imageId} size={64} />
       </div>
       <div className="record-content">
         <div className="record-heading">
@@ -78,6 +78,7 @@ function RecordCard({ record: r, index }) {
 }
 
 function AwardCard({ award: a, index }) {
+  const latest = a.latestRecipient;
   return (
     <article
       id={a.key}
@@ -88,7 +89,7 @@ function AwardCard({ award: a, index }) {
       style={{ "--record-delay": `${Math.min(index, 4) * 35}ms` }}
     >
       <div className="record-illustration">
-        <AchievementArt imageId={a.imageId} kind="achievement" size={160} />
+        <AchievementArt imageId={a.imageId} kind="achievement" size={64} />
       </div>
       <div className="record-content">
         <div className="record-heading">
@@ -97,10 +98,24 @@ function AwardCard({ award: a, index }) {
             {a.description}
           </p>
         </div>
+        {latest && (
+          <div className="record-result award-recipient">
+            <span className="award-recipient-label">Последний получатель</span>
+            {latest.bike && <Link prefetch={false} className="record-bike-name" href={publicPath("bike", latest.bike)}>{latest.bike.name}</Link>}
+            <Link prefetch={false} className={latest.bike ? "record-owner" : "record-bike-name"}
+              href={profilePath(latest.author.username)} title={usernameLabel(latest.author) || undefined}>
+              {personName(latest.author)}
+            </Link>
+          </div>
+        )}
       </div>
-      <p className="record-meta">
-        {a.earners ? earnedBy(a.earners) : "Пока никто не получил"}
-      </p>
+      <div className="record-meta">
+        {latest && <time className="award-date" dateTime={new Date(latest.awardedAt).toISOString()}
+          title={new Date(latest.awardedAt).toLocaleString("ru-RU", { timeZoneName: "short" })}>
+          {new Date(latest.awardedAt).toLocaleString("ru-RU")}
+        </time>}
+        <span className="award-count">{a.earners ? earnedBy(a.earners) : "Пока никто не получил"}</span>
+      </div>
     </article>
   );
 }
@@ -175,6 +190,7 @@ export default function Records() {
         {data && tab === "records" && (
           <>
             <p className="help hall-lead">Рекорд держит один велосипед, покатушка или участник — и лидер может смениться.</p>
+            <p className="hall-updated">Актуально на <time dateTime={new Date(data.asOf).toISOString()}>{new Date(data.asOf).toLocaleString("ru-RU")}</time></p>
             <RecordGroups records={data.records} />
             {!data.records.length && <p className="help">Рекорды пока отключены администратором.</p>}
             <details className="hall-rules">
@@ -199,7 +215,6 @@ export default function Records() {
                 При равенстве значений лидер определяется по стабильному ID.
               </p>
             </details>
-            <p className="hall-updated">Актуально на {new Date(data.asOf).toLocaleString("ru-RU")}</p>
           </>
         )}
         {data && tab === "awards" && (

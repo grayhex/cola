@@ -2,6 +2,7 @@ import { registerVerified } from "../fixtures/verified-user.js";
 import { test, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import pg from "pg";
+import AxeBuilder from "@axe-core/playwright";
 import sharp from "sharp";
 import { testConsents } from "../fixtures/legal.js";
 import { defaultGamification } from "../../lib/gamification-definitions.js";
@@ -9,7 +10,7 @@ import { metricByKey } from "../../lib/game-metrics.js";
 const imageId = "00000000-0000-4000-8000-000000000001";
 const brokenId = "00000000-0000-4000-8000-000000000002";
 const author = { id: "fixture-owner", username: "long_username_for_layout_test", name: "Владелец" };
-const bike = { id: "fixture-bike", shareId: "fixture-share", name: "Canyon Grail CF SLX 8 AXS 2026 · очень длинное название сборки" };
+const bike = { id: "fixture-bike", shareId: "fixture-share", name: "Canyon Grail CF SLX 8 AXS" };
 // Records as /api/game/records returns them (#106): held by a bike, a ride or a rider.
 const vacant = new Set(["expensive", "lightest_gravel", "complete", "marathon", "wild"]);
 const records = [
@@ -27,8 +28,8 @@ const records = [
   return { key, name: "Рекорд " + key, description: "Описание рекорда " + key, imageId: i === 0 ? brokenId : imageId, group, metric, subject, direction, category: null, eligible: i, holder };
 });
 const awards = [
-  ["first_public", "public_bikes", 12], ["full_build", "build_parts", 0], ["century", "ride_distance", 3], ["racer", "ride_max_speed", 1], ["chronicler", "journal_entries", 2],
-].map(([key, metric, earners]) => ({ key, name: "Награда " + key, description: "Описание награды " + key, imageId, group: metricByKey[metric].group, metric, subject: metricByKey[metric].subject, comparison: "gte", threshold: 1, earners }));
+  ["first_public", "public_bikes", 12], ["full_build", "build_parts", 0], ["century", "ride_distance", 3], ["racer", "ride_max_speed", 1], ["chronicler", "journal_entries", 2], ["wireless", "keywords", 2],
+].map(([key, metric, earners]) => ({ key, name: "Награда " + key, description: "Описание награды " + key, imageId, group: metricByKey[metric].group, metric, subject: metricByKey[metric].subject, comparison: "gte", threshold: 1, earners, latestRecipient: earners ? { awardedAt: "2026-09-19T10:11:12.345Z", author, bike: metricByKey[metric].subject === "bike" ? bike : null } : null }));
 async function mockRecords(page, hall = { records, awards }) {
   const large = await sharp({ create: { width: 1600, height: 1200, channels: 4, background: { r: 36, g: 43, b: 47, alpha: .8 } } }).png().toBuffer();
   await page.route("**/api/assets/" + imageId, (route) => route.fulfill({ contentType: "image/png", body: large }));
@@ -36,7 +37,7 @@ async function mockRecords(page, hall = { records, awards }) {
   await page.route("**/api/game/records", (route) => route.fulfill({ json: { ...hall, settings: defaultGamification, asOf: "2026-09-20T12:00:00Z" } }));
 }
 
-test("grouped records have large bounded artwork, linked holders and compact metrics without bike photos", async ({ page, isMobile }, info) => {
+test("grouped records have compact bounded artwork, linked holders and dated public award recipients", async ({ page, isMobile }, info) => {
   if (!isMobile) await page.setViewportSize({ width: 1366, height: 900 });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await mockRecords(page);
@@ -48,6 +49,9 @@ test("grouped records have large bounded artwork, linked holders and compact met
   await expect(page.locator('.record-card img[src^="/api/photos/"]')).toHaveCount(0);
   await expect(page.locator(".record-card").first().locator(`.game-art img[src$="${brokenId}"]`)).toHaveCount(0);
   await expect(page.locator(".hall-rules")).not.toHaveAttribute("open", "");
+  await expect(page.locator('.hall-updated time')).toHaveAttribute("datetime", "2026-09-20T12:00:00.000Z");
+  expect((await page.locator('.hall-updated').boundingBox()).y).toBeLessThan((await page.locator('.record-groups').boundingBox()).y);
+  await expect(page.locator('[data-record] time')).toHaveCount(0);
   // A ride links to the ride and its bike; a rider links to the profile.
   const ride = page.locator('[data-record="climber"]');
   await expect(ride.locator(".record-bike-name")).toHaveAttribute("href", /^\/r\//);
@@ -61,42 +65,51 @@ test("grouped records have large bounded artwork, linked holders and compact met
   for (const card of await page.locator(".record-card").all()) {
     await expect(card.locator(".record-description")).not.toBeEmpty();
     const art = await card.locator(".game-art").boundingBox();
-    expect(art.width).toBe(160);
-    expect(art.height).toBe(160);
+    expect(art.width).toBe(64);
+    expect(art.height).toBe(64);
   }
   const childBoxes = await page.locator(".record-card .game-art > *").evaluateAll(els => els.map(el => {
     const b = el.getBoundingClientRect(); return [b.width, b.height];
   }));
-  for (const [width, height] of childBoxes) { expect(width).toBeLessThanOrEqual(160); expect(height).toBeLessThanOrEqual(160); }
+  for (const [width, height] of childBoxes) { expect(width).toBeLessThanOrEqual(64); expect(height).toBeLessThanOrEqual(64); }
   const hierarchy = await page.locator(".record-card:not(.vacant)").first().evaluate(el => ({
     name: parseFloat(getComputedStyle(el.querySelector(".record-bike-name")).fontSize),
     metric: parseFloat(getComputedStyle(el.querySelector(".record-value")).fontSize),
   }));
   expect(hierarchy.name).toBeGreaterThan(hierarchy.metric);
   for (const el of await page.locator(".record-empty").all()) {
-    expect(await el.evaluate(node => getComputedStyle(node).whiteSpace)).toBe("nowrap");
+    expect(await el.evaluate(node => node.scrollWidth <= node.clientWidth + 1 && node.scrollHeight <= node.clientHeight + 1)).toBe(true);
   }
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
   if (!isMobile) {
-    expect(await page.locator(".record-grid").first().evaluate(el => getComputedStyle(el).gridTemplateColumns.split(" ").length)).toBe(3);
-    expect((await page.locator(".record-card").first().boundingBox()).height).toBeGreaterThanOrEqual(248);
+    expect(await page.locator(".record-grid").first().evaluate(el => getComputedStyle(el).gridTemplateColumns.split(" ").length)).toBe(4);
+    expect((await page.locator(".record-groups").boundingBox()).height).toBeLessThanOrEqual(1800);
+    expect((await page.locator(".record-card").first().boundingBox()).height).toBeLessThan(248);
   }
   expect(await page.locator(".record-card").first().evaluate(el => getComputedStyle(el).animationName)).toBe("none");
   await page.screenshot({ path: info.outputPath("grouped-records.png"), fullPage: true });
   // The awards tab: the same art and groups, with how many people have each.
   await page.getByRole("button", { name: "Награды", exact: true }).click();
-  await expect(page.locator(".award-card")).toHaveCount(5);
+  await expect(page.locator(".award-card")).toHaveCount(6);
   await expect(page.locator(".record-card:not(.award-card)")).toHaveCount(0);
-  await expect(page.locator('[data-award="first_public"] .record-meta')).toHaveText("Получили 12 человек");
-  await expect(page.locator('[data-award="century"] .record-meta')).toHaveText("Получили 3 человека");
-  await expect(page.locator('[data-award="racer"] .record-meta')).toHaveText("Получил 1 человек");
+  await expect(page.locator('[data-award="first_public"] .award-count')).toHaveText("Получили 12 человек");
+  await expect(page.locator('[data-award="century"] .award-count')).toHaveText("Получили 3 человека");
+  await expect(page.locator('[data-award="racer"] .award-count')).toHaveText("Получил 1 человек");
   await expect(page.locator('[data-award="full_build"] .record-meta')).toHaveText("Пока никто не получил");
   for (const art of await page.locator(".award-card .game-art").all()) {
     const box = await art.boundingBox();
-    expect(box.width).toBe(160);
-    expect(box.height).toBe(160);
+    expect(box.width).toBe(64);
+    expect(box.height).toBe(64);
   }
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  await expect(page.locator('.hall-updated')).toHaveCount(0);
+  await expect(page.locator('[data-award="first_public"] .award-recipient a')).toHaveAttribute("href", /long_username_for_layout_test/);
+  const bikeAward = page.locator('[data-award="wireless"]');
+  await expect(bikeAward.locator('.record-bike-name')).toHaveAttribute("href", /^\/b\//);
+  await expect(bikeAward.locator('.record-owner')).toHaveAttribute("href", /long_username_for_layout_test/);
+  await expect(bikeAward.locator('time')).toHaveAttribute("datetime", "2026-09-19T10:11:12.345Z");
+  await expect(bikeAward.locator('time')).not.toBeEmpty();
+  await expect(page.locator('[data-award="full_build"] time')).toHaveCount(0);
   await page.screenshot({ path: info.outputPath("awards.png"), fullPage: true });
 });
 
@@ -120,6 +133,43 @@ test("record illustration reacts to hover and keyboard focus, but reduced motion
   await page.emulateMedia({reducedMotion:"reduce"});
   await card.hover();
   await expect.poll(() => art.evaluate(el => getComputedStyle(el).transform)).toBe("none");
+});
+
+test("Hall of Fame preserves long names, timestamps and accessible contrast in both themes and narrow screens", async ({ page, isMobile }, info) => {
+  const longName = "ОченьДлинноеИмяБезПробелов".repeat(4);
+  const longBike = { ...bike, name: "Canyon Grail CF SLX 8 AXS 2026 · очень длинное название сборки " + longName };
+  const longAuthor = { ...author, name: longName };
+  await mockRecords(page, {
+    records: records.map((r) => r.holder?.kind === "bike" ? { ...r, holder: { ...r.holder, name: longBike.name, author: longAuthor } } : r),
+    awards: awards.map((a) => a.latestRecipient ? { ...a, latestRecipient: { ...a.latestRecipient, author: longAuthor, bike: a.latestRecipient.bike ? longBike : null } } : a),
+  });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  for (const theme of ["light", "dark"]) {
+    await page.goto("/records");
+    await page.evaluate((t) => localStorage.setItem("cola:theme", t), theme);
+    await page.reload();
+    await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+    for (const width of isMobile ? [390, 360] : [1440, 390]) {
+      await page.setViewportSize({ width, height: 900 });
+      for (const tab of ["Рекорды", "Награды"]) {
+        await page.getByRole("button", { name: tab, exact: true }).click();
+        await expect(page.locator(".record-card").first()).toBeVisible();
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+        // Complete names remain readable and inside each card, not clamped.
+        const names = page.locator('.record-bike-name, .record-owner');
+        expect(await names.count()).toBeGreaterThan(0);
+        for (const name of await names.all()) {
+          expect(await name.evaluate((el) => {
+            const box = el.getBoundingClientRect(), card = el.closest('.record-card').getBoundingClientRect();
+            return box.left >= card.left && box.right <= card.right + 1 && box.bottom <= card.bottom && getComputedStyle(el).webkitLineClamp === 'none';
+          })).toBe(true);
+        }
+        const result = await new AxeBuilder({ page }).include("main").withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
+        expect(result.violations).toEqual([]);
+        await page.screenshot({ path: info.outputPath(`hall-${tab === "Рекорды" ? "records" : "awards"}-${theme}-${width}.png`), fullPage: true });
+      }
+    }
+  }
 });
 
 // The admin builds awards and records from catalog metrics (#106).
@@ -151,6 +201,7 @@ test("the rule editor builds «Гонщик» and «Черепаха», keeps ar
     await db.end();
   }
   const user = { id: "fixture-admin", role: "admin", name: "Admin", preferences: {} };
+  await page.route("**/api/game/admin/image-prompt", (route) => route.fulfill({ json: { prompt: "" } }));
   let saved = fixtureRules,
     puts = 0,
     recalculations = 0;

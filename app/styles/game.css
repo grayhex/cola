@@ -410,6 +410,21 @@
     gap: var(--space-3);
     margin-top: var(--space-4);
   }
+  .game-image-prompt {
+    margin-block: var(--space-4);
+    padding: var(--space-3);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+  }
+  .game-image-prompt textarea {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    resize: vertical;
+  }
+  .game-image-prompt .game-admin-save {
+    flex-wrap: wrap;
+  }
 
   @media (max-width: 760px) {
     .locked-awards,

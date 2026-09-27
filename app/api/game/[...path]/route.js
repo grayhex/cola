@@ -8,6 +8,8 @@ import { records, awardCatalog, gameShelf, accountAchievements, reactionState, r
 import { gameSettingsInput, reactionKey, exclusionInput } from "../../../../lib/gamification-validation.js";
 import { loadRules, rulesInput, saveRules, recalculateAwards } from "../../../../lib/game-rules.js";
 import { audit } from "../../../../lib/site.js";
+import { getGameImagePrompt, saveGameImagePrompt } from "../../../../lib/game-prompt.js";
+import { gameImagePromptInput } from "../../../../lib/game-prompt-validation.js";
 export const runtime = "nodejs", dynamic = "force-dynamic";
 async function handler(req, { params }) {
   try {
@@ -43,13 +45,20 @@ async function handler(req, { params }) {
       return json(await accountAchievements(db, user.id));
     if (p[0] === "admin") {
       if (user.role !== "admin") return fail("Доступ только для администратора", 403);
+      if (p.length === 2 && p[1] === "image-prompt") {
+        if (m === "GET") return json(await transaction((q) => getGameImagePrompt(q, user.id)));
+        if (m === "PUT") {
+          const input = gameImagePromptInput.parse(await readJson(req, 65536));
+          return json(await transaction((q) => saveGameImagePrompt(q, user.id, input)));
+        }
+      }
       if (p.length === 2 && p[1] === "settings") {
         if (m === "GET") return json(await getGameSettings(db));
         if (m === "PUT") {
           const input = gameSettingsInput.parse(await readJson(req, 4096));
           return json(await transaction(async (q) => {
             await q.query("SELECT value FROM gamification_settings WHERE id=1 FOR UPDATE");
-            await q.query("UPDATE gamification_settings SET value=$1 WHERE id=1", [input]);
+            await q.query("UPDATE gamification_settings SET value=value || $1::jsonb WHERE id=1", [input]);
             await audit(q, user.id, "gamification.settings", "1");
             return input;
           }));

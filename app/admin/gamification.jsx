@@ -5,6 +5,7 @@ import { socialApi } from "../ui/social-primitives.jsx";
 import AchievementArt from "../ui/achievement-art.jsx";
 import { Medal, Plus, RefreshCw, Save, Trash2, Trophy } from "../ui/icons.jsx";
 import AssetPicker from "./asset-picker.jsx";
+import GameImagePrompt from "./game-image-prompt.jsx";
 import { publicPath } from "../../lib/public-urls.js";
 import {
   gameMetrics,
@@ -460,6 +461,7 @@ export default function Gamification() {
     <section className="social-panel game-admin">
       {confirmation}
       <h2>Награды и рекорды</h2>
+      <GameImagePrompt />
       <p className="help">
         Каждая награда и каждый рекорд — правило из проверенной метрики, условия
         и фильтров. Участвуют только публичные велосипеды и покатушки

@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import pg from "pg";
 import { exerciseGameRules } from "./gamification-rules-http.js";
+import { exerciseGamePrompt } from "./game-prompt-http.js";
 const base = process.env.TEST_ORIGIN || "http://localhost:3100",
   q = new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 1 });
 function client() {
@@ -93,6 +94,27 @@ try {
   assert.equal((await b("game/admin/settings")).status, 403);
   const settings = (await admin("game/admin/settings")).body;
   await exerciseGameRules(admin, guest, a, q);
+  await exerciseGamePrompt(admin, guest, a, q, ids[2]);
+  // #157: API recipients are filtered before sorting; hiding the newest
+  // bike reveals the previous visible recipient, without leaking its ID/name.
+  await q.query("INSERT INTO game_rules(key,kind,subject,metric,threshold,name) VALUES('rule_http_recipient','award','bike','keywords',1,'HTTP recipient')");
+  const laterBike = (await b("bikes", "POST", { ...input, name: "Later public recipient" })).body.id;
+  const awardedAt = "2026-09-01T12:34:56.789Z";
+  for (const [userId, bikeId] of [[ids[0], id], [ids[1], laterBike]])
+    await q.query("INSERT INTO achievement_awards(achievement_key,user_id,bike_id,awarded_at) VALUES('rule_http_recipient',$1,$2,$3)", [userId, bikeId, awardedAt]);
+  const wireless = async () => (await guest("game/records")).body.awards.find((award) => award.key === "rule_http_recipient");
+  assert.equal((await wireless()).latestRecipient.bike.id, laterBike);
+  assert.equal((await wireless()).latestRecipient.author.id, ids[1]);
+  assert.equal((await wireless()).latestRecipient.awardedAt, awardedAt);
+  await q.query("UPDATE bikes SET is_public=false WHERE id=$1", [laterBike]);
+  assert.equal((await wireless()).latestRecipient.bike.id, id);
+  assert.ok(!JSON.stringify(await wireless()).includes(laterBike));
+  assert.ok(!JSON.stringify(await wireless()).includes("Later public recipient"));
+  await q.query("UPDATE users SET blocked=true WHERE id=$1", [ids[0]]);
+  assert.equal((await wireless()).latestRecipient, null);
+  assert.equal((await wireless()).earners, 0);
+  await q.query("UPDATE users SET blocked=false WHERE id=$1", [ids[0]]);
+  await q.query("DELETE FROM bikes WHERE id=$1", [laterBike]);
   assert.equal(
     (
       await admin("game/admin/settings", "PUT", {
@@ -148,6 +170,8 @@ try {
     "Gamification HTTP passed: privacy, awards, origin, ownership, reactions, limits and audited admin exclusion",
   );
 } finally {
+  await q.query("DELETE FROM achievement_awards WHERE achievement_key='rule_http_recipient'");
+  await q.query("DELETE FROM game_rules WHERE key='rule_http_recipient'");
   await q.query("DELETE FROM users WHERE id=ANY($1::uuid[])", [ids]);
   await q.end();
 }
