@@ -13,9 +13,16 @@ export default function CompactCombo({
   const id = useId(),
     [open, setOpen] = useState(false),
     [active, setActive] = useState(-1);
-  const root = useRef(null), gesture = useRef(null), touchClick = useRef(false);
+  const root = useRef(null),
+    gesture = useRef(null),
+    touchClick = useRef(false);
   useEffect(() => {
-    const outside = e => { if (!root.current?.contains(e.target)) { gesture.current = null; setOpen(false); } };
+    const outside = (e) => {
+      if (!root.current?.contains(e.target)) {
+        gesture.current = null;
+        setOpen(false);
+      }
+    };
     document.addEventListener("pointerdown", outside);
     return () => document.removeEventListener("pointerdown", outside);
   }, []);
@@ -44,7 +51,8 @@ export default function CompactCombo({
         value={value}
         onFocus={() => setOpen(true)}
         onBlur={(e) => {
-          if (gesture.current || root.current?.contains(e.relatedTarget)) return;
+          if (gesture.current || root.current?.contains(e.relatedTarget))
+            return;
           setOpen(false);
           setActive(-1);
         }}
@@ -89,22 +97,36 @@ export default function CompactCombo({
                 onPointerDown={(e) => {
                   touchClick.current = e.pointerType !== "mouse";
                   if (e.pointerType === "mouse") e.preventDefault();
-                  else gesture.current = { x: e.clientX, y: e.clientY, moved: false };
+                  else
+                    gesture.current = {
+                      x: e.clientX,
+                      y: e.clientY,
+                      moved: false,
+                    };
                 }}
                 onPointerMove={(e) => {
                   const g = gesture.current;
-                  if (g && Math.hypot(e.clientX-g.x,e.clientY-g.y)>8) g.moved = true;
+                  if (g && Math.hypot(e.clientX - g.x, e.clientY - g.y) > 8)
+                    g.moved = true;
                 }}
-                onPointerCancel={() => { gesture.current = null; }}
+                onPointerCancel={() => {
+                  gesture.current = null;
+                }}
                 onPointerUp={(e) => {
                   const g = gesture.current;
                   gesture.current = null;
-                  if (g && !g.moved && Math.hypot(e.clientX-g.x,e.clientY-g.y)<=8) {
+                  if (
+                    g &&
+                    !g.moved &&
+                    Math.hypot(e.clientX - g.x, e.clientY - g.y) <= 8
+                  ) {
                     e.preventDefault();
                     choose(v);
                   }
                 }}
-                onClick={(e) => { if (!touchClick.current || e.detail === 0) choose(v); }}
+                onClick={(e) => {
+                  if (!touchClick.current || e.detail === 0) choose(v);
+                }}
               >
                 {v}
               </li>

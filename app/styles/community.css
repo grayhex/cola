@@ -29,7 +29,11 @@
     gap: var(--space-3);
     padding: var(--space-2) var(--space-4);
     border-bottom: 1px solid var(--line);
-    background: linear-gradient(to right, var(--surface-subtle), var(--surface));
+    background: linear-gradient(
+      to right,
+      var(--surface-subtle),
+      var(--surface)
+    );
   }
   .comment-heading .person-identity {
     font-size: var(--text-sm);
@@ -159,7 +163,11 @@
     border-bottom: 0;
   }
   .notification-list li.unread {
-    background: linear-gradient(to right, var(--accent-soft), var(--surface) 60%);
+    background: linear-gradient(
+      to right,
+      var(--accent-soft),
+      var(--surface) 60%
+    );
     box-shadow: inset 3px 0 0 var(--accent);
   }
   .notification-list li > div {

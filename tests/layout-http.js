@@ -28,7 +28,7 @@ for (const api of [a, b])
   assert.equal(
     (
       await api("auth/register", "POST", {
-      ...testConsents,
+        ...testConsents,
         email: randomUUID() + "@example.test",
         name: "Layout",
         password: "layout-tests-12345",

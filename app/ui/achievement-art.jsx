@@ -3,7 +3,11 @@ import { useState } from "react";
 import { Trophy, Medal } from "./icons.jsx";
 
 // This box owns its dimensions. Photo-cover rules must never size award artwork.
-export default function AchievementArt({ imageId, kind = "record", size = 40 }) {
+export default function AchievementArt({
+  imageId,
+  kind = "record",
+  size = 40,
+}) {
   const [failedId, setFailedId] = useState(null);
   const Fallback = kind === "record" ? Trophy : Medal;
   return (

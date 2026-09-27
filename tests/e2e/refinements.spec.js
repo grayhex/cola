@@ -40,7 +40,7 @@ test("three-column bike, raster map, six-ride accordion, preferences and grouped
         await registerVerified(page.request, {
           headers: { origin },
           data: {
-      ...testConsents,
+            ...testConsents,
             name: "Layout " + nonce,
             email: nonce + "@layout.test",
             password: "layout-test-secret-123",
@@ -143,7 +143,10 @@ test("three-column bike, raster map, six-ride accordion, preferences and grouped
     });
     await page.goto("/account?tab=appearance");
     await page
-      .getByRole("combobox", { name: "Покатушки на странице велосипеда", exact: true })
+      .getByRole("combobox", {
+        name: "Покатушки на странице велосипеда",
+        exact: true,
+      })
       .selectOption("cards");
     await page
       .getByRole("combobox", { name: "Карта покатушки", exact: true })
@@ -167,9 +170,18 @@ test("three-column bike, raster map, six-ride accordion, preferences and grouped
     await expect(page.getByRole("status")).toHaveText(
       "Настройки опубликованы на сайте",
     );
-    const system = adminGroups.getByRole("tab", { name: "Система", exact: true });
-    const design = adminGroups.getByRole("tab", { name: "Дизайн", exact: true });
-    const catalog = adminGroups.getByRole("tab", { name: "Каталог", exact: true });
+    const system = adminGroups.getByRole("tab", {
+      name: "Система",
+      exact: true,
+    });
+    const design = adminGroups.getByRole("tab", {
+      name: "Дизайн",
+      exact: true,
+    });
+    const catalog = adminGroups.getByRole("tab", {
+      name: "Каталог",
+      exact: true,
+    });
     const panel = page.locator("#admin-group-panel");
     await system.focus();
     // The sidebar is vertical and uses manual activation: arrows move focus,
@@ -178,7 +190,10 @@ test("three-column bike, raster map, six-ride accordion, preferences and grouped
     await expect(design).toBeFocused();
     await expect(system).toHaveAttribute("aria-selected", "true");
     await expect(design).toHaveAttribute("aria-selected", "false");
-    await expect(panel).toHaveAttribute("aria-labelledby", "admin-group-system");
+    await expect(panel).toHaveAttribute(
+      "aria-labelledby",
+      "admin-group-system",
+    );
     await expect(
       panel.getByRole("heading", { name: "Карта", exact: true, level: 1 }),
     ).toBeVisible();
@@ -196,18 +211,32 @@ test("three-column bike, raster map, six-ride accordion, preferences and grouped
     }
     await page.keyboard.press("Enter");
     await expect(design).toHaveAttribute("aria-selected", "true");
-    await expect(panel).toHaveAttribute("aria-labelledby", "admin-group-design");
+    await expect(panel).toHaveAttribute(
+      "aria-labelledby",
+      "admin-group-design",
+    );
     await expect(
-      panel.getByRole("heading", { name: "Внешний вид", exact: true, level: 1 }),
+      panel.getByRole("heading", {
+        name: "Внешний вид",
+        exact: true,
+        level: 1,
+      }),
     ).toBeVisible();
     await page.keyboard.press("End");
     await expect(catalog).toBeFocused();
     await expect(design).toHaveAttribute("aria-selected", "true");
     await page.keyboard.press("Space");
     await expect(catalog).toHaveAttribute("aria-selected", "true");
-    await expect(panel).toHaveAttribute("aria-labelledby", "admin-group-catalog");
+    await expect(panel).toHaveAttribute(
+      "aria-labelledby",
+      "admin-group-catalog",
+    );
     await expect(
-      panel.getByRole("heading", { name: "Справочники", exact: true, level: 1 }),
+      panel.getByRole("heading", {
+        name: "Справочники",
+        exact: true,
+        level: 1,
+      }),
     ).toBeVisible();
     await page.keyboard.press("Home");
     await page.keyboard.press("ArrowDown");

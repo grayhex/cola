@@ -1,6 +1,12 @@
 "use client";
 import Link from "next/link";
-import { useCallback, useEffectEvent, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffectEvent,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import dynamic from "next/dynamic";
 import { NavigationSettings, AboutSettings } from "./navigation-settings.jsx";
 import {
@@ -511,7 +517,9 @@ export default function Admin() {
               {notice}
             </div>
           )}
-          <div hidden={tab !== "legal"}><LegalSettings active={tab === "legal"} /></div>
+          <div hidden={tab !== "legal"}>
+            <LegalSettings active={tab === "legal"} />
+          </div>
           {tab === "emojis" && (
             <EmojiSettings
               value={draft.emojis}

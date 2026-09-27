@@ -1,7 +1,21 @@
-.ownership { margin: 12px 0 18px; }
-.check { display: flex; align-items: center; gap: 9px; min-height: 44px; font-weight: 600; }
-.check input { flex: 0 0 auto; width: 18px; height: 18px; }
-.ownership p { margin: 4px 0 0; }
+.ownership {
+  margin: 12px 0 18px;
+}
+.check {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 44px;
+  font-weight: 600;
+}
+.check input {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+}
+.ownership p {
+  margin: 4px 0 0;
+}
 .modelInput.modelInput {
   min-width: 0;
   max-width: 100%;

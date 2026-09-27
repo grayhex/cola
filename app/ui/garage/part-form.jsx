@@ -5,7 +5,13 @@ import PartIcon from "../part-icon.jsx";
 import { Check, Lock } from "../icons.jsx";
 import Field from "./field.jsx";
 
-export default function PartForm({ initial, section, busy, onSubmit, onDirtyChange }) {
+export default function PartForm({
+  initial,
+  section,
+  busy,
+  onSubmit,
+  onDirtyChange,
+}) {
   const { catalog, t } = useSite();
   const { parts, partCategories, manufacturers } = catalog;
   const [start] = useState(() =>

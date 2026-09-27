@@ -112,8 +112,7 @@ export default function FactorySpecification({
     if (!automatic || !valid || !config?.autoResolve || sourceUrl) return;
     if (
       !config.brands.some(
-        (a) =>
-          a.enabled && a.name.toLowerCase() === brand.trim().toLowerCase(),
+        (a) => a.enabled && a.name.toLowerCase() === brand.trim().toLowerCase(),
       )
     )
       return;

@@ -14,11 +14,18 @@ export default function MapSettings({ settings, onChange }) {
       </p>
       <label className="setting-row">
         Подключать подложку
-        <input type="checkbox" checked={v.enabled} onChange={(e) => set("enabled", e.target.checked)} />
+        <input
+          type="checkbox"
+          checked={v.enabled}
+          onChange={(e) => set("enabled", e.target.checked)}
+        />
       </label>
       <label className="field">
         <span>Провайдер карты</span>
-        <select value={v.provider} onChange={(e) => set("provider", e.target.value)}>
+        <select
+          value={v.provider}
+          onChange={(e) => set("provider", e.target.value)}
+        >
           <option value="osm">OpenStreetMap</option>
           <option value="yandex">Яндекс Карты · JavaScript API 3.0</option>
           <option value="raster">Свой сервер растровых тайлов</option>
@@ -28,13 +35,21 @@ export default function MapSettings({ settings, onChange }) {
       {v.provider === "raster" && (
         <label className="field">
           <span>URL тайлов: {"{z}/{x}/{y}"}</span>
-          <input value={v.tileUrl} maxLength={2000} onChange={(e) => set("tileUrl", e.target.value)} />
+          <input
+            value={v.tileUrl}
+            maxLength={2000}
+            onChange={(e) => set("tileUrl", e.target.value)}
+          />
         </label>
       )}
       {v.provider === "style" && (
         <label className="field">
           <span>URL стиля MapLibre</span>
-          <input value={v.styleUrl} maxLength={2000} onChange={(e) => set("styleUrl", e.target.value)} />
+          <input
+            value={v.styleUrl}
+            maxLength={2000}
+            onChange={(e) => set("styleUrl", e.target.value)}
+          />
         </label>
       )}
       {v.provider !== "osm" && (
@@ -58,15 +73,19 @@ export default function MapSettings({ settings, onChange }) {
       {v.provider !== "osm" && !yandex && (
         <label className="field">
           <span>Авторство / название провайдера</span>
-          <input value={v.attribution} maxLength={200} onChange={(e) => set("attribution", e.target.value)} />
+          <input
+            value={v.attribution}
+            maxLength={200}
+            onChange={(e) => set("attribution", e.target.value)}
+          />
         </label>
       )}
       {yandex && (
         <p className="help">
-          URL тайлов и OAuth-секрет не нужны. Авторство отображает сам Яндекс API.
-          Полноценная карта загружается только в видимой области страницы покатушки;
-          превью в списках показывают линию без API-запросов. Учитывайте ограничения
-          своего тарифа.
+          URL тайлов и OAuth-секрет не нужны. Авторство отображает сам Яндекс
+          API. Полноценная карта загружается только в видимой области страницы
+          покатушки; превью в списках показывают линию без API-запросов.
+          Учитывайте ограничения своего тарифа.
         </p>
       )}
       <p className="help">

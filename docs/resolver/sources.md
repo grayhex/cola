@@ -4,13 +4,13 @@
 
 ## Выбор места изменения
 
-| Симптом | Где исправлять |
-| --- | --- |
-| Нужная товарная страница не найдена | Discovery адаптера или retailer search |
-| Найден соседний год/trim | Matching и metadata evidence |
-| Страница не скачивается | HTTP/DNS/redirect, не CSS-селектор |
-| HTML есть, но извлечено мало деталей | Extraction, site profile, label normalization |
-| Правильный preview портится при сохранении | App wizard/factory import, не Resolver core |
+| Симптом                                    | Где исправлять                                |
+| ------------------------------------------ | --------------------------------------------- |
+| Нужная товарная страница не найдена        | Discovery адаптера или retailer search        |
+| Найден соседний год/trim                   | Matching и metadata evidence                  |
+| Страница не скачивается                    | HTTP/DNS/redirect, не CSS-селектор            |
+| HTML есть, но извлечено мало деталей       | Extraction, site profile, label normalization |
+| Правильный preview портится при сохранении | App wizard/factory import, не Resolver core   |
 
 Основные файлы перечислены в [архитектуре](architecture.md). Не вносите product-specific URL или готовую комплектацию как исключение для одного велосипеда.
 

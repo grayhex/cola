@@ -30,8 +30,12 @@ export const GET = traced(async (req, { params }) => {
   if (notModified(req, etag)) return notModifiedResponse(etag);
   try {
     const original = () =>
-      readFile(/*turbopackIgnore: true*/
-        path.join(/*turbopackIgnore: true*/ process.env.UPLOAD_DIR || "uploads", avatarFilename(id)),
+      readFile(
+        /*turbopackIgnore: true*/
+        path.join(
+          /*turbopackIgnore: true*/ process.env.UPLOAD_DIR || "uploads",
+          avatarFilename(id),
+        ),
       );
     return mediaResponse(
       width

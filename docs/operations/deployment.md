@@ -111,12 +111,12 @@ Email — пример. Скрипт работает только с сущес
 
 5. В Settings → Environments → `production` ограничьте deployment branches веткой `main` и добавьте environment secrets:
 
-   | Имя | Назначение |
-   | --- | --- |
-   | `DEPLOY_SSH_KEY` | Приватная часть отдельного ключа Actions, соответствующая ограниченной строке выше |
+   | Имя                  | Назначение                                                                                          |
+   | -------------------- | --------------------------------------------------------------------------------------------------- |
+   | `DEPLOY_SSH_KEY`     | Приватная часть отдельного ключа Actions, соответствующая ограниченной строке выше                  |
    | `DEPLOY_KNOWN_HOSTS` | Проверенные записи host key VPS в формате `known_hosts`; для нестандартного порта — с `[host]:port` |
-   | `DEPLOY_HOST` | SSH-адрес VPS без имени пользователя; workflow использует `deploy` |
-   | `DEPLOY_PORT` | SSH-порт; при отсутствии workflow использует 22 |
+   | `DEPLOY_HOST`        | SSH-адрес VPS без имени пользователя; workflow использует `deploy`                                  |
+   | `DEPLOY_PORT`        | SSH-порт; при отсутствии workflow использует 22                                                     |
 
    Host key сверяйте через доверенный канал (например, консоль провайдера); не считайте непроверенный результат `ssh-keyscan` подтверждением подлинности. Настройки защиты `main` и environment проверяются отдельно: файлы репозитория их не применяют.
 
@@ -126,13 +126,13 @@ Forced-command отклоняет всё, кроме 40-символьного S
 
 Версии проверены 26.09.2026 по официальным релизам, npm registry и Docker Hub. Это версии исходников и образов, а не подтверждение того, что уже запущено на VPS.
 
-| Компонент | Зафиксировано | Источник |
-| --- | --- | --- |
-| Node.js | `24.21.0-alpine` во всех stages обоих Dockerfile; `24.21.0` в CI; `engines` допускает 24.x | [LTS-релиз](https://nodejs.org/en/blog/release/v24.21.0), [Docker-тег](https://hub.docker.com/v2/repositories/library/node/tags/24.21.0-alpine) |
-| Next.js / Next ESLint plugin | `16.3.6` | [Релиз](https://github.com/vercel/next.js/releases/tag/v16.3.6), [npm Next](https://registry.npmjs.org/next/16.3.6), [npm plugin](https://registry.npmjs.org/@next%2feslint-plugin-next/16.3.6) |
-| React / React DOM | `19.3.0` | [Релиз](https://github.com/facebook/react/releases/tag/v19.3.0), [npm React DOM](https://registry.npmjs.org/react-dom/19.3.0) |
-| PostgreSQL | `17.11-alpine` в обоих Compose и CI | [Релиз](https://www.postgresql.org/docs/17/release-17-11.html), [Docker-тег](https://hub.docker.com/v2/repositories/library/postgres/tags/17.11-alpine) |
-| Менеджеры пакетов и типы | pnpm `11.19.0` в корне, npm у Resolver; `@types/node` `24.13.6` в обоих пакетах | [pnpm](https://registry.npmjs.org/pnpm/11.19.0), [Node types](https://registry.npmjs.org/@types%2fnode/24.13.6) |
+| Компонент                    | Зафиксировано                                                                              | Источник                                                                                                                                                                                        |
+| ---------------------------- | ------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Node.js                      | `24.21.0-alpine` во всех stages обоих Dockerfile; `24.21.0` в CI; `engines` допускает 24.x | [LTS-релиз](https://nodejs.org/en/blog/release/v24.21.0), [Docker-тег](https://hub.docker.com/v2/repositories/library/node/tags/24.21.0-alpine)                                                 |
+| Next.js / Next ESLint plugin | `16.3.6`                                                                                   | [Релиз](https://github.com/vercel/next.js/releases/tag/v16.3.6), [npm Next](https://registry.npmjs.org/next/16.3.6), [npm plugin](https://registry.npmjs.org/@next%2feslint-plugin-next/16.3.6) |
+| React / React DOM            | `19.3.0`                                                                                   | [Релиз](https://github.com/facebook/react/releases/tag/v19.3.0), [npm React DOM](https://registry.npmjs.org/react-dom/19.3.0)                                                                   |
+| PostgreSQL                   | `17.11-alpine` в обоих Compose и CI                                                        | [Релиз](https://www.postgresql.org/docs/17/release-17-11.html), [Docker-тег](https://hub.docker.com/v2/repositories/library/postgres/tags/17.11-alpine)                                         |
+| Менеджеры пакетов и типы     | pnpm `11.19.0` в корне, npm у Resolver; `@types/node` `24.13.6` в обоих пакетах            | [pnpm](https://registry.npmjs.org/pnpm/11.19.0), [Node types](https://registry.npmjs.org/@types%2fnode/24.13.6)                                                                                 |
 
 Более новый `@types/node` 24.19.0 опубликован менее суток назад и отклонён действующей политикой `minimumReleaseAge` pnpm. Выбран проверенный 24.13.6 той же линии Node 24; исключения из политики не добавлены. Node 26 пока Current, поэтому выбран Node 24 LTS. React 19.3.0 уже был в lockfile до обновления; manifest приведён к нему. PostgreSQL остаётся на major 17. На дату проверки `postgres:17-alpine` и `postgres:17.11-alpine` указывали на один digest; установленный контейнер всё равно нужно проверить отдельно. Next 16.3.6 включает [исправление `next/og`](https://github.com/vercel/next.js/security/advisories/GHSA-vcvr-r3jv-pc5j).
 
@@ -166,7 +166,6 @@ sudo cat /var/lib/colabike/verified-sha
 Для возврата только app/Resolver используйте сохранённые **точные прежние образы** через временный Compose override с `image` у этих двух сервисов, теми же env, Compose project и volumes. После проверки итоговой конфигурации `--quiet` пересоздайте только `app bike-resolver` с `up --no-build --no-deps -d --wait`, явно передав основной production-файл и override. БД при этом не пересоздаётся. Повторите readiness/smoke; зафиксируйте фактические image IDs и инцидент отдельно — ручной возврат не обновляет `verified-sha`. Учтите, что возврат Next ниже 16.3.6 возвращает известный риск `next/og`; он требует отдельного решения владельца и быстрого исправления.
 
 **Возврат образа приложения не восстанавливает данные и не откатывает PostgreSQL.** Не подключайте прежний PostgreSQL binary к существующему volume наугад, не удаляйте volume и не запускайте restore поверх рабочей БД. При проблеме БД остановите запись, сохраните текущее состояние и восстановите проверенный backup в отдельные пустые БД и volumes по [runbook](backup-restore.md#восстановление-только-отдельная-пустая-цель). Используйте совместимую версию PostgreSQL 17, проверьте данные, файлы и приложение; переключение трафика выполняет оператор после приёмки с учётом записей, появившихся после backup.
-
 
 ### CSP rollout
 

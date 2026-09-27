@@ -16,7 +16,7 @@ async function api(url, method = "GET", data) {
   return { status: r.status, body: await r.json() };
 }
 await api("auth/register", "POST", {
-      ...testConsents,
+  ...testConsents,
   name: "Quota",
   email: randomUUID() + "@example.test",
   password: "quota-tests-12345",

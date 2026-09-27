@@ -12,12 +12,12 @@
 
 ## Провайдеры
 
-| Значение | Реализация | Настройка |
-| --- | --- | --- |
-| `osm` | Официальная растровая подложка OSM; MapLibre detail и SVG preview | Default, без ключа |
-| `raster` | Совместимый HTTPS XYZ endpoint | `tileUrl` с `{z}/{x}/{y}`, при необходимости `{key}` |
-| `style` | MapLibre style URL | `styleUrl`, при необходимости публичный ключ |
-| `yandex` | Официальный JavaScript API 3.0, отдельный renderer | `publicKey` продукта JavaScript API |
+| Значение | Реализация                                                        | Настройка                                            |
+| -------- | ----------------------------------------------------------------- | ---------------------------------------------------- |
+| `osm`    | Официальная растровая подложка OSM; MapLibre detail и SVG preview | Default, без ключа                                   |
+| `raster` | Совместимый HTTPS XYZ endpoint                                    | `tileUrl` с `{z}/{x}/{y}`, при необходимости `{key}` |
+| `style`  | MapLibre style URL                                                | `styleUrl`, при необходимости публичный ключ         |
+| `yandex` | Официальный JavaScript API 3.0, отдельный renderer                | `publicKey` продукта JavaScript API                  |
 
 Меняется в **Админка → Система → Карта**. Значения карты доступны браузеру; server secrets туда не вводятся. Сохранённые personal preferences `rideMapView` и `mapScrollZoom` управляют показом/колесом только у зрителя.
 

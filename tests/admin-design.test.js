@@ -29,7 +29,10 @@ test("only content artwork is configurable and unknown appearance settings are r
     ),
   );
   assert.equal(
-    graphicAsset({ faviconId: "image" }, illustrationSlots.find((slot) => slot.key === "faviconId")),
+    graphicAsset(
+      { faviconId: "image" },
+      illustrationSlots.find((slot) => slot.key === "faviconId"),
+    ),
     "image",
   );
   assert.equal(

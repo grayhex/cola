@@ -32,7 +32,10 @@ export const settingsSchema = z
     adapters: z
       .object(
         Object.fromEntries(
-          Object.keys(adapterSupport).map((k) => [k, k === "gt" ? z.boolean().default(true) : z.boolean()]),
+          Object.keys(adapterSupport).map((k) => [
+            k,
+            k === "gt" ? z.boolean().default(true) : z.boolean(),
+          ]),
         ),
       )
       .strict(),

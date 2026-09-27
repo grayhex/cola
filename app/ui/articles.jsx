@@ -179,7 +179,8 @@ export function Articles() {
         </div>
         {error && (
           <p role="alert" className="error">
-            {error}<EmailPolicyAction message={error} />
+            {error}
+            <EmailPolicyAction message={error} />
           </p>
         )}
         {data ? (
@@ -240,7 +241,8 @@ export function ArticlePage({ share, initial = null }) {
         </Link>
         {error && (
           <p className="error" role="alert">
-            {error}<EmailPolicyAction message={error} />
+            {error}
+            <EmailPolicyAction message={error} />
           </p>
         )}
         {article ? (
@@ -511,7 +513,8 @@ function ArticleEditor({ initial, onSaved, onCancel }) {
       )}
       {error && (
         <p role="alert" className="error">
-          {error}<EmailPolicyAction message={error} />
+          {error}
+          <EmailPolicyAction message={error} />
         </p>
       )}
       <div className="article-toolbar">

@@ -42,7 +42,7 @@ try {
     assert.equal(
       (
         await c("auth/register", "POST", {
-      ...testConsents,
+          ...testConsents,
           name: "Community " + i,
           email: nonce + i + "@example.test",
           password: "community-secret-123",

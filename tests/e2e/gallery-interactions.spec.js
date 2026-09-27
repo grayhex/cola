@@ -492,7 +492,9 @@ test("broken artwork and photos keep stable space and accessible fallbacks", asy
   ).toBeFocused();
 });
 
-test("dialog sign-in refreshes the showcase once for the new viewer", async ({ page }) => {
+test("dialog sign-in refreshes the showcase once for the new viewer", async ({
+  page,
+}) => {
   await fixture(page);
   const { user } = await (await page.request.get("/api/me")).json();
   await page.context().clearCookies();
@@ -504,10 +506,16 @@ test("dialog sign-in refreshes the showcase once for the new viewer", async ({ p
   await page.goto("/bikes");
   await expect(page.locator(".bike-card")).toHaveCount(9);
   expect(loads).toBe(1);
-  await page.locator(".bike-card").first().getByRole("button", { name: "Нравится: 2" }).click();
+  await page
+    .locator(".bike-card")
+    .first()
+    .getByRole("button", { name: "Нравится: 2" })
+    .click();
   const form = page.locator(".auth-form");
   await form.getByLabel("Электронная почта", { exact: true }).fill(user.email);
-  await form.getByLabel("Пароль", { exact: true }).fill("gallery-viewer-secret-123");
+  await form
+    .getByLabel("Пароль", { exact: true })
+    .fill("gallery-viewer-secret-123");
   await form.getByRole("button", { name: "Войти", exact: true }).click();
   await expect(form).toHaveCount(0);
   await expect.poll(() => loads).toBe(2);
@@ -554,12 +562,21 @@ test("guest sign-in continues the requested add-bike action", async ({
   // must remain possible to request a fresh wizard from this same SPA page.
   await expect(page).toHaveURL(/\/account\?tab=bikes$/);
   await expect(page.locator(".garage-banner")).toHaveCount(0);
-  const wizard = page.getByRole("dialog", { name: "Новый велосипед", exact: true });
+  const wizard = page.getByRole("dialog", {
+    name: "Новый велосипед",
+    exact: true,
+  });
   await wizard.getByRole("button", { name: "Закрыть", exact: true }).click();
   await expect(wizard).not.toBeVisible();
   await page.reload();
-  await expect(page.getByRole("button", { name: "Добавить велосипед", exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Добавить велосипед", exact: true }),
+  ).toBeVisible();
   await expect(wizard).toHaveCount(0);
-  await page.getByRole("button", { name: "Добавить велосипед", exact: true }).click();
-  await expect(wizard.getByLabel("Модель, год и комплектация", { exact: true })).toHaveValue("");
+  await page
+    .getByRole("button", { name: "Добавить велосипед", exact: true })
+    .click();
+  await expect(
+    wizard.getByLabel("Модель, год и комплектация", { exact: true }),
+  ).toHaveValue("");
 });

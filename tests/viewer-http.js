@@ -64,7 +64,19 @@ const account = `aria-label="Аккаунт — ${name}"`;
 const guestLogin = /class="nav-trigger" href="\/account">[\s\S]{0,400}?Войти/;
 // A 404 page is not in this list: Next sends it as an empty shell and draws it
 // in the browser, where server-render.spec.js checks its header.
-for (const path of ["/", "/bikes", "/journal", "/articles", "/rides", "/market", "/records", "/about", "/legal/terms", "/account", bikePath]) {
+for (const path of [
+  "/",
+  "/bikes",
+  "/journal",
+  "/articles",
+  "/rides",
+  "/market",
+  "/records",
+  "/about",
+  "/legal/terms",
+  "/account",
+  bikePath,
+]) {
   const own = await reader.page(path);
   assert.equal(own.status, 200, path);
   assert.ok(own.html.includes(account), path + ": signed-in header");

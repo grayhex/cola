@@ -16,11 +16,15 @@ export function proxy(request) {
   const response = NextResponse.next({ request: { headers } });
   // Report-Only retains the baseline response header from next.config.mjs.
   // Do not overwrite the internal request CSP with a baseline proxy header.
-  if (mode === "enforce") response.headers.set("Content-Security-Policy", policy);
-  if (mode === "report-only") response.headers.set("Content-Security-Policy-Report-Only", policy);
+  if (mode === "enforce")
+    response.headers.set("Content-Security-Policy", policy);
+  if (mode === "report-only")
+    response.headers.set("Content-Security-Policy-Report-Only", policy);
   response.headers.set("Cache-Control", "private, no-store");
   return response;
 }
 export const config = {
-  matcher: ["/((?!api(?:/|$)|_next(?:/|$)|fonts(?:/|$)|maplibre(?:/|$)|favicon\\.svg$|robots\\.txt$|sitemap\\.xml$|test-map-style\\.json$).*)"],
+  matcher: [
+    "/((?!api(?:/|$)|_next(?:/|$)|fonts(?:/|$)|maplibre(?:/|$)|favicon\\.svg$|robots\\.txt$|sitemap\\.xml$|test-map-style\\.json$).*)",
+  ],
 };

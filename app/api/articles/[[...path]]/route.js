@@ -1,4 +1,7 @@
-import { requireVerifiedEmail, EmailPolicyError } from "../../../../lib/email-policy.js";
+import {
+  requireVerifiedEmail,
+  EmailPolicyError,
+} from "../../../../lib/email-policy.js";
 import { db, transaction } from "../../../../lib/db.js";
 import { currentUser, rateLimit } from "../../../../lib/auth.js";
 import { json, fail, readJson, sameOrigin } from "../../../../lib/http.js";
@@ -132,7 +135,8 @@ async function handler(req, { params }) {
     }
     return fail("Не найдено", 404);
   } catch (e) {
-    if (e instanceof EmailPolicyError) return json({ error: e.message, code: e.code }, e.status);
+    if (e instanceof EmailPolicyError)
+      return json({ error: e.message, code: e.code }, e.status);
     if (e instanceof CommunityError) return fail(e.message, e.status);
     if (e.name === "ZodError" || e instanceof SyntaxError)
       return fail(

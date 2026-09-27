@@ -116,12 +116,20 @@ test("public pages hydrate their server HTML and stay interactive", async ({
   });
   const pages = [
     ["/b/" + bike.share_id, "Гравел " + nonce, "Shimano GRX " + nonce],
-    ["/j/" + entry.shareId, "Сервис " + nonce, "Заменил тормозные колодки " + nonce],
+    [
+      "/j/" + entry.shareId,
+      "Сервис " + nonce,
+      "Заменил тормозные колодки " + nonce,
+    ],
     ["/r/" + ride.shareId, "Круг " + nonce, "Вдоль реки " + nonce],
     ["/r/" + plan.shareId, "Выезд " + nonce, "Сбор у моста " + nonce],
     ["/market/" + listing.shareId, "Колёса " + nonce, "Пара колёс " + nonce],
     ["/@" + username, "Сервер " + nonce, "Гравел " + nonce],
-    ["/articles/" + article.shareId, "Уход за цепью " + nonce, "Чистая цепь служит дольше " + nonce],
+    [
+      "/articles/" + article.shareId,
+      "Уход за цепью " + nonce,
+      "Чистая цепь служит дольше " + nonce,
+    ],
   ];
 
   const context = await browser.newContext({ timezoneId: "Asia/Vladivostok" });
@@ -142,7 +150,10 @@ test("public pages hydrate their server HTML and stay interactive", async ({
       guest.getByRole("heading", { level: 1, name: title }),
     ).toBeVisible();
     await guest.waitForLoadState("networkidle");
-    expect(errors.filter((e) => hydrationError.test(e)), path).toEqual([]);
+    expect(
+      errors.filter((e) => hydrationError.test(e)),
+      path,
+    ).toEqual([]);
     expect(await duplicateIds(guest), path).toEqual([]);
   }
   // Hydrated pages still answer clicks: the share menu opens for guests.
@@ -150,7 +161,10 @@ test("public pages hydrate their server HTML and stay interactive", async ({
   await guest.getByRole("button", { name: "Поделиться", exact: true }).click();
   await expect(guest.getByRole("menu")).toBeVisible();
   await expect(
-    guest.getByRole("button", { name: "Подписаться на велосипед", exact: true }),
+    guest.getByRole("button", {
+      name: "Подписаться на велосипед",
+      exact: true,
+    }),
   ).toHaveCount(1);
   // Times and dates switch to the viewer's own zone after hydration.
   await guest.goto("/r/" + plan.shareId);
@@ -226,10 +240,7 @@ test("a hidden bike is a 404 page for guests", async ({ page, browser }) => {
   ).toBeVisible();
   await expect(
     guest.getByRole("link", { name: "войдите", exact: true }),
-  ).toHaveAttribute(
-    "href",
-    "/login",
-  );
+  ).toHaveAttribute("href", "/login");
   expect(await guest.content()).not.toContain("Тайный " + nonce);
   await context.close();
   // The owner still opens the private bike.
@@ -261,7 +272,20 @@ test("a signed-in reader gets the header with the page, without asking /api/me",
   page.on("request", (r) => {
     if (new URL(r.url()).pathname === "/api/me") me.push(r.url());
   });
-  for (const path of ["/", "/bikes", "/journal", "/articles", "/rides", "/market", "/records", "/search?q=cube", "/experience", "/saved", "/account", "/b/unknown-zzzzzzzz"]) {
+  for (const path of [
+    "/",
+    "/bikes",
+    "/journal",
+    "/articles",
+    "/rides",
+    "/market",
+    "/records",
+    "/search?q=cube",
+    "/experience",
+    "/saved",
+    "/account",
+    "/b/unknown-zzzzzzzz",
+  ]) {
     await page.goto(path);
     // The account menu is in the first HTML; the guest "Войти" never shows.
     await expect(page.getByLabel("Аккаунт — " + name).first()).toBeAttached();

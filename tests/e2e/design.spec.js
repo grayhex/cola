@@ -112,8 +112,12 @@ test("dense visual system: shared cards, filters, search, themes and responsive 
     await expect(card.locator(".card-info > *")).toHaveCount(3);
     const classification = card.getByLabel("Классификация", { exact: true });
     await expect(classification).toBeVisible();
-    expect(await classification.locator(":scope > span").count()).toBeGreaterThan(0);
-    expect(await classification.locator(":scope > span").count()).toBeLessThanOrEqual(3);
+    expect(
+      await classification.locator(":scope > span").count(),
+    ).toBeGreaterThan(0);
+    expect(
+      await classification.locator(":scope > span").count(),
+    ).toBeLessThanOrEqual(3);
     await expect(card.locator(".like-button img")).toHaveCount(0);
     await expect(card.locator(".like-button svg.site-icon")).toBeVisible();
     expect(
@@ -149,7 +153,9 @@ test("dense visual system: shared cards, filters, search, themes and responsive 
     // The first two new families (MTB + Road/Gravel) now cover all fixture
     // bikes. Choose an explicit subset rather than relying on catalog order.
     await panel.getByRole("checkbox", { name: "MTB", exact: true }).check();
-    await panel.getByRole("checkbox", { name: "Город / туризм", exact: true }).check();
+    await panel
+      .getByRole("checkbox", { name: "Город / туризм", exact: true })
+      .check();
     expect(
       await panel
         .getByRole("button", { name: "Применить" })
@@ -202,11 +208,19 @@ test("dense visual system: shared cards, filters, search, themes and responsive 
     ]);
     await page.reload();
     await page.getByRole("button", { name: /^Фильтры/ }).click();
-    await expect(panel.getByRole("checkbox")).toHaveCount(Object.keys(bikeCategories).length);
+    await expect(panel.getByRole("checkbox")).toHaveCount(
+      Object.keys(bikeCategories).length,
+    );
     for (const label of Object.values(bikeCategories))
-      await expect(panel.getByRole("checkbox", { name: label, exact: true })).toBeVisible();
-    await expect(panel.getByRole("checkbox", { name: /Дополнительная категория/ })).toHaveCount(0);
-    expect((await page.request.get("/api/showcase?category=future-0")).status()).toBe(400);
+      await expect(
+        panel.getByRole("checkbox", { name: label, exact: true }),
+      ).toBeVisible();
+    await expect(
+      panel.getByRole("checkbox", { name: /Дополнительная категория/ }),
+    ).toHaveCount(0);
+    expect(
+      (await page.request.get("/api/showcase?category=future-0")).status(),
+    ).toBe(400);
     await panel.getByRole("checkbox").last().check();
     await noOverflow();
     await screenshot("canonical-filter-catalog");

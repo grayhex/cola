@@ -8,13 +8,7 @@ import {
   significantBadge,
   metricSegments,
 } from "../../lib/card-presentation.js";
-import {
-  X,
-  CheckCheck,
-  Zap,
-  Medal,
-  Trophy,
-} from "./icons.jsx";
+import { X, CheckCheck, Zap, Medal, Trophy } from "./icons.jsx";
 import { publicPath } from "../../lib/public-urls.js";
 
 export function CompactIconButton({

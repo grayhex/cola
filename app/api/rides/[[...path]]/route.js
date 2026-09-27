@@ -1,4 +1,7 @@
-import { requireVerifiedEmail, EmailPolicyError } from "../../../../lib/email-policy.js";
+import {
+  requireVerifiedEmail,
+  EmailPolicyError,
+} from "../../../../lib/email-policy.js";
 import { db, transaction } from "../../../../lib/db.js";
 import { currentUser, rateLimit } from "../../../../lib/auth.js";
 import {
@@ -169,7 +172,12 @@ async function handler(req, { params }) {
       return json(result, 201);
     }
     if (p.length === 2 && p[1] === "track" && m === "POST") {
-      const ride = (await db.query("SELECT is_public FROM rides WHERE id=$1 AND owner_id=$2", [uuid.parse(p[0]), user.id])).rows[0];
+      const ride = (
+        await db.query(
+          "SELECT is_public FROM rides WHERE id=$1 AND owner_id=$2",
+          [uuid.parse(p[0]), user.id],
+        )
+      ).rows[0];
       if (!ride) return fail("Покатушка недоступна", 404);
       if (ride.is_public) requireVerifiedEmail(user);
       if (!config.enabled)
@@ -292,7 +300,8 @@ async function handler(req, { params }) {
     }
     return fail("Не найдено", 404);
   } catch (e) {
-    if (e instanceof EmailPolicyError) return json({ error: e.message, code: e.code }, e.status);
+    if (e instanceof EmailPolicyError)
+      return json({ error: e.message, code: e.code }, e.status);
     if (e instanceof RideError || e instanceof CommunityError)
       return fail(e.message, e.status);
     if (e.name === "ZodError" || e instanceof SyntaxError)

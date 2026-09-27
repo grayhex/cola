@@ -1,22 +1,26 @@
-/* Hall of Fame (#127): groups of record cards — the award art on the left,
-   the record, the holder and its value on the right, the owner below a
-   hairline. The art is 160 px so every card reads the same. */
+/* Hall of Fame snapshot (#157): compact art, complete names and public
+   context. Cards grow for long names; no fixed heights or clipped links. */
 .page {
   max-width: calc(1440px + 2 * var(--gutter));
 }
 .page :global(.hall-heading) {
-  margin-bottom: var(--space-6);
+  margin-bottom: var(--space-4);
 }
 /* Records and awards: two tabs, each with a line on how it works (#106). */
 .page :global(.hall-tabs) {
   margin-bottom: var(--space-4);
 }
 .page :global(.hall-lead) {
-  margin: 0 0 var(--space-6);
+  margin: 0 0 var(--space-2);
+}
+.page :global(.hall-updated) {
+  margin: 0 0 var(--space-4);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
 }
 .page :global(.record-groups) {
   display: grid;
-  gap: var(--space-8);
+  gap: var(--space-5);
 }
 .page :global(.record-group) {
   min-width: 0;
@@ -25,8 +29,8 @@
   display: flex;
   align-items: baseline;
   gap: var(--space-2-5);
-  margin: 0 0 var(--space-3);
-  font-size: var(--text-lg);
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-base);
   font-weight: var(--weight-semibold);
 }
 .page :global(.record-group-title) > span {
@@ -35,19 +39,17 @@
 }
 .page :global(.record-grid) {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--space-4);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-3);
 }
 .page :global(.record-card) {
   display: grid;
-  grid-template-columns: 160px minmax(0, 1fr);
+  grid-template-columns: 64px minmax(0, 1fr);
   grid-template-rows: 1fr auto;
-  align-items: center;
-  gap: var(--space-4);
+  align-items: start;
+  gap: var(--space-3);
   min-width: 0;
-  min-height: 248px;
-  padding: var(--space-4);
-  overflow: hidden;
+  padding: var(--space-3);
   border: 1px solid var(--line);
   border-radius: var(--radius-xl);
   background: var(--surface-gradient);
@@ -58,8 +60,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 160px;
-  height: 160px;
+  width: 64px;
+  height: 64px;
 }
 .page :global(.record-content) {
   min-width: 0;
@@ -69,31 +71,28 @@
   font-size: var(--text-base);
   font-weight: var(--weight-semibold);
   line-height: var(--leading-snug);
+  overflow-wrap: anywhere;
 }
 .page :global(.record-description) {
   margin: var(--space-1-5) 0 0;
   color: var(--text-secondary);
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   line-height: var(--leading-normal);
   overflow-wrap: anywhere;
 }
 .page :global(.record-result) {
   display: grid;
-  gap: var(--space-1-5);
+  gap: var(--space-1);
   min-width: 0;
-  margin-top: var(--space-4);
+  margin-top: var(--space-2);
 }
 .page :global(.record-bike-name) {
-  display: -webkit-box;
-  overflow: hidden;
   color: var(--text-strong);
-  font-size: var(--text-lg);
+  font-size: var(--text-base);
   font-weight: var(--weight-bold);
   line-height: 1.3;
   overflow-wrap: anywhere;
   text-underline-offset: 3px;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
 }
 .page :global(.record-value) {
   color: var(--text-secondary);
@@ -104,12 +103,13 @@
   grid-column: 1 / -1;
   align-self: end;
   margin: 0;
-  padding-top: var(--space-2-5);
+  padding-top: var(--space-2);
   border-top: 1px dashed var(--line-dashed);
 }
 .page :global(.record-owner) {
   color: var(--text-muted);
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
 }
 .page :global(.record-meta) {
   display: flex;
@@ -117,28 +117,30 @@
   align-items: baseline;
   gap: var(--space-1) var(--space-3);
   min-width: 0;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  line-height: 1.4;
 }
 .page :global(.record-meta) small {
   margin-left: auto;
   color: var(--text-muted);
   font: var(--weight-regular) var(--text-xs) / 1.4 var(--font-mono);
 }
-/* An award has no holder: the card is shorter, the count sits below. */
-.page :global(.award-card) {
-  min-height: 208px;
-}
-.page :global(p.record-meta) {
+.page :global(.award-recipient-label) {
   color: var(--text-muted);
-  font-size: var(--text-xs);
-  line-height: 1.4;
+  font-size: var(--text-sm);
+}
+.page :global(.award-date) {
+  font-variant-numeric: tabular-nums;
+}
+.page :global(.award-count) {
+  overflow-wrap: anywhere;
 }
 .page :global(.record-empty) {
-  overflow: hidden;
   color: var(--text-muted);
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   line-height: 1.4;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 .page :global(.record-empty) strong {
   font-size: inherit;
@@ -150,25 +152,22 @@
 .page :global(.hall-rules) {
   margin-top: var(--space-6);
 }
-@media (max-width: 1199px) {
+@media (max-width: 1279px) {
+  .page :global(.record-grid) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 1023px) {
   .page :global(.record-grid) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
-@media (max-width: 799px) {
+@media (max-width: 639px) {
   .page :global(.record-grid) {
     grid-template-columns: minmax(0, 1fr);
   }
   .page :global(.record-card) {
     gap: var(--space-3);
-  }
-}
-@media (max-width: 379px) {
-  .page :global(.record-card) {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .page :global(.record-illustration) {
-    justify-self: center;
   }
 }
 @media (hover: hover) and (pointer: fine) {
@@ -196,7 +195,10 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .page :global(:is(.record-card, .record-illustration, .record-bike-name, .record-owner)) {
+  .page
+    :global(
+      :is(.record-card, .record-illustration, .record-bike-name, .record-owner)
+    ) {
     animation: none;
     transition: none;
     transform: none;

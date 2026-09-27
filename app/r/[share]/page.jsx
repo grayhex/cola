@@ -1,6 +1,12 @@
 import RidePage from "../../ui/ride-page.jsx";
-import { metadataFor, canonicalPage, sharePath, pageData } from "../../../lib/social-page.js";
-export const runtime = "nodejs", dynamic = "force-dynamic";
+import {
+  metadataFor,
+  canonicalPage,
+  sharePath,
+  pageData,
+} from "../../../lib/social-page.js";
+export const runtime = "nodejs",
+  dynamic = "force-dynamic";
 export async function generateMetadata({ params, searchParams }) {
   return metadataFor("ride", (await params).share, await searchParams);
 }

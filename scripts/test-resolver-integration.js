@@ -25,7 +25,9 @@ const environment = {
   BIKE_RESOLVER_URL: "http://127.0.0.1:8081",
   APP_ORIGIN: base,
   // Exercise the full browser matrix with blocking CSP; deployment defaults to Report-Only.
-  CSP_MODE: process.env.CSP_MODE || (process.argv.includes("--e2e") ? "enforce" : "report-only"),
+  CSP_MODE:
+    process.env.CSP_MODE ||
+    (process.argv.includes("--e2e") ? "enforce" : "report-only"),
   TEST_ORIGIN: base,
   COOKIE_SECURE: "false",
   MAX_PHOTOS_PER_USER: "20",
@@ -98,9 +100,15 @@ try {
       ),
     );
     children.splice(children.indexOf(migration), 1);
-    const fixtureDb = new pg.Client({ connectionString: environment.DATABASE_URL });
+    const fixtureDb = new pg.Client({
+      connectionString: environment.DATABASE_URL,
+    });
     await fixtureDb.connect();
-    try { await seedLegalDocuments(fixtureDb); } finally { await fixtureDb.end(); }
+    try {
+      await seedLegalDocuments(fixtureDb);
+    } finally {
+      await fixtureDb.end();
+    }
   } else {
     start(["scripts/test-db.js"]);
     console.log(

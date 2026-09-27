@@ -34,7 +34,7 @@ let original, originalCatalog, asset, adminId, memberId;
 try {
   assert.equal((await guest("admin/overview")).status, 401);
   const a = await admin("auth/register", "POST", {
-      ...testConsents,
+    ...testConsents,
     name: "Admin test",
     email: `admin-${id}@example.test`,
     password,
@@ -48,7 +48,7 @@ try {
   );
   await db.query("UPDATE users SET role='admin' WHERE id=$1", [adminId]);
   const m = await member("auth/register", "POST", {
-      ...testConsents,
+    ...testConsents,
     name: "Member test",
     email: `member-${id}@example.test`,
     password,
@@ -128,7 +128,10 @@ try {
   asset = (await upload.json()).id;
   const servedAsset = await fetch(base + "/api/assets/" + asset);
   assert.equal(servedAsset.status, 200);
-  assert.equal(servedAsset.headers.get("content-security-policy"), assetContentSecurityPolicy);
+  assert.equal(
+    servedAsset.headers.get("content-security-policy"),
+    assetContentSecurityPolicy,
+  );
   assert.equal(servedAsset.headers.get("x-content-type-options"), "nosniff");
   await servedAsset.arrayBuffer();
   let latest = (await admin("admin/overview")).data;
@@ -178,7 +181,7 @@ try {
   assert.equal(
     (
       await guest("auth/register", "POST", {
-      ...testConsents,
+        ...testConsents,
         name: "Closed",
         email: `closed-${id}@example.test`,
         password,

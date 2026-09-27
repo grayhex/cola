@@ -192,9 +192,7 @@ export default function Home() {
                     ))}
                   </h1>
                 </div>
-                <p className={styles.description}>
-                  {settings.heroDescription}
-                </p>
+                <p className={styles.description}>{settings.heroDescription}</p>
                 <div className={styles.heroSearch} data-home-search>
                   <SearchBox hero />
                 </div>
@@ -203,7 +201,10 @@ export default function Home() {
                     Смотреть велосипеды <ArrowRight size={14} />
                   </Link>
                   <span>или</span>
-                  <Link className="text-link" href="/account?tab=bikes&action=add">
+                  <Link
+                    className="text-link"
+                    href="/account?tab=bikes&action=add"
+                  >
                     добавить свой
                   </Link>
                 </div>
@@ -350,7 +351,10 @@ export default function Home() {
               {content.records.map((record) => {
                 const [href, holder] = recordHolder(record.holder);
                 return (
-                  <article className={"item-card " + styles.record} key={record.key}>
+                  <article
+                    className={"item-card " + styles.record}
+                    key={record.key}
+                  >
                     <span className={styles.recordIcon} aria-hidden="true">
                       <Trophy size={16} />
                     </span>

@@ -5,6 +5,7 @@ import { readFile, readdir } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import {
   records,
+  awardCatalog,
   awardShelf,
   reactToBike,
   excludeBike,
@@ -69,6 +70,94 @@ async function bike(
   return id;
 }
 const holder = (r, key) => r.records.find((r) => r.key === key)?.holder;
+test("Hall of Fame selects the latest visible recipient by timestamp then ID, with public context and distinct counts", async () => {
+  const q = await setup();
+  try {
+    const first = await rider(q, "first"),
+      second = await rider(q, "second");
+    const firstBike = await bike(q, first),
+      secondBike = await bike(q, second);
+    const anotherBike = await bike(q, second);
+    const stamp = "2026-09-01T12:34:56.789Z";
+    const next = "2026-09-02T00:00:00.000Z";
+    // Fixtures target existing rules without changing calculation or triggers.
+    for (const [userId, bikeId] of [
+      [first, firstBike],
+      [second, secondBike],
+      [second, anotherBike],
+    ]) {
+      await q.query(
+        "INSERT INTO achievement_awards(achievement_key,user_id,bike_id,awarded_at) VALUES('wireless',$1,$2,$3)",
+        [userId, bikeId, stamp],
+      );
+    }
+    await q.query(
+      "UPDATE achievement_awards SET awarded_at=$1 WHERE achievement_key='first_public'",
+      [stamp],
+    );
+    const item = async (key) =>
+      (await awardCatalog(q)).find((a) => a.key === key);
+    let award = await item("wireless");
+    assert.equal(award.earners, 2); // Two bikes of one person count only once.
+    assert.equal(award.latestRecipient.bike.id, anotherBike); // Equal timestamps: greater ID wins.
+    assert.equal(award.latestRecipient.author.id, second);
+    assert.equal(
+      new Date(award.latestRecipient.awardedAt).toISOString(),
+      stamp,
+    );
+    assert.deepEqual(Object.keys(award.latestRecipient.author).sort(), [
+      "avatar",
+      "id",
+      "name",
+      "username",
+    ]);
+    assert.equal(
+      (await item("first_public")).latestRecipient.author.id,
+      second,
+    );
+    assert.equal((await item("first_public")).latestRecipient.bike, null);
+    assert.equal((await item("century")).latestRecipient, null);
+    assert.equal((await item("century")).earners, 0);
+    await q.query(
+      "UPDATE achievement_awards SET awarded_at=$1 WHERE bike_id=$2",
+      [next, firstBike],
+    );
+    assert.equal((await item("wireless")).latestRecipient.bike.id, firstBike); // Timestamp precedes ID.
+    await q.query(
+      "UPDATE bikes SET name='Renamed public bike',is_public=false WHERE id=$1",
+      [firstBike],
+    );
+    award = await item("wireless");
+    assert.equal(award.earners, 1);
+    assert.equal(award.latestRecipient.bike.id, anotherBike);
+    assert.ok(!JSON.stringify(award).includes(firstBike));
+    await q.query("UPDATE users SET blocked=true WHERE id=$1", [second]);
+    assert.equal((await item("wireless")).latestRecipient, null);
+    assert.equal((await item("wireless")).earners, 0);
+    assert.equal((await item("first_public")).latestRecipient.author.id, first);
+    await q.query("UPDATE bikes SET is_public=true WHERE id=$1", [firstBike]);
+    assert.equal(
+      (await item("wireless")).latestRecipient.bike.name,
+      "Renamed public bike",
+    );
+    await q.query("DELETE FROM bikes WHERE id=$1", [firstBike]);
+    assert.equal((await item("wireless")).latestRecipient, null);
+    await q.query(
+      "UPDATE game_rules SET enabled=false WHERE key='first_public'",
+    );
+    assert.equal(await item("first_public"), undefined);
+    const snapshot = await records(q);
+    assert.ok(Number.isFinite(Date.parse(snapshot.asOf)));
+    assert.ok(
+      snapshot.records.every(
+        (r) =>
+          !Object.hasOwn(r, "awardedAt") && !Object.hasOwn(r, "held_since"),
+      ),
+    );
+  } finally {
+    await q.close();
+  }
+});
 test("game settings validate explicit thresholds, records and single currency", () => {
   assert(gameSettingsInput.safeParse(defaultGamification).success);
   for (const input of [

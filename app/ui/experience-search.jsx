@@ -67,11 +67,15 @@ export default function ExperienceSearch({ modelPage = false }) {
       active = false;
     };
   }, [query, user?.id]);
-  const set = (key, value) => setForm((f) => ({
-    ...f, [key]: value,
-    ...(["brand", "model"].includes(key) ? { bikeModelId: "" } : {}),
-    ...(["component", "componentCategory"].includes(key) ? { componentModelId: "" } : {}),
-  }));
+  const set = (key, value) =>
+    setForm((f) => ({
+      ...f,
+      [key]: value,
+      ...(["brand", "model"].includes(key) ? { bikeModelId: "" } : {}),
+      ...(["component", "componentCategory"].includes(key)
+        ? { componentModelId: "" }
+        : {}),
+    }));
   function search(next) {
     if (modelPage) next = { ...next, exact: "1" };
     setForm(next);

@@ -52,19 +52,48 @@ assert.equal(robotsTxt.status, 200);
 const rules = await robotsTxt.text();
 assert.match(rules, /User-Agent: \*/);
 assert.match(rules, /^Disallow: \/api\/$/m);
-for (const media of ["photos", "avatars", "journal/media", "market/media", "social-preview"])
+for (const media of [
+  "photos",
+  "avatars",
+  "journal/media",
+  "market/media",
+  "social-preview",
+])
   assert.match(rules, new RegExp(`^Allow: /api/${media}/$`, "m"));
 // Personal sections carry noindex instead: a crawler must fetch them to see it.
 assert.doesNotMatch(rules, /^Disallow: \/$/m);
 assert.match(rules, new RegExp(`^Sitemap: ${base}/sitemap.xml$`, "m"));
 
 // Catalogs are indexed; personal and utility pages are not.
-for (const path of ["/", "/bikes", "/journal", "/articles", "/rides", "/market", "/records", "/about", "/legal/terms"]) {
+for (const path of [
+  "/",
+  "/bikes",
+  "/journal",
+  "/articles",
+  "/rides",
+  "/market",
+  "/records",
+  "/about",
+  "/legal/terms",
+]) {
   const page = await guest.page(path);
   assert.equal(page.status, 200, path);
   assert.equal(robots(page.html), "index, follow", path);
 }
-for (const path of ["/account", "/saved", "/search", "/notifications", "/feed", "/login", "/register", "/experience", "/j/new", "/market/new", "/articles/new", "/legal/terms?revision=1"]) {
+for (const path of [
+  "/account",
+  "/saved",
+  "/search",
+  "/notifications",
+  "/feed",
+  "/login",
+  "/register",
+  "/experience",
+  "/j/new",
+  "/market/new",
+  "/articles/new",
+  "/legal/terms?revision=1",
+]) {
   const page = await guest.page(path);
   assert.match(robots(page.html) || "", /^noindex/, path);
 }
@@ -180,9 +209,16 @@ const content = {
   bike: [bikeInput.name, bikeInput.description, "Shimano GRX " + nonce],
   journal: ["Замена цепи " + nonce, "Поставил новую цепь и кассету " + nonce],
   ride: ["Утренний круг " + nonce, "Лесной круг вокруг озера " + nonce],
-  market: ["Вилка Fox " + nonce, "Ход 150 мм, после сервиса " + nonce, "45 000"],
+  market: [
+    "Вилка Fox " + nonce,
+    "Ход 150 мм, после сервиса " + nonce,
+    "45 000",
+  ],
   profile: ["Индекс " + nonce, bikeInput.name],
-  article: ["Как смазать цепь " + nonce, "Сначала очистите цепь от грязи " + nonce],
+  article: [
+    "Как смазать цепь " + nonce,
+    "Сначала очистите цепь от грязи " + nonce,
+  ],
 };
 const loading = {
   bike: ["Загружаем велосипеды"],
@@ -192,7 +228,9 @@ const loading = {
   profile: ["Загружаем профиль", "Загружаем велосипеды"],
   article: ["Загружаем статью"],
 };
-assert.ok((await guest.page(bikePath)).html.includes(`<h1>${bikeInput.name}</h1>`));
+assert.ok(
+  (await guest.page(bikePath)).html.includes(`<h1>${bikeInput.name}</h1>`),
+);
 for (const [kind, path] of Object.entries(pages)) {
   const page = await guest.page(path);
   assert.equal(page.status, 200, kind);
@@ -203,7 +241,8 @@ for (const [kind, path] of Object.entries(pages)) {
     .slice(page.html.indexOf("<body"))
     .replace(/<script[\s\S]*?<\/script>/g, "")
     .replaceAll(/\u00a0|&nbsp;/g, " ");
-  for (const text of content[kind]) assert.ok(body.includes(text), kind + ": " + text);
+  for (const text of content[kind])
+    assert.ok(body.includes(text), kind + ": " + text);
   // The page itself is ready; only side panels (awards, lists) load later.
   for (const text of loading[kind])
     assert.ok(!body.includes(text), kind + " shows " + text);

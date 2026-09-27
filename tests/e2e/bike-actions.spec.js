@@ -62,7 +62,10 @@ test("bike actions: labelled compact buttons in one place, none on the photo", a
     const sizes = await bar
       .locator("button, a")
       .evaluateAll((els) =>
-        els.map((el) => [el.getBoundingClientRect().height, el.textContent.trim()]),
+        els.map((el) => [
+          el.getBoundingClientRect().height,
+          el.textContent.trim(),
+        ]),
       );
     expect(sizes.length).toBeGreaterThan(0);
     for (const [height, text] of sizes) {
@@ -74,7 +77,9 @@ test("bike actions: labelled compact buttons in one place, none on the photo", a
   const tops = (bar) =>
     bar
       .locator("button, a")
-      .evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().top)));
+      .evaluateAll((els) =>
+        els.map((el) => Math.round(el.getBoundingClientRect().top)),
+      );
 
   const readerContext = await browser.newContext(info.project.use);
   const reader = await readerContext.newPage();
@@ -109,13 +114,16 @@ test("bike actions: labelled compact buttons in one place, none on the photo", a
     await compact(bar);
     const stage = await reader.locator(".photo-stage").boundingBox(),
       box = await bar.boundingBox();
-    if (isMobile) expect(box.y).toBeGreaterThanOrEqual(stage.y + stage.height - 1);
+    if (isMobile)
+      expect(box.y).toBeGreaterThanOrEqual(stage.y + stage.height - 1);
     else {
       expect(box.y + box.height).toBeLessThanOrEqual(stage.y + 1);
       expect(new Set(await tops(bar)).size, "one row").toBe(1);
     }
     expect(
-      await reader.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),
+      await reader.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth + 1,
+      ),
     ).toBe(true);
   } finally {
     await readerContext.close();
@@ -124,8 +132,16 @@ test("bike actions: labelled compact buttons in one place, none on the photo", a
   await page.goto(path);
   const bar = page.locator("[data-bike-actions]");
   const tools = bar.getByRole("group", { name: "Управление велосипедом" });
-  for (const name of ["Добавить фото", "Найти фото", "Доступ", "Редактировать", "Удалить"])
-    await expect(tools.getByRole("button", { name, exact: true })).toBeVisible();
+  for (const name of [
+    "Добавить фото",
+    "Найти фото",
+    "Доступ",
+    "Редактировать",
+    "Удалить",
+  ])
+    await expect(
+      tools.getByRole("button", { name, exact: true }),
+    ).toBeVisible();
   const access = tools.getByRole("button", { name: "Доступ", exact: true });
   await expect(access).toHaveAccessibleDescription("Все");
   await expect(access).toContainText("Все");
@@ -136,7 +152,9 @@ test("bike actions: labelled compact buttons in one place, none on the photo", a
   await expect(
     page.getByRole("button", { name: "Подписаться на велосипед" }),
   ).toHaveCount(0);
-  await expect(page.locator(".bike-heading .detail-actions button")).toHaveCount(0);
+  await expect(
+    page.locator(".bike-heading .detail-actions button"),
+  ).toHaveCount(0);
   await compact(bar);
   if (!isMobile) expect(new Set(await tops(bar)).size, "one row").toBe(1);
   await page.screenshot({
@@ -147,7 +165,9 @@ test("bike actions: labelled compact buttons in one place, none on the photo", a
 
   // Each tool still does its job.
   const chooser = page.waitForEvent("filechooser");
-  await tools.getByRole("button", { name: "Добавить фото", exact: true }).click();
+  await tools
+    .getByRole("button", { name: "Добавить фото", exact: true })
+    .click();
   await chooser;
   for (const [name, title] of [
     ["Найти фото", "Выбор фотографий"],
@@ -160,6 +180,8 @@ test("bike actions: labelled compact buttons in one place, none on the photo", a
     await dialog.getByRole("button", { name: "Закрыть", exact: true }).click();
     await expect(dialog).toHaveCount(0);
   }
-  await tools.getByRole("button", { name: "Редактировать", exact: true }).click();
+  await tools
+    .getByRole("button", { name: "Редактировать", exact: true })
+    .click();
   await expect(page.getByRole("dialog")).toBeVisible();
 });

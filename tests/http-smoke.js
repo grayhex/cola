@@ -33,7 +33,7 @@ try {
   assert.equal(
     (
       await owner("auth/register", "POST", {
-      ...testConsents,
+        ...testConsents,
         email: `owner-${nonce}@example.test`,
         name: "Smoke test",
         password: "colabike-test-12345",
@@ -44,7 +44,7 @@ try {
   assert.equal(
     (
       await stranger("auth/register", "POST", {
-      ...testConsents,
+        ...testConsents,
         email: `other-${nonce}@example.test`,
         name: "Other test",
         password: "colabike-test-12345",

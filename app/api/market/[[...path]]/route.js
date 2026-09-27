@@ -1,4 +1,7 @@
-import { requireVerifiedEmail, EmailPolicyError } from "../../../../lib/email-policy.js";
+import {
+  requireVerifiedEmail,
+  EmailPolicyError,
+} from "../../../../lib/email-policy.js";
 import { z } from "zod";
 import { listingTypeKeys, marketSorts } from "../../../../lib/market-types.js";
 import { db, transaction } from "../../../../lib/db.js";
@@ -32,7 +35,10 @@ import {
   setListingSaved,
   savedListings,
 } from "../../../../lib/market.js";
-import { listingModelChoices, listingBikeChoices } from "../../../../lib/market-links.js";
+import {
+  listingModelChoices,
+  listingBikeChoices,
+} from "../../../../lib/market-links.js";
 import { publicAuthor } from "../../../../lib/profile-dto.js";
 import { usernamePattern } from "../../../../lib/usernames.js";
 import { preparePhoto } from "../../../../lib/images.js";
@@ -81,35 +87,48 @@ async function handler(req, { params }) {
         : null;
       if (sellerName && !seller) return fail("Продавец не найден", 404);
       const list = await marketList(db, user?.id, {
-          seller: seller?.username || "",
-          own,
-          category: z
-            .enum(["bikes", "components", "accessories"])
-            .nullable()
-            .parse(url.searchParams.get("category")),
-          listingType: z.enum(listingTypeKeys).nullable().parse(url.searchParams.get("type")),
-          condition: z.enum(["new", "used"]).nullable().parse(url.searchParams.get("condition")),
-          priceMin: price("price_min"),
-          priceMax: price("price_max"),
-          city: z
-            .string()
-            .trim()
-            .max(100)
-            .parse(url.searchParams.get("city") || ""),
-          sort: z
-            .enum(Object.keys(marketSorts))
-            .parse(url.searchParams.get("sort") || "new"),
-          page: communityPage.parse(url.searchParams.get("page") || 1),
-          search: z
-            .string()
-            .max(100)
-            .parse(url.searchParams.get("q") || ""),
-        });
+        seller: seller?.username || "",
+        own,
+        category: z
+          .enum(["bikes", "components", "accessories"])
+          .nullable()
+          .parse(url.searchParams.get("category")),
+        listingType: z
+          .enum(listingTypeKeys)
+          .nullable()
+          .parse(url.searchParams.get("type")),
+        condition: z
+          .enum(["new", "used"])
+          .nullable()
+          .parse(url.searchParams.get("condition")),
+        priceMin: price("price_min"),
+        priceMax: price("price_max"),
+        city: z
+          .string()
+          .trim()
+          .max(100)
+          .parse(url.searchParams.get("city") || ""),
+        sort: z
+          .enum(Object.keys(marketSorts))
+          .parse(url.searchParams.get("sort") || "new"),
+        page: communityPage.parse(url.searchParams.get("page") || 1),
+        search: z
+          .string()
+          .max(100)
+          .parse(url.searchParams.get("q") || ""),
+      });
       return json(seller ? { ...list, seller: publicAuthor(seller) } : list);
     }
     if (method === "GET" && p.length === 1 && p[0] === "models") {
-      const category = z.enum(["bikes", "components"]).parse(url.searchParams.get("category"));
-      const query = z.string().trim().max(150).refine((s) => !s.includes("\0")).parse(url.searchParams.get("q") || "");
+      const category = z
+        .enum(["bikes", "components"])
+        .parse(url.searchParams.get("category"));
+      const query = z
+        .string()
+        .trim()
+        .max(150)
+        .refine((s) => !s.includes("\0"))
+        .parse(url.searchParams.get("q") || "");
       return json(await listingModelChoices(db, category, query));
     }
     if (method === "GET" && p.length === 1 && p[0] === "owned-bikes") {
@@ -117,7 +136,12 @@ async function handler(req, { params }) {
       return json(await listingBikeChoices(db, user.id));
     }
     // Contacts are shown one listing at a time to signed-in people only.
-    if (method === "GET" && p[0] === "public" && p[2] === "contact" && p.length === 3) {
+    if (
+      method === "GET" &&
+      p[0] === "public" &&
+      p[2] === "contact" &&
+      p.length === 3
+    ) {
       if (!user) return fail("Войдите, чтобы увидеть контакт", 401);
       requireVerifiedEmail(user);
       if (!(await rateLimit("market-contact:" + user.id, 20)))
@@ -189,9 +213,12 @@ async function handler(req, { params }) {
     }
     if (p.length === 2 && p[1] === "photos" && method === "POST") {
       const id = uuid.parse(p[0]);
-      const listing = (await db.query(
-        "SELECT status FROM market_listings WHERE id=$1 AND owner_id=$2", [id, user.id],
-      )).rows[0];
+      const listing = (
+        await db.query(
+          "SELECT status FROM market_listings WHERE id=$1 AND owner_id=$2",
+          [id, user.id],
+        )
+      ).rows[0];
       if (!listing) return fail("Объявление недоступно", 404);
       if (listing.status === "active") requireVerifiedEmail(user);
       const raw = await readBytes(req, 10 * 1024 * 1024);
@@ -221,7 +248,8 @@ async function handler(req, { params }) {
     }
     return fail("Не найдено", 404);
   } catch (e) {
-    if (e instanceof EmailPolicyError) return json({ error: e.message, code: e.code }, e.status);
+    if (e instanceof EmailPolicyError)
+      return json({ error: e.message, code: e.code }, e.status);
     if (e instanceof CommunityError) return fail(e.message, e.status);
     if (e.name === "ZodError" || e instanceof SyntaxError)
       return fail("Проверьте поля объявления");

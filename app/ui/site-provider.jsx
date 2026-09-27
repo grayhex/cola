@@ -24,7 +24,9 @@ export function ThemeStyle({ settings, nonce }) {
     ? settings.appearance.accent
     : appearanceDefaults.accent;
   return (
-    <style nonce={nonce}>{`:root{--accent:${accent};--accent-foreground:${accentText(accent)};--photo-ratio:${settings.photoRatio || "4/3"};--desktop-columns:${settings.desktopColumns || 3};--heading-align:${settings.textAlign || "left"}}${backgroundCss(settings)}`}</style>
+    <style
+      nonce={nonce}
+    >{`:root{--accent:${accent};--accent-foreground:${accentText(accent)};--photo-ratio:${settings.photoRatio || "4/3"};--desktop-columns:${settings.desktopColumns || 3};--heading-align:${settings.textAlign || "left"}}${backgroundCss(settings)}`}</style>
   );
 }
 export default function SiteProvider({

@@ -92,7 +92,9 @@ test("guests read an entry, an article and comments without the editor", async (
     status: "published",
     isPublic: true,
   });
-  await call("journal/" + entry.id + "/comments", { body: "*курсив* в ответе" });
+  await call("journal/" + entry.id + "/comments", {
+    body: "*курсив* в ответе",
+  });
   const article = await call("articles", {
     title: "Статья " + nonce,
     body: "## Подзаголовок\n\n> цитата из статьи",

@@ -11,7 +11,8 @@ import dynamic from "next/dynamic";
 const ComponentGallery = dynamic(() => import("./component-gallery.jsx"));
 const Discussion = dynamic(() => import("./discussion.jsx"), { ssr: false });
 
-const count = (n, one, few, many) => `${n.toLocaleString("ru-RU")} ${plural(n, one, few, many)}`;
+const count = (n, one, few, many) =>
+  `${n.toLocaleString("ru-RU")} ${plural(n, one, few, many)}`;
 
 // A model or part page of owner experience (#74). The server passes the
 // public data; nothing here is fetched again.
@@ -25,11 +26,18 @@ export default function ExperienceLanding({ data }) {
           data.types.length > 1 ? `${type.label}: ${type.builds}` : type.label,
         )
       : []),
-    model && data.years.length &&
-      (data.years[0] === data.years[1] ? `${data.years[0]} год` : `${data.years[0]}–${data.years[1]}`),
-    model && data.weight && `в среднем ${data.weight.toLocaleString("ru-RU")} кг`,
-    data.entryCount > 0 && count(data.entryCount, "запись", "записи", "записей"),
-    model && data.rides > 0 &&
+    model &&
+      data.years.length &&
+      (data.years[0] === data.years[1]
+        ? `${data.years[0]} год`
+        : `${data.years[0]}–${data.years[1]}`),
+    model &&
+      data.weight &&
+      `в среднем ${data.weight.toLocaleString("ru-RU")} кг`,
+    data.entryCount > 0 &&
+      count(data.entryCount, "запись", "записи", "записей"),
+    model &&
+      data.rides > 0 &&
       `${count(data.rides, "покатушка", "покатушки", "покатушек")} · ${data.distanceKm.toLocaleString("ru-RU")} км`,
   ].filter(Boolean);
   return (
@@ -38,7 +46,9 @@ export default function ExperienceLanding({ data }) {
       <main className={`page experience-landing ${styles.page}`}>
         <header className={styles.head}>
           <p className={styles.eyebrow}>
-            <Link href={model ? "/experience" : "/components"}>{model ? "Опыт владельцев" : "Компоненты"}</Link>
+            <Link href={model ? "/experience" : "/components"}>
+              {model ? "Опыт владельцев" : "Компоненты"}
+            </Link>
             {model ? " · модель" : " · " + data.category}
           </p>
           <h1>{data.title}</h1>
@@ -62,7 +72,8 @@ export default function ExperienceLanding({ data }) {
                 <li key={part.category + part.name}>
                   <Link href={part.path}>{part.name}</Link>
                   <span>
-                    {part.category} · {count(part.builds, "сборка", "сборки", "сборок")}
+                    {part.category} ·{" "}
+                    {count(part.builds, "сборка", "сборки", "сборок")}
                   </span>
                 </li>
               ))}
@@ -70,14 +81,18 @@ export default function ExperienceLanding({ data }) {
           </section>
         )}
         {model && data.installs.length > 0 && (
-          <section className={styles.section} aria-labelledby="landing-installs">
+          <section
+            className={styles.section}
+            aria-labelledby="landing-installs"
+          >
             <h2 id="landing-installs">Что ставили владельцы</h2>
             <ul className={styles.links}>
               {data.installs.map((part) => (
                 <li key={part.category + part.name}>
                   <Link href={part.search}>{part.name}</Link>
                   <span>
-                    {part.category} · {count(part.entries, "запись", "записи", "записей")}
+                    {part.category} ·{" "}
+                    {count(part.entries, "запись", "записи", "записей")}
                   </span>
                 </li>
               ))}
@@ -101,7 +116,12 @@ export default function ExperienceLanding({ data }) {
         )}
         <section className={styles.section} aria-labelledby="landing-bikes">
           <h2 id="landing-bikes">Сборки владельцев</h2>
-          {!data.bikes.length && <p className="help">Пока нет публичных сборок с этой моделью. Страница остаётся в каталоге.</p>}
+          {!data.bikes.length && (
+            <p className="help">
+              Пока нет публичных сборок с этой моделью. Страница остаётся в
+              каталоге.
+            </p>
+          )}
           <BikeGrid>
             {data.bikes.map((bike) => (
               <BikeCard key={bike.id} bike={bike} user={user} />
@@ -109,7 +129,9 @@ export default function ExperienceLanding({ data }) {
           </BikeGrid>
           {data.builds > data.bikes.length && (
             <p className={styles.more}>
-              <Link href={data.search}>Все {count(data.builds, "сборка", "сборки", "сборок")} →</Link>
+              <Link href={data.search}>
+                Все {count(data.builds, "сборка", "сборки", "сборок")} →
+              </Link>
             </p>
           )}
         </section>
@@ -135,7 +157,14 @@ export default function ExperienceLanding({ data }) {
             Расширенный поиск по {model ? "модели" : "детали"} →
           </Link>
         </p>
-        {!model && <Discussion key={data.id} bike={data} user={user} entityType="component" />}
+        {!model && (
+          <Discussion
+            key={data.id}
+            bike={data}
+            user={user}
+            entityType="component"
+          />
+        )}
       </main>
       <SocialFooter />
     </>

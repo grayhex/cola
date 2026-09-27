@@ -344,7 +344,7 @@ export default function GlobalHeader({
                         href={
                           {
                             bikes: "/bikes",
-                      components: "/components",
+                            components: "/components",
                             journal: "/journal",
                             articles: "/articles",
                             rides: "/rides",

@@ -26,8 +26,18 @@ export function BadgeShelf({ endpoint, account = false }) {
       active = false;
     };
   }, [endpoint]);
-  if (error) return <p className="help" role="status">{error}</p>;
-  if (!data) return <p className="help" role="status">Загружаем награды…</p>;
+  if (error)
+    return (
+      <p className="help" role="status">
+        {error}
+      </p>
+    );
+  if (!data)
+    return (
+      <p className="help" role="status">
+        Загружаем награды…
+      </p>
+    );
   function award(a, i) {
     return (
       <span
@@ -125,21 +135,32 @@ export function BadgeShelf({ endpoint, account = false }) {
   );
 }
 export function BikeGame({ bike, user }) {
-  const [state, setState] = useState(null), [busy, setBusy] = useState(false),
-    [error, setError] = useState(""), [revision, setRevision] = useState(0);
+  const [state, setState] = useState(null),
+    [busy, setBusy] = useState(false),
+    [error, setError] = useState(""),
+    [revision, setRevision] = useState(0);
   useEffect(() => {
     socialApi("game/bikes/" + bike.id + "/reactions")
-      .then(setState).catch((e) => setError(e.message));
+      .then(setState)
+      .catch((e) => setError(e.message));
   }, [bike.id]);
   const icons = { wild: Flame, clean: Sparkles, dream: Star };
   async function vote(r) {
     setBusy(true);
     setError("");
     try {
-      setState(await socialApi("game/bikes/" + bike.id + "/reactions/" + r.key, r.selected ? "DELETE" : "PUT"));
+      setState(
+        await socialApi(
+          "game/bikes/" + bike.id + "/reactions/" + r.key,
+          r.selected ? "DELETE" : "PUT",
+        ),
+      );
       setRevision((n) => n + 1);
-    } catch (e) { setError(e.message); }
-    finally { setBusy(false); }
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy(false);
+    }
   }
   return (
     <section className="bike-game">
@@ -149,8 +170,15 @@ export function BikeGame({ bike, user }) {
           {state.reactions.map((r) => {
             const Icon = icons[r.key];
             return (
-              <button key={r.key} aria-pressed={r.selected} disabled={busy || !user || state.isOwner} onClick={() => vote(r)}>
-                <Icon size={17} />{r.name}<b>{r.count}</b>
+              <button
+                key={r.key}
+                aria-pressed={r.selected}
+                disabled={busy || !user || state.isOwner}
+                onClick={() => vote(r)}
+              >
+                <Icon size={17} />
+                {r.name}
+                <b>{r.count}</b>
               </button>
             );
           })}

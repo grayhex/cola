@@ -68,13 +68,17 @@ const test = base.extend({
     await db.connect();
     try {
       await db.query("UPDATE users SET role='admin' WHERE id=$1", [user.id]);
-      original = (await (await page.request.get("/api/admin/overview")).json()).settings;
+      original = (await (await page.request.get("/api/admin/overview")).json())
+        .settings;
       await use({ assets });
     } finally {
       try {
         if (original) await saveSettings(page, original);
         for (const id of assets) {
-          const response = await page.request.delete("/api/admin/assets/" + id, { headers: { origin } });
+          const response = await page.request.delete(
+            "/api/admin/assets/" + id,
+            { headers: { origin } },
+          );
           expect(response.status()).toBe(200);
         }
       } finally {
@@ -127,7 +131,9 @@ test("account SPA opens the three-step wizard repeatedly; only explicit X can di
   await expect(wizard).not.toBeVisible();
   await expect(page.getByRole("alertdialog")).toHaveCount(0);
   await add.click();
-  await expect(wizard.getByLabel("Модель, год и комплектация", { exact: true })).toBeVisible();
+  await expect(
+    wizard.getByLabel("Модель, год и комплектация", { exact: true }),
+  ).toBeVisible();
   await wizard
     .getByLabel("Модель, год и комплектация", { exact: true })
     .fill("Cube Travel SL 2021");
@@ -251,7 +257,9 @@ test("journal menu offers only owned bikes and retains text when changing the se
     await expect(picker).toHaveValue(first.id);
     await page.goto("/j/new?bike=" + foreign.id);
     await expect(picker).toHaveValue("");
-    await expect(page.getByRole("main").getByRole("alert")).toContainText("Велосипед недоступен");
+    await expect(page.getByRole("main").getByRole("alert")).toContainText(
+      "Велосипед недоступен",
+    );
   } finally {
     await visitor.close();
   }
@@ -316,7 +324,9 @@ test("independent classification filters survive URL reload and find electric fo
     .filter({ has: page.getByText(/^Классификация/) })
     .first();
   await facets.locator("summary").click();
-  await expect(facets.getByRole("combobox", { name: "Электропривод", exact: true })).toBeVisible();
+  await expect(
+    facets.getByRole("combobox", { name: "Электропривод", exact: true }),
+  ).toBeVisible();
   await facets.getByLabel("Электропривод", { exact: true }).selectOption("0");
   await expect(
     page.getByRole("link", { name: /Unpowered commuter/ }),
@@ -353,8 +363,12 @@ test("admin backgrounds are independent per theme; native local SVG file upload 
         .getByRole("button", { name: new RegExp("^" + name + "(?: |$)") });
     await section("Графика").click();
     const graphics = page.getByRole("region", { name: "Графика сайта" });
-    await expect(graphics.getByRole("combobox", { name: "Группа", exact: true })).toBeVisible();
-    await graphics.getByLabel("Группа", { exact: true }).selectOption("Фон сайта");
+    await expect(
+      graphics.getByRole("combobox", { name: "Группа", exact: true }),
+    ).toBeVisible();
+    await graphics
+      .getByLabel("Группа", { exact: true })
+      .selectOption("Фон сайта");
     await expect(graphics.locator(".asset-picker")).toHaveCount(2);
     await graphics.getByLabel("Найти графику", { exact: true }).fill("светлая");
     await expect(graphics.locator(".asset-picker")).toHaveCount(1);
@@ -385,7 +399,9 @@ test("admin backgrounds are independent per theme; native local SVG file upload 
       expect(r.status()).toBe(201);
       // Verify the ID actually applied by the UI. Browser response bodies can
       // be evicted after fetch has consumed them; the selected value is durable.
-      const picker = page.getByLabel("Фон сайта · " + kind + " тема", { exact: true });
+      const picker = page.getByLabel("Фон сайта · " + kind + " тема", {
+        exact: true,
+      });
       await expect(picker).toHaveValue(/^[0-9a-f-]{36}$/);
       assets.push(await picker.inputValue());
     }
@@ -428,7 +444,9 @@ test("admin backgrounds are independent per theme; native local SVG file upload 
       .setInputFiles(filename);
     const r = await upload;
     expect(r.status()).toBe(201);
-    const animationPicker = page.getByLabel("Анимация · светлая тема", { exact: true });
+    const animationPicker = page.getByLabel("Анимация · светлая тема", {
+      exact: true,
+    });
     await expect(animationPicker).toHaveValue(/^[0-9a-f-]{36}$/);
     const animation = await animationPicker.inputValue();
     assets.push(animation);
@@ -439,8 +457,12 @@ test("admin backgrounds are independent per theme; native local SVG file upload 
     const response = await page.request.get("/api/assets/" + animation);
     expect(response.status()).toBe(200);
     expect(response.headers()["content-type"]).toBe("image/svg+xml");
-    expect(response.headers()["content-security-policy"]).toContain("img-src data:");
-    expect(response.headers()["content-security-policy"]).toContain("default-src 'none'");
+    expect(response.headers()["content-security-policy"]).toContain(
+      "img-src data:",
+    );
+    expect(response.headers()["content-security-policy"]).toContain(
+      "default-src 'none'",
+    );
     expect(response.headers()["content-security-policy"]).toContain("sandbox");
     const savedSvg = await response.text();
     expect(savedSvg).toContain("data:image/png;base64,");
@@ -495,7 +517,9 @@ test("admin backgrounds are independent per theme; native local SVG file upload 
       await page.setViewportSize({ width: 844, height: 390 });
     }
     await expect(art).toBeVisible();
-    await expect.poll(() => art.evaluate((img) => img.naturalWidth)).toBeGreaterThan(0);
+    await expect
+      .poll(() => art.evaluate((img) => img.naturalWidth))
+      .toBeGreaterThan(0);
     await noOverflow(page);
     if (compact) await page.setViewportSize(viewport);
     await toggle.click();

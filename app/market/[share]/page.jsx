@@ -1,6 +1,12 @@
 import Market from "../../ui/market.jsx";
-import { metadataFor, canonicalPage, sharePath, pageData } from "../../../lib/social-page.js";
-export const runtime = "nodejs", dynamic = "force-dynamic";
+import {
+  metadataFor,
+  canonicalPage,
+  sharePath,
+  pageData,
+} from "../../../lib/social-page.js";
+export const runtime = "nodejs",
+  dynamic = "force-dynamic";
 export async function generateMetadata({ params, searchParams }) {
   return metadataFor("market", (await params).share, await searchParams);
 }

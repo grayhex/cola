@@ -42,7 +42,7 @@ describe("manual sources", () => {
   it("rejects blocked URLs and private destinations before transport and honours service disable", async () => {
     const settings = new SettingsStore(),
       manual = new ManualSources(client, [], settings);
-    settings.value.blockedDomains=['evil.example'];
+    settings.value.blockedDomains = ["evil.example"];
     for (const bad of [
       "http://127.0.0.1/",
       "file:///etc/passwd",

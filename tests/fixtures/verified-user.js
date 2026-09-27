@@ -20,10 +20,14 @@ export async function verifyCapturedEmail(email) {
       if (mail.to !== email.trim().toLowerCase()) continue;
       const token = mail.text.match(/\/verify-email#([A-Za-z0-9_-]{43})/)?.[1];
       if (!token) continue;
-      const response = await globalThis.fetch(origin + "/api/auth/verify-email", {
-        method: "POST", headers: { origin, "Content-Type": "application/json" },
-        body: JSON.stringify({ token }),
-      });
+      const response = await globalThis.fetch(
+        origin + "/api/auth/verify-email",
+        {
+          method: "POST",
+          headers: { origin, "Content-Type": "application/json" },
+          body: JSON.stringify({ token }),
+        },
+      );
       assert.equal(response.status, 200, "Captured verification link succeeds");
       return;
     }

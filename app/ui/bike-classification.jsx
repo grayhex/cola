@@ -145,13 +145,23 @@ export function ClassificationBadges({ bike }) {
       {!!labels.length && (
         <span className={styles.badges} role="group" aria-label="Классификация">
           {labels.map((text, i) => (
-            <ContentLabel key={text} tone={tone} data-bike-label={i === 0 ? "type" : "feature"}
-              title={labels.join(" · ")}>{text}</ContentLabel>
+            <ContentLabel
+              key={text}
+              tone={tone}
+              data-bike-label={i === 0 ? "type" : "feature"}
+              title={labels.join(" · ")}
+            >
+              {text}
+            </ContentLabel>
           ))}
         </span>
       )}
       {!!uses.length && (
-        <ContentLabel tone={tone} data-bike-label="use" aria-label={"Назначения: " + uses.join(", ")}>
+        <ContentLabel
+          tone={tone}
+          data-bike-label="use"
+          aria-label={"Назначения: " + uses.join(", ")}
+        >
           {uses.join(" · ")}
         </ContentLabel>
       )}
