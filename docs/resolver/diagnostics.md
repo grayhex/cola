@@ -4,16 +4,16 @@
 
 ## Начинайте с уровня отказа
 
-| Наблюдение | Следующая проверка |
-| --- | --- |
-| `/api/ready` не готов | База приложения; не лечить CSS parser |
-| `/api/status` показывает `resolver:false` | Контейнер Resolver, сеть Compose, его `/ready` и storage |
-| `unsupported_brand` | Доступность адаптера и флаги enabled; ручной URL — отдельный путь |
-| `dns_failed`, `timeout`, `connection_failed` | DNS/egress именно среды Resolver |
-| `http_403`, `access_challenge`, `http_429` | Ограничение upstream; не обходить защиту и не кэшировать как not_found |
-| `js_shell`, `spec_fields_not_found`, `labels_unrecognized` | Получен ли содержательный документ, layout/labels/charset |
-| `ambiguous`, `identity_mismatch` | Источник модели, trim и года; пользовательское подтверждение |
-| `resolved` + partial/unknown | Качество извлечения; полезные поля можно предложить на review |
+| Наблюдение                                                 | Следующая проверка                                                     |
+| ---------------------------------------------------------- | ---------------------------------------------------------------------- |
+| `/api/ready` не готов                                      | База приложения; не лечить CSS parser                                  |
+| `/api/status` показывает `resolver:false`                  | Контейнер Resolver, сеть Compose, его `/ready` и storage               |
+| `unsupported_brand`                                        | Доступность адаптера и флаги enabled; ручной URL — отдельный путь      |
+| `dns_failed`, `timeout`, `connection_failed`               | DNS/egress именно среды Resolver                                       |
+| `http_403`, `access_challenge`, `http_429`                 | Ограничение upstream; не обходить защиту и не кэшировать как not_found |
+| `js_shell`, `spec_fields_not_found`, `labels_unrecognized` | Получен ли содержательный документ, layout/labels/charset              |
+| `ambiguous`, `identity_mismatch`                           | Источник модели, trim и года; пользовательское подтверждение           |
+| `resolved` + partial/unknown                               | Качество извлечения; полезные поля можно предложить на review          |
 
 Успешный браузер на ноутбуке не доказывает, что серверный transport на VPS видит тот же ответ. Доступный `api.github.com` также не доказывает достижимость `github.com:443`: разные сетевые назначения проверяются отдельно.
 

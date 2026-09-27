@@ -13,7 +13,7 @@ test("component change offers an explicit draft, never automatic publication", a
       await registerVerified(page.request, {
         headers: { origin },
         data: {
-      ...testConsents,
+          ...testConsents,
           name: "Builder",
           email: nonce + "@builder.test",
           password: "builder-browser-secret",
@@ -114,7 +114,7 @@ test("journal: draft, publication, photo, discussion and inherited privacy", asy
         await registerVerified(request, {
           headers: { origin },
           data: {
-      ...testConsents,
+            ...testConsents,
             name: "Journal " + suffix,
             email: nonce + suffix + "@journal.test",
             password: "journal-browser-secret-123",

@@ -31,7 +31,11 @@ import {
   publishedLabel,
   daysLabel,
 } from "../../lib/market-types.js";
-import { marketCategories, readMarketQuery, writeMarketQuery } from "../../lib/market-query.js";
+import {
+  marketCategories,
+  readMarketQuery,
+  writeMarketQuery,
+} from "../../lib/market-query.js";
 import styles from "./market.module.css";
 import MarketLinks from "./market-links.jsx";
 import { profilePath, publicPath } from "../../lib/public-urls.js";
@@ -46,8 +50,14 @@ export { marketCategories } from "../../lib/market-query.js";
 
 function ListingTypeLabel({ type = "sale" }) {
   return (
-    <ContentLabel tone={{ sale: "green", wanted: "blue", exchange: "purple", free: "teal" }[type] || "neutral"}
-      data-listing-type={type}>
+    <ContentLabel
+      tone={
+        { sale: "green", wanted: "blue", exchange: "purple", free: "teal" }[
+          type
+        ] || "neutral"
+      }
+      data-listing-type={type}
+    >
       {listingTypes[type] || listingTypes.sale}
     </ContentLabel>
   );
@@ -89,7 +99,14 @@ export function MarketCard({ listing: m }) {
         <h3>
           <Link href={publicPath("market", m)}>{m.title}</Link>
         </h3>
-        {(m.componentModel || m.bikeModel) && <p>Модель: <Link href={(m.componentModel || m.bikeModel).path}>{(m.componentModel || m.bikeModel).name}</Link></p>}
+        {(m.componentModel || m.bikeModel) && (
+          <p>
+            Модель:{" "}
+            <Link href={(m.componentModel || m.bikeModel).path}>
+              {(m.componentModel || m.bikeModel).name}
+            </Link>
+          </p>
+        )}
         <strong className={styles.price}>{listingPriceLabel(m)}</strong>
         <p>
           {m.location || "Город не указан"} ·{" "}
@@ -142,7 +159,12 @@ function SaveListing({ listing, onChange }) {
         )}
         {listing.saved ? "Сохранено" : "Сохранить"}
       </button>
-      {error && <span role="alert">{error}<EmailPolicyAction message={error} /></span>}
+      {error && (
+        <span role="alert">
+          {error}
+          <EmailPolicyAction message={error} />
+        </span>
+      )}
     </>
   );
 }
@@ -191,9 +213,11 @@ function ListingEditor({ initial, onSaved, onCancel }) {
   const hydrated = useHydrated();
   const legacyCurrency = !!initial?.currency && initial.currency !== "RUB";
   const [form, setForm] = useState(() => ({
-      ...Object.fromEntries(Object.keys(blank).map((k) => [k, initial?.[k] ?? blank[k]])),
+      ...Object.fromEntries(
+        Object.keys(blank).map((k) => [k, initial?.[k] ?? blank[k]]),
+      ),
       currency: "RUB",
-      price: legacyCurrency ? "" : initial?.price ?? "",
+      price: legacyCurrency ? "" : (initial?.price ?? ""),
     })),
     [identity, setIdentity] = useState(initial),
     [photos, setPhotos] = useState(initial?.photos || []),
@@ -203,7 +227,12 @@ function ListingEditor({ initial, onSaved, onCancel }) {
   async function save(status) {
     const body = {
       ...form,
-      price: form.listingType === "free" ? 0 : form.price === "" ? null : Number(form.price),
+      price:
+        form.listingType === "free"
+          ? 0
+          : form.price === ""
+            ? null
+            : Number(form.price),
       currency: "RUB",
       status,
     };
@@ -234,10 +263,15 @@ function ListingEditor({ initial, onSaved, onCancel }) {
       <h1>{initial ? "Изменить объявление" : "Новое объявление"}</h1>
       <label className="field">
         <span>Тип объявления</span>
-        <select value={form.listingType} disabled={!hydrated || busy}
-          onChange={(e) => set("listingType", e.target.value)}>
+        <select
+          value={form.listingType}
+          disabled={!hydrated || busy}
+          onChange={(e) => set("listingType", e.target.value)}
+        >
           {Object.entries(listingTypes).map(([key, label]) => (
-            <option key={key} value={key}>{label}</option>
+            <option key={key} value={key}>
+              {label}
+            </option>
           ))}
         </select>
       </label>
@@ -258,7 +292,14 @@ function ListingEditor({ initial, onSaved, onCancel }) {
           <select
             disabled={!hydrated}
             value={form.category}
-            onChange={(e) => setForm((f) => ({ ...f, category: e.target.value, componentModelId: null, bikeModelId: null }))}
+            onChange={(e) =>
+              setForm((f) => ({
+                ...f,
+                category: e.target.value,
+                componentModelId: null,
+                bikeModelId: null,
+              }))
+            }
           >
             {Object.entries(marketCategories).map(([k, v]) => (
               <option value={k} key={k}>
@@ -279,7 +320,13 @@ function ListingEditor({ initial, onSaved, onCancel }) {
           </select>
         </label>
       </div>
-      <MarketLinks key={form.category} form={form} initial={identity} disabled={!hydrated || busy} onChange={set} />
+      <MarketLinks
+        key={form.category}
+        form={form}
+        initial={identity}
+        disabled={!hydrated || busy}
+        onChange={set}
+      />
       <label className="field">
         <span>Описание</span>
         <textarea
@@ -293,10 +340,20 @@ function ListingEditor({ initial, onSaved, onCancel }) {
         />
       </label>
       {legacyCurrency && (
-        <p className="help">Старая цена была указана не в рублях. Она не конвертирована автоматически: укажите новую сумму в рублях или сохраните объявление без цены.</p>
+        <p className="help">
+          Старая цена была указана не в рублях. Она не конвертирована
+          автоматически: укажите новую сумму в рублях или сохраните объявление
+          без цены.
+        </p>
       )}
       <label className="field">
-        <span>{form.listingType === "wanted" ? "Бюджет, ₽" : form.listingType === "exchange" ? "Доплата, ₽" : "Цена, ₽"}</span>
+        <span>
+          {form.listingType === "wanted"
+            ? "Бюджет, ₽"
+            : form.listingType === "exchange"
+              ? "Доплата, ₽"
+              : "Цена, ₽"}
+        </span>
         <input
           type="number"
           min="0"
@@ -414,7 +471,8 @@ function ListingEditor({ initial, onSaved, onCancel }) {
       </fieldset>
       {error && (
         <p className="error" role="alert">
-          {error}<EmailPolicyAction message={error} />
+          {error}
+          <EmailPolicyAction message={error} />
         </p>
       )}
       {busy && <p role="status">Сохраняем…</p>}
@@ -467,7 +525,9 @@ export default function Market({
     [listing, setListing] = useState(initial?.listing || null),
     [others, setOthers] = useState(initial?.others || null),
     [edit, setEdit] = useState(create),
-    [filters, setFilters] = useState(() => readMarketQuery(new URLSearchParams())),
+    [filters, setFilters] = useState(() =>
+      readMarketQuery(new URLSearchParams()),
+    ),
     [search, setSearch] = useState(""),
     [range, setRange] = useState({ priceMin: "", priceMax: "", city: "" }),
     [contact, setContact] = useState(null),
@@ -475,11 +535,28 @@ export default function Market({
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
     [ready, setReady] = useState(false);
-  const { own, seller, category, listingType, condition, query, priceMin, priceMax, city, sort } =
-    filters;
+  const {
+    own,
+    seller,
+    category,
+    listingType,
+    condition,
+    query,
+    priceMin,
+    priceMax,
+    city,
+    sort,
+  } = filters;
   const filtered =
-    query || category || listingType || condition || city || sort !== "new" ||
-    priceMin !== "" || priceMax !== "" || seller;
+    query ||
+    category ||
+    listingType ||
+    condition ||
+    city ||
+    sort !== "new" ||
+    priceMin !== "" ||
+    priceMax !== "" ||
+    seller;
   const filterKey = writeMarketQuery(filters);
   // The server rendered the listing for this viewer (#74): keep it on mount
   // and skip the first request.
@@ -491,7 +568,11 @@ export default function Market({
     // Only the loading effect clears data when it actually starts a request.
     if (queryString === filterKey) return;
     setFilters(next);
-    window.history.pushState(null, "", "/market" + (queryString ? "?" + queryString : ""));
+    window.history.pushState(
+      null,
+      "",
+      "/market" + (queryString ? "?" + queryString : ""),
+    );
   }
   useEffect(() => {
     const restore = () => {
@@ -499,7 +580,11 @@ export default function Market({
       const state = readMarketQuery(p);
       setFilters(state);
       setSearch(state.query);
-      setRange({ priceMin: state.priceMin, priceMax: state.priceMax, city: state.city });
+      setRange({
+        priceMin: state.priceMin,
+        priceMax: state.priceMax,
+        city: state.city,
+      });
       // Equivalent history URLs can have the same filterKey: keep their data.
       setEdit(create || p.get("edit") === "1");
     };
@@ -523,9 +608,7 @@ export default function Market({
     let active = true;
     setError("");
     setData(null);
-    const path = share
-      ? "market/public/" + share
-      : "market?" + filterKey;
+    const path = share ? "market/public/" + share : "market?" + filterKey;
     socialApi(path)
       .then((d) => {
         if (active) {
@@ -552,7 +635,9 @@ export default function Market({
   async function showContact() {
     setContactError("");
     try {
-      const d = await socialApi("market/public/" + listing.shareId + "/contact");
+      const d = await socialApi(
+        "market/public/" + listing.shareId + "/contact",
+      );
       setContact(d.contact);
     } catch (e) {
       setContactError(e.message);
@@ -576,7 +661,9 @@ export default function Market({
     setError("");
     try {
       if (listing.currency !== "RUB")
-        throw Error("Сначала измените объявление и уточните цену в рублях. Старая сумма не конвертируется автоматически.");
+        throw Error(
+          "Сначала измените объявление и уточните цену в рублях. Старая сумма не конвертируется автоматически.",
+        );
       const body = {
         ...Object.fromEntries(Object.keys(blank).map((k) => [k, listing[k]])),
         listingType: listing.listingType || "sale",
@@ -601,7 +688,8 @@ export default function Market({
       <main className="page">
         {error && (
           <p role="alert" className="error">
-            {error}<EmailPolicyAction message={error} />
+            {error}
+            <EmailPolicyAction message={error} />
           </p>
         )}
         {(create || own) && !user ? (
@@ -671,7 +759,8 @@ export default function Market({
               {listing.status !== "active" ? (
                 <p className={styles.state}>
                   {listing.status === "sold"
-                    ? "Объявление закрыто" + (listing.listingType === "sale" ? " · продано" : "")
+                    ? "Объявление закрыто" +
+                      (listing.listingType === "sale" ? " · продано" : "")
                     : "Черновик · виден только вам"}
                 </p>
               ) : (
@@ -721,69 +810,108 @@ export default function Market({
                     <strong className={styles.detailPrice}>
                       {listingPriceLabel(listing)}
                     </strong>
-                    {hydrated && listing.status === "active" && !listing.expired && listing.publishedAt && (
-                      <small className={styles.published}>
-                        {publishedLabel(listing.publishedAt)}
-                      </small>
-                    )}
+                    {hydrated &&
+                      listing.status === "active" &&
+                      !listing.expired &&
+                      listing.publishedAt && (
+                        <small className={styles.published}>
+                          {publishedLabel(listing.publishedAt)}
+                        </small>
+                      )}
                   </div>
                   <dl className={styles.facts}>
-                  <div>
-                    <dt>Продавец</dt>
-                    <dd className={styles.sellerName}>
-                      <AuthorLink author={listing.author} />
-                      {usernameLabel(listing.author) && (
-                        <small>{usernameLabel(listing.author)}</small>
-                      )}
-                    </dd>
-                  </div>
-                  {(listing.componentModel || listing.bikeModel) && <div><dt>Модель каталога</dt><dd><Link href={(listing.componentModel || listing.bikeModel).path}>{(listing.componentModel || listing.bikeModel).name}</Link></dd></div>}
-                  {listing.linkedBike && <div><dt>Велосипед продавца</dt><dd><Link href={listing.linkedBike.path}>{listing.linkedBike.name}</Link></dd></div>}
-                  {listing.isOwner && listing.ownedBike && !listing.ownedBike.isPublic && <div><dt>Мой велосипед · видно только вам</dt><dd>{listing.ownedBike.name} · Приватный</dd></div>}
-                  {listing.location && (
                     <div>
-                      <dt>Город</dt>
-                      <dd className={styles.withIcon}>
-                        <MapPin size={16} aria-hidden="true" />
-                        {listing.location}
+                      <dt>Продавец</dt>
+                      <dd className={styles.sellerName}>
+                        <AuthorLink author={listing.author} />
+                        {usernameLabel(listing.author) && (
+                          <small>{usernameLabel(listing.author)}</small>
+                        )}
                       </dd>
                     </div>
-                  )}
-                  {listing.hasContact &&
-                    ((listing.status === "active" && !listing.expired) ||
-                      listing.isOwner) && (
-                    <div>
-                      <dt>Связаться с автором</dt>
-                      <dd>
-                      {listing.contact || contact ? (
-                        <p className={styles.contactValue}>
-                          {listing.contact || contact}
-                        </p>
-                      ) : user ? (
-                        <button
-                          type="button"
-                          className="button secondary small"
-                          onClick={showContact}
-                        >
-                          Показать контакт
-                        </button>
-                      ) : (
-                        <p>
-                          Контакт видят участники ColaBike.{" "}
+                    {(listing.componentModel || listing.bikeModel) && (
+                      <div>
+                        <dt>Модель каталога</dt>
+                        <dd>
                           <Link
                             href={
-                              "/login?next=" +
-                              encodeURIComponent("/market/" + listing.shareId)
+                              (listing.componentModel || listing.bikeModel).path
                             }
                           >
-                            Войти
+                            {(listing.componentModel || listing.bikeModel).name}
                           </Link>
-                        </p>
+                        </dd>
+                      </div>
+                    )}
+                    {listing.linkedBike && (
+                      <div>
+                        <dt>Велосипед продавца</dt>
+                        <dd>
+                          <Link href={listing.linkedBike.path}>
+                            {listing.linkedBike.name}
+                          </Link>
+                        </dd>
+                      </div>
+                    )}
+                    {listing.isOwner &&
+                      listing.ownedBike &&
+                      !listing.ownedBike.isPublic && (
+                        <div>
+                          <dt>Мой велосипед · видно только вам</dt>
+                          <dd>{listing.ownedBike.name} · Приватный</dd>
+                        </div>
                       )}
-                      {contactError && <p role="alert">{contactError}<EmailPolicyAction message={contactError} /></p>}
-                      </dd>
-                    </div>
-                  )}
+                    {listing.location && (
+                      <div>
+                        <dt>Город</dt>
+                        <dd className={styles.withIcon}>
+                          <MapPin size={16} aria-hidden="true" />
+                          {listing.location}
+                        </dd>
+                      </div>
+                    )}
+                    {listing.hasContact &&
+                      ((listing.status === "active" && !listing.expired) ||
+                        listing.isOwner) && (
+                        <div>
+                          <dt>Связаться с автором</dt>
+                          <dd>
+                            {listing.contact || contact ? (
+                              <p className={styles.contactValue}>
+                                {listing.contact || contact}
+                              </p>
+                            ) : user ? (
+                              <button
+                                type="button"
+                                className="button secondary small"
+                                onClick={showContact}
+                              >
+                                Показать контакт
+                              </button>
+                            ) : (
+                              <p>
+                                Контакт видят участники ColaBike.{" "}
+                                <Link
+                                  href={
+                                    "/login?next=" +
+                                    encodeURIComponent(
+                                      "/market/" + listing.shareId,
+                                    )
+                                  }
+                                >
+                                  Войти
+                                </Link>
+                              </p>
+                            )}
+                            {contactError && (
+                              <p role="alert">
+                                {contactError}
+                                <EmailPolicyAction message={contactError} />
+                              </p>
+                            )}
+                          </dd>
+                        </div>
+                      )}
                   </dl>
                   {listing.isOwner && listing.status === "active" && (
                     <div className={styles.term}>
@@ -829,7 +957,9 @@ export default function Market({
                         }
                       >
                         {listing.status === "active"
-                          ? listing.listingType === "sale" ? "Отметить проданным" : "Закрыть объявление"
+                          ? listing.listingType === "sale"
+                            ? "Отметить проданным"
+                            : "Закрыть объявление"
                           : "Опубликовать"}
                       </button>
                       {listing.status !== "draft" && (
@@ -898,11 +1028,15 @@ export default function Market({
                 Добавить объявление
               </Link>
             </div>
-            <form className={styles.search} role="search" aria-label="Поиск объявлений"
+            <form
+              className={styles.search}
+              role="search"
+              aria-label="Поиск объявлений"
               onSubmit={(e) => {
                 e.preventDefault();
                 changeFilters({ query: search.trim(), page: 1 });
-              }}>
+              }}
+            >
               <Search size={18} aria-hidden="true" />
               <input
                 type="search"
@@ -914,89 +1048,158 @@ export default function Market({
               />
               <button className="button">Найти</button>
             </form>
-            <section className={styles.filterPanel} aria-label="Фильтры объявлений">
+            <section
+              className={styles.filterPanel}
+              aria-label="Фильтры объявлений"
+            >
               <div className="ui-tabs">
-                <button aria-pressed={!own} onClick={() => changeFilters({ own: false })}>
+                <button
+                  aria-pressed={!own}
+                  onClick={() => changeFilters({ own: false })}
+                >
                   Все объявления
                 </button>
-                <button aria-pressed={own} onClick={() => changeFilters({ own: true })}>
+                <button
+                  aria-pressed={own}
+                  onClick={() => changeFilters({ own: true })}
+                >
                   Мои объявления
                 </button>
               </div>
               <div className={styles.filterRow}>
-              <div className={styles.filterFields}>
-                <label className="field">
-                  <span>Тип объявления</span>
-                  <select value={listingType} onChange={(e) => changeFilters({ listingType: e.target.value })}>
-                    <option value="">Все типы</option>
-                    {Object.entries(listingTypes).map(([key, label]) => (
-                      <option key={key} value={key}>{label}</option>
-                    ))}
-                  </select>
-                </label>
-                <label className="field">
-                  <span>Состояние</span>
-                  <select value={condition} onChange={(e) => changeFilters({ condition: e.target.value })}>
-                    <option value="">Любое состояние</option>
-                    <option value="used">С пробегом</option>
-                    <option value="new">Новое</option>
-                  </select>
-                </label>
-                <label className="field">
-                  <span>Сортировка</span>
-                  <select value={sort} onChange={(e) => changeFilters({ sort: e.target.value })}>
-                    {Object.entries(marketSorts).map(([key, label]) => (
-                      <option key={key} value={key}>{label}</option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-              <form className={styles.rangeFields} aria-label="Цена и город"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  const bound = (v) => (/^\d{1,10}$/.test(String(v).trim()) ? Number(v) : "");
-                  changeFilters({
-                    priceMin: bound(range.priceMin),
-                    priceMax: bound(range.priceMax),
-                    city: range.city.trim().slice(0, 100),
-                  });
-                }}>
-                {[["priceMin", "Цена от, ₽"], ["priceMax", "Цена до, ₽"]].map(([key, label]) => (
-                  <label className="field" key={key}>
-                    <span>{label}</span>
-                    <input type="number" inputMode="numeric" min="0" step="1" value={range[key]}
-                      onChange={(e) => setRange((r) => ({ ...r, [key]: e.target.value }))} />
+                <div className={styles.filterFields}>
+                  <label className="field">
+                    <span>Тип объявления</span>
+                    <select
+                      value={listingType}
+                      onChange={(e) =>
+                        changeFilters({ listingType: e.target.value })
+                      }
+                    >
+                      <option value="">Все типы</option>
+                      {Object.entries(listingTypes).map(([key, label]) => (
+                        <option key={key} value={key}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
                   </label>
-                ))}
-                <label className="field">
-                  <span>Город</span>
-                  <input maxLength={100} value={range.city}
-                    onChange={(e) => setRange((r) => ({ ...r, city: e.target.value }))} />
-                </label>
-                <button className="button secondary">Применить</button>
-              </form>
+                  <label className="field">
+                    <span>Состояние</span>
+                    <select
+                      value={condition}
+                      onChange={(e) =>
+                        changeFilters({ condition: e.target.value })
+                      }
+                    >
+                      <option value="">Любое состояние</option>
+                      <option value="used">С пробегом</option>
+                      <option value="new">Новое</option>
+                    </select>
+                  </label>
+                  <label className="field">
+                    <span>Сортировка</span>
+                    <select
+                      value={sort}
+                      onChange={(e) => changeFilters({ sort: e.target.value })}
+                    >
+                      {Object.entries(marketSorts).map(([key, label]) => (
+                        <option key={key} value={key}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+                <form
+                  className={styles.rangeFields}
+                  aria-label="Цена и город"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const bound = (v) =>
+                      /^\d{1,10}$/.test(String(v).trim()) ? Number(v) : "";
+                    changeFilters({
+                      priceMin: bound(range.priceMin),
+                      priceMax: bound(range.priceMax),
+                      city: range.city.trim().slice(0, 100),
+                    });
+                  }}
+                >
+                  {[
+                    ["priceMin", "Цена от, ₽"],
+                    ["priceMax", "Цена до, ₽"],
+                  ].map(([key, label]) => (
+                    <label className="field" key={key}>
+                      <span>{label}</span>
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        min="0"
+                        step="1"
+                        value={range[key]}
+                        onChange={(e) =>
+                          setRange((r) => ({ ...r, [key]: e.target.value }))
+                        }
+                      />
+                    </label>
+                  ))}
+                  <label className="field">
+                    <span>Город</span>
+                    <input
+                      maxLength={100}
+                      value={range.city}
+                      onChange={(e) =>
+                        setRange((r) => ({ ...r, city: e.target.value }))
+                      }
+                    />
+                  </label>
+                  <button className="button secondary">Применить</button>
+                </form>
               </div>
               <div className={styles.categories} aria-label="Категории товаров">
-                {[["", "Все"], ...Object.entries(marketCategories)].map(([key, label]) => (
-                  <button key={key} className="quiet" aria-pressed={category === key}
-                    onClick={() => changeFilters({ category: key })}>{label}</button>
-                ))}
+                {[["", "Все"], ...Object.entries(marketCategories)].map(
+                  ([key, label]) => (
+                    <button
+                      key={key}
+                      className="quiet"
+                      aria-pressed={category === key}
+                      onClick={() => changeFilters({ category: key })}
+                    >
+                      {label}
+                    </button>
+                  ),
+                )}
               </div>
               {filtered && (
-                <button type="button" className="quiet" onClick={() => {
-                  setSearch("");
-                  setRange({ priceMin: "", priceMax: "", city: "" });
-                  changeFilters({
-                    query: "", category: "", listingType: "", condition: "",
-                    priceMin: "", priceMax: "", city: "", sort: "new", page: 1,
-                    seller: "",
-                  });
-                }}>Сбросить фильтры</button>
+                <button
+                  type="button"
+                  className="quiet"
+                  onClick={() => {
+                    setSearch("");
+                    setRange({ priceMin: "", priceMax: "", city: "" });
+                    changeFilters({
+                      query: "",
+                      category: "",
+                      listingType: "",
+                      condition: "",
+                      priceMin: "",
+                      priceMax: "",
+                      city: "",
+                      sort: "new",
+                      page: 1,
+                      seller: "",
+                    });
+                  }}
+                >
+                  Сбросить фильтры
+                </button>
               )}
             </section>
             {data ? (
               <>
-                <p className="help" role="status">Найдено объявлений: {data.total}</p>
+                <p className="help" role="status">
+                  Найдено объявлений: {data.total}
+                </p>
                 <div className={styles.grid}>
                   {data.items.map((m) => (
                     <MarketCard key={m.id} listing={m} />
@@ -1006,10 +1209,15 @@ export default function Market({
                   <div className={styles.empty}>
                     <ShoppingBag size={32} />
                     <h2>Пока нет объявлений</h2>
-                    <p>Попробуйте другой запрос или фильтр либо добавьте своё.</p>
+                    <p>
+                      Попробуйте другой запрос или фильтр либо добавьте своё.
+                    </p>
                   </div>
                 )}
-                <Pagination {...data} onPage={(page) => changeFilters({ page })} />
+                <Pagination
+                  {...data}
+                  onPage={(page) => changeFilters({ page })}
+                />
               </>
             ) : (
               !error && <p role="status">Загружаем объявления…</p>

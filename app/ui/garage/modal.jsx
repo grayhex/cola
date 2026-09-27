@@ -3,7 +3,12 @@ import { useEffect, useRef } from "react";
 import { useSite } from "../site-provider.jsx";
 import { useBackdropClose } from "../use-backdrop-close.js";
 import { X } from "../icons.jsx";
-export default function Modal({ title, onClose, children, dismissible = true }) {
+export default function Modal({
+  title,
+  onClose,
+  children,
+  dismissible = true,
+}) {
   const { t } = useSite();
   const ref = useRef(),
     leaving = useRef(false);

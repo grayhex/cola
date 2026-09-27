@@ -1,4 +1,7 @@
-import { requireVerifiedEmail, EmailPolicyError } from "../../../../lib/email-policy.js";
+import {
+  requireVerifiedEmail,
+  EmailPolicyError,
+} from "../../../../lib/email-policy.js";
 import { db, transaction } from "../../../../lib/db.js";
 import { currentUser, rateLimit } from "../../../../lib/auth.js";
 import {
@@ -126,7 +129,8 @@ async function handler(req, { params }) {
       return fail("Слишком много действий. Попробуйте позже.", 429);
     if (!p.length && m === "POST") {
       const input = journalInput.parse(await readJson(req, 100000));
-      if (input.status === "published" && input.isPublic) requireVerifiedEmail(user);
+      if (input.status === "published" && input.isPublic)
+        requireVerifiedEmail(user);
       return json(
         await transaction((q) => saveJournal(q, user.id, input)),
         201,
@@ -149,7 +153,8 @@ async function handler(req, { params }) {
     }
     if (p.length === 1 && m === "PATCH") {
       const input = journalInput.parse(await readJson(req, 100000));
-      if (input.status === "published" && input.isPublic) requireVerifiedEmail(user);
+      if (input.status === "published" && input.isPublic)
+        requireVerifiedEmail(user);
       return json(
         await transaction((q) =>
           saveJournal(q, user.id, input, uuid.parse(p[0])),
@@ -166,12 +171,15 @@ async function handler(req, { params }) {
     if (p.length === 2 && p[1] === "photos" && m === "POST") {
       // Authorize before decoding an image; quota is reserved again under owner lock.
       const id = uuid.parse(p[0]);
-      const entry = (await db.query(
-        "SELECT status,is_public FROM journal_entries WHERE id=$1 AND owner_id=$2",
-        [id, user.id],
-      )).rows[0];
+      const entry = (
+        await db.query(
+          "SELECT status,is_public FROM journal_entries WHERE id=$1 AND owner_id=$2",
+          [id, user.id],
+        )
+      ).rows[0];
       if (!entry) return fail("Запись недоступна", 404);
-      if (entry.status === "published" && entry.is_public) requireVerifiedEmail(user);
+      if (entry.status === "published" && entry.is_public)
+        requireVerifiedEmail(user);
       const bytes = await preparePhoto(await readBytes(req, limits.fileBytes), {
         bikePhoto: false,
       });
@@ -234,7 +242,8 @@ async function handler(req, { params }) {
       );
     return fail("Не найдено", 404);
   } catch (e) {
-    if (e instanceof EmailPolicyError) return json({ error: e.message, code: e.code }, e.status);
+    if (e instanceof EmailPolicyError)
+      return json({ error: e.message, code: e.code }, e.status);
     if (e instanceof CommunityError || e instanceof QuotaError)
       return fail(e.message, e.status);
     if (e.name === "ZodError" || e instanceof SyntaxError)

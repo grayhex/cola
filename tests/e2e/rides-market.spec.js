@@ -87,19 +87,23 @@ test("Garmin import without track, chosen fields, GPX mismatch and future planni
   await expect(card).toContainText("Максимальная мощность");
   await expect(card.locator(".ride-basemap")).toHaveCount(0);
   await card.getByRole("button", { name: "Изменить" }).click();
-  await page.getByLabel("Добавить трек к поездке", { exact: false }).setInputFiles({
-    name: "wrong.gpx",
-    mimeType: "application/gpx+xml",
-    buffer: gpx([loop.map((p) => [p[0], p[1], p[2] + 86400, p[3]])]),
-  });
+  await page
+    .getByLabel("Добавить трек к поездке", { exact: false })
+    .setInputFiles({
+      name: "wrong.gpx",
+      mimeType: "application/gpx+xml",
+      buffer: gpx([loop.map((p) => [p[0], p[1], p[2] + 86400, p[3]])]),
+    });
   await expect(
     page.getByRole("alert").filter({ hasText: "Дата или время трека" }),
   ).toBeVisible();
-  await page.getByLabel("Добавить трек к поездке", { exact: false }).setInputFiles({
-    name: "matching.gpx",
-    mimeType: "application/gpx+xml",
-    buffer: gpx([loop]),
-  });
+  await page
+    .getByLabel("Добавить трек к поездке", { exact: false })
+    .setInputFiles({
+      name: "matching.gpx",
+      mimeType: "application/gpx+xml",
+      buffer: gpx([loop]),
+    });
   await expect(
     page.getByRole("status").filter({ hasText: "Трек проверен" }),
   ).toBeVisible();
@@ -159,29 +163,48 @@ test("market publishes images and price, enters home feed, and closes a listing"
   page.on("response", (response) => {
     const path = new URL(response.url()).pathname;
     if (path.startsWith("/api/market"))
-      marketResponses.push({ path, method: response.request().method(), status: response.status() });
+      marketResponses.push({
+        path,
+        method: response.request().method(),
+        status: response.status(),
+      });
   });
   // Hold hydration deterministically: SSR controls must not accept input that
   // React would discard before its change handlers are attached (#162).
   let release;
-  const hydration = new Promise((resolve) => { release = resolve; });
+  const hydration = new Promise((resolve) => {
+    release = resolve;
+  });
   await page.route("**/_next/static/**/*.js", async (route) => {
     await hydration;
     await route.continue();
   });
   try {
     await page.goto("/market/new", { waitUntil: "commit" });
-    await expect(page.getByRole("heading", { name: "Новое объявление" })).toBeVisible();
-    const controls = page.locator("main form input, main form textarea, main form select, main form button");
+    await expect(
+      page.getByRole("heading", { name: "Новое объявление" }),
+    ).toBeVisible();
+    const controls = page.locator(
+      "main form input, main form textarea, main form select, main form button",
+    );
     // Three optional catalog/garage controls were added in #133.
     await expect(controls).toHaveCount(15);
-    for (const control of await controls.all()) await expect(control).toBeDisabled();
+    for (const control of await controls.all())
+      await expect(control).toBeDisabled();
     release();
     await expect(page.getByLabel("Название", { exact: true })).toBeEnabled();
-    await expect(page.getByLabel("Найти модель велосипеда", { exact: true })).toBeEnabled();
-    await expect(page.getByRole("combobox", { name: "Мой велосипед", exact: true })).toBeEnabled();
-    await expect(page.getByLabel("Добавить фото", { exact: false })).toBeEnabled();
-    await expect(page.getByRole("button", { name: "Опубликовать", exact: true })).toBeEnabled();
+    await expect(
+      page.getByLabel("Найти модель велосипеда", { exact: true }),
+    ).toBeEnabled();
+    await expect(
+      page.getByRole("combobox", { name: "Мой велосипед", exact: true }),
+    ).toBeEnabled();
+    await expect(
+      page.getByLabel("Добавить фото", { exact: false }),
+    ).toBeEnabled();
+    await expect(
+      page.getByRole("button", { name: "Опубликовать", exact: true }),
+    ).toBeEnabled();
   } finally {
     release();
   }
@@ -192,13 +215,19 @@ test("market publishes images and price, enters home feed, and closes a listing"
   await page
     .getByRole("combobox", { name: "Категория", exact: true })
     .selectOption("components");
-  await expect(page.getByRole("combobox", { name: "Тип объявления", exact: true })).toHaveValue("sale");
+  await expect(
+    page.getByRole("combobox", { name: "Тип объявления", exact: true }),
+  ).toHaveValue("sale");
   await expect(page.getByLabel("Валюта", { exact: true })).toHaveCount(0);
   await page.getByLabel("Цена, ₽", { exact: true }).fill("12500");
   await page.getByLabel("Город", { exact: true }).fill("Тестовый город");
   await page.getByLabel("Как с вами связаться").fill("@rider");
-  await expect(page.getByLabel("Название", { exact: true })).toHaveValue("Gravel wheelset");
-  await expect(page.getByRole("textbox", { name: "Описание", exact: true })).toHaveValue("Tubeless wheels, ready for a new bicycle.");
+  await expect(page.getByLabel("Название", { exact: true })).toHaveValue(
+    "Gravel wheelset",
+  );
+  await expect(
+    page.getByRole("textbox", { name: "Описание", exact: true }),
+  ).toHaveValue("Tubeless wheels, ready for a new bicycle.");
   const photo = await sharp({
     create: { width: 640, height: 480, channels: 3, background: "#a8b6be" },
   })
@@ -207,28 +236,34 @@ test("market publishes images and price, enters home feed, and closes a listing"
   // Creating the draft and processing its photo precede the preview render.
   // Observe the upload itself so a server error cannot look like a missing image.
   const [uploaded] = await Promise.all([
-    page.waitForResponse((response) =>
-      response.request().method() === "POST" &&
-      /^\/api\/market\/[^/]+\/photos$/.test(new URL(response.url()).pathname),
+    page.waitForResponse(
+      (response) =>
+        response.request().method() === "POST" &&
+        /^\/api\/market\/[^/]+\/photos$/.test(new URL(response.url()).pathname),
       { timeout: 30000 },
     ),
     page.getByLabel("Добавить фото", { exact: false }).setInputFiles({
-      name: "wheel.png", mimeType: "image/png", buffer: photo,
+      name: "wheel.png",
+      mimeType: "image/png",
+      buffer: photo,
     }),
   ]).catch(async (error) => {
-    console.error("Market upload state", JSON.stringify({
-      responses: marketResponses,
-      title: await page.getByLabel("Название", { exact: true }).inputValue(),
-      alerts: await page.getByRole("alert").allTextContents(),
-    }));
+    console.error(
+      "Market upload state",
+      JSON.stringify({
+        responses: marketResponses,
+        title: await page.getByLabel("Название", { exact: true }).inputValue(),
+        alerts: await page.getByRole("alert").allTextContents(),
+      }),
+    );
     throw error;
   });
   expect(uploaded.status(), await uploaded.text()).toBe(201);
   const preview = page.getByRole("img", { name: "Фото объявления" });
   await expect(preview).toBeVisible();
-  await expect.poll(() => preview.evaluate((img) =>
-    img.complete && img.naturalWidth > 0,
-  )).toBe(true);
+  await expect
+    .poll(() => preview.evaluate((img) => img.complete && img.naturalWidth > 0))
+    .toBe(true);
   await page.getByRole("button", { name: "Опубликовать", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Gravel wheelset", exact: true }),
@@ -241,7 +276,10 @@ test("market publishes images and price, enters home feed, and closes a listing"
   const response = await page.request.get("/api/market/public/" + share);
   expect(response.status()).toBe(200);
   expect((await response.json()).listing).toMatchObject({
-    listingType: "sale", price: 12500, currency: "RUB", status: "active",
+    listingType: "sale",
+    price: 12500,
+    currency: "RUB",
+    status: "active",
   });
   await expect(page.locator("aside strong")).toHaveText(/^12\s500\s₽$/);
   await noOverflow(page);

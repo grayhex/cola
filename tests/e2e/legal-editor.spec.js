@@ -338,7 +338,8 @@ test("admin imports text, edits rich content, preserves drafts across tabs, publ
 async function selectEditorText(field, text) {
   await expect(field).toHaveText(text);
   await field.press("ArrowRight");
-  for (let i = 0; i < Array.from(text).length; i++) await field.press("Shift+ArrowLeft");
+  for (let i = 0; i < Array.from(text).length; i++)
+    await field.press("Shift+ArrowLeft");
   await expect
     .poll(() =>
       field.evaluate((el) => el.ownerDocument.getSelection()?.toString()),

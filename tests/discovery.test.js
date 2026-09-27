@@ -136,9 +136,7 @@ test("discovery lifecycle, aliases, custom builds, deduplicated feeds, bookmarks
       installationResult: "modified",
     });
     const entry = await tx((q) => saveJournal(q, owner, input));
-    await tx((q) =>
-      saveJournal(q, owner, { ...input, status: "draft" }),
-    );
+    await tx((q) => saveJournal(q, owner, { ...input, status: "draft" }));
     assert.equal((await rideFeed(db, null, 1, "journal", "new")).total, 1);
     assert.equal((await notificationPage(db, reader)).notifications.length, 0);
     await tx((q) => setBikeFollow(q, bike, reader, true));

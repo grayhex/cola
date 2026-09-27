@@ -2,8 +2,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { matchesClassification, readClassificationFilters } from "../../lib/bike-classification.js";
-import { readShowcaseQuery, writeShowcaseQuery } from "../../lib/showcase-query.js";
+import {
+  matchesClassification,
+  readClassificationFilters,
+} from "../../lib/bike-classification.js";
+import {
+  readShowcaseQuery,
+  writeShowcaseQuery,
+} from "../../lib/showcase-query.js";
 import { publicPath } from "../../lib/public-urls.js";
 import EmailPolicyAction from "./email-policy-action.jsx";
 import { useConfirmation } from "./confirmation.jsx";
@@ -140,7 +146,8 @@ export default function Garage({
             : null;
         seed.current = null;
         const publicData = await dataRequest;
-        const data = publicData || (viewer ? await api("bikes") : { bikes: [] });
+        const data =
+          publicData || (viewer ? await api("bikes") : { bikes: [] });
         if (sequence !== requestId.current.sequence) return;
         if (viewer && onAuthenticated) onAuthenticated();
         if (share) setSelected(data.bike);
@@ -305,7 +312,8 @@ export default function Garage({
       )}
       {error && !modal && (
         <div className="error global-error" role="alert">
-          {error}<EmailPolicyAction message={error} />
+          {error}
+          <EmailPolicyAction message={error} />
           <button className="quiet" onClick={() => run(load)}>
             {t("Повторить")}
           </button>

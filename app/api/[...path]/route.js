@@ -1,13 +1,28 @@
-import { requireVerifiedEmail, EmailPolicyError } from "../../../lib/email-policy.js";
-import { classificationOf, categoryFilterLabels } from "../../../lib/bike-classification.js";
+import {
+  requireVerifiedEmail,
+  EmailPolicyError,
+} from "../../../lib/email-policy.js";
+import {
+  classificationOf,
+  categoryFilterLabels,
+} from "../../../lib/bike-classification.js";
 import { classificationQueryInput } from "../../../lib/classification-validation.js";
-import { checkLegalAcceptance, recordLegalAcceptance, LegalError } from "../../../lib/legal-documents.js";
+import {
+  checkLegalAcceptance,
+  recordLegalAcceptance,
+  LegalError,
+} from "../../../lib/legal-documents.js";
 import { traced, logError } from "../../../lib/observability.js";
 import { resolverProxy } from "../../../lib/resolver-proxy.js";
 import { allowAuth } from "../../../lib/auth-limits.js";
 import { limits, QuotaError } from "../../../lib/limits.js";
 import { savePhotos } from "../../../lib/photo-storage.js";
-import { showcase, decorateBike, visibleBike, vote } from "../../../lib/showcase.js";
+import {
+  showcase,
+  decorateBike,
+  visibleBike,
+  vote,
+} from "../../../lib/showcase.js";
 import { searchExperience, searchInput } from "../../../lib/search.js";
 import { validatePurposes } from "../../../lib/repository.js";
 import { CommunityError } from "../../../lib/community-validation.js";
@@ -19,10 +34,7 @@ import { importPhotos } from "../../../lib/photo-import.js";
 import { appVersion } from "../../../lib/version.js";
 import { mailEnabled } from "../../../lib/mail.js";
 import { emailVerificationMail } from "../../../lib/mail-templates.js";
-import {
-  accountLink,
-  requestEmailVerification,
-} from "../../../lib/account.js";
+import { accountLink, requestEmailVerification } from "../../../lib/account.js";
 import { sendAfterResponse } from "../../../lib/account-mail.js";
 import { z } from "zod";
 import { wizardInput, createWizardBike } from "../../../lib/bike-wizard.js";
@@ -62,14 +74,12 @@ import {
   uuid,
 } from "../../../lib/validation.js";
 import { allocateUsername, suggestUsername } from "../../../lib/usernames.js";
-import {
-  ownedBike,
-  insertBike,
-} from "../../../lib/repository.js";
+import { ownedBike, insertBike } from "../../../lib/repository.js";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-const uploads = () => path.resolve(/*turbopackIgnore: true*/ process.env.UPLOAD_DIR || "uploads");
+const uploads = () =>
+  path.resolve(/*turbopackIgnore: true*/ process.env.UPLOAD_DIR || "uploads");
 const json = (data, status = 200) =>
   NextResponse.json(data, { status, headers: { "Cache-Control": "no-store" } });
 const fail = (message, status = 400) => json({ error: message }, status);
@@ -130,7 +140,8 @@ async function handler(req, { params }) {
       return json({ ok: database, database, resolver }, database ? 200 : 503);
     }
     if (
-      p[0] === "auth" && p.length === 2 &&
+      p[0] === "auth" &&
+      p.length === 2 &&
       ["login", "register"].includes(p[1]) &&
       method === "POST"
     ) {
@@ -260,7 +271,10 @@ async function handler(req, { params }) {
       const etag = mediaEtag(p[1], width);
       if (notModified(req, etag)) return notModifiedResponse(etag);
       try {
-        const original = () => readFile(/*turbopackIgnore: true*/ path.join(uploads(), rows[0].filename));
+        const original = () =>
+          readFile(
+            /*turbopackIgnore: true*/ path.join(uploads(), rows[0].filename),
+          );
         return mediaResponse(
           width ? await mediaVariant(p[1], width, original) : await original(),
           etag,
@@ -300,7 +314,15 @@ async function handler(req, { params }) {
         .enum(["new", "popular", "records"])
         .parse(url.searchParams.get("sort") || "new");
       return json(
-        await showcase(db, user?.id, { page, category, search, sort, classification: classificationQueryInput.parse(Object.fromEntries(url.searchParams)) }),
+        await showcase(db, user?.id, {
+          page,
+          category,
+          search,
+          sort,
+          classification: classificationQueryInput.parse(
+            Object.fromEntries(url.searchParams),
+          ),
+        }),
       );
     }
     if (p[0] === "search" && p.length === 1 && method === "GET")
@@ -354,7 +376,13 @@ async function handler(req, { params }) {
             409,
           );
         if (e.message === "IDENTITY_CONFIRMATION_REQUIRED")
-          return json({ error: "Подтвердите отличие модели или года источника", code: "IDENTITY_CONFIRMATION_REQUIRED" }, 409);
+          return json(
+            {
+              error: "Подтвердите отличие модели или года источника",
+              code: "IDENTITY_CONFIRMATION_REQUIRED",
+            },
+            409,
+          );
         if (e.message === "REQUEST_CONFLICT")
           return fail("Конфликт запроса", 409);
         throw e;
@@ -457,7 +485,12 @@ async function handler(req, { params }) {
     if (!bike) return fail("Велосипед не найден", 404);
     // New data/photos on an already public legacy bike are public writes too.
     // Likes returned above; deletion and explicit privacy changes stay available.
-    if (bike.is_public && p.length >= 3 && p[2] !== "share" && ["POST", "PATCH", "PUT"].includes(method))
+    if (
+      bike.is_public &&
+      p.length >= 3 &&
+      p[2] !== "share" &&
+      ["POST", "PATCH", "PUT"].includes(method)
+    )
       requireVerifiedEmail(user);
     if (p.length === 3 && p[2] === "factory-spec" && method === "POST") {
       if (!(await rateLimit("resolver:" + user.id, 30)))
@@ -498,11 +531,17 @@ async function handler(req, { params }) {
         const previous = classificationOf(bike);
         // A legacy PATCH must preserve independent features. Only an explicit
         // old category change resets the family/subtype; missing facets never do.
-        const oldType = Object.hasOwn(input, "category") && input.category !== bike.category
-          ? classificationOf({ category: input.category }) : previous;
+        const oldType =
+          Object.hasOwn(input, "category") && input.category !== bike.category
+            ? classificationOf({ category: input.category })
+            : previous;
         const b = bikeInput.parse({
           ...bike,
-          classification: { ...previous, category: oldType.category, subtype: oldType.subtype },
+          classification: {
+            ...previous,
+            category: oldType.category,
+            subtype: oldType.subtype,
+          },
           weight: bike.weight === null ? null : Number(bike.weight),
           price: bike.price === null ? null : Number(bike.price),
           ...input,
@@ -570,7 +609,9 @@ async function handler(req, { params }) {
         }
         await Promise.all(
           rows.map((p) =>
-            unlink(/*turbopackIgnore: true*/ path.join(uploads(), p.filename)).catch(() => {}),
+            unlink(
+              /*turbopackIgnore: true*/ path.join(uploads(), p.filename),
+            ).catch(() => {}),
           ),
         );
         await purgeMediaVariants(rows.map((p) => p.id));
@@ -790,7 +831,9 @@ async function handler(req, { params }) {
           }
         });
         if (filename) {
-          await unlink(/*turbopackIgnore: true*/ path.join(uploads(), filename)).catch(() => {});
+          await unlink(
+            /*turbopackIgnore: true*/ path.join(uploads(), filename),
+          ).catch(() => {});
           await purgeMediaVariants([p[3]]);
         }
         return json({ ok: true });
@@ -798,8 +841,10 @@ async function handler(req, { params }) {
     }
     return fail("Не найдено", 404);
   } catch (e) {
-    if (e instanceof EmailPolicyError) return json({ error: e.message, code: e.code }, e.status);
-    if (e instanceof LegalError) return json({ error: e.message, code: e.code }, e.status);
+    if (e instanceof EmailPolicyError)
+      return json({ error: e.message, code: e.code }, e.status);
+    if (e instanceof LegalError)
+      return json({ error: e.message, code: e.code }, e.status);
     if (e instanceof CommunityError) return fail(e.message, e.status);
     if (e instanceof QuotaError) return fail(e.message, e.status);
     if (e.name === "ZodError")

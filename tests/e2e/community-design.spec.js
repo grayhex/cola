@@ -295,14 +295,19 @@ test("theme toggle waits for hydration and its first click inverts the actual sy
   await fixture(page);
   await page.emulateMedia({ colorScheme: "dark" });
   let release;
-  const hydration = new Promise((resolve) => { release = resolve; });
+  const hydration = new Promise((resolve) => {
+    release = resolve;
+  });
   await page.route("**/_next/static/**/*.js", async (route) => {
     await hydration;
     await route.continue();
   });
   try {
     await page.goto("/", { waitUntil: "commit" });
-    const toggle = page.getByRole("switch", { name: "Тёмная тема", exact: true });
+    const toggle = page.getByRole("switch", {
+      name: "Тёмная тема",
+      exact: true,
+    });
     await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
     await expect(toggle).toBeVisible();
     await expect(toggle).toBeDisabled();
@@ -312,7 +317,9 @@ test("theme toggle waits for hydration and its first click inverts the actual sy
     if (isMobile) await toggle.tap();
     else await toggle.click();
     await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
-    expect(await page.evaluate(() => localStorage.getItem("cola:theme"))).toBe("light");
+    expect(await page.evaluate(() => localStorage.getItem("cola:theme"))).toBe(
+      "light",
+    );
     await page.reload();
     await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
     await expect(toggle).toBeEnabled();

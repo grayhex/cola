@@ -163,22 +163,14 @@ export default function BikeDetail({
       <div className="bike-meta-line" hidden={!block("heading").enabled}>
         {bike.color && <span>{bike.color}</span>}
         {settings.showMileage && (
-          <span>
-            {Number(bike.mileage || 0).toLocaleString("ru-RU")} км
-          </span>
+          <span>{Number(bike.mileage || 0).toLocaleString("ru-RU")} км</span>
         )}
       </div>
-      <div
-        className="showcase configurable-block"
-        {...blockProps("photos")}
-      >
+      <div className="showcase configurable-block" {...blockProps("photos")}>
         <div className="photo-stage">
           <span className="photo-index">
             {String(
-              Math.max(
-                1,
-                bike.photos.findIndex((p) => p.id === photo?.id) + 1,
-              ),
+              Math.max(1, bike.photos.findIndex((p) => p.id === photo?.id) + 1),
             ).padStart(2, "0")}{" "}
             / {String(Math.max(1, bike.photos.length)).padStart(2, "0")}
           </span>
@@ -249,9 +241,7 @@ export default function BikeDetail({
         </h2>
         <p hidden={settings.summaryFields?.description === false}>
           {bike.description ||
-            t(
-              "У каждого велосипеда своя история. Добавьте пару слов о вашем.",
-            )}
+            t("У каждого велосипеда своя история. Добавьте пару слов о вашем.")}
         </p>
 
         <div className="summary-bottom">
@@ -273,8 +263,7 @@ export default function BikeDetail({
           bike.price != null &&
           settings.summaryFields?.price !== false && (
             <p>
-              {t("Стоимость велосипеда")}:{" "}
-              <strong>{rub(bike.price)}</strong>
+              {t("Стоимость велосипеда")}: <strong>{rub(bike.price)}</strong>
             </p>
           )}
       </details>
@@ -291,9 +280,7 @@ export default function BikeDetail({
                 <button
                   className={
                     "thumb " +
-                    ((photo?.id || bike.photos[0].id) === p.id
-                      ? "active"
-                      : "")
+                    ((photo?.id || bike.photos[0].id) === p.id ? "active" : "")
                   }
                   aria-label={t("Показать фотографию")}
                   onClick={() => setPhoto(p)}
@@ -307,10 +294,7 @@ export default function BikeDetail({
                       disabled={busy || p.is_cover}
                       onClick={() =>
                         run(async () => {
-                          await api(
-                            `bikes/${bike.id}/photos/${p.id}`,
-                            "PATCH",
-                          );
+                          await api(`bikes/${bike.id}/photos/${p.id}`, "PATCH");
                           await refresh();
                           setNotice(t("Обложка обновлена"));
                         })
@@ -341,8 +325,7 @@ export default function BikeDetail({
         {bike.factory_spec && (
           <details className="factory-source">
             <summary>
-              Заводская комплектация ·{" "}
-              {bike.factory_spec.source.manufacturer}
+              Заводская комплектация · {bike.factory_spec.source.manufacturer}
             </summary>
             <p className="help">
               Текущие компоненты можно менять независимо от заводской
@@ -407,16 +390,10 @@ export default function BikeDetail({
             </button>
           )}
         </div>
-        <div
-          id="parts-panel"
-          role="tabpanel"
-          aria-labelledby={"tab-" + tab}
-        >
+        <div id="parts-panel" role="tabpanel" aria-labelledby={"tab-" + tab}>
           <div className="spec-label">
             <span>
-              {tab === "build"
-                ? t("ОСНОВА И ДЕТАЛИ")
-                : t("ВСЁ ДЛЯ ПОЕЗДКИ")}
+              {tab === "build" ? t("ОСНОВА И ДЕТАЛИ") : t("ВСЁ ДЛЯ ПОЕЗДКИ")}
             </span>
             <span>{t("АКТУАЛЬНАЯ КОНФИГУРАЦИЯ")}</span>
           </div>
@@ -448,12 +425,8 @@ export default function BikeDetail({
               </h3>
               <p>
                 {tab === "build"
-                  ? t(
-                      "Добавьте компоненты, из которых собран ваш велосипед.",
-                    )
-                  : t(
-                      "Свет, сумки, велокомпьютер — всё, что берёте с собой.",
-                    )}
+                  ? t("Добавьте компоненты, из которых собран ваш велосипед.")
+                  : t("Свет, сумки, велокомпьютер — всё, что берёте с собой.")}
               </p>
               {editable && (
                 <button
@@ -470,9 +443,7 @@ export default function BikeDetail({
         {(tab === "build"
           ? bike.show_component_prices
           : bike.show_accessory_prices) &&
-          bike.components.some(
-            (c) => c.section === tab && c.price != null,
-          ) && (
+          bike.components.some((c) => c.section === tab && c.price != null) && (
             <div className="cost">
               <Lock size={14} />
               <span>{t("Стоимость выбранного раздела")}</span>

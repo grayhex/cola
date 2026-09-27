@@ -47,30 +47,50 @@ function RecordCard({ record: r, index }) {
         </div>
         {b && (
           <div className="record-result">
-            <Link prefetch={false} className="record-bike-name" href={holderLink(b)} title={b.name}>
+            <Link
+              prefetch={false}
+              className="record-bike-name"
+              href={holderLink(b)}
+              title={b.name}
+            >
               {b.kind === "profile" ? personName(b.author) : b.name}
             </Link>
-            <span className="record-value">{metricValue(r.metric, b.value)}</span>
+            <span className="record-value">
+              {metricValue(r.metric, b.value)}
+            </span>
           </div>
         )}
       </div>
       {b ? (
         <div className="record-meta">
           {b.kind === "ride" && (
-            <Link prefetch={false} className="record-owner" href={publicPath("bike", b.bike)}>
+            <Link
+              prefetch={false}
+              className="record-owner"
+              href={publicPath("bike", b.bike)}
+            >
               {b.bike.name}
             </Link>
           )}
           {b.kind !== "profile" && (
-            <Link prefetch={false} className="record-owner" href={profilePath(b.author.username)} title={usernameLabel(b.author) || undefined}>
+            <Link
+              prefetch={false}
+              className="record-owner"
+              href={profilePath(b.author.username)}
+              title={usernameLabel(b.author) || undefined}
+            >
               {personName(b.author)}
             </Link>
           )}
           <small>{r.eligible} участн.</small>
         </div>
       ) : (
-        <p className="record-empty" title="Рекорд свободен · Пока никто не выполнил условия.">
-          <strong>Рекорд свободен</strong>{" · Пока никто не выполнил условия."}
+        <p
+          className="record-empty"
+          title="Рекорд свободен · Пока никто не выполнил условия."
+        >
+          <strong>Рекорд свободен</strong>
+          {" · Пока никто не выполнил условия."}
         </p>
       )}
     </article>
@@ -101,20 +121,41 @@ function AwardCard({ award: a, index }) {
         {latest && (
           <div className="record-result award-recipient">
             <span className="award-recipient-label">Последний получатель</span>
-            {latest.bike && <Link prefetch={false} className="record-bike-name" href={publicPath("bike", latest.bike)}>{latest.bike.name}</Link>}
-            <Link prefetch={false} className={latest.bike ? "record-owner" : "record-bike-name"}
-              href={profilePath(latest.author.username)} title={usernameLabel(latest.author) || undefined}>
+            {latest.bike && (
+              <Link
+                prefetch={false}
+                className="record-bike-name"
+                href={publicPath("bike", latest.bike)}
+              >
+                {latest.bike.name}
+              </Link>
+            )}
+            <Link
+              prefetch={false}
+              className={latest.bike ? "record-owner" : "record-bike-name"}
+              href={profilePath(latest.author.username)}
+              title={usernameLabel(latest.author) || undefined}
+            >
               {personName(latest.author)}
             </Link>
           </div>
         )}
       </div>
       <div className="record-meta">
-        {latest && <time className="award-date" dateTime={new Date(latest.awardedAt).toISOString()}
-          title={new Date(latest.awardedAt).toLocaleString("ru-RU", { timeZoneName: "short" })}>
-          {new Date(latest.awardedAt).toLocaleString("ru-RU")}
-        </time>}
-        <span className="award-count">{a.earners ? earnedBy(a.earners) : "Пока никто не получил"}</span>
+        {latest && (
+          <time
+            className="award-date"
+            dateTime={new Date(latest.awardedAt).toISOString()}
+            title={new Date(latest.awardedAt).toLocaleString("ru-RU", {
+              timeZoneName: "short",
+            })}
+          >
+            {new Date(latest.awardedAt).toLocaleString("ru-RU")}
+          </time>
+        )}
+        <span className="award-count">
+          {a.earners ? earnedBy(a.earners) : "Пока никто не получил"}
+        </span>
       </div>
     </article>
   );
@@ -124,14 +165,23 @@ function Groups({ items, label, Card }) {
   return (
     <div className="record-groups" aria-label={label}>
       {groupByMetric(items).map((group) => (
-        <section className="record-group" key={group.id} data-record-group={group.id}
-          aria-labelledby={label + "-" + group.id}>
+        <section
+          className="record-group"
+          key={group.id}
+          data-record-group={group.id}
+          aria-labelledby={label + "-" + group.id}
+        >
           <h2 id={label + "-" + group.id} className="record-group-title">
-            {group.name}<span aria-hidden="true">{group.items.length}</span>
+            {group.name}
+            <span aria-hidden="true">{group.items.length}</span>
           </h2>
           <div className="record-grid">
             {group.items.map((item, index) => (
-              <Card key={item.key} {...{ [Card === AwardCard ? "award" : "record"]: item }} index={index} />
+              <Card
+                key={item.key}
+                {...{ [Card === AwardCard ? "award" : "record"]: item }}
+                index={index}
+              />
             ))}
           </div>
         </section>
@@ -140,7 +190,9 @@ function Groups({ items, label, Card }) {
   );
 }
 export function RecordGroups({ records }) {
-  return <Groups items={records} label="Все рекорды сообщества" Card={RecordCard} />;
+  return (
+    <Groups items={records} label="Все рекорды сообщества" Card={RecordCard} />
+  );
 }
 
 const tabs = [
@@ -153,14 +205,19 @@ export default function Records() {
     [error, setError] = useState(""),
     [tab, setTab] = useState("records");
   useEffect(() => {
-    if (new URLSearchParams(location.search).get("tab") === "awards") setTab("awards");
+    if (new URLSearchParams(location.search).get("tab") === "awards")
+      setTab("awards");
     let active = true;
     socialApi("game/records")
       .then((d) => {
         if (active) setData(d);
       })
-      .catch((e) => { if (active) setError(e.message); });
-    return () => { active = false; };
+      .catch((e) => {
+        if (active) setError(e.message);
+      });
+    return () => {
+      active = false;
+    };
   }, []);
   return (
     <>
@@ -175,11 +232,20 @@ export default function Records() {
         </header>
         <nav className="ui-tabs hall-tabs" aria-label="Рекорды и награды">
           {tabs.map(([id, label, Icon]) => (
-            <button key={id} type="button" className="quiet" aria-pressed={tab === id}
+            <button
+              key={id}
+              type="button"
+              className="quiet"
+              aria-pressed={tab === id}
               onClick={() => {
                 setTab(id);
-                history.replaceState(null, "", id === "awards" ? "/records?tab=awards" : "/records");
-              }}>
+                history.replaceState(
+                  null,
+                  "",
+                  id === "awards" ? "/records?tab=awards" : "/records",
+                );
+              }}
+            >
               <Icon size={17} aria-hidden="true" />
               {label}
             </button>
@@ -189,39 +255,59 @@ export default function Records() {
         {!data && !error && <p role="status">Ищем рекордсменов…</p>}
         {data && tab === "records" && (
           <>
-            <p className="help hall-lead">Рекорд держит один велосипед, покатушка или участник — и лидер может смениться.</p>
-            <p className="hall-updated">Актуально на <time dateTime={new Date(data.asOf).toISOString()}>{new Date(data.asOf).toLocaleString("ru-RU")}</time></p>
+            <p className="help hall-lead">
+              Рекорд держит один велосипед, покатушка или участник — и лидер
+              может смениться.
+            </p>
+            <p className="hall-updated">
+              Актуально на{" "}
+              <time dateTime={new Date(data.asOf).toISOString()}>
+                {new Date(data.asOf).toLocaleString("ru-RU")}
+              </time>
+            </p>
             <RecordGroups records={data.records} />
-            {!data.records.length && <p className="help">Рекорды пока отключены администратором.</p>}
+            {!data.records.length && (
+              <p className="help">Рекорды пока отключены администратором.</p>
+            )}
             <details className="hall-rules">
               <summary>Условия участия и подсчёт рекордов</summary>
               <p>
                 Участвуют публичные велосипеды и покатушки незаблокированных
                 владельцев; велосипед, исключённый модератором, не участвует.
-                Заполненность карточки — от {data.settings.minimumCompleteness}%.
-                Цена участвует только при включённом показе; валюта — {data.settings.currency}.
-                Максимальная скорость покатушки — только если владелец её показывает.
+                Заполненность карточки — от {data.settings.minimumCompleteness}
+                %. Цена участвует только при включённом показе; валюта —{" "}
+                {data.settings.currency}. Максимальная скорость покатушки —
+                только если владелец её показывает.
               </p>
               <p>
                 Минимальная цена: строго выше {data.settings.budgetMinimum} ₽,
-                фото, производитель, модель и год. Допустимый вес:
-                {" "}{data.settings.weightMinimum}–{data.settings.weightMaximum} кг;
+                фото, производитель, модель и год. Допустимый вес:{" "}
+                {data.settings.weightMinimum}–{data.settings.weightMaximum} кг;
                 рекорды веса по категориям соревнуются отдельно.
               </p>
               <p>
                 Выбор сообщества — число уникальных пользователей, поставивших
                 дополнительную реакцию. Лайки — отдельный рекорд. Собственные
-                голоса и голоса заблокированных пользователей не считаются.
-                При равенстве значений лидер определяется по стабильному ID.
+                голоса и голоса заблокированных пользователей не считаются. При
+                равенстве значений лидер определяется по стабильному ID.
               </p>
             </details>
           </>
         )}
         {data && tab === "awards" && (
           <>
-            <p className="help hall-lead">Награда остаётся навсегда, даже если условие потом перестало выполняться.</p>
-            <Groups items={data.awards || []} label="Все награды" Card={AwardCard} />
-            {!data.awards?.length && <p className="help">Награды пока отключены администратором.</p>}
+            <p className="help hall-lead">
+              Награда остаётся навсегда, даже если условие потом перестало
+              выполняться.
+            </p>
+            <Groups
+              items={data.awards || []}
+              label="Все награды"
+              Card={AwardCard}
+            />
+            {!data.awards?.length && (
+              <p className="help">Награды пока отключены администратором.</p>
+            )}
           </>
         )}
       </main>

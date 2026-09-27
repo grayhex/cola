@@ -26,10 +26,16 @@ test("landing addresses keep whole names in Latin and Cyrillic", () => {
   assert.equal(landingSlug(null), "");
   const long = "Shimano Deore XT M8100 ".repeat(6).trim();
   assert.equal(landingSlug(long).length, long.length);
-  assert.equal(modelLandingPath("Cube", "Travel EXC"), "/experience/cube/travel-exc");
+  assert.equal(
+    modelLandingPath("Cube", "Travel EXC"),
+    "/experience/cube/travel-exc",
+  );
   assert.equal(
     modelLandingPath("Куб", "Тревел"),
-    "/experience/" + encodeURIComponent("куб") + "/" + encodeURIComponent("тревел"),
+    "/experience/" +
+      encodeURIComponent("куб") +
+      "/" +
+      encodeURIComponent("тревел"),
   );
   assert.equal(
     partLandingPath("Седло", "Brooks C17"),
@@ -41,7 +47,22 @@ test("Russian plural forms", () => {
   const forms = (n) => plural(n, "сборка", "сборки", "сборок");
   assert.deepEqual(
     [0, 1, 2, 4, 5, 11, 12, 14, 21, 22, 25, 101, 111, 112].map(forms),
-    ["сборок", "сборка", "сборки", "сборки", "сборок", "сборок", "сборок", "сборок", "сборка", "сборки", "сборок", "сборка", "сборок", "сборок"],
+    [
+      "сборок",
+      "сборка",
+      "сборки",
+      "сборки",
+      "сборок",
+      "сборок",
+      "сборок",
+      "сборок",
+      "сборка",
+      "сборки",
+      "сборок",
+      "сборка",
+      "сборок",
+      "сборок",
+    ],
   );
 });
 
@@ -51,17 +72,33 @@ test("model and part pages count public builds under every spelling", async () =
     for (const f of (await readdir(new URL("../db/", import.meta.url)))
       .filter((f) => f.endsWith(".sql"))
       .sort())
-      await db.exec(await readFile(new URL("../db/" + f, import.meta.url), "utf8"));
+      await db.exec(
+        await readFile(new URL("../db/" + f, import.meta.url), "utf8"),
+      );
     const catalog = mergeCatalog(defaultCatalog, {
       kind: "component",
       scope: "Седло",
       alias: "Брукс С17",
       name: "Brooks C17",
     });
-    catalog.aliases.push({ kind: "component", scope: "Седло", alias: "brooks c-17", name: "Brooks C17" });
-    catalog.aliases.push({ kind: "model", scope: "Cube", alias: "Тревел", name: "Travel" });
-    await db.query("INSERT INTO site_catalog(id,value) VALUES(1,$1)", [JSON.stringify(catalog)]);
-    await db.query("INSERT INTO site_settings(id,value) VALUES(1,$1)", [JSON.stringify(defaultSettings)]);
+    catalog.aliases.push({
+      kind: "component",
+      scope: "Седло",
+      alias: "brooks c-17",
+      name: "Brooks C17",
+    });
+    catalog.aliases.push({
+      kind: "model",
+      scope: "Cube",
+      alias: "Тревел",
+      name: "Travel",
+    });
+    await db.query("INSERT INTO site_catalog(id,value) VALUES(1,$1)", [
+      JSON.stringify(catalog),
+    ]);
+    await db.query("INSERT INTO site_settings(id,value) VALUES(1,$1)", [
+      JSON.stringify(defaultSettings),
+    ]);
     const owner = randomUUID(),
       banned = randomUUID();
     for (const [id, name, blocked] of [
@@ -73,7 +110,14 @@ test("model and part pages count public builds under every spelling", async () =
         [id, name, blocked],
       );
     const bikes = {};
-    async function bike(key, brand, model, year, weight, { user = owner, isPublic = true, saddle = "" } = {}) {
+    async function bike(
+      key,
+      brand,
+      model,
+      year,
+      weight,
+      { user = owner, isPublic = true, saddle = "" } = {},
+    ) {
       const id = randomUUID();
       bikes[key] = id;
       await db.query(
@@ -90,8 +134,14 @@ test("model and part pages count public builds under every spelling", async () =
     await bike("b", "Куб", "Travel", 2021, 13, { saddle: "Брукс С17" });
     await bike("c", "CUBE", "Тревел", 2020, null, { saddle: "brooks c-17" });
     await bike("d", "Cube", "Travel", 2018, 14, { saddle: "Brooks C17" });
-    await bike("private", "Cube", "Travel", 2022, 20, { isPublic: false, saddle: "Brooks C17" });
-    await bike("blocked", "Cube", "Travel", 2023, 20, { user: banned, saddle: "Brooks C17" });
+    await bike("private", "Cube", "Travel", 2022, 20, {
+      isPublic: false,
+      saddle: "Brooks C17",
+    });
+    await bike("blocked", "Cube", "Travel", 2023, 20, {
+      user: banned,
+      saddle: "Brooks C17",
+    });
     await bike("alone", "Trek", "Marlin 7", 2024, 14);
     await bike("nameless", "—", "…", 2024, 14);
     for (const [status, distance] of [
@@ -105,7 +155,10 @@ test("model and part pages count public builds under every spelling", async () =
 
     // An installation story on one build, a draft and a service entry.
     const saddlePart = (
-      await db.query("SELECT id,name,category,section FROM components WHERE bike_id=$1", [bikes.b])
+      await db.query(
+        "SELECT id,name,category,section FROM components WHERE bike_id=$1",
+        [bikes.b],
+      )
     ).rows[0];
     for (const [kind, status] of [
       ["build", "published"],
@@ -114,7 +167,14 @@ test("model and part pages count public builds under every spelling", async () =
     ])
       await db.query(
         "INSERT INTO journal_entries(id,share_id,owner_id,bike_id,kind,title,body,status,is_public,components,published_at) VALUES($1,$1,$2,$3,$4,'Седло','Поставил седло',$5,true,$6,now())",
-        [randomUUID(), owner, bikes.b, kind, status, JSON.stringify([saddlePart])],
+        [
+          randomUUID(),
+          owner,
+          bikes.b,
+          kind,
+          status,
+          JSON.stringify([saddlePart]),
+        ],
       );
     const cube = await modelLanding(db, null, "куб", "тревел");
     assert.equal(cube.builds, 4, "private and blocked builds stay out");
@@ -132,14 +192,21 @@ test("model and part pages count public builds under every spelling", async () =
     assert.deepEqual(cube.types, [
       { label: classificationLabels({ category: "road" })[0], builds: 4 },
     ]);
-    assert.equal(cube.installs.length, 1, "drafts and service entries are not installations");
+    assert.equal(
+      cube.installs.length,
+      1,
+      "drafts and service entries are not installations",
+    );
     assert.equal(cube.installs[0].name, "Брукс С17");
     assert.equal(cube.installs[0].entries, 1);
     assert.match(cube.installs[0].search, /type=journal/);
     assert.equal(cube.entryCount, 2, "published entries only");
     assert.equal(cube.parts.length, 1, "spellings of one saddle are one part");
     assert.equal(cube.parts[0].builds, 4);
-    assert.equal(cube.parts[0].path, partLandingPath(cube.parts[0].category, cube.parts[0].name));
+    assert.equal(
+      cube.parts[0].path,
+      partLandingPath(cube.parts[0].category, cube.parts[0].name),
+    );
     assert.deepEqual(await modelLanding(db, null, "cube", "travel"), cube);
 
     const trek = await modelLanding(db, null, "trek", "marlin-7");
@@ -147,31 +214,52 @@ test("model and part pages count public builds under every spelling", async () =
     assert.equal(trek.indexed, false, "a thin page waits for more builds");
     assert.equal(trek.path, "/experience/trek/marlin-7");
     assert.equal(await modelLanding(db, null, "cube", "reaction"), null);
-    assert.equal(await modelLanding(db, null, "-", "-"), null, "names without letters");
+    assert.equal(
+      await modelLanding(db, null, "-", "-"),
+      null,
+      "names without letters",
+    );
     assert.equal(await modelLanding(db, null, "cube", "x".repeat(400)), null);
 
     const saddle = await partLanding(db, null, "седло", "brooks-c17");
     assert.equal(saddle.builds, 4);
     assert.equal(saddle.indexed, true);
     assert.equal(saddle.title, "Brooks C17");
-    assert.equal(saddle.path, "/experience/parts/" + encodeURIComponent("седло") + "/brooks-c17");
+    assert.equal(
+      saddle.path,
+      "/experience/parts/" + encodeURIComponent("седло") + "/brooks-c17",
+    );
     assert.deepEqual(saddle.models, [
-      { brand: "Cube", model: "Travel", builds: 4, path: "/experience/cube/travel" },
+      {
+        brand: "Cube",
+        model: "Travel",
+        builds: 4,
+        path: "/experience/cube/travel",
+      },
     ]);
     assert.equal(saddle.bikes.length, 4);
     assert.deepEqual(await partLanding(db, null, "Седло", "Брукс С17"), saddle);
     assert.equal(await partLanding(db, null, "рама", "brooks-c17"), null);
 
     const limit = { model: 10, part: 10 };
-    const paths = async () => (await landingSitemap(db, limit)).map((e) => e.path);
+    const paths = async () =>
+      (await landingSitemap(db, limit)).map((e) => e.path);
     assert.deepEqual((await paths()).sort(), [cube.path, saddle.path].sort());
     assert.ok((await landingSitemap(db, limit)).every((e) => e.updatedAt));
     assert.equal(landingMinimum, 3);
 
     // Hiding builds takes both pages below the threshold.
-    await db.query("UPDATE bikes SET is_public=false WHERE id=ANY($1)", [[bikes.c, bikes.d]]);
-    assert.equal((await modelLanding(db, null, "cube", "travel")).indexed, false);
-    assert.equal((await partLanding(db, null, "седло", "brooks-c17")).builds, 2);
+    await db.query("UPDATE bikes SET is_public=false WHERE id=ANY($1)", [
+      [bikes.c, bikes.d],
+    ]);
+    assert.equal(
+      (await modelLanding(db, null, "cube", "travel")).indexed,
+      false,
+    );
+    assert.equal(
+      (await partLanding(db, null, "седло", "brooks-c17")).builds,
+      2,
+    );
     assert.deepEqual(await paths(), []);
   } finally {
     await db.close();

@@ -28,7 +28,7 @@ for (const [i, c] of [owner, reader].entries())
   assert.equal(
     (
       await c("auth/register", "POST", {
-      ...testConsents,
+        ...testConsents,
         name: "Discovery " + i,
         email: nonce + i + "@discovery.test",
         password: "discovery-http-secret",

@@ -21,7 +21,7 @@ const email = "resolver-" + randomUUID() + "@example.test";
 assert.equal((await api("admin/resolver")).status, 401);
 const user = (
   await api("auth/register", "POST", {
-      ...testConsents,
+    ...testConsents,
     email,
     name: "Resolver test",
     password: "colabike-test-12345",

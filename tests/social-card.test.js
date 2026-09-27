@@ -14,7 +14,10 @@ test("card text keeps only what the bundled font draws", () => {
     cardText(`Мой байк ${rider} ${han} — «лучший» №1, 85 ₽`),
     "Мой байк — «лучший» №1, 85 ₽",
   );
-  assert.equal(cardText("  много   пробелов\nи строк "), "много пробелов и строк");
+  assert.equal(
+    cardText("  много   пробелов\nи строк "),
+    "много пробелов и строк",
+  );
   assert.equal(cardText("a".repeat(100), 10), "a".repeat(9) + "…");
   assert.equal(cardText(null), "");
 });
@@ -93,7 +96,12 @@ test("cards are 1200x630 JPEGs cached by content, with a plain fallback", async 
     await writeFile(
       path.join(dir, "photo.jpg"),
       await sharp({
-        create: { width: 1600, height: 1000, channels: 3, background: "#5b8a72" },
+        create: {
+          width: 1600,
+          height: 1000,
+          channels: 3,
+          background: "#5b8a72",
+        },
       })
         .jpeg()
         .toBuffer(),
@@ -106,9 +114,15 @@ test("cards are 1200x630 JPEGs cached by content, with a plain fallback", async 
     };
     const first = await renderSocialImage(preview, { uploadDir: dir, env });
     const meta = await sharp(first).metadata();
-    assert.deepEqual([meta.format, meta.width, meta.height], ["jpeg", 1200, 630]);
+    assert.deepEqual(
+      [meta.format, meta.width, meta.height],
+      ["jpeg", 1200, 630],
+    );
     assert.equal((await cards()).length, 1);
-    assert.deepEqual(await renderSocialImage(preview, { uploadDir: dir, env }), first);
+    assert.deepEqual(
+      await renderSocialImage(preview, { uploadDir: dir, env }),
+      first,
+    );
     // Anything drawn on the card is part of the key: a rename draws a new one.
     await renderSocialImage(
       { ...preview, title: "Новое имя" },

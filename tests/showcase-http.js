@@ -33,7 +33,7 @@ try {
     assert.equal(
       (
         await who("auth/register", "POST", {
-      ...testConsents,
+          ...testConsents,
           name,
           email: name + nonce + "@example.test",
           password: "testing-colabike-123",

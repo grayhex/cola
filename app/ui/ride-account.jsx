@@ -2,7 +2,10 @@
 import EmailPolicyAction from "./email-policy-action.jsx";
 import SiteIcon from "./site-icon.jsx";
 import RideCreationActions from "./ride-creation-actions.jsx";
-import { selectableRideBikes, rideBikeStateError } from "../../lib/bike-status.js";
+import {
+  selectableRideBikes,
+  rideBikeStateError,
+} from "../../lib/bike-status.js";
 import { useCallback, useMemo, useEffect, useState, useRef } from "react";
 import { socialApi, Pagination } from "./social-primitives.jsx";
 import RideCard, { RideRoutePreview, RideMetrics } from "./ride-card.jsx";
@@ -55,8 +58,8 @@ function FitHelp() {
           тренировку и найдите экспорт или «Поделиться» файлом FIT.
         </li>
         <li>
-          По USB многие велокомпьютеры показывают файлы тренировок, у Garmin —
-          в папке Garmin/Activity.
+          По USB многие велокомпьютеры показывают файлы тренировок, у Garmin — в
+          папке Garmin/Activity.
         </li>
       </ul>
       <p>Названия пунктов меню зависят от версии приложения.</p>
@@ -82,9 +85,7 @@ export default function RideAccount({ bikes }) {
   // of them the ride shows. Heart rate and power stay hidden until chosen.
   const metricSource = mode === "plan" ? null : preview || editing,
     shownMetrics = visibleMetrics || defaultRideFields,
-    pickable = garminFields.filter(
-      (f) => metricSource?.metrics[f.key] != null,
-    );
+    pickable = garminFields.filter((f) => metricSource?.metrics[f.key] != null);
   const offersPicker =
     editing?.sourceKind === "garmin" ||
     pickable.some((f) => !trackMetrics.includes(f.key));
@@ -153,8 +154,7 @@ export default function RideAccount({ bikes }) {
     try {
       if (!attach && !currentBikes.length)
         throw Error("Для новой покатушки выберите текущий велосипед.");
-      if (file.size > config.maxGpxBytes)
-        throw Error("Файл слишком большой");
+      if (file.size > config.maxGpxBytes) throw Error("Файл слишком большой");
       const r = await fetch(
         "/api/rides/" +
           (attach
@@ -218,24 +218,36 @@ export default function RideAccount({ bikes }) {
   const selectedBike = rideBikes.find((b) => b.id === form.bikeId);
   const cannotPublish = form.isPublic && !selectedBike?.is_public;
   const ownershipError = selectedBike
-    ? rideBikeStateError(selectedBike, editing
-        ? { bike_id: editing.bike.id, is_public: editing.isPublic }
-        : null, form.isPublic)
+    ? rideBikeStateError(
+        selectedBike,
+        editing
+          ? { bike_id: editing.bike.id, is_public: editing.isPublic }
+          : null,
+        form.isPublic,
+      )
     : "Выберите текущий велосипед для новой покатушки.";
   return (
     <section>
       <div className="section-heading">
         <h2>Покатушки</h2>
       </div>
-      <RideCreationActions mode={mode} onSelect={start}
-        disabled={busy || !config?.enabled || !currentBikes.length} />
+      <RideCreationActions
+        mode={mode}
+        onSelect={start}
+        disabled={busy || !config?.enabled || !currentBikes.length}
+      />
       {!bikes.length && <p className="help">Сначала добавьте велосипед.</p>}
       {!!bikes.length && !currentBikes.length && (
-        <p className="help">В гараже только бывшие велосипеды. Добавьте текущий велосипед для новых покатушек. Существующие поездки можно просматривать и редактировать.</p>
+        <p className="help">
+          В гараже только бывшие велосипеды. Добавьте текущий велосипед для
+          новых покатушек. Существующие поездки можно просматривать и
+          редактировать.
+        </p>
       )}
       {error && (
         <p role="alert" className="error">
-          {error}<EmailPolicyAction message={error} />
+          {error}
+          <EmailPolicyAction message={error} />
         </p>
       )}
       {notice && <p role="status">{notice}</p>}
@@ -398,7 +410,9 @@ export default function RideAccount({ bikes }) {
                   value={form.bikeId}
                   onChange={(e) => set("bikeId", e.target.value)}
                 >
-                  <option value="" disabled>Выберите велосипед</option>
+                  <option value="" disabled>
+                    Выберите велосипед
+                  </option>
                   {rideBikes.map((b) => (
                     <option key={b.id} value={b.id}>
                       {b.name}
@@ -409,7 +423,11 @@ export default function RideAccount({ bikes }) {
                 </select>
               </label>
               {selectedBike?.is_former && (
-                <p className="help">История бывшего велосипеда сохранена. Можно изменить описание и приватность или перенести поездку на текущий велосипед; новая публикация недоступна.</p>
+                <p className="help">
+                  История бывшего велосипеда сохранена. Можно изменить описание
+                  и приватность или перенести поездку на текущий велосипед;
+                  новая публикация недоступна.
+                </p>
               )}
               {ownershipError && <p role="alert">{ownershipError}</p>}
               <label className="field">

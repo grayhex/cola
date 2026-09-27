@@ -10,14 +10,14 @@
 
 `bikes.classification` — JSONB `{category, subtype, suspension, construction, uses, electric, fatbike}`. Общий справочник и безопасная нормализация: `lib/bike-classification.js`. Серверная строгая схема: `lib/classification-validation.js`. Поле `classification` принимается при создании, изменении и завершении мастера; входит в явный публичный DTO. Неизвестные ключи, неверное сочетание категории/подтипа, дубли назначений и строковые значения вместо boolean отклоняются.
 
-| Категория | Подтипы |
-| --- | --- |
-| `mtb` | XC, Trail, Enduro, Downhill, Dirt Jump |
-| `road_gravel` | Road, Endurance, Aero, Gravel, Cyclocross, TT / Triathlon, Track |
-| `urban_touring` | Commuter, Fitness / Hybrid, Trekking, Touring, Cruiser |
-| `bmx` | Race, Freestyle, Street / Park |
-| `cargo_utility` | Cargo, Longtail, Utility |
-| `special` | Tandem, Recumbent, Adaptive, Other |
+| Категория       | Подтипы                                                          |
+| --------------- | ---------------------------------------------------------------- |
+| `mtb`           | XC, Trail, Enduro, Downhill, Dirt Jump                           |
+| `road_gravel`   | Road, Endurance, Aero, Gravel, Cyclocross, TT / Triathlon, Track |
+| `urban_touring` | Commuter, Fitness / Hybrid, Trekking, Touring, Cruiser           |
+| `bmx`           | Race, Freestyle, Street / Park                                   |
+| `cargo_utility` | Cargo, Longtail, Utility                                         |
+| `special`       | Tandem, Recumbent, Adaptive, Other                               |
 
 Амортизация: `rigid`, `hardtail`, `full_suspension`. Конструкция: `standard`, `folding`, `cargo`, `tandem`, `recumbent`. Неизвестное значение хранится как `null`, а не как уверенно угаданный Rigid или Standard. `uses` содержит до трёх уникальных ключей общего справочника; `electric` и `fatbike` не зависят от категории.
 

@@ -380,7 +380,12 @@ export default function JournalEditor({
         Без галочки запись доступна только вам, даже после публикации. На
         приватном велосипеде любая запись видна только владельцу.
       </p>
-      {error && <p role="alert">{error}<EmailPolicyAction message={error} /></p>}
+      {error && (
+        <p role="alert">
+          {error}
+          <EmailPolicyAction message={error} />
+        </p>
+      )}
       {saved?.shareId && (
         <a href={publicPath("journal", saved)}>Открыть сохранённую запись</a>
       )}

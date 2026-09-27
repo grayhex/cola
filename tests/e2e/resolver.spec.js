@@ -215,13 +215,11 @@ test("wizard quick setup, identity confirmation, image size and successful save"
   })
     .png()
     .toBuffer();
-  await dialog
-    .locator('input[type="file"]')
-    .setInputFiles({
-      name: '<img src=x onerror="alert(141)">.png',
-      mimeType: "image/png",
-      buffer: good,
-    });
+  await dialog.locator('input[type="file"]').setInputFiles({
+    name: '<img src=x onerror="alert(141)">.png',
+    mimeType: "image/png",
+    buffer: good,
+  });
   await expect(dialog.locator(".wizard-local-photos img")).toHaveCount(1);
   const preview = dialog.locator(".wizard-local-photos img");
   await expect(preview).toHaveAttribute("src", /^blob:/);

@@ -50,7 +50,8 @@ export default function LegalSettings({ active }) {
         setSaved(items);
       }
     } catch (e) {
-      if (alive.current) setError(e.message || "Не удалось загрузить документы");
+      if (alive.current)
+        setError(e.message || "Не удалось загрузить документы");
     } finally {
       loading.current = false;
       if (alive.current) setBusy(false);

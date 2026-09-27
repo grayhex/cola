@@ -101,7 +101,9 @@ export default function RideCard({ ride: r, owner = false, onEdit }) {
           </span>
         )}
         <h3>
-          <a href={publicPath("ride", r) + (owner ? "?owner=1" : "")}>{r.title}</a>
+          <a href={publicPath("ride", r) + (owner ? "?owner=1" : "")}>
+            {r.title}
+          </a>
         </h3>
         <p className="help">
           {rideDate(r.date)} ·{" "}

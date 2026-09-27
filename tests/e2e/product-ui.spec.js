@@ -79,8 +79,14 @@ test("login and registration are complete forms, errors preserve input, password
   await page
     .getByLabel("Подтвердите пароль", { exact: true })
     .fill(password + "wrong");
-  await page.getByRole("checkbox", { name: "Принять пользовательское соглашение" }).check();
-  await page.getByRole("checkbox", { name: "Согласен с политикой обработки персональных данных" }).check();
+  await page
+    .getByRole("checkbox", { name: "Принять пользовательское соглашение" })
+    .check();
+  await page
+    .getByRole("checkbox", {
+      name: "Согласен с политикой обработки персональных данных",
+    })
+    .check();
   await page
     .getByRole("button", { name: "Создать аккаунт", exact: true })
     .click();
@@ -138,7 +144,9 @@ test("the cabinet offers once to replace an automatic username (#71)", async ({
   await expect(prompt).toHaveCount(0);
   await page.evaluate(() => localStorage.clear());
   await page.reload();
-  await prompt.getByRole("button", { name: "Выбрать имя", exact: true }).click();
+  await prompt
+    .getByRole("button", { name: "Выбрать имя", exact: true })
+    .click();
   await expect(page).toHaveURL(/tab=profile/);
   const chosen = "renamed-" + randomUUID().slice(0, 8);
   await page.getByRole("textbox", { name: "Username" }).fill(chosen);

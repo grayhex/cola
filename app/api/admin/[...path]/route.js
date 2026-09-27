@@ -30,8 +30,22 @@ import { preparePhoto } from "../../../../lib/images.js";
 import { uuid } from "../../../../lib/validation.js";
 import { participationSummary } from "../../../../lib/participation.js";
 import { CommunityError } from "../../../../lib/community-validation.js";
-import { componentCatalog, componentCatalogInput, componentModelEdit, componentModelMerge, editComponentModel, mergeComponentModels } from "../../../../lib/component-catalog.js";
-import { bikeCatalog, bikeCatalogInput, bikeModelEdit, bikeModelMerge, editBikeModel, mergeBikeModels } from "../../../../lib/bike-catalog.js";
+import {
+  componentCatalog,
+  componentCatalogInput,
+  componentModelEdit,
+  componentModelMerge,
+  editComponentModel,
+  mergeComponentModels,
+} from "../../../../lib/component-catalog.js";
+import {
+  bikeCatalog,
+  bikeCatalogInput,
+  bikeModelEdit,
+  bikeModelMerge,
+  editBikeModel,
+  mergeBikeModels,
+} from "../../../../lib/bike-catalog.js";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 async function handler(req, { params }) {
@@ -46,29 +60,55 @@ async function handler(req, { params }) {
       method = req.method;
     if (p[0] === "component-models") {
       if (p.length === 1 && method === "GET")
-        return json(await componentCatalog(db, componentCatalogInput.parse(Object.fromEntries(new URL(req.url).searchParams)), true));
+        return json(
+          await componentCatalog(
+            db,
+            componentCatalogInput.parse(
+              Object.fromEntries(new URL(req.url).searchParams),
+            ),
+            true,
+          ),
+        );
       if (!uuid.safeParse(p[1]).success) return fail("Модель недоступна", 404);
       if (p.length === 2 && method === "PATCH") {
         const input = componentModelEdit.parse(await readJson(req));
-        return json(await transaction((q) => editComponentModel(q, user.id, p[1], input)));
+        return json(
+          await transaction((q) => editComponentModel(q, user.id, p[1], input)),
+        );
       }
       if (p.length === 3 && p[2] === "merge" && method === "POST") {
         const input = componentModelMerge.parse(await readJson(req));
-        return json(await transaction((q) => mergeComponentModels(q, user.id, p[1], input)));
+        return json(
+          await transaction((q) =>
+            mergeComponentModels(q, user.id, p[1], input),
+          ),
+        );
       }
       return fail("Не найдено", 404);
     }
     if (p[0] === "bike-models") {
       if (p.length === 1 && method === "GET")
-        return json(await bikeCatalog(db, bikeCatalogInput.parse(Object.fromEntries(new URL(req.url).searchParams)), true));
+        return json(
+          await bikeCatalog(
+            db,
+            bikeCatalogInput.parse(
+              Object.fromEntries(new URL(req.url).searchParams),
+            ),
+            true,
+          ),
+        );
       if (!uuid.safeParse(p[1]).success) return fail("Модель недоступна", 404);
       if (p.length === 2 && method === "PATCH") {
         const input = bikeModelEdit.parse(await readJson(req));
-        return json(await transaction((q) => editBikeModel(q, user.id, p[1], input)));
+        return json(
+          await transaction((q) => editBikeModel(q, user.id, p[1], input)),
+        );
       }
       if (p.length === 3 && p[2] === "merge" && method === "POST") {
         const input = bikeModelMerge.parse(await readJson(req));
-        return json(await transaction((q) => mergeBikeModels(q, user.id, p[1], input)));
+        return json(
+          await transaction((q) => mergeBikeModels(q, user.id, p[1], input)),
+        );
       }
       return fail("Не найдено", 404);
     }
@@ -262,7 +302,10 @@ async function handler(req, { params }) {
         await Promise.all(
           files.map((f) =>
             unlink(
-              path.join(/*turbopackIgnore: true*/ process.env.UPLOAD_DIR || "uploads", f.filename),
+              path.join(
+                /*turbopackIgnore: true*/ process.env.UPLOAD_DIR || "uploads",
+                f.filename,
+              ),
             ).catch(() => {}),
           ),
         );
@@ -353,7 +396,10 @@ async function handler(req, { params }) {
         });
         if (result.error) return fail(result.error, result.status);
         await unlink(
-          path.join(/*turbopackIgnore: true*/ process.env.UPLOAD_DIR || "uploads", result.filename),
+          path.join(
+            /*turbopackIgnore: true*/ process.env.UPLOAD_DIR || "uploads",
+            result.filename,
+          ),
         ).catch(() => {});
         return json({ ok: true });
       }

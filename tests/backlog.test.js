@@ -24,7 +24,10 @@ import { discoveryInput, discoverySearch } from "../lib/discovery.js";
 import { searchInput, searchExperience } from "../lib/search.js";
 import { prepareSvg } from "../lib/svg-asset.js";
 import { backgroundCss, backgroundDefaults } from "../lib/theme.js";
-import { illustrationSlots, filterGraphicSlots } from "../lib/design-graphics.js";
+import {
+  illustrationSlots,
+  filterGraphicSlots,
+} from "../lib/design-graphics.js";
 import { settingsInput } from "../lib/admin-validation.js";
 import { siteAssetIds, siteAssetUsage } from "../lib/site-assets.js";
 const baseBike = {
@@ -342,11 +345,24 @@ test("additive taxonomy migration preserves old bikes and independent queries re
   }
 });
 
-
 test("graphics groups expose independent background slots and compose with text search", () => {
   const backgrounds = filterGraphicSlots(illustrationSlots, "", "Фон сайта");
-  assert.deepEqual(backgrounds.map((slot) => slot.key), ["backgroundLightId", "backgroundDarkId"]);
-  assert.deepEqual(filterGraphicSlots(illustrationSlots, "светлая", "Фон сайта").map((slot) => slot.key), ["backgroundLightId"]);
-  assert.deepEqual(filterGraphicSlots(illustrationSlots, "фон", "Брендинг"), []);
-  assert.equal(filterGraphicSlots(illustrationSlots, "", "all").length, illustrationSlots.length);
+  assert.deepEqual(
+    backgrounds.map((slot) => slot.key),
+    ["backgroundLightId", "backgroundDarkId"],
+  );
+  assert.deepEqual(
+    filterGraphicSlots(illustrationSlots, "светлая", "Фон сайта").map(
+      (slot) => slot.key,
+    ),
+    ["backgroundLightId"],
+  );
+  assert.deepEqual(
+    filterGraphicSlots(illustrationSlots, "фон", "Брендинг"),
+    [],
+  );
+  assert.equal(
+    filterGraphicSlots(illustrationSlots, "", "all").length,
+    illustrationSlots.length,
+  );
 });

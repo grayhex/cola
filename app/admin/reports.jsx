@@ -146,12 +146,22 @@ export default function Reports({ onManageUser }) {
                     Скрыть запись
                   </button>
                 )}
-                {r.entityType === "component_photo" && !r.target.photoHidden && (
-                  <button className="quiet" disabled={busy} onClick={() => act(r.id, "hide_component_photo")}>Скрыть фото</button>
-                )}
-                {["comment", "ride_comment", "journal_comment", "component_comment"].includes(
-                  r.entityType,
-                ) &&
+                {r.entityType === "component_photo" &&
+                  !r.target.photoHidden && (
+                    <button
+                      className="quiet"
+                      disabled={busy}
+                      onClick={() => act(r.id, "hide_component_photo")}
+                    >
+                      Скрыть фото
+                    </button>
+                  )}
+                {[
+                  "comment",
+                  "ride_comment",
+                  "journal_comment",
+                  "component_comment",
+                ].includes(r.entityType) &&
                   !r.target.commentDeleted && (
                     <button
                       className="quiet"

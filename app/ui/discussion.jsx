@@ -2,7 +2,12 @@
 import EmailPolicyAction from "./email-policy-action.jsx";
 import Link from "next/link";
 import {
-  useCallback, useRef, useEffect, useState, createContext, useContext,
+  useCallback,
+  useRef,
+  useEffect,
+  useState,
+  createContext,
+  useContext,
 } from "react";
 import { Avatar, socialApi } from "./social-primitives.jsx";
 import { ReportButton, PageControls } from "./community-controls.jsx";
@@ -18,31 +23,35 @@ const PromptComposer = dynamic(() => import("./prompt-composer.jsx"), {
 const DiscussionKind = createContext("bike");
 const QuestionContext = createContext(null);
 const paths = (kind) =>
-  kind === "component" ? {
-    items: "components/", comments: "components/comments/", report: "component_comment",
-  } : kind === "article"
+  kind === "component"
     ? {
-        items: "articles/",
-        comments: "articles/comments/",
-        report: "journal_comment",
+        items: "components/",
+        comments: "components/comments/",
+        report: "component_comment",
       }
-    : kind === "journal"
+    : kind === "article"
       ? {
-          items: "journal/",
-          comments: "journal/comments/",
+          items: "articles/",
+          comments: "articles/comments/",
           report: "journal_comment",
         }
-      : kind === "ride"
+      : kind === "journal"
         ? {
-            items: "rides/",
-            comments: "rides/comments/",
-            report: "ride_comment",
+            items: "journal/",
+            comments: "journal/comments/",
+            report: "journal_comment",
           }
-        : {
-            items: "community/bikes/",
-            comments: "community/comments/",
-            report: "comment",
-          };
+        : kind === "ride"
+          ? {
+              items: "rides/",
+              comments: "rides/comments/",
+              report: "ride_comment",
+            }
+          : {
+              items: "community/bikes/",
+              comments: "community/comments/",
+              report: "comment",
+            };
 function Editor({ initial = "", label, onSave, onCancel }) {
   const [body, setBody] = useState(initial),
     [busy, setBusy] = useState(false),
@@ -90,7 +99,8 @@ function Editor({ initial = "", label, onSave, onCancel }) {
       </PromptComposer>
       {error && (
         <p className="error" role="alert">
-          {error}<EmailPolicyAction message={error} />
+          {error}
+          <EmailPolicyAction message={error} />
         </p>
       )}
     </form>
@@ -111,10 +121,7 @@ function Comment({ comment: c, user, bikeId, refresh, reply = false }) {
     >
       <div className="comment-heading">
         {c.author ? (
-          <a
-            className="person-identity"
-            href={profilePath(c.author.username)}
-          >
+          <a className="person-identity" href={profilePath(c.author.username)}>
             <Avatar person={c.author} size="small" />
             <span>
               <strong>{personName(c.author)}</strong>
@@ -143,7 +150,9 @@ function Comment({ comment: c, user, bikeId, refresh, reply = false }) {
         />
       ) : (
         <>
-          {!c.unavailable && <RichTextBody className="comment-body" doc={c.bodyDoc} />}
+          {!c.unavailable && (
+            <RichTextBody className="comment-body" doc={c.bodyDoc} />
+          )}
           <div className="comment-actions">
             {!c.unavailable && question?.solutionId === c.id && (
               <span className="journal-solution">Выбранный ответ · Решено</span>
@@ -241,7 +250,8 @@ function Comment({ comment: c, user, bikeId, refresh, reply = false }) {
       )}
       {error && (
         <p role="alert" className="error">
-          {error}<EmailPolicyAction message={error} />
+          {error}
+          <EmailPolicyAction message={error} />
         </p>
       )}
     </article>
@@ -293,7 +303,12 @@ function Thread({ root, user, bikeId, refresh }) {
         </button>
       )}
       {expanded && data && <PageControls {...data} onPage={setPage} />}
-      {error && <p role="alert">{error}<EmailPolicyAction message={error} /></p>}
+      {error && (
+        <p role="alert">
+          {error}
+          <EmailPolicyAction message={error} />
+        </p>
+      )}
     </div>
   );
 }
@@ -361,13 +376,15 @@ export default function Discussion({
             <div>
               <h2>
                 <MessagesSquare size={20} aria-hidden="true" />
-                {entityType === "component" ? "Обсуждение компонента" : entityType === "article"
-                  ? "Обсуждение статьи"
-                  : entityType === "journal"
-                    ? "Обсуждение записи"
-                    : entityType === "ride"
-                      ? "Обсуждение покатушки"
-                      : "Обсуждение сборки"}
+                {entityType === "component"
+                  ? "Обсуждение компонента"
+                  : entityType === "article"
+                    ? "Обсуждение статьи"
+                    : entityType === "journal"
+                      ? "Обсуждение записи"
+                      : entityType === "ride"
+                        ? "Обсуждение покатушки"
+                        : "Обсуждение сборки"}
               </h2>
               <p className="help">
                 {entityType === "article"
@@ -396,7 +413,8 @@ export default function Discussion({
           )}
           {error && (
             <p role="alert" className="error">
-              {error}<EmailPolicyAction message={error} />
+              {error}
+              <EmailPolicyAction message={error} />
             </p>
           )}
           {data?.comments.map((c) => (
@@ -413,7 +431,9 @@ export default function Discussion({
             <p className="help">
               {entityType === "ride"
                 ? "Поделитесь впечатлениями о маршруте."
-                : entityType === "journal" || entityType === "article" || entityType === "component"
+                : entityType === "journal" ||
+                    entityType === "article" ||
+                    entityType === "component"
                   ? "Задайте вопрос или поделитесь своим опытом."
                   : "Первый вопрос о сборке может стать началом знакомства."}
             </p>

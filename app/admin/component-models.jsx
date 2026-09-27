@@ -24,8 +24,7 @@ export default function ComponentModels({ kind = "component" }) {
     setData(null);
     setError("");
     socialApi(
-      endpoint + "?" +
-        new URLSearchParams({ q: query, page: String(page) }),
+      endpoint + "?" + new URLSearchParams({ q: query, page: String(page) }),
     )
       .then((d) => {
         if (active) setData(d);
@@ -94,7 +93,11 @@ export default function ComponentModels({ kind = "component" }) {
     }
   }
   return (
-    <section aria-label={"Управление каталогом " + (bike ? "велосипедов" : "компонентов")}>
+    <section
+      aria-label={
+        "Управление каталогом " + (bike ? "велосипедов" : "компонентов")
+      }
+    >
       <h2>Каталог {bike ? "велосипедов" : "компонентов"}</h2>
       <p className="help">
         Самостоятельные страницы моделей. Изменения сохраняются здесь сразу.
@@ -132,7 +135,8 @@ export default function ComponentModels({ kind = "component" }) {
               <div>
                 <Link href={m.path}>{m.name}</Link>
                 <p className="help">
-                  {m.category ? m.category + " · " : ""}{m.brand || "Бренд не указан"}
+                  {m.category ? m.category + " · " : ""}
+                  {m.brand || "Бренд не указан"}
                   {m.archived ? " · В архиве" : ""}
                 </p>
               </div>
@@ -178,15 +182,17 @@ export default function ComponentModels({ kind = "component" }) {
                   onChange={(e) => field("name", e.target.value)}
                 />
               </label>
-              {!bike && <label className="field">
-                <span>Категория модели</span>
-                <input
-                  required
-                  maxLength={60}
-                  value={editing.category}
-                  onChange={(e) => field("category", e.target.value)}
-                />
-              </label>}
+              {!bike && (
+                <label className="field">
+                  <span>Категория модели</span>
+                  <input
+                    required
+                    maxLength={60}
+                    value={editing.category}
+                    onChange={(e) => field("category", e.target.value)}
+                  />
+                </label>
+              )}
               <label className="field">
                 <span>Бренд модели</span>
                 <input

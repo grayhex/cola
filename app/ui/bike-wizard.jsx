@@ -558,7 +558,8 @@ export default function BikeWizard({ onCreated, onBusy, onDirtyChange }) {
       </h3>
       {error && (
         <p role="alert" className="error">
-          {error}<EmailPolicyAction message={error} />
+          {error}
+          <EmailPolicyAction message={error} />
         </p>
       )}
       <fieldset disabled={saving || !!savedId} className="wizard-content">
@@ -723,7 +724,11 @@ export default function BikeWizard({ onCreated, onBusy, onDirtyChange }) {
                     {settings.wizardLinkLabel ||
                       "Распознать по странице магазина"}
                   </button>
-                  <button type="button" className="button secondary" onClick={next}>
+                  <button
+                    type="button"
+                    className="button secondary"
+                    onClick={next}
+                  >
                     <Pencil size={18} />
                     {settings.wizardManualLabel || "Заполнить вручную"}
                   </button>
@@ -974,8 +979,10 @@ export default function BikeWizard({ onCreated, onBusy, onDirtyChange }) {
         )}
         {step === 2 && (
           <>
-            <FormerBikeField value={bike.is_former}
-              onChange={(value) => update("is_former", value)} />
+            <FormerBikeField
+              value={bike.is_former}
+              onChange={(value) => update("is_former", value)}
+            />
             <ClassificationFields
               value={bike.classification}
               onChange={(classification) =>

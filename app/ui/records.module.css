@@ -195,7 +195,10 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .page :global(:is(.record-card, .record-illustration, .record-bike-name, .record-owner)) {
+  .page
+    :global(
+      :is(.record-card, .record-illustration, .record-bike-name, .record-owner)
+    ) {
     animation: none;
     transition: none;
     transform: none;

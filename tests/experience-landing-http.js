@@ -121,13 +121,20 @@ for (const text of [
   `href="${partPath}"`,
 ])
   assert.ok(landing.text.includes(text), "model page: " + text);
-assert.match(landing.html, /<title>Orbea Occam LT [0-9a-f]+ — опыт владельцев · ColaBike<\/title>/);
+assert.match(
+  landing.html,
+  /<title>Orbea Occam LT [0-9a-f]+ — опыт владельцев · ColaBike<\/title>/,
+);
 
 const part = await page(partPath);
 assert.equal(part.status, 200);
 assert.equal(part.robots, "index, follow");
 assert.equal(part.canonical, base + partPath);
-for (const text of [`<h1>${fork}</h1>`, `href="${modelPath}"`, `Сборка 2 ${nonce}`])
+for (const text of [
+  `<h1>${fork}</h1>`,
+  `href="${modelPath}"`,
+  `Сборка 2 ${nonce}`,
+])
   assert.ok(part.text.includes(text), "part page: " + text);
 
 // Other spellings and letter cases move to the one address.
@@ -157,12 +164,19 @@ const bikePage = await page(
 );
 assert.equal(bikePage.status, 200);
 const stableModelPath = "/bike-models/" + bike.catalog_model_id;
-assert.ok(bikePage.html.includes(`href="${stableModelPath}"`), "bike → stable bike model");
+assert.ok(
+  bikePage.html.includes(`href="${stableModelPath}"`),
+  "bike → stable bike model",
+);
 const stableModel = await page(stableModelPath);
 assert.equal(stableModel.status, 308);
 assert.equal(stableModel.location, modelPath);
-const stablePartPath = "/components/" + bike.components.find((c) => c.name === fork).model_id;
-assert.ok(bikePage.html.includes(`href="${stablePartPath}"`), "bike → stable part model");
+const stablePartPath =
+  "/components/" + bike.components.find((c) => c.name === fork).model_id;
+assert.ok(
+  bikePage.html.includes(`href="${stablePartPath}"`),
+  "bike → stable part model",
+);
 assert.equal((await page(stablePartPath)).location, partPath);
 
 async function sitemap() {

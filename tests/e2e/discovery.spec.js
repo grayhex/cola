@@ -15,7 +15,7 @@ test("journal discovery: no-bike reader subscribes, saves, searches and returns;
         await registerVerified(request, {
           headers: { origin },
           data: {
-      ...testConsents,
+            ...testConsents,
             name: "Reader " + suffix,
             email: nonce + suffix + "@discovery.test",
             password: "discovery-browser-secret",

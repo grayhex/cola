@@ -4,12 +4,12 @@
 
 ## Workflows
 
-| Workflow | Событие | Результат |
-| --- | --- | --- |
-| `CI · ColaBike` / [check.yml](../../.github/workflows/check.yml) | PR, push в main, manual/reusable | Проверенный commit, без deploy |
-| `Deploy · Production` / [deploy.yml](../../.github/workflows/deploy.yml) | Успешный CI push в main или ручной recheck main | GitHub-hosted job → SSH → VPS, environment `production` |
-| `CI · Closed PR cleanup` / [ci-pr-cleanup.yml](../../.github/workflows/ci-pr-cleanup.yml) | Закрытие PR | Отмена его оставшегося CI без ложного check |
-| `CodeQL` / [codeql.yml](../../.github/workflows/codeql.yml) | PR и push в main, раз в неделю | Находки статического анализа безопасности в Security → Code scanning |
+| Workflow                                                                                  | Событие                                         | Результат                                                            |
+| ----------------------------------------------------------------------------------------- | ----------------------------------------------- | -------------------------------------------------------------------- |
+| `CI · ColaBike` / [check.yml](../../.github/workflows/check.yml)                          | PR, push в main, manual/reusable                | Проверенный commit, без deploy                                       |
+| `Deploy · Production` / [deploy.yml](../../.github/workflows/deploy.yml)                  | Успешный CI push в main или ручной recheck main | GitHub-hosted job → SSH → VPS, environment `production`              |
+| `CI · Closed PR cleanup` / [ci-pr-cleanup.yml](../../.github/workflows/ci-pr-cleanup.yml) | Закрытие PR                                     | Отмена его оставшегося CI без ложного check                          |
+| `CodeQL` / [codeql.yml](../../.github/workflows/codeql.yml)                               | PR и push в main, раз в неделю                  | Находки статического анализа безопасности в Security → Code scanning |
 
 Модель: feature/PR → локальные проверки и CI → review/merge → CI итогового main → production по SSH. Feature-ветка не отправляется на production обычным workflow. `Run workflow` из старого commit не обновляет workflow задним числом.
 

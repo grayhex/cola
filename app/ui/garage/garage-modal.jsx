@@ -12,7 +12,9 @@ import api from "./api.js";
 
 // Keep the existing demand-loaded boundaries for forms and owner tools.
 const AuthForm = dynamic(() => import("../auth-form.jsx"), { ssr: false });
-const PhotoSearch = dynamic(() => import("../photo-search.jsx"), { ssr: false });
+const PhotoSearch = dynamic(() => import("../photo-search.jsx"), {
+  ssr: false,
+});
 const BikeWizard = dynamic(() => import("../bike-wizard.jsx"), { ssr: false });
 
 export default function GarageModal({
@@ -44,9 +46,7 @@ export default function GarageModal({
         {
           profile: "Личный кабинет",
           auth:
-            modal.mode === "register"
-              ? t("Регистрация")
-              : t("С возвращением"),
+            modal.mode === "register" ? t("Регистрация") : t("С возвращением"),
           bike: modal.bike ? t("О велосипеде") : t("Новый велосипед"),
           part: modal.part
             ? t("Изменить деталь")
@@ -66,7 +66,8 @@ export default function GarageModal({
     >
       {error && (
         <div className="error" role="alert">
-          {error}<EmailPolicyAction message={error} />
+          {error}
+          <EmailPolicyAction message={error} />
         </div>
       )}
       {modal.type === "photoView" && (
@@ -143,9 +144,7 @@ export default function GarageModal({
               if (data.importFactory) {
                 try {
                   const imported = await api(
-                    "bikes/" +
-                      (modal.bike?.id || result.id) +
-                      "/factory-spec",
+                    "bikes/" + (modal.bike?.id || result.id) + "/factory-spec",
                     "POST",
                     {
                       sourceUrl: data.factorySourceUrl,

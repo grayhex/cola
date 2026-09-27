@@ -29,8 +29,12 @@ export const GET = traced(async (req, { params }) => {
     return notModifiedResponse(etag, { cache: immutableMediaCache, headers });
   try {
     return mediaResponse(
-      await readFile(/*turbopackIgnore: true*/
-        path.join(/*turbopackIgnore: true*/ process.env.UPLOAD_DIR || "uploads", rows[0].filename),
+      await readFile(
+        /*turbopackIgnore: true*/
+        path.join(
+          /*turbopackIgnore: true*/ process.env.UPLOAD_DIR || "uploads",
+          rows[0].filename,
+        ),
       ),
       etag,
       {

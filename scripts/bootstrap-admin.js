@@ -31,7 +31,10 @@ export async function bootstrapAdmin(q, raw) {
 }
 
 async function main() {
-  const client = new pg.Client({ connectionString: process.env.DATABASE_URL, connectionTimeoutMillis: 5000 });
+  const client = new pg.Client({
+    connectionString: process.env.DATABASE_URL,
+    connectionTimeoutMillis: 5000,
+  });
   let connected = false;
   try {
     if (

@@ -119,7 +119,9 @@ for (const staleStatus of [200, 500]) {
       );
       await expect(page.getByText("Устаревшая жалоба")).toHaveCount(0);
       await expect(errors).toHaveText([]);
-      await expect(page.getByText("Устаревшая ошибка", { exact: true })).toHaveCount(0);
+      await expect(
+        page.getByText("Устаревшая ошибка", { exact: true }),
+      ).toHaveCount(0);
     } finally {
       release();
     }

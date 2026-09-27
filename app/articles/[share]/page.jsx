@@ -1,6 +1,7 @@
 import { ArticlePage } from "../../ui/articles.jsx";
 import { articleMetadata, articlePage } from "../../../lib/social-page.js";
-export const runtime = "nodejs", dynamic = "force-dynamic";
+export const runtime = "nodejs",
+  dynamic = "force-dynamic";
 export async function generateMetadata({ params }) {
   return articleMetadata((await params).share);
 }

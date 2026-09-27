@@ -10,19 +10,19 @@ Bike Resolver — дополнительный детерминированны�
 
 ## Основные части
 
-| Код | Роль |
-| --- | --- |
-| [app.ts](../../services/bike-resolver/src/app.ts), `buildApp` | HTTP-контракты, выбор режима, settings, поток результата |
-| [planner.ts](../../services/bike-resolver/src/planner.ts), `SourcePlanner.resolve` | Ограниченный план поставщиков, без смешивания спецификаций |
-| [resolver.ts](../../services/bike-resolver/src/resolver.ts), `Resolver.resolve` | Официальный adapter, cache, matching, получение/разбор |
-| [adapters](../../services/bike-resolver/src/adapters) | Discovery производителя и правила страницы |
-| [matcher.ts](../../services/bike-resolver/src/matcher.ts), `match`, `scoreCandidate` | Ранжирование и неоднозначность модели/trim/года |
-| [http.ts](../../services/bike-resolver/src/http.ts), `ManufacturerHttpClient` | DNS/IP/redirect validation, pinning, очередь и ограничения |
-| [extract.ts](../../services/bike-resolver/src/extract.ts), [normalize.ts](../../services/bike-resolver/src/normalize.ts) | Сбор фактов и общая нормализация компонентов |
-| [manual.ts](../../services/bike-resolver/src/manual.ts), `ManualSources` | Ручной URL, product photos, временные photo IDs |
-| [retailer-search.ts](../../services/bike-resolver/src/retailer-search.ts), `RetailerSearch.resolve` | Ограниченный поиск товарной страницы магазина |
-| [cache.ts](../../services/bike-resolver/src/cache.ts), [settings.ts](../../services/bike-resolver/src/settings.ts) | Хранилища cache/settings, TTL и версии |
-| [context.ts](../../services/bike-resolver/src/context.ts) | Request context, отмена, trace, версии результата/extractor |
+| Код                                                                                                                      | Роль                                                        |
+| ------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------- |
+| [app.ts](../../services/bike-resolver/src/app.ts), `buildApp`                                                            | HTTP-контракты, выбор режима, settings, поток результата    |
+| [planner.ts](../../services/bike-resolver/src/planner.ts), `SourcePlanner.resolve`                                       | Ограниченный план поставщиков, без смешивания спецификаций  |
+| [resolver.ts](../../services/bike-resolver/src/resolver.ts), `Resolver.resolve`                                          | Официальный adapter, cache, matching, получение/разбор      |
+| [adapters](../../services/bike-resolver/src/adapters)                                                                    | Discovery производителя и правила страницы                  |
+| [matcher.ts](../../services/bike-resolver/src/matcher.ts), `match`, `scoreCandidate`                                     | Ранжирование и неоднозначность модели/trim/года             |
+| [http.ts](../../services/bike-resolver/src/http.ts), `ManufacturerHttpClient`                                            | DNS/IP/redirect validation, pinning, очередь и ограничения  |
+| [extract.ts](../../services/bike-resolver/src/extract.ts), [normalize.ts](../../services/bike-resolver/src/normalize.ts) | Сбор фактов и общая нормализация компонентов                |
+| [manual.ts](../../services/bike-resolver/src/manual.ts), `ManualSources`                                                 | Ручной URL, product photos, временные photo IDs             |
+| [retailer-search.ts](../../services/bike-resolver/src/retailer-search.ts), `RetailerSearch.resolve`                      | Ограниченный поиск товарной страницы магазина               |
+| [cache.ts](../../services/bike-resolver/src/cache.ts), [settings.ts](../../services/bike-resolver/src/settings.ts)       | Хранилища cache/settings, TTL и версии                      |
+| [context.ts](../../services/bike-resolver/src/context.ts)                                                                | Request context, отмена, trace, версии результата/extractor |
 
 ## Поток данных
 
