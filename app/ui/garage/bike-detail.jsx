@@ -2,6 +2,7 @@
 import dynamic from "next/dynamic";
 import { SharedView } from "../motion.jsx";
 import { defaultBlocks } from "../../../lib/garage-layout.js";
+import { componentText } from "../../../services/bike-resolver/src/component-identity.js";
 import { BikeLabels } from "../bike-labels.jsx";
 import { AuthorLink } from "../social-primitives.jsx";
 import Photo from "../bike-photo.jsx";
@@ -344,8 +345,8 @@ export default function BikeDetail({
             <dl className="resolver-preview">
               {bike.factory_spec.components.map((c, i) => (
                 <div key={i}>
-                  <dt>{c.raw.label}</dt>
-                  <dd>{c.raw.value}</dd>
+                  <dt>{componentText(c.raw.label)}</dt>
+                  <dd>{componentText(c.raw.value)}</dd>
                 </div>
               ))}
             </dl>

@@ -23,7 +23,7 @@ import {
 import { useSite } from "./site-provider.jsx";
 import CompactCombo from "./compact-combo.jsx";
 import PartIcon from "./part-icon.jsx";
-import { factoryComponent } from "../../lib/factory-components.js";
+import { factoryEntries } from "../../lib/factory-components.js";
 import { groupedComponents } from "../../lib/garage-layout.js";
 import { bicycleName, draftId } from "../../lib/wizard-options.js";
 import { bikeInput, componentInput } from "../../lib/validation.js";
@@ -267,13 +267,13 @@ export default function BikeWizard({ onCreated, onBusy, onDirtyChange }) {
         photoAbort.current?.abort();
         setPhotoBusy(false);
         setParts(
-          d.components.map((c) => ({
-            ...factoryComponent(c),
+          factoryEntries(d).map(({ value: c }) => ({
+            ...c,
             id: draftId(),
             url: "",
             group_id:
               catalog.componentGroups.find((g) =>
-                g.categories.includes(factoryComponent(c).category),
+                g.categories.includes(c.category),
               )?.id || "",
           })),
         );

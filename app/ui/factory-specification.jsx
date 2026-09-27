@@ -2,7 +2,8 @@
 import { useConfirmation } from "./confirmation.jsx";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { LoaderCircle, Check, RefreshCw } from "./icons.jsx";
-import { factoryComponent } from "../../lib/factory-components.js";
+import { factoryCategory } from "../../lib/factory-components.js";
+import { componentText } from "../../services/bike-resolver/src/component-identity.js";
 const messages = {
   not_found: "Комплектация не найдена. Продолжите вручную.",
   unsupported_brand: "Автозаполнение для этого производителя пока недоступно.",
@@ -241,12 +242,17 @@ export default function FactorySpecification({
                 <dl className="resolver-preview">
                   {current.components.map((c, i) => (
                     <div key={i}>
-                      <dt>{factoryComponent(c).category}</dt>
-                      <dd>{c.raw.value}</dd>
+                      <dt>{factoryCategory(c)}</dt>
+                      <dd>{componentText(c.raw.value)}</dd>
                     </div>
                   ))}
                 </dl>
               </details>
+              <p className="help">
+                В сборку добавляются распознанные модели. Безымянные
+                характеристики остаются в заводской комплектации; при
+                необходимости добавьте деталь вручную.
+              </p>
               <p className="help">
                 Источник:{" "}
                 <a href={current.source.url} target="_blank" rel="noreferrer">

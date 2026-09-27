@@ -81,7 +81,30 @@ const imported = await api("bikes/" + id + "/factory-spec", "POST", {
 assert.equal(imported.data.status, "resolved");
 assert(imported.data.importedCount > 10);
 const bike = (await api("bikes/" + id)).data.bike;
-assert.equal(bike.components.length, resolved.data.components.length);
+assert.equal(bike.components.length, 14);
+assert.deepEqual(
+  bike.components.map((c) => c.name).sort(),
+  [
+    "Giant D-Fuse SL",
+    "Giant Contact",
+    "Giant D-Fuse",
+    "Giant Approach",
+    "Shimano 105",
+    "Shimano 105",
+    "Shimano 105 GS",
+    "Shimano 105",
+    "Shimano 105",
+    "Shimano 105",
+    "KMC X12L-1",
+    "Shimano FC-RS520",
+    "Giant P-R2",
+    "Giant Gavia Fondo 2",
+  ].sort(),
+);
+assert(resolved.data.components.some((c) => c.description === "cartridge"));
+assert(
+  !bike.components.some((c) => /cartridge|not supplied|N\/A/i.test(c.name)),
+);
 assert.equal(bike.factory_spec.source.url, resolved.data.source.url);
 const part = bike.components[0];
 await api("bikes/" + id + "/components/" + part.id, "PATCH", {
@@ -115,7 +138,7 @@ try {
   assert.equal(inspected.items.at(-1).result.previewId, undefined);
   const diag = await api("admin/resolver/diagnostics");
   assert.equal(diag.status, 200);
-  assert.equal(diag.data.extractorVersion, 4);
+  assert.equal(diag.data.extractorVersion, 5);
   const preview = await db.query(
     "SELECT owner_id FROM resolver_previews WHERE id=$1",
     [streamed.previewId],

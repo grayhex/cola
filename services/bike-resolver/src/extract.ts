@@ -1,6 +1,11 @@
 import { load, type CheerioAPI } from "cheerio";
 import { componentType, normalize, normalizeComponent } from "./normalize.js";
 import {
+  componentText,
+  absentComponent,
+  splitComponentField,
+} from "./component-identity.js";
+import {
   ResolverError,
   type ParsedBike,
   type SourceDocument,
@@ -14,7 +19,7 @@ export const QUALITY = {
   completeComponents: 8,
   completeCoverage: 0.65,
 } as const;
-export const clean = (s: string) => s.replace(/\s+/g, " ").trim();
+export const clean = componentText;
 const sectionName =
   /^(technical specifications|specifications|specs|components|componentry|build|equipment|технические характеристики|характеристики|комплектация|компоненты|оборудование|spezifikationen|ausstattung|komponenten)$/i;
 const excluded =
@@ -190,13 +195,14 @@ function pipeline(doc: SourceDocument, rows?: Rows) {
     )
       return;
     if (!known(label) && !context) return;
-    fields.push({
-      label,
-      value,
-      strategy,
-      confidence,
-      ...(context ? { section: "specification" } : {}),
-    });
+    for (const field of splitComponentField(label, value))
+      fields.push({
+        label: field.label,
+        value: field.value,
+        strategy,
+        confidence,
+        ...(context ? { section: "specification" } : {}),
+      });
   };
   const run = (name: string, fn: () => void) => {
     trace("extractor_started", { strategy: name });
@@ -227,7 +233,7 @@ function pipeline(doc: SourceDocument, rows?: Rows) {
         if (!Array.isArray(p[key])) continue;
         for (const v of p[key]) {
           const label = v?.name || v?.label;
-          const value = v?.description || v?.value;
+          const value = v?.value || v?.description;
           if (typeof label === "string" && typeof value === "string")
             add(label, value, "embedded", 0.8, true);
         }
@@ -342,6 +348,14 @@ function pipeline(doc: SourceDocument, rows?: Rows) {
         );
         return;
       }
+      // A section header followed by labelled rows is not itself a component.
+      if (
+        next
+          .find("p,dt,strong,b,div,span")
+          .toArray()
+          .some((x) => known(clean($(x).text())))
+      )
+        return;
       if (inSection(el)) add(label, next.text(), "heading-value", 0.9, true);
     });
   });
@@ -379,7 +393,7 @@ function pipeline(doc: SourceDocument, rows?: Rows) {
             .find(rows.value)
             .map((_, v) => $(v).text())
             .get()
-            .join(" ");
+            .join("; ");
         if (label && value) n++;
         add(label, value, "profile", 0.9, true);
       });
@@ -427,7 +441,7 @@ export function parseDocument(
     );
   trace("normalization_started");
   const componentFields = result.chosen.filter(
-    (f) => componentType(f.label) !== "other",
+    (f) => componentType(f.label) !== "other" && !absentComponent(f.value),
   );
   const unknownFields = result.chosen.filter(
     (f) => componentType(f.label) === "other" && !metadataName.test(f.label),

@@ -38,6 +38,7 @@ const scripts = [
   "check-runtime.js",
   "cleanup-rides.js",
   "migrate.js",
+  "rebuild-factory-components.js",
   "recalculate-photo-storage.js",
   "reset-password.js",
   "set-admin.js",
@@ -45,15 +46,14 @@ const scripts = [
 assert.deepEqual((await readdir("scripts")).sort(), scripts);
 for (const name of scripts)
   execFileSync(process.execPath, ["--check", `scripts/${name}`]);
-for (const file of [
-  "docs",
-  "tests",
-  "workbench",
-  "ops",
-  "services",
-  "scripts/fixtures",
-])
+for (const file of ["docs", "tests", "workbench", "ops", "scripts/fixtures"])
   await assert.rejects(access(file), { code: "ENOENT" });
+// Only the shared pure normalizer is shipped; no Resolver app/tests/dependencies.
+assert.deepEqual(await readdir("services"), ["bike-resolver"]);
+assert.deepEqual(await readdir("services/bike-resolver"), ["src"]);
+assert.deepEqual(await readdir("services/bike-resolver/src"), [
+  "component-identity.js",
+]);
 for (const name of [
   "@electric-sql/pglite",
   "@playwright/test",
@@ -66,6 +66,14 @@ const { defaultSettings, defaultCatalog } = await load("lib/site-defaults.js");
 const { bootstrapAdmin } = await load("scripts/bootstrap-admin.js");
 await load("lib/rides.js");
 await load("lib/factory-import.js");
+await load("lib/factory-rebuild.js");
+const rebuildPreview = JSON.parse(
+  execFileSync(process.execPath, ["scripts/rebuild-factory-components.js"], {
+    encoding: "utf8",
+  }),
+);
+assert.equal(rebuildPreview.applied, false);
+assert.match(rebuildPreview.fingerprint, /^[a-f0-9]{64}$/);
 // Ops retains packages used to verify generated browser assets byte-for-byte.
 const mapDist = path.join(
   path.dirname(require.resolve("maplibre-gl/package.json")),
