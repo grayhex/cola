@@ -359,7 +359,22 @@ test("one WYSIWYG editor: toolbar, undo/redo, safe links and discussion save/rel
     else await button.click();
   }
   await user(page);
-  await page.goto("/articles/new");
+  // #262: a fast fill of the SSR title was lost before hydration in WebKit.
+  // Hold app scripts to exercise that window instead of adding a sleep/retry.
+  let releaseScripts;
+  const scriptsReady = new Promise((resolve) => {
+    releaseScripts = resolve;
+  });
+  await page.route("**/_next/static/chunks/*.js", async (route) => {
+    await scriptsReady;
+    await route.continue();
+  });
+  await page.goto("/articles/new", { waitUntil: "commit" });
+  try {
+    await expect(page.getByLabel("Заголовок статьи")).toBeDisabled();
+  } finally {
+    releaseScripts();
+  }
   await page.getByLabel("Заголовок статьи").fill("Общий rich редактор");
   await page
     .getByLabel("Текст статьи", { exact: true })
@@ -392,6 +407,12 @@ test("one WYSIWYG editor: toolbar, undo/redo, safe links and discussion save/rel
   await expect(writer.getByRole("alert")).toContainText("HTTP/HTTPS");
   await writer.getByLabel("Адрес ссылки").fill("https://example.test/rules");
   await writer.getByRole("button", { name: "Применить ссылку" }).click();
+  await expect(page.getByLabel("Заголовок статьи")).toHaveValue(
+    "Общий rich редактор",
+  );
+  await expect(
+    page.getByRole("button", { name: "Опубликовать", exact: true }),
+  ).toBeEnabled();
   await page.getByRole("button", { name: "Опубликовать", exact: true }).click();
   await expect(page).toHaveURL(/articles\/[a-f0-9-]+$/);
   await expect(page.locator(".article-prose strong")).toHaveText(

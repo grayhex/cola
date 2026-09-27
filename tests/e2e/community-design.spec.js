@@ -556,6 +556,9 @@ test("admin appearance is explicit; hero upload, replacement and removal protect
       )
       .toBe("dark");
     await nav.getByRole("button", { name: "Главная", exact: true }).click();
+    await page
+      .getByLabel("Графика главного блока", { exact: true })
+      .selectOption("custom");
     await page.getByLabel("Файл: Hero image", { exact: true }).setInputFiles({
       name: "hero-test.png",
       mimeType: "image/png",

@@ -327,6 +327,7 @@ test("OSM thumbnails with Yandex setting, bounded design headings, SVG themes an
     const updated = {
       ...old,
       map: { ...old.map, provider: "yandex", publicKey: "test-browser-key" },
+      heroGraphicMode: "custom",
       heroAnimationLightId: ids[0],
       heroAnimationDarkId: ids[1],
       heroBackgroundLight: "#f1f7ee",

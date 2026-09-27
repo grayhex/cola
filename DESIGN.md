@@ -63,7 +63,9 @@ font-black`). Числа — стандартная шкала Tailwind v4, то
 ## 3. Архитектура CSS
 
 Стек не меняется: Next.js, глобальные CSS + CSS Modules. Без Tailwind, shadcn,
-Radix и библиотек анимации.
+Radix. Общая motion-policy — `docs/development/motion.md`; две декоративные
+Rive-сцены главной — `docs/development/rive.md`. Rive не используется для
+обычных UI controls.
 
 ```
 app/styles/tokens.css      токены и порядок слоёв (импортируется первым)

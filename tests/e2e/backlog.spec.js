@@ -426,6 +426,9 @@ test("admin backgrounds are independent per theme; native local SVG file upload 
       "Настройки опубликованы",
     );
     await section("Главная").click();
+    await page
+      .getByLabel("Графика главного блока", { exact: true })
+      .selectOption("custom");
     const png = await sharp({
       create: { width: 80, height: 80, channels: 4, background: "#f43030" },
     })

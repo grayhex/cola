@@ -315,6 +315,8 @@ export function NewArticle() {
 }
 function ArticleEditor({ initial, onSaved, onCancel }) {
   const router = useRouter();
+  const [ready, setReady] = useState(false);
+  useEffect(() => setReady(true), []);
   const { settings } = useSite(),
     topics = settings.articleTopics || [];
   const [record, setRecord] = useState(initial || null),
@@ -385,6 +387,9 @@ function ArticleEditor({ initial, onSaved, onCancel }) {
         <span>Заголовок статьи</span>
         <input
           value={form.title}
+          // SSR is visible before React attaches onChange. Do not accept an
+          // early edit that the controlled value would erase during hydration.
+          disabled={!ready || busy}
           maxLength={160}
           onChange={(e) => set("title", e.target.value)}
         />

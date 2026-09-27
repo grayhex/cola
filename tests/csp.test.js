@@ -30,8 +30,9 @@ test("CSP mode and map sources cannot inject directives or weaken scripts", () =
       .split(";")
       .map((s) => s.trim())
       .find((s) => s.startsWith("script-src ")),
-    /unsafe-inline|unsafe-eval/,
+    /'unsafe-inline'|'unsafe-eval'/,
   );
+  assert.match(policy, /script-src[^;]*'wasm-unsafe-eval'/);
   assert.match(policy, /worker-src 'self'/);
   assert.throws(() => pageCsp("bad'; script-src *"));
 });

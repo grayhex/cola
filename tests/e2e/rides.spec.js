@@ -3,6 +3,7 @@ import { testConsents } from "../fixtures/legal.js";
 import sharp from "sharp";
 import pg from "pg";
 import { mapDefaults } from "../../lib/map-settings.js";
+import { profilePath, publicPath } from "../../lib/public-urls.js";
 import { test, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import { gpx, fit, loop } from "../ride-fixtures.js";
@@ -85,7 +86,14 @@ test("ride upload, SVG, privacy, profile and bike; works without tiles", async (
     if (m.type() === "error") errors.push(m.text());
   });
   page.on("pageerror", (e) => errors.push(e.message));
-  await page.goto("/u/" + data.rides[0].author.username);
+  // Follow the same canonical author link as a reader. #262 failed inside
+  // WebKit's direct navigation to the legacy /u/ redirect. The 308 contract
+  // remains covered by public-urls-http.js, including renamed profiles.
+  const authorPath = profilePath(data.rides[0].author.username);
+  const authorLink = page.locator(".entity-byline a").first();
+  await expect(authorLink).toHaveAttribute("href", authorPath);
+  await authorLink.click();
+  await expect(page).toHaveURL(new URL(authorPath, base).href);
   const ridesTab = page
     .locator("main")
     .getByRole("button", { name: "Покатушки", exact: true });
@@ -99,7 +107,7 @@ test("ride upload, SVG, privacy, profile and bike; works without tiles", async (
   expect(
     errors.filter((e) => /hydrat|did not match|#41[89]|#42[1-5]/i.test(e)),
   ).toEqual([]);
-  await page.goto("/b/" + data.rides[0].bike.shareId);
+  await page.goto(publicPath("bike", data.rides[0].bike));
   await expect(page.locator(".ride-list .ride-card")).toHaveCount(1);
 });
 

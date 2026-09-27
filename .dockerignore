@@ -18,6 +18,7 @@
 !scripts/
 !scripts/build-version.js
 !scripts/copy-maplibre-worker.js
+!scripts/copy-rive-runtime.js
 !scripts/check-runtime.js
 !scripts/migrate.js
 !scripts/bootstrap-admin.js
@@ -27,6 +28,7 @@
 !scripts/cleanup-rides.js
 # Generated assets are rebuilt from the installed, locked package.
 public/maplibre/
+public/rive/runtime/
 public/test-map-style.json
 **/node_modules/
 **/.next/
