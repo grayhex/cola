@@ -139,17 +139,25 @@ test.beforeEach(async ({ page }) => {
   });
 });
 async function paired(page, name) {
-  await expect
-    .poll(() =>
-      page.evaluate(
-        (name) =>
-          window.motionTransitions.some(
-            (r) => r.old.includes(name) && r.next.includes(name) && !r.error,
-          ),
-        name,
-      ),
-    )
-    .toBe(true);
+  try {
+    await expect
+      .poll(() =>
+        page.evaluate(
+          (name) =>
+            window.motionTransitions.some(
+              (r) => r.old.includes(name) && r.next.includes(name) && !r.error,
+            ),
+          name,
+        ),
+      )
+      .toBe(true);
+  } catch (error) {
+    await test.info().attach("view-transitions", {
+      body: JSON.stringify(await page.evaluate(() => window.motionTransitions)),
+      contentType: "application/json",
+    });
+    throw error;
+  }
 }
 async function theme(page, value) {
   await page.addInitScript(
@@ -237,8 +245,18 @@ test("journal title continues into the entry without a document reload", async (
 test("SVG map preview opens the ride, preserves attribution links and works without tiles", async ({
   page,
 }, info) => {
+  // Exercise the SVG fallback even when MapLibre can load without its tiles.
+  await page.addInitScript(() => {
+    const getContext = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function (type, ...args) {
+      if (type.includes("webgl")) return null;
+      return getContext.call(this, type, ...args);
+    };
+  });
   await page.goto(`/rides?bikeId=${bike.id}`, { waitUntil: "networkidle" });
   const card = page.locator(".ride-card").filter({ hasText: ride.title });
+  await card.scrollIntoViewIfNeeded();
+  await expect(card.locator("h3")).toBeInViewport();
   const link = card.getByRole("link", { name: "Открыть покатушку по карте" });
   await expect(link).toBeVisible();
   await expect(card.locator('a[href*="openstreetmap"]')).not.toHaveCount(0);

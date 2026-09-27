@@ -126,6 +126,7 @@ export default function Garage({
   // The server rendered the shared bike for this viewer (#74): the first
   // load reuses it instead of asking again.
   const seed = useRef(initial);
+  const loaded = useRef(false);
   const file = useRef();
   const filterKey = filters.join(",");
   // The reader comes from the server layout (#74). Signing in updates userId
@@ -158,10 +159,15 @@ export default function Garage({
         if (viewer && onAuthenticated) onAuthenticated();
         if (share) setSelected(data.bike);
         else {
-          startTransition(() => {
+          const updateGrid = () => {
             setBikes(data.bikes);
             setTotal(data.total ?? data.bikes.length);
-          });
+          };
+          // The first grid must commit with loading=false: scroll restoration
+          // needs its real height, and account forms must not remount later.
+          if (publicShowcase && loaded.current) startTransition(updateGrid);
+          else updateGrid();
+          loaded.current = true;
           const requested = initialSelection.current;
           initialSelection.current = null;
           setSelected((prev) =>

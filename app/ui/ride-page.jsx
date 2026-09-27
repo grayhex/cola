@@ -4,6 +4,7 @@ import Link from "next/link";
 import { SharedView } from "./motion.jsx";
 import RideRsvp, { RecurringRideLabel } from "./ride-rsvp.jsx";
 import RideSpeedChart from "./ride-speed-chart.jsx";
+import RideMap from "./ride-map.jsx";
 import { Heart } from "./icons.jsx";
 import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
@@ -16,9 +17,6 @@ import ShareButton from "./share-button.jsx";
 import LocalDate from "./local-date.jsx";
 // The comment editor (Tiptap) loads after the ride itself.
 const Discussion = dynamic(() => import("./discussion.jsx"), { ssr: false });
-const RideMap = dynamic(() => import("./ride-map.jsx"), {
-  loading: () => <div className="ride-map-wrap" aria-busy="true" />,
-});
 export default function RidePage({
   share,
   styleUrl,
