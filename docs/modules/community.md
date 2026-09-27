@@ -34,6 +34,8 @@
 
 ## Обсуждения компонентов и события для внешних каналов (#78)
 
+Поиск и импорт фотографий моделей: [источник, права, ограничения и приёмка](component-photo-search.md).
+
 `component-social.js` адаптирует существующий движок `comments.js` к устойчивой каталожной модели: те же пагинация 20/3, ответы одного уровня, tombstones, проверка автора, общие жалобы и UI. После объединения читаются обе исходные ветки, а новый ответ сохраняет FK исходного родителя.
 
 Текущий каталог событий `notifications.type`: `follow`, `like`, `comment`, `reply`, `ride_like`, `ride_comment`, `ride_reply`, `ride_invite`, `journal_like`, `journal_comment`, `journal_reply`, `market_expiring`, **`component_reply`**. Статьи используют `journal_*` в БД и `article_*` в публичном DTO.

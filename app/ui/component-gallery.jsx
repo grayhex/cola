@@ -8,6 +8,9 @@ import EmailPolicyAction from "./email-policy-action.jsx";
 import { profilePath } from "../../lib/public-urls.js";
 import { personName } from "../../lib/usernames.js";
 import styles from "./component-gallery.module.css";
+import ComponentPhotoSearch, {
+  PhotoSource,
+} from "./component-photo-search.jsx";
 
 function PhotoActions({ photo, run, busy, path }) {
   const [editing, setEditing] = useState(false),
@@ -216,8 +219,9 @@ export default function ComponentGallery({ model, user }) {
                 )}
               </div>
               {photo.caption && <p>{photo.caption}</p>}
+              <PhotoSource source={photo.source} />
               <p className="help">
-                Фото:{" "}
+                {photo.source ? "Добавил:" : "Фото:"}{" "}
                 <Link href={profilePath(photo.author.username)}>
                   {personName(photo.author)}
                 </Link>
@@ -288,6 +292,13 @@ export default function ComponentGallery({ model, user }) {
           </figure>
         ))}
       </div>
+      {data?.canSearch && (
+        <ComponentPhotoSearch
+          key={model.id + ":" + viewerId}
+          model={model}
+          onSaved={load}
+        />
+      )}
       {data?.canUpload && (
         <form
           className={styles.upload}
