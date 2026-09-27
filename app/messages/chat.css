@@ -17,8 +17,19 @@
   font-family: inherit;
 }
 .cola-chat .str-chat__channel-list {
+  /* ColaBike owns the list/conversation layout. The SDK's mobile overlay
+     otherwise hides this list even when our enclosing panel is visible. */
+  display: flex;
+  height: 100%;
   width: 100%;
   min-width: 0;
+  position: relative;
+  inset: auto;
+  transform: none;
+  visibility: visible;
+  pointer-events: auto;
+  transition: none;
+  z-index: auto;
 }
 .chat-toolbar {
   display: flex;

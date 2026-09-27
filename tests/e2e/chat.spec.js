@@ -47,6 +47,10 @@ test("messages: real SDK, two isolated sessions, DM delivery, mobile list and bo
       .getByRole("button", { name: /Chat Bob/ });
     await expect(dialog).toHaveCount(1);
     await expect(dialog).toBeVisible();
+    await page.screenshot({
+      path: testInfo.outputPath("chat-list.png"),
+      fullPage: true,
+    });
     if (isMobile) {
       await dialog.click();
       await expect(input).toBeVisible();
