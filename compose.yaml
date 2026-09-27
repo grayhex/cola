@@ -14,10 +14,12 @@ services:
       retries: 15
     restart: unless-stopped
   app:
-    build: .
+    build:
+      context: .
+      target: runner
     ports:
       - "3000:3000"
-    environment:
+    environment: &app-environment
       DATABASE_URL: postgresql://colabike:${POSTGRES_PASSWORD:-colabike-local-only}@db:5432/colabike
       APP_ORIGIN: ${APP_ORIGIN:-http://localhost:3000}
       PUBLIC_SITE_URL: ${PUBLIC_SITE_URL:-}
@@ -42,6 +44,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     restart: unless-stopped
     healthcheck:
       test:
@@ -55,6 +59,18 @@ services:
       timeout: 5s
       start_period: 30s
       retries: 3
+  migrate:
+    build:
+      context: .
+      target: ops
+    environment: *app-environment
+    volumes:
+      - photos:/app/uploads
+      - rides:/app/rides
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
   bike-resolver:
     build: ./services/bike-resolver
     expose:

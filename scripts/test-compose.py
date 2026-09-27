@@ -17,4 +17,11 @@ assert str(s['app']['ports'][0]['published'])=='3000'
 assert s['app']['environment']['DEPLOYMENT_MODE']=='production'
 assert any(v.get('target')=='/app/rides' for v in s['app']['volumes'])
 assert s['app']['environment']['RIDES_DIR']=='/app/rides'
+assert s['app']['build']['target']=='runner'
+assert s['migrate']['build']['target']=='ops'
+assert s['app']['depends_on']['migrate']['condition']=='service_completed_successfully'
+assert s['migrate']['depends_on']['db']['condition']=='service_healthy'
+assert s['migrate']['restart']=='no'
+assert not s['migrate'].get('ports')
+assert s['migrate']['environment']==s['app']['environment']
 print('Compose: local remains simple; production requires secrets and publishes only loopback app port.')

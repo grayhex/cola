@@ -1,0 +1,50 @@
+name: Docker build measurements
+on:
+  pull_request:
+    paths:
+      - Dockerfile
+      - .dockerignore
+      - scripts/benchmark-docker.py
+      - .github/workflows/docker-benchmark.yml
+  workflow_dispatch:
+    inputs:
+      baseline:
+        description: Baseline commit or ref for the same-run comparison
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: docker-measure-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+jobs:
+  benchmark:
+    name: Measure · ${{ matrix.variant }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [baseline, candidate]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: docker/setup-buildx-action@v4
+      # A JavaScript action inherits GitHub's short-lived cache runtime context.
+      # No secret is printed, persisted or passed on a command line.
+      - uses: actions/github-script@v9
+        env:
+          VARIANT: ${{ matrix.variant }}
+          BASELINE: ${{ github.event.pull_request.base.sha || inputs.baseline }}
+          CANDIDATE: ${{ github.sha }}
+        with:
+          script: |
+            const revision = process.env.VARIANT === 'baseline' ? process.env.BASELINE : process.env.CANDIDATE;
+            await exec.exec('python3', ['scripts/benchmark-docker.py', process.env.VARIANT, revision]);
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
+        with:
+          name: docker-measure-${{ matrix.variant }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/docker-benchmark-${{ matrix.variant }}/
+          retention-days: 7

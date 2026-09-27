@@ -22,6 +22,7 @@
 !scripts/check-runtime.js
 !scripts/migrate.js
 !scripts/bootstrap-admin.js
+!scripts/reset-password.js
 !scripts/set-admin.js
 !scripts/audit-photo-files.js
 !scripts/recalculate-photo-storage.js

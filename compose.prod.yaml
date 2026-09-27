@@ -20,10 +20,12 @@ services:
         max-size: "10m"
         max-file: "3"
   app:
-    build: .
+    build:
+      context: .
+      target: runner
     ports:
       - "127.0.0.1:3000:3000"
-    environment:
+    environment: &app-environment
       DATABASE_URL: postgresql://colabike:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@db:5432/colabike
       APP_ORIGIN: ${APP_ORIGIN:?Set APP_ORIGIN}
       PUBLIC_SITE_URL: ${PUBLIC_SITE_URL:-}
@@ -54,6 +56,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     restart: unless-stopped
     logging:
       driver: json-file
@@ -72,6 +76,18 @@ services:
       timeout: 5s
       start_period: 30s
       retries: 3
+  migrate:
+    build:
+      context: .
+      target: ops
+    environment: *app-environment
+    volumes:
+      - photos:/app/uploads
+      - rides:/app/rides
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
   bike-resolver:
     build: ./services/bike-resolver
     expose:

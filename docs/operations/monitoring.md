@@ -78,7 +78,7 @@ sudo ss -lntp
 
 ```bash
 cd /opt/stacks/cola
-docker compose --env-file .env.production -f compose.prod.yaml exec -T app node scripts/cleanup-rides.js
+docker compose --env-file .env.production -f compose.prod.yaml run --rm --no-deps -T migrate node scripts/cleanup-rides.js
 ```
 
 Для тихой установки настройте расписание от оператора отдельно. Учитывайте пересечение с backup/deploy и не создавайте неконтролируемый дополнительный писатель во время snapshot.

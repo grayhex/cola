@@ -11,7 +11,11 @@ async function walk(dir) {
       hash.update(p).update(await readFile(p));
   }
 }
-for (const p of ["app", "lib", "db"]) await walk(p);
+// A Docker web image excludes migration sources; schema_migrations tracks those.
+const inputs = process.argv.includes("--web-only")
+  ? ["app", "lib"]
+  : ["app", "lib", "db"];
+for (const p of inputs) await walk(p);
 const { version } = JSON.parse(await readFile("package.json", "utf8"));
 await writeFile(
   "lib/version.js",
