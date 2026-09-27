@@ -33,6 +33,7 @@ export default function SiteProvider({
   initial,
   nonce,
   viewer: initialViewer = null,
+  chatEnabled = false,
   children,
 }) {
   // A client navigation/refresh must retain the original document nonce.
@@ -135,6 +136,7 @@ export default function SiteProvider({
         setSite,
         t,
         viewer,
+        chatEnabled,
         setViewer,
         refreshViewer,
         setPreferences,

@@ -24,4 +24,9 @@ assert s['migrate']['depends_on']['db']['condition']=='service_healthy'
 assert s['migrate']['restart']=='no'
 assert not s['migrate'].get('ports')
 assert s['migrate']['environment']==s['app']['environment']
+assert s['chat-sync']['build']['target']=='ops'
+assert s['chat-sync']['command']==['node', 'scripts/chat-sync.js']
+assert s['chat-sync']['environment']==s['app']['environment']
+assert not s['chat-sync'].get('ports')
+assert s['chat-sync']['depends_on']['migrate']['condition']=='service_completed_successfully'
 print('Compose: local remains simple; production requires secrets and publishes only loopback app port.')

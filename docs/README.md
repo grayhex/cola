@@ -42,6 +42,8 @@
 | [Навигация и «О проекте»](modules/navigation-about.md)      | Общая шапка, меню, информационная страница                                                 |
 | [Публичные адреса, превью и поиск](modules/public-urls.md)  | Короткие адреса, перенаправления, Open Graph, серверный рендеринг, robots и карта сайта    |
 
+[Сообщения: Stream Chat](integrations/chat.md) — включение, права, lifecycle, EU West, стоимость, privacy, экспорт и live-приёмка.
+
 ## Resolver и интеграции
 
 | Глава                                                   | Содержание                                                  |

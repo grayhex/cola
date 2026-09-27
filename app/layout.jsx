@@ -21,6 +21,7 @@ import SiteProvider from "./ui/site-provider.jsx";
 import { getSite } from "../lib/site.js";
 import { hidden } from "../lib/indexing.js";
 import { currentViewer } from "../lib/viewer.js";
+import { chatConfig } from "../lib/chat-config.js";
 export const dynamic = "force-dynamic";
 export async function generateMetadata() {
   const { settings } = await getSite();
@@ -63,7 +64,12 @@ export default async function Layout({ children }) {
         />
       </head>
       <body>
-        <SiteProvider initial={site} viewer={viewer} nonce={nonce}>
+        <SiteProvider
+          initial={site}
+          viewer={viewer}
+          nonce={nonce}
+          chatEnabled={!!chatConfig()}
+        >
           {children}
         </SiteProvider>
       </body>

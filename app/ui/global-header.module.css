@@ -491,6 +491,11 @@ dialog.drawer {
   .header :global(.nav-utilities) {
     gap: 0;
   }
+  /* Keep full tap targets and the brand at 320px. Messages remain available
+     with their unread count inside the account section of the drawer. */
+  .header .chatUtility {
+    display: none;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   .popover,

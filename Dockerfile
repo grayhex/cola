@@ -49,7 +49,7 @@ COPY db ./db
 COPY scripts/check-runtime.js scripts/migrate.js \
     scripts/bootstrap-admin.js scripts/set-admin.js scripts/reset-password.js \
     scripts/audit-photo-files.js scripts/recalculate-photo-storage.js \
-    scripts/cleanup-rides.js ./scripts/
+    scripts/cleanup-rides.js scripts/chat-sync.js scripts/chat-setup.js ./scripts/
 RUN node --input-type=module -e "await import('./lib/rides.js'); await import('./lib/factory-import.js')"
 USER colabike
 CMD ["sh", "-c", "node scripts/check-runtime.js && node scripts/migrate.js"]
@@ -65,7 +65,7 @@ COPY --chown=colabike:colabike public ./public
 COPY --from=static-assets --chown=colabike:colabike /app/public ./public
 # The fail-fast startup validator has only these local imports (no migration path).
 COPY scripts/check-runtime.js ./scripts/
-COPY lib/runtime-config.js lib/csp.js lib/error-tracker.js lib/mail.js ./lib/
+COPY lib/runtime-config.js lib/csp.js lib/chat-config.js lib/error-tracker.js lib/mail.js ./lib/
 COPY --from=builder /app/lib/version.js ./lib/version.js
 USER colabike
 EXPOSE 3000

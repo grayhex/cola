@@ -28,7 +28,7 @@ c = json.loads((p / 'base.json').read_text())
 c.pop('name', None)
 for service in c['services'].values():
     service.pop('ports', None)
-for name, variable in [('app', 'COLA_TEST_APP_IMAGE'), ('migrate', 'COLA_TEST_OPS_IMAGE'), ('bike-resolver', 'COLA_TEST_RESOLVER_IMAGE')]:
+for name, variable in [('app', 'COLA_TEST_APP_IMAGE'), ('migrate', 'COLA_TEST_OPS_IMAGE'), ('chat-sync', 'COLA_TEST_OPS_IMAGE'), ('bike-resolver', 'COLA_TEST_RESOLVER_IMAGE')]:
     c['services'][name]['image'] = os.environ.get(variable) or sys.argv[2] + '-' + name
     if os.environ.get(variable):
         c['services'][name].pop('build', None)

@@ -2,6 +2,8 @@
 import { useEffect, useId, useState } from "react";
 import { socialApi } from "./social-primitives.jsx";
 import { LogOut, Download, Trash2, MonitorSmartphone } from "./icons.jsx";
+import Link from "next/link";
+import { useSite } from "./site-provider.jsx";
 
 // The «Account» tab (#70): address, password, signed-in devices, data
 // export and deletion. Every action asks the server, which checks the
@@ -374,6 +376,7 @@ function AccountDeletion() {
 }
 
 export default function AccountSecurity({ emailStatus }) {
+  const { chatEnabled } = useSite();
   return (
     <div className="account-settings">
       <section aria-labelledby="account-email">
@@ -406,6 +409,15 @@ export default function AccountSecurity({ emailStatus }) {
           объявления одним JSON-файлом, со ссылками на фотографии и треки.
         </p>
         <DataExport />
+        {chatEnabled && (
+          <p className="help">
+            Переписка хранится в Stream.{" "}
+            <Link href="/messages">Скачать свои сообщения</Link> можно отдельно
+            в разделе сообщений. При удалении аккаунта удаление данных чата
+            выполняется очередью; при недоступности Stream запрос будет
+            повторён.
+          </p>
+        )}
       </section>
       <section className="danger-zone" aria-labelledby="account-delete">
         <h3 id="account-delete">Удаление аккаунта</h3>
