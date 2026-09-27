@@ -47,7 +47,7 @@ Username выбирается при регистрации. Форма пред
 
 ```bash
 read -rsp 'Новый пароль (10–128 символов): ' NEW_PASSWORD; echo
-printf '%s' "$NEW_PASSWORD" | docker compose --env-file .env.production -f compose.prod.yaml exec -T app node scripts/reset-password.js user@example.com
+printf '%s' "$NEW_PASSWORD" | docker compose --env-file .env.production -f compose.prod.yaml run --rm --no-deps -T migrate node scripts/reset-password.js user@example.com
 unset NEW_PASSWORD
 ```
 

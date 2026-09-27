@@ -54,7 +54,7 @@
 
 ## Эксплуатация
 
-[Развёртывание](operations/deployment.md) · [CI/CD](operations/ci-cd.md) · [Backup/restore](operations/backup-restore.md) · [Мониторинг](operations/monitoring.md).
+[Развёртывание](operations/deployment.md) · [CI/CD](operations/ci-cd.md) · [Docker build](operations/docker-build.md) · [Backup/restore](operations/backup-restore.md) · [Мониторинг](operations/monitoring.md).
 
 Новая установка создаёт схему и системные настройки, но не демонстрационные профили или GPX. Выведенный из использования номер миграции `013` не переиспользуется; старые записи истории и пользовательские данные не удаляются автоматически.
 

@@ -27,7 +27,7 @@ curl --fail --max-time 10 http://localhost:3000/api/status
 
 ```bash
 read -rsp 'Пароль первого администратора (10–128 символов): ' OWNER_PASSWORD; echo
-printf '%s' "$OWNER_PASSWORD" | docker compose -f compose.yaml exec -T app node scripts/bootstrap-admin.js developer@example.test "Владелец"
+printf '%s' "$OWNER_PASSWORD" | docker compose -f compose.yaml run --rm --no-deps -T migrate node scripts/bootstrap-admin.js developer@example.test "Владелец"
 unset OWNER_PASSWORD
 ```
 
@@ -36,7 +36,7 @@ unset OWNER_PASSWORD
 Для повышения существующего пользователя сохраняется прежняя команда:
 
 ```bash
-docker compose -f compose.yaml exec app node scripts/set-admin.js developer@example.test
+docker compose -f compose.yaml run --rm --no-deps migrate node scripts/set-admin.js developer@example.test
 ```
 
 Скрипт повышает **существующего** пользователя и снимает его блокировку; он не создаёт аккаунт. Email выше — пример. Обновите страницу и откройте `/admin`. На production необходимо явно использовать `.env.production` и `compose.prod.yaml`; см. [развёртывание](../operations/deployment.md).

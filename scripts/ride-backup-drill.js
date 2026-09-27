@@ -50,14 +50,11 @@ try {
     const d = await rideDetail(db, r.share_id, null);
     assert.ok(d.geometry.length);
     const response = await fetch(
-      "http://localhost:3000/api/rides/public/" + r.share_id,
+      "http://app:3000/api/rides/public/" + r.share_id,
     );
     assert.equal(response.status, 200);
     assert.deepEqual((await response.json()).ride.geometry, d.geometry);
-    assert.equal(
-      (await fetch("http://localhost:3000/r/" + r.share_id)).status,
-      200,
-    );
+    assert.equal((await fetch("http://app:3000/r/" + r.share_id)).status, 200);
     console.log(
       "Ride row, exact original bytes, public geometry and restored page verified",
     );

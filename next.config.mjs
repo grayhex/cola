@@ -9,7 +9,7 @@ export default {
     process.env.COLABIKE_WORKER_THREADS === "1"
       ? { workerThreads: true, webpackBuildWorker: false }
       : {},
-  // Operator/backup scripts import these directly outside Next's server bundle.
+  // Keep server packages external; Next traces the web subset. Ops installs separately.
   serverExternalPackages: ["pg", "zod", "fast-xml-parser", "nodemailer"],
   async headers() {
     return [

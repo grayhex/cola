@@ -1,0 +1,74 @@
+name: Docker build measurements
+on:
+  pull_request:
+    paths:
+      - Dockerfile
+      - .dockerignore
+      - scripts/benchmark-docker.py
+      - .github/workflows/docker-benchmark.yml
+  workflow_dispatch:
+    inputs:
+      baseline:
+        description: Baseline commit or ref for the same-run comparison
+        required: true
+        type: string
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: docker-measure-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+jobs:
+  benchmark:
+    name: Measure · ${{ matrix.variant }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [baseline, candidate]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: docker/setup-buildx-action@v4
+      # A JavaScript action inherits GitHub's short-lived cache runtime context.
+      # No secret is printed, persisted or passed on a command line.
+      - uses: actions/github-script@v9
+        env:
+          VARIANT: ${{ matrix.variant }}
+          BASELINE: ${{ github.event.pull_request.base.sha || inputs.baseline }}
+          CANDIDATE: ${{ github.sha }}
+        with:
+          script: |
+            const revision = process.env.VARIANT === 'baseline' ? process.env.BASELINE : process.env.CANDIDATE;
+            try {
+              await exec.exec('python3', ['scripts/benchmark-docker.py', process.env.VARIANT, revision]);
+            } finally {
+              const caches = await github.paginate(github.rest.actions.getActionsCacheList, {
+                owner: context.repo.owner, repo: context.repo.repo, ref: context.ref, per_page: 100
+              });
+              const fs = require('node:fs');
+              const dir = `${process.env.RUNNER_TEMP}/docker-benchmark-${process.env.VARIANT}`;
+              fs.writeFileSync(`${dir}/cache-inventory.json`, JSON.stringify(caches, null, 2));
+              if (fs.existsSync(`${dir}/results.json`)) {
+                const data = JSON.parse(fs.readFileSync(`${dir}/results.json`, 'utf8'));
+                const bytes = new Map(caches.map(c => [c.key, c.size_in_bytes]));
+                let summary = '\n| Scenario | New GHA layer blobs, MiB |\n|---|---:|\n';
+                for (const run of data.runs) {
+                  const ids = [...new Set(run.transfers.map(t => /^writing layer (sha256:[a-f0-9]+)$/.exec(t.id)?.[1]).filter(Boolean))];
+                  for (const id of ids) if (!bytes.has(`buildkit-blob-1-${id}`)) throw new Error(`Missing cache size for ${id}`);
+                  run.cache_layer_bytes = ids.reduce((n, id) => n + bytes.get(`buildkit-blob-1-${id}`), 0);
+                  summary += `| ${run.scenario} | ${(run.cache_layer_bytes / 2**20).toFixed(2)} |\n`;
+                }
+                fs.writeFileSync(`${dir}/results.json`, JSON.stringify(data, null, 2));
+                fs.appendFileSync(`${dir}/summary.md`, summary);
+                fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, summary);
+              }
+            }
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
+        with:
+          name: docker-measure-${{ matrix.variant }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/docker-benchmark-${{ matrix.variant }}/
+          retention-days: 7

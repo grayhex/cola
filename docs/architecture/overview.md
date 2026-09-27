@@ -19,7 +19,7 @@ flowchart LR
     Browser --> Maps[Внешняя картографическая подложка]
 ```
 
-В runtime три Compose-сервиса: `app`, `db`, `bike-resolver`. Nginx установлен на хосте и не входит в Compose. База физически общая, но доменные таблицы приложения и схема `bike_resolver` имеют разных владельцев логики. Отдельного Redis, брокера очередей или Elasticsearch нет. Файловые очереди удаления обслуживаются существующим cleanup-скриптом.
+Постоянно работают три Compose-сервиса: `app`, `db`, `bike-resolver`; отдельный одноразовый `migrate` применяет схему перед запуском app. Nginx установлен на хосте и не входит в Compose. База физически общая, но доменные таблицы приложения и схема `bike_resolver` имеют разных владельцев логики. Отдельного Redis, брокера очередей или Elasticsearch нет. Файловые очереди удаления обслуживаются существующим cleanup-скриптом.
 
 Основной код — JavaScript/React, Resolver — TypeScript/Fastify. Версии зависимостей смотрите в [package.json](../../package.json), [package.json Resolver](../../services/bike-resolver/package.json) и lock-файлах; Docker-образы в [Dockerfile](../../Dockerfile) и [Compose](../../compose.prod.yaml). Не путайте Node приложения с runtime, на котором выполняется Marketplace action в CI.
 
