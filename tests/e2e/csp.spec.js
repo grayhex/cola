@@ -7,9 +7,8 @@ test("CSP blocks untrusted inline scripts, keeps theme/navigation and delivers r
   // or a trusted script creating a non-parser-inserted child under strict-dynamic.
   await page.route("**/about", async (route) => {
     const response = await route.fetch();
-    const nonce = response
-      .headers()
-      ["content-security-policy"].match(/'nonce-([^']+)'/)[1];
+    const policy = response.headers()["content-security-policy"];
+    const nonce = policy.match(/'nonce-([^']+)'/)[1];
     const probes = `<script>window.cspUntrusted = true</script><script nonce="${nonce}">window.cspTrusted = true</script>`;
     await route.fulfill({
       response,
