@@ -14,6 +14,7 @@ on:
         type: string
 permissions:
   contents: read
+  actions: read
 concurrency:
   group: docker-measure-${{ github.event.pull_request.number || github.run_id }}
   cancel-in-progress: true
@@ -41,7 +42,14 @@ jobs:
         with:
           script: |
             const revision = process.env.VARIANT === 'baseline' ? process.env.BASELINE : process.env.CANDIDATE;
-            await exec.exec('python3', ['scripts/benchmark-docker.py', process.env.VARIANT, revision]);
+            try {
+              await exec.exec('python3', ['scripts/benchmark-docker.py', process.env.VARIANT, revision]);
+            } finally {
+              const caches = await github.paginate(github.rest.actions.getActionsCacheList, {
+                owner: context.repo.owner, repo: context.repo.repo, ref: context.ref, per_page: 100
+              });
+              require('node:fs').writeFileSync(`${process.env.RUNNER_TEMP}/docker-benchmark-${process.env.VARIANT}/cache-inventory.json`, JSON.stringify(caches, null, 2));
+            }
       - uses: actions/upload-artifact@v7
         if: ${{ !cancelled() }}
         with:

@@ -24,7 +24,8 @@ def progress(log):
         # Buildx emits raw SolveStatus members individually; retain compatibility
         # with the grouped representation used by BuildKit history exporters.
         for v in row.get('vertexes', [row] if 'name' in row and 'id' in row else []):
-            vertices.setdefault(v['id'], {}).update(v)
+            key = v.get('digest', v.get('id'))
+            vertices.setdefault(key, {'id': key}).update(v)
         for s in row.get('statuses', [row] if 'total' in row else []):
             transfers[(s.get('vertex'), s.get('id'))] = s
     export = [v for v in vertices.values() if 'exporting to GitHub Actions Cache' in v.get('name', '')]
