@@ -72,6 +72,10 @@ test("wizard live trace, stop, partial import and mobile review", async ({
   await dialog.getByRole("button", { name: "Далее", exact: true }).click();
   await expect(dialog.locator(".wizard-part")).toHaveCount(2);
   await expect(dialog.locator('input[value="Giant AluxX"]')).toBeVisible();
+  await dialog
+    .locator(".wizard-part-group > summary")
+    .filter({ hasText: "Тормоза" })
+    .click();
   await expect(dialog.locator('input[value="Shimano BR-MT400"]')).toBeVisible();
   await expect(dialog.locator('input[value="SR Suntour"]')).toHaveCount(0);
   const contentBox = await dialog.locator(".wizard-content").boundingBox();
