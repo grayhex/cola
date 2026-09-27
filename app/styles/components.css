@@ -1571,3 +1571,34 @@
     transform: none;
   }
 }
+
+/* Administrator-selected highlight; regular icon colour remains neutral. */
+.site-icon[data-highlight] {
+  --icon-highlight: color-mix(in srgb, var(--icon-color) 80%, #182230);
+}
+[data-theme="dark"] .site-icon[data-highlight] {
+  --icon-highlight: color-mix(in srgb, var(--icon-color) 80%, #ffffff);
+}
+:is(a, button):is(
+    :hover,
+    :focus-visible,
+    [aria-pressed="true"],
+    [aria-current="page"]
+  )
+  .site-icon[data-highlight],
+.emoji-setting-row > .site-icon[data-highlight] {
+  color: var(--icon-highlight);
+}
+:is(a, button):is(
+    :hover,
+    :focus-visible,
+    [aria-pressed="true"],
+    [aria-current="page"]
+  )
+  .site-icon.custom[data-highlight],
+.emoji-setting-row > .site-icon.custom[data-highlight] {
+  background: color-mix(in srgb, var(--icon-highlight) 20%, transparent);
+  box-shadow: 0 0 0 3px
+    color-mix(in srgb, var(--icon-highlight) 20%, transparent);
+  border-radius: var(--radius-sm);
+}

@@ -44,7 +44,7 @@ const input = {
     size: "L",
     weight: null,
     mileage: 750,
-    is_public: true,
+    // Public by default (#189); the API and wizard share this contract.
   },
   components: [
     {
@@ -101,6 +101,22 @@ const confirmedBike = (await a("bikes/" + accepted.data.id)).data.bike;
 assert.equal(confirmedBike.year, 2025);
 assert.equal(confirmedBike.factory_spec.query.year, 2024);
 await a("bikes/" + accepted.data.id, "DELETE");
+const privateResult = await a("bikes/wizard", "POST", {
+  ...input,
+  requestId: randomUUID(),
+  bike: { ...input.bike, is_public: false },
+});
+assert.equal(privateResult.status, 201);
+const privateBike = (await a("bikes/" + privateResult.data.id)).data.bike;
+assert.equal(privateBike.is_public, false);
+assert.equal((await b("shared/" + privateBike.share_id)).status, 404);
+assert.equal(
+  (await a("bikes/" + privateBike.id, "PATCH", { name: "Still private" }))
+    .status,
+  200,
+);
+assert.equal((await a("bikes/" + privateBike.id)).data.bike.is_public, false);
+await a("bikes/" + privateBike.id, "DELETE");
 await a("bikes/" + id, "DELETE");
 console.log(
   "Wizard HTTP: preview ownership, edited components vs factory provenance, atomic creation, idempotent retry, mileage, privacy and validation passed.",

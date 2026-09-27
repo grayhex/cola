@@ -97,12 +97,20 @@ export default function SiteIcon({
   className = "",
 }) {
   const site = useSite();
-  const emoji = customEmoji((settings || site?.settings)?.emojis, name);
+  const config = settings || site?.settings;
+  const emoji = customEmoji(config?.emojis, name);
+  const color = config?.iconColors?.[name];
+  const style = {
+    "--icon-size": size + "px",
+    ...(/^#[0-9a-f]{6}$/i.test(color || "") ? { "--icon-color": color } : {}),
+  };
   if (emoji)
     return (
       <span
         className={"site-icon custom " + className}
-        style={{ "--icon-size": size + "px" }}
+        style={style}
+        data-icon={name}
+        data-highlight={!!color || undefined}
         aria-hidden="true"
       >
         {emoji}
@@ -112,6 +120,9 @@ export default function SiteIcon({
   return (
     <Icon
       size={size}
+      style={style}
+      data-icon={name}
+      data-highlight={!!color || undefined}
       strokeWidth={1.75}
       className={"site-icon " + className}
       aria-hidden="true"

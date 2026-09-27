@@ -36,20 +36,6 @@
   gap: var(--space-5);
   margin-bottom: var(--space-4);
 }
-.heroImage {
-  display: grid;
-  flex: 0 0 64px;
-  place-items: center;
-  width: 64px;
-  height: 64px;
-  color: var(--text);
-  object-fit: contain;
-}
-span.heroImage svg {
-  width: 56px;
-  height: 56px;
-  stroke-width: 1.2;
-}
 .heroTitle h1 {
   margin: 0;
   color: var(--text);
@@ -93,22 +79,6 @@ span.heroImage svg {
   min-height: 240px;
   overflow: hidden;
   isolation: isolate;
-}
-.animationLight,
-.animationDark {
-  width: 100%;
-  height: 240px;
-  padding-bottom: var(--space-6);
-  object-fit: contain;
-}
-.animationDark {
-  display: none;
-}
-:global([data-theme="dark"]) .animationLight {
-  display: none;
-}
-:global([data-theme="dark"]) .animationDark {
-  display: block;
 }
 .stageLabel {
   position: absolute;
@@ -232,11 +202,6 @@ span.heroImage svg {
   gap: var(--space-1) var(--space-4);
   font-size: var(--text-sm);
 }
-.trending {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--space-4);
-}
 .skeleton {
   min-height: 300px;
   border-radius: var(--radius-lg);
@@ -349,14 +314,6 @@ span.heroImage svg {
   .animationStage {
     min-height: 0;
   }
-  .animationLight,
-  .animationDark {
-    height: 160px;
-  }
-  .trending {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--space-3);
-  }
 }
 @media (max-width: 700px) {
   /* A short intro keeps the first builds on the first screen: the
@@ -372,15 +329,6 @@ span.heroImage svg {
     align-items: flex-start;
     gap: var(--space-3);
     margin-bottom: var(--space-3);
-  }
-  .heroImage {
-    flex-basis: 44px;
-    width: 44px;
-    height: 48px;
-  }
-  span.heroImage svg {
-    width: 40px;
-    height: 40px;
   }
   .heroTitle h1 {
     font-size: clamp(24px, 6.5vw, 30px);
@@ -416,9 +364,6 @@ span.heroImage svg {
   .pause {
     display: none;
   }
-  .trending {
-    gap: var(--space-2-5);
-  }
   .about {
     flex-wrap: wrap;
     align-items: flex-start;
@@ -440,26 +385,4 @@ span.heroImage svg {
   .pause {
     display: none;
   }
-}
-
-.artControls {
-  min-height: var(--control-sm);
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-3);
-  margin-top: var(--space-3);
-  color: var(--text-secondary);
-  font-size: var(--text-xs);
-}
-.artControls button {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-}
-.artControls summary {
-  cursor: pointer;
-}
-.artControls details p {
-  max-width: 36rem;
 }

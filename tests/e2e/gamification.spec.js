@@ -105,6 +105,21 @@ test("Hall of Fame changes its current record holder, with profile awards and mo
     await expect(held).not.toContainText("Первый выход");
     await expect(kept).toContainText("Первый выход");
     await expect(kept).not.toContainText("Легче ветра");
+    const shelf = await page.locator(".profile-awards").boundingBox();
+    const tabs = await page
+      .locator(".profile-collection .ui-tabs")
+      .boundingBox();
+    expect(tabs.y - (shelf.y + shelf.height)).toBeGreaterThanOrEqual(20);
+    const art = await kept.locator(".game-art").first().boundingBox();
+    expect(art.width).toBe(56);
+    expect(art.height).toBe(56);
+    expect(
+      await kept
+        .locator(".award")
+        .first()
+        .evaluate((e) => parseFloat(getComputedStyle(e).fontSize)),
+    ).toBeLessThanOrEqual(12);
+
     await page.goto("/account?tab=achievements");
     await expect(page.locator(".game-shelves")).toContainText(
       "Следующая вершина",

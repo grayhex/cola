@@ -1,8 +1,8 @@
 "use client";
 import Link from "next/link";
-import { useMotionFeedback } from "./motion.jsx";
+import { useReducedMotion } from "./motion.jsx";
 import styles from "./global-header.module.css";
-import { useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 // Navigation disclosure: links retain native Tab behavior; arrows/Home/End are shortcuts.
 export default function NavPopover({
   label,
@@ -14,16 +14,58 @@ export default function NavPopover({
   className = "",
   onOpen,
   section,
+  open: controlledOpen,
+  onOpenChange,
+  motionOrigin,
 }) {
-  const [open, setOpen] = useState(false),
+  const [localOpen, setLocalOpen] = useState(false),
     root = useRef(null),
     button = useRef(null),
     id = useId();
-  const panel = useMotionFeedback(open, { reveal: true });
-  const close = (restore = false) => {
-    setOpen(false);
-    if (restore) button.current?.focus();
-  };
+  const open = controlledOpen ?? localOpen;
+  const setOpen = onOpenChange || setLocalOpen;
+  const panel = useRef(null);
+  const leaveTimer = useRef(null);
+  const openedByHover = useRef(false);
+  const reduced = useReducedMotion();
+  useEffect(() => () => clearTimeout(leaveTimer.current), []);
+  useEffect(() => {
+    if (!open || !panel.current) return;
+    const element = panel.current;
+    const previous = motionOrigin?.current;
+    const rect = element.getBoundingClientRect();
+    if (motionOrigin)
+      motionOrigin.current = { left: rect.left, time: Date.now() };
+    let disposed = false,
+      stop;
+    const started = performance.now();
+    if (!reduced)
+      import("./interaction-motion.js")
+        .then(({ revealMenu }) => {
+          if (
+            !disposed &&
+            !window.matchMedia("(prefers-reduced-motion: reduce)").matches &&
+            performance.now() - started < 200
+          )
+            stop = revealMenu(element, previous);
+        })
+        .catch(() => {});
+    return () => {
+      disposed = true;
+      stop?.();
+      if (motionOrigin)
+        motionOrigin.current = { left: rect.left, time: Date.now() };
+    };
+  }, [open, reduced, motionOrigin]);
+  const close = useCallback(
+    (restore = false) => {
+      clearTimeout(leaveTimer.current);
+      openedByHover.current = false;
+      setOpen(false);
+      if (restore) button.current?.focus();
+    },
+    [setOpen],
+  );
   useEffect(() => {
     if (!open) return;
     const outside = (e) => {
@@ -41,10 +83,10 @@ export default function NavPopover({
       document.removeEventListener("pointerdown", outside);
       document.removeEventListener("keydown", escape);
     };
-  }, [open]);
+  }, [open, close]);
   function show(edge) {
     setOpen(true);
-    onOpen?.();
+    if (!open) onOpen?.();
     if (edge)
       requestAnimationFrame(() => {
         const links = panel.current?.querySelectorAll(
@@ -58,6 +100,25 @@ export default function NavPopover({
       className={`nav-disclosure ${styles.disclosure} ${className}`}
       data-section={section}
       ref={root}
+      data-open={open || undefined}
+      onPointerEnter={(e) => {
+        clearTimeout(leaveTimer.current);
+        if (
+          e.pointerType !== "mouse" ||
+          !window.matchMedia("(hover: hover) and (pointer: fine)").matches
+        )
+          return;
+        if (!open) {
+          openedByHover.current = true;
+          show();
+        }
+      }}
+      onPointerLeave={() => {
+        clearTimeout(leaveTimer.current);
+        leaveTimer.current = setTimeout(() => {
+          if (!root.current?.contains(document.activeElement)) close();
+        }, 140);
+      }}
       onBlur={(e) => {
         if (e.relatedTarget && !e.currentTarget.contains(e.relatedTarget))
           close();
@@ -84,7 +145,13 @@ export default function NavPopover({
         title={label}
         aria-expanded={open}
         aria-controls={id}
-        onClick={() => (open ? close() : show())}
+        onClick={() => {
+          if (open && !openedByHover.current) close();
+          else {
+            openedByHover.current = false;
+            show();
+          }
+        }}
         onKeyDown={(e) => {
           if (["ArrowDown", "ArrowUp"].includes(e.key)) {
             e.preventDefault();

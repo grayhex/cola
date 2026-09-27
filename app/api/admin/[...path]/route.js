@@ -1,6 +1,8 @@
 import { backgroundDefaults } from "../../../../lib/theme.js";
 import { siteAssetIds } from "../../../../lib/site-assets.js";
 import { prepareSvg } from "../../../../lib/svg-asset.js";
+import { prepareRive } from "../../../../lib/rive-upload.js";
+import { assetFormat } from "../../../../lib/hero-graphics.js";
 import { gameAssetInUse } from "../../../../lib/gamification-assets.js";
 import { traced, logError } from "../../../../lib/observability.js";
 import {
@@ -201,7 +203,7 @@ async function handler(req, { params }) {
         if (p[0] === "settings")
           for (const id of siteAssetIds(value)) {
             const a = await q.query(
-              "SELECT id FROM site_assets WHERE id=$1 FOR SHARE",
+              "SELECT id,filename FROM site_assets WHERE id=$1 FOR SHARE",
               [id],
             );
             if (!a.rows.length)
@@ -209,7 +211,50 @@ async function handler(req, { params }) {
                 error: "Выбранное изображение удалено. Обновите страницу.",
                 status: 409,
               };
+            if (
+              assetFormat(a.rows[0].filename) === "rive" &&
+              Object.values(value).some(
+                (entry) =>
+                  typeof entry === "string" && entry.toLowerCase() === id,
+              )
+            )
+              return {
+                error: "Для изображения выберите PNG, JPEG, WebP или SVG",
+                status: 400,
+              };
           }
+        if (p[0] === "settings") {
+          for (const key of ["heroImageId", "heroStageImageId"]) {
+            if (!value[key]) continue;
+            const asset = await q.query(
+              "SELECT filename FROM site_assets WHERE id=$1",
+              [value[key]],
+            );
+            if (assetFormat(asset.rows[0]?.filename) !== "image")
+              return {
+                error:
+                  "Для изображения главной выберите PNG, JPEG или WebP; SVG назначьте в поле анимации",
+                status: 400,
+              };
+          }
+          for (const key of [
+            "heroTitleAnimation",
+            "heroStageAnimation",
+            "heroStageDarkAnimation",
+          ]) {
+            const selected = value[key];
+            if (!selected?.assetId) continue;
+            const asset = await q.query(
+              "SELECT filename FROM site_assets WHERE id=$1",
+              [selected.assetId],
+            );
+            if (assetFormat(asset.rows[0]?.filename) !== selected.kind)
+              return {
+                error: "Формат выбранной анимации не совпадает с файлом",
+                status: 400,
+              };
+          }
+        }
         const r = await q.query(
           `UPDATE ${table} SET value=$1,version=version+1,updated_at=now() WHERE id=1 AND version=$2 RETURNING version`,
           [JSON.stringify(value), input.version],
@@ -324,6 +369,9 @@ async function handler(req, { params }) {
       if (p.length === 1 && method === "POST") {
         const bytes = await readBytes(req, 10 * 1024 * 1024);
         let image;
+        const rive =
+          /\.riv$/i.test(new URL(req.url).searchParams.get("name") || "") ||
+          bytes.subarray(0, 4).equals(Buffer.from("RIVE"));
         const svg =
           req.headers.get("content-type")?.includes("image/svg+xml") ||
           /\.svg$/i.test(new URL(req.url).searchParams.get("name") || "") ||
@@ -331,18 +379,20 @@ async function handler(req, { params }) {
             bytes.toString("utf8", 0, 500).replace(/^\uFEFF/, ""),
           );
         try {
-          image = svg
-            ? await prepareSvg(bytes)
-            : await preparePhoto(bytes, { bikePhoto: false });
+          image = rive
+            ? prepareRive(bytes)
+            : svg
+              ? await prepareSvg(bytes)
+              : await preparePhoto(bytes, { bikePhoto: false });
         } catch (e) {
           return fail(
-            svg
+            svg || rive
               ? e.message
-              : "Выберите JPEG, PNG, WebP до 10 МБ или SVG до 1 МБ",
+              : "Выберите JPEG, PNG, WebP до 10 МБ или SVG/Rive до 1 МБ",
           );
         }
         const id = randomUUID(),
-          filename = "site-" + id + (svg ? ".svg" : ".webp"),
+          filename = "site-" + id + (rive ? ".riv" : svg ? ".svg" : ".webp"),
           dir = process.env.UPLOAD_DIR || "uploads";
         const name = (
           new URL(req.url).searchParams.get("name") || "Изображение"
@@ -361,7 +411,7 @@ async function handler(req, { params }) {
           await unlink(path.join(dir, filename)).catch(() => {});
           throw e;
         }
-        return json({ id, name }, 201);
+        return json({ id, name, format: assetFormat(filename) }, 201);
       }
       if (
         p.length === 2 &&

@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import pg from "pg";
 import sharp from "sharp";
+import { readFile } from "node:fs/promises";
 const base = process.env.TEST_ORIGIN || "http://localhost:3000";
 const db = new pg.Client({ connectionString: process.env.DATABASE_URL });
 await db.connect();
@@ -30,7 +31,7 @@ const admin = client(),
   guest = client();
 const id = randomUUID(),
   password = "disposable-test-12345";
-let original, originalCatalog, asset, adminId, memberId;
+let original, originalCatalog, asset, riveAsset, adminId, memberId;
 try {
   assert.equal((await guest("admin/overview")).status, 401);
   const a = await admin("auth/register", "POST", {
@@ -238,6 +239,77 @@ try {
     200,
   );
   memberId = null;
+  const riveBytes = await readFile(
+    new URL("../assets/rive/transparent-bike.source.riv", import.meta.url),
+  );
+  const uploadRive = (bytes) =>
+    fetch(base + "/api/admin/assets?name=uploaded.riv", {
+      method: "POST",
+      headers: {
+        origin: base,
+        cookie,
+        "Content-Type": "application/octet-stream",
+      },
+      body: bytes,
+    });
+  assert.equal(
+    (await uploadRive(Buffer.from("not a runtime export"))).status,
+    400,
+  );
+  const riveResponse = await uploadRive(riveBytes);
+  assert.equal(riveResponse.status, 201);
+  const uploaded = await riveResponse.json();
+  riveAsset = uploaded.id;
+  assert.equal(uploaded.format, "rive");
+  const served = await fetch(base + "/api/assets/" + riveAsset);
+  assert.equal(served.headers.get("content-type"), "application/octet-stream");
+  assert.equal(served.headers.get("x-content-type-options"), "nosniff");
+  assert.deepEqual(Buffer.from(await served.arrayBuffer()), riveBytes);
+  latest = (await admin("admin/overview")).data;
+  for (const patch of [
+    { faviconId: riveAsset.toUpperCase() },
+    { heroImageId: riveAsset },
+    { heroStageAnimation: { kind: "svg", assetId: riveAsset } },
+    { heroStageAnimation: { kind: "rive", assetId: asset } },
+    { iconColors: { bike: "red;display:none" } },
+  ])
+    assert.equal(
+      (
+        await admin("admin/settings", "PUT", {
+          value: { ...latest.settings, ...patch },
+          version: latest.settingsVersion,
+        })
+      ).status,
+      400,
+    );
+  const value = {
+    ...latest.settings,
+    heroAnimationsEnabled: true,
+    heroTitleAnimation: { kind: "rive", assetId: riveAsset },
+    iconColors: { bike: "#aa44cc" },
+  };
+  assert.equal(
+    (
+      await admin("admin/settings", "PUT", {
+        value,
+        version: latest.settingsVersion,
+      })
+    ).status,
+    200,
+  );
+  const publicSettings = (await guest("site")).data.settings;
+  assert.equal(publicSettings.heroAnimationsEnabled, true);
+  assert.deepEqual(publicSettings.heroTitleAnimation, value.heroTitleAnimation);
+  assert.deepEqual(publicSettings.iconColors, { bike: "#aa44cc" });
+  assert.equal(
+    (await admin("admin/assets/" + riveAsset, "DELETE")).status,
+    409,
+  );
+  const library = await admin("admin/assets/library");
+  const entry = library.data.assets.find((entry) => entry.id === riveAsset);
+  assert.equal(entry.format, "rive");
+  assert.ok(entry.usage.includes("Анимация главной"));
+  assert.equal("filename" in entry, false);
   assert.ok((await admin("admin/audit")).data.events.length >= 5);
   console.log(
     "PASS: admin authorization, CSRF, version conflicts, persisted theme/copy/catalog, graphics, registration toggle, protected admin, blocked sessions, user deletion and audit.",
@@ -255,6 +327,7 @@ try {
     });
   }
   if (asset) await admin("admin/assets/" + asset, "DELETE");
+  if (riveAsset) await admin("admin/assets/" + riveAsset, "DELETE");
   if (memberId) await db.query("DELETE FROM users WHERE id=$1", [memberId]);
   if (adminId) await db.query("DELETE FROM users WHERE id=$1", [adminId]);
   await db.end();

@@ -208,7 +208,7 @@ test("admin: the design system opens next to the admin menu; on a phone the save
   expect(await noOverflow(page)).toBe(true);
   // «Главная»: the block takes the accent unless the administrator picks
   // their own colours.
-  await page.getByRole("button", { name: "Главная", exact: true }).click();
+  await page.getByRole("button", { name: "Внешний вид", exact: true }).click();
   const background = page.getByLabel("Фон блока", { exact: true });
   await expect(background).toHaveValue("accent");
   await expect(page.getByLabel("Фон блока · светлая тема")).toHaveCount(0);

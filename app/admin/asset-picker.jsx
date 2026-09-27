@@ -16,8 +16,15 @@ export default function AssetPicker({
   Fallback = ImageIcon,
   compact = false,
   accept = "image/jpeg,image/png,image/webp",
+  animation = false,
 }) {
-  const selected = assets.find((asset) => asset.id === value);
+  const choices = animation
+    ? assets
+    : assets.filter((asset) => asset.format !== "rive");
+  const selected = choices.find((asset) => asset.id === value);
+  const preview =
+    selected?.preview ||
+    (selected?.format === "rive" ? null : value && "/api/assets/" + value);
   const fileInput = useRef(null);
   const [failedId, setFailedId] = useState(null);
   return (
@@ -25,9 +32,9 @@ export default function AssetPicker({
       className={"asset-picker " + (compact ? styles.compactPicker : "")}
     >
       <div className={"asset-picker-preview " + previewClassName}>
-        {value && failedId !== value ? (
+        {preview && failedId !== value ? (
           <img
-            src={"/api/assets/" + value}
+            src={preview}
             alt=""
             loading="lazy"
             onError={() => setFailedId(value)}
@@ -54,7 +61,7 @@ export default function AssetPicker({
           {value && !selected && (
             <option value={value}>Выбранное изображение</option>
           )}
-          {assets.map((asset) => (
+          {choices.map((asset) => (
             <option value={asset.id} key={asset.id}>
               {asset.name}
             </option>

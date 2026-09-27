@@ -1,12 +1,31 @@
 import { test, expect } from "@playwright/test";
+import pg from "pg";
+import { defaultSettings } from "../../lib/site-defaults.js";
+let db, original;
+test.beforeAll(async () => {
+  db = new pg.Client({ connectionString: process.env.DATABASE_URL });
+  await db.connect();
+  original = (await db.query("SELECT value FROM site_settings WHERE id=1"))
+    .rows[0].value;
+});
+async function enabled(value) {
+  await db.query("UPDATE site_settings SET value=$1 WHERE id=1", [
+    { ...defaultSettings, heroAnimationsEnabled: value },
+  ]);
+}
+test.beforeEach(async () => enabled(true));
+test.afterEach(async () =>
+  db.query("UPDATE site_settings SET value=$1 WHERE id=1", [original]),
+);
+test.afterAll(async () => db.end());
 
 const small = '[data-rive-art="transparent-bike"]';
 const large = '[data-rive-art="riding-bike"]';
 async function theme(page, value) {
-  await page.addInitScript(
-    (theme) => localStorage.setItem("cola:theme", theme),
-    value,
-  );
+  await page.addInitScript((theme) => {
+    if (!localStorage.getItem("cola:theme"))
+      localStorage.setItem("cola:theme", theme);
+  }, value);
 }
 async function posters(page, value) {
   const image = page.locator(`${small} img[src$="-${value}.png"]`);
@@ -42,11 +61,20 @@ for (const color of ["light", "dark"])
         window.riveViolations.push(e.violatedDirective),
       );
     });
+    await enabled(false);
     await page.goto("/", { waitUntil: "networkidle" });
     await posters(page, color);
     expect(requests.some((url) => /\.(riv|wasm)$/.test(url))).toBe(false);
+    await expect(
+      page.getByRole("button", { name: "Оживить велосипеды" }),
+    ).toHaveCount(0);
+    const art = await page.locator(small).boundingBox(),
+      heading = await page.locator("h1").boundingBox();
+    expect(art.x + art.width).toBeLessThanOrEqual(heading.x);
+    await expect(page.locator("footer summary")).toHaveText("Авторы графики");
     const initial = await page.locator("[data-home-search]").boundingBox();
-    await page.getByRole("button", { name: "Оживить велосипеды" }).click();
+    await enabled(true);
+    await page.reload();
     await expect(page.locator(`${small} [data-rive-ready]`)).toBeVisible({
       timeout: 20000,
     });
@@ -103,10 +131,12 @@ for (const color of ["light", "dark"])
       )
       .toBe(true);
     await expect(page.locator(`${small} [data-rive-ready]`)).toBeVisible();
-    await page.getByRole("button", { name: "Остановить анимацию" }).click();
+    await enabled(false);
+    await page.reload();
     await expect(page.locator("[data-rive-art] canvas")).toHaveCount(0);
     await posters(page, other);
-    await page.getByRole("button", { name: "Оживить велосипеды" }).click();
+    await enabled(true);
+    await page.reload();
     await expect(page.locator(`${small} [data-rive-ready]`)).toBeVisible();
     await page.locator("footer").scrollIntoViewIfNeeded();
     await expect(page.locator("[data-rive-art] canvas")).toHaveCount(0);
@@ -128,7 +158,6 @@ test("reduced motion never fetches Rive; changing the preference stops a running
   ).toHaveCount(0);
   expect(assets).toEqual([]);
   await page.emulateMedia({ reducedMotion: "no-preference" });
-  await page.getByRole("button", { name: "Оживить велосипеды" }).click();
   await expect(page.locator(`${small} [data-rive-ready]`)).toBeVisible({
     timeout: 20000,
   });
@@ -142,6 +171,8 @@ for (const failure of ["canvas", "wasm", "asset", "runtime"])
     page,
   }) => {
     await theme(page, "light");
+    if (failure === "runtime")
+      await page.emulateMedia({ reducedMotion: "reduce" });
     let blocked = 0;
     if (failure === "canvas")
       await page.addInitScript(() => {
@@ -161,7 +192,8 @@ for (const failure of ["canvas", "wasm", "asset", "runtime"])
         blocked++;
         return route.abort();
       });
-    await page.getByRole("button", { name: "Оживить велосипеды" }).click();
+    if (failure === "runtime")
+      await page.emulateMedia({ reducedMotion: "no-preference" });
     if (failure !== "canvas")
       await expect.poll(() => blocked).toBeGreaterThan(0);
     await expect(page.locator("[data-rive-art] canvas")).toHaveCount(0, {
@@ -171,9 +203,8 @@ for (const failure of ["canvas", "wasm", "asset", "runtime"])
     await expect(page.locator("[data-rive-ready]")).toHaveCount(0);
     await page.locator("[data-home-search] input").fill("Cube");
     await expect(page.locator("[data-home-search] input")).toHaveValue("Cube");
-    // Suggestions cover the controls below the search; dismiss them as a
-    // keyboard user would before exercising the separate animation control.
+    // The search remains independently usable after the decorative runtime fails.
     await page.locator("[data-home-search] input").press("Escape");
-    await page.getByRole("button", { name: "Остановить анимацию" }).click();
+    await page.emulateMedia({ reducedMotion: "reduce" });
     await expect(page.locator("[data-rive-art] canvas")).toHaveCount(0);
   });

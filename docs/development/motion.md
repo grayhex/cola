@@ -24,7 +24,7 @@ React 19.3.0 / Next.js 16.3.6. Версия Motion проверена через
   loading state: восстановление scroll ждёт реальную высоту списка,
   а открытая форма не перемонтируется после отложенного обновления.
 - `useMotionFeedback` лениво импортирует `motion/mini` для изменения лайка,
-  сохранения записи и открытия меню. Двигается значок, а не hit target.
+  сохранения записи. Двигается значок, а не hit target.
   Реальный ответ API/optimistic queue не зависит от animation promise.
   Поздняя (>200 ms) или неудачная загрузка chunk просто пропускает эффект.
 - Карты: общий элемент — только SVG-превью с публичной geometry. Ссылки
@@ -112,3 +112,17 @@ production latency. Браузерные результаты/окончател
 - [React ViewTransition](https://react.dev/reference/react/ViewTransition)
 - [Next.js View Transitions](https://nextjs.org/docs/app/guides/view-transitions)
 - [Motion animate, mini entry](https://motion.dev/docs/animate)
+
+## Меню и популярные велосипеды (#191–#192)
+
+Поведение воспроизводит публичные примеры [mega menu](https://motion.dev/examples/react-mega-menu)
+и [carousel progress scrubber](https://motion.dev/examples/react-carousel-progress-scrubber).
+Исходники Motion+ не копируются, платные компоненты не используются.
+`interaction-motion.js` лениво загружает установленный Motion при взаимодействии:
+пружинное появление меню, stagger ссылок и прокрутку карусели. При reduced motion
+переход мгновенный; ошибка chunk не блокирует меню и native scroll.
+
+Карусель — один горизонтальный flex-ряд, со стрелками, доступным range-ползунком,
+нативной прокруткой касаниями/трекпадом и перетаскиванием мышью. Клик ссылки
+подавляется только после фактического drag; клавиатура сохраняет Tab, стрелки,
+Home/End. Нет автоматического переключения карточек или таймера загрузки runtime.

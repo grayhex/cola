@@ -16,7 +16,13 @@ class CanvasBoundary extends Component {
   }
 }
 
-export default function RiveArt({ name, playing, compact = false }) {
+export default function RiveArt({
+  name,
+  src,
+  poster,
+  playing,
+  compact = false,
+}) {
   const host = useRef(null);
   const [visible, setVisible] = useState(false);
   const reduced = useReducedMotion();
@@ -51,22 +57,30 @@ export default function RiveArt({ name, playing, compact = false }) {
     <div
       ref={host}
       className={compact ? styles.compact : styles.stage}
-      data-rive-art={name}
+      data-rive-art={name || "custom"}
       aria-hidden="true"
     >
-      <div className={styles.art}>
-        {["light", "dark"].map((theme) => (
-          <SmallImage
-            key={theme}
-            className={styles[theme]}
-            src={`/rive/${name}-${theme}.png`}
-            alt=""
-          />
-        ))}
+      {(poster || !name) && (
+        <SmallImage className={styles.poster} src={poster} alt="" />
+      )}
+      <div
+        className={styles.art}
+        data-crop={(compact && name === "transparent-bike") || undefined}
+      >
+        {!poster &&
+          name &&
+          ["light", "dark"].map((theme) => (
+            <SmallImage
+              key={theme}
+              className={styles[theme]}
+              src={`/rive/${name}-${theme}.png`}
+              alt=""
+            />
+          ))}
         {playing && !reduced && visible && (
-          <CanvasBoundary key={resolvedTheme}>
+          <CanvasBoundary key={src || name + resolvedTheme}>
             <Suspense fallback={null}>
-              <Canvas name={name} theme={resolvedTheme} />
+              <Canvas name={name} src={src} theme={resolvedTheme} />
             </Suspense>
           </CanvasBoundary>
         )}

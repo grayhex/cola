@@ -210,3 +210,25 @@ test("UUID case cannot make a referenced asset appear unused", async () => {
   assert.deepEqual(result.deleted, []);
   assert.deepEqual(result.skippedIds, [lower]);
 });
+
+test("animation references protect both draft and saved files, independent of the global switch", () => {
+  const saved = {
+    heroAnimationsEnabled: false,
+    heroStageAnimation: { kind: "rive", assetId: "a" },
+  };
+  const draft = {
+    heroStageAnimation: null,
+    heroTitleAnimation: { kind: "svg", assetId: "b" },
+  };
+  assert.deepEqual(siteAssetIds(saved), ["a"]);
+  assert.deepEqual(siteAssetIds(draft), ["b"]);
+  assert.ok(
+    assetUsageLabels({ id: "a" }, draft, saved).includes("Опубликовано"),
+  );
+  assert.ok(
+    assetUsageLabels({ id: "b" }, draft, saved).includes(
+      "В настройках / черновике",
+    ),
+  );
+  assert.deepEqual(siteAssetUsage(saved).a, ["Анимация главной"]);
+});

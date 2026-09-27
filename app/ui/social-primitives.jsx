@@ -120,6 +120,27 @@ export function SocialFooter() {
         </p>
         <div className={footerStyles.versions}>
           <Versions link={false} />
+          <details className={footerStyles.credits}>
+            <summary>Авторы графики</summary>
+            <p>
+              <a href="https://rive.app/marketplace/2008-3976-riding-bike/">
+                Riding Bike — rahiqueo
+              </a>
+              ;{" "}
+              <a href="https://rive.app/marketplace/9084-17312-transparent-bike-animation/">
+                Transparent Bike Animation — lorins
+              </a>
+              , на основе{" "}
+              <a href="https://rive.app/marketplace/3256-6872-bike-icon/">
+                Bike Icon — JcToon
+              </a>
+              .{" "}
+              <a href="https://creativecommons.org/licenses/by/4.0/">
+                CC BY 4.0
+              </a>
+              . Палитра адаптирована для ColaBike, фон второй анимации убран.
+            </p>
+          </details>
         </div>
       </div>
     </footer>

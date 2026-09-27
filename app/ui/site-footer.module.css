@@ -101,3 +101,51 @@ a.logo:hover img {
   font: var(--weight-regular) var(--text-xs) / var(--leading-snug)
     var(--font-mono);
 }
+
+.credits {
+  position: relative;
+  margin-top: var(--space-2);
+  font-size: var(--text-xs);
+}
+.credits summary {
+  cursor: pointer;
+  min-height: 24px;
+}
+.credits p {
+  position: absolute;
+  z-index: var(--z-dropdown);
+  bottom: 100%;
+  right: 0;
+  width: min(320px, calc(100vw - 2 * var(--gutter)));
+  padding: var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--text);
+  text-align: left;
+  box-shadow: var(--shadow-lg);
+  line-height: var(--leading-normal);
+}
+.credits a {
+  text-decoration: underline;
+}
+@media (max-width: 1023px) {
+  .credits p {
+    right: 50%;
+    transform: translateX(50%);
+  }
+}
+/* Closed details must not retain measurable links in WebKit's layout tree. */
+.credits:not([open]) p {
+  display: none;
+}
+@media (pointer: coarse), (max-width: 700px) {
+  .credits summary {
+    min-height: 44px;
+  }
+  .credits a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+}

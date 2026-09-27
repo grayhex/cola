@@ -124,6 +124,13 @@ test("registration, touch autocomplete, bike/photo, public feed, like and revoke
   await dialog
     .locator("input[type=file]")
     .setInputFiles({ name: "bike.png", mimeType: "image/png", buffer: bytes });
+  // Explicit privacy retains this test's publish/revoke lifecycle.
+  await expect(
+    dialog.getByRole("checkbox", { name: "Приватный велосипед", exact: true }),
+  ).not.toBeChecked();
+  await dialog
+    .getByRole("checkbox", { name: "Приватный велосипед", exact: true })
+    .check();
   await dialog
     .getByRole("button", { name: "Сохранить велосипед", exact: true })
     .click();

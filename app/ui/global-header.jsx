@@ -3,6 +3,7 @@ import SiteIcon from "./site-icon.jsx";
 import Link from "next/link";
 import styles from "./global-header.module.css";
 import ThemeControl from "./theme-control.jsx";
+import SmallImage from "./small-image.jsx";
 import { GlobalSearch, CompactDialog } from "./compact-ui.jsx";
 import { useState, useEffect, useRef } from "react";
 import { Bike, ChevronDown } from "./icons.jsx";
@@ -34,10 +35,30 @@ export default function GlobalHeader({
   const [loggingOut, setLoggingOut] = useState(false),
     [unread, setUnread] = useState(0),
     [mobile, setMobile] = useState(false),
-    [stats, setStats] = useState(null);
+    [stats, setStats] = useState(null),
+    [openSection, setOpenSection] = useState(null),
+    [indicator, setIndicator] = useState(null);
+  const menuOrigin = useRef(null),
+    navigation = useRef(null);
+  useEffect(() => {
+    const nav = navigation.current;
+    const selected =
+      openSection && nav?.querySelector(`[data-section="${openSection}"]`);
+    if (!selected) {
+      setIndicator(null);
+      return;
+    }
+    const update = () =>
+      setIndicator({ left: selected.offsetLeft, width: selected.offsetWidth });
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(nav);
+    return () => observer.disconnect();
+  }, [openSection]);
   const statsRequest = useRef(false);
   useEffect(() => {
     setMobile(false);
+    setOpenSection(null);
   }, [pathname, search]);
   useEffect(() => {
     let active = true;
@@ -215,12 +236,24 @@ export default function GlobalHeader({
       <header className={`global-header ${styles.header}`}>
         <Link className="brand" href="/" aria-label="ColaBike — главная">
           <span className="brand-mark" aria-hidden="true">
-            <Bike size={18} strokeWidth={2} />
+            {settings.faviconId ? (
+              <SmallImage
+                src={"/api/assets/" + settings.faviconId}
+                alt=""
+                priority
+              />
+            ) : (
+              <Bike size={18} strokeWidth={2} />
+            )}
           </span>
           <span>ColaBike</span>
         </Link>
         <div className="global-nav">
-          <nav className="primary-navigation" aria-label="Основная навигация">
+          <nav
+            ref={navigation}
+            className="primary-navigation"
+            aria-label="Основная навигация"
+          >
             {sections.map((section) =>
               section.id === "about" ? (
                 <Link
@@ -239,6 +272,17 @@ export default function GlobalHeader({
                 <NavPopover
                   key={section.id}
                   section={section.id}
+                  open={openSection === section.id}
+                  onOpenChange={(next) =>
+                    setOpenSection((current) =>
+                      next
+                        ? section.id
+                        : current === section.id
+                          ? null
+                          : current,
+                    )
+                  }
+                  motionOrigin={menuOrigin}
                   label={t("Подразделы") + ": " + section.label}
                   href={
                     {
@@ -263,6 +307,15 @@ export default function GlobalHeader({
                 </NavPopover>
               ),
             )}
+            <span
+              className={styles.menuIndicator}
+              aria-hidden="true"
+              style={{
+                opacity: indicator ? 1 : 0,
+                width: indicator?.width || 0,
+                transform: `translateX(${indicator?.left || 0}px)`,
+              }}
+            />
           </nav>
           <div className="nav-utilities">
             <GlobalSearch />

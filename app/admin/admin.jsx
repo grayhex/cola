@@ -78,7 +78,6 @@ const sections = [
   ["resolver", "Bike Resolver", Settings2],
   ["map", "Карта", Settings2],
   ["design", "Внешний вид", Palette],
-  ["homepage", "Главная", Palette],
   ["navigation", "Меню", Menu],
   ["graphics", "Графика", Image],
   ["emojis", "Значки", Palette],
@@ -106,7 +105,6 @@ const adminGroups = [
     icon: Palette,
     sections: [
       "design",
-      "homepage",
       "navigation",
       "graphics",
       "emojis",
@@ -523,6 +521,8 @@ export default function Admin() {
           {tab === "emojis" && (
             <EmojiSettings
               value={draft.emojis}
+              colors={draft.iconColors}
+              onColorChange={(v) => update("iconColors", v)}
               onChange={(v) => update("emojis", v)}
             />
           )}
@@ -674,16 +674,16 @@ export default function Admin() {
             </>
           )}
           {tab === "design" && (
-            <ThemeSettings settings={draft} onChange={update} />
-          )}
-          {tab === "homepage" && (
-            <HomepageSettings
-              settings={draft}
-              onChange={update}
-              assets={assets}
-              busy={locked}
-              onUpload={uploadGraphic}
-            />
+            <>
+              <ThemeSettings settings={draft} onChange={update} />
+              <HomepageSettings
+                settings={draft}
+                onChange={update}
+                assets={assets}
+                busy={locked}
+                onUpload={uploadGraphic}
+              />
+            </>
           )}
           {tab === "navigation" && (
             <NavigationSettings settings={draft} onChange={update} />

@@ -261,13 +261,21 @@ test("homepage rhythm, photo-first popular bikes and stable Light/Dark at every 
       }));
       expect(h.height / h.line).toBeLessThanOrEqual(width <= 390 ? 4.1 : 2.1);
       // #83: the photo spans the card, the text below it stays short and
-      // tablets and phones show two builds per row.
+      // all nine cards share one horizontal row, with a peek on phones.
       const first = page.locator("article[data-bike-id]").first();
       const card = await first.boundingBox();
       const photo = await first.locator("a").first().boundingBox();
       expect(photo.width).toBeGreaterThanOrEqual(card.width - 2);
       expect(card.height - photo.height).toBeLessThan(200);
-      if (width <= 1050) expect(card.width).toBeLessThan(width * 0.55);
+      if (width > 600 && width <= 1050)
+        expect(card.width).toBeLessThan(width * 0.55);
+      if (width <= 600) expect(card.width).toBeLessThan(width * 0.85);
+      const last = await page
+        .locator("article[data-bike-id]")
+        .last()
+        .boundingBox();
+      expect(Math.abs(last.y - card.y)).toBeLessThan(2);
+      expect(last.x).toBeGreaterThan(card.x);
       // Portrait phones see the first build on the first screen.
       if (width <= 390 && height > width)
         expect(card.y + 120).toBeLessThanOrEqual(height);
@@ -555,26 +563,30 @@ test("admin appearance is explicit; hero upload, replacement and removal protect
             .settings.appearance.theme,
       )
       .toBe("dark");
-    await nav.getByRole("button", { name: "Главная", exact: true }).click();
+    await nav.getByRole("button", { name: "Внешний вид", exact: true }).click();
     await page
-      .getByLabel("Графика главного блока", { exact: true })
-      .selectOption("custom");
-    await page.getByLabel("Файл: Hero image", { exact: true }).setInputFiles({
-      name: "hero-test.png",
-      mimeType: "image/png",
-      buffer: png,
-    });
+      .getByLabel("Анимация · слева от заголовка", { exact: true })
+      .selectOption("");
+    await page
+      .getByLabel("Файл: Изображение · слева от заголовка", { exact: true })
+      .setInputFiles({
+        name: "hero-test.png",
+        mimeType: "image/png",
+        buffer: png,
+      });
     const picker = page.getByRole("combobox", {
-      name: "Hero image",
+      name: "Изображение · слева от заголовка",
       exact: true,
     });
     await expect(picker).not.toHaveValue("");
     const heroId = await picker.inputValue();
     assets.push(heroId);
-    await expect(page.locator(".asset-picker-preview img")).toHaveAttribute(
-      "src",
-      "/api/assets/" + heroId,
-    );
+    await expect(
+      page
+        .locator(".asset-picker")
+        .filter({ has: picker })
+        .locator(".asset-picker-preview img"),
+    ).toHaveAttribute("src", "/api/assets/" + heroId);
     await page.getByRole("button", { name: "Сохранить", exact: true }).click();
     await expect
       .poll(
@@ -586,7 +598,9 @@ test("admin appearance is explicit; hero upload, replacement and removal protect
     const preview = await page.context().newPage();
     await preview.goto("/");
     await expect(
-      preview.locator('section[aria-labelledby="hero-title"] img'),
+      preview.locator(
+        `section[aria-labelledby="hero-title"] img[src="/api/assets/${heroId}"]`,
+      ),
     ).toHaveAttribute("src", "/api/assets/" + heroId);
     await preview.close();
     expect(
@@ -610,7 +624,10 @@ test("admin appearance is explicit; hero upload, replacement and removal protect
       fullPage: true,
     });
     await page
-      .getByRole("button", { name: "Сбросить: Hero image", exact: true })
+      .getByRole("button", {
+        name: "Сбросить: Изображение · слева от заголовка",
+        exact: true,
+      })
       .click();
     await page.getByRole("button", { name: "Сохранить", exact: true }).click();
     await expect

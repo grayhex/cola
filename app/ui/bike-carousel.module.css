@@ -1,0 +1,95 @@
+.carousel {
+  min-width: 0;
+}
+.rail {
+  display: flex;
+  gap: var(--space-4);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  padding: var(--space-1) 0 var(--space-3);
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+  touch-action: pan-x pan-y;
+}
+.rail > * {
+  flex: 0 0 calc((100% - 2 * var(--space-4)) / 3);
+  min-width: 0;
+}
+.rail[data-dragging] {
+  cursor: grabbing;
+  user-select: none;
+}
+.rail:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+  border-radius: var(--radius-lg);
+}
+.controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+.controls input {
+  flex: 1;
+  min-width: 0;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  cursor: ew-resize;
+  accent-color: var(--accent);
+  background: transparent;
+}
+.controls input:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+@media (max-width: 1050px) {
+  .rail > * {
+    flex-basis: calc((100% - var(--space-4)) / 2);
+  }
+}
+@media (max-width: 600px) {
+  .rail > * {
+    flex-basis: 82%;
+  }
+}
+.controls input[type="range"] {
+  appearance: none;
+  height: 44px;
+}
+.controls input::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 4px;
+  background: linear-gradient(
+    to right,
+    var(--accent) var(--progress),
+    var(--line) var(--progress)
+  );
+}
+.controls input::-webkit-slider-thumb {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  margin-top: -8px;
+  border: 2px solid var(--surface);
+  background: var(--accent);
+  box-shadow: 0 0 0 1px var(--line);
+}
+.controls input::-moz-range-track {
+  height: 4px;
+  border-radius: 4px;
+  background: var(--line);
+}
+.controls input::-moz-range-progress {
+  height: 4px;
+  background: var(--accent);
+}
+.controls input::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--surface);
+  border-radius: 50%;
+  background: var(--accent);
+}

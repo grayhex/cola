@@ -80,7 +80,7 @@ export default function BikeWizard({ onCreated, onBusy, onDirtyChange }) {
       price: "",
       mileage: 0,
       manufacturer_url: "",
-      is_public: false,
+      is_public: true,
       is_former: false,
       show_bike_price: false,
       show_component_prices: false,
@@ -154,7 +154,7 @@ export default function BikeWizard({ onCreated, onBusy, onDirtyChange }) {
     bike.price ||
     bike.mileage ||
     bike.manufacturer_url ||
-    bike.is_public ||
+    !bike.is_public ||
     bike.is_former ||
     bike.show_bike_price ||
     bike.show_component_prices ||
@@ -1286,8 +1286,15 @@ export default function BikeWizard({ onCreated, onBusy, onDirtyChange }) {
               />
             </label>
             <div className="wizard-privacy">
+              <label className="setting-row">
+                Приватный велосипед
+                <input
+                  type="checkbox"
+                  checked={!bike.is_public}
+                  onChange={(e) => update("is_public", !e.target.checked)}
+                />
+              </label>
               {[
-                ["is_public", "Опубликовать на общей витрине"],
                 ["show_bike_price", "Показывать стоимость велосипеда"],
                 ["show_component_prices", "Показывать стоимость компонентов"],
                 ["show_accessory_prices", "Показывать стоимость аксессуаров"],
@@ -1302,8 +1309,9 @@ export default function BikeWizard({ onCreated, onBusy, onDirtyChange }) {
                 </label>
               ))}
               <p className="help">
-                По умолчанию велосипед приватный. Включённые цены будут видны по
-                витрине и по публичной ссылке.
+                Новый велосипед виден на общей витрине. Включите приватность,
+                чтобы оставить его только для себя. Цены публикуются лишь с
+                вашего разрешения.
               </p>
             </div>
           </>
