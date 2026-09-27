@@ -38,9 +38,19 @@ test("messages: real SDK, two isolated sessions, DM delivery, mobile list and bo
     await page.goto("/messages?to=" + bob.id);
     const input = page.locator(".chat-conversation textarea").first();
     await expect(input).toBeVisible();
-    await expect(
-      page.locator(".chat-channels").getByRole("button", { name: /Chat Bob/ }),
-    ).toHaveCount(1);
+    // Mobile shows either the conversation or the list. Open the list before
+    // querying its accessible buttons, just as the user would.
+    if (isMobile)
+      await page.getByRole("button", { name: "К списку диалогов" }).click();
+    const dialog = page
+      .locator(".chat-channels")
+      .getByRole("button", { name: /Chat Bob/ });
+    await expect(dialog).toHaveCount(1);
+    await expect(dialog).toBeVisible();
+    if (isMobile) {
+      await dialog.click();
+      await expect(input).toBeVisible();
+    }
     await input.fill("Поедем кататься в субботу?");
     await input.press("Enter");
     await expect(
