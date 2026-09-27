@@ -45,6 +45,9 @@ test("admin publishes a shared animation switch, uploaded Rive, brand/favicon an
     ).toHaveCount(0);
     await page.getByLabel("Анимации главной для всех посетителей").check();
     await page
+      .getByLabel("Скорость Live и велосипедов, пикселей в секунду")
+      .fill("36");
+    await page
       .getByLabel("Файл: Анимация · слева от заголовка", { exact: true })
       .setInputFiles({
         name: "uploaded-bike.riv",
@@ -81,6 +84,9 @@ test("admin publishes a shared animation switch, uploaded Rive, brand/favicon an
     const logo = page.getByLabel("Знак ColaBike и favicon", { exact: true });
     await expect(logo).toHaveValue(/^[0-9a-f-]{36}$/);
     assets.push(await logo.inputValue());
+    await page
+      .getByLabel("Логотип вместо надписи ColaBike", { exact: true })
+      .selectOption(assets[1]);
     await page.getByRole("button", { name: "Сохранить", exact: true }).click();
     await expect(page.getByRole("status")).toContainText(
       "Настройки опубликованы",
@@ -98,7 +104,26 @@ test("admin publishes a shared animation switch, uploaded Rive, brand/favicon an
       path: info.outputPath("icon-colors.png"),
       fullPage: true,
     });
+    await nav.getByRole("button", { name: "Тексты", exact: true }).click();
+    await page
+      .getByLabel("Подпись ссылки авторов графики")
+      .fill("Художники сообщества");
+    await page.getByLabel("Ссылка авторов графики").fill("/about");
+    await expect(page.getByLabel("Отмена", { exact: true })).toHaveCount(0);
+    await page.getByRole("button", { name: "Сохранить", exact: true }).click();
+    await expect(page.getByRole("status")).toContainText(
+      "Настройки опубликованы",
+    );
     await page.goto("/");
+    await expect(page.locator(".brand > img")).toHaveAttribute(
+      "src",
+      "/api/assets/" + assets[1],
+    );
+    await expect(
+      page
+        .locator("footer")
+        .getByRole("link", { name: "Художники сообщества" }),
+    ).toHaveAttribute("href", "/about");
     await expect(page.locator(".brand-mark img")).toHaveAttribute(
       "src",
       "/api/assets/" + assets[1],
@@ -169,7 +194,7 @@ test("admin publishes a shared animation switch, uploaded Rive, brand/favicon an
   }
 });
 
-test("popular carousel stays on one row and scrolls with buttons, keyboard, scrubber and mouse drag", async ({
+test("popular carousel stays on one row and scrolls with buttons, keyboard, a single native scrollbar and mouse drag", async ({
   page,
   isMobile,
 }, info) => {
@@ -211,14 +236,9 @@ test("popular carousel stays on one row and scrolls with buttons, keyboard, scru
     .poll(() => rail.evaluate((e) => e.scrollLeft))
     .toBeGreaterThan(100);
   await page.emulateMedia({ reducedMotion: "reduce" });
-  const slider = region.getByRole("slider", {
-    name: "Позиция в популярных велосипедах",
-  });
-  await slider.focus();
-  await slider.press("End");
-  await expect
-    .poll(async () => Number(await slider.inputValue()))
-    .toBeGreaterThan(99);
+  await expect(region.getByRole("slider")).toHaveCount(0);
+  await rail.focus();
+  await rail.press("End");
   await expect
     .poll(() =>
       rail.evaluate((e) => e.scrollWidth - e.clientWidth - e.scrollLeft),
@@ -295,4 +315,159 @@ test("primary menu opens on hover, crosses panels and preserves keyboard and tou
   await expect(bikes.locator(".nav-popover")).toBeVisible();
   await bikes.locator(".nav-popover a").first().click();
   await expect(page).toHaveURL(/\/bikes/);
+});
+
+test("Live and popular bikes share speed and pause, with reduced motion respected", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1000, height: 1800 });
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.route("**/api/discovery/home", (route) =>
+    route.fulfill({
+      json: {
+        popular: Array.from({ length: 8 }, (_, i) => ({
+          id: "auto-" + i,
+          share_id: "auto-" + i,
+          name: "Automatic bike " + i,
+          category: "road",
+          photos: [],
+          author: { name: "Rider", username: "auto-rider" },
+          likes: 0,
+          is_public: true,
+        })),
+        events: Array.from({ length: 12 }, (_, i) => ({
+          id: "event-" + i,
+          type: "bike",
+          title: "Длинная история велосипеда " + i,
+          author: "Rider",
+          href: "/b/auto-" + i,
+        })),
+        content: [],
+        records: [],
+      },
+    }),
+  );
+  await page.goto("/");
+  const bikes = page.getByLabel(
+    "Велосипеды; используйте стрелки для прокрутки",
+    { exact: true },
+  );
+  const events = page.getByLabel("События; прокрутите, чтобы прочитать все", {
+    exact: true,
+  });
+  await expect
+    .poll(() => bikes.evaluate((e) => e.scrollLeft))
+    .toBeGreaterThan(5);
+  await expect
+    .poll(() => events.evaluate((e) => e.scrollLeft))
+    .toBeGreaterThan(5);
+  const offsets = () =>
+    page.evaluate(() =>
+      [
+        ...document.querySelectorAll(
+          '[aria-label="Велосипеды; используйте стрелки для прокрутки"], [aria-label="События; прокрутите, чтобы прочитать все"]',
+        ),
+      ].map((e) => e.scrollLeft),
+    );
+  const before = await offsets();
+  await expect
+    .poll(async () => (await offsets())[0] - before[0])
+    .toBeGreaterThan(20);
+  const after = await offsets();
+  expect(Math.abs(after[0] - before[0] - (after[1] - before[1]))).toBeLessThan(
+    5,
+  );
+  await page
+    .getByRole("button", { name: "Приостановить движение событий" })
+    .click();
+  const pause = await offsets();
+  await page.waitForTimeout(350);
+  expect(await offsets()).toEqual(pause);
+  await page
+    .getByRole("button", { name: "Продолжить движение событий" })
+    .click();
+  await expect
+    .poll(() => bikes.evaluate((e) => e.scrollLeft))
+    .toBeGreaterThan(pause[1] + 5);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.waitForTimeout(100);
+  const reduced = await offsets();
+  await page.waitForTimeout(350);
+  expect(await offsets()).toEqual(reduced);
+});
+
+test("hover preference inherits the site default and a member can override and reset it", async ({
+  page,
+  isMobile,
+}) => {
+  const db = new pg.Client({ connectionString: process.env.DATABASE_URL });
+  await db.connect();
+  const original = (
+    await db.query("SELECT value FROM site_settings WHERE id=1")
+  ).rows[0].value;
+  let user;
+  try {
+    await db.query(
+      "UPDATE site_settings SET value=value || '{\"menuOpenOnHover\":false}'::jsonb WHERE id=1",
+    );
+    const r = await registerVerified(page.request, {
+      headers: { origin },
+      data: {
+        ...testConsents,
+        name: "Menu member",
+        email: randomUUID() + "@menu.test",
+        password: "menu-preference-secret",
+      },
+    });
+    expect(r.status()).toBe(201);
+    user = (await (await page.request.get("/api/me")).json()).user;
+    await page.goto("/");
+    const bikes = page.locator('.primary-navigation [data-section="bikes"]');
+    if (!isMobile) {
+      await bikes.hover();
+      await expect(bikes.locator(".nav-popover")).toBeHidden();
+      await bikes.getByRole("button").click();
+      await expect(bikes.locator(".nav-popover")).toBeVisible();
+      await page.keyboard.press("Escape");
+    }
+    await page.goto("/account?tab=appearance");
+    const preference = page.getByLabel("Открывать меню при наведении", {
+      exact: true,
+    });
+    await expect(preference).toHaveValue("");
+    await preference.selectOption("true");
+    await page
+      .getByRole("button", { name: "Сохранить оформление", exact: true })
+      .click();
+    await expect
+      .poll(
+        async () =>
+          (await (await page.request.get("/api/me")).json()).user.preferences
+            .menuOpenOnHover,
+      )
+      .toBe(true);
+    await page.reload();
+    await expect(preference).toHaveValue("true");
+    if (!isMobile) {
+      await bikes.hover();
+      await expect(bikes.locator(".nav-popover")).toBeVisible();
+      await page.keyboard.press("Escape");
+    }
+    await preference.selectOption("");
+    await page
+      .getByRole("button", { name: "Сохранить оформление", exact: true })
+      .click();
+    await expect
+      .poll(async () =>
+        Object.hasOwn(
+          (await (await page.request.get("/api/me")).json()).user.preferences,
+          "menuOpenOnHover",
+        ),
+      )
+      .toBe(false);
+  } finally {
+    await db.query("UPDATE site_settings SET value=$1 WHERE id=1", [original]);
+    if (user) await db.query("DELETE FROM users WHERE id=$1", [user.id]);
+    await db.end();
+  }
 });

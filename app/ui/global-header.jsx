@@ -246,7 +246,17 @@ export default function GlobalHeader({
               <Bike size={18} strokeWidth={2} />
             )}
           </span>
-          <span>ColaBike</span>
+          {settings.brandLogoId ? (
+            <SmallImage
+              className={styles.wordmark}
+              src={"/api/assets/" + settings.brandLogoId}
+              alt="ColaBike"
+              priority
+              fallback="ColaBike"
+            />
+          ) : (
+            <span>ColaBike</span>
+          )}
         </Link>
         <div className="global-nav">
           <nav

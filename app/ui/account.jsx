@@ -406,6 +406,22 @@ function Appearance({ initial, onSaved }) {
         </select>
         <small>На сайте раскрыты на компьютере и свёрнуты на телефоне</small>
       </label>
+      <label className="field">
+        <span>Открывать меню при наведении</span>
+        <select
+          value={String(prefs.menuOpenOnHover ?? "")}
+          onChange={(e) =>
+            set(
+              "menuOpenOnHover",
+              e.target.value === "" ? "" : e.target.value === "true",
+            )
+          }
+        >
+          <option value="">Как на сайте</option>
+          <option value="true">Включено</option>
+          <option value="false">Выключено</option>
+        </select>
+      </label>
       <label className="setting-row">
         <span>Показывать пробег</span>
         <input

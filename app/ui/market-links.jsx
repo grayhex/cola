@@ -67,7 +67,7 @@ export default function MarketLinks({ form, initial, disabled, onChange }) {
             вручную. Новая модель при этом не создаётся.
           </p>
           {form[field] && (
-            <p>
+            <p className={styles.selectedModel} role="status">
               Выбрана модель:{" "}
               {selected ? (
                 <Link href={selected.path} target="_blank">
@@ -122,13 +122,18 @@ export default function MarketLinks({ form, initial, disabled, onChange }) {
               {error}
             </p>
           )}
-          {models && (
+          {(models || form[field]) && (
             <label className="field">
               <span>Модель каталога</span>
               <select
-                value=""
+                value={form[field] || ""}
                 onChange={(e) => {
-                  const m = models.items.find((v) => v.id === e.target.value);
+                  if (!e.target.value) {
+                    onChange(field, null);
+                    setSelected(null);
+                    return;
+                  }
+                  const m = models?.items.find((v) => v.id === e.target.value);
                   if (m) {
                     onChange(field, m.id);
                     setSelected(m);
@@ -136,18 +141,24 @@ export default function MarketLinks({ form, initial, disabled, onChange }) {
                 }}
               >
                 <option value="">
-                  {models.items.length
+                  {models?.items.length
                     ? "Выберите модель"
                     : "Модели не найдены"}
                 </option>
-                {models.items.map((m) => (
+                {form[field] &&
+                  !models?.items.some((m) => m.id === form[field]) && (
+                    <option value={form[field]}>
+                      {selected?.name || "Сохранённая модель"}
+                    </option>
+                  )}
+                {models?.items.map((m) => (
                   <option key={m.id} value={m.id}>
                     {component ? m.category + " · " : m.brand + " "}
                     {m.name}
                   </option>
                 ))}
               </select>
-              {models.total > models.items.length && (
+              {models && models.total > models.items.length && (
                 <small>
                   Показаны первые {models.items.length} моделей. Уточните поиск.
                 </small>

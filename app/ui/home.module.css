@@ -142,12 +142,6 @@
 .track {
   display: flex;
   width: max-content;
-  animation: marquee var(--ticker-duration, 60s) linear infinite;
-}
-.track[data-paused="true"],
-.ticker:hover .track,
-.ticker:focus-within .track {
-  animation-play-state: paused;
 }
 .tickerList {
   display: flex;
@@ -186,12 +180,6 @@
 .pause:hover {
   box-shadow: var(--shadow-inner);
 }
-@keyframes marquee {
-  to {
-    transform: translateX(-50%);
-  }
-}
-
 /* Working sections. */
 .sections {
   padding-top: var(--space-10);
@@ -360,9 +348,9 @@
     overflow-x: auto;
     scrollbar-width: none;
   }
-  .tickerList[aria-hidden="true"],
   .pause {
-    display: none;
+    width: 44px;
+    height: 44px;
   }
   .about {
     flex-wrap: wrap;

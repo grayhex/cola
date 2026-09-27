@@ -714,8 +714,30 @@ export default function Admin() {
           {tab === "copy" && (
             <section className="admin-panel">
               <p>
-                Заголовки, подписи, кнопки и подсказки сайта. Пользовательские
-                названия велосипедов и деталей здесь не меняются.
+                Заголовки и пояснения сайта. Системные действия и сообщения не
+                настраиваются. Пользовательские названия велосипедов и деталей
+                здесь не меняются.
+              </p>
+              <Field label="Подпись ссылки авторов графики">
+                <input
+                  maxLength={80}
+                  value={draft.graphicsCreditsLabel}
+                  onChange={(e) =>
+                    update("graphicsCreditsLabel", e.target.value)
+                  }
+                />
+              </Field>
+              <Field label="Ссылка авторов графики">
+                <input
+                  placeholder="https://… или /страница"
+                  value={draft.graphicsCreditsUrl}
+                  onChange={(e) => update("graphicsCreditsUrl", e.target.value)}
+                />
+              </Field>
+              <p className="help">
+                Без ссылки подпись раскрывает встроенные сведения об авторах.
+                Лицензии используемой графики остаются доступны рядом с
+                версиями.
               </p>
               <WizardCopy settings={draft} onChange={update} />
               <label className="search admin-search">
