@@ -225,6 +225,51 @@ test("component gallery and discussion: private owner, upload, originals, captio
       await expect(gallery.locator("figure")).toHaveCount(2);
       for (const width of isMobile ? [390, 360] : [1440, 390]) {
         await page.setViewportSize({ width, height: 900 });
+        await gallery.scrollIntoViewIfNeeded();
+        await expect
+          .poll(() =>
+            gallery
+              .locator("figure img")
+              .evaluateAll((images) =>
+                images.every(
+                  (image) => image.complete && image.naturalWidth > 0,
+                ),
+              ),
+          )
+          .toBe(true);
+        // Portraits must fit above the caption, not paint over the next card or upload form.
+        const previews = await gallery.locator("figure").evaluateAll((photos) =>
+          photos.map((photo) => {
+            const image = photo.querySelector("img");
+            const frame = image.closest("button").parentElement;
+            return {
+              image: image.getBoundingClientRect().toJSON(),
+              frame: frame.getBoundingClientRect().toJSON(),
+              captionTop: photo
+                .querySelector("figcaption")
+                .getBoundingClientRect().top,
+            };
+          }),
+        );
+        for (const preview of previews) {
+          expect(preview.image.width).toBeGreaterThan(0);
+          expect(preview.image.height).toBeGreaterThan(0);
+          expect(preview.image.top).toBeGreaterThanOrEqual(
+            preview.frame.top - 1,
+          );
+          expect(preview.image.left).toBeGreaterThanOrEqual(
+            preview.frame.left - 1,
+          );
+          expect(preview.image.right).toBeLessThanOrEqual(
+            preview.frame.right + 1,
+          );
+          expect(preview.image.bottom).toBeLessThanOrEqual(
+            preview.frame.bottom + 1,
+          );
+          expect(preview.image.bottom).toBeLessThanOrEqual(
+            preview.captionTop + 1,
+          );
+        }
         const overflow = await pageOverflow(page);
         expect(
           overflow,
