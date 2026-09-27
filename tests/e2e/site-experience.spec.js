@@ -431,7 +431,8 @@ test("hover preference inherits the site default and a member can override and r
       await page.keyboard.press("Escape");
     }
     await page.goto("/account?tab=appearance");
-    const preference = page.getByLabel("Открывать меню при наведении", {
+    const preference = page.getByRole("combobox", {
+      name: "Открывать меню при наведении",
       exact: true,
     });
     await expect(preference).toHaveValue("");

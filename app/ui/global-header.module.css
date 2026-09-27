@@ -535,7 +535,7 @@ dialog.drawer {
   object-fit: contain;
 }
 
-@media (min-width: 1101px) and (max-width: 1350px) {
+@media (min-width: 1280px) and (max-width: 1350px) {
   .header :global(.search-trigger) {
     width: 140px;
   }

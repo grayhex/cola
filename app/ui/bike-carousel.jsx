@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useId, useRef, useState } from "react";
+import { Children, useEffect, useId, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useAutoScroll } from "./use-auto-scroll.js";
 import { useReducedMotion } from "./motion.jsx";
@@ -19,6 +19,7 @@ export default function BikeCarousel({
   const [position, setPosition] = useState({ left: 0, max: 0 });
   const reduced = useReducedMotion();
   const id = useId();
+  const count = Children.count(children);
   useAutoScroll(rail, { speed, paused: paused || busy });
   function manual() {
     stop();
@@ -52,7 +53,7 @@ export default function BikeCarousel({
       cancelAnimationFrame(frame);
       stop();
     };
-  }, [children]);
+  }, [count]);
   useEffect(() => {
     if (reduced) stop();
   }, [reduced]);
