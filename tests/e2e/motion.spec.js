@@ -261,6 +261,7 @@ test("SVG map preview opens the ride, preserves attribution links and works with
   await expect(link).toBeVisible();
   await expect(card.locator('a[href*="openstreetmap"]')).not.toHaveCount(0);
   await expect(link.locator("a")).toHaveCount(0);
+  await expect(link.locator("image")).toHaveCount(0);
   await link.hover();
   const clock = await page.evaluate(() => performance.timeOrigin);
   await link.click();
@@ -270,6 +271,7 @@ test("SVG map preview opens the ride, preserves attribution links and works with
   await expect(
     page.locator(".ride-page .ride-route path").first(),
   ).toBeVisible();
+  await expect(page.locator(".ride-page .ride-route image")).toHaveCount(0);
   expect(await page.evaluate(() => performance.timeOrigin)).toBe(clock);
   await page.screenshot({
     path: info.outputPath("motion-ride-fallback.png"),

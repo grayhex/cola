@@ -69,6 +69,7 @@ export default function RideBasemap({
       >
         {visible &&
           showTiles &&
+          !failed &&
           viewport?.tiles.map((t) => (
             <image
               key={t.z + ":" + t.x + ":" + t.y}
