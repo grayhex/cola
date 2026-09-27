@@ -128,11 +128,13 @@ test("component photo search previews, confirms and publishes attributed local m
     ).toHaveCount(0);
     await expect(
       gallery
-        .locator("figure")
+        .getByRole("complementary", { name: "Действия и сведения о фото" })
         .getByText("Автор: Fixture author", { exact: true }),
     ).toBeVisible();
     await expect(
-      gallery.locator("figure").getByRole("link", { name: "CC BY-SA 4.0" }),
+      gallery
+        .getByRole("complementary", { name: "Действия и сведения о фото" })
+        .getByRole("link", { name: "CC BY-SA 4.0" }),
     ).toHaveAttribute(
       "href",
       "https://creativecommons.org/licenses/by-sa/4.0/",

@@ -53,3 +53,27 @@ export function scrollCarousel(element, target) {
     animation.stop();
   };
 }
+
+export function scrollPhotoCarousel(element, target) {
+  let active = true;
+  element.style.scrollSnapType = "none";
+  const style = getComputedStyle(element);
+  const animation = animate(element.scrollLeft, target, {
+    duration: parseFloat(style.getPropertyValue("--duration")) / 1000,
+    ease: style
+      .getPropertyValue("--ease-out")
+      .match(/[\d.]+/g)
+      .map(Number),
+    onUpdate(value) {
+      if (active) element.scrollLeft = value;
+    },
+    onComplete() {
+      if (active) element.style.scrollSnapType = "";
+    },
+  });
+  return () => {
+    active = false;
+    animation.stop();
+    element.style.scrollSnapType = "";
+  };
+}

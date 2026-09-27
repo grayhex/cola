@@ -1,11 +1,39 @@
 "use client";
 import Link from "next/link";
+import Image from "next/image";
+import { useState } from "react";
+import { Bike, ArrowUpRight } from "lucide-react";
 import { SocialHeader, SocialFooter } from "./social-primitives.jsx";
 import { useSite } from "./site-provider.jsx";
 import PartIcon from "./part-icon.jsx";
 import SiteIcon from "./site-icon.jsx";
 import { plural } from "../../lib/plural.js";
 import styles from "./component-catalog.module.css";
+import ComponentNavigation from "./component-navigation.jsx";
+import { componentNavigation } from "../../lib/component-navigation.js";
+import { SharedView } from "./motion.jsx";
+
+function ComponentCover({ model, icons }) {
+  const [failed, setFailed] = useState(false);
+  return (
+    <div className={styles.cover}>
+      {model.coverUrl && !failed ? (
+        <Image
+          width={640}
+          height={400}
+          unoptimized
+          src={model.coverUrl + "?width=640"}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          onError={() => setFailed(true)}
+        />
+      ) : (
+        <PartIcon category={model.category} icons={icons} size={64} />
+      )}
+    </div>
+  );
+}
 
 export default function ComponentCatalog({ data, filters }) {
   const { viewer, catalog } = useSite();
@@ -15,6 +43,10 @@ export default function ComponentCatalog({ data, filters }) {
       Object.entries({ ...filters, ...next }).filter(([, v]) => v !== ""),
     );
   const pages = Math.ceil(data.total / data.pageSize);
+  const groups = componentNavigation(catalog, [
+    ...data.categories,
+    filters.category,
+  ]);
   return (
     <>
       <SocialHeader user={viewer} />
@@ -29,6 +61,12 @@ export default function ComponentCatalog({ data, filters }) {
             </p>
           </div>
         </header>
+        <ComponentNavigation
+          key={filters.category}
+          catalog={catalog}
+          categories={data.categories}
+          selected={filters.category}
+        />
         <nav className="segmented" aria-label="Сортировка компонентов">
           <Link
             className={filters.sort === "popular" ? "active" : ""}
@@ -69,12 +107,12 @@ export default function ComponentCatalog({ data, filters }) {
               <span>Категория</span>
               <select name="category" defaultValue={filters.category}>
                 <option value="">Все категории</option>
-                {[
-                  ...new Set(
-                    [...data.categories, filters.category].filter(Boolean),
-                  ),
-                ].map((c) => (
-                  <option key={c}>{c}</option>
+                {groups.map((g) => (
+                  <optgroup key={g.id} label={g.name}>
+                    {g.categories.map((c) => (
+                      <option key={c}>{c}</option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
             </label>
@@ -112,20 +150,26 @@ export default function ComponentCatalog({ data, filters }) {
               <ul className={styles.grid}>
                 {data.items.map((m) => (
                   <li key={m.id} className={styles.card}>
-                    <PartIcon
-                      category={m.category}
+                    <ComponentCover
+                      key={m.coverUrl}
+                      model={m}
                       icons={catalog.icons}
-                      size={28}
                     />
-                    <div>
+                    <div className={styles.cardBody}>
                       <p className={styles.category}>
                         {m.category}
                         {m.brand ? " · " + m.brand : ""}
                       </p>
-                      <h2>
-                        <Link href={m.path}>{m.name}</Link>
-                      </h2>
+                      <SharedView kind="component" id={m.id}>
+                        <h2>
+                          <Link href={m.path}>
+                            {m.name}
+                            <ArrowUpRight size={16} aria-hidden="true" />
+                          </Link>
+                        </h2>
+                      </SharedView>
                       <p className={styles.count}>
+                        <Bike size={16} aria-hidden="true" />
                         {m.builds}{" "}
                         {plural(m.builds, "сборка", "сборки", "сборок")}
                       </p>

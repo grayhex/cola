@@ -139,6 +139,42 @@ test("component catalog: populated upgrade, variants, privacy, durable links and
       await componentModelAtPath(db, "седло", "secret-saddle-987"),
       null,
     );
+    const photo = async (modelId, authorId, sort = 0) => {
+      const photoId = randomUUID();
+      await db.query(
+        "INSERT INTO component_photos(id,model_id,author_id,filename,size_bytes,width,height,sort_order) VALUES($1::uuid,$2,$3,$1::text,10,800,600,$4)",
+        [photoId, modelId, authorId, sort],
+      );
+      return photoId;
+    };
+    const coverOf = async (modelId) =>
+      (await list()).items.find((m) => m.id === modelId)?.coverUrl;
+    assert.equal(await coverOf(id), null);
+    const fallbackPhoto = await photo(id, owner, 1),
+      coverPhoto = await photo(id, owner, 2);
+    await db.query(
+      "UPDATE component_models SET cover_photo_id=$2 WHERE id=$1",
+      [id, coverPhoto],
+    );
+    assert.equal(await coverOf(id), "/api/components/media/" + coverPhoto);
+    await db.query("UPDATE component_photos SET hidden=true WHERE id=$1", [
+      coverPhoto,
+    ]);
+    assert.equal(
+      await coverOf(id),
+      "/api/components/media/" + fallbackPhoto,
+      "hidden cover falls back to visible photo",
+    );
+    await db.query("UPDATE component_photos SET author_id=$2 WHERE id=$1", [
+      fallbackPhoto,
+      blocked,
+    ]);
+    assert.equal(
+      await coverOf(id),
+      null,
+      "blocked author cannot supply a public cover",
+    );
+    await db.query("DELETE FROM component_photos WHERE model_id=$1", [id]);
     const initial = await resolveComponentModel(db, id);
     assert.equal((await componentModelAtPath(db, "Седло", "Брукс C17")).id, id);
 
@@ -266,6 +302,12 @@ test("component catalog: populated upgrade, variants, privacy, durable links and
       ),
       /недоступна/,
     );
+    const mergedPhoto = await photo(beforeMerge.id, owner);
+    assert.equal(
+      await coverOf(target.id),
+      "/api/components/media/" + mergedPhoto,
+      "retained source photos supply the canonical model cover",
+    );
     // Merge the survivor again: all historical IDs resolve directly, no cycle/chain.
     await tx((q) =>
       mergeComponentModels(q, owner, target.id, {
@@ -375,7 +417,16 @@ test("component catalog: populated upgrade, variants, privacy, durable links and
       result.items.every(
         (m) =>
           Object.keys(m).sort().join() ===
-          ["id", "category", "brand", "name", "path", "builds", "firstPublicAt"]
+          [
+            "id",
+            "category",
+            "brand",
+            "name",
+            "path",
+            "builds",
+            "firstPublicAt",
+            "coverUrl",
+          ]
             .sort()
             .join(),
       ),

@@ -6,6 +6,10 @@ import BikeCard from "./bike-card.jsx";
 import BikeGrid from "./bike-grid.jsx";
 import JournalCard from "./journal-card.jsx";
 import { plural } from "../../lib/plural.js";
+import { Camera, Bike, MessageCircle, BookOpen } from "lucide-react";
+import { ComponentPath } from "./component-navigation.jsx";
+import { SharedView } from "./motion.jsx";
+import PartIcon from "./part-icon.jsx";
 import styles from "./experience-landing.module.css";
 import dynamic from "next/dynamic";
 const ComponentGallery = dynamic(() => import("./component-gallery.jsx"));
@@ -17,7 +21,7 @@ const count = (n, one, few, many) =>
 // A model or part page of owner experience (#74). The server passes the
 // public data; nothing here is fetched again.
 export default function ExperienceLanding({ data }) {
-  const { viewer: user } = useSite();
+  const { viewer: user, catalog } = useSite();
   const model = data.kind === "model";
   const facts = [
     count(data.builds, "сборка", "сборки", "сборок"),
@@ -43,7 +47,9 @@ export default function ExperienceLanding({ data }) {
   return (
     <>
       <SocialHeader user={user} />
-      <main className={`page experience-landing ${styles.page}`}>
+      <main
+        className={`page experience-landing ${styles.page} ${model ? "" : styles.componentPage}`}
+      >
         <header className={styles.head}>
           <p className={styles.eyebrow}>
             <Link href={model ? "/experience" : "/components"}>
@@ -51,7 +57,20 @@ export default function ExperienceLanding({ data }) {
             </Link>
             {model ? " · модель" : " · " + data.category}
           </p>
-          <h1>{data.title}</h1>
+          {model ? (
+            <h1>{data.title}</h1>
+          ) : (
+            <SharedView kind="component" id={data.id}>
+              <h1 className={styles.componentTitle}>
+                <PartIcon
+                  category={data.category}
+                  icons={catalog.icons}
+                  size={36}
+                />
+                {data.title}
+              </h1>
+            </SharedView>
+          )}
           {!model && data.brand && <p className="help">{data.brand}</p>}
           <ul className={styles.facts} aria-label="Коротко">
             {facts.map((fact) => (
@@ -63,7 +82,37 @@ export default function ExperienceLanding({ data }) {
             совместимости или безопасности.
           </p>
         </header>
+        {!model && (
+          <nav className={styles.sections} aria-label="Разделы компонента">
+            <a href="#component-photos">
+              <Camera size={16} />
+              Фото
+            </a>
+            <a href="#landing-bikes">
+              <Bike size={16} />
+              Велосипеды<span className="count">{data.builds}</span>
+            </a>
+            {data.entries.length > 0 && (
+              <a href="#landing-journal">
+                <BookOpen size={16} />
+                Журнал
+              </a>
+            )}
+            <a href="#component-discussion">
+              <MessageCircle size={16} />
+              Обсуждение
+            </a>
+          </nav>
+        )}
         {!model && <ComponentGallery model={data} user={user} />}
+        {!model && (
+          <ComponentPath
+            category={data.category}
+            name={data.title}
+            path={data.path}
+            catalog={catalog}
+          />
+        )}
         {model && data.parts.length > 0 && (
           <section className={styles.section} aria-labelledby="landing-parts">
             <h2 id="landing-parts">Частые детали в этих сборках</h2>
@@ -99,23 +148,19 @@ export default function ExperienceLanding({ data }) {
             </ul>
           </section>
         )}
-        {!model && data.models.length > 0 && (
-          <section className={styles.section} aria-labelledby="landing-models">
-            <h2 id="landing-models">На каких моделях стоит</h2>
-            <ul className={styles.links}>
-              {data.models.map((m) => (
-                <li key={m.brand + m.model}>
-                  <Link href={m.path}>
-                    {m.brand} {m.model}
-                  </Link>
-                  <span>{count(m.builds, "сборка", "сборки", "сборок")}</span>
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
         <section className={styles.section} aria-labelledby="landing-bikes">
-          <h2 id="landing-bikes">Сборки владельцев</h2>
+          <h2 id="landing-bikes">
+            {model ? "Сборки владельцев" : "Велосипеды с этим компонентом"}
+          </h2>
+          {!model && data.models.length > 0 && (
+            <nav className={styles.modelLinks} aria-label="Модели велосипедов">
+              {data.models.map((bikeModel) => (
+                <Link key={bikeModel.path} href={bikeModel.path}>
+                  {bikeModel.brand} {bikeModel.model}
+                </Link>
+              ))}
+            </nav>
+          )}
           {!data.bikes.length && (
             <p className="help">
               Пока нет публичных сборок с этой моделью. Страница остаётся в
@@ -158,12 +203,14 @@ export default function ExperienceLanding({ data }) {
           </Link>
         </p>
         {!model && (
-          <Discussion
-            key={data.id}
-            bike={data}
-            user={user}
-            entityType="component"
-          />
+          <div id="component-discussion">
+            <Discussion
+              key={data.id}
+              bike={data}
+              user={user}
+              entityType="component"
+            />
+          </div>
         )}
       </main>
       <SocialFooter />
