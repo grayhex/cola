@@ -50,6 +50,12 @@ export default function BikeCarousel({ children, busy }) {
     target = Math.max(0, Math.min(node.scrollWidth - node.clientWidth, target));
     if (reduced || !animate) {
       node.scrollLeft = target;
+      // A controlled range must commit its value in the input event. Waiting
+      // for scroll/rAF lets React restore the old value before native change.
+      setPosition({
+        left: node.scrollLeft,
+        max: Math.max(0, node.scrollWidth - node.clientWidth),
+      });
       return;
     }
     const token = sequence.current;

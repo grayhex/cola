@@ -135,3 +135,17 @@ a.logo:hover img {
     transform: translateX(50%);
   }
 }
+/* Closed details must not retain measurable links in WebKit's layout tree. */
+.credits:not([open]) p {
+  display: none;
+}
+@media (pointer: coarse), (max-width: 700px) {
+  .credits summary {
+    min-height: 44px;
+  }
+  .credits a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+}

@@ -399,10 +399,13 @@ test("OSM thumbnails with Yandex setting, bounded design headings, SVG themes an
       "ColaBike 1.2.test · Парсер 3.4.test",
     );
     for (const theme of ["light", "dark"]) {
-      await page.evaluate((v) => {
-        document.documentElement.dataset.theme = v;
-        localStorage.setItem("cola:theme", v);
-      }, theme);
+      const toggle = page.getByRole("switch", { name: "Тёмная тема" });
+      await expect(toggle).toBeEnabled();
+      if (
+        (await toggle.getAttribute("aria-checked")) !== String(theme === "dark")
+      )
+        await toggle.click();
+      await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
       if (!isMobile) {
         const visible = page.locator("[data-hero-animation] img:visible");
         await expect(visible).toHaveCount(1);

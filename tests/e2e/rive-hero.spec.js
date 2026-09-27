@@ -22,10 +22,10 @@ test.afterAll(async () => db.end());
 const small = '[data-rive-art="transparent-bike"]';
 const large = '[data-rive-art="riding-bike"]';
 async function theme(page, value) {
-  await page.addInitScript(
-    (theme) => localStorage.setItem("cola:theme", theme),
-    value,
-  );
+  await page.addInitScript((theme) => {
+    if (!localStorage.getItem("cola:theme"))
+      localStorage.setItem("cola:theme", theme);
+  }, value);
 }
 async function posters(page, value) {
   const image = page.locator(`${small} img[src$="-${value}.png"]`);

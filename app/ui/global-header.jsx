@@ -254,15 +254,6 @@ export default function GlobalHeader({
             className="primary-navigation"
             aria-label="Основная навигация"
           >
-            <span
-              className={styles.menuIndicator}
-              aria-hidden="true"
-              style={{
-                opacity: indicator ? 1 : 0,
-                width: indicator?.width || 0,
-                transform: `translateX(${indicator?.left || 0}px)`,
-              }}
-            />
             {sections.map((section) =>
               section.id === "about" ? (
                 <Link
@@ -316,6 +307,15 @@ export default function GlobalHeader({
                 </NavPopover>
               ),
             )}
+            <span
+              className={styles.menuIndicator}
+              aria-hidden="true"
+              style={{
+                opacity: indicator ? 1 : 0,
+                width: indicator?.width || 0,
+                transform: `translateX(${indicator?.left || 0}px)`,
+              }}
+            />
           </nav>
           <div className="nav-utilities">
             <GlobalSearch />

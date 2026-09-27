@@ -219,6 +219,11 @@ test("popular carousel stays on one row and scrolls with buttons, keyboard, scru
   await expect
     .poll(async () => Number(await slider.inputValue()))
     .toBeGreaterThan(99);
+  await expect
+    .poll(() =>
+      rail.evaluate((e) => e.scrollWidth - e.clientWidth - e.scrollLeft),
+    )
+    .toBeLessThan(2);
   await rail.focus();
   await rail.press("Home");
   await expect.poll(() => rail.evaluate((e) => e.scrollLeft)).toBeLessThan(1);
@@ -269,6 +274,14 @@ test("primary menu opens on hover, crosses panels and preserves keyboard and tou
   await rides.hover();
   await expect(bikes.locator(".nav-popover")).toBeHidden();
   await expect(rides.locator(".nav-popover")).toBeVisible();
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await expect
+    .poll(() =>
+      rides
+        .locator(".nav-popover")
+        .evaluate((e) => getComputedStyle(e).opacity),
+    )
+    .toBe("1");
   await rides.locator(".nav-popover a").first().hover();
   await expect(rides.locator(".nav-popover")).toBeVisible();
   await page.keyboard.press("Escape");

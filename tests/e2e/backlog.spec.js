@@ -205,6 +205,14 @@ test("account SPA opens the three-step wizard repeatedly; only explicit X can di
     c({ uses: ["commuting", "touring", "bikepacking"] }),
   );
   expect(native).toEqual([]);
+  // This fixture is now public by default, so do not leak it into the following global filter scenario.
+  expect(
+    (
+      await page.request.delete("/api/bikes/" + bikes[0].id, {
+        headers: { origin },
+      })
+    ).status(),
+  ).toBe(200);
 });
 
 test("journal menu offers only owned bikes and retains text when changing the selected bike", async ({
