@@ -202,6 +202,10 @@ jobs:
           tags: cola-ci-resolver:${{ needs.prepare.outputs.sha }}
           cache-from: type=gha,scope=cola-resolver
           cache-to: type=gha,scope=cola-resolver,mode=max
+      - name: Shared ops image cold-start contract
+        env:
+          COLA_TEST_OPS_IMAGE: cola-ci-ops:${{ needs.prepare.outputs.sha }}
+        run: bash scripts/test-shared-ops.sh
       - name: Final-image migrations, runtime and backup restore drill
         env:
           COLA_TEST_OPS_IMAGE: cola-ci-ops:${{ needs.prepare.outputs.sha }}

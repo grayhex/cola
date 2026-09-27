@@ -39,6 +39,12 @@ Browser artifacts разделены по проекту/attempt и хранят
 
 `deploy` из [deploy.yml](../../.github/workflows/deploy.yml) работает на `ubuntu-latest`, без runner на VPS. Автоматический путь принимает только успешный `CI · ColaBike` для события `push` в `main` этого репозитория. Ручной запуск доступен для `main` и сначала повторяет тот же CI через `verify-manual`. Deploy-job сам не делает checkout или сборку: он передаёт `TARGET_SHA` по SSH.
 
+Бюджет deploy-job — 40 минут, SSH-step — 38 минут; остаток оставлен для удаления
+ключа и завершения job. Это отдельный бюджет холодной сборки на VPS, а не изменение
+лимитов или обязательных проверок CI. Compose по-прежнему ждёт healthchecks до
+180 секунд после сборки. Причина изменения и действия после timeout описаны в
+[runbook](deployment.md#таймаут-deploy-90).
+
 Job использует environment `production` и его secrets: `DEPLOY_SSH_KEY`, `DEPLOY_KNOWN_HOSTS`, `DEPLOY_HOST`, `DEPLOY_PORT` (если не задан — порт 22). Соединение идёт пользователем `deploy` с `StrictHostKeyChecking=yes`; значения секретов в репозитории не хранятся. Ограничение environment веткой `main` настраивается отдельно в GitHub. Установка и назначение каждого секрета — в [deployment](deployment.md#ssh-доступ-для-github-actions).
 
 Оператор устанавливает [ops/deploy-cola-ssh](../../ops/deploy-cola-ssh) и [ops/deploy-cola](../../ops/deploy-cola) в `/usr/local/sbin` с root ownership. Forced-command из `authorized_keys` проверяет полный SHA из `SSH_ORIGINAL_COMMAND` и вызывает `sudo -n /usr/local/sbin/deploy-cola`. Git выполняется от владельца `/opt/stacks/cola` с read-only SSH deploy key, сборка образов и Docker — wrapper от root на VPS. Concurrency group `cola-production` сериализует выкладки; это имя группы, не label runner.
