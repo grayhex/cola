@@ -17,12 +17,11 @@ import GlobalHeader from "./global-header.jsx";
 import { SocialFooter } from "./social-primitives.jsx";
 import { useSite } from "./site-provider.jsx";
 import BikeCard from "./bike-card.jsx";
+import BikeCarousel from "./bike-carousel.jsx";
 import { ContentTypeLabel } from "./content-label.jsx";
 import labelStyles from "./content-label.module.css";
 import SearchBox from "./search-box.jsx";
-import RiveArt from "./rive-art.jsx";
-import { useReducedMotion } from "./motion.jsx";
-import SmallImage from "./small-image.jsx";
+import HeroArtwork from "./hero-artwork.jsx";
 import styles from "./home.module.css";
 import { profilePath, publicPath } from "../../lib/public-urls.js";
 import { metricValue } from "../../lib/game-metrics.js";
@@ -119,8 +118,9 @@ export function ActivityTicker({ events = [] }) {
     </section>
   );
 }
-// Photo-first cards: three per row on desktop, two on tablets and phones.
-const trendingSizes = "(max-width: 1050px) 50vw, 400px";
+// One row: a glimpse of the next card makes horizontal scrolling discoverable.
+const trendingSizes =
+  "(max-width: 600px) 82vw, (max-width: 1050px) 50vw, 400px";
 // A record is held by a bike, a ride or a rider (#106).
 function recordHolder(holder) {
   if (holder.kind === "ride") return [publicPath("ride", holder), holder.name];
@@ -155,9 +155,6 @@ export default function Home() {
       });
     return () => controller.abort();
   }, [revision]);
-  const [artPlaying, setArtPlaying] = useState(false);
-  const reducedMotion = useReducedMotion();
-  const riveHero = settings.heroGraphicMode !== "custom";
   const content = data || emptyData;
   return (
     <>
@@ -181,30 +178,17 @@ export default function Home() {
             <div className={styles.heroContent}>
               <div className={styles.heroCopy}>
                 <div className={styles.heroTitle}>
-                  {!riveHero && (
-                    <SmallImage
-                      src={
-                        settings.heroImageId
-                          ? "/api/assets/" + settings.heroImageId
-                          : null
-                      }
-                      className={styles.heroImage}
-                      alt=""
-                      priority
-                    />
-                  )}
+                  <HeroArtwork
+                    animation={settings.heroTitleAnimation}
+                    imageId={settings.heroImageId}
+                    playing={settings.heroAnimationsEnabled}
+                    compact
+                  />
                   <h1 id="hero-title">
                     {settings.heroHeadline.split("\n").map((line, i) => (
                       <span key={i}>{line}</span>
                     ))}
                   </h1>
-                  {riveHero && (
-                    <RiveArt
-                      name="transparent-bike"
-                      compact
-                      playing={artPlaying}
-                    />
-                  )}
                 </div>
                 <p className={styles.description}>{settings.heroDescription}</p>
                 <div className={styles.heroSearch} data-home-search>
@@ -222,78 +206,18 @@ export default function Home() {
                     добавить свой
                   </Link>
                 </div>
-                {riveHero && (
-                  <div className={styles.artControls}>
-                    {!reducedMotion && (
-                      <button
-                        type="button"
-                        className="text-link"
-                        aria-pressed={artPlaying}
-                        onClick={() => setArtPlaying((value) => !value)}
-                      >
-                        {artPlaying ? (
-                          <Pause size={14} aria-hidden="true" />
-                        ) : (
-                          <Play size={14} aria-hidden="true" />
-                        )}
-                        {artPlaying
-                          ? "Остановить анимацию"
-                          : "Оживить велосипеды"}
-                      </button>
-                    )}
-                    <details>
-                      <summary>Авторы графики</summary>
-                      <p>
-                        <a href="https://rive.app/marketplace/2008-3976-riding-bike/">
-                          Riding Bike — rahiqueo
-                        </a>
-                        ;{" "}
-                        <a href="https://rive.app/marketplace/9084-17312-transparent-bike-animation/">
-                          Transparent Bike Animation — lorins
-                        </a>
-                        , на основе{" "}
-                        <a href="https://rive.app/marketplace/3256-6872-bike-icon/">
-                          Bike Icon — JcToon
-                        </a>
-                        .{" "}
-                        <a href="https://creativecommons.org/licenses/by/4.0/">
-                          CC BY 4.0
-                        </a>
-                        . Палитра адаптирована для ColaBike, фон второй анимации
-                        убран.
-                      </p>
-                    </details>
-                  </div>
-                )}
               </div>
               <div
                 className={styles.animationStage}
                 data-hero-animation
                 aria-hidden="true"
               >
-                {riveHero && (
-                  <RiveArt name="riding-bike" playing={artPlaying} />
-                )}
-                {!riveHero && settings.heroAnimationLightId && (
-                  <img
-                    className={styles.animationLight}
-                    src={"/api/assets/" + settings.heroAnimationLightId}
-                    alt=""
-                  />
-                )}
-                {!riveHero &&
-                  (settings.heroAnimationDarkId ||
-                    settings.heroAnimationLightId) && (
-                    <img
-                      className={styles.animationDark}
-                      src={
-                        "/api/assets/" +
-                        (settings.heroAnimationDarkId ||
-                          settings.heroAnimationLightId)
-                      }
-                      alt=""
-                    />
-                  )}
+                <HeroArtwork
+                  animation={settings.heroStageAnimation}
+                  darkAnimation={settings.heroStageDarkAnimation}
+                  imageId={settings.heroStageImageId}
+                  playing={settings.heroAnimationsEnabled}
+                />
                 <span className={styles.stageLabel}>colabike / в движении</span>
               </div>
             </div>
@@ -319,7 +243,7 @@ export default function Home() {
                 Все велосипеды <ArrowRight size={14} />
               </Link>
             </div>
-            <div className={styles.trending} aria-busy={!data && !error}>
+            <BikeCarousel busy={!data && !error}>
               {content.popular.map((b) => (
                 <BikeCard
                   key={b.id}
@@ -338,7 +262,7 @@ export default function Home() {
                     aria-hidden="true"
                   />
                 ))}
-            </div>
+            </BikeCarousel>
             {data && !content.popular.length && (
               <p className="empty-state">
                 Пока нет публичных велосипедов. Ваш может стать первым.

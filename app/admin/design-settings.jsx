@@ -1,6 +1,7 @@
 "use client";
 import { accentText } from "../../lib/appearance.js";
 import AssetPicker from "./asset-picker.jsx";
+import AnimationPicker from "./animation-picker.jsx";
 import { Field, Select } from "./design-controls.jsx";
 import styles from "./design.module.css";
 
@@ -112,46 +113,65 @@ export function HomepageSettings({
   return (
     <section className={"admin-panel " + styles.compactPanel}>
       <h2>Главная страница</h2>
-      <Select
-        label="Графика главного блока"
-        value={s.heroGraphicMode || "rive"}
-        onChange={(v) => onChange("heroGraphicMode", v)}
-        options={[
-          ["rive", "Велосипедисты ColaBike"],
-          ["custom", "Свои изображения"],
-        ]}
-      />
-      <p className="muted">
-        Велосипедисты учитывают тему сайта. Сохранённые ниже изображения
-        используются в режиме «Свои изображения».
+      <label className="setting-row">
+        Анимации главной для всех посетителей
+        <input
+          type="checkbox"
+          checked={!!s.heroAnimationsEnabled}
+          onChange={(e) => onChange("heroAnimationsEnabled", e.target.checked)}
+        />
+      </label>
+      <p className="help">
+        При выключении остаются изображения. Настройка «Уменьшение движения» на
+        устройстве посетителя всегда имеет приоритет.
       </p>
       <div className={styles.graphicGrid}>
         {[
-          ["heroAnimationLightId", "Анимация · светлая тема"],
-          ["heroAnimationDarkId", "Анимация · тёмная тема"],
-        ].map(([key, label]) => (
-          <AssetPicker
-            key={key}
-            label={label}
-            help="Локальный SVG-файл с CSS/SMIL-анимацией · до 1 МБ. Встроенные PNG/JPEG/WebP поддерживаются; внешние файлы и Lottie JSON не поддерживаются."
-            value={s[key]}
-            assets={assets}
-            busy={busy}
-            compact
-            accept=".svg,image/svg+xml"
-            emptyLabel={
-              key === "heroAnimationDarkId"
-                ? "Как в светлой теме"
-                : "Без анимации"
-            }
-            onChange={(v) => onChange(key, v)}
-            onUpload={async (file) => {
-              const asset = await onUpload(file, { target: "setting", key });
-              if (asset) onChange(key, asset.id);
-            }}
-          />
+          ["Слева от заголовка", "heroImageId", "heroTitleAnimation"],
+          ["Справа от поиска", "heroStageImageId", "heroStageAnimation"],
+        ].map(([title, imageKey, animationKey]) => (
+          <fieldset key={imageKey} className={styles.compactPanel}>
+            <legend>{title}</legend>
+            <AssetPicker
+              compact
+              label={"Изображение · " + title.toLowerCase()}
+              help="PNG, JPEG, WebP. Видно, когда анимация выключена или недоступна."
+              value={s[imageKey]}
+              assets={assets.filter((asset) => asset.format === "image")}
+              busy={busy}
+              emptyLabel="Без изображения"
+              onChange={(id) => onChange(imageKey, id)}
+              onUpload={async (file) => {
+                const asset = await onUpload(file);
+                if (asset) onChange(imageKey, asset.id);
+              }}
+            />
+            <AnimationPicker
+              label={"Анимация · " + title.toLowerCase()}
+              value={s[animationKey]}
+              assets={assets}
+              busy={busy}
+              onChange={(value) => onChange(animationKey, value)}
+              onUpload={onUpload}
+            />
+          </fieldset>
         ))}
       </div>
+      <details>
+        <summary>Другая анимация справа для тёмной темы</summary>
+        <AnimationPicker
+          label="Анимация · тёмная тема"
+          value={s.heroStageDarkAnimation}
+          assets={assets}
+          busy={busy}
+          onChange={(value) => onChange("heroStageDarkAnimation", value)}
+          onUpload={onUpload}
+        />
+        <p className="help">
+          Если не выбрана, используется основная. Встроенные сцены меняют
+          палитру автоматически.
+        </p>
+      </details>
       <Select
         label="Фон блока"
         value={s.heroBackgroundMode}
@@ -177,24 +197,6 @@ export function HomepageSettings({
           ))}
         </div>
       )}
-      <AssetPicker
-        label="Hero image"
-        help="PNG или WebP с прозрачным фоном. Рекомендуется 320 × 320 px. Одно изображение для обеих тем."
-        value={s.heroImageId}
-        assets={assets}
-        busy={busy}
-        emptyLabel="Нейтральный значок"
-        compact
-        accept="image/png,image/webp"
-        onChange={(v) => onChange("heroImageId", v)}
-        onUpload={async (file) => {
-          const asset = await onUpload(file, {
-            target: "setting",
-            key: "heroImageId",
-          });
-          if (asset) onChange("heroImageId", asset.id);
-        }}
-      />
       <Field
         label="Заголовок hero"
         help="Перенос строки разделяет две строки заголовка."

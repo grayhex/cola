@@ -93,7 +93,15 @@ const planned = await call("rides/plan", "POST", {
 assert.equal(planned.status, 201, "unverified private ride planning");
 const rideId = planned.body.id;
 
+const defaultPublicBike = { ...bike };
+delete defaultPublicBike.is_public;
 const rejected = [
+  ["bikes", "POST", defaultPublicBike],
+  [
+    "bikes/wizard",
+    "POST",
+    { requestId: randomUUID(), bike: defaultPublicBike, components: [] },
+  ],
   ["bikes", "POST", { ...bike, is_public: true }],
   [
     "bikes/wizard",

@@ -52,7 +52,7 @@ export default function MediaLibrary({
           <h2>Медиатека сайта</h2>
           <p className="help">
             Всего: {assets.length} · Не используются: {unused.length}. JPEG,
-            PNG, WebP до 10 МБ; файлы публичны.
+            PNG, WebP до 10 МБ; SVG и Rive до 1 МБ. Файлы публичны.
           </p>
         </div>
         <div className={styles.actions}>
@@ -80,7 +80,7 @@ export default function MediaLibrary({
         ref={file}
         hidden
         type="file"
-        accept="image/jpeg,image/png,image/webp"
+        accept="image/jpeg,image/png,image/webp,image/svg+xml,.riv"
         disabled={busy}
         aria-label="Загрузить файл в медиатеку"
         onChange={(e) => {
@@ -129,13 +129,17 @@ export default function MediaLibrary({
                 rel="noreferrer"
                 aria-label={"Открыть оригинал: " + asset.name}
               >
-                <img
-                  src={"/api/assets/" + asset.id}
-                  width="48"
-                  height="48"
-                  loading="lazy"
-                  alt=""
-                />
+                {asset.format === "rive" ? (
+                  <span>Rive</span>
+                ) : (
+                  <img
+                    src={"/api/assets/" + asset.id}
+                    width="48"
+                    height="48"
+                    loading="lazy"
+                    alt=""
+                  />
+                )}
               </a>
               <div className={styles.mediaInfo}>
                 <strong title={asset.name}>{asset.name}</strong>

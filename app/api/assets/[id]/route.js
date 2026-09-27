@@ -39,9 +39,11 @@ export const GET = traced(async (req, { params }) => {
       etag,
       {
         cache: immutableMediaCache,
-        contentType: rows[0].filename.endsWith(".svg")
-          ? "image/svg+xml"
-          : "image/webp",
+        contentType: rows[0].filename.endsWith(".riv")
+          ? "application/octet-stream"
+          : rows[0].filename.endsWith(".svg")
+            ? "image/svg+xml"
+            : "image/webp",
         headers,
       },
     );

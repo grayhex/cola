@@ -327,9 +327,9 @@ test("OSM thumbnails with Yandex setting, bounded design headings, SVG themes an
     const updated = {
       ...old,
       map: { ...old.map, provider: "yandex", publicKey: "test-browser-key" },
-      heroGraphicMode: "custom",
-      heroAnimationLightId: ids[0],
-      heroAnimationDarkId: ids[1],
+      heroAnimationsEnabled: true,
+      heroStageAnimation: { kind: "svg", assetId: ids[0] },
+      heroStageDarkAnimation: { kind: "svg", assetId: ids[1] },
       heroBackgroundLight: "#f1f7ee",
       heroBackgroundDark: "#202830",
       appVersionLabel: "1.2.test",

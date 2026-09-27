@@ -18,7 +18,7 @@
   position: absolute;
   inset: 0;
 }
-.compact .art {
+.art[data-crop] {
   /* The source has a generous 500px artboard around a 135px icon. */
   inset: auto;
   top: 50%;
@@ -60,4 +60,22 @@
     width: var(--space-16);
     height: var(--space-16);
   }
+}
+
+.poster,
+.svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+span.poster {
+  display: grid;
+  place-items: center;
+  color: var(--text-muted);
+}
+.stage:has(.canvas[data-rive-ready]) > .poster,
+.compact:has(.canvas[data-rive-ready]) > .poster {
+  visibility: hidden;
 }

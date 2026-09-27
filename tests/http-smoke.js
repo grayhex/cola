@@ -54,6 +54,7 @@ try {
   );
   const b = {
     name: "Smoke bike",
+    is_public: false, // This scenario verifies private media, then explicit publication.
     brand: "Canyon",
     model: "Grizl",
     year: 2025,

@@ -7,7 +7,7 @@ import AchievementArt from "./achievement-art.jsx";
 import { metricValue } from "../../lib/game-metrics.js";
 // Records held now and awards kept for good, as two separate blocks (#106):
 // on the bike page, in a profile and in the account.
-export function BadgeShelf({ endpoint, account = false }) {
+export function BadgeShelf({ endpoint, account = false, prominent = false }) {
   const [data, setData] = useState(null),
     [error, setError] = useState("");
   const id = useId();
@@ -49,14 +49,18 @@ export function BadgeShelf({ endpoint, account = false }) {
           new Date(a.awardedAt).toLocaleDateString("ru-RU")
         }
       >
-        <AchievementArt imageId={a.imageId} kind="achievement" size={24} />
+        <AchievementArt
+          imageId={a.imageId}
+          kind="achievement"
+          size={prominent ? 56 : 24}
+        />
         <span>{a.name}</span>
       </span>
     );
   }
   const awards = account ? data.awards : data.awards.slice(0, 4);
   return (
-    <div className="game-shelves">
+    <div className={"game-shelves" + (prominent ? " profile-awards" : "")}>
       <section className="badge-shelf" aria-labelledby={id + "-records"}>
         <h3 id={id + "-records"}>Рекорды</h3>
         {data.records.length ? (
@@ -68,7 +72,10 @@ export function BadgeShelf({ endpoint, account = false }) {
                 key={r.key}
                 title={r.description}
               >
-                <AchievementArt imageId={r.imageId} size={24} />
+                <AchievementArt
+                  imageId={r.imageId}
+                  size={prominent ? 56 : 24}
+                />
                 <span>{r.name}</span>
                 <small>{metricValue(r.metric, r.holder.value)}</small>
               </a>

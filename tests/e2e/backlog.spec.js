@@ -200,6 +200,7 @@ test("account SPA opens the three-step wizard repeatedly; only explicit X can di
   const bikes = (await (await page.request.get("/api/bikes")).json()).bikes;
   expect(bikes).toHaveLength(1);
   expect(bikes[0].year).toBe(2020);
+  expect(bikes[0].is_public).toBe(true);
   expect(bikes[0].classification).toMatchObject(
     c({ uses: ["commuting", "touring", "bikepacking"] }),
   );
@@ -425,10 +426,8 @@ test("admin backgrounds are independent per theme; native local SVG file upload 
     await expect(page.getByRole("status")).toContainText(
       "Настройки опубликованы",
     );
-    await section("Главная").click();
-    await page
-      .getByLabel("Графика главного блока", { exact: true })
-      .selectOption("custom");
+    await section("Внешний вид").click();
+    await page.getByLabel("Анимации главной для всех посетителей").check();
     const png = await sharp({
       create: { width: 80, height: 80, channels: 4, background: "#f43030" },
     })
@@ -443,11 +442,11 @@ test("admin backgrounds are independent per theme; native local SVG file upload 
         r.url().includes("/api/admin/assets?"),
     );
     await page
-      .getByLabel("Файл: Анимация · светлая тема", { exact: true })
+      .getByLabel("Файл: Анимация · справа от поиска", { exact: true })
       .setInputFiles(filename);
     const r = await upload;
     expect(r.status()).toBe(201);
-    const animationPicker = page.getByLabel("Анимация · светлая тема", {
+    const animationPicker = page.getByLabel("Анимация · справа от поиска", {
       exact: true,
     });
     await expect(animationPicker).toHaveValue(/^[0-9a-f-]{36}$/);

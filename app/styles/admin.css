@@ -319,16 +319,19 @@
   }
   .emoji-settings-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
     gap: var(--space-2) var(--space-5);
     margin: var(--space-4) 0;
   }
-  .emoji-settings-grid label {
+  .emoji-setting-row {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: var(--space-3);
+    gap: var(--space-2);
     font-size: var(--text-sm);
+  }
+  .emoji-setting-row > span:not(.site-icon) {
+    flex: 1;
+    min-width: 0;
   }
   .emoji-settings-grid input {
     width: 68px;
@@ -590,4 +593,15 @@
       grid-template-columns: 62px minmax(100px, 1fr);
     }
   }
+}
+
+.emoji-settings-grid input[type="color"] {
+  width: 36px;
+  height: 36px;
+  padding: 2px;
+  flex-shrink: 0;
+}
+.emoji-setting-row button {
+  padding: 4px;
+  min-width: 28px;
 }

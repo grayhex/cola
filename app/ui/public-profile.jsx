@@ -150,7 +150,10 @@ export default function PublicProfile({
                 </button>
               </div>
             </section>
-            <BadgeShelf endpoint={"game/profiles/" + profile.username} />
+            <BadgeShelf
+              endpoint={"game/profiles/" + profile.username}
+              prominent
+            />
             {people ? (
               <section className="social-panel">
                 <button className="quiet" onClick={() => setPeople("")}>
