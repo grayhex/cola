@@ -11,7 +11,8 @@ assert.match(
   policy,
   /script-src 'self' 'nonce-[A-Za-z0-9+/]+' 'strict-dynamic'/,
 );
-assert.doesNotMatch(policy, /attacker|unsafe-eval/);
+assert.doesNotMatch(policy, /attacker|'unsafe-eval'/);
+assert.match(policy, /'wasm-unsafe-eval'/);
 assert.match(
   first.headers.get("content-security-policy"),
   /frame-ancestors 'none'/,

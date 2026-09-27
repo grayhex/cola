@@ -13,10 +13,10 @@ COPY app ./app
 COPY lib ./lib
 COPY db ./db
 COPY public ./public
-COPY scripts/build-version.js scripts/copy-maplibre-worker.js ./scripts/
+COPY scripts/build-version.js scripts/copy-maplibre-worker.js scripts/copy-rive-runtime.js ./scripts/
 RUN pnpm build && \
     rm -rf .next/standalone/node_modules && \
-    rm -f .next/standalone/scripts/build-version.js .next/standalone/scripts/copy-maplibre-worker.js
+    rm -f .next/standalone/scripts/build-version.js .next/standalone/scripts/copy-maplibre-worker.js .next/standalone/scripts/copy-rive-runtime.js
 
 FROM node:24.21.0-alpine AS runtime-dependencies
 WORKDIR /app

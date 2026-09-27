@@ -441,3 +441,25 @@ span.heroImage svg {
     display: none;
   }
 }
+
+.artControls {
+  min-height: var(--control-sm);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+}
+.artControls button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+.artControls summary {
+  cursor: pointer;
+}
+.artControls details p {
+  max-width: 36rem;
+}

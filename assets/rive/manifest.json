@@ -1,0 +1,1107 @@
+[
+  {
+    "name": "riding-bike",
+    "sha256": "75bb821b841fa615710b42037fac73774dfc42717536c34d5e28e3f9dbe5c49d",
+    "artboard": "sapiens.svg",
+    "animations": ["Animation 1"],
+    "width": 720,
+    "height": 640,
+    "colors": [
+      {
+        "offset": 595,
+        "value": "ffff5757",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 982,
+        "value": "ffcc7a5e",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 2170,
+        "value": "ffcc7a5e",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 2758,
+        "value": "ffea9d7d",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 3148,
+        "value": "ff333333",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 3239,
+        "value": "ffe53030",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 3294,
+        "value": "ffe53030",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 4036,
+        "value": "ffcc7a5e",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 4308,
+        "value": "ffea9d7d",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 4363,
+        "value": "ffe53030",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 4605,
+        "value": "00552828",
+        "type": 19,
+        "property": 38
+      },
+      {
+        "offset": 4615,
+        "value": "ffff5757",
+        "type": 19,
+        "property": 38
+      },
+      {
+        "offset": 4802,
+        "value": "ffe53030",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 5029,
+        "value": "ffff5757",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 5256,
+        "value": "ff333333",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 5568,
+        "value": "ffff5757",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 6325,
+        "value": "ffcc7a5e",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 6837,
+        "value": "ffea9d7d",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 7060,
+        "value": "ffcccccc",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 7372,
+        "value": "ffffffff",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 7974,
+        "value": "ff333333",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 8223,
+        "value": "ffffffff",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 8497,
+        "value": "ffffffff",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 8754,
+        "value": "ffcf7653",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 9096,
+        "value": "ffb4603f",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 9151,
+        "value": "ff4f2b23",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 9191,
+        "value": "ff4f2b23",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 9745,
+        "value": "ffaf361a",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 10202,
+        "value": "ffb76349",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 10344,
+        "value": "ffea9d7d",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 10409,
+        "value": "00cc7a5e",
+        "type": 19,
+        "property": 38
+      },
+      {
+        "offset": 10419,
+        "value": "ffaa5f4b",
+        "type": 19,
+        "property": 38
+      },
+      {
+        "offset": 10703,
+        "value": "ffb76349",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 10743,
+        "value": "ffea9d7d",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 11045,
+        "value": "ffea9d7d",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 11312,
+        "value": "ffcf7653",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 11539,
+        "value": "00bc5a32",
+        "type": 19,
+        "property": 38
+      },
+      {
+        "offset": 11549,
+        "value": "ffbc5a32",
+        "type": 19,
+        "property": 38
+      },
+      {
+        "offset": 11766,
+        "value": "ffea9d7d",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 12460,
+        "value": "ff333333",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 12660,
+        "value": "ff000000",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 13069,
+        "value": "fffff8f8",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 13666,
+        "value": "ff333333",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 13863,
+        "value": "ffdddddd",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 14040,
+        "value": "ffdddddd",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 14132,
+        "value": "ffea9d7d",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 14334,
+        "value": "ffff5757",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 14470,
+        "value": "ff763829",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 14545,
+        "value": "ffff5757",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 14772,
+        "value": "ff595959",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 15059,
+        "value": "fff9f9f9",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 15130,
+        "value": "ff283749",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 15170,
+        "value": "ff3aaaa7",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 15342,
+        "value": "00ff5757",
+        "type": 19,
+        "property": 38
+      },
+      {
+        "offset": 15352,
+        "value": "ffaa5757",
+        "type": 19,
+        "property": 38
+      },
+      {
+        "offset": 15494,
+        "value": "00ff5757",
+        "type": 19,
+        "property": 38
+      },
+      {
+        "offset": 15509,
+        "value": "50e15757",
+        "type": 19,
+        "property": 38
+      },
+      {
+        "offset": 15524,
+        "value": "ccaa5757",
+        "type": 19,
+        "property": 38
+      },
+      {
+        "offset": 15681,
+        "value": "80c15757",
+        "type": 19,
+        "property": 38
+      },
+      {
+        "offset": 15696,
+        "value": "66aa5757",
+        "type": 19,
+        "property": 38
+      },
+      {
+        "offset": 15853,
+        "value": "00ff5757",
+        "type": 19,
+        "property": 38
+      },
+      {
+        "offset": 15863,
+        "value": "ffaa5757",
+        "type": 19,
+        "property": 38
+      },
+      {
+        "offset": 16020,
+        "value": "00ff5757",
+        "type": 19,
+        "property": 38
+      },
+      {
+        "offset": 16030,
+        "value": "ffaa5757",
+        "type": 19,
+        "property": 38
+      },
+      {
+        "offset": 16187,
+        "value": "00ff5757",
+        "type": 19,
+        "property": 38
+      },
+      {
+        "offset": 16197,
+        "value": "ffaa5757",
+        "type": 19,
+        "property": 38
+      },
+      {
+        "offset": 16539,
+        "value": "ffff5757",
+        "type": 19,
+        "property": 38
+      },
+      {
+        "offset": 16549,
+        "value": "ff093f5c",
+        "type": 19,
+        "property": 38
+      },
+      {
+        "offset": 16696,
+        "value": "00151e28",
+        "type": 19,
+        "property": 38
+      },
+      {
+        "offset": 16706,
+        "value": "ff151e28",
+        "type": 19,
+        "property": 38
+      },
+      {
+        "offset": 16823,
+        "value": "ff595959",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 16878,
+        "value": "ffaf5757",
+        "type": 19,
+        "property": 38
+      },
+      {
+        "offset": 16888,
+        "value": "ffb25757",
+        "type": 19,
+        "property": 38
+      },
+      {
+        "offset": 16903,
+        "value": "ffbc5757",
+        "type": 19,
+        "property": 38
+      },
+      {
+        "offset": 16918,
+        "value": "ffcd5757",
+        "type": 19,
+        "property": 38
+      },
+      {
+        "offset": 16933,
+        "value": "ffe45757",
+        "type": 19,
+        "property": 38
+      },
+      {
+        "offset": 16948,
+        "value": "ffff5757",
+        "type": 19,
+        "property": 38
+      },
+      {
+        "offset": 18149,
+        "value": "ffff5757",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 18241,
+        "value": "ff000000",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 18333,
+        "value": "ff595959",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 18702,
+        "value": "fffff8f8",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 18944,
+        "value": "ff3aaaa7",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 18984,
+        "value": "ff333333",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 19364,
+        "value": "ffff5757",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 19646,
+        "value": "ff333333",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 19880,
+        "value": "ff595959",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 20099,
+        "value": "ff595959",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 20313,
+        "value": "ff595959",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 20527,
+        "value": "ff595959",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 20845,
+        "value": "ffff5757",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 21122,
+        "value": "ff333333",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 21356,
+        "value": "ff595959",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 21575,
+        "value": "ff595959",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 21789,
+        "value": "ff595959",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 22003,
+        "value": "ff595959",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 22213,
+        "value": "ffffffff",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 22300,
+        "value": "ffffffff",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 22917,
+        "value": "ff333333",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 23094,
+        "value": "ffdddddd",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 23286,
+        "value": "ffdddddd",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 23398,
+        "value": "ffff5757",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 23485,
+        "value": "ffff5757",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 24102,
+        "value": "ffff5757",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 24279,
+        "value": "ffff5757",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 24471,
+        "value": "ffff5757",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 24573,
+        "value": "ffea9d7d",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 24785,
+        "value": "ffff5757",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 25227,
+        "value": "ff282828",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 25354,
+        "value": "ffcee4d0",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 28646,
+        "value": "ffe6f1fa",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 31933,
+        "value": "ffe6f1fa",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 35329,
+        "value": "ffe6f1fa",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 38762,
+        "value": "ffe6f1fa",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 42096,
+        "value": "ffe6f1fa",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 42210,
+        "value": "ffe6f1fa",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 42387,
+        "value": "00896e67",
+        "type": 19,
+        "property": 38
+      },
+      {
+        "offset": 42397,
+        "value": "ff896e67",
+        "type": 19,
+        "property": 38
+      },
+      {
+        "offset": 42447,
+        "value": "ffbdd184",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 42487,
+        "value": "ffffe197",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 42527,
+        "value": "ffffa88a",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 42689,
+        "value": "ffb2968e",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 42906,
+        "value": "00abc1da",
+        "type": 19,
+        "property": 38
+      },
+      {
+        "offset": 42916,
+        "value": "ffabc1da",
+        "type": 19,
+        "property": 38
+      },
+      {
+        "offset": 43153,
+        "value": "ffffffff",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 43860,
+        "value": "ffe3eff9",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 44062,
+        "value": "00bdbdc9",
+        "type": 19,
+        "property": 38
+      },
+      {
+        "offset": 44072,
+        "value": "ffbdbdc9",
+        "type": 19,
+        "property": 38
+      },
+      {
+        "offset": 44591,
+        "value": "ffffffff",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 44838,
+        "value": "ffeaeaea",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 44995,
+        "value": "00e39157",
+        "type": 19,
+        "property": 38
+      },
+      {
+        "offset": 45005,
+        "value": "ffe39157",
+        "type": 19,
+        "property": 38
+      },
+      {
+        "offset": 45142,
+        "value": "ffefbb78",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 45259,
+        "value": "00e39157",
+        "type": 19,
+        "property": 38
+      },
+      {
+        "offset": 45269,
+        "value": "ffe39157",
+        "type": 19,
+        "property": 38
+      },
+      {
+        "offset": 45391,
+        "value": "00e39157",
+        "type": 19,
+        "property": 38
+      },
+      {
+        "offset": 45401,
+        "value": "ffe39157",
+        "type": 19,
+        "property": 38
+      },
+      {
+        "offset": 45565,
+        "value": "ffedb78e",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 45872,
+        "value": "ffeaeaea",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 45989,
+        "value": "00bdbdc9",
+        "type": 19,
+        "property": 38
+      },
+      {
+        "offset": 45999,
+        "value": "ffbdbdc9",
+        "type": 19,
+        "property": 38
+      },
+      {
+        "offset": 46191,
+        "value": "80000000",
+        "type": 19,
+        "property": 38
+      },
+      {
+        "offset": 46206,
+        "value": "7a1e1010",
+        "type": 19,
+        "property": 38
+      },
+      {
+        "offset": 46221,
+        "value": "6f6c3737",
+        "type": 19,
+        "property": 38
+      },
+      {
+        "offset": 46236,
+        "value": "66aa5757",
+        "type": 19,
+        "property": 38
+      },
+      {
+        "offset": 46276,
+        "value": "b3000000",
+        "type": 19,
+        "property": 38
+      },
+      {
+        "offset": 46286,
+        "value": "00000000",
+        "type": 19,
+        "property": 38
+      },
+      {
+        "offset": 46331,
+        "value": "ffffffff",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 46438,
+        "value": "ffeaeaea",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 46610,
+        "value": "ffeaeaea",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 46665,
+        "value": "00ffffff",
+        "type": 19,
+        "property": 38
+      },
+      {
+        "offset": 46675,
+        "value": "ff002d88",
+        "type": 19,
+        "property": 38
+      }
+    ],
+    "palette": {
+      "ff5757": ["f3b51b", "f3b51b"],
+      "e53030": ["b45309", "d97706"],
+      "cd5757": ["d99c16", "d99c16"],
+      "e45757": ["e6aa18", "e6aa18"],
+      "bc5757": ["bd8513", "bd8513"],
+      "b25757": ["ac7611", "ac7611"],
+      "af5757": ["a77211", "a77211"],
+      "aa5757": ["996611", "996611"],
+      "e15757": ["d6a023", "d6a023"],
+      "c15757": ["a78027", "a78027"],
+      "6c3737": ["664616", "664616"],
+      "1e1010": ["302315", "302315"],
+      "002d88": ["e5e7eb", "18212f"],
+      "abc1da": ["e5e7eb", "374151"],
+      "333333": ["111827", "e5e7eb"],
+      "595959": ["4b5563", "9ca3af"],
+      "282828": ["1f2937", "d1d5db"],
+      "000000": ["111827", "f9fafb"],
+      "3aaaa7": ["d97706", "fbbf24"]
+    }
+  },
+  {
+    "name": "transparent-bike",
+    "sha256": "a7e1d9fd4f585bc5bd48423578440b7a26e007308d5ad0976d2f2608b04a5128",
+    "artboard": "New Artboard",
+    "animations": ["Bike", "SpeedEffectOn"],
+    "width": 500,
+    "height": 500,
+    "colors": [
+      {
+        "offset": 197,
+        "value": "ffffffff",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 641,
+        "value": "ffff0d5e",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 651,
+        "value": "ff00d7ff",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 729,
+        "value": "ffff0d5e",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 782,
+        "value": "ffffffff",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 1141,
+        "value": "ffffffff",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 1151,
+        "value": "ffff0d5e",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 1173,
+        "value": "ffff0d5e",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 1455,
+        "value": "ffff0d5e",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 1465,
+        "value": "ffffffff",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 1492,
+        "value": "ffff0d5e",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 1559,
+        "value": "ffffffff",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 1704,
+        "value": "ffff0d5e",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 1853,
+        "value": "ffff0d5e",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 1947,
+        "value": "ffff0d5e",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 2023,
+        "value": "ffff0d5e",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 2246,
+        "value": "fff6c4e2",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 2256,
+        "value": "ff810353",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 2372,
+        "value": "ffffffff",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 2422,
+        "value": "ffff0d5e",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 2472,
+        "value": "ffffffff",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 2522,
+        "value": "ffff0d5e",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 2620,
+        "value": "ffffffff",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 2705,
+        "value": "00ffffff",
+        "type": 18,
+        "property": 37
+      },
+      {
+        "offset": 2715,
+        "value": "ff1a0c27",
+        "type": 18,
+        "property": 37
+      }
+    ],
+    "palette": {
+      "ff0d5e": ["f3b51b", "f3b51b"],
+      "00d7ff": ["d97706", "fbbf24"],
+      "810353": ["92400e", "b45309"],
+      "f6c4e2": ["374151", "e5e7eb"],
+      "ffffff": ["111827", "f9fafb"],
+      "1a0c27": ["001a0c27", "001a0c27"]
+    }
+  }
+]

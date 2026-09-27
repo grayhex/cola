@@ -112,6 +112,19 @@ export function HomepageSettings({
   return (
     <section className={"admin-panel " + styles.compactPanel}>
       <h2>Главная страница</h2>
+      <Select
+        label="Графика главного блока"
+        value={s.heroGraphicMode || "rive"}
+        onChange={(v) => onChange("heroGraphicMode", v)}
+        options={[
+          ["rive", "Велосипедисты ColaBike"],
+          ["custom", "Свои изображения"],
+        ]}
+      />
+      <p className="muted">
+        Велосипедисты учитывают тему сайта. Сохранённые ниже изображения
+        используются в режиме «Свои изображения».
+      </p>
       <div className={styles.graphicGrid}>
         {[
           ["heroAnimationLightId", "Анимация · светлая тема"],

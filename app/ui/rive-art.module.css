@@ -1,0 +1,63 @@
+.stage,
+.compact {
+  position: relative;
+  overflow: hidden;
+  pointer-events: none;
+}
+.stage {
+  width: 100%;
+  height: 240px;
+}
+.compact {
+  flex: 0 0 var(--space-20);
+  width: var(--space-20);
+  height: var(--space-20);
+}
+.art,
+.canvas {
+  position: absolute;
+  inset: 0;
+}
+.compact .art {
+  /* The source has a generous 500px artboard around a 135px icon. */
+  inset: auto;
+  top: 50%;
+  left: 50%;
+  width: 350%;
+  height: 350%;
+  transform: translate(-50%, -44%);
+}
+.art img,
+.canvas > div {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.dark,
+:global([data-theme="dark"]) .light {
+  display: none;
+}
+:global([data-theme="dark"]) .dark {
+  display: block;
+}
+.canvas {
+  visibility: hidden;
+}
+.canvas[data-rive-ready] {
+  visibility: visible;
+}
+.art:has(.canvas[data-rive-ready]) > img {
+  visibility: hidden;
+}
+@media (max-width: 1050px) {
+  .stage {
+    height: 160px;
+  }
+}
+@media (max-width: 700px) {
+  .compact {
+    flex-basis: var(--space-16);
+    width: var(--space-16);
+    height: var(--space-16);
+  }
+}

@@ -70,6 +70,11 @@ OAuth не реализован. Восстановление пароля и п
 | Яндекс v3, raster renderer            | `api-maps.yandex.ru`, его поддомены, `yastatic.net`; изображения/соединения также `*.maps.yandex.net`; SDK worker data/blob; search/suggest/routing не используются и не разрешаются |
 | Пользовательский raster/style         | оператор добавляет точные HTTPS origins в `CSP_MAP_ORIGINS` для connect/img, включая зависимости style JSON; без wildcard, credentials, paths или query                              |
 
+Rive на главной использует локальный WASM. `script-src` разрешает только
+`wasm-unsafe-eval` для его компиляции; JavaScript `unsafe-eval` и `unsafe-inline`
+по-прежнему запрещены. Primary/fallback WASM и `.riv` загружаются с того же origin,
+без Rive CDN. Подробности — [Rive](../development/rive.md).
+
 Яндекс документирует `unsafe-eval` для **векторного** движка; ColaBike использует raster и не добавляет это разрешение глобально. Fixture проверяет интеграцию загрузчика/renderer, но не подтверждает текущую production-версию SDK и доступность тайлов. Перед enforcement обязательна проверка живого провайдера с ограниченным ключом; при несовместимости оставить Report-Only и устранить конкретную причину. Не разрешать `https:`/`*` для подавления отчётов.
 
 `report-uri /api/csp-reports` работает отдельно от `/api/client-errors` (его JSON-схема несовместима с CSP). Приёмник понимает `application/csp-report` и `application/reports+json`, проверяет origin документа и заголовки запроса (для WebKit `Origin: null` нужны одновременно same-origin Fetch Metadata и свой Referer), максимум 16 KiB/10 записей. Бюджет 30 запросов на доверенный IP и 120 глобально за 15 минут; одинаковая очищенная запись логируется один раз за 15 минут через существующий DB rate limiter. Вывод: `csp_violation`, директива, класс маршрута/источника, disposition. Политика, nonce, URL, query, фрагменты, source-file, referrer, sample и payload не логируются и в сторонний трекер не отправляются. Неизвестные источники сведены к `external`; точную причину оператор смотрит в DevTools локально. Отчёты не являются доказательством атаки или отсутствия нарушений.
