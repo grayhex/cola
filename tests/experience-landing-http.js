@@ -130,12 +130,19 @@ const part = await page(partPath);
 assert.equal(part.status, 200);
 assert.equal(part.robots, "index, follow");
 assert.equal(part.canonical, base + partPath);
+assert.equal(
+  part.text.match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/)?.[1].replace(/<[^>]*>/g, ""),
+  fork,
+  "part title is present in the server-rendered h1, including its decorative icon",
+);
 for (const text of [
-  `<h1>${fork}</h1>`,
+  "Велосипеды с этим компонентом",
   `href="${modelPath}"`,
   `Сборка 2 ${nonce}`,
 ])
   assert.ok(part.text.includes(text), "part page: " + text);
+assert.ok(!part.text.includes("На каких моделях стоит"));
+assert.ok(!part.text.includes("Сборки владельцев"));
 
 // Other spellings and letter cases move to the one address.
 for (const [path, target] of [

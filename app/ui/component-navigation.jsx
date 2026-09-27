@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { ChevronDown, ChevronRight, Shapes } from "lucide-react";
 import PartIcon from "./part-icon.jsx";
 import { useMotionFeedback } from "./motion.jsx";
+import { plural } from "../../lib/plural.js";
 import {
   componentNavigation,
   componentCategoryPath,
@@ -114,7 +115,11 @@ export default function ComponentNavigation({ catalog, categories, selected }) {
             <PartIcon name={g.icon} size={40} />
             <span>
               <strong>{g.name}</strong>
-              <small>{g.categories.length} типов компонентов</small>
+              <small>
+                {g.categories.length}{" "}
+                {plural(g.categories.length, "тип", "типа", "типов")}{" "}
+                компонентов
+              </small>
             </span>
             <ChevronDown size={16} />
           </button>

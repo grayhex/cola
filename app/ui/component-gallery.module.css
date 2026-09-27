@@ -30,7 +30,7 @@
   border: 1px solid var(--line);
   border-radius: var(--radius-xl);
   background: var(--surface-gradient);
-  touch-action: pan-x pan-y;
+  touch-action: auto;
 }
 .rail::-webkit-scrollbar {
   display: none;

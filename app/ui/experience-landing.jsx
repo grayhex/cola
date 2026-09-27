@@ -152,6 +152,15 @@ export default function ExperienceLanding({ data }) {
           <h2 id="landing-bikes">
             {model ? "Сборки владельцев" : "Велосипеды с этим компонентом"}
           </h2>
+          {!model && data.models.length > 0 && (
+            <nav className={styles.modelLinks} aria-label="Модели велосипедов">
+              {data.models.map((bikeModel) => (
+                <Link key={bikeModel.path} href={bikeModel.path}>
+                  {bikeModel.brand} {bikeModel.model}
+                </Link>
+              ))}
+            </nav>
+          )}
           {!data.bikes.length && (
             <p className="help">
               Пока нет публичных сборок с этой моделью. Страница остаётся в

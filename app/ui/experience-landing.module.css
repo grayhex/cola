@@ -87,6 +87,28 @@
   line-height: var(--leading-tight);
   overflow-wrap: anywhere;
 }
+.modelLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+.modelLinks a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--control-lg);
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  overflow-wrap: anywhere;
+}
+.modelLinks a:hover,
+.modelLinks a:focus-visible {
+  color: var(--text);
+  border-color: var(--text-muted);
+}
 .componentTitle svg {
   flex-shrink: 0;
   color: var(--text-muted);
