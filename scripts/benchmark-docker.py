@@ -30,11 +30,8 @@ def progress(log):
             transfers[(s.get('vertex'), s.get('id'))] = s
     export = [v for v in vertices.values() if 'exporting to GitHub Actions Cache' in v.get('name', '')]
     cache_seconds = sum(stamp(v['completed']) - stamp(v['started']) for v in export if v.get('completed') and v.get('started'))
-    ids = {v['id'] for v in export}
-    uploaded = sum(s.get('current', 0) for s in transfers.values() if s.get('vertex') in ids)
     return {
         'cache_export_seconds': round(cache_seconds, 2),
-        'cache_progress_bytes': uploaded,
         'vertices': [{k: v[k] for k in ('name', 'cached', 'started', 'completed') if k in v} for v in vertices.values()],
         'transfers': list(transfers.values()),
     }
@@ -90,11 +87,11 @@ try:
     source.write_text(original + '\n// Reproducible source-only cache probe.\n')
     (context / 'public/cache-probe.txt').write_text('Public asset change must not compile Next again.\n')
     build('warm-public', True, False)
-    summary = '| Scenario | Build/export s | Compressed MiB | Uncompressed MiB | GHA export s | Cache progress MiB |\n|---|---:|---:|---:|---:|---:|\n'
+    summary = '| Scenario | Build/export s | Compressed MiB | Uncompressed MiB | GHA export s |\n|---|---:|---:|---:|---:|\n'
     for r in results:
-        summary += f"| {r['scenario']} | {r['seconds']} | {r['compressed_bytes']/2**20:.2f} | {r['uncompressed_bytes']/2**20:.2f} | {r['cache_export_seconds']} | {r['cache_progress_bytes']/2**20:.2f} |\n"
+        summary += f"| {r['scenario']} | {r['seconds']} | {r['compressed_bytes']/2**20:.2f} | {r['uncompressed_bytes']/2**20:.2f} | {r['cache_export_seconds']} |\n"
     text = f'### Docker benchmark: {variant}\n\nCommit: `{revision}`. Fresh BuildKit daemon per run; warm imports GHA. OCI export; no local image load.\n\n' + summary
-    text += '\nCache progress bytes are bytes reported by BuildKit, not billed storage. Raw progress and per-layer sizes are attached. Cache mounts are intentionally cold in each fresh daemon.\n'
+    text += '\nCache byte counts are added from GitHub cache inventory and BuildKit writing-layer digests. They exclude index/HTTP overhead. Raw progress and per-layer sizes are attached. Cache mounts are intentionally cold in each fresh daemon.\n'
     (out / 'summary.md').write_text(text)
     with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f: f.write(text)
 finally:

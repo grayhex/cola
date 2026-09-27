@@ -33,6 +33,7 @@
     "integrations/content-artwork.md",
     "operations/deployment.md",
     "operations/ci-cd.md",
+    "operations/docker-build.md",
     "operations/backup-restore.md",
     "operations/monitoring.md",
     "development/documentation.md"

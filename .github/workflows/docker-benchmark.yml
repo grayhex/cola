@@ -48,7 +48,23 @@ jobs:
               const caches = await github.paginate(github.rest.actions.getActionsCacheList, {
                 owner: context.repo.owner, repo: context.repo.repo, ref: context.ref, per_page: 100
               });
-              require('node:fs').writeFileSync(`${process.env.RUNNER_TEMP}/docker-benchmark-${process.env.VARIANT}/cache-inventory.json`, JSON.stringify(caches, null, 2));
+              const fs = require('node:fs');
+              const dir = `${process.env.RUNNER_TEMP}/docker-benchmark-${process.env.VARIANT}`;
+              fs.writeFileSync(`${dir}/cache-inventory.json`, JSON.stringify(caches, null, 2));
+              if (fs.existsSync(`${dir}/results.json`)) {
+                const data = JSON.parse(fs.readFileSync(`${dir}/results.json`, 'utf8'));
+                const bytes = new Map(caches.map(c => [c.key, c.size_in_bytes]));
+                let summary = '\n| Scenario | New GHA layer blobs, MiB |\n|---|---:|\n';
+                for (const run of data.runs) {
+                  const ids = [...new Set(run.transfers.map(t => /^writing layer (sha256:[a-f0-9]+)$/.exec(t.id)?.[1]).filter(Boolean))];
+                  for (const id of ids) if (!bytes.has(`buildkit-blob-1-${id}`)) throw new Error(`Missing cache size for ${id}`);
+                  run.cache_layer_bytes = ids.reduce((n, id) => n + bytes.get(`buildkit-blob-1-${id}`), 0);
+                  summary += `| ${run.scenario} | ${(run.cache_layer_bytes / 2**20).toFixed(2)} |\n`;
+                }
+                fs.writeFileSync(`${dir}/results.json`, JSON.stringify(data, null, 2));
+                fs.appendFileSync(`${dir}/summary.md`, summary);
+                fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, summary);
+              }
             }
       - uses: actions/upload-artifact@v7
         if: ${{ !cancelled() }}
