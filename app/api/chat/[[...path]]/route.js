@@ -20,6 +20,20 @@ export const dynamic = "force-dynamic";
 const reply = (data, status = 200) =>
   NextResponse.json(data, { status, headers: { "Cache-Control": "no-store" } });
 const empty = z.object({}).strict();
+const methods = {
+  token: "POST",
+  channels: "POST",
+  people: "GET",
+  unread: "GET",
+  export: "POST",
+};
+async function payload(req, limit) {
+  try {
+    return await readJson(req, limit);
+  } catch {
+    throw new ChatError("Проверьте размер и формат запроса", 400);
+  }
+}
 async function handler(req, { params }) {
   try {
     const viewer = await currentUser();
@@ -32,6 +46,8 @@ async function handler(req, { params }) {
     const { path = [] } = await params;
     if (path.length !== 1) return reply({ error: "Не найдено" }, 404);
     const action = path[0];
+    if (!Object.hasOwn(methods, action) || methods[action] !== req.method)
+      return reply({ error: "Не найдено" }, 404);
     if (
       !(await rateLimit(
         "chat:" + action + ":" + viewer.id,
@@ -40,12 +56,12 @@ async function handler(req, { params }) {
     )
       return reply({ error: "Слишком много запросов. Попробуйте позже" }, 429);
     if (action === "token" && req.method === "POST") {
-      empty.parse(await readJson(req, 1024));
+      empty.parse(await payload(req, 1024));
       const hash = await currentSessionHash();
       return reply(await transaction((q) => issueChatToken(q, viewer, hash)));
     }
     if (action === "channels" && req.method === "POST") {
-      const data = await readJson(req, 4096);
+      const data = await payload(req, 4096);
       const hash = await currentSessionHash();
       return reply(
         await transaction((q) => createChatChannel(q, viewer, data, hash)),
@@ -73,7 +89,7 @@ async function handler(req, { params }) {
       return reply({ unread: counts.total_unread_count || 0 });
     }
     if (action === "export" && req.method === "POST") {
-      empty.parse(await readJson(req, 1024));
+      empty.parse(await payload(req, 1024));
       const identity = await db.query(
         "SELECT 1 FROM chat_identities WHERE user_id=$1",
         [viewer.id],

@@ -3,6 +3,8 @@ import { randomUUID } from "node:crypto";
 import { verifiedFetch } from "./fixtures/verified-user.js";
 import { testConsents } from "./fixtures/legal.js";
 import pg from "pg";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 const origin = process.env.TEST_ORIGIN;
 function browser() {
   let cookie = "";
@@ -35,6 +37,11 @@ const alice = await register(a, "Chat Alice"),
 assert.equal((await guest("chat/token", {})).status, 401);
 assert.equal((await a("chat/token", {}, "https://evil.test")).status, 403);
 assert.equal((await a("chat/token", { user_id: bob.id })).status, 400);
+assert.equal(
+  (await a("chat/token", { padding: "x".repeat(2048) })).status,
+  400,
+);
+assert.equal((await a("chat/not-a-real-action", {})).status, 404);
 const token = await a("chat/token", {});
 assert.equal(token.status, 200);
 assert.match(token.headers.get("cache-control"), /no-store/);
@@ -91,13 +98,44 @@ try {
   await pool.end();
 }
 const failure = browser();
-await register(failure, "vendor-failure-test");
+const failingUser = await register(failure, "vendor-failure-test");
 const failed = await failure("chat/token", {});
 assert.equal(failed.status, 503);
 assert.doesNotMatch(
   JSON.stringify(failed.body),
   /do-not-leak|authorization|secret=/,
 );
+// Exercise the actual ops worker and its SQL retry/backoff, without live secrets.
+const workerDb = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+try {
+  await workerDb.query("INSERT INTO chat_identities(user_id) VALUES($1)", [
+    failingUser.id,
+  ]);
+  await workerDb.query(
+    "UPDATE users SET name='vendor-failure-worker' WHERE id=$1",
+    [failingUser.id],
+  );
+  const { stderr } = await promisify(execFile)(
+    process.execPath,
+    [
+      "--import",
+      "./tests/fixtures/chat-provider.js",
+      "scripts/chat-sync.js",
+      "--once",
+    ],
+    { env: process.env },
+  );
+  assert.match(stderr, /chat_sync_retry/);
+  assert.doesNotMatch(stderr, /do-not-leak|authorization|test-secret/);
+  const { rows } = await workerDb.query(
+    "SELECT attempts,next_attempt_at>now() AS delayed FROM chat_jobs WHERE user_id=$1",
+    [failingUser.id],
+  );
+  assert.equal(rows[0].attempts, 1);
+  assert.equal(rows[0].delayed, true);
+} finally {
+  await workerDb.end();
+}
 console.log(
   "Chat HTTP: own-user tokens, CSRF, verified email, private export, deterministic DM, blocked users, logout and safe vendor failures.",
 );

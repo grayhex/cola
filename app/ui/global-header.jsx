@@ -28,6 +28,7 @@ export default function GlobalHeader({
   // shows the reader the server layout knows (#74), never a guest by mistake.
   const user = shown ?? viewer;
   const userId = user?.id;
+  const chatVerified = !!user?.email_verified_at;
   const settings = previewSettings || personalSettings;
   const pathname = usePathname() || "/";
   const params = useSearchParams();
@@ -60,7 +61,7 @@ export default function GlobalHeader({
   useEffect(() => {
     let active = true;
     setChatUnread(0);
-    if (!userId || !chatEnabled) return;
+    if (!userId || !chatEnabled || !chatVerified) return;
     async function refresh() {
       if (document.visibilityState === "hidden") return;
       try {
@@ -82,7 +83,7 @@ export default function GlobalHeader({
       window.removeEventListener("cola:chat-unread", received);
       document.removeEventListener("visibilitychange", refresh);
     };
-  }, [userId, chatEnabled, pathname]);
+  }, [userId, chatEnabled, chatVerified, pathname]);
   useEffect(() => {
     setMobile(false);
     setOpenSection(null);
@@ -204,6 +205,15 @@ export default function GlobalHeader({
         </dl>
       )}
       <div className="nav-account-links">
+        {chatEnabled && (
+          <Link className="nav-menu-link" href="/messages">
+            <MessageCircle size={18} aria-hidden="true" />
+            <span>Сообщения</span>
+            {chatUnread > 0 && (
+              <small>{chatUnread > 99 ? "99+" : chatUnread}</small>
+            )}
+          </Link>
+        )}
         {[
           {
             href: user?.username
@@ -360,7 +370,8 @@ export default function GlobalHeader({
             {user && chatEnabled && (
               <Link
                 className={
-                  "global-nav-item" +
+                  "global-nav-item " +
+                  styles.chatUtility +
                   (pathname === "/messages" ? " active" : "")
                 }
                 href="/messages"

@@ -98,7 +98,8 @@ function Conversations({ client, target }) {
     [people, setPeople] = useState([]),
     [selected, setSelected] = useState([]),
     [name, setName] = useState(""),
-    [creating, setCreating] = useState(false);
+    [creating, setCreating] = useState(false),
+    [listRevision, setListRevision] = useState(0);
   const filters = useMemo(
     () => ({ type: "colabike", members: { $in: [client.userID] } }),
     [client],
@@ -117,6 +118,7 @@ function Conversations({ client, target }) {
         if (active) {
           setActiveChannel(next);
           setShowConversation(true);
+          setListRevision((value) => value + 1);
         }
       })
       .catch((e) => {
@@ -166,6 +168,7 @@ function Conversations({ client, target }) {
       await next.watch();
       setActiveChannel(next);
       setShowConversation(true);
+      setListRevision((value) => value + 1);
       setCreating(false);
       setSelected([]);
       setQuery("");
@@ -286,11 +289,16 @@ function Conversations({ client, target }) {
       <div className="chat-panels" data-conversation={showConversation}>
         <aside className="chat-channels" aria-label="Диалоги">
           <ChannelList
+            key={listRevision}
             filters={filters}
             sort={sort}
             options={options}
             setActiveChannelOnMount={false}
-            allowNewMessagesFromUnfilteredChannels={false}
+            channelRenderFilterFn={(list) =>
+              list.filter(
+                (c) => c.type === "colabike" && c.state.members[client.userID],
+              )
+            }
             renderChannels={(channels) =>
               channels.map((c) => (
                 <button

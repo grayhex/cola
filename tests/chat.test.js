@@ -147,6 +147,7 @@ test("chat identity, authorization, lifecycle and deletion survive actual databa
       ),
     );
   const dm = await channel(a, [b.id]);
+  assert.equal((await channel(a, [b.id.toUpperCase()])).cid, dm.cid);
   assert.equal(dm.cid, (await channel(b, [a.id])).cid);
   assert.deepEqual(
     provider.channels.get(dm.cid).members.map((m) => m.channel_role),

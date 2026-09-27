@@ -38,6 +38,9 @@ test("messages: real SDK, two isolated sessions, DM delivery, mobile list and bo
     await page.goto("/messages?to=" + bob.id);
     const input = page.locator(".chat-conversation textarea").first();
     await expect(input).toBeVisible();
+    await expect(
+      page.locator(".chat-channels").getByRole("button", { name: /Chat Bob/ }),
+    ).toHaveCount(1);
     await input.fill("Поедем кататься в субботу?");
     await input.press("Enter");
     await expect(
@@ -86,6 +89,18 @@ test("messages: real SDK, two isolated sessions, DM delivery, mobile list and bo
       });
     }
     expect(fixture.unexpected).toEqual([]);
+    await page.setViewportSize({ width: 320, height: 740 });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth + 1,
+      ),
+    ).toBe(true);
+    await page.getByRole("button", { name: "Открыть меню" }).click();
+    await expect(
+      page
+        .locator(".navigation-drawer")
+        .getByRole("link", { name: /^Сообщения/ }),
+    ).toBeVisible();
   } finally {
     await context.close();
   }
