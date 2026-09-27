@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { randomUUID } from "node:crypto";
 import pg from "pg";
+import { defaultGroups } from "../../lib/garage-layout.js";
 import { registerVerified } from "../fixtures/verified-user.js";
 import { testConsents } from "../fixtures/legal.js";
 import { pageOverflow, describeOverflow } from "../fixtures/overflow.js";
@@ -56,6 +57,43 @@ test("component catalog: real filters, pagination, themes, mobile and durable mo
     expect(created.status()).toBe(201);
     const bikeId = (await created.json()).id;
     await page.goto("/components");
+    const categories = page.getByRole("region", {
+      name: "Категории компонентов",
+    });
+    for (const group of defaultGroups) {
+      const trigger = categories.getByRole("button", {
+        name: new RegExp(group.name),
+      });
+      if (isMobile) await trigger.tap();
+      else await trigger.hover();
+      await expect(trigger).toHaveAttribute("aria-expanded", "true");
+      const panel = page.locator("#component-group-types");
+      for (const category of group.categories)
+        await expect(
+          panel.getByRole("link", { name: category, exact: true }),
+        ).toBeVisible();
+      await trigger.focus();
+      await trigger.press("Escape");
+      await expect(trigger).toHaveAttribute("aria-expanded", "false");
+    }
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await categories
+      .getByText("Все типы компонентов", { exact: false })
+      .click();
+    const directory = categories.locator("details");
+    for (const category of defaultGroups.flatMap((g) => g.categories)) {
+      await expect(
+        directory.getByRole("link", { name: category, exact: true }),
+      ).toHaveCount(1);
+    }
+    await directory.getByRole("link", { name: "Батарея", exact: true }).click();
+    await expect(page.getByRole("heading", { level: 1 })).toContainText("0");
+    expect(new URL(page.url()).searchParams.get("category")).toBe("Батарея");
+    await page.goto("/components#component-group-cockpit");
+    await expect(
+      categories.getByRole("button", { name: /Управление и посадка/ }),
+    ).toHaveAttribute("aria-expanded", "true");
+    await page.emulateMedia({ reducedMotion: "no-preference" });
     const filters = page.getByRole("form", { name: "Фильтры компонентов" });
     await filters.getByLabel("Поиск модели").fill(prefix);
     await filters

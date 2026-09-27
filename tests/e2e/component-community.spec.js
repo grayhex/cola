@@ -96,6 +96,9 @@ test("component gallery and discussion: private owner, upload, originals, captio
       .toBuffer();
     for (const [index, bytes] of [landscape, portrait].entries()) {
       await gallery
+        .getByRole("button", { name: "Загрузить фото", exact: true })
+        .click();
+      await gallery
         .getByLabel("Ваше фото компонента", { exact: true })
         .setInputFiles({
           name: index + "." + (index ? "jpg" : "png"),
@@ -107,14 +110,119 @@ test("component gallery and discussion: private owner, upload, originals, captio
         .click();
       await expect(gallery.locator("figure")).toHaveCount(index + 1);
     }
+    const componentPath = page.url();
+    await page.goto("/components?" + new URLSearchParams({ q: name }));
+    const catalogResults = page.getByRole("region", {
+      name: "Модели компонентов",
+    });
+    await expect(catalogResults.locator("img")).toHaveCount(1);
+    await expect(catalogResults.locator("img")).toHaveAttribute(
+      "src",
+      /\/api\/components\/media\/.*width=640/,
+    );
+    await expect
+      .poll(() =>
+        catalogResults
+          .locator("img")
+          .evaluate((img) => img.complete && img.naturalWidth > 0),
+      )
+      .toBe(true);
+    await catalogResults.getByRole("link", { name, exact: true }).click();
+    await expect(page).toHaveURL(componentPath);
+    await expect(gallery.locator("figure")).toHaveCount(2);
+    const rail = gallery.getByRole("region", {
+      name: "Фото компонента; стрелки, Home и End для выбора",
+    });
+    const scrubber = gallery.getByRole("slider", {
+      name: "Выбор фото компонента",
+    });
+    // All manual controls work with both the normal and live reduced-motion modes.
+    for (const reducedMotion of ["no-preference", "reduce"]) {
+      await page.emulateMedia({ reducedMotion });
+      await rail.focus();
+      await rail.press("End");
+      await expect(scrubber).toHaveValue("2");
+      await expect(gallery.locator("figure:not([inert])")).toHaveCount(1);
+      await expect(
+        gallery.getByRole("button", { name: "Следующее фото компонента" }),
+      ).toBeDisabled();
+      await rail.press("Home");
+      await expect(scrubber).toHaveValue("1");
+      await scrubber.focus();
+      await scrubber.press("ArrowRight");
+      await expect(scrubber).toHaveValue("2");
+      await gallery
+        .getByRole("button", { name: "Предыдущее фото компонента" })
+        .click();
+      await expect(scrubber).toHaveValue("1");
+      await gallery
+        .getByRole("navigation", { name: "Миниатюры фотографий" })
+        .getByRole("button")
+        .last()
+        .click();
+      await expect(scrubber).toHaveValue("2");
+      await rail.focus();
+      await rail.press("Home");
+      await expect(scrubber).toHaveValue("1");
+    }
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+    if (!isMobile) {
+      await rail.hover();
+      await page.mouse.wheel(0, 100);
+      await expect(scrubber).toHaveValue("2");
+      await rail.focus();
+      await rail.press("Home");
+      await expect(scrubber).toHaveValue("1");
+      const box = await rail.boundingBox();
+      await page.mouse.move(box.x + box.width * 0.9, box.y + box.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(box.x + box.width * 0.1, box.y + box.height / 2, {
+        steps: 12,
+      });
+      await page.mouse.up();
+      await expect(scrubber).toHaveValue("2");
+      await expect(page.getByRole("dialog")).toHaveCount(0);
+      await rail.focus();
+      await rail.press("Home");
+      await expect(scrubber).toHaveValue("1");
+    }
+    await gallery
+      .getByRole("button", { name: "Загрузить фото", exact: true })
+      .click();
+    const uploadDialog = page.getByRole("dialog", {
+      name: "Загрузить фото компонента",
+    });
+    await expect(uploadDialog).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(uploadDialog).not.toBeVisible();
+    await expect(
+      gallery.getByRole("button", { name: "Загрузить фото", exact: true }),
+    ).toBeFocused();
+    await expect(
+      page.getByRole("heading", {
+        name: "Велосипеды с этим компонентом",
+        exact: true,
+      }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", {
+        name: /На каких моделях стоит|Сборки владельцев/,
+      }),
+    ).toHaveCount(0);
+    const trail = page.getByRole("navigation", { name: "Путь компонента" });
+    await expect(trail.getByRole("link")).toHaveCount(4);
+    await expect(
+      trail.getByRole("link", { name: "Седло", exact: true }),
+    ).toHaveAttribute("href", /category=/);
     const first = gallery.locator("figure").first();
-    await first
+    await gallery.getByText("Управление фото", { exact: true }).click();
+    await gallery
       .getByRole("button", { name: "Изменить подпись", exact: true })
       .click();
-    await first
+    await gallery
       .getByLabel("Подпись к фото", { exact: true })
       .fill("Седло в поездке");
-    await first
+    await gallery
       .getByRole("button", { name: "Сохранить подпись", exact: true })
       .click();
     await expect(first.locator("figcaption")).toContainText("Седло в поездке");
@@ -148,7 +256,7 @@ test("component gallery and discussion: private owner, upload, originals, captio
     await expect(readerGallery.locator("figure")).toHaveCount(2);
     await expect(
       readerGallery.getByRole("button", {
-        name: "Опубликовать фото",
+        name: "Загрузить фото",
         exact: true,
       }),
     ).toHaveCount(0);
@@ -175,9 +283,8 @@ test("component gallery and discussion: private owner, upload, originals, captio
       "Мне удобно на длинных поездках.",
     );
     // Normal reader uses the shared report UI; the same account becomes moderator.
+    await readerGallery.getByText("Управление фото", { exact: true }).click();
     await readerGallery
-      .locator("figure")
-      .first()
       .getByRole("button", { name: "Пожаловаться", exact: true })
       .click();
     await readerGallery
@@ -189,28 +296,48 @@ test("component gallery and discussion: private owner, upload, originals, captio
     await db.query("UPDATE users SET role='admin' WHERE id=$1", [admin]);
     await reader.reload();
     const adminPhotos = readerGallery.locator("figure");
-    await expect(
-      adminPhotos
+    const selectLast = async (area) => {
+      await area
+        .getByRole("navigation", { name: "Миниатюры фотографий" })
+        .getByRole("button")
         .last()
-        .getByRole("button", { name: "Сделать обложкой", exact: true }),
+        .click();
+      await expect(
+        area.getByRole("slider", { name: "Выбор фото компонента" }),
+      ).toHaveValue("2");
+    };
+    const manage = async (area) => {
+      const details = area
+        .locator("details")
+        .filter({ hasText: "Управление фото" });
+      if (!((await details.getAttribute("open")) !== null))
+        await details.locator("summary").click();
+    };
+    await selectLast(readerGallery);
+    await manage(readerGallery);
+    await expect(
+      readerGallery.getByRole("button", {
+        name: "Сделать обложкой",
+        exact: true,
+      }),
     ).toBeVisible();
     const newCover = await adminPhotos.last().getAttribute("id");
-    await adminPhotos
-      .last()
+    await readerGallery
       .getByRole("button", { name: "Сделать обложкой", exact: true })
       .click();
     await expect(adminPhotos.first()).toHaveAttribute("id", newCover);
-    await adminPhotos
-      .last()
+    await selectLast(readerGallery);
+    await manage(readerGallery);
+    await readerGallery
       .getByRole("button", { name: "Скрыть фото", exact: true })
       .click();
     await expect(
       adminPhotos.last().getByText("Скрыто", { exact: true }),
     ).toBeVisible();
     await page.reload();
+    await selectLast(gallery);
     await expect(gallery.getByText("Скрыто", { exact: true })).toBeVisible(); // Author retains management access.
-    await adminPhotos
-      .last()
+    await readerGallery
       .getByRole("button", { name: "Восстановить фото", exact: true })
       .click();
     await expect(
@@ -270,6 +397,20 @@ test("component gallery and discussion: private owner, upload, originals, captio
             preview.captionTop + 1,
           );
         }
+        const layout = await Promise.all([
+          gallery
+            .getByRole("region", {
+              name: "Фото компонента; стрелки, Home и End для выбора",
+            })
+            .boundingBox(),
+          gallery
+            .getByRole("complementary", { name: "Действия и сведения о фото" })
+            .boundingBox(),
+        ]);
+        if (width > 800)
+          expect(layout[1].x).toBeGreaterThan(layout[0].x + layout[0].width);
+        else
+          expect(layout[1].y).toBeGreaterThan(layout[0].y + layout[0].height);
         const overflow = await pageOverflow(page);
         expect(
           overflow,
@@ -295,18 +436,20 @@ test("component gallery and discussion: private owner, upload, originals, captio
     await page.reload();
     await expect(gallery.locator("figure")).toHaveCount(2);
     await expect(
-      gallery.getByRole("button", { name: "Опубликовать фото", exact: true }),
+      gallery.getByRole("button", { name: "Загрузить фото", exact: true }),
     ).toHaveCount(0);
     await expect(page.locator(".comment-reply .comment-body")).toHaveText(
       "Мне удобно на длинных поездках.",
     );
-    const ownPhoto = gallery
-      .locator("figure")
-      .filter({ hasText: "Седло в поездке" });
-    await ownPhoto
-      .getByRole("button", { name: "Удалить", exact: true })
+    await gallery
+      .getByRole("button", { name: /Показать фото .*Седло в поездке/ })
       .click();
-    await ownPhoto
+    await expect(gallery.locator("figure:not([inert])")).toContainText(
+      "Седло в поездке",
+    );
+    await manage(gallery);
+    await gallery.getByRole("button", { name: "Удалить", exact: true }).click();
+    await gallery
       .getByRole("button", { name: "Удалить фото", exact: true })
       .click();
     await expect(gallery.locator("figure")).toHaveCount(1);
