@@ -1,4 +1,6 @@
 "use client";
+import Link from "next/link";
+import { SharedView } from "./motion.jsx";
 import RideRsvp, { RecurringRideLabel } from "./ride-rsvp.jsx";
 import { CalendarDays, FileSpreadsheet } from "lucide-react";
 import {
@@ -82,10 +84,16 @@ export function RideMetrics({ metrics: m, compact = false, visibleMetrics }) {
 }
 export default function RideCard({ ride: r, owner = false, onEdit }) {
   const { personalSettings: settings } = useSite();
+  const href = publicPath("ride", r) + (owner ? "?owner=1" : "");
   return (
     <article className="ride-card">
       {settings.rideMapView !== "hidden" && r.geometry?.length > 0 && (
-        <RideBasemap geometry={r.geometry} thumbnail />
+        <RideBasemap
+          geometry={r.geometry}
+          thumbnail
+          transitionId={r.id}
+          href={href}
+        />
       )}
       <div className="ride-card-body">
         {r.status !== "completed" && (
@@ -100,11 +108,11 @@ export default function RideCard({ ride: r, owner = false, onEdit }) {
             Garmin · без трека
           </span>
         )}
-        <h3>
-          <a href={publicPath("ride", r) + (owner ? "?owner=1" : "")}>
-            {r.title}
-          </a>
-        </h3>
+        <SharedView kind="ride-title" id={r.id}>
+          <h3>
+            <Link href={href}>{r.title}</Link>
+          </h3>
+        </SharedView>
         <p className="help">
           {rideDate(r.date)} ·{" "}
           <a href={publicPath("bike", r.bike)}>{r.bike.name}</a>

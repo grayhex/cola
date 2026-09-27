@@ -1,0 +1,110 @@
+"use client";
+import { ViewTransition, useEffect, useRef, useSyncExternalStore } from "react";
+
+const preference = () => window.matchMedia("(prefers-reduced-motion: reduce)");
+function subscribe(listener) {
+  const media = preference();
+  media.addEventListener("change", listener);
+  return () => media.removeEventListener("change", listener);
+}
+const reducedSnapshot = () => preference().matches;
+const serverSnapshot = () => true;
+export function useReducedMotion() {
+  return useSyncExternalStore(subscribe, reducedSnapshot, serverSnapshot);
+}
+
+// Native Next links own navigation, focus and history. Only the named leaf
+// participates; unrelated updates and the rest of the document stay still.
+export function SharedView({ kind, id, children }) {
+  const reduced = useReducedMotion();
+  return (
+    <ViewTransition
+      name={id && !reduced ? `cola-${kind}-${id}` : undefined}
+      default="none"
+      share={reduced ? "none" : "cola-shared"}
+    >
+      {children}
+    </ViewTransition>
+  );
+}
+
+export function MotionList({ children }) {
+  const reduced = useReducedMotion();
+  return (
+    <ViewTransition
+      default="none"
+      update={reduced ? "none" : "cola-list"}
+      enter={reduced ? "none" : "cola-enter"}
+      exit={reduced ? "none" : "cola-exit"}
+    >
+      {children}
+    </ViewTransition>
+  );
+}
+
+// Import the tiny WAAPI-based Motion entry only for an interaction, never for
+// first paint. Failure or a slow import must not delay or hide the real state.
+let runtime;
+function loadMotion() {
+  return (runtime ??= import("motion/mini").catch((error) => {
+    runtime = null;
+    throw error;
+  }));
+}
+export function useMotionFeedback(value, { reveal = false } = {}) {
+  const ref = useRef(null);
+  const previous = useRef(value);
+  const reduced = useReducedMotion();
+  useEffect(() => {
+    const changed = previous.current !== value;
+    previous.current = value;
+    const element = ref.current;
+    if (!changed || reduced || !element || (reveal && !value)) return;
+    let disposed = false;
+    let animation;
+    const before = {
+      transform: element.style.transform,
+      ...(reveal ? { opacity: element.style.opacity } : {}),
+    };
+    const restore = () => Object.assign(element.style, before);
+    const started = performance.now();
+    loadMotion()
+      .then(({ animate }) => {
+        if (
+          disposed ||
+          !element.isConnected ||
+          preference().matches ||
+          performance.now() - started > 200
+        )
+          return;
+        const style = getComputedStyle(element);
+        const duration =
+          parseFloat(style.getPropertyValue("--duration-fast")) / 1000;
+        animation = animate(
+          element,
+          reveal
+            ? {
+                opacity: [0.65, 1],
+                transform: ["translateY(-2px)", "translateY(0)"],
+              }
+            : { transform: ["scale(1)", "scale(1.12)", "scale(1)"] },
+          { duration, ease: style.getPropertyValue("--ease-out").trim() },
+        );
+        // Mini commits its final keyframes inline. Restore the original styles
+        // so CSS hover/press feedback and future theme changes still apply.
+        animation.then(() => {
+          if (!disposed) {
+            animation.cancel();
+            restore();
+          }
+        });
+      })
+      .catch(() => {});
+    return () => {
+      disposed = true;
+      animation?.cancel();
+      restore();
+    };
+  }, [value, reduced, reveal]);
+  return ref;
+}

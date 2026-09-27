@@ -1,5 +1,12 @@
 "use client";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  startTransition,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -112,14 +119,14 @@ export default function Garage({
     publicShowcase
       ? change({ page: typeof value === "function" ? value(page) : value })
       : setLocalPage(value);
-  const [updating, setUpdating] = useState(false),
-    [resultRevision, setResultRevision] = useState(0);
+  const [updating, setUpdating] = useState(false);
   const userId = user?.id;
   const requestId = useRef({ sequence: 0 });
   const initialSelection = useRef(initialBikeId);
   // The server rendered the shared bike for this viewer (#74): the first
   // load reuses it instead of asking again.
   const seed = useRef(initial);
+  const loaded = useRef(false);
   const file = useRef();
   const filterKey = filters.join(",");
   // The reader comes from the server layout (#74). Signing in updates userId
@@ -152,9 +159,15 @@ export default function Garage({
         if (viewer && onAuthenticated) onAuthenticated();
         if (share) setSelected(data.bike);
         else {
-          setBikes(data.bikes);
-          setTotal(data.total ?? data.bikes.length);
-          setResultRevision((v) => v + 1);
+          const updateGrid = () => {
+            setBikes(data.bikes);
+            setTotal(data.total ?? data.bikes.length);
+          };
+          // The first grid must commit with loading=false: scroll restoration
+          // needs its real height, and account forms must not remount later.
+          if (publicShowcase && loaded.current) startTransition(updateGrid);
+          else updateGrid();
+          loaded.current = true;
           const requested = initialSelection.current;
           initialSelection.current = null;
           setSelected((prev) =>
@@ -382,7 +395,6 @@ export default function Garage({
           setFacets={setFacets}
           updating={updating}
           filtered={filtered}
-          resultRevision={resultRevision}
           openBike={openBike}
           auth={auth}
           page={page}

@@ -1,8 +1,10 @@
 "use client";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { SharedView } from "./motion.jsx";
 import RideRsvp, { RecurringRideLabel } from "./ride-rsvp.jsx";
 import RideSpeedChart from "./ride-speed-chart.jsx";
+import RideMap from "./ride-map.jsx";
 import { Heart } from "./icons.jsx";
 import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
@@ -15,10 +17,6 @@ import ShareButton from "./share-button.jsx";
 import LocalDate from "./local-date.jsx";
 // The comment editor (Tiptap) loads after the ride itself.
 const Discussion = dynamic(() => import("./discussion.jsx"), { ssr: false });
-const RideMap = dynamic(() => import("./ride-map.jsx"), {
-  ssr: false,
-  loading: () => <div className="ride-map-wrap" aria-busy="true" />,
-});
 export default function RidePage({
   share,
   styleUrl,
@@ -72,7 +70,9 @@ export default function RidePage({
               </a>
               <ShareButton path={sharePath} title={ride.title} />
             </div>
-            <h1>{ride.title}</h1>
+            <SharedView kind="ride-title" id={ride.id}>
+              <h1>{ride.title}</h1>
+            </SharedView>
             <p className="help">
               {rideDate(ride.date)} ·{" "}
               <a href={publicPath("bike", ride.bike)}>{ride.bike.name}</a>
@@ -127,7 +127,11 @@ export default function RidePage({
               </section>
             )}
             {ride.geometry.length > 0 && (
-              <RideMap geometry={ride.geometry} styleUrl={styleUrl} />
+              <RideMap
+                geometry={ride.geometry}
+                styleUrl={styleUrl}
+                transitionId={ride.id}
+              />
             )}
             {ride.hasTrack && ride.status === "completed" && (
               <RideSpeedChart profile={ride.speedProfile} />

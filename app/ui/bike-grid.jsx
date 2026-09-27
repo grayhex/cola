@@ -1,10 +1,11 @@
 "use client";
 import styles from "./bike-grid.module.css";
+import { MotionList } from "./motion.jsx";
 // A single transition for the result set; cards keep their local reaction queues.
-export default function BikeGrid({ children, revision }) {
-  const transition =
-    revision == null ? "" : revision % 2 ? styles.enterA : styles.enterB;
+export default function BikeGrid({ children }) {
   return (
-    <div className={`bike-grid ${styles.grid} ${transition}`}>{children}</div>
+    <MotionList>
+      <div className={`bike-grid ${styles.grid}`}>{children}</div>
+    </MotionList>
   );
 }

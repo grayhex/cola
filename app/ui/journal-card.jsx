@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useState } from "react";
+import { SharedView, useMotionFeedback } from "./motion.jsx";
 import {
   Heart,
   MessageCircle,
@@ -28,6 +29,7 @@ export function SaveEntry({ entry, onChange }) {
   const [saved, setSaved] = useState(entry.saved),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
+  const feedback = useMotionFeedback(saved);
   return (
     <>
       <button
@@ -56,7 +58,9 @@ export function SaveEntry({ entry, onChange }) {
           }
         }}
       >
-        {saved ? <BookmarkCheck size={16} /> : <Bookmark size={16} />}
+        <span ref={feedback} className="motion-feedback-icon">
+          {saved ? <BookmarkCheck size={16} /> : <Bookmark size={16} />}
+        </span>
         {busy ? "Сохраняем…" : saved ? "Сохранено" : "Сохранить"}
       </button>
       {error && (
@@ -73,14 +77,17 @@ export default function JournalCard({ entry, onSaved }) {
   return (
     <article className="journal-card">
       {entry.photo && (
-        <a href={publicPath("journal", entry)} className="journal-card-photo">
+        <Link
+          href={publicPath("journal", entry)}
+          className="journal-card-photo"
+        >
           <img
             src={entry.photo + "?width=640"}
             alt="Фотография записи"
             loading="lazy"
             decoding="async"
           />
-        </a>
+        </Link>
       )}
       <div className="journal-card-content">
         <div className="journal-entry-meta">
@@ -93,9 +100,11 @@ export default function JournalCard({ entry, onSaved }) {
             </span>
           )}
         </div>
-        <h2>
-          <a href={publicPath("journal", entry)}>{entry.title}</a>
-        </h2>
+        <SharedView kind="journal-title" id={entry.id}>
+          <h2>
+            <Link href={publicPath("journal", entry)}>{entry.title}</Link>
+          </h2>
+        </SharedView>
         <p className="journal-excerpt">{entry.excerpt ?? entry.body}</p>
         <a
           className="journal-card-bike"

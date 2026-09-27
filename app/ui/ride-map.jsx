@@ -6,7 +6,7 @@ import { useSite } from "./site-provider.jsx";
 import { mapDefaults, mapStyle } from "../../lib/map-settings.js";
 import { bounds } from "../../lib/ride-geometry.js";
 import { routeCasing } from "../../lib/yandex-ride-map.js";
-export default function RideMap({ geometry, styleUrl }) {
+export default function RideMap({ geometry, styleUrl, transitionId }) {
   const { personalSettings: settings } = useSite();
   const config = settings.map || mapDefaults;
   if (settings.rideMapView === "hidden") return null;
@@ -20,9 +20,15 @@ export default function RideMap({ geometry, styleUrl }) {
       />
     );
   }
-  return <MapLibreRideMap geometry={geometry} styleUrl={styleUrl} />;
+  return (
+    <MapLibreRideMap
+      geometry={geometry}
+      styleUrl={styleUrl}
+      transitionId={transitionId}
+    />
+  );
 }
-function MapLibreRideMap({ geometry, styleUrl }) {
+function MapLibreRideMap({ geometry, styleUrl, transitionId }) {
   const { personalSettings: settings } = useSite();
   const config = settings.map || mapDefaults;
   // Raster providers produce an object: keep it stable through ready/visible
@@ -145,7 +151,9 @@ function MapLibreRideMap({ geometry, styleUrl }) {
         aria-label="Интерактивная карта маршрута"
       />
       {ready && <MapAttribution config={config} />}
-      {!ready && <RideBasemap geometry={geometry} />}
+      {!ready && (
+        <RideBasemap geometry={geometry} transitionId={transitionId} />
+      )}
     </div>
   );
 }
