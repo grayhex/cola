@@ -65,9 +65,17 @@ assert.equal(
       initializeCurrent: true,
     })
   ).data.importedCount,
-  3,
+  2,
 );
 let bike = (await a("bikes/" + id)).data.bike;
+assert.deepEqual(bike.components.map((c) => c.name).sort(), [
+  "Giant AluxX",
+  "Shimano BR-MT400",
+]);
+assert.ok(
+  bike.factory_spec.components.some((c) => c.raw.value === "SR Suntour"),
+  "brand-only fork stays in the source specification",
+);
 const ids = bike.components.map((c) => c.id).reverse();
 assert.equal(
   (

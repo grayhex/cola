@@ -17,6 +17,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 COPY next.config.mjs proxy.js ./
 COPY app ./app
 COPY lib ./lib
+COPY services/bike-resolver/src/component-identity.js ./services/bike-resolver/src/component-identity.js
 COPY scripts/build-version.js ./scripts/
 # Compiler cache stays in the local builder, never in an exported image/cache layer.
 # DB migrations and public files do not participate in web compilation.
@@ -45,11 +46,13 @@ RUN --mount=type=bind,from=ops-dependencies,source=/app/node_modules,target=/run
     node --input-type=module -e "import { cp } from 'node:fs/promises'; await cp('/runtime-node_modules', './node_modules', { recursive: true, dereference: false, verbatimSymlinks: true });"
 COPY package.json ./
 COPY lib ./lib
+COPY services/bike-resolver/src/component-identity.js ./services/bike-resolver/src/component-identity.js
 COPY db ./db
 COPY scripts/check-runtime.js scripts/migrate.js \
     scripts/bootstrap-admin.js scripts/set-admin.js scripts/reset-password.js \
     scripts/audit-photo-files.js scripts/recalculate-photo-storage.js \
-    scripts/cleanup-rides.js scripts/chat-sync.js scripts/chat-setup.js ./scripts/
+    scripts/cleanup-rides.js scripts/chat-sync.js scripts/chat-setup.js \
+    scripts/rebuild-factory-components.js ./scripts/
 RUN node --input-type=module -e "await import('./lib/rides.js'); await import('./lib/factory-import.js')"
 USER colabike
 CMD ["sh", "-c", "node scripts/check-runtime.js && node scripts/migrate.js"]

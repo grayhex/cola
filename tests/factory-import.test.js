@@ -35,6 +35,7 @@ test("factory import seeds empty configuration once, preserves user parts and re
       "017_rides_market",
       "018_articles_rsvp",
       "020_bike_classification",
+      "028_component_models",
     ])
       await db.exec(
         await readFile(new URL("../db/" + f + ".sql", import.meta.url), "utf8"),
@@ -97,11 +98,15 @@ test("factory import seeds empty configuration once, preserves user parts and re
         .rows[0].name,
       "Custom wheel",
     );
-    assert.deepEqual(
-      (await db.query("SELECT factory_spec FROM bikes WHERE id=$1", [id]))
-        .rows[0].factory_spec,
-      result,
-    );
+    const saved = (
+      await db.query("SELECT factory_spec FROM bikes WHERE id=$1", [id])
+    ).rows[0].factory_spec;
+    const { colaImport, ...savedSource } = saved;
+    assert.deepEqual(savedSource, result);
+    assert.equal(colaImport.version, 1);
+    assert.equal(saved.colaImport.parts.length, 1);
+    assert.equal(saved.colaImport.parts[0].snapshot.name, "Shimano Alfine");
+    assert.equal(saved.colaImport.parts[0].snapshot.price, null);
     await db.query("UPDATE bikes SET year=2025 WHERE id=$1", [id]);
     assert.equal(
       (

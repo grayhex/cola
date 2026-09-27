@@ -11,6 +11,10 @@
 !app/**
 !lib/
 !lib/**
+!services/
+!services/bike-resolver/
+!services/bike-resolver/src/
+!services/bike-resolver/src/component-identity.js
 !db/
 !db/*.sql
 !public/
@@ -26,6 +30,7 @@
 !scripts/set-admin.js
 !scripts/audit-photo-files.js
 !scripts/recalculate-photo-storage.js
+!scripts/rebuild-factory-components.js
 !scripts/cleanup-rides.js
 !scripts/chat-sync.js
 !scripts/chat-setup.js

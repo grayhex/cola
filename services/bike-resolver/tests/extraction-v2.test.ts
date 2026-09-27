@@ -103,7 +103,13 @@ it("extracts generic Shopify heading/bullet lists without product URL rules", ()
       "tire",
     ]),
   );
-  expect(result.components).toHaveLength(17);
+  // The stored fixture says "None" for the front derailleur: retain evidence,
+  // but it must not become an installed component or a catalog model (#205).
+  expect(result.components).toHaveLength(16);
+  expect(result.rawSpecification["Front derailleur"]).toBe("None");
+  expect(result.components.some((c) => c.type === "front_derailleur")).toBe(
+    false,
+  );
   expect(result.year).toBeNull();
   expect(result.suggestedMetadata?.weight).toBeUndefined();
 });

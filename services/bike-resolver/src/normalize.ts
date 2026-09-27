@@ -1,5 +1,11 @@
 import { load } from "cheerio";
 import {
+  componentIdentity,
+  componentText,
+  absentComponent,
+  splitComponentField,
+} from "./component-identity.js";
+import {
   componentTypes,
   type BikeComponent,
   type ComponentType,
@@ -138,6 +144,8 @@ export function normalizeComponent(
   label: string,
   value: string,
 ): BikeComponent {
+  label = componentText(label);
+  value = componentText(value);
   let type = componentType(label);
   if (type === "chain" && /\bGates\s+(CDX|CDN|CDC)\b/i.test(value))
     type = "belt";
@@ -167,7 +175,17 @@ export function normalizeComponent(
   }
   if (type.startsWith("front_")) c.position = "front";
   if (type.startsWith("rear_")) c.position = "rear";
+  const identity = componentIdentity(c);
+  if (identity) {
+    c.brand = identity.brand;
+    c.family = identity.family;
+    c.model = identity.model;
+    c.attributes = identity.attributes;
+  }
   return c;
 }
 export const normalizeSpecification = (raw: Record<string, string>) =>
-  Object.entries(raw).map(([k, v]) => normalizeComponent(k, v));
+  Object.entries(raw)
+    .flatMap(([k, v]) => splitComponentField(k, v))
+    .filter((f) => !absentComponent(f.value))
+    .map((f) => normalizeComponent(f.label, f.value));
