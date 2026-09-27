@@ -40,7 +40,9 @@ jobs:
     # No runner on the production server: a GitHub-hosted job reaches it over SSH
     # with a key that can only pass a commit SHA to deploy-cola (forced command).
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # A cold VPS build exceeded 20 min in deploy #90; keep a finite budget
+    # with time left to remove the SSH key after the deployment step times out.
+    timeout-minutes: 40
     # Secrets live in this environment; restrict it to the main branch in Settings.
     environment:
       name: production
@@ -66,6 +68,7 @@ jobs:
           printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
 
       - name: Deploy exactly the verified main commit
+        timeout-minutes: 38
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT || '22' }}

@@ -10,7 +10,7 @@ cleanup() {
   docker compose -p "$failed_project" -f "$tmp/compose.json" down -v --remove-orphans || true
   docker compose -p "$target_project" -f "$tmp/compose.json" down -v --remove-orphans || true
   if [[ -z "${COLA_TEST_APP_IMAGE:-}" ]]; then
-    docker image rm "${source_project}-app" "${source_project}-migrate" "${source_project}-bike-resolver" || true
+    docker image rm "${source_project}-app" "${source_project}-ops" "${source_project}-bike-resolver" || true
   fi
   rm -rf "$tmp"
 }
@@ -29,7 +29,8 @@ c.pop('name', None)
 for service in c['services'].values():
     service.pop('ports', None)
 for name, variable in [('app', 'COLA_TEST_APP_IMAGE'), ('migrate', 'COLA_TEST_OPS_IMAGE'), ('chat-sync', 'COLA_TEST_OPS_IMAGE'), ('bike-resolver', 'COLA_TEST_RESOLVER_IMAGE')]:
-    c['services'][name]['image'] = os.environ.get(variable) or sys.argv[2] + '-' + name
+    image_name = 'ops' if name in ['migrate', 'chat-sync'] else name
+    c['services'][name]['image'] = os.environ.get(variable) or sys.argv[2] + '-' + image_name
     if os.environ.get(variable):
         c['services'][name].pop('build', None)
 for group in ['volumes', 'networks']:
@@ -69,6 +70,10 @@ fi
 docker compose -p "$failed_project" -f "$tmp/failure.json" down -v --remove-orphans
 docker compose -f "$tmp/compose.json" up --no-build -d --wait --wait-timeout 180
 docker compose -f "$tmp/compose.json" ps
+# The long-running worker and completed migration must use identical image bytes.
+migrate_container=$(docker compose -f "$tmp/compose.json" ps -aq migrate)
+worker_container=$(docker compose -f "$tmp/compose.json" ps -aq chat-sync)
+[[ "$(docker inspect --format '{{.Image}}' "$migrate_container")" == "$(docker inspect --format '{{.Image}}' "$worker_container")" ]]
 docker compose -f "$tmp/compose.json" exec -T -e COLA_DISPOSABLE_RUNTIME_TEST=1 app node --input-type=module - < tests/runtime-image.js
 docker compose -f "$tmp/compose.json" run --rm --no-deps -T -e COLA_DISPOSABLE_RUNTIME_TEST=1 migrate node --input-type=module - < tests/ops-image.js
 # Restarting a web replica must not execute migrations or rewrite their history.

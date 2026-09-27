@@ -24,9 +24,22 @@ assert s['migrate']['depends_on']['db']['condition']=='service_healthy'
 assert s['migrate']['restart']=='no'
 assert not s['migrate'].get('ports')
 assert s['migrate']['environment']==s['app']['environment']
-assert s['chat-sync']['build']['target']=='ops'
+assert 'build' not in s['chat-sync']
 assert s['chat-sync']['command']==['node', 'scripts/chat-sync.js']
 assert s['chat-sync']['environment']==s['app']['environment']
 assert not s['chat-sync'].get('ports')
 assert s['chat-sync']['depends_on']['migrate']['condition']=='service_completed_successfully'
+# Ask Compose for its actual build graph, including a fresh project name. Only
+# migrate may export the shared ops tag; the worker is a local-only consumer.
+for file in ['compose.yaml', 'compose.prod.yaml']:
+    project_env = {**env, 'COMPOSE_PROJECT_NAME': 'cola-shared-ops-test'}
+    services = json.loads(config(file, project_env).stdout)['services']
+    assert services['migrate']['image'] == 'cola-shared-ops-test-ops:local'
+    assert services['chat-sync']['image'] == services['migrate']['image']
+    assert services['migrate']['pull_policy'] == services['chat-sync']['pull_policy'] == 'never'
+    plan = subprocess.run(['docker','compose','-f',file,'build','--print'],cwd=root,env=project_env,capture_output=True,text=True)
+    assert plan.returncode == 0, plan.stderr
+    targets = json.loads(plan.stdout)['target']
+    assert set(targets) == {'app', 'migrate', 'bike-resolver'}, targets.keys()
+    assert targets['migrate']['tags'] == [services['migrate']['image']]
 print('Compose: local remains simple; production requires secrets and publishes only loopback app port.')

@@ -80,6 +80,9 @@ services:
       start_period: 30s
       retries: 3
   migrate:
+    # Build/export ops once; the worker below consumes this same local image.
+    image: ${COMPOSE_PROJECT_NAME:-cola}-ops:local
+    pull_policy: never
     build:
       context: .
       target: ops
@@ -92,9 +95,8 @@ services:
         condition: service_healthy
     restart: "no"
   chat-sync:
-    build:
-      context: .
-      target: ops
+    image: ${COMPOSE_PROJECT_NAME:-cola}-ops:local
+    pull_policy: never
     command: ["node", "scripts/chat-sync.js"]
     environment: *app-environment
     depends_on:

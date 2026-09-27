@@ -10,6 +10,10 @@ tracing не заменяется вручную составленным спи
 Target `ops` не зависит от Next build и содержит migrations/bootstrap/set-admin/
 reset-password/audit/cleanup с полным production dependency graph. Этот набор оставлен
 там ради совместимости операторских команд; web больше не несёт его целиком.
+В Compose `migrate` — единственный build producer ops; `chat-sync` использует
+его локальный project-scoped image с `pull_policy: never`. Дублирующего export
+для worker нет. Это исправляет лишнюю работу, обнаруженную в Deploy #90 (#203);
+реальный бюджет VPS и процедура повторной выкладки описаны в deployment runbook.
 Входные SQL и `public` копируются после компиляции. Docker web build hash включает
 app/lib; миграции идентифицируются историей `schema_migrations`. Генерация MapLibre
 worker/shared и двух Rive WASM вынесена в отдельный stage из locked dependencies.
