@@ -29,6 +29,18 @@ export function NavigationSettings({ settings, onChange }) {
   return (
     <section className={"admin-panel " + styles.compactPanel}>
       <h2>Основное меню</h2>
+      <label className="setting-row">
+        <span>Открывать меню при наведении</span>
+        <input
+          type="checkbox"
+          checked={settings.menuOpenOnHover !== false}
+          onChange={(e) => onChange("menuOpenOnHover", e.target.checked)}
+        />
+      </label>
+      <p className="help">
+        Общая настройка для посетителей. В личном профиле её можно
+        переопределить. Нажатия и клавиатура работают всегда.
+      </p>
       <p className="help">
         Порядок, подписи и видимость разделов. Поиск, уведомления и аккаунт
         остаются отдельными действиями. Скрытие пункта не закрывает страницу.

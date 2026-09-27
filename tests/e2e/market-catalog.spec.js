@@ -92,6 +92,9 @@ test("market catalog: optional models, independent listing, private bicycle and 
       .getByRole("combobox", { name: "Модель каталога", exact: true })
       .selectOption(bike.components[0].model_id);
     await expect(page.getByText("Выбрана модель:")).toContainText(partName);
+    await expect(
+      page.getByRole("combobox", { name: "Модель каталога", exact: true }),
+    ).toHaveValue(bike.components[0].model_id);
     await page
       .getByRole("combobox", { name: "Мой велосипед", exact: true })
       .selectOption(privateId);
@@ -118,7 +121,11 @@ test("market catalog: optional models, independent listing, private bicycle and 
       await guestContext.request.get("/api/market/public/" + listing.share_id)
     ).json();
     expect(JSON.stringify(publicJson)).not.toContain(privateId);
+    await page.reload();
     await page.getByRole("button", { name: "Изменить", exact: true }).click();
+    await expect(
+      page.getByRole("combobox", { name: "Модель каталога", exact: true }),
+    ).toHaveValue(bike.components[0].model_id);
     await expect(
       page.getByRole("combobox", { name: "Мой велосипед", exact: true }),
     ).toHaveValue(privateId);
@@ -157,6 +164,9 @@ test("market catalog: optional models, independent listing, private bicycle and 
       await expect(page.getByText("Выбрана модель:")).toContainText(
         bikeInput.brand,
       );
+      await expect(
+        page.getByRole("combobox", { name: "Модель каталога", exact: true }),
+      ).toHaveValue(bike.catalog_model_id);
       for (const width of isMobile ? [390, 360] : [1440, 390]) {
         await page.setViewportSize({ width, height: 900 });
         const overflow = await pageOverflow(page);

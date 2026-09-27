@@ -528,3 +528,15 @@ dialog.drawer {
     transition: none;
   }
 }
+
+.wordmark {
+  width: 112px;
+  height: 28px;
+  object-fit: contain;
+}
+
+@media (min-width: 1280px) and (max-width: 1350px) {
+  .header :global(.search-trigger) {
+    width: 140px;
+  }
+}

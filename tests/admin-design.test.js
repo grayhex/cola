@@ -232,3 +232,39 @@ test("animation references protect both draft and saved files, independent of th
   );
   assert.deepEqual(siteAssetUsage(saved).a, ["Анимация главной"]);
 });
+
+test("shared motion and branding settings reject unsafe or unusable values", () => {
+  assert.equal(
+    settingsInput.parse({
+      ...defaultSettings,
+      autoScrollSpeed: 36,
+      menuOpenOnHover: false,
+    }).autoScrollSpeed,
+    36,
+  );
+  for (const autoScrollSpeed of [0, -1, 81, 12.5, "24"])
+    assert.equal(
+      settingsInput.safeParse({ ...defaultSettings, autoScrollSpeed }).success,
+      false,
+    );
+  for (const graphicsCreditsUrl of [
+    "javascript:alert(1)",
+    "//evil.test",
+    "https://good.test/\\evil",
+    "data:text/html,foo",
+  ])
+    assert.equal(
+      settingsInput.safeParse({ ...defaultSettings, graphicsCreditsUrl })
+        .success,
+      false,
+    );
+  assert.equal(
+    settingsInput.parse({
+      ...defaultSettings,
+      graphicsCreditsLabel: "Авторы",
+      graphicsCreditsUrl: "/about",
+    }).graphicsCreditsUrl,
+    "/about",
+  );
+  assert.deepEqual(siteAssetIds({ brandLogoId: "logo" }), ["logo"]);
+});

@@ -8,6 +8,7 @@ export default function SmallImage({
   priority = false,
   srcSet,
   sizes,
+  fallback,
 }) {
   const [failed, setFailed] = useState(null);
   const ref = useRef(null);
@@ -36,7 +37,7 @@ export default function SmallImage({
       className={className}
       {...(alt ? { role: "img", "aria-label": alt } : { "aria-hidden": true })}
     >
-      <Bike size={28} strokeWidth={1.3} aria-hidden="true" />
+      {fallback || <Bike size={28} strokeWidth={1.3} aria-hidden="true" />}
     </span>
   );
 }

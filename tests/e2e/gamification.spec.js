@@ -94,6 +94,27 @@ test("Hall of Fame changes its current record holder, with profile awards and mo
       visitor.getByRole("button", { name: "Безумие 1", exact: true }),
     ).toHaveAttribute("aria-pressed", "true");
     // Records held now and awards kept for good are separate blocks (#106).
+    // Exercise both real decoded artwork and an unavailable image, not only icon-only fixtures.
+    const artId = "11111111-1111-4111-8111-111111111111";
+    const missingId = "22222222-2222-4222-8222-222222222222";
+    const artBytes = await sharp({
+      create: { width: 100, height: 100, channels: 3, background: "#22aa88" },
+    })
+      .webp()
+      .toBuffer();
+    await page.route("**/api/assets/" + artId, (route) =>
+      route.fulfill({ contentType: "image/webp", body: artBytes }),
+    );
+    await page.route("**/api/assets/" + missingId, (route) =>
+      route.fulfill({ status: 404 }),
+    );
+    await page.route("**/api/game/profiles/**", async (route) => {
+      const response = await route.fetch();
+      const json = await response.json();
+      json.records[0].imageId = artId;
+      json.awards[0].imageId = missingId;
+      await route.fulfill({ response, json });
+    });
     await page.goto("/u/" + a.username);
     const held = page.locator(".badge-shelf", {
       has: page.getByRole("heading", { name: "Рекорды", exact: true }),
@@ -105,6 +126,20 @@ test("Hall of Fame changes its current record holder, with profile awards and mo
     await expect(held).not.toContainText("Первый выход");
     await expect(kept).toContainText("Первый выход");
     await expect(kept).not.toContainText("Легче ветра");
+    await expect
+      .poll(() =>
+        held
+          .locator(".game-art img")
+          .first()
+          .evaluate((e) => e.naturalWidth),
+      )
+      .toBe(100);
+    await expect(
+      kept.locator(".game-art").first().locator("svg"),
+    ).toBeVisible();
+    await expect(kept.locator(".game-art").first().locator("img")).toHaveCount(
+      0,
+    );
     const shelf = await page.locator(".profile-awards").boundingBox();
     const tabs = await page
       .locator(".profile-collection .ui-tabs")
@@ -113,6 +148,18 @@ test("Hall of Fame changes its current record holder, with profile awards and mo
     const art = await kept.locator(".game-art").first().boundingBox();
     expect(art.width).toBe(56);
     expect(art.height).toBe(56);
+    const caption = await kept
+      .locator(".award > span:not(.game-art)")
+      .first()
+      .boundingBox();
+    expect(caption.y).toBeGreaterThanOrEqual(art.y + art.height);
+    const editButton = await page
+      .getByRole("link", { name: "Изменить профиль", exact: true })
+      .boundingBox();
+    const shareButton = await page
+      .locator(".profile-hero .share-button")
+      .boundingBox();
+    expect(shareButton.height).toBe(editButton.height);
     expect(
       await kept
         .locator(".award")

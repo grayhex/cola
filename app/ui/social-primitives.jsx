@@ -67,7 +67,8 @@ function logoLinkName(href) {
 // One line (#124): up to four logos, ColaBike in the middle of the page,
 // app and parser versions. Section links live in the header only.
 export function SocialFooter() {
-  const { settings } = useSite();
+  const { settings, t } = useSite();
+  const creditsHref = footerLinkHref(settings.graphicsCreditsUrl);
   const logos = footerSlots
     .map((slot) => ({
       id: settings[slot.key],
@@ -116,12 +117,17 @@ export function SocialFooter() {
           <Link className={footerStyles.brand} href="/">
             ColaBike
           </Link>
-          <span>Люди. Велосипеды. Истории.</span>
+          <span>{t("Люди. Велосипеды. Истории.")}</span>
         </p>
         <div className={footerStyles.versions}>
           <Versions link={false} />
+          {creditsHref && (
+            <a href={creditsHref}>{settings.graphicsCreditsLabel}</a>
+          )}
           <details className={footerStyles.credits}>
-            <summary>Авторы графики</summary>
+            <summary>
+              {creditsHref ? "Лицензии графики" : settings.graphicsCreditsLabel}
+            </summary>
             <p>
               <a href="https://rive.app/marketplace/2008-3976-riding-bike/">
                 Riding Bike — rahiqueo

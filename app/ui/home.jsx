@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ShoppingBag,
   CalendarDays,
@@ -17,6 +17,7 @@ import GlobalHeader from "./global-header.jsx";
 import { SocialFooter } from "./social-primitives.jsx";
 import { useSite } from "./site-provider.jsx";
 import BikeCard from "./bike-card.jsx";
+import { useAutoScroll } from "./use-auto-scroll.js";
 import BikeCarousel from "./bike-carousel.jsx";
 import { ContentTypeLabel } from "./content-label.jsx";
 import labelStyles from "./content-label.module.css";
@@ -44,8 +45,14 @@ function eventText(e) {
 // The community's last events in a slow line (Pricing runs a similar
 // marquee): it pauses on hover, focus and the button, and stops for
 // reduced motion. The copy for the seamless loop is inert.
-export function ActivityTicker({ events = [] }) {
-  const [paused, setPaused] = useState(false);
+export function ActivityTicker({
+  events = [],
+  paused = false,
+  setPaused,
+  speed = 24,
+}) {
+  const rail = useRef(null);
+  useAutoScroll(rail, { speed, paused: paused || !events.length, loop: true });
   const list = (duplicate = false) => (
     <div
       className={styles.tickerList}
@@ -81,33 +88,19 @@ export function ActivityTicker({ events = [] }) {
       {events.length ? (
         <>
           <div
+            ref={rail}
             className={styles.rail}
+            onWheel={() => setPaused(true)}
+            onTouchStart={() => setPaused(true)}
+            onKeyDown={() => setPaused(true)}
             tabIndex={0}
             aria-label="События; прокрутите, чтобы прочитать все"
           >
-            <div
-              className={styles.track}
-              data-paused={paused}
-              style={{
-                "--ticker-duration": Math.max(60, events.length * 8) + "s",
-              }}
-            >
+            <div className={styles.track} data-paused={paused}>
               {list()}
               {list(true)}
             </div>
           </div>
-          <button
-            className={styles.pause}
-            aria-label={
-              paused
-                ? "Продолжить движение событий"
-                : "Приостановить движение событий"
-            }
-            aria-pressed={paused}
-            onClick={() => setPaused((v) => !v)}
-          >
-            {paused ? <Play size={14} /> : <Pause size={14} />}
-          </button>
         </>
       ) : (
         <p>
@@ -115,6 +108,18 @@ export function ActivityTicker({ events = [] }) {
           <Link href="/account?tab=bikes&action=add">Добавить велосипед →</Link>
         </p>
       )}
+      <button
+        className={styles.pause}
+        aria-label={
+          paused
+            ? "Продолжить движение событий"
+            : "Приостановить движение событий"
+        }
+        aria-pressed={paused}
+        onClick={() => setPaused((v) => !v)}
+      >
+        {paused ? <Play size={14} /> : <Pause size={14} />}
+      </button>
     </section>
   );
 }
@@ -130,7 +135,8 @@ function recordHolder(holder) {
 }
 const emptyData = { popular: [], events: [], content: [], records: [] };
 export default function Home() {
-  const { settings, viewer: user } = useSite(),
+  const { settings, viewer: user, t } = useSite(),
+    [paused, setPaused] = useState(false),
     [data, setData] = useState(null),
     [error, setError] = useState(""),
     [revision, setRevision] = useState(0);
@@ -196,14 +202,14 @@ export default function Home() {
                 </div>
                 <div className={styles.heroLinks}>
                   <Link className="text-link" href="/bikes">
-                    Смотреть велосипеды <ArrowRight size={14} />
+                    {t("Смотреть велосипеды")} <ArrowRight size={14} />
                   </Link>
                   <span>или</span>
                   <Link
                     className="text-link"
                     href="/account?tab=bikes&action=add"
                   >
-                    добавить свой
+                    {t("добавить свой")}
                   </Link>
                 </div>
               </div>
@@ -218,10 +224,17 @@ export default function Home() {
                   imageId={settings.heroStageImageId}
                   playing={settings.heroAnimationsEnabled}
                 />
-                <span className={styles.stageLabel}>colabike / в движении</span>
+                <span className={styles.stageLabel}>
+                  {t("colabike / в движении")}
+                </span>
               </div>
             </div>
-            <ActivityTicker events={content.events} />
+            <ActivityTicker
+              events={content.events}
+              paused={paused}
+              setPaused={setPaused}
+              speed={settings.autoScrollSpeed}
+            />
           </div>
         </section>
         <div className={"page " + styles.sections}>
@@ -238,12 +251,17 @@ export default function Home() {
           )}
           <section className="section" aria-labelledby="popular-heading">
             <div className="section-head">
-              <h2 id="popular-heading">Популярные велосипеды</h2>
+              <h2 id="popular-heading">{t("Популярные велосипеды")}</h2>
               <Link className="text-link" href="/bikes?sort=popular">
-                Все велосипеды <ArrowRight size={14} />
+                {t("Все велосипеды")} <ArrowRight size={14} />
               </Link>
             </div>
-            <BikeCarousel busy={!data && !error}>
+            <BikeCarousel
+              busy={!data && !error}
+              paused={paused}
+              onPause={() => setPaused(true)}
+              speed={settings.autoScrollSpeed}
+            >
               {content.popular.map((b) => (
                 <BikeCard
                   key={b.id}
@@ -271,7 +289,7 @@ export default function Home() {
           </section>
           <section className="section" aria-labelledby="community-heading">
             <div className="section-head">
-              <h2 id="community-heading">Что нового</h2>
+              <h2 id="community-heading">{t("Что нового")}</h2>
               <nav className={styles.sectionLinks} aria-label="Разделы">
                 <Link className="text-link" href="/journal">
                   Журнал
@@ -329,7 +347,7 @@ export default function Home() {
             <div className="section-head">
               <h2 id="records-heading">Рекорды</h2>
               <Link className="text-link" href="/records">
-                Все рекорды <ArrowRight size={14} />
+                {t("Все рекорды")} <ArrowRight size={14} />
               </Link>
             </div>
             <div className={styles.records}>
@@ -370,7 +388,7 @@ export default function Home() {
               <Wrench size={20} />
             </span>
             <p>
-              <strong>У каждой сборки есть своя история.</strong>
+              <strong>{t("У каждой сборки есть своя история.")}</strong>
               <span>
                 ColaBike помогает сохранить её — от первой детали до нового
                 маршрута.

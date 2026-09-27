@@ -442,3 +442,18 @@
   min-width: 0;
   margin-bottom: 0;
 }
+
+.selectedModel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  background: var(--accent-soft);
+}
+.selectedModel a {
+  font-weight: var(--weight-semibold);
+  text-decoration: underline;
+}

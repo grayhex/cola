@@ -136,11 +136,43 @@
     border-bottom: 1px solid var(--line);
   }
   .profile-awards .award {
-    max-width: 280px;
+    width: 112px;
+    max-width: 100%;
+    flex-direction: column;
+    justify-content: flex-start;
+    text-align: center;
+    line-height: var(--leading-snug);
     gap: var(--space-2);
     padding: var(--space-2);
     border-radius: var(--radius-lg);
     font-size: var(--text-xs);
+  }
+  .profile-awards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+  .profile-awards .badge-shelf {
+    min-width: 0;
+  }
+  .profile-hero > .button,
+  .profile-hero .follow-control > .button,
+  .profile-hero .share-button {
+    min-height: 36px;
+    height: 36px;
+    padding-inline: var(--space-3);
+    font-size: var(--text-sm);
+    border-radius: var(--radius-md);
+  }
+  @media (pointer: coarse), (max-width: 700px) {
+    .profile-hero > .button,
+    .profile-hero .follow-control > .button,
+    .profile-hero .share-button {
+      min-height: 44px;
+      height: 44px;
+    }
+    .profile-awards {
+      grid-template-columns: minmax(0, 1fr);
+    }
   }
   .profile-awards .award small {
     line-height: var(--leading-normal);

@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useReducedMotion } from "./motion.jsx";
+import { useSite } from "./site-provider.jsx";
 import styles from "./global-header.module.css";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 // Navigation disclosure: links retain native Tab behavior; arrows/Home/End are shortcuts.
@@ -28,6 +29,7 @@ export default function NavPopover({
   const leaveTimer = useRef(null);
   const openedByHover = useRef(false);
   const reduced = useReducedMotion();
+  const { personalSettings } = useSite();
   useEffect(() => () => clearTimeout(leaveTimer.current), []);
   useEffect(() => {
     if (!open || !panel.current) return;
@@ -104,6 +106,7 @@ export default function NavPopover({
       onPointerEnter={(e) => {
         clearTimeout(leaveTimer.current);
         if (
+          personalSettings.menuOpenOnHover === false ||
           e.pointerType !== "mouse" ||
           !window.matchMedia("(hover: hover) and (pointer: fine)").matches
         )
@@ -115,6 +118,7 @@ export default function NavPopover({
       }}
       onPointerLeave={() => {
         clearTimeout(leaveTimer.current);
+        if (!openedByHover.current) return;
         leaveTimer.current = setTimeout(() => {
           if (!root.current?.contains(document.activeElement)) close();
         }, 140);

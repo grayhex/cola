@@ -122,6 +122,7 @@ export default function SiteProvider({
           "rideListMode",
           "rideMapView",
           "mapScrollZoom",
+          "menuOpenOnHover",
         ].includes(key),
       ),
     ),

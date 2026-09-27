@@ -1,10 +1,17 @@
 "use client";
-import { useEffect, useId, useRef, useState } from "react";
+import { Children, useEffect, useId, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useAutoScroll } from "./use-auto-scroll.js";
 import { useReducedMotion } from "./motion.jsx";
 import styles from "./bike-carousel.module.css";
 
-export default function BikeCarousel({ children, busy }) {
+export default function BikeCarousel({
+  children,
+  busy,
+  speed = 24,
+  paused = false,
+  onPause,
+}) {
   const rail = useRef(null),
     cancel = useRef(null),
     sequence = useRef(0),
@@ -12,6 +19,12 @@ export default function BikeCarousel({ children, busy }) {
   const [position, setPosition] = useState({ left: 0, max: 0 });
   const reduced = useReducedMotion();
   const id = useId();
+  const count = Children.count(children);
+  useAutoScroll(rail, { speed, paused: paused || busy });
+  function manual() {
+    stop();
+    onPause?.();
+  }
   function stop() {
     sequence.current++;
     cancel.current?.();
@@ -40,18 +53,16 @@ export default function BikeCarousel({ children, busy }) {
       cancelAnimationFrame(frame);
       stop();
     };
-  }, [children]);
+  }, [count]);
   useEffect(() => {
     if (reduced) stop();
   }, [reduced]);
   async function move(target, animate = true) {
-    stop();
+    manual();
     const node = rail.current;
     target = Math.max(0, Math.min(node.scrollWidth - node.clientWidth, target));
     if (reduced || !animate) {
       node.scrollLeft = target;
-      // A controlled range must commit its value in the input event. Waiting
-      // for scroll/rAF lets React restore the old value before native change.
       setPosition({
         left: node.scrollLeft,
         max: Math.max(0, node.scrollWidth - node.clientWidth),
@@ -71,9 +82,6 @@ export default function BikeCarousel({ children, busy }) {
       if (token === sequence.current) node.scrollLeft = target;
     }
   }
-  const progress = position.max
-    ? Math.min(100, Math.max(0, (position.left / position.max) * 100))
-    : 0;
   return (
     <div
       className={styles.carousel}
@@ -87,8 +95,8 @@ export default function BikeCarousel({ children, busy }) {
         tabIndex={0}
         aria-label="Велосипеды; используйте стрелки для прокрутки"
         aria-busy={busy}
-        onWheel={stop}
-        onTouchStart={stop}
+        onWheel={manual}
+        onTouchStart={manual}
         onDragStart={(e) => e.preventDefault()}
         onPointerDown={(e) => {
           if (
@@ -97,7 +105,7 @@ export default function BikeCarousel({ children, busy }) {
             e.target.closest("button,input")
           )
             return;
-          stop();
+          manual();
           drag.current = {
             x: e.clientX,
             left: e.currentTarget.scrollLeft,
@@ -162,21 +170,6 @@ export default function BikeCarousel({ children, busy }) {
         >
           <ChevronLeft size={18} />
         </button>
-        <input
-          type="range"
-          min="0"
-          max="100"
-          step="0.1"
-          value={progress}
-          disabled={position.max < 1}
-          aria-label="Позиция в популярных велосипедах"
-          aria-controls={id}
-          aria-valuetext={`${Math.round(progress)}%`}
-          style={{ "--progress": progress + "%" }}
-          onChange={(e) =>
-            move((Number(e.target.value) / 100) * position.max, false)
-          }
-        />
         <button
           className="icon"
           type="button"
