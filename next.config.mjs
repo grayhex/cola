@@ -10,7 +10,13 @@ export default {
       ? { workerThreads: true, webpackBuildWorker: false }
       : {},
   // Keep server packages external; Next traces the web subset. Ops installs separately.
-  serverExternalPackages: ["pg", "zod", "fast-xml-parser", "nodemailer"],
+  serverExternalPackages: [
+    "pg",
+    "zod",
+    "fast-xml-parser",
+    "nodemailer",
+    "stream-chat",
+  ],
   async headers() {
     return [
       {

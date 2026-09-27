@@ -31,7 +31,7 @@ export default function PublicProfile({
     [people, setPeople] = useState(""),
     [collection, setCollection] = useState("bikes"),
     [error, setError] = useState("");
-  const { viewer: user } = useSite();
+  const { viewer: user, chatEnabled } = useSite();
   // The server rendered the profile and the first page of bikes (#74).
   const seed = useRef(initial),
     seedBikes = useRef(initial?.bikes);
@@ -119,6 +119,14 @@ export default function PublicProfile({
               </div>
               <FollowButton profile={profile} user={user} onChange={refresh} />
               <ShareButton path={sharePath} title={profile.name} />
+              {chatEnabled && user && !profile.relationship.isSelf && (
+                <Link
+                  className="button secondary"
+                  href={"/messages?to=" + profile.id}
+                >
+                  Написать
+                </Link>
+              )}
               {!profile.relationship.isSelf && (
                 <ReportButton
                   entityType="profile"

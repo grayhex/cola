@@ -6,7 +6,7 @@ import ThemeControl from "./theme-control.jsx";
 import SmallImage from "./small-image.jsx";
 import { GlobalSearch, CompactDialog } from "./compact-ui.jsx";
 import { useState, useEffect, useRef } from "react";
-import { Bike, ChevronDown } from "./icons.jsx";
+import { Bike, ChevronDown, MessageCircle } from "./icons.jsx";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useSite } from "./site-provider.jsx";
 import { Avatar } from "./avatar.jsx";
@@ -23,7 +23,7 @@ export default function GlobalHeader({
   onProfile,
   previewSettings,
 }) {
-  const { personalSettings, t, viewer } = useSite();
+  const { personalSettings, t, viewer, chatEnabled } = useSite();
   // Without an explicit user (loading, sign-in and recovery pages) the header
   // shows the reader the server layout knows (#74), never a guest by mistake.
   const user = shown ?? viewer;
@@ -56,6 +56,33 @@ export default function GlobalHeader({
     return () => observer.disconnect();
   }, [openSection]);
   const statsRequest = useRef(false);
+  const [chatUnread, setChatUnread] = useState(0);
+  useEffect(() => {
+    let active = true;
+    setChatUnread(0);
+    if (!userId || !chatEnabled) return;
+    async function refresh() {
+      if (document.visibilityState === "hidden") return;
+      try {
+        const response = await fetch("/api/chat/unread", { cache: "no-store" });
+        if (response.ok && active)
+          setChatUnread((await response.json()).unread);
+      } catch {}
+    }
+    function received(event) {
+      if (Number.isFinite(event.detail)) setChatUnread(event.detail);
+    }
+    refresh();
+    const timer = setInterval(refresh, 60000);
+    window.addEventListener("cola:chat-unread", received);
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      active = false;
+      clearInterval(timer);
+      window.removeEventListener("cola:chat-unread", received);
+      document.removeEventListener("visibilitychange", refresh);
+    };
+  }, [userId, chatEnabled, pathname]);
   useEffect(() => {
     setMobile(false);
     setOpenSection(null);
@@ -330,6 +357,24 @@ export default function GlobalHeader({
           <div className="nav-utilities">
             <GlobalSearch />
             <ThemeControl />
+            {user && chatEnabled && (
+              <Link
+                className={
+                  "global-nav-item" +
+                  (pathname === "/messages" ? " active" : "")
+                }
+                href="/messages"
+                aria-label={"Сообщения: " + chatUnread + " непрочитанных"}
+                data-tooltip="Сообщения"
+              >
+                <MessageCircle size={18} aria-hidden="true" />
+                {chatUnread > 0 && (
+                  <span className="notification-badge">
+                    {chatUnread > 99 ? "99+" : chatUnread}
+                  </span>
+                )}
+              </Link>
+            )}
             {user && (
               <Link
                 className={

@@ -29,6 +29,7 @@
     "resolver/architecture.md",
     "resolver/sources.md",
     "resolver/diagnostics.md",
+    "integrations/chat.md",
     "integrations/maps.md",
     "integrations/content-artwork.md",
     "operations/deployment.md",

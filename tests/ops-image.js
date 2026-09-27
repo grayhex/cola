@@ -33,6 +33,8 @@ const require = createRequire(path.join(root, "package.json"));
 const scripts = [
   "audit-photo-files.js",
   "bootstrap-admin.js",
+  "chat-setup.js",
+  "chat-sync.js",
   "check-runtime.js",
   "cleanup-rides.js",
   "migrate.js",

@@ -94,6 +94,8 @@ jobs:
         working-directory: services/bike-resolver
       - name: HTTP integration including PostgreSQL concurrency checks
         run: pnpm test:integration
+      - name: Chat authorization HTTP integration with isolated vendor fixture
+        run: node scripts/test-resolver-integration.js --chat
 
   e2e:
     name: Browser · ${{ matrix.project }}

@@ -15,6 +15,8 @@ const children = [],
   logs = [];
 const base = "http://localhost:3100";
 const externalDatabase = process.env.TEST_DATABASE_URL;
+const chatTests = process.argv.includes("--chat");
+const chatFixture = chatTests || process.argv.includes("--e2e");
 let databaseAdmin,
   databaseCreated = false;
 const databaseName = "cola_test_" + randomUUID().replaceAll("-", "");
@@ -35,6 +37,12 @@ const environment = {
   RIDES_DIR: path.join(dir, "rides"),
   // Emails become JSON files that account tests read (never in production).
   MAIL_CAPTURE_DIR: path.join(dir, "mail"),
+  // Credentials are fixtures. Vendor substitution lives only in tests/, loaded
+  // by Node in this child process, never by application code or production images.
+  STREAM_CHAT_ENABLED: chatFixture ? "true" : "false",
+  STREAM_CHAT_API_KEY: chatFixture ? "test-key" : "",
+  STREAM_CHAT_API_SECRET: chatFixture ? "test-secret" : "",
+  COLA_CHAT_FIXTURE: chatFixture ? "1" : "0",
   MAP_STYLE_URL: process.argv.includes("--e2e")
     ? base + "/test-map-style.json"
     : "",
@@ -121,6 +129,7 @@ try {
   );
   await ready("http://127.0.0.1:8081/ready");
   start([
+    ...(chatFixture ? ["--import", "./tests/fixtures/chat-provider.js"] : []),
     "node_modules/next/dist/bin/next",
     "start",
     "--hostname",
@@ -132,39 +141,42 @@ try {
   const e2e = process.argv.includes("--e2e");
   for (const test of e2e
     ? ["node_modules/@playwright/test/cli.js"]
-    : [
-        // First: the tracker budget is still unused right after startup.
-        "tests/observability-http.js",
-        "tests/csp-http.js",
-        "tests/csp-modes-http.js",
-        "tests/email-policy-http.js",
-        "tests/http-smoke.js",
-        "tests/media-http.js",
-        "tests/market-http.js",
-        "tests/public-urls-http.js",
-        "tests/indexing-http.js",
-        "tests/experience-landing-http.js",
-        "tests/component-catalog-http.js",
-        "tests/component-community-http.js",
-        "tests/market-catalog-http.js",
-        "tests/viewer-http.js",
-        "tests/admin-http.js",
-        "tests/resolver-http.js",
-        "tests/layout-http.js",
-        "tests/wizard-http.js",
-        "tests/showcase-http.js",
-        "tests/social-http.js",
-        "tests/community-http.js",
-        ...(externalDatabase ? ["tests/community-concurrency.js"] : []),
-        "tests/rides-http.js",
-        "tests/journal-http.js",
-        "tests/discovery-http.js",
-        "tests/gamification-http.js",
-        "tests/legal-http.js",
-        "tests/account-http.js",
-        "tests/account-security-http.js",
-        ...(externalDatabase ? ["tests/quota-http.js"] : []),
-      ])
+    : chatTests
+      ? ["tests/chat-http.js"]
+      : [
+          // First: the tracker budget is still unused right after startup.
+          "tests/observability-http.js",
+          "tests/csp-http.js",
+          "tests/csp-modes-http.js",
+          "tests/chat-disabled-http.js",
+          "tests/email-policy-http.js",
+          "tests/http-smoke.js",
+          "tests/media-http.js",
+          "tests/market-http.js",
+          "tests/public-urls-http.js",
+          "tests/indexing-http.js",
+          "tests/experience-landing-http.js",
+          "tests/component-catalog-http.js",
+          "tests/component-community-http.js",
+          "tests/market-catalog-http.js",
+          "tests/viewer-http.js",
+          "tests/admin-http.js",
+          "tests/resolver-http.js",
+          "tests/layout-http.js",
+          "tests/wizard-http.js",
+          "tests/showcase-http.js",
+          "tests/social-http.js",
+          "tests/community-http.js",
+          ...(externalDatabase ? ["tests/community-concurrency.js"] : []),
+          "tests/rides-http.js",
+          "tests/journal-http.js",
+          "tests/discovery-http.js",
+          "tests/gamification-http.js",
+          "tests/legal-http.js",
+          "tests/account-http.js",
+          "tests/account-security-http.js",
+          ...(externalDatabase ? ["tests/quota-http.js"] : []),
+        ])
     await new Promise((resolve, reject) => {
       const project = environment.COLA_CI_PLAYWRIGHT_PROJECT;
       const args = e2e

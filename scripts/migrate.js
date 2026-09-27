@@ -42,6 +42,7 @@ try {
     "028_component_models",
     "029_component_community",
     "030_market_catalog_links",
+    "031_chat_lifecycle",
   ]) {
     const { rowCount } = await client.query(
       "SELECT 1 FROM schema_migrations WHERE version=$1",
