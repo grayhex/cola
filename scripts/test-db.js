@@ -149,6 +149,12 @@ await db.exec(
     "utf8",
   ),
 );
+await db.exec(
+  await readFile(
+    new URL("../db/032_component_photo_search.sql", import.meta.url),
+    "utf8",
+  ),
+);
 await seedLegalDocuments(db);
 const server = new PGLiteSocketServer({
   db,

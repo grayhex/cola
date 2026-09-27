@@ -28,6 +28,7 @@ import {
   componentGallery,
   authorizeComponentPhoto,
   saveComponentPhoto,
+  saveComponentPhotos,
   changeComponentPhoto,
   changeComponentGallery,
   componentPhotoEdit,
@@ -47,6 +48,11 @@ import {
 } from "../../../../lib/media-cache.js";
 import { audit } from "../../../../lib/site.js";
 import { traced, logError } from "../../../../lib/observability.js";
+import {
+  searchComponentPhotos,
+  loadComponentCandidate,
+  componentPhotoSelection,
+} from "../../../../lib/component-photo-search.js";
 
 export const runtime = "nodejs",
   dynamic = "force-dynamic";
@@ -60,6 +66,25 @@ async function handler(req, { params }) {
     const user = await currentUser();
     const page = () => communityPage.parse(url.searchParams.get("page") || 1);
     if (m === "GET") {
+      if (p.length === 3 && p[1] === "photo-candidates") {
+        if (!user) return fail("Войдите в аккаунт", 401);
+        if (!(await rateLimit("component-photo-preview:" + user.id, 90)))
+          return fail("Слишком много просмотров. Попробуйте позже.", 429);
+        const photo = await loadComponentCandidate(
+          db,
+          uuid.parse(p[0]),
+          user,
+          uuid.parse(p[2]),
+        );
+        return new Response(photo.bytes, {
+          headers: {
+            "Content-Type": "image/webp",
+            "Cache-Control": "private, no-store",
+            "X-Content-Type-Options": "nosniff",
+            Vary: "Cookie",
+          },
+        });
+      }
       if (!p.length)
         return json(
           await componentCatalog(
@@ -110,6 +135,40 @@ async function handler(req, { params }) {
       return fail("Не найдено", 404);
     }
     if (!user) return fail("Войдите в аккаунт", 401);
+    if (p.length === 2 && p[1] === "photo-search" && m === "POST") {
+      if (!(await rateLimit("component-photo-search:" + user.id, 15)))
+        return fail("Слишком много поисков. Попробуйте позже.", 429);
+      return json(
+        await searchComponentPhotos(db, transaction, uuid.parse(p[0]), user),
+      );
+    }
+    if (
+      p.length === 3 &&
+      p[1] === "photos" &&
+      p[2] === "import" &&
+      m === "POST"
+    ) {
+      requireVerifiedEmail(user);
+      if (!(await rateLimit("photo-upload:" + user.id, limits.photoUploads)))
+        return fail("Слишком много загрузок. Попробуйте позже.", 429);
+      const id = uuid.parse(p[0]),
+        selection = componentPhotoSelection.parse(await readJson(req, 2048));
+      const photos = [];
+      for (const token of selection.ids)
+        photos.push(await loadComponentCandidate(db, id, user, token));
+      return json(
+        {
+          photos: await saveComponentPhotos(
+            transaction,
+            id,
+            user,
+            photos,
+            true,
+          ),
+        },
+        201,
+      );
+    }
     const key =
       p[1] === "comments"
         ? "comments"

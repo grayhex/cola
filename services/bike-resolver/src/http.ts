@@ -65,6 +65,12 @@ export class ManufacturerHttpClient {
     private interval = 700,
     private timeout = 10000,
     private settings?: () => Settings,
+    private policy: {
+      attempts?: number;
+      userAgent?: string;
+      httpsOnly?: boolean;
+      onBackoff?: (ms: number) => void;
+    } = {},
   ) {}
   async get(
     url: string,
@@ -142,9 +148,17 @@ export class ManufacturerHttpClient {
     let url = input;
     for (let redirects = 0; redirects <= 4; redirects++) {
       const u = validateUrl(url, domains);
+      if (this.policy.httpsOnly && u.protocol !== "https:")
+        throw new ResolverError(
+          "upstream_unavailable",
+          "HTTPS required",
+          false,
+          "blocked_source",
+        );
       if (this.settings)
         validateUrl(u.href, { blockedDomains: this.settings().blockedDomains });
-      for (let attempt = 0; attempt < 3; attempt++) {
+      const attempts = this.policy.attempts ?? 3;
+      for (let attempt = 0; attempt < attempts; attempt++) {
         checkAbort();
         const controller = new AbortController();
         const external = resolutionContext.getStore()?.signal;
@@ -191,6 +205,7 @@ export class ManufacturerHttpClient {
             headers: {
               ...(u.hostname === new URL(input).hostname ? headers : {}),
               "User-Agent":
+                this.policy.userAgent ??
                 "ColaBikeResolver/2.0 (factory specifications; low-rate public catalogue client)",
               "Accept-Language": "en",
               Accept: "text/html,application/json,application/xml;q=0.9",
@@ -216,9 +231,18 @@ export class ManufacturerHttpClient {
           }
           if (!response.ok) {
             await response.body?.cancel();
+            if ([429, 503].includes(response.status) && this.policy.onBackoff) {
+              const retry = response.headers.get("retry-after") || "";
+              const delay = /^\d+$/.test(retry)
+                ? Number(retry) * 1000
+                : Date.parse(retry) - Date.now();
+              this.policy.onBackoff(
+                Number.isFinite(delay) ? Math.max(5000, delay) : 5000,
+              );
+            }
             if (
               (response.status === 429 || response.status >= 500) &&
-              attempt < 2
+              attempt + 1 < attempts
             ) {
               await pause(500 * 2 ** attempt);
               continue;
@@ -290,7 +314,7 @@ export class ManufacturerHttpClient {
               "timeout",
             );
           if (e instanceof ResolverError) throw e;
-          if (attempt === 2)
+          if (attempt + 1 === attempts)
             throw new ResolverError(
               "upstream_unavailable",
               "Manufacturer connection failed",

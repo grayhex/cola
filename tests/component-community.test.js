@@ -102,6 +102,12 @@ test("component media and shared discussion: upgrade, roles, quota, merges, mode
       (await db.query("SELECT * FROM components ORDER BY id")).rows,
       snapshot,
     );
+    await db.exec(
+      await readFile(
+        new URL("../db/032_component_photo_search.sql", import.meta.url),
+        "utf8",
+      ),
+    );
     const raw = await sharp({
       create: { width: 800, height: 600, channels: 3, background: "#efac21" },
     })

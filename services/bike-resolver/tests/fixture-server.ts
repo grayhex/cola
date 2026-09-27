@@ -9,6 +9,7 @@ import { createAdapters } from "../src/adapters/index.js";
 import { ResolverError } from "../src/domain.js";
 import { abortable, resolutionContext, trace } from "../src/context.js";
 import type { ManufacturerHttpClient } from "../src/http.js";
+import { commonsFixture } from "./fixtures/component-photos.js";
 const source = JSON.parse(
   readFileSync(
     new URL("./fixtures/giant/source.json", import.meta.url),
@@ -28,6 +29,18 @@ const transport = {
     contentType: "image/png",
   }),
   get: async (url: string) => {
+    if (new URL(url).hostname === "commons.wikimedia.org") {
+      const query = new URL(url).searchParams.get("gsrsearch") || "";
+      if (query.includes("UpstreamError"))
+        throw new Error("Fixture upstream failure");
+      const data = query.includes("NoPhotos") ? {} : commonsFixture();
+      return {
+        url,
+        hash: "commons-fixture",
+        fetchedAt: source.retrievedAt,
+        body: JSON.stringify(data),
+      };
+    }
     if (url === "https://www.velo-port.ru/slow-bike") {
       trace("document_fetch_started", { host: "www.velo-port.ru" });
       await abortable(

@@ -18,6 +18,10 @@ import type { Resolver } from "./resolver.js";
 import type { Cache } from "./cache.js";
 import { SettingsStore, adapterSupport, settingsSchema } from "./settings.js";
 import { normalize } from "./normalize.js";
+import {
+  ComponentPhotoSearch,
+  componentPhotoQuery,
+} from "./component-photos.js";
 export function buildApp(
   resolver: Resolver,
   cache: Cache,
@@ -45,6 +49,7 @@ export function buildApp(
     sourceClient ??
     new ManufacturerHttpClient(pino(), 700, 10000, () => store.value);
   const manual = new ManualSources(http, resolver.adapters, store);
+  const componentPhotos = new ComponentPhotoSearch(store, sourceClient);
   const retailers = new RetailerSearch(http, manual, store);
   const planner = new SourcePlanner(),
     diagnostics = new Diagnostics();
@@ -215,6 +220,33 @@ export function buildApp(
       return reply
         .code(503)
         .send({ error: "Изображение недоступно. Повторите поиск." });
+    }
+  });
+  app.post("/v1/component-photos/search", async (req, reply) => {
+    const data = componentPhotoQuery.safeParse(req.body);
+    if (!data.success) return reply.code(400).send({ error: "invalid_input" });
+    try {
+      return await withResolution(AbortSignal.timeout(15000), undefined, () =>
+        componentPhotos.search(data.data),
+      );
+    } catch {
+      return reply.code(503).send({
+        error:
+          "Поиск Wikimedia Commons сейчас недоступен. Попробуйте позже или загрузите своё фото.",
+      });
+    }
+  });
+  app.get("/v1/component-photos/:id", async (req, reply) => {
+    const id = z.uuid().safeParse((req.params as any).id);
+    if (!id.success) return reply.code(400).send({ error: "invalid_input" });
+    try {
+      return await withResolution(AbortSignal.timeout(15000), undefined, () =>
+        componentPhotos.photo(id.data),
+      );
+    } catch {
+      return reply
+        .code(503)
+        .send({ error: "Фото недоступно или поиск устарел. Повторите поиск." });
     }
   });
   const brands = () =>

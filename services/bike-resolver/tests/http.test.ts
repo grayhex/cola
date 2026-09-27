@@ -11,6 +11,42 @@ import { ManufacturerHttpClient } from "../src/http.js";
 import { withResolution } from "../src/context.js";
 const client = () =>
   new ManufacturerHttpClient(pino({ level: "silent" }), 0, 1000);
+it("Commons policy honours Retry-After without retries, identifies the client and forbids redirect downgrade", async () => {
+  const backoff = vi.fn();
+  const http = new ManufacturerHttpClient(
+    pino({ level: "silent" }),
+    0,
+    1000,
+    undefined,
+    {
+      attempts: 1,
+      userAgent: "ColaBike/1.0 (https://colabike.ru)",
+      onBackoff: backoff,
+      httpsOnly: true,
+    },
+  );
+  vi.mocked(fetch).mockResolvedValue(
+    new Response("", { status: 429, headers: { "retry-after": "60" } }) as any,
+  );
+  await expect(
+    http.get("https://commons.wikimedia.org/", ["commons.wikimedia.org"]),
+  ).rejects.toThrow("429");
+  expect(fetch).toHaveBeenCalledTimes(1);
+  expect(backoff).toHaveBeenCalledWith(60000);
+  expect(vi.mocked(fetch).mock.calls[0][1]?.headers).toMatchObject({
+    "User-Agent": "ColaBike/1.0 (https://colabike.ru)",
+  });
+  vi.mocked(fetch).mockResolvedValue(
+    new Response("", {
+      status: 302,
+      headers: { location: "http://commons.wikimedia.org/" },
+    }) as any,
+  );
+  await expect(
+    http.get("https://commons.wikimedia.org/", ["commons.wikimedia.org"]),
+  ).rejects.toThrow("HTTPS required");
+  expect(fetch).toHaveBeenCalledTimes(2);
+});
 it("request-scoped cache fetches a tracking-equivalent document once", async () => {
   vi.mocked(fetch).mockResolvedValue(new Response("<h1>Bike</h1>") as any);
   const http = client();
