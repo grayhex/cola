@@ -1,5 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { SharedView } from "./motion.jsx";
 import {
   rasterViewport,
   tileTemplate,
@@ -27,6 +29,8 @@ export default function RideBasemap({
   geometry = [],
   forceRoute = false,
   thumbnail = false,
+  transitionId,
+  href,
 }) {
   const { personalSettings: settings } = useSite(),
     config = thumbnail
@@ -51,8 +55,8 @@ export default function RideBasemap({
       isRasterProvider(config) &&
       settings.rideMapView !== "route" &&
       settings.rideMapView !== "hidden";
-  return (
-    <div ref={ref} className="ride-basemap">
+  const preview = (
+    <SharedView kind="ride-map" id={transitionId}>
       <svg
         className="ride-route"
         viewBox="0 0 640 260"
@@ -107,6 +111,21 @@ export default function RideBasemap({
           </text>
         )}
       </svg>
+    </SharedView>
+  );
+  return (
+    <div ref={ref} className="ride-basemap">
+      {href ? (
+        <Link
+          href={href}
+          className="ride-preview-link"
+          aria-label="Открыть покатушку по карте"
+        >
+          {preview}
+        </Link>
+      ) : (
+        preview
+      )}
       {showTiles && viewport && <MapAttribution config={config} />}
       {failed && (
         <small className="help map-status">

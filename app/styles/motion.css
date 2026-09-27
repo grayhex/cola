@@ -1,0 +1,69 @@
+/* #167: reuse the design system's 150/200/300 ms tokens. No root/page slide:
+   header, controls, errors and loading indicators remain immediately usable. */
+::view-transition {
+  pointer-events: none;
+}
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+}
+::view-transition-group(.cola-shared) {
+  animation-duration: var(--duration-slow);
+  animation-timing-function: var(--ease-out);
+}
+::view-transition-old(.cola-shared),
+::view-transition-new(.cola-shared),
+::view-transition-group(.cola-list) {
+  animation-duration: var(--duration);
+  animation-timing-function: var(--ease-out);
+}
+::view-transition-old(.cola-list),
+::view-transition-old(.cola-exit) {
+  animation: cola-fade-out var(--duration-fast) var(--ease-out) both;
+}
+::view-transition-new(.cola-list),
+::view-transition-new(.cola-enter) {
+  animation: cola-fade-in var(--duration) var(--ease-out) both;
+}
+@keyframes cola-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes cola-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+/* A reaction animates only its icon; its target and count never move. */
+.motion-feedback-icon {
+  display: inline-flex;
+  align-items: center;
+}
+.ride-preview-link {
+  display: block;
+  color: inherit;
+}
+.ride-preview-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+/* Tabs and filters keep their existing semantics and hit targets. */
+.journal-modes > button,
+.choice-options > button {
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
+}
+/* The local Motion reveal replaces the old keyframe on these panels only. */
+.nav-popover[data-motion-panel] {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+  }
+}

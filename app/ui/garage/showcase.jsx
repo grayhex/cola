@@ -34,7 +34,6 @@ export default function Showcase({
   setFacets,
   updating,
   filtered,
-  resultRevision,
   openBike,
   auth,
   page,
@@ -152,7 +151,7 @@ export default function Showcase({
               ? t("Обновляем велосипеды…")
               : ""}
         </span>
-        <BikeGrid bikes={filtered} revision={resultRevision}>
+        <BikeGrid bikes={filtered}>
           {loading &&
             [0, 1, 2].map((id) => (
               <div

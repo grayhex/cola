@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { useMotionFeedback } from "./motion.jsx";
 import styles from "./global-header.module.css";
 import { useEffect, useId, useRef, useState } from "react";
 // Navigation disclosure: links retain native Tab behavior; arrows/Home/End are shortcuts.
@@ -17,8 +18,8 @@ export default function NavPopover({
   const [open, setOpen] = useState(false),
     root = useRef(null),
     button = useRef(null),
-    panel = useRef(null),
     id = useId();
+  const panel = useMotionFeedback(open, { reveal: true });
   const close = (restore = false) => {
     setOpen(false);
     if (restore) button.current?.focus();
@@ -97,6 +98,7 @@ export default function NavPopover({
         ref={panel}
         id={id}
         className={`nav-popover ${styles.popover}`}
+        data-motion-panel
         hidden={!open}
         onClick={(e) => {
           if (e.target.closest("a,button")) close(!!e.target.closest("button"));

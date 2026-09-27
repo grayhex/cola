@@ -13,6 +13,7 @@ import "./styles/game.css";
 import "./styles/profile.css";
 import "./styles/articles.css";
 import "./styles/admin.css";
+import "./styles/motion.css";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { headers } from "next/headers";
 import { themeBootstrap } from "../lib/theme.js";

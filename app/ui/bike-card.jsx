@@ -1,6 +1,7 @@
 "use client";
 import { BikeLabels, BikeLike } from "./bike-labels.jsx";
 import Link from "next/link";
+import { SharedView } from "./motion.jsx";
 import { Lock, MessageCircle, Bike } from "./icons.jsx";
 import Photo from "./bike-photo.jsx";
 import { AuthorLink } from "./social-primitives.jsx";
@@ -39,7 +40,9 @@ export default function BikeCard({
           aria-hidden="true"
           tabIndex={-1}
         >
-          <Photo bike={b} sizes={sizes} />
+          <SharedView kind="bike-photo" id={b.id}>
+            <Photo bike={b} sizes={sizes} />
+          </SharedView>
         </Open>
         {ownerView && !b.is_public && (
           <span

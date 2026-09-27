@@ -1,5 +1,6 @@
 "use client";
 import SiteIcon from "./site-icon.jsx";
+import { useMotionFeedback } from "./motion.jsx";
 import { ClassificationBadges } from "./bike-classification.jsx";
 import { ContentLabel, LabelRow } from "./content-label.jsx";
 // The year, the size and the weight in one row: on cards and under the
@@ -49,6 +50,7 @@ export function BikeLabels({ bike }) {
 // `compact`: the heart and the count only (cards); the bike page keeps the
 // word «Нравится» next to the heart (#121).
 export function BikeLike({ bike, reaction, t = (s) => s, compact = false }) {
+  const feedback = useMotionFeedback(reaction.liked);
   return (
     <button
       type="button"
@@ -63,7 +65,9 @@ export function BikeLike({ bike, reaction, t = (s) => s, compact = false }) {
       onClick={reaction.toggle}
     >
       <span>
-        <SiteIcon name="heart" size={compact ? 14 : 16} />
+        <span ref={feedback} className="motion-feedback-icon">
+          <SiteIcon name="heart" size={compact ? 14 : 16} />
+        </span>
         {!compact && t("Нравится")}
       </span>{" "}
       <strong>{reaction.likes ?? 0}</strong>

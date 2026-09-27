@@ -24,32 +24,3 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
-
-@keyframes results-a {
-  from {
-    opacity: 0.45;
-  }
-  to {
-    opacity: 1;
-  }
-}
-@keyframes results-b {
-  from {
-    opacity: 0.45;
-  }
-  to {
-    opacity: 1;
-  }
-}
-.enterA {
-  animation: results-a 160ms ease-out;
-}
-.enterB {
-  animation: results-b 160ms ease-out;
-}
-@media (prefers-reduced-motion: reduce) {
-  .enterA,
-  .enterB {
-    animation: none;
-  }
-}

@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { SharedView } from "./motion.jsx";
 import { useRouter } from "next/navigation";
 import RichTextBody from "./rich-text-body.jsx";
 import { useState, useEffect, useRef } from "react";
@@ -154,7 +155,9 @@ export default function JournalPage({
                   <span>{entry.mileage.toLocaleString("ru-RU")} км</span>
                 )}
               </div>
-              <h1>{entry.title || "Без заголовка"}</h1>
+              <SharedView kind="journal-title" id={entry.id}>
+                <h1>{entry.title || "Без заголовка"}</h1>
+              </SharedView>
               <div className="entity-byline">
                 <a href={profilePath(entry.author.username)}>
                   {personName(entry.author)}

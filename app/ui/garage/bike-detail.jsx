@@ -1,5 +1,6 @@
 "use client";
 import dynamic from "next/dynamic";
+import { SharedView } from "../motion.jsx";
 import { defaultBlocks } from "../../../lib/garage-layout.js";
 import { BikeLabels } from "../bike-labels.jsx";
 import { AuthorLink } from "../social-primitives.jsx";
@@ -183,13 +184,15 @@ export default function BikeDetail({
             <span className="visually-hidden">
               {t("Открыть фото целиком")}:{" "}
             </span>
-            <Photo
-              bike={bike}
-              photo={photo}
-              className="hero-photo"
-              sizes="(max-width: 700px) 100vw, 40vw"
-              priority
-            />
+            <SharedView kind="bike-photo" id={bike.id}>
+              <Photo
+                bike={bike}
+                photo={photo}
+                className="hero-photo"
+                sizes="(max-width: 700px) 100vw, 40vw"
+                priority
+              />
+            </SharedView>
           </button>
           {(photo || bike.photos[0])?.source_page_url && (
             <a

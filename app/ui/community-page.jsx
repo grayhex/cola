@@ -3,6 +3,7 @@ import Link from "next/link";
 import { MarketCard } from "./market.jsx";
 import RideCard from "./ride-card.jsx";
 import JournalCard from "./journal-card.jsx";
+import { MotionList } from "./motion.jsx";
 import {
   Check,
   MessagesSquare,
@@ -14,7 +15,13 @@ import {
 import LocalDate from "./local-date.jsx";
 import { daysLabel } from "../../lib/market-types.js";
 import BikeGrid from "./bike-grid.jsx";
-import { useCallback, useEffect, useState, useRef } from "react";
+import {
+  startTransition,
+  useCallback,
+  useEffect,
+  useState,
+  useRef,
+} from "react";
 import {
   SocialHeader,
   SocialFooter,
@@ -168,7 +175,8 @@ export default function CommunityPage({ kind }) {
                   : ""),
       );
       if (revision !== requestRevision.current.revision) return;
-      setData(d);
+      if (kind === "notifications") setData(d);
+      else startTransition(() => setData(d));
       setError("");
       if (kind === "notifications")
         window.dispatchEvent(new Event("cola:notifications"));
@@ -353,18 +361,20 @@ export default function CommunityPage({ kind }) {
           </>
         ) : kind === "journal" || kind === "saved" ? (
           <>
-            <div className="journal-feed">
-              {(data.entries || data.items).map((e) => (
-                <JournalCard
-                  key={e.id}
-                  entry={e}
-                  onSaved={() => {
-                    if (kind === "saved")
-                      refresh().catch((e) => setError(e.message));
-                  }}
-                />
-              ))}
-            </div>
+            <MotionList>
+              <div className="journal-feed">
+                {(data.entries || data.items).map((e) => (
+                  <JournalCard
+                    key={e.id}
+                    entry={e}
+                    onSaved={() => {
+                      if (kind === "saved")
+                        refresh().catch((e) => setError(e.message));
+                    }}
+                  />
+                ))}
+              </div>
+            </MotionList>
             {!(data.entries || data.items).length && (
               <section className="social-empty">
                 <h2>
