@@ -12,7 +12,7 @@ export const policy = () => ({
   app: {
     disable_auth_checks: false,
     disable_permissions_checks: false,
-    grants: { [CHAT_ROLE]: [] },
+    grants: { [CHAT_ROLE]: [], [CHAT_MEMBER_ROLE]: [] },
     file_upload_config: structuredClone(chatUploads),
     image_upload_config: structuredClone(chatUploads),
   },
@@ -24,6 +24,7 @@ export const policy = () => ({
       guest: [],
       anonymous: [],
       channel_member: [],
+      channel_moderator: [],
     },
     commands: [],
     url_enrichment: false,

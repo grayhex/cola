@@ -47,6 +47,12 @@ test("chat is opt-in, never broadens CSP when disabled, and rejects permissive v
       p.app.grants[CHAT_ROLE] = ["create-channel"];
     },
     (p) => {
+      p.app.grants[CHAT_MEMBER_ROLE] = ["search-user"];
+    },
+    (p) => {
+      p.type.grants.channel_moderator = ["update-channel-members"];
+    },
+    (p) => {
       p.type.grants[CHAT_MEMBER_ROLE].push("add-channel-members");
     },
     (p) => {

@@ -19,7 +19,7 @@ try {
     await client.updateAppSettings({
       disable_auth_checks: false,
       disable_permissions_checks: false,
-      grants: { ...app.grants, [CHAT_ROLE]: [] },
+      grants: { ...app.grants, [CHAT_ROLE]: [], [CHAT_MEMBER_ROLE]: [] },
       image_upload_config: chatUploads,
       file_upload_config: chatUploads,
     });
@@ -33,6 +33,7 @@ try {
         guest: [],
         anonymous: [],
         channel_member: [],
+        channel_moderator: [],
       },
       read_events: true,
       typing_events: true,
