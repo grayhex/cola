@@ -96,15 +96,15 @@ nonce, strict-dynamic, connect-src и остальные ограничения 
 
 Baseline — свежий `origin/main` `ea78d8073828d20769c46b51786898242ac93343`.
 `scripts/measure-route-payload.js`, одинаковые fixtures, production build,
-Node 24.19.0: eager JS главной **219511 → 220562 bytes gzip-9** (+1051 bytes).
+Node 24.19.0: eager JS главной **219511 → 220563 bytes gzip-9** (+1052 bytes).
 Витрина **248474 → 248498 bytes**. Это server HTML/eager scripts, не Web Vitals;
 фактические browser transfer budgets 220/250 KiB остаются прежними в CI.
-Локальный warm TTFB главной: 23.2 → 25.6 ms; одиночные замеры не доказывают
+Локальный warm TTFB главной: 23.2 → 26.3 ms; одиночные замеры не доказывают
 регрессию или улучшение production latency.
 
 | Ресурс                                                  |     Raw bytes | Gzip-9 bytes (оценка) |
 | ------------------------------------------------------- | ------------: | --------------------: |
-| Отложенный JS runtime chunk                             |        193673 |                 52705 |
+| Отложенный JS runtime chunk                             |        193720 |                 52721 |
 | WASM primary                                            |        882456 |                364845 |
 | WASM compatibility fallback (только при отказе primary) |        885386 |                366016 |
 | Riding Bike `.riv`, light / dark                        | 49560 / 49560 |         24794 / 24800 |

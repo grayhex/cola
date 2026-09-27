@@ -171,6 +171,9 @@ for (const failure of ["canvas", "wasm", "asset", "runtime"])
     await expect(page.locator("[data-rive-ready]")).toHaveCount(0);
     await page.locator("[data-home-search] input").fill("Cube");
     await expect(page.locator("[data-home-search] input")).toHaveValue("Cube");
+    // Suggestions cover the controls below the search; dismiss them as a
+    // keyboard user would before exercising the separate animation control.
+    await page.locator("[data-home-search] input").press("Escape");
     await page.getByRole("button", { name: "Остановить анимацию" }).click();
     await expect(page.locator("[data-rive-art] canvas")).toHaveCount(0);
   });
