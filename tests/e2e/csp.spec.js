@@ -1,8 +1,19 @@
 import { test, expect } from "@playwright/test";
+import pg from "pg";
 test("CSP blocks untrusted inline scripts, keeps theme/navigation and delivers reports", async ({
   page,
   isMobile,
 }) => {
+  // The browser suite shares one disposable DB (workers=1). Earlier scenarios
+  // can fill the global report bucket; this test needs a fresh delivery budget.
+  // HTTP tests separately verify that exhausting this same budget returns 429.
+  const db = new pg.Client({ connectionString: process.env.DATABASE_URL });
+  await db.connect();
+  try {
+    await db.query("DELETE FROM rate_limits WHERE key='csp:global'");
+  } finally {
+    await db.end();
+  }
   // Inject into the HTML parser, not through privileged Playwright evaluation
   // or a trusted script creating a non-parser-inserted child under strict-dynamic.
   await page.route("**/about", async (route) => {
