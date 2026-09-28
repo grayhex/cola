@@ -1,0 +1,69 @@
+.panel {
+  padding: var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  margin: var(--space-3) 0;
+  min-width: 0;
+  font-size: var(--text-sm);
+}
+.panel p {
+  margin: var(--space-2) 0;
+}
+.heading {
+  display: flex;
+  gap: var(--space-3);
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+.heading p,
+.hint,
+.panel small {
+  color: var(--text-muted);
+}
+.status {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--text-xs);
+}
+.bike {
+  display: grid;
+  gap: var(--space-2);
+  max-width: 28rem;
+  margin: var(--space-3) 0;
+}
+.bike select {
+  min-width: 0;
+  max-width: 100%;
+  min-height: 44px;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+.actions button {
+  display: inline-flex;
+  gap: var(--space-2);
+  align-items: center;
+  min-height: 44px;
+  white-space: normal;
+}
+.panel li {
+  overflow-wrap: anywhere;
+}
+.panel summary {
+  min-height: 44px;
+  padding-block: var(--space-2);
+  cursor: pointer;
+}
+@media (max-width: 700px) {
+  .actions {
+    display: grid;
+  }
+  .actions button {
+    justify-content: center;
+  }
+}

@@ -43,6 +43,13 @@ const environment = {
   STREAM_CHAT_API_KEY: chatFixture ? "test-key" : "",
   STREAM_CHAT_API_SECRET: chatFixture ? "test-secret" : "",
   COLA_CHAT_FIXTURE: chatFixture ? "1" : "0",
+  RWGPS_ENABLED: "true",
+  RWGPS_API_KEY: "fixture-api",
+  RWGPS_CLIENT_ID: "fixture-client",
+  RWGPS_CLIENT_SECRET: "fixture-secret",
+  ACTIVITY_TOKEN_KEY: "12".repeat(32),
+  COLA_RWGPS_FIXTURE: "1",
+  RWGPS_FIXTURE_FILE: path.join(dir, "rwgps.json"),
   MAP_STYLE_URL: process.argv.includes("--e2e")
     ? base + "/test-map-style.json"
     : "",
@@ -130,6 +137,8 @@ try {
   await ready("http://127.0.0.1:8081/ready");
   start([
     ...(chatFixture ? ["--import", "./tests/fixtures/chat-provider.js"] : []),
+    "--import",
+    "./tests/fixtures/rwgps-provider.js",
     "node_modules/next/dist/bin/next",
     "start",
     "--hostname",
@@ -138,6 +147,11 @@ try {
     "3100",
   ]);
   await ready(base + "/api/ready");
+  start([
+    "--import",
+    "./tests/fixtures/rwgps-provider.js",
+    "scripts/activity-sync.js",
+  ]);
   const e2e = process.argv.includes("--e2e");
   for (const test of e2e
     ? ["node_modules/@playwright/test/cli.js"]
@@ -170,6 +184,8 @@ try {
           "tests/community-http.js",
           ...(externalDatabase ? ["tests/community-concurrency.js"] : []),
           "tests/rides-http.js",
+          "tests/activity-sync-http.js",
+          ...(externalDatabase ? ["tests/activity-sync-concurrency.js"] : []),
           "tests/journal-http.js",
           "tests/discovery-http.js",
           "tests/gamification-http.js",

@@ -45,6 +45,7 @@ try {
     "031_chat_lifecycle",
     "032_component_photo_search",
     "033_component_products",
+    "034_activity_sync",
   ]) {
     const { rowCount } = await client.query(
       "SELECT 1 FROM schema_migrations WHERE version=$1",

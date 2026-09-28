@@ -3,6 +3,7 @@ import { useSearchParams } from "next/navigation";
 import EmailPolicyAction from "./email-policy-action.jsx";
 import SiteIcon from "./site-icon.jsx";
 import RideCreationActions from "./ride-creation-actions.jsx";
+import ActivitySync from "./activity-sync.jsx";
 import {
   selectableRideBikes,
   rideBikeStateError,
@@ -268,6 +269,9 @@ export default function RideAccount({ bikes }) {
         onSelect={start}
         disabled={busy || !config?.enabled || !currentBikes.length}
       />
+      {!mode && !editing && (
+        <ActivitySync bikes={bikes} disabled={busy} onImported={refresh} />
+      )}
       {!bikes.length && <p className="help">Сначала добавьте велосипед.</p>}
       {!!bikes.length && !currentBikes.length && (
         <p className="help">
