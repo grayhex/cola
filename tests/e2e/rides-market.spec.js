@@ -76,12 +76,30 @@ test("Garmin import without track, chosen fields, GPX mismatch and future planni
   await expect(
     page.getByRole("button", { name: "Синхронизировать", exact: true }),
   ).toBeDisabled();
-  await page.screenshot({
-    path: info.outputPath("account-import.png"),
-    fullPage: true,
-  });
   const form = page.getByRole("region", { name: "Импорт Garmin CSV" });
   await expect(form).toBeVisible();
+  await expect(
+    actions.getByRole("button", { name: "Garmin CSV", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  for (const theme of ["light", "dark"]) {
+    await page.evaluate(
+      (value) => (document.documentElement.dataset.theme = value),
+      theme,
+    );
+    expect(
+      await actions.getByRole("button").evaluateAll((buttons) =>
+        buttons.every((button) => {
+          const box = button.getBoundingClientRect();
+          return box.left >= 0 && box.right <= innerWidth;
+        }),
+      ),
+    ).toBe(true);
+    await page.screenshot({
+      path: info.outputPath("account-import-" + theme + ".png"),
+      fullPage: true,
+    });
+  }
+  await page.evaluate(() => (document.documentElement.dataset.theme = "light"));
   await form.getByLabel("Часовой пояс дат в CSV").selectOption("180");
   const m = parseGpx(gpx([loop])).metrics,
     clock = (s) =>
