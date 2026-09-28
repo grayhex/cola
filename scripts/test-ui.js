@@ -17,6 +17,17 @@ const env = {
   APP_ORIGIN: "http://localhost:3100",
   TEST_ORIGIN: "http://localhost:3100",
   NEXT_TELEMETRY_DISABLED: "1",
+  ...(process.env.UI_TEST_ACTIVITY === "1"
+    ? {
+        RWGPS_ENABLED: "true",
+        RWGPS_API_KEY: "fixture-api",
+        RWGPS_CLIENT_ID: "fixture-client",
+        RWGPS_CLIENT_SECRET: "fixture-secret",
+        ACTIVITY_TOKEN_KEY: "12".repeat(32),
+        COLA_RWGPS_FIXTURE: "1",
+        RWGPS_FIXTURE_FILE: path.join(dir, "rwgps.json"),
+      }
+    : {}),
   ...(process.env.UI_TEST_RESOLVER === "1"
     ? { BIKE_RESOLVER_URL: "http://127.0.0.1:8081" }
     : {}),
@@ -45,6 +56,9 @@ try {
       path.join(root, "services/bike-resolver"),
     );
   start([
+    ...(process.env.UI_TEST_ACTIVITY === "1"
+      ? ["--import", "./tests/fixtures/rwgps-provider.js"]
+      : []),
     "node_modules/next/dist/bin/next",
     "start",
     "--hostname",
@@ -65,6 +79,12 @@ try {
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
   if (!ready) throw new Error("UI test app did not become ready");
+  if (process.env.UI_TEST_ACTIVITY === "1")
+    start([
+      "--import",
+      "./tests/fixtures/rwgps-provider.js",
+      "scripts/activity-sync.js",
+    ]);
   const p = spawn(
     process.execPath,
     [

@@ -43,10 +43,10 @@ def backup(dest,keep):
     temporary=pathlib.Path(tempfile.mkdtemp(prefix='.partial-',dir=dest))
     os.chmod(temporary,0o700)
     running=output(COMPOSE+['ps','--services','--status','running']).splitlines()
-    resume=[s for s in ['app','bike-resolver','chat-sync'] if s in running]
+    resume=[s for s in ['app','bike-resolver','chat-sync','activity-sync'] if s in running]
     try:
         container=app_id()
-        compose('stop','app','bike-resolver','chat-sync')
+        compose('stop','app','bike-resolver','chat-sync','activity-sync')
         with open(temporary/'database.dump','wb') as file:
             compose('exec','-T','db','pg_dump','-U','colabike','-d','colabike','-Fc',stdout=file)
         with open(temporary/'photos.tar.gz','wb') as file:
@@ -73,7 +73,7 @@ def backup(dest,keep):
 def restore(folder,yes):
     if not yes: raise RuntimeError('Restore requires --yes into an EMPTY Compose environment')
     manifest=validate(folder)  # Verify every byte before touching the destination.
-    compose('stop','app','bike-resolver','chat-sync')
+    compose('stop','app','bike-resolver','chat-sync','activity-sync')
     compose('up','-d','--wait','db')
     count=output(COMPOSE+['exec','-T','db','psql','-U','colabike','-d','colabike','-Atc',"SELECT count(*) FROM pg_tables WHERE schemaname IN ('public','bike_resolver')"])
     if count!='0': raise RuntimeError('Destination database is not empty; restore refused')

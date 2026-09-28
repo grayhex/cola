@@ -43,3 +43,9 @@ for file in ['compose.yaml', 'compose.prod.yaml']:
     assert set(targets) == {'app', 'migrate', 'bike-resolver'}, targets.keys()
     assert targets['migrate']['tags'] == [services['migrate']['image']]
 print('Compose: local remains simple; production requires secrets and publishes only loopback app port.')
+
+assert s["activity-sync"]["image"] == s["migrate"]["image"]
+assert s["activity-sync"]["environment"] == s["app"]["environment"]
+assert s["activity-sync"]["command"] == ["node","scripts/activity-sync.js"]
+assert not s["activity-sync"].get("ports")
+assert any(v.get("target")=="/app/rides" for v in s["activity-sync"]["volumes"])

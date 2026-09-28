@@ -31,6 +31,7 @@ const root = process.cwd();
 const load = (file) => import(pathToFileURL(path.join(root, file)).href);
 const require = createRequire(path.join(root, "package.json"));
 const scripts = [
+  "activity-sync.js",
   "audit-photo-files.js",
   "bootstrap-admin.js",
   "chat-setup.js",
@@ -65,6 +66,10 @@ for (const name of [
 const { defaultSettings, defaultCatalog } = await load("lib/site-defaults.js");
 const { bootstrapAdmin } = await load("scripts/bootstrap-admin.js");
 await load("lib/rides.js");
+await load("lib/activity-worker.js");
+execFileSync(process.execPath, ["scripts/activity-sync.js", "--once"], {
+  env: { ...process.env, RWGPS_ENABLED: "false" },
+});
 await load("lib/factory-import.js");
 await load("lib/factory-rebuild.js");
 const rebuildPreview = JSON.parse(

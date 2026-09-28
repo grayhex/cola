@@ -19,7 +19,7 @@ export const GET = traced(async function GET(req, { params }) {
   if (!ride) return fail("Трек не найден", 404);
   let bytes;
   try {
-    bytes = await getOriginal(ride.id);
+    bytes = await getOriginal(ride.track_file_id || ride.id);
   } catch (e) {
     if (e.code === "ENOENT") return fail("Трек не найден", 404);
     throw e;
