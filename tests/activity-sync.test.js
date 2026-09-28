@@ -249,6 +249,36 @@ test("RWGPS durable lifecycle: OAuth, FIT, updates, duplicates, failures, deleti
       (await db.query("SELECT count(*)::int n FROM rides")).rows[0].n,
       1,
     );
+    assert.equal(
+      (
+        await db.query("SELECT count FROM rate_limits WHERE key=$1", [
+          "ride-upload:" + owner,
+        ])
+      ).rows[0].count,
+      1,
+      "Duplicate snapshots do not consume the import budget",
+    );
+    // Reconnect may move the backfill boundary forward; it must not delete an
+    // existing ride when receiving an update to that older history.
+    await db.query(
+      "UPDATE activity_connections SET import_since=now() WHERE id=$1",
+      [connection.id],
+    );
+    await tx((q) => requestActivitySync(q, owner, undefined));
+    await runActivityBatch(db, tx);
+    await runActivityBatch(db, tx);
+    assert.equal(
+      (
+        await db.query("SELECT count(*)::int n FROM rides WHERE owner_id=$1", [
+          owner,
+        ])
+      ).rows[0].n,
+      1,
+    );
+    await db.query(
+      "UPDATE activity_connections SET import_since=now()-interval '12 months' WHERE id=$1",
+      [connection.id],
+    );
     // User's title, chosen sensors and clipped geometry survive an upstream update.
     await tx((q) =>
       saveRide(
@@ -384,6 +414,64 @@ test("RWGPS durable lifecycle: OAuth, FIT, updates, duplicates, failures, deleti
       (await db.query("SELECT * FROM activity_revocations")).rows.length,
       0,
     );
+    globalThis.fetch = vendorFetch;
+    // New connection: missing/ambiguous bikes wait; stationary cycling still imports.
+    const secondBike = randomUUID();
+    await db.query(
+      "INSERT INTO bikes(id,owner_id,share_id,name,year,category) VALUES($1,$2,$1,'Other road',2026,'road')",
+      [secondBike, owner],
+    );
+    const again = await tx((q) =>
+      beginActivityOAuth(q, owner, "session", null),
+    );
+    const againState = new URL(again.url).searchParams.get("state");
+    items = [item(6), item(7), item(8)];
+    trips.set(6, {
+      ...trip(6),
+      activity_type: "cycling:indoor",
+      stationary: true,
+    });
+    trips.set(7, { ...trip(7), departed_at: "2020-01-01T00:00:00Z" });
+    trips.set(8, trip(8));
+    await tx((q) =>
+      finishActivityOAuth(q, owner, "session", againState, "code"),
+    );
+    await runActivityBatch(db, tx);
+    await runActivityBatch(db, tx);
+    assert.equal((await activityStatus(db, owner)).counts.waiting_bike, 2);
+    assert.equal(
+      (
+        await db.query(
+          "SELECT status FROM external_activities WHERE external_id='7'",
+        )
+      ).rows[0].status,
+      "ignored",
+    );
+    items = [];
+    await tx((q) => requestActivitySync(q, owner, bike));
+    await runActivityBatch(db, tx);
+    await runActivityBatch(db, tx);
+    const indoor = (
+      await db.query(
+        "SELECT r.* FROM rides r JOIN external_activities a ON a.ride_id=r.id WHERE a.external_id='6'",
+      )
+    ).rows[0];
+    assert.equal(indoor.has_track, false);
+    assert.equal(indoor.distance_m, 1000);
+    assert.equal(indoor.import_metrics.avgHr, 123);
+    assert.equal(indoor.is_public, false);
+    // Account deletion retains only a revocation job; no connection or import survives.
+    await db.query("DELETE FROM users WHERE id=$1", [owner]);
+    assert.equal(
+      (await db.query("SELECT * FROM activity_connections")).rows.length,
+      0,
+    );
+    assert.equal(
+      (await db.query("SELECT * FROM activity_revocations")).rows.length,
+      1,
+    );
+    await runActivityBatch(db, tx);
+    assert.equal(revoked, 2);
     assert.ok(downloads > 0);
     // Transport limits and URL confinement remain enforced independently of payload validation.
     await assert.rejects(

@@ -74,12 +74,23 @@ for (const theme of ["light", "dark"])
     await expect(
       page.getByText("Тестовая велопоездка RWGPS").first(),
     ).toBeVisible({ timeout: 10000 });
+    await panel.getByLabel("Велосипед для импорта").selectOption("");
+    await page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname === "/api/activity-sync/rwgps" &&
+        response.request().method() === "GET",
+    );
+    await expect(panel.getByLabel("Велосипед для импорта")).toHaveValue("");
     await panel
       .getByRole("button", { name: "Синхронизировать сейчас" })
       .click();
     await expect(panel.getByRole("status")).toContainText(
       "поставлена в очередь",
     );
+    expect(
+      (await (await page.request.get("/api/activity-sync/rwgps")).json())
+        .bikeId,
+    ).toBeNull();
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth + 1,

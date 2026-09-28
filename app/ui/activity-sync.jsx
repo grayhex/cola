@@ -27,7 +27,8 @@ export default function ActivitySync({ bikes, disabled = false, onImported }) {
   useEffect(() => {
     let active = true,
       timer,
-      lastSync;
+      lastSync,
+      firstLoad = true;
     async function load() {
       try {
         const result = await api();
@@ -41,7 +42,8 @@ export default function ActivitySync({ bikes, disabled = false, onImported }) {
         )
           onImported?.();
         lastSync = result.lastSyncAt;
-        setBike((current) => current || result.bikeId || "");
+        if (firstLoad) setBike(result.bikeId || "");
+        firstLoad = false;
         if (result.connected || result.revoking) timer = setTimeout(load, 5000);
       } catch (e) {
         if (active) setError(e.message);
