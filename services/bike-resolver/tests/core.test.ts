@@ -286,7 +286,16 @@ it("API health, readiness, exact ten brands and invalid input", async () => {
   }
 });
 describe("real reduced manufacturer fixtures", () => {
-  const adapters = createAdapters(new ManufacturerHttpClient(logger));
+  // These snapshots intentionally have no supplemental API response. Never
+  // turn an offline extraction regression into a live manufacturer request.
+  const adapters = createAdapters({
+    get: async () => {
+      throw new ResolverError(
+        "upstream_unavailable",
+        "No recorded API response",
+      );
+    },
+  } as unknown as ManufacturerHttpClient);
   for (const id of [
     "specialized",
     "canyon",
