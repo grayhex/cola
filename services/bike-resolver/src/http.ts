@@ -262,16 +262,26 @@ export class ManufacturerHttpClient {
           }
           const reader = response.body!.getReader();
           const chunks: Uint8Array[] = [];
+          // Manufacturer XML catalogues can exceed the product/image limit
+          // (Specialized's US catalogue is ~17 MiB). Keep the larger budget
+          // restricted to XML responses at .xml URLs, including redirects.
+          const limitMiB =
+            /\.xml$/i.test(u.pathname) &&
+            /^(?:application|text)\/xml(?:;|$)/i.test(
+              response.headers.get("content-type") || "",
+            )
+              ? 24
+              : 8;
           let size = 0;
           while (true) {
             const { done, value } = await reader.read();
             if (done) break;
             size += value.length;
-            if (size > 8 * 1024 * 1024) {
+            if (size > limitMiB * 1024 * 1024) {
               await reader.cancel();
               throw new ResolverError(
                 "parse_error",
-                "Manufacturer document exceeds 8 MiB",
+                `Manufacturer document exceeds ${limitMiB} MiB`,
                 false,
                 "body_too_large",
               );

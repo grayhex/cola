@@ -34,7 +34,7 @@ export const queryKey = (q: {
   ]);
 const aliases: Partial<Record<ComponentType, string[]>> = {
   frame: ["rahmen"],
-  fork: ["gabel"],
+  fork: ["gabel", "suspension fork"],
   rear_shock: ["shock", "dämpfer"],
   rear_derailleur: ["schaltwerk"],
   front_derailleur: ["umwerfer"],
@@ -44,7 +44,7 @@ const aliases: Partial<Record<ComponentType, string[]>> = {
   chainring: ["chainrings"],
   chain: ["kette"],
   rear_sprocket: ["nabenritzel"],
-  brake: ["brakes", "brake system", "bremsanlage"],
+  brake: ["brakes", "brake system", "bremsanlage", "brake set", "disc brake"],
   brake_lever: ["brake levers", "shift brake lever"],
   front_hub: ["vorderrad nabe"],
   rear_hub: ["hinterrad nabe"],
@@ -60,7 +60,7 @@ const aliases: Partial<Record<ComponentType, string[]>> = {
   headset: ["steuersatz"],
   seatpost: ["seat post", "sattelstütze"],
   saddle: ["sattel"],
-  seat_clamp: ["seat binder", "sattelklemme"],
+  seat_clamp: ["seat binder", "sattelklemme", "seatpost clamp", "seat collar"],
   pedals: ["pedal", "pedale"],
   front_light: ["headlight", "scheinwerfer"],
   rear_light: ["tail light", "rücklicht"],

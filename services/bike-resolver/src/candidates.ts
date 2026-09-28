@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { normalize } from "./normalize.js";
 import { sourceIdentity } from "./source-url.js";
 import { trace, checkAbort, resolutionContext } from "./context.js";
-import { searchLinks } from "./retailer-search.js";
+import { retailerLinks } from "./retailer-search.js";
 import type {
   BikeQuery,
   BikeCandidate,
@@ -91,23 +91,7 @@ export async function findCandidates(
     withinBudget(12000, async () => {
       if (!settings.value.retailerSearch) return [];
       trace("retailer_search_started");
-      const search = new URL("https://www.bing.com/search");
-      search.searchParams.set("format", "rss");
-      search.searchParams.set(
-        "q",
-        [
-          query.brand,
-          query.model,
-          query.trim,
-          query.year,
-          "bicycle specifications",
-        ]
-          .filter(Boolean)
-          .join(" "),
-      );
-      const doc = await http.get(search.href, ["www.bing.com", "bing.com"]);
-      if (!/<rss[\s>]/i.test(doc.body)) throw Error("Search unavailable");
-      return searchLinks(doc.body, query, 6);
+      return retailerLinks(http, query, 6);
     }),
     withinBudget(12000, async () =>
       settings.value.retailerSearch &&

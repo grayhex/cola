@@ -1,0 +1,222 @@
+[
+  {
+    "file": "trek-robots.html",
+    "requestedUrl": "https://www.trekbikes.com/robots.txt",
+    "url": "https://www.trekbikes.com/robots.txt",
+    "retrievedAt": "2026-09-28T17:12:04.488023+00:00",
+    "status": 200,
+    "rawSha256": "28b73b8a64a2a79b4c28920133cfbf2d536c886b5661b0b09a9db74c07f3a74f"
+  },
+  {
+    "file": "spec-sitemap.html",
+    "requestedUrl": "https://www.specialized.com/us/en/sitemap.xml",
+    "url": "https://www.specialized.com/us/en/sitemap.xml",
+    "retrievedAt": "2026-09-28T17:11:58.496377+00:00",
+    "status": 200,
+    "rawSha256": "f1d99f33d3bb7e05705740860a4099276b6423140e38f5601dd67eb1cff1a544"
+  },
+  {
+    "file": "cannondale-robots.html",
+    "requestedUrl": "https://www.cannondale.com/robots.txt",
+    "url": "https://www.cannondale.com/robots.txt",
+    "retrievedAt": "2026-09-28T17:12:11.127583+00:00",
+    "status": 200,
+    "rawSha256": "01bafd1fbf9295be8c49bc3231a76f8dd5c1ccfbd9ca7ebdf435183130d2b7d5"
+  },
+  {
+    "file": "cannondale-sitemap.html",
+    "requestedUrl": "https://a304077.sitemaphosting6.com/4356448/sitemap.xml",
+    "url": "https://a304077.sitemaphosting6.com/4356448/sitemap.xml",
+    "retrievedAt": "2026-09-28T17:12:59.102564+00:00",
+    "status": 200,
+    "rawSha256": "57ff84341b631dbfd75a584bad202c8528dcd36b4727f366d3d9313e997d67f4"
+  },
+  {
+    "file": "scott-rss.html",
+    "requestedUrl": "https://www.bing.com/search?format=rss&q=Scott%20Spark%20950%202025%20bicycle%20specifications",
+    "url": "https://www.bing.com/search?format=rss&q=Scott%20Spark%20950%202025%20bicycle%20specifications",
+    "retrievedAt": "2026-09-28T17:15:21.861046+00:00",
+    "status": 200,
+    "rawSha256": "671bdab568145034fa6146689ef6dde08883773256c1d3844357556bfbd8a610"
+  },
+  {
+    "file": "spec-products.html",
+    "requestedUrl": "https://media.specialized.com/sitemaps/US-Product-en-USD.xml",
+    "url": "https://media.specialized.com/sitemaps/US-Product-en-USD.xml",
+    "retrievedAt": "2026-09-28T17:13:01.701045+00:00",
+    "status": 200,
+    "rawSha256": "3ac1cb7404ce1da32d9ed60c7f59c36771a8aaa63bb23d0951ff27fc2ca90b14",
+    "reduction": "Only matching product url nodes retained, including neighbouring trims"
+  },
+  {
+    "file": "canyon-sitemap.html",
+    "requestedUrl": "https://www.canyon.com/sitemap-en_NL.xml",
+    "url": "https://www.canyon.com/sitemap-en_NL.xml",
+    "retrievedAt": "2026-09-28T17:12:05.588252+00:00",
+    "status": 200,
+    "rawSha256": "dc8869a73b01c692b2d4381a18f37fcfc51b090485624041c2d09265a5b9ab93",
+    "reduction": "Only matching product url nodes retained, including neighbouring trims"
+  },
+  {
+    "file": "cannondale-products.html",
+    "requestedUrl": "https://a304077.sitemaphosting6.com/4356448/sitemap1.xml",
+    "url": "https://a304077.sitemaphosting6.com/4356448/sitemap1.xml",
+    "retrievedAt": "2026-09-28T17:13:55.276490+00:00",
+    "status": 200,
+    "rawSha256": "15f8766226d96ee8725b967252bf149cc51b62fae79e0e0f6cb323fd7c45adb6",
+    "reduction": "Only matching product url nodes retained, including neighbouring trims"
+  },
+  {
+    "file": "cannondale-products2.html",
+    "requestedUrl": "https://a304077.sitemaphosting6.com/4356448/sitemap2.xml",
+    "url": "https://a304077.sitemaphosting6.com/4356448/sitemap2.xml",
+    "retrievedAt": "2026-09-28T17:19:58.220547+00:00",
+    "status": 200,
+    "rawSha256": "9f6ee78420446ac807586f88440fe72ee598dc7c3fdc88d5da7b46ff82a687a1",
+    "reduction": "Only matching product url nodes retained, including neighbouring trims"
+  },
+  {
+    "file": "trek-search-page.html",
+    "requestedUrl": "https://www.trekbikes.com/us/en_US/search/?text=Marlin",
+    "url": "https://www.trekbikes.com/us/en_US/bikes/mountain-bikes/cross-country-mountain-bikes/marlin/c/B321/",
+    "retrievedAt": "2026-09-28T17:21:30.568540+00:00",
+    "status": 200,
+    "rawSha256": "eb11ac9b06139a439f480681fe9ae38a5ea415ef578bf2163ed623d2b6eea030",
+    "reduction": "Original product-card-item elements with inert product JSON attributes"
+  },
+  {
+    "file": "madone-list.html",
+    "requestedUrl": "https://www.trekbikes.com/us/en_US/bikes/road-bikes/performance-road-bikes/madone/madone-sl/c/B213-2/",
+    "url": "https://www.trekbikes.com/us/en_US/bikes/road-bikes/performance-road-bikes/madone/madone-sl/c/B213-2/",
+    "retrievedAt": "2026-09-28T17:11:43.049508+00:00",
+    "status": 200,
+    "rawSha256": "755426606ed265bcf65a66de57e0c8106ea2aec63d5e4109ce580328b911f6e8",
+    "reduction": "Original product-card-item elements with inert product JSON attributes"
+  },
+  {
+    "file": "checkpoint-search-page.html",
+    "requestedUrl": "https://www.trekbikes.com/us/en_US/search/?text=Checkpoint",
+    "url": "https://www.trekbikes.com/us/en_US/bikes/bikepacking-touring-bikes/checkpoint/c/B224/",
+    "retrievedAt": "2026-09-28T17:22:09.913557+00:00",
+    "status": 200,
+    "rawSha256": "97f0e84740c4aac9f1303881d64d69a812dc839255879751ab4af10528abc09e",
+    "reduction": "Original product-card-item elements with inert product JSON attributes"
+  },
+  {
+    "file": "scott-velo-search.html",
+    "requestedUrl": "https://www.velosklad.ru/velosipedy/poiskall/?text=Scott%20Spark%20950%202025",
+    "url": "https://www.velosklad.ru/velosipedy/poisk/?text=Scott%20Spark%20950%202025",
+    "retrievedAt": "2026-09-28T17:18:15.021155+00:00",
+    "status": 200,
+    "rawSha256": "178cf9d8e850ec50b15f8329da7751c3b40b7e5302876898428f3325e964c216",
+    "reduction": "Original Scott Spark product anchors"
+  },
+  {
+    "file": "marlin6-full.html",
+    "requestedUrl": "https://api.trekbikes.com/occ/v2/us/products/57365/full",
+    "url": "https://api.trekbikes.com/occ/v2/us/products/57365/full",
+    "retrievedAt": "2026-09-28T17:23:42.717348+00:00",
+    "status": 200,
+    "rawSha256": "4b49c81c914edd673791f3c0451659c6910149f5c6e3f723381f0624d3c72097",
+    "reduction": "Identity and specifications fields only; no invented values"
+  },
+  {
+    "file": "marlin6-specs.html",
+    "requestedUrl": "https://api.trekbikes.com/occ/v2/us/products/57365/specifications",
+    "url": "https://api.trekbikes.com/occ/v2/us/products/57365/specifications",
+    "retrievedAt": "2026-09-28T17:23:39.379464+00:00",
+    "status": 200,
+    "rawSha256": "70a0f649c85180838c7ffe495af9e32dfc10860bb58de603a5bd6ae7e7c41542",
+    "reduction": "Original specifications response"
+  },
+  {
+    "file": "madone-full.html",
+    "requestedUrl": "https://api.trekbikes.com/occ/v2/us/products/57653/full",
+    "url": "https://api.trekbikes.com/occ/v2/us/products/57653/full",
+    "retrievedAt": "2026-09-28T17:14:48.207967+00:00",
+    "status": 200,
+    "rawSha256": "d8ea4a37df557e4318769630b85f74dad567e803bad4b32339edc316a16b1dbe",
+    "reduction": "Identity and specifications fields only; no invented values"
+  },
+  {
+    "file": "madone-specs.html",
+    "requestedUrl": "https://api.trekbikes.com/occ/v2/us/products/57653/specifications",
+    "url": "https://api.trekbikes.com/occ/v2/us/products/57653/specifications",
+    "retrievedAt": "2026-09-28T17:14:48.137480+00:00",
+    "status": 200,
+    "rawSha256": "b469261ef4a9a77eca0d9aafdd1d10d7ab680a5236e5ee92a7161240b259846d",
+    "reduction": "Original specifications response"
+  },
+  {
+    "file": "checkpoint-full.html",
+    "requestedUrl": "https://api.trekbikes.com/occ/v2/us/products/49946/full",
+    "url": "https://api.trekbikes.com/occ/v2/us/products/49946/full",
+    "retrievedAt": "2026-09-28T17:17:13.206445+00:00",
+    "status": 200,
+    "rawSha256": "3e4d62b1f235eb81735255850fe106f98841acb796bbfe1bea631e87151eac39",
+    "reduction": "Identity and specifications fields only; no invented values"
+  },
+  {
+    "file": "checkpoint-specs.html",
+    "requestedUrl": "https://api.trekbikes.com/occ/v2/us/products/49946/specifications",
+    "url": "https://api.trekbikes.com/occ/v2/us/products/49946/specifications",
+    "retrievedAt": "2026-09-28T17:14:54.222148+00:00",
+    "status": 200,
+    "rawSha256": "5de42d50e8579cfddfed46e50dc8dfd1f68decee933eaa5886939aafdc24bc34",
+    "reduction": "Original specifications response"
+  },
+  {
+    "file": "trek-sitemap.html",
+    "requestedUrl": "https://www.trekbikes.com/sitemap.xml",
+    "url": "https://api.trekbikes.com/occ/v2/us/sitemap.xml",
+    "retrievedAt": "2026-09-28T17:13:07.388186+00:00",
+    "status": 200,
+    "rawSha256": "c566196d7122fa1b275bb779d6096b1ad7372dda94d77e67be014bf5d070f99a",
+    "reduction": "Matching catalogue nodes only"
+  },
+  {
+    "file": "trek-map1.html",
+    "requestedUrl": "https://wcpcdn.blob.core.windows.net/hybris/sitemap/Trek-en-US-01.xml",
+    "url": "https://wcpcdn.blob.core.windows.net/hybris/sitemap/Trek-en-US-01.xml",
+    "retrievedAt": "2026-09-28T17:15:23.498320+00:00",
+    "status": 200,
+    "rawSha256": "f50fad87adc3debd6a476b6bc7ed987dbaa9c111bd575631d1bc178b8620745d",
+    "reduction": "Matching catalogue nodes only"
+  },
+  {
+    "file": "trek-map2.html",
+    "requestedUrl": "https://wcpcdn.blob.core.windows.net/hybris/sitemap/Trek-en-US-02.xml",
+    "url": "https://wcpcdn.blob.core.windows.net/hybris/sitemap/Trek-en-US-02.xml",
+    "retrievedAt": "2026-09-28T17:19:45.555352+00:00",
+    "status": 200,
+    "rawSha256": "87f80108a04b6cc0c1a829fe12c516d1798b394d2c0cd802b0f4b646cc2aacad",
+    "reduction": "Matching catalogue nodes only"
+  },
+  {
+    "file": "trek-map3.html",
+    "requestedUrl": "https://wcpcdn.blob.core.windows.net/hybris/sitemap/Trek-en-US-03.xml",
+    "url": "https://wcpcdn.blob.core.windows.net/hybris/sitemap/Trek-en-US-03.xml",
+    "retrievedAt": "2026-09-28T17:19:45.780728+00:00",
+    "status": 200,
+    "rawSha256": "c87484d09a67c87124a9b5870337c62e07e8a12b1671805f9a9ba86228e982fb",
+    "reduction": "Matching catalogue nodes only"
+  },
+  {
+    "file": "trek-map4.html",
+    "requestedUrl": "https://wcpcdn.blob.core.windows.net/hybris/sitemap/Trek-en-US-04.xml",
+    "url": "https://wcpcdn.blob.core.windows.net/hybris/sitemap/Trek-en-US-04.xml",
+    "retrievedAt": "2026-09-28T17:19:45.378498+00:00",
+    "status": 200,
+    "rawSha256": "7b6b2dbcd2861c98044f45e5740e423eeb74fd8f0e297142869d67baad6dd8f6",
+    "reduction": "Matching catalogue nodes only"
+  },
+  {
+    "file": "supersix-list.html",
+    "requestedUrl": "https://www.cannondale.com/en-us/bikes/road/race/supersix-evo",
+    "url": "https://www.cannondale.com/en-us/bikes/road/race/supersix-evo",
+    "retrievedAt": "2026-09-28T17:23:39.409264+00:00",
+    "status": 200,
+    "rawSha256": "1cbbbc9810670560253423549b791e18762b5de8eea363901a334f7124307f9e",
+    "reduction": "Original product anchors"
+  }
+]

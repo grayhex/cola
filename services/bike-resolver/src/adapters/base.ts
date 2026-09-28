@@ -19,6 +19,7 @@ export abstract class CatalogueAdapter implements BikeManufacturerAdapter {
   readonly adapterVersion: number = 1;
   abstract readonly origin: string;
   abstract productPath: RegExp;
+  protected cataloguePath?: RegExp;
   protected rows?: { row: string; label: string; value: string };
   private documents = new Map<
     string,
@@ -32,6 +33,9 @@ export abstract class CatalogueAdapter implements BikeManufacturerAdapter {
     return [this.origin + "/robots.txt"];
   }
   protected direct(_q: BikeQuery): string[] {
+    return [];
+  }
+  protected catalogueLinks(_doc: SourceDocument): string[] {
     return [];
   }
   protected async document(url: string): Promise<SourceDocument> {
@@ -79,6 +83,12 @@ export abstract class CatalogueAdapter implements BikeManufacturerAdapter {
         const u = validateUrl(new URL(value, base).href, this.allowedDomains);
         u.hash = "";
         if (
+          this.cataloguePath?.test(u.pathname) &&
+          this.matchesModel(decodeURIComponent(u.pathname), q) &&
+          !seen.has(u.href)
+        )
+          queue.unshift(u.href);
+        else if (
           this.productPath.test(u.pathname) &&
           this.matchesModel(decodeURIComponent(u.pathname), q)
         )
@@ -98,6 +108,7 @@ export abstract class CatalogueAdapter implements BikeManufacturerAdapter {
       seen.add(url);
       try {
         const doc = await this.document(url);
+        for (const link of this.catalogueLinks(doc)) add(link, doc.url);
         if (/<app-root|<title>\s*Cube Info Portal/i.test(doc.body))
           throw new ResolverError(
             "upstream_unavailable",
@@ -117,6 +128,7 @@ export abstract class CatalogueAdapter implements BikeManufacturerAdapter {
           if (anchors.length > 3) meaningful = true;
           anchors.each((_, e) => {
             const href = $(e).attr("href")!;
+            add(href, doc.url);
             try {
               const u = validateUrl(
                 new URL(href, doc.url).href,
@@ -133,6 +145,10 @@ export abstract class CatalogueAdapter implements BikeManufacturerAdapter {
                 urls.add(u.href);
             } catch {}
           });
+          // A current catalogue/search page already supplied product choices.
+          // Do not spend the remaining budget downloading historical sitemaps
+          // when the user has not requested a particular year.
+          if (q.year === null && urls.size) break;
         }
       } catch (e) {
         failure = e;

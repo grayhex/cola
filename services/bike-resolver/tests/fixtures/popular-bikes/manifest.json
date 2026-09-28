@@ -1,0 +1,344 @@
+[
+  {
+    "id": "stumpjumper",
+    "category": "MTB",
+    "query": {
+      "brand": "Specialized",
+      "model": "Stumpjumper 15",
+      "trim": "Comp",
+      "year": null
+    },
+    "sourceYear": 2025,
+    "url": "https://www.specialized.com/us/en/stumpjumper-15-comp-sram-s-1000-axs-fox-performance/p/4221395",
+    "requestedUrl": "https://www.specialized.com/us/en/stumpjumper-15-comp/p/4221395",
+    "retrievedAt": "2026-09-28T17:11:37.617473+00:00",
+    "rawSha256": "63f7edb0fa4dca17c5a702f817adc5ad55c61a4f2fe9ed9a6f17bbe819964fa3",
+    "retailer": false,
+    "selectors": [
+      "title:not(svg title)",
+      "h1",
+      "meta[property=\"og:title\"]",
+      "script[type=\"application/ld+json\"]",
+      "#technical-specifications"
+    ]
+  },
+  {
+    "id": "marlin6",
+    "category": "MTB",
+    "query": {
+      "brand": "Trek",
+      "model": "Marlin",
+      "trim": "6 Gen 3",
+      "year": null
+    },
+    "sourceYear": null,
+    "url": "https://www.trekbikes.com/us/en_US/bikes/mountain-bikes/cross-country-mountain-bikes/marlin/f/F321/marlin-6-gen-3/57365/",
+    "requestedUrl": "https://www.trekbikes.com/us/en_US/bikes/mountain-bikes/cross-country-mountain-bikes/marlin/marlin-6-gen-3/p/57365/",
+    "retrievedAt": "2026-09-28T17:23:45.699145+00:00",
+    "rawSha256": "cd183761f77e1d27a0fda36dfad81e0a97ee0a23612177afb58f507f83683bb8",
+    "retailer": false,
+    "selectors": [
+      "title:not(svg title)",
+      "h1",
+      "meta[property=\"og:title\"]",
+      "script[type=\"application/ld+json\"]"
+    ]
+  },
+  {
+    "id": "spectral",
+    "category": "MTB",
+    "query": {
+      "brand": "Canyon",
+      "model": "Spectral",
+      "trim": "CF 7",
+      "year": null
+    },
+    "sourceYear": 2027,
+    "url": "https://www.canyon.com/en-nl/mountain-bikes/trail-bikes/spectral/cf/spectral-cf-7/4380.html",
+    "requestedUrl": "https://www.canyon.com/en-nl/mountain-bikes/trail-bikes/spectral/cf/spectral-cf-7/4380.html",
+    "retrievedAt": "2026-09-28T17:11:41.047453+00:00",
+    "rawSha256": "54c7ac393a0c022d9b707fdfa5d5778db51737d17f0311f69d8fc7f0a595c130",
+    "retailer": false,
+    "selectors": [
+      "title:not(svg title)",
+      "h1",
+      "meta[property=\"og:title\"]",
+      "script[type=\"application/ld+json\"]",
+      ".allComponents__sectionSpecListItemInner"
+    ]
+  },
+  {
+    "id": "scott-velo",
+    "category": "MTB",
+    "query": {
+      "brand": "Scott",
+      "model": "Spark",
+      "trim": "950",
+      "year": null
+    },
+    "sourceYear": 2025,
+    "url": "https://www.velosklad.ru/velosipedy/bike/29148/scott-spark-950/",
+    "requestedUrl": "https://www.velosklad.ru/velosipedy/bike/29148/scott-spark-950/",
+    "retrievedAt": "2026-09-28T17:17:15.624671+00:00",
+    "rawSha256": "57182121bb5ba2d6cd6f033e181f405da1c3b000e8d9c3653358a78d8fec03bc",
+    "retailer": true,
+    "selectors": [
+      "title:not(svg title)",
+      "h1",
+      "meta[property=\"og:title\"]",
+      "script[type=\"application/ld+json\"]",
+      "table"
+    ]
+  },
+  {
+    "id": "talon",
+    "category": "MTB",
+    "query": {
+      "brand": "Giant",
+      "model": "Talon",
+      "trim": "1",
+      "year": 2025
+    },
+    "sourceYear": 2025,
+    "url": "https://www.giant-bicycles.com/gb/talon-1-2025",
+    "requestedUrl": "https://www.giant-bicycles.com/gb/talon-1-2025",
+    "retrievedAt": "2026-09-28T17:11:57.830657+00:00",
+    "rawSha256": "c5798e1b09c2ec1d3f72d8fbc0c7cdf32ce685fa3d714e7557972db6ab1fa111",
+    "retailer": false,
+    "selectors": [
+      "title:not(svg title)",
+      "h1",
+      "meta[property=\"og:title\"]",
+      "script[type=\"application/ld+json\"]",
+      "li.datarow"
+    ]
+  },
+  {
+    "id": "tarmac",
+    "category": "road",
+    "query": {
+      "brand": "Specialized",
+      "model": "Tarmac SL8",
+      "trim": "Comp",
+      "year": null
+    },
+    "sourceYear": 2026,
+    "url": "https://www.specialized.com/us/en/tarmac-sl8-comp-sram-rival-axs-/p/4292996",
+    "requestedUrl": "https://www.specialized.com/us/en/tarmac-sl8-comp-sram-rival-axs-/p/4292996",
+    "retrievedAt": "2026-09-28T17:11:58.938155+00:00",
+    "rawSha256": "3c44079b23ae036d6908bdc047d750290d0bc5b0856fd3aa52520543a1f94c4a",
+    "retailer": false,
+    "selectors": [
+      "title:not(svg title)",
+      "h1",
+      "meta[property=\"og:title\"]",
+      "script[type=\"application/ld+json\"]",
+      "#technical-specifications"
+    ]
+  },
+  {
+    "id": "madone",
+    "category": "road",
+    "query": {
+      "brand": "Trek",
+      "model": "Madone",
+      "trim": "SL 5 Gen 8",
+      "year": null
+    },
+    "sourceYear": null,
+    "url": "https://www.trekbikes.com/us/en_US/bikes/road-bikes/performance-road-bikes/madone/f/F213/madone-sl-5-gen-8/57653/",
+    "requestedUrl": "https://www.trekbikes.com/us/en_US/bikes/road-bikes/performance-road-bikes/madone/madone-sl/madone-sl-5-gen-8/p/57653/",
+    "retrievedAt": "2026-09-28T17:12:05.103923+00:00",
+    "rawSha256": "b7f561cfcb685e3e9f88dceb56fee21824ba2b2139e1af514cc0b2f77b9c342d",
+    "retailer": false,
+    "selectors": [
+      "title:not(svg title)",
+      "h1",
+      "meta[property=\"og:title\"]",
+      "script[type=\"application/ld+json\"]"
+    ]
+  },
+  {
+    "id": "supersix1",
+    "category": "road",
+    "query": {
+      "brand": "Cannondale",
+      "model": "SuperSix EVO",
+      "trim": "1",
+      "year": null
+    },
+    "sourceYear": null,
+    "url": "https://www.cannondale.com/en-us/bikes/road/race/supersix-evo/supersix-evo-1",
+    "requestedUrl": "https://www.cannondale.com/en-us/bikes/road/race/supersix-evo/supersix-evo-1",
+    "retrievedAt": "2026-09-28T17:27:39.826600+00:00",
+    "rawSha256": "64cf7ed19914966d2d1eb5a1d15790273a56e28271485ab38b605751cd524f2d",
+    "retailer": false,
+    "selectors": [
+      "title:not(svg title)",
+      "h1",
+      "meta[property=\"og:title\"]",
+      "script[type=\"application/ld+json\"]",
+      "#SpecsExpandable"
+    ]
+  },
+  {
+    "id": "aeroad",
+    "category": "road",
+    "query": {
+      "brand": "Canyon",
+      "model": "Aeroad",
+      "trim": "CF SLX 7 Di2",
+      "year": null
+    },
+    "sourceYear": 2027,
+    "url": "https://www.canyon.com/en-nl/road-bikes/aero-bikes/aeroad/cf-slx/aeroad-cf-slx-7-di2/4531.html",
+    "requestedUrl": "https://www.canyon.com/en-nl/road-bikes/aero-bikes/aeroad/cf-slx/aeroad-cf-slx-7-di2/4531.html",
+    "retrievedAt": "2026-09-28T17:11:41.369731+00:00",
+    "rawSha256": "e7496ba73bcfa5f2bd265794488fc3e4ed5cd314e398c1494ce2ac894121e853",
+    "retailer": false,
+    "selectors": [
+      "title:not(svg title)",
+      "h1",
+      "meta[property=\"og:title\"]",
+      "script[type=\"application/ld+json\"]",
+      ".allComponents__sectionSpecListItemInner"
+    ]
+  },
+  {
+    "id": "tcr",
+    "category": "road",
+    "query": {
+      "brand": "Giant",
+      "model": "TCR Advanced",
+      "trim": "2",
+      "year": null
+    },
+    "sourceYear": 2026,
+    "url": "https://www.giant-bicycles.com/gb/tcr-advanced-2",
+    "requestedUrl": "https://www.giant-bicycles.com/gb/tcr-advanced-2",
+    "retrievedAt": "2026-09-28T17:11:33.902204+00:00",
+    "rawSha256": "1889923416d4309cac72853f4dfbb3f9f7c85993067adf9746252f6917d37428",
+    "retailer": false,
+    "selectors": [
+      "title:not(svg title)",
+      "h1",
+      "meta[property=\"og:title\"]",
+      "script[type=\"application/ld+json\"]",
+      "li.datarow"
+    ]
+  },
+  {
+    "id": "diverge",
+    "category": "gravel",
+    "query": {
+      "brand": "Specialized",
+      "model": "Diverge 4",
+      "trim": "Sport Carbon",
+      "year": null
+    },
+    "sourceYear": null,
+    "url": "https://www.specialized.com/us/en/diverge-4-sport-carbon-shimano-grx-600/p/4223514",
+    "requestedUrl": "https://www.specialized.com/us/en/diverge-4-sport-carbon-shimano-grx-600/p/4223514",
+    "retrievedAt": "2026-09-28T17:11:31.659580+00:00",
+    "rawSha256": "572a61a2e49328c38a2b9588ae6cde0ba3f5f2efbbb10dc0c408fbf43bd6287a",
+    "retailer": false,
+    "selectors": [
+      "title:not(svg title)",
+      "h1",
+      "meta[property=\"og:title\"]",
+      "script[type=\"application/ld+json\"]",
+      "#technical-specifications"
+    ]
+  },
+  {
+    "id": "checkpoint",
+    "category": "gravel",
+    "query": {
+      "brand": "Trek",
+      "model": "Checkpoint",
+      "trim": "ALR 5 Gen 3",
+      "year": null
+    },
+    "sourceYear": null,
+    "url": "https://www.trekbikes.com/us/en_US/bikes/bikepacking-touring-bikes/checkpoint/checkpoint-alr/f/F224-2/checkpoint-alr-5-gen-3/49946/",
+    "requestedUrl": "https://www.trekbikes.com/us/en_US/bikes/bikepacking-touring-bikes/checkpoint/checkpoint-alr/checkpoint-alr-5-gen-3/p/49946/",
+    "retrievedAt": "2026-09-28T17:27:32.261223+00:00",
+    "rawSha256": "bffe4fa1ed03dc5b2bf9c4cfc892c4ac07c473f5145c4afb60c1364554768d9c",
+    "retailer": false,
+    "selectors": [
+      "title:not(svg title)",
+      "h1",
+      "meta[property=\"og:title\"]",
+      "script[type=\"application/ld+json\"]"
+    ]
+  },
+  {
+    "id": "cannondale-topstone",
+    "category": "gravel",
+    "query": {
+      "brand": "Cannondale",
+      "model": "Topstone",
+      "trim": "1",
+      "year": null
+    },
+    "sourceYear": null,
+    "url": "https://www.cannondale.com/en-us/bikes/road/gravel/topstone-alloy/topstone-1",
+    "requestedUrl": "https://www.cannondale.com/en-us/bikes/road/gravel/topstone-alloy/topstone-1",
+    "retrievedAt": "2026-09-28T17:11:52.985629+00:00",
+    "rawSha256": "24cd60b5fb2b1043ad25581c8a28ed364a073c0b06f4853afd05d89886bd5450",
+    "retailer": false,
+    "selectors": [
+      "title:not(svg title)",
+      "h1",
+      "meta[property=\"og:title\"]",
+      "script[type=\"application/ld+json\"]",
+      "#SpecsExpandable"
+    ]
+  },
+  {
+    "id": "revolt",
+    "category": "gravel",
+    "query": {
+      "brand": "Giant",
+      "model": "Revolt",
+      "trim": "1",
+      "year": null
+    },
+    "sourceYear": 2026,
+    "url": "https://www.giant-bicycles.com/gb/revolt-1",
+    "requestedUrl": "https://www.giant-bicycles.com/gb/revolt-1",
+    "retrievedAt": "2026-09-28T17:11:33.817008+00:00",
+    "rawSha256": "0f4580f925d032b53a9bb5d5a99a2e252f15973e4b6d4b7f1db4f3947ba42f91",
+    "retailer": false,
+    "selectors": [
+      "title:not(svg title)",
+      "h1",
+      "meta[property=\"og:title\"]",
+      "script[type=\"application/ld+json\"]",
+      "li.datarow"
+    ]
+  },
+  {
+    "id": "grail",
+    "category": "gravel",
+    "query": {
+      "brand": "Canyon",
+      "model": "Grail",
+      "trim": "CF 7",
+      "year": null
+    },
+    "sourceYear": 2027,
+    "url": "https://www.canyon.com/en-nl/gravel-bikes/race/grail/cf/grail-cf-7/4508.html",
+    "requestedUrl": "https://www.canyon.com/en-nl/gravel-bikes/race/grail/cf/grail-cf-7/4508.html",
+    "retrievedAt": "2026-09-28T17:11:41.328768+00:00",
+    "rawSha256": "379820f5e0f0bb14c244bd4cdbd55067480860b1f713fbd527be8c932119187e",
+    "retailer": false,
+    "selectors": [
+      "title:not(svg title)",
+      "h1",
+      "meta[property=\"og:title\"]",
+      "script[type=\"application/ld+json\"]",
+      ".allComponents__sectionSpecListItemInner"
+    ]
+  }
+]

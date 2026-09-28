@@ -1,5 +1,6 @@
 import { CatalogueAdapter } from "./base.js";
 export class CannondaleAdapter extends CatalogueAdapter {
+  readonly adapterVersion = 2;
   readonly id = "cannondale";
   readonly brand = "Cannondale";
   readonly allowedDomains = [
@@ -8,7 +9,8 @@ export class CannondaleAdapter extends CatalogueAdapter {
     "a304077.sitemaphosting6.com",
   ];
   readonly origin = "https://www.cannondale.com";
-  productPath = /\/en-us\/bikes\/.+\/.+/;
+  productPath = /\/en-us\/bikes\/[^/]+\/[^/]+\/[^/]+\/[^/]+(?:\/|$)/;
+  protected cataloguePath = /\/en-us\/bikes\/[^/]+\/[^/]+\/[^/]+\/?$/;
   protected seeds() {
     return [this.origin + "/robots.txt"];
   }

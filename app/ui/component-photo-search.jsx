@@ -101,9 +101,24 @@ export default function ComponentPhotoSearch({ model, onSaved }) {
             )}
             {photos?.length === 0 && (
               <p role="status">
-                Подходящих фото в Wikimedia Commons нет. Вы можете загрузить
-                своё фото, если для этой модели вам доступна ручная загрузка.
+                Поиск не нашёл фото этой модели с поддерживаемой лицензией и
+                достаточным разрешением. В Commons есть не все компоненты. Можно
+                загрузить своё фото, если вам доступна ручная загрузка.
               </p>
+            )}
+            {(error || photos?.length === 0) && (
+              <a
+                href={
+                  "https://commons.wikimedia.org/w/index.php?title=Special:MediaSearch&type=image&search=" +
+                  encodeURIComponent(
+                    [model.brand, model.name].filter(Boolean).join(" "),
+                  )
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Открыть поиск в Commons и уточнить запрос
+              </a>
             )}
             {!!photos?.length && (
               <form
