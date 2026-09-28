@@ -14,6 +14,7 @@ import {
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
+/** @param {Request} req */
 async function handler(req) {
   try {
     const user = await currentUser();
@@ -25,7 +26,10 @@ async function handler(req) {
     if (!sameOrigin(req)) return fail("Недопустимый источник запроса", 403);
     const input = await readJson(req);
     if (
-      !Array.isArray(input?.ids) ||
+      !input ||
+      typeof input !== "object" ||
+      !("ids" in input) ||
+      !Array.isArray(input.ids) ||
       !input.ids.length ||
       input.ids.length > 500 ||
       !input.ids.every((id) => uuid.safeParse(id).success)

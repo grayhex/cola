@@ -83,6 +83,7 @@ const uploads = () =>
 const json = (data, status = 200) =>
   NextResponse.json(data, { status, headers: { "Cache-Control": "no-store" } });
 const fail = (message, status = 400) => json({ error: message }, status);
+/** @param {Request} req */
 async function body(req) {
   const reader = req.body?.getReader();
   if (!reader) throw new Error("EMPTY_BODY");
@@ -100,6 +101,8 @@ async function body(req) {
   }
   return JSON.parse(Buffer.concat(chunks).toString());
 }
+/** @param {Request} req
+ * @param {{ params: Promise<{ path: string[] }> }} context */
 async function handler(req, { params }) {
   try {
     const { path: p } = await params;
@@ -146,9 +149,10 @@ async function handler(req, { params }) {
       method === "POST"
     ) {
       const raw = await body(req);
-      const input = (
-        p[1] === "register" ? registrationInput : credentials
-      ).parse(raw);
+      const registration = p[1] === "register";
+      const input = registration
+        ? registrationInput.parse(raw)
+        : credentials.parse(raw);
       // Global and per-account limits are DB-backed and do not trust proxy headers.
       if (!(await allowAuth(req, input.email, rateLimit)))
         return fail("Слишком много попыток. Попробуйте через 15 минут.", 429);
@@ -163,7 +167,7 @@ async function handler(req, { params }) {
         // allocated again; a username the person chose is reported back.
         for (let attempt = 1; !username; attempt++) {
           const candidate =
-            input.username ||
+            ("username" in input ? input.username : undefined) ||
             (await allocateUsername(
               db,
               suggestUsername(input.name, input.email),
@@ -180,7 +184,8 @@ async function handler(req, { params }) {
             username = candidate;
           } catch (e) {
             if (e.code === "23505" && e.constraint === "users_username_ci") {
-              if (!input.username && attempt < 3) continue;
+              if (!("username" in input && input.username) && attempt < 3)
+                continue;
               return json(
                 {
                   error: "Это имя пользователя уже занято. Выберите другое.",

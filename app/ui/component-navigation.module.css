@@ -19,9 +19,9 @@
   border-radius: var(--radius-xl);
   background: var(--surface-gradient);
   color: var(--text-secondary);
-  transition:
-    border-color var(--duration) var(--ease-out),
-    background var(--duration) var(--ease-out);
+  /* Text and surface tokens change together on theme switches. Interpolating
+     only the background creates low-contrast intermediate frames (#305 CI). */
+  transition: border-color var(--duration) var(--ease-out);
   scroll-margin-top: var(--space-20);
 }
 .group > svg {

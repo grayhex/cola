@@ -56,6 +56,8 @@ import {
 
 export const runtime = "nodejs",
   dynamic = "force-dynamic";
+/** @param {Request} req
+ * @param {{ params: Promise<{ path: string[] | undefined }> }} context */
 async function handler(req, { params }) {
   try {
     const p = (await params).path || [],

@@ -5,6 +5,7 @@
 @layer features {
   /* Award and record art owns its box: photo rules never size it. */
   .game-art {
+    position: relative;
     display: inline-flex;
     flex: 0 0 var(--game-art-size, 40px);
     align-items: center;
@@ -27,6 +28,13 @@
     height: 100%;
     max-height: 100%;
     object-fit: contain;
+  }
+
+  /* The placeholder keeps a visible icon while slow or failed media loads. */
+  .game-art[data-image-state="loading"] > img {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
   }
 
   /* ── Awards on the bike page and in profiles ────────────────────────── */

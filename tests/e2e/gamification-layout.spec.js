@@ -128,10 +128,10 @@ async function mockRecords(page, hall = { records, awards }) {
   })
     .png()
     .toBuffer();
-  await page.route("**/api/assets/" + imageId, (route) =>
+  await page.route("**/api/assets/" + imageId + "?width=*", (route) =>
     route.fulfill({ contentType: "image/png", body: large }),
   );
-  await page.route("**/api/assets/" + brokenId, (route) =>
+  await page.route("**/api/assets/" + brokenId + "?width=*", (route) =>
     route.fulfill({ status: 404, body: "Not found" }),
   );
   await page.route("**/api/game/records", (route) =>

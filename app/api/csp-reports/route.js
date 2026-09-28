@@ -5,6 +5,7 @@ import { readJson, fail } from "../../../lib/http.js";
 import { cspReports } from "../../../lib/csp-reports.js";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+/** @param {Request} req */
 export async function POST(req) {
   const origin = process.env.APP_ORIGIN || "http://localhost:3000";
   const suppliedOrigin = req.headers.get("origin");

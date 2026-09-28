@@ -34,6 +34,8 @@ async function payload(req, limit) {
     throw new ChatError("Проверьте размер и формат запроса", 400);
   }
 }
+/** @param {Request} req
+ * @param {{ params: Promise<{ path: string[] | undefined }> }} context */
 async function handler(req, { params }) {
   try {
     const viewer = await currentUser();
@@ -108,7 +110,13 @@ async function handler(req, { params }) {
     return reply({ error: "Не найдено" }, 404);
   } catch (e) {
     if (e instanceof EmailPolicyError || e instanceof ChatError)
-      return reply({ error: e.message, code: e.code }, e.status);
+      return reply(
+        {
+          error: e.message,
+          ...(e instanceof EmailPolicyError ? { code: e.code } : {}),
+        },
+        e.status,
+      );
     if (e instanceof z.ZodError || e instanceof SyntaxError)
       return reply({ error: "Проверьте поля запроса" }, 400);
     // Vendor errors can contain headers/tokens; never serialize or log them.

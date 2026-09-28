@@ -1,0 +1,7 @@
+{
+  "extends": "./jsconfig.json",
+  "compilerOptions": {
+    "strictNullChecks": true
+  },
+  "include": ["lib/**/*.js"]
+}

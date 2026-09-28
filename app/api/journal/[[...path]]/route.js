@@ -1,3 +1,4 @@
+import { z } from "zod";
 import {
   requireVerifiedEmail,
   EmailPolicyError,
@@ -47,6 +48,8 @@ import {
 import { logError, traced } from "../../../../lib/observability.js";
 export const runtime = "nodejs",
   dynamic = "force-dynamic";
+/** @param {Request} req
+ * @param {{ params: Promise<{ path: string[] | undefined }> }} context */
 async function handler(req, { params }) {
   try {
     const p = (await params).path || [],
@@ -144,7 +147,9 @@ async function handler(req, { params }) {
       );
     if (p.length === 2 && p[1] === "solution" && m === "PUT") {
       const input = await readJson(req, 2048);
-      const comment = uuid.nullable().parse(input?.commentId);
+      const comment = z
+        .object({ commentId: uuid.nullable() })
+        .parse(input).commentId;
       return json(
         await transaction((q) =>
           setSolution(q, uuid.parse(p[0]), user.id, comment),

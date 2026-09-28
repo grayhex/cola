@@ -845,3 +845,71 @@ test("settings migration keeps awards, records, illustrations and descriptions",
     await q.close();
   }
 });
+
+test("profile shelves group repeated bicycle awards by rule key after visibility checks", async () => {
+  const q = await setup();
+  try {
+    const owner = await rider(q, "wireless-owner");
+    const first = await bike(q, owner),
+      second = await bike(q, owner);
+    const hidden = await bike(q, owner, { publicBike: false });
+    for (const [id, stamp] of [
+      [first, "2026-09-01"],
+      [second, "2026-09-02"],
+      [hidden, "2026-09-03"],
+    ])
+      await q.query(
+        "INSERT INTO achievement_awards(achievement_key,user_id,bike_id,awarded_at) VALUES('wireless',$1,$2,$3)",
+        [owner, id, stamp],
+      );
+    // Distinct rules may share a title: only stable keys define identity.
+    await q.query(
+      "UPDATE game_rules SET name='Без проводов' WHERE key='first_public'",
+    );
+    const raw = await awardShelf(q, { userId: owner });
+    assert.equal(raw.filter((a) => a.key === "wireless").length, 2);
+    const profile = await gameShelf(q, { userId: owner });
+    const wireless = profile.awards.filter((a) => a.key === "wireless");
+    assert.equal(wireless.length, 1);
+    assert.equal(wireless[0].bikeId, second); // latest visible award, never hidden context
+    assert.equal(
+      profile.awards.filter((a) => a.name === "Без проводов").length,
+      2,
+    );
+    const account = await accountAchievements(q, owner);
+    assert.equal(account.awards.filter((a) => a.key === "wireless").length, 1);
+    assert.equal(
+      account.awards.find((a) => a.key === "wireless").bikeId,
+      hidden,
+    );
+    for (const bikeId of [first, second]) {
+      const shelf = await gameShelf(q, { bikeId });
+      assert.equal(
+        shelf.awards.find((a) => a.key === "wireless").bikeId,
+        bikeId,
+      );
+    }
+    assert.equal(
+      (
+        await q.query(
+          "SELECT count(*)::int AS n FROM achievement_awards WHERE achievement_key='wireless' AND user_id=$1",
+          [owner],
+        )
+      ).rows[0].n,
+      3,
+    );
+    await q.query("UPDATE bikes SET is_public=false WHERE owner_id=$1", [
+      owner,
+    ]);
+    assert.equal(
+      (await gameShelf(q, { userId: owner })).awards.some(
+        (a) => a.key === "wireless",
+      ),
+      false,
+    );
+    await q.query("UPDATE users SET blocked=true WHERE id=$1", [owner]);
+    assert.deepEqual((await accountAchievements(q, owner)).awards, []);
+  } finally {
+    await q.close();
+  }
+});

@@ -1,5 +1,5 @@
 {
-  // Type checking of lib/ from JSDoc (#82): `pnpm typecheck`, also in CI.
+  // JSDoc checks cover domain modules and every API route (#143).
   // Next.js reads only paths, baseUrl and decorator/JSX options from this file;
   // none are set, so the build does not change. Widen "include" step by step.
   "compilerOptions": {
@@ -15,5 +15,5 @@
     "skipLibCheck": true,
     "maxNodeModuleJsDepth": 0
   },
-  "include": ["lib/**/*.js"]
+  "include": ["lib/**/*.js", "app/api/**/*.js"]
 }

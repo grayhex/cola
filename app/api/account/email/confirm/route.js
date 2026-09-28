@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { rateLimit } from "../../../../../lib/auth.js";
 import { trustedIp } from "../../../../../lib/auth-limits.js";
 import { transaction } from "../../../../../lib/db.js";
@@ -23,7 +24,9 @@ export const POST = traced(async function POST(req) {
     return fail("Слишком много попыток. Попробуйте через 15 минут.", 429);
   let token;
   try {
-    token = tokenInput.parse((await readJson(req, 4096)).token);
+    token = tokenInput.parse(
+      z.object({ token: z.unknown() }).parse(await readJson(req, 4096)).token,
+    );
   } catch {
     token = null;
   }

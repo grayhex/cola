@@ -36,6 +36,8 @@ import {
 import { gameImagePromptInput } from "../../../../lib/game-prompt-validation.js";
 export const runtime = "nodejs",
   dynamic = "force-dynamic";
+/** @param {Request} req
+ * @param {{ params: Promise<{ path: string[] }> }} context */
 async function handler(req, { params }) {
   try {
     const { path: p } = await params,
@@ -124,8 +126,20 @@ async function handler(req, { params }) {
             // The message names the rule: its title, or its place in the list.
             const issue = parsed.error.issues[0];
             const index = issue.path[1];
+            const invalidRule =
+              typeof index === "number" &&
+              body &&
+              typeof body === "object" &&
+              "rules" in body &&
+              Array.isArray(body.rules)
+                ? body.rules[index]
+                : null;
             const name =
-              typeof index === "number" ? body?.rules?.[index]?.name : null;
+              invalidRule &&
+              typeof invalidRule === "object" &&
+              "name" in invalidRule
+                ? invalidRule.name
+                : null;
             const rule =
               typeof name === "string" && name.trim()
                 ? "«" + name.trim().slice(0, 60) + "»: "

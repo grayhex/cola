@@ -2,6 +2,8 @@ import * as original from "../../[...path]/route.js";
 import { publicResponse } from "../../../../lib/public-response.js";
 export const runtime = "nodejs",
   dynamic = "force-dynamic";
+/** @param {Request} req
+ * @param {{ params: Promise<{ path: string[] | undefined }> }} context */
 async function handler(req, { params }) {
   const { path = [] } = await params;
   return publicResponse(
