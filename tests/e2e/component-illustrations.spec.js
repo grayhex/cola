@@ -9,6 +9,8 @@ const origin = process.env.TEST_ORIGIN || "http://localhost:3100";
 
 test("component artwork: admin upload, persistence, protected deletion, themes and fallback; shared messages icon", async ({
   page,
+  browser,
+  isMobile,
 }, info) => {
   const db = new pg.Client({ connectionString: process.env.DATABASE_URL });
   await db.connect();
@@ -140,12 +142,32 @@ test("component artwork: admin upload, persistence, protected deletion, themes a
         fullPage: true,
       });
     }
-    await page.route("**/api/assets/" + asset, (route) =>
-      route.fulfill({ status: 404, body: "missing" }),
-    );
-    await page.reload();
-    await expect(trigger.locator("img")).toHaveCount(0);
-    await expect(trigger.locator(".part-icon")).toBeVisible();
+    // WebKit can reuse immutable image data on reload without hitting the
+    // route. A fresh visitor must receive a real 404 before checking fallback.
+    const visitor = await browser.newContext({
+      baseURL: origin,
+      viewport: page.viewportSize(),
+      isMobile,
+      hasTouch: isMobile,
+    });
+    try {
+      const guest = await visitor.newPage();
+      await guest.route("**/api/assets/" + asset, (route) =>
+        route.fulfill({ status: 404, body: "missing" }),
+      );
+      const missing = guest.waitForResponse(
+        (response) => response.url() === assetUrl && response.status() === 404,
+      );
+      await guest.goto("/components");
+      await missing;
+      const fallback = guest.getByRole("button", {
+        name: /Управление и посадка/,
+      });
+      await expect(fallback.locator("img")).toHaveCount(0);
+      await expect(fallback.locator(".part-icon")).toBeVisible();
+    } finally {
+      await visitor.close();
+    }
   } finally {
     await db.query("UPDATE site_settings SET value=$1 WHERE id=1", [original]);
     if (asset)
