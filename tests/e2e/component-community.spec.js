@@ -282,6 +282,8 @@ test("component gallery and discussion: private owner, upload, originals, captio
     await expect(page.locator(".comment-reply .comment-body")).toHaveText(
       "Мне удобно на длинных поездках.",
     );
+    await expect(page).toHaveURL(/[?&]comment=[^&#]+#discussion$/);
+    await expect(page.locator("#discussion")).toBeInViewport();
     // Normal reader uses the shared report UI; the same account becomes moderator.
     await readerGallery.getByText("Управление фото", { exact: true }).click();
     await readerGallery
@@ -334,7 +336,9 @@ test("component gallery and discussion: private owner, upload, originals, captio
     await expect(
       adminPhotos.last().getByText("Скрыто", { exact: true }),
     ).toBeVisible();
-    await page.reload();
+    // Leave the notification deep link: its async discussion scroll must not
+    // compete with gallery clicks or the later theme/viewport checks on reload.
+    await page.goto("/components/" + model);
     await selectLast(gallery);
     await expect(gallery.getByText("Скрыто", { exact: true })).toBeVisible(); // Author retains management access.
     await readerGallery
@@ -397,16 +401,21 @@ test("component gallery and discussion: private owner, upload, originals, captio
             preview.captionTop + 1,
           );
         }
-        const layout = await Promise.all([
-          gallery
-            .getByRole("region", {
-              name: "Фото компонента; стрелки, Home и End для выбора",
-            })
-            .boundingBox(),
-          gallery
-            .getByRole("complementary", { name: "Действия и сведения о фото" })
-            .boundingBox(),
-        ]);
+        // Read both rectangles in one DOM evaluation, in document order, so
+        // scrolling cannot put them in different viewport coordinate frames.
+        const layout = await gallery
+          .getByRole("region", {
+            name: "Фото компонента; стрелки, Home и End для выбора",
+          })
+          .or(
+            gallery.getByRole("complementary", {
+              name: "Действия и сведения о фото",
+            }),
+          )
+          .evaluateAll((elements) =>
+            elements.map((element) => element.getBoundingClientRect().toJSON()),
+          );
+        expect(layout).toHaveLength(2);
         if (width > 800)
           expect(layout[1].x).toBeGreaterThan(layout[0].x + layout[0].width);
         else
