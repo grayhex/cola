@@ -10,6 +10,7 @@ import { readJson, sameOrigin } from "../../../../lib/http.js";
 import { chatConfig, streamUserId } from "../../../../lib/chat-config.js";
 import { chatProvider, ChatError } from "../../../../lib/chat-provider.js";
 import { issueChatToken, createChatChannel } from "../../../../lib/chat.js";
+import { chatPeople } from "../../../../lib/chat-people.js";
 import {
   EmailPolicyError,
   requireVerifiedEmail,
@@ -72,12 +73,7 @@ async function handler(req, { params }) {
     }
     if (action === "people" && req.method === "GET") {
       const term = new URL(req.url).searchParams.get("q")?.trim() || "";
-      if (term.length < 2 || term.length > 80) return reply({ people: [] });
-      const { rows } = await db.query(
-        "SELECT id,name,username,avatar_id FROM users WHERE id<>$1 AND NOT blocked AND email_verified_at IS NOT NULL AND (username ILIKE $2 OR name ILIKE $2) ORDER BY username,id LIMIT 10",
-        [viewer.id, "%" + term.replace(/[\\%_]/g, "\\$&") + "%"],
-      );
-      return reply({ people: rows });
+      return reply(await chatPeople(db, viewer.id, term));
     }
     if (action === "unread" && req.method === "GET") {
       const identity = await db.query(

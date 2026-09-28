@@ -15,6 +15,7 @@ import { issueChatToken, createChatChannel } from "../lib/chat.js";
 import { syncChatJob } from "../lib/chat-lifecycle.js";
 import { fixtureProvider, policy } from "./fixtures/chat-provider.js";
 import { pageCsp } from "../lib/csp.js";
+import { chatPeople } from "../lib/chat-people.js";
 
 test("chat is opt-in, never broadens CSP when disabled, and rejects permissive vendor policies", () => {
   assert.equal(chatConfig({}), null);
@@ -113,6 +114,40 @@ test("chat identity, authorization, lifecycle and deletion survive actual databa
     b = await person("Bob"),
     c = await person("Cara"),
     unverified = await person("Unverified", false);
+  assert.deepEqual((await chatPeople(db, a.id, "")).people, []);
+  await db.query("UPDATE users SET username=$2 WHERE id=$1", [
+    b.id,
+    "bob_rider",
+  ]);
+  await db.query(
+    "INSERT INTO user_follows(follower_id,following_id) VALUES($1,$2),($1,$3)",
+    [a.id, b.id, unverified.id],
+  );
+  const suggested = await chatPeople(db, a.id, "");
+  assert.equal(suggested.mode, "following");
+  assert.deepEqual(
+    suggested.people.map((p) => p.id),
+    [b.id],
+  );
+  assert.deepEqual(Object.keys(suggested.people[0]).sort(), [
+    "avatar_id",
+    "id",
+    "name",
+    "username",
+  ]);
+  assert.deepEqual(
+    (await chatPeople(db, a.id, "@BOB_RIDER")).people.map((p) => p.id),
+    [b.id],
+  );
+  assert.deepEqual(
+    (await chatPeople(db, a.id, "CaRa")).people.map((p) => p.id),
+    [c.id],
+  );
+  assert.deepEqual((await chatPeople(db, a.id, "Alice")).people, []);
+  assert.deepEqual((await chatPeople(db, a.id, "Unverified")).people, []);
+  assert.deepEqual((await chatPeople(db, a.id, "__")).people, []);
+  assert.deepEqual((await chatPeople(db, a.id, "%%")).people, []);
+  assert.deepEqual((await chatPeople(db, a.id, "@")).people, []);
   const token = await db.transaction((q) =>
     issueChatToken(q, a, a.id, provider),
   );
@@ -182,6 +217,8 @@ test("chat identity, authorization, lifecycle and deletion survive actual databa
   await db.transaction((q) => syncChatJob(q, job, provider));
   assert.equal(provider.users.get(streamUserId(a.id)).name, "Alice new");
   await db.query("UPDATE users SET blocked=true WHERE id=$1", [b.id]);
+  assert.deepEqual((await chatPeople(db, a.id, "")).people, []);
+  assert.deepEqual((await chatPeople(db, a.id, "@bob_rider")).people, []);
   await assert.rejects(channel(a, [b.id]), (e) => e.status === 404);
   job = (await db.query("SELECT * FROM chat_jobs WHERE user_id=$1", [b.id]))
     .rows[0];

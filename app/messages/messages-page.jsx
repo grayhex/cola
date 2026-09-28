@@ -12,7 +12,7 @@ export default function MessagesPage() {
   return (
     <>
       <SocialHeader />
-      <main className="page">
+      <main className="page messages-page">
         <h1>Сообщения</h1>
         {!viewer ? (
           <p>
