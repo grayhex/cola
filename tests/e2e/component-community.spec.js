@@ -299,6 +299,9 @@ test("component gallery and discussion: private owner, upload, originals, captio
     await reader.reload();
     const adminPhotos = readerGallery.locator("figure");
     const selectLast = async (area) => {
+      // This scenario alternates two accounts/tabs. WebKit may suspend the
+      // carousel's animation frames in the background; interact in the active tab.
+      await area.page().bringToFront();
       await area
         .getByRole("navigation", { name: "Миниатюры фотографий" })
         .getByRole("button")
