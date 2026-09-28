@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { backgroundDefaults } from "../../../../lib/theme.js";
 import { siteAssetIds } from "../../../../lib/site-assets.js";
 import { componentIllustrationIds } from "../../../../lib/component-illustrations.js";
@@ -51,6 +52,8 @@ import {
 } from "../../../../lib/bike-catalog.js";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+/** @param {Request} req
+ * @param {{ params: Promise<{ path: string[] }> }} context */
 async function handler(req, { params }) {
   try {
     const user = await currentUser();
@@ -177,7 +180,9 @@ async function handler(req, { params }) {
       p.length === 1 &&
       method === "PUT"
     ) {
-      const input = await readJson(req);
+      const input = z
+        .object({ value: z.unknown(), version: z.unknown() })
+        .parse(await readJson(req));
       // Older clients must preserve background and component artwork assignments.
       let submitted = input.value;
       if (p[0] === "settings" && submitted && typeof submitted === "object") {
@@ -335,7 +340,12 @@ async function handler(req, { params }) {
               error: "Сначала снимите права администратора",
               status: 409,
             };
-          if (data.confirmEmail !== rows[0].email)
+          if (
+            !data ||
+            typeof data !== "object" ||
+            !("confirmEmail" in data) ||
+            data.confirmEmail !== rows[0].email
+          )
             return {
               error: "Для удаления введите email пользователя",
               status: 400,

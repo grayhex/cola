@@ -1,4 +1,5 @@
 import path from "node:path";
+import { z } from "zod";
 import { unlink } from "node:fs/promises";
 import { currentUser } from "../../../../../lib/auth.js";
 import { db, transaction } from "../../../../../lib/db.js";
@@ -14,6 +15,7 @@ import {
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
+/** @param {Request} req */
 async function handler(req) {
   try {
     const user = await currentUser();
@@ -23,15 +25,13 @@ async function handler(req) {
     if (req.method === "GET")
       return json({ assets: await listAssetLibrary(db) });
     if (!sameOrigin(req)) return fail("Недопустимый источник запроса", 403);
-    const input = await readJson(req);
-    if (
-      !Array.isArray(input?.ids) ||
-      !input.ids.length ||
-      input.ids.length > 500 ||
-      !input.ids.every((id) => uuid.safeParse(id).success)
-    ) {
+    const parsed = z
+      .object({ ids: z.array(uuid).min(1).max(500) })
+      .safeParse(await readJson(req));
+    if (!parsed.success) {
       return fail("Выберите от 1 до 500 изображений для удаления");
     }
+    const input = parsed.data;
     const result = await transaction(async (q) => {
       const deleted = await deleteUnusedAssets(q, input.ids);
       for (const asset of deleted.deleted)

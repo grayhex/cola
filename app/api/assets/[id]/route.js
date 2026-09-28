@@ -15,39 +15,43 @@ import {
 export const dynamic = "force-dynamic";
 // Site graphics are public and never rewritten in place: a new upload gets a
 // new ID, so browsers may keep them for a year without revalidation.
-export const GET = traced(async (req, { params }) => {
-  const { id } = await params;
-  if (!uuid.safeParse(id).success) return fail("Изображение не найдено", 404);
-  const { rows } = await db.query(
-    "SELECT filename FROM site_assets WHERE id=$1",
-    [id],
-  );
-  if (!rows[0]) return fail("Изображение не найдено", 404);
-  const etag = mediaEtag("asset-" + id);
-  const headers = { "Content-Security-Policy": assetContentSecurityPolicy };
-  if (notModified(req, etag))
-    return notModifiedResponse(etag, { cache: immutableMediaCache, headers });
-  try {
-    return mediaResponse(
-      await readFile(
-        /*turbopackIgnore: true*/
-        path.join(
-          /*turbopackIgnore: true*/ process.env.UPLOAD_DIR || "uploads",
-          rows[0].filename,
-        ),
-      ),
-      etag,
-      {
-        cache: immutableMediaCache,
-        contentType: rows[0].filename.endsWith(".riv")
-          ? "application/octet-stream"
-          : rows[0].filename.endsWith(".svg")
-            ? "image/svg+xml"
-            : "image/webp",
-        headers,
-      },
+export const GET = traced(
+  /** @param {Request} req
+   * @param {{ params: Promise<{ id: string }> }} context */
+  async (req, { params }) => {
+    const { id } = await params;
+    if (!uuid.safeParse(id).success) return fail("Изображение не найдено", 404);
+    const { rows } = await db.query(
+      "SELECT filename FROM site_assets WHERE id=$1",
+      [id],
     );
-  } catch {
-    return fail("Изображение не найдено", 404);
-  }
-});
+    if (!rows[0]) return fail("Изображение не найдено", 404);
+    const etag = mediaEtag("asset-" + id);
+    const headers = { "Content-Security-Policy": assetContentSecurityPolicy };
+    if (notModified(req, etag))
+      return notModifiedResponse(etag, { cache: immutableMediaCache, headers });
+    try {
+      return mediaResponse(
+        await readFile(
+          /*turbopackIgnore: true*/
+          path.join(
+            /*turbopackIgnore: true*/ process.env.UPLOAD_DIR || "uploads",
+            rows[0].filename,
+          ),
+        ),
+        etag,
+        {
+          cache: immutableMediaCache,
+          contentType: rows[0].filename.endsWith(".riv")
+            ? "application/octet-stream"
+            : rows[0].filename.endsWith(".svg")
+              ? "image/svg+xml"
+              : "image/webp",
+          headers,
+        },
+      );
+    } catch {
+      return fail("Изображение не найдено", 404);
+    }
+  },
+);

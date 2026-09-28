@@ -5,6 +5,8 @@ import { publicResponse } from "../../../../lib/public-response.js";
 import { CommunityError } from "../../../../lib/community-validation.js";
 export const runtime = "nodejs",
   dynamic = "force-dynamic";
+/** @param {Request} req
+ * @param {{ params: Promise<{ reference: string }> }} context */
 export async function GET(req, { params }) {
   try {
     const reference = await legacyShare(db, "bike", (await params).reference);

@@ -27,6 +27,8 @@ import { showcase } from "../../../../lib/showcase.js";
 import { limits, QuotaError } from "../../../../lib/limits.js";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+/** @param {Request} req
+ * @param {{ params: Promise<{ path: string[] }> }} context */
 async function handler(req, { params }) {
   try {
     const { path: p } = await params,

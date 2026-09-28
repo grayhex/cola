@@ -6,6 +6,8 @@ import {
 import { renderSocialImage } from "../../../../../../lib/social-preview-image.js";
 export const runtime = "nodejs",
   dynamic = "force-dynamic";
+/** @param {Request} req
+ * @param {{ params: Promise<{ kind: string, publicId: string }> }} context */
 export async function GET(req, { params }) {
   const { kind, publicId } = await params;
   if (!/^[a-z0-9]{6,8}$/.test(publicId))

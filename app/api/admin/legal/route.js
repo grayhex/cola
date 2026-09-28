@@ -10,6 +10,7 @@ import { json, fail, sameOrigin, readJson } from "../../../../lib/http.js";
 import { traced, logError } from "../../../../lib/observability.js";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+/** @param {Request} req */
 async function handler(req) {
   try {
     const user = await currentUser();
