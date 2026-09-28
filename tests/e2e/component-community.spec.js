@@ -307,6 +307,19 @@ test("component gallery and discussion: private owner, upload, originals, captio
       await expect(
         area.getByRole("slider", { name: "Выбор фото компонента" }),
       ).toHaveValue("2");
+      await expect
+        .poll(() =>
+          area
+            .getByRole("region", {
+              name: "Фото компонента; стрелки, Home и End для выбора",
+            })
+            .evaluate((node) => Math.abs(node.scrollLeft - node.clientWidth)),
+        )
+        .toBeLessThan(2);
+      await expect(area.locator("figure").last()).toHaveAttribute(
+        "aria-hidden",
+        "false",
+      );
     };
     const manage = async (area) => {
       const details = area

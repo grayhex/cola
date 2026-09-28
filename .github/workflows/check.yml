@@ -163,7 +163,11 @@ jobs:
         if: ${{ !cancelled() }}
         with:
           name: component-review-${{ matrix.project }}-${{ github.run_attempt }}
-          path: test-results/**/component*.png
+          path: |
+            test-results/**/component*.png
+            test-results/**/account-import.png
+            test-results/**/rides-import-planned.png
+            test-results/**/popular-carousel.png
           retention-days: 7
 
   operations:

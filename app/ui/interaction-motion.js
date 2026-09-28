@@ -54,7 +54,7 @@ export function scrollCarousel(element, target) {
   };
 }
 
-export function scrollPhotoCarousel(element, target) {
+export function scrollPhotoCarousel(element, target, onComplete = () => {}) {
   let active = true;
   element.style.scrollSnapType = "none";
   const style = getComputedStyle(element);
@@ -68,7 +68,10 @@ export function scrollPhotoCarousel(element, target) {
       if (active) element.scrollLeft = value;
     },
     onComplete() {
-      if (active) element.style.scrollSnapType = "";
+      if (active) {
+        element.style.scrollSnapType = "";
+        onComplete();
+      }
     },
   });
   return () => {

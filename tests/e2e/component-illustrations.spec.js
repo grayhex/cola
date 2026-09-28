@@ -99,10 +99,10 @@ test("component artwork: admin upload, persistence, protected deletion, themes a
       graphics.getByLabel("Тип · Седло", { exact: true }),
     ).toHaveValue(asset);
     await page.goto("/components");
-    // Both the header and profile menu use the same configurable icon slot.
+    // Header, desktop profile menu and mobile drawer share the icon slot.
     const icons = page.locator('.global-header [data-icon="messages"]');
-    await expect(icons).toHaveCount(2);
-    await expect(icons).toHaveText(["✉️", "✉️"]);
+    await expect(icons).toHaveCount(3);
+    await expect(icons).toHaveText(["✉️", "✉️", "✉️"]);
     const trigger = page.getByRole("button", { name: /Управление и посадка/ });
     const image = trigger.locator("img");
     await expect(image).toHaveAttribute("src", "/api/assets/" + asset);

@@ -41,7 +41,12 @@ export function usePhotoCarousel(count) {
           setPosition(index);
           return;
         }
-        cancel.current = scrollPhotoCarousel(node, target);
+        cancel.current = scrollPhotoCarousel(node, target, () => {
+          // Native scroll events can be coalesced during animation. Keep the
+          // counter, controls and inert slides in sync with the final position.
+          if (token === sequence.current)
+            setPosition(Math.round(node.scrollLeft / node.clientWidth));
+        });
       } catch {
         if (token === sequence.current) {
           node.scrollLeft = target;

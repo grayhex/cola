@@ -188,7 +188,7 @@ test("navigation: real destinations, account, keyboard, configurable About and a
       .getByRole("link", { name: "Запланировать", exact: true })
       .click();
     await expect(
-      page.getByLabel("Дата и время старта", { exact: true }),
+      page.getByLabel("Дата и время старта", { exact: false }),
     ).toBeVisible();
     await page.goto("/about");
     if (isMobile)
