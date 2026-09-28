@@ -222,7 +222,12 @@ try {
         "Content-Type": "image/png",
       },
       body: await sharp({
-        create: { width: 40, height: 30, channels: 4, background: "#335577" },
+        create: {
+          width: 1600,
+          height: 1200,
+          channels: 4,
+          background: "#335577",
+        },
       })
         .png()
         .toBuffer(),
@@ -242,7 +247,34 @@ try {
       .status,
     304,
   );
+  const small = await guest.raw("/api/assets/" + assetId + "?width=160");
+  assert.equal(small.status, 200);
+  assert.equal(
+    small.headers.get("cache-control"),
+    "public, max-age=31536000, immutable",
+  );
+  assert.equal(
+    small.headers.get("content-security-policy"),
+    asset.headers.get("content-security-policy"),
+  );
+  assert.equal(await width(small), 160);
+  const smallEtag = small.headers.get("etag");
+  assert.notEqual(smallEtag, asset.headers.get("etag"));
+  assert.equal(
+    (await guest.raw("/api/assets/" + assetId + "?width=160", smallEtag))
+      .status,
+    304,
+  );
+  assert.equal(
+    (await guest.raw("/api/assets/" + assetId + "?width=161")).status,
+    400,
+  );
   assert.equal((await owner("admin/assets/" + assetId, "DELETE")).status, 200);
+  assert.equal(
+    (await guest.raw("/api/assets/" + assetId + "?width=160", smallEtag))
+      .status,
+    404,
+  );
   assert.equal((await guest.raw("/api/assets/" + assetId)).status, 404);
 } finally {
   await db.end();

@@ -168,6 +168,7 @@ jobs:
             test-results/**/account-import*.png
             test-results/**/rides-import-planned.png
             test-results/**/popular-carousel.png
+            test-results/**/profile-art-cold*.png
           retention-days: 7
 
   operations:

@@ -8,6 +8,8 @@ import { traced } from "../../../../lib/observability.js";
 import {
   immutableMediaCache,
   mediaEtag,
+  mediaWidth,
+  mediaVariant,
   mediaResponse,
   notModified,
   notModifiedResponse,
@@ -26,19 +28,31 @@ export const GET = traced(
       [id],
     );
     if (!rows[0]) return fail("Изображение не найдено", 404);
-    const etag = mediaEtag("asset-" + id);
+    const requestedWidth = mediaWidth(
+      new URL(req.url).searchParams.get("width"),
+    );
+    if (requestedWidth === undefined)
+      return fail("Недопустимый размер изображения");
+    // SVG retains its sanitizer/CSP and vector bytes; Rive is never rasterized.
+    const raster = rows[0].filename.endsWith(".webp");
+    const width = raster ? requestedWidth : null;
+    const etag = mediaEtag("asset-" + id, width);
     const headers = { "Content-Security-Policy": assetContentSecurityPolicy };
     if (notModified(req, etag))
       return notModifiedResponse(etag, { cache: immutableMediaCache, headers });
     try {
-      return mediaResponse(
-        await readFile(
+      const original = () =>
+        readFile(
           /*turbopackIgnore: true*/
           path.join(
             /*turbopackIgnore: true*/ process.env.UPLOAD_DIR || "uploads",
             rows[0].filename,
           ),
-        ),
+        );
+      return mediaResponse(
+        width
+          ? await mediaVariant("asset-" + id, width, original)
+          : await original(),
         etag,
         {
           cache: immutableMediaCache,

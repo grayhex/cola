@@ -19,3 +19,25 @@ test("media deletion asks the rules, including switched-off ones", async () => {
     false,
   );
 });
+
+test("artwork normalizes IDs and historical local asset paths into bounded variants", async () => {
+  const { gameArtworkSource } = await import("../lib/gamification-assets.js");
+  assert.equal(gameArtworkSource(a), `/api/assets/${a}?width=160`);
+  assert.equal(
+    gameArtworkSource(`/api/assets/${a}`, 56),
+    `/api/assets/${a}?width=320`,
+  );
+  assert.equal(
+    gameArtworkSource(`/api/assets/${a}?width=1280`, 64),
+    `/api/assets/${a}?width=320`,
+  );
+  for (const invalid of [
+    null,
+    {},
+    "",
+    `https://other.test/api/assets/${a}`,
+    "../private",
+    `${a}?other=1`,
+  ])
+    assert.equal(gameArtworkSource(invalid), null);
+});

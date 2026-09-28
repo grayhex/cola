@@ -102,10 +102,10 @@ test("Hall of Fame changes its current record holder, with profile awards and mo
     })
       .webp()
       .toBuffer();
-    await page.route("**/api/assets/" + artId, (route) =>
+    await page.route("**/api/assets/" + artId + "?width=*", (route) =>
       route.fulfill({ contentType: "image/webp", body: artBytes }),
     );
-    await page.route("**/api/assets/" + missingId, (route) =>
+    await page.route("**/api/assets/" + missingId + "?width=*", (route) =>
       route.fulfill({ status: 404 }),
     );
     await page.route("**/api/game/profiles/**", async (route) => {
@@ -200,5 +200,106 @@ test("Hall of Fame changes its current record holder, with profile awards and mo
         await request.delete("/api/bikes/" + b.id, { headers: { origin } });
     }
     await context.close();
+  }
+});
+
+test("profile artwork paints after cold load without hover in both themes and motion modes", async ({
+  page,
+  browser,
+  isMobile,
+}, info) => {
+  const user = await register(
+    page.request,
+    "cold-art-" + randomUUID().slice(0, 8),
+  );
+  const ids = Array.from({ length: 8 }, () => randomUUID());
+  const bytes = await sharp({
+    create: { width: 320, height: 240, channels: 4, background: "#ca5038" },
+  })
+    .webp()
+    .toBuffer();
+  for (const theme of ["light", "dark"]) {
+    for (const reducedMotion of ["no-preference", "reduce"]) {
+      // A separate context has neither decoded images nor an HTTP memory cache.
+      const context = await browser.newContext({
+        ...(isMobile
+          ? devices["iPhone 13"]
+          : { viewport: { width: 1366, height: 900 } }),
+        baseURL: origin,
+        reducedMotion,
+      });
+      try {
+        await context.addInitScript(
+          (value) => localStorage.setItem("cola:theme", value),
+          theme,
+        );
+        const fresh = await context.newPage();
+        const requested = new Set();
+        await fresh.route("**/api/assets/*?width=*", async (route) => {
+          const id = new URL(route.request().url()).pathname.split("/").at(-1);
+          requested.add(id);
+          await route.fulfill({ contentType: "image/webp", body: bytes });
+        });
+        await fresh.route("**/api/game/profiles/**", (route) =>
+          route.fulfill({
+            json: {
+              records: [
+                {
+                  key: "cold-record",
+                  name: "Рекорд с длинным названием для узкого экрана",
+                  description: "",
+                  metric: "weight",
+                  holder: { value: 9 },
+                  imageId: ids[0],
+                },
+              ],
+              awards: ids.slice(1).map((imageId, i) => ({
+                key: "cold-" + i,
+                name: "Награда " + i,
+                description: "Проверка загрузки",
+                imageId: i === 0 ? "/api/assets/" + imageId : imageId,
+                bikeId: null,
+                awardedAt: "2026-09-01",
+              })),
+            },
+          }),
+        );
+        await fresh.goto("/u/" + user.username);
+        const shelf = fresh.locator(".profile-awards");
+        await expect(shelf.locator("img")).toHaveCount(8);
+        // Includes images in the initially closed "more awards" block: no hover,
+        // tap, scrolling or details expansion is allowed to trigger loading.
+        await expect.poll(() => requested.size).toBe(8);
+        await expect
+          .poll(() =>
+            shelf.locator(".game-art").evaluateAll((nodes) =>
+              nodes.every((el) => {
+                const image = el.querySelector("img");
+                return (
+                  el.dataset.imageState === "loaded" &&
+                  image?.complete &&
+                  image.naturalWidth > 0 &&
+                  getComputedStyle(image).opacity === "1"
+                );
+              }),
+            ),
+          )
+          .toBe(true);
+        await expect(shelf.locator(".game-art > svg")).toHaveCount(0);
+        expect(
+          await fresh.evaluate(
+            () => document.documentElement.scrollWidth <= innerWidth + 1,
+          ),
+        ).toBe(true);
+        await fresh.screenshot({
+          path: info.outputPath(
+            `profile-art-cold-${theme}-${reducedMotion}.png`,
+          ),
+          fullPage: true,
+        });
+      } finally {
+        await context.close();
+      }
+    }
   }
 });
