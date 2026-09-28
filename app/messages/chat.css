@@ -23,7 +23,7 @@
   --str-chat__input-text-default: var(--text);
   --str-chat__input-text-placeholder: var(--text-secondary);
   --str-chat__message-composer-padding: 0.875rem;
-  --str-chat__font-family: inherit;
+  --str-chat__font-family: var(--font-sans);
   display: block;
   height: auto;
   min-width: 0;
@@ -274,7 +274,7 @@
 }
 .chat-selector,
 .chat-details {
-  width: min(34rem, calc(100vw - 2rem));
+  --dialog-width: 34rem;
   color: var(--text);
 }
 .chat-selector form {
@@ -437,8 +437,11 @@ button.chat-person:hover {
   border-radius: var(--radius-xl);
 }
 .cola-chat .str-chat__message-composer-controls textarea {
+  min-height: 26px;
+  padding: 0;
   font-family: inherit;
   font-size: 1rem;
+  line-height: 1.5;
   background: transparent;
   color: var(--text);
 }

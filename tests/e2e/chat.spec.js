@@ -113,7 +113,10 @@ test("messages: real SDK, two isolated sessions, DM delivery, mobile list and bo
         () => document.documentElement.scrollWidth <= innerWidth + 1,
       ),
     ).toBe(true);
-    await page.getByRole("button", { name: "Открыть меню" }).click();
+    await page
+      .locator(".global-header")
+      .getByRole("button", { name: "Открыть меню", exact: true })
+      .click();
     await expect(
       page
         .locator(".navigation-drawer")
@@ -167,6 +170,11 @@ test("messenger: discover people, accessible selector, DM and group, drafts and 
     });
     const search = selector.getByRole("textbox", { name: "Имя или username" });
     await expect(search).toBeFocused();
+    if (isMobile)
+      expect((await selector.boundingBox()).width).toBeCloseTo(
+        page.viewportSize().width,
+        0,
+      );
     await expect(selector.getByText("Ваши подписки")).toBeVisible();
     await search.fill("z");
     await expect(
@@ -188,9 +196,11 @@ test("messenger: discover people, accessible selector, DM and group, drafts and 
     await selector.getByRole("button", { name: "Повторить поиск" }).click();
     await expect(selector.getByText(/Никого не нашли/)).toBeVisible();
     await search.fill("@" + bob.username);
-    const bobOption = selector.getByRole("button", {
-      name: new RegExp(bob.name),
-    });
+    const bobOption = selector
+      .getByRole("list", { name: "Найденные пользователи" })
+      .getByRole("button", {
+        name: new RegExp(bob.name),
+      });
     await expect(bobOption).toBeVisible();
     // A real keyboard selection, not only a pointer click.
     await search.press("Tab");
@@ -217,8 +227,9 @@ test("messenger: discover people, accessible selector, DM and group, drafts and 
     await selector.getByRole("button", { name: "Начать переписку" }).click();
     await expect(selector).toHaveCount(0);
     await expect(page).toHaveURL(/channel=colabike%3Adm_/);
-    const input = page.getByRole("textbox", { name: "Сообщение", exact: true });
+    const input = page.getByPlaceholder("Написать сообщение…", { exact: true });
     await expect(input).toBeVisible();
+    expect((await input.boundingBox()).height).toBeLessThan(60);
     await input.fill("Черновик маршрута");
     await page.goBack();
     await expect(page).toHaveURL(/\/messages$/);

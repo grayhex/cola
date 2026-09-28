@@ -255,7 +255,9 @@ export default function Conversations({ client }) {
   const [revision, setRevision] = useState(0);
   const [attempt, setAttempt] = useState(0);
   const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState("");
   const newButton = useRef(null);
+  const wasConversation = useRef(false);
   const filters = useMemo(
     () => ({ type: "colabike", members: { $in: [client.userID] } }),
     [client],
@@ -268,8 +270,11 @@ export default function Conversations({ client }) {
     if (!target && !cid) {
       setBusy(false);
       setActiveChannel(undefined);
+      if (wasConversation.current) newButton.current?.focus();
+      wasConversation.current = false;
       return;
     }
+    wasConversation.current = true;
     setBusy(true);
     (async () => {
       const nextCid = target
@@ -311,10 +316,9 @@ export default function Conversations({ client }) {
     });
   const back = () => {
     router.push("/messages", { scroll: false });
-    setTimeout(() => newButton.current?.focus(), 0);
   };
   async function exportMessages() {
-    setError("");
+    setExportError("");
     setExporting(true);
     try {
       const data = await chatApi("export", {});
@@ -327,7 +331,7 @@ export default function Conversations({ client }) {
       link.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (e) {
-      setError(e.message);
+      setExportError(e.message);
     } finally {
       setExporting(false);
     }
@@ -412,6 +416,11 @@ export default function Conversations({ client }) {
               <Download size={16} />
               {exporting ? "Готовим файл…" : "Скачать мои сообщения"}
             </button>
+            {exportError && (
+              <p role="alert" className="chat-error">
+                {exportError}
+              </p>
+            )}
           </aside>
           <section
             className="chat-conversation"
@@ -436,7 +445,6 @@ export default function Conversations({ client }) {
                     maxRows={6}
                     additionalTextareaProps={{
                       placeholder: "Написать сообщение…",
-                      "aria-label": "Сообщение",
                     }}
                   />
                 </Window>
@@ -447,7 +455,9 @@ export default function Conversations({ client }) {
                   additionalMessageComposerProps={{
                     audioRecordingEnabled: false,
                     preventClearingOnUnmount: true,
-                    additionalTextareaProps: { "aria-label": "Ответ в ветке" },
+                    additionalTextareaProps: {
+                      placeholder: "Ответить в ветке…",
+                    },
                   }}
                 />
               </Channel>
