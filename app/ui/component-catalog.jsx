@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Bike, ArrowUpRight } from "lucide-react";
 import { SocialHeader, SocialFooter } from "./social-primitives.jsx";
 import { useSite } from "./site-provider.jsx";
-import PartIcon from "./part-icon.jsx";
+import ComponentIllustration from "./component-illustration.jsx";
 import SiteIcon from "./site-icon.jsx";
 import { plural } from "../../lib/plural.js";
 import styles from "./component-catalog.module.css";
@@ -29,7 +29,11 @@ function ComponentCover({ model, icons }) {
           onError={() => setFailed(true)}
         />
       ) : (
-        <PartIcon category={model.category} icons={icons} size={64} />
+        <ComponentIllustration
+          category={model.category}
+          icons={icons}
+          size={64}
+        />
       )}
     </div>
   );

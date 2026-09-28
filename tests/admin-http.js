@@ -269,6 +269,12 @@ try {
   for (const patch of [
     { faviconId: riveAsset.toUpperCase() },
     { heroImageId: riveAsset },
+    {
+      componentIllustrations: {
+        groups: { cockpit: riveAsset.toUpperCase() },
+        categories: {},
+      },
+    },
     { heroStageAnimation: { kind: "svg", assetId: riveAsset } },
     { heroStageAnimation: { kind: "rive", assetId: asset } },
     { iconColors: { bike: "red;display:none" } },
@@ -287,6 +293,10 @@ try {
     heroAnimationsEnabled: true,
     heroTitleAnimation: { kind: "rive", assetId: riveAsset },
     iconColors: { bike: "#aa44cc" },
+    componentIllustrations: {
+      groups: { cockpit: asset },
+      categories: { Седло: asset },
+    },
   };
   assert.equal(
     (
@@ -299,6 +309,11 @@ try {
   );
   const publicSettings = (await guest("site")).data.settings;
   assert.equal(publicSettings.heroAnimationsEnabled, true);
+  assert.deepEqual(
+    publicSettings.componentIllustrations,
+    value.componentIllustrations,
+  );
+  assert.equal((await admin("admin/assets/" + asset, "DELETE")).status, 409);
   assert.deepEqual(publicSettings.heroTitleAnimation, value.heroTitleAnimation);
   assert.deepEqual(publicSettings.iconColors, { bike: "#aa44cc" });
   assert.equal(

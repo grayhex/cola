@@ -54,9 +54,53 @@ test("Garmin import without track, chosen fields, GPX mismatch and future planni
 }, info) => {
   await register(page);
   await bike(page);
+  await page.goto("/rides");
+  await expect(
+    page.getByRole("link", { name: "Запланировать покатушку", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: /Garmin|Загрузить FIT|Добавить покатушку/ }),
+  ).toHaveCount(0);
+  await expect(page.locator('input[type="file"]')).toHaveCount(0);
   await page.goto("/account?tab=rides&action=import");
+  const actions = page.getByLabel("Мои поездки и импорт");
+  await expect(
+    actions.getByRole("button", { name: "Garmin CSV", exact: true }),
+  ).toHaveCount(1);
+  await expect(
+    actions.getByRole("button", {
+      name: "Загрузить GPX / FIT / TCX",
+      exact: true,
+    }),
+  ).toHaveCount(1);
+  await expect(
+    page.getByRole("button", { name: "Синхронизировать", exact: true }),
+  ).toBeDisabled();
   const form = page.getByRole("region", { name: "Импорт Garmin CSV" });
   await expect(form).toBeVisible();
+  await expect(
+    actions.getByRole("button", { name: "Garmin CSV", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  for (const theme of ["light", "dark"]) {
+    await page.evaluate(
+      (value) => (document.documentElement.dataset.theme = value),
+      theme,
+    );
+    expect(
+      await actions.getByRole("button").evaluateAll((buttons) =>
+        buttons.every((button) => {
+          const box = button.getBoundingClientRect();
+          return box.left >= 0 && box.right <= innerWidth;
+        }),
+      ),
+    ).toBe(true);
+    await page.screenshot({
+      path: info.outputPath("account-import-" + theme + ".png"),
+      fullPage: true,
+      animations: "disabled",
+    });
+  }
+  await page.evaluate(() => (document.documentElement.dataset.theme = "light"));
   await form.getByLabel("Часовой пояс дат в CSV").selectOption("180");
   const m = parseGpx(gpx([loop])).metrics,
     clock = (s) =>
@@ -135,6 +179,19 @@ test("Garmin import without track, chosen fields, GPX mismatch and future planni
   await page
     .getByRole("button", { name: "Сохранить покатушку", exact: true })
     .click();
+  await expect(page.locator(".ride-card")).toHaveCount(2);
+  const filters = page.getByLabel("Фильтр моих покатушек");
+  await filters
+    .getByRole("button", { name: "Предстоящие", exact: true })
+    .click();
+  await expect(page.locator(".ride-card")).toHaveCount(1);
+  await expect(page.locator(".ride-card")).toContainText("Weekend gravel plan");
+  await filters.getByRole("button", { name: "Прошедшие", exact: true }).click();
+  await expect(page.locator(".ride-card")).toHaveCount(1);
+  await expect(page.locator(".ride-card")).not.toContainText(
+    "Weekend gravel plan",
+  );
+  await filters.getByRole("button", { name: "Все", exact: true }).click();
   await expect(page.locator(".ride-card")).toHaveCount(2);
   await expect(
     page.locator(".ride-card").filter({ hasText: "Weekend gravel plan" }),

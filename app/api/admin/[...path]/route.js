@@ -1,5 +1,6 @@
 import { backgroundDefaults } from "../../../../lib/theme.js";
 import { siteAssetIds } from "../../../../lib/site-assets.js";
+import { componentIllustrationIds } from "../../../../lib/component-illustrations.js";
 import { prepareSvg } from "../../../../lib/svg-asset.js";
 import { prepareRive } from "../../../../lib/rive-upload.js";
 import { assetFormat } from "../../../../lib/hero-graphics.js";
@@ -177,7 +178,7 @@ async function handler(req, { params }) {
       method === "PUT"
     ) {
       const input = await readJson(req);
-      // Old full-settings clients must not reset newly introduced backgrounds.
+      // Older clients must preserve background and component artwork assignments.
       let submitted = input.value;
       if (p[0] === "settings" && submitted && typeof submitted === "object") {
         const before =
@@ -185,10 +186,15 @@ async function handler(req, { params }) {
             ?.value || {};
         submitted = {
           ...Object.fromEntries(
-            Object.keys(backgroundDefaults).map((key) => [
-              key,
-              before[key] ?? backgroundDefaults[key],
-            ]),
+            [...Object.keys(backgroundDefaults), "componentIllustrations"].map(
+              (key) => [
+                key,
+                before[key] ??
+                  (key === "componentIllustrations"
+                    ? { groups: {}, categories: {} }
+                    : backgroundDefaults[key]),
+              ],
+            ),
           ),
           ...submitted,
         };
@@ -213,7 +219,10 @@ async function handler(req, { params }) {
               };
             if (
               assetFormat(a.rows[0].filename) === "rive" &&
-              Object.values(value).some(
+              [
+                ...Object.values(value),
+                ...componentIllustrationIds(value),
+              ].some(
                 (entry) =>
                   typeof entry === "string" && entry.toLowerCase() === id,
               )

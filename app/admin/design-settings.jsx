@@ -113,7 +113,7 @@ export function HomepageSettings({
   return (
     <section className={"admin-panel " + styles.compactPanel}>
       <h2>Главная страница</h2>
-      <Field label="Скорость Live и велосипедов, пикселей в секунду">
+      <Field label="Скорость Live, пикселей в секунду">
         <input
           type="number"
           min="5"
@@ -124,9 +124,9 @@ export function HomepageSettings({
         />
       </Field>
       <p className="help">
-        Обе ленты используют одну скорость и кнопку паузы рядом с Live.
-        Наведение и фокус временно останавливают ленту; ручная прокрутка
-        включает общую паузу.
+        Скорость ленты событий. Наведение и фокус временно останавливают её;
+        кнопка рядом с Live ставит на паузу. Карусель велосипедов прокручивается
+        вручную.
       </p>
       <label className="setting-row">
         Анимации главной для всех посетителей

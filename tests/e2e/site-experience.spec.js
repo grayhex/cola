@@ -44,9 +44,7 @@ test("admin publishes a shared animation switch, uploaded Rive, brand/favicon an
       page.getByLabel("Графика главного блока", { exact: true }),
     ).toHaveCount(0);
     await page.getByLabel("Анимации главной для всех посетителей").check();
-    await page
-      .getByLabel("Скорость Live и велосипедов, пикселей в секунду")
-      .fill("36");
+    await page.getByLabel("Скорость Live, пикселей в секунду").fill("36");
     await page
       .getByLabel("Файл: Анимация · слева от заголовка", { exact: true })
       .setInputFiles({
@@ -231,6 +229,15 @@ test("popular carousel stays on one row and scrolls with buttons, keyboard, a si
     .evaluateAll((nodes) => nodes.map((n) => n.getBoundingClientRect().y));
   expect(Math.max(...boxes) - Math.min(...boxes)).toBeLessThan(2);
   await region.scrollIntoViewIfNeeded();
+  // No hover/focus pause: watch the visible rail with the pointer elsewhere.
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.mouse.move(0, 0);
+  const idle = await rail.evaluate(async (node) => {
+    const start = node.scrollLeft;
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    return Math.abs(node.scrollLeft - start);
+  });
+  expect(idle).toBeLessThan(1);
   await region.getByRole("button", { name: "Следующие велосипеды" }).click();
   await expect
     .poll(() => rail.evaluate((e) => e.scrollLeft))
@@ -317,7 +324,7 @@ test("primary menu opens on hover, crosses panels and preserves keyboard and tou
   await expect(page).toHaveURL(/\/bikes/);
 });
 
-test("Live and popular bikes share speed and pause, with reduced motion respected", async ({
+test("Live scrolls independently of manual bikes, with pause and reduced motion respected", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1000, height: 1800 });
@@ -356,27 +363,17 @@ test("Live and popular bikes share speed and pause, with reduced motion respecte
     exact: true,
   });
   await expect
-    .poll(() => bikes.evaluate((e) => e.scrollLeft))
-    .toBeGreaterThan(5);
-  await expect
     .poll(() => events.evaluate((e) => e.scrollLeft))
     .toBeGreaterThan(5);
-  const offsets = () =>
-    page.evaluate(() =>
-      [
-        ...document.querySelectorAll(
-          '[aria-label="Велосипеды; используйте стрелки для прокрутки"], [aria-label="События; прокрутите, чтобы прочитать все"]',
-        ),
-      ].map((e) => e.scrollLeft),
-    );
+  const offsets = async () => ({
+    bikes: await bikes.evaluate((e) => e.scrollLeft),
+    events: await events.evaluate((e) => e.scrollLeft),
+  });
   const before = await offsets();
   await expect
-    .poll(async () => (await offsets())[0] - before[0])
+    .poll(async () => (await offsets()).events - before.events)
     .toBeGreaterThan(20);
-  const after = await offsets();
-  expect(Math.abs(after[0] - before[0] - (after[1] - before[1]))).toBeLessThan(
-    5,
-  );
+  expect((await offsets()).bikes).toBe(0);
   await page
     .getByRole("button", { name: "Приостановить движение событий" })
     .click();
@@ -387,8 +384,18 @@ test("Live and popular bikes share speed and pause, with reduced motion respecte
     .getByRole("button", { name: "Продолжить движение событий" })
     .click();
   await expect
+    .poll(() => events.evaluate((e) => e.scrollLeft))
+    .toBeGreaterThan(pause.events + 5);
+  expect((await offsets()).bikes).toBe(0);
+  await page.getByRole("button", { name: "Следующие велосипеды" }).click();
+  await expect
     .poll(() => bikes.evaluate((e) => e.scrollLeft))
-    .toBeGreaterThan(pause[1] + 5);
+    .toBeGreaterThan(100);
+  // Manual bike navigation must not pause the independent Live ticker.
+  const manual = await offsets();
+  await expect
+    .poll(() => events.evaluate((e) => e.scrollLeft))
+    .toBeGreaterThan(manual.events + 5);
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.waitForTimeout(100);
   const reduced = await offsets();

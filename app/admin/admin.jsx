@@ -691,6 +691,7 @@ export default function Admin() {
           {tab === "graphics" && (
             <IconSettings
               settings={draft}
+              catalog={cat}
               assets={assets}
               busy={locked}
               onChange={update}

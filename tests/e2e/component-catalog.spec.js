@@ -65,13 +65,26 @@ test("component catalog: real filters, pagination, themes, mobile and durable mo
         name: new RegExp(group.name),
       });
       if (isMobile) await trigger.tap();
-      else await trigger.hover();
+      else {
+        await trigger.hover();
+        await expect(trigger).toHaveAttribute("aria-expanded", "false");
+        await trigger.click();
+      }
       await expect(trigger).toHaveAttribute("aria-expanded", "true");
       const panel = page.locator("#component-group-types");
       for (const category of group.categories)
         await expect(
           panel.getByRole("link", { name: category, exact: true }),
         ).toBeVisible();
+      if (!isMobile) {
+        const neighbour = categories
+          .getByRole("button")
+          .filter({ hasNotText: group.name })
+          .first();
+        await neighbour.hover();
+        await expect(trigger).toHaveAttribute("aria-expanded", "true");
+        await expect(neighbour).toHaveAttribute("aria-expanded", "false");
+      }
       await trigger.focus();
       await trigger.press("Escape");
       await expect(trigger).toHaveAttribute("aria-expanded", "false");

@@ -23,10 +23,10 @@ export default function Rides() {
         <div className="section-heading">
           <div>
             <h1>Покатушки</h1>
-            <p>Маршруты, впечатления и километры сообщества.</p>
+            <p>Находите маршруты сообщества и планируйте совместные поездки.</p>
           </div>
+          <RideCreationActions />
         </div>
-        <RideCreationActions />
         <div className="ui-tabs" aria-label="Фильтр покатушек">
           {[
             [null, "Все"],
