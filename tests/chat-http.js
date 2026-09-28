@@ -35,6 +35,8 @@ const register = async (call, name) => {
 const alice = await register(a, "Chat Alice"),
   bob = await register(b, "Chat Bob");
 assert.equal((await guest("chat/token", {})).status, 401);
+assert.equal((await guest("chat/people?q=Chat")).status, 401);
+assert.deepEqual((await a("chat/people")).body.people, []);
 assert.equal((await a("chat/token", {}, "https://evil.test")).status, 403);
 assert.equal((await a("chat/token", { user_id: bob.id })).status, 400);
 assert.equal(
@@ -89,6 +91,7 @@ try {
     alice.id,
   ]);
   assert.equal((await a("chat/token", {})).status, 403);
+  assert.equal((await a("chat/people?q=Chat")).status, 403);
   await pool.query("UPDATE users SET email_verified_at=now() WHERE id=$1", [
     alice.id,
   ]);
