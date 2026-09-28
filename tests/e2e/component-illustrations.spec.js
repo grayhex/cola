@@ -115,6 +115,31 @@ test("component artwork: admin upload, persistence, protected deletion, themes a
     await trigger.focus();
     await trigger.press("Enter");
     await expect(trigger).toHaveAttribute("aria-expanded", "true");
+    // Warm the lazy Motion chunk, then hold a real reveal at its first frame.
+    // This catches low-contrast text throughout the animation, not just at rest.
+    await page.waitForLoadState("networkidle");
+    await trigger.press("Escape");
+    await expect(trigger).toHaveAttribute("aria-expanded", "false");
+    await page.evaluate(() => {
+      const animate = Element.prototype.animate;
+      Element.prototype.animate = function (...args) {
+        const animation = animate.apply(this, args);
+        if (this.id === "component-group-types") {
+          animation.pause();
+          animation.currentTime = 0;
+        }
+        return animation;
+      };
+    });
+    await trigger.press("Enter");
+    const panel = page.locator("#component-group-types");
+    await expect
+      .poll(() =>
+        panel.evaluate((el) =>
+          el.getAnimations().some((a) => a.playState === "paused"),
+        ),
+      )
+      .toBe(true);
     const category = page
       .locator("#component-group-types")
       .getByRole("link", { name: "Седло", exact: true });
@@ -142,6 +167,10 @@ test("component artwork: admin upload, persistence, protected deletion, themes a
         fullPage: true,
       });
     }
+    await panel.evaluate((el) => el.getAnimations().forEach((a) => a.finish()));
+    await expect
+      .poll(() => panel.evaluate((el) => el.style.transform))
+      .toBe("");
     // WebKit can reuse immutable image data on reload without hitting the
     // route. A fresh visitor must receive a real 404 before checking fallback.
     const visitor = await browser.newContext({

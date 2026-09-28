@@ -127,8 +127,27 @@ test("market listing: save, other listings of the seller, expiry and extension",
     );
     await buyer.goto("/saved?type=market");
     await expect(buyer.getByText("Сохранённых объявлений нет")).toBeVisible();
-    await buyer.goto("/market?q=" + encodeURIComponent("Колёса " + nonce));
+    // Follow the real empty-state link and search without tearing down an
+    // active React view transition (a hard goto can fail inside WebKit).
+    const documentStart = await buyer.evaluate(() => performance.timeOrigin);
+    await buyer
+      .getByRole("link", { name: "Открыть рынок", exact: true })
+      .click();
+    await expect(buyer).toHaveURL(/\/market$/);
+    await buyer
+      .getByRole("searchbox", { name: "Поиск на рынке" })
+      .fill("Колёса " + nonce);
+    await buyer
+      .getByRole("search", { name: "Поиск объявлений" })
+      .getByRole("button", { name: "Найти", exact: true })
+      .click();
+    await expect
+      .poll(() => new URL(buyer.url()).searchParams.get("q"))
+      .toBe("Колёса " + nonce);
     await expect(buyer.getByText("Пока нет объявлений")).toBeVisible();
+    expect(await buyer.evaluate(() => performance.timeOrigin)).toBe(
+      documentStart,
+    );
 
     // The owner sees «Срок истёк» and extends the listing in one click.
     await page.goto("/market/" + main.shareId);

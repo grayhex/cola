@@ -64,7 +64,6 @@ export function useMotionFeedback(value, { reveal = false } = {}) {
     let animation;
     const before = {
       transform: element.style.transform,
-      ...(reveal ? { opacity: element.style.opacity } : {}),
     };
     const restore = () => Object.assign(element.style, before);
     const started = performance.now();
@@ -84,7 +83,8 @@ export function useMotionFeedback(value, { reveal = false } = {}) {
           element,
           reveal
             ? {
-                opacity: [0.65, 1],
+                // Revealed panels contain text: keep its contrast throughout
+                // the animation, including paused/background WebKit frames.
                 transform: ["translateY(-2px)", "translateY(0)"],
               }
             : { transform: ["scale(1)", "scale(1.12)", "scale(1)"] },

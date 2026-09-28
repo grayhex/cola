@@ -96,9 +96,8 @@
   font-size: var(--text-sm);
   text-decoration: none;
   overflow-wrap: anywhere;
-  transition:
-    background var(--duration-fast) var(--ease-out),
-    color var(--duration-fast) var(--ease-out);
+  /* Theme text and its parent surface must switch in the same frame. */
+  transition: none;
 }
 .types a > svg {
   flex-shrink: 0;
@@ -165,9 +164,7 @@
   font-size: var(--text-sm);
   color: var(--text-secondary);
   overflow-wrap: anywhere;
-  transition:
-    color var(--duration-fast) var(--ease-out),
-    transform var(--duration-fast) var(--ease-out);
+  transition: transform var(--duration-fast) var(--ease-out);
 }
 .breadcrumb a:hover {
   color: var(--text);
