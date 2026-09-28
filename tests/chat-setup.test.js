@@ -5,9 +5,71 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { chatUploads, CHAT_TYPE } from "../lib/chat-config.js";
+import {
+  chatUploads,
+  chatMemberGrants,
+  CHAT_TYPE,
+  CHAT_ROLE,
+  CHAT_MEMBER_ROLE,
+} from "../lib/chat-config.js";
 import { assertChatPolicy, ensureChatPolicy } from "../lib/chat-provider.js";
 import { policy } from "./fixtures/chat-provider.js";
+
+test("Stream may omit empty app and channel grants, but unexpected permissions fail closed", async () => {
+  const valid = policy();
+  // Actual Stream response shape after writing empty grants: the keys disappear.
+  valid.app.grants = {};
+  valid.type.grants = { [CHAT_MEMBER_ROLE]: [...chatMemberGrants] };
+  await assert.doesNotReject(
+    ensureChatPolicy({
+      getAppSettings: async () => ({ app: valid.app }),
+      getChannelType: async () => valid.type,
+    }),
+  );
+  for (const [scope, roles] of Object.entries({
+    app: [CHAT_ROLE, CHAT_MEMBER_ROLE],
+    type: [
+      CHAT_ROLE,
+      "user",
+      "guest",
+      "anonymous",
+      "channel_member",
+      "channel_moderator",
+    ],
+  })) {
+    for (const role of roles) {
+      const explicit = structuredClone(valid);
+      explicit[scope].grants[role] = [];
+      assert.doesNotThrow(() => assertChatPolicy(explicit.app, explicit.type));
+      for (const permissions of [["read-channel"], null, "", {}, false, 0]) {
+        const invalid = structuredClone(valid);
+        invalid[scope].grants[role] = permissions;
+        assert.throws(
+          () => assertChatPolicy(invalid.app, invalid.type),
+          (error) => error.status === 503,
+          `${scope} ${role} must reject ${JSON.stringify(permissions)}`,
+        );
+      }
+    }
+  }
+});
+
+test("colabike_member channel grants must still exactly match the member policy", () => {
+  for (const permissions of [
+    undefined,
+    [],
+    chatMemberGrants.slice(1),
+    [...chatMemberGrants, "create-channel"],
+  ]) {
+    const invalid = policy();
+    if (permissions === undefined) delete invalid.type.grants[CHAT_MEMBER_ROLE];
+    else invalid.type.grants[CHAT_MEMBER_ROLE] = permissions;
+    assert.throws(
+      () => assertChatPolicy(invalid.app, invalid.type),
+      (error) => error.status === 503,
+    );
+  }
+});
 
 test("Stream upload extensions use dotted values for both configs and policy", async () => {
   const extensions = [".jpg", ".jpeg", ".png", ".webp"];

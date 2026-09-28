@@ -14,6 +14,15 @@ const update = (change) => {
   change(state);
   writeFileSync(stateFile, JSON.stringify(state));
 };
+// Stream can omit explicitly empty grants when reading settings back.
+const responseSettings = (settings) => ({
+  ...settings,
+  grants: Object.fromEntries(
+    Object.entries(settings.grants).filter(
+      ([, permissions]) => permissions.length,
+    ),
+  ),
+});
 const methods = {
   async listRoles() {
     return { roles: read().roles.map((name) => ({ name })) };
@@ -22,7 +31,7 @@ const methods = {
     update((state) => state.roles.push(name));
   },
   async getAppSettings() {
-    return { app: read().app };
+    return { app: responseSettings(read().app) };
   },
   async updateAppSettings(settings) {
     for (const config of [
@@ -50,7 +59,7 @@ const methods = {
     });
   },
   async getChannelType(name) {
-    return read().channel_types[name];
+    return responseSettings(read().channel_types[name]);
   },
 };
 const require = createRequire(import.meta.url);
