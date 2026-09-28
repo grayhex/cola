@@ -145,10 +145,18 @@ test("component artwork: admin upload, persistence, protected deletion, themes a
       .getByRole("link", { name: "Седло", exact: true });
     await expect(category.locator("img")).toHaveJSProperty("src", assetUrl);
     for (const theme of ["light", "dark"]) {
-      await page.evaluate(
-        (value) => (document.documentElement.dataset.theme = value),
-        theme,
-      );
+      await page.evaluate(async (value) => {
+        document.documentElement.dataset.theme = value;
+        // Settle the theme's CSS colour transitions while retaining the
+        // deliberately paused Motion reveal at its first frame.
+        await new Promise(requestAnimationFrame);
+        await Promise.all(
+          document
+            .getAnimations()
+            .filter((animation) => animation instanceof CSSTransition)
+            .map((animation) => animation.finished.catch(() => {})),
+        );
+      }, theme);
       expect(
         (
           await new AxeBuilder({ page })

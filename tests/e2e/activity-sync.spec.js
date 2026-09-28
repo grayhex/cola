@@ -48,8 +48,9 @@ for (const theme of ["light", "dark"])
       callback.searchParams.set("state", url.searchParams.get("state"));
       callback.searchParams.set("code", String(vendorId));
       return route.fulfill({
-        status: 302,
-        headers: { location: callback.toString() },
+        status: 200,
+        contentType: "text/html",
+        body: `<!doctype html><meta http-equiv="refresh" content="0;url=${callback.toString().replaceAll("&", "&amp;")}">`,
       });
     });
     await page.goto("/account?tab=rides");
