@@ -91,6 +91,23 @@ export function commonsQuery(input: z.infer<typeof componentPhotoQuery>) {
     "filetype:bitmap",
   ].join(" ");
 }
+export function commonsQueries(input: z.infer<typeof componentPhotoQuery>) {
+  // Keep the model in every query. Categories are often absent from file
+  // descriptions; a brand-only fallback would return unrelated products.
+  const model = [input.brand, input.name].filter(Boolean).map(phrase);
+  const words = [
+    ...new Set(
+      [input.brand, input.name].join(" ").match(/[\p{L}\p{N}-]+/gu) || [],
+    ),
+  ].map(phrase);
+  return [
+    ...new Set([
+      commonsQuery(input),
+      [...model, "filetype:bitmap"].join(" "),
+      [...words, "filetype:bitmap"].join(" "),
+    ]),
+  ];
+}
 export function commonsUrl(input: string, allowed = hosts) {
   const u = validateUrl(input, allowed);
   if (u.protocol !== "https:") throw new Error("HTTPS required");
@@ -115,17 +132,29 @@ export function commonsResults(data: any): Credit[] {
   for (const page of pages.slice(0, 12)) {
     const image = page?.imageinfo?.[0],
       meta = image?.extmetadata;
+    const rendition = image?.thumburl
+      ? {
+          url: image.thumburl,
+          mime: image.thumbmime,
+          width: image.thumbwidth,
+          height: image.thumbheight,
+        }
+      : image;
     if (
       !image ||
       !meta ||
       !["image/jpeg", "image/png", "image/webp"].includes(image.mime) ||
+      !["image/jpeg", "image/png", "image/webp"].includes(rendition.mime) ||
       ![image.size, image.width, image.height].every(
         (v) => Number.isSafeInteger(v) && v > 0,
       ) ||
-      image.size > 8 * 1024 * 1024 ||
-      image.width * image.height > 40000000 ||
-      Math.min(image.width, image.height) < 400 ||
-      Math.max(image.width, image.height) < 600
+      ![rendition.width, rendition.height].every(
+        (v) => Number.isSafeInteger(v) && v > 0,
+      ) ||
+      (!image.thumburl && image.size > 8 * 1024 * 1024) ||
+      rendition.width * rendition.height > 40000000 ||
+      Math.min(rendition.width, rendition.height) < 400 ||
+      Math.max(rendition.width, rendition.height) < 600
     )
       continue;
     try {
@@ -148,7 +177,7 @@ export function commonsResults(data: any): Credit[] {
       const source = {
         provider: "Wikimedia Commons",
         url: commonsUrl(image.descriptionurl, [hosts[0]]),
-        imageUrl: commonsUrl(image.url, imageHosts),
+        imageUrl: commonsUrl(rendition.url, imageHosts),
         title: text(page.title, 300).replace(/^File:/, ""),
         creator,
         credit: text(meta.Attribution?.value || meta.Credit?.value),
@@ -207,22 +236,28 @@ export class ComponentPhotoSearch {
     let sources =
       cached && cached.expires > Date.now() ? cached.sources : undefined;
     if (!sources) {
-      const url = new URL("https://commons.wikimedia.org/w/api.php");
-      url.search = new URLSearchParams({
-        action: "query",
-        format: "json",
-        generator: "search",
-        gsrsearch: query,
-        gsrnamespace: "6",
-        gsrlimit: "12",
-        prop: "imageinfo",
-        iiprop: "url|extmetadata|size|mime",
-        iiextmetadatafilter:
-          "Artist|Credit|Attribution|LicenseShortName|LicenseUrl",
-        maxlag: "5",
-      }).toString();
-      const doc = await this.http.get(url.href, [hosts[0]]);
-      sources = commonsResults(JSON.parse(doc.body));
+      sources = [];
+      for (const searchQuery of commonsQueries(input)) {
+        this.enabled();
+        const url = new URL("https://commons.wikimedia.org/w/api.php");
+        url.search = new URLSearchParams({
+          action: "query",
+          format: "json",
+          generator: "search",
+          gsrsearch: searchQuery,
+          gsrnamespace: "6",
+          gsrlimit: "12",
+          prop: "imageinfo",
+          iiprop: "url|extmetadata|size|mime|thumbmime",
+          iiurlwidth: "1600",
+          iiextmetadatafilter:
+            "Artist|Credit|Attribution|LicenseShortName|LicenseUrl",
+          maxlag: "5",
+        }).toString();
+        const doc = await this.http.get(url.href, [hosts[0]]);
+        sources = commonsResults(JSON.parse(doc.body));
+        if (sources.length) break;
+      }
       if (this.cache.size >= 40)
         this.cache.delete(this.cache.keys().next().value!);
       this.cache.set(query, { sources, expires: Date.now() + ttl });

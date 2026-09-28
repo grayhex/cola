@@ -259,3 +259,56 @@ it("manual domains with private DNS remain forbidden", async () => {
   ).rejects.toThrow("Non-public");
   expect(fetch).not.toHaveBeenCalled();
 });
+
+it("allows bounded large XML catalogues without raising product or image limits", async () => {
+  const body = "x".repeat(9 * 1024 * 1024);
+  const response = (type: string) =>
+    new Response(body, { headers: { "content-type": type } }) as any;
+  vi.mocked(fetch).mockResolvedValueOnce(response("application/xml"));
+  expect(
+    (await client().get("https://cube.eu/sitemap.xml", ["cube.eu"])).body
+      .length,
+  ).toBe(body.length);
+  for (const [url, type] of [
+    ["https://cube.eu/product", "application/xml"],
+    ["https://cube.eu/sitemap.xml", "text/html"],
+    ["https://cube.eu/photo.jpg", "image/jpeg"],
+  ]) {
+    vi.mocked(fetch).mockResolvedValueOnce(response(type));
+    await expect(client().get(url, ["cube.eu"])).rejects.toThrow("8 MiB");
+  }
+  vi.mocked(fetch).mockResolvedValueOnce(
+    new Response("x".repeat(25 * 1024 * 1024), {
+      headers: { "content-type": "text/xml" },
+    }) as any,
+  );
+  await expect(
+    client().get("https://cube.eu/sitemap.xml", ["cube.eu"]),
+  ).rejects.toThrow("24 MiB");
+});
+
+it("accepts octet-stream XML only from the known manufacturer catalogue paths", async () => {
+  const response = () =>
+    new Response("<urlset>" + " ".repeat(9 * 1024 * 1024) + "</urlset>", {
+      headers: { "content-type": "application/octet-stream" },
+    }) as any;
+  for (const url of [
+    "https://media.specialized.com/sitemaps/US-Product-en-USD.xml",
+    "https://wcpcdn.blob.core.windows.net/hybris/sitemap/Trek-en-US-01.xml",
+  ]) {
+    vi.mocked(fetch).mockResolvedValueOnce(response());
+    await expect(
+      client().get(url, [new URL(url).hostname]),
+    ).resolves.toBeDefined();
+  }
+  for (const url of [
+    "https://upload.wikimedia.org/image.xml",
+    "https://media.specialized.com/photos/large.xml",
+    "https://media.specialized.com/sitemaps/photo.jpg",
+  ]) {
+    vi.mocked(fetch).mockResolvedValueOnce(response());
+    await expect(client().get(url, [new URL(url).hostname])).rejects.toThrow(
+      "8 MiB",
+    );
+  }
+});

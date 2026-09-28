@@ -28,6 +28,7 @@ try {
     "002_settings",
     "003_source_policy",
     "004_catalogue_discovery",
+    "005_popular_catalogues",
   ]) {
     const { rowCount } = await client.query(
       "SELECT 1 FROM bike_resolver.schema_migrations WHERE version=$1",

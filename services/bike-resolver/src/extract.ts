@@ -187,6 +187,9 @@ function pipeline(doc: SourceDocument, rows?: Rows) {
     if (
       !label ||
       !value ||
+      /^(?:details|view details|learn more|read more|see more|подробнее)$/i.test(
+        value,
+      ) ||
       known(value) ||
       !validLabel(label) ||
       value.length > 6000 ||
@@ -335,6 +338,15 @@ function pipeline(doc: SourceDocument, rows?: Rows) {
       )
         return;
       if (next.is("ul,ol")) {
+        // A named group (e.g. Wheels) containing labelled component rows is
+        // not an extra wheel with the entire group's text as its model.
+        if (
+          next
+            .find("strong,b,dt,.label")
+            .toArray()
+            .some((x) => known(clean($(x).text())))
+        )
+          return;
         add(
           label,
           next

@@ -32,7 +32,62 @@ export function searchLinks(
     .sort((a, b) => b.score - a.score);
   return [...new Set(entries.map((e) => e.url))].slice(0, limit);
 }
-// One public search request, at most three product pages. Never parse search snippets as specs.
+export async function retailerLinks(
+  http: ManufacturerHttpClient,
+  query: BikeQuery,
+  limit = 3,
+) {
+  const words = [query.brand, query.model, query.trim, query.year]
+    .filter(Boolean)
+    .join(" ");
+  const search = new URL("https://www.bing.com/search");
+  search.searchParams.set("format", "rss");
+  search.searchParams.set("q", words + " bicycle specifications");
+  try {
+    const doc = await http.get(search.href, ["www.bing.com", "bing.com"]);
+    if (/<rss[\s>]/i.test(doc.body)) {
+      const links = searchLinks(doc.body, query, limit);
+      if (links.length) return links;
+    }
+  } catch {
+    checkAbort();
+  }
+  // A real retailer catalogue is useful when the search engine is unavailable
+  // or returns an empty RSS. Product identity is still verified after fetching.
+  const url = new URL("https://www.velosklad.ru/velosipedy/poiskall/");
+  url.searchParams.set("text", words);
+  const doc = await http.get(url.href, ["www.velosklad.ru", "velosklad.ru"]);
+  const $ = load(doc.body),
+    tokens = normalize(
+      [query.brand, query.model, query.trim].filter(Boolean).join(" "),
+    ).split(" ");
+  const links = $("a[href]")
+    .toArray()
+    .flatMap((el) => {
+      try {
+        const link = validateUrl(new URL($(el).attr("href")!, doc.url).href, [
+          "www.velosklad.ru",
+          "velosklad.ru",
+        ]);
+        if (!/^\/velosipedy\/bike\/\d+\/[^/]+\/$/.test(link.pathname))
+          return [];
+        const text = new Set(
+          normalize(
+            $(el).text() +
+              " " +
+              $(el).find("img").attr("alt") +
+              " " +
+              link.pathname,
+          ).split(" "),
+        );
+        return tokens.every((token) => text.has(token)) ? [link.href] : [];
+      } catch {
+        return [];
+      }
+    });
+  return [...new Set(links)].slice(0, limit);
+}
+// Bounded discovery and at most three product pages; snippets are never specs.
 export class RetailerSearch {
   private cache = new Map<string, { urls: string[]; expires: number }>();
   constructor(
@@ -53,28 +108,8 @@ export class RetailerSearch {
       const key = JSON.stringify(query);
       let entry = this.cache.get(key);
       if (!entry || entry.expires < Date.now()) {
-        const search = new URL("https://www.bing.com/search");
-        search.searchParams.set("format", "rss");
-        search.searchParams.set(
-          "q",
-          [
-            query.brand,
-            query.model,
-            query.trim,
-            query.year,
-            "bicycle specifications",
-          ]
-            .filter(Boolean)
-            .join(" "),
-        );
-        const doc = await this.http.get(search.href, [
-          "www.bing.com",
-          "bing.com",
-        ]);
-        if (!/<rss[\s>]/i.test(doc.body))
-          throw new ResolverError("upstream_unavailable", "Search unavailable");
         entry = {
-          urls: searchLinks(doc.body, query),
+          urls: await retailerLinks(this.http, query),
           expires: Date.now() + 3600000,
         };
         if (this.cache.size >= 100)
