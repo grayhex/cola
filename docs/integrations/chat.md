@@ -40,6 +40,8 @@ docker compose --env-file .env.production -f compose.prod.yaml run --rm --no-dep
 docker compose --env-file .env.production -f compose.prod.yaml run --rm --no-deps migrate node scripts/chat-setup.js --apply
 ```
 
+Если предыдущий `--apply` остановился на настройке вложений, после обновления кода повторите его и затем запустите проверку без `--apply`: Stream принимает расширения файлов только с ведущей точкой (`.jpg`, `.jpeg`, `.png`, `.webp`).
+
 Скрипт создаёт `colabike_user`, `colabike_member`, канал типа `colabike`; выдаёт участнику только необходимые права. Обычные user/guest/anonymous/channel_member не получают доступ к этому типу. Пользователь не может создавать каналы напрямую, добавлять участников, менять роль/профиль или искать весь каталог пользователей Stream. Создание участников и каналов идёт через ColaBike. Проверка auth/permissions, grants и upload policy перед выдачей токена/канала закрывает доступ при несовместимой настройке; результат кешируется на 30 секунд.
 
 После проверки политики, privacy/retention и сценария приёмки включите флаг и пересоздайте `app` и `chat-sync` обычным процессом деплоя. CSP разрешает только Stream chat API/WS и его CDN; произвольные URL провайдера или тестовый обход в production не предусмотрены.
