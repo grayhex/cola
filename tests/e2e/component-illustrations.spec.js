@@ -105,7 +105,8 @@ test("component artwork: admin upload, persistence, protected deletion, themes a
     await expect(icons).toHaveText(["✉️", "✉️", "✉️"]);
     const trigger = page.getByRole("button", { name: /Управление и посадка/ });
     const image = trigger.locator("img");
-    await expect(image).toHaveAttribute("src", "/api/assets/" + asset);
+    const assetUrl = new URL("/api/assets/" + asset, origin).href;
+    await expect(image).toHaveJSProperty("src", assetUrl);
     await expect
       .poll(() => image.evaluate((img) => img.complete && img.naturalWidth > 0))
       .toBe(true);
@@ -115,10 +116,7 @@ test("component artwork: admin upload, persistence, protected deletion, themes a
     const category = page
       .locator("#component-group-types")
       .getByRole("link", { name: "Седло", exact: true });
-    await expect(category.locator("img")).toHaveAttribute(
-      "src",
-      "/api/assets/" + asset,
-    );
+    await expect(category.locator("img")).toHaveJSProperty("src", assetUrl);
     for (const theme of ["light", "dark"]) {
       await page.evaluate(
         (value) => (document.documentElement.dataset.theme = value),
