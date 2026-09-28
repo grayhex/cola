@@ -211,3 +211,38 @@ it("settings reads are bounded before database access and recover after the wind
     else process.env.BIKE_RESOLVER_TOKEN = previous;
   }
 });
+
+it("enables verified catalogues on fresh/untouched settings and preserves operator choices", async () => {
+  const db = new PGlite();
+  const migration = (name: string) =>
+    readFileSync(new URL(`../migrations/${name}.sql`, import.meta.url), "utf8");
+  try {
+    for (const name of [
+      "001_cache",
+      "002_settings",
+      "003_source_policy",
+      "004_catalogue_discovery",
+    ])
+      await db.exec(migration(name));
+    const store = new SettingsStore(db as any);
+    await store.load();
+    expect(store.version).toBe(2);
+    await db.exec(migration("005_popular_catalogues"));
+    await store.load();
+    expect(store.value.adapters.trek).toBe(true);
+    expect(store.value.adapters.cannondale).toBe(true);
+    await store.save(
+      {
+        ...store.value,
+        adapters: { ...store.value.adapters, trek: false, cannondale: false },
+      },
+      store.version,
+    );
+    await db.exec(migration("005_popular_catalogues"));
+    await store.load();
+    expect(store.value.adapters.trek).toBe(false);
+    expect(store.value.adapters.cannondale).toBe(false);
+  } finally {
+    await db.close();
+  }
+});

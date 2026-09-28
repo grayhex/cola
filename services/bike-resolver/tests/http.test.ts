@@ -286,3 +286,29 @@ it("allows bounded large XML catalogues without raising product or image limits"
     client().get("https://cube.eu/sitemap.xml", ["cube.eu"]),
   ).rejects.toThrow("24 MiB");
 });
+
+it("accepts octet-stream XML only from the known manufacturer catalogue paths", async () => {
+  const response = () =>
+    new Response("<urlset>" + " ".repeat(9 * 1024 * 1024) + "</urlset>", {
+      headers: { "content-type": "application/octet-stream" },
+    }) as any;
+  for (const url of [
+    "https://media.specialized.com/sitemaps/US-Product-en-USD.xml",
+    "https://wcpcdn.blob.core.windows.net/hybris/sitemap/Trek-en-US-01.xml",
+  ]) {
+    vi.mocked(fetch).mockResolvedValueOnce(response());
+    await expect(
+      client().get(url, [new URL(url).hostname]),
+    ).resolves.toBeDefined();
+  }
+  for (const url of [
+    "https://upload.wikimedia.org/image.xml",
+    "https://media.specialized.com/photos/large.xml",
+    "https://media.specialized.com/sitemaps/photo.jpg",
+  ]) {
+    vi.mocked(fetch).mockResolvedValueOnce(response());
+    await expect(client().get(url, [new URL(url).hostname])).rejects.toThrow(
+      "8 MiB",
+    );
+  }
+});

@@ -265,11 +265,18 @@ export class ManufacturerHttpClient {
           // Manufacturer XML catalogues can exceed the product/image limit
           // (Specialized's US catalogue is ~17 MiB). Keep the larger budget
           // restricted to XML responses at .xml URLs, including redirects.
+          // These two manufacturer CDNs serve their XML as octet-stream.
+          const contentType = response.headers.get("content-type") || "";
+          const binaryCatalogue =
+            /^application\/octet-stream(?:;|$)/i.test(contentType) &&
+            ((u.hostname === "media.specialized.com" &&
+              u.pathname.startsWith("/sitemaps/")) ||
+              (u.hostname === "wcpcdn.blob.core.windows.net" &&
+                u.pathname.startsWith("/hybris/sitemap/")));
           const limitMiB =
             /\.xml$/i.test(u.pathname) &&
-            /^(?:application|text)\/xml(?:;|$)/i.test(
-              response.headers.get("content-type") || "",
-            )
+            (/^(?:application|text)\/xml(?:;|$)/i.test(contentType) ||
+              binaryCatalogue)
               ? 24
               : 8;
           let size = 0;
