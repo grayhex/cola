@@ -63,7 +63,7 @@ try {
       components: ["Search", "Other", "NoPhotos", "UpstreamError"].map((v) => ({
         section: "build",
         category: "Седло",
-        name: v + nonce,
+        name: "Brooks " + v + nonce,
         notes: "",
         price: null,
       })),
@@ -75,7 +75,8 @@ try {
       bike.id,
     ])
   ).rows;
-  const model = (name) => models.find((v) => v.name.startsWith(name)).model_id;
+  const model = (name) =>
+    models.find((v) => v.name.startsWith("Brooks " + name)).model_id;
   const path = "components/" + model("Search"),
     other = "components/" + model("Other");
   await expectStatus(guest(path + "/photo-search", "POST", {}), 401);

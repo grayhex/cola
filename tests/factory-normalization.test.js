@@ -59,16 +59,7 @@ test("factory identities separate model names from dimensions, descriptions and 
     ).name,
     "Canyon Cockpit CP0039",
   );
-  for (const v of [
-    "Not Available",
-    "Unspecified",
-    "None included",
-    "N/A",
-    "-",
-    "интегрированная, внутренняя проводка, закрытый подшипник",
-    "Specialized, 6061 alloy",
-    "Canyon One-piece carbon cockpit with specialist gravel ergonomics and design",
-  ])
+  for (const v of ["Not Available", "Unspecified", "None included", "N/A", "-"])
     assert.equal(
       factoryEntries({ components: [part("headset", v)] }).length,
       0,
@@ -78,6 +69,15 @@ test("factory identities separate model names from dimensions, descriptions and 
     componentText("Shimano&#x20;Deore&nbsp;M6100 &amp; &#32; XT™"),
     "Shimano Deore M6100 & XT",
   );
+  for (const value of [
+    "интегрированная, внутренняя проводка, закрытый подшипник",
+    "Specialized, 6061 alloy",
+    "Canyon One-piece carbon cockpit with specialist gravel ergonomics and design",
+  ]) {
+    const entry = factoryEntries({ components: [part("headset", value)] })[0];
+    assert.equal(entry.value.name, value);
+    assert.equal(entry.brand, "");
+  }
 });
 test("flattened front/rear tires are distinct installations with short product identities", () => {
   const entries = factoryEntries({

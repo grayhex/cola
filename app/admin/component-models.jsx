@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { socialApi, Pagination } from "../ui/social-primitives.jsx";
+import { productCategories } from "../../lib/component-products.js";
 
 export default function ComponentModels({ kind = "component" }) {
   const bike = kind === "bike";
@@ -84,7 +85,12 @@ export default function ComponentModels({ kind = "component" }) {
           await socialApi(
             endpoint + "?" + new URLSearchParams({ q: targetQuery }),
           )
-        ).items.filter((m) => m.id !== editing.id && !m.archived),
+        ).items.filter(
+          (m) =>
+            m.id !== editing.id &&
+            !m.archived &&
+            (bike || m.category === editing.category),
+        ),
       );
     } catch (e) {
       setError(e.message);
@@ -185,12 +191,15 @@ export default function ComponentModels({ kind = "component" }) {
               {!bike && (
                 <label className="field">
                   <span>Категория модели</span>
-                  <input
+                  <select
                     required
-                    maxLength={60}
                     value={editing.category}
                     onChange={(e) => field("category", e.target.value)}
-                  />
+                  >
+                    {productCategories.map((category) => (
+                      <option key={category}>{category}</option>
+                    ))}
+                  </select>
                 </label>
               )}
               <label className="field">
