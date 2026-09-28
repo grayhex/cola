@@ -16,6 +16,7 @@ import {
   deleteUnusedAssets,
 } from "../lib/site-asset-library.js";
 import { settingsInput } from "../lib/admin-validation.js";
+import { componentIllustrationSlots } from "../lib/component-illustrations.js";
 import { defaultSettings } from "../lib/site-defaults.js";
 
 test("only content artwork is configurable and unknown appearance settings are rejected", () => {
@@ -267,4 +268,56 @@ test("shared motion and branding settings reject unsafe or unusable values", () 
     "/about",
   );
   assert.deepEqual(siteAssetIds({ brandLogoId: "logo" }), ["logo"]);
+});
+
+test("component artwork covers custom groups/types and protects published and draft references", async () => {
+  const id = "11111111-1111-4111-8111-111111111111";
+  const slots = componentIllustrationSlots({
+    componentGroups: [
+      {
+        id: "custom",
+        name: "Особая группа",
+        icon: "other",
+        categories: ["Особая деталь"],
+      },
+    ],
+    partCategories: { build: ["Новая деталь"], accessories: [] },
+  });
+  assert(slots.some((s) => s.kind === "groups" && s.name === "custom"));
+  for (const name of ["Седло", "Особая деталь", "Новая деталь"])
+    assert.equal(
+      slots.filter((s) => s.kind === "categories" && s.name === name).length,
+      1,
+    );
+  const settings = {
+    ...defaultSettings,
+    componentIllustrations: {
+      groups: { custom: id },
+      categories: { "Особая деталь": id },
+    },
+  };
+  assert(settingsInput.safeParse(settings).success);
+  assert.equal(
+    graphicAsset(
+      settings,
+      slots.find((s) => s.name === "Особая деталь"),
+    ),
+    id,
+  );
+  assert.deepEqual(siteAssetIds(settings), [id]);
+  assert.deepEqual(siteAssetUsage(settings)[id], ["Категории компонентов"]);
+  assert(
+    assetUsageLabels({ id }, settings, {}).includes("В настройках / черновике"),
+  );
+  const q = fakeDatabase({ site: settings, ids: [id] });
+  assert.deepEqual((await deleteUnusedAssets(q, [id])).skippedIds, [id]);
+  assert.equal(
+    settingsInput.safeParse({
+      ...settings,
+      componentIllustrations: {
+        categories: { Седло: "https://example.test/image.png" },
+      },
+    }).success,
+    false,
+  );
 });

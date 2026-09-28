@@ -256,12 +256,7 @@ export default function Home() {
                 {t("Все велосипеды")} <ArrowRight size={14} />
               </Link>
             </div>
-            <BikeCarousel
-              busy={!data && !error}
-              paused={paused}
-              onPause={() => setPaused(true)}
-              speed={settings.autoScrollSpeed}
-            >
+            <BikeCarousel busy={!data && !error}>
               {content.popular.map((b) => (
                 <BikeCard
                   key={b.id}

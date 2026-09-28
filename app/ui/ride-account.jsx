@@ -1,4 +1,5 @@
 "use client";
+import { useSearchParams } from "next/navigation";
 import EmailPolicyAction from "./email-policy-action.jsx";
 import SiteIcon from "./site-icon.jsx";
 import RideCreationActions from "./ride-creation-actions.jsx";
@@ -70,6 +71,7 @@ export default function RideAccount({ bikes }) {
   const [data, setData] = useState(null),
     [config, setConfig] = useState(null),
     [page, setPage] = useState(1),
+    [status, setStatus] = useState(""),
     [preview, setPreview] = useState(null),
     [editing, setEditing] = useState(null),
     [mode, setMode] = useState(null),
@@ -80,7 +82,8 @@ export default function RideAccount({ bikes }) {
     [visibleMetrics, setVisibleMetrics] = useState(null);
   const currentBikes = useMemo(() => selectableRideBikes(bikes), [bikes]);
   const rideBikes = selectableRideBikes(bikes, editing?.bike?.id);
-  const autoOpened = useRef(false);
+  const action = useSearchParams().get("action");
+  const handledAction = useRef(undefined);
   // Garmin CSV and FIT/TCX sensors bring extra metrics; the owner picks which
   // of them the ride shows. Heart rate and power stay hidden until chosen.
   const metricSource = mode === "plan" ? null : preview || editing,
@@ -94,7 +97,14 @@ export default function RideAccount({ bikes }) {
   const refresh = useCallback(async () => {
     const revision = ++requests.current.revision;
     try {
-      const result = await socialApi("rides?own=1&page=" + page);
+      const result = await socialApi(
+        "rides?" +
+          new URLSearchParams({
+            own: "1",
+            page: String(page),
+            ...(status ? { status } : {}),
+          }),
+      );
       if (revision === requests.current.revision) {
         setData(result);
         setError("");
@@ -102,13 +112,22 @@ export default function RideAccount({ bikes }) {
     } catch (e) {
       if (revision === requests.current.revision) setError(e.message);
     }
-  }, [page]);
+  }, [page, status]);
   const start = useCallback(
     (next) => {
-      if (!currentBikes.length) return;
+      if (next && !currentBikes.length) return;
       setEditing(null);
       setPreview(null);
       setMode(next);
+      handledAction.current = next;
+      if (next) {
+        setStatus("");
+        setPage(1);
+      }
+      const url = new URL(location.href);
+      if (next) url.searchParams.set("action", next);
+      else url.searchParams.delete("action");
+      window.history.replaceState(null, "", url);
       setError("");
       setNotice("");
       setVisibleMetrics(null);
@@ -142,11 +161,18 @@ export default function RideAccount({ bikes }) {
     };
   }, []);
   useEffect(() => {
-    if (autoOpened.current || !config?.enabled || !currentBikes.length) return;
-    autoOpened.current = true;
-    const action = new URLSearchParams(location.search).get("action");
-    if (["add", "plan", "import"].includes(action)) start(action);
-  }, [config?.enabled, currentBikes.length, start]);
+    if (handledAction.current === action) return;
+    const next = ["add", "plan", "import"].includes(action) ? action : null;
+    if (next && (!config?.enabled || !currentBikes.length)) return;
+    start(next);
+  }, [action, config?.enabled, currentBikes.length, start]);
+  function finish() {
+    setMode(null);
+    handledAction.current = null;
+    const url = new URL(location.href);
+    url.searchParams.delete("action");
+    window.history.replaceState(null, "", url);
+  }
   async function upload(file, attach = false) {
     if (!file) return;
     setBusy(true);
@@ -229,10 +255,16 @@ export default function RideAccount({ bikes }) {
   return (
     <section>
       <div className="section-heading">
-        <h2>Покатушки</h2>
+        <div>
+          <h2>Мои покатушки</h2>
+          <p className="help">
+            История поездок, планы и загрузка файлов с велокомпьютера.
+          </p>
+        </div>
       </div>
       <RideCreationActions
         mode={mode}
+        busy={busy}
         onSelect={start}
         disabled={busy || !config?.enabled || !currentBikes.length}
       />
@@ -254,9 +286,9 @@ export default function RideAccount({ bikes }) {
       {mode === "import" && (
         <GarminImport
           bikes={currentBikes}
-          onCancel={() => setMode(null)}
+          onCancel={() => start(null)}
           onDone={async (result) => {
-            setMode(null);
+            finish();
             setNotice(
               `Импортировано: ${result.imported.length}. Уже загружены: ${result.skipped}.`,
             );
@@ -307,7 +339,7 @@ export default function RideAccount({ bikes }) {
                 editing ? "PATCH" : "POST",
                 input,
               );
-              setMode(null);
+              finish();
               setPreview(null);
               await refresh();
             } catch (e) {
@@ -618,7 +650,7 @@ export default function RideAccount({ bikes }) {
                         "POST",
                         {},
                       );
-                      setMode(null);
+                      finish();
                       await refresh();
                     } catch (e) {
                       setError(e.message);
@@ -640,7 +672,7 @@ export default function RideAccount({ bikes }) {
                     setBusy(true);
                     try {
                       await socialApi("rides/" + editing.id, "DELETE");
-                      setMode(null);
+                      finish();
                       await refresh();
                     } catch (e) {
                       setError(e.message);
@@ -658,7 +690,7 @@ export default function RideAccount({ bikes }) {
             type="button"
             className="quiet"
             disabled={busy}
-            onClick={() => setMode(null)}
+            onClick={() => start(null)}
           >
             Отмена
           </button>
@@ -666,6 +698,25 @@ export default function RideAccount({ bikes }) {
       )}
       {data && !mode && (
         <>
+          <div className="ui-tabs" aria-label="Фильтр моих покатушек">
+            {[
+              ["", "Все"],
+              ["completed", "Прошедшие"],
+              ["planned", "Предстоящие"],
+            ].map(([value, label]) => (
+              <button
+                type="button"
+                key={label}
+                aria-pressed={status === value}
+                onClick={() => {
+                  setPage(1);
+                  setStatus(value);
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
           <div className="ride-grid">
             {data.rides.map((r) => (
               <RideCard key={r.id} ride={r} owner onEdit={edit} />
@@ -673,8 +724,8 @@ export default function RideAccount({ bikes }) {
           </div>
           {!data.rides.length && !mode && (
             <p className="help">
-              Загрузите GPX, FIT или TCX, импортируйте Garmin CSV или
-              запланируйте маршрут.
+              В этом списке пока нет поездок. Загрузите файл трека, Garmin CSV
+              или запланируйте покатушку через меню выше.
             </p>
           )}
           <Pagination {...data} onPage={setPage} />

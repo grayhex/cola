@@ -372,6 +372,9 @@ test("admin backgrounds are independent per theme; native local SVG file upload 
         .getByRole("button", { name: new RegExp("^" + name + "(?: |$)") });
     await section("Графика").click();
     const graphics = page.getByRole("region", { name: "Графика сайта" });
+    await graphics
+      .getByRole("button", { name: "Фон сайта", exact: true })
+      .click();
     await expect(
       graphics.getByRole("combobox", { name: "Группа", exact: true }),
     ).toBeVisible();

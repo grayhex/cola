@@ -46,7 +46,7 @@ test("ride upload, SVG, privacy, profile and bike; works without tiles", async (
   ).json();
   await page.goto("/account?tab=rides");
   await page
-    .getByRole("button", { name: "Добавить покатушку", exact: true })
+    .getByRole("button", { name: "Загрузить GPX / FIT / TCX", exact: true })
     .click();
   await page.locator("input[type=file]").setInputFiles({
     name: "ride.gpx",
@@ -273,7 +273,7 @@ test("FIT upload: export hint, heart rate hidden until the owner shows it", asyn
   });
   await page.goto("/account?tab=rides");
   await page
-    .getByRole("button", { name: "Загрузить FIT", exact: true })
+    .getByRole("button", { name: "Загрузить GPX / FIT / TCX", exact: true })
     .click();
   await page.getByText("Как выгрузить FIT с велокомпьютера").click();
   await expect(page.getByText("Экспорт оригинала").first()).toBeVisible();

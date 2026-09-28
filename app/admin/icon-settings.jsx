@@ -7,10 +7,12 @@ import {
   footerLinkHref,
 } from "../../lib/design-graphics.js";
 import AssetPicker from "./asset-picker.jsx";
+import { componentIllustrationSlots } from "../../lib/component-illustrations.js";
 import { Image } from "../ui/icons.jsx";
 import styles from "./design.module.css";
 export default function IconSettings({
   settings,
+  catalog,
   assets,
   busy,
   onChange,
@@ -18,19 +20,55 @@ export default function IconSettings({
 }) {
   const [search, setSearch] = useState("");
   const [group, setGroup] = useState("all");
-  const groups = [...new Set(illustrationSlots.map((slot) => slot.group))];
-  const slots = filterGraphicSlots(illustrationSlots, search, group);
+  const [section, setSection] = useState("branding");
+  const sectionSlots = [
+    ...illustrationSlots,
+    ...componentIllustrationSlots(catalog),
+  ].filter((slot) => slot.section === section);
+  const groups = [...new Set(sectionSlots.map((slot) => slot.group))];
+  const slots = filterGraphicSlots(sectionSlots, search, group);
+  function assign(slot, id) {
+    if (!slot.kind) return onChange(slot.key, id);
+    onChange("componentIllustrations", {
+      ...settings.componentIllustrations,
+      [slot.kind]: {
+        ...settings.componentIllustrations?.[slot.kind],
+        [slot.name]: id,
+      },
+    });
+  }
   return (
     <section
       className={"admin-panel " + styles.compactPanel}
       aria-label="Графика сайта"
     >
-      <h2>Изображения и брендинг</h2>
+      <h2>Графика сайта</h2>
       <p className="help">
-        Фотографии велосипедов, иллюстрации проекта и иконка вкладки.
-        Изображение главной меняется в разделе «Внешний вид». Знак ColaBike
-        одновременно используется в шапке и на вкладке браузера.
+        Логотипы, категории компонентов, фон и иллюстрации проекта. Изображение
+        главной меняется в разделе «Внешний вид». Знак ColaBike одновременно
+        используется в шапке и на вкладке браузера.
       </p>
+      <div className="ui-tabs" aria-label="Разделы графики">
+        {[
+          ["branding", "Логотипы и брендинг"],
+          ["components", "Компоненты"],
+          ["background", "Фон сайта"],
+          ["system", "Системные иллюстрации"],
+        ].map(([id, label]) => (
+          <button
+            type="button"
+            key={id}
+            aria-pressed={section === id}
+            onClick={() => {
+              setSection(id);
+              setGroup("all");
+              setSearch("");
+            }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
       <div className={styles.toolbar}>
         <label className="field">
           <span>Найти графику</span>
@@ -72,10 +110,10 @@ export default function IconSettings({
               previewClassName="wide"
               Fallback={Image}
               accept="image/jpeg,image/png,image/webp"
-              onChange={(id) => onChange(slot.key, id)}
+              onChange={(id) => assign(slot, id)}
               onUpload={async (file) => {
                 const asset = await onUpload(file, slot);
-                if (asset) onChange(slot.key, asset.id);
+                if (asset) assign(slot, asset.id);
               }}
             />
           );

@@ -46,6 +46,9 @@ test("content artwork remains editable and protected; retired interface graphics
       .getByRole("navigation", { name: "Разделы админки" })
       .getByRole("button", { name: "Графика", exact: true })
       .click();
+    await page
+      .getByRole("button", { name: "Системные иллюстрации", exact: true })
+      .click();
     await expect(page.getByText(/Legacy|Pixel Club/)).toHaveCount(0);
     await page
       .getByRole("combobox", {

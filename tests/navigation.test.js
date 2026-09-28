@@ -27,6 +27,11 @@ test("navigation defaults ignore retired ordering fields; known destinations res
     sectionLinks("bikes", { id: "owner" }).at(-1).href,
     "/account?tab=bikes&action=add",
   );
+  for (const user of [null, { id: "owner" }]) {
+    const links = sectionLinks("rides", user);
+    assert(links.some((link) => link.href.endsWith("action=plan")));
+    assert(links.every((link) => !/action=(?:add|import)/.test(link.href)));
+  }
   assert.equal(activeSection("/account", "?tab=rides"), "rides");
   assert.equal(activeSection("/r/share"), "rides");
   assert.equal(activeSection("/about"), "about");

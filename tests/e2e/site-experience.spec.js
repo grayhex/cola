@@ -44,9 +44,7 @@ test("admin publishes a shared animation switch, uploaded Rive, brand/favicon an
       page.getByLabel("Графика главного блока", { exact: true }),
     ).toHaveCount(0);
     await page.getByLabel("Анимации главной для всех посетителей").check();
-    await page
-      .getByLabel("Скорость Live и велосипедов, пикселей в секунду")
-      .fill("36");
+    await page.getByLabel("Скорость Live, пикселей в секунду").fill("36");
     await page
       .getByLabel("Файл: Анимация · слева от заголовка", { exact: true })
       .setInputFiles({
@@ -231,6 +229,15 @@ test("popular carousel stays on one row and scrolls with buttons, keyboard, a si
     .evaluateAll((nodes) => nodes.map((n) => n.getBoundingClientRect().y));
   expect(Math.max(...boxes) - Math.min(...boxes)).toBeLessThan(2);
   await region.scrollIntoViewIfNeeded();
+  // No hover/focus pause: watch the visible rail with the pointer elsewhere.
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.mouse.move(0, 0);
+  const idle = await rail.evaluate(async (node) => {
+    const start = node.scrollLeft;
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    return Math.abs(node.scrollLeft - start);
+  });
+  expect(idle).toBeLessThan(1);
   await region.getByRole("button", { name: "Следующие велосипеды" }).click();
   await expect
     .poll(() => rail.evaluate((e) => e.scrollLeft))

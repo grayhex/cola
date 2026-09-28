@@ -1,17 +1,10 @@
 "use client";
 import { Children, useEffect, useId, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { useAutoScroll } from "./use-auto-scroll.js";
 import { useReducedMotion } from "./motion.jsx";
 import styles from "./bike-carousel.module.css";
 
-export default function BikeCarousel({
-  children,
-  busy,
-  speed = 24,
-  paused = false,
-  onPause,
-}) {
+export default function BikeCarousel({ children, busy }) {
   const rail = useRef(null),
     cancel = useRef(null),
     sequence = useRef(0),
@@ -20,10 +13,8 @@ export default function BikeCarousel({
   const reduced = useReducedMotion();
   const id = useId();
   const count = Children.count(children);
-  useAutoScroll(rail, { speed, paused: paused || busy });
   function manual() {
     stop();
-    onPause?.();
   }
   function stop() {
     sequence.current++;

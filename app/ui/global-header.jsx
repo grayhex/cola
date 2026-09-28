@@ -6,7 +6,7 @@ import ThemeControl from "./theme-control.jsx";
 import SmallImage from "./small-image.jsx";
 import { GlobalSearch, CompactDialog } from "./compact-ui.jsx";
 import { useState, useEffect, useRef } from "react";
-import { Bike, ChevronDown, MessageCircle } from "./icons.jsx";
+import { Bike, ChevronDown } from "./icons.jsx";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useSite } from "./site-provider.jsx";
 import { Avatar } from "./avatar.jsx";
@@ -207,7 +207,7 @@ export default function GlobalHeader({
       <div className="nav-account-links">
         {chatEnabled && (
           <Link className="nav-menu-link" href="/messages">
-            <MessageCircle size={18} aria-hidden="true" />
+            {graphic("messages")}
             <span>Сообщения</span>
             {chatUnread > 0 && (
               <small>{chatUnread > 99 ? "99+" : chatUnread}</small>
@@ -378,7 +378,7 @@ export default function GlobalHeader({
                 aria-label={"Сообщения: " + chatUnread + " непрочитанных"}
                 data-tooltip="Сообщения"
               >
-                <MessageCircle size={18} aria-hidden="true" />
+                {graphic("messages")}
                 {chatUnread > 0 && (
                   <span className="notification-badge">
                     {chatUnread > 99 ? "99+" : chatUnread}

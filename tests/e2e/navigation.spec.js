@@ -185,9 +185,11 @@ test("navigation: real destinations, account, keyboard, configurable About and a
         .getByRole("button", { name: "Подразделы: Покатушки", exact: true })
         .click();
     await page
-      .getByRole("link", { name: "Добавить покатушку", exact: true })
+      .getByRole("link", { name: "Запланировать", exact: true })
       .click();
-    await expect(page.getByLabel("Файл трека", { exact: false })).toBeVisible();
+    await expect(
+      page.getByLabel("Дата и время старта", { exact: true }),
+    ).toBeVisible();
     await page.goto("/about");
     if (isMobile)
       await page.getByRole("button", { name: "Открыть меню" }).click();

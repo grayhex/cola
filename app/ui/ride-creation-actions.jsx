@@ -3,84 +3,57 @@ import Link from "next/link";
 import SiteIcon from "./site-icon.jsx";
 import styles from "./ride-creation-actions.module.css";
 
-// Public rides and the account use the same two entry points. CSV always
-// represents a completed ride, never another kind of future plan.
+// Discovery offers planning only; personal imports live in the account.
 export default function RideCreationActions({
   onSelect,
   disabled = false,
+  busy = false,
   mode = null,
 }) {
-  const action = (kind, text, icon) =>
-    onSelect ? (
-      <button
-        type="button"
-        className="button secondary"
-        disabled={disabled}
-        aria-pressed={mode === kind}
-        onClick={() => onSelect(kind)}
-      >
-        <SiteIcon name={icon} />
-        {text}
-      </button>
-    ) : (
-      <Link
-        className="button secondary"
-        href={`/account?tab=rides&action=${kind}`}
-      >
-        <SiteIcon name={icon} />
-        {text}
+  if (!onSelect)
+    return (
+      <Link className="button" href="/account?tab=rides&action=plan">
+        <SiteIcon name="plan" />
+        Запланировать покатушку
       </Link>
     );
   return (
-    <section className={styles.creation} aria-label="Добавление покатушек">
-      <div className={styles.primary}>
-        <div className={styles.group}>
-          <span className={styles.caption}>Прошедшая поездка</span>
-          {action("add", "Добавить покатушку", "addRide")}
-        </div>
-        <div className={styles.group}>
-          <span className={styles.caption}>Будущая поездка</span>
-          {action("plan", "Запланировать", "plan")}
-        </div>
-      </div>
-      <div className={styles.imports} aria-label="Импорт прошедших покатушек">
-        <span>Загрузить прошлые поездки:</span>
-        {onSelect ? (
+    <div className={styles.creation}>
+      <div className="ui-tabs" aria-label="Мои поездки и импорт">
+        {[
+          [null, "Мои поездки", "rides"],
+          ["add", "Загрузить GPX / FIT / TCX", "addRide"],
+          ["import", "Garmin CSV", "import"],
+          ["plan", "Запланировать", "plan"],
+        ].map(([kind, label, icon]) => (
           <button
+            key={label}
             type="button"
-            className="quiet"
-            disabled={disabled}
-            aria-pressed={mode === "import"}
-            onClick={() => onSelect("import")}
+            disabled={kind ? disabled : busy}
+            aria-pressed={mode === kind}
+            onClick={() => onSelect(kind)}
           >
-            <SiteIcon name="import" />
-            Импорт Garmin CSV
+            <SiteIcon name={icon} />
+            {label}
           </button>
-        ) : (
-          <Link className="quiet" href="/account?tab=rides&action=import">
-            <SiteIcon name="import" />
-            Импорт Garmin CSV
-          </Link>
-        )}
-        {/* FIT covers Garmin, Wahoo, Magene, Bryton, iGPSport and Coros: the
-            regular upload form takes it and explains how to export it. */}
-        {onSelect ? (
-          <button
-            type="button"
-            className="quiet"
-            disabled={disabled}
-            onClick={() => onSelect("add")}
-          >
-            <SiteIcon name="import" />
-            Загрузить FIT
-          </button>
-        ) : (
-          <Link className="quiet" href="/account?tab=rides&action=add">
-            <SiteIcon name="import" />
-            Загрузить FIT
-          </Link>
-        )}
+        ))}
       </div>
-    </section>
+      <div className={styles.sync}>
+        <span>
+          Garmin Connect <small>· скоро</small>
+        </span>
+        <button
+          className="quiet"
+          type="button"
+          disabled
+          aria-describedby="garmin-sync-help"
+        >
+          <SiteIcon name="repeat" /> Синхронизировать
+        </button>
+        <small id="garmin-sync-help">
+          Пока можно загрузить файл трека или Garmin CSV.
+        </small>
+      </div>
+    </div>
   );
 }

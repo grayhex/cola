@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ChevronDown, ChevronRight, Shapes } from "lucide-react";
-import PartIcon from "./part-icon.jsx";
+import ComponentIllustration from "./component-illustration.jsx";
 import { useMotionFeedback } from "./motion.jsx";
 import { plural } from "../../lib/plural.js";
 import {
@@ -30,7 +30,11 @@ export function ComponentPath({ category, name, path, catalog }) {
           <li>
             <ChevronRight size={14} />
             <Link href={componentGroupPath(group.id)}>
-              <PartIcon name={group.icon} size={20} />
+              <ComponentIllustration
+                group={group.id}
+                name={group.icon}
+                size={20}
+              />
               {group.name}
             </Link>
           </li>
@@ -38,7 +42,11 @@ export function ComponentPath({ category, name, path, catalog }) {
         <li>
           <ChevronRight size={14} />
           <Link href={componentCategoryPath(category)}>
-            <PartIcon category={category} icons={catalog.icons} size={20} />
+            <ComponentIllustration
+              category={category}
+              icons={catalog.icons}
+              size={20}
+            />
             {category}
           </Link>
         </li>
@@ -85,7 +93,11 @@ export default function ComponentNavigation({ catalog, categories, selected }) {
             href={componentCategoryPath(c)}
             aria-current={selected === c ? "page" : undefined}
           >
-            <PartIcon category={c} icons={catalog.icons} size={22} />
+            <ComponentIllustration
+              category={c}
+              icons={catalog.icons}
+              size={22}
+            />
             {c}
             <ChevronRight size={14} />
           </Link>
@@ -104,15 +116,12 @@ export default function ComponentNavigation({ catalog, categories, selected }) {
             type="button"
             aria-expanded={expanded === g.id}
             aria-controls="component-group-types"
-            onPointerEnter={(e) => {
-              if (e.pointerType === "mouse") setExpanded(g.id);
-            }}
             onClick={() => setExpanded(g.id)}
             onKeyDown={(e) => {
               if (e.key === "Escape") setExpanded("");
             }}
           >
-            <PartIcon name={g.icon} size={40} />
+            <ComponentIllustration group={g.id} name={g.icon} size={40} />
             <span>
               <strong>{g.name}</strong>
               <small>
@@ -134,7 +143,11 @@ export default function ComponentNavigation({ catalog, categories, selected }) {
         {active && (
           <>
             <h2>
-              <PartIcon name={active.icon} size={24} />
+              <ComponentIllustration
+                group={active.id}
+                name={active.icon}
+                size={24}
+              />
               {active.name}
             </h2>
             {links(active)}
@@ -153,7 +166,7 @@ export default function ComponentNavigation({ catalog, categories, selected }) {
           {groups.map((g) => (
             <section key={g.id} aria-label={g.name}>
               <h3>
-                <PartIcon name={g.icon} size={24} />
+                <ComponentIllustration group={g.id} name={g.icon} size={24} />
                 {g.name}
               </h3>
               {links(g)}
