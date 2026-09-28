@@ -97,6 +97,7 @@ test("Garmin import without track, chosen fields, GPX mismatch and future planni
     await page.screenshot({
       path: info.outputPath("account-import-" + theme + ".png"),
       fullPage: true,
+      animations: "disabled",
     });
   }
   await page.evaluate(() => (document.documentElement.dataset.theme = "light"));
