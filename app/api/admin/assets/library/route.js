@@ -1,5 +1,4 @@
 import path from "node:path";
-import { z } from "zod";
 import { unlink } from "node:fs/promises";
 import { currentUser } from "../../../../../lib/auth.js";
 import { db, transaction } from "../../../../../lib/db.js";
@@ -25,13 +24,18 @@ async function handler(req) {
     if (req.method === "GET")
       return json({ assets: await listAssetLibrary(db) });
     if (!sameOrigin(req)) return fail("Недопустимый источник запроса", 403);
-    const parsed = z
-      .object({ ids: z.array(uuid).min(1).max(500) })
-      .safeParse(await readJson(req));
-    if (!parsed.success) {
+    const input = await readJson(req);
+    if (
+      !input ||
+      typeof input !== "object" ||
+      !("ids" in input) ||
+      !Array.isArray(input.ids) ||
+      !input.ids.length ||
+      input.ids.length > 500 ||
+      !input.ids.every((id) => uuid.safeParse(id).success)
+    ) {
       return fail("Выберите от 1 до 500 изображений для удаления");
     }
-    const input = parsed.data;
     const result = await transaction(async (q) => {
       const deleted = await deleteUnusedAssets(q, input.ids);
       for (const asset of deleted.deleted)

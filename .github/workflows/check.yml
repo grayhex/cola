@@ -80,9 +80,9 @@ jobs:
       # Zero warnings: the lint debt was cleared in #140; new warnings fail CI.
       - name: Lint
         run: pnpm lint
-      # JSDoc types of lib/ (#82): DTOs, input schemas and their callers.
+      # API checkJs + lib strictNullChecks; negative probes guard the coverage (#143).
       - name: Type check
-        run: pnpm typecheck
+        run: pnpm typecheck && pnpm test:typecheck
       - name: Application unit and database tests
         run: pnpm test
       - name: Production build
