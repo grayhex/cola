@@ -12,11 +12,7 @@ import { groupedComponents } from "../../lib/garage-layout.js";
 import { useId, useState, useSyncExternalStore } from "react";
 import { useSite } from "./site-provider.jsx";
 import PartIcon from "./part-icon.jsx";
-import {
-  experienceHref,
-  landingSlug,
-  partLandingPath,
-} from "../../lib/experience-catalog.js";
+import { experienceHref } from "../../lib/experience-catalog.js";
 import { useHydrated } from "./use-hydrated.js";
 // Without a personal choice groups are open on wide screens and closed on phones.
 const wideQuery = "(min-width: 701px)";
@@ -37,16 +33,13 @@ export default function GroupedComponents({
   rub,
 }) {
   const { personalSettings } = useSite();
-  // Parts of a public bike have their own page (#74); others open the search.
+  // A specification-only row has no product page, even on a public bicycle.
   const partHref = (c) =>
-    bike.is_public &&
-    bike.id !== "demo" &&
-    landingSlug(c.category) &&
-    landingSlug(c.name)
-      ? c.model_id
+    !c.model_id
+      ? null
+      : bike.is_public && bike.id !== "demo"
         ? "/components/" + c.model_id
-        : partLandingPath(c.category, c.name)
-      : experienceHref({ component: c.name, componentCategory: c.category });
+        : experienceHref({ component: c.name, componentCategory: c.category });
   const [expanded, setExpanded] = useState({});
   const wide = useSyncExternalStore(subscribeWide, wideNow, () => false);
   const hydrated = useHydrated();
@@ -146,12 +139,16 @@ export default function GroupedComponents({
                 <div className="compact-part-main">
                   <small>{c.category}</small>
                   <strong>
-                    <a
-                      href={partHref(c)}
-                      title="Сборки и записи с этим компонентом"
-                    >
-                      {c.name}
-                    </a>
+                    {partHref(c) ? (
+                      <a
+                        href={partHref(c)}
+                        title="Сборки и записи с этим компонентом"
+                      >
+                        {c.name}
+                      </a>
+                    ) : (
+                      c.name
+                    )}
                   </strong>
                   {c.notes && <span className="part-notes">{c.notes}</span>}
                   {c.url && (

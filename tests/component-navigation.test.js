@@ -2,7 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { defaultGroups } from "../lib/garage-layout.js";
 import {
-  componentNavigation,
+  installationNavigation as componentNavigation,
+  componentNavigation as productNavigation,
   componentCategoryPath,
   componentGroupPath,
 } from "../lib/component-navigation.js";
@@ -65,6 +66,40 @@ test("configured names and moved types coexist with unassigned defaults and cust
     "Custom accessory",
     "Available only",
   ]);
+});
+
+test("public navigation contains only product classes and never positional or custom duplicates", () => {
+  const before = structuredClone(defaultGroups);
+  const groups = productNavigation(
+    { partCategories: { build: ["Каретка", "Другое", "Custom"] } },
+    ["Передняя покрышка"],
+  );
+  const categories = groups.flatMap((g) => g.categories);
+  assert.equal(categories.length, new Set(categories).size);
+  for (const category of [
+    "Покрышки",
+    "Обода",
+    "Втулки",
+    "Тормоза",
+    "Манетки / дуалы",
+    "Передний переключатель",
+    "Задний переключатель",
+  ])
+    assert(categories.includes(category), category);
+  for (const category of [
+    "Каретка",
+    "Кассета",
+    "Роторы",
+    "Тормозная ручка",
+    "Подседельный зажим",
+    "Камеры / бескамерка",
+    "Другое",
+    "Custom",
+    "Передняя покрышка",
+    "Левая манетка",
+  ])
+    assert(!categories.includes(category), category);
+  assert.deepEqual(defaultGroups, before);
 });
 
 test("category and group addresses preserve names with URL punctuation", () => {

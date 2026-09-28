@@ -47,7 +47,7 @@ test("component photo search previews, confirms and publishes attributed local m
           {
             section: "build",
             category: "Седло",
-            name: "Commons Saddle " + nonce,
+            name: "Brooks Commons Saddle " + nonce,
             notes: "",
             price: null,
           },

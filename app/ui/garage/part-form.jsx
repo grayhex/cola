@@ -4,6 +4,7 @@ import { useSite } from "../site-provider.jsx";
 import PartIcon from "../part-icon.jsx";
 import { Check, Lock } from "../icons.jsx";
 import Field from "./field.jsx";
+import { productCategory } from "../../../lib/component-products.js";
 
 export default function PartForm({
   initial,
@@ -148,6 +149,11 @@ export default function PartForm({
       <p className="help">
         {t("Выберите из справочника или введите своё название.")} Показываем до
         8 совпадений — уточните название.
+      </p>
+      <p className="help">
+        {productCategory(c.category)
+          ? "Бренд и модель связывают деталь с каталогом. Произвольное описание останется только в комплектации; размеры укажите в примечании."
+          : "Эта деталь сохраняется только в комплектации велосипеда — без отдельной страницы в каталоге."}
       </p>
       <Field label={t("Примечание")}>
         <input

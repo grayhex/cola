@@ -61,7 +61,7 @@ export default function ComponentCatalog({ data, filters }) {
               Компоненты <span className="count">{data.total}</span>
             </h1>
             <p className="help">
-              Модели деталей и опыт владельцев — в одном каталоге.
+              Продуктовые модели, сборки и опыт владельцев.
             </p>
           </div>
         </header>
@@ -148,7 +148,9 @@ export default function ComponentCatalog({ data, filters }) {
             <p className="help">
               {filters.sort === "popular"
                 ? "По числу публичных велосипедов с этой моделью."
-                : "По первому публичному появлению модели."}
+                : "По первому публичному появлению модели."}{" "}
+              Одна модель — одна карточка, независимо от места установки. Полная
+              комплектация остаётся на странице велосипеда.
             </p>
             {data.items.length ? (
               <ul className={styles.grid}>

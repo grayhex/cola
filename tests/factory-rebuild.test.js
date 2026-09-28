@@ -15,8 +15,10 @@ import { saveFactorySpecification } from "../lib/factory-import.js";
 test("reviewed rebuild splits factory parts, preserves manual/content references, rolls back stale plans and is idempotent", async () => {
   const db = new PGlite();
   try {
+    // Historical #205 content-retention contract; #221 migration and current
+    // schema import/rebuild idempotency are covered by component-products.test.js.
     for (const f of (await readdir(new URL("../db/", import.meta.url)))
-      .filter((f) => /^\d.*\.sql$/.test(f))
+      .filter((f) => /^\d.*\.sql$/.test(f) && f < "033")
       .sort())
       await db.exec(
         await readFile(new URL("../db/" + f, import.meta.url), "utf8"),
@@ -114,10 +116,9 @@ test("reviewed rebuild splits factory parts, preserves manual/content references
       manual = before.find((p) => p.id === ids[6]);
     const preview = await db.transaction((q) => rebuildFactoryComponents(q));
     assert.equal(preview.bikes, 1);
-    assert.equal(preview.changes.length, 7);
+    assert.equal(preview.changes.length, 6);
     assert(preview.retainedModels.some((m) => m.id === photoModel));
-    for (const model of [commentModel, marketModel])
-      assert(preview.retainedModels.some((m) => m.id === model));
+    assert(preview.retainedModels.some((m) => m.id === marketModel));
     assert(preview.preservedParts.some((p) => p.id === ids[6]));
     assert.deepEqual(await snapshot(), before, "dry-run is read only");
     await assert.rejects(
@@ -169,7 +170,11 @@ test("reviewed rebuild splits factory parts, preserves manual/content references
       after.find((p) => p.id === ids[3]).name,
       "Canyon Cockpit CP0039",
     );
-    for (const id of [ids[4], ids[5]]) assert(!after.some((p) => p.id === id));
+    assert(
+      after.some((p) => p.id === ids[4]),
+      "generic equipment remains in the specification",
+    );
+    assert(!after.some((p) => p.id === ids[5]), "absent equipment is omitted");
     for (const m of fresh.removeModels)
       assert.equal(
         (await db.query("SELECT 1 FROM component_models WHERE id=$1", [m.id]))

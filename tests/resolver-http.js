@@ -81,7 +81,7 @@ const imported = await api("bikes/" + id + "/factory-spec", "POST", {
 assert.equal(imported.data.status, "resolved");
 assert(imported.data.importedCount > 10);
 const bike = (await api("bikes/" + id)).data.bike;
-assert.equal(bike.components.length, 14);
+assert.equal(bike.components.length, 20);
 assert.deepEqual(
   bike.components.map((c) => c.name).sort(),
   [
@@ -99,12 +99,33 @@ assert.deepEqual(
     "Shimano FC-RS520",
     "Giant P-R2",
     "Giant Gavia Fondo 2",
+    "ALUXX-grade aluminium, disc",
+    "Advanced-grade composite, full-composite OverDrive steerer, disc",
+    "cartridge",
+    "Giant alloy, 12mm thru-axle",
+    "Sapim",
+    "Velo cork tape with gel",
   ].sort(),
 );
 assert(resolved.data.components.some((c) => c.description === "cartridge"));
-assert(
-  !bike.components.some((c) => /cartridge|not supplied|N\/A/i.test(c.name)),
+assert(!bike.components.some((c) => /not supplied|N\/A/i.test(c.name)));
+assert.equal(
+  bike.components.find((c) => c.name === "cartridge").model_id,
+  null,
 );
+for (const category of [
+  "Каретка",
+  "Кассета",
+  "Цепь",
+  "Передний ротор",
+  "Задний ротор",
+]) {
+  for (const component of bike.components.filter(
+    (c) => c.category === category,
+  )) {
+    assert.equal(component.model_id, null, category);
+  }
+}
 assert.equal(bike.factory_spec.source.url, resolved.data.source.url);
 const part = bike.components[0];
 await api("bikes/" + id + "/components/" + part.id, "PATCH", {

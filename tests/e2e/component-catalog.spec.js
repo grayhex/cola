@@ -2,11 +2,143 @@ import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { randomUUID } from "node:crypto";
 import pg from "pg";
-import { defaultGroups } from "../../lib/garage-layout.js";
+import { componentNavigation } from "../../lib/component-navigation.js";
+const defaultGroups = componentNavigation();
 import { registerVerified } from "../fixtures/verified-user.js";
 import { testConsents } from "../fixtures/legal.js";
 import { pageOverflow, describeOverflow } from "../fixtures/overflow.js";
+import { publicPath } from "../../lib/public-urls.js";
 const origin = process.env.TEST_ORIGIN || "http://localhost:3100";
+
+test("product catalog separates installation text, paired products and public navigation", async ({
+  page,
+}, info) => {
+  const db = new pg.Client({ connectionString: process.env.DATABASE_URL });
+  await db.connect();
+  let owner;
+  try {
+    const nonce = randomUUID().slice(0, 8);
+    const registered = await registerVerified(page.request, {
+      headers: { origin },
+      data: {
+        ...testConsents,
+        name: "Product owner",
+        email: "products-" + nonce + "@example.test",
+        password: "products-browser-secret-123",
+      },
+    });
+    expect(registered.status()).toBe(201);
+    owner = (await registered.json()).user.id;
+    const tire = "Schwalbe G-One RS " + nonce;
+    const parts = [
+      ["Передняя покрышка", tire],
+      ["Задняя покрышка", tire],
+      ["Передний тормоз", "Shimano XT M8100 " + nonce],
+      ["Задний тормоз", "Shimano Deore M6100 " + nonce],
+      ["Кассета", "Shimano Deore CS-M6100 " + nonce],
+      ["Система / шатуны", "карбоновые шатуны " + nonce],
+      ["Другое", "катафот " + nonce],
+    ];
+    const response = await page.request.post("/api/bikes/wizard", {
+      headers: { origin },
+      data: {
+        requestId: randomUUID(),
+        bike: {
+          name: "Продуктовая комплектация",
+          brand: "Cube",
+          model: "Travel",
+          year: 2021,
+          category: "road",
+          is_public: true,
+          description: "",
+          color: "",
+          size: "",
+          weight: null,
+        },
+        components: parts.map(([category, name]) => ({
+          section: "build",
+          category,
+          name,
+          notes: "",
+          price: null,
+        })),
+      },
+    });
+    expect(response.status()).toBe(201);
+    const id = (await response.json()).id;
+    const bike = (await db.query("SELECT * FROM bikes WHERE id=$1", [id]))
+      .rows[0];
+    const installations = (
+      await db.query(
+        "SELECT category,name,model_id,position FROM components WHERE bike_id=$1",
+        [id],
+      )
+    ).rows;
+    expect(installations).toHaveLength(7);
+    expect(installations.filter((p) => p.model_id === null)).toHaveLength(3);
+    const catalogResponse = await page.request.get(
+      "/api/components?" + new URLSearchParams({ q: nonce }),
+    );
+    expect(catalogResponse.ok()).toBe(true);
+    const catalog = await catalogResponse.json();
+    expect(catalog.total).toBe(3);
+    expect(catalog.items.filter((m) => m.category === "Покрышки")).toHaveLength(
+      1,
+    );
+    expect(catalog.items.filter((m) => m.category === "Тормоза")).toHaveLength(
+      2,
+    );
+    await page.goto(publicPath("bike", bike));
+    for (const button of await page.locator(".component-group-toggle").all())
+      if ((await button.getAttribute("aria-expanded")) === "false")
+        await button.click();
+    await expect(page.locator(".compact-part")).toHaveCount(7);
+    for (const [, name] of parts.slice(4)) {
+      const part = page.locator(".compact-part").filter({ hasText: name });
+      await expect(part).toBeVisible();
+      await expect(part.locator("strong a")).toHaveCount(0);
+    }
+    const links = page
+      .locator(".compact-part")
+      .filter({ hasText: tire })
+      .locator("strong a");
+    await expect(links).toHaveCount(2);
+    expect(
+      new Set(
+        await links.evaluateAll((nodes) =>
+          nodes.map((n) => n.getAttribute("href")),
+        ),
+      ).size,
+    ).toBe(1);
+    await page.goto("/components?" + new URLSearchParams({ q: nonce }));
+    const models = page.getByRole("region", { name: "Модели компонентов" });
+    await expect(models.getByRole("heading", { level: 2 })).toHaveCount(3);
+    const filters = page.getByRole("form", { name: "Фильтры компонентов" });
+    for (const name of ["Кассета", "Другое", "Передняя покрышка"])
+      await expect(
+        filters.getByRole("option", { name, exact: true }),
+      ).toHaveCount(0);
+    for (const theme of ["light", "dark"]) {
+      await page.evaluate((value) => {
+        localStorage.setItem("cola:theme", value);
+        window.dispatchEvent(new Event("storage"));
+      }, theme);
+      await page.emulateMedia({ reducedMotion: "reduce" });
+      await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+      expect(
+        (await new AxeBuilder({ page }).include("main").analyze()).violations,
+      ).toEqual([]);
+      await page.screenshot({
+        path: info.outputPath("component-products-" + theme + ".png"),
+        fullPage: true,
+      });
+      expect(await pageOverflow(page)).toBeNull();
+    }
+  } finally {
+    if (owner) await db.query("DELETE FROM users WHERE id=$1", [owner]);
+    await db.end();
+  }
+});
 
 test("component catalog: real filters, pagination, themes, mobile and durable model management", async ({
   page,
@@ -100,8 +232,12 @@ test("component catalog: real filters, pagination, themes, mobile and durable mo
       ).toHaveCount(1);
     }
     await directory.getByRole("link", { name: "Батарея", exact: true }).click();
-    await expect(page.getByRole("heading", { level: 1 })).toContainText("0");
-    expect(new URL(page.url()).searchParams.get("category")).toBe("Батарея");
+    await expect(page).toHaveURL(
+      (url) => url.searchParams.get("category") === "Батарея",
+    );
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+      "Компоненты 0",
+    );
     await page.goto("/components#component-group-cockpit");
     await expect(
       categories.getByRole("button", { name: /Управление и посадка/ }),

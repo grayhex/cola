@@ -83,7 +83,7 @@ export function splitComponentField(label, value) {
       .replace(/[\s;|:]+$/g, ""),
   }));
 }
-const brands = [
+export const componentBrands = [
   "Busch & Müller",
   "DT Swiss",
   "Selle Royal",
@@ -151,7 +151,7 @@ export function componentIdentity(c) {
   );
   if (absentComponent(description)) return null;
   let brand =
-    brands.find(
+    componentBrands.find(
       (b) =>
         description.toLowerCase() === b.toLowerCase() ||
         description.toLowerCase().startsWith(b.toLowerCase() + " ") ||
