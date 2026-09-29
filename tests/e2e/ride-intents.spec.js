@@ -28,6 +28,15 @@ async function open(page) {
     .click();
   return page.getByRole("dialog", { name: "Хочу кататься", exact: true });
 }
+// #243: trip conditions are option tiles that open a compact sheet.
+async function pick(page, scope, tile, option) {
+  await scope
+    .getByRole("button", { name: new RegExp("^" + tile + ":") })
+    .click();
+  const sheet = page.getByRole("dialog", { name: new RegExp("^" + tile) });
+  await sheet.getByRole("button", { name: option, exact: true }).click();
+  await expect(sheet).toHaveCount(0);
+}
 async function fill(dialog, area = "Парк намерений") {
   await dialog
     .getByLabel("Часовой пояс (IANA)", { exact: false })
@@ -39,7 +48,7 @@ async function fill(dialog, area = "Парк намерений") {
     .getByLabel("Окно 1: до", { exact: true })
     .fill(date(1) + "T15:00");
   await dialog.getByLabel("Область поездки").fill(area);
-  await dialog.getByRole("button", { name: "Общение", exact: true }).click();
+  await pick(dialog.page(), dialog, "Цель", "Общение");
 }
 test.beforeEach(async ({ page }) => {
   await register(page.request);
@@ -69,11 +78,16 @@ test("intent lifecycle without a bike: windows, preferences, themes, privacy and
   await dialog
     .getByLabel("Окно 2: до", { exact: true })
     .fill(date(3) + "T02:00");
-  await dialog.getByRole("button", { name: "Спокойный", exact: true }).click();
-  await dialog.getByText("Дополнительные условия", { exact: true }).click();
-  await dialog.getByLabel("Дистанция, км: от", { exact: true }).fill("20");
-  await dialog.getByLabel("Дистанция, км: до", { exact: true }).fill("40");
-  await dialog.getByText("Дополнительные условия", { exact: true }).click();
+  await pick(page, dialog, "Темп", "Спокойный");
+  await dialog.getByRole("button", { name: /^Дистанция:/ }).click();
+  const distance = page.getByRole("dialog", { name: "Дистанция, км" });
+  await distance.getByLabel("Дистанция, км: от", { exact: true }).fill("20");
+  await distance.getByLabel("Дистанция, км: до", { exact: true }).fill("40");
+  await distance.getByRole("button", { name: "Готово" }).click();
+  await expect(distance).toHaveCount(0);
+  await expect(
+    dialog.getByRole("button", { name: "Дистанция: 20–40 км" }),
+  ).toBeFocused();
   await dialog
     .getByRole("button", {
       name: "Сохранить условия как предпочтения",
@@ -120,6 +134,16 @@ test("intent lifecycle without a bike: windows, preferences, themes, privacy and
     });
     await dialog.screenshot({
       path: info.outputPath(`intent-${theme}.png`),
+      animations: "disabled",
+    });
+  }
+  for (const [name, locator] of [
+    ["tiles", dialog.getByRole("group", { name: "Параметры поездки" })],
+    ["privacy", dialog.getByRole("group", { name: "Кому видно" })],
+  ]) {
+    await locator.scrollIntoViewIfNeeded();
+    await dialog.screenshot({
+      path: info.outputPath(`intent-${name}.png`),
       animations: "disabled",
     });
   }
@@ -237,7 +261,7 @@ test("load failure, lost create response, reduced motion and missing chunk prese
     chunks++;
     return route.abort();
   });
-  await dialog.getByRole("button", { name: "Спортивный", exact: true }).click();
+  await pick(page, dialog, "Темп", "Спортивный");
   await dialog
     .getByRole("button", { name: "Готов ехать", exact: true })
     .click();
@@ -270,4 +294,120 @@ test("load failure, lost create response, reduced motion and missing chunk prese
   expect(list.total).toBe(1);
   expect(list.items[0].passport.pace).toBe("sporty");
   expect(chunks).toBeGreaterThan(0);
+});
+test("workspace screen (#243): setup sections, preference tiles, tabs, empty and filled states in both themes", async ({
+  page,
+  isMobile,
+}, info) => {
+  if (!isMobile) await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/ride-intents");
+  const main = page.locator("main");
+  await expect(
+    main.getByRole("heading", { name: "Хочу кататься", level: 1 }),
+  ).toBeVisible();
+  await expect(
+    main.getByText("Пока нет намерений. Выберите время"),
+  ).toBeVisible();
+  await expect(
+    main.getByRole("heading", { name: "Как это работает" }),
+  ).toBeVisible();
+  const save = main.getByRole("button", { name: "Сохранить как настройки" });
+  await expect(save).toBeDisabled();
+  // Tiles: keyboard open, Escape closes and returns focus, a value fills it.
+  const pace = main.getByRole("button", { name: "Темп: Любой" });
+  await pace.focus();
+  await page.keyboard.press("Enter");
+  const sheet = page.getByRole("dialog", { name: "Темп поездки" });
+  await expect(sheet).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(sheet).toHaveCount(0);
+  await expect(pace).toBeFocused();
+  await pick(page, main, "Темп", "Умеренный");
+  await expect(
+    main.getByRole("button", { name: "Темп: Умеренный" }),
+  ).toHaveAttribute("data-filled", "true");
+  await main.getByRole("button", { name: /^Компания:/ }).click();
+  const company = page.getByRole("dialog", { name: "Размер компании, чел." });
+  await company.getByLabel("Размер компании, чел.: от").fill("5");
+  await company.getByLabel("Размер компании, чел.: до").fill("2");
+  await company.getByRole("button", { name: "Готово" }).click();
+  await expect(company.getByRole("alert")).toContainText("Нижняя граница");
+  await company.getByLabel("Размер компании, чел.: до").fill("8");
+  await company.getByRole("button", { name: "Готово" }).click();
+  await expect(save).toBeEnabled();
+  await save.click();
+  await expect(main.getByRole("status")).toContainText("Настройки сохранены");
+  const prefs = await (
+    await page.request.get("/api/ride-intents/preferences")
+  ).json();
+  expect(prefs.preferences.passport).toEqual({
+    pace: "moderate",
+    groupSize: { min: 5, max: 8 },
+  });
+  expect(
+    (await (await page.request.get("/api/ride-intents")).json()).total,
+  ).toBe(0);
+  const shoot = async (name) => {
+    for (const [theme, system] of [
+      ["light", "light"],
+      ["dark", "light"],
+      ["system", "dark"],
+    ]) {
+      await page.emulateMedia({ colorScheme: system });
+      await page.evaluate((value) => {
+        document.documentElement.dataset.theme = value;
+      }, theme);
+      expect(
+        (await new AxeBuilder({ page }).include("main").analyze()).violations,
+      ).toEqual([]);
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth + 1,
+        ),
+      ).toBe(true);
+      await page.screenshot({
+        path: info.outputPath(`workspace-${name}-${theme}.png`),
+        fullPage: true,
+        animations: "disabled",
+      });
+    }
+    await page.emulateMedia({ colorScheme: "light" });
+    await page.evaluate(() => {
+      document.documentElement.dataset.theme = "light";
+    });
+  };
+  await shoot("empty");
+  // One, then several intents; the list keeps its place while refreshing.
+  for (const [n, area] of [
+    [1, "Первое намерение"],
+    [2, "Второе намерение"],
+  ]) {
+    const response = await page.request.post("/api/ride-intents", {
+      headers: { origin },
+      data: {
+        requestId: randomUUID(),
+        readiness: n === 1 ? "ready" : "considering",
+        timeZone: "Europe/Moscow",
+        windows: [
+          { startLocal: date(n) + "T10:00", endLocal: date(n) + "T15:00" },
+        ],
+        passport: { area: { label: area }, purpose: "social" },
+        visibility: n === 1 ? "private" : "community",
+      },
+    });
+    expect(response.status()).toBe(201);
+    await main.getByRole("button", { name: "Обновить" }).click();
+    await expect(main.locator("[data-intent-id]")).toHaveCount(n);
+    if (n === 1) await shoot("one");
+  }
+  await shoot("several");
+  await main.getByRole("button", { name: "Сообщество" }).click();
+  await expect(
+    main.getByRole("button", { name: "Сообщество" }),
+  ).toHaveAttribute("aria-pressed", "true");
+  // Other members' community intents may be listed too; the private one never.
+  await expect(main).toContainText("Второе намерение");
+  await expect(main).not.toContainText("Первое намерение");
+  await expect(main.getByRole("button", { name: "Обновить" })).toBeEnabled();
+  await shoot("community");
 });

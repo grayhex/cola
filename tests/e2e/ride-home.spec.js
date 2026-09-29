@@ -189,7 +189,11 @@ test("signed-in home: going, suits, gather, composer with a keyboard-picked area
     exact: true,
   });
   await dialog.getByLabel("Область поездки").fill("Воробьёвы горы");
-  await dialog.getByRole("button", { name: "Общение", exact: true }).click();
+  await dialog.getByRole("button", { name: /^Цель:/ }).click();
+  await page
+    .getByRole("dialog", { name: "Цель поездки" })
+    .getByRole("button", { name: "Общение", exact: true })
+    .click();
   await dialog
     .getByRole("button", { name: "Отметить область на карте" })
     .click();

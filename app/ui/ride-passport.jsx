@@ -11,6 +11,7 @@ export default function RidePassport({
   passport = {},
   compact = false,
   map = false,
+  region = true,
 }) {
   const labels = {
     purpose: "Цель",
@@ -38,8 +39,14 @@ export default function RidePassport({
     ],
   );
   const known = rows.filter(([, value]) => value);
+  const Wrapper = region ? "section" : "div";
   return (
-    <section className={styles.passport} aria-label="Паспорт поездки">
+    // Lists of several cards pass region={false}: one landmark per card
+    // would repeat the same name (axe landmark-unique).
+    <Wrapper
+      className={styles.passport}
+      {...(region ? { "aria-label": "Паспорт поездки" } : {})}
+    >
       {passport.area?.label && (
         <p className={styles.area}>
           {passport.area.label}
@@ -66,6 +73,6 @@ export default function RidePassport({
           Ещё {known.length - 4} условий в подробностях
         </small>
       )}
-    </section>
+    </Wrapper>
   );
 }
