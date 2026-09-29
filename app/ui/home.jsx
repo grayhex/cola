@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import {
   ShoppingBag,
@@ -24,6 +25,41 @@ import labelStyles from "./content-label.module.css";
 import SearchBox from "./search-box.jsx";
 import HeroArtwork from "./hero-artwork.jsx";
 import styles from "./home.module.css";
+// Personal planning (#233) is a separate chunk loaded only for a signed-in
+// viewer after hydration: guests download none of it and no personal data is
+// rendered on the server.
+const HomePlanner = dynamic(() => import("./home-planner.jsx"), {
+  ssr: false,
+  loading: () => (
+    <div className={"skeleton " + styles.plannerSkeleton} aria-hidden />
+  ),
+});
+function RideTogether() {
+  return (
+    <section
+      className={"section " + styles.together}
+      aria-labelledby="together-heading"
+    >
+      <div>
+        <span className="eyebrow">Покатушки</span>
+        <h2 id="together-heading">Найти компанию для поездки</h2>
+        <ol className={styles.steps}>
+          <li>Отметьте, когда и где хочется кататься.</li>
+          <li>Смотрите подходящие выезды с объяснением, что совпало.</li>
+          <li>Отвечайте «Иду» — и договаривайтесь об остальном.</li>
+        </ol>
+      </div>
+      <div className={styles.togetherActions}>
+        <Link className="button" href="/rides?status=planned">
+          Предстоящие выезды
+        </Link>
+        <Link className="button secondary" href="/ride-intents">
+          Войти, чтобы отметить время
+        </Link>
+      </div>
+    </section>
+  );
+}
 import { profilePath, publicPath } from "../../lib/public-urls.js";
 import { metricValue } from "../../lib/game-metrics.js";
 import { personName } from "../../lib/usernames.js";
@@ -282,6 +318,9 @@ export default function Home() {
               </p>
             )}
           </section>
+          {/* After the popular builds: on a portrait phone the first build stays
+              on the first screen (#83); planning comes right below it. */}
+          {user ? <HomePlanner key={user.id} /> : <RideTogether />}
           <section className="section" aria-labelledby="community-heading">
             <div className="section-head">
               <h2 id="community-heading">{t("Что нового")}</h2>

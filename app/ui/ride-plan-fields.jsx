@@ -3,6 +3,8 @@ import { useState } from "react";
 import { ridePlanOptions } from "../../lib/ride-plan-options.js";
 import { useMotionFeedback } from "./motion.jsx";
 import RidePassport from "./ride-passport.jsx";
+import AreaPicker from "./ride-area-map.jsx";
+import PassportTiles from "./passport-tiles.jsx";
 import styles from "./ride-passport.module.css";
 
 export default function RidePlanFields({
@@ -72,14 +74,16 @@ export default function RidePlanFields({
       <label className="field">
         <span>Область поездки</span>
         <input
-          required={intent}
+          required={intent || !!area.center}
           maxLength={100}
           placeholder="Например, Измайловский парк"
           value={area.label || ""}
           onChange={(e) =>
             set(
               "area",
-              e.target.value ? { ...area, label: e.target.value } : undefined,
+              e.target.value || area.center
+                ? { ...area, label: e.target.value }
+                : undefined,
             )
           }
         />
@@ -89,56 +93,62 @@ export default function RidePlanFields({
             : "Приблизительный район, без домашнего адреса. Точное место встречи задаётся отдельно."}
         </small>
       </label>
-      <div className="ride-form-grid">
-        {intent ? (
-          <fieldset className={styles.pace}>
-            <legend>Цель поездки</legend>
-            <div className="segmented" role="group" aria-label="Цель поездки">
-              {Object.entries(ridePlanOptions.purpose).map(([key, text]) => (
+      <AreaPicker
+        value={area}
+        disabled={disabled}
+        onChange={(next) =>
+          set("area", next.label || next.center ? next : undefined)
+        }
+      />
+      {intent ? (
+        // Intents use the shared option tiles (#243); plans keep their form.
+        <PassportTiles
+          value={value}
+          onChange={onChange}
+          required={["purpose"]}
+          disabled={disabled}
+        />
+      ) : (
+        <>
+          <div className="ride-form-grid">
+            {select("purpose", "Цель поездки")}
+            {select("surface", "Покрытие")}
+          </div>
+          <fieldset className={styles.pace} ref={feedback}>
+            <legend>Темп</legend>
+            <div className="ui-tabs" role="group" aria-label="Темп поездки">
+              {[
+                ["", "Не уточнён"],
+                ...Object.entries(ridePlanOptions.pace),
+              ].map(([v, label]) => (
                 <button
-                  key={key}
+                  key={v}
                   type="button"
-                  aria-pressed={value.purpose === key}
-                  onClick={() => set("purpose", key)}
+                  aria-pressed={(value.pace || "") === v}
+                  onClick={() => set("pace", v)}
                 >
-                  {text}
+                  {label}
                 </button>
               ))}
             </div>
           </fieldset>
-        ) : (
-          select("purpose", "Цель поездки")
-        )}
-        {select("surface", "Покрытие")}
-      </div>
-      <fieldset className={styles.pace} ref={feedback}>
-        <legend>Темп</legend>
-        <div className="ui-tabs" role="group" aria-label="Темп поездки">
-          {[["", "Не уточнён"], ...Object.entries(ridePlanOptions.pace)].map(
-            ([v, label]) => (
-              <button
-                key={v}
-                type="button"
-                aria-pressed={(value.pace || "") === v}
-                onClick={() => set("pace", v)}
-              >
-                {label}
-              </button>
-            ),
-          )}
-        </div>
-      </fieldset>
+        </>
+      )}
       <details onToggle={(e) => setExpanded(e.currentTarget.open)}>
         <summary>Дополнительные условия</summary>
         <div ref={reveal} className={styles.additional}>
           <div className="ride-form-grid">
-            {range("distanceKm", "Дистанция, км", 1000, 0.1)}
-            {range(
-              "durationMinutes",
-              "Общая длительность с остановками, мин",
-              10080,
+            {!intent && (
+              <>
+                {range("distanceKm", "Дистанция, км", 1000, 0.1)}
+                {range(
+                  "durationMinutes",
+                  "Общая длительность с остановками, мин",
+                  10080,
+                )}
+                {range("groupSize", "Желательный размер компании, чел.", 100)}
+              </>
             )}
-            {range("groupSize", "Желательный размер компании, чел.", 100)}
             {range(
               "speedKmh",
               "Скорость в движении без остановок, км/ч",
@@ -176,7 +186,7 @@ export default function RidePlanFields({
           </p>
         </div>
       </details>
-      <RidePassport passport={value} />
+      {!intent && <RidePassport passport={value} />}
     </fieldset>
   );
 }

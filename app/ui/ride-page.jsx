@@ -101,7 +101,7 @@ export default function RidePage({
               </p>
             )}
             {ride.sourceKind === "planned" && (
-              <RidePassport passport={ride.passport} />
+              <RidePassport passport={ride.passport} map />
             )}
             {ride.expectedEndAt && (
               <p className="help">

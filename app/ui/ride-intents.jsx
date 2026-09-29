@@ -1,7 +1,18 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useRef, useState, startTransition } from "react";
-import { Plus, CalendarDays, X, Check, LockKeyhole, Users } from "lucide-react";
+import {
+  Plus,
+  CalendarDays,
+  Check,
+  LockKeyhole,
+  Users,
+  Bike,
+  SlidersHorizontal,
+  RefreshCw,
+  Trash2,
+} from "lucide-react";
+import PassportTiles from "./passport-tiles.jsx";
 import { useSite } from "./site-provider.jsx";
 import {
   SocialHeader,
@@ -85,7 +96,7 @@ function TimeField({ side, window, zone, index, onChange }) {
     </div>
   );
 }
-function IntentComposer({
+export function IntentComposer({
   initial,
   preferences,
   onSaved,
@@ -121,6 +132,10 @@ function IntentComposer({
   async function save(e) {
     e.preventDefault();
     if (busy) return;
+    if (!draft.passport.purpose) {
+      setError("Выберите цель поездки");
+      return;
+    }
     setBusy(true);
     setError("");
     setNotice("");
@@ -230,44 +245,54 @@ function IntentComposer({
               </p>
               {draft.windows.map((w, index) => (
                 <div key={index} className={styles.window}>
-                  <TimeField
-                    side="start"
-                    window={w}
-                    zone={draft.timeZone}
-                    index={index}
-                    onChange={(v) =>
-                      set(
-                        "windows",
-                        draft.windows.map((row, n) => (n === index ? v : row)),
-                      )
-                    }
-                  />
-                  <TimeField
-                    side="end"
-                    window={w}
-                    zone={draft.timeZone}
-                    index={index}
-                    onChange={(v) =>
-                      set(
-                        "windows",
-                        draft.windows.map((row, n) => (n === index ? v : row)),
-                      )
-                    }
-                  />
-                  <button
-                    type="button"
-                    className="quiet"
-                    disabled={draft.windows.length === 1}
-                    aria-label={`Удалить окно ${index + 1}`}
-                    onClick={() =>
-                      set(
-                        "windows",
-                        draft.windows.filter((_, n) => n !== index),
-                      )
-                    }
-                  >
-                    <X size={16} />
-                  </button>
+                  <div className={styles.windowHead}>
+                    <strong>Окно {index + 1}</strong>
+                    <button
+                      type="button"
+                      className="icon secondary small danger"
+                      disabled={draft.windows.length === 1}
+                      aria-label={`Удалить окно ${index + 1}`}
+                      title="Удалить окно"
+                      onClick={() =>
+                        set(
+                          "windows",
+                          draft.windows.filter((_, n) => n !== index),
+                        )
+                      }
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                  <div className={styles.windowTimes}>
+                    <TimeField
+                      side="start"
+                      window={w}
+                      zone={draft.timeZone}
+                      index={index}
+                      onChange={(v) =>
+                        set(
+                          "windows",
+                          draft.windows.map((row, n) =>
+                            n === index ? v : row,
+                          ),
+                        )
+                      }
+                    />
+                    <TimeField
+                      side="end"
+                      window={w}
+                      zone={draft.timeZone}
+                      index={index}
+                      onChange={(v) =>
+                        set(
+                          "windows",
+                          draft.windows.map((row, n) =>
+                            n === index ? v : row,
+                          ),
+                        )
+                      }
+                    />
+                  </div>
                 </div>
               ))}
               <button
@@ -357,36 +382,57 @@ function IntentComposer({
             </label>
             <fieldset className={styles.privacy}>
               <legend>Кому видно</legend>
-              {[
-                ["private", "Только мне — для подбора"],
-                ["community", "Сообществу ColaBike"],
-              ].map(([key, label]) => (
-                <label className="check" key={key}>
-                  <input
-                    type="radio"
-                    name="intent-visibility"
-                    checked={draft.visibility === key}
-                    onChange={() => set("visibility", key)}
-                  />
-                  {label}
-                </label>
-              ))}
-              <p className="help">
-                В сообществе будут видны ваше имя, район и расписание. Без
-                точного адреса. Для публикации нужна подтверждённая почта.
-              </p>
+              <div className={styles.choices}>
+                {[
+                  [
+                    "private",
+                    "Только мне — для подбора",
+                    "Видите только вы. Используется для вашего подбора.",
+                    LockKeyhole,
+                  ],
+                  [
+                    "community",
+                    "Сообществу ColaBike",
+                    "Видны имя, район и расписание, без точного адреса. Нужна подтверждённая почта.",
+                    Users,
+                  ],
+                ].map(([key, label, hint, Icon]) => (
+                  <label className={styles.choice} key={key}>
+                    <input
+                      type="radio"
+                      name="intent-visibility"
+                      aria-label={label}
+                      aria-describedby={"visibility-" + key}
+                      checked={draft.visibility === key}
+                      onChange={() => set("visibility", key)}
+                    />
+                    <Icon size={16} aria-hidden="true" />
+                    <span>
+                      <strong>{label}</strong>
+                      <small id={"visibility-" + key}>{hint}</small>
+                    </span>
+                  </label>
+                ))}
+              </div>
               <label className="check">
                 <input
                   type="checkbox"
+                  role="switch"
+                  className="toggle"
+                  aria-label="Можно предлагать мне подходящие поездки"
+                  aria-describedby="suggestions-hint"
                   checked={draft.allowSuggestions}
                   onChange={(e) => set("allowSuggestions", e.target.checked)}
                 />
-                Можно предлагать мне подходящие поездки
+                <span>
+                  Можно предлагать мне подходящие поездки
+                  <small id="suggestions-hint">
+                    Отдельное разрешение для будущих предложений. Email и push
+                    не включаются. Приватные условия организаторам не
+                    показываются.
+                  </small>
+                </span>
               </label>
-              <small className="help">
-                Отдельное разрешение для будущих предложений. Email и push не
-                включаются. Приватные условия организаторам не показываются.
-              </small>
             </fieldset>
           </fieldset>
           <section
@@ -448,6 +494,28 @@ function IntentComposer({
     </>
   );
 }
+/** A composer draft: a quick window, a copy of `item`, or its edit. */
+export function intentDraft(kind = "custom", item = null, edit = false) {
+  const timeZone =
+    item?.timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const windows = edit
+    ? item.windows.map((w) => windowDraft(w, timeZone))
+    : kind === "custom"
+      ? [blankWindow()]
+      : quickWindows(kind, timeZone);
+  return {
+    ...(edit ? { id: item.id } : { requestId: crypto.randomUUID() }),
+    readiness: item?.readiness || "considering",
+    timeZone,
+    windows: windows.length ? windows : [blankWindow()],
+    passport: item?.passport || {},
+    ...(item?.meetNewPeople === undefined
+      ? {}
+      : { meetNewPeople: item.meetNewPeople }),
+    visibility: edit ? item.visibility : "private",
+    allowSuggestions: edit ? item.allowSuggestions : false,
+  };
+}
 function IntentCard({ item, busy, onEdit, onRepeat, onAction }) {
   const state =
     item.status === "expired"
@@ -483,7 +551,7 @@ function IntentCard({ item, busy, onEdit, onRepeat, onAction }) {
         ))}
       </ul>
       <small className="help">{item.timeZone} · окно доступности целиком</small>
-      <RidePassport passport={item.passport} />
+      <RidePassport passport={item.passport} region={false} />
       {item.meetNewPeople !== undefined && (
         <p className="help">
           {item.meetNewPeople
@@ -498,11 +566,11 @@ function IntentCard({ item, busy, onEdit, onRepeat, onAction }) {
               ? "Подходящие поездки можно предлагать"
               : "Предложения поездок выключены"}
           </p>
-          <div className={styles.quick}>
+          <div className={styles.cardActions}>
             {!["cancelled", "expired"].includes(item.status) && (
               <>
                 <button
-                  className="quiet"
+                  className="button secondary small"
                   disabled={busy}
                   onClick={() => onEdit(item)}
                 >
@@ -524,12 +592,13 @@ function IntentCard({ item, busy, onEdit, onRepeat, onAction }) {
             >
               Повторить с новыми датами
             </button>
+            {/* Destructive action stands apart from the everyday ones. */}
             <button
-              className="quiet danger"
+              className={"quiet danger " + styles.remove}
               disabled={busy}
               onClick={() => onAction(item, true)}
             >
-              Удалить
+              <Trash2 size={14} aria-hidden="true" /> Удалить
             </button>
           </div>
         </>
@@ -537,6 +606,40 @@ function IntentCard({ item, busy, onEdit, onRepeat, onAction }) {
     </article>
   );
 }
+// Calendar + bicycle in the site's line style; colours follow the theme.
+function IntentIllustration() {
+  return (
+    <svg
+      className={styles.illustration}
+      viewBox="0 0 120 88"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <rect x="8" y="10" width="62" height="54" rx="8" className={styles.art} />
+      <path d="M8 26h62M22 4v12M56 4v12" className={styles.art} />
+      <rect
+        x="19"
+        y="34"
+        width="10"
+        height="8"
+        rx="2"
+        className={styles.artAccent}
+      />
+      <path d="M36 38h24M19 50h41" className={styles.artSoft} />
+      <circle cx="74" cy="68" r="13" className={styles.art} />
+      <circle cx="106" cy="68" r="13" className={styles.art} />
+      <path
+        d="M74 68l12-18h14l6 18M86 50l8 18h-20M84 44h8M98 44l2 6"
+        className={styles.artAccentLine}
+      />
+    </svg>
+  );
+}
+const howSteps = [
+  "Укажите, когда хотите кататься и на каких условиях.",
+  "ColaBike подберёт подходящие покатушки и единомышленников.",
+  "Участие в конкретной покатушке подтверждается отдельно.",
+];
 export default function RideIntents() {
   const { viewer } = useSite();
   const [scope, setScope] = useState("own"),
@@ -547,21 +650,36 @@ export default function RideIntents() {
     [error, setError] = useState(""),
     [draft, setDraft] = useState(null),
     [preferences, setPreferences] = useState({ passport: {} }),
+    [prefDraft, setPrefDraft] = useState(null),
+    [prefBusy, setPrefBusy] = useState(false),
+    [prefMessage, setPrefMessage] = useState(""),
+    [prefError, setPrefError] = useState(""),
     [busy, setBusy] = useState(false),
     [message, setMessage] = useState("");
   const [ask, confirmation] = useConfirmation();
   const saved = useMotionFeedback(message);
+  const loaded = useRef("");
   useEffect(() => {
     if (!viewer) return;
     let live = true;
+    // The previous list stays on screen (aria-busy) while a tab or page loads.
     setLoading(true);
     setError("");
     Promise.all([api(`?scope=${scope}&page=${page}`), api("/preferences")])
       .then(([list, prefs]) => {
-        if (live) {
-          setData(list);
+        if (!live) return;
+        startTransition(() => {
+          setData({ ...list, scope });
           setPreferences(prefs.preferences);
-        }
+          // Do not overwrite unsaved tile edits on a list refresh.
+          const snapshot = JSON.stringify(prefs.preferences.passport || {});
+          setPrefDraft((d) =>
+            d === null || JSON.stringify(d) === loaded.current
+              ? prefs.preferences.passport || {}
+              : d,
+          );
+          loaded.current = snapshot;
+        });
       })
       .catch((e) => {
         if (live) setError(e.message);
@@ -584,25 +702,32 @@ export default function RideIntents() {
       />
     );
   function open(kind = "custom", item = null, edit = false) {
-    const timeZone =
-      item?.timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone;
-    const windows = edit
-      ? item.windows.map((w) => windowDraft(w, timeZone))
-      : kind === "custom"
-        ? [blankWindow()]
-        : quickWindows(kind, timeZone);
-    setDraft({
-      ...(edit ? { id: item.id } : { requestId: crypto.randomUUID() }),
-      readiness: item?.readiness || "considering",
-      timeZone,
-      windows: windows.length ? windows : [blankWindow()],
-      passport: item?.passport || {},
-      ...(item?.meetNewPeople === undefined
-        ? {}
-        : { meetNewPeople: item.meetNewPeople }),
-      visibility: edit ? item.visibility : "private",
-      allowSuggestions: edit ? item.allowSuggestions : false,
-    });
+    setDraft(intentDraft(kind, item, edit));
+  }
+  const prefDirty =
+    prefDraft !== null &&
+    JSON.stringify(prefDraft) !== JSON.stringify(preferences.passport || {});
+  async function savePreferences() {
+    setPrefBusy(true);
+    setPrefError("");
+    setPrefMessage("");
+    try {
+      const result = await api("/preferences", "PUT", {
+        passport: prefDraft,
+        ...(preferences.meetNewPeople === undefined
+          ? {}
+          : { meetNewPeople: preferences.meetNewPeople }),
+      });
+      setPreferences(result.preferences);
+      loaded.current = JSON.stringify(result.preferences.passport || {});
+      setPrefMessage(
+        "Настройки сохранены только для вас. Намерение не создано.",
+      );
+    } catch (e) {
+      setPrefError(e.message);
+    } finally {
+      setPrefBusy(false);
+    }
   }
   async function action(item, remove) {
     if (
@@ -637,31 +762,41 @@ export default function RideIntents() {
       setBusy(false);
     }
   }
+  const shown = data?.scope === scope ? data : null;
+  const empty = !loading && shown && shown.items.length === 0;
   return (
     <>
       <SocialHeader user={viewer} />
-      <main className="page narrow">
-        <div className="page-head">
-          <div className="page-title">
+      <main className={"page " + styles.page}>
+        <header className={styles.header}>
+          <span className={styles.headerIcon} aria-hidden="true">
+            <Bike size={22} />
+          </span>
+          <div className={styles.headerText}>
             <h1>Хочу кататься</h1>
+            <p>
+              Отметьте свободное время и условия поездки. Велосипед в гараже не
+              нужен; участие в конкретной покатушке подтверждается отдельно.
+            </p>
           </div>
-          <p className="page-lead">
-            Отметьте свободное время и условия поездки. Велосипед в гараже не
-            нужен; участие в покатушке подтверждается отдельно.
-          </p>
           <Link className="text-link" href="/rides">
             Все покатушки
           </Link>
-        </div>
-        <section className={styles.composer} aria-label="Быстрое намерение">
-          <div>
-            <strong>Когда найдётся время?</strong>
-            <p className="help">
-              До 5 активных намерений на ближайшие 90 дней. По умолчанию —
-              только для вас.
-            </p>
+        </header>
+        <section className={styles.setup} aria-labelledby="when-heading">
+          <div className={styles.setupHead}>
+            <span className={styles.roundIcon} aria-hidden="true">
+              <CalendarDays size={18} />
+            </span>
+            <div>
+              <h2 id="when-heading">Когда найдётся время?</h2>
+              <p className="help">
+                До 5 активных намерений на ближайшие 90 дней. По умолчанию —
+                только для вас.
+              </p>
+            </div>
           </div>
-          <div className={styles.quick}>
+          <div className={styles.whenActions}>
             {[
               ["tonight", "Сегодня вечером"],
               ["weekend", "В выходные"],
@@ -672,35 +807,79 @@ export default function RideIntents() {
                 key={key}
                 onClick={() => open(key)}
               >
-                <Plus size={16} />
+                <Plus size={16} aria-hidden="true" />
                 {label}
               </button>
             ))}
           </div>
         </section>
-        <div className="ui-tabs" aria-label="Намерения">
-          {[
-            ["own", "Мои намерения"],
-            ["community", "Сообщество"],
-          ].map(([key, label]) => (
+        <section className={styles.setup} aria-labelledby="prefs-heading">
+          <div className={styles.setupHead}>
+            <span className={styles.roundIcon} aria-hidden="true">
+              <SlidersHorizontal size={18} />
+            </span>
+            <div>
+              <h2 id="prefs-heading">Предпочтения для покатушек</h2>
+              <p className="help">
+                Личные настройки для подбора. Подставляются в намерение только
+                по вашему действию.
+              </p>
+            </div>
             <button
-              key={key}
-              aria-pressed={scope === key}
-              onClick={() => {
-                setScope(key);
-                setPage(1);
-                setData(null);
-              }}
+              className="button secondary"
+              disabled={!prefDirty || prefBusy}
+              aria-busy={prefBusy}
+              onClick={savePreferences}
             >
-              {label}
+              {prefBusy ? "Сохраняем…" : "Сохранить как настройки"}
             </button>
-          ))}
+          </div>
+          <PassportTiles
+            value={prefDraft || {}}
+            disabled={prefDraft === null || prefBusy}
+            label="Предпочтения для покатушек"
+            onChange={(next) => {
+              setPrefMessage("");
+              setPrefDraft(next);
+            }}
+          />
+          {prefMessage && (
+            <p className="notice" data-tone="success" role="status">
+              {prefMessage}
+            </p>
+          )}
+          {prefError && (
+            <p className="error" role="alert">
+              {prefError}
+            </p>
+          )}
+        </section>
+        <div className={styles.listBar}>
+          <div className="ui-tabs" role="group" aria-label="Намерения">
+            {[
+              ["own", "Мои намерения"],
+              ["community", "Сообщество"],
+            ].map(([key, label]) => (
+              <button
+                key={key}
+                aria-pressed={scope === key}
+                onClick={() => {
+                  if (key === scope) return;
+                  setScope(key);
+                  setPage(1);
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
           <button
             className="quiet"
             disabled={loading}
+            aria-busy={loading}
             onClick={() => setRevision((v) => v + 1)}
           >
-            Обновить
+            <RefreshCw size={14} aria-hidden="true" /> Обновить
           </button>
         </div>
         {message && (
@@ -716,64 +895,89 @@ export default function RideIntents() {
             </button>
           </p>
         )}
-        {loading && (
-          <p className="help" role="status">
-            Загружаем намерения…
-          </p>
-        )}
-        <MotionList>
-          <div className={styles.list} aria-busy={loading}>
-            {data?.items.map((item) => (
-              <IntentCard
-                key={item.id}
-                item={item}
-                busy={busy}
-                onEdit={(item) => open("custom", item, true)}
-                onRepeat={(item) => open("custom", item)}
-                onAction={action}
-              />
-            ))}
+        <div className={styles.workspace}>
+          <div className={styles.results}>
+            {loading && !shown && (
+              <p className="help" role="status">
+                Загружаем намерения…
+              </p>
+            )}
+            {empty ? (
+              <div className={styles.empty}>
+                <IntentIllustration />
+                <p>
+                  <strong>
+                    {scope === "own"
+                      ? "Пока нет намерений. Выберите время, когда хочется кататься."
+                      : "Пока нет открытых намерений с будущими окнами."}
+                  </strong>
+                </p>
+                {scope === "own" && (
+                  <p className="help">
+                    Сохранённые предпочтения подставляются только по вашему
+                    действию. Они не создают намерения и не включают
+                    уведомления.
+                  </p>
+                )}
+              </div>
+            ) : (
+              <MotionList>
+                <div className={styles.list} aria-busy={loading}>
+                  {shown?.items.map((item) => (
+                    <IntentCard
+                      key={item.id}
+                      item={item}
+                      busy={busy}
+                      onEdit={(item) => open("custom", item, true)}
+                      onRepeat={(item) => open("custom", item)}
+                      onAction={action}
+                    />
+                  ))}
+                </div>
+              </MotionList>
+            )}
+            {shown?.pages > 1 && (
+              <div className="form-actions">
+                <button
+                  className="button secondary"
+                  disabled={page <= 1 || loading}
+                  onClick={() => setPage((p) => p - 1)}
+                >
+                  Назад
+                </button>
+                <span>
+                  {page} / {shown.pages}
+                </span>
+                <button
+                  className="button secondary"
+                  disabled={page >= shown.pages || loading}
+                  onClick={() => setPage((p) => p + 1)}
+                >
+                  Далее
+                </button>
+              </div>
+            )}
           </div>
-        </MotionList>
-        {!loading && data?.items.length === 0 && (
-          <p className="empty-state">
-            {scope === "own"
-              ? "Пока нет намерений. Выберите время, когда хочется кататься."
-              : "Пока нет открытых намерений с будущими окнами."}
-          </p>
-        )}
-        {data?.pages > 1 && (
-          <div className="form-actions">
-            <button
-              className="button secondary"
-              disabled={page <= 1 || loading}
-              onClick={() => setPage((p) => p - 1)}
-            >
-              Назад
-            </button>
-            <span>
-              {page} / {data.pages}
-            </span>
-            <button
-              className="button secondary"
-              disabled={page >= data.pages || loading}
-              onClick={() => setPage((p) => p + 1)}
-            >
-              Далее
-            </button>
-          </div>
-        )}
-        <p className="help">
-          Сохранённые предпочтения подставляются только по вашему действию. Они
-          не создают намерения и не включают уведомления.
-        </p>
+          <aside className={styles.how} aria-labelledby="how-heading">
+            <h2 id="how-heading">Как это работает</h2>
+            <ol>
+              {howSteps.map((step) => (
+                <li key={step}>{step}</li>
+              ))}
+            </ol>
+          </aside>
+        </div>
       </main>
       <SocialFooter />
       {draft && (
         <IntentComposer
           initial={draft}
           preferences={preferences}
-          onPreferences={setPreferences}
+          onPreferences={(next) => {
+            setPreferences(next);
+            setPrefDraft(next.passport || {});
+            loaded.current = JSON.stringify(next.passport || {});
+          }}
           onClose={() => setDraft(null)}
           onSaved={() => {
             setDraft(null);
