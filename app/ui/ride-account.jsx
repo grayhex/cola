@@ -419,6 +419,10 @@ export default function RideAccount({ bikes }) {
               {offersPicker && (
                 <fieldset className="metric-picker">
                   <legend>Показывать показатели</legend>
+                  <p className="help">
+                    Средний или максимальный пульс, каденс и мощность также
+                    открывают соответствующий график на публичной части трека.
+                  </p>
                   <div>
                     {pickable.map((f) => (
                       <label key={f.key}>

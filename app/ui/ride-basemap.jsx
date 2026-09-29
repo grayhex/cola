@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { SharedView } from "./motion.jsx";
 import {
@@ -31,6 +31,7 @@ export default function RideBasemap({
   thumbnail = false,
   transitionId,
   href,
+  selectedCoord,
 }) {
   const { personalSettings: settings } = useSite(),
     config = thumbnail
@@ -48,7 +49,8 @@ export default function RideBasemap({
   }, []);
   const template = tileTemplate(config);
   useEffect(() => setFailed(false), [template, geometry]);
-  const viewport = rasterViewport(geometry),
+  const viewport = useMemo(() => rasterViewport(geometry), [geometry]),
+    cursor = selectedCoord && viewport?.point(selectedCoord),
     showTiles =
       !forceRoute &&
       config.enabled &&
@@ -106,6 +108,17 @@ export default function RideBasemap({
             strokeLinejoin="round"
           />
         ))}
+        {cursor && (
+          <circle
+            aria-label="Выбранная точка маршрута"
+            cx={cursor[0]}
+            cy={cursor[1]}
+            r="6"
+            fill="#ffffff"
+            stroke="#1d2733"
+            strokeWidth="3"
+          />
+        )}
         {!viewport && (
           <text x="320" y="130" textAnchor="middle" fill="currentColor">
             Маршрут скрыт

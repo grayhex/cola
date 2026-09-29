@@ -84,6 +84,18 @@ const { id, shareId } = save.body;
 assert.equal((await a("rides/preview", "POST", gpx([loop]))).status, 409);
 const detail = (await guest("rides/public/" + shareId)).body.ride;
 assert.ok(detail.geometry.length);
+assert.equal(detail.analysis.visibility, "public");
+assert.ok(detail.analysis.pointCount > 0);
+assert.equal(detail.analysis.segments[0][0].elapsedS, 0);
+assert.ok(!JSON.stringify(detail.analysis).includes("timestampS"));
+assert.equal((await guest("rides/" + id + "/analysis", "POST")).status, 401);
+assert.equal((await b("rides/" + id + "/analysis", "POST")).status, 404);
+assert.equal(
+  (await a("rides/" + id + "/analysis", "POST", null, "https://evil.test"))
+    .status,
+  403,
+);
+assert.equal((await a("rides/" + id + "/analysis", "POST")).status, 200);
 for (const key of [
   "source_hash",
   "started_at",
@@ -139,6 +151,14 @@ for (const key of ["avgHr", "maxHr", "avgPower", "maxPower", "avgCadence"])
 const ownFit = (await b("rides/owner/" + fitSave.body.shareId)).body.ride;
 assert.equal(ownFit.metrics.maxPower, 250);
 assert.equal(ownFit.metrics.avgHr, 110);
+assert.ok(ownFit.analysis.channels.includes("hrBpm"));
+assert.ok(ownFit.analysis.channels.includes("powerW"));
+assert.ok(ownFit.analysis.segments[0][0].timestampS);
+assert.ok(!shown.analysis.channels.includes("hrBpm"));
+assert.ok(!("hrBpm" in shown.analysis.segments[0][0]));
+const ownerPublic = (await b("rides/public/" + fitSave.body.shareId)).body.ride;
+assert.equal(ownerPublic.analysis.visibility, "public");
+assert.ok(!ownerPublic.analysis.channels.includes("hrBpm"));
 // Editing re-reads the stored FIT original; showing heart rate is opt-in.
 assert.equal(
   (
@@ -152,6 +172,18 @@ assert.equal(
 shown = await publicFit();
 assert.equal(shown.metrics.avgHr, 110);
 assert.ok(!("maxPower" in shown.metrics));
+assert.ok(shown.analysis.channels.includes("hrBpm"));
+assert.ok(!shown.analysis.channels.includes("powerW"));
+assert.equal(
+  (
+    await b("rides/" + fitSave.body.id, "PATCH", {
+      ...fitRide,
+      visibleMetrics: ["distanceM"],
+    })
+  ).status,
+  200,
+);
+assert.ok(!(await publicFit()).analysis.channels.includes("hrBpm"));
 // The same file is the same ride; a damaged one gets a clear error.
 assert.equal((await b("rides/preview", "POST", fit(loop))).status, 409);
 const damaged = Buffer.from(fit(loop));

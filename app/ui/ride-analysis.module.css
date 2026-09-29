@@ -1,0 +1,103 @@
+.analysis {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  margin: 24px 0;
+  min-width: 0;
+}
+.analysis h2 {
+  margin-top: 0;
+  font-size: 20px;
+}
+.selector {
+  display: grid;
+  gap: 8px;
+  font-size: 14px;
+}
+.selector input {
+  width: 100%;
+  min-height: 44px;
+  accent-color: var(--accent);
+}
+.readout {
+  display: grid;
+  gap: 6px;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+.readout span {
+  color: var(--text-muted);
+}
+.chart h3 {
+  font-size: 16px;
+  margin: 20px 0 0;
+}
+.chart small {
+  color: var(--text-muted);
+  font-weight: normal;
+}
+.chart svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  min-height: 100px;
+  touch-action: pan-y;
+}
+.chart text {
+  fill: var(--text-muted);
+  font: 13px var(--font-sans);
+}
+.line {
+  stroke: var(--chart-line);
+  stroke-width: 2;
+  fill: none;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+.grid {
+  stroke: var(--line);
+}
+.cursor {
+  stroke: var(--chart-line);
+  stroke-dasharray: 3 3;
+  vector-effect: non-scaling-stroke;
+}
+.data {
+  margin-top: 16px;
+  font-size: 13px;
+}
+.data summary {
+  min-height: 44px;
+  cursor: pointer;
+  padding-block: 12px;
+}
+.data > div {
+  overflow: auto;
+  max-height: 320px;
+}
+.data table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+.data th,
+.data td {
+  white-space: nowrap;
+  text-align: left;
+  padding: 6px;
+  border-bottom: 1px solid var(--line);
+}
+.data tr[aria-selected="true"] {
+  background: var(--surface);
+}
+.data nav {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 12px;
+}
+@media (max-width: 700px) {
+  .analysis {
+    padding: 14px;
+  }
+}

@@ -177,6 +177,7 @@ test("Garmin lifecycle, safe GPX binding, planned invitations and market publica
     );
     const publicRide = await rideDetail(db, ride.shareId, friend);
     assert.equal(publicRide.hasTrack, false);
+    assert.equal(publicRide.analysis, null);
     assert.deepEqual(publicRide.geometry, []);
     assert.deepEqual(publicRide.visibleMetrics, input.visibleMetrics);
     await db.transaction((q) =>
@@ -224,6 +225,7 @@ test("Garmin lifecycle, safe GPX binding, planned invitations and market publica
     );
     const attached = await rideDetail(db, ride.shareId, owner, true);
     assert.equal(attached.hasTrack, true);
+    assert.ok(attached.analysis.pointCount > 0);
     assert(attached.geometry.length);
     assert.equal(attached.metrics.maxPower, 1234);
     await assert.rejects(

@@ -215,12 +215,27 @@ test("MapLibre initializes with intercepted OSM tiles, no external traffic", asy
     await expect(page.locator(".ride-map.ready")).toBeVisible();
     expect(await canvas.evaluate((el) => el.isConnected)).toBe(true);
     const chart = page.getByRole("img", {
-      name: "График скорости по расстоянию",
+      name: "График: Скорость по расстоянию",
     });
     await chart.hover();
-    await expect(page.getByRole("region", { name: "Скорость" })).toContainText(
-      /на \d+[,.]?\d* км/,
+    const series = (
+      await (await page.request.get("/api/rides/public/" + ride.shareId)).json()
+    ).ride.analysis;
+    const slider = page.getByRole("slider", { name: "Точка маршрута" });
+    await slider.fill("20");
+    await expect(page.locator(".ride-analysis-marker")).toHaveAttribute(
+      "data-coordinate",
+      series.segments.flat()[20].coord.join(","),
     );
+    await slider.press("ArrowRight");
+    await expect(page.locator(".ride-analysis-marker")).toHaveAttribute(
+      "data-coordinate",
+      series.segments.flat()[21].coord.join(","),
+    );
+    expect(await canvas.evaluate((el) => el.isConnected)).toBe(true);
+    await expect(
+      page.getByRole("region", { name: "Анализ поездки" }),
+    ).toContainText(/\d+[,.]?\d* км/);
     await page.locator("#discussion").scrollIntoViewIfNeeded();
     await page.evaluate(
       () =>
@@ -244,7 +259,7 @@ test("MapLibre initializes with intercepted OSM tiles, no external traffic", asy
 test("FIT upload: export hint, heart rate hidden until the owner shows it", async ({
   page,
   browser,
-}) => {
+}, info) => {
   const nonce = randomUUID().slice(0, 8),
     base = process.env.TEST_ORIGIN || "http://localhost:3100";
   await registerVerified(page.request, {
@@ -308,5 +323,62 @@ test("FIT upload: export hint, heart rate hidden until the owner shows it", asyn
   ).toBeVisible();
   await expect(guest.getByText("110 уд/мин")).toBeVisible();
   await expect(guest.getByText("Максимальная мощность")).toHaveCount(0);
+  await expect(
+    guest.getByRole("heading", { name: "Пульс", exact: false }),
+  ).toBeVisible();
+  await expect(
+    guest.getByRole("heading", { name: "Мощность", exact: false }),
+  ).toHaveCount(0);
+  await page.goto("/r/" + rides[0].shareId + "?owner=1");
+  const analysis = page.getByRole("region", { name: "Анализ поездки" });
+  await expect(
+    analysis.getByRole("heading", { name: "Мощность", exact: false }),
+  ).toBeVisible();
+  await expect(analysis).toContainText("Полный трек");
+  const slider = page.getByRole("slider", { name: "Точка маршрута" });
+  await slider.fill("20");
+  const cursor = page.locator(
+    ".ride-route circle[aria-label='Выбранная точка маршрута']",
+  );
+  await expect(cursor).toBeVisible();
+  const first = await cursor.getAttribute("cx");
+  await slider.press("ArrowRight");
+  await expect(cursor).not.toHaveAttribute("cx", first);
+  await analysis.getByText("Таблица значений", { exact: true }).click();
+  await expect(analysis.locator("tbody tr")).toHaveCount(50);
+  await analysis.getByRole("button", { name: "Далее", exact: true }).click();
+  await expect(analysis.locator("tbody tr")).toHaveCount(31);
+  await analysis
+    .getByRole("button", { name: "Выбрать точку 51", exact: true })
+    .click();
+  await expect(slider).toHaveValue("50");
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  for (const mode of ["light", "dark"]) {
+    await page.evaluate((mode) => {
+      localStorage.setItem("cola:theme", mode);
+      document.documentElement.dataset.theme = mode;
+    }, mode);
+    await page.screenshot({
+      path: info.outputPath("ride-analysis-" + mode + ".png"),
+      fullPage: true,
+    });
+  }
+  // Legacy records get an explicit owner-only backfill, never a public read-side parse.
+  const db = new pg.Client({ connectionString: process.env.DATABASE_URL });
+  await db.connect();
+  try {
+    await db.query("DELETE FROM ride_analysis WHERE ride_id=$1", [rides[0].id]);
+  } finally {
+    await db.end();
+  }
+  await page.reload();
+  await page.getByRole("button", { name: "Подготовить анализ трека" }).click();
+  await expect(
+    page.getByRole("region", { name: "Анализ поездки" }),
+  ).toBeVisible();
   await context.close();
 });

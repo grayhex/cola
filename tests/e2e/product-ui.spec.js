@@ -249,7 +249,7 @@ test("all product routes and account sections share clear light/dark UI; compose
     ["/rides", ".ride-card", "rides"],
     [
       "/r/" + ride.shareId,
-      'svg[aria-label="График скорости по расстоянию"]',
+      'svg[aria-label="График: Скорость по расстоянию"]',
       "ride",
     ],
     ["/u/" + user.username, ".profile-hero", "profile"],
@@ -301,20 +301,20 @@ test("all product routes and account sections share clear light/dark UI; compose
           }
           if (name === "ride") {
             const chart = page.getByRole("img", {
-              name: "График скорости по расстоянию",
+              name: "График: Скорость по расстоянию",
             });
             await expect
               .poll(async () => (await chart.boundingBox()).height)
-              .toBeGreaterThan(180);
+              .toBeGreaterThanOrEqual(100);
             await expect(
-              page.getByRole("region", { name: "Скорость" }),
-            ).toHaveAttribute("aria-busy", "false");
+              page.getByRole("slider", { name: "Точка маршрута" }),
+            ).toBeVisible();
             await chart.hover();
             await expect(
               page
-                .getByRole("region", { name: "Скорость" })
+                .getByRole("region", { name: "Анализ поездки" })
                 .locator('[aria-live="polite"]'),
-            ).toContainText(/на \d+[,.]?\d* км/);
+            ).toContainText(/\d+[,.]?\d* км/);
           }
           if (name === "post")
             await expect(page.locator(".comment-body")).toHaveCount(2);

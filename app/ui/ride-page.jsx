@@ -6,7 +6,7 @@ import RideRsvp, { RecurringRideLabel } from "./ride-rsvp.jsx";
 import RideSpeedChart from "./ride-speed-chart.jsx";
 import RideMap from "./ride-map.jsx";
 import { Heart } from "./icons.jsx";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { SocialHeader, SocialFooter, socialApi } from "./social-primitives.jsx";
 import { RideMetrics, rideDate } from "./ride-card.jsx";
@@ -16,6 +16,7 @@ import { personName } from "../../lib/usernames.js";
 import ShareButton from "./share-button.jsx";
 import LocalDate from "./local-date.jsx";
 // The comment editor (Tiptap) loads after the ride itself.
+const RideAnalysis = dynamic(() => import("./ride-analysis.jsx"));
 const Discussion = dynamic(() => import("./discussion.jsx"), { ssr: false });
 export default function RidePage({
   share,
@@ -27,7 +28,20 @@ export default function RidePage({
   const { viewer: user } = useSite();
   const [ride, setRide] = useState(initial?.ride || null),
     [error, setError] = useState(""),
-    [busy, setBusy] = useState(false);
+    [busy, setBusy] = useState(false),
+    [analysisBusy, setAnalysisBusy] = useState(false),
+    [selected, setSelected] = useState(0);
+  const analysisPoints = useMemo(
+    () => ride?.analysis?.segments.flat() || [],
+    [ride?.analysis],
+  );
+  const geometry = useMemo(
+    () =>
+      ride?.analysis?.visibility === "owner"
+        ? ride.analysis.segments.map((run) => run.map((p) => p.coord))
+        : ride?.geometry || [],
+    [ride],
+  );
   // The server rendered the public ride for this viewer (#74).
   const seed = useRef(initial);
   useEffect(() => {
@@ -126,16 +140,64 @@ export default function RidePage({
                 ))}
               </section>
             )}
-            {ride.geometry.length > 0 && (
+            {geometry.length > 0 && (
               <RideMap
-                geometry={ride.geometry}
+                geometry={geometry}
+                selectedCoord={
+                  analysisPoints[Math.min(selected, analysisPoints.length - 1)]
+                    ?.coord
+                }
                 styleUrl={styleUrl}
                 transitionId={ride.id}
               />
             )}
-            {ride.hasTrack && ride.status === "completed" && (
-              <RideSpeedChart profile={ride.speedProfile} />
-            )}
+            {ride.hasTrack &&
+              ride.status === "completed" &&
+              (ride.analysis ? (
+                <RideAnalysis
+                  key={ride.id}
+                  series={ride.analysis}
+                  selected={selected}
+                  onSelect={setSelected}
+                />
+              ) : (
+                <>
+                  <RideSpeedChart profile={ride.speedProfile} />
+                  {ride.isOwner && (
+                    <button
+                      className="quiet"
+                      disabled={analysisBusy}
+                      onClick={async () => {
+                        setAnalysisBusy(true);
+                        setError("");
+                        try {
+                          await socialApi(
+                            "rides/" + ride.id + "/analysis",
+                            "POST",
+                          );
+                          const mode =
+                            new URLSearchParams(location.search).get(
+                              "owner",
+                            ) === "1"
+                              ? "owner/"
+                              : "public/";
+                          const data = await socialApi("rides/" + mode + share);
+                          setRide(data.ride);
+                          setSelected(0);
+                        } catch (e) {
+                          setError(e.message);
+                        } finally {
+                          setAnalysisBusy(false);
+                        }
+                      }}
+                    >
+                      {analysisBusy
+                        ? "Готовим анализ…"
+                        : "Подготовить анализ трека"}
+                    </button>
+                  )}
+                </>
+              ))}
             {ride.description && (
               <p className="ride-description">{ride.description}</p>
             )}
