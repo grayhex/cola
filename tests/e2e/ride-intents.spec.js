@@ -411,3 +411,40 @@ test("workspace screen (#243): setup sections, preference tiles, tabs, empty and
   await expect(main.getByRole("button", { name: "Обновить" })).toBeEnabled();
   await shoot("community");
 });
+
+test("area from preferences moves the map view; Enter keeps the stored centre (#241)", async ({
+  page,
+}) => {
+  await page.route("https://tile.openstreetmap.org/**", (route) =>
+    route.abort(),
+  );
+  const saved = await page.request.put("/api/ride-intents/preferences", {
+    headers: { origin },
+    data: {
+      passport: {
+        area: { label: "Невский", center: [30.32, 59.93], radiusM: 3000 },
+        purpose: "social",
+      },
+    },
+  });
+  expect(saved.status()).toBe(200);
+  const dialog = await open(page);
+  await dialog
+    .getByRole("button", { name: "Подставить мои предпочтения" })
+    .click();
+  const map = dialog.getByRole("application");
+  await expect(map).toBeVisible();
+  await map.focus();
+  await page.keyboard.press("Enter");
+  await dialog
+    .getByLabel("Окно 1: с", { exact: true })
+    .fill(date(1) + "T10:00");
+  await dialog
+    .getByLabel("Окно 1: до", { exact: true })
+    .fill(date(1) + "T15:00");
+  await dialog.getByLabel("Часовой пояс (IANA)").fill("Europe/Moscow");
+  await dialog.getByRole("button", { name: "Сохранить намерение" }).click();
+  await expect(dialog).toHaveCount(0);
+  const list = await (await page.request.get("/api/ride-intents")).json();
+  expect(list.items[0].passport.area.center).toEqual([30.32, 59.93]);
+});

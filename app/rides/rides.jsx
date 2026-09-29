@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { X } from "lucide-react";
 import { useSite } from "../ui/site-provider.jsx";
 import RideCreationActions from "../ui/ride-creation-actions.jsx";
@@ -29,12 +29,15 @@ function writeUrl(status, filters, bikeId) {
   window.history.replaceState(null, "", url);
 }
 function FilterFields({ value, onChange, idPrefix }) {
-  const set = (key, v) => {
-    const next = { ...value };
-    if (!v) delete next[key];
-    else next[key] = v;
-    onChange(next);
-  };
+  // An updater, not a copy of `value`: two quick changes before React
+  // re-renders (a pending list transition) must not drop the first one.
+  const set = (key, v) =>
+    onChange((prev) => {
+      const next = { ...prev };
+      if (!v) delete next[key];
+      else next[key] = v;
+      return next;
+    });
   const select = (key, label, options) => (
     <label className="field" key={key}>
       <span>{label}</span>
@@ -103,6 +106,8 @@ export default function Rides() {
     [area, setArea] = useState(""),
     [sheet, setSheet] = useState(false),
     [draft, setDraft] = useState({});
+  // The newest filter set, ahead of the next render.
+  const latest = useRef({});
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const initial = readFilters(params);
@@ -112,6 +117,7 @@ export default function Rides() {
         ? params.get("status")
         : null,
     );
+    latest.current = initial;
     setFilters(initial);
     setArea(initial.area || "");
   }, []);
@@ -129,6 +135,8 @@ export default function Rides() {
       bikeId,
     );
   };
+  // Any other change (a filter, the tab) restarts the pause, so the delayed
+  // write always carries the current status and filter set.
   useEffect(() => {
     const next = filters.area || "";
     if (next === area) return;
@@ -137,14 +145,16 @@ export default function Rides() {
       url(status, filters, next);
     }, 350);
     return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- writes the URL for this pause only
-  }, [filters.area, area]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `url` only reads bikeId
+  }, [filters, area, status]);
   const applied = useMemo(() => {
     const { area: typed, ...rest } = filters;
     void typed;
     return area ? { ...rest, area } : rest;
   }, [filters, area]);
-  function change(next, typed = area) {
+  function change(update, typed = area) {
+    const next = typeof update === "function" ? update(latest.current) : update;
+    latest.current = next;
     setFilters(next);
     url(status, next, next.area === undefined ? "" : typed);
   }
@@ -219,9 +229,11 @@ export default function Rides() {
               <button
                 key={key}
                 onClick={() => {
-                  const next = { ...filters };
-                  delete next[key];
-                  change(next);
+                  change((prev) => {
+                    const next = { ...prev };
+                    delete next[key];
+                    return next;
+                  });
                   if (key === "area") setArea("");
                 }}
                 aria-label={"Убрать фильтр " + label}

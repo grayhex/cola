@@ -11,6 +11,7 @@ import {
   metersPerPixel,
 } from "../lib/map-settings.js";
 import {
+  durationBuckets,
   presetRange,
   readFilters,
   apiFilters,
@@ -80,7 +81,7 @@ test("date presets are local and bounded; URL filters accept only public known v
     area: "Сокольники",
   });
   const api = apiFilters(filters, at("2030-05-01T15:00:00"));
-  assert.equal(api.durationMin, "120");
+  assert.equal(api.durationMin, "121");
   assert.equal(api.durationMax, "240");
   assert.ok(api.from && api.to);
   assert.equal("when" in api, false);
@@ -299,6 +300,23 @@ test("public upcoming filters: future only, passport choices, duration buckets a
     assert.deepEqual(await titles({ surface: "gravel" }), ["Long sporty"]);
     assert.deepEqual(await titles({ durationMax: 120 }), ["Short relaxed"]);
     assert.deepEqual(await titles({ durationMin: 240 }), ["Long sporty"]);
+    // Buckets never overlap: exactly 120 min is short, exactly 240 is medium.
+    await add("Exactly two hours", soon(6), {}, soon(8));
+    await add("Exactly four hours", soon(7), {}, soon(11));
+    const bucket = async (key) =>
+      titles(
+        Object.fromEntries(
+          Object.entries(durationBuckets[key][1]).map(([k, v]) => [k, v]),
+        ),
+      );
+    const short = await bucket("short"),
+      medium = await bucket("medium"),
+      long = await bucket("long");
+    assert.ok(short.includes("Exactly two hours"));
+    assert.ok(!medium.includes("Exactly two hours"));
+    assert.ok(medium.includes("Exactly four hours"));
+    assert.ok(!long.includes("Exactly four hours"));
+    for (const t of short) assert.ok(!medium.includes(t) && !long.includes(t));
     assert.deepEqual(await titles({ area: "сокол" }), ["Short relaxed"]);
     assert.deepEqual(
       await titles({ area: "%" }),
@@ -316,7 +334,7 @@ test("public upcoming filters: future only, passport choices, duration buckets a
           plan: { pace: "sporty" },
         })
       ).total,
-      5,
+      7,
     );
   } finally {
     await db.close();

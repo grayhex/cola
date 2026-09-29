@@ -306,15 +306,10 @@ test("public filters: URL keeps shared choices only, slow answers never win, emp
   await page.goBack();
   await expect(page).toHaveURL(/pace=sporty/);
   await expect(page.locator("main")).toContainText(titles.maybe);
-  // Zero results and a failing service are different messages. A change in
-  // the first ~100 ms after back can land during the navigation's view
-  // transition, before React owns the controls; retry until it is applied.
-  await expect(async () => {
-    await choose("Цель", "adventure");
-    await expect(
-      page.getByRole("button", { name: "Убрать фильтр Приключение" }),
-    ).toBeVisible({ timeout: 1000 });
-  }).toPass();
+  await choose("Цель", "adventure");
+  await expect(
+    page.getByRole("button", { name: "Убрать фильтр Приключение" }),
+  ).toBeVisible();
   await expect(
     page.getByText("По этим фильтрам предстоящих выездов нет."),
   ).toBeVisible();
@@ -333,6 +328,17 @@ test("public filters: URL keeps shared choices only, slow answers never win, emp
   await expect(alert).toContainText("Сервис покатушек недоступен");
   await page.getByRole("button", { name: "Повторить" }).click();
   await expect(alert).toHaveCount(0);
+  // A district typed and, within the pause, another filter chosen: the
+  // delayed URL write carries both, never a stale snapshot.
+  if (!isMobile) {
+    const bar = page.locator(".ride-filters");
+    await bar.getByLabel("Район или парк").fill("Сокол");
+    await bar.getByLabel("Покрытие").selectOption("asphalt");
+    await expect(page).toHaveURL(/area=/);
+    const settled = new URL(page.url());
+    expect(settled.searchParams.get("surface")).toBe("asphalt");
+    expect(settled.searchParams.get("area")).toBe("Сокол");
+  }
   await page.getByRole("button", { name: "Сбросить всё" }).click();
   await expect(page.locator("main")).toContainText(titles.relaxed);
   expect(

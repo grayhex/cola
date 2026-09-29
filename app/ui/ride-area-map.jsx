@@ -119,7 +119,20 @@ export default function AreaPicker({ value = {}, onChange, disabled }) {
       value.center ? zoomFor(value.radiusM, value.center[1]) : 10,
     ),
     [view, setView] = useState(value.center || initialCenter);
-  const svg = useRef(null);
+  const svg = useRef(null),
+    placed = useRef(value.center ? value.center.join(",") : "");
+  // A centre that arrives from outside (preferences filled in, an edit form)
+  // moves the view to it, so Enter never replaces it with the old view.
+  const centerKey = value.center ? value.center.join(",") : "";
+  useEffect(() => {
+    if (!centerKey || centerKey === placed.current) return;
+    placed.current = centerKey;
+    const center = centerKey.split(",").map(Number);
+    setView(center);
+    setZoom(zoomFor(value.radiusM || 5000, center[1]));
+    setOpen(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed by the centre
+  }, [centerKey]);
   const viewport = useMemo(
     () => pointViewport(view, zoom, width, height),
     [view, zoom],
@@ -133,6 +146,7 @@ export default function AreaPicker({ value = {}, onChange, disabled }) {
   const radiusKm = value.radiusM ? value.radiusM / 1000 : 5;
   const place = (center, radius = radiusKm) => {
     const point = coarsePoint(center);
+    placed.current = point.join(",");
     setView(point);
     onChange({ ...value, center: point, radiusM: radius * 1000 });
   };

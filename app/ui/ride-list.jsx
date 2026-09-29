@@ -9,7 +9,6 @@ import {
 } from "react";
 import { socialApi, Pagination } from "./social-primitives.jsx";
 import RideCard, { rideDate } from "./ride-card.jsx";
-import { MotionList } from "./motion.jsx";
 import { useSite } from "./site-provider.jsx";
 import { apiFilters } from "../../lib/ride-filters.js";
 import { plural } from "../../lib/plural.js";
@@ -152,32 +151,33 @@ export default function RideList({
               })} км`}
             {loading && " · обновляем…"}
           </p>
-          <MotionList>
-            <div
-              className={list ? "ride-accordion" : "ride-grid"}
-              aria-busy={loading}
-            >
-              {data.rides.map((r) =>
-                list ? (
-                  <details className="ride-list-item" key={r.id}>
-                    <summary>
-                      <strong>{r.title}</strong>
-                      <small>
-                        {rideDate(r.date)} ·{" "}
-                        {(r.metrics.distanceM / 1000).toLocaleString("ru-RU", {
-                          maximumFractionDigits: 1,
-                        })}{" "}
-                        км
-                      </small>
-                    </summary>
-                    <RideCard ride={r} />
-                  </details>
-                ) : (
-                  <RideCard key={r.id} ride={r} />
-                ),
-              )}
-            </div>
-          </MotionList>
+          {/* No MotionList here: a list view transition with the cards' nested
+              SharedView names held React commits, so quick filter changes
+              stalled (#233). Stale answers are still dropped by sequence. */}
+          <div
+            className={list ? "ride-accordion" : "ride-grid"}
+            aria-busy={loading}
+          >
+            {data.rides.map((r) =>
+              list ? (
+                <details className="ride-list-item" key={r.id}>
+                  <summary>
+                    <strong>{r.title}</strong>
+                    <small>
+                      {rideDate(r.date)} ·{" "}
+                      {(r.metrics.distanceM / 1000).toLocaleString("ru-RU", {
+                        maximumFractionDigits: 1,
+                      })}{" "}
+                      км
+                    </small>
+                  </summary>
+                  <RideCard ride={r} />
+                </details>
+              ) : (
+                <RideCard key={r.id} ride={r} />
+              ),
+            )}
+          </div>
           {!data.total && !error && status === "planned" && (
             <div className="empty-state">
               <p>
