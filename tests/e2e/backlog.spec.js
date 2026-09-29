@@ -111,7 +111,8 @@ test("account SPA opens the three-step wizard repeatedly; only explicit X can di
     native.push(d.type());
     await d.dismiss();
   });
-  await page.goto("/account");
+  // #245: «Добавить велосипед» is the main action of «Мои велосипеды».
+  await page.goto("/account?tab=bikes");
   const add = page.getByRole("button", {
     name: "Добавить велосипед",
     exact: true,
