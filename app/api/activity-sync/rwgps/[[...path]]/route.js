@@ -58,7 +58,7 @@ async function handler(req, { params }) {
         return fail("Слишком много попыток", 429);
       const url = new URL(req.url),
         target = new URL(
-          "/account?tab=rides",
+          "/account?tab=integrations",
           process.env.APP_ORIGIN || "http://localhost:3000",
         );
       try {

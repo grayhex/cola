@@ -14,6 +14,8 @@ export default function Modal({
     leaving = useRef(false);
   useEffect(() => {
     const el = ref.current;
+    // The window may unmount before it closes; focus then returns here.
+    const opener = document.activeElement;
     leaving.current = false;
     const y = window.scrollY,
       body = document.body,
@@ -32,6 +34,13 @@ export default function Modal({
       if (previous === null) body.removeAttribute("style");
       else body.setAttribute("style", previous);
       window.scrollTo({ top: y, behavior: "instant" });
+      const current = document.activeElement;
+      if (
+        opener instanceof HTMLElement &&
+        opener.isConnected &&
+        (!current || current === document.body || el.contains(current))
+      )
+        opener.focus({ preventScroll: true });
     };
   }, []);
   const request = () => {

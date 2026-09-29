@@ -1,6 +1,5 @@
 "use client";
 import Link from "next/link";
-import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import {
   ShoppingBag,
@@ -25,37 +24,56 @@ import labelStyles from "./content-label.module.css";
 import SearchBox from "./search-box.jsx";
 import HeroArtwork from "./hero-artwork.jsx";
 import styles from "./home.module.css";
-// Personal planning (#233) is a separate chunk loaded only for a signed-in
-// viewer after hydration: guests download none of it and no personal data is
-// rendered on the server.
-const HomePlanner = dynamic(() => import("./home-planner.jsx"), {
-  ssr: false,
-  loading: () => (
-    <div className={"skeleton " + styles.plannerSkeleton} aria-hidden />
-  ),
-});
-function RideTogether() {
+import TogetherActions from "./together-actions.jsx";
+// A route over a ruled map: two riders meet on the way. Decoration only,
+// drawn with semantic tokens so both themes read as one system.
+function TogetherArt() {
   return (
-    <section
-      className={"section " + styles.together}
-      aria-labelledby="together-heading"
+    <svg
+      className={styles.togetherArt}
+      viewBox="0 0 320 220"
+      aria-hidden="true"
+      focusable="false"
     >
-      <div>
-        <span className="eyebrow">Покатушки</span>
-        <h2 id="together-heading">Найти компанию для поездки</h2>
-        <ol className={styles.steps}>
-          <li>Отметьте, когда и где хочется кататься.</li>
-          <li>Смотрите подходящие выезды с объяснением, что совпало.</li>
-          <li>Отвечайте «Иду» — и договаривайтесь об остальном.</li>
-        </ol>
-      </div>
-      <div className={styles.togetherActions}>
-        <Link className="button" href="/rides?status=planned">
-          Предстоящие выезды
-        </Link>
-        <Link className="button secondary" href="/ride-intents">
-          Войти, чтобы отметить время
-        </Link>
+      <path
+        className={styles.artRoute}
+        d="M24 184 C 70 180, 72 120, 118 118 S 176 150, 206 104 S 250 40, 296 36"
+      />
+      <path className={styles.artBranch} d="M60 36 C 96 52, 110 84, 118 118" />
+      <circle className={styles.artStart} cx="24" cy="184" r="6" />
+      <circle className={styles.artStart} cx="60" cy="36" r="6" />
+      <circle className={styles.artMeet} cx="118" cy="118" r="11" />
+      <circle className={styles.artMeetCore} cx="118" cy="118" r="4" />
+      <circle className={styles.artFinish} cx="296" cy="36" r="7" />
+      <g className={styles.artTag} transform="translate(186 140)">
+        <rect width="104" height="40" rx="8" />
+        <text x="12" y="17">
+          СБ · 09:00
+        </text>
+        <text x="12" y="32">
+          2 райдера
+        </text>
+      </g>
+    </svg>
+  );
+}
+// «Покататься вместе» (#245): one large block right after the hero, the same
+// for a guest and a rider, with no personal data — the two actions open the
+// composers in a window; a guest follows them to sign in.
+function TogetherHero({ user }) {
+  return (
+    <section className="frame" aria-labelledby="together-heading">
+      <div className={"frame-inner " + styles.together}>
+        <div className={styles.togetherCopy}>
+          <span className="eyebrow">Покатушки</span>
+          <h2 id="together-heading">Покататься вместе</h2>
+          <p>
+            Отметьте, когда хочется ехать, — подберём выезды и покажем, с кем
+            можно собраться. Велосипед в гараже не нужен.
+          </p>
+          <TogetherActions key={user?.id || "guest"} signedIn={!!user} />
+        </div>
+        <TogetherArt />
       </div>
     </section>
   );
@@ -273,6 +291,7 @@ export default function Home() {
             />
           </div>
         </section>
+        <TogetherHero user={user} />
         <div className={"page " + styles.sections}>
           {error && (
             <p className="error" role="alert">
@@ -318,9 +337,6 @@ export default function Home() {
               </p>
             )}
           </section>
-          {/* After the popular builds: on a portrait phone the first build stays
-              on the first screen (#83); planning comes right below it. */}
-          {user ? <HomePlanner key={user.id} /> : <RideTogether />}
           <section className="section" aria-labelledby="community-heading">
             <div className="section-head">
               <h2 id="community-heading">{t("Что нового")}</h2>

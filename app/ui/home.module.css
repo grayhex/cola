@@ -375,39 +375,121 @@
   }
 }
 
-/* Ride together (#233): guests see how it works, never a personal feed. */
+/* «Покататься вместе» (#245): a band of the ruled column right after the
+   hero — large type and two actions on the left, a route drawing over a
+   faint map grid on the right, a surface of its own in both themes. */
 .together {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: end;
-  gap: var(--space-4);
-  padding: var(--space-5);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-xl);
-  background: var(--surface-gradient);
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  align-items: center;
+  gap: var(--space-8);
+  overflow: hidden;
+  padding: var(--space-12) var(--space-10);
+  background:
+    linear-gradient(var(--line) 1px, transparent 1px) 0 0 / 40px 40px,
+    linear-gradient(90deg, var(--line) 1px, transparent 1px) 0 0 / 40px 40px,
+    var(--surface-gradient);
 }
-.together h2 {
-  margin: var(--space-1) 0 var(--space-2);
+.together::before {
+  /* Fade the grid towards the copy so the text sits on a calm surface. */
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to right,
+    var(--surface-subtle) 0%,
+    color-mix(in srgb, var(--surface-subtle) 88%, transparent) 45%,
+    transparent 100%
+  );
+  pointer-events: none;
 }
-.steps {
+.together > * {
+  position: relative;
+}
+.togetherCopy {
   display: grid;
-  gap: var(--space-1);
+  gap: var(--space-4);
+  justify-items: start;
+  min-width: 0;
+}
+.togetherCopy h2 {
   margin: 0;
-  padding-left: var(--space-5);
+  font-size: var(--text-5xl);
+  font-weight: var(--weight-black);
+  line-height: 1.05;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+.togetherCopy > p {
+  max-width: 36rem;
+  margin: 0;
   color: var(--text-secondary);
+  font-size: var(--text-lg);
+  line-height: var(--leading-snug);
 }
-.togetherActions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
+.togetherArt {
+  justify-self: end;
+  width: 100%;
+  max-width: 360px;
+  height: auto;
 }
-.plannerSkeleton {
-  min-height: 360px;
-  border-radius: var(--radius-xl);
+.artRoute,
+.artBranch {
+  fill: none;
+  stroke-linecap: round;
+  stroke-width: 4;
+}
+.artRoute {
+  stroke: var(--primary);
+}
+.artBranch {
+  stroke: var(--text-muted);
+  stroke-dasharray: 2 9;
+}
+.artStart {
+  fill: var(--surface);
+  stroke: var(--text-muted);
+  stroke-width: 3;
+}
+.artMeet {
+  fill: color-mix(in srgb, var(--primary) 18%, var(--surface));
+  stroke: var(--primary);
+  stroke-width: 2;
+}
+.artMeetCore,
+.artFinish {
+  fill: var(--primary);
+}
+.artTag rect {
+  fill: var(--surface);
+  stroke: var(--line-strong);
+}
+.artTag text {
+  fill: var(--text-secondary);
+  font: var(--weight-medium) 11px var(--font-mono);
+}
+@media (max-width: 1023px) {
+  .together {
+    padding: var(--space-10) var(--space-8);
+  }
+  .togetherCopy h2 {
+    font-size: var(--text-4xl);
+  }
 }
 @media (max-width: 720px) {
   .together {
     grid-template-columns: minmax(0, 1fr);
-    padding: var(--space-4);
+    gap: var(--space-4);
+    padding: var(--space-8) var(--space-4);
+  }
+  .togetherCopy h2 {
+    font-size: var(--text-3xl);
+  }
+  .togetherCopy > p {
+    font-size: var(--text-base);
+  }
+  /* The drawing is decoration: a phone keeps the words and actions. */
+  .togetherArt {
+    display: none;
   }
 }

@@ -4,7 +4,8 @@ import { randomUUID } from "node:crypto";
 import { registerVerified } from "../fixtures/verified-user.js";
 import { testConsents } from "../fixtures/legal.js";
 
-// #233 personal home planning and #241 coarse area picking, on real APIs.
+// #245 «Покататься вместе» on the home page, #241 coarse area picking and
+// #233 public filters, on real APIs.
 const origin = process.env.TEST_ORIGIN || "http://localhost:3100";
 const nonce = randomUUID().slice(0, 8);
 const day = (offset) =>
@@ -41,12 +42,10 @@ const titles = {
   maybe: `Воскресный гравий ${nonce}`,
   relaxed: `Спокойная прогулка ${nonce}`,
 };
-let organizer, community, plans;
+let organizer;
 test.beforeAll(async ({ browser }) => {
   organizer = await browser.newContext();
-  community = await browser.newContext();
   await member(organizer.request, "Organizer");
-  await member(community.request, "Neighbour");
   const bike = await call(organizer.request, "bikes", "POST", {
     name: "Planner bike",
     brand: "Giant",
@@ -72,36 +71,24 @@ test.beforeAll(async ({ browser }) => {
       meetingPoint: "Секретная калитка",
       passport,
     });
-  plans = {
-    suits: await plan(titles.suits, day(5), "06:30", "08:30", {
-      purpose: "social",
-      pace: "moderate",
-      area: { label: "Парк Горького", center: [37.6, 55.73], radiusM: 3000 },
-    }),
-    maybe: await plan(titles.maybe, day(6), "12:00", "15:00", {
-      purpose: "training",
-      pace: "sporty",
-      surface: "gravel",
-    }),
-    relaxed: await plan(titles.relaxed, day(7), "10:00", "11:00", {
-      purpose: "leisure",
-      pace: "relaxed",
-      area: { label: "Сокольники" },
-    }),
-  };
-  await call(community.request, "ride-intents", "POST", {
-    requestId: randomUUID(),
-    readiness: "ready",
-    timeZone: "Europe/Moscow",
-    windows: [{ startLocal: day(5) + "T06:00", endLocal: day(5) + "T10:00" }],
-    passport: { area: { label: "Нескучный сад" }, purpose: "social" },
-    visibility: "community",
-    allowSuggestions: true,
+  await plan(titles.suits, day(5), "06:30", "08:30", {
+    purpose: "social",
+    pace: "moderate",
+    area: { label: "Парк Горького", center: [37.6, 55.73], radiusM: 3000 },
+  });
+  await plan(titles.maybe, day(6), "12:00", "15:00", {
+    purpose: "training",
+    pace: "sporty",
+    surface: "gravel",
+  });
+  await plan(titles.relaxed, day(7), "10:00", "11:00", {
+    purpose: "leisure",
+    pace: "relaxed",
+    area: { label: "Сокольники" },
   });
 });
 test.afterAll(async () => {
   await organizer?.close();
-  await community?.close();
 });
 test.beforeEach(async ({ page }) => {
   await page.route("https://tile.openstreetmap.org/**", (route) =>
@@ -109,52 +96,36 @@ test.beforeEach(async ({ page }) => {
   );
 });
 
-test("signed-in home: going, suits, gather, composer with a keyboard-picked area, themes and account switch", async ({
+const personalApi =
+  /\/api\/(ride-matches|ride-intents|rides\?own|bikes$|rides\/settings)/;
+const togetherBlock = (page) =>
+  page.locator("section[aria-labelledby=together-heading]");
+
+test("signed-in home: one «Покататься вместе» block, both composers in windows, themes and account switch", async ({
   page,
 }, info) => {
-  const rider = await member(page.request, "Rider");
-  // A private intent drives only the owner's own suggestions.
-  await call(page.request, "ride-intents", "POST", {
-    requestId: randomUUID(),
-    readiness: "ready",
-    timeZone: "Europe/Moscow",
-    windows: [{ startLocal: day(5) + "T06:00", endLocal: day(5) + "T09:30" }],
-    passport: {
-      area: { label: "У реки", center: [37.61, 55.74], radiusM: 5000 },
-      purpose: "social",
-      pace: "moderate",
-    },
+  await member(page.request, "Rider");
+  const personal = [];
+  page.on("request", (r) => {
+    if (personalApi.test(r.url())) personal.push(r.url());
   });
-  const maybe = await call(
-    page.request,
-    "rides/public/" + plans.maybe.shareId,
-    "GET",
-  );
-  await call(page.request, `rides/${plans.maybe.id}/rsvp`, "PATCH", {
-    response: "maybe",
-    occurrenceAt: maybe.ride.scheduledAt,
-  });
-  await page.goto("/");
-  const planner = page.locator("section[aria-labelledby=planner-heading]");
+  await page.goto("/", { waitUntil: "networkidle" });
+  const block = togetherBlock(page);
   await expect(
-    planner.getByRole("heading", { name: "Покататься вместе" }),
+    block.getByRole("heading", { name: "Покататься вместе" }),
   ).toBeVisible();
-  const going = planner.locator("section[aria-labelledby=going-heading]");
-  const goingRow = going.locator("article", { hasText: titles.maybe });
-  await expect(goingRow).toContainText("Может быть");
-  await expect(goingRow).toContainText("Место встречи откроется после «Иду»");
-  await expect(goingRow).not.toContainText("Секретная калитка");
-  const suits = planner.locator("section[aria-labelledby=suits-heading]");
-  const suitsRow = suits.locator("article", { hasText: titles.suits });
-  await expect(suitsRow).toContainText("Подходит: время");
-  await expect(suitsRow).toContainText("область");
-  await expect(suits).not.toContainText(titles.relaxed);
-  const gather = planner.locator("section[aria-labelledby=gather-heading]");
-  await expect(gather.locator("article").first()).toContainText("целиком");
-  await gather.getByRole("button", { name: "3 ч", exact: true }).click();
-  await expect(gather.getByRole("button", { name: "3 ч" })).toHaveAttribute(
-    "aria-pressed",
-    "true",
+  // #245: the personal dashboard is gone, and so are its requests.
+  for (const gone of ["Ты собираешься", "Подходит тебе", "Можно собраться"])
+    await expect(page.getByText(gone, { exact: true })).toHaveCount(0);
+  expect(personal).toEqual([]);
+  const buttons = block.getByRole("button");
+  await expect(buttons).toHaveText(["Хочу кататься", "Организовать покатушку"]);
+  // Order: hero, the ride-together block, then the popular builds.
+  const top = async (selector) =>
+    (await page.locator(selector).first().boundingBox()).y;
+  expect(await top("#hero-title")).toBeLessThan(await top("#together-heading"));
+  expect(await top("#together-heading")).toBeLessThan(
+    await top("#popular-heading"),
   );
   for (const [theme, system] of [
     ["light", "light"],
@@ -171,22 +142,31 @@ test("signed-in home: going, suits, gather, composer with a keyboard-picked area
     expect(
       (
         await new AxeBuilder({ page })
-          .include("section[aria-labelledby=planner-heading]")
+          .include("section[aria-labelledby=together-heading]")
           .analyze()
       ).violations,
     ).toEqual([]);
+    // The block is its own surface: its background differs from the page.
+    const [pageBg, blockBg] = await block.evaluate((el) => [
+      getComputedStyle(document.body).backgroundColor,
+      getComputedStyle(el.querySelector(".frame-inner")).backgroundImage,
+    ]);
+    expect(blockBg).not.toBe("none");
+    expect(pageBg).toBeTruthy();
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth + 1,
       ),
     ).toBe(true);
-    await planner.screenshot({
-      path: info.outputPath(`home-planner-${theme}.png`),
+    await page.screenshot({
+      path: info.outputPath(`home-together-${theme}.png`),
+      fullPage: true,
       animations: "disabled",
     });
   }
-  // The composer is the same #231 form; the area is picked without a mouse.
-  await planner.getByRole("button", { name: "Хочу кататься" }).click();
+  // «Хочу кататься»: the #231 composer; the area is picked without a mouse.
+  const want = block.getByRole("button", { name: "Хочу кататься" });
+  await want.click();
   const dialog = page.getByRole("dialog", {
     name: "Хочу кататься",
     exact: true,
@@ -214,9 +194,7 @@ test("signed-in home: going, suits, gather, composer with a keyboard-picked area
   });
   await dialog.getByRole("button", { name: "Сохранить намерение" }).click();
   await expect(dialog).toHaveCount(0);
-  await expect(planner.getByRole("status")).toContainText(
-    "Намерение сохранено",
-  );
+  await expect(block.getByRole("status")).toContainText("Намерение сохранено");
   const own = await call(page.request, "ride-intents?scope=own", "GET");
   const picked = own.items.find(
     (i) => i.passport.area.label === "Воробьёвы горы",
@@ -224,47 +202,87 @@ test("signed-in home: going, suits, gather, composer with a keyboard-picked area
   expect(picked.passport.area.radiusM).toBe(3000);
   for (const n of picked.passport.area.center)
     expect(Math.round(n * 100) / 100).toBe(n); // never finer than 0.01°
+  // «Организовать покатушку» without a bike: an explanation, no ride.
+  const organize = block.getByRole("button", {
+    name: "Организовать покатушку",
+  });
+  await organize.click();
+  const planner = page.getByRole("dialog", { name: "Организовать покатушку" });
+  await expect(planner).toContainText("Покатушка привязана к велосипеду");
+  await expect(
+    planner.getByRole("link", { name: "Добавить велосипед" }),
+  ).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(planner).toHaveCount(0);
+  await expect(organize).toBeFocused();
+  expect((await call(page.request, "rides?own=1", "GET")).rides.length).toBe(0);
+  // With a bike the same window holds the plan form and saves on the spot.
+  await call(page.request, "bikes", "POST", {
+    name: "Rider bike",
+    brand: "Trek",
+    model: "Checkpoint",
+    year: 2024,
+    category: "gravel",
+    description: "",
+    color: "",
+    size: "",
+    weight: null,
+    is_public: true,
+  });
+  await organize.click();
+  await planner.getByLabel("Название", { exact: true }).fill("Круг с главной");
+  await planner.getByLabel("Дата и время старта").fill(day(4) + "T09:00");
+  await planner
+    .getByRole("button", { name: "Сохранить покатушку", exact: true })
+    .click();
+  await expect(planner).toHaveCount(0);
+  await expect(block.getByRole("status")).toContainText(
+    "Покатушка запланирована",
+  );
+  await expect(
+    block.getByRole("status").getByRole("link", { name: "Мои покатушки" }),
+  ).toHaveAttribute("href", "/account?tab=rides");
+  expect(
+    (await call(page.request, "rides?own=1", "GET")).rides.map((r) => r.title),
+  ).toContain("Круг с главной");
   // Logout and another account: nothing personal remains on the page.
   await call(page.request, "auth/logout", "POST");
   await page.goto("/");
   await expect(
-    page.getByRole("heading", { name: "Найти компанию для поездки" }),
-  ).toBeVisible();
-  await expect(
-    page.locator("section[aria-labelledby=planner-heading]"),
-  ).toHaveCount(0);
+    block.getByRole("link", { name: "Хочу кататься" }),
+  ).toHaveAttribute("href", "/ride-intents");
+  await expect(block.getByRole("status")).toHaveCount(0);
   await member(page.request, "Second");
   await page.goto("/");
   await expect(
-    planner.getByRole("heading", { name: "Покататься вместе" }),
+    block.getByRole("button", { name: "Хочу кататься" }),
   ).toBeVisible();
-  await expect(going.locator(".empty-state")).toBeVisible();
-  // Public feeds may mention the ride; the personal planner must not.
-  await expect(planner).not.toContainText(titles.maybe);
-  await expect(planner).not.toContainText("У реки");
-  // No intent and no preferences: an honest empty state, not a random list.
-  await expect(suits).toContainText(
-    "Пока нет намерений и предпочтений для подбора.",
-  );
-  await expect(suits.locator("article")).toHaveCount(0);
-  expect(rider.id).toBeTruthy();
+  await expect(block.getByRole("status")).toHaveCount(0);
+  await expect(block).not.toContainText("Воробьёвы горы");
 });
 
-test("guest home stays public: no personal requests, HTML or cached data", async ({
+test("guest home stays public: the same block, links to sign in, no personal requests or cached data", async ({
   page,
 }) => {
   const personal = [];
   page.on("request", (r) => {
-    if (/\/api\/(ride-matches|ride-intents)/.test(r.url()))
-      personal.push(r.url());
+    if (personalApi.test(r.url())) personal.push(r.url());
   });
   const response = await page.goto("/", { waitUntil: "networkidle" });
   const html = await response.text();
+  const block = togetherBlock(page);
   await expect(
-    page.getByRole("heading", { name: "Найти компанию для поездки" }),
+    block.getByRole("heading", { name: "Покататься вместе" }),
   ).toBeVisible();
+  // The block is server-rendered: no personal data, no layout shift.
+  expect(html).toContain("Покататься вместе");
+  await expect(
+    block.getByRole("link", { name: "Хочу кататься" }),
+  ).toHaveAttribute("href", "/ride-intents");
+  await expect(
+    block.getByRole("link", { name: "Организовать покатушку" }),
+  ).toHaveAttribute("href", "/account?tab=rides&action=plan");
   expect(personal).toEqual([]);
-  expect(html).not.toContain("Покататься вместе");
   expect(response.headers()["cache-control"] || "").not.toMatch(/public/);
 });
 
@@ -351,19 +369,39 @@ test("public filters: URL keeps shared choices only, slow answers never win, emp
   ).toBe(true);
 });
 
-test("reduced motion and a missing animation chunk keep the planner working", async ({
+test("the composer chunk: reduced motion, a failed load, a slow load, then the window", async ({
   page,
 }) => {
   await member(page.request, "Calm");
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/", { waitUntil: "networkidle" });
-  const gather = page.locator("section[aria-labelledby=gather-heading]");
-  await expect(gather).toBeVisible();
+  const block = togetherBlock(page);
+  const want = block.getByRole("button", { name: "Хочу кататься" });
+  await expect(want).toBeEnabled();
+  // A lost chunk shows an error and leaves the action usable.
   await page.route("**/_next/static/**/*.js", (route) => route.abort());
-  await gather.getByRole("button", { name: "1 ч", exact: true }).click();
-  await expect(gather.getByRole("button", { name: "1 ч" })).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
-  await expect(gather.locator("[aria-busy=false]")).toHaveCount(1);
+  await want.click();
+  await expect(block.getByRole("alert")).toContainText("Не удалось открыть");
+  await expect(want).toBeEnabled();
+  await page.unroute("**/_next/static/**/*.js");
+  // A slow network: the button says it is opening, then the window appears.
+  let release;
+  const slow = new Promise((resolve) => {
+    release = resolve;
+  });
+  await page.route("**/_next/static/**/*.js", async (route) => {
+    await slow;
+    await route.continue();
+  });
+  await want.click();
+  await expect(
+    block.getByRole("button", { name: "Открываем…" }).first(),
+  ).toBeDisabled();
+  release();
+  const dialog = page.getByRole("dialog", { name: "Хочу кататься" });
+  await expect(dialog).toBeVisible();
+  await expect(block.getByRole("alert")).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+  await expect(want).toBeFocused();
 });

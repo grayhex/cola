@@ -276,9 +276,15 @@ test("homepage rhythm, photo-first popular bikes and stable Light/Dark at every 
         .boundingBox();
       expect(Math.abs(last.y - card.y)).toBeLessThan(2);
       expect(last.x).toBeGreaterThan(card.x);
-      // Portrait phones see the first build on the first screen.
+      // #245 puts «Покататься вместе» between the hero and the builds. On a
+      // portrait phone the first build follows it directly: without that
+      // block it would still be on the first screen, so the hero cannot grow.
+      const together = await page
+        .locator("section[aria-labelledby=together-heading]")
+        .boundingBox();
+      expect(card.y).toBeGreaterThan(together.y + together.height);
       if (width <= 390 && height > width)
-        expect(card.y + 120).toBeLessThanOrEqual(height);
+        expect(card.y - together.height + 120).toBeLessThanOrEqual(height);
       await expect(
         page.locator(".global-header img, .garage-banner"),
       ).toHaveCount(0);

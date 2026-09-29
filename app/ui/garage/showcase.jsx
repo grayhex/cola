@@ -9,6 +9,7 @@ import { FilterControl, FilterChips } from "../compact-ui.jsx";
 import BikeGrid from "../bike-grid.jsx";
 import BikeCard from "../bike-card.jsx";
 import { Search } from "../icons.jsx";
+import AccountSectionHead from "../account-section.jsx";
 
 export default function Showcase({
   Main,
@@ -44,81 +45,113 @@ export default function Showcase({
         className={`garage ${embedded ? "" : "page"} ${styles.garage}`}
         onClickCapture={publicShowcase ? rememberScroll : undefined}
       >
-        {/* Datasets' title row: name, grey count, then the actions. */}
-        <div className={`garage-heading page-head ${styles.heading}`}>
-          <div className="showcase-heading-copy page-title">
-            <h1 className={styles.title}>
-              {account
-                ? t("Мои велосипеды")
-                : t(settings.showcaseTitle || "Наши велосипеды")}
-            </h1>
-            {!loading && total > 0 && (
-              <span className="count">{total.toLocaleString("ru-RU")}</span>
-            )}
-          </div>
-          <div
-            className={`showcase-actions page-actions ${styles.actions}`}
-            aria-label={t("Действия витрины")}
-          >
-            {!account && (
-              <ChoiceMenu
-                label="Порядок витрины"
-                value={sort}
-                choices={[
-                  { value: "new", label: "Новые", emoji: "new" },
-                  {
-                    value: "popular",
-                    label: "Популярные",
-                    emoji: "popular",
-                  },
-                  {
-                    value: "records",
-                    label: "Рекордсмены",
-                    emoji: "records",
-                  },
-                ]}
-                onChange={(value) => {
-                  setSort(value);
+        {account && embedded ? (
+          // «Мои велосипеды» shares the account section shell with «Мои
+          // покатушки» (#245): title and count, primary action, toolbar.
+          <AccountSectionHead
+            title={t("Мои велосипеды")}
+            count={!loading ? total : null}
+            helper="Ваш гараж: публичные и приватные велосипеды, история и детали."
+            action={
+              user && (
+                <button
+                  type="button"
+                  className="button add-bike"
+                  onClick={() => setModal({ type: "bike" })}
+                >
+                  <SiteIcon name="add" />
+                  {t("Добавить велосипед")}
+                </button>
+              )
+            }
+            toolbar={
+              <FilterControl
+                categories={bikeCategories}
+                selected={filters}
+                onChange={(values) => {
+                  setFilters(values);
                   setPage(1);
                 }}
               />
-            )}
-            <FilterControl
-              categories={bikeCategories}
-              selected={filters}
-              onChange={(values) => {
-                setFilters(values);
-                setPage(1);
-              }}
-            />
-            {!account && (
-              <Link
-                className="button add-bike"
-                href="/account?tab=bikes&action=add"
-                aria-label={t("Добавить велосипед")}
-              >
-                <SiteIcon name="add" />
-                <span className={styles.addLabel}>
-                  {t("Добавить велосипед")}
-                </span>
-              </Link>
-            )}
-            {user && account && (
-              <button
-                type="button"
-                className="button add-bike"
-                aria-label="Добавить велосипед"
-                title="Добавить велосипед"
-                onClick={() => setModal({ type: "bike" })}
-              >
-                <SiteIcon name="add" />
-                <span className={styles.addLabel}>
-                  {t("Добавить велосипед")}
-                </span>
-              </button>
-            )}
+            }
+          />
+        ) : (
+          // Datasets' title row: name, grey count, then the actions.
+          <div className={`garage-heading page-head ${styles.heading}`}>
+            <div className="showcase-heading-copy page-title">
+              <h1 className={styles.title}>
+                {account
+                  ? t("Мои велосипеды")
+                  : t(settings.showcaseTitle || "Наши велосипеды")}
+              </h1>
+              {!loading && total > 0 && (
+                <span className="count">{total.toLocaleString("ru-RU")}</span>
+              )}
+            </div>
+            <div
+              className={`showcase-actions page-actions ${styles.actions}`}
+              aria-label={t("Действия витрины")}
+            >
+              {!account && (
+                <ChoiceMenu
+                  label="Порядок витрины"
+                  value={sort}
+                  choices={[
+                    { value: "new", label: "Новые", emoji: "new" },
+                    {
+                      value: "popular",
+                      label: "Популярные",
+                      emoji: "popular",
+                    },
+                    {
+                      value: "records",
+                      label: "Рекордсмены",
+                      emoji: "records",
+                    },
+                  ]}
+                  onChange={(value) => {
+                    setSort(value);
+                    setPage(1);
+                  }}
+                />
+              )}
+              <FilterControl
+                categories={bikeCategories}
+                selected={filters}
+                onChange={(values) => {
+                  setFilters(values);
+                  setPage(1);
+                }}
+              />
+              {!account && (
+                <Link
+                  className="button add-bike"
+                  href="/account?tab=bikes&action=add"
+                  aria-label={t("Добавить велосипед")}
+                >
+                  <SiteIcon name="add" />
+                  <span className={styles.addLabel}>
+                    {t("Добавить велосипед")}
+                  </span>
+                </Link>
+              )}
+              {user && account && (
+                <button
+                  type="button"
+                  className="button add-bike"
+                  aria-label="Добавить велосипед"
+                  title="Добавить велосипед"
+                  onClick={() => setModal({ type: "bike" })}
+                >
+                  <SiteIcon name="add" />
+                  <span className={styles.addLabel}>
+                    {t("Добавить велосипед")}
+                  </span>
+                </button>
+              )}
+            </div>
           </div>
-        </div>
+        )}
         {publicShowcase && !user && (
           <p className={styles.invitation}>
             {t("Твой байк тоже здесь к месту")} ·{" "}

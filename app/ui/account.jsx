@@ -1,22 +1,25 @@
 "use client";
-import Link from "next/link";
 import RideAccount from "./ride-account.jsx";
+import AccountIntegrations from "./account-integrations.jsx";
+import TogetherActions from "./together-actions.jsx";
+import { CompactDialog } from "./compact-ui.jsx";
 import { useSearchParams } from "next/navigation";
 import BikeGrid from "./bike-grid.jsx";
 import { BadgeShelf } from "./achievements.jsx";
 import { useRef, useCallback, useEffect, useState } from "react";
 import {
-  Plus,
   ExternalLink,
   LogOut,
   LayoutGrid,
   UserRound,
   Bike,
   Route,
+  Cable,
   Users,
   Trophy,
   Palette,
   Settings2,
+  ChevronDown,
 } from "./icons.jsx";
 import AuthPage from "./auth-page.jsx";
 import AccountSecurity from "./account-security.jsx";
@@ -37,6 +40,7 @@ const tabIcons = {
   profile: UserRound,
   bikes: Bike,
   rides: Route,
+  integrations: Cable,
   social: Users,
   achievements: Trophy,
   appearance: Palette,
@@ -46,7 +50,8 @@ const tabs = {
   overview: "Обзор",
   profile: "Мой профиль",
   bikes: "Мои велосипеды",
-  rides: "Покатушки",
+  rides: "Мои покатушки",
+  integrations: "Интеграции и импорт",
   social: "Социальное",
   achievements: "Достижения",
   appearance: "Оформление",
@@ -456,6 +461,20 @@ function Appearance({ initial, onSaved }) {
     </form>
   );
 }
+// Old links opened imports inside «Покатушки»; they live under «Интеграции и
+// импорт» now (#245). The intent (which importer, the OAuth result) is kept.
+function forwardedTab(params) {
+  const tab = params.get("tab");
+  if (
+    tab === "rides" &&
+    (["add", "import"].includes(params.get("action")) ||
+      params.has("activity_sync"))
+  )
+    return "integrations";
+  return tabs[tab] ? tab : "overview";
+}
+const sectionHref = (key) =>
+  "/account" + (key === "overview" ? "" : "?tab=" + key);
 export default function Account() {
   const params = useSearchParams();
   const [data, setData] = useState(null),
@@ -464,7 +483,8 @@ export default function Account() {
     [kind, setKind] = useState("following"),
     [error, setError] = useState(""),
     [create, setCreate] = useState(false),
-    [selected, setSelected] = useState(null);
+    [selected, setSelected] = useState(null),
+    [menu, setMenu] = useState(false);
   const { viewer: user, refreshViewer } = useSite();
   // The reader comes from the server layout (#74). A profile change reloads
   // it too, so the header shows the new name at once.
@@ -500,8 +520,16 @@ export default function Account() {
   // Next navigation within /account does not remount Account. Observe the URL,
   // including a repeated add request after closing a previous wizard.
   useEffect(() => {
-    const requested = params.get("tab");
-    setTab(tabs[requested] ? requested : "overview");
+    const requested = forwardedTab(params);
+    if (
+      requested !== (params.get("tab") || "overview") &&
+      requested !== "overview"
+    ) {
+      const next = new URL(window.location.href);
+      next.searchParams.set("tab", requested);
+      window.history.replaceState(null, "", next.pathname + next.search);
+    }
+    setTab(requested);
     setSelected(requested === "bikes" ? params.get("bike") : null);
     setCreate(requested === "bikes" && params.get("action") === "add");
   }, [params]);
@@ -512,255 +540,305 @@ export default function Account() {
     next.searchParams.set("tab", "bikes");
     window.history.replaceState(null, "", next.pathname + next.search);
   }, []);
-  function navigate(next) {
+  function navigate(next, push = false) {
     setCreate(false);
     setSelected(null);
     setTab(next);
-    window.history.replaceState(
+    setMenu(false);
+    window.history[push ? "pushState" : "replaceState"](
       null,
       "",
-      "/account" + (next === "overview" ? "" : "?tab=" + next),
+      sectionHref(next),
     );
     if (next !== "bikes") refresh().catch((e) => setError(e.message));
   }
   if (user === null)
     return <AuthPage onAuthenticated={() => window.location.reload()} />;
   const profile = data?.profile;
+  // One list of sections: a column on wide screens, a sheet on phones.
+  const sections = (
+    <ul className="account-nav-list">
+      {Object.entries(tabs).map(([key, label]) => {
+        const Icon = tabIcons[key];
+        return (
+          <li key={key}>
+            <a
+              href={sectionHref(key)}
+              aria-current={tab === key ? "page" : undefined}
+              onClick={(e) => {
+                // A new tab or window keeps the browser's own behaviour.
+                if (
+                  e.button ||
+                  e.metaKey ||
+                  e.ctrlKey ||
+                  e.shiftKey ||
+                  e.altKey
+                )
+                  return;
+                e.preventDefault();
+                navigate(key, true);
+              }}
+            >
+              <Icon size={17} aria-hidden="true" />
+              {label}
+            </a>
+          </li>
+        );
+      })}
+    </ul>
+  );
+  const CurrentIcon = tabIcons[tab];
   return (
     <>
       <SocialHeader user={user} />
       <main className="page account-page">
-        <div className="account-heading">
-          <h1>Личный кабинет</h1>
-          {profile && (
-            <a href={profilePath(profile.username)} className="quiet">
-              <ExternalLink size={15} />
-              Мой публичный профиль
-            </a>
-          )}
-        </div>
-        <nav
-          className="account-tabs ui-tabs"
-          aria-label="Разделы личного кабинета"
-        >
-          {Object.entries(tabs).map(([key, label]) => (
+        <div className="account-layout">
+          <aside className="account-sidebar">
+            <h1>Личный кабинет</h1>
+            <div className="account-identity">
+              <Avatar person={profile || user} />
+              <div>
+                <strong>{profile?.name || user?.name}</strong>
+                {(profile?.username || user?.username) && (
+                  <span className="username">
+                    @{profile?.username || user?.username}
+                  </span>
+                )}
+              </div>
+            </div>
+            {profile && (
+              <a href={profilePath(profile.username)} className="quiet">
+                <ExternalLink size={15} />
+                Мой публичный профиль
+              </a>
+            )}
+            <nav className="account-nav" aria-label="Разделы личного кабинета">
+              {sections}
+            </nav>
             <button
-              key={key}
-              aria-current={tab === key ? "page" : undefined}
-              onClick={() => navigate(key)}
+              type="button"
+              className="account-nav-toggle"
+              aria-haspopup="dialog"
+              aria-expanded={menu}
+              onClick={() => setMenu(true)}
             >
-              {(() => {
-                const Icon = tabIcons[key];
-                return <Icon size={17} aria-hidden="true" />;
-              })()}
-              {label}
+              <CurrentIcon size={17} aria-hidden="true" />
+              <span>
+                <small>Раздел:</small> {tabs[tab]}
+              </span>
+              <ChevronDown size={16} aria-hidden="true" />
             </button>
-          ))}
-        </nav>
-        {error && (
-          <p role="alert" className="error">
-            {error}
-          </p>
-        )}
-        {!data ? (
-          <p role="status">Загружаем кабинет…</p>
-        ) : (
-          <div className="account-content">
-            {tab === "overview" && (
-              <>
-                <UsernamePrompt
-                  profile={profile}
-                  onChoose={() => navigate("profile")}
-                />
-                <section className="account-overview">
-                  <Avatar person={profile} size="large" />
-                  <div>
-                    <h2>{profile.name}</h2>
-                    <span className="username">@{profile.username}</span>
-                    <p>
-                      <a href={profilePath(profile.username)}>
-                        Посмотреть мой публичный профиль
-                      </a>
-                    </p>
-                  </div>
-                  <button
-                    className="button small"
-                    onClick={() => {
-                      window.history.replaceState(
-                        null,
-                        "",
-                        "/account?tab=bikes&action=add",
-                      );
-                    }}
-                  >
-                    <Plus size={16} />
-                    Добавить велосипед
-                  </button>
-                </section>
-                <div className="account-metrics">
-                  {[
-                    ["Всего байков", data.stats.bikes, "bikes"],
-                    ["Публичные", data.stats.public, "bikes"],
-                    ["Приватные", data.stats.private, "bikes"],
-                    ["Подписчики", profile.counts.followers, "followers"],
-                    ["Подписки", profile.counts.following, "following"],
-                    ["Друзья", profile.counts.friends, "friends"],
-                    ["Лайки", data.stats.likes, null],
-                  ].map(([label, count, target]) => (
-                    <button
-                      key={label}
-                      disabled={!target}
-                      onClick={() => {
-                        if (target === "bikes") navigate("bikes");
-                        else {
-                          setKind(target);
-                          navigate("social");
-                        }
-                      }}
-                    >
-                      <strong>{count}</strong>
-                      <span>{label}</span>
-                    </button>
-                  ))}
-                </div>
-                <section className="recent-bikes">
-                  <div className="section-heading">
-                    <h2>Последние велосипеды</h2>
-                    <button className="quiet" onClick={() => navigate("bikes")}>
-                      Все велосипеды
-                    </button>
-                  </div>
-                  <BikeGrid bikes={bikes.slice(0, 3)}>
-                    {bikes.slice(0, 3).map((b) => (
-                      <BikeCard
-                        key={b.id}
-                        bike={b}
-                        ownerView
-                        onOpen={() => {
-                          setSelected(b.id);
-                          setTab("bikes");
-                        }}
-                      />
-                    ))}
-                  </BikeGrid>
-                  {!bikes.length && (
-                    <p className="help">
-                      Добавьте первый велосипед и начните свою коллекцию.
-                    </p>
-                  )}
-                </section>
-              </>
+          </aside>
+          <div className="account-main">
+            {error && (
+              <p role="alert" className="error">
+                {error}
+              </p>
             )}
-            {tab === "rides" && (
-              <>
-                <p>
-                  <Link className="button secondary" href="/ride-intents">
-                    Хочу кататься · Мои намерения
-                  </Link>
-                </p>
-                <RideAccount bikes={bikes} />
-              </>
-            )}
-            {tab === "achievements" && (
-              <BadgeShelf endpoint="game/me" account />
-            )}
-            {tab === "profile" && (
-              <section className="social-panel">
-                <h2>Мой профиль</h2>
-                <ProfileEditor
-                  profile={profile}
-                  onSaved={() => refresh(true)}
-                />
-              </section>
-            )}
-            {tab === "bikes" && (
-              <Garage
-                account
-                embedded
-                startCreate={create}
-                onCreateOpened={createOpened}
-                initialBikeId={selected}
-              />
-            )}
-            {tab === "social" && (
-              <section className="social-panel">
-                <h2>Социальное</h2>
-                <div
-                  className="social-switch ui-tabs"
-                  role="group"
-                  aria-label="Связи"
-                >
-                  {[
-                    ["following", "Подписки"],
-                    ["followers", "Подписчики"],
-                    ["friends", "Друзья"],
-                  ].map(([key, label]) => (
-                    <button
-                      className="quiet"
-                      aria-pressed={kind === key}
-                      key={key}
-                      onClick={() => setKind(key)}
-                    >
-                      {label} · {profile.counts[key]}
-                    </button>
-                  ))}
-                </div>
-                <PeopleList
-                  key={kind}
-                  username={profile.username}
-                  kind={kind}
-                  user={user}
-                  onChange={() => refresh()}
-                />
-              </section>
-            )}
-            {tab === "appearance" && (
-              <section className="social-panel">
-                <h2>Оформление</h2>
-                <Appearance
-                  initial={data.preferences}
-                  onSaved={() => refresh()}
-                />
-              </section>
-            )}
-            {tab === "account" && (
-              <section className="social-panel account-private">
-                <div className="section-heading">
-                  <h2>Аккаунт</h2>
-                  <button
-                    className="button secondary small"
-                    onClick={async () => {
-                      try {
-                        await socialApi("auth/logout", "POST");
-                        // New session: reload the server viewer and discard private client state.
-                        // eslint-disable-next-line @next/next/no-location-assign-relative-destination
-                        window.location.assign("/");
-                      } catch (e) {
-                        setError(e.message);
-                      }
-                    }}
-                  >
-                    <LogOut size={16} />
-                    Выйти
-                  </button>
-                </div>
-                <p className="help">
-                  Эта информация доступна только вам. С нами с{" "}
-                  {new Date(profile.createdAt).toLocaleDateString("ru-RU")}.
-                </p>
-                <AccountSecurity
-                  emailStatus={
-                    <EmailStatus
-                      email={data.email}
-                      verified={!!user?.email_verified_at}
+            {!data ? (
+              <p role="status">Загружаем кабинет…</p>
+            ) : (
+              <div className="account-content">
+                {tab === "overview" && (
+                  <>
+                    <UsernamePrompt
+                      profile={profile}
+                      onChoose={() => navigate("profile")}
                     />
-                  }
-                />
-              </section>
+                    <section
+                      className="account-overview"
+                      aria-labelledby="overview-heading"
+                    >
+                      <div>
+                        <h2 id="overview-heading">Обзор</h2>
+                        <p className="help">
+                          Отметьте, когда хочется ехать, или соберите выезд
+                          сами.
+                        </p>
+                      </div>
+                      <TogetherActions
+                        key={user?.id}
+                        signedIn
+                        onSaved={() => refresh().catch(() => {})}
+                      />
+                    </section>
+                    <div className="account-metrics">
+                      {[
+                        ["Всего байков", data.stats.bikes, "bikes"],
+                        ["Публичные", data.stats.public, "bikes"],
+                        ["Приватные", data.stats.private, "bikes"],
+                        ["Подписчики", profile.counts.followers, "followers"],
+                        ["Подписки", profile.counts.following, "following"],
+                        ["Друзья", profile.counts.friends, "friends"],
+                        ["Лайки", data.stats.likes, null],
+                      ].map(([label, count, target]) => (
+                        <button
+                          key={label}
+                          disabled={!target}
+                          onClick={() => {
+                            if (target === "bikes") navigate("bikes", true);
+                            else {
+                              setKind(target);
+                              navigate("social", true);
+                            }
+                          }}
+                        >
+                          <strong>{count}</strong>
+                          <span>{label}</span>
+                        </button>
+                      ))}
+                    </div>
+                    <section className="recent-bikes">
+                      <div className="section-heading">
+                        <h2>Последние велосипеды</h2>
+                        <button
+                          className="quiet"
+                          onClick={() => navigate("bikes", true)}
+                        >
+                          Все велосипеды
+                        </button>
+                      </div>
+                      <BikeGrid bikes={bikes.slice(0, 3)}>
+                        {bikes.slice(0, 3).map((b) => (
+                          <BikeCard
+                            key={b.id}
+                            bike={b}
+                            ownerView
+                            onOpen={() => {
+                              setSelected(b.id);
+                              setTab("bikes");
+                            }}
+                          />
+                        ))}
+                      </BikeGrid>
+                      {!bikes.length && (
+                        <p className="help">
+                          Велосипеды появятся здесь после добавления в разделе
+                          «Мои велосипеды».
+                        </p>
+                      )}
+                    </section>
+                  </>
+                )}
+                {tab === "rides" && <RideAccount bikes={bikes} />}
+                {tab === "integrations" && (
+                  <AccountIntegrations
+                    bikes={bikes}
+                    onImported={() => refresh().catch(() => {})}
+                  />
+                )}
+                {tab === "achievements" && (
+                  <BadgeShelf endpoint="game/me" account />
+                )}
+                {tab === "profile" && (
+                  <section className="social-panel">
+                    <h2>Мой профиль</h2>
+                    <ProfileEditor
+                      profile={profile}
+                      onSaved={() => refresh(true)}
+                    />
+                  </section>
+                )}
+                {tab === "bikes" && (
+                  <Garage
+                    account
+                    embedded
+                    startCreate={create}
+                    onCreateOpened={createOpened}
+                    initialBikeId={selected}
+                  />
+                )}
+                {tab === "social" && (
+                  <section className="social-panel">
+                    <h2>Социальное</h2>
+                    <div
+                      className="social-switch ui-tabs"
+                      role="group"
+                      aria-label="Связи"
+                    >
+                      {[
+                        ["following", "Подписки"],
+                        ["followers", "Подписчики"],
+                        ["friends", "Друзья"],
+                      ].map(([key, label]) => (
+                        <button
+                          className="quiet"
+                          aria-pressed={kind === key}
+                          key={key}
+                          onClick={() => setKind(key)}
+                        >
+                          {label} · {profile.counts[key]}
+                        </button>
+                      ))}
+                    </div>
+                    <PeopleList
+                      key={kind}
+                      username={profile.username}
+                      kind={kind}
+                      user={user}
+                      onChange={() => refresh()}
+                    />
+                  </section>
+                )}
+                {tab === "appearance" && (
+                  <section className="social-panel">
+                    <h2>Оформление</h2>
+                    <Appearance
+                      initial={data.preferences}
+                      onSaved={() => refresh()}
+                    />
+                  </section>
+                )}
+                {tab === "account" && (
+                  <section className="social-panel account-private">
+                    <div className="section-heading">
+                      <h2>Аккаунт</h2>
+                      <button
+                        className="button secondary small"
+                        onClick={async () => {
+                          try {
+                            await socialApi("auth/logout", "POST");
+                            // New session: reload the server viewer and discard private client state.
+                            // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+                            window.location.assign("/");
+                          } catch (e) {
+                            setError(e.message);
+                          }
+                        }}
+                      >
+                        <LogOut size={16} />
+                        Выйти
+                      </button>
+                    </div>
+                    <p className="help">
+                      Эта информация доступна только вам. С нами с{" "}
+                      {new Date(profile.createdAt).toLocaleDateString("ru-RU")}.
+                    </p>
+                    <AccountSecurity
+                      emailStatus={
+                        <EmailStatus
+                          email={data.email}
+                          verified={!!user?.email_verified_at}
+                        />
+                      }
+                    />
+                  </section>
+                )}
+              </div>
             )}
           </div>
-        )}
+        </div>
       </main>
+      <CompactDialog
+        open={menu}
+        onClose={() => setMenu(false)}
+        title="Разделы кабинета"
+        className="account-nav-sheet"
+      >
+        <nav className="account-nav" aria-label="Разделы личного кабинета">
+          {sections}
+        </nav>
+      </CompactDialog>
       <SocialFooter />
     </>
   );

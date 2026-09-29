@@ -17,7 +17,6 @@ import {
   apiFilters,
   filterLabels,
 } from "../lib/ride-filters.js";
-import { matchSummary, listText } from "../lib/ride-match-labels.js";
 import { rideList, upcomingRides } from "../lib/rides.js";
 import { ridePassportInput } from "../lib/ride-plan.js";
 
@@ -89,29 +88,6 @@ test("date presets are local and bounded; URL filters accept only public known v
     filterLabels(filters).map(([k]) => k),
     ["when", "purpose", "surface", "duration", "area"],
   );
-});
-
-test("match reasons are localized from server codes only", () => {
-  assert.equal(listText(["время"]), "время");
-  assert.equal(listText(["время", "темп", "цель"]), "время, темп и цель");
-  const lines = matchSummary({
-    matched: ["time", "pace"],
-    partial: ["area"],
-    unknown: ["surface", "time"],
-    conflicts: ["purpose"],
-    reasons: [{ field: "area", status: "partial", code: "area_label_text" }],
-  });
-  assert.deepEqual(
-    lines.map((l) => l.text),
-    [
-      "Подходит: время и темп",
-      "Уточнить: район совпадает только по названию",
-      "Расходится: цель",
-      "Не указано: покрытие",
-      "Время не учитывалось",
-    ],
-  );
-  assert.deepEqual(matchSummary({}), []);
 });
 
 async function migrated() {

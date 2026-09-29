@@ -157,7 +157,8 @@ test("the cabinet offers once to replace an automatic username (#71)", async ({
     page.getByRole("status").filter({ hasText: "Профиль сохранён" }),
   ).toBeVisible();
   await page.goto("/account");
-  await expect(page.locator(".account-overview")).toContainText("@" + chosen);
+  // #245: the identity sits at the top of the account sidebar.
+  await expect(page.locator(".account-identity")).toContainText("@" + chosen);
   await expect(prompt).toHaveCount(0);
 });
 

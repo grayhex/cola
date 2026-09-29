@@ -50,6 +50,15 @@ test("account profile/avatar editing, public garage, author links and mutual mob
   await expect(
     page.getByRole("heading", { name: "Личный кабинет", exact: true }),
   ).toBeVisible();
+  // #245: a sidebar of links; phones open the same list from one selector.
+  const section = async (name) => {
+    if (isMobile) await page.getByRole("button", { name: /^Раздел:/ }).click();
+    await page
+      .getByRole("navigation", { name: "Разделы личного кабинета" })
+      .getByRole("link", { name, exact: true })
+      .click();
+    await expect(page).toHaveURL(/tab=/);
+  };
   const header = page.locator(".global-header");
   await expect(header).toBeVisible();
   await expect(
@@ -67,7 +76,7 @@ test("account profile/avatar editing, public garage, author links and mutual mob
     header.getByRole("button", { name: "Выйти", exact: true }),
   ).toBeVisible();
   await page.keyboard.press("Escape");
-  await page.getByRole("button", { name: "Мой профиль", exact: true }).click();
+  await section("Мой профиль");
   await page.getByLabel("Username", { exact: true }).fill(username);
   await page.getByLabel("Отображаемое имя").fill("Велосипедист Сергей");
   await page
@@ -88,7 +97,7 @@ test("account profile/avatar editing, public garage, author links and mutual mob
     .setInputFiles({ name: "avatar.png", mimeType: "image/png", buffer });
   await expect(page.getByRole("status")).toHaveText("Аватар обновлён");
   await expect(page.locator(".avatar-editor img")).toBeVisible();
-  await page.getByRole("button", { name: "Оформление", exact: true }).click();
+  await section("Оформление");
   await page
     .getByRole("combobox", { name: "Тема", exact: true })
     .selectOption("dark");
@@ -100,7 +109,7 @@ test("account profile/avatar editing, public garage, author links and mutual mob
     .selectOption("light");
   await page.getByRole("button", { name: "Сохранить оформление" }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
-  await page.getByRole("button", { name: "Аккаунт", exact: true }).click();
+  await section("Аккаунт");
   await expect(
     page.getByText("owner-" + nonce + "@example.test", { exact: true }),
   ).toBeVisible();

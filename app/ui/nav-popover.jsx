@@ -9,6 +9,7 @@ export default function NavPopover({
   label,
   href,
   linkLabel,
+  linkName,
   trigger,
   children,
   active,
@@ -132,6 +133,8 @@ export default function NavPopover({
         <Link
           className={"nav-trigger" + (active ? " active" : "")}
           href={href}
+          aria-label={linkName}
+          title={linkName}
           aria-current={active ? "page" : undefined}
         >
           {linkLabel}

@@ -194,10 +194,10 @@ test("left admin navigation, configurable emoji, frame labels and one-tap weekly
     expect(created.status()).toBe(201);
     await page.goto("/account?tab=rides&action=plan");
     await expect(page.locator(".ride-form")).toBeVisible();
-    await expect(page.locator(".ride-card")).toHaveCount(0);
+    // The custom emoji replaces the plan icon on the section's main action.
     await expect(
       page
-        .getByRole("button", { name: "Запланировать", exact: true })
+        .getByRole("button", { name: "Организовать покатушку", exact: true })
         .locator(".site-icon.custom"),
     ).toHaveText("🌅");
     await expect(

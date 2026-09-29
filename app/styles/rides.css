@@ -532,6 +532,28 @@
       padding: var(--space-4);
     }
   }
+
+  /* «Хочу кататься» / «Организовать покатушку» (#245): the same pair on the
+     home page and in the account overview. */
+  .together-actions {
+    display: grid;
+    gap: var(--space-3);
+    min-width: 0;
+  }
+  .together-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+  .together-actions > p {
+    margin: 0;
+  }
+  @media (max-width: 480px) {
+    .together-buttons > .button {
+      flex: 1 1 100%;
+      justify-content: center;
+    }
+  }
 }
 
 .ride-analysis-marker {
