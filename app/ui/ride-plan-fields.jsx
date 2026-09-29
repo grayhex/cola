@@ -3,6 +3,7 @@ import { useState } from "react";
 import { ridePlanOptions } from "../../lib/ride-plan-options.js";
 import { useMotionFeedback } from "./motion.jsx";
 import RidePassport from "./ride-passport.jsx";
+import AreaPicker from "./ride-area-map.jsx";
 import styles from "./ride-passport.module.css";
 
 export default function RidePlanFields({
@@ -72,14 +73,16 @@ export default function RidePlanFields({
       <label className="field">
         <span>Область поездки</span>
         <input
-          required={intent}
+          required={intent || !!area.center}
           maxLength={100}
           placeholder="Например, Измайловский парк"
           value={area.label || ""}
           onChange={(e) =>
             set(
               "area",
-              e.target.value ? { ...area, label: e.target.value } : undefined,
+              e.target.value || area.center
+                ? { ...area, label: e.target.value }
+                : undefined,
             )
           }
         />
@@ -89,6 +92,13 @@ export default function RidePlanFields({
             : "Приблизительный район, без домашнего адреса. Точное место встречи задаётся отдельно."}
         </small>
       </label>
+      <AreaPicker
+        value={area}
+        disabled={disabled}
+        onChange={(next) =>
+          set("area", next.label || next.center ? next : undefined)
+        }
+      />
       <div className="ride-form-grid">
         {intent ? (
           <fieldset className={styles.pace}>

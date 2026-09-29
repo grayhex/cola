@@ -16,6 +16,7 @@ import {
   planInterest,
   draftInterest,
 } from "../../../../lib/ride-matching.js";
+import { upcomingRides } from "../../../../lib/rides.js";
 export const runtime = "nodejs",
   dynamic = "force-dynamic";
 // Read-only matching (#232). Every read needs a session; answers are no-store
@@ -30,6 +31,10 @@ async function handler(req, { params }) {
       search = queryObject(new URL(req.url).searchParams);
     if (!(await rateLimit("ride-match:" + user.id, 120)))
       return fail("Слишком много запросов. Попробуйте позже.", 429);
+    if (p.length === 1 && p[0] === "upcoming") {
+      z.object({}).strict().parse(search);
+      return json({ rides: await upcomingRides(db, user.id) });
+    }
     if (p.length === 1 && p[0] === "rides")
       return json(await matchRides(db, user.id, riderQuery.parse(search)));
     if (p.length === 1 && p[0] === "interest")

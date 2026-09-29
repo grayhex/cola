@@ -643,6 +643,10 @@ test("rider matching: visibility, blocks, RSVP, invitations, time feasibility an
     );
     // Blocked viewers get nothing.
     await assert.rejects(matchRides(db, blocked, rq()), { status: 401 });
+    // Nothing to match on at all: an empty answer, not every public plan.
+    const newcomer = await f.user();
+    const none = await matchRides(db, newcomer, rq());
+    assert.deepEqual([none.basis, none.items, none.total], ["none", [], 0]);
     // No intents: saved preferences only rank, time stays unspecified.
     await db.query(
       "INSERT INTO ride_intent_preferences(owner_id,value) VALUES($1,$2)",

@@ -1,10 +1,17 @@
 import { ridePlanOptions } from "../../lib/ride-plan-options.js";
+import { AreaPreview } from "./ride-area-map.jsx";
 import styles from "./ride-passport.module.css";
 const rangeText = (v, unit) =>
   v?.min !== undefined && v?.max !== undefined
     ? `${v.min === v.max ? v.min : `${v.min}–${v.max}`} ${unit}`
     : null;
-export default function RidePassport({ passport = {}, compact = false }) {
+// `map` shows the coarse area circle; only detail pages opt in, lists never
+// load tiles per card.
+export default function RidePassport({
+  passport = {},
+  compact = false,
+  map = false,
+}) {
   const labels = {
     purpose: "Цель",
     pace: "Темп",
@@ -41,6 +48,7 @@ export default function RidePassport({ passport = {}, compact = false }) {
           )}
         </p>
       )}
+      {map && passport.area?.center && <AreaPreview area={passport.area} />}
       {!known.length && !passport.area?.label ? (
         <p className="help">Организатор пока не уточнил условия.</p>
       ) : (

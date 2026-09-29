@@ -124,6 +124,53 @@
     font-weight: var(--weight-semibold);
   }
 
+  /* ── Quick filters of upcoming rides (#233) ─────────────────────────── */
+  .ride-filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+  }
+  .ride-filter-open {
+    display: none;
+  }
+  .ride-filters {
+    display: grid;
+    gap: var(--space-3);
+    margin: var(--space-3) 0;
+    padding: var(--space-3);
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius-lg);
+    background: var(--surface-gradient);
+  }
+  .ride-filters .segmented,
+  dialog.sheet .segmented {
+    flex-wrap: wrap;
+  }
+  .ride-filter-fields {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: var(--space-2);
+  }
+  dialog.sheet .ride-filter-fields {
+    grid-template-columns: minmax(0, 1fr);
+    margin-top: var(--space-3);
+  }
+  @media (max-width: 1024px) {
+    .ride-filter-fields {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+  @media (max-width: 640px) {
+    .ride-filters {
+      display: none;
+    }
+    .ride-filter-open {
+      display: inline-flex;
+    }
+  }
+
   /* ── Route previews and maps ────────────────────────────────────────── */
   .ride-basemap {
     min-width: 0;

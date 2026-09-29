@@ -1,5 +1,6 @@
 "use client";
 import RidePlanFields from "./ride-plan-fields.jsx";
+import { planDraftKey } from "../../lib/ride-plan-options.js";
 import { useSearchParams } from "next/navigation";
 import EmailPolicyAction from "./email-policy-action.jsx";
 import SiteIcon from "./site-icon.jsx";
@@ -136,11 +137,25 @@ export default function RideAccount({ bikes }) {
       setError("");
       setNotice("");
       setVisibleMetrics(null);
+      // «Можно собраться» on the home page hands over a slot through this
+      // tab's storage, never the URL; it is used once.
+      let offered = null;
+      if (next === "plan")
+        try {
+          offered = JSON.parse(sessionStorage.getItem(planDraftKey) || "null");
+          sessionStorage.removeItem(planDraftKey);
+        } catch {}
       setForm({
         ...blank,
         recurrenceTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         bikeId: currentBikes[0]?.id || "",
         privacyRadiusM: config?.defaultRadius || 500,
+        ...(offered?.scheduledAt
+          ? {
+              scheduledAt: localDate(offered.scheduledAt),
+              expectedEndAt: localDate(offered.expectedEndAt),
+            }
+          : {}),
       });
     },
     [currentBikes, config?.defaultRadius],

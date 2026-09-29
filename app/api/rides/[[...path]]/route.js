@@ -42,6 +42,7 @@ import {
 } from "../../../../lib/rides.js";
 import { parseGarminCsv } from "../../../../lib/garmin-csv.js";
 import { z } from "zod";
+import { ridePlanOptions } from "../../../../lib/ride-plan-options.js";
 import { cleanupRides } from "../../../../lib/ride-storage.js";
 import {
   rideCommentPage,
@@ -50,6 +51,31 @@ import {
   changeRideComment,
   likeRide,
 } from "../../../../lib/ride-comments.js";
+// Public filters of upcoming plans (#233); ignored for other statuses.
+const planFilterKeys = [
+  "from",
+  "to",
+  "pace",
+  "purpose",
+  "surface",
+  "durationMin",
+  "durationMax",
+  "area",
+];
+const planChoice = (key) =>
+  z.enum(Object.keys(ridePlanOptions[key])).optional();
+const planFilters = z
+  .object({
+    from: z.iso.datetime({ offset: true }).optional(),
+    to: z.iso.datetime({ offset: true }).optional(),
+    pace: planChoice("pace"),
+    purpose: planChoice("purpose"),
+    surface: planChoice("surface"),
+    durationMin: z.coerce.number().int().min(0).max(10080).optional(),
+    durationMax: z.coerce.number().int().min(1).max(10080).optional(),
+    area: z.string().trim().min(1).max(100).optional(),
+  })
+  .strict();
 export const runtime = "nodejs",
   dynamic = "force-dynamic";
 /** @param {Request} req
@@ -93,6 +119,13 @@ async function handler(req, { params }) {
             ? uuid.parse(url.searchParams.get("bikeId"))
             : null,
           page: page(),
+          plan: planFilters.parse(
+            Object.fromEntries(
+              [...url.searchParams].filter(([key]) =>
+                planFilterKeys.includes(key),
+              ),
+            ),
+          ),
         }),
       );
     }

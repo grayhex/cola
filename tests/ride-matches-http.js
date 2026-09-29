@@ -106,6 +106,41 @@ for (const bad of [
 assert.equal((await rider("ride-matches/elsewhere")).status, 404);
 assert.equal((await rider("ride-matches/rides", "POST", {})).status, 405);
 
+// #233: the viewer's own upcoming commitments and public plan filters.
+assert.equal((await guest("ride-matches/upcoming")).status, 401);
+assert.equal((await organizer("ride-matches/upcoming?x=1")).status, 400);
+const upcoming = await organizer("ride-matches/upcoming");
+assert.equal(upcoming.status, 200, upcoming.text);
+assert.equal(upcoming.headers.get("cache-control"), "no-store");
+assert.equal(
+  upcoming.body.rides.find((r) => r.id === plan.body.id)?.role,
+  "organizer",
+);
+assert.equal(
+  (await rider("ride-matches/upcoming")).body.rides.some(
+    (r) => r.id === plan.body.id,
+  ),
+  false,
+  "no answer yet: not in the rider's plans",
+);
+const filtered = await guest(
+  "rides?status=planned&purpose=social&area=" + encodeURIComponent("HTTP"),
+);
+assert.equal(filtered.status, 200, filtered.text);
+assert.ok(filtered.body.rides.some((r) => r.id === plan.body.id));
+assert.doesNotMatch(filtered.text, /Hidden HTTP gate/);
+assert.equal(
+  (await guest("rides?status=planned&purpose=training")).body.rides.some(
+    (r) => r.id === plan.body.id,
+  ),
+  false,
+);
+for (const bad of [
+  "rides?status=planned&pace=fast",
+  "rides?status=planned&durationMax=0",
+  "rides?status=planned&from=tomorrow",
+])
+  assert.equal((await guest(bad)).status, 400, bad);
 const interestPath = `ride-matches/plans/${plan.body.id}/interest`;
 const interest = await organizer(interestPath);
 assert.equal(interest.status, 200, interest.text);
@@ -148,5 +183,5 @@ assert.ok(
 );
 assert.notEqual(organizerId, riderId);
 console.log(
-  "Ride matches HTTP: session, validation, owner-only interest, no-store and consent withdrawal passed",
+  "Ride matches HTTP: session, validation, owner-only interest, upcoming, public filters, no-store and consent withdrawal passed",
 );

@@ -85,7 +85,7 @@ function TimeField({ side, window, zone, index, onChange }) {
     </div>
   );
 }
-function IntentComposer({
+export function IntentComposer({
   initial,
   preferences,
   onSaved,
@@ -448,6 +448,28 @@ function IntentComposer({
     </>
   );
 }
+/** A composer draft: a quick window, a copy of `item`, or its edit. */
+export function intentDraft(kind = "custom", item = null, edit = false) {
+  const timeZone =
+    item?.timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const windows = edit
+    ? item.windows.map((w) => windowDraft(w, timeZone))
+    : kind === "custom"
+      ? [blankWindow()]
+      : quickWindows(kind, timeZone);
+  return {
+    ...(edit ? { id: item.id } : { requestId: crypto.randomUUID() }),
+    readiness: item?.readiness || "considering",
+    timeZone,
+    windows: windows.length ? windows : [blankWindow()],
+    passport: item?.passport || {},
+    ...(item?.meetNewPeople === undefined
+      ? {}
+      : { meetNewPeople: item.meetNewPeople }),
+    visibility: edit ? item.visibility : "private",
+    allowSuggestions: edit ? item.allowSuggestions : false,
+  };
+}
 function IntentCard({ item, busy, onEdit, onRepeat, onAction }) {
   const state =
     item.status === "expired"
@@ -584,25 +606,7 @@ export default function RideIntents() {
       />
     );
   function open(kind = "custom", item = null, edit = false) {
-    const timeZone =
-      item?.timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone;
-    const windows = edit
-      ? item.windows.map((w) => windowDraft(w, timeZone))
-      : kind === "custom"
-        ? [blankWindow()]
-        : quickWindows(kind, timeZone);
-    setDraft({
-      ...(edit ? { id: item.id } : { requestId: crypto.randomUUID() }),
-      readiness: item?.readiness || "considering",
-      timeZone,
-      windows: windows.length ? windows : [blankWindow()],
-      passport: item?.passport || {},
-      ...(item?.meetNewPeople === undefined
-        ? {}
-        : { meetNewPeople: item.meetNewPeople }),
-      visibility: edit ? item.visibility : "private",
-      allowSuggestions: edit ? item.allowSuggestions : false,
-    });
+    setDraft(intentDraft(kind, item, edit));
   }
   async function action(item, remove) {
     if (
