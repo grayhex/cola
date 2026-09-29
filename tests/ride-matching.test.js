@@ -318,6 +318,19 @@ test("group slots: a common window for everyone, never a chain of pairwise overl
     groupSlots([], { duration: { min: 60, max: 60 }, from: t, to: t + H }),
     [],
   );
+  // Overlapping windows of someone already counted do not split one group
+  // into adjacent copies that would use up the slot limit.
+  const repeated = groupSlots(
+    [w("A", 0, 4), w("A", 1, 5), w("B", 0, 5), w("C", 10, 12), w("D", 10, 12)],
+    { duration: { min: 60, max: 60 }, from: t, to: t + 20 * H },
+  );
+  assert.deepEqual(
+    repeated.map((s) => [s.startFrom, s.startUntil, s.users]),
+    [
+      [t, t + 4 * H, ["A", "B"]],
+      [t + 10 * H, t + 11 * H, ["C", "D"]],
+    ],
+  );
   // Deterministic regardless of input order.
   assert.deepEqual(
     groupSlots([...many].reverse(), {
@@ -787,6 +800,21 @@ test("organizer draft: one start or common slots; A↔B and B↔C never make A+B
       draftInterest(db, org, dq("start=2000-01-01T00:00:00Z")),
       { status: 400 },
     );
+    // More consenting people than 50 pages: reported pages stay requestable.
+    await db.exec(`
+INSERT INTO users(id,email,name,password_hash,username)
+ SELECT md5('crowd'||g)::uuid,'crowd'||g||'@test.invalid','U','h','crowd'||g FROM generate_series(1,1010) g;
+INSERT INTO ride_intents(id,owner_id,readiness,time_zone,passport,visibility,allow_suggestions,status,request_hash)
+ SELECT md5('crowd-i'||g)::uuid,md5('crowd'||g)::uuid,'ready','Europe/Moscow','{}','community',true,'active','h'
+ FROM generate_series(1,1010) g;
+INSERT INTO ride_intent_windows(intent_id,starts_at,ends_at)
+ SELECT md5('crowd-i'||g)::uuid,'${new Date(h(0)).toISOString()}','${new Date(h(4)).toISOString()}'
+ FROM generate_series(1,1010) g;`);
+    const start = encodeURIComponent(new Date(h(1.5)).toISOString());
+    const crowd = await draftInterest(db, org, dq(`start=${start}&page=50`));
+    assert.equal(crowd.people.total, 1012); // 1010 + a and b above
+    assert.equal(crowd.people.pages, 50);
+    assert.equal(crowd.people.items.length, 20);
   } finally {
     await db.close();
   }
