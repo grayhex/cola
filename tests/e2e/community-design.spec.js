@@ -404,6 +404,8 @@ test("search keyboard, groups, cancellation and real results navigation", async 
   await expect(page).toHaveURL(/component=Shimano/);
   await expect(page.getByText("Велосипеды с компонентом:")).toBeVisible();
   await page.goto("/");
+  // Wait for the client-rendered gallery before typing after the hard navigation.
+  await expect(page.locator("article[data-bike-id]")).toHaveCount(9);
   let release;
   await page.route("**/api/discovery/search?**", async (r) => {
     if (new URL(r.request().url()).searchParams.get("q") === "old")
