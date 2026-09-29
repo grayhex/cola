@@ -52,6 +52,7 @@ async function noOverflow(page) {
 test("Garmin import without track, chosen fields, GPX mismatch and future planning", async ({
   page,
 }, info) => {
+  const planTitle = "Weekend gravel plan " + randomUUID().slice(0, 8);
   await register(page);
   await bike(page);
   await page.goto("/rides");
@@ -165,15 +166,15 @@ test("Garmin import without track, chosen fields, GPX mismatch and future planni
   await expect(
     page.locator(".ride-form .ride-route path").first(),
   ).toBeVisible();
-  await page
-    .getByLabel("Название", { exact: true })
-    .fill("Weekend gravel plan");
+  await page.getByLabel("Название", { exact: true }).fill(planTitle);
   await page
     .getByLabel("Описание — необязательно")
     .fill("Coffee and quiet roads");
   const future = new Date(Date.now() + 172800000).toISOString().slice(0, 16);
   await page.getByLabel("Дата и время старта").fill(future);
-  await page.getByLabel("Место встречи").fill("Парк");
+  await page
+    .getByRole("textbox", { name: "Место встречи", exact: true })
+    .fill("Парк");
   await page.getByLabel("Особенности маршрута").fill("Гравий, Кофе");
   await page.getByLabel("Опубликовать", { exact: true }).check();
   await page
@@ -185,19 +186,17 @@ test("Garmin import without track, chosen fields, GPX mismatch and future planni
     .getByRole("button", { name: "Предстоящие", exact: true })
     .click();
   await expect(page.locator(".ride-card")).toHaveCount(1);
-  await expect(page.locator(".ride-card")).toContainText("Weekend gravel plan");
+  await expect(page.locator(".ride-card")).toContainText(planTitle);
   await filters.getByRole("button", { name: "Прошедшие", exact: true }).click();
   await expect(page.locator(".ride-card")).toHaveCount(1);
-  await expect(page.locator(".ride-card")).not.toContainText(
-    "Weekend gravel plan",
-  );
+  await expect(page.locator(".ride-card")).not.toContainText(planTitle);
   await filters.getByRole("button", { name: "Все", exact: true }).click();
   await expect(page.locator(".ride-card")).toHaveCount(2);
   await expect(
-    page.locator(".ride-card").filter({ hasText: "Weekend gravel plan" }),
+    page.locator(".ride-card").filter({ hasText: planTitle }),
   ).toContainText("Планируемая покатушка");
   const saved = await (await page.request.get("/api/rides?own=1")).json();
-  const planned = saved.rides.find((r) => r.title === "Weekend gravel plan");
+  const planned = saved.rides.find((r) => r.title === planTitle);
   expect(planned.hasTrack).toBe(true);
   expect(planned.metrics.avgSpeedMps).toBeNull();
   expect(planned.scheduledAt.slice(0, 10)).toBe(future.slice(0, 10));
@@ -207,9 +206,7 @@ test("Garmin import without track, chosen fields, GPX mismatch and future planni
     fullPage: true,
   });
   await page.goto("/");
-  await expect(
-    page.getByRole("heading", { name: "Weekend gravel plan" }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: planTitle })).toBeVisible();
 });
 
 test("market publishes images and price, enters home feed, and closes a listing", async ({

@@ -23,6 +23,7 @@ import {
   Weight,
   X,
 } from "lucide-react";
+import RidePlanFields from "../../ui/ride-plan-fields.jsx";
 import GlobalHeader from "../../ui/global-header.jsx";
 import { SocialFooter } from "../../ui/social-primitives.jsx";
 import SiteIcon, { slotIcons } from "../../ui/site-icon.jsx";
@@ -34,6 +35,7 @@ const sections = [
   ["type", "Типографика"],
   ["buttons", "Кнопки"],
   ["fields", "Поля"],
+  ["ride-plans", "Паспорт поездки"],
   ["cards", "Карточки"],
   ["badges", "Бейджи и теги"],
   ["tabs", "Вкладки и фильтры"],
@@ -754,6 +756,17 @@ function Icons() {
   );
 }
 
+function RidePlanDemo() {
+  const [passport, setPassport] = useState({
+    area: { label: "Измайловский парк" },
+    purpose: "social",
+    pace: "relaxed",
+    surface: "mixed",
+    beginnerFriendly: true,
+  });
+  return <RidePlanFields value={passport} onChange={setPassport} />;
+}
+
 // The sections of the kit: on their own page and inside the admin, where
 // the admin menu stays next to them (#131).
 export function UiKitSections() {
@@ -792,6 +805,15 @@ export function UiKitSections() {
         lead="Строка-карточка по образцу Hugging Face Datasets: моноширинное имя, метаданные через «•»."
       >
         <Cards />
+      </Section>
+      <Section
+        id="ride-plans"
+        title="Паспорт поездки"
+        lead="Общие параметры планов и будущих намерений. Неизвестные значения не подменяются нулями."
+      >
+        <Both wide>
+          <RidePlanDemo />
+        </Both>
       </Section>
       <Section id="badges" title="Бейджи и теги">
         <Badges />

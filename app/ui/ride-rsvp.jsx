@@ -25,7 +25,7 @@ export function RecurringRideLabel({ ride }) {
     </p>
   );
 }
-export default function RideRsvp({ ride }) {
+export default function RideRsvp({ ride, onResponse }) {
   const [state, setState] = useState(ride),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
@@ -59,6 +59,7 @@ export default function RideRsvp({ ride }) {
                   },
                 );
                 setState((v) => ({ ...v, ...next }));
+                await onResponse?.(next);
               } catch (e) {
                 setError(e.message);
               } finally {

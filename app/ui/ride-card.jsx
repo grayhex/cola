@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import RidePassport from "./ride-passport.jsx";
 import { SharedView } from "./motion.jsx";
 import RideRsvp, { RecurringRideLabel } from "./ride-rsvp.jsx";
 import { CalendarDays, FileSpreadsheet } from "lucide-react";
@@ -119,6 +120,9 @@ export default function RideCard({ ride: r, owner = false, onEdit }) {
         </p>
         <RecurringRideLabel ride={r} />
         <RideRsvp ride={r} />
+        {r.sourceKind === "planned" && (
+          <RidePassport passport={r.passport} compact />
+        )}
         <RideMetrics
           metrics={r.metrics}
           visibleMetrics={r.visibleMetrics}

@@ -1,0 +1,77 @@
+.passport {
+  min-width: 0;
+  padding-block: var(--space-3);
+  border-block: 1px solid var(--line);
+}
+.area {
+  margin: 0 0 var(--space-2);
+  font-weight: var(--weight-semibold);
+  overflow-wrap: anywhere;
+}
+.area small {
+  font-weight: var(--weight-regular);
+  color: var(--text-secondary);
+}
+.metadata {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  margin: 0;
+  font-size: var(--text-sm);
+}
+.metadata div {
+  min-width: 0;
+}
+.metadata dt {
+  color: var(--text-secondary);
+}
+.metadata dd {
+  margin: 0;
+  font-weight: var(--weight-semibold);
+}
+.composer {
+  min-width: 0;
+  margin: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  display: grid;
+  gap: var(--space-3);
+}
+.composer > legend {
+  font-weight: var(--weight-bold);
+  padding-inline: var(--space-2);
+}
+.pace {
+  min-width: 0;
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+.pace legend {
+  font-size: var(--text-sm);
+  margin-bottom: var(--space-2);
+}
+.pace > div {
+  flex-wrap: wrap;
+}
+.range {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+  padding: 0;
+  border: 0;
+  min-width: 0;
+  margin: 0;
+}
+.range legend {
+  font-size: var(--text-sm);
+  margin-bottom: var(--space-2);
+}
+.additional {
+  padding-top: var(--space-3);
+}
+.composer summary {
+  cursor: pointer;
+  padding-block: var(--space-2);
+}
