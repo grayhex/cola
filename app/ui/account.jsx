@@ -506,6 +506,11 @@ export default function Account() {
     },
     [userId, refreshViewer],
   );
+  // Stable: ActivitySync reloads when this identity changes, and a reload
+  // would reset the bike the rider has just chosen.
+  const reload = useCallback(() => {
+    refresh().catch(() => {});
+  }, [refresh]);
   useEffect(() => {
     const pending = requests.current;
     let active = true;
@@ -659,7 +664,7 @@ export default function Account() {
                       <TogetherActions
                         key={user?.id}
                         signedIn
-                        onSaved={() => refresh().catch(() => {})}
+                        onSaved={reload}
                       />
                     </section>
                     <div className="account-metrics">
@@ -722,10 +727,7 @@ export default function Account() {
                 )}
                 {tab === "rides" && <RideAccount bikes={bikes} />}
                 {tab === "integrations" && (
-                  <AccountIntegrations
-                    bikes={bikes}
-                    onImported={() => refresh().catch(() => {})}
-                  />
+                  <AccountIntegrations bikes={bikes} onImported={reload} />
                 )}
                 {tab === "achievements" && (
                   <BadgeShelf endpoint="game/me" account />
