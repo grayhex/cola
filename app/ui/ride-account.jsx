@@ -21,7 +21,10 @@ export default function RideAccount({ bikes }) {
     [planning, setPlanning] = useState(false),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
-    [notice, setNotice] = useState("");
+    [notice, setNotice] = useState(""),
+    [settingsRevision, setSettingsRevision] = useState(0),
+    // Kept apart from the list error: a loaded list must not hide it.
+    [settingsError, setSettingsError] = useState("");
   const action = useSearchParams().get("action");
   const requests = useRef({ revision: 0 });
   const refresh = useCallback(async () => {
@@ -54,15 +57,17 @@ export default function RideAccount({ bikes }) {
     let active = true;
     socialApi("rides/settings")
       .then((result) => {
-        if (active) setConfig(result);
+        if (!active) return;
+        setConfig(result);
+        setSettingsError("");
       })
       .catch((e) => {
-        if (active) setError(e.message);
+        if (active) setSettingsError(e.message);
       });
     return () => {
       active = false;
     };
-  }, []);
+  }, [settingsRevision]);
   // Old and new links: ?action=plan opens the planner once.
   const handled = useRef(null);
   useEffect(() => {
@@ -82,7 +87,14 @@ export default function RideAccount({ bikes }) {
     setError("");
     setNotice("");
     try {
-      const { ride } = await socialApi("rides/owner/" + r.shareId);
+      // The editor needs ride settings; a failed first load is retried here
+      // so «Изменить» never hides the list without showing the form.
+      const [{ ride }, settings] = await Promise.all([
+        socialApi("rides/owner/" + r.shareId),
+        config || socialApi("rides/settings"),
+      ]);
+      setConfig(settings);
+      setSettingsError("");
       setEditing(ride);
     } catch (e) {
       setError(e.message);
@@ -147,10 +159,18 @@ export default function RideAccount({ bikes }) {
           )
         }
       />
-      {error && (
+      {(error || settingsError) && (
         <p role="alert" className="error">
-          {error}{" "}
-          <button className="quiet" onClick={() => refresh()}>
+          {error || settingsError}{" "}
+          <button
+            className="quiet"
+            onClick={() => {
+              setError("");
+              setSettingsError("");
+              void refresh();
+              if (!config) setSettingsRevision((v) => v + 1);
+            }}
+          >
             Повторить
           </button>
         </p>

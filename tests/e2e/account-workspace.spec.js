@@ -177,3 +177,86 @@ test("sidebar, overview actions, one section shell, imports moved, old links and
     animations: "disabled",
   });
 });
+
+test("a failed ride settings load does not strand «Изменить» or «Повторить»", async ({
+  page,
+}) => {
+  const response = await registerVerified(page.request, {
+    headers: { origin },
+    data: {
+      ...testConsents,
+      name: "Settings " + randomUUID().slice(0, 8),
+      email: `settings-${randomUUID()}@example.test`,
+      password: "workspace-secret-123",
+    },
+  });
+  expect(response.status()).toBe(201);
+  const bike = await (
+    await page.request.post("/api/bikes", {
+      headers: { origin },
+      data: {
+        name: "Settings gravel",
+        brand: "Canyon",
+        model: "Grizl",
+        year: 2024,
+        category: "gravel",
+        description: "",
+        color: "",
+        size: "",
+        weight: null,
+        is_public: false,
+      },
+    })
+  ).json();
+  const created = await page.request.post("/api/rides/plan", {
+    headers: { origin },
+    data: {
+      bikeId: bike.id,
+      title: "План для правки",
+      description: "",
+      isPublic: false,
+      privacyEnabled: false,
+      privacyRadiusM: 500,
+      scheduledAt: new Date(Date.now() + 3 * 86400000).toISOString(),
+    },
+  });
+  expect(created.status()).toBe(201);
+  // The next settings request fails; later ones succeed.
+  let fails = 1;
+  await page.route("**/api/rides/settings", (route) => {
+    if (fails <= 0) return route.continue();
+    fails--;
+    return route.fulfill({
+      status: 500,
+      json: { error: "Настройки недоступны" },
+    });
+  });
+  await page.goto("/account?tab=rides");
+  const section = page.locator(".account-section");
+  await expect(section.getByRole("alert")).toContainText(
+    "Настройки недоступны",
+  );
+  // «Повторить» reloads the missing settings too.
+  const settings = page.waitForResponse((r) =>
+    r.url().endsWith("/api/rides/settings"),
+  );
+  await section.getByRole("button", { name: "Повторить" }).click();
+  expect((await settings).ok()).toBe(true);
+  await expect(section.getByRole("alert")).toHaveCount(0);
+  // Editing after a failed first load fetches the settings itself.
+  fails = 1;
+  await page.goto("/account?tab=rides");
+  await expect(section.getByRole("alert")).toContainText(
+    "Настройки недоступны",
+  );
+  await page
+    .locator(".ride-card", { hasText: "План для правки" })
+    .getByRole("button", { name: "Изменить" })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Изменить покатушку" }),
+  ).toBeVisible();
+  await expect(page.getByLabel("Название", { exact: true })).toHaveValue(
+    "План для правки",
+  );
+});
