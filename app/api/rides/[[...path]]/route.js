@@ -32,6 +32,7 @@ import {
   rideSettings,
   rideSettingsInput,
   previewRide,
+  previewParse,
   saveRide,
   deleteRide,
   rideDetail,
@@ -43,7 +44,7 @@ import {
 import { parseGarminCsv } from "../../../../lib/garmin-csv.js";
 import { z } from "zod";
 import { ridePlanOptions } from "../../../../lib/ride-plan-options.js";
-import { cleanupRides } from "../../../../lib/ride-storage.js";
+import { collectRideFiles } from "../../../../lib/ride-storage.js";
 import {
   rideCommentPage,
   rideReplyPage,
@@ -78,6 +79,12 @@ const planFilters = z
   .strict();
 export const runtime = "nodejs",
   dynamic = "force-dynamic";
+// #248: a saved or planned ride frees only the preview it consumed; the
+// global storage pass runs in scripts/cleanup-rides.js, never in a request.
+const releasePreview = (/** @type {string | undefined} */ previewId) =>
+  previewId
+    ? collectRideFiles(db, [{ id: previewId, kind: "preview" }]).catch(() => {})
+    : Promise.resolve();
 /** @param {Request} req
  * @param {{ params: Promise<{ path: string[] | undefined }> }} context */
 async function handler(req, { params }) {
@@ -210,7 +217,8 @@ async function handler(req, { params }) {
       const result = await transaction((q) =>
         planRide(q, user.id, input, config),
       );
-      await cleanupRides(db).catch(() => {});
+      // #248: only the preview this request consumed, never a storage scan.
+      await releasePreview(input.previewId);
       return json(result, 201);
     }
     if (p.length === 2 && p[1] === "track" && m === "POST") {
@@ -272,10 +280,13 @@ async function handler(req, { params }) {
       if (!config.enabled)
         return fail("Загрузка покатушек временно выключена", 403);
       const bytes = await readBytes(req, config.maxGpxBytes);
+      // Parse before the transaction: no connection is held while decoding.
+      const parsed = previewParse(bytes, config);
       return json(
         await transaction((q) =>
           previewRide(q, user.id, bytes, config, {
             planned: url.searchParams.get("purpose") === "plan",
+            parsed,
           }),
         ),
         201,
@@ -289,7 +300,7 @@ async function handler(req, { params }) {
       const result = await transaction((q) =>
         saveRide(q, user.id, input, config),
       );
-      await cleanupRides(db).catch(() => {});
+      await releasePreview(input.previewId);
       return json(result, 201);
     }
     if (
@@ -334,10 +345,13 @@ async function handler(req, { params }) {
       );
     }
     if (p.length === 1 && m === "DELETE") {
-      const result = await transaction((q) =>
+      const { fileId, ...result } = await transaction((q) =>
         deleteRide(q, user.id, uuid.parse(p[0])),
       );
-      await cleanupRides(db).catch(() => {});
+      // The deleted ride's own file; a failure stays queued for the job.
+      await collectRideFiles(db, [{ id: fileId, kind: "ride" }]).catch(
+        () => {},
+      );
       return json(result);
     }
     return fail("Не найдено", 404);

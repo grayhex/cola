@@ -188,6 +188,7 @@ try {
           "tests/ride-matches-http.js",
           "tests/activity-sync-http.js",
           ...(externalDatabase ? ["tests/activity-sync-concurrency.js"] : []),
+          ...(externalDatabase ? ["tests/ride-storage-concurrency.js"] : []),
           "tests/journal-http.js",
           "tests/discovery-http.js",
           "tests/gamification-http.js",
