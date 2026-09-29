@@ -512,21 +512,11 @@ test("migration 021 keeps existing bikes, planned history and foreign-currency a
     await schema(db, true);
     const owner = await user(db, "upgrade_owner");
     const bike = await db.transaction((q) => insertBike(q, owner, inputBike()));
-    const ride = await db.transaction((q) =>
-      planRide(
-        q,
-        owner,
-        {
-          bikeId: bike,
-          title: "Existing plan",
-          description: "",
-          isPublic: true,
-          privacyEnabled: false,
-          privacyRadiusM: 500,
-          scheduledAt: new Date(Date.now() + 86400000).toISOString(),
-        },
-        rideDefaults,
-      ),
+    // Seed the historical schema directly: the current domain writer expects all migrations.
+    const ride = { id: randomUUID() };
+    await db.query(
+      "INSERT INTO rides(id,owner_id,bike_id,share_id,title,source_hash,status,source_kind,has_track,started_at,is_public,distance_m,point_count,public_point_count,public_geometry,privacy_radius_m) VALUES($1,$2,$3,$1,'Existing plan','legacy-plan','planned','planned',false,$4,true,0,0,0,'[]',500)",
+      [ride.id, owner, bike, new Date(Date.now() + 86400000).toISOString()],
     );
     const listing = randomUUID();
     await db.query(

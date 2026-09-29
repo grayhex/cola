@@ -1,4 +1,5 @@
 "use client";
+import RidePlanFields from "./ride-plan-fields.jsx";
 import { useSearchParams } from "next/navigation";
 import EmailPolicyAction from "./email-policy-action.jsx";
 import SiteIcon from "./site-icon.jsx";
@@ -23,6 +24,9 @@ const blank = {
   scheduledAt: "",
   features: "",
   meetingPoint: "",
+  meetingVisibility: "participants",
+  passport: {},
+  expectedEndAt: "",
   invitations: "",
   recurrence: "none",
   recurrenceTimezone: "Europe/Moscow",
@@ -234,6 +238,9 @@ export default function RideAccount({ bikes }) {
         recurrenceTimezone: ride.recurrenceTimezone,
         features: ride.features.join(", "),
         meetingPoint: ride.meetingPoint,
+        meetingVisibility: ride.meetingVisibility || "public",
+        passport: ride.passport || {},
+        expectedEndAt: localDate(ride.planEndsAt || ride.expectedEndAt),
         invitations: ride.invitations.map((i) => i.username).join(", "),
       });
     } catch (e) {
@@ -313,6 +320,9 @@ export default function RideAccount({ bikes }) {
                 scheduledAt,
                 features,
                 meetingPoint,
+                meetingVisibility,
+                passport,
+                expectedEndAt,
                 invitations,
                 ...base
               } = form;
@@ -327,6 +337,11 @@ export default function RideAccount({ bikes }) {
                         .map((s) => s.trim())
                         .filter(Boolean),
                       meetingPoint,
+                      meetingVisibility,
+                      passport,
+                      expectedEndAt: expectedEndAt
+                        ? new Date(expectedEndAt).toISOString()
+                        : null,
                       invitations: invitations
                         .split(/[\s,;]+/)
                         .map((s) => s.replace(/^@/, ""))
@@ -513,6 +528,41 @@ export default function RideAccount({ bikes }) {
                     </label>
                   </div>
                   <label className="field">
+                    <span>Кто видит точное место встречи</span>
+                    <select
+                      value={form.meetingVisibility}
+                      onChange={(e) => set("meetingVisibility", e.target.value)}
+                    >
+                      <option value="participants">
+                        Организатор и участники с ответом «Иду»
+                      </option>
+                      <option value="public">Все, кому доступна поездка</option>
+                    </select>
+                  </label>
+                  <p className="help">
+                    Не указывайте точный адрес в названии, описании и
+                    особенностях. Эти поля публикуются вместе с поездкой.
+                    Маршрут тоже может раскрыть место; при закрытом месте
+                    встречи края трека скрываются автоматически.
+                  </p>
+                  <RidePlanFields
+                    value={form.passport}
+                    onChange={(v) => set("passport", v)}
+                    disabled={busy}
+                  />
+                  <label className="field">
+                    <span>Ожидаемое окончание — необязательно</span>
+                    <input
+                      type="datetime-local"
+                      value={form.expectedEndAt}
+                      onChange={(e) => set("expectedEndAt", e.target.value)}
+                    />
+                    <small>
+                      В вашем часовом поясе. Для серии переносится вместе с
+                      датой выезда.
+                    </small>
+                  </label>
+                  <label className="field">
                     <span>Особенности маршрута</span>
                     <input
                       maxLength={640}
@@ -607,12 +657,21 @@ export default function RideAccount({ bikes }) {
               <label className="ride-toggle">
                 <input
                   type="checkbox"
-                  checked={form.privacyEnabled}
+                  checked={
+                    form.privacyEnabled ||
+                    (mode === "plan" &&
+                      form.meetingVisibility === "participants")
+                  }
+                  disabled={
+                    mode === "plan" && form.meetingVisibility === "participants"
+                  }
                   onChange={(e) => set("privacyEnabled", e.target.checked)}
                 />
                 Скрыть начало и конец маршрута
               </label>
-              {form.privacyEnabled && (
+              {(form.privacyEnabled ||
+                (mode === "plan" &&
+                  form.meetingVisibility === "participants")) && (
                 <label className="field">
                   <span>Радиус приватности</span>
                   <select

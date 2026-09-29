@@ -1,6 +1,7 @@
 "use client";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import RidePassport from "./ride-passport.jsx";
 import { SharedView } from "./motion.jsx";
 import RideRsvp, { RecurringRideLabel } from "./ride-rsvp.jsx";
 import RideSpeedChart from "./ride-speed-chart.jsx";
@@ -99,6 +100,20 @@ export default function RidePage({
                 · <LocalDate value={ride.scheduledAt} time />
               </p>
             )}
+            {ride.sourceKind === "planned" && (
+              <RidePassport passport={ride.passport} />
+            )}
+            {ride.expectedEndAt && (
+              <p className="help">
+                Ожидаемое окончание:{" "}
+                <LocalDate value={ride.expectedEndAt} time />
+              </p>
+            )}
+            {ride.meetingHidden && (
+              <p className="help" role="status">
+                Точное место встречи доступно после ответа «Иду».
+              </p>
+            )}
             {ride.meetingPoint && <p>Место встречи: {ride.meetingPoint}</p>}
             {ride.features?.length > 0 && (
               <ul className="ride-features">
@@ -121,7 +136,25 @@ export default function RidePage({
             {ride.invitation && (
               <p className="help">Вы приглашены организатором.</p>
             )}
-            <RideRsvp ride={ride} />
+            <RideRsvp
+              ride={ride}
+              onResponse={async (next) => {
+                // Remove the previous permission-dependent value immediately, even if the refresh fails.
+                setRide((r) =>
+                  r.meetingVisibility === "participants" && !r.isOwner
+                    ? { ...r, ...next, meetingPoint: "", meetingHidden: true }
+                    : { ...r, ...next },
+                );
+                try {
+                  const data = await socialApi(
+                    "rides/" + (ride.isOwner ? "owner/" : "public/") + share,
+                  );
+                  setRide(data.ride);
+                } catch (e) {
+                  setError(e.message);
+                }
+              }}
+            />
             {ride.isOwner && ride.invitations?.length > 0 && (
               <section className="ride-invitation">
                 <h2>Приглашённые</h2>
