@@ -379,7 +379,7 @@ export default function PlanForm({
               выберите «По приглашению».
             </p>
           )}
-          <div className="planning-row">
+          <div className="planning-row wide">
             <label className="field">
               <span>Кто видит точное место встречи</span>
               <select

@@ -1265,6 +1265,10 @@
     gap: var(--space-3);
     min-width: 0;
   }
+  /* Long labels and selects: side by side only where both fit. */
+  .planning-row.wide {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  }
   .planning-row .field {
     margin: 0;
   }
