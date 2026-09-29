@@ -1,6 +1,7 @@
 import { registerVerified } from "../fixtures/verified-user.js";
 import { testConsents } from "../fixtures/legal.js";
 import { test, expect } from "@playwright/test";
+import AxeBuilder from "@axe-core/playwright";
 import pg from "pg";
 import sharp from "sharp";
 import { readFile } from "node:fs/promises";
@@ -300,6 +301,171 @@ test("homepage rhythm, photo-first popular bikes and stable Light/Dark at every 
       });
     }
   }
+});
+
+test("home is one ruled column of six bands with rails inside, record art and a closing «О проекте» (#254)", async ({
+  page,
+  isMobile,
+}, info) => {
+  const art = randomUUID(),
+    missing = randomUUID();
+  const png = await sharp({
+    create: { width: 160, height: 160, channels: 4, background: "#f3b51b" },
+  })
+    .png()
+    .toBuffer();
+  const assets = [];
+  await page.route("**/api/assets/**", (r) => {
+    const url = new URL(r.request().url());
+    assets.push(url.pathname + url.search);
+    return url.pathname.endsWith(art)
+      ? r.fulfill({ body: png, contentType: "image/png" })
+      : r.fulfill({ status: 404, body: "missing" });
+  });
+  await fixture(page, {
+    ...home,
+    records: [
+      { ...home.records[0], imageId: art },
+      {
+        key: "heavy",
+        name: "Самый тяжёлый",
+        metric: "weight",
+        imageId: missing,
+        holder: {
+          shareId: "community-share-1",
+          name: "Cube Travel",
+          value: 16,
+        },
+      },
+      {
+        key: "plain",
+        name: "Без иллюстрации",
+        metric: "weight",
+        holder: { shareId: "community-share-2", name: "Conway", value: 12 },
+      },
+    ],
+  });
+  const widths = isMobile
+    ? [[390, 844]]
+    : [
+        [1280, 900],
+        [1440, 900],
+        [1600, 900],
+        [1920, 1080],
+        [2560, 1200],
+      ];
+  for (const [width, height] of widths) {
+    await page.setViewportSize({ width, height });
+    await page.goto("/");
+    await expect(page.locator("article[data-bike-id]")).toHaveCount(9);
+    // Six bands in order, each a band of the ruled column; nothing between.
+    const bands = page.locator("main > section.frame");
+    expect(
+      await bands.evaluateAll((nodes) =>
+        nodes.map((n) => n.getAttribute("aria-labelledby")),
+      ),
+    ).toEqual([
+      "hero-title",
+      "together-heading",
+      "popular-heading",
+      "community-heading",
+      "records-heading",
+      "about-heading",
+    ]);
+    await expect(page.locator("main .section-head")).toHaveCount(0);
+    await expect(page.locator("main > :not(section.frame)")).toHaveCount(0);
+    // The inner column and its side rails line up in every band.
+    const columns = await page
+      .locator("main > section.frame > .frame-inner")
+      .evaluateAll((nodes) =>
+        nodes.map((n) => {
+          const r = n.getBoundingClientRect();
+          return [Math.round(r.left), Math.round(r.width)];
+        }),
+      );
+    for (const column of columns) expect(column).toEqual(columns[0]);
+    // Blocks 3–6 carry their title in a rail inside the band.
+    for (const id of ["popular", "community", "records", "about"]) {
+      const band = page.locator(`[data-home-band="${id}"]`);
+      const heading = band.getByRole("heading", { level: 2 });
+      await expect(heading).toHaveCount(1);
+      const [rail, box] = await Promise.all([
+        heading.evaluate((h) => h.parentElement.getBoundingClientRect().height),
+        band.boundingBox(),
+      ]);
+      expect(rail).toBeLessThanOrEqual(isMobile ? 104 : 56);
+      expect((await heading.boundingBox()).y).toBeGreaterThanOrEqual(box.y);
+    }
+    const band = (id) => page.locator(`[data-home-band="${id}"]`).boundingBox();
+    const [popular, community, records, about] = await Promise.all(
+      ["popular", "community", "records", "about"].map(band),
+    );
+    expect(records.height).toBeLessThan(popular.height);
+    if (!isMobile) expect(records.height).toBeLessThan(community.height);
+    // The footer follows the closing band directly.
+    const footer = await page.locator("footer").last().boundingBox();
+    expect(Math.abs(footer.y - (about.y + about.height))).toBeLessThan(2);
+    // «Что нового»: a strict grid, cells of a row share top and height.
+    const cells = await page
+      .locator('[data-home-band="community"] article')
+      .evaluateAll((nodes) =>
+        nodes.map((n) => {
+          const r = n.getBoundingClientRect();
+          return [Math.round(r.top), Math.round(r.height)];
+        }),
+      );
+    expect(cells).toHaveLength(3);
+    if (width >= 1280) for (const cell of cells) expect(cell).toEqual(cells[0]);
+    // Records: the rule's art, a fallback for a broken or missing one.
+    const recordsBand = page.locator('[data-home-band="records"]');
+    await recordsBand.scrollIntoViewIfNeeded();
+    const arts = recordsBand.locator(".game-art");
+    await expect(arts).toHaveCount(3);
+    await expect
+      .poll(() =>
+        arts
+          .nth(0)
+          .locator("img")
+          .evaluate((e) => e.complete && e.naturalWidth),
+      )
+      .toBeGreaterThan(0);
+    await expect(arts.nth(0)).toHaveAttribute("data-image-state", "loaded");
+    await expect(arts.nth(1)).toHaveAttribute("data-image-state", "error");
+    await expect(arts.nth(1).locator("img")).toHaveCount(0);
+    await expect(arts.nth(1).locator("svg")).toBeVisible();
+    await expect(arts.nth(2)).toHaveAttribute("data-image-state", "empty");
+    await expect(
+      recordsBand.getByRole("link", { name: "Canyon Grail", exact: true }),
+    ).toHaveAttribute("href", "/b/community-share-0");
+    // «О проекте»: one thought and one link to the page.
+    const closing = page.locator('[data-home-band="about"]');
+    await expect(closing.getByRole("link")).toHaveCount(1);
+    await expect(closing.getByRole("link")).toHaveAttribute("href", "/about");
+    for (const [label, mode] of [
+      ["Светлая", "light"],
+      ["Тёмная", "dark"],
+    ]) {
+      await theme(page, label);
+      await expect(page.locator("html")).toHaveAttribute("data-theme", mode);
+      await noOverflow(page);
+      if (width === widths[0][0])
+        expect(
+          (
+            await new AxeBuilder({ page })
+              .include("main")
+              .disableRules(["region"])
+              .analyze()
+          ).violations,
+        ).toEqual([]);
+      await page.screenshot({
+        path: info.outputPath(`home-254-${width}-${mode}.png`),
+        fullPage: true,
+        animations: "disabled",
+      });
+    }
+  }
+  // Presentation-size art only, never the original file.
+  expect(assets.every((path) => /\?width=160$/.test(path))).toBe(true);
 });
 
 test("theme toggle waits for hydration and its first click inverts the actual system theme", async ({

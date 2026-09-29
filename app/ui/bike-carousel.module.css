@@ -1,6 +1,8 @@
 .carousel {
   min-width: 0;
 }
+/* The scrollbar is the only hint that the row goes on (#254): thin, but in
+   the stronger hairline so it stays visible in both themes. */
 .rail {
   display: flex;
   gap: var(--space-4);
@@ -8,7 +10,7 @@
   overscroll-behavior-x: contain;
   padding: var(--space-1) 0 var(--space-3);
   scrollbar-width: thin;
-  scrollbar-color: var(--line) transparent;
+  scrollbar-color: var(--line-strong) transparent;
   touch-action: pan-x pan-y;
 }
 .rail > * {
@@ -24,11 +26,11 @@
   outline-offset: 4px;
   border-radius: var(--radius-lg);
 }
-.controls {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  margin-top: var(--space-3);
+/* The wide column (#253) fits a fourth card. */
+@media (min-width: 1400px) {
+  .rail > * {
+    flex-basis: calc((100% - 3 * var(--space-4)) / 4);
+  }
 }
 @media (max-width: 1050px) {
   .rail > * {

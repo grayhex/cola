@@ -1,5 +1,5 @@
-/* Home (#127): a marketing intro in the ruled column, then working
-   sections — popular builds, what's new, records. */
+/* Home (#127, #254): one ruled column of six bands — the intro, «Покататься
+   вместе», popular builds, what's new, records and the closing «О проекте». */
 .home {
   min-width: 0;
 }
@@ -180,25 +180,122 @@
 .pause:hover {
   box-shadow: var(--shadow-inner);
 }
-/* Working sections. */
-.sections {
-  padding-top: var(--space-10);
+/* Blocks 3–6 (#254): bands of the same ruled column as the hero and
+   «Покататься вместе». The title sits in a thin rail inside the band, the
+   section's links on the right; the band's surface is one of three:
+   neutral, a subtle tint or the faint map grid of «Покататься вместе». */
+.band {
+  display: grid;
+  min-width: 0;
+}
+.band[data-tone="subtle"] {
+  background: var(--bg-subtle);
+}
+.band[data-tone="ruled"] {
+  background:
+    linear-gradient(
+      to right,
+      var(--surface-subtle) 20%,
+      color-mix(in srgb, var(--surface-subtle) 70%, transparent)
+    ),
+    linear-gradient(var(--line) 1px, transparent 1px) 0 0 / 32px 32px,
+    linear-gradient(90deg, var(--line) 1px, transparent 1px) 0 0 / 32px 32px,
+    var(--bg);
+}
+.bandRail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-4);
+  min-height: 44px;
+  padding: var(--space-1-5) var(--space-10);
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--surface-subtle) 55%, transparent);
+}
+.bandRail h2 {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  color: var(--text);
+  font-size: var(--text-smd);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-snug);
+}
+.bandRail h2 svg {
+  flex: none;
+  color: var(--text-subtle);
+}
+.bandRail :global(.text-link) {
+  font-size: var(--text-sm);
+}
+.bandBody {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+  padding: var(--space-6) var(--space-10) var(--space-8);
+}
+.bandBody > :global(.empty-state) {
+  margin: 0;
 }
 .sectionLinks {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: var(--space-1) var(--space-4);
+  font-size: var(--text-sm);
+}
+.status {
+  margin: 0;
+}
+.waiting {
+  margin: 0;
+  color: var(--text-muted);
   font-size: var(--text-sm);
 }
 .skeleton {
   min-height: 300px;
   border-radius: var(--radius-lg);
 }
+.recordSkeleton {
+  height: 78px;
+  border-radius: var(--radius-lg);
+}
+.lineSkeleton {
+  display: block;
+  height: 14px;
+  border-radius: var(--radius-sm);
+}
+.lineSkeleton + .lineSkeleton {
+  width: 70%;
+}
+
+/* «Что нового»: one ruled table of cells, three across on wide screens, two
+   on tablets, one on phones; rows share a height, nothing floats. */
+.stories {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
 .story {
+  position: relative;
   display: grid;
   align-content: start;
   gap: var(--space-1-5);
-  padding: var(--space-3) var(--space-4);
+  min-width: 0;
+  margin: 0 -1px -1px 0;
+  padding: var(--space-4) var(--space-5);
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  transition: background-color var(--duration-fast) var(--ease-out);
+}
+.story:hover,
+.story:focus-within {
+  background: var(--surface-hover);
 }
 .storyHead {
   display: flex;
@@ -214,40 +311,50 @@
   line-height: var(--leading-snug);
   overflow-wrap: anywhere;
 }
-.story :global(.item-link) {
+.storyLink {
   color: var(--text-strong);
 }
-.story:hover :global(.item-link) {
+/* The title's link covers the cell. */
+.storyLink::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+.story:hover .storyLink {
   color: var(--accent-text);
 }
 .story p {
   display: -webkit-box;
   overflow: hidden;
+  margin: 0;
   color: var(--text-secondary);
   font-size: var(--text-sm);
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
+
+/* «Рекорды»: a lower band — up to four records in one row, each with its
+   illustration beside the holder and the value. */
 .records {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
   gap: var(--space-3);
 }
 .record {
+  position: relative;
   display: flex;
-  align-items: flex-start;
-  gap: var(--space-3);
+  align-items: center;
+  gap: var(--space-4);
+  min-width: 0;
   padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  transition: background-color var(--duration-fast) var(--ease-out);
 }
-.recordIcon {
-  display: grid;
-  flex: none;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-full);
-  background: var(--accent-soft);
-  color: var(--accent-text);
+.record:hover,
+.record:focus-within {
+  background: var(--surface-hover);
 }
 .record > div {
   display: grid;
@@ -255,6 +362,7 @@
   min-width: 0;
 }
 .record p {
+  margin: 0;
   color: var(--text-muted);
   font-size: var(--text-xs);
   font-weight: var(--weight-semibold);
@@ -264,32 +372,89 @@
   font-weight: var(--weight-semibold);
   overflow-wrap: anywhere;
 }
+/* The holder's link covers the card. */
+.record :global(.item-link)::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-lg);
+}
 .record small {
   color: var(--text-secondary);
   font-size: var(--text-sm);
 }
+.band[data-home-band="records"] .bandBody {
+  padding-block: var(--space-5) var(--space-6);
+}
+
+/* «О проекте»: the closing band — one thought and one way to /about. */
+.band[data-home-band="about"] .bandBody {
+  padding-block: var(--space-6);
+}
 .about {
   display: flex;
   align-items: center;
-  gap: var(--space-4);
-  margin-top: var(--space-12);
-  padding: var(--space-5);
-  border: 1px dashed var(--line-dashed);
-  border-radius: var(--radius-xl);
+  gap: var(--space-5);
+  min-width: 0;
 }
-.about :global(.mk-cell-icon) {
+.aboutMark {
+  display: grid;
   flex: none;
-  margin: 0;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  color: var(--text-secondary);
 }
 .about p {
   display: grid;
   flex: 1;
   gap: 2px;
   min-width: 0;
+  margin: 0;
+}
+.about p strong {
+  font-size: var(--text-lg);
+  line-height: var(--leading-snug);
 }
 .about p span {
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-size: var(--text-sm);
+}
+
+@media (max-width: 1100px) {
+  .stories {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 1023px) {
+  .bandRail {
+    padding-inline: var(--space-8);
+  }
+  .bandBody {
+    padding-inline: var(--space-8);
+  }
+}
+@media (max-width: 720px) {
+  .bandRail {
+    padding-inline: var(--space-4);
+  }
+  .bandBody {
+    padding: var(--space-4) var(--space-4) var(--space-6);
+  }
+  .stories {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .about {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+  /* The text keeps a readable width; the button moves to its own row. */
+  .about p {
+    flex: 1 1 200px;
+  }
 }
 
 @media (max-width: 1050px) {
@@ -351,14 +516,6 @@
   .pause {
     width: 44px;
     height: 44px;
-  }
-  .about {
-    flex-wrap: wrap;
-    align-items: flex-start;
-  }
-  /* The text keeps a readable width; the button moves to its own row. */
-  .about p {
-    flex: 1 1 200px;
   }
 }
 @media (prefers-reduced-motion: reduce) {

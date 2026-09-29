@@ -12,6 +12,8 @@ import {
   Pause,
   Play,
   Wrench,
+  Newspaper,
+  Info,
 } from "lucide-react";
 import GlobalHeader from "./global-header.jsx";
 import { SocialFooter } from "./social-primitives.jsx";
@@ -19,8 +21,8 @@ import { useSite } from "./site-provider.jsx";
 import BikeCard from "./bike-card.jsx";
 import { useAutoScroll } from "./use-auto-scroll.js";
 import BikeCarousel from "./bike-carousel.jsx";
+import AchievementArt from "./achievement-art.jsx";
 import { ContentTypeLabel } from "./content-label.jsx";
-import labelStyles from "./content-label.module.css";
 import SearchBox from "./search-box.jsx";
 import HeroArtwork from "./hero-artwork.jsx";
 import styles from "./home.module.css";
@@ -55,6 +57,29 @@ function TogetherArt() {
         </text>
       </g>
     </svg>
+  );
+}
+// Blocks 3–6 of the home page (#254): a band of the ruled column like the hero
+// and «Покататься вместе», its title in a thin rail inside the band with the
+// section's links on the right. `tone` picks one of the few band surfaces.
+function HomeBand({ id, title, icon: Icon, action, tone, children }) {
+  return (
+    <section className="frame" aria-labelledby={id + "-heading"}>
+      <div
+        className={"frame-inner " + styles.band}
+        data-tone={tone}
+        data-home-band={id}
+      >
+        <div className={styles.bandRail}>
+          <h2 id={id + "-heading"}>
+            <Icon size={16} aria-hidden="true" />
+            {title}
+          </h2>
+          {action}
+        </div>
+        <div className={styles.bandBody}>{children}</div>
+      </div>
+    </section>
   );
 }
 // «Покататься вместе» (#245): one large block right after the hero, the same
@@ -292,9 +317,20 @@ export default function Home() {
           </div>
         </section>
         <TogetherHero user={user} />
-        <div className={"page " + styles.sections}>
+        <HomeBand
+          id="popular"
+          title={t("Популярные велосипеды")}
+          icon={Bike}
+          action={
+            <Link className="text-link" href="/bikes?sort=popular">
+              {t("Все велосипеды")} <ArrowRight size={14} />
+            </Link>
+          }
+        >
+          {/* One status row for the whole page: the blocks below keep their
+              geometry and say briefly that they are waiting for it. */}
           {error && (
-            <p className="error" role="alert">
+            <p className={"error " + styles.status} role="alert">
               {error}{" "}
               <button
                 className="quiet"
@@ -304,60 +340,58 @@ export default function Home() {
               </button>
             </p>
           )}
-          <section className="section" aria-labelledby="popular-heading">
-            <div className="section-head">
-              <h2 id="popular-heading">{t("Популярные велосипеды")}</h2>
-              <Link className="text-link" href="/bikes?sort=popular">
-                {t("Все велосипеды")} <ArrowRight size={14} />
-              </Link>
-            </div>
-            <BikeCarousel busy={!data && !error}>
-              {content.popular.map((b) => (
-                <BikeCard
-                  key={b.id}
-                  bike={b}
-                  user={user}
-                  headingLevel={3}
-                  sizes={trendingSizes}
+          <BikeCarousel busy={!data && !error}>
+            {content.popular.map((b) => (
+              <BikeCard
+                key={b.id}
+                bike={b}
+                user={user}
+                headingLevel={3}
+                sizes={trendingSizes}
+              />
+            ))}
+            {!data &&
+              !error &&
+              Array.from({ length: 6 }, (_, i) => (
+                <div
+                  className={"skeleton " + styles.skeleton}
+                  key={i}
+                  aria-hidden="true"
                 />
               ))}
-              {!data &&
-                !error &&
-                Array.from({ length: 6 }, (_, i) => (
-                  <div
-                    className={"skeleton " + styles.skeleton}
-                    key={i}
-                    aria-hidden="true"
-                  />
-                ))}
-            </BikeCarousel>
-            {data && !content.popular.length && (
-              <p className="empty-state">
-                Пока нет публичных велосипедов. Ваш может стать первым.
-              </p>
-            )}
-          </section>
-          <section className="section" aria-labelledby="community-heading">
-            <div className="section-head">
-              <h2 id="community-heading">{t("Что нового")}</h2>
-              <nav className={styles.sectionLinks} aria-label="Разделы">
-                <Link className="text-link" href="/journal">
-                  Журнал
-                </Link>
-                <Link className="text-link" href="/rides">
-                  Покатушки
-                </Link>
-                <Link className="text-link" href="/market">
-                  Рынок
-                </Link>
-              </nav>
-            </div>
-            <div className="list-grid">
+          </BikeCarousel>
+          {data && !content.popular.length && (
+            <p className="empty-state">
+              Пока нет публичных велосипедов. Ваш может стать первым.
+            </p>
+          )}
+        </HomeBand>
+        <HomeBand
+          id="community"
+          title={t("Что нового")}
+          icon={Newspaper}
+          tone="subtle"
+          action={
+            <nav className={styles.sectionLinks} aria-label="Разделы">
+              <Link className="text-link" href="/journal">
+                Журнал
+              </Link>
+              <Link className="text-link" href="/rides">
+                Покатушки
+              </Link>
+              <Link className="text-link" href="/market">
+                Рынок
+              </Link>
+            </nav>
+          }
+        >
+          {content.content.length > 0 && (
+            <div className={styles.stories}>
               {content.content.map((item) => {
                 const Icon = markers[item.type] || BookOpen;
                 return (
                   <article
-                    className={`item-card ${styles.story} ${labelStyles.eventCard}`}
+                    className={styles.story}
                     key={item.id}
                     data-event={item.type}
                   >
@@ -378,7 +412,7 @@ export default function Home() {
                       </span>
                     </div>
                     <h3>
-                      <Link className="item-link" href={item.href}>
+                      <Link className={styles.storyLink} href={item.href}>
                         {item.title}
                       </Link>
                     </h3>
@@ -387,30 +421,48 @@ export default function Home() {
                 );
               })}
             </div>
-            {data && !content.content.length && (
-              <p className="empty-state">
-                Здесь появятся новые истории, маршруты и сборки.
-              </p>
-            )}
-          </section>
-          <section className="section" aria-labelledby="records-heading">
-            <div className="section-head">
-              <h2 id="records-heading">Рекорды</h2>
-              <Link className="text-link" href="/records">
-                {t("Все рекорды")} <ArrowRight size={14} />
-              </Link>
+          )}
+          {!data && !error && (
+            <div className={styles.stories} aria-hidden="true">
+              {Array.from({ length: 3 }, (_, i) => (
+                <div className={styles.story} key={i}>
+                  <span className={"skeleton " + styles.lineSkeleton} />
+                  <span className={"skeleton " + styles.lineSkeleton} />
+                </div>
+              ))}
             </div>
+          )}
+          {data && !content.content.length && (
+            <p className="empty-state">
+              Здесь появятся новые истории, маршруты и сборки.
+            </p>
+          )}
+          {error && <p className={styles.waiting}>Появится после загрузки.</p>}
+        </HomeBand>
+        <HomeBand
+          id="records"
+          title="Рекорды"
+          icon={Trophy}
+          action={
+            <Link className="text-link" href="/records">
+              {t("Все рекорды")} <ArrowRight size={14} />
+            </Link>
+          }
+        >
+          {content.records.length > 0 && (
             <div className={styles.records}>
               {content.records.map((record) => {
                 const [href, holder] = recordHolder(record.holder);
                 return (
-                  <article
-                    className={"item-card " + styles.record}
-                    key={record.key}
-                  >
-                    <span className={styles.recordIcon} aria-hidden="true">
-                      <Trophy size={16} />
-                    </span>
+                  <article className={styles.record} key={record.key}>
+                    {/* The rule's own illustration, a presentation size
+                        loaded on scroll; a missing or broken one falls back
+                        to the shared record mark. */}
+                    <AchievementArt
+                      imageId={record.imageId}
+                      size={52}
+                      loading="lazy"
+                    />
                     <div>
                       <p>{record.name}</p>
                       <Link className="item-link" href={href}>
@@ -424,18 +476,28 @@ export default function Home() {
                 );
               })}
             </div>
-            {data && !content.records.length && (
-              <p className="empty-state">
-                Рекорды появятся, когда велосипеды и покатушки выполнят условия.{" "}
-                <Link className="text-link" href="/records">
-                  Как это работает
-                </Link>
-              </p>
-            )}
-          </section>
-          <aside className={styles.about}>
-            <span className="mk-cell-icon" aria-hidden="true">
-              <Wrench size={20} />
+          )}
+          {!data && !error && (
+            <div className={styles.records} aria-hidden="true">
+              {Array.from({ length: 3 }, (_, i) => (
+                <div className={"skeleton " + styles.recordSkeleton} key={i} />
+              ))}
+            </div>
+          )}
+          {data && !content.records.length && (
+            <p className="empty-state">
+              Рекорды появятся, когда велосипеды и покатушки выполнят условия.{" "}
+              <Link className="text-link" href="/records">
+                Как это работает
+              </Link>
+            </p>
+          )}
+          {error && <p className={styles.waiting}>Появится после загрузки.</p>}
+        </HomeBand>
+        <HomeBand id="about" title="О проекте" icon={Info} tone="ruled">
+          <div className={styles.about}>
+            <span className={styles.aboutMark} aria-hidden="true">
+              <Wrench size={22} />
             </span>
             <p>
               <strong>{t("У каждой сборки есть своя история.")}</strong>
@@ -445,10 +507,10 @@ export default function Home() {
               </span>
             </p>
             <Link className="button secondary" href="/about">
-              О проекте <ArrowRight size={16} />
+              Подробнее о проекте <ArrowRight size={16} />
             </Link>
-          </aside>
-        </div>
+          </div>
+        </HomeBand>
       </main>
       <SocialFooter />
     </>

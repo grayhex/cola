@@ -1,63 +1,31 @@
 "use client";
-import { Children, useEffect, useId, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useEffect, useRef } from "react";
 import { useReducedMotion } from "./motion.jsx";
 import styles from "./bike-carousel.module.css";
 
+// A row of cards that scrolls sideways (#254): the thin scrollbar shows there
+// is more; wheel, touch, mouse drag and the arrow, Home and End keys move it.
 export default function BikeCarousel({ children, busy }) {
   const rail = useRef(null),
     cancel = useRef(null),
     sequence = useRef(0),
     drag = useRef(null);
-  const [position, setPosition] = useState({ left: 0, max: 0 });
   const reduced = useReducedMotion();
-  const id = useId();
-  const count = Children.count(children);
-  function manual() {
-    stop();
-  }
   function stop() {
     sequence.current++;
     cancel.current?.();
     cancel.current = null;
   }
-  useEffect(() => {
-    const node = rail.current;
-    let frame;
-    const measure = () => {
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() =>
-        setPosition({
-          left: node.scrollLeft,
-          max: Math.max(0, node.scrollWidth - node.clientWidth),
-        }),
-      );
-    };
-    const observer = new ResizeObserver(measure);
-    observer.observe(node);
-    for (const child of node.children) observer.observe(child);
-    node.addEventListener("scroll", measure, { passive: true });
-    measure();
-    return () => {
-      observer.disconnect();
-      node.removeEventListener("scroll", measure);
-      cancelAnimationFrame(frame);
-      stop();
-    };
-  }, [count]);
+  useEffect(() => stop, []);
   useEffect(() => {
     if (reduced) stop();
   }, [reduced]);
-  async function move(target, animate = true) {
-    manual();
+  async function move(target) {
+    stop();
     const node = rail.current;
     target = Math.max(0, Math.min(node.scrollWidth - node.clientWidth, target));
-    if (reduced || !animate) {
+    if (reduced) {
       node.scrollLeft = target;
-      setPosition({
-        left: node.scrollLeft,
-        max: Math.max(0, node.scrollWidth - node.clientWidth),
-      });
       return;
     }
     const token = sequence.current;
@@ -81,13 +49,12 @@ export default function BikeCarousel({ children, busy }) {
     >
       <div
         ref={rail}
-        id={id}
         className={styles.rail}
         tabIndex={0}
         aria-label="Велосипеды; используйте стрелки для прокрутки"
         aria-busy={busy}
-        onWheel={manual}
-        onTouchStart={manual}
+        onWheel={stop}
+        onTouchStart={stop}
         onDragStart={(e) => e.preventDefault()}
         onPointerDown={(e) => {
           if (
@@ -96,7 +63,7 @@ export default function BikeCarousel({ children, busy }) {
             e.target.closest("button,input")
           )
             return;
-          manual();
+          stop();
           drag.current = {
             x: e.clientX,
             left: e.currentTarget.scrollLeft,
@@ -136,43 +103,18 @@ export default function BikeCarousel({ children, busy }) {
           )
             return;
           e.preventDefault();
+          const node = e.currentTarget;
           move(
             e.key === "Home"
               ? 0
               : e.key === "End"
-                ? position.max
-                : rail.current.scrollLeft +
-                  (e.key === "ArrowLeft" ? -1 : 1) * rail.current.clientWidth,
+                ? node.scrollWidth
+                : node.scrollLeft +
+                  (e.key === "ArrowLeft" ? -1 : 1) * node.clientWidth,
           );
         }}
       >
         {children}
-      </div>
-      <div className={styles.controls}>
-        <button
-          className="icon"
-          type="button"
-          aria-label="Предыдущие велосипеды"
-          aria-controls={id}
-          disabled={position.left < 1}
-          onClick={() =>
-            move(rail.current.scrollLeft - rail.current.clientWidth)
-          }
-        >
-          <ChevronLeft size={18} />
-        </button>
-        <button
-          className="icon"
-          type="button"
-          aria-label="Следующие велосипеды"
-          aria-controls={id}
-          disabled={position.max - position.left < 1}
-          onClick={() =>
-            move(rail.current.scrollLeft + rail.current.clientWidth)
-          }
-        >
-          <ChevronRight size={18} />
-        </button>
       </div>
     </div>
   );
