@@ -919,8 +919,8 @@ test("invitations from interest (#234): re-checked on the server, refusals kept,
       end: h(3),
       passport: { purpose: "social" },
     });
-    const [a, b, c, d, e, stranger] = await Promise.all(
-      Array.from({ length: 6 }, () => f.user()),
+    const [a, b, c, d, e, stranger, trainer] = await Promise.all(
+      Array.from({ length: 7 }, () => f.user()),
     );
     const ia = await f.intent(a, [[h(0), h(4)]]);
     const ib = await f.intent(b, [[h(0), h(4)]]);
@@ -928,6 +928,10 @@ test("invitations from interest (#234): re-checked on the server, refusals kept,
     await f.intent(d, [[h(0), h(4)]]);
     await f.intent(e, [[h(0), h(4)]]);
     await f.rsvp(plan, d, h(1), "declined");
+    // Time fits, but the intent explicitly wants training, not a social ride.
+    await f.intent(trainer, [[h(0), h(4)]], {
+      passport: { area: { label: "Парк" }, purpose: "training" },
+    });
     const input = (/** @type {string[]} */ userIds) =>
       interestInvitationsInput.parse({
         occurrenceAt: new Date(h(1)).toISOString(),
@@ -937,6 +941,11 @@ test("invitations from interest (#234): re-checked on the server, refusals kept,
     assert.equal(
       view.people.items.find((p) => p.author.id === d).declined,
       true,
+    );
+    assert.equal(
+      view.people.items.some((p) => p.author.id === trainer),
+      false,
+      "an explicit format conflict is not a candidate",
     );
     // Between the view and the send: a withdraws, b's window moves away.
     await db.query("UPDATE ride_intents SET status='cancelled' WHERE id=$1", [
@@ -950,7 +959,7 @@ test("invitations from interest (#234): re-checked on the server, refusals kept,
       db,
       org,
       plan,
-      input([a, b, c, d, e, stranger, e]),
+      input([a, b, c, d, e, stranger, e, trainer]),
     );
     assert.deepEqual(
       Object.fromEntries(sent.results.map((r) => [r.userId, r.status])),
@@ -961,6 +970,7 @@ test("invitations from interest (#234): re-checked on the server, refusals kept,
         [d]: "declined",
         [e]: "invited",
         [stranger]: "unavailable",
+        [trainer]: "unavailable",
       },
     );
     assert.equal(sent.invited, 1);

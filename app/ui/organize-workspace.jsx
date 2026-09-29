@@ -25,6 +25,9 @@ const PlanComposer = dynamic(() => import("./plan-composer.jsx"), {
   ssr: false,
 });
 
+// One request invites at most this many (matchLimits.inviteBatch on the
+// server); the choice survives paging, so it is capped here too.
+const inviteBatch = 20;
 const people = (/** @type {number} */ n) =>
   n % 10 === 1 && n % 100 !== 11
     ? `${n} человек`
@@ -295,12 +298,14 @@ export function InviteFromInterest({ plan, onClose }) {
             <ul className={styles.people} aria-busy={state.status !== "ready"}>
               {state.items.map((p) => {
                 const locked = p.invited || p.declined;
+                const full =
+                  chosen.size >= inviteBatch && !chosen.has(p.author.id);
                 return (
                   <li key={p.author.id}>
                     <label className={styles.person}>
                       <input
                         type="checkbox"
-                        disabled={locked || busy}
+                        disabled={locked || busy || full}
                         checked={locked ? p.invited : chosen.has(p.author.id)}
                         onChange={(e) =>
                           setChosen((prev) => {
@@ -338,6 +343,12 @@ export function InviteFromInterest({ plan, onClose }) {
                 );
               })}
             </ul>
+          )}
+          {chosen.size >= inviteBatch && (
+            <p className="help" role="status">
+              За один раз можно пригласить {inviteBatch} человек. Отправьте
+              этих, затем выберите остальных.
+            </p>
           )}
           {state.pages > 1 && (
             <div className={styles.pager}>

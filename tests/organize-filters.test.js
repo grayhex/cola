@@ -38,6 +38,16 @@ test("the groups query is valid for the API contract", () => {
   assert.equal(parsed.from, now.toISOString());
 });
 
+test("a window in progress is proposed from the next whole minute", () => {
+  assert.equal(
+    organizeDraft(
+      { duration: "short" },
+      { startFrom: "2031-03-08T06:00:12.345Z" },
+    ).startAt,
+    "2031-03-08T06:01:00.000Z",
+  );
+});
+
 test("the planner prefill is the group's start and format, nothing personal", () => {
   const draft = organizeDraft(
     { duration: "short", pace: "relaxed", area: "Сокольники" },
