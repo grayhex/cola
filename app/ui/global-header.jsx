@@ -406,12 +406,17 @@ export default function GlobalHeader({
             )}
             <div className="desktop-account">
               {user ? (
+                // The avatar itself opens the account (#245); the menu has
+                // its own chevron, so one click never means both.
                 <NavPopover
                   label={"Аккаунт — " + user.name}
                   className="account-disclosure"
                   onOpen={loadStats}
+                  href="/account"
+                  linkName="Личный кабинет"
+                  linkLabel={<Avatar person={user} size="small" />}
                   active={pathname.startsWith("/account")}
-                  trigger={<Avatar person={user} size="small" />}
+                  trigger={<ChevronDown size={14} aria-hidden="true" />}
                 >
                   {account}
                 </NavPopover>

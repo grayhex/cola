@@ -8,6 +8,7 @@ export {
   Bell,
   Bike,
   BookOpen,
+  Cable,
   Calendar,
   Camera,
   Check,

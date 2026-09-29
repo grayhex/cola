@@ -121,8 +121,9 @@ test("passport form, keyboard disclosure, themes, edit and live RSVP privacy wit
   await page
     .getByRole("button", { name: "Сохранить покатушку", exact: true })
     .click();
+  // The planner window closes after a save (#245).
   await expect(
-    page.getByRole("heading", { name: "Планируемая покатушка", exact: true }),
+    page.getByRole("dialog", { name: "Организовать покатушку" }),
   ).toHaveCount(0);
   let data = (
     await (await author.request.get("/api/rides?own=1")).json()

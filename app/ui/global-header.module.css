@@ -545,3 +545,8 @@ dialog.drawer {
     width: 140px;
   }
 }
+/* The avatar is a link to the account; its menu opens from the chevron. */
+.header :global(.account-disclosure) > :global(.nav-chevron) {
+  min-width: 24px;
+  margin-left: -2px;
+}

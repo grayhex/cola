@@ -82,10 +82,10 @@ export default function ActivitySync({ bikes, disabled = false, onImported }) {
     }
   }
   return (
-    <section className={styles.panel} aria-label="Ride with GPS">
+    <section className={styles.panel} aria-labelledby="integration-rwgps">
       <div className={styles.heading}>
         <div>
-          <strong>Ride with GPS</strong>
+          <h3 id="integration-rwgps">Ride with GPS</h3>
           <p>Велопоездки автоматически появляются здесь после записи.</p>
         </div>
         <span className={styles.status}>

@@ -44,9 +44,10 @@ test("ride upload, SVG, privacy, profile and bike; works without tiles", async (
       },
     })
   ).json();
-  await page.goto("/account?tab=rides");
+  // #245: track files are uploaded under «Интеграции и импорт».
+  await page.goto("/account?tab=integrations");
   await page
-    .getByRole("button", { name: "Загрузить GPX / FIT / TCX", exact: true })
+    .getByRole("button", { name: "Загрузить файл", exact: true })
     .click();
   await page.locator("input[type=file]").setInputFiles({
     name: "ride.gpx",
@@ -58,6 +59,11 @@ test("ride upload, SVG, privacy, profile and bike; works without tiles", async (
   await page.getByLabel("Опубликовать", { exact: true }).check();
   await page.getByLabel("Скрыть начало и конец маршрута").check();
   await page.getByRole("button", { name: "Сохранить покатушку" }).click();
+  await page
+    .getByRole("status")
+    .filter({ hasText: "Покатушка сохранена" })
+    .getByRole("link", { name: "Мои покатушки" })
+    .click();
   await expect(page.locator(".ride-card")).toHaveCount(1);
   await page
     .getByRole("link", { name: "Вечерняя покатушка", exact: true })
@@ -286,9 +292,10 @@ test("FIT upload: export hint, heart rate hidden until the owner shows it", asyn
       is_public: true,
     },
   });
-  await page.goto("/account?tab=rides");
+  // #245: track files are uploaded under «Интеграции и импорт».
+  await page.goto("/account?tab=integrations");
   await page
-    .getByRole("button", { name: "Загрузить GPX / FIT / TCX", exact: true })
+    .getByRole("button", { name: "Загрузить файл", exact: true })
     .click();
   await page.getByText("Как выгрузить FIT с велокомпьютера").click();
   await expect(page.getByText("Экспорт оригинала").first()).toBeVisible();
@@ -308,6 +315,11 @@ test("FIT upload: export hint, heart rate hidden until the owner shows it", asyn
     .fill("Утро с пульсометром");
   await page.getByLabel("Опубликовать", { exact: true }).check();
   await page.getByRole("button", { name: "Сохранить покатушку" }).click();
+  await page
+    .getByRole("status")
+    .filter({ hasText: "Покатушка сохранена" })
+    .getByRole("link", { name: "Мои покатушки" })
+    .click();
   await expect(page.locator(".ride-card")).toHaveCount(1);
   const { rides } = await (
     await page.request.get(base + "/api/rides?own=1")

@@ -23,7 +23,7 @@ test("wizard live trace, stop, partial import and mobile review", async ({
     },
   });
   expect(registered.status()).toBe(201);
-  await page.goto("/account");
+  await page.goto("/account?tab=bikes");
   await page
     .getByRole("button", { name: "Добавить велосипед", exact: true })
     .click();
@@ -144,7 +144,7 @@ test("wizard quick setup, identity confirmation, image size and successful save"
   await expect(
     page.getByRole("button", { name: "Добавить велосипед", exact: true }),
   ).toHaveCount(0);
-  await page.goto("/account");
+  await page.goto("/account?tab=bikes");
   await page
     .getByRole("button", { name: "Добавить велосипед", exact: true })
     .click();

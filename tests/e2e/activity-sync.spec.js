@@ -53,7 +53,8 @@ for (const theme of ["light", "dark"])
         body: `<!doctype html><meta http-equiv="refresh" content="0;url=${callback.toString().replaceAll("&", "&amp;")}">`,
       });
     });
-    await page.goto("/account?tab=rides");
+    // #245: connections live under «Интеграции и импорт».
+    await page.goto("/account?tab=integrations");
     await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
     const panel = page.getByRole("region", {
       name: "Ride with GPS",
@@ -72,9 +73,13 @@ for (const theme of ["light", "dark"])
     await expect(panel.getByText(/Импортировано: 1/)).toBeVisible({
       timeout: 30000,
     });
-    await expect(
-      page.getByText("Тестовая велопоездка RWGPS").first(),
-    ).toBeVisible({ timeout: 10000 });
+    // The OAuth callback returns to the same section.
+    await expect(page).toHaveURL(/tab=integrations/);
+    const imported = async () =>
+      (await (await page.request.get("/api/rides?own=1")).json()).rides.map(
+        (r) => r.title,
+      );
+    await expect.poll(imported).toContain("Тестовая велопоездка RWGPS");
     await panel.getByLabel("Велосипед для импорта").selectOption("");
     await page.waitForResponse(
       (response) =>
@@ -98,7 +103,7 @@ for (const theme of ["light", "dark"])
       ),
     ).toBe(true);
     const axe = await new AxeBuilder({ page })
-      .include('[aria-label="Ride with GPS"]')
+      .include("section[aria-labelledby=integration-rwgps]")
       .analyze();
     expect(axe.violations).toEqual([]);
     await page.screenshot({
@@ -111,7 +116,5 @@ for (const theme of ["light", "dark"])
     await expect(
       panel.getByRole("button", { name: "Подключить Ride with GPS" }),
     ).toBeEnabled({ timeout: 15000 });
-    await expect(
-      page.getByText("Тестовая велопоездка RWGPS").first(),
-    ).toBeVisible();
+    expect(await imported()).toContain("Тестовая велопоездка RWGPS");
   });

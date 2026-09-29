@@ -63,37 +63,39 @@ test("Garmin import without track, chosen fields, GPX mismatch and future planni
     page.getByRole("link", { name: /Garmin|Загрузить FIT|Добавить покатушку/ }),
   ).toHaveCount(0);
   await expect(page.locator('input[type="file"]')).toHaveCount(0);
+  // #245: the old import link lands in «Интеграции и импорт».
   await page.goto("/account?tab=rides&action=import");
-  const actions = page.getByLabel("Мои поездки и импорт");
+  await expect(page).toHaveURL(/tab=integrations&action=import/);
+  const actions = page.locator(".integrations");
+  const csvRow = actions.getByRole("group", { name: "Garmin CSV" });
   await expect(
-    actions.getByRole("button", { name: "Garmin CSV", exact: true }),
-  ).toHaveCount(1);
-  await expect(
-    actions.getByRole("button", {
-      name: "Загрузить GPX / FIT / TCX",
-      exact: true,
-    }),
-  ).toHaveCount(1);
-  await expect(
-    page.getByRole("button", { name: "Синхронизировать", exact: true }),
-  ).toBeDisabled();
+    actions
+      .getByRole("group", { name: "GPX / FIT / TCX" })
+      .getByRole("button", { name: "Загрузить файл", exact: true }),
+  ).toBeEnabled();
+  // Garmin Connect is a status (#225), not a working switch.
+  const connect = actions.getByRole("group", { name: "Garmin Connect" });
+  await expect(connect).toContainText("Скоро");
+  await expect(connect.getByRole("button")).toHaveCount(0);
   const form = page.getByRole("region", { name: "Импорт Garmin CSV" });
   await expect(form).toBeVisible();
   await expect(
-    actions.getByRole("button", { name: "Garmin CSV", exact: true }),
-  ).toHaveAttribute("aria-pressed", "true");
+    csvRow.getByRole("button", { name: "Скрыть", exact: true }),
+  ).toHaveAttribute("aria-expanded", "true");
   for (const theme of ["light", "dark"]) {
     await page.evaluate(
       (value) => (document.documentElement.dataset.theme = value),
       theme,
     );
     expect(
-      await actions.getByRole("button").evaluateAll((buttons) =>
-        buttons.every((button) => {
-          const box = button.getBoundingClientRect();
-          return box.left >= 0 && box.right <= innerWidth;
-        }),
-      ),
+      await actions
+        .locator(".integration-action button")
+        .evaluateAll((buttons) =>
+          buttons.every((button) => {
+            const box = button.getBoundingClientRect();
+            return box.left >= 0 && box.right <= innerWidth;
+          }),
+        ),
     ).toBe(true);
     await page.screenshot({
       path: info.outputPath("account-import-" + theme + ".png"),
@@ -123,9 +125,12 @@ test("Garmin import without track, chosen fields, GPX mismatch and future planni
   await form.getByLabel("Максимальная мощность", { exact: true }).check();
   await form.getByLabel("Опубликовать поездки").check();
   await form.getByRole("button", { name: "Импортировать · 1" }).click();
-  await expect(
-    page.getByRole("status").filter({ hasText: "Импортировано: 1" }),
-  ).toBeVisible();
+  const imported = page
+    .getByRole("status")
+    .filter({ hasText: "Импортировано: 1" });
+  await expect(imported).toBeVisible();
+  await imported.getByRole("link", { name: "Мои покатушки" }).click();
+  await expect(page).toHaveURL(/tab=rides/);
   const card = page.locator(".ride-card");
   await expect(card).toHaveCount(1);
   await expect(card).toContainText("Garmin · без трека");
@@ -156,35 +161,40 @@ test("Garmin import without track, chosen fields, GPX mismatch and future planni
     .getByRole("button", { name: "Сохранить покатушку", exact: true })
     .click();
   await page
-    .getByRole("button", { name: "Запланировать", exact: true })
+    .getByRole("button", { name: "Организовать покатушку", exact: true })
     .click();
-  await page.getByLabel("Файл трека", { exact: false }).setInputFiles({
+  const planner = page.getByRole("dialog", { name: "Организовать покатушку" });
+  await planner.getByLabel("Файл трека", { exact: false }).setInputFiles({
     name: "weekend-route.gpx",
     mimeType: "application/gpx+xml",
     buffer: gpx([loop]),
   });
   await expect(
-    page.locator(".ride-form .ride-route path").first(),
+    planner.locator(".ride-form .ride-route path").first(),
   ).toBeVisible();
-  await page.getByLabel("Название", { exact: true }).fill(planTitle);
-  await page
+  await planner.getByLabel("Название", { exact: true }).fill(planTitle);
+  await planner
     .getByLabel("Описание — необязательно")
     .fill("Coffee and quiet roads");
   const future = new Date(Date.now() + 172800000).toISOString().slice(0, 16);
-  await page.getByLabel("Дата и время старта").fill(future);
-  await page
+  await planner.getByLabel("Дата и время старта").fill(future);
+  await planner
     .getByRole("textbox", { name: "Место встречи", exact: true })
     .fill("Парк");
-  await page.getByLabel("Особенности маршрута").fill("Гравий, Кофе");
-  await page.getByLabel("Опубликовать", { exact: true }).check();
-  await page
+  await planner.getByLabel("Особенности маршрута").fill("Гравий, Кофе");
+  await planner.getByLabel("Опубликовать", { exact: true }).check();
+  await planner
     .getByRole("button", { name: "Сохранить покатушку", exact: true })
     .click();
-  await expect(page.locator(".ride-card")).toHaveCount(2);
+  await expect(planner).toHaveCount(0);
+  await expect(
+    page.getByRole("status").filter({ hasText: "Покатушка запланирована" }),
+  ).toBeVisible();
+  // The new plan is shown among the upcoming ones.
   const filters = page.getByLabel("Фильтр моих покатушек");
-  await filters
-    .getByRole("button", { name: "Предстоящие", exact: true })
-    .click();
+  await expect(
+    filters.getByRole("button", { name: "Предстоящие", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator(".ride-card")).toHaveCount(1);
   await expect(page.locator(".ride-card")).toContainText(planTitle);
   await filters.getByRole("button", { name: "Прошедшие", exact: true }).click();
