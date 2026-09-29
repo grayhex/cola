@@ -17,6 +17,12 @@ async function register(request) {
     },
   });
   expect(response.status()).toBe(201);
+  // #253: the composer takes the zone from the profile, not a form field.
+  const zone = await request.patch("/api/social/preferences", {
+    headers: { origin },
+    data: { preferences: { timeZone: "Europe/Moscow" } },
+  });
+  expect(zone.status()).toBe(200);
 }
 async function open(page) {
   await page.goto("/ride-intents");
@@ -38,9 +44,9 @@ async function pick(page, scope, tile, option) {
   await expect(sheet).toHaveCount(0);
 }
 async function fill(dialog, area = "Парк намерений") {
-  await dialog
-    .getByLabel("Часовой пояс (IANA)", { exact: false })
-    .fill("Europe/Moscow");
+  // No zone field: the profile's Europe/Moscow is shown read-only.
+  await expect(dialog.getByLabel(/Часовой пояс/)).toHaveCount(0);
+  await expect(dialog).toContainText("Europe/Moscow");
   await dialog
     .getByLabel("Окно 1: с", { exact: true })
     .fill(date(1) + "T10:00");
@@ -180,7 +186,7 @@ test("intent lifecycle without a bike: windows, preferences, themes, privacy and
     await card.getByRole("button", { name: "Изменить", exact: true }).click();
     const editor = page.getByRole("dialog", { name: "Изменить намерение" });
     await editor.getByLabel("Сообществу ColaBike", { exact: true }).check();
-    await editor.getByRole("button", { name: "Сохранить намерение" }).click();
+    await editor.getByRole("button", { name: "Сохранить изменения" }).click();
     await expect(editor).toHaveCount(0);
     expect((await reader.request.get("/api/ride-intents/" + id)).status()).toBe(
       200,
@@ -189,7 +195,7 @@ test("intent lifecycle without a bike: windows, preferences, themes, privacy and
     await editor
       .getByLabel("Только мне — для подбора", { exact: true })
       .check();
-    await editor.getByRole("button", { name: "Сохранить намерение" }).click();
+    await editor.getByRole("button", { name: "Сохранить изменения" }).click();
     await expect(editor).toHaveCount(0);
     expect((await reader.request.get("/api/ride-intents/" + id)).status()).toBe(
       404,
@@ -446,7 +452,6 @@ test("area from preferences moves the map view; Enter keeps the stored centre (#
   await dialog
     .getByLabel("Окно 1: до", { exact: true })
     .fill(date(1) + "T15:00");
-  await dialog.getByLabel("Часовой пояс (IANA)").fill("Europe/Moscow");
   await dialog.getByRole("button", { name: "Сохранить намерение" }).click();
   await expect(dialog).toHaveCount(0);
   const list = await (await page.request.get("/api/ride-intents")).json();

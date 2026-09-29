@@ -557,6 +557,118 @@ function DialogDemo() {
   );
 }
 
+// The wide planning window of «Хочу кататься» and «Организовать покатушку»
+// (#253): numbered sections on a 12-column grid, option tiles, rare fields
+// under «Дополнительно» and a sticky footer with the main action.
+function PlanningDialogDemo() {
+  const dialog = useRef(null);
+  const title = useId();
+  const [visibility, setVisibility] = useState("public");
+  return (
+    <div>
+      <button
+        className="button secondary"
+        type="button"
+        onClick={() => dialog.current?.showModal()}
+      >
+        Открыть окно планирования
+      </button>
+      <dialog ref={dialog} className="planning" aria-labelledby={title}>
+        <div className="modal-head">
+          <h2 id={title}>Организовать покатушку</h2>
+          <button
+            className="icon"
+            type="button"
+            aria-label="Закрыть"
+            onClick={() => dialog.current?.close()}
+          >
+            <X />
+          </button>
+        </div>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            dialog.current?.close();
+          }}
+        >
+          <div className="planning-body">
+            <fieldset className="planning-section half">
+              <legend>
+                <span className="step" aria-hidden="true">
+                  1
+                </span>
+                Когда и где
+              </legend>
+              <div className="planning-row">
+                <label className="field">
+                  <span>Дата</span>
+                  <input type="date" />
+                </label>
+                <label className="field">
+                  <span>Старт</span>
+                  <input type="time" />
+                </label>
+              </div>
+            </fieldset>
+            <fieldset className="planning-section half">
+              <legend>
+                <span className="step" aria-hidden="true">
+                  2
+                </span>
+                Участники и доступ
+              </legend>
+              <div
+                className="option-tiles"
+                role="radiogroup"
+                aria-label="Кто видит"
+              >
+                {[
+                  ["public", "Публичная покатушка", "Видна в ленте."],
+                  ["invite", "По приглашению", "Только приглашённые."],
+                ].map(([value, label, hint]) => (
+                  <label className="option-tile" key={value}>
+                    <input
+                      type="radio"
+                      name={title + "-visibility"}
+                      checked={visibility === value}
+                      onChange={() => setVisibility(value)}
+                    />
+                    <span>
+                      <strong>{label}</strong>
+                      <small>{hint}</small>
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+          </div>
+          <details className="planning-advanced">
+            <summary>Дополнительно</summary>
+            <div className="planning-body">
+              <label className="field planning-section">
+                <span>Описание</span>
+                <textarea rows={2} />
+              </label>
+            </div>
+          </details>
+          <div className="planning-actions">
+            <button
+              className="button secondary"
+              type="button"
+              onClick={() => dialog.current?.close()}
+            >
+              Отмена
+            </button>
+            <button className="button" type="submit">
+              Создать покатушку
+            </button>
+          </div>
+        </form>
+      </dialog>
+    </div>
+  );
+}
+
 function Menus() {
   return (
     <Both>
@@ -588,6 +700,7 @@ function Menus() {
           </button>
         </div>
         <DialogDemo />
+        <PlanningDialogDemo />
       </div>
     </Both>
   );

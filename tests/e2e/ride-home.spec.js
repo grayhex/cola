@@ -231,9 +231,10 @@ test("signed-in home: one «Покататься вместе» block, both comp
   });
   await organize.click();
   await planner.getByLabel("Название", { exact: true }).fill("Круг с главной");
-  await planner.getByLabel("Дата и время старта").fill(day(4) + "T09:00");
+  await planner.getByLabel("Дата", { exact: true }).fill(day(4));
+  await planner.getByLabel("Старт", { exact: true }).fill("09:00");
   await planner
-    .getByRole("button", { name: "Сохранить покатушку", exact: true })
+    .getByRole("button", { name: "Создать покатушку", exact: true })
     .click();
   await expect(planner).toHaveCount(0);
   await expect(block.getByRole("status")).toContainText(

@@ -193,13 +193,17 @@ test("left admin navigation, configurable emoji, frame labels and one-tap weekly
     });
     expect(created.status()).toBe(201);
     await page.goto("/account?tab=rides&action=plan");
-    await expect(page.locator(".ride-form")).toBeVisible();
+    await expect(page.locator(".plan-form")).toBeVisible();
     // The custom emoji replaces the plan icon on the section's main action.
     await expect(
       page
         .getByRole("button", { name: "Организовать покатушку", exact: true })
         .locator(".site-icon.custom"),
     ).toHaveText("🌅");
+    // #253: weekly repeat is a rare option under «Дополнительно».
+    await page
+      .locator(".plan-form summary", { hasText: "Дополнительно" })
+      .click();
     await expect(
       page.getByLabel("Повторять каждую неделю", { exact: false }),
     ).toBeVisible();

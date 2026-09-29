@@ -164,27 +164,32 @@ test("Garmin import without track, chosen fields, GPX mismatch and future planni
     .getByRole("button", { name: "Организовать покатушку", exact: true })
     .click();
   const planner = page.getByRole("dialog", { name: "Организовать покатушку" });
-  await planner.getByLabel("Файл трека", { exact: false }).setInputFiles({
+  // #253: the track, description and features sit under «Дополнительно».
+  await planner.locator("summary", { hasText: "Дополнительно" }).click();
+  await planner.locator("input[type=file]").setInputFiles({
     name: "weekend-route.gpx",
     mimeType: "application/gpx+xml",
     buffer: gpx([loop]),
   });
   await expect(
-    planner.locator(".ride-form .ride-route path").first(),
+    planner.locator(".plan-form .ride-route path").first(),
   ).toBeVisible();
   await planner.getByLabel("Название", { exact: true }).fill(planTitle);
   await planner
-    .getByLabel("Описание — необязательно")
+    .getByRole("textbox", { name: /^Описание/ })
     .fill("Coffee and quiet roads");
   const future = new Date(Date.now() + 172800000).toISOString().slice(0, 16);
-  await planner.getByLabel("Дата и время старта").fill(future);
+  await planner.getByLabel("Дата", { exact: true }).fill(future.slice(0, 10));
+  await planner.getByLabel("Старт", { exact: true }).fill(future.slice(11));
   await planner
     .getByRole("textbox", { name: "Место встречи", exact: true })
     .fill("Парк");
   await planner.getByLabel("Особенности маршрута").fill("Гравий, Кофе");
-  await planner.getByLabel("Опубликовать", { exact: true }).check();
+  await expect(
+    planner.getByRole("radio", { name: "Публичная покатушка" }),
+  ).toBeChecked();
   await planner
-    .getByRole("button", { name: "Сохранить покатушку", exact: true })
+    .getByRole("button", { name: "Создать покатушку", exact: true })
     .click();
   await expect(planner).toHaveCount(0);
   await expect(

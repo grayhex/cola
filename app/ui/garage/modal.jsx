@@ -8,6 +8,7 @@ export default function Modal({
   onClose,
   children,
   dismissible = true,
+  wide = false,
 }) {
   const { t } = useSite();
   const ref = useRef(),
@@ -66,6 +67,7 @@ export default function Modal({
         request();
       }}
       {...backdrop}
+      className={wide ? "planning" : undefined}
       aria-labelledby="dialog-title"
     >
       <div className="modal-head">

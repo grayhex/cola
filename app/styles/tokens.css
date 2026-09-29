@@ -219,7 +219,9 @@
       0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
 
     /* Layout */
-    --container: 1280px;
+    /* #253: close to Hugging Face's desktop frame; reading measures stay
+       narrow inside it (.page.narrow, .page.form, prose columns). */
+    --container: 1536px;
     --container-narrow: 768px;
     --gutter: 16px;
     --header-height: 64px;

@@ -2,15 +2,16 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Modal from "./garage/modal.jsx";
-import RideForm from "./ride-form.jsx";
+import PlanForm from "./plan-form.jsx";
 import { socialApi } from "./social-primitives.jsx";
 import { useConfirmation } from "./confirmation.jsx";
 import { selectableRideBikes } from "../../lib/bike-status.js";
 
-// «Организовать покатушку» as a window over the current page (#245): the home
-// page, the account overview and «Мои покатушки» open the same planner. It
-// loads the garage and ride settings on open, so no page pays for it upfront.
-export default function PlanComposer({ onClose, onSaved }) {
+// «Организовать покатушку» as a wide window over the current page (#245,
+// #253): the home page, the account overview and «Мои покатушки» open the
+// same planner, which also edits an existing plan. It loads the garage and
+// ride settings on open, so no page pays for it upfront.
+export default function PlanComposer({ ride = null, onClose, onSaved }) {
   const [state, setState] = useState({ status: "loading" }),
     [revision, setRevision] = useState(0);
   const dirty = useRef(false);
@@ -41,36 +42,50 @@ export default function PlanComposer({ onClose, onSaved }) {
     )
       onClose();
   }
-  const current =
-    state.status === "ready" ? selectableRideBikes(state.bikes) : [];
+  const ready = state.status === "ready";
+  const current = ready ? selectableRideBikes(state.bikes) : [];
+  // Editing keeps the plan's own bike even when it is no longer current.
+  const canPlan = ready && state.config.enabled && (!!current.length || ride);
+  const status = (children) => (
+    <div className="planning-body">
+      <div className="planning-section">{children}</div>
+    </div>
+  );
   return (
     <>
-      <Modal title="Организовать покатушку" onClose={close}>
-        {state.status === "loading" && (
-          <p role="status">Загружаем гараж и настройки…</p>
-        )}
-        {state.status === "error" && (
-          <div className="empty-state">
-            <p role="alert" className="error">
-              {state.error || "Не удалось открыть планировщик."}
-            </p>
-            <button
-              type="button"
-              className="button secondary small"
-              onClick={() => setRevision((v) => v + 1)}
-            >
-              Повторить
-            </button>
-          </div>
-        )}
-        {state.status === "ready" && !state.config.enabled && (
-          <p className="empty-state">
-            Планирование покатушек временно выключено. Попробуйте позже.
-          </p>
-        )}
-        {state.status === "ready" &&
+      <Modal
+        wide
+        title={ride ? "Изменить покатушку" : "Организовать покатушку"}
+        onClose={close}
+      >
+        {state.status === "loading" &&
+          status(<p role="status">Загружаем гараж и настройки…</p>)}
+        {state.status === "error" &&
+          status(
+            <div className="empty-state">
+              <p role="alert" className="error">
+                {state.error || "Не удалось открыть планировщик."}
+              </p>
+              <button
+                type="button"
+                className="button secondary small"
+                onClick={() => setRevision((v) => v + 1)}
+              >
+                Повторить
+              </button>
+            </div>,
+          )}
+        {ready &&
+          !state.config.enabled &&
+          status(
+            <p className="empty-state">
+              Планирование покатушек временно выключено. Попробуйте позже.
+            </p>,
+          )}
+        {ready &&
           state.config.enabled &&
-          !current.length && (
+          !canPlan &&
+          status(
             // A plan belongs to a current bike; without one nothing is created.
             <div className="empty-state">
               <p>
@@ -84,24 +99,21 @@ export default function PlanComposer({ onClose, onSaved }) {
               >
                 Добавить велосипед
               </Link>
-            </div>
+            </div>,
           )}
-        {state.status === "ready" &&
-          state.config.enabled &&
-          !!current.length && (
-            <RideForm
-              mode="plan"
-              heading={false}
-              bikes={state.bikes}
-              config={state.config}
-              onDirty={onDirty}
-              onCancel={close}
-              onSaved={() => {
-                dirty.current = false;
-                onSaved();
-              }}
-            />
-          )}
+        {canPlan && (
+          <PlanForm
+            ride={ride}
+            bikes={state.bikes}
+            config={state.config}
+            onDirty={onDirty}
+            onCancel={close}
+            onSaved={(result) => {
+              dirty.current = false;
+              onSaved(result);
+            }}
+          />
+        )}
       </Modal>
       {confirmation}
     </>

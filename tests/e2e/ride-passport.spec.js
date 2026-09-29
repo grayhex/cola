@@ -54,38 +54,74 @@ test.beforeEach(async ({ context }) => {
   await context.addCookies((await author.storageState()).cookies);
 });
 
-test("passport form, keyboard disclosure, themes, edit and live RSVP privacy without a participant bike", async ({
+// #243 option tiles: a tile opens a compact sheet with the choices.
+async function pick(page, scope, tile, option) {
+  await scope
+    .getByRole("button", { name: new RegExp("^" + tile + ":") })
+    .click();
+  const sheet = page.getByRole("dialog", { name: new RegExp("^" + tile) });
+  await sheet.getByRole("button", { name: option, exact: true }).click();
+  await expect(sheet).toHaveCount(0);
+}
+async function range(page, scope, tile, title, min, max) {
+  await scope
+    .getByRole("button", { name: new RegExp("^" + tile + ":") })
+    .click();
+  const sheet = page.getByRole("dialog", { name: title });
+  await sheet.getByLabel(title + ": от", { exact: true }).fill(String(min));
+  await sheet.getByLabel(title + ": до", { exact: true }).fill(String(max));
+  await sheet.getByRole("button", { name: "Готово", exact: true }).click();
+  await expect(sheet).toHaveCount(0);
+}
+
+test("planner (#253): when and where first, tiles, visibility, advanced, themes, edit and live RSVP privacy", async ({
   page,
   context,
 }, info) => {
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto("/account?tab=rides&action=plan");
-  const composer = page.getByRole("group", { name: "Как поедем", exact: true });
-  await expect(composer).toBeVisible();
-  await expect(composer).toContainText("Организатор пока не уточнил");
-  await expect(page.getByLabel("Кто видит точное место встречи")).toHaveValue(
+  const dialog = page.getByRole("dialog", { name: "Организовать покатушку" });
+  const when = dialog.getByRole("group", { name: "Когда и где" });
+  const how = dialog.getByRole("group", { name: "Как поедем" });
+  const access = dialog.getByRole("group", { name: "Участники и доступ" });
+  await expect(when.getByLabel("Дата", { exact: true })).toBeVisible();
+  // No per-ride zone, publish checkbox or track privacy in a plan.
+  await expect(dialog.getByLabel(/Часовой пояс/)).toHaveCount(0);
+  await expect(dialog.getByLabel("Опубликовать", { exact: true })).toHaveCount(
+    0,
+  );
+  await expect(dialog.getByText("Скрыть начало и конец маршрута")).toHaveCount(
+    0,
+  );
+  await expect(dialog.getByText("Радиус приватности")).toHaveCount(0);
+  await expect(
+    access.getByRole("radio", { name: "Публичная покатушка" }),
+  ).toBeChecked();
+  await expect(access.getByLabel("Кто видит точное место встречи")).toHaveValue(
     "participants",
   );
-  await page.getByLabel("Название", { exact: true }).fill("Утро в парке");
-  await page.getByLabel("Дата и время старта").fill("2031-03-29T09:00");
-  await page.getByLabel("Место встречи", { exact: true }).fill(secret);
-  await page.getByLabel("Область поездки").fill("Измайловский парк");
-  await page.getByLabel("Цель поездки").selectOption("social");
-  await page.getByLabel("Покрытие", { exact: true }).selectOption("mixed");
-  await page.getByRole("button", { name: "Спокойный", exact: true }).click();
-  const disclosure = composer.locator("summary");
-  await disclosure.focus();
+  // The only current bike is chosen by itself; the bike lives in «Дополнительно».
+  await expect(dialog.getByLabel("Велосипед", { exact: true })).toBeHidden();
+  await when.getByLabel("Дата", { exact: true }).fill("2031-03-29");
+  await when.getByLabel("Старт", { exact: true }).fill("09:00");
+  await when.getByLabel("Окончание", { exact: true }).fill("12:00");
+  await when.getByLabel("Место встречи", { exact: true }).fill(secret);
+  await when.getByLabel("Район или парк").fill("Измайловский парк");
+  await how.getByLabel("Название", { exact: true }).fill("Утро в парке");
+  await pick(page, how, "Цель", "Общение");
+  await pick(page, how, "Покрытие", "Смешанное");
+  await pick(page, how, "Темп", "Спокойный");
+  await range(page, how, "Дистанция", "Дистанция, км", 20, 40);
+  await how.getByLabel("Подходит новичкам").selectOption("true");
+  await how.getByLabel("Как ждём отстающих").selectOption("wait");
+  const advanced = dialog.locator("summary", { hasText: "Дополнительно" });
+  await advanced.focus();
   await page.keyboard.press("Enter");
-  await page.getByLabel("Дистанция, км: от", { exact: true }).fill("20");
-  await page.getByLabel("Дистанция, км: до", { exact: true }).fill("40");
-  await page.getByLabel("Подходит новичкам").selectOption("true");
-  await page.getByLabel("Как ждём отстающих").selectOption("wait");
-  await disclosure.click();
-  await disclosure.click();
-  await expect(
-    page.getByLabel("Дистанция, км: от", { exact: true }),
-  ).toHaveValue("20");
+  await expect(dialog.getByLabel("Велосипед", { exact: true })).toHaveValue(
+    bike.id,
+  );
+  await dialog.getByLabel("Техническая сложность").selectOption("easy");
   for (const [theme, system] of [
     ["light", "light"],
     ["dark", "light"],
@@ -96,12 +132,8 @@ test("passport form, keyboard disclosure, themes, edit and live RSVP privacy wit
       (value) => (document.documentElement.dataset.theme = value),
       theme,
     );
-    // Wait for the theme's color transition before measuring contrast.
-    await expect(
-      page.getByRole("button", { name: "Спокойный", exact: true }),
-    ).toHaveCSS(
-      "color",
-      theme === "light" ? "rgb(17, 24, 39)" : "rgb(255, 255, 255)",
+    await page.waitForFunction(() =>
+      document.getAnimations().every((a) => a.playState !== "running"),
     );
     expect(
       await page.evaluate(
@@ -109,42 +141,44 @@ test("passport form, keyboard disclosure, themes, edit and live RSVP privacy wit
       ),
     ).toBe(true);
     expect(
-      (await new AxeBuilder({ page }).include(".ride-form").analyze())
+      (await new AxeBuilder({ page }).include(".plan-form").analyze())
         .violations,
     ).toEqual([]);
-    await composer.screenshot({
-      path: info.outputPath(`passport-form-${theme}.png`),
+    await dialog.screenshot({
+      path: info.outputPath(`planner-${theme}.png`),
       animations: "disabled",
     });
   }
-  await page.getByLabel("Опубликовать", { exact: true }).check();
-  await page
-    .getByRole("button", { name: "Сохранить покатушку", exact: true })
+  await dialog
+    .getByRole("button", { name: "Создать покатушку", exact: true })
     .click();
-  // The planner window closes after a save (#245).
-  await expect(
-    page.getByRole("dialog", { name: "Организовать покатушку" }),
-  ).toHaveCount(0);
+  await expect(dialog).toHaveCount(0);
   let data = (
     await (await author.request.get("/api/rides?own=1")).json()
   ).rides.find((r) => r.title === "Утро в парке");
   expect(data.passport.distanceKm).toEqual({ min: 20, max: 40 });
+  expect(data.passport.difficulty).toBe("easy");
+  expect(data.isPublic).toBe(true);
+  // A hidden meeting point protects the route edges with the default radius.
+  expect(data.privacyEnabled).toBe(true);
   const card = page.locator(".ride-card").filter({ hasText: "Утро в парке" });
   await expect(
     card.getByRole("region", { name: "Паспорт поездки" }),
   ).toContainText("Измайловский парк");
   await card.getByRole("button", { name: "Изменить", exact: true }).click();
-  await expect(page.getByLabel("Область поездки")).toHaveValue(
+  const edit = page.getByRole("dialog", { name: "Изменить покатушку" });
+  await expect(edit.getByLabel("Район или парк")).toHaveValue(
     "Измайловский парк",
   );
-  await expect(page.getByLabel("Кто видит точное место встречи")).toHaveValue(
+  await expect(edit.getByLabel("Старт", { exact: true })).toHaveValue("09:00");
+  await expect(edit.getByLabel("Кто видит точное место встречи")).toHaveValue(
     "participants",
   );
-  await page.getByRole("button", { name: "Умеренный", exact: true }).click();
-  await page
-    .getByRole("button", { name: "Сохранить покатушку", exact: true })
+  await pick(page, edit, "Темп", "Умеренный");
+  await edit
+    .getByRole("button", { name: "Сохранить изменения", exact: true })
     .click();
-  await expect(composer).toHaveCount(0);
+  await expect(edit).toHaveCount(0);
   data = (
     await (await author.request.get("/api/rides/public/" + data.shareId)).json()
   ).ride;
@@ -262,24 +296,41 @@ test("HTTP schemas and private meeting never leak to anonymous API, SSR or previ
   }
 });
 
-test("controls survive reduced motion, missing Motion chunk, loading and API errors", async ({
+test("planner controls survive reduced motion, a missing Motion chunk, a slow API error and a missing bike", async ({
   page,
 }, info) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/account?tab=rides&action=plan", {
     waitUntil: "networkidle",
   });
-  await page.getByRole("button", { name: "Спокойный", exact: true }).click();
-  await expect(
-    page.getByRole("button", { name: "Спокойный", exact: true }),
-  ).toHaveAttribute("aria-pressed", "true");
+  const dialog = page.getByRole("dialog", { name: "Организовать покатушку" });
+  await pick(page, dialog, "Темп", "Спокойный");
+  await expect(dialog.getByRole("button", { name: /^Темп:/ })).toContainText(
+    "Спокойный",
+  );
   await page.emulateMedia({ reducedMotion: "no-preference" });
   await page.route("**/_next/static/**/*.js", (route) => route.abort());
-  await page.getByRole("button", { name: "Умеренный", exact: true }).click();
-  await page.getByText("Дополнительные условия", { exact: true }).click();
-  await expect(page.getByLabel("Техническая сложность")).toBeVisible();
-  await page.getByLabel("Название", { exact: true }).fill("Ошибка сохранения");
-  await page.getByLabel("Дата и время старта").fill("2031-03-29T09:00");
+  await pick(page, dialog, "Темп", "Умеренный");
+  await dialog.locator("summary", { hasText: "Дополнительно" }).click();
+  await expect(dialog.getByLabel("Техническая сложность")).toBeVisible();
+  await dialog
+    .getByLabel("Название", { exact: true })
+    .fill("Ошибка сохранения");
+  await dialog.getByLabel("Дата", { exact: true }).fill("2031-03-29");
+  await dialog.getByLabel("Старт", { exact: true }).fill("09:00");
+  // No bike chosen: the advanced block explains and focuses the selector.
+  await dialog.getByLabel("Велосипед", { exact: true }).evaluate((select) => {
+    select.value = "";
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  const save = dialog.getByRole("button", {
+    name: "Создать покатушку",
+    exact: true,
+  });
+  await save.click();
+  await expect(dialog.getByRole("alert")).toContainText("Выберите велосипед");
+  await expect(dialog.getByLabel("Велосипед", { exact: true })).toBeFocused();
+  await dialog.getByLabel("Велосипед", { exact: true }).selectOption(bike.id);
   let release;
   const delayed = new Promise((resolve) => {
     release = resolve;
@@ -292,23 +343,52 @@ test("controls survive reduced motion, missing Motion chunk, loading and API err
       body: JSON.stringify({ error: "Проверьте длительность поездки" }),
     });
   });
-  const save = page.getByRole("button", {
-    name: "Сохранить покатушку",
-    exact: true,
-  });
   await save.click();
   await expect(save).toBeDisabled();
   release();
-  await expect(page.locator("main").getByRole("alert")).toContainText(
+  await expect(dialog.getByRole("alert")).toContainText(
     "Проверьте длительность поездки",
   );
-  await expect(
-    page.getByRole("button", { name: "Умеренный", exact: true }),
-  ).toHaveAttribute("aria-pressed", "true");
+  // The entered plan stays as it was.
+  await expect(dialog.getByRole("button", { name: /^Темп:/ })).toContainText(
+    "Умеренный",
+  );
+  await expect(dialog.getByLabel("Название", { exact: true })).toHaveValue(
+    "Ошибка сохранения",
+  );
   await expect(save).toBeEnabled();
   await page.screenshot({
-    path: info.outputPath("passport-error.png"),
+    path: info.outputPath("planner-error.png"),
     fullPage: true,
     animations: "disabled",
+  });
+  // Saved with a hidden meeting point, the plan protects its track; making
+  // the point public lifts that protection, as there is no separate control.
+  await page.unroute("**/api/rides/plan");
+  await page.unroute("**/_next/static/**/*.js");
+  await dialog.getByLabel("Название", { exact: true }).fill("Открытая встреча");
+  await save.click();
+  await expect(dialog).toHaveCount(0);
+  const saved = async () =>
+    (await (await page.request.get("/api/rides?own=1")).json()).rides.find(
+      (r) => r.title === "Открытая встреча",
+    );
+  expect((await saved()).privacyEnabled).toBe(true);
+  await page
+    .locator(".ride-card")
+    .filter({ hasText: "Открытая встреча" })
+    .getByRole("button", { name: "Изменить", exact: true })
+    .click();
+  const edit = page.getByRole("dialog", { name: "Изменить покатушку" });
+  await edit
+    .getByLabel("Кто видит точное место встречи")
+    .selectOption("public");
+  await edit
+    .getByRole("button", { name: "Сохранить изменения", exact: true })
+    .click();
+  await expect(edit).toHaveCount(0);
+  expect(await saved()).toMatchObject({
+    meetingVisibility: "public",
+    privacyEnabled: false,
   });
 });

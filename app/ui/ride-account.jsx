@@ -82,6 +82,8 @@ export default function RideAccount({ bikes }) {
     url.searchParams.delete("action");
     window.history.replaceState(null, "", url);
   }
+  // Only a recorded ride replaces the list; a plan opens over it.
+  const inline = editing?.status === "completed";
   async function edit(r) {
     setBusy(true);
     setError("");
@@ -132,7 +134,7 @@ export default function RideAccount({ bikes }) {
           </button>
         }
         toolbar={
-          !editing && (
+          !inline && (
             <div
               className="ui-tabs"
               role="group"
@@ -176,10 +178,11 @@ export default function RideAccount({ bikes }) {
         </p>
       )}
       {notice && <p role="status">{notice}</p>}
-      {editing && config && (
+      {/* A recorded ride edits inline; a plan opens the wide planner (#253). */}
+      {editing?.status === "completed" && config && (
         <RideForm
           key={editing.id}
-          mode={editing.status === "completed" ? "add" : "plan"}
+          mode="add"
           ride={editing}
           bikes={bikes}
           config={config}
@@ -196,8 +199,24 @@ export default function RideAccount({ bikes }) {
           }}
         />
       )}
-      {!editing && !data && !error && <p role="status">Загружаем покатушки…</p>}
-      {!editing && data && (
+      {editing && editing.status !== "completed" && (
+        <PlanComposer
+          key={editing.id}
+          ride={editing}
+          onClose={() => setEditing(null)}
+          onSaved={async (result) => {
+            setEditing(null);
+            setNotice(
+              result === "removed"
+                ? "Покатушка убрана."
+                : "Изменения сохранены.",
+            );
+            await refresh();
+          }}
+        />
+      )}
+      {!inline && !data && !error && <p role="status">Загружаем покатушки…</p>}
+      {!inline && data && (
         <>
           <div className="ride-grid" aria-busy={busy}>
             {data.rides.map((r) => (

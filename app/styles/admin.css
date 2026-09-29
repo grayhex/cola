@@ -10,7 +10,7 @@
     align-items: start;
     gap: var(--space-8);
     width: 100%;
-    max-width: calc(1440px + 2 * var(--gutter));
+    max-width: calc(var(--container) + 2 * var(--gutter));
     margin: 0 auto;
     padding: var(--space-6) var(--gutter) var(--space-16);
   }
