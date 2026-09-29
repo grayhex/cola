@@ -446,9 +446,13 @@ test("OSM thumbnails with Yandex setting, bounded design headings, SVG themes an
       if (r.url().includes("api-maps.yandex.ru")) sdk++;
     });
     await page.goto("/rides");
-    await expect(
-      page.locator(".ride-card").filter({ hasText: "OSM preview" }),
-    ).toBeVisible();
+    const osmCard = page
+      .locator(".ride-card")
+      .filter({ hasText: "OSM preview" });
+    await expect(osmCard).toBeVisible();
+    // Thumbnails load when the card is on screen; other specs' public rides
+    // share this list and can push it below the fold on a phone.
+    await osmCard.scrollIntoViewIfNeeded();
     await expect.poll(() => tiles).toBeGreaterThan(0);
     expect(sdk).toBe(0);
     await page.goto("/admin");

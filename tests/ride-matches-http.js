@@ -167,6 +167,87 @@ const draft = await organizer(
 );
 assert.equal(draft.status, 200, draft.text);
 assert.equal(draft.body.counts.total, 1);
+// #234: «Собрать компанию» — counts only, and explicit invitations re-checked
+// on the server.
+const period =
+  "from=" +
+  encodeURIComponent(`${date}T09:00:00+03:00`) +
+  "&to=" +
+  encodeURIComponent(`${date}T16:00:00+03:00`) +
+  "&durationMin=60&durationMax=120";
+assert.equal((await guest("ride-matches/groups?" + period)).status, 401);
+assert.equal(
+  (await organizer("ride-matches/groups?from=" + encodeURIComponent(date)))
+    .status,
+  400,
+);
+const groups = await organizer(
+  "ride-matches/groups?" + period + "&purpose=social",
+);
+assert.equal(groups.status, 200, groups.text);
+assert.equal(groups.headers.get("cache-control"), "no-store");
+assert.equal(groups.body.groups[0].counts.total, 1);
+assert.doesNotMatch(
+  groups.text,
+  new RegExp(`${riderId}|author|username|@example\\.test|HTTP park`),
+);
+assert.equal(
+  (await organizer("ride-matches/groups?" + period + "&purpose=training")).body
+    .groups.length,
+  0,
+);
+const invitePath = `ride-matches/plans/${plan.body.id}/invitations`;
+const occurrenceAt = interest.body.occurrenceAt;
+assert.equal(
+  (
+    await organizer(
+      invitePath,
+      "POST",
+      { occurrenceAt, userIds: [riderId] },
+      "https://evil.test",
+    )
+  ).status,
+  403,
+);
+assert.equal(
+  (await guest(invitePath, "POST", { occurrenceAt, userIds: [riderId] }))
+    .status,
+  401,
+);
+assert.equal(
+  (await rider(invitePath, "POST", { occurrenceAt, userIds: [organizerId] }))
+    .status,
+  404,
+  "only the organizer invites to their plan",
+);
+for (const bad of [
+  {},
+  { occurrenceAt, userIds: [] },
+  { occurrenceAt, userIds: ["nope"] },
+  { occurrenceAt, userIds: [riderId], extra: true },
+])
+  assert.equal(
+    (await organizer(invitePath, "POST", bad)).status,
+    400,
+    JSON.stringify(bad),
+  );
+const sent = await organizer(invitePath, "POST", {
+  occurrenceAt,
+  userIds: [riderId],
+});
+assert.equal(sent.status, 200, sent.text);
+assert.deepEqual(sent.body.results, [{ userId: riderId, status: "invited" }]);
+const again = await organizer(invitePath, "POST", {
+  occurrenceAt,
+  userIds: [riderId],
+});
+assert.deepEqual(again.body.results, [
+  { userId: riderId, status: "already_invited" },
+]);
+assert.equal(
+  (await organizer(interestPath)).body.people.items[0].invited,
+  true,
+);
 // Withdrawing consent to be shown takes effect on the next read.
 const put = await rider("ride-intents/" + created.body.intent.id, "PUT", {
   ...intent,

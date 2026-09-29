@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { X } from "lucide-react";
 import { useSite } from "../ui/site-provider.jsx";
 import RideCreationActions from "../ui/ride-creation-actions.jsx";
@@ -15,6 +16,16 @@ import {
   filterLabels,
   readFilters,
 } from "../../lib/ride-filters.js";
+import { readOrganize } from "../../lib/organize-filters.js";
+
+// «Собрать компанию» (#234) loads only when a signed-in organizer opens it.
+const OrganizeWorkspace = dynamic(
+  () => import("../ui/organize-workspace.jsx"),
+  {
+    ssr: false,
+    loading: () => <p role="status">Открываем…</p>,
+  },
+);
 
 // Only shared public filters reach the URL (#233): shareable, restorable on
 // back/forward, never a personal schedule, identity or coordinates.
@@ -98,9 +109,18 @@ function FilterFields({ value, onChange, idPrefix }) {
     </>
   );
 }
+// The organizer's shared choices only — never a schedule or a person.
+function writeOrganizeUrl(filters) {
+  const url = new URL(location.pathname, location.origin);
+  url.searchParams.set("mode", "organize");
+  for (const [key, value] of Object.entries(filters))
+    if (value) url.searchParams.set(key, value);
+  window.history.replaceState(null, "", url);
+}
 export default function Rides() {
   const { viewer: user } = useSite();
   const [bikeId, setBikeId] = useState(null),
+    [organize, setOrganize] = useState(null),
     [status, setStatus] = useState(null),
     [filters, setFilters] = useState({}),
     [area, setArea] = useState(""),
@@ -111,6 +131,7 @@ export default function Rides() {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const initial = readFilters(params);
+    if (params.get("mode") === "organize") setOrganize(readOrganize(params));
     setBikeId(params.get("bikeId") || "");
     setStatus(
       ["planned", "completed"].includes(params.get("status"))
@@ -159,9 +180,11 @@ export default function Rides() {
     url(status, next, next.area === undefined ? "" : typed);
   }
   function chooseStatus(value) {
+    setOrganize(null);
     setStatus(value);
     url(value, filters, area);
   }
+  const organizeChanged = useCallback((next) => writeOrganizeUrl(next), []);
   const chips = filterLabels(applied);
   const upcoming = status === "planned";
   return (
@@ -189,14 +212,26 @@ export default function Rides() {
             ].map(([value, label]) => (
               <button
                 key={label}
-                aria-pressed={status === value}
+                aria-pressed={!organize && status === value}
                 onClick={() => chooseStatus(value)}
               >
                 {label}
               </button>
             ))}
+            {user && (
+              <button
+                aria-pressed={!!organize}
+                onClick={() => {
+                  const next = readOrganize(new URLSearchParams());
+                  setOrganize(next);
+                  writeOrganizeUrl(next);
+                }}
+              >
+                Собрать компанию
+              </button>
+            )}
           </div>
-          {upcoming && (
+          {upcoming && !organize && (
             <button
               type="button"
               className="button secondary ride-filter-open"
@@ -215,7 +250,22 @@ export default function Rides() {
             </button>
           )}
         </div>
-        {upcoming && (
+        {organize &&
+          (user ? (
+            <OrganizeWorkspace
+              initial={organize}
+              onFiltersChange={organizeChanged}
+            />
+          ) : (
+            <p className="empty-state">
+              Чтобы собрать компанию,{" "}
+              <Link href="/login?next=%2Frides%3Fmode%3Dorganize">
+                войдите в аккаунт
+              </Link>
+              .
+            </p>
+          ))}
+        {upcoming && !organize && (
           <section
             className="ride-filters"
             aria-label="Фильтры предстоящих покатушек"
@@ -223,7 +273,7 @@ export default function Rides() {
             <FilterFields value={filters} onChange={change} idPrefix="inline" />
           </section>
         )}
-        {upcoming && chips.length > 0 && (
+        {upcoming && !organize && chips.length > 0 && (
           <div className="filter-chips" aria-label="Активные фильтры">
             {chips.map(([key, label]) => (
               <button
@@ -253,7 +303,7 @@ export default function Rides() {
             </button>
           </div>
         )}
-        {bikeId !== null && (
+        {bikeId !== null && !organize && (
           <RideList
             bikeId={bikeId}
             status={status}

@@ -448,6 +448,10 @@ test("home is one ruled column of six bands with rails inside, record art and a 
       await theme(page, label);
       await expect(page.locator("html")).toHaveAttribute("data-theme", mode);
       await noOverflow(page);
+      // Card backgrounds fade on a theme switch: measure contrast after it.
+      await page.waitForFunction(() =>
+        document.getAnimations().every((a) => a.playState !== "running"),
+      );
       if (width === widths[0][0])
         expect(
           (
