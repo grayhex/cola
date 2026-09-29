@@ -16,3 +16,9 @@ __pycache__/
 public/maplibre/
 
 public/rive/runtime/
+
+coverage/
+/mail/
+public/test-map-style.json
+*.tsbuildinfo
+.DS_Store

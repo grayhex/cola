@@ -44,12 +44,16 @@ sudo env \
 
 Проверяются `/api/status` (включая `resolver`), срок TLS-сертификата (`COLA_TLS_MIN_DAYS`, 14), заполнение диска (`COLA_DISK_PATHS`, `COLA_DISK_MAX_PERCENT`, 85), возраст последнего `colabike-*` бэкапа (`COLA_BACKUP_MAX_AGE_HOURS`, 26) и число `request_failed` за 15 минут (`COLA_5XX_MAX`, 20; нужен доступ к Docker). Пример cron раз в 5 минут с уведомлением по почте: `*/5 * * * * root /usr/bin/env COLA_URL=… bash /opt/stacks/cola/scripts/check-health.sh >/tmp/cola-health 2>&1 || mail -s 'ColaBike ALERT' ops@example.com </tmp/cola-health`. Репозиторий не включает расписание и канал доставки: их настраивает оператор.
 
+## Фоновые интеграции
+
+`/api/ready` проверяет приложение и БД, но не доставку сообщений и активностей. Дополнительно контролируйте состояние `chat-sync` / `activity-sync`, повторные ошибки и возраст заданий. Для Stream — [очередь lifecycle](../integrations/chat.md); для Ride with GPS — [sync и revocation outbox](../integrations/activity-sync.md). Наличие запущенного контейнера не подтверждает успешный обмен с провайдером.
+
 ## Базовая диагностика VPS
 
 ```bash
 cd /opt/stacks/cola
 docker compose --env-file .env.production -f compose.prod.yaml ps
-docker compose --env-file .env.production -f compose.prod.yaml logs --tail=100 app bike-resolver
+docker compose --env-file .env.production -f compose.prod.yaml logs --tail=100 app bike-resolver chat-sync activity-sync
 curl --fail --max-time 10 https://colabike.ru/api/ready
 curl --fail --max-time 10 https://colabike.ru/api/status
 curl --fail --max-time 10 https://colabike.ru/api/versions
@@ -87,4 +91,4 @@ docker compose --env-file .env.production -f compose.prod.yaml run --rm --no-dep
 
 ## Что оператор должен настроить сам
 
-Расписание `scripts/check-health.sh` и канал уведомлений, при необходимости `ERROR_TRACKER_DSN`; оповещение о провале deploy; проверку off-host копий; обновление системы/runner; защиту main и reviews; продление сертификата с reload nginx. Наличие этих глав или успешный CI не означает, что мониторинг уже включён на сервере.
+Расписание `scripts/check-health.sh` и канал уведомлений, при необходимости `ERROR_TRACKER_DSN`; оповещение о провале deploy; проверку off-host копий; обновление системы и Docker; защиту main и reviews; продление сертификата с reload nginx. Наличие этих глав или успешный CI не означает, что мониторинг уже включён на сервере.

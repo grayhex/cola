@@ -11,13 +11,13 @@
 | `CI · Closed PR cleanup` / [ci-pr-cleanup.yml](../../.github/workflows/ci-pr-cleanup.yml) | Закрытие PR                                     | Отмена его оставшегося CI без ложного check                          |
 | `CodeQL` / [codeql.yml](../../.github/workflows/codeql.yml)                               | PR и push в main, раз в неделю                  | Находки статического анализа безопасности в Security → Code scanning |
 
-Модель: feature/PR → локальные проверки и CI → review/merge → CI итогового main → production по SSH. Feature-ветка не отправляется на production обычным workflow. `Run workflow` из старого commit не обновляет workflow задним числом.
+[Docker build measurements](../../.github/workflows/docker-benchmark.yml) запускает отдельные измерения для изменений упаковки и вручную; методика — [Docker build](docker-build.md).
 
-Staging выведен из эксплуатации 26.09.2026; workflow, скрипт и инструкции запуска удалены.
+Модель: feature/PR → локальные проверки и CI → review/merge → CI итогового main → production по SSH. Feature-ветка не отправляется на production обычным workflow. `Run workflow` из старого commit не обновляет workflow задним числом.
 
 ## Проверки и кеши
 
-`prepare` один раз фиксирует SHA. Далее параллельны Application/Resolver/HTTP (первыми шагами — `pnpm lint` и `pnpm typecheck`), Chromium, WebKit mobile и Docker/backup. Браузеры имеют отдельные базы и runners, внутри каждого один worker. `check` требует `success` от всех обязательных групп, не трактует skip/cancel как успех. Изменения приложения, схемы, зависимостей и runtime-упаковки проходят полный набор; проверки не отключаются ради ускорения.
+`prepare` один раз фиксирует SHA. Далее параллельны Application/Resolver/HTTP (форматирование, lint, typecheck, unit, build и HTTP), Chromium, WebKit mobile и Docker/backup. Браузеры имеют отдельные базы и runners, внутри каждого один worker. `check` требует `success` от всех обязательных групп, не трактует skip/cancel как успех. Изменения приложения, схемы, зависимостей и runtime-упаковки проходят полный набор; проверки не отключаются ради ускорения.
 
 pnpm store кешируется по платформе, Node и lock/workspace-файлам; npm download cache Resolver — по его `package-lock.json`. Кеш не заменяет установку с зафиксированным lock. Docker использует отдельные BuildKit layer caches для web, ops и Resolver. Operations собирает три конечных образа один раз, затем передаёт их в drill без повторной сборки. Локальный drill без готовых образов собирает их сам.
 
@@ -43,7 +43,7 @@ Browser artifacts разделены по проекту/attempt и хранят
 ключа и завершения job. Это отдельный бюджет холодной сборки на VPS, а не изменение
 лимитов или обязательных проверок CI. Compose по-прежнему ждёт healthchecks до
 180 секунд после сборки. Причина изменения и действия после timeout описаны в
-[runbook](deployment.md#таймаут-deploy-90).
+[runbook](deployment.md#незавершённый-deploy-и-повторный-запуск).
 
 Job использует environment `production` и его secrets: `DEPLOY_SSH_KEY`, `DEPLOY_KNOWN_HOSTS`, `DEPLOY_HOST`, `DEPLOY_PORT` (если не задан — порт 22). Соединение идёт пользователем `deploy` с `StrictHostKeyChecking=yes`; значения секретов в репозитории не хранятся. Ограничение environment веткой `main` настраивается отдельно в GitHub. Установка и назначение каждого секрета — в [deployment](deployment.md#ssh-доступ-для-github-actions).
 

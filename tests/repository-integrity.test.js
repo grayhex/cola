@@ -109,6 +109,12 @@ test("handbook manifest and relative document/image links resolve in this tree",
   assert.equal(book.pathBase, "docs");
   assert.equal(Object.hasOwn(book, "compatibilityPaths"), false);
   assert.equal(new Set(book.chapters).size, book.chapters.length);
+  const chapters = (await files("docs")).filter((p) => p.endsWith(".md"));
+  assert.deepEqual(
+    book.chapters.map((p) => path.join("docs", p)).sort(),
+    [...chapters].sort(),
+    "Every maintained chapter must be included in the handbook",
+  );
   for (const chapter of book.chapters)
     assert.ok(
       await exists(path.join(root, "docs", chapter)),
@@ -126,9 +132,11 @@ test("handbook manifest and relative document/image links resolve in this tree",
     );
   const documents = [
     "README.md",
+    "AGENTS.md",
     "CONTRIBUTING.md",
+    "public/fonts/README.md",
     "services/bike-resolver/README.md",
-    ...(await files("docs")).filter((p) => p.endsWith(".md")),
+    ...chapters,
   ];
   for (const file of documents) {
     // Examples in fenced code are not rendered document links.

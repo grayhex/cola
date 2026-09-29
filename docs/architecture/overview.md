@@ -4,22 +4,27 @@
 
 ## Модель системы
 
-ColaBike — приложение вокруг велосипеда как постоянного объекта: его владелец ведёт комплектацию, публикует записи и покатушки, а другие участники подписываются и обсуждают их. Главная остаётся витриной велосипедов. Журнал, поездки, поиск и рекорды используют эти же сущности и права, а не независимые копии профилей и байков.
+ColaBike — приложение вокруг велосипеда как постоянного объекта: его владелец ведёт комплектацию, публикует записи и покатушки, а другие участники подписываются и обсуждают их. Главная показывает сообщество, события и популярные велосипеды; полная витрина находится на `/bikes`. Журнал, поездки, поиск и рекорды используют эти же сущности и права, а не независимые копии профилей и байков.
 
 ```mermaid
-flowchart LR
+flowchart TD
     Browser[Браузер] --> Proxy[Nginx / HTTPS]
     Proxy --> App[Next.js: страницы и API]
     App --> DB[(PostgreSQL: public)]
     App --> Photos[(photos: фото, аватары, журнал, графика)]
-    App --> Rides[(rides: приватные GPX)]
+    App --> Rides[(rides: приватные GPX, TCX, FIT)]
     App --> Resolver[Fastify: Bike Resolver]
     Resolver --> Cache[(PostgreSQL: bike_resolver)]
     Resolver --> Sources[Публичные страницы источников]
     Browser --> Maps[Внешняя картографическая подложка]
+    App --> Stream[Stream Chat]
+    Workers[chat-sync и activity-sync] --> DB
+    Workers --> Stream
+    Workers --> RWGPS[Ride with GPS]
+    Workers --> Rides
 ```
 
-Постоянно работают три Compose-сервиса: `app`, `db`, `bike-resolver`; отдельный одноразовый `migrate` применяет схему перед запуском app. Nginx установлен на хосте и не входит в Compose. База физически общая, но доменные таблицы приложения и схема `bike_resolver` имеют разных владельцев логики. Отдельного Redis, брокера очередей или Elasticsearch нет. Файловые очереди удаления обслуживаются существующим cleanup-скриптом.
+Compose содержит пять долгоживущих сервисов: `app`, `db`, `bike-resolver`, `chat-sync` и `activity-sync`. Одноразовый `migrate` применяет схему перед запуском app и workers. Оба worker используют общий образ `ops`; включение и настройка провайдеров описаны в [чате](../integrations/chat.md) и [синхронизации активностей](../integrations/activity-sync.md). Nginx установлен на хосте и не входит в Compose. База физически общая, но доменные таблицы приложения и схема `bike_resolver` имеют разных владельцев логики. Отдельного Redis, брокера очередей или Elasticsearch нет: задания интеграций хранятся в PostgreSQL. Файловая очистка обслуживается `scripts/cleanup-rides.js`. Переписка и вложения Stream хранятся у провайдера, а оригиналы импортированных поездок — в локальном rides volume.
 
 Основной код — JavaScript/React, Resolver — TypeScript/Fastify. Версии зависимостей смотрите в [package.json](../../package.json), [package.json Resolver](../../services/bike-resolver/package.json) и lock-файлах; Docker-образы в [Dockerfile](../../Dockerfile) и [Compose](../../compose.prod.yaml). Не путайте Node приложения с runtime, на котором выполняется Marketplace action в CI.
 
@@ -31,7 +36,7 @@ flowchart LR
 | `app/ui/`                           | Клиентские компоненты, запросы, локальный черновик и состояния интерфейса |
 | `app/api/`                          | HTTP, авторизация, Origin, лимиты, входные схемы, вызов доменных функций  |
 | `lib/`                              | SQL и доменная логика, DTO, валидация, файлы, настройки, клиент Resolver  |
-| `db/`                               | Миграции приложения и одноразовый серверный demo importer                 |
+| `db/`                               | Миграции приложения; новые установки без demo-контента                    |
 | `services/bike-resolver/`           | Независимый HTTP-сервис, discovery, парсинг, cache, собственные миграции  |
 | `scripts/`, `ops/`                  | Сборка, миграции, проверки runtime, backup и deploy wrappers              |
 | `tests/`                            | Unit/DB, HTTP и браузерные сценарии приложения                            |

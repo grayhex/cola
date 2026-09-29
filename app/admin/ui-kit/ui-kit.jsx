@@ -837,7 +837,7 @@ export default function UiKit() {
           </div>
           <p className="page-lead">
             Утверждённые токены, компоненты и их состояния в светлой и тёмной
-            теме. Правила применения — в DESIGN.md в корне репозитория.
+            теме. Правила применения — в docs/development/design-system.md.
           </p>
         </div>
         <UiKitSections />

@@ -34,6 +34,7 @@
 !scripts/cleanup-rides.js
 !scripts/chat-sync.js
 !scripts/chat-setup.js
+!scripts/activity-sync.js
 # Generated assets are rebuilt from the installed, locked package.
 public/maplibre/
 public/rive/runtime/

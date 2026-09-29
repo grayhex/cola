@@ -166,7 +166,7 @@ export default function Home() {
     <>
       <GlobalHeader user={user} />
       <main className={styles.home}>
-        {/* Marketing intro (DESIGN.md → Layout): the ruled column with the
+        {/* Marketing intro (docs/development/design-system.md → Layout): the ruled column with the
             headline, search and the administrator's pictures and colours. */}
         <section className="frame" aria-labelledby="hero-title">
           <div

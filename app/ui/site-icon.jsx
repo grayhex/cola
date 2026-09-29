@@ -91,7 +91,7 @@ export const slotIcons = {
   date: Calendar,
 };
 // Interface icon: the administrator's emoji when one is set for the slot,
-// otherwise the line icon, both at the same size (DESIGN.md → Icons).
+// otherwise the line icon, both at the same size (docs/development/design-system.md → Icons).
 export default function SiteIcon({
   name,
   settings,

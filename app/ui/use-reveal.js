@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef } from "react";
 // Marketing blocks ([data-reveal-item]) fade in once as they scroll into
-// view (DESIGN.md → Motion). Server HTML shows everything, so the content is
+// view (docs/development/design-system.md → Motion). Server HTML shows everything, so the content is
 // there without JavaScript, with reduced motion and for blocks already on
 // screen when the page opens: only blocks below the fold wait.
 export function useReveal() {
