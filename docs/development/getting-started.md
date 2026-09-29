@@ -4,10 +4,10 @@
 
 ## Запуск без настройки Node на хосте
 
-Нужны доступ к приватному `grayhex/cola`, Git и Docker Engine/Desktop с Compose. Используйте собственную GitHub-аутентификацию; production deploy key и `.env.production` разработчику не нужны.
+Нужны Git и Docker Engine/Desktop с Compose. Репозиторий публичный; для клонирования по HTTPS GitHub-аутентификация не требуется. Production deploy key и `.env.production` разработчику не нужны.
 
 ```bash
-git clone git@github.com:grayhex/cola.git
+git clone https://github.com/grayhex/cola.git
 cd cola
 # Не перезаписывает существующий локальный конфиг.
 if [ ! -e .env ]; then cp .env.example .env; fi

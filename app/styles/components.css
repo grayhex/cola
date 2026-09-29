@@ -1,4 +1,4 @@
-/* Shared components (#127, DESIGN.md → Components). Every page composes
+/* Shared components (#127, docs/development/design-system.md → Components). Every page composes
    these classes; feature styles only arrange them. States: hover, active,
    :focus-visible (from base.css), disabled / aria-disabled, aria-busy,
    aria-invalid, aria-pressed / aria-selected / aria-current.

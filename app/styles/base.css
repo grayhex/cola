@@ -1,4 +1,4 @@
-/* Base elements (#127, DESIGN.md → Typography). */
+/* Base elements (#127, docs/development/design-system.md → Typography). */
 @layer tokens, base, components, layout, features;
 @layer base {
   *,

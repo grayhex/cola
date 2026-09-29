@@ -12,7 +12,7 @@
 
 ## Репозиторий и конфигурация
 
-Клонируйте репозиторий с отдельным read-only deploy key в `/opt/stacks/cola`. Ключ чтения GitHub у владельца checkout и ключ Actions для входа на VPS пользователем `deploy` — разные credentials. Git должен работать от владельца checkout. Пользователю `deploy` не нужны личный GitHub-ключ или Docker group.
+Публичный репозиторий можно клонировать по HTTPS в `/opt/stacks/cola` без ключа GitHub. Если существующая установка использует read-only deploy key, его менять не требуется. Ключ чтения репозитория и ключ Actions для входа на VPS пользователем `deploy` — разные credentials. Git должен работать от владельца checkout; пользователю `deploy` не нужна Docker group.
 
 Production использует **самостоятельный** [compose.prod.yaml](../../compose.prod.yaml). Не объединяйте его через несколько `-f` с локальным `compose.yaml`: настройки портов могут сложиться. Создайте `.env.production` из [примера](../../.env.production.example), только если файла ещё нет; не перегенерируйте значения для работающей БД.
 
@@ -50,7 +50,7 @@ curl --fail --max-time 10 http://127.0.0.1:3000/api/status
 sudo ss -lntp | grep -E ':(3000|5432|8080)\b'
 ```
 
-Ожидается только `127.0.0.1:3000` на хосте; db/resolver не имеют host ports. Runtime проверяет production-настройки, затем миграции выполняются до старта Next. Ошибка Resolver не должна выключать ручной ввод, но после `--wait` проверяйте состояние всех трёх сервисов.
+Ожидается только `127.0.0.1:3000` на хосте; db/resolver не имеют host ports. Runtime проверяет production-настройки, затем миграции выполняются до старта Next. Ошибка Resolver не должна выключать ручной ввод, но после `--wait` проверяйте `app`, `db`, `bike-resolver`, `chat-sync`, `activity-sync` и успешное завершение `migrate`. Workers не имеют HTTP-healthcheck: их работу дополнительно проверяют по логам и очередям интеграций.
 
 Не печатайте `docker compose config` без `--quiet` в общедоступный лог: он раскрывает секреты. Стабильное имя Compose project определяет имена volumes; сохраните существующее имя при обновлении. Не запускайте `down -v` для исправления сборки.
 
@@ -81,7 +81,7 @@ Email — пример. Скрипт работает только с сущес
 
 ## SSH-доступ для GitHub Actions
 
-Это инструкция первоначальной настройки оператором. Перенос исходника `deploy-cola-ssh` в `ops/` не меняет его байты, установленный путь или `authorized_keys`; для уже работающей SSH-выкладки переустановка из-за одного переноса не требуется.
+Это инструкция первоначальной настройки оператором. Изменение скриптов в `ops/` само по себе не обновляет установленные root-owned wrappers: их обновление выполняется оператором после review.
 
 1. Подготовьте отдельного пользователя `deploy` с рабочей оболочкой для forced-command, без входа по паролю и без Docker group. У владельца `/opt/stacks/cola` должен работать read-only доступ к репозиторию; `deploy` не должен изменять checkout и `.env.production`.
 2. Из проверенного checkout установите оба root-owned скрипта (каталог назначения также не должен быть доступен `deploy` на запись):
@@ -122,7 +122,7 @@ Email — пример. Скрипт работает только с сущес
 
 Forced-command отклоняет всё, кроме 40-символьного SHA. Затем `deploy-cola` требует, чтобы SHA совпадал с текущим `origin/main`, проверяет чистоту tracked-файлов, собирает Compose и ждёт healthchecks. Даже корректный SHA запускает реальную выкладку: не используйте его как безвредный тест SSH. При разрешённой оператором выкладке проверьте Actions, healthchecks и `/var/lib/colabike/verified-sha`; недоступную production-проверку отмечайте отдельно.
 
-## Одноразовые миграции и операторские команды (#194)
+## Одноразовые миграции и операторские команды
 
 Обычный `compose up --build -d --wait` теперь собирает `app` (target `runner`) и
 `migrate` (target `ops`). После готовности БД запускается один контейнер миграций;
@@ -132,9 +132,9 @@ Forced-command отклоняет всё, кроме 40-символьного S
 Установленный deploy wrapper использует ту же команду Compose и не требует замены.
 
 `migrate` единожды собирает локальный образ `${COMPOSE_PROJECT_NAME}-ops:local`.
-`chat-sync` использует этот же образ без собственного build/export и без pull из
-registry; имя изолировано именем Compose-проекта. Worker стартует только после
-успешной миграции. На чистом хосте запускайте обычный полный `up --build` либо
+`chat-sync` и `activity-sync` используют этот же образ без собственного build/export
+и без pull из registry; имя изолировано именем Compose-проекта. Оба worker стартуют
+только после успешной миграции. На чистом хосте запускайте обычный полный `up --build` либо
 сначала `build migrate`: `up --no-build chat-sync` не создаст отсутствующий образ.
 CI проверяет build graph, холодный `up --build` с отдельным локальным тегом и
 совпадение image ID миграции/worker в runtime/restore drill.
@@ -151,21 +151,9 @@ CI проверяет build graph, холодный `up --build` с отдель
 `exec app`. После принятой выкладки отдельно проверить exit code `migrate`, readiness,
 вход, загрузку фото, покатушку и версии. Production-проверку выполняет оператор.
 
-## Таймаут Deploy #90
+## Незавершённый deploy и повторный запуск
 
-[Run #90](https://github.com/grayhex/cola/actions/runs/36337745437) для `82b746c`
-27.09.2026 завершился по 20-минутному лимиту Actions на экспорте web image.
-Next успешно скомпилировался: весь build step занял 983 секунды, включая запись
-compiler cache. Одновременно экспортировались два одинаковых ops target для
-`migrate` и `chat-sync` (по ~350 секунд, эти интервалы перекрываются и не суммируются).
-В логе нет подтверждения завершённой выкладки. Причину нагрузки на VPS — CPU,
-RAM/swap или I/O — без серверных метрик установить нельзя.
-
-Исправление #203 использует один ops image и бюджет 40/38 минут для job/SSH-step.
-Проверки SHA, forced-command, миграций и readiness сохранены. Переноса сборки в
-registry и смены установленного wrapper в этом исправлении нет; новые secrets
-или ручная переустановка wrapper не нужны. Ускорение на конкретном VPS должно
-подтверждаться следующим разрешённым deploy, а не временем hosted CI.
+В workflow заданы лимиты 40 минут для job и 38 минут для SSH-step. Их актуальные значения — в [deploy.yml](../../.github/workflows/deploy.yml); время сборки зависит от ресурсов VPS и кеша. Если выкладка не завершилась, проверьте сервер до повтора.
 
 Отмена SSH-job не доказывает остановку удалённого BuildKit/Compose. Перед повтором
 оператор проверяет состояние; lock-файл не удаляют и процессы не убивают вслепую:
@@ -179,25 +167,23 @@ curl --fail --silent --show-error https://colabike.ru/api/ready
 ```
 
 Если прежняя операция держит `/var/lock/colabike-deploy.lock`, дождитесь её
-завершения и выясните состояние процесса до новой выкладки. После принятия
-исправления оператор запускает штатный deploy актуального проверенного `main`.
-Re-run старого #90 использует старый workflow/старый SHA и не применяет новый
-бюджет; wrapper также отклонит SHA, который уже не совпадает с `origin/main`.
+завершения и выясните состояние процесса до новой выкладки. Оператор запускает
+штатный deploy актуального проверенного `main`. Re-run старого запуска использует
+его workflow/commit; wrapper отклонит SHA, который уже не совпадает с `origin/main`.
 Успех подтверждается зелёным deploy, readiness и ожидаемым `verified-sha`.
 
 ## Версии стека и обновление
 
-Версии проверены 26.09.2026 по официальным релизам, npm registry и Docker Hub. Это версии исходников и образов, а не подтверждение того, что уже запущено на VPS.
+Версии ниже взяты из файлов этой ветки; состояние запущенных контейнеров проверяется отдельно. При обновлении сверяйте manifests, lockfiles, Dockerfile и CI вместе.
 
-| Компонент                    | Зафиксировано                                                                              | Источник                                                                                                                                                                                        |
-| ---------------------------- | ------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Node.js                      | `24.21.0-alpine` во всех stages обоих Dockerfile; `24.21.0` в CI; `engines` допускает 24.x | [LTS-релиз](https://nodejs.org/en/blog/release/v24.21.0), [Docker-тег](https://hub.docker.com/v2/repositories/library/node/tags/24.21.0-alpine)                                                 |
-| Next.js / Next ESLint plugin | `16.3.6`                                                                                   | [Релиз](https://github.com/vercel/next.js/releases/tag/v16.3.6), [npm Next](https://registry.npmjs.org/next/16.3.6), [npm plugin](https://registry.npmjs.org/@next%2feslint-plugin-next/16.3.6) |
-| React / React DOM            | `19.3.0`                                                                                   | [Релиз](https://github.com/facebook/react/releases/tag/v19.3.0), [npm React DOM](https://registry.npmjs.org/react-dom/19.3.0)                                                                   |
-| PostgreSQL                   | `17.11-alpine` в обоих Compose и CI                                                        | [Релиз](https://www.postgresql.org/docs/17/release-17-11.html), [Docker-тег](https://hub.docker.com/v2/repositories/library/postgres/tags/17.11-alpine)                                         |
-| Менеджеры пакетов и типы     | pnpm `11.19.0` в корне, npm у Resolver; `@types/node` `24.13.6` в обоих пакетах            | [pnpm](https://registry.npmjs.org/pnpm/11.19.0), [Node types](https://registry.npmjs.org/@types%2fnode/24.13.6)                                                                                 |
+| Компонент         | Линия / источник точной версии                                                                                                                |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Node.js           | 24.x; [Dockerfile](../../Dockerfile), [Resolver Dockerfile](../../services/bike-resolver/Dockerfile), [CI](../../.github/workflows/check.yml) |
+| Next.js / React   | 16 / 19; [package.json](../../package.json) и [pnpm-lock.yaml](../../pnpm-lock.yaml)                                                          |
+| PostgreSQL        | 17; [Compose](../../compose.prod.yaml) и CI                                                                                                   |
+| Менеджеры пакетов | pnpm из `packageManager` корня; npm с отдельным [lockfile Resolver](../../services/bike-resolver/package-lock.json)                           |
 
-Более новый `@types/node` 24.19.0 опубликован менее суток назад и отклонён действующей политикой `minimumReleaseAge` pnpm. Выбран проверенный 24.13.6 той же линии Node 24; исключения из политики не добавлены. Node 26 пока Current, поэтому выбран Node 24 LTS. React 19.3.0 уже был в lockfile до обновления; manifest приведён к нему. PostgreSQL остаётся на major 17. На дату проверки `postgres:17-alpine` и `postgres:17.11-alpine` указывали на один digest; установленный контейнер всё равно нужно проверить отдельно. Next 16.3.6 включает [исправление `next/og`](https://github.com/vercel/next.js/security/advisories/GHSA-vcvr-r3jv-pc5j).
+Сохраняйте ограничения `engines`, политику `minimumReleaseAge` и проверку peers. Не обходите их ради самого нового пакета. Обновление major PostgreSQL требует отдельного плана переноса данных; смена тега не заменяет миграцию БД.
 
 ### До merge и выкладки: операторская проверка
 
@@ -214,9 +200,9 @@ sudo docker compose --env-file .env.production -f compose.prod.yaml images
 sudo cat /var/lib/colabike/verified-sha
 ```
 
-Если реальные версии новее выбранных или PostgreSQL уже другого major, остановите выкладку и согласуйте версию PR; не понижайте их по старой таблице. Сохраните SHA, точные image IDs/digests приложения, Resolver и БД. До пересборки присвойте прежним app/Resolver images отдельные уникальные локальные теги через `docker image tag IMAGE_ID BACKUP_TAG`, при необходимости выгрузите их через `docker image save`. Не полагайтесь на переиспользуемое имя Compose image и не запускайте image prune до приёмки. Сохраните конфигурацию отдельно с ограниченным доступом.
+Если реальные версии расходятся с выбранным commit или PostgreSQL уже другого major, выясните причину до выкладки; не понижайте их по документации. Сохраните SHA, точные image IDs/digests приложения, ops, Resolver и БД. До пересборки присвойте прежним app/ops/Resolver images отдельные уникальные локальные теги через `docker image tag IMAGE_ID BACKUP_TAG`, при необходимости выгрузите их через `docker image save`. Не полагайтесь на переиспользуемое имя Compose image и не запускайте image prune до приёмки. Сохраните конфигурацию отдельно с ограниченным доступом.
 
-Выполните [production backup](backup-restore.md#production-backup), `verify` и проверьте доступность копии вне VPS. Backup включает БД и пользовательские файлы; сам образ приложения в него не входит. Эта смена версий не добавляет миграций приложения, однако перед обновлением PostgreSQL backup всё равно обязателен.
+Выполните [production backup](backup-restore.md#production-backup), `verify` и проверьте доступность копии вне VPS. Backup включает БД и пользовательские файлы; сам образ приложения в него не входит. Состав миграций проверяйте по diff выбранного обновления; перед обновлением PostgreSQL backup обязателен.
 
 ### После разрешённой выкладки
 

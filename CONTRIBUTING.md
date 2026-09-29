@@ -1,6 +1,6 @@
 # Разработка ColaBike
 
-Начните с [оглавления документации](docs/README.md).
+Начните с [оглавления документации](docs/README.md). Для AI-агентов — короткий [AGENTS.md](AGENTS.md); для UI — [дизайн-система](docs/development/design-system.md).
 
 Первый маршрут чтения: [локальный запуск](docs/development/getting-started.md) → [архитектура](docs/architecture/overview.md) → [принципы разработки](docs/development/principles.md) → [нужный модуль](docs/README.md#модули-приложения). Для парсера: [Resolver](docs/resolver/architecture.md) и [добавление источника](docs/resolver/sources.md).
 

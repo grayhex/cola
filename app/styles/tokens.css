@@ -2,7 +2,7 @@
    never the raw palette, so light and dark share one component structure.
    The raw scale is Tailwind's default palette, which the reference pages
    (huggingface.co/pricing, /storage, /datasets) are built on; gray-950 is
-   Hugging Face's own dark canvas from design.md. See DESIGN.md. */
+   Hugging Face's own dark canvas from the design reference. See docs/development/design-system.md. */
 @layer tokens, base, components, layout, features;
 
 @layer tokens {
