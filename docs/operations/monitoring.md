@@ -78,14 +78,21 @@ sudo ss -lntp
 
 Квоты одного пользователя не ограничивают весь диск при росте числа аккаунтов; графика администратора также расходует место. Контролируйте данные, Docker build cache/images, логи, backup volume и память. `docker system prune --volumes` не является штатным лечением занятого диска.
 
-Периодический cleanup GPX и journal outbox:
+Периодический cleanup файлов поездок, journal, рынка и фото компонентов:
 
 ```bash
 cd /opt/stacks/cola
 docker compose --env-file .env.production -f compose.prod.yaml run --rm --no-deps -T migrate node scripts/cleanup-rides.js
 ```
 
-Для тихой установки настройте расписание от оператора отдельно. Учитывайте пересечение с backup/deploy и не создавайте неконтролируемый дополнительный писатель во время snapshot.
+С #248 HTTP-запросы больше не обслуживают хранилище поездок. Удаление поездки и сохранение из preview сразу убирают только свои файлы, остальное делает этот скрипт. Без расписания растут очередь `ride_file_gc`, просроченные preview и файлы-сироты. Уборка грубо идёт раз в 15–60 минут; один проход ограничен (по умолчанию 20 с, пачки по 200, до 2000 файлов-кандидатов в сиротах) и продолжает обход сирот с сохранённого курсора. Параллельный второй запуск завершается сразу (`"skipped":true`). Пример расписания, которое оператор ставит сам (репозиторий его не включает):
+
+```cron
+# crontab пользователя, владеющего checkout; flock не даёт копиться запускам
+*/30 * * * * cd /opt/stacks/cola && flock -n /tmp/cola-cleanup.lock docker compose --env-file .env.production -f compose.prod.yaml run --rm --no-deps -T migrate node scripts/cleanup-rides.js >> /var/log/cola-cleanup.log 2>&1
+```
+
+Скрипт печатает одну JSON-строку `ride_storage_cleanup` только со счётчиками: `expiredPreviews`, `gc.removed/kept/failed/batches`, `orphans.checked/removed/failed/wrapped`, `backlog.queued/oldestQueuedAt/expiredPreviews`. Если файл не удалось удалить, задание остаётся в очереди, а код выхода — 1. Растущие `backlog.queued` и старый `oldestQueuedAt` означают, что уборка не успевает или не запускается. Ручная проверка без удаления: `SELECT count(*), min(created_at) FROM ride_file_gc;`. Учитывайте пересечение с backup/deploy и не создавайте неконтролируемый дополнительный писатель во время snapshot.
 
 Аудит файлов фотографий запускается отдельно через [audit-photo-files.js](../../scripts/audit-photo-files.js). `--prune-orphans` — явная операция удаления, только после backup и проверки текущей версии. [recalculate-photo-storage.js](../../scripts/recalculate-photo-storage.js) по умолчанию показывает изменения; `--apply` записывает метаданные размеров. Не запускайте старый prune-код над новой схемой/типами файлов.
 
