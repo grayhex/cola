@@ -110,6 +110,7 @@ export default function RideBasemap({
         ))}
         {cursor && (
           <circle
+            role="img"
             aria-label="Выбранная точка маршрута"
             cx={cursor[0]}
             cy={cursor[1]}
