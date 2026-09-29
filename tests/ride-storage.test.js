@@ -252,7 +252,12 @@ test("GC queue: bounded batches, live track files kept, ENOENT, storage errors k
     assert.equal(first.removed, 2);
     assert.equal(await queued(), 3);
     // A crash after unlink and before the row was confirmed: ENOENT next time.
-    await rm(path.join(dir, `ride-${ids[2]}.gpx.gz`));
+    // The queue orders by time, then id: equal timestamps make the first
+    // batch any two of the five, so take a file that is still queued.
+    const [pending] = (
+      await db.query("SELECT id FROM ride_file_gc ORDER BY id LIMIT 1")
+    ).rows;
+    await rm(path.join(dir, `ride-${pending.id}.gpx.gz`));
     // Two passes at once finish the queue without errors or double counts.
     const [a, b] = await Promise.all([
       drainRideFileGc(db, { limit: 10 }),
