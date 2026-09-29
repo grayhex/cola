@@ -11,7 +11,13 @@ import { selectableRideBikes } from "../../lib/bike-status.js";
 // #253): the home page, the account overview and «Мои покатушки» open the
 // same planner, which also edits an existing plan. It loads the garage and
 // ride settings on open, so no page pays for it upfront.
-export default function PlanComposer({ ride = null, onClose, onSaved }) {
+export default function PlanComposer({
+  ride = null,
+  draft = null,
+  title,
+  onClose,
+  onSaved,
+}) {
   const [state, setState] = useState({ status: "loading" }),
     [revision, setRevision] = useState(0);
   const dirty = useRef(false);
@@ -55,7 +61,9 @@ export default function PlanComposer({ ride = null, onClose, onSaved }) {
     <>
       <Modal
         wide
-        title={ride ? "Изменить покатушку" : "Организовать покатушку"}
+        title={
+          title || (ride ? "Изменить покатушку" : "Организовать покатушку")
+        }
         onClose={close}
       >
         {state.status === "loading" &&
@@ -104,13 +112,14 @@ export default function PlanComposer({ ride = null, onClose, onSaved }) {
         {canPlan && (
           <PlanForm
             ride={ride}
+            draft={draft}
             bikes={state.bikes}
             config={state.config}
             onDirty={onDirty}
             onCancel={close}
-            onSaved={(result) => {
+            onSaved={(result, created) => {
               dirty.current = false;
-              onSaved(result);
+              onSaved(result, created);
             }}
           />
         )}

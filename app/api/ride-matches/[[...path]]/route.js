@@ -55,7 +55,7 @@ async function handler(req, { params }) {
         await transaction((q) => inviteFromInterest(q, user.id, rideId, input)),
       );
     }
-    if (req.method !== "GET") return fail("Не найдено", 404);
+    if (req.method !== "GET") return fail("Метод не поддерживается", 405);
     const search = queryObject(new URL(req.url).searchParams);
     if (!(await rateLimit("ride-match:" + user.id, 120)))
       return fail("Слишком много запросов. Попробуйте позже.", 429);

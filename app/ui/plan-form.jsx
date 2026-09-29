@@ -35,25 +35,29 @@ const splitLocal = (instant, zone) => {
   const [date, time] = localDateTime(instant, zone).split("T");
   return [date, time];
 };
-function initialPlan(ride, currentBikes, zone) {
-  if (!ride)
+function initialPlan(ride, currentBikes, zone, draft) {
+  if (!ride) {
+    // A proposal from a group of interest (#234) brings a start and the
+    // group's format; the organizer still fixes everything before saving.
+    const [date, time] = splitLocal(draft?.startAt, zone);
     return {
       bikeId: currentBikes.length === 1 ? currentBikes[0].id : "",
       title: "",
       description: "",
       isPublic: true,
-      date: "",
-      time: "",
+      date,
+      time,
       endTime: "",
-      startFold: undefined,
+      startFold: foldOf(draft?.startAt, zone),
       endFold: undefined,
       meetingPoint: "",
       meetingVisibility: "participants",
-      passport: {},
+      passport: draft?.passport || {},
       invitations: "",
       recurrence: "none",
       features: "",
     };
+  }
   const startsAt = ride.startedAt || ride.scheduledAt,
     endsAt = ride.planEndsAt || ride.expectedEndAt;
   const [date, time] = splitLocal(startsAt, zone);
@@ -99,12 +103,14 @@ function FoldChoice({ local, zone, label, value, onChange }) {
   );
 }
 /**
- * @param {{ ride?: any, bikes: any[], config: any,
- *   onSaved: (result: "planned" | "saved" | "removed") => void,
+ * @param {{ ride?: any, draft?: {startAt?: string, passport?: object, fromInterest?: boolean} | null,
+ *   bikes: any[], config: any,
+ *   onSaved: (result: "planned" | "saved" | "removed", created?: {id: string, shareId: string, occurrenceAt: string}) => void,
  *   onCancel: () => void, onDirty?: (dirty: boolean) => void }} props
  */
 export default function PlanForm({
   ride = null,
+  draft = null,
   bikes,
   config,
   onSaved,
@@ -119,7 +125,9 @@ export default function PlanForm({
       : userTimeZone(personalSettings);
   const currentBikes = useMemo(() => selectableRideBikes(bikes), [bikes]);
   const rideBikes = selectableRideBikes(bikes, ride?.bike?.id);
-  const [form, setForm] = useState(() => initialPlan(ride, currentBikes, zone)),
+  const [form, setForm] = useState(() =>
+      initialPlan(ride, currentBikes, zone, draft),
+    ),
     [initial] = useState(form),
     [preview, setPreview] = useState(null),
     [busy, setBusy] = useState(false),
@@ -217,13 +225,20 @@ export default function PlanForm({
           .map((s) => s.replace(/^@/, ""))
           .filter(Boolean),
         ...(!ride && preview ? { previewId: preview.previewId } : {}),
+        ...(!ride && draft?.fromInterest ? { fromInterest: true } : {}),
       };
-      await socialApi(
+      const saved = await socialApi(
         ride ? "rides/" + ride.id : "rides/plan",
         ride ? "PATCH" : "POST",
         input,
       );
-      onSaved(ride ? "saved" : "planned");
+      if (ride) onSaved("saved");
+      else
+        onSaved("planned", {
+          id: saved.id,
+          shareId: saved.shareId,
+          occurrenceAt: times.scheduledAt,
+        });
     } catch (err) {
       setError(err.message);
     } finally {

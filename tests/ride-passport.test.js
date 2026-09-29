@@ -118,6 +118,11 @@ test("migration preserves legacy visibility; meeting access follows this occurre
     assert.equal(old.meetingPoint, "Old public meeting");
     assert.deepEqual(old.passport, {});
     assert.equal(old.meetingVisibility, "public");
+    // The code below needs the current schema, not the one right after 036.
+    for (const file of migrations.filter((f) => f > "036_ride_passport.sql"))
+      await db.exec(
+        await readFile(new URL("../db/" + file, import.meta.url), "utf8"),
+      );
     const tx = (fn) => db.transaction(fn);
     const input = planInput.parse({
       bikeId: bike,
