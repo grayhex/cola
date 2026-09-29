@@ -362,4 +362,33 @@ test("planner controls survive reduced motion, a missing Motion chunk, a slow AP
     fullPage: true,
     animations: "disabled",
   });
+  // Saved with a hidden meeting point, the plan protects its track; making
+  // the point public lifts that protection, as there is no separate control.
+  await page.unroute("**/api/rides/plan");
+  await page.unroute("**/_next/static/**/*.js");
+  await dialog.getByLabel("Название", { exact: true }).fill("Открытая встреча");
+  await save.click();
+  await expect(dialog).toHaveCount(0);
+  const saved = async () =>
+    (await (await page.request.get("/api/rides?own=1")).json()).rides.find(
+      (r) => r.title === "Открытая встреча",
+    );
+  expect((await saved()).privacyEnabled).toBe(true);
+  await page
+    .locator(".ride-card")
+    .filter({ hasText: "Открытая встреча" })
+    .getByRole("button", { name: "Изменить", exact: true })
+    .click();
+  const edit = page.getByRole("dialog", { name: "Изменить покатушку" });
+  await edit
+    .getByLabel("Кто видит точное место встречи")
+    .selectOption("public");
+  await edit
+    .getByRole("button", { name: "Сохранить изменения", exact: true })
+    .click();
+  await expect(edit).toHaveCount(0);
+  expect(await saved()).toMatchObject({
+    meetingVisibility: "public",
+    privacyEnabled: false,
+  });
 });

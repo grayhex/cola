@@ -14,11 +14,14 @@ import {
   rideBikeStateError,
 } from "../../lib/bike-status.js";
 import { userTimeZone } from "../../lib/user-time-zone.js";
+import { localDateTime, validTimeZone } from "../../lib/ride-intent-time.js";
 import {
-  localDateTime,
-  resolveLocal,
-  validTimeZone,
-} from "../../lib/ride-intent-time.js";
+  foldChoices,
+  foldOf,
+  planInstants,
+  planLocalTimes,
+  planPrivacy,
+} from "../../lib/ride-plan-input.js";
 
 // «Организовать покатушку» (#253): when and where → the ride → who takes part
 // → the rest. The zone comes from the profile (a series keeps its own), the
@@ -42,6 +45,8 @@ function initialPlan(ride, currentBikes, zone) {
       date: "",
       time: "",
       endTime: "",
+      startFold: undefined,
+      endFold: undefined,
       meetingPoint: "",
       meetingVisibility: "participants",
       passport: {},
@@ -49,8 +54,10 @@ function initialPlan(ride, currentBikes, zone) {
       recurrence: "none",
       features: "",
     };
-  const [date, time] = splitLocal(ride.startedAt || ride.scheduledAt, zone);
-  const [, endTime] = splitLocal(ride.planEndsAt || ride.expectedEndAt, zone);
+  const startsAt = ride.startedAt || ride.scheduledAt,
+    endsAt = ride.planEndsAt || ride.expectedEndAt;
+  const [date, time] = splitLocal(startsAt, zone);
+  const [, endTime] = splitLocal(endsAt, zone);
   return {
     bikeId: ride.bike.id,
     title: ride.title,
@@ -59,6 +66,8 @@ function initialPlan(ride, currentBikes, zone) {
     date,
     time,
     endTime,
+    startFold: foldOf(startsAt, zone),
+    endFold: foldOf(endsAt, zone),
     meetingPoint: ride.meetingPoint,
     meetingVisibility: ride.meetingVisibility || "public",
     passport: ride.passport || {},
@@ -67,19 +76,27 @@ function initialPlan(ride, currentBikes, zone) {
     features: ride.features.join(", "),
   };
 }
-/** Start and optional end as instants in `zone`; an end not after the start
- * is the next day. */
-function instants(form, zone) {
-  const start = resolveLocal(`${form.date}T${form.time}`, zone, "earlier");
-  if (!form.endTime) return { scheduledAt: start, expectedEndAt: null };
-  let end = resolveLocal(`${form.date}T${form.endTime}`, zone, "earlier");
-  if (Date.parse(end) <= Date.parse(start)) {
-    const next = new Date(Date.parse(`${form.date}T00:00:00Z`) + 86400000)
-      .toISOString()
-      .slice(0, 10);
-    end = resolveLocal(`${next}T${form.endTime}`, zone, "earlier");
-  }
-  return { scheduledAt: start, expectedEndAt: end };
+/** Repeated local time on a fall-back day: which occurrence is meant. */
+function FoldChoice({ local, zone, label, value, onChange }) {
+  const choices = foldChoices(local, zone);
+  if (choices.length < 2) return null;
+  return (
+    <label className="field">
+      <span>{label}</span>
+      <select
+        required
+        value={value || ""}
+        onChange={(e) => onChange(e.target.value || undefined)}
+      >
+        <option value="">Выберите вхождение</option>
+        {choices.map((instant, n) => (
+          <option key={instant} value={n ? "later" : "earlier"}>
+            {n ? "Второй" : "Первый"} раз · {instant.slice(11, 16)} UTC
+          </option>
+        ))}
+      </select>
+    </label>
+  );
 }
 /**
  * @param {{ ride?: any, bikes: any[], config: any,
@@ -115,6 +132,7 @@ export default function PlanForm({
   const dirty = !!preview || JSON.stringify(form) !== JSON.stringify(initial);
   useEffect(() => onDirty?.(dirty), [dirty, onDirty]);
   const set = (key, value) => setForm((f) => ({ ...f, [key]: value }));
+  const local = planLocalTimes(form);
   const selectedBike = rideBikes.find((b) => b.id === form.bikeId);
   const cannotPublish =
     form.isPublic && selectedBike && !selectedBike.is_public;
@@ -162,7 +180,7 @@ export default function PlanForm({
     if (cannotPublish) return;
     let times;
     try {
-      times = instants(form, zone);
+      times = planInstants(form, zone);
     } catch (err) {
       setWhenError(err.message);
       return;
@@ -178,9 +196,8 @@ export default function PlanForm({
         title: form.title,
         description: form.description,
         isPublic: form.isPublic,
-        // Track privacy is not a planning choice; an existing ride keeps its
-        // own, a hidden meeting point is protected by the server.
-        privacyEnabled: ride ? ride.privacyEnabled : false,
+        // Track privacy follows the meeting point; no separate control.
+        privacyEnabled: planPrivacy(ride, form.meetingVisibility),
         privacyRadiusM: ride
           ? ride.privacyRadiusM
           : config?.defaultRadius || 500,
@@ -251,7 +268,14 @@ export default function PlanForm({
                 type="date"
                 required
                 value={form.date}
-                onChange={(e) => set("date", e.target.value)}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    date: e.target.value,
+                    startFold: undefined,
+                    endFold: undefined,
+                  }))
+                }
               />
             </label>
             <label className="field">
@@ -260,7 +284,14 @@ export default function PlanForm({
                 type="time"
                 required
                 value={form.time}
-                onChange={(e) => set("time", e.target.value)}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    time: e.target.value,
+                    startFold: undefined,
+                    endFold: undefined,
+                  }))
+                }
               />
             </label>
             <label className="field">
@@ -269,10 +300,30 @@ export default function PlanForm({
                 type="time"
                 aria-describedby="plan-end-help"
                 value={form.endTime}
-                onChange={(e) => set("endTime", e.target.value)}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    endTime: e.target.value,
+                    endFold: undefined,
+                  }))
+                }
               />
             </label>
           </div>
+          <FoldChoice
+            local={local.start}
+            zone={zone}
+            label="Время старта повторяется при переводе часов"
+            value={form.startFold}
+            onChange={(v) => set("startFold", v)}
+          />
+          <FoldChoice
+            local={local.end}
+            zone={zone}
+            label="Время окончания повторяется при переводе часов"
+            value={form.endFold}
+            onChange={(v) => set("endFold", v)}
+          />
           <small className="help" id="plan-end-help">
             Время — {zone}
             {ride ? " (пояс серии)" : " · из профиля"}. Окончание необязательно;
