@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useSite } from "../ui/site-provider.jsx";
 import RideCreationActions from "../ui/ride-creation-actions.jsx";
@@ -25,7 +26,12 @@ export default function Rides() {
             <h1>Покатушки</h1>
             <p>Находите маршруты сообщества и планируйте совместные поездки.</p>
           </div>
-          <RideCreationActions />
+          <div className="page-actions">
+            <Link className="button secondary" href="/ride-intents">
+              Хочу кататься
+            </Link>
+            <RideCreationActions />
+          </div>
         </div>
         <div className="ui-tabs" aria-label="Фильтр покатушек">
           {[

@@ -258,6 +258,14 @@ test("component media and shared discussion: upgrade, roles, quota, merges, mode
       bytes.length,
     ]);
     assert.equal(await componentPhotoBytes(db, owner.id), bytes.length);
+    // The export contract also includes intentions; this historical 029 fixture
+    // needs their independent schema before calling the current exporter.
+    await db.exec(
+      await readFile(
+        new URL("../db/037_ride_intents.sql", import.meta.url),
+        "utf8",
+      ),
+    );
     assert.equal(
       (await exportAccount(db, owner.id, "https://example.test"))
         .componentPhotos[0].id,

@@ -756,7 +756,7 @@ function Icons() {
   );
 }
 
-function RidePlanDemo() {
+function RidePlanDemo({ intent = false }) {
   const [passport, setPassport] = useState({
     area: { label: "Измайловский парк" },
     purpose: "social",
@@ -764,7 +764,9 @@ function RidePlanDemo() {
     surface: "mixed",
     beginnerFriendly: true,
   });
-  return <RidePlanFields value={passport} onChange={setPassport} />;
+  return (
+    <RidePlanFields value={passport} onChange={setPassport} intent={intent} />
+  );
 }
 
 // The sections of the kit: on their own page and inside the admin, where
@@ -809,10 +811,14 @@ export function UiKitSections() {
       <Section
         id="ride-plans"
         title="Паспорт поездки"
-        lead="Общие параметры планов и будущих намерений. Неизвестные значения не подменяются нулями."
+        lead="Общие параметры планов и намерений. Неизвестные значения не подменяются нулями."
       >
         <Both wide>
           <RidePlanDemo />
+        </Both>
+        <h3>Намерение: цель и приблизительный район</h3>
+        <Both wide>
+          <RidePlanDemo intent />
         </Both>
       </Section>
       <Section id="badges" title="Бейджи и теги">

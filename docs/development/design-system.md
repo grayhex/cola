@@ -342,7 +342,7 @@ app/**/*.module.css        стили одного React-компонента
 
 ## 11. UI Kit
 
-`RidePlanFields` и `RidePassport` (`app/ui/ride-plan-fields.jsx`, `app/ui/ride-passport.jsx`) — общие поля и компактные metadata плановой поездки: неизвестные условия не заполняются значениями по умолчанию, дополнительные поля раскрываются через `details`, выбор темпа использует `ui-tabs`. Пример — «Паспорт поездки» в UI Kit. Motion feedback и раскрытие используют существующий `useMotionFeedback`; карточка → detail сохраняет `SharedView`.
+`RidePlanFields` и `RidePassport` (`app/ui/ride-plan-fields.jsx`, `app/ui/ride-passport.jsx`) — общие поля и компактные metadata плановой поездки: неизвестные условия не заполняются значениями по умолчанию, дополнительные поля раскрываются через `details`, выбор темпа использует `ui-tabs`. Вариант `intent` использует chips целей, обязательную область и формулировки без организатора/места встречи. Примеры обоих вариантов — «Паспорт поездки» в UI Kit. Motion feedback и раскрытие используют существующий `useMotionFeedback`; карточка → detail сохраняет `SharedView`.
 
 `/admin/ui-kit` (`app/admin/ui-kit`) — все компоненты этого файла, их варианты
 и состояния; каждый пример показан в светлой и тёмной теме рядом. В админке это

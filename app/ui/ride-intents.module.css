@@ -1,0 +1,115 @@
+.composer,
+.card,
+.preview {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  background: var(--surface);
+}
+.composer {
+  margin-block: var(--space-5);
+  background: var(--surface-subtle);
+}
+.quick,
+.cardHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.quick button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+.list {
+  display: grid;
+  gap: var(--space-3);
+  margin-block: var(--space-4);
+}
+.card {
+  min-width: 0;
+  background: var(--surface-gradient);
+}
+.card h2 {
+  margin: 0;
+  font-size: var(--text-lg);
+}
+.cardHead {
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
+}
+.intervals {
+  display: grid;
+  gap: var(--space-2);
+  list-style: none;
+  padding: 0;
+  margin-block: var(--space-3);
+}
+.intervals li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-variant-numeric: tabular-nums;
+}
+.intervals svg {
+  flex-shrink: 0;
+}
+
+.form,
+.fields {
+  display: grid;
+  gap: var(--space-4);
+}
+.fields {
+  padding: 0;
+  border: 0;
+  min-width: 0;
+  margin: 0;
+}
+.fields :global(.segmented) {
+  flex-wrap: wrap;
+}
+.windows,
+.privacy {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3);
+  min-width: 0;
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+}
+.windows legend,
+.privacy legend {
+  font-weight: var(--weight-semibold);
+  padding-inline: var(--space-1);
+}
+.window {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: var(--space-2);
+  align-items: end;
+}
+.window input {
+  min-width: 0;
+  width: 100%;
+}
+.preview {
+  background: var(--surface-subtle);
+  font-size: var(--text-sm);
+}
+.preview > strong {
+  margin-right: var(--space-3);
+}
+.preview p {
+  margin-block: var(--space-2);
+}
+@media (max-width: 600px) {
+  .window {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .window > button {
+    justify-self: end;
+  }
+}
