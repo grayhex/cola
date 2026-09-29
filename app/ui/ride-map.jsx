@@ -6,7 +6,12 @@ import { useSite } from "./site-provider.jsx";
 import { mapDefaults, mapStyle } from "../../lib/map-settings.js";
 import { bounds } from "../../lib/ride-geometry.js";
 import { routeCasing } from "../../lib/yandex-ride-map.js";
-export default function RideMap({ geometry, styleUrl, transitionId }) {
+export default function RideMap({
+  geometry,
+  styleUrl,
+  transitionId,
+  selectedCoord,
+}) {
   const { personalSettings: settings } = useSite();
   const config = settings.map || mapDefaults;
   if (settings.rideMapView === "hidden") return null;
@@ -25,15 +30,22 @@ export default function RideMap({ geometry, styleUrl, transitionId }) {
       geometry={geometry}
       styleUrl={styleUrl}
       transitionId={transitionId}
+      selectedCoord={selectedCoord}
     />
   );
 }
-function MapLibreRideMap({ geometry, styleUrl, transitionId }) {
+function MapLibreRideMap({ geometry, styleUrl, transitionId, selectedCoord }) {
   const { personalSettings: settings } = useSite();
   const config = settings.map || mapDefaults;
   // Raster providers produce an object: keep it stable through ready/visible
   // renders so that the map effect does not recreate its own canvas (#140).
   const style = useMemo(() => styleUrl || mapStyle(config), [styleUrl, config]);
+  const markerRef = useRef(null),
+    selectedRef = useRef(selectedCoord);
+  useEffect(() => {
+    selectedRef.current = selectedCoord;
+    updateMarker(markerRef.current, selectedCoord);
+  }, [selectedCoord]);
   const ref = useRef(null),
     [ready, setReady] = useState(false),
     [visible, setVisible] = useState(false);
@@ -81,7 +93,10 @@ function MapLibreRideMap({ geometry, styleUrl, transitionId }) {
             data: {
               type: "Feature",
               properties: {},
-              geometry: { type: "MultiLineString", coordinates: geometry },
+              geometry: {
+                type: "MultiLineString",
+                coordinates: geometry.filter((run) => run.length > 1),
+              },
             },
           });
           // A dark casing under the accent line keeps the route visible
@@ -110,6 +125,14 @@ function MapLibreRideMap({ geometry, styleUrl, transitionId }) {
             },
             layout: { "line-join": "round", "line-cap": "round" },
           });
+          const dot = document.createElement("div");
+          dot.className = "ride-analysis-marker";
+          dot.setAttribute("role", "img");
+          dot.setAttribute("aria-label", "Выбранная точка маршрута");
+          markerRef.current = new lib.Marker({ element: dot })
+            .setLngLat(selectedRef.current || geometry[0][0])
+            .addTo(map);
+          updateMarker(markerRef.current, selectedRef.current);
           const b = bounds(geometry);
           map.fitBounds(
             [
@@ -132,6 +155,8 @@ function MapLibreRideMap({ geometry, styleUrl, transitionId }) {
       .catch(() => {});
     return () => {
       disposed = true;
+      markerRef.current?.remove();
+      markerRef.current = null;
       map?.remove();
     };
   }, [
@@ -152,8 +177,22 @@ function MapLibreRideMap({ geometry, styleUrl, transitionId }) {
       />
       {ready && <MapAttribution config={config} />}
       {!ready && (
-        <RideBasemap geometry={geometry} transitionId={transitionId} />
+        <RideBasemap
+          geometry={geometry}
+          transitionId={transitionId}
+          selectedCoord={selectedCoord}
+        />
       )}
     </div>
   );
+}
+
+function updateMarker(marker, coord) {
+  if (!marker) return;
+  const element = marker.getElement();
+  element.hidden = !coord;
+  if (coord) {
+    marker.setLngLat(coord);
+    element.dataset.coordinate = coord.join(",");
+  }
 }

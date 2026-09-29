@@ -11,6 +11,7 @@ import {
   rideDetail,
   rideList,
   deleteRide,
+  refreshRideAnalysis,
 } from "../lib/rides.js";
 import { cleanupRides, getOriginal } from "../lib/ride-storage.js";
 import {
@@ -77,6 +78,38 @@ test("rides ownership, previews, privacy, social, feed, moderation, delete and s
     const saved = await tx((q) => saveRide(q, owner, input, rideDefaults));
     const r = await rideDetail(db, saved.shareId, other);
     assert.equal(r.title, "Loop");
+    assert.equal(r.analysis.visibility, "public");
+    assert.ok(r.analysis.pointCount > 0 && r.analysis.pointCount < loop.length);
+    const ownAnalysis = (await rideDetail(db, saved.shareId, owner, true))
+      .analysis;
+    assert.equal(ownAnalysis.pointCount, loop.length);
+    assert.equal(ownAnalysis.visibility, "owner");
+    assert.ok(ownAnalysis.segments[0][0].timestampS);
+    assert.equal(
+      (await rideDetail(db, saved.shareId, other, true)).analysis.visibility,
+      "public",
+    );
+    await assert.rejects(
+      tx((q) => refreshRideAnalysis(q, other, saved.id, rideDefaults)),
+      /недоступна/,
+    );
+    await db.query("DELETE FROM ride_analysis WHERE ride_id=$1", [saved.id]);
+    assert.equal(
+      (await rideDetail(db, saved.shareId, owner, true)).analysis,
+      null,
+    );
+    await tx((q) => refreshRideAnalysis(q, owner, saved.id, rideDefaults));
+    assert.deepEqual(
+      (await rideDetail(db, saved.shareId, owner, true)).analysis,
+      ownAnalysis,
+    );
+    await db.query(
+      "UPDATE ride_analysis SET privacy_radius_m=1000 WHERE ride_id=$1",
+      [saved.id],
+    );
+    assert.equal((await rideDetail(db, saved.shareId, other)).analysis, null);
+    await tx((q) => refreshRideAnalysis(q, owner, saved.id, rideDefaults));
+
     assert.ok(!("startedAt" in r));
     assert.ok(!("sourceHash" in r));
     assert.ok(r.geometry.length);

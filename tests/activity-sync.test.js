@@ -308,6 +308,13 @@ test("RWGPS durable lifecycle: OAuth, FIT, updates, duplicates, failures, deleti
     assert.deepEqual(ride.visible_metrics, ["distanceM"]);
     assert.equal(ride.description, "Mine");
     const publicRide = await rideDetail(db, ride.share_id, null);
+    assert.ok(publicRide.analysis.pointCount > 0);
+    assert.equal(publicRide.analysis.visibility, "public");
+    assert.ok(!("timestampS" in publicRide.analysis.segments[0][0]));
+    assert.ok(
+      (await rideDetail(db, ride.share_id, owner, true)).analysis.pointCount >=
+        publicRide.analysis.pointCount,
+    );
     assert.ok(!JSON.stringify(publicRide).includes("private-token"));
     assert.ok(!("external_id" in publicRide));
     // One upstream failure leaves the next trip importable; non-bike trips are ignored.

@@ -35,6 +35,7 @@ import {
   saveRide,
   deleteRide,
   rideDetail,
+  refreshRideAnalysis,
   rideList,
   rideInput,
   rideEdit,
@@ -147,6 +148,12 @@ async function handler(req, { params }) {
         .parse(await readJson(req, 3 * 1024 * 1024));
       return json(parseGarminCsv(body.csv, body));
     }
+    if (p.length === 2 && p[1] === "analysis" && m === "POST")
+      return json(
+        await transaction((q) =>
+          refreshRideAnalysis(q, user.id, uuid.parse(p[0]), config),
+        ),
+      );
     if (p[0] === "import" && p.length === 1 && m === "POST") {
       if (!config.enabled)
         return fail("Загрузка покатушек временно выключена", 403);

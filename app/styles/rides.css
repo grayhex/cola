@@ -486,3 +486,16 @@
     }
   }
 }
+
+.ride-analysis-marker {
+  width: 18px;
+  height: 18px;
+  border: 3px solid #1d2733;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 4px #0006;
+  pointer-events: none;
+}
+.ride-analysis-marker[hidden] {
+  display: none;
+}

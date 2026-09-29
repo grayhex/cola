@@ -46,6 +46,7 @@ try {
     "032_component_photo_search",
     "033_component_products",
     "034_activity_sync",
+    "035_ride_analysis",
   ]) {
     const { rowCount } = await client.query(
       "SELECT 1 FROM schema_migrations WHERE version=$1",
