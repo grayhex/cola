@@ -357,6 +357,10 @@ test("workspace screen (#243): setup sections, preference tiles, tabs, empty and
       await page.evaluate((value) => {
         document.documentElement.dataset.theme = value;
       }, theme);
+      // Measure the final palette: colours transition after a theme switch.
+      await page.waitForFunction(() =>
+        document.getAnimations().every((a) => a.playState !== "running"),
+      );
       expect(
         (await new AxeBuilder({ page }).include("main").analyze()).violations,
       ).toEqual([]);

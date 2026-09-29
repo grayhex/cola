@@ -285,7 +285,6 @@ export default function Home() {
               </button>
             </p>
           )}
-          {user ? <HomePlanner key={user.id} /> : <RideTogether />}
           <section className="section" aria-labelledby="popular-heading">
             <div className="section-head">
               <h2 id="popular-heading">{t("Популярные велосипеды")}</h2>
@@ -319,6 +318,9 @@ export default function Home() {
               </p>
             )}
           </section>
+          {/* After the popular builds: on a portrait phone the first build stays
+              on the first screen (#83); planning comes right below it. */}
+          {user ? <HomePlanner key={user.id} /> : <RideTogether />}
           <section className="section" aria-labelledby="community-heading">
             <div className="section-head">
               <h2 id="community-heading">{t("Что нового")}</h2>

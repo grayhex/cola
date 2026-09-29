@@ -165,6 +165,9 @@ test("signed-in home: going, suits, gather, composer with a keyboard-picked area
     await page.evaluate((value) => {
       document.documentElement.dataset.theme = value;
     }, theme);
+    await page.waitForFunction(() =>
+      document.getAnimations().every((a) => a.playState !== "running"),
+    );
     expect(
       (
         await new AxeBuilder({ page })
