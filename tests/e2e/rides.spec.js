@@ -324,26 +324,31 @@ test("FIT upload: export hint, heart rate hidden until the owner shows it", asyn
   await expect(guest.getByText("110 уд/мин")).toBeVisible();
   await expect(guest.getByText("Максимальная мощность")).toHaveCount(0);
   await expect(
-    guest.getByRole("heading", { name: "Пульс", exact: false }),
+    guest.getByRole("heading", { name: "Пульс", level: 3, exact: false }),
   ).toBeVisible();
   await expect(
-    guest.getByRole("heading", { name: "Мощность", exact: false }),
+    guest.getByRole("heading", { name: "Мощность", level: 3, exact: false }),
   ).toHaveCount(0);
   await page.goto("/r/" + rides[0].shareId + "?owner=1");
   const analysis = page.getByRole("region", { name: "Анализ поездки" });
   await expect(
-    analysis.getByRole("heading", { name: "Мощность", exact: false }),
+    analysis.getByRole("heading", { name: "Мощность", level: 3, exact: false }),
   ).toBeVisible();
   await expect(analysis).toContainText("Полный трек");
   const slider = page.getByRole("slider", { name: "Точка маршрута" });
   await slider.fill("20");
   const cursor = page.locator(
-    ".ride-route circle[aria-label='Выбранная точка маршрута']",
+    ".ride-route circle[aria-label='Выбранная точка маршрута'], .ride-map.ready .ride-analysis-marker",
   );
   await expect(cursor).toBeVisible();
-  const first = await cursor.getAttribute("cx");
+  const position = () =>
+    cursor.evaluate(
+      (el) => el.getAttribute("cx") || el.getAttribute("data-coordinate"),
+    );
+  const first = await position();
   await slider.press("ArrowRight");
-  await expect(cursor).not.toHaveAttribute("cx", first);
+  await expect(slider).toHaveValue("21");
+  await expect.poll(position).not.toBe(first);
   await analysis.getByText("Таблица значений", { exact: true }).click();
   await expect(analysis.locator("tbody tr")).toHaveCount(50);
   await analysis.getByRole("button", { name: "Далее", exact: true }).click();
