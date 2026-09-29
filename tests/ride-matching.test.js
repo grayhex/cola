@@ -16,6 +16,8 @@ import {
   riderQuery,
   draftQuery,
   planQuery,
+  groupsQuery,
+  interestInvitationsInput,
   queryObject,
 } from "../lib/ride-match-input.js";
 import {
@@ -23,6 +25,8 @@ import {
   planInterest,
   draftInterest,
   planOccurrences,
+  interestGroups,
+  inviteFromInterest,
 } from "../lib/ride-matching.js";
 import { resolveLocal } from "../lib/ride-intent-time.js";
 
@@ -485,6 +489,8 @@ const dq = (text = "") =>
   draftQuery.parse(queryObject(new URLSearchParams(text)));
 const pq = (text = "") =>
   planQuery.parse(queryObject(new URLSearchParams(text)));
+const gq = (text = "") =>
+  groupsQuery.parse(queryObject(new URLSearchParams(text)));
 // Two days ahead at 08:00 UTC keeps every fixture in the future and inside 90 days.
 const day0 = (() => {
   const d = new Date();
@@ -819,6 +825,217 @@ INSERT INTO ride_intent_windows(intent_id,starts_at,ends_at)
     assert.equal(crowd.people.total, 1012); // 1010 + a and b above
     assert.equal(crowd.people.pages, 50);
     assert.equal(crowd.people.items.length, 20);
+  } finally {
+    await db.close();
+  }
+});
+
+test("organizer workspace (#234): consenting, fitting people only; counts without names", async () => {
+  const db = await migrated();
+  try {
+    const f = fixtures(db);
+    const org = await f.user();
+    const [a, b, c, d, e, g, blocked] = await Promise.all(
+      Array.from({ length: 7 }, (_, i) => f.user(i === 6)),
+    );
+    const social = { area: { label: "Парк Сокольники" }, purpose: "social" };
+    await f.intent(a, [[h(0), h(4)]], { passport: social });
+    // Two intents of one person count once.
+    await f.intent(b, [[h(0), h(3)]], {
+      readiness: "considering",
+      passport: social,
+    });
+    await f.intent(b, [[h(1), h(5)]], { passport: social });
+    await f.intent(c, [[h(0), h(4)]], { passport: social, allow: false });
+    await f.intent(d, [[h(0), h(4)]], {
+      passport: social,
+      visibility: "private",
+    });
+    await f.intent(e, [[h(0), h(4)]], {
+      passport: { area: { label: "Парк Сокольники" }, purpose: "training" },
+    });
+    await f.intent(g, [[h(0), h(4)]], {
+      passport: { area: { label: "Измайлово" }, purpose: "social" },
+    });
+    await f.intent(blocked, [[h(0), h(4)]], { passport: social });
+    await f.intent(org, [[h(0), h(4)]], { passport: social });
+    const period = `from=${encodeURIComponent(new Date(h(-1)).toISOString())}&to=${encodeURIComponent(new Date(h(6)).toISOString())}`;
+    const all = await interestGroups(
+      db,
+      org,
+      gq(period + "&durationMin=60&durationMax=120"),
+    );
+    // a, b (once), e and g; c has not allowed suggestions, d is private.
+    assert.equal(all.groups[0].counts.total, 4);
+    assert.doesNotMatch(
+      JSON.stringify(all),
+      /author|username|intentId|@test\.invalid|Сокольники|Измайлово/,
+    );
+    const social60 = await interestGroups(
+      db,
+      org,
+      gq(period + "&durationMin=60&durationMax=120&purpose=social"),
+    );
+    assert.equal(social60.groups[0].counts.total, 3);
+    assert.deepEqual(social60.groups[0].formats.purpose, { social: 3 });
+    const park = await interestGroups(
+      db,
+      org,
+      gq(
+        period +
+          "&durationMin=60&durationMax=120&purpose=social&areaText=" +
+          encodeURIComponent("сокольники"),
+      ),
+    );
+    const best = park.groups.reduce((x, y) =>
+      y.counts.total > x.counts.total ? y : x,
+    );
+    // a and b; e wants training, g rides elsewhere.
+    assert.equal(best.counts.total, 2);
+    // No common time for everyone: never a ready-made company.
+    const long = await interestGroups(
+      db,
+      org,
+      gq(period + "&durationMin=300&durationMax=300"),
+    );
+    assert.deepEqual(long.groups, []);
+    assert.equal(
+      groupsQuery.safeParse(queryObject(new URLSearchParams(period))).success,
+      false,
+      "duration is required",
+    );
+  } finally {
+    await db.close();
+  }
+});
+
+test("invitations from interest (#234): re-checked on the server, refusals kept, capped and idempotent", async () => {
+  const db = await migrated();
+  try {
+    const f = fixtures(db);
+    const org = await f.user(),
+      bike = await f.bike(org);
+    const plan = await f.plan(org, bike, h(1), {
+      end: h(3),
+      passport: { purpose: "social" },
+    });
+    const [a, b, c, d, e, stranger] = await Promise.all(
+      Array.from({ length: 6 }, () => f.user()),
+    );
+    const ia = await f.intent(a, [[h(0), h(4)]]);
+    const ib = await f.intent(b, [[h(0), h(4)]]);
+    await f.intent(c, [[h(0), h(4)]], { allow: false });
+    await f.intent(d, [[h(0), h(4)]]);
+    await f.intent(e, [[h(0), h(4)]]);
+    await f.rsvp(plan, d, h(1), "declined");
+    const input = (/** @type {string[]} */ userIds) =>
+      interestInvitationsInput.parse({
+        occurrenceAt: new Date(h(1)).toISOString(),
+        userIds,
+      });
+    const view = await planInterest(db, org, plan, pq());
+    assert.equal(
+      view.people.items.find((p) => p.author.id === d).declined,
+      true,
+    );
+    // Between the view and the send: a withdraws, b's window moves away.
+    await db.query("UPDATE ride_intents SET status='cancelled' WHERE id=$1", [
+      ia,
+    ]);
+    await db.query(
+      "UPDATE ride_intent_windows SET starts_at=$2 WHERE intent_id=$1",
+      [ib, new Date(h(2)).toISOString()],
+    );
+    const sent = await inviteFromInterest(
+      db,
+      org,
+      plan,
+      input([a, b, c, d, e, stranger, e]),
+    );
+    assert.deepEqual(
+      Object.fromEntries(sent.results.map((r) => [r.userId, r.status])),
+      {
+        [a]: "unavailable",
+        [b]: "unavailable",
+        [c]: "unavailable",
+        [d]: "declined",
+        [e]: "invited",
+        [stranger]: "unavailable",
+      },
+    );
+    assert.equal(sent.invited, 1);
+    const rows = (
+      await db.query(
+        "SELECT user_id,source FROM ride_invitations WHERE ride_id=$1",
+        [plan],
+      )
+    ).rows;
+    assert.deepEqual(rows, [{ user_id: e, source: "interest" }]);
+    const notes = (
+      await db.query(
+        "SELECT recipient_id FROM notifications WHERE type='ride_invite' AND ride_id=$1",
+        [plan],
+      )
+    ).rows;
+    assert.deepEqual(notes, [{ recipient_id: e }]);
+    // A repeat (double click) changes nothing and notifies nobody again.
+    const again = await inviteFromInterest(db, org, plan, input([e]));
+    assert.deepEqual(again.results, [{ userId: e, status: "already_invited" }]);
+    assert.equal(
+      (
+        await db.query(
+          "SELECT count(*)::int n FROM notifications WHERE type='ride_invite' AND ride_id=$1",
+          [plan],
+        )
+      ).rows[0].n,
+      1,
+    );
+    // The per-ride cap of the plan form holds here too.
+    const crowd = [];
+    for (let i = 0; i < 40; i++) {
+      const id = await f.user();
+      await f.intent(id, [[h(0), h(4)]]);
+      crowd.push(id);
+    }
+    const first = await inviteFromInterest(
+      db,
+      org,
+      plan,
+      input(crowd.slice(0, 20)),
+    );
+    assert.equal(first.invited, 20);
+    const second = await inviteFromInterest(
+      db,
+      org,
+      plan,
+      input(crowd.slice(20, 40)),
+    );
+    assert.equal(second.invited, 9); // 1 + 20 + 9 = 30
+    assert.equal(second.results.filter((r) => r.status === "limit").length, 11);
+    // Only the owner of a live plan, only a real occurrence.
+    await assert.rejects(inviteFromInterest(db, a, plan, input([b])), {
+      status: 404,
+    });
+    await assert.rejects(
+      inviteFromInterest(
+        db,
+        org,
+        plan,
+        interestInvitationsInput.parse({
+          occurrenceAt: new Date(h(2)).toISOString(),
+          userIds: [b],
+        }),
+      ),
+      { status: 409 },
+    );
+    assert.equal(
+      interestInvitationsInput.safeParse({
+        occurrenceAt: new Date(h(1)).toISOString(),
+        userIds: crowd.slice(0, 21),
+      }).success,
+      false,
+      "batch limit",
+    );
   } finally {
     await db.close();
   }
