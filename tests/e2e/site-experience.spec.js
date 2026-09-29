@@ -192,7 +192,7 @@ test("admin publishes a shared animation switch, uploaded Rive, brand/favicon an
   }
 });
 
-test("popular carousel stays on one row and scrolls with buttons, keyboard, a single native scrollbar and mouse drag", async ({
+test("popular carousel stays on one row and scrolls with keyboard, a single native scrollbar and mouse drag, without arrow buttons", async ({
   page,
   isMobile,
 }, info) => {
@@ -238,7 +238,12 @@ test("popular carousel stays on one row and scrolls with buttons, keyboard, a si
     return Math.abs(node.scrollLeft - start);
   });
   expect(idle).toBeLessThan(1);
-  await region.getByRole("button", { name: "Следующие велосипеды" }).click();
+  // #254: no previous/next buttons; the scrollbar and the keys move the row.
+  await expect(
+    region.getByRole("button", { name: /^(Предыдущие|Следующие) велосипеды$/ }),
+  ).toHaveCount(0);
+  await rail.focus();
+  await rail.press("ArrowRight");
   await expect
     .poll(() => rail.evaluate((e) => e.scrollLeft))
     .toBeGreaterThan(100);
@@ -387,7 +392,8 @@ test("Live scrolls independently of manual bikes, with pause and reduced motion 
     .poll(() => events.evaluate((e) => e.scrollLeft))
     .toBeGreaterThan(pause.events + 5);
   expect((await offsets()).bikes).toBe(0);
-  await page.getByRole("button", { name: "Следующие велосипеды" }).click();
+  await bikes.focus();
+  await bikes.press("ArrowRight");
   await expect
     .poll(() => bikes.evaluate((e) => e.scrollLeft))
     .toBeGreaterThan(100);

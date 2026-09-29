@@ -5,10 +5,13 @@ import { gameArtworkSource } from "../../lib/gamification-assets.js";
 
 // Small shelf icons load as soon as they mount. Their first paint must not
 // depend on lazy scheduling, deferred decoding or a later hover/interaction.
+// Below the fold (the home records, #254) `loading="lazy"` waits for the
+// scroll; the fallback icon holds the place meanwhile.
 export default function AchievementArt({
   imageId,
   kind = "record",
   size = 40,
+  loading = "eager",
 }) {
   const src = gameArtworkSource(imageId, size);
   const [imageState, setImageState] = useState({
@@ -39,8 +42,8 @@ export default function AchievementArt({
           alt=""
           width={size}
           height={size}
-          loading="eager"
-          decoding="sync"
+          loading={loading}
+          decoding={loading === "lazy" ? "async" : "sync"}
           onLoad={() => setImageState({ src, status: "loaded" })}
           onError={() => setImageState({ src, status: "error" })}
         />
