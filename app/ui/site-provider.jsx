@@ -124,6 +124,7 @@ export default function SiteProvider({
           "rideMapView",
           "mapScrollZoom",
           "menuOpenOnHover",
+          "timeZone",
         ].includes(key),
       ),
     ),

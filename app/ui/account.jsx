@@ -35,6 +35,8 @@ import {
 import { useSite } from "./site-provider.jsx";
 import { profilePath } from "../../lib/public-urls.js";
 import { isGeneratedUsername } from "../../lib/usernames.js";
+import { userTimeZone, timeZoneChoices } from "../../lib/user-time-zone.js";
+import { validTimeZone } from "../../lib/ride-intent-time.js";
 const tabIcons = {
   overview: LayoutGrid,
   profile: UserRound,
@@ -148,13 +150,16 @@ function UsernamePrompt({ profile, onChoose }) {
     </aside>
   );
 }
-function ProfileEditor({ profile, onSaved }) {
+function ProfileEditor({ profile, preferences = {}, onSaved }) {
+  const { setPreferences } = useSite();
   const [form, setForm] = useState({
       username: profile.username,
       name: profile.name,
       bio: profile.bio,
       location: profile.location,
     }),
+    // #253: new intents and plans read this zone; unset follows the browser.
+    [timeZone, setTimeZone] = useState(() => userTimeZone(preferences)),
     [busy, setBusy] = useState(false),
     [message, setMessage] = useState(""),
     [error, setError] = useState("");
@@ -165,7 +170,14 @@ function ProfileEditor({ profile, onSaved }) {
     setError("");
     setMessage("");
     try {
+      if (!validTimeZone(timeZone))
+        throw new Error("Выберите часовой пояс из списка");
       await socialApi("social/me", "PATCH", form);
+      if (timeZone !== preferences.timeZone) {
+        const next = { ...preferences, timeZone };
+        await socialApi("social/preferences", "PATCH", { preferences: next });
+        setPreferences(next);
+      }
       await onSaved();
       setMessage("Профиль сохранён");
     } catch (e) {
@@ -274,6 +286,26 @@ function ProfileEditor({ profile, onSaved }) {
             onChange={(e) => set("bio", e.target.value)}
           />
           <small>Публичная заметка в профиле · {form.bio.length}/500</small>
+        </label>
+        <label className="field">
+          <span>Часовой пояс</span>
+          <input
+            required
+            list="profile-time-zones"
+            autoComplete="off"
+            spellCheck={false}
+            value={timeZone}
+            onChange={(e) => setTimeZone(e.target.value.trim())}
+          />
+          <datalist id="profile-time-zones">
+            {timeZoneChoices().map((zone) => (
+              <option key={zone} value={zone} />
+            ))}
+          </datalist>
+          <small>
+            Время новых намерений и покатушек. Уже созданные серии сохраняют
+            свой пояс.
+          </small>
         </label>
         <label className="field">
           <span>Местоположение</span>
@@ -445,7 +477,14 @@ function Appearance({ initial, onSaved }) {
         />
       </label>
       <div className="form-actions">
-        <button type="button" className="quiet" onClick={() => setPrefs({})}>
+        <button
+          type="button"
+          className="quiet"
+          // The profile's time zone is not a look; a reset keeps it.
+          onClick={() =>
+            setPrefs((p) => (p.timeZone ? { timeZone: p.timeZone } : {}))
+          }
+        >
           Сбросить оформление
         </button>
         <button className="button" disabled={busy}>
@@ -737,6 +776,7 @@ export default function Account() {
                     <h2>Мой профиль</h2>
                     <ProfileEditor
                       profile={profile}
+                      preferences={data.preferences || {}}
                       onSaved={() => refresh(true)}
                     />
                   </section>

@@ -1,5 +1,5 @@
 .page {
-  max-width: 960px;
+  max-width: calc(var(--container) + 2 * var(--gutter));
   min-height: 65dvh;
   padding: 36px 24px 64px;
   margin: auto;

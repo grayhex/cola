@@ -7,27 +7,79 @@ import AreaPicker from "./ride-area-map.jsx";
 import PassportTiles from "./passport-tiles.jsx";
 import styles from "./ride-passport.module.css";
 
-export default function RidePlanFields({
+// The ride passport's inputs as parts (#253): the planners place the area,
+// the option tiles and the rare conditions in their own sections; the UI
+// Kit and older screens use the whole set below.
+const setter = (value, onChange) => (key, v) => {
+  const next = { ...value };
+  if (v === undefined || v === "") delete next[key];
+  else next[key] = v;
+  onChange(next);
+};
+
+/** The approximate area — a label and an optional circle on the map. */
+export function AreaField({
   value = {},
   onChange,
   disabled = false,
   intent = false,
+  label = "Область поездки",
 }) {
-  const [expanded, setExpanded] = useState(false);
-  const reveal = useMotionFeedback(expanded, { reveal: true });
-  const feedback = useMotionFeedback(value.pace);
-  const set = (key, v) => {
-    const next = { ...value };
-    if (v === undefined || v === "") delete next[key];
-    else next[key] = v;
-    onChange(next);
-  };
+  const set = setter(value, onChange);
   const area = value.area || {};
+  return (
+    <>
+      <label className="field">
+        <span>{label}</span>
+        <input
+          required={intent || !!area.center}
+          disabled={disabled}
+          maxLength={100}
+          placeholder="Например, Измайловский парк"
+          value={area.label || ""}
+          onChange={(e) =>
+            set(
+              "area",
+              e.target.value || area.center
+                ? { ...area, label: e.target.value }
+                : undefined,
+            )
+          }
+        />
+        <small>
+          {intent
+            ? "Приблизительный район или парк, без домашнего адреса."
+            : "Приблизительный район, без домашнего адреса."}
+        </small>
+      </label>
+      <AreaPicker
+        value={area}
+        disabled={disabled}
+        onChange={(next) =>
+          set("area", next.label || next.center ? next : undefined)
+        }
+      />
+    </>
+  );
+}
+
+/** Rare conditions: speed, difficulty, regrouping and beginners; plans also
+ * edit the numeric ranges here when they are not shown as tiles. */
+export function ExtraConditions({
+  value = {},
+  onChange,
+  ranges = false,
+  disabled = false,
+  pick = ["speedKmh", "difficulty", "regroupPolicy", "beginnerFriendly"],
+  help = true,
+}) {
+  const set = setter(value, onChange);
   const select = (key, label) => (
     <label className="field" key={key}>
       <span>{label}</span>
       <select
         aria-label={label}
+        disabled={disabled}
         value={value[key] || ""}
         onChange={(e) => set(key, e.target.value)}
       >
@@ -43,7 +95,7 @@ export default function RidePlanFields({
   const range = (key, label, max, step = 1) => {
     const v = value[key] || {};
     return (
-      <fieldset className={styles.range}>
+      <fieldset className={styles.range} disabled={disabled}>
         <legend>{label}</legend>
         {["min", "max"].map((side) => (
           <label className="field" key={side}>
@@ -69,121 +121,90 @@ export default function RidePlanFields({
     );
   };
   return (
+    <>
+      <div className="ride-form-grid">
+        {ranges && (
+          <>
+            {range("distanceKm", "Дистанция, км", 1000, 0.1)}
+            {range(
+              "durationMinutes",
+              "Общая длительность с остановками, мин",
+              10080,
+            )}
+            {range("groupSize", "Желательный размер компании, чел.", 100)}
+          </>
+        )}
+        {pick.includes("speedKmh") &&
+          range("speedKmh", "Скорость в движении без остановок, км/ч", 60, 0.1)}
+        {pick.includes("difficulty") &&
+          select("difficulty", "Техническая сложность")}
+        {pick.includes("regroupPolicy") &&
+          select("regroupPolicy", "Как ждём отстающих")}
+        {pick.includes("beginnerFriendly") && (
+          <label className="field">
+            <span>Подходит новичкам</span>
+            <select
+              disabled={disabled}
+              value={
+                value.beginnerFriendly === undefined
+                  ? ""
+                  : String(value.beginnerFriendly)
+              }
+              onChange={(e) =>
+                set(
+                  "beginnerFriendly",
+                  e.target.value === "" ? undefined : e.target.value === "true",
+                )
+              }
+            >
+              <option value="">Не уточнено</option>
+              <option value="true">Да</option>
+              <option value="false">Нужен опыт</option>
+            </select>
+          </label>
+        )}
+      </div>
+      {help && (
+        <p className="help">
+          Диапазоны — пожелания к поездке, не ограничения участия. Скорость
+          указана в движении; общее время включает остановки.
+        </p>
+      )}
+    </>
+  );
+}
+
+export default function RidePlanFields({
+  value = {},
+  onChange,
+  disabled = false,
+  intent = false,
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const reveal = useMotionFeedback(expanded, { reveal: true });
+  return (
     <fieldset className={styles.composer} disabled={disabled}>
       <legend>Как поедем</legend>
-      <label className="field">
-        <span>Область поездки</span>
-        <input
-          required={intent || !!area.center}
-          maxLength={100}
-          placeholder="Например, Измайловский парк"
-          value={area.label || ""}
-          onChange={(e) =>
-            set(
-              "area",
-              e.target.value || area.center
-                ? { ...area, label: e.target.value }
-                : undefined,
-            )
-          }
-        />
-        <small>
-          {intent
-            ? "Приблизительный район или парк, без домашнего адреса."
-            : "Приблизительный район, без домашнего адреса. Точное место встречи задаётся отдельно."}
-        </small>
-      </label>
-      <AreaPicker
-        value={area}
+      <AreaField
+        value={value}
+        onChange={onChange}
         disabled={disabled}
-        onChange={(next) =>
-          set("area", next.label || next.center ? next : undefined)
-        }
+        intent={intent}
       />
-      {intent ? (
-        // Intents use the shared option tiles (#243); plans keep their form.
-        <PassportTiles
-          value={value}
-          onChange={onChange}
-          required={["purpose"]}
-          disabled={disabled}
-        />
-      ) : (
-        <>
-          <div className="ride-form-grid">
-            {select("purpose", "Цель поездки")}
-            {select("surface", "Покрытие")}
-          </div>
-          <fieldset className={styles.pace} ref={feedback}>
-            <legend>Темп</legend>
-            <div className="ui-tabs" role="group" aria-label="Темп поездки">
-              {[
-                ["", "Не уточнён"],
-                ...Object.entries(ridePlanOptions.pace),
-              ].map(([v, label]) => (
-                <button
-                  key={v}
-                  type="button"
-                  aria-pressed={(value.pace || "") === v}
-                  onClick={() => set("pace", v)}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          </fieldset>
-        </>
-      )}
+      <PassportTiles
+        value={value}
+        onChange={onChange}
+        required={intent ? ["purpose"] : []}
+        disabled={disabled}
+      />
       <details onToggle={(e) => setExpanded(e.currentTarget.open)}>
         <summary>Дополнительные условия</summary>
         <div ref={reveal} className={styles.additional}>
-          <div className="ride-form-grid">
-            {!intent && (
-              <>
-                {range("distanceKm", "Дистанция, км", 1000, 0.1)}
-                {range(
-                  "durationMinutes",
-                  "Общая длительность с остановками, мин",
-                  10080,
-                )}
-                {range("groupSize", "Желательный размер компании, чел.", 100)}
-              </>
-            )}
-            {range(
-              "speedKmh",
-              "Скорость в движении без остановок, км/ч",
-              60,
-              0.1,
-            )}
-            {select("difficulty", "Техническая сложность")}
-            {select("regroupPolicy", "Как ждём отстающих")}
-            <label className="field">
-              <span>Подходит новичкам</span>
-              <select
-                value={
-                  value.beginnerFriendly === undefined
-                    ? ""
-                    : String(value.beginnerFriendly)
-                }
-                onChange={(e) =>
-                  set(
-                    "beginnerFriendly",
-                    e.target.value === ""
-                      ? undefined
-                      : e.target.value === "true",
-                  )
-                }
-              >
-                <option value="">Не уточнено</option>
-                <option value="true">Да</option>
-                <option value="false">Нужен опыт</option>
-              </select>
-            </label>
-          </div>
-          <p className="help">
-            Диапазоны — пожелания к поездке, не ограничения участия. Скорость
-            указана в движении; общее время включает остановки.
-          </p>
+          <ExtraConditions
+            value={value}
+            onChange={onChange}
+            disabled={disabled}
+          />
         </div>
       </details>
       {!intent && <RidePassport passport={value} />}

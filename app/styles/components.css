@@ -1205,6 +1205,183 @@
     }
   }
 
+  /* Planning workspace (#253): «Хочу кататься» and «Организовать
+     покатушку» in a wide window, HF /new-space density — sections in a
+     12-column grid, the head and the actions stay put, only the body
+     scrolls. One column on phones. <dialog class="planning">. */
+  dialog.planning {
+    max-width: min(1120px, calc(100vw - 2 * var(--gutter)));
+    padding: 0;
+  }
+  dialog.planning > .modal-head {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    margin: 0;
+    padding: var(--space-4) var(--space-6);
+    border-bottom: 1px solid var(--line);
+    background: var(--surface);
+  }
+  .planning-body {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: var(--space-5) var(--space-6);
+    padding: var(--space-5) var(--space-6);
+  }
+  .planning-section {
+    display: grid;
+    grid-column: span 12;
+    align-content: start;
+    gap: var(--space-3);
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+  .planning-section > h3,
+  .planning-section > legend {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin: 0;
+    padding: 0;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+  }
+  .planning-section > h3 .step,
+  .planning-section > legend .step {
+    display: inline-grid;
+    place-items: center;
+    width: 20px;
+    height: 20px;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-full);
+    color: var(--text-secondary);
+    font: var(--weight-semibold) var(--text-xs) / 1 var(--font-mono);
+  }
+  .planning-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: var(--space-3);
+    min-width: 0;
+  }
+  .planning-row .field {
+    margin: 0;
+  }
+  .planning-advanced {
+    grid-column: span 12;
+    border-top: 1px solid var(--line);
+    padding-top: var(--space-3);
+  }
+  .planning-advanced > summary {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+    cursor: pointer;
+  }
+  .planning-advanced > .planning-body {
+    padding: var(--space-4) 0 0;
+  }
+  .planning-actions {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-6);
+    border-top: 1px solid var(--line);
+    background: var(--surface);
+  }
+  .planning-actions > .start {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-right: auto;
+  }
+  .planning-actions > [role="status"],
+  .planning-actions > [role="alert"] {
+    flex: 1 1 100%;
+    margin: 0;
+  }
+  @media (min-width: 900px) {
+    .planning-section.half {
+      grid-column: span 6;
+    }
+    .planning-section.third {
+      grid-column: span 4;
+    }
+    .planning-section.two-thirds {
+      grid-column: span 8;
+    }
+  }
+  @media (max-width: 640px) {
+    dialog.planning {
+      width: 100%;
+      max-width: none;
+      height: 100dvh;
+      max-height: 100dvh;
+      border-width: 0;
+      border-radius: 0;
+    }
+    dialog.planning > .modal-head,
+    .planning-body,
+    .planning-actions {
+      padding-inline: var(--space-4);
+    }
+    .planning-actions > .button {
+      flex: 1 1 auto;
+    }
+  }
+
+  /* Option tiles: a choice between modes as cards, not a checkbox (#253). */
+  .option-tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--space-2);
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+  .option-tile {
+    display: grid;
+    grid-template-columns: auto auto minmax(0, 1fr);
+    align-items: start;
+    gap: var(--space-2);
+    padding: var(--space-3);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    cursor: pointer;
+  }
+  .option-tile:hover {
+    border-color: var(--line-strong);
+  }
+  .option-tile:has(input:checked) {
+    border-color: var(--text);
+    box-shadow: inset 0 0 0 1px var(--text);
+  }
+  .option-tile:has(input:focus-visible) {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+  .option-tile input {
+    margin: 3px 0 0;
+    accent-color: var(--primary);
+  }
+  .option-tile svg {
+    margin-top: 2px;
+    color: var(--text-secondary);
+  }
+  .option-tile > span {
+    display: grid;
+    gap: 2px;
+    font-size: var(--text-sm);
+  }
+  .option-tile small {
+    color: var(--text-secondary);
+  }
+
   /* Sheet: filters, search and the phone menu. A panel under the header
      on wide screens, a bottom sheet on phones (<dialog class="sheet">). */
   dialog.sheet {

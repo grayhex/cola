@@ -1,7 +1,7 @@
 /* Hall of Fame snapshot (#157): compact art, complete names and public
    context. Cards grow for long names; no fixed heights or clipped links. */
 .page {
-  max-width: calc(1440px + 2 * var(--gutter));
+  max-width: calc(var(--container) + 2 * var(--gutter));
 }
 .page :global(.hall-heading) {
   margin-bottom: var(--space-4);

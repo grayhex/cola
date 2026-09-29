@@ -1,8 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import RidePlanFields from "./ride-plan-fields.jsx";
 import EmailPolicyAction from "./email-policy-action.jsx";
-import SiteIcon from "./site-icon.jsx";
 import {
   selectableRideBikes,
   rideBikeStateError,
@@ -11,9 +9,9 @@ import { socialApi } from "./social-primitives.jsx";
 import { RideRoutePreview, RideMetrics } from "./ride-card.jsx";
 import { garminFields, defaultRideFields } from "../../lib/garmin-fields.js";
 
-// The one ride form (#245): planning from the home page, the account overview
-// and «Мои покатушки», uploading a track under «Интеграции и импорт» and
-// editing an existing ride all share this state, validation and API.
+// The recorded-ride form (#245): uploading a track under «Интеграции и
+// импорт» and editing a recorded ride. Planning, create and edit, is PlanForm
+// in the wide PlanComposer window (#253).
 const blank = {
   bikeId: "",
   title: "",
@@ -21,22 +19,6 @@ const blank = {
   isPublic: false,
   privacyEnabled: false,
   privacyRadiusM: 500,
-  scheduledAt: "",
-  features: "",
-  meetingPoint: "",
-  meetingVisibility: "participants",
-  passport: {},
-  expectedEndAt: "",
-  invitations: "",
-  recurrence: "none",
-  recurrenceTimezone: "Europe/Moscow",
-};
-const localDate = (v) => {
-  if (!v) return "";
-  const d = new Date(v);
-  return new Date(d.getTime() - d.getTimezoneOffset() * 60000)
-    .toISOString()
-    .slice(0, 16);
 };
 export const trackFiles =
   ".gpx,.fit,.tcx,application/gpx+xml,application/vnd.garmin.tcx+xml";
@@ -76,7 +58,6 @@ function initialForm(ride, currentBikes, config) {
   if (!ride)
     return {
       ...blank,
-      recurrenceTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       bikeId: currentBikes[0]?.id || "",
       privacyRadiusM: config?.defaultRadius || 500,
     };
@@ -87,25 +68,16 @@ function initialForm(ride, currentBikes, config) {
     isPublic: ride.isPublic,
     privacyEnabled: ride.privacyEnabled,
     privacyRadiusM: ride.privacyRadiusM,
-    scheduledAt: localDate(ride.startedAt || ride.scheduledAt),
-    recurrence: ride.recurrence,
-    recurrenceTimezone: ride.recurrenceTimezone,
-    features: ride.features.join(", "),
-    meetingPoint: ride.meetingPoint,
-    meetingVisibility: ride.meetingVisibility || "public",
-    passport: ride.passport || {},
-    expectedEndAt: localDate(ride.planEndsAt || ride.expectedEndAt),
-    invitations: ride.invitations.map((i) => i.username).join(", "),
   };
 }
 /**
  * @param {{
- *   mode: "add" | "plan",
+ *   mode: "add",
  *   ride?: any,
  *   bikes: any[],
  *   config: any,
  *   heading?: boolean,
- *   onSaved: (result: "planned" | "saved" | "removed") => void,
+ *   onSaved: (result: "saved" | "removed") => void,
  *   onCancel: () => void,
  *   onChanged?: () => void,
  *   onDirty?: (dirty: boolean) => void,
@@ -138,7 +110,7 @@ export default function RideForm({
   useEffect(() => onDirty?.(dirty), [dirty, onDirty]);
   // Garmin CSV and FIT/TCX sensors bring extra metrics; the owner picks which
   // of them the ride shows. Heart rate and power stay hidden until chosen.
-  const metricSource = mode === "plan" ? null : preview || editing,
+  const metricSource = preview || editing,
     shownMetrics = visibleMetrics || defaultRideFields,
     pickable = garminFields.filter((f) => metricSource?.metrics[f.key] != null);
   const offersPicker =
@@ -154,10 +126,7 @@ export default function RideForm({
         throw Error("Для новой покатушки выберите текущий велосипед.");
       if (file.size > config.maxGpxBytes) throw Error("Файл слишком большой");
       const r = await fetch(
-        "/api/rides/" +
-          (attach
-            ? editing.id + "/track"
-            : "preview" + (mode === "plan" ? "?purpose=plan" : "")),
+        "/api/rides/" + (attach ? editing.id + "/track" : "preview"),
         {
           method: "POST",
           headers: {
@@ -203,47 +172,17 @@ export default function RideForm({
         setError("");
         try {
           if (ownershipError) throw Error(ownershipError);
-          const {
-            scheduledAt,
-            features,
-            meetingPoint,
-            meetingVisibility,
-            passport,
-            expectedEndAt,
-            invitations,
-            ...base
-          } = form;
           const input = {
-            ...base,
+            ...form,
             ...(visibleMetrics ? { visibleMetrics } : {}),
-            ...(mode === "plan"
-              ? {
-                  scheduledAt: new Date(scheduledAt).toISOString(),
-                  features: features
-                    .split(",")
-                    .map((s) => s.trim())
-                    .filter(Boolean),
-                  meetingPoint,
-                  meetingVisibility,
-                  passport,
-                  expectedEndAt: expectedEndAt
-                    ? new Date(expectedEndAt).toISOString()
-                    : null,
-                  invitations: invitations
-                    .split(/[\s,;]+/)
-                    .map((s) => s.replace(/^@/, ""))
-                    .filter(Boolean),
-                }
-              : {}),
             ...(!editing && preview ? { previewId: preview.previewId } : {}),
           };
           await socialApi(
-            "rides" +
-              (editing ? "/" + editing.id : mode === "plan" ? "/plan" : ""),
+            "rides" + (editing ? "/" + editing.id : ""),
             editing ? "PATCH" : "POST",
             input,
           );
-          onSaved(mode === "plan" && !editing ? "planned" : "saved");
+          onSaved("saved");
         } catch (e) {
           setError(e.message);
         } finally {
@@ -252,13 +191,7 @@ export default function RideForm({
       }}
     >
       {heading && (
-        <h2>
-          {editing
-            ? "Изменить покатушку"
-            : mode === "plan"
-              ? "Планируемая покатушка"
-              : "Прошлая покатушка"}
-        </h2>
+        <h2>{editing ? "Изменить покатушку" : "Прошлая покатушка"}</h2>
       )}
       {error && (
         <p role="alert" className="error">
@@ -277,7 +210,6 @@ export default function RideForm({
           }}
         >
           Файл трека: GPX, FIT или TCX
-          {mode === "plan" ? " · необязательно" : ""}
           <input
             type="file"
             accept={trackFiles}
@@ -308,7 +240,7 @@ export default function RideForm({
         </label>
       )}
       {busy && <p role="status">Обрабатываем…</p>}
-      {(preview || editing || mode === "plan") && (
+      {(preview || editing) && (
         <>
           {(preview || editing)?.geometry?.length > 0 && (
             <RideRoutePreview geometry={(preview || editing).geometry} />
@@ -316,11 +248,7 @@ export default function RideForm({
           {(preview || editing) && (
             <RideMetrics
               metrics={(preview || editing).metrics}
-              visibleMetrics={
-                mode === "plan"
-                  ? ["distanceM", "elevationGainM"]
-                  : visibleMetrics
-              }
+              visibleMetrics={visibleMetrics}
             />
           )}
           {offersPicker && (
@@ -394,138 +322,6 @@ export default function RideForm({
               onChange={(e) => set("description", e.target.value)}
             />
           </label>
-          {mode === "plan" && (
-            <>
-              <div className="ride-form-grid">
-                <label className="field">
-                  <span>Дата и время старта</span>
-                  <input
-                    type="datetime-local"
-                    required
-                    value={form.scheduledAt}
-                    onChange={(e) => set("scheduledAt", e.target.value)}
-                  />
-                  <small>
-                    Ваш часовой пояс:{" "}
-                    {Intl.DateTimeFormat().resolvedOptions().timeZone}
-                  </small>
-                </label>
-                <label className="field">
-                  <span>Место встречи</span>
-                  <input
-                    maxLength={200}
-                    value={form.meetingPoint}
-                    onChange={(e) => set("meetingPoint", e.target.value)}
-                  />
-                </label>
-              </div>
-              <label className="field">
-                <span>Кто видит точное место встречи</span>
-                <select
-                  value={form.meetingVisibility}
-                  onChange={(e) => set("meetingVisibility", e.target.value)}
-                >
-                  <option value="participants">
-                    Организатор и участники с ответом «Иду»
-                  </option>
-                  <option value="public">Все, кому доступна поездка</option>
-                </select>
-              </label>
-              <p className="help">
-                Не указывайте точный адрес в названии, описании и особенностях.
-                Эти поля публикуются вместе с поездкой. Маршрут тоже может
-                раскрыть место; при закрытом месте встречи края трека скрываются
-                автоматически.
-              </p>
-              <RidePlanFields
-                value={form.passport}
-                onChange={(v) => set("passport", v)}
-                disabled={busy}
-              />
-              <label className="field">
-                <span>Ожидаемое окончание — необязательно</span>
-                <input
-                  type="datetime-local"
-                  value={form.expectedEndAt}
-                  onChange={(e) => set("expectedEndAt", e.target.value)}
-                />
-                <small>
-                  В вашем часовом поясе. Для серии переносится вместе с датой
-                  выезда.
-                </small>
-              </label>
-              <label className="field">
-                <span>Особенности маршрута</span>
-                <input
-                  maxLength={640}
-                  placeholder="Гравий, спокойный темп, кофе по пути"
-                  value={form.features}
-                  onChange={(e) => set("features", e.target.value)}
-                />
-                <small>До 8 особенностей через запятую</small>
-              </label>
-              <label className="field">
-                <span>Пригласить пользователей</span>
-                <input
-                  maxLength={930}
-                  placeholder="@username, @friend"
-                  value={form.invitations}
-                  onChange={(e) => set("invitations", e.target.value)}
-                />
-                <small>
-                  До 30 имён через запятую. Приглашённые увидят поездку и
-                  получат уведомление.
-                </small>
-              </label>
-              <label className="ride-toggle">
-                <input
-                  type="checkbox"
-                  checked={form.recurrence === "weekly"}
-                  onChange={(e) =>
-                    set("recurrence", e.target.checked ? "weekly" : "none")
-                  }
-                />
-                <SiteIcon name="repeat" /> Повторять каждую неделю
-                {form.scheduledAt && (
-                  <small>
-                    {" "}
-                    ·{" "}
-                    {new Date(form.scheduledAt).toLocaleDateString("ru-RU", {
-                      weekday: "long",
-                    })}
-                  </small>
-                )}
-              </label>
-              <label className="field">
-                <span>Часовой пояс</span>
-                <input
-                  required
-                  maxLength={80}
-                  value={form.recurrenceTimezone}
-                  onChange={(e) => set("recurrenceTimezone", e.target.value)}
-                  list="ride-timezones"
-                />
-                <datalist id="ride-timezones">
-                  {[
-                    "Europe/Moscow",
-                    "Europe/Kaliningrad",
-                    "Asia/Yekaterinburg",
-                    "Asia/Novosibirsk",
-                    "Asia/Vladivostok",
-                    "Europe/Berlin",
-                    "UTC",
-                  ].map((zone) => (
-                    <option key={zone} value={zone} />
-                  ))}
-                </datalist>
-                <small>
-                  Время выше указано в{" "}
-                  {Intl.DateTimeFormat().resolvedOptions().timeZone}; повторение
-                  сохраняет местное время выбранного часового пояса.
-                </small>
-              </label>
-            </>
-          )}
           <label className="ride-toggle">
             <input
               type="checkbox"
@@ -543,19 +339,12 @@ export default function RideForm({
           <label className="ride-toggle">
             <input
               type="checkbox"
-              checked={
-                form.privacyEnabled ||
-                (mode === "plan" && form.meetingVisibility === "participants")
-              }
-              disabled={
-                mode === "plan" && form.meetingVisibility === "participants"
-              }
+              checked={form.privacyEnabled}
               onChange={(e) => set("privacyEnabled", e.target.checked)}
             />
             Скрыть начало и конец маршрута
           </label>
-          {(form.privacyEnabled ||
-            (mode === "plan" && form.meetingVisibility === "participants")) && (
+          {form.privacyEnabled && (
             <label className="field">
               <span>Радиус приватности</span>
               <select
@@ -585,31 +374,6 @@ export default function RideForm({
           >
             Сохранить покатушку
           </button>
-          {editing?.status === "planned" && (
-            <button
-              type="button"
-              className="quiet"
-              disabled={busy}
-              onClick={async () => {
-                if (!confirm("Отменить запланированную покатушку?")) return;
-                setBusy(true);
-                try {
-                  await socialApi(
-                    "rides/" + editing.id + "/cancel",
-                    "POST",
-                    {},
-                  );
-                  onSaved("removed");
-                } catch (e) {
-                  setError(e.message);
-                } finally {
-                  setBusy(false);
-                }
-              }}
-            >
-              Отменить поездку
-            </button>
-          )}
           {editing && (
             <button
               type="button"

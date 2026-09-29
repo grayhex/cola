@@ -24,7 +24,7 @@ import AuthPage from "./auth-page.jsx";
 import { useConfirmation } from "./confirmation.jsx";
 import Modal from "./garage/modal.jsx";
 import { MotionList, SharedView, useMotionFeedback } from "./motion.jsx";
-import RidePlanFields from "./ride-plan-fields.jsx";
+import { AreaField, ExtraConditions } from "./ride-plan-fields.jsx";
 import RidePassport from "./ride-passport.jsx";
 import {
   intentLimits,
@@ -35,6 +35,7 @@ import {
   windowDraft,
   formatIntentWindow,
 } from "../../lib/ride-intent-time.js";
+import { userTimeZone } from "../../lib/user-time-zone.js";
 import styles from "./ride-intents.module.css";
 const blankWindow = () => ({ startLocal: "", endLocal: "" });
 const readinessLabels = {
@@ -157,144 +158,106 @@ export function IntentComposer({
   return (
     <>
       <Modal
+        wide
         title={draft.id ? "Изменить намерение" : "Хочу кататься"}
         onClose={close}
         dismissible={!busy}
       >
-        <form onSubmit={save} className={styles.form}>
-          <fieldset disabled={busy || uncertain} className={styles.fields}>
-            <legend className="sr-only">Условия намерения</legend>
-            <div
-              className="segmented"
-              role="group"
-              aria-label="Готовность"
-              ref={feedback}
+        {/* #253: when → where → how → who sees it, in the wide planner
+            shell; the zone is the profile's (an edit keeps its own). */}
+        <form onSubmit={save} className="intent-form">
+          <div className="planning-body">
+            <fieldset
+              className="planning-section half"
+              disabled={busy || uncertain}
             >
-              {Object.entries(readinessLabels).map(([key, label]) => (
-                <button
-                  key={key}
-                  type="button"
-                  aria-pressed={draft.readiness === key}
-                  onClick={() => set("readiness", key)}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-            <label className="field">
-              <span>Часовой пояс (IANA)</span>
-              <input
-                required
-                list="intent-time-zones"
-                value={draft.timeZone}
-                onChange={(e) =>
-                  setDraft((d) => ({
-                    ...d,
-                    timeZone: e.target.value,
-                    windows: d.windows.map(({ startLocal, endLocal }) => ({
-                      startLocal,
-                      endLocal,
-                    })),
-                  }))
-                }
-              />
-              <small>
-                Даты ниже относятся к этому поясу. При смене пояса местное время
-                сохраняется.
-              </small>
-            </label>
-            <datalist id="intent-time-zones">
-              {[
-                "Europe/Moscow",
-                "Europe/Kaliningrad",
-                "Asia/Yekaterinburg",
-                "Asia/Novosibirsk",
-                "Asia/Vladivostok",
-                "Europe/Berlin",
-                "UTC",
-              ].map((zone) => (
-                <option key={zone} value={zone} />
-              ))}
-            </datalist>
-            <div className={styles.quick}>
-              {[
-                ["tonight", "Сегодня вечером"],
-                ["weekend", "В выходные"],
-              ].map(([kind, label]) => (
-                <button
-                  key={kind}
-                  type="button"
-                  className="button secondary"
-                  disabled={
-                    !validTimeZone(draft.timeZone) ||
-                    !quickWindows(kind, draft.timeZone).length
-                  }
-                  onClick={() =>
-                    set("windows", quickWindows(kind, draft.timeZone))
-                  }
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-            <fieldset className={styles.windows}>
-              <legend>Когда могу кататься</legend>
-              <p className="help">
-                Всё время поездки должно помещаться в окно, включая остановки.
-                До 4 окон, максимум 24 часа каждое.
-              </p>
-              {draft.windows.map((w, index) => (
-                <div key={index} className={styles.window}>
-                  <div className={styles.windowHead}>
-                    <strong>Окно {index + 1}</strong>
-                    <button
-                      type="button"
-                      className="icon secondary small danger"
-                      disabled={draft.windows.length === 1}
-                      aria-label={`Удалить окно ${index + 1}`}
-                      title="Удалить окно"
-                      onClick={() =>
-                        set(
-                          "windows",
-                          draft.windows.filter((_, n) => n !== index),
-                        )
-                      }
-                    >
-                      <Trash2 size={14} />
-                    </button>
+              <legend>
+                <span className="step" aria-hidden="true">
+                  1
+                </span>
+                Когда
+              </legend>
+              <div
+                className="segmented"
+                role="group"
+                aria-label="Готовность"
+                ref={feedback}
+              >
+                {Object.entries(readinessLabels).map(([key, label]) => (
+                  <button
+                    key={key}
+                    type="button"
+                    aria-pressed={draft.readiness === key}
+                    onClick={() => set("readiness", key)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <div className={styles.quick}>
+                {[
+                  ["tonight", "Сегодня вечером"],
+                  ["weekend", "В выходные"],
+                ].map(([kind, label]) => (
+                  <button
+                    key={kind}
+                    type="button"
+                    className="button secondary small"
+                    disabled={
+                      !validTimeZone(draft.timeZone) ||
+                      !quickWindows(kind, draft.timeZone).length
+                    }
+                    onClick={() =>
+                      set("windows", quickWindows(kind, draft.timeZone))
+                    }
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <div className={styles.windowList}>
+                {draft.windows.map((w, index) => (
+                  <div key={index} className={styles.window}>
+                    <div className={styles.windowHead}>
+                      <strong>Окно {index + 1}</strong>
+                      <button
+                        type="button"
+                        className="icon secondary small danger"
+                        disabled={draft.windows.length === 1}
+                        aria-label={`Удалить окно ${index + 1}`}
+                        title="Удалить окно"
+                        onClick={() =>
+                          set(
+                            "windows",
+                            draft.windows.filter((_, n) => n !== index),
+                          )
+                        }
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                    <div className={styles.windowTimes}>
+                      {["start", "end"].map((side) => (
+                        <TimeField
+                          key={side}
+                          side={side}
+                          window={w}
+                          zone={draft.timeZone}
+                          index={index}
+                          onChange={(v) =>
+                            set(
+                              "windows",
+                              draft.windows.map((row, n) =>
+                                n === index ? v : row,
+                              ),
+                            )
+                          }
+                        />
+                      ))}
+                    </div>
                   </div>
-                  <div className={styles.windowTimes}>
-                    <TimeField
-                      side="start"
-                      window={w}
-                      zone={draft.timeZone}
-                      index={index}
-                      onChange={(v) =>
-                        set(
-                          "windows",
-                          draft.windows.map((row, n) =>
-                            n === index ? v : row,
-                          ),
-                        )
-                      }
-                    />
-                    <TimeField
-                      side="end"
-                      window={w}
-                      zone={draft.timeZone}
-                      index={index}
-                      onChange={(v) =>
-                        set(
-                          "windows",
-                          draft.windows.map((row, n) =>
-                            n === index ? v : row,
-                          ),
-                        )
-                      }
-                    />
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
               <button
                 type="button"
                 className="quiet"
@@ -305,84 +268,148 @@ export function IntentComposer({
               >
                 <Plus size={16} /> Добавить окно
               </button>
-            </fieldset>
-            <div className={styles.quick}>
-              <button
-                type="button"
-                className="quiet"
-                disabled={!Object.keys(preferences.passport || {}).length}
-                onClick={() => {
-                  setDraft((d) => ({
-                    ...d,
-                    passport: { ...preferences.passport, ...d.passport },
-                    meetNewPeople: d.meetNewPeople ?? preferences.meetNewPeople,
-                  }));
-                  setNotice("Предпочтения подставлены в незаполненные условия");
-                }}
-              >
-                Подставить мои предпочтения
-              </button>
-              <button
-                type="button"
-                className="quiet"
-                onClick={async () => {
-                  setBusy(true);
-                  setError("");
-                  try {
-                    const result = await api("/preferences", "PUT", {
-                      passport: draft.passport,
-                      ...(draft.meetNewPeople === undefined
-                        ? {}
-                        : { meetNewPeople: draft.meetNewPeople }),
-                    });
-                    onPreferences(result.preferences);
-                    setNotice(
-                      "Предпочтения сохранены только для вас. Намерение не опубликовано.",
-                    );
-                  } catch (e) {
-                    setError(e.message);
-                  } finally {
-                    setBusy(false);
-                  }
-                }}
-              >
-                Сохранить условия как предпочтения
-              </button>
-            </div>
-            <RidePlanFields
-              value={draft.passport}
-              onChange={(v) => set("passport", v)}
-              intent
-            />
-            <label className="field">
-              <span>Готовность знакомиться</span>
-              <select
-                value={
-                  draft.meetNewPeople === undefined
-                    ? ""
-                    : String(draft.meetNewPeople)
-                }
-                onChange={(e) =>
-                  set(
-                    "meetNewPeople",
-                    e.target.value === ""
-                      ? undefined
-                      : e.target.value === "true",
-                  )
-                }
-              >
-                <option value="">Не уточнено</option>
-                <option value="true">Рад новым знакомствам</option>
-                <option value="false">Предпочитаю знакомую компанию</option>
-              </select>
-              <small>
-                Это пожелание; состав компании здесь не ограничивается
-                автоматически.
+              <small className="help">
+                Поездка целиком помещается в окно; до 4 окон по 24 ч. Время —{" "}
+                {draft.timeZone}
+                {draft.id ? "." : " из профиля."}
               </small>
-            </label>
-            <fieldset className={styles.privacy}>
-              <legend>Кому видно</legend>
-              <div className={styles.choices}>
+            </fieldset>
+            <fieldset
+              className="planning-section half"
+              disabled={busy || uncertain}
+            >
+              <legend>
+                <span className="step" aria-hidden="true">
+                  2
+                </span>
+                Где
+              </legend>
+              <AreaField
+                value={draft.passport}
+                onChange={(v) => set("passport", v)}
+                intent
+              />
+            </fieldset>
+            <fieldset
+              className="planning-section two-thirds"
+              disabled={busy || uncertain}
+            >
+              <legend>
+                <span className="step" aria-hidden="true">
+                  3
+                </span>
+                Как хочется кататься
+              </legend>
+              <PassportTiles
+                value={draft.passport}
+                onChange={(v) => set("passport", v)}
+                required={["purpose"]}
+              />
+              <label className="field">
+                <span>Готовность знакомиться</span>
+                <select
+                  value={
+                    draft.meetNewPeople === undefined
+                      ? ""
+                      : String(draft.meetNewPeople)
+                  }
+                  onChange={(e) =>
+                    set(
+                      "meetNewPeople",
+                      e.target.value === ""
+                        ? undefined
+                        : e.target.value === "true",
+                    )
+                  }
+                >
+                  <option value="">Не уточнено</option>
+                  <option value="true">Рад новым знакомствам</option>
+                  <option value="false">Предпочитаю знакомую компанию</option>
+                </select>
+              </label>
+              <details className={styles.extra}>
+                <summary>Дополнительные условия</summary>
+                <ExtraConditions
+                  value={draft.passport}
+                  onChange={(v) => set("passport", v)}
+                />
+              </details>
+              <div className={styles.quick}>
+                <button
+                  type="button"
+                  className="quiet"
+                  disabled={!Object.keys(preferences.passport || {}).length}
+                  onClick={() => {
+                    setDraft((d) => ({
+                      ...d,
+                      passport: { ...preferences.passport, ...d.passport },
+                      meetNewPeople:
+                        d.meetNewPeople ?? preferences.meetNewPeople,
+                    }));
+                    setNotice(
+                      "Предпочтения подставлены в незаполненные условия",
+                    );
+                  }}
+                >
+                  Подставить мои предпочтения
+                </button>
+                <button
+                  type="button"
+                  className="quiet"
+                  onClick={async () => {
+                    setBusy(true);
+                    setError("");
+                    try {
+                      const result = await api("/preferences", "PUT", {
+                        passport: draft.passport,
+                        ...(draft.meetNewPeople === undefined
+                          ? {}
+                          : { meetNewPeople: draft.meetNewPeople }),
+                      });
+                      onPreferences(result.preferences);
+                      setNotice(
+                        "Предпочтения сохранены только для вас. Намерение не опубликовано.",
+                      );
+                    } catch (e) {
+                      setError(e.message);
+                    } finally {
+                      setBusy(false);
+                    }
+                  }}
+                >
+                  Сохранить условия как предпочтения
+                </button>
+              </div>
+            </fieldset>
+            <section
+              className={"planning-section third " + styles.preview}
+              aria-label="Предпросмотр намерения"
+            >
+              <div>
+                <strong>{readinessLabels[draft.readiness]}</strong>
+                <span className="badge">
+                  {draft.visibility === "private" ? "Только мне" : "Сообществу"}
+                </span>
+              </div>
+              {windows.length ? (
+                windows.map((w) => (
+                  <p key={w.startsAt + w.endsAt}>
+                    {formatIntentWindow(w, draft.timeZone)}
+                  </p>
+                ))
+              ) : (
+                <p className="help">Выберите точные даты и время</p>
+              )}
+              <p>{draft.passport.area?.label || "Укажите район или парк"}</p>
+            </section>
+            <fieldset className="planning-section" disabled={busy || uncertain}>
+              <legend>
+                <span className="step" aria-hidden="true">
+                  4
+                </span>
+                Кому видно
+              </legend>
+              <div className="option-tiles">
                 {[
                   [
                     "private",
@@ -397,7 +424,7 @@ export function IntentComposer({
                     Users,
                   ],
                 ].map(([key, label, hint, Icon]) => (
-                  <label className={styles.choice} key={key}>
+                  <label className="option-tile" key={key}>
                     <input
                       type="radio"
                       name="intent-visibility"
@@ -427,51 +454,30 @@ export function IntentComposer({
                 <span>
                   Можно предлагать мне подходящие поездки
                   <small id="suggestions-hint">
-                    Отдельное разрешение для будущих предложений. Email и push
-                    не включаются. Приватные условия организаторам не
-                    показываются.
+                    Отдельное разрешение. Email и push не включаются; приватные
+                    условия организаторам не показываются.
                   </small>
                 </span>
               </label>
             </fieldset>
-          </fieldset>
-          <section
-            className={styles.preview}
-            aria-label="Предпросмотр намерения"
-          >
-            <strong>{readinessLabels[draft.readiness]}</strong>
-            <span className="badge">
-              {draft.visibility === "private" ? "Только мне" : "Сообществу"}
-            </span>
-            {windows.length ? (
-              windows.map((w) => (
-                <p key={w.startsAt + w.endsAt}>
-                  {formatIntentWindow(w, draft.timeZone)}
-                </p>
-              ))
-            ) : (
-              <p className="help">Выберите точные даты и время</p>
+          </div>
+          <div className="planning-actions">
+            {notice && (
+              <p role="status" className="notice">
+                {notice}
+              </p>
             )}
-            <small>{draft.timeZone}</small>
-            <p>{draft.passport.area?.label || "Укажите район или парк"}</p>
-          </section>
-          {notice && (
-            <p role="status" className="notice">
-              {notice}
-            </p>
-          )}
-          {error && (
-            <p className="error" role="alert">
-              {error}
-            </p>
-          )}
-          {uncertain && (
-            <p className="help">
-              Повторная отправка проверит тот же запрос и не создаст копию.
-              Условия сохранены в форме.
-            </p>
-          )}
-          <div className="form-actions">
+            {error && (
+              <p className="error" role="alert">
+                {error}
+              </p>
+            )}
+            {uncertain && (
+              <p className="help">
+                Повторная отправка проверит тот же запрос и не создаст копию.
+                Условия сохранены в форме.
+              </p>
+            )}
             <button
               type="button"
               className="button secondary"
@@ -485,7 +491,9 @@ export function IntentComposer({
                 ? "Сохраняем…"
                 : uncertain
                   ? "Повторить отправку"
-                  : "Сохранить намерение"}
+                  : draft.id
+                    ? "Сохранить изменения"
+                    : "Сохранить намерение"}
             </button>
           </div>
         </form>
@@ -495,9 +503,14 @@ export function IntentComposer({
   );
 }
 /** A composer draft: a quick window, a copy of `item`, or its edit. */
-export function intentDraft(kind = "custom", item = null, edit = false) {
-  const timeZone =
-    item?.timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+export function intentDraft(
+  kind = "custom",
+  item = null,
+  edit = false,
+  zone = Intl.DateTimeFormat().resolvedOptions().timeZone,
+) {
+  // An existing intent keeps its zone; a new one uses the profile's (#253).
+  const timeZone = item?.timeZone || zone;
   const windows = edit
     ? item.windows.map((w) => windowDraft(w, timeZone))
     : kind === "custom"
@@ -641,7 +654,7 @@ const howSteps = [
   "Участие в конкретной покатушке подтверждается отдельно.",
 ];
 export default function RideIntents() {
-  const { viewer } = useSite();
+  const { viewer, personalSettings } = useSite();
   const [scope, setScope] = useState("own"),
     [page, setPage] = useState(1),
     [revision, setRevision] = useState(0),
@@ -702,7 +715,7 @@ export default function RideIntents() {
       />
     );
   function open(kind = "custom", item = null, edit = false) {
-    setDraft(intentDraft(kind, item, edit));
+    setDraft(intentDraft(kind, item, edit, userTimeZone(personalSettings)));
   }
   const prefDirty =
     prefDraft !== null &&
