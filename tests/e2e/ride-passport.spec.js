@@ -96,6 +96,13 @@ test("passport form, keyboard disclosure, themes, edit and live RSVP privacy wit
       (value) => (document.documentElement.dataset.theme = value),
       theme,
     );
+    // Wait for the theme's color transition before measuring contrast.
+    await expect(
+      page.getByRole("button", { name: "Спокойный", exact: true }),
+    ).toHaveCSS(
+      "color",
+      theme === "light" ? "rgb(17, 24, 39)" : "rgb(255, 255, 255)",
+    );
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth + 1,
