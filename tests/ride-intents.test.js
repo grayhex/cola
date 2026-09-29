@@ -266,16 +266,16 @@ test("intent DB: independent of garage, ownership, visibility/expiry, quotas, re
         .rows[0].passport,
       {},
     );
-    for (const table of ["rides", "ride_responses", "journal_entries"]) {
-      const exists = (await db.query("SELECT to_regclass($1) AS name", [table]))
-        .rows[0].name;
-      if (exists)
-        assert.equal(
-          Number(
-            (await db.query("SELECT count(*) FROM " + table)).rows[0].count,
-          ),
-          0,
-        );
+    for (const table of [
+      "rides",
+      "ride_rsvps",
+      "ride_invitations",
+      "journal_entries",
+    ]) {
+      assert.equal(
+        Number((await db.query("SELECT count(*) FROM " + table)).rows[0].count),
+        0,
+      );
     }
     await db.query("DELETE FROM users WHERE id=$1", [owner]);
     assert.equal(
