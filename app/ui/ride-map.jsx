@@ -93,7 +93,10 @@ function MapLibreRideMap({ geometry, styleUrl, transitionId, selectedCoord }) {
             data: {
               type: "Feature",
               properties: {},
-              geometry: { type: "MultiLineString", coordinates: geometry },
+              geometry: {
+                type: "MultiLineString",
+                coordinates: geometry.filter((run) => run.length > 1),
+              },
             },
           });
           // A dark casing under the accent line keeps the route visible

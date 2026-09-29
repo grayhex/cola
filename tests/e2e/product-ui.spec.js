@@ -309,6 +309,12 @@ test("all product routes and account sections share clear light/dark UI; compose
             await expect(
               page.getByRole("slider", { name: "Точка маршрута" }),
             ).toBeVisible();
+            await expect
+              .poll(
+                async () =>
+                  (await chart.locator("text").first().boundingBox()).height,
+              )
+              .toBeGreaterThanOrEqual(10);
             await chart.hover();
             await expect(
               page

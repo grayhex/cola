@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { analysisChannels } from "../../lib/ride-analysis-contract.js";
 import styles from "./ride-analysis.module.css";
 
@@ -19,7 +19,17 @@ const elapsed = (seconds) =>
     : `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`;
 
 export default function RideAnalysis({ series, selected, onSelect }) {
-  const [page, setPage] = useState(0);
+  const [page, setPage] = useState(0),
+    [width, setWidth] = useState(768);
+  const ref = useRef(null);
+  useEffect(() => {
+    const observer = new ResizeObserver(([entry]) =>
+      setWidth(Math.max(240, entry.contentRect.width)),
+    );
+    if (ref.current) observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, []);
+  const plotWidth = width - 72;
   const points = useMemo(() => series.segments.flat(), [series]);
   const channels = useMemo(
     () => [
@@ -31,7 +41,7 @@ export default function RideAnalysis({ series, selected, onSelect }) {
   );
   const distance = points.at(-1)?.distanceM || 1;
   const active = points[Math.min(selected, points.length - 1)];
-  const x = (p) => 48 + (p.distanceM / distance) * 696;
+  const x = (p) => 48 + (p.distanceM / distance) * plotWidth;
   const charts = useMemo(
     () =>
       channels.map((key) => {
@@ -55,14 +65,14 @@ export default function RideAnalysis({ series, selected, onSelect }) {
                 }
                 const command = connected && !(p.gaps & bit) ? "L" : "M";
                 connected = true;
-                return `${command}${(48 + (p.distanceM / distance) * 696).toFixed(2)},${y(p).toFixed(2)}`;
+                return `${command}${(48 + (p.distanceM / distance) * plotWidth).toFixed(2)},${y(p).toFixed(2)}`;
               })
               .join(" ");
           })
           .join(" ");
         return { key, path, min, max, y, present: present.length > 0 };
       }),
-    [channels, points, series, distance],
+    [channels, points, series, distance, plotWidth],
   );
   function scrub(event) {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -71,7 +81,7 @@ export default function RideAnalysis({ series, selected, onSelect }) {
         0,
         Math.min(
           1,
-          (((event.clientX - rect.left) / rect.width) * 768 - 48) / 696,
+          (((event.clientX - rect.left) / rect.width) * width - 48) / plotWidth,
         ),
       ) * distance;
     let nearest = 0;
@@ -84,7 +94,7 @@ export default function RideAnalysis({ series, selected, onSelect }) {
     onSelect(nearest);
   }
   return (
-    <section className={styles.analysis} aria-label="Анализ поездки">
+    <section ref={ref} className={styles.analysis} aria-label="Анализ поездки">
       <h2>Анализ поездки</h2>
       <p className="help">
         {series.visibility === "owner"
@@ -135,7 +145,7 @@ export default function RideAnalysis({ series, selected, onSelect }) {
               </h3>
               {present ? (
                 <svg
-                  viewBox="0 0 768 136"
+                  viewBox={`0 0 ${width} 136`}
                   role="img"
                   aria-label={`График: ${labels[key][0]} по расстоянию`}
                   onPointerDown={(e) => {
@@ -148,7 +158,7 @@ export default function RideAnalysis({ series, selected, onSelect }) {
                 >
                   <line
                     x1="48"
-                    x2="744"
+                    x2={width - 24}
                     y1="104"
                     y2="104"
                     className={styles.grid}
@@ -162,7 +172,7 @@ export default function RideAnalysis({ series, selected, onSelect }) {
                   <text x="48" y="130">
                     0 км
                   </text>
-                  <text x="744" y="130" textAnchor="end">
+                  <text x={width - 24} y="130" textAnchor="end">
                     {(distance / 1000).toFixed(2)} км
                   </text>
                   <path d={path} className={styles.line} />
