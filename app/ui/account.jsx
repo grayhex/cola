@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import RideAccount from "./ride-account.jsx";
 import { useSearchParams } from "next/navigation";
 import BikeGrid from "./bike-grid.jsx";
@@ -650,7 +651,16 @@ export default function Account() {
                 </section>
               </>
             )}
-            {tab === "rides" && <RideAccount bikes={bikes} />}
+            {tab === "rides" && (
+              <>
+                <p>
+                  <Link className="button secondary" href="/ride-intents">
+                    Хочу кататься · Мои намерения
+                  </Link>
+                </p>
+                <RideAccount bikes={bikes} />
+              </>
+            )}
             {tab === "achievements" && (
               <BadgeShelf endpoint="game/me" account />
             )}

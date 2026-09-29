@@ -9,6 +9,7 @@ export default function RidePlanFields({
   value = {},
   onChange,
   disabled = false,
+  intent = false,
 }) {
   const [expanded, setExpanded] = useState(false);
   const reveal = useMotionFeedback(expanded, { reveal: true });
@@ -71,6 +72,7 @@ export default function RidePlanFields({
       <label className="field">
         <span>Область поездки</span>
         <input
+          required={intent}
           maxLength={100}
           placeholder="Например, Измайловский парк"
           value={area.label || ""}
@@ -82,12 +84,31 @@ export default function RidePlanFields({
           }
         />
         <small>
-          Приблизительный район, без домашнего адреса. Точное место встречи
-          задаётся отдельно.
+          {intent
+            ? "Приблизительный район или парк, без домашнего адреса."
+            : "Приблизительный район, без домашнего адреса. Точное место встречи задаётся отдельно."}
         </small>
       </label>
       <div className="ride-form-grid">
-        {select("purpose", "Цель поездки")}
+        {intent ? (
+          <fieldset className={styles.pace}>
+            <legend>Цель поездки</legend>
+            <div className="segmented" role="group" aria-label="Цель поездки">
+              {Object.entries(ridePlanOptions.purpose).map(([key, text]) => (
+                <button
+                  key={key}
+                  type="button"
+                  aria-pressed={value.purpose === key}
+                  onClick={() => set("purpose", key)}
+                >
+                  {text}
+                </button>
+              ))}
+            </div>
+          </fieldset>
+        ) : (
+          select("purpose", "Цель поездки")
+        )}
         {select("surface", "Покрытие")}
       </div>
       <fieldset className={styles.pace} ref={feedback}>
@@ -150,8 +171,8 @@ export default function RidePlanFields({
             </label>
           </div>
           <p className="help">
-            Диапазоны — ожидания организатора, не ограничения регистрации.
-            Скорость указана в движении; общее время включает остановки.
+            Диапазоны — пожелания к поездке, не ограничения участия. Скорость
+            указана в движении; общее время включает остановки.
           </p>
         </div>
       </details>
