@@ -49,6 +49,7 @@ try {
     "035_ride_analysis",
     "036_ride_passport",
     "037_ride_intents",
+    "038_ride_matching",
   ]) {
     const { rowCount } = await client.query(
       "SELECT 1 FROM schema_migrations WHERE version=$1",
