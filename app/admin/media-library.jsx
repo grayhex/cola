@@ -1,8 +1,8 @@
 "use client";
 import { useRef, useState } from "react";
 import { assetUsageLabels } from "../../lib/site-assets.ts";
-import { Trash2, Upload } from "../ui/icons.jsx";
-import { Pager } from "./design-controls.jsx";
+import { Trash2, Upload } from "../ui/icons.tsx";
+import { Pager } from "./design-controls.tsx";
 import styles from "./design.module.css";
 
 const pageSize = 12;

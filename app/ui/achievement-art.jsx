@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { Trophy, Medal } from "./icons.jsx";
+import { Trophy, Medal } from "./icons.tsx";
 import { gameArtworkSource } from "../../lib/gamification-assets.ts";
 
 // Small shelf icons load as soon as they mount. Their first paint must not

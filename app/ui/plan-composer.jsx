@@ -1,10 +1,10 @@
 "use client";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import Modal from "./garage/modal.jsx";
+import Modal from "./garage/modal.tsx";
 import PlanForm from "./plan-form.jsx";
-import { socialApi } from "./social-primitives.jsx";
-import { useConfirmation } from "./confirmation.jsx";
+import { socialApi } from "./social-primitives.tsx";
+import { useConfirmation } from "./confirmation.tsx";
 import { selectableRideBikes } from "../../lib/bike-status.ts";
 
 // «Организовать покатушку» as a wide window over the current page (#245,

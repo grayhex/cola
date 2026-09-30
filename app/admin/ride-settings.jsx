@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { socialApi } from "../ui/social-primitives.jsx";
+import { socialApi } from "../ui/social-primitives.tsx";
 export default function RideSettings() {
   const [v, setV] = useState(null),
     [error, setError] = useState(""),

@@ -1,7 +1,7 @@
 "use client";
-import { useConfirmation } from "./confirmation.jsx";
+import { useConfirmation } from "./confirmation.tsx";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { LoaderCircle, Check, RefreshCw } from "./icons.jsx";
+import { LoaderCircle, Check, RefreshCw } from "./icons.tsx";
 import { factoryCategory } from "../../lib/factory-components.ts";
 import { componentText } from "../../services/bike-resolver/src/component-identity.js";
 const messages = {

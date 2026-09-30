@@ -48,7 +48,7 @@ export async function legalMetadata(q: Queryable) {
       return [
         kind,
         { revision, href: legalHref(kind, revision), title: legalTitles[kind] },
-      ];
+      ] as const;
     }),
   );
   return {

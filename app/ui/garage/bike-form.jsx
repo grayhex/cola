@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import dynamic from "next/dynamic";
-import { useSite } from "../site-provider.jsx";
+import { useSite } from "../site-provider.tsx";
 import ClassificationFields from "../bike-classification.jsx";
 import { FormerBikeField } from "../bike-fields.jsx";
 import fieldStyles from "../bike-fields.module.css";
@@ -10,8 +10,8 @@ import {
   compatibilityCategory,
 } from "../../../lib/bike-classification.ts";
 import { parseBikeName } from "../../../lib/bike-name.ts";
-import { Check } from "../icons.jsx";
-import Field from "./field.jsx";
+import { Check } from "../icons.tsx";
+import Field from "./field.tsx";
 
 const FactorySpecification = dynamic(
   () => import("../factory-specification.jsx"),

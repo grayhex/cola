@@ -1,8 +1,8 @@
 "use client";
 import { Component, lazy, Suspense, useEffect, useRef, useState } from "react";
-import SmallImage from "./small-image.jsx";
-import { useReducedMotion } from "./motion.jsx";
-import { useSite } from "./site-provider.jsx";
+import SmallImage from "./small-image.tsx";
+import { useReducedMotion } from "./motion.tsx";
+import { useSite } from "./site-provider.tsx";
 import styles from "./rive-art.module.css";
 
 const Canvas = lazy(() => import("./rive-canvas.jsx"));

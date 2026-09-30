@@ -1,10 +1,10 @@
 "use client";
-import EmailPolicyAction from "./email-policy-action.jsx";
-import { useConfirmation } from "./confirmation.jsx";
+import EmailPolicyAction from "./email-policy-action.tsx";
+import { useConfirmation } from "./confirmation.tsx";
 import ClassificationFields from "./bike-classification.jsx";
 import { FormerBikeField } from "./bike-fields.jsx";
 import fieldStyles from "./bike-fields.module.css";
-import SiteIcon from "./site-icon.jsx";
+import SiteIcon from "./site-icon.tsx";
 import {
   emptyClassification,
   compatibilityCategory,
@@ -19,9 +19,9 @@ import {
   Trash2,
   Link,
   Pencil,
-} from "./icons.jsx";
-import { useSite } from "./site-provider.jsx";
-import CompactCombo from "./compact-combo.jsx";
+} from "./icons.tsx";
+import { useSite } from "./site-provider.tsx";
+import CompactCombo from "./compact-combo.tsx";
 import PartIcon from "./part-icon.jsx";
 import { factoryEntries } from "../../lib/factory-components.ts";
 import { groupedComponents } from "../../lib/garage-layout.ts";

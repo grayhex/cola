@@ -7,13 +7,13 @@ import {
   Trash2,
   ExternalLink,
   Ellipsis,
-} from "./icons.jsx";
+} from "./icons.tsx";
 import { groupedComponents } from "../../lib/garage-layout.ts";
 import { useId, useState, useSyncExternalStore } from "react";
-import { useSite } from "./site-provider.jsx";
+import { useSite } from "./site-provider.tsx";
 import PartIcon from "./part-icon.jsx";
 import { experienceHref } from "../../lib/experience-catalog.ts";
-import { useHydrated } from "./use-hydrated.js";
+import { useHydrated } from "./use-hydrated.ts";
 // Without a personal choice groups are open on wide screens and closed on phones.
 const wideQuery = "(min-width: 701px)";
 function subscribeWide(onChange) {

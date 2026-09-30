@@ -1,20 +1,20 @@
 "use client";
 import Link from "next/link";
-import { SharedView } from "./motion.jsx";
+import { SharedView } from "./motion.tsx";
 import { useRouter } from "next/navigation";
 import RichTextBody from "./rich-text-body.jsx";
 import { useState, useEffect, useRef } from "react";
-import { SocialHeader, SocialFooter, socialApi } from "./social-primitives.jsx";
-import { useSite } from "./site-provider.jsx";
+import { SocialHeader, SocialFooter, socialApi } from "./social-primitives.tsx";
+import { useSite } from "./site-provider.tsx";
 import { journalKinds } from "../../lib/journal-kinds.ts";
-import { Heart } from "./icons.jsx";
+import { Heart } from "./icons.tsx";
 import { SaveEntry } from "./journal-card.jsx";
 import { experienceHref } from "../../lib/experience-catalog.ts";
 import dynamic from "next/dynamic";
 import { profilePath, publicPath } from "../../lib/public-urls.ts";
 import { personName } from "../../lib/usernames.ts";
-import ShareButton from "./share-button.jsx";
-import LocalDate from "./local-date.jsx";
+import ShareButton from "./share-button.tsx";
+import LocalDate from "./local-date.tsx";
 // The owner's editor and the comment composer load after the entry itself.
 const Discussion = dynamic(() => import("./discussion.jsx"), { ssr: false });
 const JournalEditor = dynamic(() => import("./journal-editor.jsx"), {

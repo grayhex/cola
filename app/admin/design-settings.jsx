@@ -2,7 +2,7 @@
 import { accentText } from "../../lib/appearance.ts";
 import AssetPicker from "./asset-picker.jsx";
 import AnimationPicker from "./animation-picker.jsx";
-import { Field, Select } from "./design-controls.jsx";
+import { Field, Select } from "./design-controls.tsx";
 import styles from "./design.module.css";
 
 export function ThemeSettings({ settings: s, onChange }) {

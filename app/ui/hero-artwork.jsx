@@ -1,9 +1,9 @@
 "use client";
 import { useState } from "react";
 import RiveArt from "./rive-art.jsx";
-import SmallImage from "./small-image.jsx";
-import { useReducedMotion } from "./motion.jsx";
-import { useSite } from "./site-provider.jsx";
+import SmallImage from "./small-image.tsx";
+import { useReducedMotion } from "./motion.tsx";
+import { useSite } from "./site-provider.tsx";
 import styles from "./rive-art.module.css";
 
 export default function HeroArtwork({

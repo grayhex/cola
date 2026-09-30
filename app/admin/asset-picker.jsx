@@ -1,6 +1,6 @@
 "use client";
 import { useRef, useState } from "react";
-import { Image as ImageIcon, Upload, RotateCcw } from "../ui/icons.jsx";
+import { Image as ImageIcon, Upload, RotateCcw } from "../ui/icons.tsx";
 import styles from "./design.module.css";
 
 export default function AssetPicker({

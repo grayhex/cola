@@ -39,7 +39,7 @@ test("an unavailable account profile reports an error without crashing the page"
     });
   });
   await page.goto("/account");
-  await expect(page.getByRole("alert")).toHaveText(
+  await expect(page.getByRole("main").getByRole("alert")).toHaveText(
     "Профиль недоступен. Обновите страницу.",
   );
   await expect(

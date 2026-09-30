@@ -3,7 +3,7 @@ import Link from "next/link";
 import { MarketCard } from "./market.jsx";
 import RideCard from "./ride-card.jsx";
 import JournalCard from "./journal-card.jsx";
-import { MotionList } from "./motion.jsx";
+import { MotionList } from "./motion.tsx";
 import {
   Check,
   MessagesSquare,
@@ -11,8 +11,8 @@ import {
   NotebookPen,
   ShoppingBag,
   RefreshCw,
-} from "./icons.jsx";
-import LocalDate from "./local-date.jsx";
+} from "./icons.tsx";
+import LocalDate from "./local-date.tsx";
 import { daysLabel } from "../../lib/market-types.ts";
 import BikeGrid from "./bike-grid.jsx";
 import {
@@ -28,10 +28,10 @@ import {
   Avatar,
   Pagination,
   socialApi,
-} from "./social-primitives.jsx";
+} from "./social-primitives.tsx";
 import { PageControls } from "./community-controls.jsx";
 import BikeCard from "./bike-card.jsx";
-import { useSite } from "./site-provider.jsx";
+import { useSite } from "./site-provider.tsx";
 import { profilePath } from "../../lib/public-urls.ts";
 import { personName } from "../../lib/usernames.ts";
 const eventText = {

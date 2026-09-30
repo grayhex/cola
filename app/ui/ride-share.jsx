@@ -1,9 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
-import ShareButton from "./share-button.jsx";
-import { Copy } from "./icons.jsx";
-import { useMotionFeedback } from "./motion.jsx";
+import ShareButton from "./share-button.tsx";
+import { Copy } from "./icons.tsx";
+import { useMotionFeedback } from "./motion.tsx";
 import styles from "./ride-plan.module.css";
 
 const RideQr = dynamic(

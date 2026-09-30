@@ -1,4 +1,4 @@
-import SmallImage from "../ui/small-image.jsx";
+import SmallImage from "../ui/small-image.tsx";
 function safeImage(value) {
   try {
     const u = new URL(value);

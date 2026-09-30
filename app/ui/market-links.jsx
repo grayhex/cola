@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { socialApi } from "./social-primitives.jsx";
+import { socialApi } from "./social-primitives.tsx";
 import styles from "./market.module.css";
 
 export default function MarketLinks({ form, initial, disabled, onChange }) {

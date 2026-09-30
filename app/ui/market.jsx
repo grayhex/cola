@@ -1,5 +1,5 @@
 "use client";
-import EmailPolicyAction from "./email-policy-action.jsx";
+import EmailPolicyAction from "./email-policy-action.tsx";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
@@ -21,9 +21,9 @@ import {
   socialApi,
   Pagination,
   AuthorLink,
-} from "./social-primitives.jsx";
-import { useSite } from "./site-provider.jsx";
-import { ContentLabel } from "./content-label.jsx";
+} from "./social-primitives.tsx";
+import { useSite } from "./site-provider.tsx";
+import { ContentLabel } from "./content-label.tsx";
 import {
   listingTypes,
   listingPriceLabel,
@@ -40,9 +40,9 @@ import styles from "./market.module.css";
 import MarketLinks from "./market-links.jsx";
 import { profilePath, publicPath } from "../../lib/public-urls.ts";
 import { personName, usernameLabel } from "../../lib/usernames.ts";
-import ShareButton from "./share-button.jsx";
-import { useHydrated } from "./use-hydrated.js";
-import LocalDate from "./local-date.jsx";
+import ShareButton from "./share-button.tsx";
+import { useHydrated } from "./use-hydrated.ts";
+import LocalDate from "./local-date.tsx";
 // The link keeps the original; previews use the cached size variants.
 const marketVariants = (id, widths = [320, 640, 1280]) =>
   widths.map((w) => `/api/market/media/${id}?width=${w} ${w}w`).join(", ");

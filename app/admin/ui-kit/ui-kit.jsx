@@ -24,9 +24,9 @@ import {
   X,
 } from "lucide-react";
 import RidePlanFields from "../../ui/ride-plan-fields.jsx";
-import GlobalHeader from "../../ui/global-header.jsx";
-import { SocialFooter } from "../../ui/social-primitives.jsx";
-import SiteIcon, { slotIcons } from "../../ui/site-icon.jsx";
+import GlobalHeader from "../../ui/global-header.tsx";
+import { SocialFooter } from "../../ui/social-primitives.tsx";
+import SiteIcon, { slotIcons } from "../../ui/site-icon.tsx";
 import { emojiSlots } from "../../../lib/ui-emoji.ts";
 import styles from "./ui-kit.module.css";
 

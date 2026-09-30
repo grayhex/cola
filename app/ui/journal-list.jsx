@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import { Plus, NotebookPen, Heart, X } from "./icons.jsx";
-import { socialApi } from "./social-primitives.jsx";
+import { Plus, NotebookPen, Heart, X } from "./icons.tsx";
+import { socialApi } from "./social-primitives.tsx";
 import { PageControls } from "./community-controls.jsx";
 import { journalKinds } from "../../lib/journal-kinds.ts";
 import { publicPath } from "../../lib/public-urls.ts";

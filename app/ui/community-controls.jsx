@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
-import { Flag } from "./icons.jsx";
-import { socialApi } from "./social-primitives.jsx";
+import { Flag } from "./icons.tsx";
+import { socialApi } from "./social-primitives.tsx";
 export function PageControls({ page, hasMore, onPage }) {
   return (
     (page > 1 || hasMore) && (

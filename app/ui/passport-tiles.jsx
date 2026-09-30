@@ -9,8 +9,8 @@ import {
   Target,
   Users,
 } from "lucide-react";
-import { CompactDialog } from "./compact-ui.jsx";
-import { useMotionFeedback } from "./motion.jsx";
+import { CompactDialog } from "./compact-ui.tsx";
+import { useMotionFeedback } from "./motion.tsx";
 import { ridePlanOptions } from "../../lib/ride-plan-options.ts";
 import styles from "./passport-tiles.module.css";
 

@@ -93,7 +93,7 @@ export async function discoverySearch(q: Queryable, input: DiscoveryInput) {
         classification: ClassificationType | null;
         weight: string | null;
       }) => ({
-        type: "bike",
+        type: "bike" as const,
         id: r.id,
         title: r.title,
         subtitle: r.author,
@@ -111,7 +111,7 @@ export async function discoverySearch(q: Queryable, input: DiscoveryInput) {
       sql: `SELECT min(p.name) title,count(DISTINCT b.id)::int bikes FROM components p JOIN bikes b ON b.id=p.bike_id JOIN users u ON u.id=b.owner_id WHERE b.is_public AND NOT u.blocked AND ${literalMatch("p.name")}${facets} GROUP BY lower(normalize(p.name,NFKC))`,
       order: "bikes DESC,title",
       map: (r: { title: string; bikes: number }) => ({
-        type: "component",
+        type: "component" as const,
         id: r.title,
         title: r.title,
         subtitle: `Велосипедов: ${r.bikes}`,
@@ -144,7 +144,7 @@ export async function discoverySearch(q: Queryable, input: DiscoveryInput) {
         author: string;
         distance_m: number;
       }) => ({
-        type: "ride",
+        type: "ride" as const,
         id: r.id,
         title: r.title,
         subtitle: r.author,

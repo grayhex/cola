@@ -1,7 +1,7 @@
 "use client";
 import { navigationSections } from "../../lib/navigation.ts";
 import { aboutSections, aboutDefaults } from "../../lib/about-content.ts";
-import { ArrowUp, ArrowDown } from "../ui/icons.jsx";
+import { ArrowUp, ArrowDown } from "../ui/icons.tsx";
 import styles from "./design.module.css";
 
 export function NavigationSettings({ settings, onChange }) {

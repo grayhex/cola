@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import Image from "next/image";
-import { useSite } from "./site-provider.jsx";
+import { useSite } from "./site-provider.tsx";
 import PartIcon from "./part-icon.jsx";
 import styles from "./component-illustration.module.css";
 

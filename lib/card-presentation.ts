@@ -1,5 +1,6 @@
 interface Badge {
   key: string;
+  name?: string;
   holder?: { kind: string; id: string };
   group?: string;
 }

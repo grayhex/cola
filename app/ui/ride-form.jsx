@@ -1,11 +1,11 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import EmailPolicyAction from "./email-policy-action.jsx";
+import EmailPolicyAction from "./email-policy-action.tsx";
 import {
   selectableRideBikes,
   rideBikeStateError,
 } from "../../lib/bike-status.ts";
-import { socialApi } from "./social-primitives.jsx";
+import { socialApi } from "./social-primitives.tsx";
 import { RideRoutePreview, RideMetrics } from "./ride-card.jsx";
 import { garminFields, defaultRideFields } from "../../lib/garmin-fields.ts";
 

@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import SiteIcon from "./site-icon.jsx";
+import SiteIcon from "./site-icon.tsx";
 
 // Discovery offers planning only; imports live under «Интеграции и импорт».
 export default function RideCreationActions() {

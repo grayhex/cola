@@ -1,17 +1,17 @@
 "use client";
 import dynamic from "next/dynamic";
 import { publicPath } from "../../../lib/public-urls.ts";
-import EmailPolicyAction from "../email-policy-action.jsx";
+import EmailPolicyAction from "../email-policy-action.tsx";
 import Photo from "../bike-photo.jsx";
-import AuthWindow from "../auth-window.jsx";
-import { Globe, Lock, Copy } from "../icons.jsx";
-import Modal from "./modal.jsx";
+import AuthWindow from "../auth-window.tsx";
+import { Globe, Lock, Copy } from "../icons.tsx";
+import Modal from "./modal.tsx";
 import BikeForm from "./bike-form.jsx";
 import PartForm from "./part-form.jsx";
-import api from "./api.js";
+import api from "./api.ts";
 
 // Keep the existing demand-loaded boundaries for forms and owner tools.
-const AuthForm = dynamic(() => import("../auth-form.jsx"), { ssr: false });
+const AuthForm = dynamic(() => import("../auth-form.tsx"), { ssr: false });
 const PhotoSearch = dynamic(() => import("../photo-search.jsx"), {
   ssr: false,
 });

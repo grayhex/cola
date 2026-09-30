@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef } from "react";
-import { useReducedMotion } from "./motion.jsx";
+import { useReducedMotion } from "./motion.tsx";
 import styles from "./bike-carousel.module.css";
 
 // A row of cards that scrolls sideways (#254): the thin scrollbar shows there
@@ -38,7 +38,7 @@ export default function BikeCarousel({
     }
     const token = sequence.current;
     try {
-      const { scrollCarousel } = await import("./interaction-motion.js");
+      const { scrollCarousel } = await import("./interaction-motion.ts");
       if (token !== sequence.current || !node.isConnected) return;
       if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
         node.scrollLeft = target;

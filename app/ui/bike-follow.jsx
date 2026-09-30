@@ -1,8 +1,8 @@
 "use client";
 import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
-import { socialApi } from "./social-primitives.jsx";
-import { Bell, BellRing } from "./icons.jsx";
+import { socialApi } from "./social-primitives.tsx";
+import { Bell, BellRing } from "./icons.tsx";
 // A short label in the bike's action row (#121); the accessible name keeps
 // the whole phrase.
 export default function BikeFollow({ bikeId, className = "quiet" }) {

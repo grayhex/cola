@@ -29,7 +29,7 @@ export const heroDefaults = {
 export const themeModes = ["system", "light", "dark"];
 export const themeStorageKey = "cola:theme";
 export function validTheme(value: string | null, fallback = "system") {
-  return themeModes.includes(value || "") ? value : fallback;
+  return value !== null && themeModes.includes(value) ? value : fallback;
 }
 export function resolveTheme(preference: string, dark: boolean) {
   return preference === "system"

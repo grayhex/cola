@@ -2,10 +2,10 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import styles from "./records.module.css";
-import { socialApi, SocialHeader, SocialFooter } from "./social-primitives.jsx";
-import { useSite } from "./site-provider.jsx";
+import { socialApi, SocialHeader, SocialFooter } from "./social-primitives.tsx";
+import { useSite } from "./site-provider.tsx";
 import AchievementArt from "./achievement-art.jsx";
-import { Medal, Trophy } from "./icons.jsx";
+import { Medal, Trophy } from "./icons.tsx";
 import { groupByMetric } from "../../lib/gamification-presentation.ts";
 import { metricValue } from "../../lib/game-metrics.ts";
 import { profilePath, publicPath } from "../../lib/public-urls.ts";

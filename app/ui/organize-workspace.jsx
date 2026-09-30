@@ -3,10 +3,10 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Users } from "lucide-react";
-import Modal from "./garage/modal.jsx";
-import { MotionList } from "./motion.jsx";
-import { Avatar, socialApi } from "./social-primitives.jsx";
-import { useSite } from "./site-provider.jsx";
+import Modal from "./garage/modal.tsx";
+import { MotionList } from "./motion.tsx";
+import { Avatar, socialApi } from "./social-primitives.tsx";
+import { useSite } from "./site-provider.tsx";
 import { ridePlanOptions } from "../../lib/ride-plan-options.ts";
 import { userTimeZone } from "../../lib/user-time-zone.ts";
 import {

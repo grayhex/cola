@@ -1,7 +1,7 @@
 "use client";
-import EmailPolicyAction from "./email-policy-action.jsx";
+import EmailPolicyAction from "./email-policy-action.tsx";
 import { useState, useEffect } from "react";
-import { socialApi } from "./social-primitives.jsx";
+import { socialApi } from "./social-primitives.tsx";
 import PromptComposer from "./prompt-composer.jsx";
 import { journalKinds } from "../../lib/journal-kinds.ts";
 import { publicPath } from "../../lib/public-urls.ts";

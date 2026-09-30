@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useState } from "react";
-import { SharedView, useMotionFeedback } from "./motion.jsx";
+import { SharedView, useMotionFeedback } from "./motion.tsx";
 import {
   Heart,
   MessageCircle,
@@ -13,8 +13,8 @@ import {
   CircleHelp,
   Route,
   FileText,
-} from "./icons.jsx";
-import { socialApi } from "./social-primitives.jsx";
+} from "./icons.tsx";
+import { socialApi } from "./social-primitives.tsx";
 import { journalKinds } from "../../lib/journal-kinds.ts";
 import { profilePath, publicPath } from "../../lib/public-urls.ts";
 import { personName } from "../../lib/usernames.ts";

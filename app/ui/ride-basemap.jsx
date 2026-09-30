@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { SharedView } from "./motion.jsx";
+import { SharedView } from "./motion.tsx";
 import {
   rasterViewport,
   tileTemplate,
@@ -9,7 +9,7 @@ import {
   mapDefaults,
   osmAttribution,
 } from "../../lib/map-settings.ts";
-import { useSite } from "./site-provider.jsx";
+import { useSite } from "./site-provider.tsx";
 export function MapAttribution({ config }) {
   // The Yandex SDK renders its own mandatory attribution; route-only previews
   // must not claim that an OSM basemap is being displayed.

@@ -14,7 +14,7 @@ import {
   HomepageSettings,
   WizardCopy,
 } from "./design-settings.jsx";
-import { Field, Select, Toggle } from "./design-controls.jsx";
+import { Field, Select, Toggle } from "./design-controls.tsx";
 import IconSettings from "./icon-settings.jsx";
 import MediaLibrary from "./media-library.jsx";
 import CatalogEditor from "./catalog-editor.jsx";
@@ -26,8 +26,8 @@ import ScoringSettings from "./scoring-settings.jsx";
 import { GroupSettings } from "./layout-settings.jsx";
 import ResolverSettings from "./resolver-settings.jsx";
 import { copyBlocks } from "../../lib/copy-blocks.ts";
-import GlobalHeader from "../ui/global-header.jsx";
-import { useSite } from "../ui/site-provider.jsx";
+import GlobalHeader from "../ui/global-header.tsx";
+import { useSite } from "../ui/site-provider.tsx";
 import {
   Trophy,
   Check,
@@ -46,7 +46,7 @@ import {
   LoaderCircle,
   Menu,
   LayoutGrid,
-} from "../ui/icons.jsx";
+} from "../ui/icons.tsx";
 import "./design.module.css";
 import ArticleTopicSettings from "./article-topics.jsx";
 import LegalSettings from "./legal-settings.jsx";

@@ -15,15 +15,15 @@ import {
   Newspaper,
   Info,
 } from "lucide-react";
-import GlobalHeader from "./global-header.jsx";
-import { SocialFooter } from "./social-primitives.jsx";
-import { useSite } from "./site-provider.jsx";
+import GlobalHeader from "./global-header.tsx";
+import { SocialFooter } from "./social-primitives.tsx";
+import { useSite } from "./site-provider.tsx";
 import BikeCard from "./bike-card.jsx";
-import { useAutoScroll } from "./use-auto-scroll.js";
+import { useAutoScroll } from "./use-auto-scroll.ts";
 import BikeCarousel from "./bike-carousel.jsx";
 import AchievementArt from "./achievement-art.jsx";
-import { ContentTypeLabel } from "./content-label.jsx";
-import SearchBox from "./search-box.jsx";
+import { ContentTypeLabel } from "./content-label.tsx";
+import SearchBox from "./search-box.tsx";
 import HeroArtwork from "./hero-artwork.jsx";
 import styles from "./home.module.css";
 import TogetherActions from "./together-actions.jsx";

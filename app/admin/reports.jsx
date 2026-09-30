@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useRef, useEffect, useState } from "react";
-import { socialApi } from "../ui/social-primitives.jsx";
+import { socialApi } from "../ui/social-primitives.tsx";
 import { PageControls } from "../ui/community-controls.jsx";
 import { profilePath } from "../../lib/public-urls.ts";
 export default function Reports({ onManageUser }) {

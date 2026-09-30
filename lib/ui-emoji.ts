@@ -47,7 +47,10 @@ export const defaultEmojis = Object.fromEntries(
 );
 // Interface icons are line icons (#127). An administrator may replace one
 // with an emoji; an empty value or the old default emoji means "not chosen".
-export function customEmoji(emojis: { [x: string]: string }, name: string) {
+export function customEmoji(
+  emojis: { [x: string]: string } | undefined,
+  name: string,
+) {
   const value = typeof emojis?.[name] === "string" ? emojis[name].trim() : "";
   return value && value !== defaultEmojis[name] ? value : null;
 }

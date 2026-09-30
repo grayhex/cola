@@ -12,13 +12,13 @@ import {
   ArrowUp,
   ArrowDown,
 } from "lucide-react";
-import { CompactDialog } from "./compact-ui.jsx";
-import { usePhotoCarousel } from "./use-photo-carousel.js";
+import { CompactDialog } from "./compact-ui.tsx";
+import { usePhotoCarousel } from "./use-photo-carousel.ts";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
-import ZoomablePhoto from "./zoomable-photo.jsx";
-import { socialApi } from "./social-primitives.jsx";
+import ZoomablePhoto from "./zoomable-photo.tsx";
+import { socialApi } from "./social-primitives.tsx";
 import { ReportButton } from "./community-controls.jsx";
-import EmailPolicyAction from "./email-policy-action.jsx";
+import EmailPolicyAction from "./email-policy-action.tsx";
 import { profilePath } from "../../lib/public-urls.ts";
 import { personName } from "../../lib/usernames.ts";
 import styles from "./component-gallery.module.css";

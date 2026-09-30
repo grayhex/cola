@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import Versions from "../ui/versions.jsx";
+import Versions from "../ui/versions.tsx";
 import ResolverInspector from "./resolver-inspector.jsx";
 async function request(method = "GET", body, path = "") {
   const r = await fetch("/api/admin/resolver" + path, {

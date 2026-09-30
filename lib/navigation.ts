@@ -43,7 +43,10 @@ export function navigationSections(settings: Partial<SiteSettings>) {
   }
   return sectionDefaults;
 }
-export function sectionLinks(id: string, user: Viewer) {
+export function sectionLinks(
+  id: string,
+  user: Pick<NonNullable<Viewer>, "username"> | null,
+) {
   if (id === "components")
     return [
       { href: "/components", label: "Популярные", icon: "popular" },

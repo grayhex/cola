@@ -1,9 +1,9 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { socialApi } from "./social-primitives.jsx";
-import { useSite } from "./site-provider.jsx";
-import { useMotionFeedback } from "./motion.jsx";
-import SiteIcon from "./site-icon.jsx";
+import { socialApi } from "./social-primitives.tsx";
+import { useSite } from "./site-provider.tsx";
+import { useMotionFeedback } from "./motion.tsx";
+import SiteIcon from "./site-icon.tsx";
 const choices = [
   ["accepted", "yes", "Иду"],
   ["maybe", "maybe", "Может быть"],

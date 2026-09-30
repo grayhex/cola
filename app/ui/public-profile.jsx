@@ -4,9 +4,9 @@ import RideList from "./ride-list.jsx";
 import BikeGrid from "./bike-grid.jsx";
 import { BadgeShelf } from "./achievements.jsx";
 import { ReportButton } from "./community-controls.jsx";
-import { Bike, Route } from "./icons.jsx";
+import { Bike, Route } from "./icons.tsx";
 import { useEffect, useRef, useState } from "react";
-import { MapPin, Calendar, ArrowLeft } from "./icons.jsx";
+import { MapPin, Calendar, ArrowLeft } from "./icons.tsx";
 import {
   Avatar,
   SocialHeader,
@@ -15,11 +15,11 @@ import {
   PeopleList,
   Pagination,
   socialApi,
-} from "./social-primitives.jsx";
+} from "./social-primitives.tsx";
 import BikeCard from "./bike-card.jsx";
-import { useSite } from "./site-provider.jsx";
-import ShareButton from "./share-button.jsx";
-import LocalDate from "./local-date.jsx";
+import { useSite } from "./site-provider.tsx";
+import ShareButton from "./share-button.tsx";
+import LocalDate from "./local-date.tsx";
 export default function PublicProfile({
   username,
   sharePath = null,

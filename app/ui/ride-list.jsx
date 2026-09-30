@@ -7,9 +7,9 @@ import {
   useState,
   startTransition,
 } from "react";
-import { socialApi, Pagination } from "./social-primitives.jsx";
+import { socialApi, Pagination } from "./social-primitives.tsx";
 import RideCard, { rideDate } from "./ride-card.jsx";
-import { useSite } from "./site-provider.jsx";
+import { useSite } from "./site-provider.tsx";
 import { apiFilters } from "../../lib/ride-filters.ts";
 import { plural } from "../../lib/plural.ts";
 

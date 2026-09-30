@@ -1,8 +1,8 @@
 "use client";
-import { useConfirmation } from "../ui/confirmation.jsx";
+import { useConfirmation } from "../ui/confirmation.tsx";
 import { useCallback, useEffect, useRef, useState } from "react";
 import PromptComposer from "../ui/prompt-composer.jsx";
-import { SectionTabs } from "./design-controls.jsx";
+import { SectionTabs } from "./design-controls.tsx";
 import styles from "./legal-settings.module.css";
 const titles = {
   terms: "Пользовательское соглашение",

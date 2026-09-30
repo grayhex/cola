@@ -2,14 +2,14 @@
 import { useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import Modal from "./garage/modal.jsx";
-import AuthWindow from "./auth-window.jsx";
-import { socialApi } from "./social-primitives.jsx";
+import Modal from "./garage/modal.tsx";
+import AuthWindow from "./auth-window.tsx";
+import { socialApi } from "./social-primitives.tsx";
 
 // The form loads on demand; a failed chunk leaves a working way to sign in.
 const AuthForm = dynamic(
   () =>
-    import("./auth-form.jsx").catch(() => ({
+    import("./auth-form.tsx").catch(() => ({
       default: function AuthUnavailable() {
         return (
           <p role="alert" className="error">

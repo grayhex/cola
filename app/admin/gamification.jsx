@@ -1,9 +1,9 @@
 "use client";
-import { useConfirmation } from "../ui/confirmation.jsx";
+import { useConfirmation } from "../ui/confirmation.tsx";
 import { useEffect, useState } from "react";
-import { socialApi } from "../ui/social-primitives.jsx";
+import { socialApi } from "../ui/social-primitives.tsx";
 import AchievementArt from "../ui/achievement-art.jsx";
-import { Medal, Plus, RefreshCw, Save, Trash2, Trophy } from "../ui/icons.jsx";
+import { Medal, Plus, RefreshCw, Save, Trash2, Trophy } from "../ui/icons.tsx";
 import AssetPicker from "./asset-picker.jsx";
 import GameImagePrompt from "./game-image-prompt.jsx";
 import { publicPath } from "../../lib/public-urls.ts";
