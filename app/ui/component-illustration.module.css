@@ -1,4 +1,11 @@
+/* A fixed square the picture fits into whole (#264); callers may still set
+   a smaller square for phones. */
 .image {
+  display: block;
+  width: var(--illustration-size, 26px);
+  height: var(--illustration-size, 26px);
+  max-width: none;
   object-fit: contain;
+  object-position: center;
   flex-shrink: 0;
 }

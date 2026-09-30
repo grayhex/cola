@@ -5,7 +5,15 @@ import styles from "./bike-carousel.module.css";
 
 // A row of cards that scrolls sideways (#254): the thin scrollbar shows there
 // is more; wheel, touch, mouse drag and the arrow, Home and End keys move it.
-export default function BikeCarousel({ children, busy }) {
+// It never moves by itself. `compact` fits smaller cards, like the home
+// page's records (#264).
+export default function BikeCarousel({
+  children,
+  busy,
+  label = "Карусель популярных велосипедов",
+  railLabel = "Велосипеды; используйте стрелки для прокрутки",
+  compact = false,
+}) {
   const rail = useRef(null),
     cancel = useRef(null),
     sequence = useRef(0),
@@ -42,16 +50,13 @@ export default function BikeCarousel({ children, busy }) {
     }
   }
   return (
-    <div
-      className={styles.carousel}
-      role="region"
-      aria-label="Карусель популярных велосипедов"
-    >
+    <div className={styles.carousel} role="region" aria-label={label}>
       <div
         ref={rail}
         className={styles.rail}
+        data-compact={compact || undefined}
         tabIndex={0}
-        aria-label="Велосипеды; используйте стрелки для прокрутки"
+        aria-label={railLabel}
         aria-busy={busy}
         onWheel={stop}
         onTouchStart={stop}

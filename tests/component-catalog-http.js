@@ -150,13 +150,48 @@ try {
   });
   assert.equal(stable.status, 308);
   assert.equal(stable.headers.get("location"), renamed.path);
+  // A description (#264): shown on the model page, kept by an edit that does
+  // not send it, bounded in length.
+  const described = await admin("admin/component-models/" + model.id, "PATCH", {
+    ...edit,
+    description: "Кожаное седло для длинных поездок.",
+    version: editable.version + 1,
+  });
+  assert.equal(described.status, 200);
+  assert.equal(
+    (
+      await admin("admin/component-models/" + model.id, "PATCH", {
+        ...edit,
+        version: editable.version + 2,
+      })
+    ).status,
+    200,
+  );
+  assert.match(
+    await (await fetch(base + renamed.path)).text(),
+    /Кожаное седло для длинных поездок\./,
+  );
+  assert.equal(
+    (
+      await admin("admin/component-models/" + model.id, "PATCH", {
+        ...edit,
+        description: "x".repeat(2001),
+        version: editable.version + 3,
+      })
+    ).status,
+    400,
+  );
   const target = (
     await admin("admin/component-models?" + new URLSearchParams({ q: term }))
   ).body.items.find((m) => m.id !== model.id);
   const merged = await admin(
     `admin/component-models/${model.id}/merge`,
     "POST",
-    { targetId: target.id, version: 2, targetVersion: target.version },
+    {
+      targetId: target.id,
+      version: editable.version + 3,
+      targetVersion: target.version,
+    },
   );
   assert.equal(merged.status, 200);
   assert.equal(

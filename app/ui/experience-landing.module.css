@@ -131,11 +131,12 @@
   font-size: var(--text-xs);
   max-width: var(--container-narrow);
 }
+/* The component's anchors; the action row below draws the divider (#264). */
 .sections {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-1) var(--space-5);
-  border-bottom: 1px solid var(--line);
+  margin-bottom: calc(-1 * var(--space-3));
 }
 .sections a {
   display: inline-flex;

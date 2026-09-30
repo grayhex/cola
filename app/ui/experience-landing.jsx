@@ -8,6 +8,7 @@ import JournalCard from "./journal-card.jsx";
 import { plural } from "../../lib/plural.js";
 import { Camera, Bike, MessageCircle, BookOpen } from "lucide-react";
 import { ComponentPath } from "./component-navigation.jsx";
+import ComponentAbout from "./component-about.jsx";
 import { SharedView } from "./motion.jsx";
 import PartIcon from "./part-icon.jsx";
 import styles from "./experience-landing.module.css";
@@ -104,7 +105,17 @@ export default function ExperienceLanding({ data }) {
             </a>
           </nav>
         )}
-        {!model && <ComponentGallery model={data} user={user} />}
+        {/* One row of small actions over a line, then the description on
+            the left and the photos on the right (#264). */}
+        {!model && (
+          <ComponentAbout model={data} canEdit={user?.role === "admin"}>
+            {({ button, about }) => (
+              <ComponentGallery model={data} user={user} leading={button}>
+                {about}
+              </ComponentGallery>
+            )}
+          </ComponentAbout>
+        )}
         {!model && (
           <ComponentPath
             category={data.category}

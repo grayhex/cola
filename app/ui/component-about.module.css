@@ -1,0 +1,54 @@
+/* The description half of a component page (#264). */
+.about {
+  display: grid;
+  align-content: start;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.about > h2 {
+  margin: 0;
+  font-size: var(--text-base);
+}
+.text {
+  display: grid;
+  gap: var(--space-3);
+  max-width: 68ch;
+  color: var(--text-secondary);
+  line-height: var(--leading-normal);
+  overflow-wrap: anywhere;
+}
+.text p {
+  margin: 0;
+  white-space: pre-line;
+}
+/* The editor's empty state: a quiet dashed box with one action. */
+.empty {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-2);
+  padding: var(--space-5);
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-xl);
+  background: var(--surface-subtle);
+  color: var(--text-secondary);
+}
+.empty p,
+.none {
+  margin: 0;
+  font-size: var(--text-sm);
+}
+.none {
+  color: var(--text-muted);
+}
+.editor {
+  display: grid;
+  gap: var(--space-3);
+}
+.editor :is(input, select, textarea) {
+  width: 100%;
+}
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}

@@ -108,6 +108,13 @@ test("component media and shared discussion: upgrade, roles, quota, merges, mode
         "utf8",
       ),
     );
+    // Model edits write the description (#264).
+    await db.exec(
+      await readFile(
+        new URL("../db/041_component_descriptions.sql", import.meta.url),
+        "utf8",
+      ),
+    );
     const raw = await sharp({
       create: { width: 800, height: 600, channels: 3, background: "#efac21" },
     })

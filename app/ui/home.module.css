@@ -320,8 +320,8 @@
   position: absolute;
   inset: 0;
 }
-.story:hover .storyLink {
-  color: var(--accent-text);
+.story:is(:hover, :focus-within) .storyLink {
+  color: var(--title-hover);
 }
 .story p {
   display: -webkit-box;
@@ -333,8 +333,9 @@
   -webkit-line-clamp: 2;
 }
 
-/* «Рекорды»: a lower band — up to four records in one row, each with its
-   illustration beside the holder and the value. */
+/* «Рекорды»: a lower band — up to four records in one manual rail (#264),
+   each with its illustration beside the holder and the value; the skeleton
+   keeps the same row. */
 .records {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
@@ -371,6 +372,10 @@
   color: var(--text-strong);
   font-weight: var(--weight-semibold);
   overflow-wrap: anywhere;
+  transition: color var(--duration-fast) var(--ease-out);
+}
+.record:is(:hover, :focus-within) :global(.item-link) {
+  color: var(--title-hover);
 }
 /* The holder's link covers the card. */
 .record :global(.item-link)::after {

@@ -67,13 +67,15 @@ test("component photo search previews, confirms and publishes attributed local m
       name: "Фотографии компонента",
       exact: true,
     });
+    // The photo actions sit in the page's action row (#264).
+    const tools = page.getByRole("group", { name: "Действия с компонентом" });
     await expect(
-      gallery.getByLabel("Ваше фото компонента", { exact: true }),
+      page.getByLabel("Ваше фото компонента", { exact: true }),
     ).toHaveCount(0);
-    await gallery
+    await tools
       .getByRole("button", { name: "Найти фото", exact: true })
       .click();
-    const selection = gallery.getByRole("group", {
+    const selection = page.getByRole("group", {
       name: "Выберите до трёх фотографий",
     });
     await expect(selection).toBeVisible();
@@ -113,6 +115,7 @@ test("component photo search previews, confirms and publishes attributed local m
     }
     const axe = await new AxeBuilder({ page })
       .include('section[aria-labelledby="component-photos"]')
+      .include("dialog[open]")
       .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
       .analyze();
     expect(axe.violations).toEqual([]);
@@ -124,17 +127,14 @@ test("component photo search previews, confirms and publishes attributed local m
       .click();
     await expect(gallery.locator("figure")).toHaveCount(1);
     await expect(
-      gallery.getByRole("button", { name: "Найти фото", exact: true }),
+      tools.getByRole("button", { name: "Найти фото", exact: true }),
     ).toHaveCount(0);
+    // The active photo's credits sit under it (#264).
     await expect(
-      gallery
-        .getByRole("complementary", { name: "Действия и сведения о фото" })
-        .getByText("Автор: Fixture author", { exact: true }),
+      gallery.getByText("Автор: Fixture author", { exact: true }),
     ).toBeVisible();
     await expect(
-      gallery
-        .getByRole("complementary", { name: "Действия и сведения о фото" })
-        .getByRole("link", { name: "CC BY-SA 4.0" }),
+      gallery.getByRole("link", { name: "CC BY-SA 4.0" }),
     ).toHaveAttribute(
       "href",
       "https://creativecommons.org/licenses/by-sa/4.0/",

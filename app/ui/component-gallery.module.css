@@ -1,5 +1,35 @@
+/* The action row (#264): small buttons in one line over the page's divider;
+   on a narrow screen the row scrolls sideways instead of wrapping. The line
+   stays when a reader has no actions. */
+.toolbar {
+  min-width: 0;
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--line);
+}
+.toolbarRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  /* Room for focus rings inside the scrolling row. */
+  margin: calc(-1 * var(--space-1));
+  padding: var(--space-1);
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.toolbarRow:empty {
+  display: none;
+}
+.toolbar:has(.toolbarRow:empty) {
+  padding-bottom: 0;
+}
+.toolbarRow > :global(.button) {
+  flex: none;
+  white-space: nowrap;
+}
 .gallery {
   display: grid;
+  align-content: start;
   gap: var(--space-3);
   min-width: 0;
 }
@@ -7,14 +37,14 @@
   font-size: var(--text-base);
   margin: 0;
 }
+/* The description on the left half, the photos on the right half. */
 .workspace {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 320px);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-6);
   align-items: start;
 }
-.visual,
-.sidebar {
+.visual {
   min-width: 0;
 }
 .visual {
@@ -161,26 +191,6 @@
   color: var(--text-muted);
   font-size: var(--text-xs);
 }
-.sidebar {
-  display: grid;
-  align-content: start;
-  gap: var(--space-4);
-  border-left: 1px solid var(--line);
-  padding-left: var(--space-6);
-}
-.sidebar h3 {
-  margin: 0;
-  font-size: var(--text-base);
-}
-.primaryActions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-}
-.primaryActions > button {
-  flex: 1;
-  white-space: nowrap;
-}
 .photoInfo {
   display: grid;
   gap: var(--space-3);
@@ -204,20 +214,12 @@
   gap: var(--space-1);
 }
 .management {
-  border-top: 1px solid var(--line);
-  padding-top: var(--space-2);
+  display: grid;
+  gap: var(--space-3);
 }
-.management summary {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-height: var(--control-lg);
-  cursor: pointer;
-  font-size: var(--text-sm);
-  font-weight: var(--weight-semibold);
-}
-.management .actions {
-  margin-top: var(--space-2);
+.management > p {
+  margin: 0;
+  overflow-wrap: anywhere;
 }
 .upload {
   display: grid;
@@ -301,11 +303,6 @@
   .workspace {
     grid-template-columns: minmax(0, 1fr);
     gap: var(--space-4);
-  }
-  .sidebar {
-    border-left: 0;
-    border-top: 1px solid var(--line);
-    padding: var(--space-4) 0 0;
   }
 }
 @media (max-width: 500px) {

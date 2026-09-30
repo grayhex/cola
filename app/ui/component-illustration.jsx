@@ -20,6 +20,9 @@ export default function ComponentIllustration({ group, category, ...props }) {
         src={"/api/assets/" + id}
         width={size}
         height={size}
+        // A fixed square the picture fits into whole, whatever its
+        // proportions (#264): never cropped, never stretching its row.
+        style={{ "--illustration-size": size + "px" }}
         alt=""
         aria-hidden="true"
         onError={() => setFailedId(id)}

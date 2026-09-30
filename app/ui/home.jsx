@@ -449,8 +449,14 @@ export default function Home() {
             </Link>
           }
         >
+          {/* A manual rail (#264): it scrolls by wheel, touch, drag and the
+              arrow keys, never by itself, and has no arrow buttons. */}
           {content.records.length > 0 && (
-            <div className={styles.records}>
+            <BikeCarousel
+              compact
+              label="Рекорды сообщества"
+              railLabel="Рекорды; используйте стрелки для прокрутки"
+            >
               {content.records.map((record) => {
                 const [href, holder] = recordHolder(record.holder);
                 return (
@@ -475,7 +481,7 @@ export default function Home() {
                   </article>
                 );
               })}
-            </div>
+            </BikeCarousel>
           )}
           {!data && !error && (
             <div className={styles.records} aria-hidden="true">

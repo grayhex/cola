@@ -134,7 +134,8 @@ export default function PlanForm({
     [error, setError] = useState(""),
     [whenError, setWhenError] = useState(""),
     [bikeError, setBikeError] = useState(""),
-    [advanced, setAdvanced] = useState(() => currentBikes.length > 1 && !ride);
+    // Rare fields stay folded (#264); a missing bike opens them on submit.
+    [advanced, setAdvanced] = useState(false);
   const bikeSelect = useRef(null);
   const reveal = useMotionFeedback(advanced, { reveal: true });
   const dirty = !!preview || JSON.stringify(form) !== JSON.stringify(initial);
@@ -480,7 +481,11 @@ export default function PlanForm({
         >
           <summary>
             Дополнительно
-            {selectedBike ? ` · ${selectedBike.name}` : ""}
+            {selectedBike
+              ? ` · ${selectedBike.name}`
+              : rideBikes.length
+                ? " · выберите велосипед"
+                : ""}
           </summary>
           <div className="planning-body" ref={reveal}>
             <fieldset className="planning-section half" disabled={busy}>

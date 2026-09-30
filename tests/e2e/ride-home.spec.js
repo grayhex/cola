@@ -167,10 +167,12 @@ test("signed-in home: one «Покататься вместе» block, both comp
   // «Хочу кататься»: the #231 composer; the area is picked without a mouse.
   const want = block.getByRole("button", { name: "Хочу кататься" });
   await want.click();
+  // The same «Новое намерение» window as on /ride-intents (#264).
   const dialog = page.getByRole("dialog", {
-    name: "Хочу кататься",
+    name: "Новое намерение",
     exact: true,
   });
+  await dialog.getByRole("button", { name: "В выходные", exact: true }).click();
   await dialog.getByLabel("Область поездки").fill("Воробьёвы горы");
   await dialog.getByRole("button", { name: /^Цель:/ }).click();
   await page
@@ -251,7 +253,7 @@ test("signed-in home: one «Покататься вместе» block, both comp
   await page.goto("/");
   await expect(
     block.getByRole("link", { name: "Хочу кататься" }),
-  ).toHaveAttribute("href", "/ride-intents");
+  ).toHaveAttribute("href", "/ride-intents?new=1");
   await expect(block.getByRole("status")).toHaveCount(0);
   await member(page.request, "Second");
   await page.goto("/");
@@ -279,7 +281,7 @@ test("guest home stays public: the same block, links to sign in, no personal req
   expect(html).toContain("Покататься вместе");
   await expect(
     block.getByRole("link", { name: "Хочу кататься" }),
-  ).toHaveAttribute("href", "/ride-intents");
+  ).toHaveAttribute("href", "/ride-intents?new=1");
   await expect(
     block.getByRole("link", { name: "Организовать покатушку" }),
   ).toHaveAttribute("href", "/account?tab=rides&action=plan");
@@ -399,7 +401,7 @@ test("the composer chunk: reduced motion, a failed load, a slow load, then the w
     block.getByRole("button", { name: "Открываем…" }).first(),
   ).toBeDisabled();
   release();
-  const dialog = page.getByRole("dialog", { name: "Хочу кататься" });
+  const dialog = page.getByRole("dialog", { name: "Новое намерение" });
   await expect(dialog).toBeVisible();
   await expect(block.getByRole("alert")).toHaveCount(0);
   await page.keyboard.press("Escape");

@@ -11,9 +11,10 @@ export { default as PlanComposer } from "./plan-composer.jsx";
 // copies with their own state.
 export function IntentDialog({ onClose, onSaved }) {
   const { personalSettings } = useSite();
-  // New intents use the profile's zone (#253).
+  // New intents use the profile's zone (#253). The same blank draft as
+  // «Выбрать время» on /ride-intents, so both doors open one window (#264).
   const [draft] = useState(() =>
-      intentDraft("weekend", null, false, userTimeZone(personalSettings)),
+      intentDraft("custom", null, false, userTimeZone(personalSettings)),
     ),
     [preferences, setPreferences] = useState({ passport: {} });
   useEffect(() => {
