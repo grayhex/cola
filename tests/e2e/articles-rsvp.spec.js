@@ -109,6 +109,7 @@ test("article without a bike: illustrated Markdown, draft, publication, discussi
 
 test("left admin navigation, configurable emoji, frame labels and one-tap weekly RSVP", async ({
   page,
+  browser,
   isMobile,
 }, info) => {
   const user = await register(page);
@@ -207,30 +208,50 @@ test("left admin navigation, configurable emoji, frame labels and one-tap weekly
     await expect(
       page.getByLabel("Повторять каждую неделю", { exact: false }),
     ).toBeVisible();
+    // The organizer takes part by organizing (#235): no answer buttons on
+    // the own plan. Another rider answers in one tap from the list.
     await page.goto("/rides");
-    const card = page
+    const own = page
       .locator(".ride-card")
       .filter({ hasText: "Субботний круг" });
-    await expect(card).toContainText("Каждую неделю");
-    await card.getByRole("button", { name: /^Иду/ }).click();
-    await expect(card.getByRole("button", { name: /^Иду/ })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
-    await card.getByRole("button", { name: /^Может быть/ }).click();
-    await expect(
-      card.getByRole("button", { name: /^Может быть/ }),
-    ).toHaveAttribute("aria-pressed", "true");
-    await page.reload();
-    await expect(
-      card.getByRole("button", { name: /^Может быть/ }),
-    ).toHaveAttribute("aria-pressed", "true");
-    await noOverflow(page);
-    await page.screenshot({
-      path: info.outputPath("weekly-rsvp.png"),
-      fullPage: true,
-      animations: "disabled",
+    await expect(own).toContainText("Каждую неделю");
+    await expect(own.getByRole("button", { name: /^Иду/ })).toHaveCount(0);
+    const riderContext = await browser.newContext({
+      baseURL: origin,
+      viewport: info.project.use.viewport,
+      isMobile: info.project.use.isMobile,
+      hasTouch: info.project.use.hasTouch,
     });
+    try {
+      const rider = await riderContext.newPage();
+      await register(rider);
+      await rider.goto("/rides");
+      const card = rider
+        .locator(".ride-card")
+        .filter({ hasText: "Субботний круг" });
+      await expect(card).toContainText("Каждую неделю");
+      await card.getByRole("button", { name: /^Иду/ }).click();
+      await expect(card.getByRole("button", { name: /^Иду/ })).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      );
+      await card.getByRole("button", { name: /^Может быть/ }).click();
+      await expect(
+        card.getByRole("button", { name: /^Может быть/ }),
+      ).toHaveAttribute("aria-pressed", "true");
+      await rider.reload();
+      await expect(
+        card.getByRole("button", { name: /^Может быть/ }),
+      ).toHaveAttribute("aria-pressed", "true");
+      await noOverflow(rider);
+      await rider.screenshot({
+        path: info.outputPath("weekly-rsvp.png"),
+        fullPage: true,
+        animations: "disabled",
+      });
+    } finally {
+      await riderContext.close();
+    }
     await page.goto("/bikes");
     const tile = page.locator(".bike-card").filter({ hasText: "RSVP Bike" });
     await expect(

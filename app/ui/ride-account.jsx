@@ -25,7 +25,11 @@ export default function RideAccount({ bikes }) {
     [settingsRevision, setSettingsRevision] = useState(0),
     // Kept apart from the list error: a loaded list must not hide it.
     [settingsError, setSettingsError] = useState("");
-  const action = useSearchParams().get("action");
+  const params = useSearchParams();
+  const action = params.get("action"),
+    // «Изменить» on a ride page (#235) opens that plan's editor once; the
+    // owner endpoint still decides whether it is the viewer's own.
+    editShare = params.get("edit");
   const requests = useRef({ revision: 0 });
   const refresh = useCallback(async () => {
     const revision = ++requests.current.revision;
@@ -82,6 +86,21 @@ export default function RideAccount({ bikes }) {
     url.searchParams.delete("action");
     window.history.replaceState(null, "", url);
   }
+  const opened = useRef(null);
+  useEffect(() => {
+    if (
+      !editShare ||
+      opened.current === editShare ||
+      !/^[0-9a-f-]{36}$/i.test(editShare)
+    )
+      return;
+    opened.current = editShare;
+    void edit({ shareId: editShare });
+    const url = new URL(location.href);
+    url.searchParams.delete("edit");
+    window.history.replaceState(null, "", url);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editShare]);
   // Only a recorded ride replaces the list; a plan opens over it.
   const inline = editing?.status === "completed";
   async function edit(r) {

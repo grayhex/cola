@@ -1,13 +1,12 @@
 "use client";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import RidePassport from "./ride-passport.jsx";
 import { SharedView } from "./motion.jsx";
-import RideRsvp, { RecurringRideLabel } from "./ride-rsvp.jsx";
 import RideSpeedChart from "./ride-speed-chart.jsx";
 import RideMap from "./ride-map.jsx";
+import RidePlanView from "./ride-plan-view.jsx";
 import { Heart } from "./icons.jsx";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { SocialHeader, SocialFooter, socialApi } from "./social-primitives.jsx";
 import { RideMetrics, rideDate } from "./ride-card.jsx";
@@ -18,7 +17,27 @@ import ShareButton from "./share-button.jsx";
 import LocalDate from "./local-date.jsx";
 // The comment editor (Tiptap) loads after the ride itself.
 const RideAnalysis = dynamic(() => import("./ride-analysis.jsx"));
-const Discussion = dynamic(() => import("./discussion.jsx"), { ssr: false });
+// A failed chunk leaves the ride, its agreement and RSVP working (#235).
+const Discussion = dynamic(
+  () =>
+    import("./discussion.jsx").catch(() => ({
+      default: function DiscussionUnavailable() {
+        return (
+          <p className="help" role="status">
+            Обсуждение не загрузилось. Обновите страницу, чтобы попробовать
+            снова.
+          </p>
+        );
+      },
+    })),
+  { ssr: false },
+);
+const detailPath = (share) =>
+  "rides/" +
+  (new URLSearchParams(location.search).get("owner") === "1"
+    ? "owner/"
+    : "public/") +
+  share;
 export default function RidePage({
   share,
   styleUrl,
@@ -47,15 +66,7 @@ export default function RidePage({
   const seed = useRef(initial);
   useEffect(() => {
     let active = true;
-    const rideRequest =
-      seed.current ||
-      socialApi(
-        "rides/" +
-          (new URLSearchParams(location.search).get("owner") === "1"
-            ? "owner/"
-            : "public/") +
-          share,
-      );
+    const rideRequest = seed.current || socialApi(detailPath(share));
     seed.current = null;
     Promise.resolve(rideRequest)
       .then((d) => {
@@ -68,6 +79,23 @@ export default function RidePage({
       active = false;
     };
   }, [share]);
+  // After an answer or an organizer action the page shows the server's state
+  // (#235); permission-dependent values never outlive a failed refresh.
+  const reload = useCallback(async () => {
+    try {
+      const data = await socialApi(detailPath(share));
+      setRide(data.ride);
+      setError("");
+    } catch (e) {
+      setRide((r) =>
+        r && r.meetingVisibility === "participants" && !r.isOwner
+          ? { ...r, meetingPoint: "", meetingHidden: true }
+          : r,
+      );
+      setError(e.message);
+    }
+  }, [share]);
+  const planned = ride?.sourceKind === "planned";
   return (
     <>
       <SocialHeader user={user} />
@@ -79,99 +107,72 @@ export default function RidePage({
         )}
         {ride ? (
           <>
-            <div className="entity-byline">
-              <a href={profilePath(ride.author.username)}>
-                {personName(ride.author)}
-              </a>
-              <ShareButton path={sharePath} title={ride.title} />
-            </div>
-            <SharedView kind="ride-title" id={ride.id}>
-              <h1>{ride.title}</h1>
-            </SharedView>
-            <p className="help">
-              {rideDate(ride.date)} ·{" "}
-              <a href={publicPath("bike", ride.bike)}>{ride.bike.name}</a>
-            </p>
-            {ride.status !== "completed" && (
-              <p className="ride-status">
-                {ride.status === "cancelled"
-                  ? "Покатушка отменена"
-                  : "Планируемая покатушка"}{" "}
-                · <LocalDate value={ride.scheduledAt} time />
-              </p>
-            )}
-            {ride.sourceKind === "planned" && (
-              <RidePassport passport={ride.passport} map />
-            )}
-            {ride.expectedEndAt && (
-              <p className="help">
-                Ожидаемое окончание:{" "}
-                <LocalDate value={ride.expectedEndAt} time />
-              </p>
-            )}
-            {ride.meetingHidden && (
-              <p className="help" role="status">
-                Точное место встречи доступно после ответа «Иду».
-              </p>
-            )}
-            {ride.meetingPoint && <p>Место встречи: {ride.meetingPoint}</p>}
-            {ride.features?.length > 0 && (
-              <ul className="ride-features">
-                {ride.features.map((f) => (
-                  <li key={f}>{f}</li>
-                ))}
-              </ul>
-            )}
-            <RideMetrics
-              metrics={ride.metrics}
-              visibleMetrics={ride.visibleMetrics}
-            />
-            {!ride.hasTrack && (
-              <p className="help">
-                Трек пока не добавлен
-                {ride.sourceKind === "garmin" ? " · импорт Garmin" : ""}.
-              </p>
-            )}
-            <RecurringRideLabel ride={ride} />
-            {ride.invitation && (
-              <p className="help">Вы приглашены организатором.</p>
-            )}
-            <RideRsvp
-              ride={ride}
-              onResponse={async (next) => {
-                // Remove the previous permission-dependent value immediately, even if the refresh fails.
-                setRide((r) =>
-                  r.meetingVisibility === "participants" && !r.isOwner
-                    ? { ...r, ...next, meetingPoint: "", meetingHidden: true }
-                    : { ...r, ...next },
-                );
-                try {
-                  const data = await socialApi(
-                    "rides/" + (ride.isOwner ? "owner/" : "public/") + share,
+            {planned ? (
+              <RidePlanView
+                ride={ride}
+                share={share}
+                sharePath={sharePath}
+                onReload={reload}
+                onAnswer={async (next) => {
+                  // A hidden meeting place closes with any answer but «Иду»
+                  // at once, before the refresh confirms it (#230, #235).
+                  setRide((r) =>
+                    next.rsvp !== "accepted" &&
+                    r.meetingVisibility === "participants" &&
+                    !r.isOwner
+                      ? {
+                          ...r,
+                          ...next,
+                          meetingPoint: "",
+                          meetingHidden: true,
+                        }
+                      : { ...r, ...next },
                   );
-                  setRide(data.ride);
-                } catch (e) {
-                  setError(e.message);
-                }
-              }}
-            />
-            {ride.isOwner && ride.invitations?.length > 0 && (
-              <section className="ride-invitation">
-                <h2>Приглашённые</h2>
-                {ride.invitations.map((i) => (
-                  <p key={i.username}>
-                    {personName(i)} ·{" "}
-                    {
-                      {
-                        pending: "ожидает ответа",
-                        accepted: "поедет",
-                        declined: "не сможет",
-                        maybe: "возможно",
-                      }[i.response]
-                    }
+                  await reload();
+                }}
+              />
+            ) : (
+              <>
+                <div className="entity-byline">
+                  <a href={profilePath(ride.author.username)}>
+                    {personName(ride.author)}
+                  </a>
+                  <ShareButton path={sharePath} title={ride.title} />
+                </div>
+                <SharedView kind="ride-title" id={ride.id}>
+                  <h1>{ride.title}</h1>
+                </SharedView>
+                <p className="help">
+                  {rideDate(ride.date)} ·{" "}
+                  <a href={publicPath("bike", ride.bike)}>{ride.bike.name}</a>
+                </p>
+                {ride.status !== "completed" && (
+                  <p className="ride-status">
+                    {ride.status === "cancelled"
+                      ? "Покатушка отменена"
+                      : "Планируемая покатушка"}{" "}
+                    · <LocalDate value={ride.scheduledAt} time />
                   </p>
-                ))}
-              </section>
+                )}
+                {ride.meetingPoint && <p>Место встречи: {ride.meetingPoint}</p>}
+                {ride.features?.length > 0 && (
+                  <ul className="ride-features">
+                    {ride.features.map((f) => (
+                      <li key={f}>{f}</li>
+                    ))}
+                  </ul>
+                )}
+                <RideMetrics
+                  metrics={ride.metrics}
+                  visibleMetrics={ride.visibleMetrics}
+                />
+                {!ride.hasTrack && (
+                  <p className="help">
+                    Трек пока не добавлен
+                    {ride.sourceKind === "garmin" ? " · импорт Garmin" : ""}.
+                  </p>
+                )}
+              </>
             )}
             {geometry.length > 0 && (
               <RideMap
@@ -208,13 +209,7 @@ export default function RidePage({
                             "rides/" + ride.id + "/analysis",
                             "POST",
                           );
-                          const mode =
-                            new URLSearchParams(location.search).get(
-                              "owner",
-                            ) === "1"
-                              ? "owner/"
-                              : "public/";
-                          const data = await socialApi("rides/" + mode + share);
+                          const data = await socialApi(detailPath(share));
                           setRide(data.ride);
                           setSelected(0);
                         } catch (e) {
@@ -234,7 +229,7 @@ export default function RidePage({
             {ride.description && (
               <p className="ride-description">{ride.description}</p>
             )}
-            {ride.isOwner && (
+            {ride.isOwner && !planned && (
               <Link className="quiet" href="/account?tab=rides">
                 Управлять покатушками
               </Link>

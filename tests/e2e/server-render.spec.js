@@ -166,10 +166,29 @@ test("public pages hydrate their server HTML and stay interactive", async ({
       exact: true,
     }),
   ).toHaveCount(1);
-  // Times and dates switch to the viewer's own zone after hydration.
+  // A plan keeps the agreed time in its own zone (#235); the viewer's own
+  // clock is added after hydration.
   await guest.goto("/r/" + plan.shareId);
-  await expect(guest.locator(".ride-status time")).toHaveText(
-    scheduledAt.toLocaleString("ru-RU", { timeZone: "Asia/Vladivostok" }),
+  const when = guest.getByRole("region", { name: "Договорённости" });
+  const clock = (timeZone) =>
+    scheduledAt.toLocaleTimeString("ru-RU", {
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone,
+    });
+  const day = (timeZone) =>
+    scheduledAt.toLocaleDateString("ru-RU", {
+      day: "numeric",
+      month: "long",
+      timeZone,
+    });
+  await expect(when).toContainText(clock("Europe/Moscow") + " GMT+3");
+  await expect(when).toContainText(
+    "у вас " +
+      (day("Asia/Vladivostok") === day("Europe/Moscow")
+        ? ""
+        : day("Asia/Vladivostok") + ", ") +
+      clock("Asia/Vladivostok"),
   );
   await guest.goto("/market/" + listing.shareId);
   await expect(guest.getByText("Опубликовано сегодня")).toBeVisible();

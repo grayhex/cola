@@ -184,6 +184,8 @@ try {
           "tests/community-http.js",
           ...(externalDatabase ? ["tests/community-concurrency.js"] : []),
           "tests/rides-http.js",
+          "tests/ride-agreements-http.js",
+          ...(externalDatabase ? ["tests/ride-agreements-concurrency.js"] : []),
           "tests/ride-intents-http.js",
           "tests/ride-matches-http.js",
           "tests/activity-sync-http.js",

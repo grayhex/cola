@@ -34,6 +34,20 @@ import {
 import { chatApi } from "./chat-api.js";
 import NewConversation from "./new-conversation.jsx";
 import { Images, plainText } from "./chat-content.jsx";
+import { socialApi } from "../ui/social-primitives.jsx";
+import { publicPath } from "../../lib/public-urls.js";
+import { rideTimeLabel } from "../../lib/ride-announcement.js";
+import { streamUserId } from "../../lib/chat-config.js";
+
+/** The draft of a question about a ride: title, agreed time and the public
+ * address — no meeting place, people or answers. */
+function rideContext(ride) {
+  const when =
+    ride.status === "planned" && ride.scheduledAt
+      ? " (" + rideTimeLabel(ride.scheduledAt, ride.recurrenceTimezone) + ")"
+      : "";
+  return `Вопрос о покатушке «${ride.title}»${when}: ${new URL(publicPath("ride", ride), location.origin).href}\n`;
+}
 
 const MessengerContext = createContext(null);
 const actions = ["edit", "delete", "flag", "react", "reply", "quote"];
@@ -249,6 +263,10 @@ export default function Conversations({ client }) {
   const router = useRouter();
   const target = params.get("to");
   const cid = params.get("channel");
+  // «Спросить организатора» (#235): a ride the viewer can open, as context.
+  const rideShare = /^[0-9a-f-]{36}$/i.test(params.get("ride") || "")
+    ? params.get("ride")
+    : null;
   const [creating, setCreating] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -290,9 +308,12 @@ export default function Conversations({ client }) {
       setActiveChannel(next);
       if (target) {
         setRevision((n) => n + 1);
-        router.replace("/messages?channel=" + encodeURIComponent(nextCid), {
-          scroll: false,
-        });
+        router.replace(
+          "/messages?channel=" +
+            encodeURIComponent(nextCid) +
+            (rideShare ? "&ride=" + rideShare : ""),
+          { scroll: false },
+        );
       }
     })()
       .catch(() => {
@@ -309,7 +330,40 @@ export default function Conversations({ client }) {
     return () => {
       active = false;
     };
+    // rideShare only travels with `to`; it does not reopen the channel.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [target, cid, client, setActiveChannel, router, attempt]);
+  // The ride is read again with this viewer's access; only its title, date
+  // and public address go into the draft, and only for its own organizer.
+  // Nothing is sent without the person pressing «Отправить».
+  useEffect(() => {
+    if (!rideShare || !cid || !channel || channel.cid !== cid || target) return;
+    let active = true;
+    socialApi("rides/public/" + rideShare)
+      .then(({ ride }) => {
+        if (!active) return;
+        const organizer = ride.author?.id && streamUserId(ride.author.id);
+        const composer = channel.messageComposer?.textComposer;
+        if (
+          organizer &&
+          organizer !== client.userID &&
+          channel.state.members[organizer] &&
+          composer &&
+          !composer.text.trim()
+        )
+          composer.setText(rideContext(ride));
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (active)
+          router.replace("/messages?channel=" + encodeURIComponent(cid), {
+            scroll: false,
+          });
+      });
+    return () => {
+      active = false;
+    };
+  }, [rideShare, cid, channel, target, client, router]);
   const select = (nextCid) =>
     router.push("/messages?channel=" + encodeURIComponent(nextCid), {
       scroll: false,

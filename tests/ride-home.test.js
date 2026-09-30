@@ -189,8 +189,13 @@ test("upcoming rides: organizer, accepted, maybe, pending invitation, cancellati
     await rsvp(blockedAuthor, me, soon(8), "accepted");
     await rsvp(far, me, soon(24 * 70), "accepted");
     void strangerInvite;
-    // An edit after the answer is flagged.
-    await db.query("UPDATE rides SET updated_at=now() WHERE id=$1", [accepted]);
+    // A new edition of the agreement after the answer is flagged (#235); a
+    // plain edit (title, typo) is not.
+    await db.query(
+      "UPDATE rides SET agreement_revision=2,agreement_changes='{place}',updated_at=now() WHERE id=$1",
+      [accepted],
+    );
+    await db.query("UPDATE rides SET updated_at=now() WHERE id=$1", [maybe]);
     const list = await upcomingRides(db, me);
     assert.deepEqual(
       list.map((r) => [r.title, r.role]),

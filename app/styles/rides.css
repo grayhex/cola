@@ -329,6 +329,24 @@
     color: inherit;
     opacity: 0.75;
   }
+  /* The answer given before the conditions changed (#235): outlined, not
+     pressed, so it never reads as agreement with the new edition. */
+  .ride-rsvp .button[data-previous] {
+    border-style: dashed;
+    border-color: var(--line-strong);
+  }
+  .ride-rsvp[data-compact] {
+    margin: var(--space-1) 0;
+  }
+  .rsvp-icon {
+    display: inline-flex;
+  }
+  .ride-card-flags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+    margin: 0;
+  }
   .recurrence-label {
     display: flex;
     flex-wrap: wrap;
