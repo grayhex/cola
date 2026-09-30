@@ -56,7 +56,7 @@ export default function ComponentPhotoSearch({ model, onSaved }) {
   return (
     <>
       <button
-        className="button secondary"
+        className="button secondary small"
         type="button"
         aria-haspopup="dialog"
         aria-expanded={open}
@@ -66,7 +66,7 @@ export default function ComponentPhotoSearch({ model, onSaved }) {
           if (!photos && !busy) void search();
         }}
       >
-        <Search size={18} />
+        <Search size={16} />
         Найти фото
       </button>
       <CompactDialog

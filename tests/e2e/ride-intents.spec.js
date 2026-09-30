@@ -32,7 +32,13 @@ async function open(page) {
   await page
     .getByRole("button", { name: "Выбрать время", exact: true })
     .click();
-  return page.getByRole("dialog", { name: "Хочу кататься", exact: true });
+  return page.getByRole("dialog", { name: "Новое намерение", exact: true });
+}
+// Who sees an intent sits under «Дополнительно», folded by default (#264).
+async function advanced(dialog) {
+  const details = dialog.locator("details.intent-advanced");
+  if (!(await details.evaluate((el) => el.open)))
+    await details.locator("summary").click();
 }
 // #243: trip conditions are option tiles that open a compact sheet.
 async function pick(page, scope, tile, option) {
@@ -96,12 +102,12 @@ test("intent lifecycle without a bike: windows, preferences, themes, privacy and
   ).toBeFocused();
   await dialog
     .getByRole("button", {
-      name: "Сохранить условия как предпочтения",
+      name: "Сохранить как постоянные предпочтения",
       exact: true,
     })
     .click();
   await expect(dialog.getByRole("status")).toContainText(
-    "Предпочтения сохранены",
+    "Постоянные предпочтения сохранены",
   );
   expect(
     (await (await page.request.get("/api/ride-intents")).json()).total,
@@ -147,6 +153,7 @@ test("intent lifecycle without a bike: windows, preferences, themes, privacy and
     ["tiles", dialog.getByRole("group", { name: "Параметры поездки" })],
     ["privacy", dialog.getByRole("group", { name: "Кому видно" })],
   ]) {
+    if (name === "privacy") await advanced(dialog);
     await locator.scrollIntoViewIfNeeded();
     await dialog.screenshot({
       path: info.outputPath(`intent-${name}.png`),
@@ -185,6 +192,7 @@ test("intent lifecycle without a bike: windows, preferences, themes, privacy and
     );
     await card.getByRole("button", { name: "Изменить", exact: true }).click();
     const editor = page.getByRole("dialog", { name: "Изменить намерение" });
+    await advanced(editor);
     await editor.getByLabel("Сообществу ColaBike", { exact: true }).check();
     await editor.getByRole("button", { name: "Сохранить изменения" }).click();
     await expect(editor).toHaveCount(0);
@@ -192,6 +200,7 @@ test("intent lifecycle without a bike: windows, preferences, themes, privacy and
       200,
     );
     await card.getByRole("button", { name: "Изменить", exact: true }).click();
+    await advanced(editor);
     await editor
       .getByLabel("Только мне — для подбора", { exact: true })
       .check();
@@ -257,7 +266,7 @@ test("load failure, lost create response, reduced motion and missing chunk prese
     .getByRole("button", { name: "Выбрать время", exact: true })
     .click();
   const dialog = page.getByRole("dialog", {
-    name: "Хочу кататься",
+    name: "Новое намерение",
     exact: true,
   });
   await fill(dialog, "Повторная отправка");
@@ -317,7 +326,7 @@ test("workspace screen (#243): setup sections, preference tiles, tabs, empty and
   await expect(
     main.getByRole("heading", { name: "Как это работает" }),
   ).toBeVisible();
-  const save = main.getByRole("button", { name: "Сохранить как настройки" });
+  const save = main.getByRole("button", { name: "Сохранить предпочтения" });
   await expect(save).toBeDisabled();
   // Tiles: keyboard open, Escape closes and returns focus, a value fills it.
   const pace = main.getByRole("button", { name: "Темп: Любой" });
@@ -342,7 +351,9 @@ test("workspace screen (#243): setup sections, preference tiles, tabs, empty and
   await company.getByRole("button", { name: "Готово" }).click();
   await expect(save).toBeEnabled();
   await save.click();
-  await expect(main.getByRole("status")).toContainText("Настройки сохранены");
+  await expect(main.getByRole("status")).toContainText(
+    "Постоянные предпочтения сохранены",
+  );
   const prefs = await (
     await page.request.get("/api/ride-intents/preferences")
   ).json();
@@ -440,7 +451,7 @@ test("area from preferences moves the map view; Enter keeps the stored centre (#
   expect(saved.status()).toBe(200);
   const dialog = await open(page);
   await dialog
-    .getByRole("button", { name: "Подставить мои предпочтения" })
+    .getByRole("button", { name: "Подставить постоянные предпочтения" })
     .click();
   const map = dialog.getByRole("application");
   await expect(map).toBeVisible();

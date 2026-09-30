@@ -203,6 +203,12 @@ await db.exec(
     "utf8",
   ),
 );
+await db.exec(
+  await readFile(
+    new URL("../db/041_component_descriptions.sql", import.meta.url),
+    "utf8",
+  ),
+);
 await seedLegalDocuments(db);
 const server = new PGLiteSocketServer({
   db,

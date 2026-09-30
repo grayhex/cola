@@ -6,7 +6,7 @@ import SiteIcon from "./site-icon.jsx";
 
 const loadDialogs = () => import("./together-dialogs.jsx");
 const saved = {
-  intent: ["Намерение сохранено.", "/ride-intents", "Подходящие выезды"],
+  intent: ["Намерение сохранено.", "/ride-intents", "Мои намерения"],
   plan: ["Покатушка запланирована.", "/account?tab=rides", "Мои покатушки"],
 };
 /**
@@ -79,7 +79,9 @@ export default function TogetherActions({ signedIn, className = "", onSaved }) {
           </>
         ) : (
           <>
-            <Link className="button" href="/ride-intents">
+            {/* After signing in the page opens the same «Новое намерение»
+                window a member gets here (#264). */}
+            <Link className="button" href="/ride-intents?new=1">
               <CalendarDays size={16} aria-hidden="true" />
               Хочу кататься
             </Link>

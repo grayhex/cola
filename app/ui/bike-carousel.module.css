@@ -42,3 +42,13 @@
     flex-basis: 82%;
   }
 }
+/* Compact cards (#264): records keep their own width; a phone shows most of
+   one card and the edge of the next. */
+.rail[data-compact] > * {
+  flex-basis: clamp(240px, calc((100% - 3 * var(--space-4)) / 4), 360px);
+}
+@media (max-width: 600px) {
+  .rail[data-compact] > * {
+    flex-basis: 82%;
+  }
+}

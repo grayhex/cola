@@ -103,6 +103,8 @@ test("market catalog: populated migration, independent fields, private/foreign b
       await db.query("SELECT * FROM market_listings WHERE id=$1", [oldId])
     ).rows[0];
     await sql("030_market_catalog_links.sql");
+    // Model edits write the description (#264).
+    await sql("041_component_descriptions.sql");
     const migrated = (
       await db.query("SELECT * FROM market_listings WHERE id=$1", [oldId])
     ).rows[0];

@@ -19,6 +19,7 @@ function ComponentCover({ model, icons }) {
     <div className={styles.cover}>
       {model.coverUrl && !failed ? (
         <Image
+          className={styles.photo}
           width={640}
           height={400}
           unoptimized
@@ -32,7 +33,7 @@ function ComponentCover({ model, icons }) {
         <ComponentIllustration
           category={model.category}
           icons={icons}
-          size={64}
+          size={88}
         />
       )}
     </div>

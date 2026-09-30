@@ -96,9 +96,10 @@
   cursor: pointer;
   transition: color var(--duration-fast) var(--ease-out);
 }
-/* The whole card answers the pointer, as a Datasets row does. */
-.card:hover .identity :is(a, button) {
-  color: var(--accent-text);
+/* The whole card answers the pointer and keyboard focus, as a Datasets row
+   does, in a title colour readable in both themes (#264). */
+.card:is(:hover, :focus-within) .identity :is(a, button) {
+  color: var(--title-hover);
 }
 .info :global(.bike-labels) {
   margin: 0;
