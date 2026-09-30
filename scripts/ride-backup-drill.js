@@ -4,9 +4,9 @@ import {
   saveRide,
   rideDefaults,
   rideDetail,
-} from "../lib/rides.js";
-import { getOriginal } from "../lib/ride-storage.js";
-import { parseTrack } from "../lib/ride-track.js";
+} from "../lib/rides.ts";
+import { getOriginal } from "../lib/ride-storage.ts";
+import { parseTrack } from "../lib/ride-track.ts";
 import assert from "node:assert/strict";
 const owner = "00000000-0000-4000-8000-000000000001",
   bike = "00000000-0000-4000-8000-000000000003";

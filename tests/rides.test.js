@@ -12,17 +12,17 @@ import {
   rideList,
   deleteRide,
   refreshRideAnalysis,
-} from "../lib/rides.js";
-import { cleanupRides, getOriginal } from "../lib/ride-storage.js";
+} from "../lib/rides.ts";
+import { cleanupRides, getOriginal } from "../lib/ride-storage.ts";
 import {
   likeRide,
   createRideComment,
   rideCommentPage,
-} from "../lib/ride-comments.js";
+} from "../lib/ride-comments.ts";
 import { notificationPage } from "../lib/notifications.ts";
 import { createReport, moderateReport, reportPage } from "../lib/reports.ts";
 import { defaultSettings, defaultCatalog } from "../lib/site-defaults.ts";
-import { rideFeed } from "../lib/ride-feed.js";
+import { rideFeed } from "../lib/ride-feed.ts";
 import { gpx, loop } from "./ride-fixtures.js";
 test("rides ownership, previews, privacy, social, feed, moderation, delete and storage lifecycle", async () => {
   const dir = await mkdtemp(tmpdir() + "/cola-rides-");

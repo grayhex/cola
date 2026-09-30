@@ -65,8 +65,8 @@ for (const name of [
 
 const { defaultSettings, defaultCatalog } = await load("lib/site-defaults.ts");
 const { bootstrapAdmin } = await load("scripts/bootstrap-admin.js");
-await load("lib/rides.js");
-await load("lib/activity-worker.js");
+await load("lib/rides.ts");
+await load("lib/activity-worker.ts");
 execFileSync(process.execPath, ["scripts/activity-sync.js", "--once"], {
   env: { ...process.env, RWGPS_ENABLED: "false" },
 });

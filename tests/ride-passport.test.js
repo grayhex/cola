@@ -8,7 +8,7 @@ import {
   ridePassportInput,
   plannedDetails,
   plannedEnd,
-} from "../lib/ride-plan.js";
+} from "../lib/ride-plan.ts";
 import {
   planInput,
   rideInput,
@@ -19,7 +19,7 @@ import {
   saveRide,
   respondRide,
   attachRideTrack,
-} from "../lib/rides.js";
+} from "../lib/rides.ts";
 import { loadSocialPreview, loadSocialCard } from "../lib/social-preview.ts";
 import { gpx, loop } from "./ride-fixtures.js";
 

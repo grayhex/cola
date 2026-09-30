@@ -67,7 +67,17 @@ function dto(e: ArticleViewRow, user: string | null) {
 export async function articleList(
   q: Queryable,
   user: string | null = null,
-  { own = false, topic = null, page = 1, search = "" } = {},
+  {
+    own = false,
+    topic = null,
+    page = 1,
+    search = "",
+  }: {
+    own?: boolean;
+    topic?: string | null;
+    page?: number;
+    search?: string;
+  } = {},
 ) {
   const where = ` WHERE ${visible} AND (${own ? "e.owner_id=$1" : "e.status='published' AND e.is_public"}) AND ($2::text IS NULL OR e.topic_id=$2) AND ($3='' OR e.title ILIKE '%'||$3||'%' OR e.body ILIKE '%'||$3||'%')`;
   const params = [user, topic, search];

@@ -1,8 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parseTrack } from "../lib/ride-track.js";
-import { parseFit, fitCrc } from "../lib/ride-fit.js";
-import { parseTcx } from "../lib/ride-tcx.js";
+import { parseTrack } from "../lib/ride-track.ts";
+import { parseFit, fitCrc } from "../lib/ride-fit.ts";
+import { parseTcx } from "../lib/ride-tcx.ts";
 import { gpx, fit, tcx, loop, crc16 } from "./ride-fixtures.js";
 
 const expectedSensors = {

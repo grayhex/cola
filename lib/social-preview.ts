@@ -31,8 +31,8 @@ import type { Queryable } from "./db.ts";
 import { findPublicLink } from "./public-link-data.ts";
 import { publicPath } from "./public-urls.ts";
 import { previewText } from "./social-metadata.ts";
-import { rideOccurrence } from "./ride-occurrence.js";
-import { rideAnnouncement } from "./ride-announcement.js";
+import { rideOccurrence } from "./ride-occurrence.ts";
+import { rideAnnouncement } from "./ride-announcement.ts";
 
 const photo = (bikeColumn: string) =>
   `(SELECT filename FROM photos WHERE bike_id=${bikeColumn} ORDER BY is_cover DESC,created_at,id LIMIT 1)`;

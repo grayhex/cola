@@ -11,8 +11,8 @@ import { useSite } from "./site-provider.jsx";
 import { useHydrated } from "./use-hydrated.js";
 import { profilePath } from "../../lib/public-urls.ts";
 import { personName } from "../../lib/usernames.ts";
-import { rideTimeLabel } from "../../lib/ride-announcement.js";
-import { formatRideMetric } from "../../lib/garmin-fields.js";
+import { rideTimeLabel } from "../../lib/ride-announcement.ts";
+import { formatRideMetric } from "../../lib/garmin-fields.ts";
 import styles from "./ride-plan.module.css";
 
 // Loaded on the first click; a failed chunk still leaves the login page.

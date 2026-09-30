@@ -6,7 +6,7 @@ import pg from "pg";
 import sharp from "sharp";
 import { garminCsv } from "../garmin-fixtures.js";
 import { gpx, loop } from "../ride-fixtures.js";
-import { parseGpx } from "../../lib/ride-gpx.js";
+import { parseGpx } from "../../lib/ride-gpx.ts";
 const origin = process.env.TEST_ORIGIN || "http://localhost:3100";
 const password = "feature-browser-secret-123";
 async function register(page) {

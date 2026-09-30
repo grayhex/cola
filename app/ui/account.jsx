@@ -36,7 +36,7 @@ import { useSite } from "./site-provider.jsx";
 import { profilePath } from "../../lib/public-urls.ts";
 import { isGeneratedUsername } from "../../lib/usernames.ts";
 import { userTimeZone, timeZoneChoices } from "../../lib/user-time-zone.ts";
-import { validTimeZone } from "../../lib/ride-intent-time.js";
+import { validTimeZone } from "../../lib/ride-intent-time.ts";
 const tabIcons = {
   overview: LayoutGrid,
   profile: UserRound,

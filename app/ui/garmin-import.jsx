@@ -5,7 +5,7 @@ import {
   garminFields,
   defaultRideFields,
   formatRideMetric,
-} from "../../lib/garmin-fields.js";
+} from "../../lib/garmin-fields.ts";
 import { RideMetrics } from "./ride-card.jsx";
 export default function GarminImport({ bikes, onDone, onCancel }) {
   const [csv, setCsv] = useState(""),

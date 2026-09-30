@@ -7,7 +7,7 @@ import {
 } from "../../lib/bike-status.ts";
 import { socialApi } from "./social-primitives.jsx";
 import { RideRoutePreview, RideMetrics } from "./ride-card.jsx";
-import { garminFields, defaultRideFields } from "../../lib/garmin-fields.js";
+import { garminFields, defaultRideFields } from "../../lib/garmin-fields.ts";
 
 // The recorded-ride form (#245): uploading a track under «Интеграции и
 // импорт» and editing a recorded ride. Planning, create and edit, is PlanForm

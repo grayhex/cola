@@ -1,5 +1,5 @@
 import { db } from "../lib/db.ts";
-import { cleanupRides } from "../lib/ride-storage.js";
+import { cleanupRides } from "../lib/ride-storage.ts";
 import { cleanupMarketPhotos } from "../lib/market.ts";
 import { cleanupJournalPhotos } from "../lib/journal-storage.ts";
 import { cleanupComponentPhotos } from "../lib/component-photos.ts";

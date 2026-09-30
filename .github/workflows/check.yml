@@ -80,7 +80,7 @@ jobs:
       # Zero warnings: the lint debt was cleared in #140; new warnings fail CI.
       - name: Lint
         run: pnpm lint
-      # Native strict TS + frozen JS baseline; preserve API/lib JSDoc gates (#143).
+      # Native strict backend/API + TS/TSX probes and a shrinking UI JS baseline.
       - name: Type check
         run: pnpm typecheck && pnpm test:typecheck
       - name: Application unit and database tests

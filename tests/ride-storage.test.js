@@ -21,7 +21,7 @@ import {
   planRide,
   deleteRide,
   rideDefaults,
-} from "../lib/rides.js";
+} from "../lib/rides.ts";
 import {
   collectRideFiles,
   drainRideFileGc,
@@ -29,7 +29,7 @@ import {
   scanRideOrphans,
   cleanupRides,
   putOriginal,
-} from "../lib/ride-storage.js";
+} from "../lib/ride-storage.ts";
 import { defaultSettings, defaultCatalog } from "../lib/site-defaults.ts";
 import { gpx, loop } from "./ride-fixtures.js";
 

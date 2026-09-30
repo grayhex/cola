@@ -5,7 +5,7 @@ import {
   organizeQuery,
   organizeDraft,
 } from "../lib/organize-filters.ts";
-import { groupsQuery, queryObject } from "../lib/ride-match-input.js";
+import { groupsQuery, queryObject } from "../lib/ride-match-input.ts";
 
 // #234: the organizer's filters reach the URL and the API only as shared
 // choices, and the planner prefill carries the group's start and format only.

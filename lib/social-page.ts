@@ -20,7 +20,7 @@ import { indexed, hidden } from "./indexing.ts";
 import { getSite } from "./site.ts";
 import { visibleBike, showcase } from "./showcase.ts";
 import { journalDetail } from "./journal.ts";
-import { rideDetail } from "./rides.js";
+import { rideDetail } from "./rides.ts";
 import { marketDetail, sellerListings } from "./market.ts";
 import { articleDetail } from "./articles.ts";
 import { getProfile } from "./profiles.ts";

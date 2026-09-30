@@ -1,12 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parseGpx } from "../lib/ride-gpx.js";
+import { parseGpx } from "../lib/ride-gpx.ts";
 import {
   distance,
   publicGeometry,
   bounds,
   routePaths,
-} from "../lib/ride-geometry.js";
+} from "../lib/ride-geometry.ts";
 import { gpx, loop } from "./ride-fixtures.js";
 test("GPX metrics: known distance, moving average excludes stops and segments", () => {
   const p = parseGpx(

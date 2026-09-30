@@ -1,13 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parseTrack } from "../lib/ride-track.js";
+import { parseTrack } from "../lib/ride-track.ts";
 import {
   deriveAnalysis,
   permittedAnalysis,
   ANALYSIS_LIMIT,
   analysisChannels,
-} from "../lib/ride-analysis.js";
-import { distance, lineDistance } from "../lib/ride-geometry.js";
+} from "../lib/ride-analysis.ts";
+import { distance, lineDistance } from "../lib/ride-geometry.ts";
 import { gpx, fit, tcx, loop } from "./ride-fixtures.js";
 const flat = (s) => s.segments.flat();
 

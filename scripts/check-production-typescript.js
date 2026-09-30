@@ -69,7 +69,10 @@ async function walk(dir) {
       }
     } else if (/\.(?:[cm]?js|jsx)$/.test(entry.name)) {
       present.add(filename);
-      if (!allowed.has(filename)) unexpected.push(filename);
+      const backend =
+        filename.startsWith("lib/") || filename.startsWith("app/api/");
+      if (!allowed.has(filename) || (backend && filename !== "lib/version.js"))
+        unexpected.push(filename);
     }
   }
 }

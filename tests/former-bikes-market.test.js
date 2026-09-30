@@ -18,9 +18,9 @@ import {
   rideDefaults,
   rideDetail,
   deleteRide,
-} from "../lib/rides.js";
-import { getOriginal } from "../lib/ride-storage.js";
-import { parseGarminCsv } from "../lib/garmin-csv.js";
+} from "../lib/rides.ts";
+import { getOriginal } from "../lib/ride-storage.ts";
+import { parseGarminCsv } from "../lib/garmin-csv.ts";
 import {
   listingInput,
   saveListing,

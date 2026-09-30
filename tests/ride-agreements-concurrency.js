@@ -12,7 +12,7 @@ import {
   rideEdit,
   saveRide,
   setRideRecruitment,
-} from "../lib/rides.js";
+} from "../lib/rides.ts";
 
 const pool = new pg.Pool({
   connectionString: process.env.DATABASE_URL,

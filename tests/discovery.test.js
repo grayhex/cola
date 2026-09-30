@@ -15,7 +15,7 @@ import {
   setSolution,
 } from "../lib/journal-discovery.ts";
 import { setFollow } from "../lib/follows.ts";
-import { rideFeed } from "../lib/ride-feed.js";
+import { rideFeed } from "../lib/ride-feed.ts";
 import { searchInput, searchExperience } from "../lib/search.ts";
 import { participationSummary } from "../lib/participation.ts";
 import { notificationPage } from "../lib/notifications.ts";

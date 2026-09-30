@@ -34,7 +34,7 @@ import {
   quickWindows,
   windowDraft,
   formatIntentWindow,
-} from "../../lib/ride-intent-time.js";
+} from "../../lib/ride-intent-time.ts";
 import { userTimeZone } from "../../lib/user-time-zone.ts";
 import styles from "./ride-intents.module.css";
 const blankWindow = () => ({ startLocal: "", endLocal: "" });

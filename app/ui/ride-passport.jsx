@@ -1,4 +1,4 @@
-import { ridePlanOptions } from "../../lib/ride-plan-options.js";
+import { ridePlanOptions } from "../../lib/ride-plan-options.ts";
 import { AreaPreview } from "./ride-area-map.jsx";
 import styles from "./ride-passport.module.css";
 const rangeText = (v, unit) =>

@@ -4,8 +4,8 @@ import RideBasemap, { MapAttribution } from "./ride-basemap.jsx";
 import YandexRideMap from "./yandex-ride-map.jsx";
 import { useSite } from "./site-provider.jsx";
 import { mapDefaults, mapStyle } from "../../lib/map-settings.ts";
-import { bounds } from "../../lib/ride-geometry.js";
-import { routeCasing } from "../../lib/yandex-ride-map.js";
+import { bounds } from "../../lib/ride-geometry.ts";
+import { routeCasing } from "../../lib/yandex-ride-map.ts";
 export default function RideMap({
   geometry,
   styleUrl,

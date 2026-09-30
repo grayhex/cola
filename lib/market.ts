@@ -115,9 +115,22 @@ export async function marketList(
     search = "",
     ids = null,
     seller = "",
+  }: {
+    own?: boolean;
+    category?: string | null;
+    listingType?: string | null;
+    condition?: string | null;
+    priceMin?: number | null;
+    priceMax?: number | null;
+    city?: string;
+    sort?: string;
+    page?: number;
+    search?: string;
+    ids?: string[] | null;
+    seller?: string;
   } = {},
 ) {
-  const params = [viewer || null, category, search, ids];
+  const params: unknown[] = [viewer || null, category, search, ids];
   let where = ` WHERE ${own ? "m.owner_id=$1 AND NOT u.blocked" : marketPublic} AND ($1::uuid IS NULL OR $1::uuid IS NOT NULL) AND ($2::text IS NULL OR m.category=$2) AND ($3='' OR strpos(lower(m.title||' '||m.description||' '||m.location),lower($3))>0) AND ($4::uuid[] IS NULL OR m.id=ANY($4))`;
   // All listings of one seller: the link under "Other listings" (#116).
   if (seller) {

@@ -7,8 +7,8 @@ import { PGlite } from "@electric-sql/pglite";
 import {
   sealActivityToken,
   openActivityToken,
-} from "../lib/activity-credentials.js";
-import { rwgpsConfig, verifyRwgpsWebhook, rwgpsRequest } from "../lib/rwgps.js";
+} from "../lib/activity-credentials.ts";
+import { rwgpsConfig, verifyRwgpsWebhook, rwgpsRequest } from "../lib/rwgps.ts";
 import {
   beginActivityOAuth,
   finishActivityOAuth,
@@ -18,18 +18,18 @@ import {
   activityStatus,
   chooseActivityBike,
   twelveMonthsAgo,
-} from "../lib/activity-sync.js";
+} from "../lib/activity-sync.ts";
 import {
   runActivityBatch,
   processActivityJob,
-} from "../lib/activity-worker.js";
+} from "../lib/activity-worker.ts";
 import {
   rideDetail,
   saveRide,
   rideDefaults,
   deleteRide,
-} from "../lib/rides.js";
-import { getOriginal } from "../lib/ride-storage.js";
+} from "../lib/rides.ts";
+import { getOriginal } from "../lib/ride-storage.ts";
 import { defaultSettings, defaultCatalog } from "../lib/site-defaults.ts";
 import { fit, loop } from "./ride-fixtures.js";
 

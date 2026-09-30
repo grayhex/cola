@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { CompactDialog } from "./compact-ui.jsx";
 import { useMotionFeedback } from "./motion.jsx";
-import { ridePlanOptions } from "../../lib/ride-plan-options.js";
+import { ridePlanOptions } from "../../lib/ride-plan-options.ts";
 import styles from "./passport-tiles.module.css";
 
 // Option tiles for the shared ride passport (#243, rules of #230/#231): one

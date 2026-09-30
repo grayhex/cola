@@ -16,9 +16,9 @@ import {
   readFilters,
   apiFilters,
   filterLabels,
-} from "../lib/ride-filters.js";
-import { rideList, upcomingRides } from "../lib/rides.js";
-import { ridePassportInput } from "../lib/ride-plan.js";
+} from "../lib/ride-filters.ts";
+import { rideList, upcomingRides } from "../lib/rides.ts";
+import { ridePassportInput } from "../lib/ride-plan.ts";
 
 test("area picker geometry: Mercator round trip, coarse 0.01° grid, circle size", () => {
   for (const zoom of [3, 10, 15])
