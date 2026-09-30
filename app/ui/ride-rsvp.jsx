@@ -39,17 +39,35 @@ function shifted(counts, from, to) {
   next[to] = (next[to] || 0) + 1;
   return next;
 }
+/** The buttons at once, before the server answers. */
+const chosen = (v, response) => ({
+  ...v,
+  rsvp: response,
+  participation: response,
+  previousRsvp: null,
+  rsvpCounts: shifted(
+    v.rsvpCounts || {},
+    v.participation === "reconfirm" ? "reconfirm" : v.rsvp,
+    response,
+  ),
+});
 /** The viewer's answer to the current date (#235). One state from the API:
  * an answer to an earlier edition is shown as "confirm again", never as a
- * pressed button. A failed request rolls the buttons back and says why. */
+ * pressed button. Answers go one at a time and the latest press wins: a
+ * press during a request is sent right after it. A failed request rolls the
+ * buttons back to the last saved answer and says why. */
 export default function RideRsvp({ ride, onResponse, compact = false }) {
   const { viewer } = useSite();
   const [state, setState] = useState(ride),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [status, setStatus] = useState("");
-  const sequence = useRef(0);
-  useEffect(() => setState(ride), [ride]);
+  const running = useRef(false),
+    queued = useRef(null);
+  // A refresh read before the last press must not flip the buttons back.
+  useEffect(() => {
+    if (!running.current) setState(ride);
+  }, [ride]);
   const feedback = useMotionFeedback(state.rsvp);
   if (
     ride.status !== "planned" ||
@@ -61,39 +79,46 @@ export default function RideRsvp({ ride, onResponse, compact = false }) {
   )
     return null;
   async function answer(response) {
-    if (busy || state.rsvp === response) return;
-    const before = state,
-      request = ++sequence.current;
-    setBusy(true);
     setError("");
     setStatus("");
-    // The buttons follow at once; the server's answer replaces them.
-    setState((v) => ({
-      ...v,
-      rsvp: response,
-      participation: response,
-      previousRsvp: null,
-      rsvpCounts: shifted(
-        v.rsvpCounts || {},
-        v.participation === "reconfirm" ? "reconfirm" : v.rsvp,
-        response,
-      ),
-    }));
-    try {
-      const next = await socialApi("rides/" + ride.id + "/rsvp", "PATCH", {
-        response,
-        occurrenceAt: new Date(ride.scheduledAt).toISOString(),
-      });
-      if (request !== sequence.current) return;
-      setState((v) => ({ ...v, ...next }));
-      setStatus("Ответ сохранён: " + responseLabels[response]);
-      await onResponse?.(next);
-    } catch (e) {
-      if (request !== sequence.current) return;
-      setState(before);
-      setError(e.message);
-    } finally {
-      if (request === sequence.current) setBusy(false);
+    if (running.current) {
+      queued.current = response;
+      setState((v) => (v.rsvp === response ? v : chosen(v, response)));
+      return;
+    }
+    if (state.rsvp === response) return;
+    running.current = true;
+    setBusy(true);
+    setState((v) => chosen(v, response));
+    let saved = state,
+      last = null,
+      failed = false,
+      choice = response;
+    while (choice) {
+      try {
+        last = await socialApi("rides/" + ride.id + "/rsvp", "PATCH", {
+          response: choice,
+          occurrenceAt: new Date(ride.scheduledAt).toISOString(),
+        });
+        saved = { ...saved, ...last };
+      } catch (e) {
+        failed = true;
+        setError(e.message);
+        break;
+      }
+      choice = queued.current !== last.rsvp ? queued.current : null;
+      queued.current = null;
+    }
+    queued.current = null;
+    running.current = false;
+    setBusy(false);
+    // The last saved answer, never a press the server refused.
+    setState(saved);
+    if (last) {
+      if (!failed) setStatus("Ответ сохранён: " + responseLabels[last.rsvp]);
+      // The page refreshes what depends on the answer (the meeting place);
+      // the buttons do not wait for it.
+      void onResponse?.(last);
     }
   }
   return (
