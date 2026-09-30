@@ -4,7 +4,7 @@ import {
   readOrganize,
   organizeQuery,
   organizeDraft,
-} from "../lib/organize-filters.js";
+} from "../lib/organize-filters.ts";
 import { groupsQuery, queryObject } from "../lib/ride-match-input.js";
 
 // #234: the organizer's filters reach the URL and the API only as shared

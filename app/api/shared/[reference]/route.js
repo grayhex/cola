@@ -1,8 +1,8 @@
 import { GET as original } from "../../[...path]/route.js";
-import { db } from "../../../../lib/db.js";
-import { legacyShare } from "../../../../lib/public-link-data.js";
-import { publicResponse } from "../../../../lib/public-response.js";
-import { CommunityError } from "../../../../lib/community-validation.js";
+import { db } from "../../../../lib/db.ts";
+import { legacyShare } from "../../../../lib/public-link-data.ts";
+import { publicResponse } from "../../../../lib/public-response.ts";
+import { CommunityError } from "../../../../lib/community-validation.ts";
 export const runtime = "nodejs",
   dynamic = "force-dynamic";
 /** @param {Request} req

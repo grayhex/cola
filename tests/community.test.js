@@ -3,24 +3,24 @@ import assert from "node:assert/strict";
 import { PGlite } from "@electric-sql/pglite";
 import { readFile, readdir } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
-import { commentInput, reportInput } from "../lib/community-validation.js";
+import { commentInput, reportInput } from "../lib/community-validation.ts";
 import {
   createComment,
   changeComment,
   commentPage,
   replyPage,
   commentDto,
-} from "../lib/comments.js";
+} from "../lib/comments.ts";
 import {
   notificationPage,
   unreadCount,
   readNotifications,
-} from "../lib/notifications.js";
-import { setFollow } from "../lib/follows.js";
-import { showcase, vote } from "../lib/showcase.js";
-import { createReport, reportPage, moderateReport } from "../lib/reports.js";
-import { insertBike } from "../lib/repository.js";
-import { defaultCatalog, defaultSettings } from "../lib/site-defaults.js";
+} from "../lib/notifications.ts";
+import { setFollow } from "../lib/follows.ts";
+import { showcase, vote } from "../lib/showcase.ts";
+import { createReport, reportPage, moderateReport } from "../lib/reports.ts";
+import { insertBike } from "../lib/repository.ts";
+import { defaultCatalog, defaultSettings } from "../lib/site-defaults.ts";
 async function setup() {
   const db = new PGlite();
   for (const f of (await readdir(new URL("../db/", import.meta.url)))

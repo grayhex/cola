@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { socialApi } from "../ui/social-primitives.jsx";
-import { gameImagePromptLimit } from "../../lib/game-prompt-validation.js";
+import { gameImagePromptLimit } from "../../lib/game-prompt-validation.ts";
 
 export default function GameImagePrompt() {
   const [prompt, setPrompt] = useState(null);

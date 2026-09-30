@@ -12,10 +12,10 @@ import {
   saveArticle,
   deleteArticle,
   articleSocial,
-} from "../lib/articles.js";
-import { saveJournalPhoto, readJournalPhoto } from "../lib/journal-storage.js";
-import { notificationPage } from "../lib/notifications.js";
-import { createReport, reportPage, moderateReport } from "../lib/reports.js";
+} from "../lib/articles.ts";
+import { saveJournalPhoto, readJournalPhoto } from "../lib/journal-storage.ts";
+import { notificationPage } from "../lib/notifications.ts";
+import { createReport, reportPage, moderateReport } from "../lib/reports.ts";
 import {
   planRide,
   planInput,
@@ -25,9 +25,9 @@ import {
   rideOccurrence,
   cancelPlannedRide,
 } from "../lib/rides.js";
-import { defaultSettings, defaultCatalog } from "../lib/site-defaults.js";
-import { articleBlocks, articleInline } from "../lib/article-markup.js";
-import { settingsInput } from "../lib/admin-validation.js";
+import { defaultSettings, defaultCatalog } from "../lib/site-defaults.ts";
+import { articleBlocks, articleInline } from "../lib/article-markup.ts";
+import { settingsInput } from "../lib/admin-validation.ts";
 
 test("article markup renders a small safe subset, attachment references and plain HTML", () => {
   const id = randomUUID(),

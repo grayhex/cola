@@ -1,11 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createBikeReaction } from "../lib/bike-reactions.js";
+import { createBikeReaction } from "../lib/bike-reactions.ts";
 import {
   readShowcaseQuery,
   writeShowcaseQuery,
-} from "../lib/showcase-query.js";
-import { accentText } from "../lib/appearance.js";
+} from "../lib/showcase-query.ts";
+import { accentText } from "../lib/appearance.ts";
 const tick = () => new Promise((resolve) => setImmediate(resolve));
 const deferred = () => {
   let resolve, reject;

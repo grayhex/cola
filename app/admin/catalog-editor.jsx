@@ -1,9 +1,9 @@
 "use client";
-import { bikeCategories } from "../../lib/bike-classification.js";
+import { bikeCategories } from "../../lib/bike-classification.ts";
 import { useState } from "react";
 import { Plus, Trash2, ArrowUp, ArrowDown } from "../ui/icons.jsx";
 import PartIcon from "../ui/part-icon.jsx";
-import { iconNames, categoryIcons } from "../../lib/part-icons.js";
+import { iconNames, categoryIcons } from "../../lib/part-icons.ts";
 import ExperienceCatalog from "./experience-catalog.jsx";
 import ComponentModels from "./component-models.jsx";
 import { Field, Select } from "./design-controls.jsx";

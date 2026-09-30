@@ -5,9 +5,9 @@ import {
   sectionLinks,
   activeSection,
   sectionDefaults,
-} from "../lib/navigation.js";
-import { settingsInput } from "../lib/admin-validation.js";
-import { defaultSettings } from "../lib/site-defaults.js";
+} from "../lib/navigation.ts";
+import { settingsInput } from "../lib/admin-validation.ts";
+import { defaultSettings } from "../lib/site-defaults.ts";
 test("navigation defaults ignore retired ordering fields; known destinations respect auth", () => {
   assert.deepEqual(
     navigationSections({}).map((s) => s.id),

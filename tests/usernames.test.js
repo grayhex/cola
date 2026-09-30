@@ -12,8 +12,8 @@ import {
   usernameFrom,
   usernameLabel,
   usernamePattern,
-} from "../lib/usernames.js";
-import { registrationInput } from "../lib/social-validation.js";
+} from "../lib/usernames.ts";
+import { registrationInput } from "../lib/social-validation.ts";
 
 test("usernames are transliterated from Russian and Latin names", () => {
   assert.equal(usernameFrom("Иван Петров"), "ivan-petrov");

@@ -1,5 +1,5 @@
 "use client";
-import { accentText } from "../../lib/appearance.js";
+import { accentText } from "../../lib/appearance.ts";
 import AssetPicker from "./asset-picker.jsx";
 import AnimationPicker from "./animation-picker.jsx";
 import { Field, Select } from "./design-controls.jsx";

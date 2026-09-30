@@ -8,7 +8,7 @@ RUN --mount=type=cache,id=cola-pnpm-store,target=/pnpm/store,sharing=locked \
 
 # Generated public assets depend on locked packages, not the Next output.
 FROM dependencies AS static-assets
-COPY lib/rive-assets.js ./lib/
+COPY lib/rive-assets.ts ./lib/
 COPY scripts/copy-maplibre-worker.js scripts/copy-rive-runtime.js ./scripts/
 RUN node scripts/copy-maplibre-worker.js && node scripts/copy-rive-runtime.js
 
@@ -53,7 +53,7 @@ COPY scripts/check-runtime.js scripts/migrate.js \
     scripts/audit-photo-files.js scripts/recalculate-photo-storage.js \
     scripts/cleanup-rides.js scripts/chat-sync.js scripts/chat-setup.js scripts/activity-sync.js \
     scripts/rebuild-factory-components.js ./scripts/
-RUN node --input-type=module -e "await import('./lib/rides.js'); await import('./lib/factory-import.js')"
+RUN node --input-type=module -e "await import('./lib/rides.js'); await import('./lib/factory-import.ts')"
 USER colabike
 CMD ["sh", "-c", "node scripts/check-runtime.js && node scripts/migrate.js"]
 
@@ -68,7 +68,7 @@ COPY --chown=colabike:colabike public ./public
 COPY --from=static-assets --chown=colabike:colabike /app/public ./public
 # The fail-fast startup validator has only these local imports (no migration path).
 COPY scripts/check-runtime.js ./scripts/
-COPY lib/runtime-config.js lib/csp.js lib/chat-config.js lib/error-tracker.js lib/mail.js ./lib/
+COPY lib/runtime-config.ts lib/csp.ts lib/chat-config.ts lib/error-tracker.ts lib/mail.ts ./lib/
 COPY --from=builder /app/lib/version.js ./lib/version.js
 USER colabike
 EXPOSE 3000

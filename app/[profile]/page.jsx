@@ -5,8 +5,8 @@ import {
   canonicalPage,
   sharePath,
   pageData,
-} from "../../lib/social-page.js";
-import { routeParam } from "../../lib/public-urls.js";
+} from "../../lib/social-page.ts";
+import { routeParam } from "../../lib/public-urls.ts";
 export const runtime = "nodejs",
   dynamic = "force-dynamic";
 function usernameFrom(segment) {

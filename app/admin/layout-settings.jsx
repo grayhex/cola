@@ -1,8 +1,8 @@
 "use client";
 import { Plus, Trash2, ArrowUp, ArrowDown } from "../ui/icons.jsx";
 import PartIcon from "../ui/part-icon.jsx";
-import { iconNames } from "../../lib/part-icons.js";
-import { moveItem, defaultGroups } from "../../lib/garage-layout.js";
+import { iconNames } from "../../lib/part-icons.ts";
+import { moveItem, defaultGroups } from "../../lib/garage-layout.ts";
 export function GroupSettings({ catalog, onChange }) {
   const groups = catalog.componentGroups || defaultGroups;
   const set = (next) => onChange({ ...catalog, componentGroups: next });

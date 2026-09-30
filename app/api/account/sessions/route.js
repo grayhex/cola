@@ -2,11 +2,11 @@ import {
   currentSessionHash,
   currentUser,
   endSession,
-} from "../../../../lib/auth.js";
-import { db, transaction } from "../../../../lib/db.js";
-import { fail, json, sameOrigin } from "../../../../lib/http.js";
-import { endAllSessions, listSessions } from "../../../../lib/account-data.js";
-import { traced } from "../../../../lib/observability.js";
+} from "../../../../lib/auth.ts";
+import { db, transaction } from "../../../../lib/db.ts";
+import { fail, json, sameOrigin } from "../../../../lib/http.ts";
+import { endAllSessions, listSessions } from "../../../../lib/account-data.ts";
+import { traced } from "../../../../lib/observability.ts";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 

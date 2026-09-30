@@ -1,4 +1,4 @@
-import { assetContentSecurityPolicy } from "./lib/asset-security.js";
+import { assetContentSecurityPolicy } from "./lib/asset-security.ts";
 
 export default {
   output: "standalone",

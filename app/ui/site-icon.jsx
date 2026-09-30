@@ -43,8 +43,8 @@ import {
   X,
 } from "lucide-react";
 import { useSite } from "./site-provider.jsx";
-import { customEmoji } from "../../lib/ui-emoji.js";
-// One line icon per interface slot of lib/ui-emoji.js (#127).
+import { customEmoji } from "../../lib/ui-emoji.ts";
+// One line icon per interface slot of lib/ui-emoji.ts (#127).
 export const slotIcons = {
   home: House,
   bike: Bike,

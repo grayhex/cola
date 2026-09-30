@@ -3,9 +3,9 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import { PGlite } from "@electric-sql/pglite";
-import { saveFactorySpecification } from "../lib/factory-import.js";
-import { insertBike } from "../lib/repository.js";
-import { parseBikeName } from "../lib/bike-name.js";
+import { saveFactorySpecification } from "../lib/factory-import.ts";
+import { insertBike } from "../lib/repository.ts";
+import { parseBikeName } from "../lib/bike-name.ts";
 test("full bicycle names retain significant trim and extract trailing year", () => {
   assert.deepEqual(
     parseBikeName("Canyon Grail CF SLX 8 AXS 2026", ["Cube", "Canyon"]),

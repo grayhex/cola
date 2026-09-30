@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
-import { preparePhoto } from "../lib/images.js";
+import { preparePhoto } from "../lib/images.ts";
 import { PGlite } from "@electric-sql/pglite";
 
 test("image decoding rejects SVG and arbitrary content regardless of MIME", async () => {
@@ -15,14 +15,14 @@ test("image decoding rejects SVG and arbitrary content regardless of MIME", asyn
     /UNSUPPORTED_IMAGE/,
   );
 });
-import { hashPassword, verifyPassword } from "../lib/password.js";
-import { bikeInput, componentInput, credentials } from "../lib/validation.js";
+import { hashPassword, verifyPassword } from "../lib/password.ts";
+import { bikeInput, componentInput, credentials } from "../lib/validation.ts";
 import {
   insertBike,
   ownedBike,
   sharedBike,
   hydrate,
-} from "../lib/repository.js";
+} from "../lib/repository.ts";
 
 test("passwords are salted and incorrect passwords are rejected", async () => {
   const a = await hashPassword("correct horse battery");

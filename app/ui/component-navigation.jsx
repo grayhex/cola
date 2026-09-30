@@ -4,13 +4,13 @@ import { useEffect, useState } from "react";
 import { ChevronDown, ChevronRight, Shapes } from "lucide-react";
 import ComponentIllustration from "./component-illustration.jsx";
 import { useMotionFeedback } from "./motion.jsx";
-import { plural } from "../../lib/plural.js";
+import { plural } from "../../lib/plural.ts";
 import {
   componentNavigation,
   componentCategoryPath,
   componentGroupAnchor,
   componentGroupPath,
-} from "../../lib/component-navigation.js";
+} from "../../lib/component-navigation.ts";
 import styles from "./component-navigation.module.css";
 
 export function ComponentPath({ category, name, path, catalog }) {

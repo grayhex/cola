@@ -3,11 +3,11 @@ import assert from "node:assert/strict";
 import { PGlite } from "@electric-sql/pglite";
 import { readFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
-import { scoreBike, defaultScoring } from "../lib/bike-score.js";
-import { defaultSettings, defaultCatalog } from "../lib/site-defaults.js";
-import { profileInput, scoringInput } from "../lib/social-validation.js";
-import { showcase, vote } from "../lib/showcase.js";
-import { insertBike } from "../lib/repository.js";
+import { scoreBike, defaultScoring } from "../lib/bike-score.ts";
+import { defaultSettings, defaultCatalog } from "../lib/site-defaults.ts";
+import { profileInput, scoringInput } from "../lib/social-validation.ts";
+import { showcase, vote } from "../lib/showcase.ts";
+import { insertBike } from "../lib/repository.ts";
 test("scores clamp, apply each literal trigger once, respect groups and price privacy", () => {
   const config = structuredClone(defaultScoring);
   config.rules = [

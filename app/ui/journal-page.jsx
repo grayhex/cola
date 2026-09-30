@@ -6,13 +6,13 @@ import RichTextBody from "./rich-text-body.jsx";
 import { useState, useEffect, useRef } from "react";
 import { SocialHeader, SocialFooter, socialApi } from "./social-primitives.jsx";
 import { useSite } from "./site-provider.jsx";
-import { journalKinds } from "../../lib/journal-kinds.js";
+import { journalKinds } from "../../lib/journal-kinds.ts";
 import { Heart } from "./icons.jsx";
 import { SaveEntry } from "./journal-card.jsx";
-import { experienceHref } from "../../lib/experience-catalog.js";
+import { experienceHref } from "../../lib/experience-catalog.ts";
 import dynamic from "next/dynamic";
-import { profilePath, publicPath } from "../../lib/public-urls.js";
-import { personName } from "../../lib/usernames.js";
+import { profilePath, publicPath } from "../../lib/public-urls.ts";
+import { personName } from "../../lib/usernames.ts";
 import ShareButton from "./share-button.jsx";
 import LocalDate from "./local-date.jsx";
 // The owner's editor and the comment composer load after the entry itself.

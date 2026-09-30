@@ -1,5 +1,5 @@
 import Garage from "../ui/garage.jsx";
-import { indexed } from "../../lib/indexing.js";
+import { indexed } from "../../lib/indexing.ts";
 export const metadata = {
   title: "Велосипеды · ColaBike",
   description:

@@ -1,6 +1,6 @@
-import { db } from "../../../lib/db.js";
-import { resolveBikeModel } from "../../../lib/bike-catalog.js";
-import { modelLandingPath } from "../../../lib/experience-catalog.js";
+import { db } from "../../../lib/db.ts";
+import { resolveBikeModel } from "../../../lib/bike-catalog.ts";
+import { modelLandingPath } from "../../../lib/experience-catalog.ts";
 export const dynamic = "force-dynamic";
 // A real HTTP redirect, including for non-JS clients: a streamed page could
 // already have sent 200 by the time its asynchronous lookup completes.

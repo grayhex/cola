@@ -1,4 +1,4 @@
-import { assetContentSecurityPolicy } from "../lib/asset-security.js";
+import { assetContentSecurityPolicy } from "../lib/asset-security.ts";
 import { testConsents } from "./fixtures/legal.js";
 // Use only with scripts/test-db.js and the app pointed to that disposable database.
 import assert from "node:assert/strict";

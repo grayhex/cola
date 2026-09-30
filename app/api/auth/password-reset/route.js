@@ -1,15 +1,15 @@
 import { z } from "zod";
-import { rateLimit } from "../../../../lib/auth.js";
-import { trustedIp } from "../../../../lib/auth-limits.js";
-import { transaction } from "../../../../lib/db.js";
-import { fail, json, readJson, sameOrigin } from "../../../../lib/http.js";
-import { digest } from "../../../../lib/password.js";
-import { emailInput } from "../../../../lib/validation.js";
-import { mailEnabled } from "../../../../lib/mail.js";
-import { passwordResetMail } from "../../../../lib/mail-templates.js";
-import { accountLink, requestPasswordReset } from "../../../../lib/account.js";
-import { sendAfterResponse } from "../../../../lib/account-mail.js";
-import { traced } from "../../../../lib/observability.js";
+import { rateLimit } from "../../../../lib/auth.ts";
+import { trustedIp } from "../../../../lib/auth-limits.ts";
+import { transaction } from "../../../../lib/db.ts";
+import { fail, json, readJson, sameOrigin } from "../../../../lib/http.ts";
+import { digest } from "../../../../lib/password.ts";
+import { emailInput } from "../../../../lib/validation.ts";
+import { mailEnabled } from "../../../../lib/mail.ts";
+import { passwordResetMail } from "../../../../lib/mail-templates.ts";
+import { accountLink, requestPasswordReset } from "../../../../lib/account.ts";
+import { sendAfterResponse } from "../../../../lib/account-mail.ts";
+import { traced } from "../../../../lib/observability.ts";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 

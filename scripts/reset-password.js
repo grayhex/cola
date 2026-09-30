@@ -2,8 +2,8 @@
 // configured or mailbox lost). The password is read from stdin, never argv.
 import pg from "pg";
 import { pathToFileURL } from "node:url";
-import { emailInput, passwordInput } from "../lib/validation.js";
-import { hashPassword } from "../lib/password.js";
+import { emailInput, passwordInput } from "../lib/validation.ts";
+import { hashPassword } from "../lib/password.ts";
 
 // Caller owns the transaction. Every session of the account ends.
 export async function setPassword(q, email, password) {

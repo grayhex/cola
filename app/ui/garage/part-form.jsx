@@ -4,7 +4,7 @@ import { useSite } from "../site-provider.jsx";
 import PartIcon from "../part-icon.jsx";
 import { Check, Lock } from "../icons.jsx";
 import Field from "./field.jsx";
-import { productCategory } from "../../../lib/component-products.js";
+import { productCategory } from "../../../lib/component-products.ts";
 
 export default function PartForm({
   initial,

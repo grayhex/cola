@@ -1,5 +1,5 @@
 import Market from "../ui/market.jsx";
-import { indexed } from "../../lib/indexing.js";
+import { indexed } from "../../lib/indexing.ts";
 export const metadata = {
   title: "Рынок · ColaBike",
   description:

@@ -3,23 +3,23 @@ import assert from "node:assert/strict";
 import { readFile, readdir } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import { PGlite } from "@electric-sql/pglite";
-import { defaultCatalog } from "../lib/site-defaults.js";
+import { defaultCatalog } from "../lib/site-defaults.ts";
 import {
   productCategories,
   pairedCategories,
   productCategory,
   installationPosition,
-} from "../lib/component-products.js";
+} from "../lib/component-products.ts";
 import {
   componentCatalog,
   componentCatalogInput,
   resolveComponentModel,
   editComponentModel,
   mergeComponentModels,
-} from "../lib/component-catalog.js";
-import { factoryEntries } from "../lib/factory-components.js";
-import { saveFactorySpecification } from "../lib/factory-import.js";
-import { rebuildFactoryComponents } from "../lib/factory-rebuild.js";
+} from "../lib/component-catalog.ts";
+import { factoryEntries } from "../lib/factory-components.ts";
+import { saveFactorySpecification } from "../lib/factory-import.ts";
+import { rebuildFactoryComponents } from "../lib/factory-rebuild.ts";
 
 test("product migration preserves specifications, consolidates paired models and blocks catalog pollution on every write", async () => {
   const db = new PGlite();

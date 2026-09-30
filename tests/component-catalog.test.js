@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFile, readdir } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import { PGlite } from "@electric-sql/pglite";
-import { defaultCatalog, defaultSettings } from "../lib/site-defaults.js";
+import { defaultCatalog, defaultSettings } from "../lib/site-defaults.ts";
 import {
   componentCatalog,
   componentCatalogInput,
@@ -11,9 +11,9 @@ import {
   editComponentModel,
   mergeComponentModels,
   resolveComponentModel,
-} from "../lib/component-catalog.js";
-import { partLanding } from "../lib/experience-landing.js";
-import { searchExperience, searchInput } from "../lib/search.js";
+} from "../lib/component-catalog.ts";
+import { partLanding } from "../lib/experience-landing.ts";
+import { searchExperience, searchInput } from "../lib/search.ts";
 
 test("component catalog: populated upgrade, variants, privacy, durable links and administrative lifecycle", async () => {
   const db = new PGlite();

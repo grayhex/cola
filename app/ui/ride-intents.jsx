@@ -35,7 +35,7 @@ import {
   windowDraft,
   formatIntentWindow,
 } from "../../lib/ride-intent-time.js";
-import { userTimeZone } from "../../lib/user-time-zone.js";
+import { userTimeZone } from "../../lib/user-time-zone.ts";
 import styles from "./ride-intents.module.css";
 const blankWindow = () => ({ startLocal: "", endLocal: "" });
 const readinessLabels = {

@@ -1,4 +1,4 @@
-import { eventPresentation } from "../../lib/content-labels.js";
+import { eventPresentation } from "../../lib/content-labels.ts";
 import styles from "./content-label.module.css";
 
 export function ContentLabel({

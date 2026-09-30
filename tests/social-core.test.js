@@ -10,19 +10,19 @@ import {
   usernameInput,
   publicProfileInput,
   reservedUsernames,
-} from "../lib/social-validation.js";
-import { publicAuthor, publicProfile } from "../lib/profile-dto.js";
-import { getProfile, updateProfile, accountOverview } from "../lib/profiles.js";
-import { setFollow, followPage } from "../lib/follows.js";
+} from "../lib/social-validation.ts";
+import { publicAuthor, publicProfile } from "../lib/profile-dto.ts";
+import { getProfile, updateProfile, accountOverview } from "../lib/profiles.ts";
+import { setFollow, followPage } from "../lib/follows.ts";
 import {
   prepareAvatar,
   replaceAvatar,
   avatarFilename,
-} from "../lib/avatars.js";
-import { checkPhotoQuota, limits } from "../lib/limits.js";
-import { showcase } from "../lib/showcase.js";
-import { insertBike } from "../lib/repository.js";
-import { defaultSettings, defaultCatalog } from "../lib/site-defaults.js";
+} from "../lib/avatars.ts";
+import { checkPhotoQuota, limits } from "../lib/limits.ts";
+import { showcase } from "../lib/showcase.ts";
+import { insertBike } from "../lib/repository.ts";
+import { defaultSettings, defaultCatalog } from "../lib/site-defaults.ts";
 const migrations = [
   "001_initial",
   "002_admin",

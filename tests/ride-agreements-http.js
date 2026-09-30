@@ -4,7 +4,7 @@ import { verifiedFetch as fetch } from "./fixtures/verified-user.js";
 import { testConsents } from "./fixtures/legal.js";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { publicPath } from "../lib/public-urls.js";
+import { publicPath } from "../lib/public-urls.ts";
 
 const base = process.env.TEST_ORIGIN || "http://localhost:3100";
 const nonce = randomUUID().slice(0, 8);

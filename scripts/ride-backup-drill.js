@@ -1,4 +1,4 @@
-import { db, transaction } from "../lib/db.js";
+import { db, transaction } from "../lib/db.ts";
 import {
   previewRide,
   saveRide,

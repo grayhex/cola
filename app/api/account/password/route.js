@@ -3,12 +3,12 @@ import {
   currentSessionHash,
   currentUser,
   rateLimit,
-} from "../../../../lib/auth.js";
-import { transaction } from "../../../../lib/db.js";
-import { fail, json, readJson, sameOrigin } from "../../../../lib/http.js";
-import { passwordInput } from "../../../../lib/validation.js";
-import { changePassword } from "../../../../lib/account-data.js";
-import { traced } from "../../../../lib/observability.js";
+} from "../../../../lib/auth.ts";
+import { transaction } from "../../../../lib/db.ts";
+import { fail, json, readJson, sameOrigin } from "../../../../lib/http.ts";
+import { passwordInput } from "../../../../lib/validation.ts";
+import { changePassword } from "../../../../lib/account-data.ts";
+import { traced } from "../../../../lib/observability.ts";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 

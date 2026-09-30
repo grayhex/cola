@@ -3,8 +3,8 @@ import EmailPolicyAction from "./email-policy-action.jsx";
 import { useState, useEffect } from "react";
 import { socialApi } from "./social-primitives.jsx";
 import PromptComposer from "./prompt-composer.jsx";
-import { journalKinds } from "../../lib/journal-kinds.js";
-import { publicPath } from "../../lib/public-urls.js";
+import { journalKinds } from "../../lib/journal-kinds.ts";
+import { publicPath } from "../../lib/public-urls.ts";
 export default function JournalEditor({
   entry = null,
   bikeId,

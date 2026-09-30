@@ -8,7 +8,7 @@ import GarminImport from "./garmin-import.jsx";
 import RideForm from "./ride-form.jsx";
 import EmailPolicyAction from "./email-policy-action.jsx";
 import { socialApi } from "./social-primitives.jsx";
-import { selectableRideBikes } from "../../lib/bike-status.js";
+import { selectableRideBikes } from "../../lib/bike-status.ts";
 
 // «Интеграции и импорт» (#245): connecting sources and manual imports in one
 // place, each a provider row — name, short helper, status, action — with the

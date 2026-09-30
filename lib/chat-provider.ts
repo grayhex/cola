@@ -1,0 +1,96 @@
+type AppPolicy = NonNullable<
+  Awaited<ReturnType<StreamChat["getAppSettings"]>>["app"]
+>;
+type ChannelPolicy = Awaited<ReturnType<StreamChat["getChannelType"]>>;
+import { StreamChat } from "stream-chat";
+import {
+  chatCredentials,
+  CHAT_TYPE,
+  CHAT_ROLE,
+  CHAT_MEMBER_ROLE,
+  chatMemberGrants,
+  CHAT_FILE_BYTES,
+  chatUploads,
+} from "./chat-config.ts";
+
+let cached: { key: string; secret: string; client: StreamChat } | undefined;
+export function chatProvider() {
+  const config = chatCredentials();
+  if (!config) throw new ChatError("Сообщения временно недоступны", 503);
+  if (!cached || cached.key !== config.key || cached.secret !== config.secret) {
+    policyUntil = 0;
+    cached = {
+      ...config,
+      client: new StreamChat(config.key, config.secret, {
+        timeout: 5000,
+        logger: () => {},
+      }),
+    };
+  }
+  return cached.client;
+}
+export class ChatError extends Error {
+  declare status: number;
+  constructor(message: string | undefined, status = 400) {
+    super(message);
+    this.status = status;
+  }
+}
+const same = (a: unknown, b: unknown) =>
+  Array.isArray(a) &&
+  Array.isArray(b) &&
+  a.length === b.length &&
+  [...a].sort().join() === [...b].sort().join();
+// Stream may omit a role whose grants were explicitly set to an empty array.
+const noGrants = (permissions: unknown) =>
+  permissions === undefined || same(permissions, []);
+export function assertChatPolicy(app: AppPolicy, type: ChannelPolicy) {
+  const grants = type.grants || {};
+  if (
+    app.disable_auth_checks ||
+    app.disable_permissions_checks ||
+    !noGrants(app.grants?.[CHAT_ROLE]) ||
+    !noGrants(app.grants?.[CHAT_MEMBER_ROLE]) ||
+    !noGrants(grants[CHAT_ROLE]) ||
+    !same(grants[CHAT_MEMBER_ROLE], chatMemberGrants) ||
+    !noGrants(grants.user) ||
+    !noGrants(grants.guest) ||
+    !noGrants(grants.anonymous) ||
+    !noGrants(grants.channel_member) ||
+    !noGrants(grants.channel_moderator) ||
+    type.commands?.length ||
+    type.url_enrichment ||
+    type.max_message_length !== 4000 ||
+    !type.read_events ||
+    !type.typing_events ||
+    !type.reactions ||
+    !type.replies ||
+    !type.uploads ||
+    type.polls ||
+    type.shared_locations
+  ) {
+    throw new ChatError("Сообщения ещё не настроены", 503);
+  }
+  for (const uploads of [app.file_upload_config, app.image_upload_config]) {
+    if (
+      !uploads ||
+      uploads.size_limit !== CHAT_FILE_BYTES ||
+      !same(
+        uploads.allowed_file_extensions,
+        chatUploads.allowed_file_extensions,
+      ) ||
+      !same(uploads.allowed_mime_types, chatUploads.allowed_mime_types)
+    )
+      throw new ChatError("Сообщения ещё не настроены", 503);
+  }
+}
+let policyUntil = 0;
+export async function ensureChatPolicy(provider = chatProvider()) {
+  if (provider === cached?.client && Date.now() < policyUntil) return;
+  const [settings, type] = await Promise.all([
+    provider.getAppSettings(),
+    provider.getChannelType(CHAT_TYPE),
+  ]);
+  assertChatPolicy(settings.app!, type);
+  if (provider === cached?.client) policyUntil = Date.now() + 30000;
+}

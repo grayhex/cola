@@ -11,7 +11,7 @@ import { socialApi, Pagination } from "./social-primitives.jsx";
 import RideCard, { rideDate } from "./ride-card.jsx";
 import { useSite } from "./site-provider.jsx";
 import { apiFilters } from "../../lib/ride-filters.js";
-import { plural } from "../../lib/plural.js";
+import { plural } from "../../lib/plural.ts";
 
 // Back/forward returns to the same public list and scroll position (#233):
 // the last public page is kept per filter set in this tab only.

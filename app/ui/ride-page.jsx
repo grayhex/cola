@@ -11,8 +11,8 @@ import dynamic from "next/dynamic";
 import { SocialHeader, SocialFooter, socialApi } from "./social-primitives.jsx";
 import { RideMetrics, rideDate } from "./ride-card.jsx";
 import { useSite } from "./site-provider.jsx";
-import { profilePath, publicPath } from "../../lib/public-urls.js";
-import { personName } from "../../lib/usernames.js";
+import { profilePath, publicPath } from "../../lib/public-urls.ts";
+import { personName } from "../../lib/usernames.ts";
 import ShareButton from "./share-button.jsx";
 import LocalDate from "./local-date.jsx";
 // The comment editor (Tiptap) loads after the ride itself.

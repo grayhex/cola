@@ -5,12 +5,12 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { PGlite } from "@electric-sql/pglite";
-import { getGameImagePrompt, saveGameImagePrompt } from "../lib/game-prompt.js";
+import { getGameImagePrompt, saveGameImagePrompt } from "../lib/game-prompt.ts";
 import {
   gameImagePromptInput,
   gameImagePromptLimit,
-} from "../lib/game-prompt-validation.js";
-import { getGameSettings } from "../lib/gamification.js";
+} from "../lib/game-prompt-validation.ts";
+import { getGameSettings } from "../lib/gamification.ts";
 
 test("image prompt accepts bounded plain text, empty reset, Unicode and newlines but no coercion or controls", () => {
   for (const prompt of [

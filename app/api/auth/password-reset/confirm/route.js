@@ -1,12 +1,12 @@
 import { z } from "zod";
-import { rateLimit, startSession } from "../../../../../lib/auth.js";
-import { trustedIp } from "../../../../../lib/auth-limits.js";
-import { transaction } from "../../../../../lib/db.js";
-import { fail, json, readJson, sameOrigin } from "../../../../../lib/http.js";
-import { digest } from "../../../../../lib/password.js";
-import { passwordInput } from "../../../../../lib/validation.js";
-import { resetPassword, tokenInput } from "../../../../../lib/account.js";
-import { traced } from "../../../../../lib/observability.js";
+import { rateLimit, startSession } from "../../../../../lib/auth.ts";
+import { trustedIp } from "../../../../../lib/auth-limits.ts";
+import { transaction } from "../../../../../lib/db.ts";
+import { fail, json, readJson, sameOrigin } from "../../../../../lib/http.ts";
+import { digest } from "../../../../../lib/password.ts";
+import { passwordInput } from "../../../../../lib/validation.ts";
+import { resetPassword, tokenInput } from "../../../../../lib/account.ts";
+import { traced } from "../../../../../lib/observability.ts";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 

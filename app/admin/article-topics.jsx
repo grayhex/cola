@@ -1,5 +1,5 @@
 "use client";
-import { defaultArticleTopics } from "../../lib/ui-emoji.js";
+import { defaultArticleTopics } from "../../lib/ui-emoji.ts";
 export default function ArticleTopicSettings({
   value = defaultArticleTopics,
   onChange,

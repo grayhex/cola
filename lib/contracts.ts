@@ -1,9 +1,19 @@
+import type { settingsInput as settingsInputType } from "./admin-validation.ts";
+import type { catalogInput as catalogInputType } from "./admin-validation.ts";
 // Type-only boundaries shared by native TS and legacy JSDoc. Keep runtime
 // schemas/DTO mappers authoritative; these types do not validate external data.
 import type { z } from "zod";
-import type { bikeInput, componentInput, credentials } from "./validation.js";
-import type { classificationInput } from "./classification-validation.js";
-import type { commentInput, reportInput } from "./community-validation.js";
+import type { bikeInput, componentInput, credentials } from "./validation.ts";
+import type { classificationInput } from "./classification-validation.ts";
+import type { commentInput, reportInput } from "./community-validation.ts";
+export type SiteSettings = z.infer<typeof settingsInputType>;
+export type SiteCatalog = z.infer<typeof catalogInputType>;
+export interface SiteDefinition {
+  settings: SiteSettings;
+  catalog: SiteCatalog;
+  settingsVersion: number;
+  catalogVersion: number;
+}
 
 // UUIDs remain strings until checked by a runtime schema. No branded casts.
 export type EntityId = string;
@@ -149,3 +159,9 @@ export interface SocialBike extends PublicBike {
   comments: number;
   scores: { completeness: number; upgrade: number };
 }
+
+export type JsonData<T> = T extends Date
+  ? string
+  : T extends object
+    ? { [K in keyof T]: JsonData<T[K]> }
+    : T;

@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import { registerVerified } from "../fixtures/verified-user.js";
 import { testConsents } from "../fixtures/legal.js";
 import { chatBrowserFixture } from "../fixtures/chat-browser.js";
-import { publicPath } from "../../lib/public-urls.js";
+import { publicPath } from "../../lib/public-urls.ts";
 
 // #235: one participation state per person and date, agreements with
 // editions, closed recruitment, the public announcement, link and QR.

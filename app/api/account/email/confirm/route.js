@@ -1,14 +1,14 @@
 import { z } from "zod";
-import { rateLimit } from "../../../../../lib/auth.js";
-import { trustedIp } from "../../../../../lib/auth-limits.js";
-import { transaction } from "../../../../../lib/db.js";
-import { fail, json, readJson, sameOrigin } from "../../../../../lib/http.js";
-import { digest } from "../../../../../lib/password.js";
-import { tokenInput } from "../../../../../lib/account.js";
-import { confirmEmailChange } from "../../../../../lib/account-data.js";
-import { emailChangedMail } from "../../../../../lib/mail-templates.js";
-import { sendAfterResponse } from "../../../../../lib/account-mail.js";
-import { traced } from "../../../../../lib/observability.js";
+import { rateLimit } from "../../../../../lib/auth.ts";
+import { trustedIp } from "../../../../../lib/auth-limits.ts";
+import { transaction } from "../../../../../lib/db.ts";
+import { fail, json, readJson, sameOrigin } from "../../../../../lib/http.ts";
+import { digest } from "../../../../../lib/password.ts";
+import { tokenInput } from "../../../../../lib/account.ts";
+import { confirmEmailChange } from "../../../../../lib/account-data.ts";
+import { emailChangedMail } from "../../../../../lib/mail-templates.ts";
+import { sendAfterResponse } from "../../../../../lib/account-mail.ts";
+import { traced } from "../../../../../lib/observability.ts";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 

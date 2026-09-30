@@ -8,7 +8,7 @@ import {
   isRasterProvider,
   mapDefaults,
   osmAttribution,
-} from "../../lib/map-settings.js";
+} from "../../lib/map-settings.ts";
 import { useSite } from "./site-provider.jsx";
 export function MapAttribution({ config }) {
   // The Yandex SDK renders its own mandatory attribution; route-only previews

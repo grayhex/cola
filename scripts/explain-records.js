@@ -1,7 +1,7 @@
 // Isolated in-memory benchmark. Never connects to production or modifies its tables.
 import { PGlite } from "@electric-sql/pglite";
 import { readFile, readdir } from "node:fs/promises";
-import { leaderboardSQL, records } from "../lib/gamification.js";
+import { leaderboardSQL, records } from "../lib/gamification.ts";
 const q = new PGlite();
 try {
   for (const f of (await readdir(new URL("../db", import.meta.url)))

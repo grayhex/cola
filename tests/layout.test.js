@@ -1,9 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { groupedComponents, defaultGroups } from "../lib/garage-layout.js";
-import { publicBike, safeLink } from "../lib/validation.js";
-import { catalogInput, settingsInput } from "../lib/admin-validation.js";
-import { defaultSettings, defaultCatalog } from "../lib/site-defaults.js";
+import { groupedComponents, defaultGroups } from "../lib/garage-layout.ts";
+import { publicBike, safeLink } from "../lib/validation.ts";
+import { catalogInput, settingsInput } from "../lib/admin-validation.ts";
+import { defaultSettings, defaultCatalog } from "../lib/site-defaults.ts";
 test("groups honour explicit assignment and ordering including uncategorized parts", () => {
   const parts = [
     { id: "1", category: "Рама" },

@@ -2,7 +2,7 @@
 import { useCallback, useRef, useEffect, useState } from "react";
 import { socialApi } from "../ui/social-primitives.jsx";
 import { PageControls } from "../ui/community-controls.jsx";
-import { profilePath } from "../../lib/public-urls.js";
+import { profilePath } from "../../lib/public-urls.ts";
 export default function Reports({ onManageUser }) {
   const [status, setStatus] = useState("open"),
     [page, setPage] = useState(1),

@@ -7,17 +7,17 @@ import {
   useRef,
   useState,
 } from "react";
-import { accentText, titleHover } from "../../lib/appearance.js";
+import { accentText, titleHover } from "../../lib/appearance.ts";
 import {
   appearanceDefaults,
   backgroundCss,
   resolveTheme,
   themeStorageKey,
   validTheme,
-} from "../../lib/theme.js";
+} from "../../lib/theme.ts";
 import { useBrowseHistory } from "./showcase-scroll.js";
 import { installErrorReporting } from "./error-reporting.js";
-import { defaultSettings, defaultCatalog } from "../../lib/site-defaults.js";
+import { defaultSettings, defaultCatalog } from "../../lib/site-defaults.ts";
 const Context = createContext(null);
 export function ThemeStyle({ settings, nonce }) {
   const accent = /^#[\da-f]{6}$/i.test(settings.appearance?.accent || "")

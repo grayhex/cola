@@ -10,7 +10,7 @@ import {
   serializeRichText,
   richPlainText,
   safeRichLink,
-} from "../lib/rich-text.js";
+} from "../lib/rich-text.ts";
 import {
   legalMetadata,
   adminLegalDocuments,
@@ -18,7 +18,7 @@ import {
   publishedLegalDocument,
   checkLegalAcceptance,
   recordLegalAcceptance,
-} from "../lib/legal-documents.js";
+} from "../lib/legal-documents.ts";
 const schema = getSchema(richExtensions());
 const walk = (n) => [n, ...(n.content || []).flatMap(walk)];
 
@@ -248,7 +248,7 @@ test("legal migration, immutable publication, draft conflicts and atomic version
 
 test("a fresh site can bootstrap one owner without opening public registration or inventing consents", async () => {
   const { bootstrapAdmin } = await import("../scripts/bootstrap-admin.js");
-  const { verifyPassword } = await import("../lib/password.js");
+  const { verifyPassword } = await import("../lib/password.ts");
   const db = new PGlite();
   try {
     for (const name of ["001_initial", "002_admin", "019_legal_documents"])

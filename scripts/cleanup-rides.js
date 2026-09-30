@@ -1,8 +1,8 @@
-import { db } from "../lib/db.js";
+import { db } from "../lib/db.ts";
 import { cleanupRides } from "../lib/ride-storage.js";
-import { cleanupMarketPhotos } from "../lib/market.js";
-import { cleanupJournalPhotos } from "../lib/journal-storage.js";
-import { cleanupComponentPhotos } from "../lib/component-photos.js";
+import { cleanupMarketPhotos } from "../lib/market.ts";
+import { cleanupJournalPhotos } from "../lib/journal-storage.ts";
+import { cleanupComponentPhotos } from "../lib/component-photos.ts";
 // Scheduled storage maintenance (#248): requests no longer clean storage, so
 // run this periodically (docs/operations/monitoring.md). One bounded pass;
 // a second concurrent run skips. The report holds counts only.

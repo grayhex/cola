@@ -1,7 +1,7 @@
-import { logError } from "../lib/observability.js";
+import { logError } from "../lib/observability.ts";
 import pg from "pg";
 import { readFile } from "node:fs/promises";
-import { defaultSettings, defaultCatalog } from "../lib/site-defaults.js";
+import { defaultSettings, defaultCatalog } from "../lib/site-defaults.ts";
 const client = new pg.Client({ connectionString: process.env.DATABASE_URL });
 try {
   await client.connect();

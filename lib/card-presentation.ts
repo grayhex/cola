@@ -1,0 +1,33 @@
+interface Badge {
+  key: string;
+  holder?: { kind: string; id: string };
+  group?: string;
+}
+// Presentation only: eligibility and awards remain authoritative on the server.
+const valuableAwards = ["bike_likes_100", "bike_likes_50", "full_build"];
+export function significantBadge(
+  bike: { id: string; is_public: boolean; badges?: Badge[] },
+  records: Badge[] = [],
+) {
+  if (!bike.is_public) return null;
+  // Records held by the bike itself; a ride on it holds its own records.
+  const current = records.filter(
+    (record) =>
+      (record.holder?.kind || "bike") === "bike" &&
+      record.holder?.id === bike.id,
+  );
+  return (
+    current.find((record) => record.group !== "community") ||
+    valuableAwards
+      .map((key) =>
+        (bike.badges || []).find((award: { key: string }) => award.key === key),
+      )
+      .find(Boolean) ||
+    current[0] ||
+    null
+  );
+}
+export function metricSegments(value: unknown) {
+  const percent = Math.max(0, Math.min(100, Number(value) || 0));
+  return Math.min(4, Math.floor(percent / 25) + 1);
+}

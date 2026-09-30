@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { safeTrace, readResolverStream } from "../lib/resolver-stream.js";
+import { safeTrace, readResolverStream } from "../lib/resolver-stream.ts";
 test("trace whitelist strips internal metadata and unsafe hostnames", () => {
   assert.deepEqual(
     safeTrace({

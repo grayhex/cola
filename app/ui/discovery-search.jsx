@@ -3,7 +3,7 @@ import { ClassificationFilters } from "./bike-classification.jsx";
 import {
   readClassificationFilters,
   classificationLabels,
-} from "../../lib/bike-classification.js";
+} from "../../lib/bike-classification.ts";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";

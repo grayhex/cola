@@ -1,11 +1,11 @@
 import { z } from "zod";
-import { rateLimit } from "../../../../lib/auth.js";
-import { trustedIp } from "../../../../lib/auth-limits.js";
-import { transaction } from "../../../../lib/db.js";
-import { fail, json, readJson, sameOrigin } from "../../../../lib/http.js";
-import { digest } from "../../../../lib/password.js";
-import { tokenInput, verifyEmail } from "../../../../lib/account.js";
-import { traced } from "../../../../lib/observability.js";
+import { rateLimit } from "../../../../lib/auth.ts";
+import { trustedIp } from "../../../../lib/auth-limits.ts";
+import { transaction } from "../../../../lib/db.ts";
+import { fail, json, readJson, sameOrigin } from "../../../../lib/http.ts";
+import { digest } from "../../../../lib/password.ts";
+import { tokenInput, verifyEmail } from "../../../../lib/account.ts";
+import { traced } from "../../../../lib/observability.ts";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 

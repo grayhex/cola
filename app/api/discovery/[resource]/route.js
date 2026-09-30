@@ -1,12 +1,12 @@
-import { db } from "../../../../lib/db.js";
-import { currentUser } from "../../../../lib/auth.js";
-import { withPublicReferences } from "../../../../lib/public-response.js";
+import { db } from "../../../../lib/db.ts";
+import { currentUser } from "../../../../lib/auth.ts";
+import { withPublicReferences } from "../../../../lib/public-response.ts";
 import {
   communityHome,
   discoveryInput,
   discoverySearch,
-} from "../../../../lib/discovery.js";
-import { logError, traced } from "../../../../lib/observability.js";
+} from "../../../../lib/discovery.ts";
+import { logError, traced } from "../../../../lib/observability.ts";
 export const dynamic = "force-dynamic";
 const json = async (data, status = 200) =>
   Response.json(status < 400 ? await withPublicReferences(data) : data, {

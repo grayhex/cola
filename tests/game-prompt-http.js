@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { gameImagePromptLimit } from "../lib/game-prompt-validation.js";
+import { gameImagePromptLimit } from "../lib/game-prompt-validation.ts";
 
 export async function exerciseGamePrompt(admin, guest, regular, q, adminId) {
   const endpoint = "game/admin/image-prompt";

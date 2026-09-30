@@ -1,10 +1,10 @@
-import { currentUser } from "../../../../../../lib/auth.js";
-import { db } from "../../../../../../lib/db.js";
-import { fail } from "../../../../../../lib/http.js";
-import { uuid } from "../../../../../../lib/validation.js";
+import { currentUser } from "../../../../../../lib/auth.ts";
+import { db } from "../../../../../../lib/db.ts";
+import { fail } from "../../../../../../lib/http.ts";
+import { uuid } from "../../../../../../lib/validation.ts";
 import { getOriginal } from "../../../../../../lib/ride-storage.js";
-import { ownRideTrack } from "../../../../../../lib/account-data.js";
-import { traced } from "../../../../../../lib/observability.js";
+import { ownRideTrack } from "../../../../../../lib/account-data.ts";
+import { traced } from "../../../../../../lib/observability.ts";
 import { NextResponse } from "next/server";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

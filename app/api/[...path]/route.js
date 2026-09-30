@@ -1,54 +1,54 @@
 import {
   requireVerifiedEmail,
   EmailPolicyError,
-} from "../../../lib/email-policy.js";
+} from "../../../lib/email-policy.ts";
 import {
   classificationOf,
   categoryFilterLabels,
-} from "../../../lib/bike-classification.js";
-import { classificationQueryInput } from "../../../lib/classification-validation.js";
+} from "../../../lib/bike-classification.ts";
+import { classificationQueryInput } from "../../../lib/classification-validation.ts";
 import {
   checkLegalAcceptance,
   recordLegalAcceptance,
   LegalError,
-} from "../../../lib/legal-documents.js";
-import { traced, logError } from "../../../lib/observability.js";
-import { resolverProxy } from "../../../lib/resolver-proxy.js";
-import { allowAuth } from "../../../lib/auth-limits.js";
-import { limits, QuotaError } from "../../../lib/limits.js";
-import { savePhotos } from "../../../lib/photo-storage.js";
+} from "../../../lib/legal-documents.ts";
+import { traced, logError } from "../../../lib/observability.ts";
+import { resolverProxy } from "../../../lib/resolver-proxy.ts";
+import { allowAuth } from "../../../lib/auth-limits.ts";
+import { limits, QuotaError } from "../../../lib/limits.ts";
+import { savePhotos } from "../../../lib/photo-storage.ts";
 import {
   showcase,
   decorateBike,
   visibleBike,
   vote,
-} from "../../../lib/showcase.js";
-import { searchExperience, searchInput } from "../../../lib/search.js";
-import { validatePurposes } from "../../../lib/repository.js";
-import { CommunityError } from "../../../lib/community-validation.js";
+} from "../../../lib/showcase.ts";
+import { searchExperience, searchInput } from "../../../lib/search.ts";
+import { validatePurposes } from "../../../lib/repository.ts";
+import { CommunityError } from "../../../lib/community-validation.ts";
 import {
   profileInput,
   registrationInput,
-} from "../../../lib/social-validation.js";
-import { importPhotos } from "../../../lib/photo-import.js";
+} from "../../../lib/social-validation.ts";
+import { importPhotos } from "../../../lib/photo-import.ts";
 import { appVersion } from "../../../lib/version.js";
-import { mailEnabled } from "../../../lib/mail.js";
-import { emailVerificationMail } from "../../../lib/mail-templates.js";
-import { accountLink, requestEmailVerification } from "../../../lib/account.js";
-import { sendAfterResponse } from "../../../lib/account-mail.js";
+import { mailEnabled } from "../../../lib/mail.ts";
+import { emailVerificationMail } from "../../../lib/mail-templates.ts";
+import { accountLink, requestEmailVerification } from "../../../lib/account.ts";
+import { sendAfterResponse } from "../../../lib/account-mail.ts";
 import { z } from "zod";
-import { wizardInput, createWizardBike } from "../../../lib/bike-wizard.js";
-import { reorderComponents } from "../../../lib/component-order.js";
-import { saveFactorySpecification } from "../../../lib/factory-import.js";
+import { wizardInput, createWizardBike } from "../../../lib/bike-wizard.ts";
+import { reorderComponents } from "../../../lib/component-order.ts";
+import { saveFactorySpecification } from "../../../lib/factory-import.ts";
 import {
   bikeResolverClient,
   resolverQuery,
-} from "../../../lib/bike-resolver-client.js";
+} from "../../../lib/bike-resolver-client.ts";
 import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
 import { readFile, unlink } from "node:fs/promises";
 import path from "node:path";
-import { preparePhoto, prepareThumbnail } from "../../../lib/images.js";
+import { preparePhoto, prepareThumbnail } from "../../../lib/images.ts";
 import {
   mediaEtag,
   mediaResponse,
@@ -57,24 +57,24 @@ import {
   notModified,
   notModifiedResponse,
   purgeMediaVariants,
-} from "../../../lib/media-cache.js";
-import { getSite } from "../../../lib/site.js";
-import { db, transaction } from "../../../lib/db.js";
+} from "../../../lib/media-cache.ts";
+import { getSite } from "../../../lib/site.ts";
+import { db, transaction } from "../../../lib/db.ts";
 import {
   currentUser,
   startSession,
   endSession,
   rateLimit,
-} from "../../../lib/auth.js";
-import { hashPassword, verifyPassword } from "../../../lib/password.js";
+} from "../../../lib/auth.ts";
+import { hashPassword, verifyPassword } from "../../../lib/password.ts";
 import {
   bikeInput,
   componentInput,
   credentials,
   uuid,
-} from "../../../lib/validation.js";
-import { allocateUsername, suggestUsername } from "../../../lib/usernames.js";
-import { ownedBike, insertBike } from "../../../lib/repository.js";
+} from "../../../lib/validation.ts";
+import { allocateUsername, suggestUsername } from "../../../lib/usernames.ts";
+import { ownedBike, insertBike } from "../../../lib/repository.ts";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -119,7 +119,9 @@ async function handler(req, { params }) {
     }
     if (p[0] === "ready" && p.length === 1 && method === "GET") {
       try {
-        await db.query("SELECT 1");
+        await /** @type {Promise<import("../../../lib/db.ts").QueryRows<{"?column?": number}>>} */ (
+          db.query("SELECT 1")
+        );
         return json({ ok: true });
       } catch (e) {
         logError("database_unavailable", e);
@@ -130,7 +132,9 @@ async function handler(req, { params }) {
       let database = false,
         resolver = false;
       try {
-        await db.query("SELECT 1");
+        await /** @type {Promise<import("../../../lib/db.ts").QueryRows<{"?column?": number}>>} */ (
+          db.query("SELECT 1")
+        );
         database = true;
       } catch {}
       try {
@@ -220,9 +224,10 @@ async function handler(req, { params }) {
           201,
         );
       }
-      const { rows } = await db.query("SELECT * FROM users WHERE email=$1", [
-        input.email,
-      ]);
+      const { rows } =
+        await /** @type {Promise<import("../../../lib/db.ts").QueryRows<{"id": string; "email": string; "name": string; "password_hash": string; "created_at": Date; "role": string; "blocked": boolean; "preferences": unknown; "username": string; "bio": string; "location": string; "avatar_id": string | null; "avatar_size_bytes": string; "email_verified_at": Date; "password_changed_at": Date; "public_id": string; "slug": string}>>} */ (
+          db.query("SELECT * FROM users WHERE email=$1", [input.email])
+        );
       const user = rows[0];
       const valid = await verifyPassword(
         input.password,
@@ -267,10 +272,13 @@ async function handler(req, { params }) {
       if (!uuid.safeParse(p[1]).success) return fail("Фото не найдено", 404);
       const width = mediaWidth(new URL(req.url).searchParams.get("width"));
       if (width === undefined) return fail("Неверный размер фотографии");
-      const { rows } = await db.query(
-        "SELECT p.filename FROM photos p JOIN bikes b ON b.id=p.bike_id JOIN users u ON u.id=b.owner_id WHERE p.id=$1 AND u.blocked=false AND (b.is_public=true OR b.owner_id=$2)",
-        [p[1], user?.id || null],
-      );
+      const { rows } =
+        await /** @type {Promise<import("../../../lib/db.ts").QueryRows<{"filename": string}>>} */ (
+          db.query(
+            "SELECT p.filename FROM photos p JOIN bikes b ON b.id=p.bike_id JOIN users u ON u.id=b.owner_id WHERE p.id=$1 AND u.blocked=false AND (b.is_public=true OR b.owner_id=$2)",
+            [p[1], user?.id || null],
+          )
+        );
       if (!rows[0]) return fail("Фото не найдено", 404);
       // Access is checked above on every request, including revalidation.
       const etag = mediaEtag(p[1], width);
@@ -443,10 +451,13 @@ async function handler(req, { params }) {
     }
     if (p[1] === "photo-candidates" && p.length === 3 && method === "GET") {
       const id = uuid.parse(p[2]);
-      const { rows } = await db.query(
-        "SELECT id FROM photo_search_candidates WHERE id=$1 AND owner_id=$2 AND expires_at>now()",
-        [id, user.id],
-      );
+      const { rows } =
+        await /** @type {Promise<import("../../../lib/db.ts").QueryRows<{"id": string}>>} */ (
+          db.query(
+            "SELECT id FROM photo_search_candidates WHERE id=$1 AND owner_id=$2 AND expires_at>now()",
+            [id, user.id],
+          )
+        );
       if (!rows.length) return fail("Поиск устарел", 404);
       const photo = await bikeResolverClient.request("/v1/photos/" + id);
       const bytes = await prepareThumbnail(
@@ -465,10 +476,13 @@ async function handler(req, { params }) {
     }
     if (p.length === 1) {
       if (method === "GET") {
-        const { rows } = await db.query(
-          "SELECT * FROM bikes WHERE owner_id=$1 ORDER BY created_at DESC",
-          [user.id],
-        );
+        const { rows } =
+          await /** @type {Promise<import("../../../lib/db.ts").QueryRows<import("../../../lib/database-rows.ts").BikeRow>>} */ (
+            db.query(
+              "SELECT * FROM bikes WHERE owner_id=$1 ORDER BY created_at DESC",
+              [user.id],
+            )
+          );
         const site = await getSite();
         return json({
           bikes: await Promise.all(
@@ -586,19 +600,23 @@ async function handler(req, { params }) {
       if (method === "DELETE") {
         if (
           (
-            await db.query("SELECT 1 FROM rides WHERE bike_id=$1 LIMIT 1", [
-              bike.id,
-            ])
+            await /** @type {Promise<import("../../../lib/db.ts").QueryRows<{"?column?": number}>>} */ (
+              db.query("SELECT 1 FROM rides WHERE bike_id=$1 LIMIT 1", [
+                bike.id,
+              ])
+            )
           ).rowCount
         )
           return fail(
             "У велосипеда есть покатушки. Сначала удалите их или перенесите на другой велосипед.",
             409,
           );
-        const { rows } = await db.query(
-          "SELECT id,filename FROM photos WHERE bike_id=$1",
-          [bike.id],
-        );
+        const { rows } =
+          await /** @type {Promise<import("../../../lib/db.ts").QueryRows<{"id": string; "filename": string}>>} */ (
+            db.query("SELECT id,filename FROM photos WHERE bike_id=$1", [
+              bike.id,
+            ])
+          );
         try {
           await db.query("DELETE FROM bikes WHERE id=$1 AND owner_id=$2", [
             bike.id,
@@ -668,9 +686,9 @@ async function handler(req, { params }) {
       if (p.length === 3 && method === "POST") {
         const c = componentInput.parse(await body(req));
         await transaction(async (q) => {
-          await q.query("SELECT id FROM bikes WHERE id=$1 FOR UPDATE", [
-            bike.id,
-          ]);
+          await /** @type {Promise<import("../../../lib/db.ts").QueryRows<{"id": string}>>} */ (
+            q.query("SELECT id FROM bikes WHERE id=$1 FOR UPDATE", [bike.id])
+          );
           await q.query(
             "INSERT INTO components(id,bike_id,section,category,name,notes,price,url,group_id,sort_order) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,(SELECT coalesce(max(sort_order),-1)+1 FROM components WHERE bike_id=$2))",
             [
@@ -697,10 +715,13 @@ async function handler(req, { params }) {
           return json({ ok: true });
         }
         if (method === "PATCH") {
-          const existing = await db.query(
-            "SELECT * FROM components WHERE id=$1 AND bike_id=$2",
-            [p[3], bike.id],
-          );
+          const existing =
+            await /** @type {Promise<import("../../../lib/db.ts").QueryRows<{"id": string; "bike_id": string; "section": string; "category": string; "name": string; "notes": string; "price": string; "created_at": Date; "url": string; "group_id": string; "sort_order": number; "model_id": string; "position": string}>>} */ (
+              db.query("SELECT * FROM components WHERE id=$1 AND bike_id=$2", [
+                p[3],
+                bike.id,
+              ])
+            );
           if (!existing.rows[0]) return fail("Компонент не найден", 404);
           const c = componentInput.parse({
             ...existing.rows[0],
@@ -809,13 +830,18 @@ async function handler(req, { params }) {
       ) {
         let filename;
         await transaction(async (client) => {
-          await client.query("SELECT id FROM bikes WHERE id=$1 FOR UPDATE", [
-            bike.id,
-          ]);
-          const { rows } = await client.query(
-            "SELECT * FROM photos WHERE id=$1 AND bike_id=$2",
-            [p[3], bike.id],
+          await /** @type {Promise<import("../../../lib/db.ts").QueryRows<{"id": string}>>} */ (
+            client.query("SELECT id FROM bikes WHERE id=$1 FOR UPDATE", [
+              bike.id,
+            ])
           );
+          const { rows } =
+            await /** @type {Promise<import("../../../lib/db.ts").QueryRows<{"id": string; "bike_id": string; "filename": string; "is_cover": boolean; "created_at": Date; "source_url": string; "source_page_url": string; "size_bytes": string}>>} */ (
+              client.query("SELECT * FROM photos WHERE id=$1 AND bike_id=$2", [
+                p[3],
+                bike.id,
+              ])
+            );
           if (!rows[0]) return;
           if (method === "PATCH") {
             await client.query(

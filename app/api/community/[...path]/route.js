@@ -1,20 +1,20 @@
 import {
   requireVerifiedEmail,
   EmailPolicyError,
-} from "../../../../lib/email-policy.js";
+} from "../../../../lib/email-policy.ts";
 import { rideFeed } from "../../../../lib/ride-feed.js";
 import {
   bikeFollowing,
   setBikeFollow,
   savedPage,
-} from "../../../../lib/journal-discovery.js";
-import { audit } from "../../../../lib/site.js";
-import { db, transaction } from "../../../../lib/db.js";
-import { currentUser, rateLimit } from "../../../../lib/auth.js";
-import { json, fail, sameOrigin, readJson } from "../../../../lib/http.js";
-import { traced, logError } from "../../../../lib/observability.js";
-import { uuid } from "../../../../lib/validation.js";
-import { limits } from "../../../../lib/limits.js";
+} from "../../../../lib/journal-discovery.ts";
+import { audit } from "../../../../lib/site.ts";
+import { db, transaction } from "../../../../lib/db.ts";
+import { currentUser, rateLimit } from "../../../../lib/auth.ts";
+import { json, fail, sameOrigin, readJson } from "../../../../lib/http.ts";
+import { traced, logError } from "../../../../lib/observability.ts";
+import { uuid } from "../../../../lib/validation.ts";
+import { limits } from "../../../../lib/limits.ts";
 import {
   CommunityError,
   commentInput,
@@ -22,24 +22,24 @@ import {
   reportInput,
   reportAction,
   communityPage,
-} from "../../../../lib/community-validation.js";
+} from "../../../../lib/community-validation.ts";
 import {
   commentPage,
   replyPage,
   createComment,
   changeComment,
-} from "../../../../lib/comments.js";
+} from "../../../../lib/comments.ts";
 import {
   notificationPage,
   unreadCount,
   readNotifications,
-} from "../../../../lib/notifications.js";
-import { noticeExpiringListings } from "../../../../lib/market.js";
+} from "../../../../lib/notifications.ts";
+import { noticeExpiringListings } from "../../../../lib/market.ts";
 import {
   createReport,
   reportPage,
   moderateReport,
-} from "../../../../lib/reports.js";
+} from "../../../../lib/reports.ts";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 /** @param {Request} req

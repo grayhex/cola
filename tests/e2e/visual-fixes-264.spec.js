@@ -6,7 +6,7 @@ import sharp from "sharp";
 import { registerVerified } from "../fixtures/verified-user.js";
 import { testConsents } from "../fixtures/legal.js";
 import { pageOverflow, describeOverflow } from "../fixtures/overflow.js";
-import { titleHover } from "../../lib/appearance.js";
+import { titleHover } from "../../lib/appearance.ts";
 
 // Visual fixes and one «Хочу кататься» flow (#264).
 const origin = process.env.TEST_ORIGIN || "http://localhost:3100";

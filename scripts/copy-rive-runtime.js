@@ -1,6 +1,6 @@
 import { createRequire } from "node:module";
 import { copyFile, mkdir, readFile } from "node:fs/promises";
-import { riveRuntimeVersion } from "../lib/rive-assets.js";
+import { riveRuntimeVersion } from "../lib/rive-assets.ts";
 const require = createRequire(import.meta.url);
 const entry = require.resolve("@rive-app/react-canvas-lite");
 const runtimeRequire = createRequire(entry);

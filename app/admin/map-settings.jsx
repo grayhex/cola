@@ -1,5 +1,5 @@
 "use client";
-import { mapDefaults } from "../../lib/map-settings.js";
+import { mapDefaults } from "../../lib/map-settings.ts";
 export default function MapSettings({ settings, onChange }) {
   const v = settings.map || mapDefaults,
     set = (k, value) => onChange("map", { ...v, [k]: value });

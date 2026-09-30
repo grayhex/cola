@@ -5,21 +5,21 @@ import { readFile, mkdtemp, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
-import { limits, checkPhotoQuota } from "../lib/limits.js";
-import { insertBike } from "../lib/repository.js";
-import { savePhotos } from "../lib/photo-storage.js";
-import { importPhotos } from "../lib/photo-import.js";
-import { bikeResolverClient } from "../lib/bike-resolver-client.js";
+import { limits, checkPhotoQuota } from "../lib/limits.ts";
+import { insertBike } from "../lib/repository.ts";
+import { savePhotos } from "../lib/photo-storage.ts";
+import { importPhotos } from "../lib/photo-import.ts";
+import { bikeResolverClient } from "../lib/bike-resolver-client.ts";
 import {
   publicBike,
   publicBikeKeys,
   publicComponentKeys,
   publicPhotoKeys,
-} from "../lib/public-dto.js";
-import { showcase } from "../lib/showcase.js";
-import { defaultSettings, defaultCatalog } from "../lib/site-defaults.js";
-import { validateRuntime } from "../lib/runtime-config.js";
-import { trustedIp, allowAuth } from "../lib/auth-limits.js";
+} from "../lib/public-dto.ts";
+import { showcase } from "../lib/showcase.ts";
+import { defaultSettings, defaultCatalog } from "../lib/site-defaults.ts";
+import { validateRuntime } from "../lib/runtime-config.ts";
+import { trustedIp, allowAuth } from "../lib/auth-limits.ts";
 import sharp from "sharp";
 const base = {
   name: "Test",

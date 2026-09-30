@@ -9,13 +9,13 @@ import {
   streamUserId,
   CHAT_MEMBER_ROLE,
   CHAT_ROLE,
-} from "../lib/chat-config.js";
-import { assertChatPolicy } from "../lib/chat-provider.js";
-import { issueChatToken, createChatChannel } from "../lib/chat.js";
-import { syncChatJob } from "../lib/chat-lifecycle.js";
+} from "../lib/chat-config.ts";
+import { assertChatPolicy } from "../lib/chat-provider.ts";
+import { issueChatToken, createChatChannel } from "../lib/chat.ts";
+import { syncChatJob } from "../lib/chat-lifecycle.ts";
 import { fixtureProvider, policy } from "./fixtures/chat-provider.js";
-import { pageCsp } from "../lib/csp.js";
-import { chatPeople } from "../lib/chat-people.js";
+import { pageCsp } from "../lib/csp.ts";
+import { chatPeople } from "../lib/chat-people.ts";
 
 test("chat is opt-in, never broadens CSP when disabled, and rejects permissive vendor policies", () => {
   assert.equal(chatConfig({}), null);

@@ -1,4 +1,4 @@
-import { validateRuntime } from "../lib/runtime-config.js";
+import { validateRuntime } from "../lib/runtime-config.ts";
 try {
   console.log(
     JSON.stringify({

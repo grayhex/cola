@@ -1,0 +1,45 @@
+import { NextResponse } from "next/server";
+import { withPublicReferences } from "./public-response.ts";
+export async function json(data: unknown, status = 200) {
+  const payload =
+    status >= 200 && status < 300 ? await withPublicReferences(data) : data;
+  return NextResponse.json(payload, {
+    status,
+    headers: { "Cache-Control": "no-store" },
+  });
+}
+
+export const fail = (error: string, status: number = 400) =>
+  json({ error }, status);
+
+export async function readBytes(req: Request, limit: number) {
+  const reader = req.body?.getReader();
+  if (!reader) throw new Error("Пустой запрос");
+  const chunks = [];
+  let length = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    length += value.length;
+    if (length > limit) {
+      await reader.cancel();
+      throw new Error("Превышен допустимый размер запроса");
+    }
+    chunks.push(value);
+  }
+  return Buffer.concat(chunks);
+}
+
+export async function readJson(
+  req: Request,
+  limit = 1024 * 1024,
+): Promise<unknown> {
+  return JSON.parse((await readBytes(req, limit)).toString());
+}
+
+export function sameOrigin(req: Request) {
+  return (
+    req.headers.get("origin") ===
+    (process.env.APP_ORIGIN || "http://localhost:3000")
+  );
+}

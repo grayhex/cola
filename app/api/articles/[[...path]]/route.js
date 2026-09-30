@@ -1,17 +1,17 @@
 import {
   requireVerifiedEmail,
   EmailPolicyError,
-} from "../../../../lib/email-policy.js";
-import { db, transaction } from "../../../../lib/db.js";
-import { currentUser, rateLimit } from "../../../../lib/auth.js";
-import { json, fail, readJson, sameOrigin } from "../../../../lib/http.js";
-import { uuid } from "../../../../lib/validation.js";
+} from "../../../../lib/email-policy.ts";
+import { db, transaction } from "../../../../lib/db.ts";
+import { currentUser, rateLimit } from "../../../../lib/auth.ts";
+import { json, fail, readJson, sameOrigin } from "../../../../lib/http.ts";
+import { uuid } from "../../../../lib/validation.ts";
 import {
   CommunityError,
   communityPage,
   commentInput,
   commentEdit,
-} from "../../../../lib/community-validation.js";
+} from "../../../../lib/community-validation.ts";
 import {
   articleInput,
   articleList,
@@ -19,9 +19,9 @@ import {
   saveArticle,
   deleteArticle,
   articleSocial,
-} from "../../../../lib/articles.js";
-import { cleanupJournalPhotos } from "../../../../lib/journal-storage.js";
-import { logError, traced } from "../../../../lib/observability.js";
+} from "../../../../lib/articles.ts";
+import { cleanupJournalPhotos } from "../../../../lib/journal-storage.ts";
+import { logError, traced } from "../../../../lib/observability.ts";
 export const runtime = "nodejs",
   dynamic = "force-dynamic";
 /** @param {Request} req

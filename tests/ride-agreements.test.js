@@ -31,9 +31,9 @@ import {
   setRideRecruitment,
   upcomingRides,
 } from "../lib/rides.js";
-import { loadSocialCard, loadSocialPreview } from "../lib/social-preview.js";
-import { cardContent } from "../lib/social-card.js";
-import { notificationPage } from "../lib/notifications.js";
+import { loadSocialCard, loadSocialPreview } from "../lib/social-preview.ts";
+import { cardContent } from "../lib/social-card.ts";
+import { notificationPage } from "../lib/notifications.ts";
 import { gpx, loop } from "./ride-fixtures.js";
 
 const hour = 3600000;

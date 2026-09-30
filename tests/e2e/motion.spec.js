@@ -4,7 +4,7 @@ import sharp from "sharp";
 import { registerVerified } from "../fixtures/verified-user.js";
 import { testConsents } from "../fixtures/legal.js";
 import { gpx, loop } from "../ride-fixtures.js";
-import { publicPath } from "../../lib/public-urls.js";
+import { publicPath } from "../../lib/public-urls.ts";
 
 const origin = process.env.TEST_ORIGIN || "http://localhost:3100";
 const marker = "motion-" + randomUUID().slice(0, 8);

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Flame, Sparkles, Star } from "./icons.jsx";
 import { socialApi } from "./social-primitives.jsx";
 import AchievementArt from "./achievement-art.jsx";
-import { metricValue } from "../../lib/game-metrics.js";
+import { metricValue } from "../../lib/game-metrics.ts";
 // Records held now and awards kept for good, as two separate blocks (#106):
 // on the bike page, in a profile and in the account.
 export function BadgeShelf({ endpoint, account = false, prominent = false }) {

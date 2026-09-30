@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import pg from "pg";
-import { defaultSettings } from "../../lib/site-defaults.js";
+import { defaultSettings } from "../../lib/site-defaults.ts";
 let db, original;
 test.beforeAll(async () => {
   db = new pg.Client({ connectionString: process.env.DATABASE_URL });

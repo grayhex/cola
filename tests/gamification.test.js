@@ -12,16 +12,16 @@ import {
   gameShelf,
   accountAchievements,
   leaderboardSQL,
-} from "../lib/gamification.js";
-import { defaultSettings, defaultCatalog } from "../lib/site-defaults.js";
-import { gameSettingsInput } from "../lib/gamification-validation.js";
-import { defaultGamification } from "../lib/gamification-definitions.js";
+} from "../lib/gamification.ts";
+import { defaultSettings, defaultCatalog } from "../lib/site-defaults.ts";
+import { gameSettingsInput } from "../lib/gamification-validation.ts";
+import { defaultGamification } from "../lib/gamification-definitions.ts";
 import {
   loadRules,
   saveRules,
   recalculateAwards,
   rulesInput,
-} from "../lib/game-rules.js";
+} from "../lib/game-rules.ts";
 async function setup() {
   const q = new PGlite();
   for (const f of (await readdir(new URL("../db", import.meta.url)))

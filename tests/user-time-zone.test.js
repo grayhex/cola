@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { preferencesInput } from "../lib/social-validation.js";
-import { timeZoneChoices, userTimeZone } from "../lib/user-time-zone.js";
+import { preferencesInput } from "../lib/social-validation.ts";
+import { timeZoneChoices, userTimeZone } from "../lib/user-time-zone.ts";
 
 // #253: the profile keeps the rider's IANA zone among private preferences.
 test("profile time zone accepts IANA zones and rejects anything else", () => {

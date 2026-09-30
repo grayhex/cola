@@ -1,10 +1,10 @@
 import { notFound } from "next/navigation";
-import { db } from "../../lib/db.js";
+import { db } from "../../lib/db.ts";
 import {
   componentCatalog,
   componentCatalogInput,
-} from "../../lib/component-catalog.js";
-import { indexed } from "../../lib/indexing.js";
+} from "../../lib/component-catalog.ts";
+import { indexed } from "../../lib/indexing.ts";
 import ComponentCatalog from "../ui/component-catalog.jsx";
 export const dynamic = "force-dynamic";
 export const metadata = {

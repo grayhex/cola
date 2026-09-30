@@ -8,8 +8,8 @@ import SiteIcon from "./site-icon.jsx";
 import {
   emptyClassification,
   compatibilityCategory,
-} from "../../lib/bike-classification.js";
-import { parseBikeSearch } from "../../lib/bike-search-input.js";
+} from "../../lib/bike-classification.ts";
+import { parseBikeSearch } from "../../lib/bike-search-input.ts";
 import { useCallback, useMemo, useEffect, useRef, useState } from "react";
 import {
   Bike,
@@ -23,11 +23,11 @@ import {
 import { useSite } from "./site-provider.jsx";
 import CompactCombo from "./compact-combo.jsx";
 import PartIcon from "./part-icon.jsx";
-import { factoryEntries } from "../../lib/factory-components.js";
-import { groupedComponents } from "../../lib/garage-layout.js";
-import { bicycleName, draftId } from "../../lib/wizard-options.js";
-import { bikeInput, componentInput } from "../../lib/validation.js";
-import { resolveWithTrace } from "../../lib/resolver-stream.js";
+import { factoryEntries } from "../../lib/factory-components.ts";
+import { groupedComponents } from "../../lib/garage-layout.ts";
+import { bicycleName, draftId } from "../../lib/wizard-options.ts";
+import { bikeInput, componentInput } from "../../lib/validation.ts";
+import { resolveWithTrace } from "../../lib/resolver-stream.ts";
 import ResolverTimeline from "./resolver-timeline.jsx";
 const steps = ["Поиск комплектации", "Компоненты", "Детали и фото"];
 const failures = {

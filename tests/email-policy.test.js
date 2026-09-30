@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { requireVerifiedEmail, EmailPolicyError } from "../lib/email-policy.js";
+import { requireVerifiedEmail, EmailPolicyError } from "../lib/email-policy.ts";
 test("email capability has no role or SMTP bypass", () => {
   for (const role of ["user", "admin"]) {
     assert.throws(

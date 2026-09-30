@@ -9,7 +9,7 @@ import {
   pointViewport,
   coarsePoint,
   metersPerPixel,
-} from "../lib/map-settings.js";
+} from "../lib/map-settings.ts";
 import {
   durationBuckets,
   presetRange,

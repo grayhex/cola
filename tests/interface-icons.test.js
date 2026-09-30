@@ -6,7 +6,7 @@ import {
   defaultEmojis,
   emojiSlots,
   noCustomEmojis,
-} from "../lib/ui-emoji.js";
+} from "../lib/ui-emoji.ts";
 
 test("interface icons: a line icon unless the administrator chose an emoji", () => {
   assert.equal(customEmoji(undefined, "home"), null);

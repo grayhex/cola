@@ -9,7 +9,7 @@ import {
   tileTemplate,
   pointViewport,
   coarsePoint,
-} from "../../lib/map-settings.js";
+} from "../../lib/map-settings.ts";
 import styles from "./ride-passport.module.css";
 
 // Coarse area on the admin's raster basemap (#241): a circle, never a precise

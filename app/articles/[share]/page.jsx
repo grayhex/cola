@@ -1,5 +1,5 @@
 import { ArticlePage } from "../../ui/articles.jsx";
-import { articleMetadata, articlePage } from "../../../lib/social-page.js";
+import { articleMetadata, articlePage } from "../../../lib/social-page.ts";
 export const runtime = "nodejs",
   dynamic = "force-dynamic";
 export async function generateMetadata({ params }) {

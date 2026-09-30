@@ -2,7 +2,7 @@
 import { useConfirmation } from "./confirmation.jsx";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { LoaderCircle, Check, RefreshCw } from "./icons.jsx";
-import { factoryCategory } from "../../lib/factory-components.js";
+import { factoryCategory } from "../../lib/factory-components.ts";
 import { componentText } from "../../services/bike-resolver/src/component-identity.js";
 const messages = {
   not_found: "Комплектация не найдена. Продолжите вручную.",

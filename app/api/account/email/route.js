@@ -1,14 +1,14 @@
 import { z } from "zod";
-import { currentUser, rateLimit } from "../../../../lib/auth.js";
-import { transaction } from "../../../../lib/db.js";
-import { fail, json, readJson, sameOrigin } from "../../../../lib/http.js";
-import { emailInput } from "../../../../lib/validation.js";
-import { mailEnabled } from "../../../../lib/mail.js";
-import { emailChangeMail } from "../../../../lib/mail-templates.js";
-import { accountLink } from "../../../../lib/account.js";
-import { sendAfterResponse } from "../../../../lib/account-mail.js";
-import { requestEmailChange } from "../../../../lib/account-data.js";
-import { traced } from "../../../../lib/observability.js";
+import { currentUser, rateLimit } from "../../../../lib/auth.ts";
+import { transaction } from "../../../../lib/db.ts";
+import { fail, json, readJson, sameOrigin } from "../../../../lib/http.ts";
+import { emailInput } from "../../../../lib/validation.ts";
+import { mailEnabled } from "../../../../lib/mail.ts";
+import { emailChangeMail } from "../../../../lib/mail-templates.ts";
+import { accountLink } from "../../../../lib/account.ts";
+import { sendAfterResponse } from "../../../../lib/account-mail.ts";
+import { requestEmailChange } from "../../../../lib/account-data.ts";
+import { traced } from "../../../../lib/observability.ts";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 

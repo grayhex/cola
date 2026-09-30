@@ -7,7 +7,7 @@ import {
   CHAT_MEMBER_ROLE,
   chatMemberGrants,
   chatUploads,
-} from "../../lib/chat-config.js";
+} from "../../lib/chat-config.ts";
 export const policy = () => ({
   app: {
     disable_auth_checks: false,

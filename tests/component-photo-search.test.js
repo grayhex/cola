@@ -6,17 +6,17 @@ import os from "node:os";
 import path from "node:path";
 import sharp from "sharp";
 import { PGlite } from "@electric-sql/pglite";
-import { bikeResolverClient } from "../lib/bike-resolver-client.js";
+import { bikeResolverClient } from "../lib/bike-resolver-client.ts";
 import {
   componentPhotoSelection,
   searchComponentPhotos,
   loadComponentCandidate,
-} from "../lib/component-photo-search.js";
+} from "../lib/component-photo-search.ts";
 import {
   componentGallery,
   saveComponentPhotos,
   saveComponentPhoto,
-} from "../lib/component-photos.js";
+} from "../lib/component-photos.ts";
 
 test("component search scopes tokens and preserves atomic first-gallery import, provenance, quotas and publication policy", async () => {
   const db = new PGlite(),

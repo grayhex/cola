@@ -1,10 +1,10 @@
-import { assetContentSecurityPolicy } from "../../../../lib/asset-security.js";
-import { db } from "../../../../lib/db.js";
+import { assetContentSecurityPolicy } from "../../../../lib/asset-security.ts";
+import { db } from "../../../../lib/db.ts";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { uuid } from "../../../../lib/validation.js";
-import { fail } from "../../../../lib/http.js";
-import { traced } from "../../../../lib/observability.js";
+import { uuid } from "../../../../lib/validation.ts";
+import { fail } from "../../../../lib/http.ts";
+import { traced } from "../../../../lib/observability.ts";
 import {
   immutableMediaCache,
   mediaEtag,
@@ -13,7 +13,7 @@ import {
   mediaResponse,
   notModified,
   notModifiedResponse,
-} from "../../../../lib/media-cache.js";
+} from "../../../../lib/media-cache.ts";
 export const dynamic = "force-dynamic";
 // Site graphics are public and never rewritten in place: a new upload gets a
 // new ID, so browsers may keep them for a year without revalidation.
@@ -23,10 +23,10 @@ export const GET = traced(
   async (req, { params }) => {
     const { id } = await params;
     if (!uuid.safeParse(id).success) return fail("Изображение не найдено", 404);
-    const { rows } = await db.query(
-      "SELECT filename FROM site_assets WHERE id=$1",
-      [id],
-    );
+    const { rows } =
+      await /** @type {Promise<import("../../../../lib/db.ts").QueryRows<{"filename": string}>>} */ (
+        db.query("SELECT filename FROM site_assets WHERE id=$1", [id])
+      );
     if (!rows[0]) return fail("Изображение не найдено", 404);
     const requestedWidth = mediaWidth(
       new URL(req.url).searchParams.get("width"),

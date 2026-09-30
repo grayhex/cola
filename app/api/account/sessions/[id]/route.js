@@ -2,12 +2,12 @@ import {
   currentSessionHash,
   currentUser,
   endSession,
-} from "../../../../../lib/auth.js";
-import { db, transaction } from "../../../../../lib/db.js";
-import { fail, json, sameOrigin } from "../../../../../lib/http.js";
-import { uuid } from "../../../../../lib/validation.js";
-import { endSessionById } from "../../../../../lib/account-data.js";
-import { traced } from "../../../../../lib/observability.js";
+} from "../../../../../lib/auth.ts";
+import { db, transaction } from "../../../../../lib/db.ts";
+import { fail, json, sameOrigin } from "../../../../../lib/http.ts";
+import { uuid } from "../../../../../lib/validation.ts";
+import { endSessionById } from "../../../../../lib/account-data.ts";
+import { traced } from "../../../../../lib/observability.ts";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -20,10 +20,12 @@ export const DELETE = traced(async function DELETE(req, { params }) {
   if (!uuid.safeParse(id).success) return fail("Сеанс не найден", 404);
   const hash = await currentSessionHash();
   const current = (
-    await db.query("SELECT 1 FROM sessions WHERE id=$1 AND token_hash=$2", [
-      id,
-      hash,
-    ])
+    await /** @type {Promise<import("../../../../../lib/db.ts").QueryRows<{"?column?": number}>>} */ (
+      db.query("SELECT 1 FROM sessions WHERE id=$1 AND token_hash=$2", [
+        id,
+        hash,
+      ])
+    )
   ).rowCount;
   const ended = await transaction((q) => endSessionById(q, user.id, id));
   if (!ended) return fail("Сеанс не найден", 404);

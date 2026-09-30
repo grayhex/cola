@@ -1,5 +1,5 @@
 import Rides from "./rides.jsx";
-import { indexed } from "../../lib/indexing.js";
+import { indexed } from "../../lib/indexing.ts";
 export const metadata = {
   title: "Покатушки · ColaBike",
   description:

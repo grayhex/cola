@@ -7,9 +7,9 @@ import { useBackdropClose } from "./use-backdrop-close.js";
 import {
   significantBadge,
   metricSegments,
-} from "../../lib/card-presentation.js";
+} from "../../lib/card-presentation.ts";
 import { X, CheckCheck, Zap, Medal, Trophy } from "./icons.jsx";
-import { publicPath } from "../../lib/public-urls.js";
+import { publicPath } from "../../lib/public-urls.ts";
 
 export function CompactIconButton({
   label,

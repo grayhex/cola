@@ -9,7 +9,7 @@ import { useSite } from "./site-provider.jsx";
 import { MicroMetrics } from "./compact-ui.jsx";
 import { useBikeReaction } from "./use-bike-reaction.js";
 import styles from "./bike-card.module.css";
-import { publicPath } from "../../lib/public-urls.js";
+import { publicPath } from "../../lib/public-urls.ts";
 
 // Photo-first card with a Datasets-style body (#127): the name, a row of
 // labels, then the owner and the counters in one quiet line.

@@ -4,7 +4,7 @@ import pg from "pg";
 import { randomUUID } from "node:crypto";
 import { registerVerified } from "../fixtures/verified-user.js";
 import { testConsents } from "../fixtures/legal.js";
-import { gameImagePromptLimit } from "../../lib/game-prompt-validation.js";
+import { gameImagePromptLimit } from "../../lib/game-prompt-validation.ts";
 
 const origin = process.env.TEST_ORIGIN || "http://localhost:3100";
 test("admin image prompt saves real plain text, survives reload and clears independently in both themes", async ({

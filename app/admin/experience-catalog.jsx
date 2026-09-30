@@ -4,7 +4,7 @@ import {
   mergeCatalog,
   defaultAliases,
   defaultPurposes,
-} from "../../lib/experience-catalog.js";
+} from "../../lib/experience-catalog.ts";
 export default function ExperienceCatalog({ value, onChange }) {
   const [rule, setRule] = useState({
       kind: "component",

@@ -13,8 +13,8 @@ import { Heart } from "./icons.jsx";
 import { useSite } from "./site-provider.jsx";
 import RideBasemap from "./ride-basemap.jsx";
 import { routePaths } from "../../lib/ride-geometry.js";
-import { profilePath, publicPath } from "../../lib/public-urls.js";
-import { personName } from "../../lib/usernames.js";
+import { profilePath, publicPath } from "../../lib/public-urls.ts";
+import { personName } from "../../lib/usernames.ts";
 export function RideRoutePreview({ geometry = [], className = "" }) {
   const paths = routePaths(geometry);
   return (

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { gameAssetInUse } from "../lib/gamification-assets.js";
+import { gameAssetInUse } from "../lib/gamification-assets.ts";
 const a = "00000000-0000-4000-8000-000000000001";
 
 // #106: an illustration belongs to a rule, switched off or not; the media
@@ -21,7 +21,7 @@ test("media deletion asks the rules, including switched-off ones", async () => {
 });
 
 test("artwork normalizes IDs and historical local asset paths into bounded variants", async () => {
-  const { gameArtworkSource } = await import("../lib/gamification-assets.js");
+  const { gameArtworkSource } = await import("../lib/gamification-assets.ts");
   assert.equal(gameArtworkSource(a), `/api/assets/${a}?width=160`);
   assert.equal(
     gameArtworkSource(`/api/assets/${a}`, 56),

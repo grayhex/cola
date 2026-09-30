@@ -1,6 +1,6 @@
 "use client";
 import { ClassificationFilters } from "./bike-classification.jsx";
-import { readClassificationFilters } from "../../lib/bike-classification.js";
+import { readClassificationFilters } from "../../lib/bike-classification.ts";
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import {
@@ -16,8 +16,8 @@ import BikeGrid from "./bike-grid.jsx";
 import JournalCard from "./journal-card.jsx";
 import { CompactDialog } from "./compact-ui.jsx";
 import { SlidersHorizontal } from "./icons.jsx";
-import { profilePath } from "../../lib/public-urls.js";
-import { personName, usernameLabel } from "../../lib/usernames.js";
+import { profilePath } from "../../lib/public-urls.ts";
+import { personName, usernameLabel } from "../../lib/usernames.ts";
 const empty = {
   ...readClassificationFilters(new URLSearchParams()),
   category: "",

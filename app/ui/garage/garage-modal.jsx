@@ -1,6 +1,6 @@
 "use client";
 import dynamic from "next/dynamic";
-import { publicPath } from "../../../lib/public-urls.js";
+import { publicPath } from "../../../lib/public-urls.ts";
 import EmailPolicyAction from "../email-policy-action.jsx";
 import Photo from "../bike-photo.jsx";
 import AuthWindow from "../auth-window.jsx";

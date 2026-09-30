@@ -3,14 +3,14 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { readdir, readFile } from "node:fs/promises";
 import { PGlite } from "@electric-sql/pglite";
-import { defaultCatalog } from "../lib/site-defaults.js";
+import { defaultCatalog } from "../lib/site-defaults.ts";
 import {
   rebuildFactoryComponents,
   legacyFactoryPart,
-} from "../lib/factory-rebuild.js";
-import { createWizardBike, wizardInput } from "../lib/bike-wizard.js";
-import { factoryEntries } from "../lib/factory-components.js";
-import { saveFactorySpecification } from "../lib/factory-import.js";
+} from "../lib/factory-rebuild.ts";
+import { createWizardBike, wizardInput } from "../lib/bike-wizard.ts";
+import { factoryEntries } from "../lib/factory-components.ts";
+import { saveFactorySpecification } from "../lib/factory-import.ts";
 
 test("reviewed rebuild splits factory parts, preserves manual/content references, rolls back stale plans and is idempotent", async () => {
   const db = new PGlite();

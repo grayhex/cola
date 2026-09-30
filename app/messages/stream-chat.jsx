@@ -5,7 +5,7 @@ import { Chat, Streami18n } from "stream-chat-react";
 import "stream-chat-react/dist/css/index.css";
 import "./chat.css";
 import { useSite } from "../ui/site-provider.jsx";
-import { CHAT_FILE_BYTES } from "../../lib/chat-config.js";
+import { CHAT_FILE_BYTES } from "../../lib/chat-config.ts";
 import { chatApi as api } from "./chat-api.js";
 import Conversations from "./conversations.jsx";
 export default function StreamMessages() {

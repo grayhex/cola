@@ -6,9 +6,9 @@ import GlobalHeader from "./global-header.jsx";
 import { useSite } from "./site-provider.jsx";
 import footerStyles from "./site-footer.module.css";
 import Versions from "./versions.jsx";
-import { footerSlots, footerLinkHref } from "../../lib/design-graphics.js";
-import { profilePath } from "../../lib/public-urls.js";
-import { personName, usernameLabel } from "../../lib/usernames.js";
+import { footerSlots, footerLinkHref } from "../../lib/design-graphics.ts";
+import { profilePath } from "../../lib/public-urls.ts";
+import { personName, usernameLabel } from "../../lib/usernames.ts";
 // `keepalive` lets a small mutation finish when the reader leaves the page
 // right after a click; its total body size is limited, so it is opt-in.
 export async function socialApi(

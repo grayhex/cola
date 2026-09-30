@@ -30,23 +30,23 @@ import {
   marketSorts,
   publishedLabel,
   daysLabel,
-} from "../../lib/market-types.js";
+} from "../../lib/market-types.ts";
 import {
   marketCategories,
   readMarketQuery,
   writeMarketQuery,
-} from "../../lib/market-query.js";
+} from "../../lib/market-query.ts";
 import styles from "./market.module.css";
 import MarketLinks from "./market-links.jsx";
-import { profilePath, publicPath } from "../../lib/public-urls.js";
-import { personName, usernameLabel } from "../../lib/usernames.js";
+import { profilePath, publicPath } from "../../lib/public-urls.ts";
+import { personName, usernameLabel } from "../../lib/usernames.ts";
 import ShareButton from "./share-button.jsx";
 import { useHydrated } from "./use-hydrated.js";
 import LocalDate from "./local-date.jsx";
 // The link keeps the original; previews use the cached size variants.
 const marketVariants = (id, widths = [320, 640, 1280]) =>
   widths.map((w) => `/api/market/media/${id}?width=${w} ${w}w`).join(", ");
-export { marketCategories } from "../../lib/market-query.js";
+export { marketCategories } from "../../lib/market-query.ts";
 
 function ListingTypeLabel({ type = "sale" }) {
   return (

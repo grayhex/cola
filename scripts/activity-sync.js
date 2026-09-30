@@ -1,4 +1,4 @@
-import { db, transaction } from "../lib/db.js";
+import { db, transaction } from "../lib/db.ts";
 import { rwgpsConfig } from "../lib/rwgps.js";
 import { runActivityBatch } from "../lib/activity-worker.js";
 import pg from "pg";

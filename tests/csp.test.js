@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { cspMode, pageCsp, mapOrigins } from "../lib/csp.js";
-import { cspReports } from "../lib/csp-reports.js";
+import { cspMode, pageCsp, mapOrigins } from "../lib/csp.ts";
+import { cspReports } from "../lib/csp-reports.ts";
 test("CSP mode and map sources cannot inject directives or weaken scripts", () => {
   assert.equal(cspMode({}), "report-only");
   for (const mode of ["off", "report-only", "enforce"])

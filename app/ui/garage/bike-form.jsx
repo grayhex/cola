@@ -8,8 +8,8 @@ import fieldStyles from "../bike-fields.module.css";
 import {
   classificationOf,
   compatibilityCategory,
-} from "../../../lib/bike-classification.js";
-import { parseBikeName } from "../../../lib/bike-name.js";
+} from "../../../lib/bike-classification.ts";
+import { parseBikeName } from "../../../lib/bike-name.ts";
 import { Check } from "../icons.jsx";
 import Field from "./field.jsx";
 

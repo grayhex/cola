@@ -1,6 +1,6 @@
-import { db, transaction } from "../lib/db.js";
-import { chatCredentials } from "../lib/chat-config.js";
-import { syncChatJob } from "../lib/chat-lifecycle.js";
+import { db, transaction } from "../lib/db.ts";
+import { chatCredentials } from "../lib/chat-config.ts";
+import { syncChatJob } from "../lib/chat-lifecycle.ts";
 
 async function batch() {
   if (!chatCredentials()) return;

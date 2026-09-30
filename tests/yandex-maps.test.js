@@ -12,7 +12,7 @@ import {
   mapStyle,
   tileTemplate,
   isRasterProvider,
-} from "../lib/map-settings.js";
+} from "../lib/map-settings.ts";
 
 function loaderFixture(timeoutMs = 1000) {
   const win = {};

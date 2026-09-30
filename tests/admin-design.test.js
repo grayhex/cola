@@ -5,19 +5,19 @@ import {
   illustrationSlots,
   graphicAsset,
   filterGraphicSlots,
-} from "../lib/design-graphics.js";
+} from "../lib/design-graphics.ts";
 import {
   siteAssetIds,
   siteAssetUsage,
   assetUsageLabels,
-} from "../lib/site-assets.js";
+} from "../lib/site-assets.ts";
 import {
   listAssetLibrary,
   deleteUnusedAssets,
-} from "../lib/site-asset-library.js";
-import { settingsInput } from "../lib/admin-validation.js";
-import { componentIllustrationSlots } from "../lib/component-illustrations.js";
-import { defaultSettings } from "../lib/site-defaults.js";
+} from "../lib/site-asset-library.ts";
+import { settingsInput } from "../lib/admin-validation.ts";
+import { componentIllustrationSlots } from "../lib/component-illustrations.ts";
+import { defaultSettings } from "../lib/site-defaults.ts";
 
 test("only content artwork is configurable and unknown appearance settings are rejected", () => {
   assert.equal(

@@ -1,12 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { defaultGroups } from "../lib/garage-layout.js";
+import { defaultGroups } from "../lib/garage-layout.ts";
 import {
   installationNavigation as componentNavigation,
   componentNavigation as productNavigation,
   componentCategoryPath,
   componentGroupPath,
-} from "../lib/component-navigation.js";
+} from "../lib/component-navigation.ts";
 
 test("component navigation includes empty default categories without mutating the garage", () => {
   const before = structuredClone(defaultGroups);

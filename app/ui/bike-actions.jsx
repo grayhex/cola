@@ -12,7 +12,7 @@ import {
   Pencil,
   Trash2,
 } from "./icons.jsx";
-import { publicPath } from "../../lib/public-urls.js";
+import { publicPath } from "../../lib/public-urls.ts";
 import styles from "./bike-actions.module.css";
 
 // Everything a reader and the owner can do with a bike, in one place (#121):

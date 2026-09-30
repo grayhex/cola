@@ -11,8 +11,8 @@ import {
   CHAT_TYPE,
   CHAT_ROLE,
   CHAT_MEMBER_ROLE,
-} from "../lib/chat-config.js";
-import { assertChatPolicy, ensureChatPolicy } from "../lib/chat-provider.js";
+} from "../lib/chat-config.ts";
+import { assertChatPolicy, ensureChatPolicy } from "../lib/chat-provider.ts";
 import { policy } from "./fixtures/chat-provider.js";
 
 test("Stream may omit empty app and channel grants, but unexpected permissions fail closed", async () => {

@@ -19,8 +19,8 @@ import ZoomablePhoto from "./zoomable-photo.jsx";
 import { socialApi } from "./social-primitives.jsx";
 import { ReportButton } from "./community-controls.jsx";
 import EmailPolicyAction from "./email-policy-action.jsx";
-import { profilePath } from "../../lib/public-urls.js";
-import { personName } from "../../lib/usernames.js";
+import { profilePath } from "../../lib/public-urls.ts";
+import { personName } from "../../lib/usernames.ts";
 import styles from "./component-gallery.module.css";
 import ComponentPhotoSearch, {
   PhotoSource,

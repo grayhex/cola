@@ -8,13 +8,13 @@ import { MotionList } from "./motion.jsx";
 import { Avatar, socialApi } from "./social-primitives.jsx";
 import { useSite } from "./site-provider.jsx";
 import { ridePlanOptions } from "../../lib/ride-plan-options.js";
-import { userTimeZone } from "../../lib/user-time-zone.js";
+import { userTimeZone } from "../../lib/user-time-zone.ts";
 import {
   organizeDraft,
   organizeDurations,
   organizePeriods,
   organizeQuery,
-} from "../../lib/organize-filters.js";
+} from "../../lib/organize-filters.ts";
 import styles from "./organize-workspace.module.css";
 
 // «Собрать компанию» (#234): the organizer sees when and in what format there

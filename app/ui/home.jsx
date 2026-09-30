@@ -103,9 +103,9 @@ function TogetherHero({ user }) {
     </section>
   );
 }
-import { profilePath, publicPath } from "../../lib/public-urls.js";
-import { metricValue } from "../../lib/game-metrics.js";
-import { personName } from "../../lib/usernames.js";
+import { profilePath, publicPath } from "../../lib/public-urls.ts";
+import { metricValue } from "../../lib/game-metrics.ts";
+import { personName } from "../../lib/usernames.ts";
 const markers = {
   market: ShoppingBag,
   planned: CalendarDays,

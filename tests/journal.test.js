@@ -12,19 +12,19 @@ import {
   journalDetail,
   journalList,
   deleteJournal,
-} from "../lib/journal.js";
-import { journalSocial } from "../lib/journal-social.js";
+} from "../lib/journal.ts";
+import { journalSocial } from "../lib/journal-social.ts";
 import {
   saveJournalPhoto,
   readJournalPhoto,
   cleanupJournalPhotos,
-} from "../lib/journal-storage.js";
-import { notificationPage, unreadCount } from "../lib/notifications.js";
-import { createReport, moderateReport, reportPage } from "../lib/reports.js";
-import { siteStatistics } from "../lib/site-statistics.js";
-import { settingsInput } from "../lib/admin-validation.js";
-import { defaultSettings } from "../lib/site-defaults.js";
-import { siteAssetIds } from "../lib/site-assets.js";
+} from "../lib/journal-storage.ts";
+import { notificationPage, unreadCount } from "../lib/notifications.ts";
+import { createReport, moderateReport, reportPage } from "../lib/reports.ts";
+import { siteStatistics } from "../lib/site-statistics.ts";
+import { settingsInput } from "../lib/admin-validation.ts";
+import { defaultSettings } from "../lib/site-defaults.ts";
+import { siteAssetIds } from "../lib/site-assets.ts";
 test("journal validation, font catalogue and asset references", () => {
   const base = { bikeId: randomUUID(), kind: "story", title: "", body: "" };
   assert(journalInput.safeParse(base).success);

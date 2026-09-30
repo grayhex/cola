@@ -1,13 +1,13 @@
 import { z } from "zod";
-import { currentUser, rateLimit } from "../../../../lib/auth.js";
-import { db, transaction } from "../../../../lib/db.js";
-import { json, fail, readJson, sameOrigin } from "../../../../lib/http.js";
+import { currentUser, rateLimit } from "../../../../lib/auth.ts";
+import { db, transaction } from "../../../../lib/db.ts";
+import { json, fail, readJson, sameOrigin } from "../../../../lib/http.ts";
 import {
   requireVerifiedEmail,
   EmailPolicyError,
-} from "../../../../lib/email-policy.js";
-import { uuid } from "../../../../lib/validation.js";
-import { traced, logError } from "../../../../lib/observability.js";
+} from "../../../../lib/email-policy.ts";
+import { uuid } from "../../../../lib/validation.ts";
+import { traced, logError } from "../../../../lib/observability.ts";
 import {
   riderQuery,
   draftQuery,

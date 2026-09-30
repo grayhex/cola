@@ -13,7 +13,7 @@ import {
   RefreshCw,
 } from "./icons.jsx";
 import LocalDate from "./local-date.jsx";
-import { daysLabel } from "../../lib/market-types.js";
+import { daysLabel } from "../../lib/market-types.ts";
 import BikeGrid from "./bike-grid.jsx";
 import {
   startTransition,
@@ -32,8 +32,8 @@ import {
 import { PageControls } from "./community-controls.jsx";
 import BikeCard from "./bike-card.jsx";
 import { useSite } from "./site-provider.jsx";
-import { profilePath } from "../../lib/public-urls.js";
-import { personName } from "../../lib/usernames.js";
+import { profilePath } from "../../lib/public-urls.ts";
+import { personName } from "../../lib/usernames.ts";
 const eventText = {
   component_reply: "ответил вам в обсуждении компонента",
   article_like: "понравилась ваша статья",

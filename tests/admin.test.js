@@ -3,10 +3,10 @@ import assert from "node:assert/strict";
 import { PGlite } from "@electric-sql/pglite";
 import { readFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
-import { settingsInput, catalogInput } from "../lib/admin-validation.js";
-import { defaultSettings, defaultCatalog } from "../lib/site-defaults.js";
-import { getSite, updateManagedUser } from "../lib/site.js";
-import { iconPaths, categoryIcons } from "../lib/part-icons.js";
+import { settingsInput, catalogInput } from "../lib/admin-validation.ts";
+import { defaultSettings, defaultCatalog } from "../lib/site-defaults.ts";
+import { getSite, updateManagedUser } from "../lib/site.ts";
+import { iconPaths, categoryIcons } from "../lib/part-icons.ts";
 test("settings validate safe themes, fonts, color, assets and copy; every seeded category has an icon", () => {
   assert.ok(settingsInput.safeParse(defaultSettings).success);
   for (const desktopColumns of [3, 4, 5])

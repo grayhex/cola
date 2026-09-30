@@ -10,13 +10,13 @@ import {
   discoverySearch,
   communityActivity,
   communityHome,
-} from "../lib/discovery.js";
-import { showcase } from "../lib/showcase.js";
-import { defaultSettings, defaultCatalog } from "../lib/site-defaults.js";
-import { settingsInput } from "../lib/admin-validation.js";
-import { themeBootstrap, resolveTheme } from "../lib/theme.js";
-import { siteAssetIds } from "../lib/site-assets.js";
-import { prepareThumbnail } from "../lib/images.js";
+} from "../lib/discovery.ts";
+import { showcase } from "../lib/showcase.ts";
+import { defaultSettings, defaultCatalog } from "../lib/site-defaults.ts";
+import { settingsInput } from "../lib/admin-validation.ts";
+import { themeBootstrap, resolveTheme } from "../lib/theme.ts";
+import { siteAssetIds } from "../lib/site-assets.ts";
+import { prepareThumbnail } from "../lib/images.ts";
 
 test("theme bootstrap chooses system, persisted preference and storage failure without unsafe injection", () => {
   for (const [saved, defaultTheme, dark, expected] of [

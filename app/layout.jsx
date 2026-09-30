@@ -16,12 +16,12 @@ import "./styles/admin.css";
 import "./styles/motion.css";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { headers } from "next/headers";
-import { themeBootstrap } from "../lib/theme.js";
+import { themeBootstrap } from "../lib/theme.ts";
 import SiteProvider from "./ui/site-provider.jsx";
-import { getSite } from "../lib/site.js";
-import { hidden } from "../lib/indexing.js";
-import { currentViewer } from "../lib/viewer.js";
-import { chatConfig } from "../lib/chat-config.js";
+import { getSite } from "../lib/site.ts";
+import { hidden } from "../lib/indexing.ts";
+import { currentViewer } from "../lib/viewer.ts";
+import { chatConfig } from "../lib/chat-config.ts";
 export const dynamic = "force-dynamic";
 export async function generateMetadata() {
   const { settings } = await getSite();
