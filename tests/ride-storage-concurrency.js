@@ -6,7 +6,7 @@ import { randomUUID } from "node:crypto";
 import { mkdtemp, rm, access } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { cleanupRides, putOriginal } from "../lib/ride-storage.js";
+import { cleanupRides, putOriginal } from "../lib/ride-storage.ts";
 
 const dir = await mkdtemp(tmpdir() + "/cola-ride-gc-");
 process.env.RIDES_DIR = dir;

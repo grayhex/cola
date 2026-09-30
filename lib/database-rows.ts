@@ -1,4 +1,6 @@
-import type { Passport } from "./ride-match-core.js";
+import type * as RideSpeedTypes from "./ride-speed.ts";
+import type * as RideMetricsTypes from "./ride-metrics.ts";
+import type { Passport } from "./ride-match-core.ts";
 import type { Part } from "../services/bike-resolver/src/component-identity.js";
 // PostgreSQL rows at repository boundaries. Numeric/bigint values remain strings;
 // nullable database columns stay nullable. JSON fields use their domain contract.
@@ -274,7 +276,7 @@ export interface RideRow {
   elevation_gain_m: string | null;
   point_count: number;
   public_point_count: number;
-  public_geometry: unknown;
+  public_geometry: number[][][];
   is_public: boolean;
   published_at: Date | null;
   privacy_enabled: boolean;
@@ -282,13 +284,13 @@ export interface RideRow {
   source_hash: string;
   created_at: Date;
   updated_at: Date;
-  public_speed_profile: unknown;
+  public_speed_profile: RideSpeedTypes.SpeedPoint[][];
   status: string;
   source_kind: string;
   has_track: boolean;
   gpx_hash: string | null;
-  import_metrics: unknown;
-  visible_metrics: unknown | null;
+  import_metrics: RideMetricsTypes.RideMetrics;
+  visible_metrics: string[] | null;
   features: string[];
   meeting_point: string;
   recurrence: string;

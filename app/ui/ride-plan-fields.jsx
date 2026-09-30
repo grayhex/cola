@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { ridePlanOptions } from "../../lib/ride-plan-options.js";
+import { ridePlanOptions } from "../../lib/ride-plan-options.ts";
 import { useMotionFeedback } from "./motion.jsx";
 import RidePassport from "./ride-passport.jsx";
 import AreaPicker from "./ride-area-map.jsx";

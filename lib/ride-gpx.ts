@@ -1,0 +1,436 @@
+import { XMLParser, XMLValidator } from "fast-xml-parser";
+import { createHash } from "node:crypto";
+import { distance } from "./ride-geometry.ts";
+export const GPX_THRESHOLDS = Object.freeze({
+  movingMps: 1,
+  maxMps: 45,
+  maxUntimedJumpM: 10000,
+  maxIntervalS: 300,
+  elevationWindow: 5,
+  ascentDeltaM: 3,
+  maxDepth: 32,
+});
+export class RideError extends Error {
+  declare status: number;
+  constructor(message: string, status = 400) {
+    super(message);
+    this.status = status;
+  }
+}
+export type XmlValue =
+  string | number | null | undefined | XmlNode | XmlValue[];
+export interface XmlNode {
+  [key: string]: XmlValue;
+}
+const array = <T>(v: T | T[] | null | undefined): T[] =>
+  v == null ? [] : Array.isArray(v) ? v : [v];
+const scalar = (v: XmlValue): XmlValue =>
+  v && typeof v === "object" ? (v as XmlNode)["#text"] : v;
+function number(v: XmlValue) {
+  const s = scalar(v);
+  return s === undefined || s === null || String(s).trim() === ""
+    ? null
+    : Number(s);
+}
+function timestamp(v: XmlValue) {
+  const s = scalar(v);
+  if (
+    typeof s !== "string" ||
+    !/^\d{4}-\d{2}-\d{2}T.*(?:Z|[+-]\d{2}:\d{2})$/.test(s)
+  )
+    return null;
+  const t = Date.parse(s);
+  return Number.isFinite(t) ? t / 1000 : null;
+}
+// XML checks shared by GPX and TCX: UTF-8, no DTD or entities, bounded nesting.
+export function readXml(
+  bytes: Uint8Array,
+  {
+    maxBytes,
+    label,
+    preserveNamespaces = false,
+  }: { maxBytes: number; label: string; preserveNamespaces?: boolean },
+): XmlNode {
+  if (!bytes.length) throw new RideError(`Пустой ${label}-файл`);
+  if (bytes.length > maxBytes)
+    throw new RideError(`${label}-файл слишком большой`, 413);
+  let xml;
+  try {
+    xml = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+  } catch {
+    throw new RideError(`${label} должен быть в кодировке UTF-8`);
+  }
+  if (/<!\s*(?:DOCTYPE|ENTITY)/i.test(xml))
+    throw new RideError("DTD и XML entities запрещены");
+  // Bound nesting before recursive parsing, independently of file size.
+  let depth = 0;
+  for (const m of xml.matchAll(/<\/?[A-Za-z_][^>]*>/g)) {
+    if (m[0].startsWith("</")) depth--;
+    else if (!m[0].endsWith("/>")) depth++;
+    if (depth > GPX_THRESHOLDS.maxDepth)
+      throw new RideError(`Слишком сложный ${label}`);
+  }
+  if (XMLValidator.validate(xml) !== true)
+    throw new RideError("Некорректный XML");
+  return new XMLParser({
+    ignoreAttributes: false,
+    attributeNamePrefix: "@",
+    removeNSPrefix: !preserveNamespaces,
+    parseTagValue: false,
+    processEntities: false,
+  }).parse(xml);
+}
+export {
+  array as xmlList,
+  scalar as xmlText,
+  number as xmlNumber,
+  timestamp as xmlTime,
+};
+const gpxNamespaces = new Set([
+  "",
+  "http://www.topografix.com/GPX/1/0",
+  "http://www.topografix.com/GPX/1/1",
+]);
+// Resolve namespace URIs (including aliases and local redeclarations), never
+// guess an extension from its prefix or traverse arbitrary unknown extensions.
+interface NamespacedNode {
+  value: XmlValue;
+  ns: Record<string, string>;
+  name?: string;
+  uri?: string;
+}
+function xmlChildren(parent: NamespacedNode) {
+  return Object.entries(
+    parent.value && typeof parent.value === "object" ? parent.value : {},
+  ).flatMap(([key, values]) => {
+    if (key.startsWith("@") || key.startsWith("#") || key.startsWith("?"))
+      return [];
+    return array(values).map((value) => {
+      let ns = parent.ns;
+      for (const [attr, uri] of Object.entries(
+        value && typeof value === "object" ? value : {},
+      )) {
+        if (attr === "@xmlns" || attr.startsWith("@xmlns:")) {
+          if (ns === parent.ns) ns = { ...ns };
+          ns[attr === "@xmlns" ? "" : attr.slice(7)] = String(uri);
+        }
+      }
+      const split = key.indexOf(":"),
+        prefix = split < 0 ? "" : key.slice(0, split);
+      return {
+        value,
+        ns,
+        name: split < 0 ? key : key.slice(split + 1),
+        uri: ns[prefix] ?? (prefix ? "unknown" : ""),
+      };
+    });
+  });
+}
+const gpxChildren = (parent: NamespacedNode, name: string) =>
+  xmlChildren(parent).filter(
+    (c) => c.name === name && gpxNamespaces.has(c.uri),
+  );
+const gpxValue = (parent: NamespacedNode, name: string) =>
+  gpxChildren(parent, name)[0]?.value;
+function gpxSensors(point: NamespacedNode) {
+  const result: Partial<
+    Record<"hr" | "cadence" | "speed" | "power", number | null>
+  > = {};
+  for (const ext of gpxChildren(point, "extensions"))
+    for (const child of xmlChildren(ext)) {
+      if (
+        child.name === "TrackPointExtension" &&
+        /^http:\/\/www\.garmin\.com\/xmlschemas\/TrackPointExtension\/v[12]$/.test(
+          child.uri,
+        )
+      ) {
+        for (const sample of xmlChildren(child))
+          if (sample.uri === child.uri) {
+            const key = (
+              { hr: "hr", cad: "cadence", speed: "speed" } as Record<
+                string,
+                "hr" | "cadence" | "speed"
+              >
+            )[sample.name];
+            if (key) result[key] = number(sample.value);
+          }
+      } else if (
+        (child.name === "PowerInWatts" &&
+          child.uri === "http://www.garmin.com/xmlschemas/PowerExtension/v1") ||
+        (child.name === "power" && gpxNamespaces.has(child.uri))
+      )
+        result.power = number(child.value);
+    }
+  return result;
+}
+export function parseGpx(
+  bytes: Uint8Array,
+  { maxBytes = 10 * 1024 * 1024, maxPoints = 200000 } = {},
+) {
+  const doc = readXml(bytes, {
+    maxBytes,
+    label: "GPX",
+    preserveNamespaces: true,
+  });
+  const root = gpxChildren({ value: doc, ns: {} }, "gpx")[0];
+  if (!root || Object.keys(doc).filter((k) => !k.startsWith("?")).length !== 1)
+    throw new RideError("Нужен файл с корневым элементом GPX");
+  const tracks = gpxChildren(root, "trk"),
+    routes = gpxChildren(root, "rte");
+  let raw = tracks.flatMap((t) =>
+    gpxChildren(t, "trkseg").map((s) => gpxChildren(s, "trkpt")),
+  );
+  if (!raw.some((s) => s.length))
+    raw = routes.map((r) => gpxChildren(r, "rtept"));
+  const count = raw.reduce((n, s) => n + s.length, 0);
+  if (!count) throw new RideError("GPX не содержит маршрут");
+  if (count > maxPoints) throw new RideError("Слишком много точек GPX", 413);
+  const sections = raw.map((section) =>
+    section.map((p) => {
+      const lat = number((p.value as XmlNode)["@lat"]),
+        lon = number((p.value as XmlNode)["@lon"]);
+      if (lat === null || lon === null || !validPosition(lat, lon))
+        throw new RideError("Некорректные координаты GPX");
+      const ele = number(gpxValue(p, "ele"));
+      return {
+        lat,
+        lon,
+        ele: Number.isFinite(ele) ? ele : null,
+        time: timestamp(gpxValue(p, "time")),
+        ...gpxSensors(p),
+      };
+    }),
+  );
+  return trackFrom(sections, {
+    bytes,
+    title: String(
+      scalar(tracks[0] && gpxValue(tracks[0], "name")) ||
+        scalar(routes[0] && gpxValue(routes[0], "name")) ||
+        "",
+    ),
+    sensors: sensorMetrics(sections.flat()),
+  });
+}
+export const validPosition = (lat: number | null, lon: number | null) =>
+  lat !== null &&
+  lon !== null &&
+  Number.isFinite(lat) &&
+  Number.isFinite(lon) &&
+  Math.abs(lat) <= 90 &&
+  Math.abs(lon) <= 180;
+/** A decoded track point of any supported format. */
+export interface SensorSample {
+  time: number | null;
+  hr?: number | null;
+  cadence?: number | null;
+  power?: number | null;
+  speed?: number | null;
+}
+export interface TrackPoint extends SensorSample {
+  lat: number;
+  lon: number;
+  ele: number | null;
+  analysisBreak?: boolean;
+}
+export interface Sample extends SensorSample {
+  coord: number[];
+  ele: number | null;
+  analysisBreak?: boolean;
+}
+export type ParsedTrack = ReturnType<typeof trackFrom>;
+/** Metrics and geometry of a track, whatever file it came from (GPX, TCX, FIT).
+Distance is summed inside sections; GPS jumps start a new segment. */
+export function trackFrom(
+  sections: TrackPoint[][],
+  {
+    bytes,
+    title = "",
+    sensors = {},
+  }: { bytes: Uint8Array; title?: string; sensors?: Record<string, number> },
+) {
+  const count = sections.reduce((n, s) => n + s.length, 0);
+
+  const segments: Sample[][] = [];
+  const analysisSamples: Sample[][] = [];
+
+  let started: number | null = null;
+
+  let ended: number | null = null;
+  let distanceM = 0,
+    movingDistance = 0,
+    movingTime = 0,
+    timedIntervals = 0,
+    gain = 0,
+    hasElevation = false;
+  for (const section of sections) {
+    let points: Sample[] = [];
+    let telemetry: Sample[] = [];
+
+    let previous: Sample | null = null;
+    const flush = () => {
+      if (points.length >= 2) {
+        segments.push(points);
+        analysisSamples.push(telemetry);
+      }
+      points = [];
+      telemetry = [];
+    };
+    for (const p of section) {
+      const time = p.time,
+        point = {
+          coord: [p.lon, p.lat],
+          ele: p.ele,
+          time,
+          hr: p.hr,
+          cadence: p.cadence,
+          power: p.power,
+          speed: p.speed,
+          analysisBreak: p.analysisBreak,
+        };
+      if (time !== null) {
+        if (started === null) started = time;
+        ended = time;
+      }
+      if (previous) {
+        const d = distance(previous.coord, point.coord),
+          dt =
+            time !== null && previous.time !== null
+              ? time - previous.time
+              : null;
+        const jump =
+          dt !== null && dt > 0
+            ? d / dt > GPX_THRESHOLDS.maxMps
+            : d > GPX_THRESHOLDS.maxUntimedJumpM;
+        if (jump) {
+          flush();
+          // A discontinuity may start a valid new leg. Keep its first sample;
+          // isolated spikes remain singletons and are discarded by flush().
+          points.push(point);
+          telemetry.push(point);
+          previous = point;
+          continue;
+        }
+        distanceM += d;
+        if (dt !== null && dt > 0 && dt <= GPX_THRESHOLDS.maxIntervalS) {
+          timedIntervals++;
+          if (d / dt >= GPX_THRESHOLDS.movingMps) {
+            movingTime += dt;
+            movingDistance += d;
+          }
+        }
+        // Update time at stationary samples so a stop does not inflate moving time.
+        if (d < 0.01) {
+          telemetry.push(point);
+          previous = point;
+          continue;
+        }
+      }
+      points.push(point);
+      telemetry.push(point);
+      previous = point;
+    }
+    flush();
+  }
+  for (const points of segments) {
+    const elevations = points.map((p) => p.ele);
+
+    let anchor: number | null = null;
+    for (let i = 0; i < elevations.length; i++) {
+      if (elevations[i] === null) {
+        anchor = null;
+        continue;
+      }
+      hasElevation = true;
+      const window = elevations
+        .slice(Math.max(0, i - 2), i + 3)
+        .filter((v) => v !== null)
+        .sort((a, b) => a - b);
+      const e = window[Math.floor(window.length / 2)];
+      if (anchor === null) anchor = e;
+      else if (e - anchor >= GPX_THRESHOLDS.ascentDeltaM) {
+        gain += e - anchor;
+        anchor = e;
+      } else if (anchor - e >= GPX_THRESHOLDS.ascentDeltaM) anchor = e;
+    }
+  }
+  const geometry = segments.map((s) => s.map((p) => p.coord));
+  if (!geometry.some((s) => s.length >= 2))
+    throw new RideError("Недостаточно точек маршрута");
+  return {
+    sourceHash: createHash("sha256").update(bytes).digest("hex"),
+    samples: segments,
+    analysisSamples,
+    title: title.slice(0, 120),
+    geometry,
+    metrics: {
+      startedAt:
+        started === null ? null : new Date(started * 1000).toISOString(),
+      endedAt: ended === null ? null : new Date(ended * 1000).toISOString(),
+      distanceM: Math.round(distanceM),
+      elapsedTimeS:
+        started !== null && ended !== null && ended > started
+          ? Math.round(ended - started)
+          : null,
+      movingTimeS: timedIntervals ? Math.round(movingTime) : null,
+      avgSpeedMps: movingTime ? movingDistance / movingTime : null,
+      elevationGainM: hasElevation ? Math.round(gain) : null,
+      pointCount: count,
+    },
+    sensors,
+  };
+}
+/** Heart rate, cadence and power from device samples, weighted by time so
+that smart recording (denser points in turns) does not skew averages.
+Cadence averages skip zeros (coasting), power keeps them, as devices do. */
+export function sensorMetrics(
+  samples: Array<{
+    time: number | null;
+    hr?: number | null;
+    cadence?: number | null;
+    power?: number | null;
+    speed?: number | null;
+  }>,
+): Record<string, number> {
+  const result: Record<string, number> = {};
+
+  const channels: [
+    field: "hr" | "cadence" | "power",
+    avg: string,
+    max: string,
+    valid: (v: number) => boolean,
+  ][] = [
+    ["hr", "avgHr", "maxHr", (v) => v > 0 && v < 255],
+    ["cadence", "avgCadence", "maxCadence", (v) => v > 0 && v < 255],
+    ["power", "avgPower", "maxPower", (v) => v >= 0 && v < 3000],
+  ];
+  for (const [field, avgKey, maxKey, valid] of channels) {
+    let total = 0,
+      weight = 0;
+
+    let max: number | null = null;
+    samples.forEach((s, i) => {
+      const v = s[field];
+      if (v == null || !valid(v)) return;
+      const next = samples[i + 1]?.time,
+        dt =
+          s.time !== null && next != null && next > s.time
+            ? Math.min(next - s.time, GPX_THRESHOLDS.maxIntervalS)
+            : 1;
+      total += v * dt;
+      weight += dt;
+      max = max === null ? v : Math.max(max, v);
+    });
+    if (weight && max !== null) {
+      result[avgKey] = Math.round(total / weight);
+      result[maxKey] = max;
+    }
+  }
+  // Device speed; faster than a GPS jump threshold is a glitch, not a record.
+
+  let maxSpeed: number | null = null;
+  for (const { speed } of samples)
+    if (speed != null && speed >= 0 && speed <= GPX_THRESHOLDS.maxMps)
+      maxSpeed = maxSpeed === null ? speed : Math.max(maxSpeed, speed);
+  if (maxSpeed !== null) result.maxSpeedMps = maxSpeed;
+  return result;
+}

@@ -2,9 +2,9 @@
 import assert from "node:assert/strict";
 import pg from "pg";
 import { randomUUID } from "node:crypto";
-import { processActivityJob } from "../lib/activity-worker.js";
-import { disconnectActivity } from "../lib/activity-sync.js";
-import { sealActivityToken } from "../lib/activity-credentials.js";
+import { processActivityJob } from "../lib/activity-worker.ts";
+import { disconnectActivity } from "../lib/activity-sync.ts";
+import { sealActivityToken } from "../lib/activity-credentials.ts";
 import { fit, loop } from "./ride-fixtures.js";
 const db = new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 5 });
 const tx = async (fn) => {

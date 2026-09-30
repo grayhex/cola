@@ -43,14 +43,14 @@ async function checkPassword(
 export async function listSessions(
   q: Queryable,
   userId: string,
-  currentHash: string,
+  currentHash: string | null,
 ) {
   const { rows } = await q.query<{
     id: string;
     created_at: Date;
     last_seen_at: Date;
     user_agent: string;
-    current: boolean;
+    current: boolean | null;
   }>(
     `SELECT id,created_at,last_seen_at,user_agent,token_hash=$2 AS current
      FROM sessions WHERE user_id=$1 AND expires_at>now()
@@ -91,7 +91,7 @@ export async function changePassword(
   userId: string,
   current: string,
   next: string,
-  currentHash: string,
+  currentHash: string | null,
 ) {
   const user = await lockedUser(q, userId);
   if (!(await checkPassword(user, current)))
@@ -157,7 +157,7 @@ export async function confirmEmailChange(q: Queryable, token: string) {
     "SELECT 1 FROM users WHERE email=$1",
     [row.email],
   );
-  if (taken.rowCount) return { taken: true };
+  if (taken.rowCount) return { taken: true as const };
   // Opening the link proves the new mailbox, so it is verified at once.
   await q.query(
     "UPDATE users SET email=$2,email_verified_at=now() WHERE id=$1",

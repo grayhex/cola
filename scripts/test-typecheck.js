@@ -1,4 +1,4 @@
-// Prove legacy and native gates reject real errors, including TSX and new JS.
+// Prove the native gate rejects real API/DTO/null errors, TSX and new JS.
 // The probes are temporary source files, not @ts-expect-error assertions that
 // could pass when a directory is accidentally excluded from the compiler.
 import assert from "node:assert/strict";
@@ -12,12 +12,11 @@ try {
   const api = await mkdtemp(path.join(root, "app/api/typecheck-probe-"));
   dirs.push(api);
   await writeFile(
-    path.join(api, "route.js"),
+    path.join(api, "route.ts"),
     `
 import { currentUser } from ${JSON.stringify("../../../lib/auth.ts")};
 import { publicAuthor } from ${JSON.stringify("../../../lib/profile-dto.ts")};
-/** @param {Request} request */
-export async function GET(request) {
+export async function GET(request: Request) {
   const viewer = await currentUser();
   if (viewer) viewer.role = 42;
   publicAuthor({ id: 42, username: "probe", name: "Probe" });
@@ -25,29 +24,29 @@ export async function GET(request) {
 }
 `,
   );
-  const apiResult = check("jsconfig.json");
-  assert.match(apiResult, /route\.js.*TS2322/);
-  assert.match(apiResult, /route\.js.*TS2769/);
-  assert.match(apiResult, /route\.js.*TS2339/);
+  const apiResult = check("tsconfig.json");
+  assert.match(apiResult, /route\.ts.*TS2322/);
+  assert.match(apiResult, /route\.ts.*TS2769/);
+  assert.match(apiResult, /route\.ts.*TS2339/);
   await rm(api, { recursive: true, force: true });
   const lib = await mkdtemp(path.join(root, "lib/typecheck-probe-"));
   dirs.push(lib);
   await writeFile(
-    path.join(lib, "null.js"),
+    path.join(lib, "null.ts"),
     `
 import { ownedBike } from ${JSON.stringify("../repository.ts")};
 import { currentViewer } from ${JSON.stringify("../viewer.ts")};
-/** @param {import(${JSON.stringify("../repository.ts")}).Queryable} db */
-export async function probe(db) {
+import type { Queryable } from ${JSON.stringify("../repository.ts")};
+export async function probe(db: Queryable) {
   const bike = await ownedBike(db, "id", "owner");
   const viewer = await currentViewer();
   return bike.name + viewer.id;
 }
 `,
   );
-  const nullResult = check("jsconfig.strict.json");
-  assert.match(nullResult, /null\.js.*TS18047: 'bike'/);
-  assert.match(nullResult, /null\.js.*TS18047: 'viewer'/);
+  const nullResult = check("tsconfig.json");
+  assert.match(nullResult, /null\.ts.*TS18047: 'bike'/);
+  assert.match(nullResult, /null\.ts.*TS18047: 'viewer'/);
   await rm(lib, { recursive: true, force: true });
 
   const nativeLib = await mkdtemp(path.join(root, "lib/typecheck-probe-"));
@@ -155,20 +154,24 @@ export async function GET(request: Request) {
   // Scan the actual working tree; untracked JS must not evade the CI policy.
   const policyApp = await mkdtemp(path.join(root, "app/typecheck-probe-"));
   const policyLib = await mkdtemp(path.join(root, "lib/typecheck-probe-"));
-  dirs.push(policyApp, policyLib);
+  const policyApi = await mkdtemp(path.join(root, "app/api/typecheck-probe-"));
+  dirs.push(policyApp, policyLib, policyApi);
   for (const [dir, name] of [
     [policyApp, "new.js"],
     [policyApp, "new.jsx"],
     [policyLib, "new.mjs"],
     [policyLib, "new.cjs"],
+    [policyApi, "route.js"],
   ])
     await writeFile(path.join(dir, name), "export const value = 1;\n");
   const policy = run("scripts/check-production-typescript.js");
   assert.equal(policy.status, 1, policy.stdout + policy.stderr);
   for (const ext of ["js", "jsx", "mjs", "cjs"])
     assert.ok(policy.stderr.includes(`new.${ext}`), policy.stderr);
+  assert.ok(policy.stderr.includes("route.js"), policy.stderr);
   await rm(policyApp, { recursive: true, force: true });
   await rm(policyLib, { recursive: true, force: true });
+  await rm(policyApi, { recursive: true, force: true });
 
   // Shared modules also run directly in workers and ops, without a TS loader.
   const runtimeLib = await mkdtemp(path.join(root, "lib/typecheck-probe-"));
@@ -192,6 +195,26 @@ export async function GET(request: Request) {
   const baselinePath = path.join(root, "scripts/production-js-baseline.json");
   const savedBaseline = await readFile(baselinePath, "utf8");
   try {
+    // Completed backend migration cannot be bypassed by expanding the UI list.
+    const backend = await mkdtemp(path.join(root, "app/api/typecheck-probe-"));
+    dirs.push(backend);
+    const backendFile = path.join(backend, "route.js");
+    await writeFile(backendFile, "export const GET = () => new Response();\n");
+    await writeFile(
+      baselinePath,
+      JSON.stringify([
+        ...JSON.parse(savedBaseline),
+        path.relative(root, backendFile),
+      ]),
+    );
+    const backendPolicy = run("scripts/check-production-typescript.js");
+    assert.equal(
+      backendPolicy.status,
+      1,
+      backendPolicy.stdout + backendPolicy.stderr,
+    );
+    assert.match(backendPolicy.stderr, /route\.js/);
+    await rm(backend, { recursive: true, force: true });
     await writeFile(
       baselinePath,
       JSON.stringify([...JSON.parse(savedBaseline), "lib/deleted-probe.js"]),
@@ -213,7 +236,7 @@ export async function GET(request: Request) {
   assert.match(lint.stdout, /@typescript-eslint\/no-explicit-any/);
   assert.match(lint.stdout, /@typescript-eslint\/ban-ts-comment/);
   console.log(
-    "Typecheck gates reject legacy API/DTO/null errors, strict TS/TSX errors, new JS, non-erasable shared TS and TS lint suppressions.",
+    "Typecheck gates reject native API/DTO/null errors, strict TS/TSX errors, new JS, non-erasable shared TS and TS lint suppressions.",
   );
 } finally {
   for (const dir of dirs) await rm(dir, { recursive: true, force: true });

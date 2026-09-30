@@ -14,15 +14,15 @@ import {
   rideBikeStateError,
 } from "../../lib/bike-status.ts";
 import { userTimeZone } from "../../lib/user-time-zone.ts";
-import { areaChanged, placeChanged } from "../../lib/ride-agreement.js";
-import { localDateTime, validTimeZone } from "../../lib/ride-intent-time.js";
+import { areaChanged, placeChanged } from "../../lib/ride-agreement.ts";
+import { localDateTime, validTimeZone } from "../../lib/ride-intent-time.ts";
 import {
   foldChoices,
   foldOf,
   planInstants,
   planLocalTimes,
   planPrivacy,
-} from "../../lib/ride-plan-input.js";
+} from "../../lib/ride-plan-input.ts";
 
 // «Организовать покатушку» (#253): when and where → the ride → who takes part
 // → the rest. The zone comes from the profile (a series keeps its own), the

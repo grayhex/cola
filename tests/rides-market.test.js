@@ -5,9 +5,9 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { PGlite } from "@electric-sql/pglite";
-import { parseGarminCsv, assertMatchingTrack } from "../lib/garmin-csv.js";
+import { parseGarminCsv, assertMatchingTrack } from "../lib/garmin-csv.ts";
 import { prepareSvg } from "../lib/svg-asset.ts";
-import { parseGpx } from "../lib/ride-gpx.js";
+import { parseGpx } from "../lib/ride-gpx.ts";
 import {
   previewRide,
   importGarmin,
@@ -20,7 +20,7 @@ import {
   respondRideInvitation,
   cancelPlannedRide,
   bikeRideStats,
-} from "../lib/rides.js";
+} from "../lib/rides.ts";
 import {
   saveListing,
   marketList,

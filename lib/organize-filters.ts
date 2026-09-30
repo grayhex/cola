@@ -1,5 +1,5 @@
-import { ridePlanOptions } from "./ride-plan-options.js";
-import { presetRange } from "./ride-filters.js";
+import { ridePlanOptions } from "./ride-plan-options.ts";
+import { presetRange } from "./ride-filters.ts";
 
 // «Собрать компанию» (#234): the organizer's compact filters → the groups
 // query of /api/ride-matches and the planner prefill. Nothing here reaches

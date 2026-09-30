@@ -1,12 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { setTimeout as delay } from "node:timers/promises";
-import { createYandexMapsLoader, yandexApiUrl } from "../lib/yandex-maps.js";
+import { createYandexMapsLoader, yandexApiUrl } from "../lib/yandex-maps.ts";
 import {
   createYandexRideMap,
   yandexRoute,
   yandexGroundLayerId,
-} from "../lib/yandex-ride-map.js";
+} from "../lib/yandex-ride-map.ts";
 import {
   mapDefaults,
   mapStyle,

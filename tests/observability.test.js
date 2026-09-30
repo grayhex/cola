@@ -55,11 +55,11 @@ test("scrub removes personal data and secrets but keeps identifiers", () => {
 test("stack frames keep code locations for Node and browsers", () => {
   const node = [
     "TypeError: Cannot read properties of undefined (reading 'id')",
-    `    at saveRide (${process.cwd()}/lib/rides.js:120:14)`,
+    `    at saveRide (${process.cwd()}/lib/rides.ts:120:14)`,
     "    at async handler (file:///app/.next/server/app/api/rides/route.js:3:99)",
   ].join("\n");
   assert.deepEqual(stackFrames(node), [
-    "saveRide (lib/rides.js:120:14)",
+    "saveRide (lib/rides.ts:120:14)",
     "async handler (/app/.next/server/app/api/rides/route.js:3:99)",
   ]);
   const browser =
@@ -192,7 +192,7 @@ test("DSN parsing, event format and envelope follow the Sentry protocol", () => 
       errorType: "TypeError",
       message: "boom",
       stack: [
-        "saveRide (lib/rides.js:120:14)",
+        "saveRide (lib/rides.ts:120:14)",
         "handler (app/api/rides/route.js:3:9)",
       ],
     },
@@ -220,7 +220,7 @@ test("DSN parsing, event format and envelope follow the Sentry protocol", () => 
       lineno: frames.at(-1).lineno,
       colno: frames.at(-1).colno,
     },
-    { filename: "lib/rides.js", lineno: 120, colno: 14 },
+    { filename: "lib/rides.ts", lineno: 120, colno: 14 },
   );
   const lines = envelopeBody(event)
     .split("\n")

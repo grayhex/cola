@@ -10,12 +10,12 @@ import {
   mayJoin,
   participationState,
   placeChanged,
-} from "../lib/ride-agreement.js";
+} from "../lib/ride-agreement.ts";
 import {
   rideAnnouncement,
   rideFormatLabel,
   rideTimeLabel,
-} from "../lib/ride-announcement.js";
+} from "../lib/ride-announcement.ts";
 import {
   attachRideTrack,
   cancelPlannedRide,
@@ -30,7 +30,7 @@ import {
   saveRide,
   setRideRecruitment,
   upcomingRides,
-} from "../lib/rides.js";
+} from "../lib/rides.ts";
 import { loadSocialCard, loadSocialPreview } from "../lib/social-preview.ts";
 import { cardContent } from "../lib/social-card.ts";
 import { notificationPage } from "../lib/notifications.ts";

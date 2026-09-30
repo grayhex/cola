@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { analysisChannels } from "../../lib/ride-analysis-contract.js";
+import { analysisChannels } from "../../lib/ride-analysis-contract.ts";
 import styles from "./ride-analysis.module.css";
 
 const labels = {

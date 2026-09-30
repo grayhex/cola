@@ -15,7 +15,7 @@ export const loop = Array.from({ length: 81 }, (_, i) => [
 const FIT_EPOCH_S = 631065600;
 const semicircles = (deg) => Math.round((deg * 2 ** 31) / 180) >>> 0;
 // FIT's own CRC-16 (reflected polynomial 0xA001), written out independently
-// of lib/ride-fit.js so the fixtures do not trust the code under test.
+// of lib/ride-fit.ts so the fixtures do not trust the code under test.
 export function crc16(bytes) {
   let crc = 0;
   for (const byte of bytes) {

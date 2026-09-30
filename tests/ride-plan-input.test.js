@@ -6,7 +6,7 @@ import {
   planInstants,
   planLocalTimes,
   planPrivacy,
-} from "../lib/ride-plan-input.js";
+} from "../lib/ride-plan-input.ts";
 
 // #253: Europe/Berlin goes back from 03:00 to 02:00 on 2031-10-26, so 02:30
 // happens twice; on 2031-03-30 it jumps from 02:00 to 03:00.

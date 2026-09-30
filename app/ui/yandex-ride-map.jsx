@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { loadYandexMaps } from "../../lib/yandex-maps.js";
-import { createYandexRideMap, yandexRoute } from "../../lib/yandex-ride-map.js";
+import { loadYandexMaps } from "../../lib/yandex-maps.ts";
+import { createYandexRideMap, yandexRoute } from "../../lib/yandex-ride-map.ts";
 import RideBasemap from "./ride-basemap.jsx";
 import styles from "./yandex-ride-map.module.css";
 

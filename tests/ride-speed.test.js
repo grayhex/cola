@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parseGpx } from "../lib/ride-gpx.js";
-import { speedProfile } from "../lib/ride-speed.js";
+import { parseGpx } from "../lib/ride-gpx.ts";
+import { speedProfile } from "../lib/ride-speed.ts";
 import { gpx, loop } from "./ride-fixtures.js";
 
 test("speed uses measured visible GPX intervals, has bounded size and exposes no coordinates or timestamps", () => {

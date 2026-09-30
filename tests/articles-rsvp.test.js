@@ -24,7 +24,7 @@ import {
   respondRide,
   rideOccurrence,
   cancelPlannedRide,
-} from "../lib/rides.js";
+} from "../lib/rides.ts";
 import { defaultSettings, defaultCatalog } from "../lib/site-defaults.ts";
 import { articleBlocks, articleInline } from "../lib/article-markup.ts";
 import { settingsInput } from "../lib/admin-validation.ts";

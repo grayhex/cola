@@ -1,4 +1,4 @@
-import { validTimeZone } from "./ride-intent-time.js";
+import { validTimeZone } from "./ride-intent-time.ts";
 
 /** The rider's zone for new intents and planned rides (#253): the profile
 setting when saved, else the browser's own zone. */

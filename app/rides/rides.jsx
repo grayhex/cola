@@ -9,13 +9,13 @@ import RideList from "../ui/ride-list.jsx";
 import { CompactDialog } from "../ui/compact-ui.jsx";
 import SiteIcon from "../ui/site-icon.jsx";
 import { SocialHeader, SocialFooter } from "../ui/social-primitives.jsx";
-import { ridePlanOptions } from "../../lib/ride-plan-options.js";
+import { ridePlanOptions } from "../../lib/ride-plan-options.ts";
 import {
   datePresets,
   durationBuckets,
   filterLabels,
   readFilters,
-} from "../../lib/ride-filters.js";
+} from "../../lib/ride-filters.ts";
 import { readOrganize } from "../../lib/organize-filters.ts";
 
 // «Собрать компанию» (#234) loads only when a signed-in organizer opens it.

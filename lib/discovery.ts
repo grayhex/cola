@@ -25,7 +25,7 @@ import { showcase } from "./showcase.ts";
 import { records } from "./gamification.ts";
 import { homeRecords } from "./gamification-presentation.ts";
 import { journalPublic, journalFrom } from "./journal.ts";
-import { effectiveRide, rideFrom } from "./rides.js";
+import { effectiveRide, rideFrom } from "./rides.ts";
 import { plainExcerpt } from "./excerpt.ts";
 import { richExcerpt } from "./rich-text.ts";
 import { listingPriceLabel } from "./market-types.ts";
@@ -248,7 +248,10 @@ export async function communityActivity(q: Queryable) {
   const content = items.filter((i) => i.type !== "achievement").slice(0, 6);
   return { events: items.slice(0, 16), content };
 }
-export async function communityHome(q: Queryable, viewer = null) {
+export async function communityHome(
+  q: Queryable,
+  viewer: string | null | undefined = null,
+) {
   const [popular, activity, hall] = await Promise.all([
     showcase(q, viewer, { sort: "popular" }),
     communityActivity(q),

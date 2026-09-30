@@ -8,8 +8,8 @@ import {
   resolveLocal,
   quickWindows,
   windowDraft,
-} from "../lib/ride-intent-time.js";
-import { normalizeIntent, intentInput } from "../lib/ride-intent-input.js";
+} from "../lib/ride-intent-time.ts";
+import { normalizeIntent, intentInput } from "../lib/ride-intent-input.ts";
 import {
   createIntent,
   updateIntent,
@@ -18,7 +18,7 @@ import {
   intentDetail,
   intentPreferences,
   saveIntentPreferences,
-} from "../lib/ride-intents.js";
+} from "../lib/ride-intents.ts";
 import { exportAccount } from "../lib/account-data.ts";
 const body = (
   date = new Date(Date.now() + 86400000).toISOString().slice(0, 10),

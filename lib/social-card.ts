@@ -7,10 +7,10 @@ import sharp from "sharp";
 import { categoryFilterLabels } from "./bike-classification.ts";
 import { journalKinds } from "./journal-kinds.ts";
 import { listingPriceLabel } from "./market-types.ts";
-import { defaultRideFields, formatRideMetric } from "./garmin-fields.js";
-import { routePaths } from "./ride-geometry.js";
+import { defaultRideFields, formatRideMetric } from "./garmin-fields.ts";
+import { routePaths } from "./ride-geometry.ts";
 import { isGeneratedUsername } from "./usernames.ts";
-import { rideFormatLabel, rideTimeLabel } from "./ride-announcement.js";
+import { rideFormatLabel, rideTimeLabel } from "./ride-announcement.ts";
 
 export interface CardData {
   author?: string;

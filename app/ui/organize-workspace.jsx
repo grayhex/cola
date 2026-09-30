@@ -7,7 +7,7 @@ import Modal from "./garage/modal.jsx";
 import { MotionList } from "./motion.jsx";
 import { Avatar, socialApi } from "./social-primitives.jsx";
 import { useSite } from "./site-provider.jsx";
-import { ridePlanOptions } from "../../lib/ride-plan-options.js";
+import { ridePlanOptions } from "../../lib/ride-plan-options.ts";
 import { userTimeZone } from "../../lib/user-time-zone.ts";
 import {
   organizeDraft,

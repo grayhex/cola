@@ -2,7 +2,7 @@ import { z } from "zod";
 import { defaultScoring } from "./bike-score.ts";
 import { reservedUsernames } from "./usernames.ts";
 import { credentials } from "./validation.ts";
-import { validTimeZone } from "./ride-intent-time.js";
+import { validTimeZone } from "./ride-intent-time.ts";
 const adjustment = z
   .object({
     reference: z.number().positive().max(999999999),

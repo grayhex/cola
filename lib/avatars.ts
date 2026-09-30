@@ -20,7 +20,7 @@ export async function prepareAvatar(bytes: Buffer) {
 export async function replaceAvatar(
   transaction: typeof transactionType,
   owner: string,
-  bytes: Buffer,
+  bytes: Buffer | null,
   directory: string,
 ) {
   const id = bytes ? randomUUID() : null,

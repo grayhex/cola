@@ -190,7 +190,7 @@ test("missing/empty asset sets never trigger an unrestricted DELETE", async () =
 
 test("cleanup route retains admin, Origin, UUID bounds, audit and post-commit file cleanup", () => {
   const route = readFileSync(
-    new URL("../app/api/admin/assets/library/route.js", import.meta.url),
+    new URL("../app/api/admin/assets/library/route.ts", import.meta.url),
     "utf8",
   );
   assert.match(route, /user\.role !== "admin"/);

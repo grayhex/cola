@@ -1,6 +1,6 @@
 import type { ReportInput as ReportInputType } from "./community-validation.ts";
 import type { Queryable } from "./db.ts";
-import { changeRideComment } from "./ride-comments.js";
+import { changeRideComment } from "./ride-comments.ts";
 import { journalSocial } from "./journal-social.ts";
 import { randomUUID } from "node:crypto";
 import { CommunityError } from "./community-validation.ts";

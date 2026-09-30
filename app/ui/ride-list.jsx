@@ -10,7 +10,7 @@ import {
 import { socialApi, Pagination } from "./social-primitives.jsx";
 import RideCard, { rideDate } from "./ride-card.jsx";
 import { useSite } from "./site-provider.jsx";
-import { apiFilters } from "../../lib/ride-filters.js";
+import { apiFilters } from "../../lib/ride-filters.ts";
 import { plural } from "../../lib/plural.ts";
 
 // Back/forward returns to the same public list and scroll position (#233):

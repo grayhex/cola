@@ -11,7 +11,7 @@ import {
   groupSlots,
   compareMatches,
   normalizeLabel,
-} from "../lib/ride-match-core.js";
+} from "../lib/ride-match-core.ts";
 import {
   riderQuery,
   draftQuery,
@@ -19,7 +19,7 @@ import {
   groupsQuery,
   interestInvitationsInput,
   queryObject,
-} from "../lib/ride-match-input.js";
+} from "../lib/ride-match-input.ts";
 import {
   matchRides,
   planInterest,
@@ -27,8 +27,8 @@ import {
   planOccurrences,
   interestGroups,
   inviteFromInterest,
-} from "../lib/ride-matching.js";
-import { resolveLocal } from "../lib/ride-intent-time.js";
+} from "../lib/ride-matching.ts";
+import { resolveLocal } from "../lib/ride-intent-time.ts";
 
 const H = 3600000;
 const at = (/** @type {string} */ iso) => Date.parse(iso);

@@ -1,6 +1,6 @@
 import { db, transaction } from "../lib/db.ts";
-import { rwgpsConfig } from "../lib/rwgps.js";
-import { runActivityBatch } from "../lib/activity-worker.js";
+import { rwgpsConfig } from "../lib/rwgps.ts";
+import { runActivityBatch } from "../lib/activity-worker.ts";
 import pg from "pg";
 
 async function batch() {
