@@ -20,7 +20,7 @@ const RideAnalysis = dynamic(() => import("./ride-analysis.jsx"));
 // A failed chunk leaves the ride, its agreement and RSVP working (#235).
 const Discussion = dynamic(
   () =>
-    import("./discussion.jsx").catch(() => ({
+    import("./discussion.tsx").catch(() => ({
       default: function DiscussionUnavailable() {
         return (
           <p className="help" role="status">

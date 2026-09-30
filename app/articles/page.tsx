@@ -1,0 +1,11 @@
+import { Articles } from "../ui/articles.tsx";
+import { indexed } from "../../lib/indexing.ts";
+export const metadata = {
+  title: "Статьи · ColaBike",
+  description:
+    "База знаний велосипедистов: обслуживание, компоненты и полезный опыт.",
+  robots: indexed,
+};
+export default function Page() {
+  return <Articles />;
+}

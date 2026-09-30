@@ -1,0 +1,39 @@
+import { notFound } from "next/navigation";
+import PublicProfile from "../ui/public-profile.tsx";
+import {
+  metadataFor,
+  canonicalPage,
+  sharePath,
+  pageData,
+} from "../../lib/social-page.ts";
+import { routeParam } from "../../lib/public-urls.ts";
+export const runtime = "nodejs",
+  dynamic = "force-dynamic";
+function usernameFrom(segment) {
+  const profile = routeParam(segment);
+  if (!/^@[a-z0-9._-]{3,30}$/i.test(profile)) notFound();
+  return profile.slice(1);
+}
+export async function generateMetadata({ params, searchParams }) {
+  return metadataFor(
+    "profile",
+    usernameFrom((await params).profile),
+    await searchParams,
+  );
+}
+export default async function Page({ params, searchParams }) {
+  const reference = usernameFrom((await params).profile);
+  const username = await canonicalPage(
+    "profile",
+    reference,
+    await searchParams,
+  );
+  return (
+    <PublicProfile
+      key={username}
+      username={username}
+      sharePath={await sharePath("profile", reference)}
+      initial={await pageData("profile", username)}
+    />
+  );
+}

@@ -26,14 +26,14 @@ import { AuthorLink } from "../social-primitives.tsx";
 import Photo from "../bike-photo.tsx";
 import BikeActions from "../bike-actions.tsx";
 import GroupedComponents from "../grouped-components.tsx";
-import { BikeGame } from "../achievements.jsx";
+import { BikeGame } from "../achievements.tsx";
 import RideList from "../ride-list.jsx";
-import JournalList from "../journal-list.jsx";
+import JournalList from "../journal-list.tsx";
 import { ArrowLeft, ChevronRight, Plus, X, Package, Lock } from "../icons.tsx";
 import api from "./api.ts";
 
 // Keep the reader's page independent of the comment editor bundle.
-const Discussion = dynamic(() => import("../discussion.jsx"), { ssr: false });
+const Discussion = dynamic(() => import("../discussion.tsx"), { ssr: false });
 const rub = (v: string | number) =>
   new Intl.NumberFormat("ru-RU", {
     style: "currency",

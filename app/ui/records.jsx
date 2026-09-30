@@ -4,7 +4,7 @@ import Link from "next/link";
 import styles from "./records.module.css";
 import { socialApi, SocialHeader, SocialFooter } from "./social-primitives.tsx";
 import { useSite } from "./site-provider.tsx";
-import AchievementArt from "./achievement-art.jsx";
+import AchievementArt from "./achievement-art.tsx";
 import { Medal, Trophy } from "./icons.tsx";
 import { groupByMetric } from "../../lib/gamification-presentation.ts";
 import { metricValue } from "../../lib/game-metrics.ts";

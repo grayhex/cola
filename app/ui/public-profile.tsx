@@ -1,0 +1,241 @@
+"use client";
+import Link from "next/link";
+import RideList from "./ride-list.jsx";
+import BikeGrid from "./bike-grid.tsx";
+import { BadgeShelf } from "./achievements.tsx";
+import { ReportButton } from "./community-controls.tsx";
+import { Bike, Route } from "./icons.tsx";
+import { useEffect, useRef, useState } from "react";
+import { MapPin, Calendar, ArrowLeft } from "./icons.tsx";
+import {
+  Avatar,
+  SocialHeader,
+  SocialFooter,
+  FollowButton,
+  PeopleList,
+  Pagination,
+  socialApi,
+} from "./social-primitives.tsx";
+import BikeCard from "./bike-card.tsx";
+import { useSite } from "./site-provider.tsx";
+import ShareButton from "./share-button.tsx";
+import LocalDate from "./local-date.tsx";
+export default function PublicProfile({
+  username,
+  sharePath = null,
+  initial = null,
+}) {
+  const [profile, setProfile] = useState(initial?.profile || null),
+    [feed, setFeed] = useState(initial?.bikes || null),
+    [page, setPage] = useState(1),
+    [people, setPeople] = useState(""),
+    [collection, setCollection] = useState("bikes"),
+    [error, setError] = useState("");
+  const { viewer: user, chatEnabled } = useSite();
+  // The server rendered the profile and the first page of bikes (#74).
+  const seed = useRef(initial),
+    seedBikes = useRef(initial?.bikes);
+  async function refresh() {
+    const d = await socialApi("social/profiles/" + username);
+    setProfile(d.profile);
+  }
+  useEffect(() => {
+    let active = true;
+    setError("");
+    const profileRequest =
+      seed.current || socialApi("social/profiles/" + username);
+    seed.current = null;
+    Promise.resolve(profileRequest)
+      .then((data) => {
+        if (active) setProfile(data.profile);
+      })
+      .catch((e) => {
+        if (active) setError(e.message);
+      });
+    return () => {
+      active = false;
+    };
+  }, [username]);
+  useEffect(() => {
+    let active = true;
+    if (seedBikes.current && page === 1) {
+      seedBikes.current = null;
+      return;
+    }
+    seedBikes.current = null;
+    setFeed(null);
+    socialApi("social/profiles/" + username + "/bikes?page=" + page)
+      .then((d) => {
+        if (active) setFeed(d);
+      })
+      .catch((e) => {
+        if (active) setError(e.message);
+      });
+    return () => {
+      active = false;
+    };
+  }, [username, page]);
+  return (
+    <>
+      <SocialHeader user={user} />
+      <main className="page public-profile">
+        {error ? (
+          <section className="social-empty">
+            <h1>Профиль недоступен</h1>
+            <p role="alert">{error}</p>
+            <Link href="/">На витрину</Link>
+          </section>
+        ) : !profile ? (
+          <p role="status">Загружаем профиль…</p>
+        ) : (
+          <>
+            <section className="profile-hero">
+              <Avatar person={profile} size="large" />
+              <div className="profile-title">
+                <p className="eyebrow">Владелец коллекции</p>
+                <h1>{profile.name}</h1>
+                <span className="username">@{profile.username}</span>
+                {profile.bio && (
+                  <section className="profile-about">
+                    <h2>О себе</h2>
+                    <p className="profile-bio">{profile.bio}</p>
+                  </section>
+                )}
+                <div className="profile-meta">
+                  {profile.location && (
+                    <span>
+                      <MapPin size={14} />
+                      {profile.location}
+                    </span>
+                  )}
+                  <span>
+                    <Calendar size={14} />С нами с{" "}
+                    <LocalDate
+                      value={profile.createdAt}
+                      options={{ month: "long", year: "numeric" }}
+                    />
+                  </span>
+                </div>
+              </div>
+              <FollowButton profile={profile} user={user} onChange={refresh} />
+              <ShareButton path={sharePath} title={profile.name} />
+              {chatEnabled && user && !profile.relationship.isSelf && (
+                <Link
+                  className="button secondary"
+                  href={"/messages?to=" + profile.id}
+                >
+                  Написать
+                </Link>
+              )}
+              {!profile.relationship.isSelf && (
+                <ReportButton
+                  entityType="profile"
+                  targetId={profile.id}
+                  user={user}
+                />
+              )}
+              <div className="social-stats">
+                <button onClick={() => setPeople("")} aria-pressed={!people}>
+                  <strong>{profile.counts.bikes}</strong>Велосипеды
+                </button>
+                <button
+                  onClick={() => setPeople("followers")}
+                  aria-pressed={people === "followers"}
+                >
+                  <strong>{profile.counts.followers}</strong>Подписчики
+                </button>
+                <button
+                  onClick={() => setPeople("following")}
+                  aria-pressed={people === "following"}
+                >
+                  <strong>{profile.counts.following}</strong>Подписки
+                </button>
+                <button
+                  onClick={() => setPeople("friends")}
+                  aria-pressed={people === "friends"}
+                >
+                  <strong>{profile.counts.friends}</strong>Друзья
+                </button>
+              </div>
+            </section>
+            <BadgeShelf
+              endpoint={"game/profiles/" + profile.username}
+              prominent
+            />
+            {people ? (
+              <section className="social-panel">
+                <button className="quiet" onClick={() => setPeople("")}>
+                  <ArrowLeft size={15} />К велосипедам
+                </button>
+                <h2>
+                  {
+                    {
+                      followers: "Подписчики",
+                      following: "Подписки",
+                      friends: "Друзья",
+                    }[people]
+                  }
+                </h2>
+                <PeopleList
+                  key={people}
+                  username={profile.username}
+                  kind={people}
+                  user={user}
+                  onChange={refresh}
+                />
+              </section>
+            ) : (
+              <section className="profile-collection">
+                <div className="social-switch ui-tabs">
+                  <button
+                    className="quiet"
+                    aria-pressed={collection === "bikes"}
+                    onClick={() => setCollection("bikes")}
+                  >
+                    <Bike size={17} aria-hidden="true" />
+                    Велосипеды
+                  </button>
+                  <button
+                    className="quiet"
+                    aria-pressed={collection === "rides"}
+                    onClick={() => setCollection("rides")}
+                  >
+                    <Route size={17} aria-hidden="true" />
+                    Покатушки
+                  </button>
+                </div>
+                {collection === "rides" ? (
+                  <RideList username={username} />
+                ) : (
+                  <>
+                    <h2>
+                      Коллекция велосипедов <span>{profile.counts.bikes}</span>
+                    </h2>
+                    {feed ? (
+                      <>
+                        <BikeGrid bikes={feed.bikes}>
+                          {feed.bikes.map((b) => (
+                            <BikeCard key={b.id} bike={b} user={user} />
+                          ))}
+                        </BikeGrid>
+                        {!feed.bikes.length && (
+                          <p className="help">
+                            Владелец ещё не опубликовал велосипеды.
+                          </p>
+                        )}
+                        <Pagination {...feed} onPage={setPage} />
+                      </>
+                    ) : (
+                      <p role="status">Загружаем велосипеды…</p>
+                    )}
+                  </>
+                )}
+              </section>
+            )}
+          </>
+        )}
+      </main>
+      <SocialFooter />
+    </>
+  );
+}

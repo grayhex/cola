@@ -15,7 +15,7 @@ import { errorMessage } from "../../lib/errors.ts";
 import { useConfirmation } from "../ui/confirmation.tsx";
 import { useEffect, useState } from "react";
 import { socialApi } from "../ui/social-primitives.tsx";
-import AchievementArt from "../ui/achievement-art.jsx";
+import AchievementArt from "../ui/achievement-art.tsx";
 import { Medal, Plus, RefreshCw, Save, Trash2, Trophy } from "../ui/icons.tsx";
 import AssetPicker from "./asset-picker.tsx";
 import GameImagePrompt from "./game-image-prompt.tsx";

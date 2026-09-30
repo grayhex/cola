@@ -12,7 +12,7 @@ import {
   RefreshCw,
   Trash2,
 } from "lucide-react";
-import PassportTiles from "./passport-tiles.jsx";
+import PassportTiles from "./passport-tiles.tsx";
 import { useSite } from "./site-provider.tsx";
 import {
   SocialHeader,
