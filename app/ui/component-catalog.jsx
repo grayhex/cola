@@ -3,15 +3,15 @@ import Link from "next/link";
 import Image from "next/image";
 import { useState } from "react";
 import { Bike, ArrowUpRight } from "lucide-react";
-import { SocialHeader, SocialFooter } from "./social-primitives.jsx";
-import { useSite } from "./site-provider.jsx";
+import { SocialHeader, SocialFooter } from "./social-primitives.tsx";
+import { useSite } from "./site-provider.tsx";
 import ComponentIllustration from "./component-illustration.jsx";
-import SiteIcon from "./site-icon.jsx";
+import SiteIcon from "./site-icon.tsx";
 import { plural } from "../../lib/plural.ts";
 import styles from "./component-catalog.module.css";
 import ComponentNavigation from "./component-navigation.jsx";
 import { componentNavigation } from "../../lib/component-navigation.ts";
-import { SharedView } from "./motion.jsx";
+import { SharedView } from "./motion.tsx";
 
 function ComponentCover({ model, icons }) {
   const [failed, setFailed] = useState(false);

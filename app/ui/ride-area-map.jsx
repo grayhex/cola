@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Minus, Plus, MapPin, X } from "lucide-react";
 import { MapAttribution } from "./ride-basemap.jsx";
-import { useSite } from "./site-provider.jsx";
+import { useSite } from "./site-provider.tsx";
 import {
   mapDefaults,
   isRasterProvider,

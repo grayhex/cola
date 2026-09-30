@@ -26,13 +26,13 @@ flowchart TD
 
 Compose содержит пять долгоживущих сервисов: `app`, `db`, `bike-resolver`, `chat-sync` и `activity-sync`. Одноразовый `migrate` применяет схему перед запуском app и workers. Оба worker используют общий образ `ops`; включение и настройка провайдеров описаны в [чате](../integrations/chat.md) и [синхронизации активностей](../integrations/activity-sync.md). Nginx установлен на хосте и не входит в Compose. База физически общая, но доменные таблицы приложения и схема `bike_resolver` имеют разных владельцев логики. Отдельного Redis, брокера очередей или Elasticsearch нет: задания интеграций хранятся в PostgreSQL. Файловая очистка обслуживается `scripts/cleanup-rides.js`. Переписка и вложения Stream хранятся у провайдера, а оригиналы импортированных поездок — в локальном rides volume.
 
-Основной код — React в смешанной JS/TS-фазе миграции #256: новый production-код пишется на strict TypeScript/TSX, существующий JavaScript сохраняет JSDoc gates. Resolver — TypeScript/Fastify. Общие типы viewer, публичных DTO и API-границ находятся в `lib/contracts.ts`; Zod и DTO-mappers остаются runtime-источником истины. Версии зависимостей смотрите в [package.json](../../package.json), [package.json Resolver](../../services/bike-resolver/package.json) и lock-файлах; Docker-образы в [Dockerfile](../../Dockerfile) и [Compose](../../compose.prod.yaml). Не путайте Node приложения с runtime, на котором выполняется Marketplace action в CI.
+Основной код — React в смешанной JS/TS-фазе миграции #256: новый production-код пишется на strict TypeScript/TSX, backend/API и core UI (shared/auth/account) проверяются единым strict typecheck; оставшийся legacy UI ещё использует JavaScript. Resolver — TypeScript/Fastify. Общие типы viewer, публичных DTO и API-границ находятся в `lib/contracts.ts`; Zod и DTO-mappers остаются runtime-источником истины. Версии зависимостей смотрите в [package.json](../../package.json), [package.json Resolver](../../services/bike-resolver/package.json) и lock-файлах; Docker-образы в [Dockerfile](../../Dockerfile) и [Compose](../../compose.prod.yaml). Не путайте Node приложения с runtime, на котором выполняется Marketplace action в CI.
 
 ## Карта кода
 
 | Область                             | Ответственность                                                           |
 | ----------------------------------- | ------------------------------------------------------------------------- |
-| `app/**/page.jsx`, `app/layout.jsx` | Маршруты Next, общий layout, начальные настройки                          |
+| `app/**/page.jsx`, `app/layout.tsx` | Маршруты Next, общий layout, начальные настройки                          |
 | `app/ui/`                           | Клиентские компоненты, запросы, локальный черновик и состояния интерфейса |
 | `app/api/`                          | HTTP, авторизация, Origin, лимиты, входные схемы, вызов доменных функций  |
 | `lib/`                              | SQL и доменная логика, DTO, валидация, файлы, настройки, клиент Resolver  |
@@ -47,7 +47,7 @@ Compose содержит пять долгоживущих сервисов: `ap
 
 [lib/db.ts](../../lib/db.ts) предоставляет `db` и `transaction`. Доменные функции, принимающие `q`, могут работать как с пулом, так и внутри транзакции. Это позволяет проверять правила на тестовой базе и сохранять согласованность нескольких изменений. Не открывайте независимую транзакцию из функции, которая должна участвовать в транзакции вызывающего кода.
 
-[SiteProvider](../../app/ui/site-provider.jsx) объединяет серверные настройки сайта и личные предпочтения. Настройки отображения публичны. Секреты подключения к БД и внутреннему сервису сюда не попадают.
+[SiteProvider](../../app/ui/site-provider.tsx) объединяет серверные настройки сайта и личные предпочтения. Настройки отображения публичны. Секреты подключения к БД и внутреннему сервису сюда не попадают.
 
 ## Граница парсера
 

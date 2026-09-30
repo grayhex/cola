@@ -1,8 +1,8 @@
 "use client";
-import SiteIcon from "./site-icon.jsx";
-import { useMotionFeedback } from "./motion.jsx";
+import SiteIcon from "./site-icon.tsx";
+import { useMotionFeedback } from "./motion.tsx";
 import { ClassificationBadges } from "./bike-classification.jsx";
-import { ContentLabel, LabelRow } from "./content-label.jsx";
+import { ContentLabel, LabelRow } from "./content-label.tsx";
 // The year, the size and the weight in one row: on cards and under the
 // title of the bike page (#131).
 export function BikeLabels({ bike }) {

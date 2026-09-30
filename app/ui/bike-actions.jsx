@@ -2,7 +2,7 @@
 import { useId } from "react";
 import { BikeLike } from "./bike-labels.jsx";
 import BikeFollow from "./bike-follow.jsx";
-import ShareButton from "./share-button.jsx";
+import ShareButton from "./share-button.tsx";
 import {
   MessageCircle,
   ImagePlus,
@@ -11,7 +11,7 @@ import {
   Lock,
   Pencil,
   Trash2,
-} from "./icons.jsx";
+} from "./icons.tsx";
 import { publicPath } from "../../lib/public-urls.ts";
 import styles from "./bike-actions.module.css";
 

@@ -18,10 +18,10 @@ import {
   ScanLine,
   Search,
   ShieldCheck,
-} from "../ui/icons.jsx";
-import { useSite } from "../ui/site-provider.jsx";
-import { SocialHeader, SocialFooter } from "../ui/social-primitives.jsx";
-import { useReveal } from "../ui/use-reveal.js";
+} from "../ui/icons.tsx";
+import { useSite } from "../ui/site-provider.tsx";
+import { SocialHeader, SocialFooter } from "../ui/social-primitives.tsx";
+import { useReveal } from "../ui/use-reveal.ts";
 import Link from "next/link";
 import { legalKinds, legalTitles } from "../../lib/legal-titles.ts";
 import {

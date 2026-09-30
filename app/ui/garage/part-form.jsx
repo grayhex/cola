@@ -1,9 +1,9 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { useSite } from "../site-provider.jsx";
+import { useSite } from "../site-provider.tsx";
 import PartIcon from "../part-icon.jsx";
-import { Check, Lock } from "../icons.jsx";
-import Field from "./field.jsx";
+import { Check, Lock } from "../icons.tsx";
+import Field from "./field.tsx";
 import { productCategory } from "../../../lib/component-products.ts";
 
 export default function PartForm({

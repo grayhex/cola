@@ -1,8 +1,8 @@
 "use client";
 import { useEffect, useId, useState } from "react";
 import Link from "next/link";
-import { Flame, Sparkles, Star } from "./icons.jsx";
-import { socialApi } from "./social-primitives.jsx";
+import { Flame, Sparkles, Star } from "./icons.tsx";
+import { socialApi } from "./social-primitives.tsx";
 import AchievementArt from "./achievement-art.jsx";
 import { metricValue } from "../../lib/game-metrics.ts";
 // Records held now and awards kept for good, as two separate blocks (#106):

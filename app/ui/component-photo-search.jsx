@@ -2,9 +2,9 @@
 import { useId, useState } from "react";
 import Image from "next/image";
 import { Search } from "lucide-react";
-import { CompactDialog } from "./compact-ui.jsx";
-import { socialApi } from "./social-primitives.jsx";
-import EmailPolicyAction from "./email-policy-action.jsx";
+import { CompactDialog } from "./compact-ui.tsx";
+import { socialApi } from "./social-primitives.tsx";
+import EmailPolicyAction from "./email-policy-action.tsx";
 import styles from "./component-gallery.module.css";
 
 export function PhotoSource({ source }) {

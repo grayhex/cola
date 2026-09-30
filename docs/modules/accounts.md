@@ -8,7 +8,7 @@
 
 ## Точки входа
 
-`/account` (вкладка «Аккаунт» — `/account?tab=account`), `/@<username>` (старый `/u/<username>` перенаправляет), `/confirm-email`, `/api/auth/register`, `/api/auth/login`, `/api/auth/logout`, `/api/me`, `/api/account/*`; дополнительные операции профиля/предпочтений — в `app/api/social`. UI: [account.jsx](../../app/ui/account.jsx), [public-profile.jsx](../../app/ui/public-profile.jsx). Вход/регистрация используют существующий интерфейс гаража, а не независимую систему авторизации.
+`/account` (вкладка «Аккаунт» — `/account?tab=account`), `/@<username>` (старый `/u/<username>` перенаправляет), `/confirm-email`, `/api/auth/register`, `/api/auth/login`, `/api/auth/logout`, `/api/me`, `/api/account/*`; дополнительные операции профиля/предпочтений — в `app/api/social`. UI: [account.jsx](../../app/ui/account.tsx), [public-profile.jsx](../../app/ui/public-profile.jsx). Вход/регистрация используют существующий интерфейс гаража, а не независимую систему авторизации.
 
 ## Данные и основные функции
 
@@ -63,7 +63,7 @@ unset NEW_PASSWORD
 
 ## Безопасность аккаунта и данные (#70)
 
-Вкладка «Аккаунт» в кабинете (`/account?tab=account`, [account-security.jsx](../../app/ui/account-security.jsx)); серверная часть — [account-data.js](../../lib/account-data.ts). Каждое изменение — `POST`/`DELETE` с проверкой сессии и `Origin` (`sameOrigin`); пароль, почта, выгрузка и удаление ограничены по частоте на аккаунт.
+Вкладка «Аккаунт» в кабинете (`/account?tab=account`, [account-security.jsx](../../app/ui/account-security.tsx)); серверная часть — [account-data.js](../../lib/account-data.ts). Каждое изменение — `POST`/`DELETE` с проверкой сессии и `Origin` (`sameOrigin`); пароль, почта, выгрузка и удаление ограничены по частоте на аккаунт.
 
 - **Пароль** — `POST /api/account/password` (`currentPassword`, `password`): неверный текущий пароль — 403, совпадающий с текущим — 400. После смены завершаются все сессии, кроме этого браузера, и отменяются ссылки восстановления.
 - **Почта** — `POST /api/account/email` (`password`, `email`): письмо со ссылкой уходит на новый адрес, до её открытия для входа работает прежний. Ссылка (`/confirm-email#…`, назначение `email_change` в `auth_tokens`, 24 часа, одноразовая) открывается без входа — `POST /api/account/email/confirm`. Она меняет адрес, сразу считает его подтверждённым, отменяет остальные ссылки аккаунта и шлёт на прежний адрес уведомление со ссылкой на восстановление доступа. Если адрес за это время занял другой аккаунт — 409 `EMAIL_TAKEN`. Без настроенной почты смена адреса недоступна (503).

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ChevronDown, ChevronRight, Shapes } from "lucide-react";
 import ComponentIllustration from "./component-illustration.jsx";
-import { useMotionFeedback } from "./motion.jsx";
+import { useMotionFeedback } from "./motion.tsx";
 import { plural } from "../../lib/plural.ts";
 import {
   componentNavigation,

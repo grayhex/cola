@@ -13,17 +13,17 @@ import {
   Trash2,
 } from "lucide-react";
 import PassportTiles from "./passport-tiles.jsx";
-import { useSite } from "./site-provider.jsx";
+import { useSite } from "./site-provider.tsx";
 import {
   SocialHeader,
   SocialFooter,
   socialApi,
   AuthorLink,
-} from "./social-primitives.jsx";
-import AuthPage from "./auth-page.jsx";
-import { useConfirmation } from "./confirmation.jsx";
-import Modal from "./garage/modal.jsx";
-import { MotionList, SharedView, useMotionFeedback } from "./motion.jsx";
+} from "./social-primitives.tsx";
+import AuthPage from "./auth-page.tsx";
+import { useConfirmation } from "./confirmation.tsx";
+import Modal from "./garage/modal.tsx";
+import { MotionList, SharedView, useMotionFeedback } from "./motion.tsx";
 import { AreaField, ExtraConditions } from "./ride-plan-fields.jsx";
 import RidePassport from "./ride-passport.jsx";
 import {

@@ -6,8 +6,8 @@ import {
   legalTitles,
   publishedLegalDocument,
 } from "../../../lib/legal-documents.ts";
-import GlobalHeader from "../../ui/global-header.jsx";
-import { SocialFooter } from "../../ui/social-primitives.jsx";
+import GlobalHeader from "../../ui/global-header.tsx";
+import { SocialFooter } from "../../ui/social-primitives.tsx";
 import RichTextBody from "../../ui/rich-text-body.jsx";
 import { parseRichText } from "../../../lib/rich-text.ts";
 import { indexed } from "../../../lib/indexing.ts";

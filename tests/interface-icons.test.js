@@ -27,7 +27,7 @@ test("interface icons: a line icon unless the administrator chose an emoji", () 
 
 test("interface icons: every slot has its own line icon", async () => {
   const source = await readFile(
-    new URL("../app/ui/site-icon.jsx", import.meta.url),
+    new URL("../app/ui/site-icon.tsx", import.meta.url),
     "utf8",
   );
   const block = source.slice(

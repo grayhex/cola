@@ -510,7 +510,12 @@ test("one date of a series is cancelled or revised without touching the others",
   const t = await setup();
   const { db, tx, owner } = t;
   try {
+    // The later +1 hour edit must stay on the same Moscow weekday, even
+    // when the test runs at 23:xx there. A midnight crossing is a new date.
+    const start = new Date(at(48));
+    start.setUTCHours(9, 0, 0, 0);
     const ride = await t.plan({
+      scheduledAt: start.toISOString(),
       recurrence: "weekly",
       recurrenceTimezone: "Europe/Moscow",
     });

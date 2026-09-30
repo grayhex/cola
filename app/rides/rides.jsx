@@ -3,12 +3,12 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { X } from "lucide-react";
-import { useSite } from "../ui/site-provider.jsx";
+import { useSite } from "../ui/site-provider.tsx";
 import RideCreationActions from "../ui/ride-creation-actions.jsx";
 import RideList from "../ui/ride-list.jsx";
-import { CompactDialog } from "../ui/compact-ui.jsx";
-import SiteIcon from "../ui/site-icon.jsx";
-import { SocialHeader, SocialFooter } from "../ui/social-primitives.jsx";
+import { CompactDialog } from "../ui/compact-ui.tsx";
+import SiteIcon from "../ui/site-icon.tsx";
+import { SocialHeader, SocialFooter } from "../ui/social-primitives.tsx";
 import { ridePlanOptions } from "../../lib/ride-plan-options.ts";
 import {
   datePresets,

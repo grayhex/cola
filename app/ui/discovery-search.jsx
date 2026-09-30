@@ -8,10 +8,10 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Bike, Route, Wrench, ArrowRight } from "lucide-react";
-import { SocialHeader, SocialFooter } from "./social-primitives.jsx";
-import { useSite } from "./site-provider.jsx";
-import SearchBox from "./search-box.jsx";
-import SmallImage from "./small-image.jsx";
+import { SocialHeader, SocialFooter } from "./social-primitives.tsx";
+import { useSite } from "./site-provider.tsx";
+import SearchBox from "./search-box.tsx";
+import SmallImage from "./small-image.tsx";
 import styles from "./discovery-search.module.css";
 const tabs = [
   ["all", "Все"],

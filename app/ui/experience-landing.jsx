@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
-import { SocialHeader, SocialFooter } from "./social-primitives.jsx";
-import { useSite } from "./site-provider.jsx";
+import { SocialHeader, SocialFooter } from "./social-primitives.tsx";
+import { useSite } from "./site-provider.tsx";
 import BikeCard from "./bike-card.jsx";
 import BikeGrid from "./bike-grid.jsx";
 import JournalCard from "./journal-card.jsx";
@@ -9,7 +9,7 @@ import { plural } from "../../lib/plural.ts";
 import { Camera, Bike, MessageCircle, BookOpen } from "lucide-react";
 import { ComponentPath } from "./component-navigation.jsx";
 import ComponentAbout from "./component-about.jsx";
-import { SharedView } from "./motion.jsx";
+import { SharedView } from "./motion.tsx";
 import PartIcon from "./part-icon.jsx";
 import styles from "./experience-landing.module.css";
 import dynamic from "next/dynamic";

@@ -1,8 +1,8 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { CompactDialog } from "../ui/compact-ui.jsx";
-import { Avatar } from "../ui/avatar.jsx";
-import { Check, Search, Send, Users, X } from "../ui/icons.jsx";
+import { CompactDialog } from "../ui/compact-ui.tsx";
+import { Avatar } from "../ui/avatar.tsx";
+import { Check, Search, Send, Users, X } from "../ui/icons.tsx";
 import { chatApi } from "./chat-api.js";
 
 export default function NewConversation({ onClose, onCreated }) {

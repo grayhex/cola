@@ -2,11 +2,11 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import SiteIcon from "./site-icon.jsx";
-import AccountSectionHead from "./account-section.jsx";
+import SiteIcon from "./site-icon.tsx";
+import AccountSectionHead from "./account-section.tsx";
 import RideForm from "./ride-form.jsx";
 import PlanComposer from "./plan-composer.jsx";
-import { socialApi, Pagination } from "./social-primitives.jsx";
+import { socialApi, Pagination } from "./social-primitives.tsx";
 import RideCard from "./ride-card.jsx";
 
 // «Мои покатушки» (#245): the rider's own planned and completed rides and

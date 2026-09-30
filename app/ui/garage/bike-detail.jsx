@@ -1,18 +1,18 @@
 "use client";
 import dynamic from "next/dynamic";
-import { SharedView } from "../motion.jsx";
+import { SharedView } from "../motion.tsx";
 import { defaultBlocks } from "../../../lib/garage-layout.ts";
 import { componentText } from "../../../services/bike-resolver/src/component-identity.js";
 import { BikeLabels } from "../bike-labels.jsx";
-import { AuthorLink } from "../social-primitives.jsx";
+import { AuthorLink } from "../social-primitives.tsx";
 import Photo from "../bike-photo.jsx";
 import BikeActions from "../bike-actions.jsx";
 import GroupedComponents from "../grouped-components.jsx";
 import { BikeGame } from "../achievements.jsx";
 import RideList from "../ride-list.jsx";
 import JournalList from "../journal-list.jsx";
-import { ArrowLeft, ChevronRight, Plus, X, Package, Lock } from "../icons.jsx";
-import api from "./api.js";
+import { ArrowLeft, ChevronRight, Plus, X, Package, Lock } from "../icons.tsx";
+import api from "./api.ts";
 
 // Keep the reader's page independent of the comment editor bundle.
 const Discussion = dynamic(() => import("../discussion.jsx"), { ssr: false });

@@ -1,5 +1,5 @@
 "use client";
-import { Plus, Trash2, ArrowUp, ArrowDown } from "../ui/icons.jsx";
+import { Plus, Trash2, ArrowUp, ArrowDown } from "../ui/icons.tsx";
 import PartIcon from "../ui/part-icon.jsx";
 import { iconNames } from "../../lib/part-icons.ts";
 import { moveItem, defaultGroups } from "../../lib/garage-layout.ts";

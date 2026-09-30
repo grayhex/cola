@@ -20,8 +20,8 @@ import {
   useChatContext,
   useChannelStateContext,
 } from "stream-chat-react";
-import { Avatar } from "../ui/avatar.jsx";
-import { CompactDialog, CompactIconButton } from "../ui/compact-ui.jsx";
+import { Avatar } from "../ui/avatar.tsx";
+import { CompactDialog, CompactIconButton } from "../ui/compact-ui.tsx";
 import {
   ArrowLeft,
   CheckCheck,
@@ -30,11 +30,11 @@ import {
   MessagesSquare,
   Plus,
   Users,
-} from "../ui/icons.jsx";
+} from "../ui/icons.tsx";
 import { chatApi } from "./chat-api.js";
 import NewConversation from "./new-conversation.jsx";
 import { Images, plainText } from "./chat-content.jsx";
-import { socialApi } from "../ui/social-primitives.jsx";
+import { socialApi } from "../ui/social-primitives.tsx";
 import { publicPath } from "../../lib/public-urls.ts";
 import { rideTimeLabel } from "../../lib/ride-announcement.ts";
 import { streamUserId } from "../../lib/chat-config.ts";

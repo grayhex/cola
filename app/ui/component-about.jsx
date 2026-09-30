@@ -2,8 +2,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FileText, Pencil } from "lucide-react";
-import { CompactDialog } from "./compact-ui.jsx";
-import { socialApi } from "./social-primitives.jsx";
+import { CompactDialog } from "./compact-ui.tsx";
+import { socialApi } from "./social-primitives.tsx";
 import { productCategories } from "../../lib/component-products.ts";
 import styles from "./component-about.module.css";
 

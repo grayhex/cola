@@ -1,5 +1,5 @@
 "use client";
-import EmailPolicyAction from "./email-policy-action.jsx";
+import EmailPolicyAction from "./email-policy-action.tsx";
 import Link from "next/link";
 import {
   useCallback,
@@ -9,11 +9,11 @@ import {
   createContext,
   useContext,
 } from "react";
-import { Avatar, socialApi } from "./social-primitives.jsx";
+import { Avatar, socialApi } from "./social-primitives.tsx";
 import { ReportButton, PageControls } from "./community-controls.jsx";
 import dynamic from "next/dynamic";
 import RichTextBody from "./rich-text-body.jsx";
-import { MessagesSquare, Reply } from "./icons.jsx";
+import { MessagesSquare, Reply } from "./icons.tsx";
 import { profilePath } from "../../lib/public-urls.ts";
 import { personName, usernameLabel } from "../../lib/usernames.ts";
 // The composer brings the editor; guests read comments without it (#117).

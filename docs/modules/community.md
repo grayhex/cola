@@ -8,7 +8,7 @@
 
 ## Точки входа
 
-Публичные профили, социальная вкладка аккаунта, `/feed`, уведомления; HTTP-группы `app/api/social`, `app/api/community` и объектные маршруты bikes/rides/journal/components. [discussion.jsx](../../app/ui/discussion.jsx) и [social-primitives.jsx](../../app/ui/social-primitives.jsx) используются совместно несколькими разделами.
+Публичные профили, социальная вкладка аккаунта, `/feed`, уведомления; HTTP-группы `app/api/social`, `app/api/community` и объектные маршруты bikes/rides/journal/components. [discussion.jsx](../../app/ui/discussion.jsx) и [social-primitives.jsx](../../app/ui/social-primitives.tsx) используются совместно несколькими разделами.
 
 ## Данные и основные функции
 

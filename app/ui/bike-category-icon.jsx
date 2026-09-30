@@ -1,4 +1,4 @@
-import { Bike } from "./icons.jsx";
+import { Bike } from "./icons.tsx";
 export default function BikeCategoryIcon({ label, size = 28 }) {
   return (
     <Bike

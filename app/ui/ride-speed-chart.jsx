@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useId, useRef, useState } from "react";
-import { Gauge } from "./icons.jsx";
+import { Gauge } from "./icons.tsx";
 import styles from "./ride-speed-chart.module.css";
 
 export default function RideSpeedChart({ profile = [] }) {

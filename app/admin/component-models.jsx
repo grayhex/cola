@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { socialApi, Pagination } from "../ui/social-primitives.jsx";
+import { socialApi, Pagination } from "../ui/social-primitives.tsx";
 import { productCategories } from "../../lib/component-products.ts";
 
 export default function ComponentModels({ kind = "component" }) {

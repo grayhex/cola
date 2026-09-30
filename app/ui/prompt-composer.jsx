@@ -11,7 +11,7 @@ import {
   safeRichLink,
   PhotoReference,
 } from "../../lib/rich-text.ts";
-import { useSite } from "./site-provider.jsx";
+import { useSite } from "./site-provider.tsx";
 import RichTextBody from "./rich-text-body.jsx";
 import {
   Bold,
@@ -23,7 +23,7 @@ import {
   Undo2,
   Redo2,
   RemoveFormatting,
-} from "./icons.jsx";
+} from "./icons.tsx";
 import styles from "./prompt-composer.module.css";
 
 // In the editor an illustration shows its picture and an editable caption,

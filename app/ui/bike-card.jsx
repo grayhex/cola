@@ -1,18 +1,19 @@
 "use client";
 import { BikeLabels, BikeLike } from "./bike-labels.jsx";
 import Link from "next/link";
-import { SharedView } from "./motion.jsx";
-import { Lock, MessageCircle, Bike } from "./icons.jsx";
+import { SharedView } from "./motion.tsx";
+import { Lock, MessageCircle, Bike } from "./icons.tsx";
 import Photo from "./bike-photo.jsx";
-import { AuthorLink } from "./social-primitives.jsx";
-import { useSite } from "./site-provider.jsx";
-import { MicroMetrics } from "./compact-ui.jsx";
-import { useBikeReaction } from "./use-bike-reaction.js";
+import { AuthorLink } from "./social-primitives.tsx";
+import { useSite } from "./site-provider.tsx";
+import { MicroMetrics } from "./compact-ui.tsx";
+import { useBikeReaction } from "./use-bike-reaction.ts";
 import styles from "./bike-card.module.css";
 import { publicPath } from "../../lib/public-urls.ts";
 
 // Photo-first card with a Datasets-style body (#127): the name, a row of
 // labels, then the owner and the counters in one quiet line.
+/** @param {{ bike: import("../../lib/contracts.ts").AccountBikeDto, onOpen?: () => void, user?: import("../../lib/contracts.ts").ViewerDto | null, onGuest?: () => void, ownerView?: boolean, headingLevel?: number, sizes?: string }} props */
 export default function BikeCard({
   bike: b,
   onOpen,

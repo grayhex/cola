@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { Camera } from "./icons.jsx";
-import { useSite } from "./site-provider.jsx";
+import { Camera } from "./icons.tsx";
+import { useSite } from "./site-provider.tsx";
 const demoImage =
   "https://dma.canyon.com/image/upload/w_930%2Ch_487%2Cc_fit/f_auto/q_auto/v1760425750/2025_FULL_grizl_al-7-raw_4527_R075_P08_ujmfyh";
 // Card width on the showcase grid: one column on phones, two on tablets.

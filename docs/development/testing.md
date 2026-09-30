@@ -26,6 +26,8 @@ bash scripts/test-backup-drill.sh
 
 Для UI без изменений Resolver после production build можно запустить `node scripts/test-ui.js`. Harness поднимает disposable PGlite и Next на 3100, выполняет `gallery-interactions.spec.js` в Chromium и завершает процессы. Браузер должен быть установлен Playwright. Можно передать другие spec-файлы, `--project` и обычные параметры Playwright. Пример: `node scripts/test-ui.js tests/e2e/design.spec.js tests/e2e/navigation.spec.js tests/e2e/garage-polish.spec.js tests/e2e/gallery-interactions.spec.js`. Ни production БД, ни внешний парсер не используются. Unit-регрессии очереди реакций, URL и контраста: `node --test tests/gallery-interactions.test.js`.
 
+После первой части #259 отрицательные пробы `test:typecheck` проверяют также реальные границы UI: props `CompactDialog`, nullable viewer, настройки пользователя и generic API response. Core UI покрывают `account-workspace`, `account-security`, `account-recovery`, `navigation`, `motion`, `gallery-interactions` и `accessibility`; для сценариев интеграций кабинета включайте `UI_TEST_ACTIVITY=1` (fixture Ride with GPS).
+
 Опциональный `COMMUNITY_ARTWORK_DIR` указывает на локальную папку с `bike-1.webp`…`bike-3.webp` для визуального сравнения с реальными публичными ресурсами. Без него тесты создают нейтральные локальные изображения. Это входные данные теста, не новая система управления графикой сайта.
 
 ## Что означает каждый уровень

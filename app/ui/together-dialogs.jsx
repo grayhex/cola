@@ -1,8 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
 import { IntentComposer, intentDraft } from "./ride-intents.jsx";
-import { socialApi } from "./social-primitives.jsx";
-import { useSite } from "./site-provider.jsx";
+import { socialApi } from "./social-primitives.tsx";
+import { useSite } from "./site-provider.tsx";
 import { userTimeZone } from "../../lib/user-time-zone.ts";
 export { default as PlanComposer } from "./plan-composer.jsx";
 

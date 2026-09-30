@@ -148,6 +148,32 @@ export async function GET(request: Request) {
   assert.match(appResult, /view\.tsx.*TS2322/);
   assert.match(appResult, /view\.tsx.*TS2339/);
   assert.match(appResult, /route\.ts.*TS2339/);
+  // Real migrated UI boundaries must reject bad props, preferences and DTOs.
+  await writeFile(
+    path.join(nativeApp, "core.tsx"),
+    `
+import { CompactDialog } from ${JSON.stringify("../ui/compact-ui.tsx")};
+import { useSite } from ${JSON.stringify("../ui/site-provider.tsx")};
+import { socialApi } from ${JSON.stringify("../ui/social-primitives.tsx")};
+import type { MeResponse, LegalMetadataDto } from ${JSON.stringify("../../lib/contracts.ts")};
+export function CoreProbe() {
+  const { viewer, setPreferences } = useSite();
+  setPreferences({ showMileage: "yes" });
+  return <CompactDialog open="yes" title="Probe" onClose={() => {}}>{viewer.email}</CompactDialog>;
+}
+export async function responseProbe() {
+  const result = await socialApi<MeResponse>("me");
+  return result.nonexistentProperty;
+}
+export function legalProbe(data: LegalMetadataDto): string {
+  return data.documents.terms.revision;
+}
+`,
+  );
+  const coreResult = check("tsconfig.json");
+  assert.equal((coreResult.match(/core\.tsx.*TS2322/g) || []).length, 3);
+  assert.match(coreResult, /core\.tsx.*TS18047/);
+  assert.match(coreResult, /core\.tsx.*TS2339/);
   await rm(nativeApp, { recursive: true, force: true });
   await rm(nativeApi, { recursive: true, force: true });
 

@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { socialApi } from "./social-primitives.jsx";
+import { socialApi } from "./social-primitives.tsx";
 import {
   garminFields,
   defaultRideFields,

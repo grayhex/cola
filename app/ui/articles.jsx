@@ -1,5 +1,5 @@
 "use client";
-import EmailPolicyAction from "./email-policy-action.jsx";
+import EmailPolicyAction from "./email-policy-action.tsx";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -10,13 +10,13 @@ import {
   AuthorLink,
   Pagination,
   socialApi,
-} from "./social-primitives.jsx";
-import { useSite } from "./site-provider.jsx";
-import SiteIcon from "./site-icon.jsx";
-import ChoiceMenu from "./choice-menu.jsx";
+} from "./social-primitives.tsx";
+import { useSite } from "./site-provider.tsx";
+import SiteIcon from "./site-icon.tsx";
+import ChoiceMenu from "./choice-menu.tsx";
 import ArticleBody from "./article-body.jsx";
 import Discussion from "./discussion.jsx";
-import LocalDate from "./local-date.jsx";
+import LocalDate from "./local-date.tsx";
 // Only authors need the editor; readers get the parsed article (#117).
 const PromptComposer = dynamic(() => import("./prompt-composer.jsx"), {
   ssr: false,

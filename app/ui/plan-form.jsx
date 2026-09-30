@@ -1,14 +1,14 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Globe, LockKeyhole } from "lucide-react";
-import EmailPolicyAction from "./email-policy-action.jsx";
-import SiteIcon from "./site-icon.jsx";
+import EmailPolicyAction from "./email-policy-action.tsx";
+import SiteIcon from "./site-icon.tsx";
 import PassportTiles from "./passport-tiles.jsx";
 import { AreaField, ExtraConditions } from "./ride-plan-fields.jsx";
 import { RideRoutePreview, RideMetrics } from "./ride-card.jsx";
-import { useMotionFeedback } from "./motion.jsx";
-import { useSite } from "./site-provider.jsx";
-import { socialApi } from "./social-primitives.jsx";
+import { useMotionFeedback } from "./motion.tsx";
+import { useSite } from "./site-provider.tsx";
+import { socialApi } from "./social-primitives.tsx";
 import {
   selectableRideBikes,
   rideBikeStateError,

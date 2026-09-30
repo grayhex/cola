@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useRef, useState } from "react";
 import { CalendarDays } from "lucide-react";
-import SiteIcon from "./site-icon.jsx";
+import SiteIcon from "./site-icon.tsx";
 
 const loadDialogs = () => import("./together-dialogs.jsx");
 const saved = {

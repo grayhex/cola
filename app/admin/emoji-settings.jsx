@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { emojiSlots, customEmoji, noCustomEmojis } from "../../lib/ui-emoji.ts";
-import SiteIcon from "../ui/site-icon.jsx";
+import SiteIcon from "../ui/site-icon.tsx";
 // Interface icons are line icons; an emoji typed here replaces one of them
 // everywhere at the same size. An empty field keeps the standard icon.
 export default function EmojiSettings({

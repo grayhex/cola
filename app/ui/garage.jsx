@@ -18,19 +18,20 @@ import {
   writeShowcaseQuery,
 } from "../../lib/showcase-query.ts";
 import { publicPath } from "../../lib/public-urls.ts";
-import EmailPolicyAction from "./email-policy-action.jsx";
-import { useConfirmation } from "./confirmation.jsx";
-import { useBikeReaction } from "./use-bike-reaction.js";
-import { useShowcaseScroll } from "./showcase-scroll.js";
-import { SocialFooter } from "./social-primitives.jsx";
-import GlobalHeader from "./global-header.jsx";
-import { Check, Lock, LoaderCircle } from "./icons.jsx";
-import { useSite } from "./site-provider.jsx";
-import api from "./garage/api.js";
+import EmailPolicyAction from "./email-policy-action.tsx";
+import { useConfirmation } from "./confirmation.tsx";
+import { useBikeReaction } from "./use-bike-reaction.ts";
+import { useShowcaseScroll } from "./showcase-scroll.ts";
+import { SocialFooter } from "./social-primitives.tsx";
+import GlobalHeader from "./global-header.tsx";
+import { Check, Lock, LoaderCircle } from "./icons.tsx";
+import { useSite } from "./site-provider.tsx";
+import api from "./garage/api.ts";
 import BikeDetail from "./garage/bike-detail.jsx";
 import Showcase from "./garage/showcase.jsx";
 import GarageModal from "./garage/garage-modal.jsx";
 
+/** @param {{ share?: string, initial?: { bike: import("../../lib/contracts.ts").AccountBikeDto } | null, account?: boolean, embedded?: boolean, startCreate?: boolean, initialBikeId?: string | null, onAuthenticated?: () => void, onCreateOpened?: () => void }} props */
 export default function Garage({
   share,
   initial = null,

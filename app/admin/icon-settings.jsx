@@ -8,7 +8,7 @@ import {
 } from "../../lib/design-graphics.ts";
 import AssetPicker from "./asset-picker.jsx";
 import { componentIllustrationSlots } from "../../lib/component-illustrations.ts";
-import { Image } from "../ui/icons.jsx";
+import { Image } from "../ui/icons.tsx";
 import styles from "./design.module.css";
 export default function IconSettings({
   settings,

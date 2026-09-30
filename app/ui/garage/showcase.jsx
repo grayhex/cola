@@ -3,13 +3,13 @@ import Link from "next/link";
 import { bikeCategories } from "../../../lib/bike-classification.ts";
 import { ClassificationFilters } from "../bike-classification.jsx";
 import styles from "../garage.module.css";
-import ChoiceMenu from "../choice-menu.jsx";
-import SiteIcon from "../site-icon.jsx";
-import { FilterControl, FilterChips } from "../compact-ui.jsx";
+import ChoiceMenu from "../choice-menu.tsx";
+import SiteIcon from "../site-icon.tsx";
+import { FilterControl, FilterChips } from "../compact-ui.tsx";
 import BikeGrid from "../bike-grid.jsx";
 import BikeCard from "../bike-card.jsx";
-import { Search } from "../icons.jsx";
-import AccountSectionHead from "../account-section.jsx";
+import { Search } from "../icons.tsx";
+import AccountSectionHead from "../account-section.tsx";
 
 export default function Showcase({
   Main,

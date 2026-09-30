@@ -11,7 +11,7 @@ import {
   classificationFilterOptions,
 } from "../../lib/bike-classification.ts";
 import { bikeCategoryTone } from "../../lib/content-labels.ts";
-import { ContentLabel } from "./content-label.jsx";
+import { ContentLabel } from "./content-label.tsx";
 import styles from "./bike-classification.module.css";
 
 function Choice({

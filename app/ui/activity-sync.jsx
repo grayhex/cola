@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import SiteIcon from "./site-icon.jsx";
+import SiteIcon from "./site-icon.tsx";
 import styles from "./activity-sync.module.css";
 
 const endpoint = "/api/activity-sync/rwgps";

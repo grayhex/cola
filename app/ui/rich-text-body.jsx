@@ -1,5 +1,5 @@
 import { safeRichLink } from "../../lib/rich-link.ts";
-import ZoomablePhoto from "./zoomable-photo.jsx";
+import ZoomablePhoto from "./zoomable-photo.tsx";
 import styles from "./rich-text.module.css";
 
 // A paragraph that holds only illustrations is a block of figures.

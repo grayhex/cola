@@ -17,6 +17,36 @@ const sections = [
   "Оформление",
   "Аккаунт",
 ];
+test("an unavailable account profile reports an error without crashing the page", async ({
+  page,
+}) => {
+  const response = await registerVerified(page.request, {
+    headers: { origin },
+    data: {
+      ...testConsents,
+      name: "Missing profile",
+      email: `missing-profile-${randomUUID()}@example.test`,
+      password: "workspace-secret-123",
+    },
+  });
+  expect(response.status()).toBe(201);
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await page.route("**/api/social/account", async (route) => {
+    const response = await route.fetch();
+    await route.fulfill({
+      json: { ...(await response.json()), profile: null },
+    });
+  });
+  await page.goto("/account");
+  await expect(page.getByRole("main").getByRole("alert")).toHaveText(
+    "Профиль недоступен. Обновите страницу.",
+  );
+  await expect(
+    page.getByRole("heading", { name: "Личный кабинет", exact: true }),
+  ).toBeVisible();
+  expect(errors).toEqual([]);
+});
 test("sidebar, overview actions, one section shell, imports moved, old links and the header avatar", async ({
   page,
   isMobile,

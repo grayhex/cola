@@ -1,8 +1,8 @@
 "use client";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useSite } from "../ui/site-provider.jsx";
-import { SocialHeader, SocialFooter } from "../ui/social-primitives.jsx";
+import { useSite } from "../ui/site-provider.tsx";
+import { SocialHeader, SocialFooter } from "../ui/social-primitives.tsx";
 const Chat = dynamic(() => import("./stream-chat.jsx"), {
   ssr: false,
   loading: () => <p role="status">Загружаем сообщения…</p>,

@@ -9,13 +9,13 @@ import {
   socialApi,
   Pagination,
   Avatar,
-} from "./social-primitives.jsx";
-import { useSite } from "./site-provider.jsx";
+} from "./social-primitives.tsx";
+import { useSite } from "./site-provider.tsx";
 import BikeCard from "./bike-card.jsx";
 import BikeGrid from "./bike-grid.jsx";
 import JournalCard from "./journal-card.jsx";
-import { CompactDialog } from "./compact-ui.jsx";
-import { SlidersHorizontal } from "./icons.jsx";
+import { CompactDialog } from "./compact-ui.tsx";
+import { SlidersHorizontal } from "./icons.tsx";
 import { profilePath } from "../../lib/public-urls.ts";
 import { personName, usernameLabel } from "../../lib/usernames.ts";
 const empty = {

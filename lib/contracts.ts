@@ -1,3 +1,10 @@
+import type { discoverySearch } from "./discovery.ts";
+import type { listSessions } from "./account-data.ts";
+import type { legalMetadata } from "./legal-documents.ts";
+import type { followPage } from "./follows.ts";
+import type { decorateBike } from "./showcase.ts";
+import type { accountOverview } from "./profiles.ts";
+import type { profileInput } from "./social-validation.ts";
 import type { settingsInput as settingsInputType } from "./admin-validation.ts";
 import type { catalogInput as catalogInputType } from "./admin-validation.ts";
 // Type-only boundaries shared by native TS and legacy JSDoc. Keep runtime
@@ -6,6 +13,7 @@ import type { z } from "zod";
 import type { bikeInput, componentInput, credentials } from "./validation.ts";
 import type { classificationInput } from "./classification-validation.ts";
 import type { commentInput, reportInput } from "./community-validation.ts";
+export type UserPreferences = z.infer<typeof profileInput>["preferences"];
 export type SiteSettings = z.infer<typeof settingsInputType>;
 export type SiteCatalog = z.infer<typeof catalogInputType>;
 export interface SiteDefinition {
@@ -34,7 +42,7 @@ export interface CurrentUser {
   email: string;
   name: string;
   role: "user" | "admin";
-  preferences: Record<string, unknown>;
+  preferences: UserPreferences;
   username: string;
   bio: string;
   location: string;
@@ -165,3 +173,26 @@ export type JsonData<T> = T extends Date
   : T extends object
     ? { [K in keyof T]: JsonData<T[K]> }
     : T;
+
+// JSON responses consumed by the migrated core UI. Derive domain data from
+// the server producers; dates cross HTTP as strings.
+export type AccountOverviewDto = JsonData<
+  Awaited<ReturnType<typeof accountOverview>>
+>;
+export type AccountBikeDto = JsonData<Awaited<ReturnType<typeof decorateBike>>>;
+export type FollowPageDto = JsonData<
+  NonNullable<Awaited<ReturnType<typeof followPage>>>
+>;
+export type LegalMetadataDto = Awaited<ReturnType<typeof legalMetadata>>;
+export type SessionsDto = JsonData<Awaited<ReturnType<typeof listSessions>>>;
+export type DiscoverySearchDto = JsonData<
+  Awaited<ReturnType<typeof discoverySearch>>
+>;
+export interface EmailVerificationResponse {
+  ok: true;
+  verified?: boolean;
+  sent?: boolean;
+}
+export interface UnreadCountResponse {
+  unread: number;
+}
