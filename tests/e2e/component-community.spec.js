@@ -319,14 +319,20 @@ test("component gallery and discussion: private owner, upload, originals, captio
       // This scenario alternates two accounts/tabs. WebKit may suspend the
       // carousel's animation frames in the background; interact in the active tab.
       await area.page().bringToFront();
-      await area
-        .getByRole("navigation", { name: "Миниатюры фотографий" })
-        .getByRole("button")
-        .last()
-        .click();
-      await expect(
-        area.getByRole("slider", { name: "Выбор фото компонента" }),
-      ).toHaveValue("2");
+      // Right after a reload the thumbnails are server HTML, and a click that
+      // lands before hydration does nothing in WebKit (see rides.spec.js):
+      // click until the slider follows.
+      const slider = area.getByRole("slider", {
+        name: "Выбор фото компонента",
+      });
+      await expect(async () => {
+        await area
+          .getByRole("navigation", { name: "Миниатюры фотографий" })
+          .getByRole("button")
+          .last()
+          .click({ timeout: 2000 });
+        await expect(slider).toHaveValue("2", { timeout: 2000 });
+      }).toPass({ timeout: 15000 });
       await expect
         .poll(() =>
           area

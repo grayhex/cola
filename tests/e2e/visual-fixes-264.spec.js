@@ -36,6 +36,14 @@ async function member(request, label, { admin = false } = {}) {
   }
   return user;
 }
+// A click on server HTML before hydration does nothing in WebKit (see
+// rides.spec.js): click until the window opens.
+async function openWindow(button, dialog) {
+  await expect(async () => {
+    if (!(await dialog.isVisible())) await button.click({ timeout: 2000 });
+    await expect(dialog).toBeVisible({ timeout: 2000 });
+  }).toPass({ timeout: 15000 });
+}
 async function noOverflow(page) {
   const overflow = await pageOverflow(page);
   expect(overflow, overflow ? describeOverflow(overflow) : "fits").toBeNull();
@@ -264,6 +272,11 @@ test("planners: «Дополнительно» starts folded in both windows and
     expect(r.status()).toBe(201);
   }
   await page.goto("/ride-intents");
+  // The list loads on the client, so it also proves hydration (as in
+  // ride-intents.spec.js): an earlier click is lost in WebKit.
+  await expect(
+    page.getByText("Пока нет намерений.", { exact: false }),
+  ).toBeVisible();
   await page
     .getByRole("button", { name: "Выбрать время", exact: true })
     .click();
@@ -345,11 +358,12 @@ test("one «Хочу кататься» flow: the same «Новое намере
   ).toBeVisible();
   // The home page opens the very same window, not another form.
   await page.goto("/");
-  await page
-    .locator(".together-actions")
-    .getByRole("button", { name: "Хочу кататься" })
-    .click();
-  await expect(dialog).toBeVisible();
+  await openWindow(
+    page
+      .locator(".together-actions")
+      .getByRole("button", { name: "Хочу кататься" }),
+    dialog,
+  );
   await expect(dialog.locator(".planning-lead")).toHaveText(lead);
   await expect(dialog.getByLabel("Окно 1: с", { exact: true })).toHaveValue("");
   await expect(
