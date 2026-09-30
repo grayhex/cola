@@ -1,4 +1,17 @@
 "use client";
+import type { ViewerDto } from "../../lib/contracts.ts";
+import type {
+  CommentDto,
+  CommentPageDto,
+  ReplyPageDto,
+} from "./content-types.ts";
+type DiscussionEntity = "bike" | "component" | "article" | "journal" | "ride";
+interface Question {
+  solutionId?: string | null;
+  canSelect?: boolean;
+  refresh?: () => void | Promise<void>;
+}
+import { errorMessage } from "../../lib/errors.ts";
 import EmailPolicyAction from "./email-policy-action.tsx";
 import Link from "next/link";
 import {
@@ -20,39 +33,49 @@ import { personName, usernameLabel } from "../../lib/usernames.ts";
 const PromptComposer = dynamic(() => import("./prompt-composer.tsx"), {
   ssr: false,
 });
-const DiscussionKind = createContext("bike");
-const QuestionContext = createContext(null);
-const paths = (kind) =>
+const DiscussionKind = createContext<DiscussionEntity>("bike");
+const QuestionContext = createContext<Question | null>(null);
+const paths = (kind: DiscussionEntity) =>
   kind === "component"
     ? {
         items: "components/",
         comments: "components/comments/",
-        report: "component_comment",
+        report: "component_comment" as const,
       }
     : kind === "article"
       ? {
           items: "articles/",
           comments: "articles/comments/",
-          report: "journal_comment",
+          report: "journal_comment" as const,
         }
       : kind === "journal"
         ? {
             items: "journal/",
             comments: "journal/comments/",
-            report: "journal_comment",
+            report: "journal_comment" as const,
           }
         : kind === "ride"
           ? {
               items: "rides/",
               comments: "rides/comments/",
-              report: "ride_comment",
+              report: "ride_comment" as const,
             }
           : {
               items: "community/bikes/",
               comments: "community/comments/",
-              report: "comment",
+              report: "comment" as const,
             };
-function Editor({ initial = "", label, onSave, onCancel }) {
+function Editor({
+  initial = "",
+  label,
+  onSave,
+  onCancel,
+}: {
+  initial?: string;
+  label: string;
+  onSave: (body: string) => void | Promise<void>;
+  onCancel?: () => void;
+}) {
   const [body, setBody] = useState(initial),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
@@ -67,7 +90,7 @@ function Editor({ initial = "", label, onSave, onCancel }) {
           await onSave(body);
           setBody("");
         } catch (e) {
-          setError(e.message);
+          setError(errorMessage(e));
         } finally {
           setBusy(false);
         }
@@ -106,7 +129,19 @@ function Editor({ initial = "", label, onSave, onCancel }) {
     </form>
   );
 }
-function Comment({ comment: c, user, bikeId, refresh, reply = false }) {
+function Comment({
+  comment: c,
+  user,
+  bikeId,
+  refresh,
+  reply = false,
+}: {
+  comment: CommentDto;
+  user: ViewerDto | null;
+  bikeId: string;
+  refresh: () => Promise<void>;
+  reply?: boolean;
+}) {
   const question = useContext(QuestionContext);
   const api = paths(useContext(DiscussionKind));
   const [editing, setEditing] = useState(false),
@@ -139,7 +174,7 @@ function Comment({ comment: c, user, bikeId, refresh, reply = false }) {
       </div>
       {editing ? (
         <Editor
-          initial={c.body}
+          initial={c.body || ""}
           label="Изменить комментарий"
           onCancel={() => setEditing(false)}
           onSave={async (body) => {
@@ -170,7 +205,7 @@ function Comment({ comment: c, user, bikeId, refresh, reply = false }) {
                     });
                     await question.refresh?.();
                   } catch (e) {
-                    setError(e.message);
+                    setError(errorMessage(e));
                   } finally {
                     setBusy(false);
                   }
@@ -221,7 +256,7 @@ function Comment({ comment: c, user, bikeId, refresh, reply = false }) {
                 setConfirm(false);
                 await refresh();
               } catch (e) {
-                setError(e.message);
+                setError(errorMessage(e));
               } finally {
                 setBusy(false);
               }
@@ -257,16 +292,26 @@ function Comment({ comment: c, user, bikeId, refresh, reply = false }) {
     </article>
   );
 }
-function Thread({ root, user, bikeId, refresh }) {
+function Thread({
+  root,
+  user,
+  bikeId,
+  refresh,
+}: {
+  root: CommentPageDto["comments"][number];
+  user: ViewerDto | null;
+  bikeId: string;
+  refresh: () => Promise<void>;
+}) {
   const api = paths(useContext(DiscussionKind));
   const [page, setPage] = useState(1),
     [expanded, setExpanded] = useState(false),
-    [data, setData] = useState(null),
+    [data, setData] = useState<ReplyPageDto | null>(null),
     [error, setError] = useState("");
   useEffect(() => {
     if (!expanded) return;
     let alive = true;
-    socialApi(
+    socialApi<ReplyPageDto>(
       api.items + bikeId + "/comments/" + root.id + "/replies?page=" + page,
     )
       .then((d) => {
@@ -312,17 +357,27 @@ function Thread({ root, user, bikeId, refresh }) {
     </div>
   );
 }
-/** @param {{ bike: { id: string, author?: { id: string } | null, kind?: string, solutionId?: string | null, isOwner?: boolean }, user: import("../../lib/contracts.ts").ViewerDto | null, entityType?: string, onSolution?: () => void }} props */
 export default function Discussion({
   bike,
   user,
   entityType = "bike",
   onSolution,
+}: {
+  bike: {
+    id: string;
+    author?: { id: string } | null;
+    kind?: string;
+    solutionId?: string | null;
+    isOwner?: boolean;
+  };
+  user: ViewerDto | null;
+  entityType?: DiscussionEntity;
+  onSolution?: () => void | Promise<void>;
 }) {
   const api = paths(entityType);
-  const [data, setData] = useState(null),
+  const [data, setData] = useState<CommentPageDto | null>(null),
     [page, setPage] = useState(1),
-    [focus, setFocus] = useState(null),
+    [focus, setFocus] = useState<string | null>(null),
     [loaded, setLoaded] = useState(false),
     [error, setError] = useState("");
   useEffect(() => {
@@ -333,7 +388,7 @@ export default function Discussion({
   const refresh = useCallback(async () => {
     const revision = ++requests.current.revision;
     try {
-      const d = await socialApi(
+      const d = await socialApi<CommentPageDto>(
         api.items +
           bike.id +
           "/comments?page=" +
@@ -344,7 +399,7 @@ export default function Discussion({
       setData(d);
       setError("");
     } catch (e) {
-      if (revision === requests.current.revision) setError(e.message);
+      if (revision === requests.current.revision) setError(errorMessage(e));
     }
   }, [api.items, bike.id, page, focus]);
   useEffect(() => {

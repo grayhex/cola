@@ -1,19 +1,32 @@
 "use client";
+import type { FormEvent } from "react";
+import type { ChatPerson, chatPeople } from "../../lib/chat-people.ts";
+import { errorMessage } from "../../lib/errors.ts";
 import { useEffect, useRef, useState } from "react";
 import { CompactDialog } from "../ui/compact-ui.tsx";
 import { Avatar } from "../ui/avatar.tsx";
 import { Check, Search, Send, Users, X } from "../ui/icons.tsx";
 import { chatApi } from "./chat-api.ts";
 
-export default function NewConversation({ onClose, onCreated }) {
+export default function NewConversation({
+  onClose,
+  onCreated,
+}: {
+  onClose: () => void;
+  onCreated: (cid: string) => void;
+}) {
   const [query, setQuery] = useState("");
-  const [result, setResult] = useState({ query: null, people: [], error: "" });
-  const [selected, setSelected] = useState([]);
+  const [result, setResult] = useState<{
+    query: string | null;
+    people: ChatPerson[];
+    error: string;
+  }>({ query: null, people: [], error: "" });
+  const [selected, setSelected] = useState<ChatPerson[]>([]);
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [retry, setRetry] = useState(0);
-  const input = useRef(null);
+  const input = useRef<HTMLInputElement>(null);
   const active = useRef(true);
   const term = query.trim();
   const short = term && term.replace(/^@/, "").length < 2;
@@ -30,7 +43,7 @@ export default function NewConversation({ onClose, onCreated }) {
     const controller = new AbortController();
     const timer = setTimeout(
       () => {
-        chatApi(
+        chatApi<Awaited<ReturnType<typeof chatPeople>>>(
           "people?q=" + encodeURIComponent(term),
           undefined,
           controller.signal,
@@ -51,7 +64,7 @@ export default function NewConversation({ onClose, onCreated }) {
       clearTimeout(timer);
     };
   }, [term, short, retry]);
-  function toggle(person) {
+  function toggle(person: ChatPerson) {
     setError("");
     setSelected((current) =>
       current.some((p) => p.id === person.id)
@@ -61,20 +74,20 @@ export default function NewConversation({ onClose, onCreated }) {
           : current,
     );
   }
-  async function create(event) {
+  async function create(event: FormEvent) {
     event.preventDefault();
     if (busy || !selected.length) return;
     setBusy(true);
     setError("");
     try {
-      const { cid } = await chatApi("channels", {
+      const { cid } = await chatApi<{ cid: string }>("channels", {
         kind: selected.length === 1 ? "dm" : "group",
         members: selected.map((p) => p.id),
         ...(selected.length > 1 ? { name } : {}),
       });
       if (active.current) onCreated(cid);
     } catch (e) {
-      if (active.current) setError(e.message);
+      if (active.current) setError(errorMessage(e));
     } finally {
       if (active.current) setBusy(false);
     }

@@ -1,4 +1,22 @@
 "use client";
+import type { MouseEventHandler } from "react";
+import type { Passport, Range } from "../../lib/ride-match-core.ts";
+type ChoiceKey = "purpose" | "pace" | "surface";
+type RangeKey = "distanceKm" | "durationMinutes" | "groupSize";
+type TileBase = {
+  label: string;
+  title: string;
+  icon: typeof Target;
+  any: string;
+};
+type ChoiceTile = TileBase & { key: ChoiceKey; unit?: never };
+type RangeTile = TileBase & {
+  key: RangeKey;
+  unit: string;
+  max: number;
+  step: number;
+};
+type PassportTile = ChoiceTile | RangeTile;
 import { useRef, useState } from "react";
 import {
   ChevronRight,
@@ -17,7 +35,7 @@ import styles from "./passport-tiles.module.css";
 // Option tiles for the shared ride passport (#243, rules of #230/#231): one
 // control for the preferences section and the intent composer, editing the
 // same passport object. Each tile opens a compact sheet, never a long form.
-export const passportTiles = [
+export const passportTiles: PassportTile[] = [
   {
     key: "purpose",
     label: "Цель",
@@ -70,13 +88,31 @@ export const passportTiles = [
     step: 1,
   },
 ];
-export function tileValue(tile, passport = {}) {
+export function tileValue(tile: PassportTile, passport: Passport = {}) {
   const v = passport[tile.key];
   if (v === undefined) return null;
-  if (!tile.unit) return ridePlanOptions[tile.key][v] || null;
-  return `${v.min === v.max ? v.min : `${v.min}–${v.max}`} ${tile.unit}`;
+  if (tile.unit === undefined)
+    return (
+      Object.entries(ridePlanOptions[tile.key]).find(
+        ([key]) => key === passport[tile.key],
+      )?.[1] || null
+    );
+  const range = passport[tile.key]!;
+  return `${range.min === range.max ? range.min : `${range.min}–${range.max}`} ${tile.unit}`;
 }
-function Tile({ tile, passport, required, disabled, onOpen }) {
+function Tile({
+  tile,
+  passport,
+  required,
+  disabled,
+  onOpen,
+}: {
+  tile: PassportTile;
+  passport: Passport;
+  required: boolean;
+  disabled: boolean;
+  onOpen: MouseEventHandler<HTMLButtonElement>;
+}) {
   const text = tileValue(tile, passport);
   const feedback = useMotionFeedback(text);
   const Icon = tile.icon;
@@ -104,7 +140,17 @@ function Tile({ tile, passport, required, disabled, onOpen }) {
     </button>
   );
 }
-function ChoiceEditor({ tile, value, required, onPick }) {
+function ChoiceEditor({
+  tile,
+  value,
+  required,
+  onPick,
+}: {
+  tile: ChoiceTile;
+  value?: string;
+  required: boolean;
+  onPick: (value: string | undefined) => void;
+}) {
   const options = [
     ...(required ? [] : [["", "Не важно"]]),
     ...Object.entries(ridePlanOptions[tile.key]),
@@ -125,7 +171,15 @@ function ChoiceEditor({ tile, value, required, onPick }) {
     </div>
   );
 }
-function RangeEditor({ tile, value, onPick }) {
+function RangeEditor({
+  tile,
+  value,
+  onPick,
+}: {
+  tile: RangeTile;
+  value?: Range;
+  onPick: (value: Range | undefined) => void;
+}) {
   const [draft, setDraft] = useState({
     min: value?.min ?? "",
     max: value?.max ?? "",
@@ -157,7 +211,7 @@ function RangeEditor({ tile, value, onPick }) {
         }
       }}
     >
-      {["min", "max"].map((side) => (
+      {(["min", "max"] as const).map((side) => (
         <label className="field" key={side}>
           <span>{side === "min" ? "От" : "До"}</span>
           <input
@@ -204,14 +258,32 @@ export default function PassportTiles({
   required = [],
   disabled = false,
   label = "Параметры поездки",
+}: {
+  value?: Passport;
+  onChange: (passport: Passport) => void;
+  required?: string[];
+  disabled?: boolean;
+  label?: string;
 }) {
-  const [open, setOpen] = useState(null);
-  const returnTo = useRef(null);
+  const [open, setOpen] = useState<ChoiceKey | RangeKey | null>(null);
+  const returnTo = useRef<HTMLButtonElement | null>(null);
   const tile = passportTiles.find((t) => t.key === open);
-  function pick(next) {
+  function pick(next: string | Range | undefined) {
     const passport = { ...value };
+    if (!open) return;
     if (next === undefined) delete passport[open];
-    else passport[open] = next;
+    else if (
+      typeof next === "string" &&
+      (open === "purpose" || open === "pace" || open === "surface")
+    )
+      passport[open] = next;
+    else if (
+      typeof next !== "string" &&
+      (open === "distanceKm" ||
+        open === "durationMinutes" ||
+        open === "groupSize")
+    )
+      passport[open] = next;
     onChange(passport);
     close();
   }
@@ -246,7 +318,7 @@ export default function PassportTiles({
         className={styles.sheet}
       >
         {tile &&
-          (tile.unit ? (
+          (tile.unit !== undefined ? (
             <RangeEditor
               key={tile.key}
               tile={tile}

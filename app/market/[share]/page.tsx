@@ -7,10 +7,22 @@ import {
 } from "../../../lib/social-page.ts";
 export const runtime = "nodejs",
   dynamic = "force-dynamic";
-export async function generateMetadata({ params, searchParams }) {
+export async function generateMetadata({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ share: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   return metadataFor("market", (await params).share, await searchParams);
 }
-export default async function Page({ params, searchParams }) {
+export default async function Page({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ share: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const reference = (await params).share;
   const share = await canonicalPage("market", reference, await searchParams);
   return (

@@ -2,6 +2,7 @@
 import { errorMessage } from "../../lib/errors.ts";
 import type {
   ApiError,
+  CurrentUser,
   ViewerDto,
   PublicAuthor,
   Relationship,
@@ -60,7 +61,11 @@ export function AuthorLink({ author }: { author?: PublicAuthor | null }) {
     </Link>
   );
 }
-export function SocialHeader({ user }: { user?: ViewerDto | null }) {
+export function SocialHeader({
+  user,
+}: {
+  user?: ViewerDto | CurrentUser | null;
+}) {
   return <GlobalHeader user={user} />;
 }
 // A footer logo's accessible name: where the link goes.

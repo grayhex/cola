@@ -1,4 +1,23 @@
 "use client";
+import type {
+  FeedDto,
+  JournalFeedDto,
+  SavedPageDto,
+  NotificationPageDto,
+  MarketListDto,
+  MarketNoticeDto,
+  NotificationDto,
+} from "./content-types.ts";
+type CommunityData =
+  | (FeedDto & { view: "feed" })
+  | (JournalFeedDto & { view: "journal"; entries: JournalFeedDto["items"] })
+  | (SavedPageDto & { view: "saved" })
+  | (NotificationPageDto & { view: "notifications" })
+  | (MarketListDto & { view: "market" });
+function isMarketNotice(n: NotificationDto): n is MarketNoticeDto {
+  return n.type === "market_expiring";
+}
+import { errorMessage } from "../../lib/errors.ts";
 import Link from "next/link";
 import { MarketCard } from "./market.tsx";
 import RideCard from "./ride-card.jsx";
@@ -34,7 +53,7 @@ import BikeCard from "./bike-card.tsx";
 import { useSite } from "./site-provider.tsx";
 import { profilePath } from "../../lib/public-urls.ts";
 import { personName } from "../../lib/usernames.ts";
-const eventText = {
+const eventText: Record<string, string> = {
   component_reply: "ответил вам в обсуждении компонента",
   article_like: "понравилась ваша статья",
   article_comment: "прокомментировал статью",
@@ -51,7 +70,7 @@ const eventText = {
   comment: "прокомментировал",
   reply: "ответил вам",
 };
-const noticeTime = (value) =>
+const noticeTime = (value: string) =>
   new Date(value).toLocaleString("ru-RU", {
     day: "numeric",
     month: "short",
@@ -60,7 +79,19 @@ const noticeTime = (value) =>
   });
 // The site's notice about a listing's term (#116). The text follows the
 // listing as it is now: extended, sold or still ending.
-function MarketNotice({ notice: n, days, busy, onExtend, onRead }) {
+function MarketNotice({
+  notice: n,
+  days,
+  busy,
+  onExtend,
+  onRead,
+}: {
+  notice: MarketNoticeDto;
+  days: number;
+  busy: boolean;
+  onExtend: () => void;
+  onRead: () => void;
+}) {
   const listing = (
     <a href={n.target.href} onClick={() => !n.readAt && onRead()}>
       {n.target.name}
@@ -119,7 +150,11 @@ function MarketNotice({ notice: n, days, busy, onExtend, onRead }) {
     </li>
   );
 }
-export default function CommunityPage({ kind }) {
+export default function CommunityPage({
+  kind,
+}: {
+  kind: "saved" | "journal" | "feed" | "notifications";
+}) {
   const [mode, setMode] = useState("new");
   useEffect(
     () =>
@@ -130,7 +165,7 @@ export default function CommunityPage({ kind }) {
       ),
     [],
   );
-  const [feedType, setFeedType] = useState(null);
+  const [feedType, setFeedType] = useState<string | null>(null);
   useEffect(
     () =>
       setFeedType(
@@ -141,7 +176,7 @@ export default function CommunityPage({ kind }) {
     [],
   );
   // /saved → «Записи» or «Объявления» (#116).
-  const [savedType, setSavedType] = useState(null);
+  const [savedType, setSavedType] = useState<"journal" | "market" | null>(null);
   useEffect(
     () =>
       setSavedType(
@@ -151,7 +186,7 @@ export default function CommunityPage({ kind }) {
       ),
     [],
   );
-  const [data, setData] = useState(null),
+  const [data, setData] = useState<CommunityData | null>(null),
     [page, setPage] = useState(1),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false);
@@ -161,19 +196,32 @@ export default function CommunityPage({ kind }) {
   const refresh = useCallback(async () => {
     const revision = ++requestRevision.current.revision;
     try {
-      const d = await socialApi(
+      const path =
         kind === "saved" && savedType === "market"
           ? "market/saved?page=" + page
           : "community/" +
-              (kind === "journal" ? "feed" : kind) +
-              "?page=" +
-              page +
-              (kind === "journal"
-                ? "&type=journal&mode=" + mode
-                : feedType === "rides"
-                  ? "&type=rides"
-                  : ""),
-      );
+            (kind === "journal" ? "feed" : kind) +
+            "?page=" +
+            page +
+            (kind === "journal"
+              ? "&type=journal&mode=" + mode
+              : feedType === "rides"
+                ? "&type=rides"
+                : "");
+      let d: CommunityData;
+      if (kind === "notifications")
+        d = {
+          ...(await socialApi<NotificationPageDto>(path)),
+          view: "notifications",
+        };
+      else if (kind === "feed")
+        d = { ...(await socialApi<FeedDto>(path)), view: "feed" };
+      else if (kind === "journal") {
+        const result = await socialApi<JournalFeedDto>(path);
+        d = { ...result, entries: result.items, view: "journal" };
+      } else if (savedType === "market")
+        d = { ...(await socialApi<MarketListDto>(path)), view: "market" };
+      else d = { ...(await socialApi<SavedPageDto>(path)), view: "saved" };
       if (revision !== requestRevision.current.revision) return;
       if (kind === "notifications") setData(d);
       else startTransition(() => setData(d));
@@ -181,7 +229,8 @@ export default function CommunityPage({ kind }) {
       if (kind === "notifications")
         window.dispatchEvent(new Event("cola:notifications"));
     } catch (e) {
-      if (revision === requestRevision.current.revision) setError(e.message);
+      if (revision === requestRevision.current.revision)
+        setError(errorMessage(e));
     }
   }, [kind, savedType, page, mode, feedType]);
   useEffect(() => {
@@ -204,12 +253,12 @@ export default function CommunityPage({ kind }) {
     }, 30000);
     return () => clearInterval(timer);
   }, [userId, kind, refresh]);
-  async function read(id) {
+  async function read(id: string) {
     await socialApi("community/notifications/" + id + "/read", "PATCH");
     await refresh();
   }
   // «Продлить» right in the notice: one click, a new full term (#116).
-  async function extend(n) {
+  async function extend(n: MarketNoticeDto) {
     setBusy(true);
     setError("");
     try {
@@ -218,7 +267,7 @@ export default function CommunityPage({ kind }) {
         await socialApi("community/notifications/" + n.id + "/read", "PATCH");
       await refresh();
     } catch (e) {
-      setError(e.message);
+      setError(errorMessage(e));
     } finally {
       setBusy(false);
     }
@@ -239,7 +288,7 @@ export default function CommunityPage({ kind }) {
                     : "Подписки"
                   : "Уведомления"}
           </h1>
-          {kind === "notifications" && !!data?.unread && (
+          {data?.view === "notifications" && !!data.unread && (
             <button
               className="quiet"
               disabled={busy}
@@ -249,7 +298,7 @@ export default function CommunityPage({ kind }) {
                   await socialApi("community/notifications/read-all", "PATCH");
                   await refresh();
                 } catch (e) {
-                  setError(e.message);
+                  setError(errorMessage(e));
                 } finally {
                   setBusy(false);
                 }
@@ -261,10 +310,12 @@ export default function CommunityPage({ kind }) {
         </div>
         {kind === "saved" && user && (
           <nav className="ui-tabs" aria-label="Что сохранено">
-            {[
-              ["journal", "Записи", NotebookPen],
-              ["market", "Объявления", ShoppingBag],
-            ].map(([id, label, Icon]) => (
+            {(
+              [
+                ["journal", "Записи", NotebookPen],
+                ["market", "Объявления", ShoppingBag],
+              ] as const
+            ).map(([id, label, Icon]) => (
               <button
                 key={id}
                 className="quiet"
@@ -340,7 +391,7 @@ export default function CommunityPage({ kind }) {
           </p>
         ) : !data ? (
           <p role="status">Загружаем…</p>
-        ) : kind === "saved" && savedType === "market" ? (
+        ) : data.view === "market" ? (
           <>
             <BikeGrid>
               {data.items.map((m) => (
@@ -359,11 +410,11 @@ export default function CommunityPage({ kind }) {
             )}
             <Pagination {...data} onPage={setPage} />
           </>
-        ) : kind === "journal" || kind === "saved" ? (
+        ) : data.view === "journal" || data.view === "saved" ? (
           <>
             <MotionList>
               <div className="journal-feed">
-                {(data.entries || data.items).map((e) => (
+                {data.entries.map((e) => (
                   <JournalCard
                     key={e.id}
                     entry={e}
@@ -375,7 +426,7 @@ export default function CommunityPage({ kind }) {
                 ))}
               </div>
             </MotionList>
-            {!(data.entries || data.items).length && (
+            {!data.entries.length && (
               <section className="social-empty">
                 <h2>
                   {kind === "saved"
@@ -398,13 +449,13 @@ export default function CommunityPage({ kind }) {
             )}
             <Pagination {...data} onPage={setPage} />
           </>
-        ) : kind === "feed" ? (
+        ) : data.view === "feed" ? (
           <>
             <p className="help">
               Новые публикации владельцев, на которых вы подписаны.
             </p>
-            <BikeGrid bikes={data.bikes}>
-              {(data.items || data.bikes).map((b) =>
+            <BikeGrid>
+              {data.items.map((b) =>
                 b.kind === "journal" ? (
                   <JournalCard key={b.id} entry={b} />
                 ) : b.kind === "market" ? (
@@ -416,7 +467,7 @@ export default function CommunityPage({ kind }) {
                 ),
               )}
             </BikeGrid>
-            {!(data.items || data.bikes).length && (
+            {!data.items.length && (
               <section className="social-empty">
                 <h2>Публикации знакомых появятся здесь</h2>
                 <p>
@@ -434,7 +485,7 @@ export default function CommunityPage({ kind }) {
           <>
             <ul className="notification-list">
               {data.notifications.map((n) =>
-                n.type === "market_expiring" ? (
+                isMarketNotice(n) ? (
                   <MarketNotice
                     key={n.id}
                     notice={n}

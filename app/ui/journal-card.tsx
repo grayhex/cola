@@ -1,4 +1,7 @@
 "use client";
+import { errorMessage } from "../../lib/errors.ts";
+
+import type { JournalDto, JournalCardDto } from "./content-types.ts";
 import Link from "next/link";
 import { useState } from "react";
 import { SharedView, useMotionFeedback } from "./motion.tsx";
@@ -18,14 +21,20 @@ import { socialApi } from "./social-primitives.tsx";
 import { journalKinds } from "../../lib/journal-kinds.ts";
 import { profilePath, publicPath } from "../../lib/public-urls.ts";
 import { personName } from "../../lib/usernames.ts";
-const kindIcons = {
+const kindIcons: Record<string, typeof NotebookPen> = {
   story: NotebookPen,
   upgrade: Wrench,
   question: CircleHelp,
   ride: Route,
   review: FileText,
 };
-export function SaveEntry({ entry, onChange }) {
+export function SaveEntry({
+  entry,
+  onChange,
+}: {
+  entry: Pick<JournalDto, "id" | "saved">;
+  onChange?: (saved: boolean) => void;
+}) {
   const [saved, setSaved] = useState(entry.saved),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
@@ -44,7 +53,7 @@ export function SaveEntry({ entry, onChange }) {
           setError("");
           const before = saved;
           try {
-            const r = await socialApi(
+            const r = await socialApi<{ saved: boolean }>(
               "journal/" + entry.id + "/save",
               before ? "DELETE" : "PUT",
             );
@@ -52,7 +61,7 @@ export function SaveEntry({ entry, onChange }) {
             onChange?.(r.saved);
           } catch (e) {
             setSaved(before);
-            setError(e.message);
+            setError(errorMessage(e));
           } finally {
             setBusy(false);
           }
@@ -71,9 +80,14 @@ export function SaveEntry({ entry, onChange }) {
     </>
   );
 }
-/** @param {{ entry: import("../../lib/contracts.ts").JsonData<Awaited<ReturnType<typeof import("../../lib/journal-discovery.ts").journalCards>>[number]>, onSaved?: () => void }} props */
-export default function JournalCard({ entry, onSaved }) {
-  const kind = entry.entryKind || entry.kind;
+export default function JournalCard({
+  entry,
+  onSaved,
+}: {
+  entry: JournalCardDto;
+  onSaved?: () => void;
+}) {
+  const kind = ("entryKind" in entry && entry.entryKind) || entry.kind;
   const KindIcon = kindIcons[kind] || NotebookPen;
   return (
     <article className="journal-card">
@@ -93,7 +107,8 @@ export default function JournalCard({ entry, onSaved }) {
       <div className="journal-card-content">
         <div className="journal-entry-meta">
           <span>
-            <KindIcon size={16} /> {journalKinds[kind]}
+            <KindIcon size={16} />{" "}
+            {Object.entries(journalKinds).find(([key]) => key === kind)?.[1]}
           </span>
           {entry.solutionId && (
             <span>
@@ -110,7 +125,7 @@ export default function JournalCard({ entry, onSaved }) {
         <a
           className="journal-card-bike"
           title={entry.bike.name}
-          href={publicPath("bike", entry.bike)}
+          href={publicPath("bike", { shareId: entry.bike.shareId })}
         >
           {entry.bike.name}
         </a>

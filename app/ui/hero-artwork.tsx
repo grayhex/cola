@@ -1,4 +1,5 @@
 "use client";
+import type { HeroAnimation } from "./content-types.ts";
 import { useState } from "react";
 import RiveArt from "./rive-art.tsx";
 import SmallImage from "./small-image.tsx";
@@ -12,11 +13,17 @@ export default function HeroArtwork({
   imageId,
   playing,
   compact = false,
+}: {
+  animation?: HeroAnimation;
+  darkAnimation?: HeroAnimation;
+  imageId?: string | null;
+  playing: boolean;
+  compact?: boolean;
 }) {
   const { resolvedTheme } = useSite();
   const reduced = useReducedMotion();
-  const [failed, setFailed] = useState(null);
-  const [loaded, setLoaded] = useState(null);
+  const [failed, setFailed] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState<string | null>(null);
   const selected =
     resolvedTheme === "dark" && darkAnimation ? darkAnimation : animation;
   const poster = imageId ? "/api/assets/" + imageId : null;
@@ -24,7 +31,11 @@ export default function HeroArtwork({
     return (
       <RiveArt
         name={selected.kind === "builtin" ? selected.name : undefined}
-        src={selected.assetId ? "/api/assets/" + selected.assetId : undefined}
+        src={
+          "assetId" in selected && selected.assetId
+            ? "/api/assets/" + selected.assetId
+            : undefined
+        }
         poster={poster}
         playing={playing}
         compact={compact}

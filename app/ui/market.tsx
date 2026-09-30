@@ -1,4 +1,15 @@
 "use client";
+import type {
+  MarketDto,
+  MarketListDto,
+  MarketOthersDto,
+  MarketSaved,
+  ListingDraft,
+  MarketContactDto,
+  MarketExtendDto,
+} from "./content-types.ts";
+import type { ApiError } from "../../lib/contracts.ts";
+import { errorMessage } from "../../lib/errors.ts";
 import EmailPolicyAction from "./email-policy-action.tsx";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -44,11 +55,11 @@ import ShareButton from "./share-button.tsx";
 import { useHydrated } from "./use-hydrated.ts";
 import LocalDate from "./local-date.tsx";
 // The link keeps the original; previews use the cached size variants.
-const marketVariants = (id, widths = [320, 640, 1280]) =>
+const marketVariants = (id: string, widths = [320, 640, 1280]) =>
   widths.map((w) => `/api/market/media/${id}?width=${w} ${w}w`).join(", ");
 export { marketCategories } from "../../lib/market-query.ts";
 
-function ListingTypeLabel({ type = "sale" }) {
+function ListingTypeLabel({ type = "sale" }: { type?: string }) {
   return (
     <ContentLabel
       tone={
@@ -58,11 +69,12 @@ function ListingTypeLabel({ type = "sale" }) {
       }
       data-listing-type={type}
     >
-      {listingTypes[type] || listingTypes.sale}
+      {Object.entries(listingTypes).find(([key]) => key === type)?.[1] ||
+        listingTypes.sale}
     </ContentLabel>
   );
 }
-export function MarketCard({ listing: m }) {
+export function MarketCard({ listing: m }: { listing: MarketDto }) {
   return (
     <article className={styles.card} data-listing-id={m.id}>
       <Link
@@ -102,8 +114,8 @@ export function MarketCard({ listing: m }) {
         {(m.componentModel || m.bikeModel) && (
           <p>
             Модель:{" "}
-            <Link href={(m.componentModel || m.bikeModel).path}>
-              {(m.componentModel || m.bikeModel).name}
+            <Link href={(m.componentModel || m.bikeModel)!.path}>
+              {(m.componentModel || m.bikeModel)!.name}
             </Link>
           </p>
         )}
@@ -124,7 +136,13 @@ export function MarketCard({ listing: m }) {
   );
 }
 // Saved listings live in /saved → «Объявления» (#116).
-function SaveListing({ listing, onChange }) {
+function SaveListing({
+  listing,
+  onChange,
+}: {
+  listing: MarketDto;
+  onChange: (saved: boolean) => void;
+}) {
   const [busy, setBusy] = useState(false),
     [error, setError] = useState("");
   return (
@@ -140,13 +158,13 @@ function SaveListing({ listing, onChange }) {
           setBusy(true);
           setError("");
           try {
-            const r = await socialApi(
+            const r = await socialApi<{ saved: boolean }>(
               "market/" + listing.id + "/save",
               listing.saved ? "DELETE" : "PUT",
             );
             onChange(r.saved);
           } catch (e) {
-            setError(e.message);
+            setError(errorMessage(e));
           } finally {
             setBusy(false);
           }
@@ -169,7 +187,13 @@ function SaveListing({ listing, onChange }) {
   );
 }
 // Other listings of the seller that are on the market now (#116).
-function SellerListings({ listing, others }) {
+function SellerListings({
+  listing,
+  others,
+}: {
+  listing: MarketDto;
+  others: MarketOthersDto | null;
+}) {
   if (!others?.items.length) return null;
   const seller = listing.author;
   return (
@@ -208,23 +232,40 @@ const blank = {
   bikeModelId: null,
   linkedBikeId: null,
 };
-function ListingEditor({ initial, onSaved, onCancel }) {
+function ListingEditor({
+  initial,
+  onSaved,
+  onCancel,
+}: {
+  initial?: MarketDto | null;
+  onSaved: (listing: MarketSaved) => void | Promise<void>;
+  onCancel: (listing: MarketSaved | null | undefined) => void;
+}) {
   // SSR fields must not accept input before React can retain it in form state.
   const hydrated = useHydrated();
   const legacyCurrency = !!initial?.currency && initial.currency !== "RUB";
-  const [form, setForm] = useState(() => ({
-      ...Object.fromEntries(
-        Object.keys(blank).map((k) => [k, initial?.[k] ?? blank[k]]),
-      ),
-      currency: "RUB",
-      price: legacyCurrency ? "" : (initial?.price ?? ""),
-    })),
-    [identity, setIdentity] = useState(initial),
+  const [form, setForm] = useState<ListingDraft>(
+      () =>
+        ({
+          ...Object.fromEntries(
+            (Object.keys(blank) as (keyof ListingDraft)[]).map((k) => [
+              k,
+              initial?.[k] ?? blank[k],
+            ]),
+          ),
+          currency: "RUB",
+          price: legacyCurrency ? "" : (initial?.price ?? ""),
+        }) as ListingDraft,
+    ),
+    [identity, setIdentity] = useState<
+      MarketSaved | MarketDto | null | undefined
+    >(initial),
     [photos, setPhotos] = useState(initial?.photos || []),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
-  const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
-  async function save(status) {
+  const set = <K extends keyof ListingDraft>(k: K, v: ListingDraft[K]) =>
+    setForm((f) => ({ ...f, [k]: v }));
+  async function save(status: string) {
     const body = {
       ...form,
       price:
@@ -236,7 +277,7 @@ function ListingEditor({ initial, onSaved, onCancel }) {
       currency: "RUB",
       status,
     };
-    const saved = await socialApi(
+    const saved = await socialApi<MarketSaved>(
       "market" + (identity ? "/" + identity.id : ""),
       identity ? "PATCH" : "POST",
       body,
@@ -254,7 +295,7 @@ function ListingEditor({ initial, onSaved, onCancel }) {
         try {
           await onSaved(await save(form.status === "sold" ? "sold" : "active"));
         } catch (e) {
-          setError(e.message);
+          setError(errorMessage(e));
         } finally {
           setBusy(false);
         }
@@ -409,7 +450,7 @@ function ListingEditor({ initial, onSaved, onCancel }) {
                     await socialApi("market/media/" + p.id, "DELETE");
                     setPhotos((rows) => rows.filter((v) => v.id !== p.id));
                   } catch (e) {
-                    setError(e.message);
+                    setError(errorMessage(e));
                   } finally {
                     setBusy(false);
                   }
@@ -453,12 +494,13 @@ function ListingEditor({ initial, onSaved, onCancel }) {
                       headers: { "Content-Type": file.type },
                       body: file,
                     }),
-                    p = await r.json();
+                    p: MarketDto["photos"][number] & Partial<ApiError> =
+                      await r.json();
                   if (!r.ok) throw Error(p.error);
                   setPhotos((rows) => [...rows, p]);
                 }
               } catch (e) {
-                setError(e.message);
+                setError(errorMessage(e));
               } finally {
                 setBusy(false);
               }
@@ -490,7 +532,7 @@ function ListingEditor({ initial, onSaved, onCancel }) {
             try {
               await onSaved(await save("draft"));
             } catch (e) {
-              setError(e.message);
+              setError(errorMessage(e));
             } finally {
               setBusy(false);
             }
@@ -515,13 +557,18 @@ export default function Market({
   create = false,
   sharePath = null,
   initial = null,
+}: {
+  share?: string | null;
+  create?: boolean;
+  sharePath?: string | null;
+  initial?: { listing: MarketDto; others: MarketOthersDto } | null;
 }) {
   const router = useRouter();
   const { viewer: user, settings } = useSite();
   const userId = user?.id;
   const hydrated = useHydrated();
   const listingDays = settings?.marketListingDays || 60;
-  const [data, setData] = useState(null),
+  const [data, setData] = useState<MarketListDto | null>(null),
     [listing, setListing] = useState(initial?.listing || null),
     [others, setOthers] = useState(initial?.others || null),
     [edit, setEdit] = useState(create),
@@ -529,8 +576,12 @@ export default function Market({
       readMarketQuery(new URLSearchParams()),
     ),
     [search, setSearch] = useState(""),
-    [range, setRange] = useState({ priceMin: "", priceMax: "", city: "" }),
-    [contact, setContact] = useState(null),
+    [range, setRange] = useState<{
+      priceMin: string | number;
+      priceMax: string | number;
+      city: string;
+    }>({ priceMin: "", priceMax: "", city: "" }),
+    [contact, setContact] = useState<MarketContactDto["contact"] | null>(null),
     [contactError, setContactError] = useState(""),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
@@ -561,7 +612,7 @@ export default function Market({
   // The server rendered the listing for this viewer (#74): keep it on mount
   // and skip the first request.
   const seed = useRef(initial);
-  function changeFilters(patch) {
+  function changeFilters(patch: Partial<ReturnType<typeof readMarketQuery>>) {
     const next = { ...filters, page: 1, ...patch };
     const queryString = writeMarketQuery(next);
     // An unchanged request keeps its result and does not add a history entry.
@@ -609,10 +660,13 @@ export default function Market({
     setError("");
     setData(null);
     const path = share ? "market/public/" + share : "market?" + filterKey;
-    socialApi(path)
+    (share
+      ? socialApi<{ listing: MarketDto; others: MarketOthersDto }>(path)
+      : socialApi<MarketListDto>(path)
+    )
       .then((d) => {
         if (active) {
-          if (share) {
+          if ("listing" in d) {
             setListing(d.listing);
             setOthers(d.others);
           } else setData(d);
@@ -628,35 +682,41 @@ export default function Market({
       active = false;
     };
   }, [ready, share, create, userId, own, filterKey]);
-  const saved = async (r) => {
+  const saved = async (r: MarketSaved) => {
     // Saving can target this same URL: rebuild the server-seeded listing/editor.
     location.assign(publicPath("market", r));
   };
   async function showContact() {
+    if (!listing) return;
     setContactError("");
     try {
-      const d = await socialApi(
+      const d = await socialApi<MarketContactDto>(
         "market/public/" + listing.shareId + "/contact",
       );
       setContact(d.contact);
     } catch (e) {
-      setContactError(e.message);
+      setContactError(errorMessage(e));
     }
   }
   // One click gives the listing a new full term (#116).
   async function extend() {
+    if (!listing) return;
     setBusy(true);
     setError("");
     try {
-      const r = await socialApi("market/" + listing.id + "/extend", "POST");
-      setListing((v) => ({ ...v, ...r }));
+      const r = await socialApi<MarketExtendDto>(
+        "market/" + listing.id + "/extend",
+        "POST",
+      );
+      setListing((v) => (v ? { ...v, ...r } : v));
     } catch (e) {
-      setError(e.message);
+      setError(errorMessage(e));
     } finally {
       setBusy(false);
     }
   }
-  async function changeStatus(status) {
+  async function changeStatus(status: string) {
+    if (!listing) return;
     setBusy(true);
     setError("");
     try {
@@ -665,7 +725,12 @@ export default function Market({
           "Сначала измените объявление и уточните цену в рублях. Старая сумма не конвертируется автоматически.",
         );
       const body = {
-        ...Object.fromEntries(Object.keys(blank).map((k) => [k, listing[k]])),
+        ...Object.fromEntries(
+          (Object.keys(blank) as (keyof ListingDraft)[]).map((k) => [
+            k,
+            listing[k],
+          ]),
+        ),
         listingType: listing.listingType || "sale",
         price: listing.price ?? null,
         currency: "RUB",
@@ -673,11 +738,14 @@ export default function Market({
       };
       await socialApi("market/" + listing.id, "PATCH", body);
       // A new publication starts a new term: read it back.
-      const fresh = await socialApi("market/public/" + listing.shareId);
+      const fresh = await socialApi<{
+        listing: MarketDto;
+        others: MarketOthersDto;
+      }>("market/public/" + listing.shareId);
       setListing(fresh.listing);
       setOthers(fresh.others);
     } catch (e) {
-      setError(e.message);
+      setError(errorMessage(e));
     } finally {
       setBusy(false);
     }
@@ -744,7 +812,7 @@ export default function Market({
                       <SaveListing
                         listing={listing}
                         onChange={(saved) =>
-                          setListing((v) => ({ ...v, saved }))
+                          setListing((v) => (v ? { ...v, saved } : v))
                         }
                       />
                     )}
@@ -835,10 +903,14 @@ export default function Market({
                         <dd>
                           <Link
                             href={
-                              (listing.componentModel || listing.bikeModel).path
+                              (listing.componentModel || listing.bikeModel)!
+                                .path
                             }
                           >
-                            {(listing.componentModel || listing.bikeModel).name}
+                            {
+                              (listing.componentModel || listing.bikeModel)!
+                                .name
+                            }
                           </Link>
                         </dd>
                       </div>
@@ -847,7 +919,7 @@ export default function Market({
                       <div>
                         <dt>Велосипед продавца</dt>
                         <dd>
-                          <Link href={listing.linkedBike.path}>
+                          <Link href={listing.linkedBike.path!}>
                             {listing.linkedBike.name}
                           </Link>
                         </dd>
@@ -932,7 +1004,7 @@ export default function Market({
                       {/* Three days before the end, like the notice. */}
                       {(listing.expired ||
                         (hydrated &&
-                          new Date(listing.expiresAt) - Date.now() <=
+                          new Date(listing.expiresAt!).getTime() - Date.now() <=
                             3 * 86400000)) && (
                         <button
                           type="button"
@@ -982,7 +1054,7 @@ export default function Market({
                             await socialApi("market/" + listing.id, "DELETE");
                             router.push("/market?own=1");
                           } catch (e) {
-                            setError(e.message);
+                            setError(errorMessage(e));
                             setBusy(false);
                           }
                         }}
@@ -1071,7 +1143,7 @@ export default function Market({
                   <label className="field">
                     <span>Тип объявления</span>
                     <select
-                      value={listingType}
+                      value={listingType ?? undefined}
                       onChange={(e) =>
                         changeFilters({ listingType: e.target.value })
                       }
@@ -1087,7 +1159,7 @@ export default function Market({
                   <label className="field">
                     <span>Состояние</span>
                     <select
-                      value={condition}
+                      value={condition ?? undefined}
                       onChange={(e) =>
                         changeFilters({ condition: e.target.value })
                       }
@@ -1100,7 +1172,7 @@ export default function Market({
                   <label className="field">
                     <span>Сортировка</span>
                     <select
-                      value={sort}
+                      value={sort ?? undefined}
                       onChange={(e) => changeFilters({ sort: e.target.value })}
                     >
                       {Object.entries(marketSorts).map(([key, label]) => (
@@ -1116,7 +1188,7 @@ export default function Market({
                   aria-label="Цена и город"
                   onSubmit={(e) => {
                     e.preventDefault();
-                    const bound = (v) =>
+                    const bound = (v: string | number) =>
                       /^\d{1,10}$/.test(String(v).trim()) ? Number(v) : "";
                     changeFilters({
                       priceMin: bound(range.priceMin),
@@ -1125,10 +1197,12 @@ export default function Market({
                     });
                   }}
                 >
-                  {[
-                    ["priceMin", "Цена от, ₽"],
-                    ["priceMax", "Цена до, ₽"],
-                  ].map(([key, label]) => (
+                  {(
+                    [
+                      ["priceMin", "Цена от, ₽"],
+                      ["priceMax", "Цена до, ₽"],
+                    ] as const
+                  ).map(([key, label]) => (
                     <label className="field" key={key}>
                       <span>{label}</span>
                       <input

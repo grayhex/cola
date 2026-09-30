@@ -1,4 +1,5 @@
 "use client";
+import type { ReactNode } from "react";
 import { Component, lazy, Suspense, useEffect, useRef, useState } from "react";
 import SmallImage from "./small-image.tsx";
 import { useReducedMotion } from "./motion.tsx";
@@ -6,7 +7,10 @@ import { useSite } from "./site-provider.tsx";
 import styles from "./rive-art.module.css";
 
 const Canvas = lazy(() => import("./rive-canvas.tsx"));
-class CanvasBoundary extends Component {
+class CanvasBoundary extends Component<
+  { children: ReactNode },
+  { failed: boolean }
+> {
   state = { failed: false };
   static getDerivedStateFromError() {
     return { failed: true };
@@ -22,8 +26,14 @@ export default function RiveArt({
   poster,
   playing,
   compact = false,
+}: {
+  name?: string;
+  src?: string;
+  poster?: string | null;
+  playing: boolean;
+  compact?: boolean;
 }) {
-  const host = useRef(null);
+  const host = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
   const reduced = useReducedMotion();
   const { resolvedTheme } = useSite();
@@ -45,7 +55,7 @@ export default function RiveArt({
       intersects = entry.isIntersecting && entry.intersectionRatio > 0;
       update();
     });
-    observer.observe(host.current);
+    if (host.current) observer.observe(host.current);
     document.addEventListener("visibilitychange", update);
     return () => {
       observer.disconnect();
@@ -69,7 +79,7 @@ export default function RiveArt({
       >
         {!poster &&
           name &&
-          ["light", "dark"].map((theme) => (
+          (["light", "dark"] as const).map((theme) => (
             <SmallImage
               key={theme}
               className={styles[theme]}
@@ -80,7 +90,11 @@ export default function RiveArt({
         {playing && !reduced && visible && (
           <CanvasBoundary key={src || name + resolvedTheme}>
             <Suspense fallback={null}>
-              <Canvas name={name} src={src} theme={resolvedTheme} />
+              <Canvas
+                name={name}
+                src={src}
+                theme={resolvedTheme === "dark" ? "dark" : "light"}
+              />
             </Suspense>
           </CanvasBoundary>
         )}

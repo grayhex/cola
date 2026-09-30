@@ -1,4 +1,9 @@
 "use client";
+import type { ReactNode, Dispatch, SetStateAction, CSSProperties } from "react";
+import type { ViewerDto } from "../../lib/contracts.ts";
+import type { CommunityHomeDto } from "./content-types.ts";
+import type { RecordHolder } from "../../lib/gamification.ts";
+import type { JsonData } from "../../lib/contracts.ts";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -62,7 +67,21 @@ function TogetherArt() {
 // Blocks 3–6 of the home page (#254): a band of the ruled column like the hero
 // and «Покататься вместе», its title in a thin rail inside the band with the
 // section's links on the right. `tone` picks one of the few band surfaces.
-function HomeBand({ id, title, icon: Icon, action, tone, children }) {
+function HomeBand({
+  id,
+  title,
+  icon: Icon,
+  action,
+  tone,
+  children,
+}: {
+  id: string;
+  title: string;
+  icon: typeof Bike;
+  action?: ReactNode;
+  tone?: string;
+  children: ReactNode;
+}) {
   return (
     <section className="frame" aria-labelledby={id + "-heading"}>
       <div
@@ -85,7 +104,7 @@ function HomeBand({ id, title, icon: Icon, action, tone, children }) {
 // «Покататься вместе» (#245): one large block right after the hero, the same
 // for a guest and a rider, with no personal data — the two actions open the
 // composers in a window; a guest follows them to sign in.
-function TogetherHero({ user }) {
+function TogetherHero({ user }: { user: ViewerDto | null }) {
   return (
     <section className="frame" aria-labelledby="together-heading">
       <div className={"frame-inner " + styles.together}>
@@ -106,7 +125,7 @@ function TogetherHero({ user }) {
 import { profilePath, publicPath } from "../../lib/public-urls.ts";
 import { metricValue } from "../../lib/game-metrics.ts";
 import { personName } from "../../lib/usernames.ts";
-const markers = {
+const markers: Record<string, typeof Bike> = {
   market: ShoppingBag,
   planned: CalendarDays,
   bike: Bike,
@@ -115,7 +134,7 @@ const markers = {
   ride: Route,
   achievement: Trophy,
 };
-function eventText(e) {
+function eventText(e: CommunityHomeDto["events"][number]) {
   if (e.type === "bike") return `${e.author} добавил ${e.title}`;
   if (e.type === "ride")
     return `${e.author} · ${e.title}${e.distanceM ? ` · ${Math.round(e.distanceM / 1000)} км` : ""}`;
@@ -129,8 +148,13 @@ export function ActivityTicker({
   paused = false,
   setPaused,
   speed = 24,
+}: {
+  events?: CommunityHomeDto["events"];
+  paused?: boolean;
+  setPaused: Dispatch<SetStateAction<boolean>>;
+  speed?: number;
 }) {
-  const rail = useRef(null);
+  const rail = useRef<HTMLDivElement>(null);
   useAutoScroll(rail, { speed, paused: paused || !events.length, loop: true });
   const list = (duplicate = false) => (
     <div
@@ -206,7 +230,7 @@ export function ActivityTicker({
 const trendingSizes =
   "(max-width: 600px) 82vw, (max-width: 1050px) 50vw, 400px";
 // A record is held by a bike, a ride or a rider (#106).
-function recordHolder(holder) {
+function recordHolder(holder: JsonData<RecordHolder>): [string, string] {
   if (holder.kind === "ride") return [publicPath("ride", holder), holder.name];
   if (holder.kind === "profile")
     return [profilePath(holder.author.username), personName(holder.author)];
@@ -216,7 +240,7 @@ const emptyData = { popular: [], events: [], content: [], records: [] };
 export default function Home() {
   const { settings, viewer: user, t } = useSite(),
     [paused, setPaused] = useState(false),
-    [data, setData] = useState(null),
+    [data, setData] = useState<CommunityHomeDto | null>(null),
     [error, setError] = useState(""),
     [revision, setRevision] = useState(0);
   useEffect(() => {
@@ -227,7 +251,7 @@ export default function Home() {
     })
       .then((r) => {
         if (!r.ok) throw Error();
-        return r.json();
+        return r.json() as Promise<CommunityHomeDto>;
       })
       .then((home) => {
         if (controller.signal.aborted) return;
@@ -253,10 +277,10 @@ export default function Home() {
             style={
               // Without its own colours the block takes the accent (#131).
               settings.heroBackgroundMode === "custom"
-                ? {
+                ? ({
                     "--hero-light": settings.heroBackgroundLight,
                     "--hero-dark": settings.heroBackgroundDark,
-                  }
+                  } as CSSProperties)
                 : undefined
             }
           >

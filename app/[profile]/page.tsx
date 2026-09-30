@@ -9,19 +9,31 @@ import {
 import { routeParam } from "../../lib/public-urls.ts";
 export const runtime = "nodejs",
   dynamic = "force-dynamic";
-function usernameFrom(segment) {
+function usernameFrom(segment: string) {
   const profile = routeParam(segment);
   if (!/^@[a-z0-9._-]{3,30}$/i.test(profile)) notFound();
   return profile.slice(1);
 }
-export async function generateMetadata({ params, searchParams }) {
+export async function generateMetadata({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ profile: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   return metadataFor(
     "profile",
     usernameFrom((await params).profile),
     await searchParams,
   );
 }
-export default async function Page({ params, searchParams }) {
+export default async function Page({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ profile: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const reference = usernameFrom((await params).profile);
   const username = await canonicalPage(
     "profile",

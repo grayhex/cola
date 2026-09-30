@@ -1,8 +1,20 @@
 "use client";
+import type { ViewerDto, ReportInput } from "../../lib/contracts.ts";
+type UiViewer = ViewerDto | null;
+import { errorMessage } from "../../lib/errors.ts";
+
 import { useState } from "react";
 import { Flag } from "./icons.tsx";
 import { socialApi } from "./social-primitives.tsx";
-export function PageControls({ page, hasMore, onPage }) {
+export function PageControls({
+  page,
+  hasMore,
+  onPage,
+}: {
+  page: number;
+  hasMore: boolean;
+  onPage: (page: number) => void;
+}) {
   return (
     (page > 1 || hasMore) && (
       <nav className="pager" aria-label="Страницы">
@@ -25,7 +37,15 @@ export function PageControls({ page, hasMore, onPage }) {
     )
   );
 }
-export function ReportButton({ entityType, targetId, user }) {
+export function ReportButton({
+  entityType,
+  targetId,
+  user,
+}: {
+  entityType: ReportInput["entityType"];
+  targetId: string;
+  user: UiViewer;
+}) {
   const [open, setOpen] = useState(false),
     [reason, setReason] = useState("spam"),
     [busy, setBusy] = useState(false),
@@ -59,7 +79,7 @@ export function ReportButton({ entityType, targetId, user }) {
               setOpen(false);
               setMessage("Жалоба отправлена модератору");
             } catch (e) {
-              setError(e.message);
+              setError(errorMessage(e));
             } finally {
               setBusy(false);
             }

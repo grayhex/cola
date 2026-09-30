@@ -1,4 +1,9 @@
 "use client";
+import type { ViewerDto } from "../../lib/contracts.ts";
+type UiViewer = ViewerDto | null;
+import { errorMessage } from "../../lib/errors.ts";
+import type { BikeDto } from "../../lib/contracts.ts";
+import type { GameShelfDto, ReactionStateDto } from "./content-types.ts";
 import { useEffect, useId, useState } from "react";
 import Link from "next/link";
 import { Flame, Sparkles, Star } from "./icons.tsx";
@@ -7,15 +12,23 @@ import AchievementArt from "./achievement-art.tsx";
 import { metricValue } from "../../lib/game-metrics.ts";
 // Records held now and awards kept for good, as two separate blocks (#106):
 // on the bike page, in a profile and in the account.
-export function BadgeShelf({ endpoint, account = false, prominent = false }) {
-  const [data, setData] = useState(null),
+export function BadgeShelf({
+  endpoint,
+  account = false,
+  prominent = false,
+}: {
+  endpoint: string;
+  account?: boolean;
+  prominent?: boolean;
+}) {
+  const [data, setData] = useState<GameShelfDto | null>(null),
     [error, setError] = useState("");
   const id = useId();
   useEffect(() => {
     let active = true;
     setData(null);
     setError("");
-    socialApi(endpoint)
+    socialApi<GameShelfDto>(endpoint)
       .then((d) => {
         if (active) setData(d);
       })
@@ -38,7 +51,7 @@ export function BadgeShelf({ endpoint, account = false, prominent = false }) {
         Загружаем награды…
       </p>
     );
-  function award(a, i) {
+  function award(a: GameShelfDto["awards"][number], i: number) {
     return (
       <span
         className="award"
@@ -77,7 +90,7 @@ export function BadgeShelf({ endpoint, account = false, prominent = false }) {
                   size={prominent ? 56 : 24}
                 />
                 <span>{r.name}</span>
-                <small>{metricValue(r.metric, r.holder.value)}</small>
+                <small>{metricValue(r.metric, r.holder!.value)}</small>
               </a>
             ))}
           </div>
@@ -123,7 +136,7 @@ export function BadgeShelf({ endpoint, account = false, prominent = false }) {
                     <>
                       <progress
                         aria-label={a.name}
-                        max={a.target}
+                        max={a.target ?? undefined}
                         value={a.progress}
                       />
                       <small>
@@ -141,30 +154,40 @@ export function BadgeShelf({ endpoint, account = false, prominent = false }) {
     </div>
   );
 }
-export function BikeGame({ bike, user }) {
-  const [state, setState] = useState(null),
+export function BikeGame({
+  bike,
+  user,
+}: {
+  bike: Pick<BikeDto, "id">;
+  user: UiViewer;
+}) {
+  const [state, setState] = useState<ReactionStateDto | null>(null),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [revision, setRevision] = useState(0);
   useEffect(() => {
-    socialApi("game/bikes/" + bike.id + "/reactions")
+    socialApi<ReactionStateDto>("game/bikes/" + bike.id + "/reactions")
       .then(setState)
       .catch((e) => setError(e.message));
   }, [bike.id]);
-  const icons = { wild: Flame, clean: Sparkles, dream: Star };
-  async function vote(r) {
+  const icons: Record<string, typeof Flame> = {
+    wild: Flame,
+    clean: Sparkles,
+    dream: Star,
+  };
+  async function vote(r: ReactionStateDto["reactions"][number]) {
     setBusy(true);
     setError("");
     try {
       setState(
-        await socialApi(
+        await socialApi<ReactionStateDto>(
           "game/bikes/" + bike.id + "/reactions/" + r.key,
           r.selected ? "DELETE" : "PUT",
         ),
       );
       setRevision((n) => n + 1);
     } catch (e) {
-      setError(e.message);
+      setError(errorMessage(e));
     } finally {
       setBusy(false);
     }

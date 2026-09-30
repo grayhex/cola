@@ -1,4 +1,6 @@
 "use client";
+import type { DiscoveryDto } from "./content-types.ts";
+import type { ApiError } from "../../lib/contracts.ts";
 import { ClassificationFilters } from "./bike-classification.tsx";
 import {
   readClassificationFilters,
@@ -22,7 +24,7 @@ const tabs = [
 export default function DiscoverySearch() {
   const params = useSearchParams(),
     { viewer: user } = useSite(),
-    [data, setData] = useState(null),
+    [data, setData] = useState<DiscoveryDto | null>(null),
     [error, setError] = useState(""),
     [revision, setRevision] = useState(0);
   const query = params.get("q") || params.get("component") || "",
@@ -43,7 +45,7 @@ export default function DiscoverySearch() {
       cache: "no-store",
     })
       .then(async (r) => {
-        const d = await r.json();
+        const d: DiscoveryDto & Partial<ApiError> = await r.json();
         if (!r.ok) throw Error(d.error);
         return d;
       })
@@ -55,7 +57,7 @@ export default function DiscoverySearch() {
       });
     return () => controller.abort();
   }, [key, revision]);
-  function href(patch) {
+  function href(patch: Record<string, string | number>) {
     const next = new URLSearchParams(key);
     Object.entries(patch).forEach(([k, v]) => next.set(k, String(v)));
     return "/search?" + next;
@@ -150,14 +152,14 @@ export default function DiscoverySearch() {
                     <strong>{item.title}</strong>
                     <small>
                       {item.subtitle}
-                      {item.metadata.category
+                      {item.type === "bike" && item.metadata.category
                         ? " · " +
                           classificationLabels(item.metadata).join(" · ")
                         : ""}
-                      {item.metadata.weight
+                      {"weight" in item.metadata && item.metadata.weight
                         ? " · " + Number(item.metadata.weight) + " кг"
                         : ""}
-                      {item.metadata.distanceM != null
+                      {item.type === "ride" && item.metadata.distanceM != null
                         ? " · " +
                           (item.metadata.distanceM / 1000).toLocaleString(
                             "ru-RU",

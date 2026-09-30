@@ -1,4 +1,5 @@
 "use client";
+import type { CSSProperties } from "react";
 import { useEffect, useRef, useState } from "react";
 import { Trophy, Medal } from "./icons.tsx";
 import { gameArtworkSource } from "../../lib/gamification-assets.ts";
@@ -12,13 +13,21 @@ export default function AchievementArt({
   kind = "record",
   size = 40,
   loading = "eager",
+}: {
+  imageId?: string | null;
+  kind?: "record" | "achievement";
+  size?: number;
+  loading?: "eager" | "lazy";
 }) {
-  const src = gameArtworkSource(imageId, size);
-  const [imageState, setImageState] = useState({
+  const src = gameArtworkSource(imageId || "", size);
+  const [imageState, setImageState] = useState<{
+    src: string | null;
+    status: "loading" | "loaded" | "error";
+  }>({
     src: null,
     status: "loading",
   });
-  const image = useRef(null);
+  const image = useRef<HTMLImageElement>(null);
   const state = imageState.src === src ? imageState.status : "loading";
   useEffect(() => {
     const node = image.current;
@@ -30,7 +39,7 @@ export default function AchievementArt({
   return (
     <span
       className="game-art"
-      style={{ "--game-art-size": `${size}px` }}
+      style={{ "--game-art-size": `${size}px` } as CSSProperties}
       aria-hidden="true"
       data-image-state={src ? state : "empty"}
     >

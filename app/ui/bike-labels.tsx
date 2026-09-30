@@ -7,7 +7,14 @@ import { ClassificationBadges } from "./bike-classification.tsx";
 import { ContentLabel, LabelRow } from "./content-label.tsx";
 // The year, the size and the weight in one row: on cards and under the
 // title of the bike page (#131).
-export function BikeLabels({ bike }: { bike: BikeDto }) {
+export function BikeLabels({
+  bike,
+}: {
+  bike: Pick<BikeDto, "category"> &
+    Partial<
+      Pick<BikeDto, "classification" | "year" | "size" | "weight" | "is_former">
+    >;
+}) {
   return (
     <LabelRow className="bike-labels" aria-label="Характеристики велосипеда">
       {bike.is_former && (
@@ -57,7 +64,7 @@ export function BikeLike({
   t = (s) => s,
   compact = false,
 }: {
-  bike: Pick<BikeDto, "is_owner">;
+  bike: Partial<Pick<BikeDto, "is_owner">>;
   reaction: ReturnType<typeof useBikeReaction>;
   t?: (text: string) => string;
   compact?: boolean;

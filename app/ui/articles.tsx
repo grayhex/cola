@@ -1,4 +1,8 @@
 "use client";
+import { errorMessage } from "../../lib/errors.ts";
+import type { ArticleSaved, PhotoInserter } from "./content-types.ts";
+import type { SiteSettings, ApiError } from "../../lib/contracts.ts";
+import type { ArticleDto, ArticleListDto } from "./content-types.ts";
 import EmailPolicyAction from "./email-policy-action.tsx";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
@@ -25,7 +29,13 @@ const PromptComposer = dynamic(() => import("./prompt-composer.tsx"), {
 function useReader() {
   return useSite().viewer;
 }
-export function ArticleCard({ article: a, topics }) {
+export function ArticleCard({
+  article: a,
+  topics,
+}: {
+  article: ArticleListDto["articles"][number];
+  topics: SiteSettings["articleTopics"];
+}) {
   const topic = topics.find((t) => t.id === a.topicId);
   return (
     <article className="article-card">
@@ -72,7 +82,7 @@ export function Articles() {
     [search, setSearch] = useState(""),
     [query, setQuery] = useState(""),
     [page, setPage] = useState(1),
-    [data, setData] = useState(null),
+    [data, setData] = useState<ArticleListDto | null>(null),
     [error, setError] = useState("");
   useEffect(
     () => setOwn(new URLSearchParams(location.search).get("own") === "1"),
@@ -88,7 +98,7 @@ export function Articles() {
       ...(own ? { own: "1" } : {}),
       ...(topic ? { topic } : {}),
     });
-    socialApi("articles?" + qs)
+    socialApi<ArticleListDto>("articles?" + qs)
       .then((d) => {
         if (alive) setData(d);
       })
@@ -208,7 +218,13 @@ export function Articles() {
     </>
   );
 }
-export function ArticlePage({ share, initial = null }) {
+export function ArticlePage({
+  share,
+  initial = null,
+}: {
+  share: string;
+  initial?: { article: ArticleDto } | null;
+}) {
   const user = useReader(),
     { settings } = useSite();
   const [article, setArticle] = useState(initial?.article || null),
@@ -218,7 +234,9 @@ export function ArticlePage({ share, initial = null }) {
   const seed = useRef(initial);
   useEffect(() => {
     let alive = true;
-    const request = seed.current || socialApi("articles/public/" + share);
+    const request =
+      seed.current ||
+      socialApi<{ article: ArticleDto }>("articles/public/" + share);
     seed.current = null;
     Promise.resolve(request)
       .then((d) => {
@@ -313,13 +331,21 @@ export function NewArticle() {
     </>
   );
 }
-function ArticleEditor({ initial, onSaved, onCancel }) {
+function ArticleEditor({
+  initial,
+  onSaved,
+  onCancel,
+}: {
+  initial?: ArticleDto | null;
+  onSaved: (article: ArticleDto) => void | Promise<void>;
+  onCancel?: () => void;
+}) {
   const router = useRouter();
   const [ready, setReady] = useState(false);
   useEffect(() => setReady(true), []);
   const { settings } = useSite(),
     topics = settings.articleTopics || [];
-  const [record, setRecord] = useState(initial || null),
+  const [record, setRecord] = useState<ArticleSaved | null>(initial || null),
     [form, setForm] = useState({
       title: initial?.title || "",
       body: initial?.body || "",
@@ -330,22 +356,22 @@ function ArticleEditor({ initial, onSaved, onCancel }) {
     [error, setError] = useState(""),
     [dirty, setDirty] = useState(false);
   // Filled in by the editor: puts an illustration where the author writes.
-  const inserter = useRef(null);
-  const set = (key, value) => {
+  const inserter = useRef<PhotoInserter | null>(null);
+  const set = (key: "title" | "body" | "topicId", value: string) => {
     setForm((v) => ({ ...v, [key]: value }));
     setDirty(true);
   };
   useEffect(() => {
     if (!dirty) return;
-    const handler = (e) => {
+    const handler = (e: BeforeUnloadEvent) => {
       e.preventDefault();
       e.returnValue = "";
     };
     window.addEventListener("beforeunload", handler);
     return () => window.removeEventListener("beforeunload", handler);
   }, [dirty]);
-  async function save(status) {
-    const result = await socialApi(
+  async function save(status: "draft" | "published") {
+    const result = await socialApi<ArticleSaved>(
       "articles" + (record ? "/" + record.id : ""),
       record ? "PATCH" : "POST",
       { ...form, status },
@@ -356,7 +382,7 @@ function ArticleEditor({ initial, onSaved, onCancel }) {
   }
   // An illustration becomes a block of its own at the cursor (#128); until
   // the editor has loaded, it goes to the end.
-  function insertPhoto(id) {
+  function insertPhoto(id: string) {
     if (inserter.current) inserter.current(id);
     else
       set(
@@ -372,12 +398,16 @@ function ArticleEditor({ initial, onSaved, onCancel }) {
         setBusy(true);
         setError("");
         try {
-          const status = e.nativeEvent.submitter?.value || "draft";
-          const result = await save(status);
-          const d = await socialApi("articles/public/" + result.shareId);
+          const status =
+            (e.nativeEvent.submitter as HTMLButtonElement | null)?.value ||
+            "draft";
+          const result = await save(status as "draft" | "published");
+          const d = await socialApi<{ article: ArticleDto }>(
+            "articles/public/" + result.shareId,
+          );
           onSaved(d.article);
         } catch (e) {
-          setError(e.message);
+          setError(errorMessage(e));
         } finally {
           setBusy(false);
         }
@@ -449,12 +479,13 @@ function ArticleEditor({ initial, onSaved, onCancel }) {
                       body: file,
                     },
                   );
-                  const photo = await r.json();
+                  const photo: ArticleDto["photos"][number] &
+                    Partial<ApiError> = await r.json();
                   if (!r.ok) throw Error(photo.error);
                   setPhotos((v) => [...v, photo]);
                   insertPhoto(photo.id);
                 } catch (e) {
-                  setError(e.message);
+                  setError(errorMessage(e));
                 } finally {
                   setBusy(false);
                 }
@@ -489,7 +520,7 @@ function ArticleEditor({ initial, onSaved, onCancel }) {
                   setError("");
                   try {
                     await socialApi(
-                      "journal/" + record.id + "/photos/" + p.id,
+                      "journal/" + record!.id + "/photos/" + p.id,
                       "DELETE",
                     );
                     setPhotos((v) => v.filter((photo) => photo.id !== p.id));
@@ -504,7 +535,7 @@ function ArticleEditor({ initial, onSaved, onCancel }) {
                       ),
                     );
                   } catch (e) {
-                    setError(e.message);
+                    setError(errorMessage(e));
                   } finally {
                     setBusy(false);
                   }
@@ -560,7 +591,7 @@ function ArticleEditor({ initial, onSaved, onCancel }) {
                 setDirty(false);
                 router.push("/articles?own=1");
               } catch (e) {
-                setError(e.message);
+                setError(errorMessage(e));
                 setBusy(false);
               }
             }}

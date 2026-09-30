@@ -15,11 +15,19 @@ RuntimeLoader.setWasmFallbackUrl(
   `/rive/runtime/${riveRuntimeVersion}/rive_fallback.wasm`,
 );
 
-export default function RiveCanvas({ name, src, theme }) {
+export default function RiveCanvas({
+  name,
+  src,
+  theme,
+}: {
+  name?: string;
+  src?: string;
+  theme: "light" | "dark";
+}) {
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
   const firstFrame = useRef(false);
-  const asset = riveAssets[name];
+  const asset = Object.entries(riveAssets).find(([key]) => key === name)?.[1];
   const { rive, RiveComponent } = useRive(
     {
       src: src || `/rive/${name}-${theme}.riv`,

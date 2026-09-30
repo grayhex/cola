@@ -1,4 +1,22 @@
 "use client";
+import type {
+  Channel as StreamChannel,
+  StreamChat,
+  ChannelSort,
+} from "stream-chat";
+import type {
+  ChannelListItemUIProps,
+  ChannelListUIProps,
+  ComponentContextValue,
+} from "stream-chat-react";
+import type { PropsWithChildren } from "react";
+import type { RideDto } from "../ui/content-types.ts";
+interface MessengerActions {
+  newChat: () => void;
+  retryList: () => void;
+  back: () => void;
+}
+import { errorMessage } from "../../lib/errors.ts";
 import {
   createContext,
   useContext,
@@ -33,7 +51,7 @@ import {
 } from "../ui/icons.tsx";
 import { chatApi } from "./chat-api.ts";
 import NewConversation from "./new-conversation.tsx";
-import { Images, plainText } from "./chat-content.tsx";
+import { plainText } from "./chat-content.tsx";
 import { socialApi } from "../ui/social-primitives.tsx";
 import { publicPath } from "../../lib/public-urls.ts";
 import { rideTimeLabel } from "../../lib/ride-announcement.ts";
@@ -41,7 +59,7 @@ import { streamUserId } from "../../lib/chat-config.ts";
 
 /** The draft of a question about a ride: title, agreed time and the public
  * address — no meeting place, people or answers. */
-function rideContext(ride) {
+function rideContext(ride: RideDto) {
   const when =
     ride.status === "planned" && ride.scheduledAt
       ? " (" + rideTimeLabel(ride.scheduledAt, ride.recurrenceTimezone) + ")"
@@ -49,15 +67,20 @@ function rideContext(ride) {
   return `Вопрос о покатушке «${ride.title}»${when}: ${new URL(publicPath("ride", ride), location.origin).href}\n`;
 }
 
-const MessengerContext = createContext(null);
+const MessengerContext = createContext<MessengerActions | null>(null);
+declare module "stream-chat" {
+  interface CustomChannelData {
+    name?: string;
+  }
+}
 const actions = ["edit", "delete", "flag", "react", "reply", "quote"];
-function participants(channel, me) {
+function participants(channel: StreamChannel, me: string | undefined) {
   return Object.values(channel.state.members)
     .filter((m) => m.user_id !== me)
     .map((m) => m.user)
-    .filter(Boolean);
+    .filter((person): person is NonNullable<typeof person> => !!person);
 }
-function titleFor(channel, me) {
+function titleFor(channel: StreamChannel, me: string | undefined) {
   return (
     channel.data?.name ||
     participants(channel, me)
@@ -66,7 +89,13 @@ function titleFor(channel, me) {
     "Диалог"
   );
 }
-function ChannelAvatar({ channel, me }) {
+function ChannelAvatar({
+  channel,
+  me,
+}: {
+  channel: StreamChannel;
+  me?: string;
+}) {
   return channel.id?.startsWith("group_") ? (
     <span className="chat-group-avatar" aria-hidden="true">
       <Users size={22} />
@@ -87,7 +116,7 @@ function ConversationRow({
   lastMessage,
   onSelect,
   messageDeliveryStatus,
-}) {
+}: ChannelListItemUIProps) {
   const { client } = useChatContext();
   const title = titleFor(channel, client.userID);
   const date = lastMessage?.created_at
@@ -121,7 +150,7 @@ function ConversationRow({
       <span className="chat-channel-copy">
         <span className="chat-channel-top">
           <strong>{title}</strong>
-          {time && <time dateTime={date.toISOString()}>{time}</time>}
+          {time && <time dateTime={date!.toISOString()}>{time}</time>}
         </span>
         <span className="chat-channel-bottom">
           <span className="chat-preview">
@@ -131,12 +160,12 @@ function ConversationRow({
           {own && messageDeliveryStatus === "read" && (
             <CheckCheck size={15} aria-label="Прочитано" />
           )}
-          {unread > 0 && (
+          {(unread ?? 0) > 0 && (
             <span
               className="chat-unread"
               aria-label={`${unread} непрочитанных`}
             >
-              {unread > 99 ? "99+" : unread}
+              {(unread ?? 0) > 99 ? "99+" : unread}
             </span>
           )}
         </span>
@@ -145,7 +174,7 @@ function ConversationRow({
   );
 }
 function EmptyConversations() {
-  const { newChat } = useContext(MessengerContext);
+  const { newChat } = useContext(MessengerContext)!;
   return (
     <div className="chat-state">
       <MessagesSquare size={30} aria-hidden="true" />
@@ -157,8 +186,12 @@ function EmptyConversations() {
     </div>
   );
 }
-function ConversationList({ error, loading, children }) {
-  const { retryList } = useContext(MessengerContext);
+function ConversationList({
+  error,
+  loading,
+  children,
+}: PropsWithChildren<ChannelListUIProps>) {
+  const { retryList } = useContext(MessengerContext)!;
   if (error)
     return (
       <div className="chat-state" role="alert">
@@ -176,7 +209,7 @@ function ConversationList({ error, loading, children }) {
     );
   return <div className="chat-channel-items">{children}</div>;
 }
-const components = {
+const components: Partial<ComponentContextValue> = {
   ChannelListHeader: () => null,
   ChannelListUI: ConversationList,
   ChannelListItemUI: ConversationRow,
@@ -184,12 +217,12 @@ const components = {
 function ConversationHeader() {
   const { channel, members } = useChannelStateContext();
   const { client } = useChatContext();
-  const { back } = useContext(MessengerContext);
+  const { back } = useContext(MessengerContext)!;
   const [details, setDetails] = useState(false);
   const title = titleFor(channel, client.userID);
   const users = Object.values(members || channel.state.members)
     .map((m) => m.user)
-    .filter(Boolean);
+    .filter((person): person is NonNullable<typeof person> => !!person);
   const group = channel.id?.startsWith("group_");
   const other = users.find((u) => u.id !== client.userID);
   return (
@@ -257,7 +290,7 @@ function ConversationHeader() {
     </>
   );
 }
-export default function Conversations({ client }) {
+export default function Conversations({ client }: { client: StreamChat }) {
   const { channel, setActiveChannel } = useChatContext();
   const params = useSearchParams();
   const router = useRouter();
@@ -274,13 +307,13 @@ export default function Conversations({ client }) {
   const [attempt, setAttempt] = useState(0);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState("");
-  const newButton = useRef(null);
+  const newButton = useRef<HTMLButtonElement>(null);
   const wasConversation = useRef(false);
   const filters = useMemo(
-    () => ({ type: "colabike", members: { $in: [client.userID] } }),
+    () => ({ type: "colabike", members: { $in: [client.userID!] } }),
     [client],
   );
-  const sort = useMemo(() => ({ last_message_at: -1 }), []);
+  const sort = useMemo<ChannelSort>(() => ({ last_message_at: -1 }), []);
   const options = useMemo(() => ({ limit: 20, state: true, watch: true }), []);
   useEffect(() => {
     let active = true;
@@ -296,13 +329,18 @@ export default function Conversations({ client }) {
     setBusy(true);
     (async () => {
       const nextCid = target
-        ? (await chatApi("channels", { kind: "dm", members: [target] })).cid
+        ? (
+            await chatApi<{ cid: string }>("channels", {
+              kind: "dm",
+              members: [target],
+            })
+          ).cid
         : cid;
-      if (!/^colabike:(dm_[a-f0-9]{40}|group_[a-f0-9]{32})$/.test(nextCid))
+      if (!/^colabike:(dm_[a-f0-9]{40}|group_[a-f0-9]{32})$/.test(nextCid!))
         throw new Error("Диалог недоступен");
-      const next = client.channel("colabike", nextCid.split(":")[1]);
+      const next = client.channel("colabike", nextCid!.split(":")[1]);
       await next.watch();
-      if (!next.state.members[client.userID])
+      if (!next.state.members[client.userID!])
         throw new Error("Диалог недоступен");
       if (!active) return;
       setActiveChannel(next);
@@ -310,7 +348,7 @@ export default function Conversations({ client }) {
         setRevision((n) => n + 1);
         router.replace(
           "/messages?channel=" +
-            encodeURIComponent(nextCid) +
+            encodeURIComponent(nextCid!) +
             (rideShare ? "&ride=" + rideShare : ""),
           { scroll: false },
         );
@@ -339,7 +377,7 @@ export default function Conversations({ client }) {
   useEffect(() => {
     if (!rideShare || !cid || !channel || channel.cid !== cid || target) return;
     let active = true;
-    socialApi("rides/public/" + rideShare)
+    socialApi<{ ride: RideDto }>("rides/public/" + rideShare)
       .then(({ ride }) => {
         if (!active) return;
         const organizer = ride.author?.id && streamUserId(ride.author.id);
@@ -364,7 +402,7 @@ export default function Conversations({ client }) {
       active = false;
     };
   }, [rideShare, cid, channel, target, client, router]);
-  const select = (nextCid) =>
+  const select = (nextCid: string) =>
     router.push("/messages?channel=" + encodeURIComponent(nextCid), {
       scroll: false,
     });
@@ -385,7 +423,7 @@ export default function Conversations({ client }) {
       link.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (e) {
-      setExportError(e.message);
+      setExportError(errorMessage(e));
     } finally {
       setExporting(false);
     }
@@ -448,7 +486,7 @@ export default function Conversations({ client }) {
                 channelRenderFilterFn={(list) =>
                   list.filter(
                     (c) =>
-                      c.type === "colabike" && c.state.members[client.userID],
+                      c.type === "colabike" && c.state.members[client.userID!],
                   )
                 }
                 renderChannels={(list) =>
@@ -486,7 +524,7 @@ export default function Conversations({ client }) {
                 Открываем диалог…
               </div>
             ) : channel ? (
-              <Channel key={channel.cid} Attachment={Images}>
+              <Channel key={channel.cid}>
                 <Window>
                   <ConversationHeader />
                   <MessageList
@@ -539,7 +577,7 @@ export default function Conversations({ client }) {
               setCreating(false);
               newButton.current?.focus();
             }}
-            onCreated={(nextCid) => {
+            onCreated={(nextCid: string) => {
               setCreating(false);
               setRevision((n) => n + 1);
               select(nextCid);

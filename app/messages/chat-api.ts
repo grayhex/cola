@@ -1,4 +1,9 @@
-export async function chatApi(action, data, signal) {
+import type { ApiError } from "../../lib/contracts.ts";
+export async function chatApi<T = unknown>(
+  action: string,
+  data?: unknown,
+  signal?: AbortSignal,
+): Promise<T> {
   let response;
   try {
     response = await fetch("/api/chat/" + action, {
@@ -15,7 +20,7 @@ export async function chatApi(action, data, signal) {
       { cause: error },
     );
   }
-  const result = await response.json();
+  const result: T & Partial<ApiError> = await response.json();
   if (!response.ok)
     throw new Error(result.error || "Не удалось открыть сообщения");
   return result;

@@ -13,25 +13,39 @@ import { parseRichText } from "../../../lib/rich-text.ts";
 import { indexed } from "../../../lib/indexing.ts";
 import styles from "./page.module.css";
 export const dynamic = "force-dynamic";
-export async function generateMetadata({ params, searchParams }) {
+export async function generateMetadata({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ kind: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const { kind } = await params;
   // Search engines index the current published revision only.
   const current =
-    legalKinds.includes(kind) &&
+    legalKinds.some((k) => k === kind) &&
     (await searchParams).revision === undefined &&
     (await publishedLegalDocument(db, kind));
   return {
-    title: (legalTitles[kind] || "Документ") + " · ColaBike",
+    title:
+      (legalTitles[kind as keyof typeof legalTitles] || "Документ") +
+      " · ColaBike",
     ...(current && { robots: indexed }),
   };
 }
-export default async function Page({ params, searchParams }) {
+export default async function Page({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ kind: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const { kind } = await params,
     search = await searchParams;
-  if (!legalKinds.includes(kind)) notFound();
+  if (!legalKinds.some((k) => k === kind)) notFound();
   if (
     search.revision !== undefined &&
-    !/^[1-9][0-9]{0,8}$/.test(search.revision)
+    !/^[1-9][0-9]{0,8}$/.test(String(search.revision))
   )
     notFound();
   const document = await publishedLegalDocument(
@@ -44,7 +58,7 @@ export default async function Page({ params, searchParams }) {
     <>
       <GlobalHeader user={await currentViewer()} />
       <main className={styles.page}>
-        <h1>{legalTitles[kind]}</h1>
+        <h1>{legalTitles[kind as keyof typeof legalTitles]}</h1>
         {document ? (
           <>
             <p className={styles.version}>

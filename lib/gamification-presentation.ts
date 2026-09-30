@@ -30,7 +30,10 @@ export function homeRecords<T extends { holder: unknown; subject: string }>(
   records: T[],
   limit = 4,
 ) {
-  const held = records.filter((record) => record.holder);
+  const held = records.filter(
+    (record): record is T & { holder: NonNullable<T["holder"]> } =>
+      !!record.holder,
+  );
   const bikes = held.filter(
     (record: { subject: string }) => record.subject === "bike",
   );

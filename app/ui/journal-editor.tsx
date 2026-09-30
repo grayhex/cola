@@ -1,4 +1,12 @@
 "use client";
+import type { BikeDto, ApiError } from "../../lib/contracts.ts";
+import type {
+  JournalDto,
+  JournalSaved,
+  JournalDraft,
+  RideListDto,
+} from "./content-types.ts";
+import { errorMessage } from "../../lib/errors.ts";
 import EmailPolicyAction from "./email-policy-action.tsx";
 import { useState, useEffect } from "react";
 import { socialApi } from "./social-primitives.tsx";
@@ -11,8 +19,14 @@ export default function JournalEditor({
   bikes = null,
   onSaved,
   onCancel,
+}: {
+  entry?: JournalDto | null;
+  bikeId?: string;
+  bikes?: BikeDto[] | null;
+  onSaved: (record: JournalSaved) => void | Promise<void>;
+  onCancel?: () => void;
 }) {
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<JournalDraft>({
     bikeId: entry?.bike.id || bikeId || "",
     kind: entry?.kind || "story",
     installationResult: entry?.installationResult || null,
@@ -25,15 +39,18 @@ export default function JournalEditor({
     rideId: entry?.ride?.id || null,
     componentIds: entry?.components.map((c) => c.id) || [],
   });
-  const [bike, setBike] = useState(null),
-    [rides, setRides] = useState([]),
+  const [bike, setBike] = useState<BikeDto | null>(null),
+    [rides, setRides] = useState<RideListDto["rides"]>([]),
     [ridePage, setRidePage] = useState(1),
     [rideTotal, setRideTotal] = useState(0),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
-    [files, setFiles] = useState([]),
-    [saved, setSaved] = useState(entry);
-  const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+    [files, setFiles] = useState<File[]>([]),
+    [saved, setSaved] = useState<(JournalSaved & Partial<JournalDto>) | null>(
+      entry,
+    );
+  const set = <K extends keyof JournalDraft>(k: K, v: JournalDraft[K]) =>
+    setForm((f) => ({ ...f, [k]: v }));
   useEffect(() => {
     let active = true;
     setBike(null);
@@ -42,8 +59,8 @@ export default function JournalEditor({
     setRideTotal(0);
     if (!form.bikeId) return;
     Promise.all([
-      socialApi("bikes/" + form.bikeId),
-      socialApi("rides?own=1&bikeId=" + form.bikeId),
+      socialApi<{ bike: BikeDto }>("bikes/" + form.bikeId),
+      socialApi<RideListDto>("rides?own=1&bikeId=" + form.bikeId),
     ])
       .then(([b, r]) => {
         if (active) {
@@ -63,10 +80,10 @@ export default function JournalEditor({
   const parts = [
     ...(saved?.components || []),
     ...(bike?.components || []).filter(
-      (c) => !saved?.components.some((p) => p.id === c.id),
+      (c) => !saved?.components?.some((p) => p.id === c.id),
     ),
   ];
-  async function submit(status) {
+  async function submit(status: "draft" | "published") {
     setBusy(true);
     setError("");
     let record = saved;
@@ -77,7 +94,7 @@ export default function JournalEditor({
         throw Error("Для публикации нужны заголовок и текст");
       // Save text first as a draft when new uploads are pending. Publication is last,
       // so a failed image never silently publishes a partial new entry.
-      const r = await socialApi(
+      const r = await socialApi<JournalSaved>(
         "journal" + (record ? "/" + record.id : ""),
         record ? "PATCH" : "POST",
         { ...input, status: files.length ? "draft" : status },
@@ -90,7 +107,7 @@ export default function JournalEditor({
           headers: { "Content-Type": f.type },
           body: f,
         });
-        const d = await res.json();
+        const d: Partial<ApiError> = await res.json();
         if (!res.ok) throw Error(d.error);
         setFiles((a) => a.filter((x) => x !== f));
       }
@@ -99,15 +116,15 @@ export default function JournalEditor({
       await onSaved(r);
     } catch (e) {
       setError(
-        e.message +
+        errorMessage(e) +
           (record
             ? " Черновик/сохранённые данные доступны по ссылке ниже."
             : ""),
       );
       if (record?.shareId) {
-        const d = await socialApi("journal/public/" + record.shareId).catch(
-          () => null,
-        );
+        const d = await socialApi<{ entry: JournalDto }>(
+          "journal/public/" + record.shareId,
+        ).catch(() => null);
         if (d) setSaved(d.entry);
       }
     } finally {
@@ -241,7 +258,7 @@ export default function JournalEditor({
           <label key={p.id} className="setting-row">
             <span>
               {p.name}
-              {saved?.components.some((c) => c.id === p.id)
+              {saved?.components?.some((c) => c.id === p.id)
                 ? " · сохранённый снимок"
                 : ""}
             </span>
@@ -272,8 +289,8 @@ export default function JournalEditor({
                 {r.title}
               </option>
             ))}
-            {entry?.ride && !rides.some((r) => r.id === entry.ride.id) && (
-              <option value={entry.ride.id}>{entry.ride.title}</option>
+            {entry?.ride && !rides.some((r) => r.id === entry.ride!.id) && (
+              <option value={entry.ride.id}>{entry.ride!.title}</option>
             )}
           </select>
         </label>
@@ -285,7 +302,7 @@ export default function JournalEditor({
             onClick={async () => {
               setBusy(true);
               try {
-                const r = await socialApi(
+                const r = await socialApi<RideListDto>(
                   "rides?own=1&bikeId=" +
                     form.bikeId +
                     "&page=" +
@@ -298,7 +315,7 @@ export default function JournalEditor({
                 setRidePage(r.page);
                 setRideTotal(r.total);
               } catch (e) {
-                setError(e.message);
+                setError(errorMessage(e));
               } finally {
                 setBusy(false);
               }
@@ -319,7 +336,7 @@ export default function JournalEditor({
           accept="image/jpeg,image/png,image/webp"
           disabled={busy}
           onChange={(e) => {
-            const next = [...e.target.files];
+            const next = [...(e.target.files || [])];
             if (
               next.some((f) => f.size > 10 * 1024 * 1024) ||
               next.length + (saved?.photos?.length || 0) > 8
@@ -352,12 +369,16 @@ export default function JournalEditor({
                     "journal/" + saved.id + "/photos/" + p.id,
                     "DELETE",
                   );
-                  setSaved((s) => ({
-                    ...s,
-                    photos: s.photos.filter((x) => x.id !== p.id),
-                  }));
+                  setSaved((s) =>
+                    s
+                      ? {
+                          ...s,
+                          photos: (s.photos || []).filter((x) => x.id !== p.id),
+                        }
+                      : s,
+                  );
                 } catch (e) {
-                  setError(e.message);
+                  setError(errorMessage(e));
                 } finally {
                   setBusy(false);
                 }

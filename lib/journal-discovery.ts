@@ -56,7 +56,10 @@ export async function savedPage(q: Queryable, viewer: string, page = 1) {
     ),
     byId = new Map(cards.map((c) => [c.id, c]));
   return {
-    entries: rows.flatMap((r) => (byId.has(r.id) ? [byId.get(r.id)] : [])),
+    entries: rows.flatMap((r) => {
+      const card = byId.get(r.id);
+      return card ? [card] : [];
+    }),
     total,
     page,
     pageSize: 24,

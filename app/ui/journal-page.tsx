@@ -1,4 +1,7 @@
 "use client";
+import { errorMessage } from "../../lib/errors.ts";
+import type { BikeDto } from "../../lib/contracts.ts";
+import type { JournalDto } from "./content-types.ts";
 import Link from "next/link";
 import { SharedView } from "./motion.tsx";
 import { useRouter } from "next/navigation";
@@ -24,11 +27,15 @@ export default function JournalPage({
   share = null,
   sharePath = null,
   initial = null,
+}: {
+  share?: string | null;
+  sharePath?: string | null;
+  initial?: { entry: JournalDto } | null;
 }) {
   const router = useRouter();
-  const [bikes, setBikes] = useState([]);
+  const [bikes, setBikes] = useState<BikeDto[]>([]);
   const [entry, setEntry] = useState(initial?.entry || null),
-    [bike, setBike] = useState(null),
+    [bike, setBike] = useState<BikeDto | null>(null),
     [editing, setEditing] = useState(false),
     [loaded, setLoaded] = useState(!!initial),
     [error, setError] = useState(""),
@@ -40,7 +47,7 @@ export default function JournalPage({
   // reuses it instead of asking again.
   const seed = useRef(initial);
   async function refresh() {
-    const d = await socialApi("journal/public/" + share);
+    const d = await socialApi<{ entry: JournalDto }>("journal/public/" + share);
     setEntry(d.entry);
   }
   useEffect(() => {
@@ -49,7 +56,8 @@ export default function JournalPage({
       try {
         if (share) {
           const d =
-            seed.current || (await socialApi("journal/public/" + share));
+            seed.current ||
+            (await socialApi<{ entry: JournalDto }>("journal/public/" + share));
           seed.current = null;
           if (!active) return;
           setEntry(d.entry);
@@ -60,7 +68,7 @@ export default function JournalPage({
         } else {
           if (!userId) throw Error("Войдите в аккаунт, чтобы написать запись");
           const id = new URLSearchParams(location.search).get("bike");
-          const d = await socialApi("bikes");
+          const d = await socialApi<{ bikes: BikeDto[] }>("bikes");
           if (!active) return;
           setBikes(d.bikes);
           if (id && !d.bikes.some((b) => b.id === id))
@@ -71,7 +79,7 @@ export default function JournalPage({
         }
         setLoaded(true);
       } catch (e) {
-        if (active) setError(e.message);
+        if (active) setError(errorMessage(e));
       } finally {
         if (active) setLoaded(true);
       }
@@ -137,14 +145,20 @@ export default function JournalPage({
               <a
                 href={
                   entry.bikePublic
-                    ? publicPath("bike", entry.bike)
+                    ? publicPath("bike", { shareId: entry.bike.shareId })
                     : "/account?tab=bikes&bike=" + entry.bike.id
                 }
               >
                 {entry.bike.name}
               </a>
               <div className="journal-entry-meta">
-                <span>{journalKinds[entry.kind]}</span>
+                <span>
+                  {
+                    Object.entries(journalKinds).find(
+                      ([kind]) => kind === entry.kind,
+                    )?.[1]
+                  }
+                </span>
                 {entry.status === "draft" ? (
                   <span>Черновик</span>
                 ) : !visible ? (
@@ -280,7 +294,7 @@ export default function JournalPage({
                               "/account?tab=bikes&bike=" + entry.bike.id,
                             );
                           } catch (e) {
-                            setError(e.message);
+                            setError(errorMessage(e));
                             setBusy(false);
                           }
                         }}
@@ -314,13 +328,16 @@ export default function JournalPage({
                         }
                         setBusy(true);
                         try {
-                          const r = await socialApi(
+                          const r = await socialApi<{
+                            likes: number;
+                            liked: boolean;
+                          }>(
                             "journal/" + entry.id + "/like",
                             entry.liked ? "DELETE" : "PUT",
                           );
-                          setEntry((e) => ({ ...e, ...r }));
+                          setEntry((e) => (e ? { ...e, ...r } : e));
                         } catch (e) {
-                          setError(e.message);
+                          setError(errorMessage(e));
                         } finally {
                           setBusy(false);
                         }

@@ -1,4 +1,6 @@
 "use client";
+import type { PublicProfile } from "../../lib/contracts.ts";
+import type { ProfileInitial } from "./content-types.ts";
 import Link from "next/link";
 import RideList from "./ride-list.jsx";
 import BikeGrid from "./bike-grid.tsx";
@@ -24,6 +26,10 @@ export default function PublicProfile({
   username,
   sharePath = null,
   initial = null,
+}: {
+  username: string;
+  sharePath?: string | null;
+  initial?: ProfileInitial | null;
 }) {
   const [profile, setProfile] = useState(initial?.profile || null),
     [feed, setFeed] = useState(initial?.bikes || null),
@@ -34,16 +40,19 @@ export default function PublicProfile({
   const { viewer: user, chatEnabled } = useSite();
   // The server rendered the profile and the first page of bikes (#74).
   const seed = useRef(initial),
-    seedBikes = useRef(initial?.bikes);
+    seedBikes = useRef<ProfileInitial["bikes"] | null>(initial?.bikes || null);
   async function refresh() {
-    const d = await socialApi("social/profiles/" + username);
+    const d = await socialApi<Pick<ProfileInitial, "profile">>(
+      "social/profiles/" + username,
+    );
     setProfile(d.profile);
   }
   useEffect(() => {
     let active = true;
     setError("");
     const profileRequest =
-      seed.current || socialApi("social/profiles/" + username);
+      seed.current ||
+      socialApi<Pick<ProfileInitial, "profile">>("social/profiles/" + username);
     seed.current = null;
     Promise.resolve(profileRequest)
       .then((data) => {
@@ -64,7 +73,9 @@ export default function PublicProfile({
     }
     seedBikes.current = null;
     setFeed(null);
-    socialApi("social/profiles/" + username + "/bikes?page=" + page)
+    socialApi<ProfileInitial["bikes"]>(
+      "social/profiles/" + username + "/bikes?page=" + page,
+    )
       .then((d) => {
         if (active) setFeed(d);
       })
@@ -213,7 +224,7 @@ export default function PublicProfile({
                     </h2>
                     {feed ? (
                       <>
-                        <BikeGrid bikes={feed.bikes}>
+                        <BikeGrid>
                           {feed.bikes.map((b) => (
                             <BikeCard key={b.id} bike={b} user={user} />
                           ))}

@@ -87,42 +87,43 @@ export async function unreadCount(q: Queryable, id: string) {
   );
   return { unread: r.rows.length, capped: r.rows.length === 100 };
 }
+interface NotificationRow {
+  id: string;
+  type: string;
+  created_at: Date;
+  read_at: Date | null;
+  comment_id: string;
+  ride_comment_id: string;
+  entry_comment_id: string;
+  component_comment_id: string;
+  component_id: string;
+  component_name: string;
+  category_slug: string;
+  slug: string;
+  listing_id: string;
+  listing_share: string;
+  listing_title: string;
+  listing_status: string;
+  listing_expires: Date;
+  listing_expired: boolean;
+  listing_due: boolean;
+  entry_id: string;
+  entry_kind: string;
+  entry_share: string;
+  entry_title: string;
+  ride_id: string;
+  ride_share_id: string;
+  ride_title: string;
+  bike_id: string;
+  share_id: string;
+  bike_name: string;
+  actor_id: string;
+  username: string;
+  name: string;
+  avatar_id: string;
+}
 export async function notificationPage(q: Queryable, id: string, page = 1) {
-  const r = await q.query<{
-    id: string;
-    type: string;
-    created_at: Date;
-    read_at: Date;
-    comment_id: string;
-    ride_comment_id: string;
-    entry_comment_id: string;
-    component_comment_id: string;
-    component_id: string;
-    component_name: string;
-    category_slug: string;
-    slug: string;
-    listing_id: string;
-    listing_share: string;
-    listing_title: string;
-    listing_status: string;
-    listing_expires: Date;
-    listing_expired: boolean;
-    listing_due: boolean;
-    entry_id: string;
-    entry_kind: string;
-    entry_share: string;
-    entry_title: string;
-    ride_id: string;
-    ride_share_id: string;
-    ride_title: string;
-    bike_id: string;
-    share_id: string;
-    bike_name: string;
-    actor_id: string;
-    username: string;
-    name: string;
-    avatar_id: string;
-  }>(
+  const r = await q.query<NotificationRow>(
     `SELECT n.id,n.type,n.created_at,n.read_at,n.comment_id,n.ride_comment_id,n.entry_comment_id,n.component_comment_id,cm.id component_id,cm.name component_name,cm.category_slug,cm.slug,ml.id AS listing_id,ml.share_id AS listing_share,ml.title AS listing_title,ml.status AS listing_status,ml.expires_at AS listing_expires,(ml.expires_at<=now()) AS listing_expired,(ml.expires_at<=now()+make_interval(days=>${expiryNoticeDays})) AS listing_due,e.id AS entry_id,e.kind AS entry_kind,e.share_id AS entry_share,e.title AS entry_title,r.id AS ride_id,r.share_id AS ride_share_id,r.title AS ride_title,b.id AS bike_id,b.share_id,b.name AS bike_name,a.id AS actor_id,a.username,a.name,a.avatar_id` +
       from +
       " WHERE " +
@@ -211,7 +212,7 @@ export async function notificationPage(q: Queryable, id: string, page = 1) {
 }
 // The listing's state is read now, not stored with the notice: the text
 // follows an extension, a sale or the end of the term.
-function marketNotice(n: Record<string, unknown>) {
+function marketNotice(n: NotificationRow) {
   return {
     id: n.id,
     type: n.type,

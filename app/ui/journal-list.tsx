@@ -1,17 +1,31 @@
 "use client";
+import type { JournalSaved } from "./content-types.ts";
+import { errorMessage } from "../../lib/errors.ts";
+import type { BikeDto } from "../../lib/contracts.ts";
+import type { JournalListDto } from "./content-types.ts";
 import { useState, useEffect, useRef } from "react";
 import { Plus, NotebookPen, Heart, X } from "./icons.tsx";
 import { socialApi } from "./social-primitives.tsx";
 import { PageControls } from "./community-controls.tsx";
 import { journalKinds } from "../../lib/journal-kinds.ts";
 import { publicPath } from "../../lib/public-urls.ts";
-export default function JournalList({ bike, owner = false, editable = false }) {
-  const [data, setData] = useState(null),
+export default function JournalList({
+  bike,
+  owner = false,
+  editable = false,
+}: {
+  bike: BikeDto;
+  owner?: boolean;
+  editable?: boolean;
+}) {
+  const [data, setData] = useState<JournalListDto | null>(null),
     [page, setPage] = useState(1),
     [error, setError] = useState(""),
-    [change, setChange] = useState(null),
+    [change, setChange] = useState<{ componentIds: string[] } | null>(null),
     [busy, setBusy] = useState(false);
-  const previous = useRef(null);
+  const previous = useRef<{ id: string; parts: BikeDto["components"] } | null>(
+    null,
+  );
   useEffect(() => {
     const state = { id: bike.id, parts: bike.components || [] };
     if (
@@ -34,7 +48,7 @@ export default function JournalList({ bike, owner = false, editable = false }) {
   useEffect(() => {
     let active = true;
     setData(null);
-    socialApi("journal?bikeId=" + bike.id + "&page=" + page)
+    socialApi<JournalListDto>("journal?bikeId=" + bike.id + "&page=" + page)
       .then((d) => {
         if (active) setData(d);
       })
@@ -46,10 +60,11 @@ export default function JournalList({ bike, owner = false, editable = false }) {
     };
   }, [bike.id, page]);
   async function draft() {
+    if (!change) return;
     setBusy(true);
     setError("");
     try {
-      const e = await socialApi("journal", "POST", {
+      const e = await socialApi<JournalSaved>("journal", "POST", {
         bikeId: bike.id,
         kind: "build",
         title: "Изменения комплектации",
@@ -60,7 +75,7 @@ export default function JournalList({ bike, owner = false, editable = false }) {
       });
       location.assign(publicPath("journal", e) + "?edit=1");
     } catch (e) {
-      setError(e.message);
+      setError(errorMessage(e));
     } finally {
       setBusy(false);
     }
@@ -102,7 +117,13 @@ export default function JournalList({ bike, owner = false, editable = false }) {
       {data?.entries.map((e) => (
         <article className="journal-list-entry" key={e.id}>
           <div className="journal-entry-meta">
-            <span>{journalKinds[e.kind]}</span>
+            <span>
+              {
+                Object.entries(journalKinds).find(
+                  ([kind]) => kind === e.kind,
+                )?.[1]
+              }
+            </span>
             <time>
               {e.eventDate || new Date(e.createdAt).toLocaleDateString("ru-RU")}
             </time>

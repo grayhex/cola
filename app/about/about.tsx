@@ -1,4 +1,11 @@
 "use client";
+import type { CurrentUser } from "../../lib/auth.ts";
+import type { ViewerDto } from "../../lib/contracts.ts";
+type UiViewer = ViewerDto | null;
+
+import type { AboutItem } from "../../lib/about-content.ts";
+import type { siteStatistics } from "../../lib/site-statistics.ts";
+type StatisticsDto = Awaited<ReturnType<typeof siteStatistics>>;
 import { useEffect } from "react";
 import {
   Bell,
@@ -31,7 +38,7 @@ import {
 } from "../../lib/about-content.ts";
 import styles from "./about.module.css";
 
-const icons = {
+const icons: Record<string, typeof Bike> = {
   bike: Bike,
   journal: NotebookPen,
   search: Search,
@@ -42,7 +49,10 @@ const icons = {
   check: CheckCheck,
   layers: Layers,
 };
-const illustrations = {
+const illustrations: Record<
+  string,
+  "aboutGuideImageId" | "aboutTechnologyImageId"
+> = {
   guide: "aboutGuideImageId",
   technology: "aboutTechnologyImageId",
 };
@@ -70,7 +80,7 @@ function GlyphField() {
   );
 }
 
-function Statistics({ statistics }) {
+function Statistics({ statistics }: { statistics: StatisticsDto }) {
   const cells = [
     ["Участников", statistics.users],
     ["Велосипедов", statistics.bikes],
@@ -101,7 +111,13 @@ function Statistics({ statistics }) {
 
 // A bike icon in quiet concentric rings (Storage's security emblem), or the
 // picture chosen in Админка → Дизайн → Графика.
-function Emblem({ asset, icon: Icon }) {
+function Emblem({
+  asset,
+  icon: Icon,
+}: {
+  asset?: string | null;
+  icon: typeof Bike;
+}) {
   if (asset)
     return (
       <img
@@ -122,7 +138,7 @@ function Emblem({ asset, icon: Icon }) {
   );
 }
 
-function Cells({ items }) {
+function Cells({ items }: { items: AboutItem[] }) {
   return (
     <div className="mk-cells">
       {items.map((item) => {
@@ -366,14 +382,14 @@ function RidesDemo() {
   );
 }
 
-const demos = {
+const demos: Record<string, () => React.ReactNode> = {
   "demo-bike": BikeDemo,
   "demo-journal": JournalDemo,
   "demo-reading": ReadingDemo,
   "demo-rides": RidesDemo,
 };
 
-function Scenario({ item }) {
+function Scenario({ item }: { item: AboutItem }) {
   const Demo = demos[item.id];
   return (
     <section className="frame">
@@ -421,7 +437,13 @@ function Gap() {
   );
 }
 
-export default function About({ user, statistics }) {
+export default function About({
+  user,
+  statistics,
+}: {
+  user: UiViewer | CurrentUser;
+  statistics: StatisticsDto;
+}) {
   const { settings, setPreferences } = useSite(),
     config = settings.about || aboutDefaults;
   useEffect(
@@ -429,12 +451,12 @@ export default function About({ user, statistics }) {
     [setPreferences, user?.preferences],
   );
   const root = useReveal();
-  const shown = (id) =>
+  const shown = (id: string) =>
     config.sections.find((s) => s.id === id) ||
-    aboutDefaults.sections.find((s) => s.id === id);
-  const items = (section) =>
+    aboutDefaults.sections.find((s) => s.id === id)!;
+  const items = (section: string) =>
     aboutSections
-      .find((s) => s.id === section)
+      .find((s) => s.id === section)!
       .items.filter((i) => !config.hiddenItems.includes(i.id));
   const guide = shown("guide"),
     technology = shown("technology");
@@ -442,7 +464,7 @@ export default function About({ user, statistics }) {
   const features = guideItems.filter((i) => i.kind === "feature"),
     scenarios = guideItems.filter((i) => i.kind === "scenario"),
     steps = guideItems.find((i) => i.kind === "steps");
-  const intro = (id) => aboutSections.find((s) => s.id === id).intro;
+  const intro = (id: string) => aboutSections.find((s) => s.id === id)!.intro;
   return (
     <>
       <SocialHeader user={user} />
@@ -498,9 +520,9 @@ export default function About({ user, statistics }) {
                     </div>
                     <ol
                       className="mk-steps"
-                      style={{ "--mk-steps": steps.steps.length }}
+                      style={{ "--mk-steps": steps.steps!.length }}
                     >
-                      {steps.steps.map((step) => (
+                      {steps.steps!.map((step) => (
                         <li key={step.title} data-reveal-item>
                           <strong>{step.title}</strong>
                           <span>{step.text}</span>

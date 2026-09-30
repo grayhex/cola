@@ -1,4 +1,10 @@
 "use client";
+import type { Node as ProseMirrorNode, Mark } from "@tiptap/pm/model";
+import type { SelectionBookmark } from "@tiptap/pm/state";
+import type { Editor } from "@tiptap/core";
+import type { RefObject, ReactNode } from "react";
+import type { PhotoInserter } from "./content-types.ts";
+
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import { Extension } from "@tiptap/core";
@@ -99,7 +105,6 @@ const PhotoInEditor = PhotoReference.extend({
 
 // One controlled Markdown contract and one WYSIWYG surface for articles, posts,
 // discussions and legal documents. Historical bodies require no migration.
-/** @param {{ label: string, value?: string, onChange: (value: string) => void, maxLength?: number, rows?: number, required?: boolean, disabled?: boolean, placeholder?: string, photos?: Array<{ id: string, url: string, alt?: string }>, inserter?: import("react").RefObject<((id: string, alt?: string) => void) | null>, children?: import("react").ReactNode }} props */
 export default function PromptComposer({
   label,
   value = "",
@@ -114,11 +119,28 @@ export default function PromptComposer({
   // where the author writes, as a paragraph of its own (#128).
   inserter,
   children,
+}: {
+  label: string;
+  value?: string;
+  onChange: (value: string) => void;
+  maxLength?: number;
+  rows?: number;
+  required?: boolean;
+  disabled?: boolean;
+  placeholder?: string;
+  photos?: { id: string; url: string; alt?: string }[];
+  inserter?: RefObject<PhotoInserter | null>;
+  children?: ReactNode;
 }) {
   const id = useId(),
-    root = useRef(null),
-    source = useRef(null);
-  const toolbarSelection = useRef(null);
+    root = useRef<HTMLDivElement>(null),
+    source = useRef<HTMLTextAreaElement>(null);
+  const toolbarSelection = useRef<{
+    button: HTMLButtonElement;
+    doc: ProseMirrorNode;
+    bookmark: SelectionBookmark;
+    storedMarks: readonly Mark[] | null;
+  } | null>(null);
   const latest = useRef({ onChange, maxLength });
   latest.current = { onChange, maxLength };
   const emitted = useRef(value);
@@ -227,7 +249,7 @@ export default function PromptComposer({
   }, [inserter, editor, mode, value, onChange]);
   useEffect(() => {
     const form = root.current?.closest("form");
-    const validate = (event) => {
+    const validate = (event: Event) => {
       if (
         disabled ||
         value.length > maxLength ||
@@ -249,7 +271,13 @@ export default function PromptComposer({
     form?.addEventListener("submit", validate, true);
     return () => form?.removeEventListener("submit", validate, true);
   }, [editor, disabled, required, value, maxLength]);
-  function action(title, text, command, active = false, enabled = true) {
+  function action(
+    title: string,
+    text: ReactNode,
+    command: (current: Editor) => void,
+    active = false,
+    enabled = true,
+  ) {
     return (
       <button
         type="button"
@@ -261,7 +289,7 @@ export default function PromptComposer({
         // Keep the logical selection even when mobile Safari moves DOM focus.
         // Do not cancel touch pointerdown: WebKit can suppress its native click.
         onPointerDown={(event) => {
-          if (event.button !== 0) return;
+          if (event.button !== 0 || !editor) return;
           const { selection, doc, storedMarks } = editor.state;
           toolbarSelection.current = {
             button: event.currentTarget,
@@ -281,6 +309,7 @@ export default function PromptComposer({
           if (event.button === 0) event.preventDefault();
         }}
         onClick={(event) => {
+          if (!editor) return;
           const saved = toolbarSelection.current;
           toolbarSelection.current = null;
           // A delayed click must not restore positions from a replaced document.
@@ -294,7 +323,7 @@ export default function PromptComposer({
             if (saved.storedMarks) tr.setStoredMarks(saved.storedMarks);
             editor.view.dispatch(tr);
           }
-          command();
+          command(editor);
         }}
       >
         {text}
@@ -365,15 +394,19 @@ export default function PromptComposer({
                 ? String(editor.getAttributes("heading").level)
                 : "paragraph"
             }
-            onChange={(event) =>
-              event.target.value === "paragraph"
-                ? editor.chain().focus().setParagraph().run()
-                : editor
-                    .chain()
-                    .focus()
-                    .setHeading({ level: Number(event.target.value) })
-                    .run()
-            }
+            onChange={(event) => {
+              if (!editor) return;
+              if (event.target.value === "paragraph")
+                editor.chain().focus().setParagraph().run();
+              else
+                editor
+                  .chain()
+                  .focus()
+                  .setHeading({
+                    level: Number(event.target.value) as 1 | 2 | 3,
+                  })
+                  .run();
+            }}
           >
             <option value="paragraph">Абзац</option>
             <option value="1">Заголовок</option>
@@ -383,44 +416,44 @@ export default function PromptComposer({
           {action(
             "Полужирный",
             <Bold size={16} aria-hidden="true" />,
-            () => editor.chain().focus().toggleBold().run(),
+            (current) => current.chain().focus().toggleBold().run(),
             editor?.isActive("bold"),
           )}
           {action(
             "Курсив",
             <Italic size={16} aria-hidden="true" />,
-            () => editor.chain().focus().toggleItalic().run(),
+            (current) => current.chain().focus().toggleItalic().run(),
             editor?.isActive("italic"),
           )}
           {action(
             "Подчёркнутый",
             <Underline size={16} aria-hidden="true" />,
-            () => editor.chain().focus().toggleUnderline().run(),
+            (current) => current.chain().focus().toggleUnderline().run(),
             editor?.isActive("underline"),
           )}
           {action(
             "Маркированный список",
             <List size={16} aria-hidden="true" />,
-            () => editor.chain().focus().toggleBulletList().run(),
+            (current) => current.chain().focus().toggleBulletList().run(),
             editor?.isActive("bulletList"),
           )}
           {action(
             "Нумерованный список",
             <ListOrdered size={16} aria-hidden="true" />,
-            () => editor.chain().focus().toggleOrderedList().run(),
+            (current) => current.chain().focus().toggleOrderedList().run(),
             editor?.isActive("orderedList"),
           )}
           {action(
             "Цитата",
             <Quote size={16} aria-hidden="true" />,
-            () => editor.chain().focus().toggleBlockquote().run(),
+            (current) => current.chain().focus().toggleBlockquote().run(),
             editor?.isActive("blockquote"),
           )}
           {action(
             "Ссылка",
             "Ссылка",
-            () => {
-              setLink(editor.getAttributes("link").href || "");
+            (current) => {
+              setLink(current.getAttributes("link").href || "");
               setLinkOpen(true);
             },
             editor?.isActive("link"),
@@ -428,24 +461,25 @@ export default function PromptComposer({
           {action(
             "Отменить действие",
             <Undo2 size={16} aria-hidden="true" />,
-            () => editor.chain().focus().undo().run(),
+            (current) => current.chain().focus().undo().run(),
             false,
             editor?.can().undo(),
           )}
           {action(
             "Повторить действие",
             <Redo2 size={16} aria-hidden="true" />,
-            () => editor.chain().focus().redo().run(),
+            (current) => current.chain().focus().redo().run(),
             false,
             editor?.can().redo(),
           )}
           {action(
             "Убрать форматирование",
             <RemoveFormatting size={16} aria-hidden="true" />,
-            () => editor.chain().focus().unsetAllMarks().clearNodes().run(),
+            (current) =>
+              current.chain().focus().unsetAllMarks().clearNodes().run(),
           )}
         </div>
-        {linkOpen && (
+        {linkOpen && editor && (
           <div
             className={styles.linkControls}
             role="group"

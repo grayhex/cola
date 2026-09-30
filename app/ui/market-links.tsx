@@ -1,13 +1,34 @@
 "use client";
+import type {
+  ListingDraft,
+  MarketDto,
+  MarketSaved,
+  MarketModelsDto,
+  MarketBikesDto,
+} from "./content-types.ts";
+import { errorMessage } from "../../lib/errors.ts";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { socialApi } from "./social-primitives.tsx";
 import styles from "./market.module.css";
 
-export default function MarketLinks({ form, initial, disabled, onChange }) {
+export default function MarketLinks({
+  form,
+  initial,
+  disabled,
+  onChange,
+}: {
+  form: ListingDraft;
+  initial?: MarketDto | MarketSaved | null;
+  disabled: boolean;
+  onChange: <K extends keyof ListingDraft>(
+    key: K,
+    value: ListingDraft[K],
+  ) => void;
+}) {
   const [query, setQuery] = useState("");
-  const [models, setModels] = useState(null),
-    [bikes, setBikes] = useState(null);
+  const [models, setModels] = useState<MarketModelsDto | null>(null),
+    [bikes, setBikes] = useState<MarketBikesDto["items"] | null>(null);
   const [error, setError] = useState(""),
     [bikeError, setBikeError] = useState("");
   const [busy, setBusy] = useState(false),
@@ -15,12 +36,28 @@ export default function MarketLinks({ form, initial, disabled, onChange }) {
   const request = useRef(0);
   const component = form.category === "components";
   const field = component ? "componentModelId" : "bikeModelId";
-  const initialModel = component ? initial?.componentModel : initial?.bikeModel;
-  const [selected, setSelected] = useState(initialModel);
+  const initialModel = component
+    ? initial && "componentModel" in initial
+      ? initial.componentModel
+      : undefined
+    : initial && "bikeModel" in initial
+      ? initial.bikeModel
+      : undefined;
+  const [selected, setSelected] = useState<
+    | {
+        id: string;
+        name: string;
+        path: string;
+        archived?: boolean;
+        brand?: string;
+      }
+    | null
+    | undefined
+  >(initialModel);
   useEffect(() => {
     let active = true;
     setBikeError("");
-    socialApi("market/owned-bikes")
+    socialApi<MarketBikesDto>("market/owned-bikes")
       .then((r) => {
         if (active) setBikes(r.items);
       })
@@ -44,19 +81,20 @@ export default function MarketLinks({ form, initial, disabled, onChange }) {
     setBusy(true);
     setError("");
     try {
-      const r = await socialApi(
+      const r = await socialApi<MarketModelsDto>(
         "market/models?" +
           new URLSearchParams({ category: form.category, q: query }),
       );
       if (request.current === id) setModels(r);
     } catch (e) {
-      if (request.current === id) setError(e.message);
+      if (request.current === id) setError(errorMessage(e));
     } finally {
       if (request.current === id) setBusy(false);
     }
   }
   const ownBike =
-    bikes?.find((b) => b.id === form.linkedBikeId) || initial?.ownedBike;
+    bikes?.find((b) => b.id === form.linkedBikeId) ||
+    (initial && "ownedBike" in initial ? initial.ownedBike : undefined);
   return (
     <fieldset className={styles.photoField} disabled={disabled}>
       <legend>Связи с каталогом и гаражом</legend>
@@ -153,7 +191,9 @@ export default function MarketLinks({ form, initial, disabled, onChange }) {
                   )}
                 {models?.items.map((m) => (
                   <option key={m.id} value={m.id}>
-                    {component ? m.category + " · " : m.brand + " "}
+                    {component
+                      ? ("category" in m ? m.category : "") + " · "
+                      : m.brand + " "}
                     {m.name}
                   </option>
                 ))}
