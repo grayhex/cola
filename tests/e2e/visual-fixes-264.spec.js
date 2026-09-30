@@ -6,6 +6,7 @@ import sharp from "sharp";
 import { registerVerified } from "../fixtures/verified-user.js";
 import { testConsents } from "../fixtures/legal.js";
 import { pageOverflow, describeOverflow } from "../fixtures/overflow.js";
+import { titleHover } from "../../lib/appearance.js";
 
 // Visual fixes and one «Хочу кататься» flow (#264).
 const origin = process.env.TEST_ORIGIN || "http://localhost:3100";
@@ -102,15 +103,24 @@ const home = {
   })),
 };
 
-test("home: card titles stay readable under the pointer and keyboard focus in both themes, even with a dark accent", async ({
+test("home: card titles stay readable under the pointer and keyboard focus in both themes, whatever the accent", async ({
   page,
 }, info) => {
   await page.route("**/api/discovery/home", (route) =>
     route.fulfill({ json: home }),
   );
   await page.goto("/");
-  // The administrator may pick a deep accent; titles must stay readable.
-  await page.addStyleTag({ content: "html:root{--accent:#1d4ed8}" });
+  // The page carries the hover colours computed from the site's accent.
+  const emitted = await page.evaluate(() => {
+    const root = getComputedStyle(document.documentElement);
+    return ["--accent", "--title-hover-on-light", "--title-hover-on-dark"].map(
+      (name) => root.getPropertyValue(name).trim(),
+    );
+  });
+  expect(emitted.slice(1)).toEqual([
+    titleHover(emitted[0], "light"),
+    titleHover(emitted[0], "dark"),
+  ]);
   const title = page
     .locator('[data-home-band="popular"] article')
     .first()
@@ -131,7 +141,26 @@ test("home: card titles stay readable under the pointer and keyboard focus in bo
       await Promise.all(el.getAnimations().map((a) => a.finished));
       return getComputedStyle(el).color;
     });
-  for (const mode of ["light", "dark"]) {
+  // The administrator may pick any accent: a deep one, black on the dark
+  // theme, white on the light one. The values are the ones ThemeStyle would
+  // emit, set through CSSOM: the enforced CSP refuses an injected <style>.
+  for (const [mode, accent] of [
+    ["light", "#1D4ED8"],
+    ["dark", "#1D4ED8"],
+    ["light", "#FFFFFF"],
+    ["dark", "#000000"],
+  ]) {
+    await page.evaluate(
+      (values) => {
+        for (const [name, value] of Object.entries(values))
+          document.documentElement.style.setProperty(name, value);
+      },
+      {
+        "--accent": accent,
+        "--title-hover-on-light": titleHover(accent, "light"),
+        "--title-hover-on-dark": titleHover(accent, "dark"),
+      },
+    );
     await theme(page, mode);
     const rest = await color(title);
     await title.hover();
@@ -162,9 +191,9 @@ test("home: card titles stay readable under the pointer and keyboard focus in bo
       ),
       mode + " focus",
     ).toBeGreaterThanOrEqual(4.5);
-    await page
-      .locator('[data-home-band="popular"]')
-      .screenshot({ path: info.outputPath(`home-hover-${mode}.png`) });
+    await page.locator('[data-home-band="popular"]').screenshot({
+      path: info.outputPath(`home-hover-${mode}-${accent.slice(1)}.png`),
+    });
   }
 });
 

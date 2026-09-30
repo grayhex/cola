@@ -91,9 +91,11 @@
     /* The accent as readable text on the page (yellow itself is too light). */
     --accent-text: color-mix(in srgb, var(--accent) 55%, #000000);
     /* A card title under the pointer or keyboard focus (#264): the accent,
-       mixed with the page's strongest text so it stays readable in both
-       themes whatever accent the administrator picks. */
-    --title-hover: var(--accent-text);
+       mixed toward the page's strongest text. ThemeStyle (site-provider.jsx)
+       computes it from the administrator's accent to keep 4.5:1 on
+       --surface-hover (titleHover in lib/appearance.js); the mix is only a
+       fallback. */
+    --title-hover: var(--title-hover-on-light, var(--accent-text));
 
     /* The main action is black on white, white on dark. */
     --primary: #000000;
@@ -303,7 +305,10 @@
     --line-dot: var(--gray-500);
 
     --accent-text: color-mix(in srgb, var(--accent) 85%, #ffffff);
-    --title-hover: color-mix(in oklab, var(--accent) 45%, #ffffff);
+    --title-hover: var(
+      --title-hover-on-dark,
+      color-mix(in oklab, var(--accent) 45%, #ffffff)
+    );
     --info: var(--blue-400);
     --info-soft: rgb(96 165 250 / 0.15);
     --success: var(--green-400);
@@ -396,7 +401,10 @@
       --line-dot: var(--gray-500);
 
       --accent-text: color-mix(in srgb, var(--accent) 85%, #ffffff);
-      --title-hover: color-mix(in oklab, var(--accent) 45%, #ffffff);
+      --title-hover: var(
+        --title-hover-on-dark,
+        color-mix(in oklab, var(--accent) 45%, #ffffff)
+      );
       --info: var(--blue-400);
       --info-soft: rgb(96 165 250 / 0.15);
       --success: var(--green-400);
