@@ -1,7 +1,7 @@
 {
   // JSDoc checks cover domain modules and every API route (#143).
-  // Next.js reads only paths, baseUrl and decorator/JSX options from this file;
-  // none are set, so the build does not change. Widen "include" step by step.
+  // Temporary legacy gate during #256. Next uses tsconfig.json; keep this
+  // checkJs coverage until lib/API have migrated to native strict TS (#258).
   "compilerOptions": {
     "allowJs": true,
     "checkJs": true,

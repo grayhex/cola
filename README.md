@@ -49,7 +49,7 @@ docker compose up --build -d --wait --wait-timeout 180
 
 ## Как устроен проект
 
-Приложение на **Next.js 16 / React 19**, основная логика — JavaScript с JSDoc и проверкой типов. **PostgreSQL 17** хранит данные и очереди фоновых задач. **Bike Resolver** — отдельный детерминированный сервис на TypeScript, Fastify, Cheerio и Zod. Точные версии закреплены в package/lock-файлах и Dockerfile.
+Приложение на **Next.js 16 / React 19**, новый код — strict TypeScript/TSX. Существующий JavaScript с JSDoc сохраняет проверку типов и постепенно мигрирует по [#256](https://github.com/grayhex/cola/issues/256). **PostgreSQL 17** хранит данные и очереди фоновых задач. **Bike Resolver** — отдельный детерминированный сервис на TypeScript, Fastify, Cheerio и Zod. Точные версии закреплены в package/lock-файлах и Dockerfile.
 
 | Каталог                                              | Назначение                                       |
 | ---------------------------------------------------- | ------------------------------------------------ |
