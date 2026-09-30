@@ -1,7 +1,7 @@
 import type * as RideSpeedTypes from "./ride-speed.ts";
 import type * as RideMetricsTypes from "./ride-metrics.ts";
 import type { Passport } from "./ride-match-core.ts";
-import type { Part } from "../services/bike-resolver/src/component-identity.js";
+import type { Part } from "../services/bike-resolver/src/component-identity.ts";
 // PostgreSQL rows at repository boundaries. Numeric/bigint values remain strings;
 // nullable database columns stay nullable. JSON fields use their domain contract.
 import type { z } from "zod";

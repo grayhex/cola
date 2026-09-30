@@ -20,7 +20,7 @@ import type { useBikeReaction } from "../use-bike-reaction.ts";
 import dynamic from "next/dynamic";
 import { SharedView } from "../motion.tsx";
 import { defaultBlocks } from "../../../lib/garage-layout.ts";
-import { componentText } from "../../../services/bike-resolver/src/component-identity.js";
+import { componentText } from "../../../services/bike-resolver/src/component-identity.ts";
 import { BikeLabels } from "../bike-labels.tsx";
 import { AuthorLink } from "../social-primitives.tsx";
 import Photo from "../bike-photo.tsx";

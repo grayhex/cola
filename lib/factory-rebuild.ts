@@ -10,8 +10,8 @@ import {
   sameFactoryPart,
   assignFactoryBrand,
 } from "./factory-provenance.ts";
-import type { Part } from "../services/bike-resolver/src/component-identity.js";
-import { componentIdentity } from "../services/bike-resolver/src/component-identity.js";
+import type { Part } from "../services/bike-resolver/src/component-identity.ts";
+import { componentIdentity } from "../services/bike-resolver/src/component-identity.ts";
 
 // Exact historical projection, used only to recognize untouched pre-#205 rows.
 // Never infer ownership of a current installation from its name alone.

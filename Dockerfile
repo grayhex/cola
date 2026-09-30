@@ -18,7 +18,7 @@ COPY next.config.mjs proxy.js tsconfig.json ./
 COPY app ./app
 COPY lib ./lib
 # The shared helper runs in web; the TS files are type-only inputs for Next.
-COPY services/bike-resolver/src/component-identity.js services/bike-resolver/src/domain.ts services/bike-resolver/src/context.ts services/bike-resolver/src/settings.ts services/bike-resolver/src/planner.ts ./services/bike-resolver/src/
+COPY services/bike-resolver/src/component-identity.ts services/bike-resolver/src/domain.ts services/bike-resolver/src/context.ts services/bike-resolver/src/settings.ts services/bike-resolver/src/planner.ts ./services/bike-resolver/src/
 COPY scripts/build-version.js ./scripts/
 # Compiler cache stays in the local builder, never in an exported image/cache layer.
 # DB migrations and public files do not participate in web compilation.
@@ -47,7 +47,7 @@ RUN --mount=type=bind,from=ops-dependencies,source=/app/node_modules,target=/run
     node --input-type=module -e "import { cp } from 'node:fs/promises'; await cp('/runtime-node_modules', './node_modules', { recursive: true, dereference: false, verbatimSymlinks: true });"
 COPY package.json ./
 COPY lib ./lib
-COPY services/bike-resolver/src/component-identity.js ./services/bike-resolver/src/component-identity.js
+COPY services/bike-resolver/src/component-identity.ts ./services/bike-resolver/src/component-identity.ts
 COPY db ./db
 COPY scripts/check-runtime.js scripts/migrate.js \
     scripts/bootstrap-admin.js scripts/set-admin.js scripts/reset-password.js \

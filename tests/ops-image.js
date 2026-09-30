@@ -53,7 +53,7 @@ for (const file of ["docs", "tests", "workbench", "ops", "scripts/fixtures"])
 assert.deepEqual(await readdir("services"), ["bike-resolver"]);
 assert.deepEqual(await readdir("services/bike-resolver"), ["src"]);
 assert.deepEqual(await readdir("services/bike-resolver/src"), [
-  "component-identity.js",
+  "component-identity.ts",
 ]);
 for (const name of [
   "@electric-sql/pglite",
