@@ -4,13 +4,13 @@ import {
   isFormerBike,
   rideBikeStateError,
   selectableRideBikes,
-} from "../lib/bike-status.js";
+} from "../lib/bike-status.ts";
 import {
   listingTypes,
   listingPriceLabel,
   publishedLabel,
-} from "../lib/market-types.js";
-import { readMarketQuery, writeMarketQuery } from "../lib/market-query.js";
+} from "../lib/market-types.ts";
+import { readMarketQuery, writeMarketQuery } from "../lib/market-query.ts";
 
 test("former bikes are not new ride targets but their existing history remains editable", () => {
   const active = { id: "current", is_former: false };

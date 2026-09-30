@@ -63,15 +63,15 @@ for (const name of [
 ])
   assert.throws(() => require.resolve(name), { code: "MODULE_NOT_FOUND" });
 
-const { defaultSettings, defaultCatalog } = await load("lib/site-defaults.js");
+const { defaultSettings, defaultCatalog } = await load("lib/site-defaults.ts");
 const { bootstrapAdmin } = await load("scripts/bootstrap-admin.js");
 await load("lib/rides.js");
 await load("lib/activity-worker.js");
 execFileSync(process.execPath, ["scripts/activity-sync.js", "--once"], {
   env: { ...process.env, RWGPS_ENABLED: "false" },
 });
-await load("lib/factory-import.js");
-await load("lib/factory-rebuild.js");
+await load("lib/factory-import.ts");
+await load("lib/factory-rebuild.ts");
 const rebuildPreview = JSON.parse(
   execFileSync(process.execPath, ["scripts/rebuild-factory-components.js"], {
     encoding: "utf8",
@@ -152,7 +152,7 @@ function runScript(file, env, args = []) {
   }
 }
 const admin = new pg.Client({ connectionString: process.env.DATABASE_URL });
-const { db: libraryPool } = await load("lib/db.js");
+const { db: libraryPool } = await load("lib/db.ts");
 await admin.connect();
 async function isolatedDatabase(label, check) {
   // Names are generated here, never supplied by the caller. Only created DBs are dropped.

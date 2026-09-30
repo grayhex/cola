@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { currentViewer } from "../../../lib/viewer.js";
+import { currentViewer } from "../../../lib/viewer.ts";
 import UiKit from "./ui-kit.jsx";
 export const metadata = { title: "UI Kit · ColaBike" };
 // The design system reference (#127): administrators only, or anyone while

@@ -1,14 +1,14 @@
-import { currentUser, rateLimit } from "../../../../lib/auth.js";
-import { transaction } from "../../../../lib/db.js";
-import { fail, json, sameOrigin } from "../../../../lib/http.js";
-import { mailEnabled } from "../../../../lib/mail.js";
-import { emailVerificationMail } from "../../../../lib/mail-templates.js";
+import { currentUser, rateLimit } from "../../../../lib/auth.ts";
+import { transaction } from "../../../../lib/db.ts";
+import { fail, json, sameOrigin } from "../../../../lib/http.ts";
+import { mailEnabled } from "../../../../lib/mail.ts";
+import { emailVerificationMail } from "../../../../lib/mail-templates.ts";
 import {
   accountLink,
   requestEmailVerification,
-} from "../../../../lib/account.js";
-import { sendAfterResponse } from "../../../../lib/account-mail.js";
-import { traced } from "../../../../lib/observability.js";
+} from "../../../../lib/account.ts";
+import { sendAfterResponse } from "../../../../lib/account-mail.ts";
+import { traced } from "../../../../lib/observability.ts";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 

@@ -5,8 +5,8 @@ import pg from "pg";
 import AxeBuilder from "@axe-core/playwright";
 import sharp from "sharp";
 import { testConsents } from "../fixtures/legal.js";
-import { defaultGamification } from "../../lib/gamification-definitions.js";
-import { metricByKey } from "../../lib/game-metrics.js";
+import { defaultGamification } from "../../lib/gamification-definitions.ts";
+import { metricByKey } from "../../lib/game-metrics.ts";
 const imageId = "00000000-0000-4000-8000-000000000001";
 const brokenId = "00000000-0000-4000-8000-000000000002";
 const author = {

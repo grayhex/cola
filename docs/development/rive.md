@@ -93,7 +93,7 @@ runtime не загружается.
 `pnpm dev/build` копируют **оба** WASM файла из закреплённого npm package в
 `public/rive/runtime/2.43.1/`. Docker builder выполняет тот же шаг и переносит
 `public/` в runtime image. WASM не коммитится. Скрипт проверяет совпадение
-версии с `lib/rive-assets.js`; обновлять их вместе. Primary и fallback URL
+версии с `lib/rive-assets.ts`; обновлять их вместе. Primary и fallback URL
 локальные, Rive Asset CDN отключён. В источниках нет внешних file assets;
 asset loader не разрешает незаявленную загрузку.
 

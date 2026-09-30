@@ -3,21 +3,21 @@ import assert from "node:assert/strict";
 import { PGlite } from "@electric-sql/pglite";
 import { readFile, readdir } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
-import { defaultCatalog, defaultSettings } from "../lib/site-defaults.js";
+import { defaultCatalog, defaultSettings } from "../lib/site-defaults.ts";
 import {
   landingSlug,
   mergeCatalog,
   modelLandingPath,
   partLandingPath,
-} from "../lib/experience-catalog.js";
+} from "../lib/experience-catalog.ts";
 import {
   landingMinimum,
   landingSitemap,
   modelLanding,
   partLanding,
-} from "../lib/experience-landing.js";
-import { plural } from "../lib/plural.js";
-import { classificationLabels } from "../lib/bike-classification.js";
+} from "../lib/experience-landing.ts";
+import { plural } from "../lib/plural.ts";
+import { classificationLabels } from "../lib/bike-classification.ts";
 
 test("landing addresses keep whole names in Latin and Cyrillic", () => {
   assert.equal(landingSlug("Stumpjumper EVO Comp"), "stumpjumper-evo-comp");

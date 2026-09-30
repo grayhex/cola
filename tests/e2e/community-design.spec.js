@@ -6,7 +6,7 @@ import pg from "pg";
 import sharp from "sharp";
 import { readFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
-import { defaultSettings } from "../../lib/site-defaults.js";
+import { defaultSettings } from "../../lib/site-defaults.ts";
 const origin = process.env.TEST_ORIGIN || "http://localhost:3100";
 const bikes = Array.from({ length: 9 }, (_, i) => ({
   id: `community-${i}`,

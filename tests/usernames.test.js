@@ -3,7 +3,6 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { PGlite } from "@electric-sql/pglite";
 import {
-  allocateUsername,
   isGeneratedUsername,
   personName,
   reservedUsernames,
@@ -12,8 +11,9 @@ import {
   usernameFrom,
   usernameLabel,
   usernamePattern,
-} from "../lib/usernames.js";
-import { registrationInput } from "../lib/social-validation.js";
+} from "../lib/usernames.ts";
+import { allocateUsername } from "../lib/username-allocation.ts";
+import { registrationInput } from "../lib/social-validation.ts";
 
 test("usernames are transliterated from Russian and Latin names", () => {
   assert.equal(usernameFrom("Иван Петров"), "ivan-petrov");
@@ -57,6 +57,18 @@ test("allocation takes the first free candidate, ignoring case", async () => {
     assert.equal(await allocateUsername(db, "ivan"), "ivan");
     await db.exec("INSERT INTO users VALUES ('ivan'),('Ivan-2'),('ivan-4');");
     assert.equal(await allocateUsername(db, "ivan"), "ivan-3");
+    // Exhaust every readable candidate, including a stem whose truncation
+    // lands on a separator. The random fallback keeps the six-digit contract.
+    for (const base of ["rider", "a".repeat(22) + "-" + "a".repeat(7)]) {
+      const candidates = usernameCandidates(base);
+      await db.query("INSERT INTO users SELECT unnest($1::text[])", [
+        candidates,
+      ]);
+      const fallback = await allocateUsername(db, base);
+      assert.match(fallback, /^(?:rider|a{22})-[0-9]{6}$/);
+      assert(usernamePattern.test(fallback));
+      assert(!candidates.includes(fallback));
+    }
   } finally {
     await db.close();
   }

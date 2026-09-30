@@ -9,7 +9,7 @@ import {
   reservedUsernames,
   suggestUsername,
   usernamePattern,
-} from "../../lib/usernames.js";
+} from "../../lib/usernames.ts";
 const usernameHelp = {
   checking: "Проверяем…",
   invalid: "3–30 символов: латиница, цифры, точка, дефис или подчёркивание.",

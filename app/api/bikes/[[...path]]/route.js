@@ -1,5 +1,5 @@
 import * as original from "../../[...path]/route.js";
-import { publicResponse } from "../../../../lib/public-response.js";
+import { publicResponse } from "../../../../lib/public-response.ts";
 export const runtime = "nodejs",
   dynamic = "force-dynamic";
 /** @param {Request} req

@@ -6,17 +6,17 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { PGlite } from "@electric-sql/pglite";
-import { defaultSettings, defaultCatalog } from "../lib/site-defaults.js";
+import { defaultSettings, defaultCatalog } from "../lib/site-defaults.ts";
 import {
   mailConfig,
   mailEnabled,
   sendMail,
   MailUnavailableError,
-} from "../lib/mail.js";
+} from "../lib/mail.ts";
 import {
   emailVerificationMail,
   passwordResetMail,
-} from "../lib/mail-templates.js";
+} from "../lib/mail-templates.ts";
 import {
   accountLink,
   consumeToken,
@@ -25,8 +25,8 @@ import {
   requestPasswordReset,
   resetPassword,
   verifyEmail,
-} from "../lib/account.js";
-import { digest, hashPassword, verifyPassword } from "../lib/password.js";
+} from "../lib/account.ts";
+import { digest, hashPassword, verifyPassword } from "../lib/password.ts";
 import { setPassword } from "../scripts/reset-password.js";
 
 test("mail configuration: TLS by default, explicit local relay, capture only outside production", () => {

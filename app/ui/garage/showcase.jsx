@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { bikeCategories } from "../../../lib/bike-classification.js";
+import { bikeCategories } from "../../../lib/bike-classification.ts";
 import { ClassificationFilters } from "../bike-classification.jsx";
 import styles from "../garage.module.css";
 import ChoiceMenu from "../choice-menu.jsx";

@@ -12,12 +12,12 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   matchesClassification,
   readClassificationFilters,
-} from "../../lib/bike-classification.js";
+} from "../../lib/bike-classification.ts";
 import {
   readShowcaseQuery,
   writeShowcaseQuery,
-} from "../../lib/showcase-query.js";
-import { publicPath } from "../../lib/public-urls.js";
+} from "../../lib/showcase-query.ts";
+import { publicPath } from "../../lib/public-urls.ts";
 import EmailPolicyAction from "./email-policy-action.jsx";
 import { useConfirmation } from "./confirmation.jsx";
 import { useBikeReaction } from "./use-bike-reaction.js";

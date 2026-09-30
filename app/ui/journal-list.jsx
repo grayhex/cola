@@ -3,8 +3,8 @@ import { useState, useEffect, useRef } from "react";
 import { Plus, NotebookPen, Heart, X } from "./icons.jsx";
 import { socialApi } from "./social-primitives.jsx";
 import { PageControls } from "./community-controls.jsx";
-import { journalKinds } from "../../lib/journal-kinds.js";
-import { publicPath } from "../../lib/public-urls.js";
+import { journalKinds } from "../../lib/journal-kinds.ts";
+import { publicPath } from "../../lib/public-urls.ts";
 export default function JournalList({ bike, owner = false, editable = false }) {
   const [data, setData] = useState(null),
     [page, setPage] = useState(1),

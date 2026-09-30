@@ -2,12 +2,12 @@
 // load, the canonical redirect and metadata.
 import { cache } from "react";
 import { notFound, permanentRedirect } from "next/navigation";
-import { db } from "../../lib/db.js";
-import { currentViewer } from "../../lib/viewer.js";
-import { routeParam, absolutePublicUrl } from "../../lib/public-urls.js";
-import { indexed, hidden } from "../../lib/indexing.js";
-import { plural } from "../../lib/plural.js";
-import { modelLanding, partLanding } from "../../lib/experience-landing.js";
+import { db } from "../../lib/db.ts";
+import { currentViewer } from "../../lib/viewer.ts";
+import { routeParam, absolutePublicUrl } from "../../lib/public-urls.ts";
+import { indexed, hidden } from "../../lib/indexing.ts";
+import { plural } from "../../lib/plural.ts";
+import { modelLanding, partLanding } from "../../lib/experience-landing.ts";
 
 const loaders = { model: modelLanding, part: partLanding };
 const load = cache(async (kind, first, second) =>

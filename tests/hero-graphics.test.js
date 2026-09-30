@@ -1,12 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { migrateHeroGraphics } from "../lib/hero-graphics.js";
-import { prepareRive } from "../lib/rive-upload.js";
-import { settingsInput } from "../lib/admin-validation.js";
-import { defaultSettings } from "../lib/site-defaults.js";
-import { getSite } from "../lib/site.js";
-import { bikeInput } from "../lib/validation.js";
+import { migrateHeroGraphics } from "../lib/hero-graphics.ts";
+import { prepareRive } from "../lib/rive-upload.ts";
+import { settingsInput } from "../lib/admin-validation.ts";
+import { defaultSettings } from "../lib/site-defaults.ts";
+import { getSite } from "../lib/site.ts";
+import { bikeInput } from "../lib/validation.ts";
 
 test("legacy graphics migrate to independent references without losing themed uploads", () => {
   const light = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",

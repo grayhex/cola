@@ -5,8 +5,8 @@ import {
   groupRecords,
   homeRecords,
   ruleCondition,
-} from "../lib/gamification-presentation.js";
-import { metricGroups, metricValue } from "../lib/game-metrics.js";
+} from "../lib/gamification-presentation.ts";
+import { metricGroups, metricValue } from "../lib/game-metrics.ts";
 
 test("records and awards come in the groups of their metrics; nothing is lost", () => {
   const items = [

@@ -33,9 +33,9 @@ import {
   socialApi,
 } from "./social-primitives.jsx";
 import { useSite } from "./site-provider.jsx";
-import { profilePath } from "../../lib/public-urls.js";
-import { isGeneratedUsername } from "../../lib/usernames.js";
-import { userTimeZone, timeZoneChoices } from "../../lib/user-time-zone.js";
+import { profilePath } from "../../lib/public-urls.ts";
+import { isGeneratedUsername } from "../../lib/usernames.ts";
+import { userTimeZone, timeZoneChoices } from "../../lib/user-time-zone.ts";
 import { validTimeZone } from "../../lib/ride-intent-time.js";
 const tabIcons = {
   overview: LayoutGrid,

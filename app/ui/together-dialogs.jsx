@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { IntentComposer, intentDraft } from "./ride-intents.jsx";
 import { socialApi } from "./social-primitives.jsx";
 import { useSite } from "./site-provider.jsx";
-import { userTimeZone } from "../../lib/user-time-zone.js";
+import { userTimeZone } from "../../lib/user-time-zone.ts";
 export { default as PlanComposer } from "./plan-composer.jsx";
 
 // Loaded on the first «Хочу кататься» / «Организовать покатушку» click

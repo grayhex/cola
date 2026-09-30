@@ -1,16 +1,16 @@
 import { z } from "zod";
-import { rateLimit } from "../../../lib/auth.js";
-import { trustedIp } from "../../../lib/auth-limits.js";
-import { fail, readJson, sameOrigin } from "../../../lib/http.js";
-import { digest } from "../../../lib/password.js";
-import { reportError } from "../../../lib/error-tracker.js";
+import { rateLimit } from "../../../lib/auth.ts";
+import { trustedIp } from "../../../lib/auth-limits.ts";
+import { fail, readJson, sameOrigin } from "../../../lib/http.ts";
+import { digest } from "../../../lib/password.ts";
+import { reportError } from "../../../lib/error-tracker.ts";
 import {
   currentRequestId,
   routeTemplate,
   scrub,
   stackFrames,
   traced,
-} from "../../../lib/observability.js";
+} from "../../../lib/observability.ts";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 

@@ -1,7 +1,7 @@
 "use client";
 import { useMemo, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
-import { createBikeReaction } from "../../lib/bike-reactions.js";
+import { createBikeReaction } from "../../lib/bike-reactions.ts";
 
 export function useBikeReaction(bike, user, onGuest) {
   const router = useRouter();

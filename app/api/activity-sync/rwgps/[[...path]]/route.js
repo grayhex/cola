@@ -1,20 +1,20 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { db, transaction } from "../../../../../lib/db.js";
+import { db, transaction } from "../../../../../lib/db.ts";
 import {
   currentUser,
   currentSessionHash,
   rateLimit,
-} from "../../../../../lib/auth.js";
+} from "../../../../../lib/auth.ts";
 import {
   fail,
   json,
   readJson,
   readBytes,
   sameOrigin,
-} from "../../../../../lib/http.js";
-import { traced } from "../../../../../lib/observability.js";
-import { uuid } from "../../../../../lib/validation.js";
+} from "../../../../../lib/http.ts";
+import { traced } from "../../../../../lib/observability.ts";
+import { uuid } from "../../../../../lib/validation.ts";
 import {
   ActivityError,
   rwgpsConfig,

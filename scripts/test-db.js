@@ -2,7 +2,7 @@
 import { PGlite } from "@electric-sql/pglite";
 import { PGLiteSocketServer } from "@electric-sql/pglite-socket";
 import { readFile } from "node:fs/promises";
-import { defaultSettings, defaultCatalog } from "../lib/site-defaults.js";
+import { defaultSettings, defaultCatalog } from "../lib/site-defaults.ts";
 import { seedLegalDocuments } from "../tests/fixtures/legal.js";
 const db = await PGlite.create();
 await db.exec(

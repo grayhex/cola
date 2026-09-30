@@ -15,7 +15,12 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "incremental": true,
-    "plugins": [{ "name": "next" }]
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "allowImportingTsExtensions": true
   },
   "include": [
     "next-env.d.ts",

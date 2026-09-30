@@ -14,8 +14,8 @@ import { ReportButton, PageControls } from "./community-controls.jsx";
 import dynamic from "next/dynamic";
 import RichTextBody from "./rich-text-body.jsx";
 import { MessagesSquare, Reply } from "./icons.jsx";
-import { profilePath } from "../../lib/public-urls.js";
-import { personName, usernameLabel } from "../../lib/usernames.js";
+import { profilePath } from "../../lib/public-urls.ts";
+import { personName, usernameLabel } from "../../lib/usernames.ts";
 // The composer brings the editor; guests read comments without it (#117).
 const PromptComposer = dynamic(() => import("./prompt-composer.jsx"), {
   ssr: false,

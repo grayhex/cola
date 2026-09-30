@@ -3,10 +3,10 @@ import assert from "node:assert/strict";
 import { PGlite } from "@electric-sql/pglite";
 import { readFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
-import { wizardInput, createWizardBike } from "../lib/bike-wizard.js";
-import { limitedOptions, bicycleName, draftId } from "../lib/wizard-options.js";
-import { settingsInput } from "../lib/admin-validation.js";
-import { defaultSettings } from "../lib/site-defaults.js";
+import { wizardInput, createWizardBike } from "../lib/bike-wizard.ts";
+import { limitedOptions, bicycleName, draftId } from "../lib/wizard-options.ts";
+import { settingsInput } from "../lib/admin-validation.ts";
+import { defaultSettings } from "../lib/site-defaults.ts";
 test("compact catalogues filter, deduplicate and cap suggestions; optional name uses identity", () => {
   assert.match(
     draftId(),

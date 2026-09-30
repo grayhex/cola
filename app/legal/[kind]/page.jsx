@@ -1,16 +1,16 @@
 import { notFound } from "next/navigation";
-import { db } from "../../../lib/db.js";
-import { currentViewer } from "../../../lib/viewer.js";
+import { db } from "../../../lib/db.ts";
+import { currentViewer } from "../../../lib/viewer.ts";
 import {
   legalKinds,
   legalTitles,
   publishedLegalDocument,
-} from "../../../lib/legal-documents.js";
+} from "../../../lib/legal-documents.ts";
 import GlobalHeader from "../../ui/global-header.jsx";
 import { SocialFooter } from "../../ui/social-primitives.jsx";
 import RichTextBody from "../../ui/rich-text-body.jsx";
-import { parseRichText } from "../../../lib/rich-text.js";
-import { indexed } from "../../../lib/indexing.js";
+import { parseRichText } from "../../../lib/rich-text.ts";
+import { indexed } from "../../../lib/indexing.ts";
 import styles from "./page.module.css";
 export const dynamic = "force-dynamic";
 export async function generateMetadata({ params, searchParams }) {

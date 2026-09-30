@@ -1,4 +1,4 @@
-import { safeRichLink } from "../../lib/rich-link.js";
+import { safeRichLink } from "../../lib/rich-link.ts";
 import ZoomablePhoto from "./zoomable-photo.jsx";
 import styles from "./rich-text.module.css";
 

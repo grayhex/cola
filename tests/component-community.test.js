@@ -6,8 +6,8 @@ import os from "node:os";
 import path from "node:path";
 import sharp from "sharp";
 import { PGlite } from "@electric-sql/pglite";
-import { defaultCatalog, defaultSettings } from "../lib/site-defaults.js";
-import { preparePhoto } from "../lib/images.js";
+import { defaultCatalog, defaultSettings } from "../lib/site-defaults.ts";
+import { preparePhoto } from "../lib/images.ts";
 import {
   componentGallery,
   saveComponentPhoto,
@@ -15,17 +15,17 @@ import {
   changeComponentGallery,
   componentPhotoFilename,
   cleanupComponentPhotos,
-} from "../lib/component-photos.js";
-import { componentSocial } from "../lib/component-social.js";
+} from "../lib/component-photos.ts";
+import { componentSocial } from "../lib/component-social.ts";
 import {
   editComponentModel,
   mergeComponentModels,
   resolveComponentModel,
-} from "../lib/component-catalog.js";
-import { notificationPage } from "../lib/notifications.js";
-import { createReport, reportPage, moderateReport } from "../lib/reports.js";
-import { componentPhotoBytes, checkPhotoQuota, limits } from "../lib/limits.js";
-import { exportAccount } from "../lib/account-data.js";
+} from "../lib/component-catalog.ts";
+import { notificationPage } from "../lib/notifications.ts";
+import { createReport, reportPage, moderateReport } from "../lib/reports.ts";
+import { componentPhotoBytes, checkPhotoQuota, limits } from "../lib/limits.ts";
+import { exportAccount } from "../lib/account-data.ts";
 
 test("component media and shared discussion: upgrade, roles, quota, merges, moderation and lifetime", async () => {
   const db = new PGlite(),

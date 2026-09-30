@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import pg from "pg";
-import { vote } from "../lib/showcase.js";
-import { createComment } from "../lib/comments.js";
+import { vote } from "../lib/showcase.ts";
+import { createComment } from "../lib/comments.ts";
 
 // Requires real PostgreSQL: PGlite's single connection cannot expose this cycle.
 const clients = Array.from(

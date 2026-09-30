@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import config from "../next.config.mjs";
-import { assetContentSecurityPolicy } from "../lib/asset-security.js";
+import { assetContentSecurityPolicy } from "../lib/asset-security.ts";
 
 test("asset sandbox remains the final path policy without changing page headers", async () => {
   const rules = await config.headers();

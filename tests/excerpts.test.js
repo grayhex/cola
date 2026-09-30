@@ -1,10 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { plainExcerpt, joinBlocks } from "../lib/excerpt.js";
-import { richExcerpt } from "../lib/rich-text.js";
-import { activityExcerpt } from "../lib/discovery.js";
-import { journalDto } from "../lib/journal.js";
-import { formatRubles, listingPriceLabel } from "../lib/market-types.js";
+import { plainExcerpt, joinBlocks } from "../lib/excerpt.ts";
+import { richExcerpt } from "../lib/rich-text.ts";
+import { activityExcerpt } from "../lib/discovery.ts";
+import { journalDto } from "../lib/journal.ts";
+import { formatRubles, listingPriceLabel } from "../lib/market-types.ts";
 
 // Intl uses no-break spaces in ru-RU prices; compare the visible text.
 const norm = (value) => value.replace(/\s/gu, " ");

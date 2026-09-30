@@ -15,9 +15,9 @@ import {
   FileText,
 } from "./icons.jsx";
 import { socialApi } from "./social-primitives.jsx";
-import { journalKinds } from "../../lib/journal-kinds.js";
-import { profilePath, publicPath } from "../../lib/public-urls.js";
-import { personName } from "../../lib/usernames.js";
+import { journalKinds } from "../../lib/journal-kinds.ts";
+import { profilePath, publicPath } from "../../lib/public-urls.ts";
+import { personName } from "../../lib/usernames.ts";
 const kindIcons = {
   story: NotebookPen,
   upgrade: Wrench,

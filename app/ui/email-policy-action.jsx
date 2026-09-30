@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useSite } from "./site-provider.jsx";
-import { EMAIL_POLICY_MESSAGE } from "../../lib/email-policy.js";
+import { EMAIL_POLICY_MESSAGE } from "../../lib/email-policy.ts";
 
 // Inline even inside dialogs: sending/checking must never navigate away from a draft.
 export default function EmailPolicyAction({ message }) {

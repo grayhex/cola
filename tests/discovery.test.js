@@ -3,22 +3,22 @@ import assert from "node:assert/strict";
 import { PGlite } from "@electric-sql/pglite";
 import { readFile, readdir } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
-import { defaultCatalog, defaultSettings } from "../lib/site-defaults.js";
-import { catalogInput } from "../lib/admin-validation.js";
-import { componentModel, mergeCatalog } from "../lib/experience-catalog.js";
-import { journalInput, saveJournal, journalDetail } from "../lib/journal.js";
-import { journalSocial } from "../lib/journal-social.js";
+import { defaultCatalog, defaultSettings } from "../lib/site-defaults.ts";
+import { catalogInput } from "../lib/admin-validation.ts";
+import { componentModel, mergeCatalog } from "../lib/experience-catalog.ts";
+import { journalInput, saveJournal, journalDetail } from "../lib/journal.ts";
+import { journalSocial } from "../lib/journal-social.ts";
 import {
   setBikeFollow,
   setSaved,
   savedPage,
   setSolution,
-} from "../lib/journal-discovery.js";
-import { setFollow } from "../lib/follows.js";
+} from "../lib/journal-discovery.ts";
+import { setFollow } from "../lib/follows.ts";
 import { rideFeed } from "../lib/ride-feed.js";
-import { searchInput, searchExperience } from "../lib/search.js";
-import { participationSummary } from "../lib/participation.js";
-import { notificationPage } from "../lib/notifications.js";
+import { searchInput, searchExperience } from "../lib/search.ts";
+import { participationSummary } from "../lib/participation.ts";
+import { notificationPage } from "../lib/notifications.ts";
 test("catalogue aliases merge identities, not installations; cycles and excessive purposes rejected", () => {
   const c = mergeCatalog(defaultCatalog, {
     kind: "component",

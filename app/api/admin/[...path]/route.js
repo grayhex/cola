@@ -1,39 +1,39 @@
 import { z } from "zod";
-import { backgroundDefaults } from "../../../../lib/theme.js";
-import { siteAssetIds } from "../../../../lib/site-assets.js";
-import { componentIllustrationIds } from "../../../../lib/component-illustrations.js";
-import { prepareSvg } from "../../../../lib/svg-asset.js";
-import { prepareRive } from "../../../../lib/rive-upload.js";
-import { assetFormat } from "../../../../lib/hero-graphics.js";
-import { gameAssetInUse } from "../../../../lib/gamification-assets.js";
-import { traced, logError } from "../../../../lib/observability.js";
+import { backgroundDefaults } from "../../../../lib/theme.ts";
+import { siteAssetIds } from "../../../../lib/site-assets.ts";
+import { componentIllustrationIds } from "../../../../lib/component-illustrations.ts";
+import { prepareSvg } from "../../../../lib/svg-asset.ts";
+import { prepareRive } from "../../../../lib/rive-upload.ts";
+import { assetFormat } from "../../../../lib/hero-graphics.ts";
+import { gameAssetInUse } from "../../../../lib/gamification-assets.ts";
+import { traced, logError } from "../../../../lib/observability.ts";
 import {
   bikeResolverClient,
   resolverQuery,
-} from "../../../../lib/bike-resolver-client.js";
-import { resolverProxy } from "../../../../lib/resolver-proxy.js";
+} from "../../../../lib/bike-resolver-client.ts";
+import { resolverProxy } from "../../../../lib/resolver-proxy.ts";
 import { randomUUID } from "node:crypto";
 import { mkdir, writeFile, unlink } from "node:fs/promises";
 import path from "node:path";
-import { db, transaction } from "../../../../lib/db.js";
-import { currentUser, startSession, rateLimit } from "../../../../lib/auth.js";
+import { db, transaction } from "../../../../lib/db.ts";
+import { currentUser, startSession, rateLimit } from "../../../../lib/auth.ts";
 import {
   json,
   fail,
   readJson,
   readBytes,
   sameOrigin,
-} from "../../../../lib/http.js";
-import { getSite, audit, updateManagedUser } from "../../../../lib/site.js";
+} from "../../../../lib/http.ts";
+import { getSite, audit, updateManagedUser } from "../../../../lib/site.ts";
 import {
   settingsInput,
   catalogInput,
   userInput,
-} from "../../../../lib/admin-validation.js";
-import { preparePhoto } from "../../../../lib/images.js";
-import { uuid } from "../../../../lib/validation.js";
-import { participationSummary } from "../../../../lib/participation.js";
-import { CommunityError } from "../../../../lib/community-validation.js";
+} from "../../../../lib/admin-validation.ts";
+import { preparePhoto } from "../../../../lib/images.ts";
+import { uuid } from "../../../../lib/validation.ts";
+import { participationSummary } from "../../../../lib/participation.ts";
+import { CommunityError } from "../../../../lib/community-validation.ts";
 import {
   componentCatalog,
   componentCatalogInput,
@@ -41,7 +41,7 @@ import {
   componentModelMerge,
   editComponentModel,
   mergeComponentModels,
-} from "../../../../lib/component-catalog.js";
+} from "../../../../lib/component-catalog.ts";
 import {
   bikeCatalog,
   bikeCatalogInput,
@@ -49,7 +49,7 @@ import {
   bikeModelMerge,
   editBikeModel,
   mergeBikeModels,
-} from "../../../../lib/bike-catalog.js";
+} from "../../../../lib/bike-catalog.ts";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 /** @param {Request} req
@@ -165,9 +165,12 @@ async function handler(req, { params }) {
       }
     }
     if (p[0] === "overview" && method === "GET") {
-      const stats = await db.query(
-        "SELECT (SELECT count(*)::int FROM users) AS users,(SELECT count(*)::int FROM bikes) AS bikes,(SELECT count(*)::int FROM photos) AS photos",
-      );
+      const stats =
+        await /** @type {Promise<import("../../../../lib/db.ts").QueryRows<{"users": number; "bikes": number; "photos": number}>>} */ (
+          db.query(
+            "SELECT (SELECT count(*)::int FROM users) AS users,(SELECT count(*)::int FROM bikes) AS bikes,(SELECT count(*)::int FROM photos) AS photos",
+          )
+        );
       return json({
         ...(await getSite()),
         stats: stats.rows[0],
@@ -187,8 +190,11 @@ async function handler(req, { params }) {
       let submitted = input.value;
       if (p[0] === "settings" && submitted && typeof submitted === "object") {
         const before =
-          (await db.query("SELECT value FROM site_settings WHERE id=1")).rows[0]
-            ?.value || {};
+          (
+            await /** @type {Promise<import("../../../../lib/db.ts").QueryRows<{"value": unknown}>>} */ (
+              db.query("SELECT value FROM site_settings WHERE id=1")
+            )
+          ).rows[0]?.value || {};
         submitted = {
           ...Object.fromEntries(
             [...Object.keys(backgroundDefaults), "componentIllustrations"].map(
@@ -212,11 +218,18 @@ async function handler(req, { params }) {
       const table = p[0] === "settings" ? "site_settings" : "site_catalog";
       const result = await transaction(async (q) => {
         if (p[0] === "settings")
-          for (const id of siteAssetIds(value)) {
-            const a = await q.query(
-              "SELECT id,filename FROM site_assets WHERE id=$1 FOR SHARE",
-              [id],
-            );
+          for (const id of siteAssetIds(
+            /** @type {import("../../../../lib/contracts.ts").SiteSettings} */ (
+              value
+            ),
+          )) {
+            const a =
+              await /** @type {Promise<import("../../../../lib/db.ts").QueryRows<{"id": string; "filename": string}>>} */ (
+                q.query(
+                  "SELECT id,filename FROM site_assets WHERE id=$1 FOR SHARE",
+                  [id],
+                )
+              );
             if (!a.rows.length)
               return {
                 error: "Выбранное изображение удалено. Обновите страницу.",
@@ -226,7 +239,11 @@ async function handler(req, { params }) {
               assetFormat(a.rows[0].filename) === "rive" &&
               [
                 ...Object.values(value),
-                ...componentIllustrationIds(value),
+                ...componentIllustrationIds(
+                  /** @type {import("../../../../lib/contracts.ts").SiteSettings} */ (
+                    value
+                  ),
+                ),
               ].some(
                 (entry) =>
                   typeof entry === "string" && entry.toLowerCase() === id,
@@ -240,10 +257,12 @@ async function handler(req, { params }) {
         if (p[0] === "settings") {
           for (const key of ["heroImageId", "heroStageImageId"]) {
             if (!value[key]) continue;
-            const asset = await q.query(
-              "SELECT filename FROM site_assets WHERE id=$1",
-              [value[key]],
-            );
+            const asset =
+              await /** @type {Promise<import("../../../../lib/db.ts").QueryRows<{"filename": string}>>} */ (
+                q.query("SELECT filename FROM site_assets WHERE id=$1", [
+                  value[key],
+                ])
+              );
             if (assetFormat(asset.rows[0]?.filename) !== "image")
               return {
                 error:
@@ -258,10 +277,12 @@ async function handler(req, { params }) {
           ]) {
             const selected = value[key];
             if (!selected?.assetId) continue;
-            const asset = await q.query(
-              "SELECT filename FROM site_assets WHERE id=$1",
-              [selected.assetId],
-            );
+            const asset =
+              await /** @type {Promise<import("../../../../lib/db.ts").QueryRows<{"filename": string}>>} */ (
+                q.query("SELECT filename FROM site_assets WHERE id=$1", [
+                  selected.assetId,
+                ])
+              );
             if (assetFormat(asset.rows[0]?.filename) !== selected.kind)
               return {
                 error: "Формат выбранной анимации не совпадает с файлом",
@@ -269,10 +290,13 @@ async function handler(req, { params }) {
               };
           }
         }
-        const r = await q.query(
-          `UPDATE ${table} SET value=$1,version=version+1,updated_at=now() WHERE id=1 AND version=$2 RETURNING version`,
-          [JSON.stringify(value), input.version],
-        );
+        const r =
+          await /** @type {Promise<import("../../../../lib/db.ts").QueryRows<{"version": number}>>} */ (
+            q.query(
+              `UPDATE ${table} SET value=$1,version=version+1,updated_at=now() WHERE id=1 AND version=$2 RETURNING version`,
+              [JSON.stringify(value), input.version],
+            )
+          );
         if (!r.rows.length)
           return {
             error:
@@ -282,7 +306,9 @@ async function handler(req, { params }) {
         await audit(q, user.id, p[0] + ".update", String(r.rows[0].version));
         return r.rows[0];
       });
-      return result.error ? fail(result.error, result.status) : json(result);
+      return "error" in result
+        ? fail(result.error, result.status)
+        : json(result);
     }
     if (p[0] === "users") {
       if (p.length === 1 && method === "GET") {
@@ -293,14 +319,20 @@ async function handler(req, { params }) {
             Math.min(100000, Number(url.searchParams.get("page")) || 1),
           );
         const values = ["%" + term + "%", (page - 1) * 20];
-        const { rows } = await db.query(
-          "SELECT u.id,u.email,u.name,u.role,u.blocked,u.created_at,(SELECT count(*)::int FROM bikes b WHERE b.owner_id=u.id) AS bikes FROM users u WHERE u.email ILIKE $1 OR u.name ILIKE $1 OR u.username ILIKE $1 ORDER BY u.created_at DESC,u.id LIMIT 20 OFFSET $2",
-          values,
-        );
-        const total = await db.query(
-          "SELECT count(*)::int AS count FROM users WHERE email ILIKE $1 OR name ILIKE $1 OR username ILIKE $1",
-          [values[0]],
-        );
+        const { rows } =
+          await /** @type {Promise<import("../../../../lib/db.ts").QueryRows<{"id": string; "email": string; "name": string; "role": string; "blocked": boolean; "created_at": Date; "bikes": number}>>} */ (
+            db.query(
+              "SELECT u.id,u.email,u.name,u.role,u.blocked,u.created_at,(SELECT count(*)::int FROM bikes b WHERE b.owner_id=u.id) AS bikes FROM users u WHERE u.email ILIKE $1 OR u.name ILIKE $1 OR u.username ILIKE $1 ORDER BY u.created_at DESC,u.id LIMIT 20 OFFSET $2",
+              values,
+            )
+          );
+        const total =
+          await /** @type {Promise<import("../../../../lib/db.ts").QueryRows<{"count": number}>>} */ (
+            db.query(
+              "SELECT count(*)::int AS count FROM users WHERE email ILIKE $1 OR name ILIKE $1 OR username ILIKE $1",
+              [values[0]],
+            )
+          );
         return json({ users: rows, total: total.rows[0].count, page });
       }
       if (!uuid.safeParse(p[1]).success)
@@ -327,13 +359,18 @@ async function handler(req, { params }) {
         const data = await readJson(req);
         let files = [];
         const result = await transaction(async (q) => {
-          await q.query(
-            "SELECT id FROM users WHERE role='admin' ORDER BY id FOR UPDATE",
+          await /** @type {Promise<import("../../../../lib/db.ts").QueryRows<{"id": string}>>} */ (
+            q.query(
+              "SELECT id FROM users WHERE role='admin' ORDER BY id FOR UPDATE",
+            )
           );
-          const { rows } = await q.query(
-            "SELECT id,role,email,avatar_id FROM users WHERE id=$1 FOR UPDATE",
-            [p[1]],
-          );
+          const { rows } =
+            await /** @type {Promise<import("../../../../lib/db.ts").QueryRows<{"id": string; "role": string; "email": string; "avatar_id": string | null}>>} */ (
+              q.query(
+                "SELECT id,role,email,avatar_id FROM users WHERE id=$1 FOR UPDATE",
+                [p[1]],
+              )
+            );
           if (!rows[0]) return { error: "Пользователь не найден", status: 404 };
           if (rows[0].role === "admin")
             return {
@@ -351,9 +388,11 @@ async function handler(req, { params }) {
               status: 400,
             };
           files = (
-            await q.query(
-              "SELECT p.filename FROM photos p JOIN bikes b ON b.id=p.bike_id WHERE b.owner_id=$1",
-              [p[1]],
+            await /** @type {Promise<import("../../../../lib/db.ts").QueryRows<{"filename": string}>>} */ (
+              q.query(
+                "SELECT p.filename FROM photos p JOIN bikes b ON b.id=p.bike_id WHERE b.owner_id=$1",
+                [p[1]],
+              )
             )
           ).rows;
           if (rows[0].avatar_id)
@@ -380,8 +419,10 @@ async function handler(req, { params }) {
       if (p.length === 1 && method === "GET")
         return json({
           assets: (
-            await db.query(
-              "SELECT id,name,created_at FROM site_assets ORDER BY created_at DESC",
+            await /** @type {Promise<import("../../../../lib/db.ts").QueryRows<{"id": string; "name": string; "created_at": Date}>>} */ (
+              db.query(
+                "SELECT id,name,created_at FROM site_assets ORDER BY created_at DESC",
+              )
             )
           ).rows,
         });
@@ -438,14 +479,19 @@ async function handler(req, { params }) {
         method === "DELETE"
       ) {
         const result = await transaction(async (q) => {
-          const r = await q.query(
-            "SELECT filename FROM site_assets WHERE id=$1 FOR UPDATE",
-            [p[1]],
-          );
+          const r =
+            await /** @type {Promise<import("../../../../lib/db.ts").QueryRows<{"filename": string}>>} */ (
+              q.query(
+                "SELECT filename FROM site_assets WHERE id=$1 FOR UPDATE",
+                [p[1]],
+              )
+            );
           if (!r.rows.length)
             return { error: "Изображение не найдено", status: 404 };
           const config = (
-            await q.query("SELECT value FROM site_settings WHERE id=1")
+            await /** @type {Promise<import("../../../../lib/db.ts").QueryRows<{"value": unknown}>>} */ (
+              q.query("SELECT value FROM site_settings WHERE id=1")
+            )
           ).rows[0].value;
           if (siteAssetIds(config).includes(p[1]))
             return {
@@ -476,8 +522,10 @@ async function handler(req, { params }) {
     if (p[0] === "audit" && method === "GET")
       return json({
         events: (
-          await db.query(
-            "SELECT a.id,a.action,a.target,a.created_at,u.name AS actor FROM admin_audit a LEFT JOIN users u ON u.id=a.actor_id ORDER BY a.id DESC LIMIT 100",
+          await /** @type {Promise<import("../../../../lib/db.ts").QueryRows<{"id": string; "action": string; "target": string; "created_at": Date; "actor": string}>>} */ (
+            db.query(
+              "SELECT a.id,a.action,a.target,a.created_at,u.name AS actor FROM admin_audit a LEFT JOIN users u ON u.id=a.actor_id ORDER BY a.id DESC LIMIT 100",
+            )
           )
         ).rows,
       });

@@ -5,7 +5,7 @@ import { useSite } from "./site-provider.jsx";
 import BikeCard from "./bike-card.jsx";
 import BikeGrid from "./bike-grid.jsx";
 import JournalCard from "./journal-card.jsx";
-import { plural } from "../../lib/plural.js";
+import { plural } from "../../lib/plural.ts";
 import { Camera, Bike, MessageCircle, BookOpen } from "lucide-react";
 import { ComponentPath } from "./component-navigation.jsx";
 import ComponentAbout from "./component-about.jsx";

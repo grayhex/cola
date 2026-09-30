@@ -7,10 +7,10 @@ import { SocialHeader, SocialFooter } from "./social-primitives.jsx";
 import { useSite } from "./site-provider.jsx";
 import ComponentIllustration from "./component-illustration.jsx";
 import SiteIcon from "./site-icon.jsx";
-import { plural } from "../../lib/plural.js";
+import { plural } from "../../lib/plural.ts";
 import styles from "./component-catalog.module.css";
 import ComponentNavigation from "./component-navigation.jsx";
-import { componentNavigation } from "../../lib/component-navigation.js";
+import { componentNavigation } from "../../lib/component-navigation.ts";
 import { SharedView } from "./motion.jsx";
 
 function ComponentCover({ model, icons }) {

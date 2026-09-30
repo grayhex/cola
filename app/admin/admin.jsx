@@ -25,7 +25,7 @@ import Reports from "./reports.jsx";
 import ScoringSettings from "./scoring-settings.jsx";
 import { GroupSettings } from "./layout-settings.jsx";
 import ResolverSettings from "./resolver-settings.jsx";
-import { copyBlocks } from "../../lib/copy-blocks.js";
+import { copyBlocks } from "../../lib/copy-blocks.ts";
 import GlobalHeader from "../ui/global-header.jsx";
 import { useSite } from "../ui/site-provider.jsx";
 import {

@@ -6,10 +6,10 @@ import { socialApi, SocialHeader, SocialFooter } from "./social-primitives.jsx";
 import { useSite } from "./site-provider.jsx";
 import AchievementArt from "./achievement-art.jsx";
 import { Medal, Trophy } from "./icons.jsx";
-import { groupByMetric } from "../../lib/gamification-presentation.js";
-import { metricValue } from "../../lib/game-metrics.js";
-import { profilePath, publicPath } from "../../lib/public-urls.js";
-import { personName, usernameLabel } from "../../lib/usernames.js";
+import { groupByMetric } from "../../lib/gamification-presentation.ts";
+import { metricValue } from "../../lib/game-metrics.ts";
+import { profilePath, publicPath } from "../../lib/public-urls.ts";
+import { personName, usernameLabel } from "../../lib/usernames.ts";
 
 // Where a record holder leads: a bike, a ride (with its bike), or a person.
 function holderLink(b) {

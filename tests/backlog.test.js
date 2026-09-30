@@ -4,32 +4,32 @@ import { randomUUID } from "node:crypto";
 import { readFile, readdir } from "node:fs/promises";
 import sharp from "sharp";
 import { PGlite } from "@electric-sql/pglite";
-import { parseBikeSearch } from "../lib/bike-search-input.js";
+import { parseBikeSearch } from "../lib/bike-search-input.ts";
 import {
   classificationInput,
   classificationQueryInput,
-} from "../lib/classification-validation.js";
+} from "../lib/classification-validation.ts";
 import {
   classificationOf,
   classificationLabels,
   compatibilityCategory,
   matchesClassification,
-} from "../lib/bike-classification.js";
-import { bikeInput } from "../lib/validation.js";
-import { publicBike } from "../lib/public-dto.js";
-import { defaultSettings, defaultCatalog } from "../lib/site-defaults.js";
-import { insertBike } from "../lib/repository.js";
-import { showcase } from "../lib/showcase.js";
-import { discoveryInput, discoverySearch } from "../lib/discovery.js";
-import { searchInput, searchExperience } from "../lib/search.js";
-import { prepareSvg } from "../lib/svg-asset.js";
-import { backgroundCss, backgroundDefaults } from "../lib/theme.js";
+} from "../lib/bike-classification.ts";
+import { bikeInput } from "../lib/validation.ts";
+import { publicBike } from "../lib/public-dto.ts";
+import { defaultSettings, defaultCatalog } from "../lib/site-defaults.ts";
+import { insertBike } from "../lib/repository.ts";
+import { showcase } from "../lib/showcase.ts";
+import { discoveryInput, discoverySearch } from "../lib/discovery.ts";
+import { searchInput, searchExperience } from "../lib/search.ts";
+import { prepareSvg } from "../lib/svg-asset.ts";
+import { backgroundCss, backgroundDefaults } from "../lib/theme.ts";
 import {
   illustrationSlots,
   filterGraphicSlots,
-} from "../lib/design-graphics.js";
-import { settingsInput } from "../lib/admin-validation.js";
-import { siteAssetIds, siteAssetUsage } from "../lib/site-assets.js";
+} from "../lib/design-graphics.ts";
+import { settingsInput } from "../lib/admin-validation.ts";
+import { siteAssetIds, siteAssetUsage } from "../lib/site-assets.ts";
 const baseBike = {
   name: "Fixture",
   brand: "Cube",

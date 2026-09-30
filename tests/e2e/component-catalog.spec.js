@@ -2,12 +2,12 @@ import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { randomUUID } from "node:crypto";
 import pg from "pg";
-import { componentNavigation } from "../../lib/component-navigation.js";
+import { componentNavigation } from "../../lib/component-navigation.ts";
 const defaultGroups = componentNavigation();
 import { registerVerified } from "../fixtures/verified-user.js";
 import { testConsents } from "../fixtures/legal.js";
 import { pageOverflow, describeOverflow } from "../fixtures/overflow.js";
-import { publicPath } from "../../lib/public-urls.js";
+import { publicPath } from "../../lib/public-urls.ts";
 const origin = process.env.TEST_ORIGIN || "http://localhost:3100";
 
 test("product catalog separates installation text, paired products and public navigation", async ({

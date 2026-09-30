@@ -30,7 +30,7 @@ import {
   deleteRide,
 } from "../lib/rides.js";
 import { getOriginal } from "../lib/ride-storage.js";
-import { defaultSettings, defaultCatalog } from "../lib/site-defaults.js";
+import { defaultSettings, defaultCatalog } from "../lib/site-defaults.ts";
 import { fit, loop } from "./ride-fixtures.js";
 
 const env = {

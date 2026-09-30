@@ -6,7 +6,7 @@ import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { PGlite } from "@electric-sql/pglite";
 import { parseGarminCsv, assertMatchingTrack } from "../lib/garmin-csv.js";
-import { prepareSvg } from "../lib/svg-asset.js";
+import { prepareSvg } from "../lib/svg-asset.ts";
 import { parseGpx } from "../lib/ride-gpx.js";
 import {
   previewRide,
@@ -29,10 +29,10 @@ import {
   marketPhoto,
   deleteListing,
   cleanupMarketPhotos,
-} from "../lib/market.js";
-import { notificationPage } from "../lib/notifications.js";
-import { communityActivity } from "../lib/discovery.js";
-import { defaultSettings, defaultCatalog } from "../lib/site-defaults.js";
+} from "../lib/market.ts";
+import { notificationPage } from "../lib/notifications.ts";
+import { communityActivity } from "../lib/discovery.ts";
+import { defaultSettings, defaultCatalog } from "../lib/site-defaults.ts";
 import { garminCsv } from "./garmin-fixtures.js";
 import { gpx, loop } from "./ride-fixtures.js";
 

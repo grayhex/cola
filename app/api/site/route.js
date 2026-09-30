@@ -1,6 +1,6 @@
-import { logError, traced } from "../../../lib/observability.js";
-import { getSite } from "../../../lib/site.js";
-import { json, fail } from "../../../lib/http.js";
+import { logError, traced } from "../../../lib/observability.ts";
+import { getSite } from "../../../lib/site.ts";
+import { json, fail } from "../../../lib/http.ts";
 export const dynamic = "force-dynamic";
 export const GET = traced(async function GET() {
   try {

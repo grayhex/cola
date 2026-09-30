@@ -35,9 +35,9 @@ import { chatApi } from "./chat-api.js";
 import NewConversation from "./new-conversation.jsx";
 import { Images, plainText } from "./chat-content.jsx";
 import { socialApi } from "../ui/social-primitives.jsx";
-import { publicPath } from "../../lib/public-urls.js";
+import { publicPath } from "../../lib/public-urls.ts";
 import { rideTimeLabel } from "../../lib/ride-announcement.js";
-import { streamUserId } from "../../lib/chat-config.js";
+import { streamUserId } from "../../lib/chat-config.ts";
 
 /** The draft of a question about a ride: title, agreed time and the public
  * address — no meeting place, people or answers. */

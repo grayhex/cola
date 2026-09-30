@@ -2,8 +2,8 @@
 import pg from "pg";
 import { randomUUID } from "node:crypto";
 import { pathToFileURL } from "node:url";
-import { credentials } from "../lib/validation.js";
-import { hashPassword } from "../lib/password.js";
+import { credentials } from "../lib/validation.ts";
+import { hashPassword } from "../lib/password.ts";
 
 // Caller owns the transaction; a table lock makes concurrent first-owner attempts exclusive.
 export async function bootstrapAdmin(q, raw) {

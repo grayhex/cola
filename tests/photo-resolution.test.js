@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import sharp from "sharp";
-import { preparePhoto } from "../lib/images.js";
+import { preparePhoto } from "../lib/images.ts";
 test("bike images require 600 by 400; icons and avatars retain their own sizing", async () => {
   const small = await sharp({
     create: { width: 100, height: 100, channels: 3, background: "white" },

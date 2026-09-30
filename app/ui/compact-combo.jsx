@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useId, useRef, useState } from "react";
-import { limitedOptions } from "../../lib/wizard-options.js";
+import { limitedOptions } from "../../lib/wizard-options.ts";
 export default function CompactCombo({
   label,
   value,

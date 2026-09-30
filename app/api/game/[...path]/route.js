@@ -1,12 +1,12 @@
-import { db, transaction } from "../../../../lib/db.js";
-import { currentUser, rateLimit } from "../../../../lib/auth.js";
-import { json, fail, sameOrigin, readJson } from "../../../../lib/http.js";
-import { traced, logError } from "../../../../lib/observability.js";
-import { uuid } from "../../../../lib/validation.js";
+import { db, transaction } from "../../../../lib/db.ts";
+import { currentUser, rateLimit } from "../../../../lib/auth.ts";
+import { json, fail, sameOrigin, readJson } from "../../../../lib/http.ts";
+import { traced, logError } from "../../../../lib/observability.ts";
+import { uuid } from "../../../../lib/validation.ts";
 import {
   CommunityError,
   communityPage,
-} from "../../../../lib/community-validation.js";
+} from "../../../../lib/community-validation.ts";
 import {
   records,
   awardCatalog,
@@ -16,24 +16,24 @@ import {
   reactToBike,
   getGameSettings,
   excludeBike,
-} from "../../../../lib/gamification.js";
+} from "../../../../lib/gamification.ts";
 import {
   gameSettingsInput,
   reactionKey,
   exclusionInput,
-} from "../../../../lib/gamification-validation.js";
+} from "../../../../lib/gamification-validation.ts";
 import {
   loadRules,
   rulesInput,
   saveRules,
   recalculateAwards,
-} from "../../../../lib/game-rules.js";
-import { audit } from "../../../../lib/site.js";
+} from "../../../../lib/game-rules.ts";
+import { audit } from "../../../../lib/site.ts";
 import {
   getGameImagePrompt,
   saveGameImagePrompt,
-} from "../../../../lib/game-prompt.js";
-import { gameImagePromptInput } from "../../../../lib/game-prompt-validation.js";
+} from "../../../../lib/game-prompt.ts";
+import { gameImagePromptInput } from "../../../../lib/game-prompt-validation.ts";
 export const runtime = "nodejs",
   dynamic = "force-dynamic";
 /** @param {Request} req
@@ -50,9 +50,11 @@ async function handler(req, { params }) {
       return json({ ...(await records(db)), awards: await awardCatalog(db) });
     if (p[0] === "profiles" && p.length === 2 && m === "GET") {
       const u = (
-        await db.query(
-          "SELECT id FROM users WHERE lower(username)=lower($1) AND NOT blocked",
-          [p[1]],
+        await /** @type {Promise<import("../../../../lib/db.ts").QueryRows<{"id": string}>>} */ (
+          db.query(
+            "SELECT id FROM users WHERE lower(username)=lower($1) AND NOT blocked",
+            [p[1]],
+          )
         )
       ).rows[0];
       if (!u) return fail("Профиль недоступен", 404);
@@ -102,8 +104,10 @@ async function handler(req, { params }) {
           const input = gameSettingsInput.parse(await readJson(req, 4096));
           return json(
             await transaction(async (q) => {
-              await q.query(
-                "SELECT value FROM gamification_settings WHERE id=1 FOR UPDATE",
+              await /** @type {Promise<import("../../../../lib/db.ts").QueryRows<{"value": unknown}>>} */ (
+                q.query(
+                  "SELECT value FROM gamification_settings WHERE id=1 FOR UPDATE",
+                )
               );
               await q.query(
                 "UPDATE gamification_settings SET value=value || $1::jsonb WHERE id=1",
@@ -163,9 +167,11 @@ async function handler(req, { params }) {
         );
         return json({
           bikes: (
-            await db.query(
-              "SELECT id,name,share_id,leaderboard_excluded FROM bikes ORDER BY leaderboard_excluded DESC,created_at DESC LIMIT 25 OFFSET $1",
-              [(page - 1) * 25],
+            await /** @type {Promise<import("../../../../lib/db.ts").QueryRows<{"id": string; "name": string; "share_id": string; "leaderboard_excluded": boolean}>>} */ (
+              db.query(
+                "SELECT id,name,share_id,leaderboard_excluded FROM bikes ORDER BY leaderboard_excluded DESC,created_at DESC LIMIT 25 OFFSET $1",
+                [(page - 1) * 25],
+              )
             )
           ).rows,
           page,
@@ -194,8 +200,10 @@ async function handler(req, { params }) {
 async function adminRules() {
   const awarded = new Map(
     (
-      await db.query(
-        "SELECT achievement_key AS key,count(DISTINCT user_id)::int AS n FROM achievement_awards GROUP BY achievement_key",
+      await /** @type {Promise<import("../../../../lib/db.ts").QueryRows<{"key": string; "n": number}>>} */ (
+        db.query(
+          "SELECT achievement_key AS key,count(DISTINCT user_id)::int AS n FROM achievement_awards GROUP BY achievement_key",
+        )
       )
     ).rows.map((r) => [r.key, r.n]),
   );

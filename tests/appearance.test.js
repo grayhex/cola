@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { contrastRatio, titleHover } from "../lib/appearance.js";
+import { contrastRatio, titleHover } from "../lib/appearance.ts";
 
 // The hover surface of each theme, read from the tokens so a new surface
 // colour cannot silently break the guarantee.

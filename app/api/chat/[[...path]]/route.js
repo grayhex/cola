@@ -4,18 +4,18 @@ import {
   currentUser,
   currentSessionHash,
   rateLimit,
-} from "../../../../lib/auth.js";
-import { db, transaction } from "../../../../lib/db.js";
-import { readJson, sameOrigin } from "../../../../lib/http.js";
-import { chatConfig, streamUserId } from "../../../../lib/chat-config.js";
-import { chatProvider, ChatError } from "../../../../lib/chat-provider.js";
-import { issueChatToken, createChatChannel } from "../../../../lib/chat.js";
-import { chatPeople } from "../../../../lib/chat-people.js";
+} from "../../../../lib/auth.ts";
+import { db, transaction } from "../../../../lib/db.ts";
+import { readJson, sameOrigin } from "../../../../lib/http.ts";
+import { chatConfig, streamUserId } from "../../../../lib/chat-config.ts";
+import { chatProvider, ChatError } from "../../../../lib/chat-provider.ts";
+import { issueChatToken, createChatChannel } from "../../../../lib/chat.ts";
+import { chatPeople } from "../../../../lib/chat-people.ts";
 import {
   EmailPolicyError,
   requireVerifiedEmail,
-} from "../../../../lib/email-policy.js";
-import { traced } from "../../../../lib/observability.js";
+} from "../../../../lib/email-policy.ts";
+import { traced } from "../../../../lib/observability.ts";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 const reply = (data, status = 200) =>
@@ -76,10 +76,12 @@ async function handler(req, { params }) {
       return reply(await chatPeople(db, viewer.id, term));
     }
     if (action === "unread" && req.method === "GET") {
-      const identity = await db.query(
-        "SELECT 1 FROM chat_identities WHERE user_id=$1",
-        [viewer.id],
-      );
+      const identity =
+        await /** @type {Promise<import("../../../../lib/db.ts").QueryRows<{"?column?": number}>>} */ (
+          db.query("SELECT 1 FROM chat_identities WHERE user_id=$1", [
+            viewer.id,
+          ])
+        );
       if (!identity.rowCount) return reply({ unread: 0 });
       const counts = await chatProvider().getUnreadCount(
         streamUserId(viewer.id),
@@ -88,10 +90,12 @@ async function handler(req, { params }) {
     }
     if (action === "export" && req.method === "POST") {
       empty.parse(await payload(req, 1024));
-      const identity = await db.query(
-        "SELECT 1 FROM chat_identities WHERE user_id=$1",
-        [viewer.id],
-      );
+      const identity =
+        await /** @type {Promise<import("../../../../lib/db.ts").QueryRows<{"?column?": number}>>} */ (
+          db.query("SELECT 1 FROM chat_identities WHERE user_id=$1", [
+            viewer.id,
+          ])
+        );
       const data = identity.rowCount
         ? await chatProvider().exportUser(streamUserId(viewer.id))
         : { messages: [], reactions: [] };

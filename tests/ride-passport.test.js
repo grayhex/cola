@@ -20,7 +20,7 @@ import {
   respondRide,
   attachRideTrack,
 } from "../lib/rides.js";
-import { loadSocialPreview, loadSocialCard } from "../lib/social-preview.js";
+import { loadSocialPreview, loadSocialCard } from "../lib/social-preview.ts";
 import { gpx, loop } from "./ride-fixtures.js";
 
 test("shared passport validates units, unknowns, coarse areas and total duration", () => {

@@ -1,8 +1,8 @@
-import { currentViewer } from "../../lib/viewer.js";
+import { currentViewer } from "../../lib/viewer.ts";
 import About from "./about.jsx";
-import { db } from "../../lib/db.js";
-import { siteStatistics } from "../../lib/site-statistics.js";
-import { indexed } from "../../lib/indexing.js";
+import { db } from "../../lib/db.ts";
+import { siteStatistics } from "../../lib/site-statistics.ts";
+import { indexed } from "../../lib/indexing.ts";
 export const metadata = {
   title: "О проекте · ColaBike",
   description:

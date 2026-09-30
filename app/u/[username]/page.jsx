@@ -1,5 +1,5 @@
 import PublicProfile from "../../ui/public-profile.jsx";
-import { metadataFor, canonicalPage } from "../../../lib/social-page.js";
+import { metadataFor, canonicalPage } from "../../../lib/social-page.ts";
 export const runtime = "nodejs",
   dynamic = "force-dynamic";
 export async function generateMetadata({ params, searchParams }) {

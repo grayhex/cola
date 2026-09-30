@@ -1,6 +1,6 @@
 import { registerVerified } from "../fixtures/verified-user.js";
 import { testConsents } from "../fixtures/legal.js";
-import { bikeCategories } from "../../lib/bike-classification.js";
+import { bikeCategories } from "../../lib/bike-classification.ts";
 import { test, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import pg from "pg";

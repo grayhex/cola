@@ -15,7 +15,7 @@ import {
   privateMediaCache,
   purgeMediaVariants,
   sweepMediaCache,
-} from "../lib/media-cache.js";
+} from "../lib/media-cache.ts";
 
 test("only the closed set of widths is accepted", () => {
   assert.equal(mediaWidth(null), null);

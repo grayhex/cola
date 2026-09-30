@@ -19,7 +19,7 @@ import {
   intentPreferences,
   saveIntentPreferences,
 } from "../lib/ride-intents.js";
-import { exportAccount } from "../lib/account-data.js";
+import { exportAccount } from "../lib/account-data.ts";
 const body = (
   date = new Date(Date.now() + 86400000).toISOString().slice(0, 10),
 ) => ({

@@ -15,9 +15,9 @@ import {
   navigationSections,
   sectionLinks,
   activeSection,
-} from "../../lib/navigation.js";
-import { profilePath } from "../../lib/public-urls.js";
-import { usernameLabel } from "../../lib/usernames.js";
+} from "../../lib/navigation.ts";
+import { profilePath } from "../../lib/public-urls.ts";
+import { usernameLabel } from "../../lib/usernames.ts";
 export default function GlobalHeader({
   user: shown,
   onProfile,

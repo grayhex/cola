@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { resolveWithTrace } from "../../lib/resolver-stream.js";
+import { resolveWithTrace } from "../../lib/resolver-stream.ts";
 import ResolverTimeline from "../ui/resolver-timeline.jsx";
 export default function ResolverInspector() {
   const [query, setQuery] = useState({

@@ -30,7 +30,7 @@ import {
   cleanupRides,
   putOriginal,
 } from "../lib/ride-storage.js";
-import { defaultSettings, defaultCatalog } from "../lib/site-defaults.js";
+import { defaultSettings, defaultCatalog } from "../lib/site-defaults.ts";
 import { gpx, loop } from "./ride-fixtures.js";
 
 // #248: requests release only their own files; the storage pass is bounded,

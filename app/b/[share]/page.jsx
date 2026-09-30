@@ -3,7 +3,7 @@ import {
   metadataFor,
   canonicalPage,
   pageData,
-} from "../../../lib/social-page.js";
+} from "../../../lib/social-page.ts";
 export const runtime = "nodejs",
   dynamic = "force-dynamic";
 export async function generateMetadata({ params, searchParams }) {

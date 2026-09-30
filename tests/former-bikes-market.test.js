@@ -5,11 +5,11 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { PGlite } from "@electric-sql/pglite";
-import { bikeInput } from "../lib/validation.js";
-import { insertBike, hydrate, ownedBike } from "../lib/repository.js";
-import { showcase } from "../lib/showcase.js";
-import { publicBike } from "../lib/public-dto.js";
-import { defaultSettings, defaultCatalog } from "../lib/site-defaults.js";
+import { bikeInput } from "../lib/validation.ts";
+import { insertBike, hydrate, ownedBike } from "../lib/repository.ts";
+import { showcase } from "../lib/showcase.ts";
+import { publicBike } from "../lib/public-dto.ts";
+import { defaultSettings, defaultCatalog } from "../lib/site-defaults.ts";
 import {
   previewRide,
   saveRide,
@@ -27,8 +27,8 @@ import {
   marketList,
   marketDetail,
   marketContact,
-} from "../lib/market.js";
-import { listingPriceLabel } from "../lib/market-types.js";
+} from "../lib/market.ts";
+import { listingPriceLabel } from "../lib/market-types.ts";
 import { garminCsv } from "./garmin-fixtures.js";
 import { gpx, loop } from "./ride-fixtures.js";
 

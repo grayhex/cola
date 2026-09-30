@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { readFile, readdir } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import { PGlite } from "@electric-sql/pglite";
-import { defaultSettings, defaultCatalog } from "../lib/site-defaults.js";
+import { defaultSettings, defaultCatalog } from "../lib/site-defaults.ts";
 import {
   listingInput,
   saveListing,
@@ -18,12 +18,12 @@ import {
   sellerListings,
   setListingSaved,
   savedListings,
-} from "../lib/market.js";
-import { notificationPage, unreadCount } from "../lib/notifications.js";
-import { communityActivity } from "../lib/discovery.js";
-import { sitemapEntries } from "../lib/indexing.js";
-import { loadSocialPreview } from "../lib/social-preview.js";
-import { socialMetadata } from "../lib/social-metadata.js";
+} from "../lib/market.ts";
+import { notificationPage, unreadCount } from "../lib/notifications.ts";
+import { communityActivity } from "../lib/discovery.ts";
+import { sitemapEntries } from "../lib/indexing.ts";
+import { loadSocialPreview } from "../lib/social-preview.ts";
+import { socialMetadata } from "../lib/social-metadata.ts";
 
 const day = 86400000;
 const start = new Date("2026-10-01T09:00:00Z").getTime();

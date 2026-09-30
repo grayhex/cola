@@ -1,13 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { ruleInput, rulesInput } from "../lib/game-rule-validation.js";
+import { ruleInput, rulesInput } from "../lib/game-rule-validation.ts";
 import {
   gameSettingsInput,
   gameSettings,
-} from "../lib/gamification-validation.js";
-import { defaultGamification } from "../lib/gamification-definitions.js";
-import { gameMetrics } from "../lib/game-metrics.js";
-import { gameDescriptionLimit } from "../lib/gamification-presentation.js";
+} from "../lib/gamification-validation.ts";
+import { defaultGamification } from "../lib/gamification-definitions.ts";
+import { gameMetrics } from "../lib/game-metrics.ts";
+import { gameDescriptionLimit } from "../lib/gamification-presentation.ts";
 
 const id = "00000000-0000-4000-8000-000000000001";
 const award = {

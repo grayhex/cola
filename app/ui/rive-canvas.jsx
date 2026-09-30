@@ -6,7 +6,7 @@ import {
   Layout,
   Fit,
 } from "@rive-app/react-canvas-lite";
-import { riveAssets, riveRuntimeVersion } from "../../lib/rive-assets.js";
+import { riveAssets, riveRuntimeVersion } from "../../lib/rive-assets.ts";
 import styles from "./rive-art.module.css";
 
 // Both paths are local. In particular, failure must never fall back to a CDN.

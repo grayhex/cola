@@ -2,7 +2,7 @@ import Link from "next/link";
 import GlobalHeader from "./ui/global-header.jsx";
 import { SocialFooter } from "./ui/social-primitives.jsx";
 import { Compass } from "./ui/icons.jsx";
-import { currentViewer } from "../lib/viewer.js";
+import { currentViewer } from "../lib/viewer.ts";
 export default async function NotFound() {
   const user = await currentViewer();
   return (

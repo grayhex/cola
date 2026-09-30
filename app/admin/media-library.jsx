@@ -1,6 +1,6 @@
 "use client";
 import { useRef, useState } from "react";
-import { assetUsageLabels } from "../../lib/site-assets.js";
+import { assetUsageLabels } from "../../lib/site-assets.ts";
 import { Trash2, Upload } from "../ui/icons.jsx";
 import { Pager } from "./design-controls.jsx";
 import styles from "./design.module.css";

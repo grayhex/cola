@@ -19,9 +19,9 @@ import {
   createRideComment,
   rideCommentPage,
 } from "../lib/ride-comments.js";
-import { notificationPage } from "../lib/notifications.js";
-import { createReport, moderateReport, reportPage } from "../lib/reports.js";
-import { defaultSettings, defaultCatalog } from "../lib/site-defaults.js";
+import { notificationPage } from "../lib/notifications.ts";
+import { createReport, moderateReport, reportPage } from "../lib/reports.ts";
+import { defaultSettings, defaultCatalog } from "../lib/site-defaults.ts";
 import { rideFeed } from "../lib/ride-feed.js";
 import { gpx, loop } from "./ride-fixtures.js";
 test("rides ownership, previews, privacy, social, feed, moderation, delete and storage lifecycle", async () => {

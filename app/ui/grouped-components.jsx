@@ -8,11 +8,11 @@ import {
   ExternalLink,
   Ellipsis,
 } from "./icons.jsx";
-import { groupedComponents } from "../../lib/garage-layout.js";
+import { groupedComponents } from "../../lib/garage-layout.ts";
 import { useId, useState, useSyncExternalStore } from "react";
 import { useSite } from "./site-provider.jsx";
 import PartIcon from "./part-icon.jsx";
-import { experienceHref } from "../../lib/experience-catalog.js";
+import { experienceHref } from "../../lib/experience-catalog.ts";
 import { useHydrated } from "./use-hydrated.js";
 // Without a personal choice groups are open on wide screens and closed on phones.
 const wideQuery = "(min-width: 701px)";

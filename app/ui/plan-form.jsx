@@ -12,8 +12,8 @@ import { socialApi } from "./social-primitives.jsx";
 import {
   selectableRideBikes,
   rideBikeStateError,
-} from "../../lib/bike-status.js";
-import { userTimeZone } from "../../lib/user-time-zone.js";
+} from "../../lib/bike-status.ts";
+import { userTimeZone } from "../../lib/user-time-zone.ts";
 import { areaChanged, placeChanged } from "../../lib/ride-agreement.js";
 import { localDateTime, validTimeZone } from "../../lib/ride-intent-time.js";
 import {

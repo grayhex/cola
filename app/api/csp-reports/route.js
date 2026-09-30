@@ -1,8 +1,8 @@
-import { rateLimit } from "../../../lib/auth.js";
-import { trustedIp } from "../../../lib/auth-limits.js";
-import { digest } from "../../../lib/password.js";
-import { readJson, fail } from "../../../lib/http.js";
-import { cspReports } from "../../../lib/csp-reports.js";
+import { rateLimit } from "../../../lib/auth.ts";
+import { trustedIp } from "../../../lib/auth-limits.ts";
+import { digest } from "../../../lib/password.ts";
+import { readJson, fail } from "../../../lib/http.ts";
+import { cspReports } from "../../../lib/csp-reports.ts";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 /** @param {Request} req */

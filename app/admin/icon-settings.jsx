@@ -5,9 +5,9 @@ import {
   graphicAsset,
   filterGraphicSlots,
   footerLinkHref,
-} from "../../lib/design-graphics.js";
+} from "../../lib/design-graphics.ts";
 import AssetPicker from "./asset-picker.jsx";
-import { componentIllustrationSlots } from "../../lib/component-illustrations.js";
+import { componentIllustrationSlots } from "../../lib/component-illustrations.ts";
 import { Image } from "../ui/icons.jsx";
 import styles from "./design.module.css";
 export default function IconSettings({

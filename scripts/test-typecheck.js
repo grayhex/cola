@@ -14,8 +14,8 @@ try {
   await writeFile(
     path.join(api, "route.js"),
     `
-import { currentUser } from ${JSON.stringify("../../../lib/auth.js")};
-import { publicAuthor } from ${JSON.stringify("../../../lib/profile-dto.js")};
+import { currentUser } from ${JSON.stringify("../../../lib/auth.ts")};
+import { publicAuthor } from ${JSON.stringify("../../../lib/profile-dto.ts")};
 /** @param {Request} request */
 export async function GET(request) {
   const viewer = await currentUser();
@@ -35,9 +35,9 @@ export async function GET(request) {
   await writeFile(
     path.join(lib, "null.js"),
     `
-import { ownedBike } from ${JSON.stringify("../repository.js")};
-import { currentViewer } from ${JSON.stringify("../viewer.js")};
-/** @param {import(${JSON.stringify("../repository.js")}).Queryable} db */
+import { ownedBike } from ${JSON.stringify("../repository.ts")};
+import { currentViewer } from ${JSON.stringify("../viewer.ts")};
+/** @param {import(${JSON.stringify("../repository.ts")}).Queryable} db */
 export async function probe(db) {
   const bike = await ownedBike(db, "id", "owner");
   const viewer = await currentViewer();
@@ -72,7 +72,7 @@ export default function Probe({ count }: { count: number }) {
   await writeFile(
     path.join(nativeLib, "strict.ts"),
     `
-import type { PublicAuthor, Viewer, BikeInput, Page } from ${JSON.stringify("../contracts.js")};
+import type { PublicAuthor, Viewer, BikeInput, Page } from ${JSON.stringify("../contracts.ts")};
 export const author: PublicAuthor = { id: "id", username: "probe", name: "Probe", avatar: null };
 export const page: Page<PublicAuthor> = { items: [author], total: 1, page: 1, pageSize: 20 };
 export function viewerId(viewer: Viewer) { return viewer?.id ?? null; }
@@ -89,7 +89,7 @@ export function year(input: BikeInput): number { return input.year; }
   await writeFile(
     path.join(nativeLib, "strict.ts"),
     `
-import type { PublicAuthor, Viewer, BikeInput, ApiError, Page } from ${JSON.stringify("../contracts.js")};
+import type { PublicAuthor, Viewer, BikeInput, ApiError, Page } from ${JSON.stringify("../contracts.ts")};
 export function implicit(value) { return value; }
 export function nullable(viewer: Viewer) { return viewer.id; }
 export const author: PublicAuthor = { id: "id", username: "probe", name: "Probe", avatar: null, email: "private" };
@@ -107,6 +107,24 @@ export function invalidInput(input: BikeInput) { input.year = "2026"; }
     nativeResult.includes("Type 'string' is not assignable to type 'number'"),
     nativeResult,
   );
+  // SQL values stay typed and nullable; an untyped query cannot leak unknown fields.
+  await writeFile(
+    path.join(nativeLib, "rows.ts"),
+    `
+import type { Queryable } from ${JSON.stringify("../db.ts")};
+export async function rows(db: Queryable) {
+  const typed = await db.query<{id: string; happened_at: Date | null}>("SELECT id,happened_at FROM probe");
+  const id: number = typed.rows[0].id;
+  const date = typed.rows[0].happened_at.toISOString();
+  const untyped = await db.query("SELECT secret FROM probe");
+  const secret: string = untyped.rows[0].secret;
+  return {id, date, secret};
+}
+`,
+  );
+  const rowResult = check("tsconfig.json");
+  assert.equal((rowResult.match(/rows\.ts.*TS2322/g) || []).length, 2);
+  assert.match(rowResult, /rows\.ts.*TS2531/);
   await rm(nativeLib, { recursive: true, force: true });
 
   // Strict native code must also be checked under app/ and app/api/.
@@ -152,6 +170,23 @@ export async function GET(request: Request) {
   await rm(policyApp, { recursive: true, force: true });
   await rm(policyLib, { recursive: true, force: true });
 
+  // Shared modules also run directly in workers and ops, without a TS loader.
+  const runtimeLib = await mkdtemp(path.join(root, "lib/typecheck-probe-"));
+  dirs.push(runtimeLib);
+  await writeFile(
+    path.join(runtimeLib, "unsupported.ts"),
+    "export class Unsupported { constructor(public value: string) {} }\n",
+  );
+  const runtimePolicy = run("scripts/check-production-typescript.js");
+  assert.equal(
+    runtimePolicy.status,
+    1,
+    runtimePolicy.stdout + runtimePolicy.stderr,
+  );
+  assert.match(runtimePolicy.stderr, /unsupported\.ts/);
+  assert.match(runtimePolicy.stderr, /ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX/);
+  await rm(runtimeLib, { recursive: true, force: true });
+
   // A deleted/migrated path must leave the baseline, so it cannot be reused
   // later to sneak a new JS file through a grandfathered exception.
   const baselinePath = path.join(root, "scripts/production-js-baseline.json");
@@ -178,7 +213,7 @@ export async function GET(request: Request) {
   assert.match(lint.stdout, /@typescript-eslint\/no-explicit-any/);
   assert.match(lint.stdout, /@typescript-eslint\/ban-ts-comment/);
   console.log(
-    "Typecheck gates reject legacy API/DTO/null errors, strict TS/TSX errors, new JS and TS lint suppressions.",
+    "Typecheck gates reject legacy API/DTO/null errors, strict TS/TSX errors, new JS, non-erasable shared TS and TS lint suppressions.",
   );
 } finally {
   for (const dir of dirs) await rm(dir, { recursive: true, force: true });

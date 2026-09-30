@@ -1,5 +1,5 @@
 "use client";
-import { defaultScoring } from "../../lib/bike-score.js";
+import { defaultScoring } from "../../lib/bike-score.ts";
 export default function ScoringSettings({
   value = defaultScoring,
   onChange,

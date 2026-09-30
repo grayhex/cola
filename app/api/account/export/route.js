@@ -1,8 +1,8 @@
-import { currentUser, rateLimit } from "../../../../lib/auth.js";
-import { db } from "../../../../lib/db.js";
-import { fail, sameOrigin } from "../../../../lib/http.js";
-import { exportAccount } from "../../../../lib/account-data.js";
-import { traced } from "../../../../lib/observability.js";
+import { currentUser, rateLimit } from "../../../../lib/auth.ts";
+import { db } from "../../../../lib/db.ts";
+import { fail, sameOrigin } from "../../../../lib/http.ts";
+import { exportAccount } from "../../../../lib/account-data.ts";
+import { traced } from "../../../../lib/observability.ts";
 import { NextResponse } from "next/server";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

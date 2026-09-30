@@ -2,23 +2,23 @@ import { z } from "zod";
 import {
   requireVerifiedEmail,
   EmailPolicyError,
-} from "../../../../lib/email-policy.js";
-import { db, transaction } from "../../../../lib/db.js";
-import { currentUser, rateLimit } from "../../../../lib/auth.js";
+} from "../../../../lib/email-policy.ts";
+import { db, transaction } from "../../../../lib/db.ts";
+import { currentUser, rateLimit } from "../../../../lib/auth.ts";
 import {
   json,
   fail,
   readJson,
   readBytes,
   sameOrigin,
-} from "../../../../lib/http.js";
-import { uuid } from "../../../../lib/validation.js";
+} from "../../../../lib/http.ts";
+import { uuid } from "../../../../lib/validation.ts";
 import {
   CommunityError,
   communityPage,
   commentInput,
   commentEdit,
-} from "../../../../lib/community-validation.js";
+} from "../../../../lib/community-validation.ts";
 import {
   journalInput,
   journalDetail,
@@ -26,17 +26,17 @@ import {
   saveJournal,
   deleteJournal,
   journalBikeLock,
-} from "../../../../lib/journal.js";
-import { journalSocial } from "../../../../lib/journal-social.js";
-import { setSaved, setSolution } from "../../../../lib/journal-discovery.js";
-import { preparePhoto } from "../../../../lib/images.js";
-import { limits, QuotaError } from "../../../../lib/limits.js";
+} from "../../../../lib/journal.ts";
+import { journalSocial } from "../../../../lib/journal-social.ts";
+import { setSaved, setSolution } from "../../../../lib/journal-discovery.ts";
+import { preparePhoto } from "../../../../lib/images.ts";
+import { limits, QuotaError } from "../../../../lib/limits.ts";
 import {
   saveJournalPhoto,
   journalPhotoFilename,
   readJournalPhotoFile,
   cleanupJournalPhotos,
-} from "../../../../lib/journal-storage.js";
+} from "../../../../lib/journal-storage.ts";
 import {
   mediaEtag,
   mediaResponse,
@@ -44,8 +44,8 @@ import {
   mediaWidth,
   notModified,
   notModifiedResponse,
-} from "../../../../lib/media-cache.js";
-import { logError, traced } from "../../../../lib/observability.js";
+} from "../../../../lib/media-cache.ts";
+import { logError, traced } from "../../../../lib/observability.ts";
 export const runtime = "nodejs",
   dynamic = "force-dynamic";
 /** @param {Request} req
@@ -177,9 +177,11 @@ async function handler(req, { params }) {
       // Authorize before decoding an image; quota is reserved again under owner lock.
       const id = uuid.parse(p[0]);
       const entry = (
-        await db.query(
-          "SELECT status,is_public FROM journal_entries WHERE id=$1 AND owner_id=$2",
-          [id, user.id],
+        await /** @type {Promise<import("../../../../lib/db.ts").QueryRows<{"status": string; "is_public": boolean}>>} */ (
+          db.query(
+            "SELECT status,is_public FROM journal_entries WHERE id=$1 AND owner_id=$2",
+            [id, user.id],
+          )
         )
       ).rows[0];
       if (!entry) return fail("Запись недоступна", 404);
@@ -193,9 +195,11 @@ async function handler(req, { params }) {
     if (p.length === 3 && p[1] === "photos" && m === "DELETE") {
       await transaction(async (q) => {
         const e = (
-          await q.query(
-            "SELECT bike_id FROM journal_entries WHERE id=$1 AND owner_id=$2",
-            [uuid.parse(p[0]), user.id],
+          await /** @type {Promise<import("../../../../lib/db.ts").QueryRows<{"bike_id": string}>>} */ (
+            q.query(
+              "SELECT bike_id FROM journal_entries WHERE id=$1 AND owner_id=$2",
+              [uuid.parse(p[0]), user.id],
+            )
           )
         ).rows[0];
         if (!e) throw new CommunityError("Запись недоступна", 404);

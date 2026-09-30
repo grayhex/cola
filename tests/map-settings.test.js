@@ -5,10 +5,10 @@ import {
   mapDefaults,
   mapStyle,
   tileTemplate,
-} from "../lib/map-settings.js";
-import { mapInput, settingsInput } from "../lib/admin-validation.js";
-import { defaultSettings } from "../lib/site-defaults.js";
-import { preferencesInput } from "../lib/social-validation.js";
+} from "../lib/map-settings.ts";
+import { mapInput, settingsInput } from "../lib/admin-validation.ts";
+import { defaultSettings } from "../lib/site-defaults.ts";
+import { preferencesInput } from "../lib/social-validation.ts";
 test("map configuration requires safe browser URLs and compatible templates", () => {
   assert.equal(mapInput.safeParse(mapDefaults).success, true);
   for (const tileUrl of [

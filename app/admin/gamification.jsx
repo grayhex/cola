@@ -6,18 +6,18 @@ import AchievementArt from "../ui/achievement-art.jsx";
 import { Medal, Plus, RefreshCw, Save, Trash2, Trophy } from "../ui/icons.jsx";
 import AssetPicker from "./asset-picker.jsx";
 import GameImagePrompt from "./game-image-prompt.jsx";
-import { publicPath } from "../../lib/public-urls.js";
+import { publicPath } from "../../lib/public-urls.ts";
 import {
   gameMetrics,
   metricByKey,
   metricGroups,
-} from "../../lib/game-metrics.js";
-import { ruleInput } from "../../lib/game-rule-validation.js";
-import { categories } from "../../lib/catalog.js";
+} from "../../lib/game-metrics.ts";
+import { ruleInput } from "../../lib/game-rule-validation.ts";
+import { categories } from "../../lib/catalog.ts";
 import {
   gameDescriptionLimit,
   ruleCondition,
-} from "../../lib/gamification-presentation.js";
+} from "../../lib/gamification-presentation.ts";
 
 // Awards and records are rules (#106): a metric from the catalog, a
 // condition (award) or a direction (record), filters, a name, a description

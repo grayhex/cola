@@ -1,30 +1,30 @@
-import { db, transaction } from "../../../../lib/db.js";
-import { currentUser, rateLimit } from "../../../../lib/auth.js";
+import { db, transaction } from "../../../../lib/db.ts";
+import { currentUser, rateLimit } from "../../../../lib/auth.ts";
 import {
   json,
   fail,
   sameOrigin,
   readJson,
   readBytes,
-} from "../../../../lib/http.js";
-import { traced, logError } from "../../../../lib/observability.js";
+} from "../../../../lib/http.ts";
+import { traced, logError } from "../../../../lib/observability.ts";
 import {
   usernameInput,
   publicProfileInput,
   preferencesInput,
   socialPage,
   reservedUsernames,
-} from "../../../../lib/social-validation.js";
-import { allocateUsername } from "../../../../lib/usernames.js";
+} from "../../../../lib/social-validation.ts";
+import { allocateUsername } from "../../../../lib/username-allocation.ts";
 import {
   getProfile,
   updateProfile,
   accountOverview,
-} from "../../../../lib/profiles.js";
-import { followPage, setFollow } from "../../../../lib/follows.js";
-import { prepareAvatar, replaceAvatar } from "../../../../lib/avatars.js";
-import { showcase } from "../../../../lib/showcase.js";
-import { limits, QuotaError } from "../../../../lib/limits.js";
+} from "../../../../lib/profiles.ts";
+import { followPage, setFollow } from "../../../../lib/follows.ts";
+import { prepareAvatar, replaceAvatar } from "../../../../lib/avatars.ts";
+import { showcase } from "../../../../lib/showcase.ts";
+import { limits, QuotaError } from "../../../../lib/limits.ts";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 /** @param {Request} req

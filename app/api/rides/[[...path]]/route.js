@@ -1,24 +1,24 @@
 import {
   requireVerifiedEmail,
   EmailPolicyError,
-} from "../../../../lib/email-policy.js";
-import { db, transaction } from "../../../../lib/db.js";
-import { currentUser, rateLimit } from "../../../../lib/auth.js";
+} from "../../../../lib/email-policy.ts";
+import { db, transaction } from "../../../../lib/db.ts";
+import { currentUser, rateLimit } from "../../../../lib/auth.ts";
 import {
   json,
   fail,
   readJson,
   readBytes,
   sameOrigin,
-} from "../../../../lib/http.js";
-import { uuid } from "../../../../lib/validation.js";
-import { logError, traced } from "../../../../lib/observability.js";
+} from "../../../../lib/http.ts";
+import { uuid } from "../../../../lib/validation.ts";
+import { logError, traced } from "../../../../lib/observability.ts";
 import {
   CommunityError,
   commentInput,
   commentEdit,
   communityPage,
-} from "../../../../lib/community-validation.js";
+} from "../../../../lib/community-validation.ts";
 import { RideError } from "../../../../lib/ride-gpx.js";
 import {
   importGarmin,
@@ -224,9 +224,11 @@ async function handler(req, { params }) {
     }
     if (p.length === 2 && p[1] === "track" && m === "POST") {
       const ride = (
-        await db.query(
-          "SELECT is_public FROM rides WHERE id=$1 AND owner_id=$2",
-          [uuid.parse(p[0]), user.id],
+        await /** @type {Promise<import("../../../../lib/db.ts").QueryRows<{"is_public": boolean}>>} */ (
+          db.query("SELECT is_public FROM rides WHERE id=$1 AND owner_id=$2", [
+            uuid.parse(p[0]),
+            user.id,
+          ])
         )
       ).rows[0];
       if (!ride) return fail("Покатушка недоступна", 404);

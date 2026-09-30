@@ -5,7 +5,7 @@ import Modal from "./garage/modal.jsx";
 import PlanForm from "./plan-form.jsx";
 import { socialApi } from "./social-primitives.jsx";
 import { useConfirmation } from "./confirmation.jsx";
-import { selectableRideBikes } from "../../lib/bike-status.js";
+import { selectableRideBikes } from "../../lib/bike-status.ts";
 
 // «Организовать покатушку» as a wide window over the current page (#245,
 // #253): the home page, the account overview and «Мои покатушки» open the

@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { socialApi, Pagination } from "../ui/social-primitives.jsx";
-import { productCategories } from "../../lib/component-products.js";
+import { productCategories } from "../../lib/component-products.ts";
 
 export default function ComponentModels({ kind = "component" }) {
   const bike = kind === "bike";

@@ -10,7 +10,7 @@ import {
   richPlainText,
   safeRichLink,
   PhotoReference,
-} from "../../lib/rich-text.js";
+} from "../../lib/rich-text.ts";
 import { useSite } from "./site-provider.jsx";
 import RichTextBody from "./rich-text-body.jsx";
 import {

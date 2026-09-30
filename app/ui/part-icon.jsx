@@ -1,5 +1,5 @@
 "use client";
-import { iconPaths, categoryIcons } from "../../lib/part-icons.js";
+import { iconPaths, categoryIcons } from "../../lib/part-icons.ts";
 export default function PartIcon({ category, name, icons = {}, size = 26 }) {
   const key = name || icons[category] || categoryIcons[category] || "other";
   return (

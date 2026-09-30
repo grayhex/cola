@@ -1,23 +1,23 @@
 import {
   requireVerifiedEmail,
   EmailPolicyError,
-} from "../../../../lib/email-policy.js";
+} from "../../../../lib/email-policy.ts";
 import { z } from "zod";
-import { listingTypeKeys, marketSorts } from "../../../../lib/market-types.js";
-import { db, transaction } from "../../../../lib/db.js";
-import { currentUser, rateLimit } from "../../../../lib/auth.js";
+import { listingTypeKeys, marketSorts } from "../../../../lib/market-types.ts";
+import { db, transaction } from "../../../../lib/db.ts";
+import { currentUser, rateLimit } from "../../../../lib/auth.ts";
 import {
   json,
   fail,
   readJson,
   readBytes,
   sameOrigin,
-} from "../../../../lib/http.js";
-import { uuid } from "../../../../lib/validation.js";
+} from "../../../../lib/http.ts";
+import { uuid } from "../../../../lib/validation.ts";
 import {
   CommunityError,
   communityPage,
-} from "../../../../lib/community-validation.js";
+} from "../../../../lib/community-validation.ts";
 import {
   listingInput,
   marketList,
@@ -34,14 +34,14 @@ import {
   extendListing,
   setListingSaved,
   savedListings,
-} from "../../../../lib/market.js";
+} from "../../../../lib/market.ts";
 import {
   listingModelChoices,
   listingBikeChoices,
-} from "../../../../lib/market-links.js";
-import { publicAuthor } from "../../../../lib/profile-dto.js";
-import { usernamePattern } from "../../../../lib/usernames.js";
-import { preparePhoto } from "../../../../lib/images.js";
+} from "../../../../lib/market-links.ts";
+import { publicAuthor } from "../../../../lib/profile-dto.ts";
+import { usernamePattern } from "../../../../lib/usernames.ts";
+import { preparePhoto } from "../../../../lib/images.ts";
 import {
   mediaEtag,
   mediaResponse,
@@ -49,8 +49,8 @@ import {
   mediaWidth,
   notModified,
   notModifiedResponse,
-} from "../../../../lib/media-cache.js";
-import { logError, traced } from "../../../../lib/observability.js";
+} from "../../../../lib/media-cache.ts";
+import { logError, traced } from "../../../../lib/observability.ts";
 export const runtime = "nodejs",
   dynamic = "force-dynamic";
 /** @param {Request} req
@@ -81,9 +81,11 @@ async function handler(req, { params }) {
         .parse(url.searchParams.get("seller") || null);
       const seller = sellerName
         ? (
-            await db.query(
-              "SELECT id,username,name,avatar_id FROM users WHERE lower(username)=lower($1) AND NOT blocked",
-              [sellerName],
+            await /** @type {Promise<import("../../../../lib/db.ts").QueryRows<{"id": string; "username": string; "name": string; "avatar_id": string | null}>>} */ (
+              db.query(
+                "SELECT id,username,name,avatar_id FROM users WHERE lower(username)=lower($1) AND NOT blocked",
+                [sellerName],
+              )
             )
           ).rows[0]
         : null;
@@ -216,9 +218,11 @@ async function handler(req, { params }) {
     if (p.length === 2 && p[1] === "photos" && method === "POST") {
       const id = uuid.parse(p[0]);
       const listing = (
-        await db.query(
-          "SELECT status FROM market_listings WHERE id=$1 AND owner_id=$2",
-          [id, user.id],
+        await /** @type {Promise<import("../../../../lib/db.ts").QueryRows<{"status": string}>>} */ (
+          db.query(
+            "SELECT status FROM market_listings WHERE id=$1 AND owner_id=$2",
+            [id, user.id],
+          )
         )
       ).rows[0];
       if (!listing) return fail("Объявление недоступно", 404);

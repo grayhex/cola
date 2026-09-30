@@ -8,10 +8,10 @@ import {
   publicOrigin,
   absolutePublicUrl,
   preserveSearch,
-} from "../lib/public-urls.js";
-import { previewText, socialMetadata } from "../lib/social-metadata.js";
-import { routeParam } from "../lib/public-urls.js";
-import { validateRuntime } from "../lib/runtime-config.js";
+} from "../lib/public-urls.ts";
+import { previewText, socialMetadata } from "../lib/social-metadata.ts";
+import { routeParam } from "../lib/public-urls.ts";
+import { validateRuntime } from "../lib/runtime-config.ts";
 
 const id = "03ab9xyz";
 const legacy = "10000000-0000-4000-8000-000000000001";

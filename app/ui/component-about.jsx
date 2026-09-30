@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { FileText, Pencil } from "lucide-react";
 import { CompactDialog } from "./compact-ui.jsx";
 import { socialApi } from "./social-primitives.jsx";
-import { productCategories } from "../../lib/component-products.js";
+import { productCategories } from "../../lib/component-products.ts";
 import styles from "./component-about.module.css";
 
 /** The edit of a catalog model for administrators (#264): the existing admin

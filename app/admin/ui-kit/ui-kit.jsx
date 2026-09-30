@@ -27,7 +27,7 @@ import RidePlanFields from "../../ui/ride-plan-fields.jsx";
 import GlobalHeader from "../../ui/global-header.jsx";
 import { SocialFooter } from "../../ui/social-primitives.jsx";
 import SiteIcon, { slotIcons } from "../../ui/site-icon.jsx";
-import { emojiSlots } from "../../../lib/ui-emoji.js";
+import { emojiSlots } from "../../../lib/ui-emoji.ts";
 import styles from "./ui-kit.module.css";
 
 const sections = [

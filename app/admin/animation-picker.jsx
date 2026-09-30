@@ -1,6 +1,6 @@
 "use client";
 import AssetPicker from "./asset-picker.jsx";
-import { bundledAnimations } from "../../lib/hero-graphics.js";
+import { bundledAnimations } from "../../lib/hero-graphics.ts";
 
 export default function AnimationPicker({
   label,

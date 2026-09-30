@@ -1,12 +1,12 @@
 import { z } from "zod";
-import { currentUser, endSession, rateLimit } from "../../../../lib/auth.js";
-import { transaction } from "../../../../lib/db.js";
-import { fail, json, readJson, sameOrigin } from "../../../../lib/http.js";
+import { currentUser, endSession, rateLimit } from "../../../../lib/auth.ts";
+import { transaction } from "../../../../lib/db.ts";
+import { fail, json, readJson, sameOrigin } from "../../../../lib/http.ts";
 import {
   deleteAccount,
   removeAccountFiles,
-} from "../../../../lib/account-data.js";
-import { traced } from "../../../../lib/observability.js";
+} from "../../../../lib/account-data.ts";
+import { traced } from "../../../../lib/observability.ts";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 

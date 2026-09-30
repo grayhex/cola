@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { significantBadge, metricSegments } from "../lib/card-presentation.js";
+import { significantBadge, metricSegments } from "../lib/card-presentation.ts";
 test("card status selects one current record, then rare milestone, then community title", () => {
   const rare = { key: "bike_likes_50", name: "50 сердец" };
   const bike = {

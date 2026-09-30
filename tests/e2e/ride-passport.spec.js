@@ -3,7 +3,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { randomUUID } from "node:crypto";
 import { registerVerified } from "../fixtures/verified-user.js";
 import { testConsents } from "../fixtures/legal.js";
-import { publicPath } from "../../lib/public-urls.js";
+import { publicPath } from "../../lib/public-urls.ts";
 import { gpx, loop } from "../ride-fixtures.js";
 
 const origin = process.env.TEST_ORIGIN || "http://localhost:3100";
@@ -56,22 +56,28 @@ test.beforeEach(async ({ context }) => {
 
 // #243 option tiles: a tile opens a compact sheet with the choices.
 async function pick(page, scope, tile, option) {
-  await scope
-    .getByRole("button", { name: new RegExp("^" + tile + ":") })
-    .click();
+  const opener = scope.getByRole("button", {
+    name: new RegExp("^" + tile + ":"),
+  });
+  await opener.click();
   const sheet = page.getByRole("dialog", { name: new RegExp("^" + tile) });
   await sheet.getByRole("button", { name: option, exact: true }).click();
   await expect(sheet).toHaveCount(0);
+  // Closing the sheet restores focus on the next frame. Finish that handoff
+  // before moving to another control, especially before keyboard activation.
+  await expect(opener).toBeFocused();
 }
 async function range(page, scope, tile, title, min, max) {
-  await scope
-    .getByRole("button", { name: new RegExp("^" + tile + ":") })
-    .click();
+  const opener = scope.getByRole("button", {
+    name: new RegExp("^" + tile + ":"),
+  });
+  await opener.click();
   const sheet = page.getByRole("dialog", { name: title });
   await sheet.getByLabel(title + ": от", { exact: true }).fill(String(min));
   await sheet.getByLabel(title + ": до", { exact: true }).fill(String(max));
   await sheet.getByRole("button", { name: "Готово", exact: true }).click();
   await expect(sheet).toHaveCount(0);
+  await expect(opener).toBeFocused();
 }
 
 test("planner (#253): when and where first, tiles, visibility, advanced, themes, edit and live RSVP privacy", async ({
@@ -116,8 +122,8 @@ test("planner (#253): when and where first, tiles, visibility, advanced, themes,
   await how.getByLabel("Подходит новичкам").selectOption("true");
   await how.getByLabel("Как ждём отстающих").selectOption("wait");
   const advanced = dialog.locator("summary", { hasText: "Дополнительно" });
-  await advanced.focus();
-  await page.keyboard.press("Enter");
+  await advanced.press("Enter");
+  await expect(dialog.getByLabel("Велосипед", { exact: true })).toBeVisible();
   await expect(dialog.getByLabel("Велосипед", { exact: true })).toHaveValue(
     bike.id,
   );

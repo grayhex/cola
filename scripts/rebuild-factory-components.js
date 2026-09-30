@@ -1,6 +1,6 @@
 import { parseArgs } from "node:util";
-import { db, transaction } from "../lib/db.js";
-import { rebuildFactoryComponents } from "../lib/factory-rebuild.js";
+import { db, transaction } from "../lib/db.ts";
+import { rebuildFactoryComponents } from "../lib/factory-rebuild.ts";
 
 const { values } = parseArgs({
   options: {

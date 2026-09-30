@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { factoryEntries } from "../lib/factory-components.js";
+import { factoryEntries } from "../lib/factory-components.ts";
 import {
   componentIdentity,
   componentText,

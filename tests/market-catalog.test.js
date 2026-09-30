@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFile, readdir } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import { PGlite } from "@electric-sql/pglite";
-import { defaultCatalog, defaultSettings } from "../lib/site-defaults.js";
+import { defaultCatalog, defaultSettings } from "../lib/site-defaults.ts";
 import {
   bikeCatalog,
   bikeCatalogInput,
@@ -11,11 +11,11 @@ import {
   resolveBikeModel,
   editBikeModel,
   mergeBikeModels,
-} from "../lib/bike-catalog.js";
+} from "../lib/bike-catalog.ts";
 import {
   listingBikeChoices,
   listingModelChoices,
-} from "../lib/market-links.js";
+} from "../lib/market-links.ts";
 import {
   listingInput,
   saveListing,
@@ -26,15 +26,15 @@ import {
   sellerListings,
   marketContact,
   extendListing,
-} from "../lib/market.js";
+} from "../lib/market.ts";
 import {
   editComponentModel,
   mergeComponentModels,
   resolveComponentModel,
-} from "../lib/component-catalog.js";
-import { modelLanding } from "../lib/experience-landing.js";
-import { socialMetadata } from "../lib/social-metadata.js";
-import { loadSocialPreview } from "../lib/social-preview.js";
+} from "../lib/component-catalog.ts";
+import { modelLanding } from "../lib/experience-landing.ts";
+import { socialMetadata } from "../lib/social-metadata.ts";
+import { loadSocialPreview } from "../lib/social-preview.ts";
 
 const offer = (extra = {}) =>
   listingInput.parse({

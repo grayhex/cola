@@ -9,8 +9,8 @@ import {
   classificationOf,
   classificationLabels,
   classificationFilterOptions,
-} from "../../lib/bike-classification.js";
-import { bikeCategoryTone } from "../../lib/content-labels.js";
+} from "../../lib/bike-classification.ts";
+import { bikeCategoryTone } from "../../lib/content-labels.ts";
 import { ContentLabel } from "./content-label.jsx";
 import styles from "./bike-classification.module.css";
 

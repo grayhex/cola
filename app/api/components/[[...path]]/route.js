@@ -1,29 +1,29 @@
-import { db, transaction } from "../../../../lib/db.js";
-import { currentUser, rateLimit } from "../../../../lib/auth.js";
+import { db, transaction } from "../../../../lib/db.ts";
+import { currentUser, rateLimit } from "../../../../lib/auth.ts";
 import {
   json,
   fail,
   sameOrigin,
   readJson,
   readBytes,
-} from "../../../../lib/http.js";
-import { uuid } from "../../../../lib/validation.js";
-import { limits, QuotaError } from "../../../../lib/limits.js";
+} from "../../../../lib/http.ts";
+import { uuid } from "../../../../lib/validation.ts";
+import { limits, QuotaError } from "../../../../lib/limits.ts";
 import {
   requireVerifiedEmail,
   EmailPolicyError,
-} from "../../../../lib/email-policy.js";
+} from "../../../../lib/email-policy.ts";
 import {
   CommunityError,
   communityPage,
   commentInput,
   commentEdit,
-} from "../../../../lib/community-validation.js";
+} from "../../../../lib/community-validation.ts";
 import {
   componentCatalog,
   componentCatalogInput,
-} from "../../../../lib/component-catalog.js";
-import { componentSocial } from "../../../../lib/component-social.js";
+} from "../../../../lib/component-catalog.ts";
+import { componentSocial } from "../../../../lib/component-social.ts";
 import {
   componentGallery,
   authorizeComponentPhoto,
@@ -36,8 +36,8 @@ import {
   componentPhotoFilename,
   readComponentPhotoFile,
   cleanupComponentPhotos,
-} from "../../../../lib/component-photos.js";
-import { preparePhoto } from "../../../../lib/images.js";
+} from "../../../../lib/component-photos.ts";
+import { preparePhoto } from "../../../../lib/images.ts";
 import {
   mediaWidth,
   mediaEtag,
@@ -45,14 +45,14 @@ import {
   notModifiedResponse,
   mediaResponse,
   mediaVariant,
-} from "../../../../lib/media-cache.js";
-import { audit } from "../../../../lib/site.js";
-import { traced, logError } from "../../../../lib/observability.js";
+} from "../../../../lib/media-cache.ts";
+import { audit } from "../../../../lib/site.ts";
+import { traced, logError } from "../../../../lib/observability.ts";
 import {
   searchComponentPhotos,
   loadComponentCandidate,
   componentPhotoSelection,
-} from "../../../../lib/component-photo-search.js";
+} from "../../../../lib/component-photo-search.ts";
 
 export const runtime = "nodejs",
   dynamic = "force-dynamic";

@@ -8,14 +8,14 @@ import {
   scrub,
   stackFrames,
   traced,
-} from "../lib/observability.js";
+} from "../lib/observability.ts";
 import {
   envelopeBody,
   parseDsn,
   reportError,
   trackerEvent,
-} from "../lib/error-tracker.js";
-import { validateRuntime } from "../lib/runtime-config.js";
+} from "../lib/error-tracker.ts";
+import { validateRuntime } from "../lib/runtime-config.ts";
 
 function capture(method, run) {
   const original = console[method];

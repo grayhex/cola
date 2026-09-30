@@ -1,13 +1,13 @@
-import { currentUser } from "../../../../lib/auth.js";
-import { db, transaction } from "../../../../lib/db.js";
-import { audit } from "../../../../lib/site.js";
+import { currentUser } from "../../../../lib/auth.ts";
+import { db, transaction } from "../../../../lib/db.ts";
+import { audit } from "../../../../lib/site.ts";
 import {
   adminLegalDocuments,
   saveLegalDocument,
   LegalError,
-} from "../../../../lib/legal-documents.js";
-import { json, fail, sameOrigin, readJson } from "../../../../lib/http.js";
-import { traced, logError } from "../../../../lib/observability.js";
+} from "../../../../lib/legal-documents.ts";
+import { json, fail, sameOrigin, readJson } from "../../../../lib/http.ts";
+import { traced, logError } from "../../../../lib/observability.ts";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 /** @param {Request} req */

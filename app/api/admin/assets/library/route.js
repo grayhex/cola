@@ -1,15 +1,15 @@
 import path from "node:path";
 import { unlink } from "node:fs/promises";
-import { currentUser } from "../../../../../lib/auth.js";
-import { db, transaction } from "../../../../../lib/db.js";
-import { fail, json, readJson, sameOrigin } from "../../../../../lib/http.js";
-import { audit } from "../../../../../lib/site.js";
-import { uuid } from "../../../../../lib/validation.js";
-import { traced, logError } from "../../../../../lib/observability.js";
+import { currentUser } from "../../../../../lib/auth.ts";
+import { db, transaction } from "../../../../../lib/db.ts";
+import { fail, json, readJson, sameOrigin } from "../../../../../lib/http.ts";
+import { audit } from "../../../../../lib/site.ts";
+import { uuid } from "../../../../../lib/validation.ts";
+import { traced, logError } from "../../../../../lib/observability.ts";
 import {
   listAssetLibrary,
   deleteUnusedAssets,
-} from "../../../../../lib/site-asset-library.js";
+} from "../../../../../lib/site-asset-library.ts";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -36,8 +36,10 @@ async function handler(req) {
     ) {
       return fail("Выберите от 1 до 500 изображений для удаления");
     }
+    // Each ID passed the UUID schema above; retain that contract across the callback.
+    const ids = /** @type {string[]} */ (input.ids);
     const result = await transaction(async (q) => {
-      const deleted = await deleteUnusedAssets(q, input.ids);
+      const deleted = await deleteUnusedAssets(q, ids);
       for (const asset of deleted.deleted)
         await audit(q, user.id, "asset.delete", asset.id);
       return deleted;

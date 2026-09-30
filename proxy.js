@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { NextResponse } from "next/server";
-import { cspMode, pageCsp } from "./lib/csp.js";
+import { cspMode, pageCsp } from "./lib/csp.ts";
 export function proxy(request) {
   const headers = new Headers(request.headers);
   // Never trust a nonce/policy supplied by the client, including RSC requests.

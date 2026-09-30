@@ -4,7 +4,7 @@ import EmailPolicyAction from "./email-policy-action.jsx";
 import {
   selectableRideBikes,
   rideBikeStateError,
-} from "../../lib/bike-status.js";
+} from "../../lib/bike-status.ts";
 import { socialApi } from "./social-primitives.jsx";
 import { RideRoutePreview, RideMetrics } from "./ride-card.jsx";
 import { garminFields, defaultRideFields } from "../../lib/garmin-fields.js";

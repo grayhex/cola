@@ -23,12 +23,12 @@ import { useSite } from "../ui/site-provider.jsx";
 import { SocialHeader, SocialFooter } from "../ui/social-primitives.jsx";
 import { useReveal } from "../ui/use-reveal.js";
 import Link from "next/link";
-import { legalKinds, legalTitles } from "../../lib/legal-titles.js";
+import { legalKinds, legalTitles } from "../../lib/legal-titles.ts";
 import {
   aboutHero,
   aboutSections,
   aboutDefaults,
-} from "../../lib/about-content.js";
+} from "../../lib/about-content.ts";
 import styles from "./about.module.css";
 
 const icons = {

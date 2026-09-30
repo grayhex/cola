@@ -16,7 +16,7 @@ import {
   filterLabels,
   readFilters,
 } from "../../lib/ride-filters.js";
-import { readOrganize } from "../../lib/organize-filters.js";
+import { readOrganize } from "../../lib/organize-filters.ts";
 
 // «Собрать компанию» (#234) loads only when a signed-in organizer opens it.
 const OrganizeWorkspace = dynamic(

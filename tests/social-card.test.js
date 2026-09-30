@@ -4,8 +4,8 @@ import { mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import sharp from "sharp";
-import { cardContent, cardText } from "../lib/social-card.js";
-import { renderSocialImage } from "../lib/social-preview-image.js";
+import { cardContent, cardText } from "../lib/social-card.ts";
+import { renderSocialImage } from "../lib/social-preview-image.ts";
 
 test("card text keeps only what the bundled font draws", () => {
   const rider = String.fromCodePoint(0x1f6b5, 0x200d, 0x2640, 0xfe0f);
