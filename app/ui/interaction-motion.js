@@ -1,5 +1,6 @@
 // Interaction-only chunk: the initial route never needs the full animation runtime.
 import { animate, stagger } from "motion";
+import { cssBezier } from "../../lib/motion-easing.ts";
 export function revealMenu(element, previous) {
   const rect = element.getBoundingClientRect();
   const x =
@@ -60,10 +61,7 @@ export function scrollPhotoCarousel(element, target, onComplete = () => {}) {
   const style = getComputedStyle(element);
   const animation = animate(element.scrollLeft, target, {
     duration: parseFloat(style.getPropertyValue("--duration")) / 1000,
-    ease: style
-      .getPropertyValue("--ease-out")
-      .match(/[\d.]+/g)
-      .map(Number),
+    ease: cssBezier(style.getPropertyValue("--ease-out")),
     onUpdate(value) {
       if (active) element.scrollLeft = value;
     },

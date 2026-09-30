@@ -1,5 +1,6 @@
 "use client";
 import { ViewTransition, useEffect, useRef, useSyncExternalStore } from "react";
+import { cssBezier } from "../../lib/motion-easing.ts";
 
 const preference = () => window.matchMedia("(prefers-reduced-motion: reduce)");
 function subscribe(listener) {
@@ -88,7 +89,7 @@ export function useMotionFeedback(value, { reveal = false } = {}) {
                 transform: ["translateY(-2px)", "translateY(0)"],
               }
             : { transform: ["scale(1)", "scale(1.12)", "scale(1)"] },
-          { duration, ease: style.getPropertyValue("--ease-out").trim() },
+          { duration, ease: cssBezier(style.getPropertyValue("--ease-out")) },
         );
         // Mini commits its final keyframes inline. Restore the original styles
         // so CSS hover/press feedback and future theme changes still apply.

@@ -133,6 +133,7 @@ test.beforeEach(async ({ page }) => {
         window.motionEffects.push({
           target: this.className,
           duration: args[1]?.duration,
+          easing: args[1]?.easing,
         });
       return animate.apply(this, args);
     };
@@ -295,6 +296,24 @@ test("like/save feedback is lazy, respects live reduced motion and keeps state",
   await expect
     .poll(() => page.evaluate(() => window.motionEffects.length))
     .toBeGreaterThan(0);
+  // The CSS token must reach WAAPI; Motion silently drops a CSS string
+  // passed directly as its `ease` option instead of a numeric tuple.
+  const easing = await like.evaluate((element) =>
+    getComputedStyle(element).getPropertyValue("--ease-out").replace(/\s/g, ""),
+  );
+  const feedback = await page.evaluate(() =>
+    window.motionEffects.filter((effect) =>
+      effect.target.includes("motion-feedback-icon"),
+    ),
+  );
+  expect(feedback.length).toBeGreaterThan(0);
+  expect(easing).toMatch(/^cubic-bezier\(/);
+  for (const effect of feedback) {
+    expect(effect.easing).toMatch(/^cubic-bezier\(/);
+    expect(effect.easing.match(/[\d.]+/g).map(Number)).toEqual(
+      easing.match(/[\d.]+/g).map(Number),
+    );
+  }
   await expect
     .poll(() =>
       like

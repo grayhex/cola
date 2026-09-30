@@ -539,6 +539,7 @@ export default function Account() {
           socialApi("bikes"),
         ]);
         if (revision !== requests.current.revision) return;
+        if (!d.profile) throw new Error("Профиль недоступен. Обновите страницу.");
         setData(d);
         setBikes(b.bikes);
       }
@@ -679,7 +680,7 @@ export default function Account() {
                 {error}
               </p>
             )}
-            {!data ? (
+            {!data || !profile ? (
               <p role="status">Загружаем кабинет…</p>
             ) : (
               <div className="account-content">
