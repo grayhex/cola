@@ -8,7 +8,7 @@ export function previewText(value: unknown, limit = 200) {
     .replace(/!\[[^\]]*\]\([^)]*\)/g, " ")
     .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
     .replace(/[`*_>#~]+/g, " ")
-    .replace(/[\p{Cc}&&\p{ASCII}]/gv, " ")
+    .replace(new RegExp(String.raw`[\u0000-\u001f\u007f]+`, "g"), " ")
     .replace(/\s+/g, " ")
     .trim();
   return text.length <= limit ? text : text.slice(0, limit - 1).trimEnd() + "…";

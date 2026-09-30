@@ -111,7 +111,7 @@ export function invalidInput(input: BikeInput) { input.year = "2026"; }
   await writeFile(
     path.join(nativeLib, "rows.ts"),
     `
-import type { Queryable } from "../db.ts";
+import type { Queryable } from ${JSON.stringify("../db.ts")};
 export async function rows(db: Queryable) {
   const typed = await db.query<{id: string; happened_at: Date | null}>("SELECT id,happened_at FROM probe");
   const id: number = typed.rows[0].id;
