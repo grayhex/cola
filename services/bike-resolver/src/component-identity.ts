@@ -1,7 +1,14 @@
 // Pure, shared by Resolver, the wizard and the offline rebuild. No network or DOM.
-/** @typedef {{type?: string, brand?: string|null, model?: string|null, family?: string|null, description?: string, attributes?: Record<string,string|number|boolean>, raw?: {label?: string, value?: string}}} Part */
-/** @type {Record<string, string>} */
-const entities = {
+export interface Part {
+  type?: string;
+  brand?: string | null;
+  model?: string | null;
+  family?: string | null;
+  description?: string;
+  attributes?: Record<string, string | number | boolean>;
+  raw?: { label?: string; value?: string };
+}
+const entities: Record<string, string> = {
   nbsp: " ",
   amp: "&",
   quot: '"',
@@ -15,20 +22,22 @@ const entities = {
   trade: "",
   copy: "",
 };
-/** @param {unknown} value */
-export function componentText(value) {
+export function componentText(value: unknown) {
   let s = typeof value === "string" ? value : "";
   for (let i = 0; i < 3; i++) {
-    const next = s.replace(/&(#x[\da-f]+|#\d+|[a-z]+);/gi, (whole, code) => {
-      if (code[0] !== "#") return entities[code.toLowerCase()] ?? whole;
-      const n =
-        code[1].toLowerCase() === "x"
-          ? parseInt(code.slice(2), 16)
-          : Number(code.slice(1));
-      return n > 0 && n <= 0x10ffff && !(n >= 0xd800 && n <= 0xdfff)
-        ? String.fromCodePoint(n)
-        : " ";
-    });
+    const next = s.replace(
+      /&(#x[\da-f]+|#\d+|[a-z]+);/gi,
+      (whole: string, code: string) => {
+        if (code[0] !== "#") return entities[code.toLowerCase()] ?? whole;
+        const n =
+          code[1].toLowerCase() === "x"
+            ? parseInt(code.slice(2), 16)
+            : Number(code.slice(1));
+        return n > 0 && n <= 0x10ffff && !(n >= 0xd800 && n <= 0xdfff)
+          ? String.fromCodePoint(n)
+          : " ";
+      },
+    );
     if (next === s) break;
     s = next;
   }
@@ -43,8 +52,7 @@ export function componentText(value) {
     .replace(/\s+([,;:])/g, "$1")
     .trim();
 }
-/** @param {unknown} value */
-export function absentComponent(value) {
+export function absentComponent(value: unknown) {
   const s = componentText(value).replace(/^[\s:;|.,-]+|[\s:;|.,-]+$/g, "");
   return (
     !s ||
@@ -53,8 +61,7 @@ export function absentComponent(value) {
     )
   );
 }
-/** @type {Record<string, string>} */
-const positions = {
+const positions: Record<string, string> = {
   "front tire": "front_tire",
   "front tyre": "front_tire",
   "rear tire": "rear_tire",
@@ -66,8 +73,8 @@ const positions = {
   "передний тормоз": "front_brake",
   "задний тормоз": "rear_brake",
 };
-/** Recover labelled subfields in saved flattened specs as well as new HTML. @param {string} label @param {string} value */
-export function splitComponentField(label, value) {
+/** Recover labelled subfields in saved flattened specs as well as new HTML. */
+export function splitComponentField(label: string, value: string) {
   const clean = componentText(value);
   const matches = [
     ...clean.matchAll(
@@ -143,8 +150,8 @@ export const componentBrands = [
 ];
 const generic =
   /^(?:alloy|aluminium|aluminum|carbon|steel|integrated|internal|sealed|hydraulic|disc|one-piece|custom|интегрированн|внутренн|закрыт|алюмини|сталь|карбон|гидравлическ)/i;
-/** A conservative catalog identity; unidentifiable equipment stays in factory_spec. @param {Part} c */
-export function componentIdentity(c) {
+/** A conservative catalog identity; unidentifiable equipment stays in factory_spec. */
+export function componentIdentity(c: Part) {
   const description = componentText(c.description || c.raw?.value).replace(
     /^["\']|["\']$/g,
     "",

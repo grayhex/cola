@@ -2,7 +2,7 @@
 // The probes are temporary source files, not @ts-expect-error assertions that
 // could pass when a directory is accidentally excluded from the compiler.
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, writeFile, rm } from "node:fs/promises";
+import { mkdtemp, writeFile, rm } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
@@ -251,6 +251,8 @@ export const planner = <PlanComposer onClose={() => {}} onSaved={() => {}} draft
     [policyLib, "new.mjs"],
     [policyLib, "new.cjs"],
     [policyApi, "route.js"],
+    [policyApp, "version.js"],
+    [policyLib, "version.js"],
   ])
     await writeFile(path.join(dir, name), "export const value = 1;\n");
   const policy = run("scripts/check-production-typescript.js");
@@ -258,6 +260,11 @@ export const planner = <PlanComposer onClose={() => {}} onSaved={() => {}} draft
   for (const ext of ["js", "jsx", "mjs", "cjs"])
     assert.ok(policy.stderr.includes(`new.${ext}`), policy.stderr);
   assert.ok(policy.stderr.includes("route.js"), policy.stderr);
+  for (const dir of [policyApp, policyLib])
+    assert.ok(
+      policy.stderr.includes(`${path.relative(root, dir)}/version.js`),
+      policy.stderr,
+    );
   await rm(policyApp, { recursive: true, force: true });
   await rm(policyLib, { recursive: true, force: true });
   await rm(policyApi, { recursive: true, force: true });
@@ -278,42 +285,6 @@ export const planner = <PlanComposer onClose={() => {}} onSaved={() => {}} draft
   assert.match(runtimePolicy.stderr, /unsupported\.ts/);
   assert.match(runtimePolicy.stderr, /ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX/);
   await rm(runtimeLib, { recursive: true, force: true });
-
-  // A deleted/migrated path must leave the baseline, so it cannot be reused
-  // later to sneak a new JS file through a grandfathered exception.
-  const baselinePath = path.join(root, "scripts/production-js-baseline.json");
-  const savedBaseline = await readFile(baselinePath, "utf8");
-  try {
-    // Completed backend migration cannot be bypassed by expanding the UI list.
-    const backend = await mkdtemp(path.join(root, "app/api/typecheck-probe-"));
-    dirs.push(backend);
-    const backendFile = path.join(backend, "route.js");
-    await writeFile(backendFile, "export const GET = () => new Response();\n");
-    await writeFile(
-      baselinePath,
-      JSON.stringify([
-        ...JSON.parse(savedBaseline),
-        path.relative(root, backendFile),
-      ]),
-    );
-    const backendPolicy = run("scripts/check-production-typescript.js");
-    assert.equal(
-      backendPolicy.status,
-      1,
-      backendPolicy.stdout + backendPolicy.stderr,
-    );
-    assert.match(backendPolicy.stderr, /route\.js/);
-    await rm(backend, { recursive: true, force: true });
-    await writeFile(
-      baselinePath,
-      JSON.stringify([...JSON.parse(savedBaseline), "lib/deleted-probe.js"]),
-    );
-    const stale = run("scripts/check-production-typescript.js");
-    assert.equal(stale.status, 1, stale.stdout + stale.stderr);
-    assert.match(stale.stderr, /lib\/deleted-probe\.js/);
-  } finally {
-    await writeFile(baselinePath, savedBaseline);
-  }
 
   // The TS parser and recommended rules must run, rather than ignore TS files.
   const lint = run(

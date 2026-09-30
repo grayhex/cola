@@ -6,9 +6,9 @@
 
 Карта показывает уже разрешённую API геометрию покатушки; она не пересчитывает GPX, не достраивает скрытые участки и не выполняет routing/geocoding. Серверные privacy-зоны и настройки зрителя — разные вещи. При отказе подложки сохраняются линия маршрута и метрики.
 
-Линия маршрута — акцентного цвета сайта поверх тёмной каймы (`routeCasing` в [yandex-ride-map.js](../../lib/yandex-ride-map.ts)): в MapLibre это слой `ride-casing` под слоем `ride`, в Яндексе — отдельные объекты `ride-casing-N` под `ride-segment-N`, в SVG-превью — путь `.route-casing`. Так маршрут виден и поверх жёлтых и оранжевых дорог подложки (#131). Контейнеры карт (`.map-engine`) не подчиняются общему правилу `max-width: 100%` для картинок и canvas: движки карт сами задают размеры своих слоёв.
+Линия маршрута — акцентного цвета сайта поверх тёмной каймы (`routeCasing` в [yandex-ride-map.ts](../../lib/yandex-ride-map.ts)): в MapLibre это слой `ride-casing` под слоем `ride`, в Яндексе — отдельные объекты `ride-casing-N` под `ride-segment-N`, в SVG-превью — путь `.route-casing`. Так маршрут виден и поверх жёлтых и оранжевых дорог подложки (#131). Контейнеры карт (`.map-engine`) не подчиняются общему правилу `max-width: 100%` для картинок и canvas: движки карт сами задают размеры своих слоёв.
 
-Код: [map-settings.js](../../lib/map-settings.ts), [ride-map.jsx](../../app/ui/ride-map.tsx), [ride-basemap.jsx](../../app/ui/ride-basemap.tsx), [admin map settings](../../app/admin/map-settings.tsx). Серверная схема находится в [admin-validation.js](../../lib/admin-validation.ts).
+Код: [map-settings.ts](../../lib/map-settings.ts), [ride-map.tsx](../../app/ui/ride-map.tsx), [ride-basemap.tsx](../../app/ui/ride-basemap.tsx), [admin map settings](../../app/admin/map-settings.tsx). Серверная схема находится в [admin-validation.ts](../../lib/admin-validation.ts).
 
 ## Провайдеры
 

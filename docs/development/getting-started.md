@@ -62,6 +62,6 @@ pnpm install --frozen-lockfile
 
 ## Куда идти по задаче
 
-Начните с [карты архитектуры](../architecture/overview.md). Для маршрута откройте `app/.../page.jsx`, клиентский компонент в `app/ui`, затем соответствующий `app/api/.../route.ts`, входную схему и доменный `lib`. Для парсинга начните с [Resolver](../resolver/architecture.md), а не с JSX мастера. Список проверок — [тестирование](testing.md).
+Начните с [карты архитектуры](../architecture/overview.md). Для маршрута откройте `app/.../page.tsx`, клиентский компонент в `app/ui`, затем соответствующий `app/api/.../route.ts`, входную схему и доменный `lib`. Для парсинга начните с [Resolver](../resolver/architecture.md), а не с JSX мастера. Список проверок — [тестирование](testing.md).
 
 Рабочие данные сохраняются в named volumes. `docker compose down` и `down -v` — не одно и то же: **не добавляйте `-v` к командам для окружения с нужными данными**.

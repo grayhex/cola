@@ -4,13 +4,11 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "strict": true,
-    "allowJs": true,
-    "checkJs": true,
     "esModuleInterop": true,
     "outDir": "dist",
     "rootDir": "src",
     "skipLibCheck": true,
     "declaration": true
   },
-  "include": ["src/**/*.ts", "src/component-identity.js"]
+  "include": ["src/**/*.ts"]
 }

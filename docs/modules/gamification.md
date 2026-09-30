@@ -12,11 +12,11 @@
 
 API: `/api/game/records` (рекорды, награды с числом получивших и последним видимым получателем, параметры рейтинга), `/api/game/me`, `/api/game/profiles/<username>`, `/api/game/bikes/<id>`, `/api/game/bikes/<id>/reactions/<kind>`; для администратора `/api/game/admin/settings`, `/api/game/admin/rules` (GET/PUT), `/api/game/admin/image-prompt` (GET/PUT), `/api/game/admin/recalculate` (POST), `/api/game/admin/bikes`.
 
-UI: [records.jsx](../../app/ui/records.tsx), [records.module.css](../../app/ui/records.module.css), [achievements.jsx](../../app/ui/achievements.tsx), [achievement-art.jsx](../../app/ui/achievement-art.tsx), [редактор правил](../../app/admin/gamification.tsx), стили — [game.css](../../app/styles/game.css).
+UI: [records.tsx](../../app/ui/records.tsx), [records.module.css](../../app/ui/records.module.css), [achievements.tsx](../../app/ui/achievements.tsx), [achievement-art.tsx](../../app/ui/achievement-art.tsx), [редактор правил](../../app/admin/gamification.tsx), стили — [game.css](../../app/styles/game.css).
 
 ## Каталог метрик
 
-[game-metrics.js](../../lib/game-metrics.ts) — единственный список того, из чего собираются правила. У метрики есть предмет (`bike`, `ride`, `user`), единица, группа для страницы рекордов, допустимые фильтры и отметка, годится ли она для награды, для рекорда или для обоих.
+[game-metrics.ts](../../lib/game-metrics.ts) — единственный список того, из чего собираются правила. У метрики есть предмет (`bike`, `ride`, `user`), единица, группа для страницы рекордов, допустимые фильтры и отметка, годится ли она для награды, для рекорда или для обоих.
 
 | Группа               | Метрики                                                                                                                                  |
 | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
@@ -30,13 +30,13 @@ UI: [records.jsx](../../app/ui/records.tsx), [records.module.css](../../app/ui/r
 
 Фильтры: тип велосипеда (`category`), минимальная дистанция покатушки (`minDistanceKm`), ключевые слова в названии детали (`keywords`, только буквы, цифры, пробел и дефис — слова подставляются в регулярное выражение SQL как есть).
 
-Значения считают SQL-функции из [027_game_rules.sql](../../db/027_game_rules.sql): `game_bike_values`, `game_ride_values`, `game_user_values`. Рекорды велосипедов считаются по общему снимку рейтинга (`leaderboardSQL` + `rankBikes` в [gamification.js](../../lib/gamification.ts)), рекорды покатушек и участников — теми же SQL-функциями.
+Значения считают SQL-функции из [027_game_rules.sql](../../db/027_game_rules.sql): `game_bike_values`, `game_ride_values`, `game_user_values`. Рекорды велосипедов считаются по общему снимку рейтинга (`leaderboardSQL` + `rankBikes` в [gamification.ts](../../lib/gamification.ts)), рекорды покатушек и участников — теми же SQL-функциями.
 
 ## Правила
 
 Таблица `game_rules`: `key` (постоянный идентификатор, на него ссылается история `achievement_awards`), `kind` (`award`/`record`), `subject`, `metric`, для награды `comparison` (`gte`/`lte`) и `threshold`, для рекорда `direction` (`max`/`min`), фильтры, `name`, `description` (до 160 знаков), `image_id`, `enabled`, `builtin`, `position`.
 
-Проверка ввода — [game-rule-validation.js](../../lib/game-rule-validation.ts) (той же схемой пользуется редактор в браузере), сохранение — `saveRules` в [game-rules.js](../../lib/game-rules.ts): список целиком, в одной транзакции, с аудитом `gamification.rules`. Нельзя удалить встроенное правило и правило, награду которого уже кто-то получил, — их можно только выключить; нельзя превратить награду в рекорд; иллюстрация должна существовать в медиатеке.
+Проверка ввода — [game-rule-validation.ts](../../lib/game-rule-validation.ts) (той же схемой пользуется редактор в браузере), сохранение — `saveRules` в [game-rules.ts](../../lib/game-rules.ts): список целиком, в одной транзакции, с аудитом `gamification.rules`. Нельзя удалить встроенное правило и правило, награду которого уже кто-то получил, — их можно только выключить; нельзя превратить награду в рекорд; иллюстрация должна существовать в медиатеке.
 
 Встроенные награды: Первый выход, Сборка до винтика, Без проводов (Di2/AXS/eTap), 10/50/100 сердец, Любимец витрины, 10/50 попутчиков, Без границ, В теме, Сотка (покатушка от 100 км), Горный козёл (от 1000 м набора), Гонщик (от 50 км/ч), Круглый год (покатушки в каждом месяце года), Летописец (10 записей журнала), Механик (10 записей об обслуживании).
 
