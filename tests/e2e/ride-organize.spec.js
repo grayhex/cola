@@ -129,6 +129,10 @@ test("organizer sees consenting interest, proposes a ride and invites explicitly
       await page.evaluate((value) => {
         document.documentElement.dataset.theme = value;
       }, theme);
+      // Colours fade between themes: axe must read the settled ones.
+      await page.waitForFunction(() =>
+        document.getAnimations().every((a) => a.playState !== "running"),
+      );
       expect(
         (await new AxeBuilder({ page }).include("main").analyze()).violations,
       ).toEqual([]);
@@ -259,14 +263,24 @@ test("organizer sees consenting interest, proposes a ride and invites explicitly
 
 test("empty demand, an unavailable API and guests", async ({ page }) => {
   await member(page.request, "Одинокий организатор");
-  await page.route("**/api/ride-matches/groups?**", (r) =>
-    r.fulfill({ status: 500, json: { error: "Сервис подбора недоступен" } }),
-  );
+  let failed = 0;
+  await page.route("**/api/ride-matches/groups?**", (r) => {
+    failed++;
+    return r.fulfill({
+      status: 500,
+      json: { error: "Сервис подбора недоступен" },
+    });
+  });
   // No one wants an adventure in this run: an honest empty state.
   await page.goto("/rides?mode=organize&purpose=adventure");
   await expect(page.locator("main").getByRole("alert")).toContainText(
     "Сервис подбора недоступен",
   );
+  // One request per choice: the filter pause must not send the same one
+  // again (it did 250 ms after opening, and a late copy leaked into the
+  // guest check below).
+  await page.waitForTimeout(600);
+  expect(failed).toBe(1);
   await page.unroute("**/api/ride-matches/groups?**");
   await page.getByRole("button", { name: "Повторить", exact: true }).click();
   await expect(

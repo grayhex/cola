@@ -119,7 +119,20 @@ export default function RideCard({ ride: r, owner = false, onEdit }) {
           <a href={publicPath("bike", r.bike)}>{r.bike.name}</a>
         </p>
         <RecurringRideLabel ride={r} />
-        <RideRsvp ride={r} />
+        {r.status === "planned" &&
+          (r.participation === "reconfirm" || r.recruitmentClosed) && (
+            <p className="ride-card-flags">
+              {r.participation === "reconfirm" && (
+                <span className="badge" data-tone="warning">
+                  Условия изменились — подтвердите заново
+                </span>
+              )}
+              {r.recruitmentClosed && (
+                <span className="badge">Набор закрыт</span>
+              )}
+            </p>
+          )}
+        <RideRsvp ride={r} compact />
         {r.sourceKind === "planned" && (
           <RidePassport passport={r.passport} compact />
         )}

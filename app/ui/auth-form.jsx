@@ -114,7 +114,14 @@ function UsernameField({ suggestion, onStatus }) {
     </>
   );
 }
-export default function AuthForm({ mode, busy, onSubmit, switchMode }) {
+export default function AuthForm({
+  mode,
+  busy,
+  onSubmit,
+  switchMode,
+  // Context-specific first line, e.g. answering a ride (#235).
+  intro = null,
+}) {
   const { settings, t } = useSite();
   const [authError, setAuthError] = useState("");
   const [person, setPerson] = useState({ name: "", email: "" }),
@@ -233,9 +240,10 @@ export default function AuthForm({ mode, busy, onSubmit, switchMode }) {
       }}
     >
       <p className="form-intro">
-        {mode === "register"
-          ? t("Сохраните комплектацию и фотографии своих велосипедов.")
-          : t("Войдите, чтобы открыть свои велосипеды.")}
+        {intro?.[mode] ||
+          (mode === "register"
+            ? t("Сохраните комплектацию и фотографии своих велосипедов.")
+            : t("Войдите, чтобы открыть свои велосипеды."))}
       </p>
       {mode === "register" && (
         <>

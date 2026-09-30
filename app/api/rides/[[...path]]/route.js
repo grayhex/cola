@@ -29,6 +29,7 @@ import {
   respondRideInvitation,
   respondRide,
   cancelPlannedRide,
+  setRideRecruitment,
   rideSettings,
   rideSettingsInput,
   previewRide,
@@ -270,12 +271,48 @@ async function handler(req, { params }) {
         ),
       );
     }
-    if (p.length === 2 && p[1] === "cancel" && m === "POST")
+    if (p.length === 2 && p[1] === "cancel" && m === "POST") {
+      // No body cancels the plan or the whole series; `occurrenceAt` of a
+      // weekly series cancels only that date (#235).
+      const input = req.headers.get("content-type")?.includes("json")
+        ? z
+            .object({
+              occurrenceAt: z.iso.datetime({ offset: true }).optional(),
+            })
+            .strict()
+            .parse(await readJson(req, 1024))
+        : {};
       return json(
         await transaction((q) =>
-          cancelPlannedRide(q, uuid.parse(p[0]), user.id),
+          cancelPlannedRide(
+            q,
+            uuid.parse(p[0]),
+            user.id,
+            input.occurrenceAt || null,
+          ),
         ),
       );
+    }
+    if (p.length === 2 && p[1] === "recruitment" && m === "PATCH") {
+      const input = z
+        .object({
+          open: z.boolean(),
+          occurrenceAt: z.iso.datetime({ offset: true }),
+        })
+        .strict()
+        .parse(await readJson(req, 1024));
+      return json(
+        await transaction((q) =>
+          setRideRecruitment(
+            q,
+            uuid.parse(p[0]),
+            user.id,
+            input.open,
+            input.occurrenceAt,
+          ),
+        ),
+      );
+    }
     if (p[0] === "preview" && p.length === 1 && m === "POST") {
       if (!config.enabled)
         return fail("Загрузка покатушек временно выключена", 403);

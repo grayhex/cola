@@ -1,0 +1,210 @@
+/* The page of a planned ride (#235): a Hugging Face entity page. Title and
+   metadata, the agreement as label/value rows beside the participation
+   panel, then the organizer's summary, the format and the route. */
+.head {
+  display: grid;
+  gap: var(--space-2);
+  margin: var(--space-4) 0 var(--space-5);
+}
+.head h1 {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1-5) var(--space-2);
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+/* Agreement and format on the left, participation beside them; on a phone
+   the participation comes right after the agreement. */
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
+  grid-template-areas:
+    "agreement aside"
+    "format aside";
+  grid-template-rows: auto 1fr;
+  gap: var(--space-6);
+  align-items: start;
+}
+.agreement {
+  grid-area: agreement;
+  min-width: 0;
+}
+.format {
+  grid-area: format;
+  min-width: 0;
+}
+.aside {
+  grid-area: aside;
+}
+.section {
+  min-width: 0;
+  margin-top: var(--space-6);
+}
+:is(.agreement, .format) > h2,
+.panel > h2 {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+}
+.terms {
+  margin: 0;
+  border-top: 1px solid var(--line);
+}
+.terms > div {
+  display: grid;
+  grid-template-columns: minmax(120px, 180px) minmax(0, 1fr);
+  gap: var(--space-3);
+  padding: var(--space-2-5) 0;
+  border-bottom: 1px solid var(--line);
+  font-size: var(--text-sm);
+}
+.terms dt {
+  color: var(--text-muted);
+}
+.terms dd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+  margin: 0;
+  min-width: 0;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+.terms dd small {
+  color: var(--text-muted);
+}
+.hidden {
+  color: var(--text-secondary);
+}
+.person {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  color: var(--text);
+  font-weight: var(--weight-medium);
+}
+.person:hover {
+  color: var(--accent-text);
+}
+.panel {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  box-shadow: var(--shadow-xs);
+}
+.panel > p,
+.panel .notice {
+  margin: 0;
+}
+.aside {
+  display: grid;
+  gap: var(--space-4);
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.divider {
+  border: 0;
+  border-top: 1px dashed var(--line-dashed);
+  margin: 0;
+}
+/* Organizer's summary: counts as HF stat blocks, then the people. */
+.stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-5);
+  margin: 0;
+}
+.stats > div {
+  display: grid;
+  gap: var(--space-0-5);
+}
+.stats dt {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+.stats dd {
+  margin: 0;
+  font: var(--weight-semibold) var(--text-xl) / 1.2 var(--font-mono);
+}
+.people {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.people li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--line);
+  font-size: var(--text-sm);
+}
+.people li:last-child {
+  border-bottom: 0;
+}
+.states {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+/* QR stays dark on white in both themes: cameras need the contrast. */
+.qr {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--bg-subtle);
+}
+.qr svg {
+  display: block;
+  width: min(220px, 100%);
+  height: auto;
+  border-radius: var(--radius-md);
+  background: #fff;
+  color: #111315;
+}
+.qr small {
+  max-width: 100%;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  overflow-wrap: anywhere;
+}
+.status {
+  align-self: center;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+@media (max-width: 960px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "agreement" "aside" "format";
+    grid-template-rows: none;
+    gap: var(--space-5);
+  }
+}
+@media (max-width: 600px) {
+  .terms > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-1);
+  }
+}

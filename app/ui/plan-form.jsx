@@ -14,6 +14,7 @@ import {
   rideBikeStateError,
 } from "../../lib/bike-status.js";
 import { userTimeZone } from "../../lib/user-time-zone.js";
+import { areaChanged, placeChanged } from "../../lib/ride-agreement.js";
 import { localDateTime, validTimeZone } from "../../lib/ride-intent-time.js";
 import {
   foldChoices,
@@ -79,6 +80,40 @@ function initialPlan(ride, currentBikes, zone, draft) {
     recurrence: ride.recurrence,
     features: ride.features.join(", "),
   };
+}
+const aspectLabels = {
+  start: "время старта",
+  place: "место встречи",
+};
+/** While an existing plan is edited (#235): will saving ask the people who
+ * answered to confirm again? The same rule as the server's, so a typo fix in
+ * the meeting place is shown as harmless before it is saved. */
+function RevisionHint({ ride, initial, form }) {
+  const answered = Object.entries(ride.rsvpCounts || {}).some(
+    ([state, n]) => state !== "declined" && n > 0,
+  );
+  const changes = [];
+  if (form.date !== initial.date || form.time !== initial.time)
+    changes.push("start");
+  if (
+    placeChanged(initial.meetingPoint, form.meetingPoint) ||
+    areaChanged(initial.passport?.area, form.passport?.area)
+  )
+    changes.push("place");
+  if (!changes.length)
+    return (
+      <small className="help">
+        Исправление опечатки в месте встречи не меняет ответы участников.
+      </small>
+    );
+  return (
+    <p className="notice" data-tone="warning" role="status">
+      {answered
+        ? "После сохранения ответившие «Иду» и «Может быть» подтвердят участие заново"
+        : "Это новая редакция договорённостей"}
+      : изменились {changes.map((c) => aspectLabels[c]).join(", ")}.
+    </p>
+  );
 }
 /** Repeated local time on a fall-back day: which occurrence is meant. */
 function FoldChoice({ local, zone, label, value, onChange }) {
@@ -250,7 +285,7 @@ export default function PlanForm({
     if (
       !confirm(
         kind === "cancel"
-          ? "Отменить запланированную покатушку?"
+          ? "Отменить запланированную покатушку? Превью ссылки, уже отправленные в мессенджеры, могут остаться у получателей."
           : "Удалить покатушку и её обсуждение?",
       )
     )
@@ -365,6 +400,9 @@ export default function PlanForm({
             disabled={busy}
             label="Район или парк"
           />
+          {ride && ride.status === "planned" && (
+            <RevisionHint ride={ride} initial={initial} form={form} />
+          )}
         </fieldset>
         <fieldset className="planning-section half" disabled={busy}>
           <legend>
@@ -444,6 +482,13 @@ export default function PlanForm({
             <p role="alert" className="error">
               Велосипед «{selectedBike.name}» приватный: опубликуйте его или
               выберите «По приглашению».
+            </p>
+          )}
+          {ride?.isPublic && !form.isPublic && (
+            <p className="notice" data-tone="warning">
+              Анонс и превью ссылки станут закрытыми сразу после сохранения. Но
+              превью, уже отправленные в мессенджеры, могут остаться у
+              получателей — отозвать их нельзя.
             </p>
           )}
           <div className="planning-row wide">
