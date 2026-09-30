@@ -4,7 +4,7 @@
 
 ## Контекст
 
-- Next.js / React, JavaScript с JSDoc; бизнес-логика и SQL в `lib/`, HTTP в `app/api/`, UI в `app/ui/`. Resolver — отдельный TypeScript-сервис в `services/bike-resolver/`.
+- Next.js / React; новый production-код в `app/` и `lib/` — strict TypeScript/TSX. Legacy JavaScript с JSDoc мигрирует по #256; бизнес-логика и SQL в `lib/`, HTTP в `app/api/`, UI в `app/ui/`. Общие типы границ — `lib/contracts.ts`; входные типы выводятся из Zod. Resolver — отдельный TypeScript-сервис в `services/bike-resolver/`.
 - Node 24.x; корень — pnpm с закреплённым `packageManager`, Resolver — npm. Сохраняйте соответствующие lockfiles. Код, схема и workflows определяют текущее поведение; issues — намерения и приоритеты.
 - Интерфейс: [дизайн-код](docs/development/design-system.md), семантические токены `app/styles/tokens.css`, общие компоненты. Обе темы, мобильный экран, клавиатура и reduced motion обязательны. Переиспользуйте существующие Motion/Rive-механизмы.
 
@@ -19,5 +19,6 @@
 
 - Работайте в отдельной ветке от актуального `main`, соблюдайте границы задачи. Не затирайте чужие изменения. Merge и production deploy — только с явным разрешением владельца: merge запускает автоматическую выкладку.
 - Во время работы запускайте адресные проверки. Перед PR проверьте итоговый diff и соответствующие gates из [руководства по тестированию](docs/development/testing.md); не ослабляйте CI ради зелёного статуса. Для UI проверяйте результат в браузере.
+- Не добавляйте production JS в `scripts/production-js-baseline.json`: этот список только сокращается при миграции. Не закрывайте типовые ошибки через `any`, `@ts-ignore`, `@ts-nocheck` или цепочки casts; сохраняйте runtime validation и серверные проверки доступа.
 - Обновляйте действующую главу вместе с поведением; новую главу включайте в `docs/README.md` и `docs/book.json`. Не коммитьте секреты, пользовательские выгрузки, отчёты прогонов и разовые планы.
 - В PR кратко: проблема, результат, проверки, риски. Отдельно указывайте, что не удалось проверить; fixture-тест не подтверждает работу внешнего сервиса в production.

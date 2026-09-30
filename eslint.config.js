@@ -2,6 +2,7 @@ import js from "@eslint/js";
 import globals from "globals";
 import reactHooks from "eslint-plugin-react-hooks";
 import nextPlugin from "@next/eslint-plugin-next";
+import tseslint from "typescript-eslint";
 
 // Every warning blocks CI as well (pnpm lint --max-warnings=0, #140).
 export default [
@@ -17,6 +18,10 @@ export default [
     ],
   },
   js.configs.recommended,
+  ...tseslint.configs.recommended.map((config) => ({
+    ...config,
+    files: ["**/*.{ts,tsx}"],
+  })),
   {
     files: ["**/*.{js,jsx,mjs}"],
     languageOptions: {
@@ -34,7 +39,19 @@ export default [
     },
   },
   {
-    files: ["app/**/*.{js,jsx}"],
+    files: ["**/*.{ts,tsx}"],
+    languageOptions: { globals: globals.node },
+    rules: {
+      "@typescript-eslint/no-unused-vars": ["warn", { caughtErrors: "none" }],
+      "@typescript-eslint/consistent-type-imports": "error",
+      "@typescript-eslint/ban-ts-comment": [
+        "error",
+        { "ts-ignore": true, "ts-nocheck": true, "ts-expect-error": true },
+      ],
+    },
+  },
+  {
+    files: ["app/**/*.{js,jsx,ts,tsx}"],
     languageOptions: { globals: { ...globals.browser, ...globals.node } },
     plugins: { "react-hooks": reactHooks, "@next/next": nextPlugin },
     rules: {

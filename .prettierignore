@@ -15,6 +15,7 @@ pnpm-lock.yaml
 
 # Build scripts own these files.
 lib/version.js
+next-env.d.ts
 services/bike-resolver/src/version.ts
 public/maplibre/
 public/test-map-style.json

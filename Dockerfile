@@ -14,7 +14,7 @@ RUN node scripts/copy-maplibre-worker.js && node scripts/copy-rive-runtime.js
 
 FROM dependencies AS builder
 ENV NEXT_TELEMETRY_DISABLED=1
-COPY next.config.mjs proxy.js ./
+COPY next.config.mjs proxy.js tsconfig.json ./
 COPY app ./app
 COPY lib ./lib
 COPY services/bike-resolver/src/component-identity.js ./services/bike-resolver/src/component-identity.js
