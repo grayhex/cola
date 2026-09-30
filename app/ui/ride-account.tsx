@@ -1,4 +1,8 @@
 "use client";
+import { errorMessage } from "../../lib/errors.ts";
+import type { AccountBikeDto } from "../../lib/contracts.ts";
+import type { RideDto, RideListDto } from "./content-types.ts";
+import type { RideConfig } from "./ride-types.ts";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -12,12 +16,12 @@ import RideCard from "./ride-card.tsx";
 // «Мои покатушки» (#245): the rider's own planned and completed rides and
 // their management. Track files, Garmin CSV and Ride with GPS live under
 // «Интеграции и импорт».
-export default function RideAccount({ bikes }) {
-  const [data, setData] = useState(null),
-    [config, setConfig] = useState(null),
+export default function RideAccount({ bikes }: { bikes: AccountBikeDto[] }) {
+  const [data, setData] = useState<RideListDto | null>(null),
+    [config, setConfig] = useState<RideConfig | null>(null),
     [page, setPage] = useState(1),
     [status, setStatus] = useState(""),
-    [editing, setEditing] = useState(null),
+    [editing, setEditing] = useState<RideDto | null>(null),
     [planning, setPlanning] = useState(false),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
@@ -34,7 +38,7 @@ export default function RideAccount({ bikes }) {
   const refresh = useCallback(async () => {
     const revision = ++requests.current.revision;
     try {
-      const result = await socialApi(
+      const result = await socialApi<RideListDto>(
         "rides?" +
           new URLSearchParams({
             own: "1",
@@ -47,7 +51,7 @@ export default function RideAccount({ bikes }) {
         setError("");
       }
     } catch (e) {
-      if (revision === requests.current.revision) setError(e.message);
+      if (revision === requests.current.revision) setError(errorMessage(e));
     }
   }, [page, status]);
   useEffect(() => {
@@ -59,21 +63,21 @@ export default function RideAccount({ bikes }) {
   }, [refresh]);
   useEffect(() => {
     let active = true;
-    socialApi("rides/settings")
+    socialApi<RideConfig>("rides/settings")
       .then((result) => {
         if (!active) return;
         setConfig(result);
         setSettingsError("");
       })
       .catch((e) => {
-        if (active) setSettingsError(e.message);
+        if (active) setSettingsError(errorMessage(e));
       });
     return () => {
       active = false;
     };
   }, [settingsRevision]);
   // Old and new links: ?action=plan opens the planner once.
-  const handled = useRef(null);
+  const handled = useRef<string | null>(null);
   useEffect(() => {
     if (action !== "plan" || handled.current === action) return;
     handled.current = action;
@@ -86,7 +90,7 @@ export default function RideAccount({ bikes }) {
     url.searchParams.delete("action");
     window.history.replaceState(null, "", url);
   }
-  const opened = useRef(null);
+  const opened = useRef<string | null>(null);
   useEffect(() => {
     if (
       !editShare ||
@@ -103,7 +107,7 @@ export default function RideAccount({ bikes }) {
   }, [editShare]);
   // Only a recorded ride replaces the list; a plan opens over it.
   const inline = editing?.status === "completed";
-  async function edit(r) {
+  async function edit(r: { shareId: string }) {
     setBusy(true);
     setError("");
     setNotice("");
@@ -111,14 +115,14 @@ export default function RideAccount({ bikes }) {
       // The editor needs ride settings; a failed first load is retried here
       // so «Изменить» never hides the list without showing the form.
       const [{ ride }, settings] = await Promise.all([
-        socialApi("rides/owner/" + r.shareId),
-        config || socialApi("rides/settings"),
+        socialApi<{ ride: RideDto }>("rides/owner/" + r.shareId),
+        config || socialApi<RideConfig>("rides/settings"),
       ]);
       setConfig(settings);
       setSettingsError("");
       setEditing(ride);
     } catch (e) {
-      setError(e.message);
+      setError(errorMessage(e));
     } finally {
       setBusy(false);
     }

@@ -1,4 +1,22 @@
 "use client";
+import type { ReactNode, CSSProperties } from "react";
+import type { JsonData } from "../../lib/contracts.ts";
+import type {
+  records,
+  awardCatalog,
+  RecordHolder,
+} from "../../lib/gamification.ts";
+import { errorMessage } from "../../lib/errors.ts";
+type RecordsDto = JsonData<Awaited<ReturnType<typeof records>>> & {
+  awards: JsonData<Awaited<ReturnType<typeof awardCatalog>>>;
+};
+type RecordDto = RecordsDto["records"][number];
+type AwardDto = RecordsDto["awards"][number];
+const cardDelay = (
+  index: number,
+): CSSProperties & { "--record-delay": string } => ({
+  "--record-delay": `${Math.min(index, 4) * 35}ms`,
+});
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import styles from "./records.module.css";
@@ -12,19 +30,25 @@ import { profilePath, publicPath } from "../../lib/public-urls.ts";
 import { personName, usernameLabel } from "../../lib/usernames.ts";
 
 // Where a record holder leads: a bike, a ride (with its bike), or a person.
-function holderLink(b) {
+function holderLink(b: JsonData<RecordHolder>) {
   if (b.kind === "ride") return publicPath("ride", b);
   if (b.kind === "profile") return profilePath(b.author.username);
   return publicPath("bike", b);
 }
 // "Получил 1 человек", "Получили 3 человека", "Получили 12 человек".
-function earnedBy(n) {
+function earnedBy(n: number) {
   if (n % 10 === 1 && n % 100 !== 11) return `Получил ${n} человек`;
   const few = [2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100);
   return `Получили ${n} ${few ? "человека" : "человек"}`;
 }
 
-function RecordCard({ record: r, index }) {
+function RecordCard({
+  record: r,
+  index,
+}: {
+  record: RecordDto;
+  index: number;
+}) {
   const b = r.holder;
   return (
     <article
@@ -33,7 +57,7 @@ function RecordCard({ record: r, index }) {
       data-record={r.key}
       aria-labelledby={"record-title-" + r.key}
       aria-describedby={"record-description-" + r.key}
-      style={{ "--record-delay": `${Math.min(index, 4) * 35}ms` }}
+      style={cardDelay(index)}
     >
       <div className="record-illustration">
         <AchievementArt imageId={r.imageId} size={64} />
@@ -97,7 +121,7 @@ function RecordCard({ record: r, index }) {
   );
 }
 
-function AwardCard({ award: a, index }) {
+function AwardCard({ award: a, index }: { award: AwardDto; index: number }) {
   const latest = a.latestRecipient;
   return (
     <article
@@ -106,7 +130,7 @@ function AwardCard({ award: a, index }) {
       data-award={a.key}
       aria-labelledby={"award-title-" + a.key}
       aria-describedby={"award-description-" + a.key}
-      style={{ "--record-delay": `${Math.min(index, 4) * 35}ms` }}
+      style={cardDelay(index)}
     >
       <div className="record-illustration">
         <AchievementArt imageId={a.imageId} kind="achievement" size={64} />
@@ -161,7 +185,15 @@ function AwardCard({ award: a, index }) {
   );
 }
 
-function Groups({ items, label, Card }) {
+function Groups<T extends { key: string; group: string }>({
+  items,
+  label,
+  render,
+}: {
+  items: T[];
+  label: string;
+  render: (item: T, index: number) => ReactNode;
+}) {
   return (
     <div className="record-groups" aria-label={label}>
       {groupByMetric(items).map((group) => (
@@ -176,44 +208,44 @@ function Groups({ items, label, Card }) {
             <span aria-hidden="true">{group.items.length}</span>
           </h2>
           <div className="record-grid">
-            {group.items.map((item, index) => (
-              <Card
-                key={item.key}
-                {...{ [Card === AwardCard ? "award" : "record"]: item }}
-                index={index}
-              />
-            ))}
+            {group.items.map((item, index) => render(item, index))}
           </div>
         </section>
       ))}
     </div>
   );
 }
-export function RecordGroups({ records }) {
+export function RecordGroups({ records }: { records: RecordDto[] }) {
   return (
-    <Groups items={records} label="Все рекорды сообщества" Card={RecordCard} />
+    <Groups
+      items={records}
+      label="Все рекорды сообщества"
+      render={(record, index) => (
+        <RecordCard key={record.key} record={record} index={index} />
+      )}
+    />
   );
 }
 
 const tabs = [
   ["records", "Рекорды", Trophy],
   ["awards", "Награды", Medal],
-];
+] as const;
 export default function Records() {
   const { viewer: user } = useSite();
-  const [data, setData] = useState(null),
+  const [data, setData] = useState<RecordsDto | null>(null),
     [error, setError] = useState(""),
     [tab, setTab] = useState("records");
   useEffect(() => {
     if (new URLSearchParams(location.search).get("tab") === "awards")
       setTab("awards");
     let active = true;
-    socialApi("game/records")
+    socialApi<RecordsDto>("game/records")
       .then((d) => {
         if (active) setData(d);
       })
       .catch((e) => {
-        if (active) setError(e.message);
+        if (active) setError(errorMessage(e));
       });
     return () => {
       active = false;
@@ -303,7 +335,9 @@ export default function Records() {
             <Groups
               items={data.awards || []}
               label="Все награды"
-              Card={AwardCard}
+              render={(award, index) => (
+                <AwardCard key={award.key} award={award} index={index} />
+              )}
             />
             {!data.awards?.length && (
               <p className="help">Награды пока отключены администратором.</p>

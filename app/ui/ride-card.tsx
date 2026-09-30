@@ -1,4 +1,6 @@
 "use client";
+import type { RideItem } from "./ride-types.ts";
+import type { RideMetrics as RideMetricsData } from "../../lib/ride-metrics.ts";
 import Link from "next/link";
 import RidePassport from "./ride-passport.tsx";
 import { SharedView } from "./motion.tsx";
@@ -15,7 +17,13 @@ import RideBasemap from "./ride-basemap.tsx";
 import { routePaths } from "../../lib/ride-geometry.ts";
 import { profilePath, publicPath } from "../../lib/public-urls.ts";
 import { personName } from "../../lib/usernames.ts";
-export function RideRoutePreview({ geometry = [], className = "" }) {
+export function RideRoutePreview({
+  geometry = [],
+  className = "",
+}: {
+  geometry?: number[][][];
+  className?: string;
+}) {
   const paths = routePaths(geometry);
   return (
     <svg
@@ -58,7 +66,7 @@ export function RideRoutePreview({ geometry = [], className = "" }) {
     </svg>
   );
 }
-export const rideDate = (date) =>
+export const rideDate = (date: string | null | undefined) =>
   date
     ? new Date(date).toLocaleDateString("ru-RU", {
         day: "numeric",
@@ -66,7 +74,15 @@ export const rideDate = (date) =>
         timeZone: "UTC",
       })
     : "Дата не указана";
-export function RideMetrics({ metrics: m, compact = false, visibleMetrics }) {
+export function RideMetrics({
+  metrics: m,
+  compact = false,
+  visibleMetrics,
+}: {
+  metrics: Omit<RideMetricsData, "distanceM"> & { distanceM?: number | null };
+  compact?: boolean;
+  visibleMetrics?: string[] | null;
+}) {
   const keys = visibleMetrics || defaultRideFields;
   return (
     <dl className={"ride-metrics" + (compact ? " compact" : "")}>
@@ -75,7 +91,7 @@ export function RideMetrics({ metrics: m, compact = false, visibleMetrics }) {
         const value = f ? formatRideMetric(m[key], f.format) : null;
         return value === null ? null : (
           <div key={key}>
-            <dt>{f.label}</dt>
+            <dt>{f?.label}</dt>
             <dd>{value}</dd>
           </div>
         );
@@ -83,8 +99,16 @@ export function RideMetrics({ metrics: m, compact = false, visibleMetrics }) {
     </dl>
   );
 }
-/** @param {{ride: import("./content-types.ts").RideListDto["rides"][number], owner?: boolean, onEdit?: (ride: import("./content-types.ts").RideListDto["rides"][number]) => void}} props */
-export default function RideCard({ ride: r, owner = false, onEdit }) {
+/**/
+export default function RideCard({
+  ride: r,
+  owner = false,
+  onEdit,
+}: {
+  ride: RideItem;
+  owner?: boolean;
+  onEdit?: (ride: RideItem) => void;
+}) {
   const { personalSettings: settings } = useSite();
   const href = publicPath("ride", r) + (owner ? "?owner=1" : "");
   return (

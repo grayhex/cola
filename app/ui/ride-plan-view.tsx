@@ -1,4 +1,7 @@
 "use client";
+import type { RideDto } from "./content-types.ts";
+import type { RideResponse } from "./ride-types.ts";
+import { errorMessage } from "../../lib/errors.ts";
 import { useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
@@ -19,7 +22,7 @@ import styles from "./ride-plan.module.css";
 const RideAuthDialog = dynamic(
   () =>
     import("./ride-auth-dialog.tsx").catch(() => ({
-      default: function AuthLink({ onClose }) {
+      default: function AuthLink({ onClose }: { onClose: () => void }) {
         return (
           <p role="alert" className="error">
             Не удалось открыть вход.{" "}
@@ -33,26 +36,26 @@ const RideAuthDialog = dynamic(
   { ssr: false },
 );
 
-const changeLabels = {
+const changeLabels: Record<string, string> = {
   start: "время старта",
   place: "место встречи",
   route: "маршрут",
 };
-const stateLabels = {
+const stateLabels: Record<string, [string, string | undefined]> = {
   accepted: ["Идёт", "success"],
   reconfirm: ["Подтвердить заново", "warning"],
   maybe: ["Может быть", "info"],
   invited: ["Ждём ответа", "accent"],
   declined: ["Не идёт", undefined],
 };
-const dateOnly = (value, timeZone) =>
-  new Date(value).toLocaleDateString("ru-RU", {
+const dateOnly = (value: string | null | undefined, timeZone?: string) =>
+  new Date(value || "").toLocaleDateString("ru-RU", {
     day: "numeric",
     month: "long",
     timeZone,
   });
-const timeOnly = (value, timeZone) =>
-  new Date(value).toLocaleTimeString("ru-RU", {
+const timeOnly = (value: string | null | undefined, timeZone?: string) =>
+  new Date(value || "").toLocaleTimeString("ru-RU", {
     hour: "2-digit",
     minute: "2-digit",
     ...(timeZone ? { timeZone } : {}),
@@ -60,7 +63,7 @@ const timeOnly = (value, timeZone) =>
 
 /** The agreed time in the ride's zone; the reader's own clock is added after
  * hydration when it differs, so the server HTML stays the same for all. */
-function RideTime({ ride }) {
+function RideTime({ ride }: { ride: RideDto }) {
   const hydrated = useHydrated();
   const zone = ride.recurrenceTimezone;
   const at = ride.scheduledAt;
@@ -69,7 +72,7 @@ function RideTime({ ride }) {
   const local = hydrated ? localDay + ", " + timeOnly(at) : agreed;
   return (
     <>
-      <time dateTime={ride.scheduledAt} suppressHydrationWarning>
+      <time dateTime={ride.scheduledAt || undefined} suppressHydrationWarning>
         {rideTimeLabel(ride.scheduledAt, zone)}
       </time>
       {ride.expectedEndAt && (
@@ -90,7 +93,7 @@ function RideTime({ ride }) {
   );
 }
 
-function participationNote(ride) {
+function participationNote(ride: RideDto): [string | undefined, string] {
   const hiddenPlace =
     ride.meetingVisibility === "participants"
       ? " Точное место встречи откроется после ответа «Иду»."
@@ -115,7 +118,7 @@ function participationNote(ride) {
     case "reconfirm":
       return [
         "warning",
-        `Условия изменились — подтвердите заново. Раньше вы ответили «${responseLabels[ride.previousRsvp] || "Иду"}».`,
+        `Условия изменились — подтвердите заново. Раньше вы ответили «${responseLabels[ride.previousRsvp || "accepted"] || "Иду"}».`,
       ];
     case "invited":
       return [
@@ -138,7 +141,7 @@ function participationNote(ride) {
 }
 
 /** The existing direct messages (#170, #217) with this ride as context. */
-function AskOrganizer({ ride, share }) {
+function AskOrganizer({ ride, share }: { ride: RideDto; share: string }) {
   const { viewer, chatEnabled } = useSite();
   if (ride.isOwner || !viewer) return null;
   if (!chatEnabled)
@@ -170,13 +173,21 @@ function AskOrganizer({ ride, share }) {
   );
 }
 
-function Participation({ ride, share, onAnswer }) {
+function Participation({
+  ride,
+  share,
+  onAnswer,
+}: {
+  ride: RideDto;
+  share: string;
+  onAnswer: (response: RideResponse) => void | Promise<void>;
+}) {
   const { viewer } = useSite();
   const [auth, setAuth] = useState(false);
   const [tone, text] = participationNote(ride);
   const note = useMotionFeedback(ride.participation, { reveal: true });
   const upcoming =
-    ride.status === "planned" && new Date(ride.scheduledAt) > new Date();
+    ride.status === "planned" && new Date(ride.scheduledAt || "") > new Date();
   return (
     <section className={styles.panel} aria-labelledby="ride-participation">
       <h2 id="ride-participation">Участие</h2>
@@ -227,15 +238,31 @@ function Participation({ ride, share, onAnswer }) {
   );
 }
 
-function OrganizerPanel({ ride, onReload }) {
+function OrganizerPanel({
+  ride,
+  onReload,
+}: {
+  ride: RideDto;
+  onReload: () => void | Promise<void>;
+}) {
   const [busy, setBusy] = useState(""),
     [error, setError] = useState(""),
     [status, setStatus] = useState("");
-  const answers = ride.answers || { counts: {}, people: [] };
+  const answers: NonNullable<RideDto["answers"]> = ride.answers || {
+    counts: {},
+    people: [],
+    truncated: false,
+  };
   const counts = answers.counts || {};
   const size = ride.passport?.groupSize;
   const zone = ride.recurrenceTimezone;
-  async function act(key, path, method, body, done) {
+  async function act(
+    key: string,
+    path: string,
+    method: string,
+    body: unknown,
+    done: string,
+  ) {
     setBusy(key);
     setError("");
     setStatus("");
@@ -244,12 +271,12 @@ function OrganizerPanel({ ride, onReload }) {
       setStatus(done);
       await onReload();
     } catch (e) {
-      setError(e.message);
+      setError(errorMessage(e));
     } finally {
       setBusy("");
     }
   }
-  const occurrenceAt = new Date(ride.scheduledAt).toISOString();
+  const occurrenceAt = new Date(ride.scheduledAt || "").toISOString();
   const day = dateOnly(ride.scheduledAt, zone);
   const warning =
     "Уже отправленные в мессенджеры превью ссылки могут остаться у получателей.";
@@ -410,13 +437,19 @@ export default function RidePlanView({
   sharePath,
   onAnswer,
   onReload,
+}: {
+  ride: RideDto;
+  share: string;
+  sharePath?: string | null;
+  onAnswer: (response: RideResponse) => void | Promise<void>;
+  onReload: () => void | Promise<void>;
 }) {
   const zone = ride.recurrenceTimezone;
   const past =
-    ride.status === "planned" && new Date(ride.scheduledAt) <= new Date();
+    ride.status === "planned" && new Date(ride.scheduledAt || "") <= new Date();
   const changes = ride.agreement?.changes || [];
-  const changed = (aspect) =>
-    ride.agreement?.revision > 1 && changes.includes(aspect) ? (
+  const changed = (aspect: string) =>
+    (ride.agreement?.revision || 0) > 1 && changes.includes(aspect) ? (
       <span className="badge" data-tone="warning">
         изменено
       </span>
@@ -465,24 +498,27 @@ export default function RidePlanView({
       <div className={styles.layout}>
         <section className={styles.agreement} aria-labelledby="ride-terms">
           <h2 id="ride-terms">Договорённости</h2>
-          {ride.agreement?.revision > 1 && changes.length > 0 && (
-            <p ref={notice} className="notice" data-tone="warning">
-              Организатор изменил условия
-              {ride.agreement.changedAt
-                ? " " + dateOnly(ride.agreement.changedAt, zone)
-                : ""}
-              : {changes.map((c) => changeLabels[c]).join(", ")}.
-            </p>
-          )}
-          {ride.cancelledOccurrences?.length > 0 && (
-            <p className="notice" data-tone="danger">
-              Отменены выезды:{" "}
-              {ride.cancelledOccurrences
-                .map((d) => dateOnly(d, zone))
-                .join(", ")}
-              . Серия продолжается.
-            </p>
-          )}
+          {ride.agreement &&
+            ride.agreement.revision > 1 &&
+            changes.length > 0 && (
+              <p ref={notice} className="notice" data-tone="warning">
+                Организатор изменил условия
+                {ride.agreement.changedAt
+                  ? " " + dateOnly(ride.agreement.changedAt, zone)
+                  : ""}
+                : {changes.map((c) => changeLabels[c]).join(", ")}.
+              </p>
+            )}
+          {ride.cancelledOccurrences &&
+            ride.cancelledOccurrences.length > 0 && (
+              <p className="notice" data-tone="danger">
+                Отменены выезды:{" "}
+                {ride.cancelledOccurrences
+                  .map((d) => dateOnly(d, zone))
+                  .join(", ")}
+                . Серия продолжается.
+              </p>
+            )}
           <dl className={styles.terms}>
             <div>
               <dt>Когда</dt>

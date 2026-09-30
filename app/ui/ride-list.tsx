@@ -1,4 +1,6 @@
 "use client";
+import { errorMessage } from "../../lib/errors.ts";
+import type { RideListDto } from "./content-types.ts";
 import Link from "next/link";
 import {
   useEffect,
@@ -15,8 +17,9 @@ import { plural } from "../../lib/plural.ts";
 
 // Back/forward returns to the same public list and scroll position (#233):
 // the last public page is kept per filter set in this tab only.
-const storageKey = (key) => "cola:ride-list:" + key;
-function readSaved(key) {
+type SavedList = { data?: RideListDto; page?: number; scrollY?: number };
+const storageKey = (key: string) => "cola:ride-list:" + key;
+function readSaved(key: string): SavedList | null {
   if (!key) return null;
   try {
     return JSON.parse(sessionStorage.getItem(storageKey(key)) || "null");
@@ -24,16 +27,18 @@ function readSaved(key) {
     return null;
   }
 }
-function save(key, value) {
+function save(key: string, value: SavedList) {
   if (!key) return;
   try {
     sessionStorage.setItem(
       storageKey(key),
       JSON.stringify({ ...readSaved(key), ...value }),
     );
-  } catch {}
+  } catch {
+    // Session storage is optional; the public list still loads from the API.
+  }
 }
-/** @param {{ username?: string, bikeId?: string, latest?: boolean, status?: string | null, filters?: Record<string, string> | null, restoreKey?: string, onReset?: () => void }} props */
+/**/
 export default function RideList({
   username,
   bikeId,
@@ -42,15 +47,23 @@ export default function RideList({
   filters = null,
   restoreKey = "",
   onReset,
+}: {
+  username?: string;
+  bikeId?: string;
+  latest?: boolean;
+  status?: string | null;
+  filters?: Record<string, string> | null;
+  restoreKey?: string;
+  onReset?: () => void;
 }) {
   const { personalSettings: settings } = useSite();
-  const [data, setData] = useState(null),
+  const [data, setData] = useState<RideListDto | null>(null),
     [page, setPage] = useState(1),
     [error, setError] = useState(""),
     [loading, setLoading] = useState(true),
     [revision, setRevision] = useState(0);
   const seq = useRef(0),
-    restoring = useRef(null),
+    restoring = useRef<number | null>(null),
     query = JSON.stringify([username, bikeId, status, filters]);
   // A new filter set starts from page 1 without clearing the old result.
   const previous = useRef(query);
@@ -72,14 +85,14 @@ export default function RideList({
     const id = ++seq.current;
     setLoading(true);
     setError("");
-    socialApi(
+    socialApi<RideListDto>(
       "rides?" +
         new URLSearchParams({
           ...(username ? { username } : {}),
           ...(status ? { status } : {}),
           ...(bikeId ? { bikeId } : {}),
           ...(filters ? apiFilters(filters) : {}),
-          page,
+          page: String(page),
         }),
     )
       .then((d) => {
@@ -88,7 +101,7 @@ export default function RideList({
         save(restoreKey, { data: d, page });
       })
       .catch((e) => {
-        if (id === seq.current) setError(e.message);
+        if (id === seq.current) setError(errorMessage(e));
       })
       .finally(() => {
         if (id === seq.current) setLoading(false);
@@ -122,7 +135,7 @@ export default function RideList({
   const list =
     latest &&
     (settings.rideListMode === "list" ||
-      (settings.rideListMode === "auto" && data?.total > 5));
+      (settings.rideListMode === "auto" && (data?.total || 0) > 5));
   // An empty rides column on a bike page shrinks to one line.
   if (latest && data?.total === 0)
     return (
@@ -166,9 +179,12 @@ export default function RideList({
                     <strong>{r.title}</strong>
                     <small>
                       {rideDate(r.date)} ·{" "}
-                      {(r.metrics.distanceM / 1000).toLocaleString("ru-RU", {
-                        maximumFractionDigits: 1,
-                      })}{" "}
+                      {(Number(r.metrics.distanceM) / 1000).toLocaleString(
+                        "ru-RU",
+                        {
+                          maximumFractionDigits: 1,
+                        },
+                      )}{" "}
                       км
                     </small>
                   </summary>

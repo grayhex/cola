@@ -1,4 +1,6 @@
 "use client";
+import { errorMessage } from "../../lib/errors.ts";
+import type { RideDto, ReactionStateDto } from "./content-types.ts";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { SharedView } from "./motion.tsx";
@@ -32,7 +34,7 @@ const Discussion = dynamic(
     })),
   { ssr: false },
 );
-const detailPath = (share) =>
+const detailPath = (share: string) =>
   "rides/" +
   (new URLSearchParams(location.search).get("owner") === "1"
     ? "owner/"
@@ -43,6 +45,11 @@ export default function RidePage({
   styleUrl,
   sharePath = null,
   initial = null,
+}: {
+  share: string;
+  styleUrl?: string;
+  sharePath?: string | null;
+  initial?: { ride: RideDto } | null;
 }) {
   const router = useRouter();
   const { viewer: user } = useSite();
@@ -66,14 +73,15 @@ export default function RidePage({
   const seed = useRef(initial);
   useEffect(() => {
     let active = true;
-    const rideRequest = seed.current || socialApi(detailPath(share));
+    const rideRequest =
+      seed.current || socialApi<{ ride: RideDto }>(detailPath(share));
     seed.current = null;
     Promise.resolve(rideRequest)
       .then((d) => {
         if (active) setRide(d.ride);
       })
       .catch((e) => {
-        if (active) setError(e.message);
+        if (active) setError(errorMessage(e));
       });
     return () => {
       active = false;
@@ -87,18 +95,18 @@ export default function RidePage({
   const reload = useCallback(async () => {
     const id = ++reloads.current;
     try {
-      const data = await socialApi(detailPath(share));
+      const data = await socialApi<{ ride: RideDto }>(detailPath(share));
       if (id !== reloads.current) return;
       setRide(data.ride);
       setError("");
     } catch (e) {
       if (id !== reloads.current) return;
       setRide((r) =>
-        r && r.meetingVisibility === "participants" && !r.isOwner
+        r && r?.meetingVisibility === "participants" && !r.isOwner
           ? { ...r, meetingPoint: "", meetingHidden: true }
           : r,
       );
-      setError(e.message);
+      setError(errorMessage(e));
     }
   }, [share]);
   const planned = ride?.sourceKind === "planned";
@@ -123,6 +131,7 @@ export default function RidePage({
                   // A hidden meeting place closes with any answer but «Иду»
                   // at once, before the refresh confirms it (#230, #235).
                   setRide((r) =>
+                    r &&
                     next.rsvp !== "accepted" &&
                     r.meetingVisibility === "participants" &&
                     !r.isOwner
@@ -132,7 +141,9 @@ export default function RidePage({
                           meetingPoint: "",
                           meetingHidden: true,
                         }
-                      : { ...r, ...next },
+                      : r
+                        ? { ...r, ...next }
+                        : r,
                   );
                   await reload();
                 }}
@@ -215,11 +226,13 @@ export default function RidePage({
                             "rides/" + ride.id + "/analysis",
                             "POST",
                           );
-                          const data = await socialApi(detailPath(share));
+                          const data = await socialApi<{ ride: RideDto }>(
+                            detailPath(share),
+                          );
                           setRide(data.ride);
                           setSelected(0);
                         } catch (e) {
-                          setError(e.message);
+                          setError(errorMessage(e));
                         } finally {
                           setAnalysisBusy(false);
                         }
@@ -254,13 +267,13 @@ export default function RidePage({
                     }
                     setBusy(true);
                     try {
-                      const d = await socialApi(
+                      const d = await socialApi<ReactionStateDto>(
                         "rides/" + ride.id + "/like",
                         ride.liked ? "DELETE" : "PUT",
                       );
-                      setRide((r) => ({ ...r, ...d }));
+                      setRide((r) => (r ? { ...r, ...d } : r));
                     } catch (e) {
-                      setError(e.message);
+                      setError(errorMessage(e));
                     } finally {
                       setBusy(false);
                     }

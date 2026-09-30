@@ -1,4 +1,30 @@
 "use client";
+import type { Dispatch, SetStateAction } from "react";
+import type { ApiError } from "../../lib/contracts.ts";
+import type {
+  PlanInterestDto,
+  InterestInvitationsDto,
+  InterestGroupsDto,
+  PlanDraft,
+  CreatedPlan,
+} from "./ride-types.ts";
+import { errorMessage } from "../../lib/errors.ts";
+type ZoneFormat = (iso: string, options: Intl.DateTimeFormatOptions) => string;
+type InterestState = {
+  status: "loading" | "reloading" | "ready" | "error";
+  items?: PlanInterestDto["people"]["items"];
+  pages?: number;
+  total?: number;
+  error?: string;
+};
+type GroupsState = {
+  status: "loading" | "reloading" | "ready" | "error";
+  data?: InterestGroupsDto;
+  error?: string;
+};
+type InvitationResults = Omit<InterestInvitationsDto, "results"> & {
+  results: (InterestInvitationsDto["results"][number] & { name: string })[];
+};
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -28,13 +54,13 @@ const PlanComposer = dynamic(() => import("./plan-composer.tsx"), {
 // One request invites at most this many (matchLimits.inviteBatch on the
 // server); the choice survives paging, so it is capped here too.
 const inviteBatch = 20;
-const people = (/** @type {number} */ n) =>
+const people = (n: number) =>
   n % 10 === 1 && n % 100 !== 11
     ? `${n} человек`
     : [2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100)
       ? `${n} человека`
       : `${n} человек`;
-const fieldLabels = {
+const fieldLabels: Record<string, string> = {
   time: "время",
   area: "район",
   duration: "длительность",
@@ -48,7 +74,7 @@ const fieldLabels = {
   regroupPolicy: "ожидание",
   beginnerFriendly: "новички",
 };
-const outcome = {
+const outcome: Record<string, string> = {
   invited: "Приглашение отправлено",
   already_invited: "Уже приглашён",
   declined: "Отказался от этой поездки — не приглашён",
@@ -56,9 +82,9 @@ const outcome = {
   limit: "Достигнут лимит приглашений — не приглашён",
 };
 
-function useZoneFormat(zone) {
+function useZoneFormat(zone: string): ZoneFormat {
   return useCallback(
-    (/** @type {string} */ iso, /** @type {Intl.DateTimeFormatOptions} */ o) =>
+    (iso: string, o: Intl.DateTimeFormatOptions) =>
       new Intl.DateTimeFormat("ru-RU", { timeZone: zone, ...o }).format(
         new Date(iso),
       ),
@@ -66,15 +92,25 @@ function useZoneFormat(zone) {
   );
 }
 
-function Filters({ value, onChange }) {
-  const set = (key, v) =>
+function Filters({
+  value,
+  onChange,
+}: {
+  value: Record<string, string>;
+  onChange: Dispatch<SetStateAction<Record<string, string>>>;
+}) {
+  const set = (key: string, v: string) =>
     onChange((prev) => {
       const next = { ...prev };
       if (!v) delete next[key];
       else next[key] = v;
       return next;
     });
-  const segmented = (key, label, options) => (
+  const segmented = (
+    key: string,
+    label: string,
+    options: Readonly<Record<string, string | readonly [string, object]>>,
+  ) => (
     <div className="filter-group">
       <span className={styles.filterLabel} id={"organize-" + key}>
         {label}
@@ -97,7 +133,7 @@ function Filters({ value, onChange }) {
       </div>
     </div>
   );
-  const select = (key, label) => (
+  const select = (key: "purpose" | "pace" | "surface", label: string) => (
     <label className="field" key={key}>
       <span>{label}</span>
       <select
@@ -136,7 +172,15 @@ function Filters({ value, onChange }) {
   );
 }
 
-function GroupRow({ group, format, onPropose }) {
+function GroupRow({
+  group,
+  format,
+  onPropose,
+}: {
+  group: InterestGroupsDto["groups"][number];
+  format: ZoneFormat;
+  onPropose: (group: InterestGroupsDto["groups"][number]) => void;
+}) {
   const day = format(group.startFrom, {
       weekday: "short",
       day: "numeric",
@@ -146,11 +190,11 @@ function GroupRow({ group, format, onPropose }) {
     until = format(group.startUntil, { hour: "2-digit", minute: "2-digit" });
   const tallies = [
     ...Object.entries(group.formats.purpose).map(([k, n]) => [
-      ridePlanOptions.purpose[k],
+      Object.entries(ridePlanOptions.purpose).find(([key]) => key === k)?.[1],
       n,
     ]),
     ...Object.entries(group.formats.pace).map(([k, n]) => [
-      ridePlanOptions.pace[k],
+      Object.entries(ridePlanOptions.pace).find(([key]) => key === k)?.[1],
       n,
     ]),
   ].filter(([label]) => label);
@@ -195,19 +239,25 @@ function GroupRow({ group, format, onPropose }) {
 
 /** After the plan is published: people whose intent fits this occurrence,
  * chosen one by one; the server checks each again before inviting. */
-export function InviteFromInterest({ plan, onClose }) {
-  const [state, setState] = useState({ status: "loading" }),
+export function InviteFromInterest({
+  plan,
+  onClose,
+}: {
+  plan: CreatedPlan;
+  onClose: () => void;
+}) {
+  const [state, setState] = useState<InterestState>({ status: "loading" }),
     [page, setPage] = useState(1),
-    [chosen, setChosen] = useState(() => new Set()),
+    [chosen, setChosen] = useState(() => new Set<string>()),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
-    [results, setResults] = useState(null),
+    [results, setResults] = useState<InvitationResults | null>(null),
     [revision, setRevision] = useState(0);
   const sending = useRef(false);
   useEffect(() => {
     let active = true;
     setState((s) => ({ ...s, status: s.items ? "reloading" : "loading" }));
-    socialApi(
+    socialApi<PlanInterestDto>(
       `ride-matches/plans/${plan.id}/interest?` +
         new URLSearchParams({
           occurrenceAt: plan.occurrenceAt,
@@ -224,7 +274,7 @@ export function InviteFromInterest({ plan, onClose }) {
           });
       })
       .catch((e) => {
-        if (active) setState({ status: "error", error: e.message });
+        if (active) setState({ status: "error", error: errorMessage(e) });
       });
     return () => {
       active = false;
@@ -237,7 +287,7 @@ export function InviteFromInterest({ plan, onClose }) {
     setBusy(true);
     setError("");
     try {
-      const answer = await socialApi(
+      const answer = await socialApi<InterestInvitationsDto>(
         `ride-matches/plans/${plan.id}/invitations`,
         "POST",
         { occurrenceAt: plan.occurrenceAt, userIds: [...chosen] },
@@ -257,7 +307,7 @@ export function InviteFromInterest({ plan, onClose }) {
       setChosen(new Set());
       setRevision((v) => v + 1);
     } catch (e) {
-      setError(e.message);
+      setError(errorMessage(e));
     } finally {
       sending.current = false;
       setBusy(false);
@@ -350,7 +400,7 @@ export function InviteFromInterest({ plan, onClose }) {
               этих, затем выберите остальных.
             </p>
           )}
-          {state.pages > 1 && (
+          {(state.pages || 0) > 1 && (
             <div className={styles.pager}>
               <button
                 type="button"
@@ -366,7 +416,7 @@ export function InviteFromInterest({ plan, onClose }) {
               <button
                 type="button"
                 className="button secondary small"
-                disabled={page >= state.pages || busy}
+                disabled={page >= (state.pages || 0) || busy}
                 onClick={() => setPage((v) => v + 1)}
               >
                 Дальше
@@ -415,14 +465,20 @@ export function InviteFromInterest({ plan, onClose }) {
   );
 }
 
-export default function OrganizeWorkspace({ initial, onFiltersChange }) {
+export default function OrganizeWorkspace({
+  initial,
+  onFiltersChange,
+}: {
+  initial: Record<string, string>;
+  onFiltersChange?: (value: Record<string, string>) => void;
+}) {
   const { personalSettings } = useSite();
   const format = useZoneFormat(userTimeZone(personalSettings));
   const [filters, setFilters] = useState(initial),
-    [state, setState] = useState({ status: "loading" }),
+    [state, setState] = useState<GroupsState>({ status: "loading" }),
     [revision, setRevision] = useState(0),
-    [proposal, setProposal] = useState(null),
-    [invite, setInvite] = useState(null),
+    [proposal, setProposal] = useState<PlanDraft | null>(null),
+    [invite, setInvite] = useState<CreatedPlan | null>(null),
     [notice, setNotice] = useState("");
   // A typed district waits for a pause; choices apply at once.
   const [query, setQuery] = useState(() => organizeQuery(initial).toString());
@@ -447,15 +503,15 @@ export default function OrganizeWorkspace({ initial, onFiltersChange }) {
       signal: controller.signal,
     })
       .then(async (r) => {
-        const data = await r.json();
+        const data: InterestGroupsDto & Partial<ApiError> = await r.json();
         if (!r.ok) throw Error(data.error || "Не удалось загрузить интерес");
         setState({ status: "ready", data });
       })
       .catch((e) => {
-        if (e.name !== "AbortError")
+        if (!(e instanceof Error && e.name === "AbortError"))
           setState({
             status: "error",
-            error: e.message || "Не удалось загрузить интерес",
+            error: errorMessage(e) || "Не удалось загрузить интерес",
           });
       });
     return () => controller.abort();

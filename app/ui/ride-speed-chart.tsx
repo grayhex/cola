@@ -1,15 +1,21 @@
 "use client";
+import type { PointerEvent } from "react";
+import type { SpeedPoint } from "../../lib/ride-speed.ts";
 import { useEffect, useId, useRef, useState } from "react";
 import { Gauge } from "./icons.tsx";
 import styles from "./ride-speed-chart.module.css";
 
-export default function RideSpeedChart({ profile = [] }) {
+export default function RideSpeedChart({
+  profile = [],
+}: {
+  profile?: SpeedPoint[][];
+}) {
   const id = useId().replaceAll(":", "");
   const points = profile.flat();
   const hasPoints = points.length > 0;
-  const svgRef = useRef(null);
+  const svgRef = useRef<SVGSVGElement | null>(null);
   const [width, setWidth] = useState(800);
-  const [selected, setSelected] = useState(null);
+  const [selected, setSelected] = useState<number | null>(null);
   const [ready, setReady] = useState(false);
   // Keep axis labels and plot height readable instead of shrinking an 800px
   // illustration down to phone width.
@@ -28,13 +34,13 @@ export default function RideSpeedChart({ profile = [] }) {
     Math.ceil(Math.max(...points.map((p) => p.speedKmh), 0) / 10) * 10,
   );
   const maxDistance = Math.max(...points.map((p) => p.distanceKm), 0.001);
-  const x = (p) => 42 + (p.distanceKm / maxDistance) * plotWidth;
-  const y = (p) => 160 - (p.speedKmh / maxSpeed) * 136;
+  const x = (p: SpeedPoint) => 42 + (p.distanceKm / maxDistance) * plotWidth;
+  const y = (p: SpeedPoint) => 160 - (p.speedKmh / maxSpeed) * 136;
   const active =
     selected === null ? null : points[Math.min(selected, points.length - 1)];
-  const format = (value) =>
+  const format = (value: number) =>
     value.toLocaleString("ru-RU", { maximumFractionDigits: 1 });
-  function selectPoint(event) {
+  function selectPoint(event: PointerEvent<SVGSVGElement>) {
     const rect = event.currentTarget.getBoundingClientRect();
     const km =
       ((((event.clientX - rect.left) / rect.width) * width - 42) / plotWidth) *
@@ -132,7 +138,7 @@ export default function RideSpeedChart({ profile = [] }) {
                 return (
                   <g key={i}>
                     <path
-                      d={`${line} L${x(run.at(-1))} 160 L${x(run[0])} 160 Z`}
+                      d={`${line} L${x(run[run.length - 1])} 160 L${x(run[0])} 160 Z`}
                       fill={`url(#${id}-fill)`}
                     />
                     <path d={line} className={styles.line} />

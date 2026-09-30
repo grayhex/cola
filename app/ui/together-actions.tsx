@@ -5,7 +5,8 @@ import { CalendarDays } from "lucide-react";
 import SiteIcon from "./site-icon.tsx";
 
 const loadDialogs = () => import("./together-dialogs.tsx");
-const saved = {
+type ActionKind = "intent" | "plan";
+const saved: Record<ActionKind, [string, string, string]> = {
   intent: ["Намерение сохранено.", "/ride-intents", "Мои намерения"],
   plan: ["Покатушка запланирована.", "/account?tab=rides", "Мои покатушки"],
 };
@@ -13,16 +14,22 @@ const saved = {
  * The two riding actions (#245): «Хочу кататься» and «Организовать
  * покатушку». A guest follows links to sign in; a signed-in rider gets the
  * composer in a window over the current page. Its code loads on the first
- * click, so pages that show the buttons do not pay for the forms.
- * @param {{ signedIn: boolean, className?: string, onSaved?: (kind: "intent" | "plan") => void }} props
- */
-export default function TogetherActions({ signedIn, className = "", onSaved }) {
-  const [open, setOpen] = useState(null),
-    [loading, setLoading] = useState(null),
+ * click, so pages that show the buttons do not pay for the forms.*/
+export default function TogetherActions({
+  signedIn,
+  className = "",
+  onSaved,
+}: {
+  signedIn: boolean;
+  className?: string;
+  onSaved?: (kind: ActionKind) => void;
+}) {
+  const [open, setOpen] = useState<ActionKind | null>(null),
+    [loading, setLoading] = useState<ActionKind | null>(null),
     [error, setError] = useState(""),
-    [notice, setNotice] = useState(null);
-  const dialogs = useRef(null);
-  async function launch(kind) {
+    [notice, setNotice] = useState<[string, string, string] | null>(null);
+  const dialogs = useRef<Awaited<ReturnType<typeof loadDialogs>> | null>(null);
+  async function launch(kind: ActionKind) {
     if (loading) return;
     setError("");
     setNotice(null);
@@ -41,7 +48,7 @@ export default function TogetherActions({ signedIn, className = "", onSaved }) {
     }
     setOpen(kind);
   }
-  function done(kind) {
+  function done(kind: ActionKind) {
     setOpen(null);
     setNotice(saved[kind]);
     onSaved?.(kind);

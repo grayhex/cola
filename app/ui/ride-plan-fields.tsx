@@ -1,4 +1,9 @@
 "use client";
+import type {
+  PassportDraft,
+  PassportRangeKey,
+  PassportChoiceKey,
+} from "./ride-types.ts";
 import { useState } from "react";
 import { ridePlanOptions } from "../../lib/ride-plan-options.ts";
 import { useMotionFeedback } from "./motion.tsx";
@@ -10,12 +15,14 @@ import styles from "./ride-passport.module.css";
 // The ride passport's inputs as parts (#253): the planners place the area,
 // the option tiles and the rare conditions in their own sections; the UI
 // Kit and older screens use the whole set below.
-const setter = (value, onChange) => (key, v) => {
-  const next = { ...value };
-  if (v === undefined || v === "") delete next[key];
-  else next[key] = v;
-  onChange(next);
-};
+const setter =
+  (value: PassportDraft, onChange: (value: PassportDraft) => void) =>
+  <K extends keyof PassportDraft>(key: K, v: PassportDraft[K] | "") => {
+    const next = { ...value };
+    if (v === undefined || v === "") delete next[key];
+    else next[key] = v;
+    onChange(next);
+  };
 
 /** The approximate area — a label and an optional circle on the map. */
 export function AreaField({
@@ -24,6 +31,12 @@ export function AreaField({
   disabled = false,
   intent = false,
   label = "Область поездки",
+}: {
+  value?: PassportDraft;
+  onChange: (value: PassportDraft) => void;
+  disabled?: boolean;
+  intent?: boolean;
+  label?: string;
 }) {
   const set = setter(value, onChange);
   const area = value.area || {};
@@ -72,9 +85,17 @@ export function ExtraConditions({
   disabled = false,
   pick = ["speedKmh", "difficulty", "regroupPolicy", "beginnerFriendly"],
   help = true,
+}: {
+  value?: PassportDraft;
+  onChange: (value: PassportDraft) => void;
+  disabled?: boolean;
+  intent?: boolean;
+  ranges?: boolean;
+  pick?: string[];
+  help?: boolean;
 }) {
   const set = setter(value, onChange);
-  const select = (key, label) => (
+  const select = (key: PassportChoiceKey, label: string) => (
     <label className="field" key={key}>
       <span>{label}</span>
       <select
@@ -92,12 +113,17 @@ export function ExtraConditions({
       </select>
     </label>
   );
-  const range = (key, label, max, step = 1) => {
+  const range = (
+    key: PassportRangeKey,
+    label: string,
+    max: number,
+    step = 1,
+  ) => {
     const v = value[key] || {};
     return (
       <fieldset className={styles.range} disabled={disabled}>
         <legend>{label}</legend>
-        {["min", "max"].map((side) => (
+        {(["min", "max"] as const).map((side) => (
           <label className="field" key={side}>
             <span>{side === "min" ? "От" : "До"}</span>
             <input
@@ -179,6 +205,11 @@ export default function RidePlanFields({
   onChange,
   disabled = false,
   intent = false,
+}: {
+  value?: PassportDraft;
+  onChange: (value: PassportDraft) => void;
+  disabled?: boolean;
+  intent?: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
   const reveal = useMotionFeedback(expanded, { reveal: true });

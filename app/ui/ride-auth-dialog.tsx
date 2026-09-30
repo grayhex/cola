@@ -1,4 +1,5 @@
 "use client";
+import { errorMessage } from "../../lib/errors.ts";
 import { useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
@@ -30,8 +31,8 @@ const AuthForm = dynamic(
  * to this ride from scratch; nothing is answered on the person's behalf.
  * Registration stays subject to `registrationOpen`, blocking and the usual
  * e-mail rules. */
-export default function RideAuthDialog({ onClose }) {
-  const [mode, setMode] = useState("login"),
+export default function RideAuthDialog({ onClose }: { onClose: () => void }) {
+  const [mode, setMode] = useState<"login" | "register">("login"),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
   return (
@@ -65,7 +66,7 @@ export default function RideAuthDialog({ onClose }) {
               await socialApi("auth/" + mode, "POST", data);
               location.reload();
             } catch (e) {
-              setError(e.message);
+              setError(errorMessage(e));
               setBusy(false);
             }
           }}

@@ -1,9 +1,15 @@
 "use client";
+import type { PointerEvent } from "react";
+import type {
+  AnalysisPoint,
+  AnalysisChannel,
+} from "../../lib/ride-analysis-contract.ts";
+import type { RideAnalysisSeries } from "./ride-types.ts";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { analysisChannels } from "../../lib/ride-analysis-contract.ts";
 import styles from "./ride-analysis.module.css";
 
-const labels = {
+const labels: Record<AnalysisChannel, [string, string, number]> = {
   elevationM: ["Высота", "м", 1],
   speedMps: ["Скорость", "км/ч", 3.6],
   gradePct: ["Уклон", "%", 1],
@@ -11,17 +17,25 @@ const labels = {
   cadenceRpm: ["Каденс", "об/мин", 1],
   powerW: ["Мощность", "Вт", 1],
 };
-const value = (p, key) =>
-  p?.[key] == null ? "—" : (p[key] * labels[key][2]).toFixed(1);
-const elapsed = (seconds) =>
+const value = (p: AnalysisPoint | undefined, key: AnalysisChannel) =>
+  p?.[key] == null ? "—" : (Number(p[key]) * labels[key][2]).toFixed(1);
+const elapsed = (seconds: number | null) =>
   seconds == null
     ? "—"
     : `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`;
 
-export default function RideAnalysis({ series, selected, onSelect }) {
+export default function RideAnalysis({
+  series,
+  selected,
+  onSelect,
+}: {
+  series: RideAnalysisSeries;
+  selected: number;
+  onSelect: (index: number) => void;
+}) {
   const [page, setPage] = useState(0),
     [width, setWidth] = useState(768);
-  const ref = useRef(null);
+  const ref = useRef<HTMLElement | null>(null);
   useEffect(() => {
     const observer = new ResizeObserver(([entry]) =>
       setWidth(Math.max(240, entry.contentRect.width)),
@@ -31,7 +45,7 @@ export default function RideAnalysis({ series, selected, onSelect }) {
   }, []);
   const plotWidth = width - 72;
   const points = useMemo(() => series.segments.flat(), [series]);
-  const channels = useMemo(
+  const channels = useMemo<AnalysisChannel[]>(
     () => [
       "elevationM",
       "speedMps",
@@ -41,18 +55,20 @@ export default function RideAnalysis({ series, selected, onSelect }) {
   );
   const distance = points.at(-1)?.distanceM || 1;
   const active = points[Math.min(selected, points.length - 1)];
-  const x = (p) => 48 + (p.distanceM / distance) * plotWidth;
+  const x = (p: AnalysisPoint) =>
+    48 + (Number(p.distanceM) / distance) * plotWidth;
   const charts = useMemo(
     () =>
       channels.map((key) => {
         const present = points.filter((p) => p[key] != null);
         const min = present.length
-          ? Math.min(...present.map((p) => p[key]))
+          ? Math.min(...present.map((p) => Number(p[key])))
           : 0;
         const max = present.length
-          ? Math.max(...present.map((p) => p[key]))
+          ? Math.max(...present.map((p) => Number(p[key])))
           : 1;
-        const y = (p) => 104 - ((p[key] - min) / (max - min || 1)) * 80;
+        const y = (p: AnalysisPoint) =>
+          104 - ((Number(p[key]) - min) / (max - min || 1)) * 80;
         const bit = 1 << analysisChannels.indexOf(key);
         const path = series.segments
           .map((run) => {
@@ -65,7 +81,7 @@ export default function RideAnalysis({ series, selected, onSelect }) {
                 }
                 const command = connected && !(p.gaps & bit) ? "L" : "M";
                 connected = true;
-                return `${command}${(48 + (p.distanceM / distance) * plotWidth).toFixed(2)},${y(p).toFixed(2)}`;
+                return `${command}${(48 + (Number(p.distanceM) / distance) * plotWidth).toFixed(2)},${y(p).toFixed(2)}`;
               })
               .join(" ");
           })
@@ -74,7 +90,7 @@ export default function RideAnalysis({ series, selected, onSelect }) {
       }),
     [channels, points, series, distance, plotWidth],
   );
-  function scrub(event) {
+  function scrub(event: PointerEvent<SVGSVGElement>) {
     const rect = event.currentTarget.getBoundingClientRect();
     const target =
       Math.max(
@@ -87,8 +103,8 @@ export default function RideAnalysis({ series, selected, onSelect }) {
     let nearest = 0;
     for (let i = 1; i < points.length; i++)
       if (
-        Math.abs(points[i].distanceM - target) <
-        Math.abs(points[nearest].distanceM - target)
+        Math.abs(Number(points[i].distanceM) - target) <
+        Math.abs(Number(points[nearest].distanceM) - target)
       )
         nearest = i;
     onSelect(nearest);
@@ -121,12 +137,12 @@ export default function RideAnalysis({ series, selected, onSelect }) {
               max={points.length - 1}
               value={Math.min(selected, points.length - 1)}
               onChange={(e) => onSelect(Number(e.target.value))}
-              aria-valuetext={`${(active.distanceM / 1000).toFixed(2)} км, ${elapsed(active.elapsedS)}`}
+              aria-valuetext={`${(Number(active.distanceM) / 1000).toFixed(2)} км, ${elapsed(active.elapsedS)}`}
             />
           </label>
           <div className={styles.readout} aria-live="polite" aria-atomic="true">
             <strong>
-              {(active.distanceM / 1000).toFixed(2)} км ·{" "}
+              {(Number(active.distanceM) / 1000).toFixed(2)} км ·{" "}
               {elapsed(active.elapsedS)}
             </strong>
             <span>
@@ -235,7 +251,7 @@ export default function RideAnalysis({ series, selected, onSelect }) {
                           {page * 50 + i + 1}
                         </button>
                       </td>
-                      <td>{(p.distanceM / 1000).toFixed(2)}</td>
+                      <td>{(Number(p.distanceM) / 1000).toFixed(2)}</td>
                       <td>{elapsed(p.elapsedS)}</td>
                       {channels.map((key) => (
                         <td key={key}>{value(p, key)}</td>

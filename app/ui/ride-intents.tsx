@@ -1,4 +1,15 @@
 "use client";
+import type { FormEvent } from "react";
+import type {
+  IntentDto,
+  IntentListDto,
+  IntentDraft,
+  IntentWindowDraft,
+  PreferencesDraft,
+  IntentPreferencesDto,
+  PassportDraft,
+} from "./ride-types.ts";
+import { errorMessage, errorStatus } from "../../lib/errors.ts";
 import Link from "next/link";
 import { useEffect, useRef, useState, startTransition } from "react";
 import {
@@ -37,14 +48,17 @@ import {
 } from "../../lib/ride-intent-time.ts";
 import { userTimeZone } from "../../lib/user-time-zone.ts";
 import styles from "./ride-intents.module.css";
-const blankWindow = () => ({ startLocal: "", endLocal: "" });
-const readinessLabels = {
+const blankWindow = (): IntentWindowDraft => ({ startLocal: "", endLocal: "" });
+const readinessLabels: Record<string, string> = {
   ready: "Готов ехать",
   considering: "Пока прикидываю",
 };
-const api = (path = "", method = "GET", body) =>
-  socialApi("ride-intents" + path, method, body);
-function previewWindows(draft) {
+const api = <T = unknown,>(
+  path = "",
+  method = "GET",
+  body?: unknown,
+): Promise<T> => socialApi<T>("ride-intents" + path, method, body);
+function previewWindows(draft: IntentDraft) {
   try {
     return draft.windows.map((w) => ({
       startsAt: resolveLocal(w.startLocal, draft.timeZone, w.startFold),
@@ -54,13 +68,27 @@ function previewWindows(draft) {
     return [];
   }
 }
-function TimeField({ side, window, zone, index, onChange }) {
-  const key = side + "Local",
-    foldKey = side + "Fold";
-  let choices = [];
+function TimeField({
+  side,
+  window,
+  zone,
+  index,
+  onChange,
+}: {
+  side: "start" | "end";
+  window: IntentWindowDraft;
+  zone: string;
+  index: number;
+  onChange: (value: IntentWindowDraft) => void;
+}) {
+  const key = side === "start" ? "startLocal" : "endLocal",
+    foldKey = side === "start" ? "startFold" : "endFold";
+  let choices: string[] = [];
   try {
     choices = localInstants(window[key], zone);
-  } catch {}
+  } catch {
+    // An incomplete local time has no occurrences to choose from.
+  }
   return (
     <div>
       <label className="field">
@@ -103,17 +131,24 @@ export function IntentComposer({
   onSaved,
   onClose,
   onPreferences,
+}: {
+  initial: IntentDraft;
+  preferences: PreferencesDraft;
+  onSaved: () => void;
+  onClose: () => void;
+  onPreferences: (value: PreferencesDraft) => void;
 }) {
   const [draft, setDraft] = useState(initial),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
     [uncertain, setUncertain] = useState(false);
-  const pending = useRef(null),
+  const pending = useRef<Omit<IntentDraft, "id"> | null>(null),
     closing = useRef(false);
   const [ask, confirmation] = useConfirmation();
   const feedback = useMotionFeedback(draft.readiness);
-  const set = (key, value) => setDraft((d) => ({ ...d, [key]: value }));
+  const set = <K extends keyof IntentDraft>(key: K, value: IntentDraft[K]) =>
+    setDraft((d) => ({ ...d, [key]: value }));
   const dirty = JSON.stringify(draft) !== JSON.stringify(initial);
   async function close() {
     if (busy || closing.current) return;
@@ -130,7 +165,7 @@ export function IntentComposer({
       onClose();
     closing.current = false;
   }
-  async function save(e) {
+  async function save(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (busy) return;
     if (!draft.passport.purpose) {
@@ -146,10 +181,13 @@ export function IntentComposer({
       await api(id ? "/" + id : "", id ? "PUT" : "POST", pending.current);
       onSaved();
     } catch (e) {
-      const ambiguous = !e.status || e.status >= 500;
+      const status = errorStatus(e);
+      const ambiguous = !status || status >= 500;
       setUncertain(ambiguous);
       if (!ambiguous) pending.current = null;
-      setError(e.message || "Не удалось получить ответ. Повторите отправку.");
+      setError(
+        errorMessage(e) || "Не удалось получить ответ. Повторите отправку.",
+      );
     } finally {
       setBusy(false);
     }
@@ -243,7 +281,7 @@ export function IntentComposer({
                       </button>
                     </div>
                     <div className={styles.windowTimes}>
-                      {["start", "end"].map((side) => (
+                      {(["start", "end"] as const).map((side) => (
                         <TimeField
                           key={side}
                           side={side}
@@ -337,7 +375,9 @@ export function IntentComposer({
                     setBusy(true);
                     setError("");
                     try {
-                      const result = await api("/preferences", "PUT", {
+                      const result = await api<{
+                        preferences: IntentPreferencesDto;
+                      }>("/preferences", "PUT", {
                         passport: draft.passport,
                         ...(draft.meetNewPeople === undefined
                           ? {}
@@ -348,7 +388,7 @@ export function IntentComposer({
                         "Постоянные предпочтения сохранены только для вас. Намерение пока не сохранено.",
                       );
                     } catch (e) {
-                      setError(e.message);
+                      setError(errorMessage(e));
                     } finally {
                       setBusy(false);
                     }
@@ -400,20 +440,22 @@ export function IntentComposer({
                     Кому видно
                   </legend>
                   <div className="option-tiles">
-                    {[
+                    {(
                       [
-                        "private",
-                        "Только мне — для подбора",
-                        "Видите только вы. Используется для вашего подбора.",
-                        LockKeyhole,
-                      ],
-                      [
-                        "community",
-                        "Сообществу ColaBike",
-                        "Видны имя, район и расписание, без точного адреса. Нужна подтверждённая почта.",
-                        Users,
-                      ],
-                    ].map(([key, label, hint, Icon]) => (
+                        [
+                          "private",
+                          "Только мне — для подбора",
+                          "Видите только вы. Используется для вашего подбора.",
+                          LockKeyhole,
+                        ],
+                        [
+                          "community",
+                          "Сообществу ColaBike",
+                          "Видны имя, район и расписание, без точного адреса. Нужна подтверждённая почта.",
+                          Users,
+                        ],
+                      ] as const
+                    ).map(([key, label, hint, Icon]) => (
                       <label className="option-tile" key={key}>
                         <input
                           type="radio"
@@ -533,19 +575,20 @@ export function IntentComposer({
 /** A composer draft: a quick window, a copy of `item`, or its edit. */
 export function intentDraft(
   kind = "custom",
-  item = null,
+  item: IntentDto | null = null,
   edit = false,
   zone = Intl.DateTimeFormat().resolvedOptions().timeZone,
-) {
+): IntentDraft {
   // An existing intent keeps its zone; a new one uses the profile's (#253).
   const timeZone = item?.timeZone || zone;
-  const windows = edit
-    ? item.windows.map((w) => windowDraft(w, timeZone))
-    : kind === "custom"
-      ? [blankWindow()]
-      : quickWindows(kind, timeZone);
+  const windows =
+    edit && item
+      ? item.windows.map((w) => windowDraft(w, timeZone))
+      : kind === "custom"
+        ? [blankWindow()]
+        : quickWindows(kind, timeZone);
   return {
-    ...(edit ? { id: item.id } : { requestId: crypto.randomUUID() }),
+    ...(edit && item ? { id: item.id } : { requestId: crypto.randomUUID() }),
     readiness: item?.readiness || "considering",
     timeZone,
     windows: windows.length ? windows : [blankWindow()],
@@ -553,11 +596,23 @@ export function intentDraft(
     ...(item?.meetNewPeople === undefined
       ? {}
       : { meetNewPeople: item.meetNewPeople }),
-    visibility: edit ? item.visibility : "private",
-    allowSuggestions: edit ? item.allowSuggestions : false,
+    visibility: edit && item ? item.visibility : "private",
+    allowSuggestions: edit && item ? item.allowSuggestions : false,
   };
 }
-function IntentCard({ item, busy, onEdit, onRepeat, onAction }) {
+function IntentCard({
+  item,
+  busy,
+  onEdit,
+  onRepeat,
+  onAction,
+}: {
+  item: IntentDto;
+  busy: boolean;
+  onEdit: (item: IntentDto) => void;
+  onRepeat: (item: IntentDto) => void;
+  onAction: (item: IntentDto, remove: boolean) => void;
+}) {
   const state =
     item.status === "expired"
       ? "Истекло"
@@ -686,19 +741,23 @@ export default function RideIntents() {
   const [scope, setScope] = useState("own"),
     [page, setPage] = useState(1),
     [revision, setRevision] = useState(0),
-    [data, setData] = useState(null),
+    [data, setData] = useState<(IntentListDto & { scope: string }) | null>(
+      null,
+    ),
     [loading, setLoading] = useState(true),
     [error, setError] = useState(""),
-    [draft, setDraft] = useState(null),
-    [preferences, setPreferences] = useState({ passport: {} }),
-    [prefDraft, setPrefDraft] = useState(null),
+    [draft, setDraft] = useState<IntentDraft | null>(null),
+    [preferences, setPreferences] = useState<PreferencesDraft>({
+      passport: {},
+    }),
+    [prefDraft, setPrefDraft] = useState<PassportDraft | null>(null),
     [prefBusy, setPrefBusy] = useState(false),
     [prefMessage, setPrefMessage] = useState(""),
     [prefError, setPrefError] = useState(""),
     [busy, setBusy] = useState(false),
     [message, setMessage] = useState("");
   const [ask, confirmation] = useConfirmation();
-  const saved = useMotionFeedback(message);
+  const saved = useMotionFeedback<SVGSVGElement>(message);
   const loaded = useRef("");
   useEffect(() => {
     if (!viewer) return;
@@ -706,7 +765,10 @@ export default function RideIntents() {
     // The previous list stays on screen (aria-busy) while a tab or page loads.
     setLoading(true);
     setError("");
-    Promise.all([api(`?scope=${scope}&page=${page}`), api("/preferences")])
+    Promise.all([
+      api<IntentListDto>(`?scope=${scope}&page=${page}`),
+      api<{ preferences: IntentPreferencesDto }>("/preferences"),
+    ])
       .then(([list, prefs]) => {
         if (!live) return;
         startTransition(() => {
@@ -723,7 +785,7 @@ export default function RideIntents() {
         });
       })
       .catch((e) => {
-        if (live) setError(e.message);
+        if (live) setError(errorMessage(e));
       })
       .finally(() => {
         if (live) setLoading(false);
@@ -755,7 +817,7 @@ export default function RideIntents() {
         }}
       />
     );
-  function open(kind = "custom", item = null, edit = false) {
+  function open(kind = "custom", item: IntentDto | null = null, edit = false) {
     setDraft(intentDraft(kind, item, edit, userTimeZone(personalSettings)));
   }
   const prefDirty =
@@ -766,24 +828,28 @@ export default function RideIntents() {
     setPrefError("");
     setPrefMessage("");
     try {
-      const result = await api("/preferences", "PUT", {
-        passport: prefDraft,
-        ...(preferences.meetNewPeople === undefined
-          ? {}
-          : { meetNewPeople: preferences.meetNewPeople }),
-      });
+      const result = await api<{ preferences: IntentPreferencesDto }>(
+        "/preferences",
+        "PUT",
+        {
+          passport: prefDraft,
+          ...(preferences.meetNewPeople === undefined
+            ? {}
+            : { meetNewPeople: preferences.meetNewPeople }),
+        },
+      );
       setPreferences(result.preferences);
       loaded.current = JSON.stringify(result.preferences.passport || {});
       setPrefMessage(
         "Постоянные предпочтения сохранены только для вас. Намерение не создано.",
       );
     } catch (e) {
-      setPrefError(e.message);
+      setPrefError(errorMessage(e));
     } finally {
       setPrefBusy(false);
     }
   }
-  async function action(item, remove) {
+  async function action(item: IntentDto, remove: boolean) {
     if (
       !(await ask(
         remove
@@ -811,7 +877,7 @@ export default function RideIntents() {
       setRevision((v) => v + 1);
       setMessage(remove ? "Намерение удалено" : "Намерение отменено");
     } catch (e) {
-      setError(e.message);
+      setError(errorMessage(e));
     } finally {
       setBusy(false);
     }
@@ -990,7 +1056,7 @@ export default function RideIntents() {
                 </div>
               </MotionList>
             )}
-            {shown?.pages > 1 && (
+            {shown && (shown.pages || 0) > 1 && (
               <div className="form-actions">
                 <button
                   className="button secondary"

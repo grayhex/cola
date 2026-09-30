@@ -1,4 +1,5 @@
 "use client";
+import type { Map as LibreMap, Marker } from "maplibre-gl";
 import { useEffect, useMemo, useRef, useState } from "react";
 import RideBasemap, { MapAttribution } from "./ride-basemap.tsx";
 import YandexRideMap from "./yandex-ride-map.tsx";
@@ -11,6 +12,11 @@ export default function RideMap({
   styleUrl,
   transitionId,
   selectedCoord,
+}: {
+  geometry: number[][][];
+  styleUrl?: string;
+  transitionId?: string;
+  selectedCoord?: number[] | null;
 }) {
   const { personalSettings: settings } = useSite();
   const config = settings.map || mapDefaults;
@@ -34,19 +40,29 @@ export default function RideMap({
     />
   );
 }
-function MapLibreRideMap({ geometry, styleUrl, transitionId, selectedCoord }) {
+function MapLibreRideMap({
+  geometry,
+  styleUrl,
+  transitionId,
+  selectedCoord,
+}: {
+  geometry: number[][][];
+  styleUrl?: string;
+  transitionId?: string;
+  selectedCoord?: number[] | null;
+}) {
   const { personalSettings: settings } = useSite();
   const config = settings.map || mapDefaults;
   // Raster providers produce an object: keep it stable through ready/visible
   // renders so that the map effect does not recreate its own canvas (#140).
   const style = useMemo(() => styleUrl || mapStyle(config), [styleUrl, config]);
-  const markerRef = useRef(null),
+  const markerRef = useRef<Marker | null>(null),
     selectedRef = useRef(selectedCoord);
   useEffect(() => {
     selectedRef.current = selectedCoord;
     updateMarker(markerRef.current, selectedCoord);
   }, [selectedCoord]);
-  const ref = useRef(null),
+  const ref = useRef<HTMLDivElement | null>(null),
     [ready, setReady] = useState(false),
     [visible, setVisible] = useState(false);
   useEffect(() => {
@@ -62,7 +78,7 @@ function MapLibreRideMap({ geometry, styleUrl, transitionId, selectedCoord }) {
     return () => observer.disconnect();
   }, []);
   useEffect(() => {
-    let map,
+    let map: LibreMap | undefined,
       disposed = false;
     setReady(false);
     if (
@@ -75,20 +91,24 @@ function MapLibreRideMap({ geometry, styleUrl, transitionId, selectedCoord }) {
       return;
     import("maplibre-gl")
       .then((lib) => {
-        if (disposed) return;
+        const container = ref.current;
+        const first = geometry.find((run) => run.length)?.[0];
+        const last = geometry.findLast((run) => run.length)?.at(-1);
+        if (disposed || !container || !first || !last) return;
         lib.setWorkerUrl("/maplibre/maplibre-gl-worker.mjs");
-        map = new lib.Map({
-          container: ref.current,
+        const instance = new lib.Map({
+          container,
           style,
-          attributionControl: true,
+          attributionControl: {},
         });
-        if (!settings.mapScrollZoom) map.scrollZoom.disable();
-        map.on("error", () => {
+        map = instance;
+        if (!settings.mapScrollZoom) instance.scrollZoom.disable();
+        instance.on("error", () => {
           if (!disposed) setReady(false);
         });
-        map.on("load", () => {
+        instance.on("load", () => {
           if (disposed) return;
-          map.addSource("ride", {
+          instance.addSource("ride", {
             type: "geojson",
             data: {
               type: "Feature",
@@ -101,7 +121,7 @@ function MapLibreRideMap({ geometry, styleUrl, transitionId, selectedCoord }) {
           });
           // A dark casing under the accent line keeps the route visible
           // over yellow and orange roads of the basemap (#131).
-          map.addLayer({
+          instance.addLayer({
             id: "ride-casing",
             type: "line",
             source: "ride",
@@ -112,13 +132,13 @@ function MapLibreRideMap({ geometry, styleUrl, transitionId, selectedCoord }) {
             },
             layout: { "line-join": "round", "line-cap": "round" },
           });
-          map.addLayer({
+          instance.addLayer({
             id: "ride",
             type: "line",
             source: "ride",
             paint: {
               "line-color":
-                getComputedStyle(ref.current)
+                getComputedStyle(container)
                   .getPropertyValue("--accent")
                   .trim() || "#e7482f",
               "line-width": 4,
@@ -130,24 +150,25 @@ function MapLibreRideMap({ geometry, styleUrl, transitionId, selectedCoord }) {
           dot.setAttribute("role", "img");
           dot.setAttribute("aria-label", "Выбранная точка маршрута");
           markerRef.current = new lib.Marker({ element: dot })
-            .setLngLat(selectedRef.current || geometry[0][0])
-            .addTo(map);
+            .setLngLat(lngLat(selectedRef.current || first))
+            .addTo(instance);
           updateMarker(markerRef.current, selectedRef.current);
           const b = bounds(geometry);
-          map.fitBounds(
-            [
-              [b[0], b[1]],
-              [b[2], b[3]],
-            ],
-            { padding: 36, maxZoom: 15, duration: 0 },
-          );
+          if (b)
+            instance.fitBounds(
+              [
+                [b[0], b[1]],
+                [b[2], b[3]],
+              ],
+              { padding: 36, maxZoom: 15, duration: 0 },
+            );
           for (const [point, color] of [
-            [geometry[0][0], "#237d50"],
-            [geometry.at(-1).at(-1), "#e7482f"],
-          ])
-            new lib.Marker({ color }).setLngLat(point).addTo(map);
-          map.addControl(new lib.NavigationControl());
-          map.once("idle", () => {
+            [first, "#237d50"],
+            [last, "#e7482f"],
+          ] as const)
+            new lib.Marker({ color }).setLngLat(lngLat(point)).addTo(instance);
+          instance.addControl(new lib.NavigationControl());
+          instance.once("idle", () => {
             if (!disposed) setReady(true);
           });
         });
@@ -187,12 +208,16 @@ function MapLibreRideMap({ geometry, styleUrl, transitionId, selectedCoord }) {
   );
 }
 
-function updateMarker(marker, coord) {
+const lngLat = (coord: number[]): [number, number] => [coord[0], coord[1]];
+function updateMarker(
+  marker: Marker | null,
+  coord: number[] | null | undefined,
+) {
   if (!marker) return;
   const element = marker.getElement();
   element.hidden = !coord;
   if (coord) {
-    marker.setLngLat(coord);
+    marker.setLngLat(lngLat(coord));
     element.dataset.coordinate = coord.join(",");
   }
 }

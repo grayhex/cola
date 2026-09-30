@@ -1,4 +1,9 @@
 "use client";
+import { errorMessage } from "../../lib/errors.ts";
+import type { RideMetrics as Metrics } from "../../lib/ride-metrics.ts";
+import type { AccountBikeDto, ApiError } from "../../lib/contracts.ts";
+import type { RideDto } from "./content-types.ts";
+import type { RideConfig, RidePreview, RideSaveHandler } from "./ride-types.ts";
 import { useEffect, useMemo, useState } from "react";
 import EmailPolicyAction from "./email-policy-action.tsx";
 import {
@@ -54,7 +59,11 @@ export function FitHelp() {
     </details>
   );
 }
-function initialForm(ride, currentBikes, config) {
+function initialForm(
+  ride: RideDto | null,
+  currentBikes: AccountBikeDto[],
+  config: RideConfig,
+) {
   if (!ride)
     return {
       ...blank,
@@ -70,19 +79,7 @@ function initialForm(ride, currentBikes, config) {
     privacyRadiusM: ride.privacyRadiusM,
   };
 }
-/**
- * @param {{
- *   mode: "add",
- *   ride?: any,
- *   bikes: any[],
- *   config: any,
- *   heading?: boolean,
- *   onSaved: (result: "saved" | "removed") => void,
- *   onCancel: () => void,
- *   onChanged?: () => void,
- *   onDirty?: (dirty: boolean) => void,
- * }} props
- */
+
 export default function RideForm({
   mode,
   ride = null,
@@ -93,12 +90,22 @@ export default function RideForm({
   onCancel,
   onChanged,
   onDirty,
+}: {
+  mode: "add";
+  ride?: RideDto | null;
+  bikes: AccountBikeDto[];
+  config: RideConfig;
+  heading?: boolean;
+  onSaved: RideSaveHandler;
+  onCancel: () => void;
+  onChanged?: () => void;
+  onDirty?: (dirty: boolean) => void;
 }) {
   const currentBikes = useMemo(() => selectableRideBikes(bikes), [bikes]);
   const [editing, setEditing] = useState(ride),
     [form, setForm] = useState(() => initialForm(ride, currentBikes, config)),
     [initial] = useState(form),
-    [preview, setPreview] = useState(null),
+    [preview, setPreview] = useState<RidePreview | null>(null),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
@@ -111,13 +118,16 @@ export default function RideForm({
   // Garmin CSV and FIT/TCX sensors bring extra metrics; the owner picks which
   // of them the ride shows. Heart rate and power stay hidden until chosen.
   const metricSource = preview || editing,
+    metrics: Omit<Metrics, "distanceM"> & { distanceM?: number | null } =
+      metricSource?.metrics || {},
     shownMetrics = visibleMetrics || defaultRideFields,
-    pickable = garminFields.filter((f) => metricSource?.metrics[f.key] != null);
+    pickable = garminFields.filter((f) => metrics[f.key] != null);
   const offersPicker =
     editing?.sourceKind === "garmin" ||
     pickable.some((f) => !trackMetrics.includes(f.key));
-  const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
-  async function upload(file, attach = false) {
+  const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) =>
+    setForm((f) => ({ ...f, [k]: v }));
+  async function upload(file: File | undefined, attach = false) {
     if (!file) return;
     setBusy(true);
     setError("");
@@ -126,7 +136,7 @@ export default function RideForm({
         throw Error("Для новой покатушки выберите текущий велосипед.");
       if (file.size > config.maxGpxBytes) throw Error("Файл слишком большой");
       const r = await fetch(
-        "/api/rides/" + (attach ? editing.id + "/track" : "preview"),
+        "/api/rides/" + (attach ? editing?.id + "/track" : "preview"),
         {
           method: "POST",
           headers: {
@@ -135,10 +145,12 @@ export default function RideForm({
           body: file,
         },
       );
-      const d = await r.json();
+      const d: RidePreview & Partial<ApiError> = await r.json();
       if (!r.ok) throw Error(d.error);
-      if (attach) {
-        const detail = await socialApi("rides/owner/" + editing.shareId);
+      if (attach && editing) {
+        const detail = await socialApi<{ ride: RideDto }>(
+          "rides/owner/" + editing.shareId,
+        );
         setEditing(detail.ride);
         setNotice("Трек проверен и добавлен.");
         onChanged?.();
@@ -147,7 +159,7 @@ export default function RideForm({
         if (!form.title) set("title", d.title);
       }
     } catch (e) {
-      setError(e.message);
+      setError(errorMessage(e));
     } finally {
       setBusy(false);
     }
@@ -184,7 +196,7 @@ export default function RideForm({
           );
           onSaved("saved");
         } catch (e) {
-          setError(e.message);
+          setError(errorMessage(e));
         } finally {
           setBusy(false);
         }
@@ -214,7 +226,7 @@ export default function RideForm({
             type="file"
             accept={trackFiles}
             disabled={busy || !currentBikes.length}
-            onChange={(e) => upload(e.target.files[0])}
+            onChange={(e) => upload(e.target.files?.[0])}
           />
           <small>
             Выберите файл или перетащите его сюда · до{" "}
@@ -230,7 +242,7 @@ export default function RideForm({
             type="file"
             accept={trackFiles}
             disabled={busy}
-            onChange={(e) => upload(e.target.files[0], true)}
+            onChange={(e) => upload(e.target.files?.[0], true)}
           />
           <small>
             {editing.sourceKind === "garmin"
@@ -240,14 +252,14 @@ export default function RideForm({
         </label>
       )}
       {busy && <p role="status">Обрабатываем…</p>}
-      {(preview || editing) && (
+      {metricSource && (
         <>
-          {(preview || editing)?.geometry?.length > 0 && (
-            <RideRoutePreview geometry={(preview || editing).geometry} />
+          {!!metricSource?.geometry?.length && (
+            <RideRoutePreview geometry={metricSource.geometry} />
           )}
-          {(preview || editing) && (
+          {metricSource && (
             <RideMetrics
-              metrics={(preview || editing).metrics}
+              metrics={metricSource.metrics}
               visibleMetrics={visibleMetrics}
             />
           )}
@@ -386,7 +398,7 @@ export default function RideForm({
                   await socialApi("rides/" + editing.id, "DELETE");
                   onSaved("removed");
                 } catch (e) {
-                  setError(e.message);
+                  setError(errorMessage(e));
                 } finally {
                   setBusy(false);
                 }

@@ -1,23 +1,38 @@
 "use client";
+import { errorMessage } from "../../lib/errors.ts";
+import type { AccountBikeDto, ApiError } from "../../lib/contracts.ts";
+import type { ActivityDto, ActivityOAuthDto } from "./ride-types.ts";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import SiteIcon from "./site-icon.tsx";
 import styles from "./activity-sync.module.css";
 
 const endpoint = "/api/activity-sync/rwgps";
-async function api(path = "", method = "GET", body) {
+async function api<T = unknown>(
+  path = "",
+  method = "GET",
+  body?: unknown,
+): Promise<T> {
   const response = await fetch(endpoint + path, {
     method,
     headers: { "Content-Type": "application/json" },
     body: body ? JSON.stringify(body) : undefined,
   });
-  const value = await response.json();
+  const value: T & Partial<ApiError> = await response.json();
   if (!response.ok)
     throw new Error(value.error || "Не удалось выполнить действие");
   return value;
 }
-export default function ActivitySync({ bikes, disabled = false, onImported }) {
-  const [data, setData] = useState(null),
+export default function ActivitySync({
+  bikes,
+  disabled = false,
+  onImported,
+}: {
+  bikes: AccountBikeDto[];
+  disabled?: boolean;
+  onImported?: () => void;
+}) {
+  const [data, setData] = useState<ActivityDto | null>(null),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
     [bike, setBike] = useState(""),
@@ -26,12 +41,12 @@ export default function ActivitySync({ bikes, disabled = false, onImported }) {
   const callback = useSearchParams().get("activity_sync");
   useEffect(() => {
     let active = true,
-      timer,
-      lastSync,
+      timer: ReturnType<typeof setTimeout> | undefined,
+      lastSync: string | null | undefined,
       firstLoad = true;
     async function load() {
       try {
-        const result = await api();
+        const result = await api<ActivityDto>();
         if (!active) return;
         setData(result);
         setError("");
@@ -46,7 +61,7 @@ export default function ActivitySync({ bikes, disabled = false, onImported }) {
         firstLoad = false;
         if (result.connected || result.revoking) timer = setTimeout(load, 5000);
       } catch (e) {
-        if (active) setError(e.message);
+        if (active) setError(errorMessage(e));
       }
     }
     load();
@@ -55,13 +70,15 @@ export default function ActivitySync({ bikes, disabled = false, onImported }) {
       clearTimeout(timer);
     };
   }, [version, onImported]);
-  async function perform(action) {
+  async function perform(action: "connect" | "disconnect" | "sync") {
     setBusy(true);
     setError("");
     setNotice("");
     try {
       if (action === "connect") {
-        const result = await api("/connect", "POST", { bikeId: bike || null });
+        const result = await api<ActivityOAuthDto>("/connect", "POST", {
+          bikeId: bike || null,
+        });
         window.location.assign(result.url);
         return;
       }
@@ -76,7 +93,7 @@ export default function ActivitySync({ bikes, disabled = false, onImported }) {
       setVersion((v) => v + 1);
       onImported?.();
     } catch (e) {
-      setError(e.message);
+      setError(errorMessage(e));
     } finally {
       setBusy(false);
     }
@@ -142,7 +159,7 @@ export default function ActivitySync({ bikes, disabled = false, onImported }) {
             {data.lastSyncAt
               ? new Date(data.lastSyncAt).toLocaleString("ru-RU")
               : "ещё не завершена"}
-            {data.pending > 0 ? ` · В очереди: ${data.pending}` : ""}
+            {(data.pending || 0) > 0 ? ` · В очереди: ${data.pending}` : ""}
           </p>
           <p className={styles.hint}>
             Импортировано: {data.counts?.synced || 0}
@@ -152,11 +169,11 @@ export default function ActivitySync({ bikes, disabled = false, onImported }) {
             {data.counts?.error ? ` · С ошибкой: ${data.counts.error}` : ""}
           </p>
           {data.error && <p role="status">{data.error}</p>}
-          {data.items?.length > 0 && (
+          {(data.items?.length || 0) > 0 && (
             <details>
               <summary>Поездки, требующие внимания</summary>
               <ul>
-                {data.items.map((item) => (
+                {data.items?.map((item) => (
                   <li key={item.id}>
                     {item.name || "Поездка"} —{" "}
                     {item.status === "waiting_bike"

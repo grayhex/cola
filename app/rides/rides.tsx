@@ -1,4 +1,5 @@
 "use client";
+import type { SetStateAction } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -29,7 +30,11 @@ const OrganizeWorkspace = dynamic(
 
 // Only shared public filters reach the URL (#233): shareable, restorable on
 // back/forward, never a personal schedule, identity or coordinates.
-function writeUrl(status, filters, bikeId) {
+function writeUrl(
+  status: string | null,
+  filters: Record<string, string>,
+  bikeId: string,
+) {
   // Rebuilt from allowed keys only: nothing else survives from a pasted URL.
   const url = new URL(location.pathname, location.origin);
   if (status) url.searchParams.set("status", status);
@@ -39,17 +44,29 @@ function writeUrl(status, filters, bikeId) {
   if (bikeId) url.searchParams.set("bikeId", bikeId);
   window.history.replaceState(null, "", url);
 }
-function FilterFields({ value, onChange, idPrefix }) {
+function FilterFields({
+  value,
+  onChange,
+  idPrefix,
+}: {
+  value: Record<string, string>;
+  onChange: (update: SetStateAction<Record<string, string>>) => void;
+  idPrefix: string;
+}) {
   // An updater, not a copy of `value`: two quick changes before React
   // re-renders (a pending list transition) must not drop the first one.
-  const set = (key, v) =>
+  const set = (key: string, v: string) =>
     onChange((prev) => {
       const next = { ...prev };
       if (!v) delete next[key];
       else next[key] = v;
       return next;
     });
-  const select = (key, label, options) => (
+  const select = (
+    key: string,
+    label: string,
+    options: Readonly<Record<string, string | readonly [string, object]>>,
+  ) => (
     <label className="field" key={key}>
       <span>{label}</span>
       <select
@@ -110,7 +127,7 @@ function FilterFields({ value, onChange, idPrefix }) {
   );
 }
 // The organizer's shared choices only — never a schedule or a person.
-function writeOrganizeUrl(filters) {
+function writeOrganizeUrl(filters: Record<string, string>) {
   const url = new URL(location.pathname, location.origin);
   url.searchParams.set("mode", "organize");
   for (const [key, value] of Object.entries(filters))
@@ -119,22 +136,22 @@ function writeOrganizeUrl(filters) {
 }
 export default function Rides() {
   const { viewer: user } = useSite();
-  const [bikeId, setBikeId] = useState(null),
-    [organize, setOrganize] = useState(null),
-    [status, setStatus] = useState(null),
-    [filters, setFilters] = useState({}),
+  const [bikeId, setBikeId] = useState<string | null>(null),
+    [organize, setOrganize] = useState<Record<string, string> | null>(null),
+    [status, setStatus] = useState<string | null>(null),
+    [filters, setFilters] = useState<Record<string, string>>({}),
     [area, setArea] = useState(""),
     [sheet, setSheet] = useState(false),
-    [draft, setDraft] = useState({});
+    [draft, setDraft] = useState<Record<string, string>>({});
   // The newest filter set, ahead of the next render.
-  const latest = useRef({});
+  const latest = useRef<Record<string, string>>({});
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const initial = readFilters(params);
     if (params.get("mode") === "organize") setOrganize(readOrganize(params));
     setBikeId(params.get("bikeId") || "");
     setStatus(
-      ["planned", "completed"].includes(params.get("status"))
+      ["planned", "completed"].includes(params.get("status") || "")
         ? params.get("status")
         : null,
     );
@@ -146,7 +163,11 @@ export default function Rides() {
   // set is derived, so no timer can leave it behind the visible controls.
   // The URL is written in the same event: a late remount after back/forward
   // re-reads it and cannot drop a choice that has not reached it yet.
-  const url = (nextStatus, nextFilters, typed) => {
+  const url = (
+    nextStatus: string | null,
+    nextFilters: Record<string, string>,
+    typed: string,
+  ) => {
     if (bikeId === null) return;
     const { area: _typed, ...rest } = nextFilters;
     void _typed;
@@ -173,18 +194,24 @@ export default function Rides() {
     void typed;
     return area ? { ...rest, area } : rest;
   }, [filters, area]);
-  function change(update, typed = area) {
+  function change(
+    update: SetStateAction<Record<string, string>>,
+    typed = area,
+  ) {
     const next = typeof update === "function" ? update(latest.current) : update;
     latest.current = next;
     setFilters(next);
     url(status, next, next.area === undefined ? "" : typed);
   }
-  function chooseStatus(value) {
+  function chooseStatus(value: string | null) {
     setOrganize(null);
     setStatus(value);
     url(value, filters, area);
   }
-  const organizeChanged = useCallback((next) => writeOrganizeUrl(next), []);
+  const organizeChanged = useCallback(
+    (next: Record<string, string>) => writeOrganizeUrl(next),
+    [],
+  );
   const chips = filterLabels(applied);
   const upcoming = status === "planned";
   return (

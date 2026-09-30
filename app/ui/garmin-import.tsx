@@ -1,4 +1,8 @@
 "use client";
+import { errorMessage } from "../../lib/errors.ts";
+import type { Dispatch, SetStateAction } from "react";
+import type { AccountBikeDto } from "../../lib/contracts.ts";
+import type { GarminPreviewDto, GarminImportDto } from "./ride-types.ts";
 import { useState } from "react";
 import { socialApi } from "./social-primitives.tsx";
 import {
@@ -7,10 +11,18 @@ import {
   formatRideMetric,
 } from "../../lib/garmin-fields.ts";
 import { RideMetrics } from "./ride-card.tsx";
-export default function GarminImport({ bikes, onDone, onCancel }) {
+export default function GarminImport({
+  bikes,
+  onDone,
+  onCancel,
+}: {
+  bikes: AccountBikeDto[];
+  onDone: (result: GarminImportDto) => void | Promise<void>;
+  onCancel: () => void;
+}) {
   const [csv, setCsv] = useState(""),
-    [data, setData] = useState(null),
-    [selected, setSelected] = useState([]),
+    [data, setData] = useState<GarminPreviewDto | null>(null),
+    [selected, setSelected] = useState<number[]>([]),
     [fields, setFields] = useState(defaultRideFields),
     [bikeId, setBikeId] = useState(bikes[0]?.id || ""),
     [isPublic, setPublic] = useState(false),
@@ -23,23 +35,31 @@ export default function GarminImport({ bikes, onDone, onCancel }) {
     setError("");
     setData(null);
     try {
-      const result = await socialApi("rides/csv-preview", "POST", {
-        csv: text,
-        utcOffsetMinutes,
-        units,
-      });
+      const result = await socialApi<GarminPreviewDto>(
+        "rides/csv-preview",
+        "POST",
+        {
+          csv: text,
+          utcOffsetMinutes,
+          units,
+        },
+      );
       setData(result);
       setSelected(result.rides.map((r) => r.index));
       setFields(
         defaultRideFields.filter((k) => result.availableFields.includes(k)),
       );
     } catch (e) {
-      setError(e.message);
+      setError(errorMessage(e));
     } finally {
       setBusy(false);
     }
   }
-  const toggle = (value, list, setter) =>
+  const toggle = <T,>(
+    value: T,
+    list: T[],
+    setter: Dispatch<SetStateAction<T[]>>,
+  ) =>
     setter(
       list.includes(value) ? list.filter((k) => k !== value) : [...list, value],
     );
@@ -93,7 +113,7 @@ export default function GarminImport({ bikes, onDone, onCancel }) {
           accept=".csv,text/csv"
           disabled={busy}
           onChange={async (e) => {
-            const f = e.target.files[0];
+            const f = e.target.files?.[0];
             if (!f) return;
             if (f.size > 2 * 1024 * 1024) {
               setError("CSV: максимум 2 МБ");
@@ -222,18 +242,22 @@ export default function GarminImport({ bikes, onDone, onCancel }) {
               setBusy(true);
               setError("");
               try {
-                const result = await socialApi("rides/import", "POST", {
-                  csv,
-                  utcOffsetMinutes,
-                  units,
-                  bikeId,
-                  isPublic,
-                  selected,
-                  visibleMetrics: fields,
-                });
+                const result = await socialApi<GarminImportDto>(
+                  "rides/import",
+                  "POST",
+                  {
+                    csv,
+                    utcOffsetMinutes,
+                    units,
+                    bikeId,
+                    isPublic,
+                    selected,
+                    visibleMetrics: fields,
+                  },
+                );
                 await onDone(result);
               } catch (e) {
-                setError(e.message);
+                setError(errorMessage(e));
               } finally {
                 setBusy(false);
               }

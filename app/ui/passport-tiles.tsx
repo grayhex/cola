@@ -1,6 +1,7 @@
 "use client";
 import type { MouseEventHandler } from "react";
-import type { Passport, Range } from "../../lib/ride-match-core.ts";
+import type { Range } from "../../lib/ride-match-core.ts";
+import type { PassportDraft } from "./ride-types.ts";
 type ChoiceKey = "purpose" | "pace" | "surface";
 type RangeKey = "distanceKm" | "durationMinutes" | "groupSize";
 type TileBase = {
@@ -88,7 +89,7 @@ export const passportTiles: PassportTile[] = [
     step: 1,
   },
 ];
-export function tileValue(tile: PassportTile, passport: Passport = {}) {
+export function tileValue(tile: PassportTile, passport: PassportDraft = {}) {
   const v = passport[tile.key];
   if (v === undefined) return null;
   if (tile.unit === undefined)
@@ -108,7 +109,7 @@ function Tile({
   onOpen,
 }: {
   tile: PassportTile;
-  passport: Passport;
+  passport: PassportDraft;
   required: boolean;
   disabled: boolean;
   onOpen: MouseEventHandler<HTMLButtonElement>;
@@ -177,7 +178,7 @@ function RangeEditor({
   onPick,
 }: {
   tile: RangeTile;
-  value?: Range;
+  value?: Partial<Range>;
   onPick: (value: Range | undefined) => void;
 }) {
   const [draft, setDraft] = useState({
@@ -250,8 +251,7 @@ function RangeEditor({
     </div>
   );
 }
-/** @param {{value: object, onChange: (passport: object) => void,
- *   required?: string[], disabled?: boolean, label?: string}} props */
+/**/
 export default function PassportTiles({
   value = {},
   onChange,
@@ -259,8 +259,8 @@ export default function PassportTiles({
   disabled = false,
   label = "Параметры поездки",
 }: {
-  value?: Passport;
-  onChange: (passport: Passport) => void;
+  value?: PassportDraft;
+  onChange: (passport: PassportDraft) => void;
   required?: string[];
   disabled?: boolean;
   label?: string;

@@ -1,4 +1,33 @@
 "use client";
+import { errorMessage } from "../../lib/errors.ts";
+import type { FormEvent } from "react";
+import type { AccountBikeDto, ApiError } from "../../lib/contracts.ts";
+import type { RideDto } from "./content-types.ts";
+import type {
+  RideConfig,
+  PlanDraft,
+  PassportDraft,
+  RidePreview,
+  RideSaved,
+  RideSaveHandler,
+} from "./ride-types.ts";
+type PlanFormDraft = {
+  bikeId: string;
+  title: string;
+  description: string;
+  isPublic: boolean;
+  date: string;
+  time: string;
+  endTime: string;
+  startFold?: string;
+  endFold?: string;
+  meetingPoint: string;
+  meetingVisibility: string;
+  passport: PassportDraft;
+  invitations: string;
+  recurrence: string;
+  features: string;
+};
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Globe, LockKeyhole } from "lucide-react";
 import EmailPolicyAction from "./email-policy-action.tsx";
@@ -31,12 +60,20 @@ import {
 // the server with the default radius.
 const trackFiles =
   ".gpx,.fit,.tcx,application/gpx+xml,application/vnd.garmin.tcx+xml";
-const splitLocal = (instant, zone) => {
+const splitLocal = (
+  instant: string | null | undefined,
+  zone: string,
+): [string, string] => {
   if (!instant) return ["", ""];
   const [date, time] = localDateTime(instant, zone).split("T");
   return [date, time];
 };
-function initialPlan(ride, currentBikes, zone, draft) {
+function initialPlan(
+  ride: RideDto | null,
+  currentBikes: AccountBikeDto[],
+  zone: string,
+  draft: PlanDraft | null,
+): PlanFormDraft {
   if (!ride) {
     // A proposal from a group of interest (#234) brings a start and the
     // group's format; the organizer still fixes everything before saving.
@@ -88,11 +125,19 @@ const aspectLabels = {
 /** While an existing plan is edited (#235): will saving ask the people who
  * answered to confirm again? The same rule as the server's, so a typo fix in
  * the meeting place is shown as harmless before it is saved. */
-function RevisionHint({ ride, initial, form }) {
+function RevisionHint({
+  ride,
+  initial,
+  form,
+}: {
+  ride: RideDto;
+  initial: PlanFormDraft;
+  form: PlanFormDraft;
+}) {
   const answered = Object.entries(ride.rsvpCounts || {}).some(
     ([state, n]) => state !== "declined" && n > 0,
   );
-  const changes = [];
+  const changes: (keyof typeof aspectLabels)[] = [];
   if (form.date !== initial.date || form.time !== initial.time)
     changes.push("start");
   if (
@@ -116,7 +161,19 @@ function RevisionHint({ ride, initial, form }) {
   );
 }
 /** Repeated local time on a fall-back day: which occurrence is meant. */
-function FoldChoice({ local, zone, label, value, onChange }) {
+function FoldChoice({
+  local,
+  zone,
+  label,
+  value,
+  onChange,
+}: {
+  local: string;
+  zone: string;
+  label: string;
+  value?: string;
+  onChange: (value: string | undefined) => void;
+}) {
   const choices = foldChoices(local, zone);
   if (choices.length < 2) return null;
   return (
@@ -137,12 +194,7 @@ function FoldChoice({ local, zone, label, value, onChange }) {
     </label>
   );
 }
-/**
- * @param {{ ride?: any, draft?: {startAt?: string, passport?: object, fromInterest?: boolean} | null,
- *   bikes: any[], config: any,
- *   onSaved: (result: "planned" | "saved" | "removed", created?: {id: string, shareId: string, occurrenceAt: string}) => void,
- *   onCancel: () => void, onDirty?: (dirty: boolean) => void }} props
- */
+
 export default function PlanForm({
   ride = null,
   draft = null,
@@ -151,6 +203,14 @@ export default function PlanForm({
   onSaved,
   onCancel,
   onDirty,
+}: {
+  ride?: RideDto | null;
+  draft?: PlanDraft | null;
+  bikes: AccountBikeDto[];
+  config: RideConfig;
+  onSaved: RideSaveHandler;
+  onCancel: () => void;
+  onDirty?: (dirty: boolean) => void;
 }) {
   const { personalSettings } = useSite();
   // A series keeps the zone it was created in; new plans use the profile's.
@@ -164,18 +224,21 @@ export default function PlanForm({
       initialPlan(ride, currentBikes, zone, draft),
     ),
     [initial] = useState(form),
-    [preview, setPreview] = useState(null),
+    [preview, setPreview] = useState<RidePreview | null>(null),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [whenError, setWhenError] = useState(""),
     [bikeError, setBikeError] = useState(""),
     // Rare fields stay folded (#264); a missing bike opens them on submit.
     [advanced, setAdvanced] = useState(false);
-  const bikeSelect = useRef(null);
+  const bikeSelect = useRef<HTMLSelectElement | null>(null);
   const reveal = useMotionFeedback(advanced, { reveal: true });
   const dirty = !!preview || JSON.stringify(form) !== JSON.stringify(initial);
   useEffect(() => onDirty?.(dirty), [dirty, onDirty]);
-  const set = (key, value) => setForm((f) => ({ ...f, [key]: value }));
+  const set = <K extends keyof PlanFormDraft>(
+    key: K,
+    value: PlanFormDraft[K],
+  ) => setForm((f) => ({ ...f, [key]: value }));
   const local = planLocalTimes(form);
   const selectedBike = rideBikes.find((b) => b.id === form.bikeId);
   const cannotPublish =
@@ -187,7 +250,7 @@ export default function PlanForm({
         form.isPublic,
       )
     : "";
-  async function upload(file) {
+  async function upload(file: File | undefined) {
     if (!file) return;
     setBusy(true);
     setError("");
@@ -198,22 +261,22 @@ export default function PlanForm({
         headers: { "Content-Type": file.type || "application/octet-stream" },
         body: file,
       });
-      const d = await r.json();
+      const d: RidePreview & Partial<ApiError> = await r.json();
       if (!r.ok) throw Error(d.error);
       setPreview(d);
       if (!form.title) set("title", d.title);
     } catch (e) {
-      setError(e.message);
+      setError(errorMessage(e));
     } finally {
       setBusy(false);
     }
   }
-  function requireBike(message) {
+  function requireBike(message: string) {
     setAdvanced(true);
     setBikeError(message);
     requestAnimationFrame(() => bikeSelect.current?.focus());
   }
-  async function submit(e) {
+  async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (busy) return;
     setError("");
@@ -226,7 +289,7 @@ export default function PlanForm({
     try {
       times = planInstants(form, zone);
     } catch (err) {
-      setWhenError(err.message);
+      setWhenError(errorMessage(err));
       return;
     }
     if (!ride && Date.parse(times.scheduledAt) <= Date.now()) {
@@ -263,7 +326,7 @@ export default function PlanForm({
         ...(!ride && preview ? { previewId: preview.previewId } : {}),
         ...(!ride && draft?.fromInterest ? { fromInterest: true } : {}),
       };
-      const saved = await socialApi(
+      const saved = await socialApi<RideSaved>(
         ride ? "rides/" + ride.id : "rides/plan",
         ride ? "PATCH" : "POST",
         input,
@@ -276,12 +339,12 @@ export default function PlanForm({
           occurrenceAt: times.scheduledAt,
         });
     } catch (err) {
-      setError(err.message);
+      setError(errorMessage(err));
     } finally {
       setBusy(false);
     }
   }
-  async function remove(kind) {
+  async function remove(kind: "cancel" | "delete") {
     if (
       !confirm(
         kind === "cancel"
@@ -290,6 +353,7 @@ export default function PlanForm({
       )
     )
       return;
+    if (!ride) return;
     setBusy(true);
     try {
       await (kind === "cancel"
@@ -297,7 +361,7 @@ export default function PlanForm({
         : socialApi("rides/" + ride.id, "DELETE"));
       onSaved("removed");
     } catch (err) {
-      setError(err.message);
+      setError(errorMessage(err));
     } finally {
       setBusy(false);
     }
@@ -447,20 +511,22 @@ export default function PlanForm({
             role="radiogroup"
             aria-label="Кто видит покатушку"
           >
-            {[
+            {(
               [
-                true,
-                "Публичная покатушка",
-                "Видна в ленте, откликнуться может любой.",
-                Globe,
-              ],
-              [
-                false,
-                "По приглашению",
-                "Видят только вы и приглашённые.",
-                LockKeyhole,
-              ],
-            ].map(([value, label, hint, Icon]) => (
+                [
+                  true,
+                  "Публичная покатушка",
+                  "Видна в ленте, откликнуться может любой.",
+                  Globe,
+                ],
+                [
+                  false,
+                  "По приглашению",
+                  "Видят только вы и приглашённые.",
+                  LockKeyhole,
+                ],
+              ] as const
+            ).map(([value, label, hint, Icon]) => (
               <label className="option-tile" key={label}>
                 <input
                   type="radio"
@@ -572,7 +638,7 @@ export default function PlanForm({
                     type="file"
                     accept={trackFiles}
                     disabled={busy}
-                    onChange={(e) => upload(e.target.files[0])}
+                    onChange={(e) => upload(e.target.files?.[0])}
                   />
                   <small>
                     До {Math.round((config?.maxGpxBytes || 10485760) / 1048576)}{" "}
@@ -580,12 +646,12 @@ export default function PlanForm({
                   </small>
                 </label>
               )}
-              {(preview || ride)?.geometry?.length > 0 && (
-                <RideRoutePreview geometry={(preview || ride).geometry} />
+              {!!(preview || ride)?.geometry?.length && (
+                <RideRoutePreview geometry={(preview || ride)?.geometry} />
               )}
               {(preview || ride?.hasTrack) && (
                 <RideMetrics
-                  metrics={(preview || ride).metrics}
+                  metrics={(preview || ride)?.metrics || {}}
                   visibleMetrics={["distanceM", "elevationGainM"]}
                 />
               )}

@@ -1,7 +1,9 @@
+import type { PassportDraft, PassportChoiceKey } from "./ride-types.ts";
+import type { Range } from "../../lib/ride-match-core.ts";
 import { ridePlanOptions } from "../../lib/ride-plan-options.ts";
 import { AreaPreview } from "./ride-area-map.tsx";
 import styles from "./ride-passport.module.css";
-const rangeText = (v, unit) =>
+const rangeText = (v: Partial<Range> | undefined, unit: string) =>
   v?.min !== undefined && v?.max !== undefined
     ? `${v.min === v.max ? v.min : `${v.min}–${v.max}`} ${unit}`
     : null;
@@ -12,6 +14,11 @@ export default function RidePassport({
   compact = false,
   map = false,
   region = true,
+}: {
+  passport?: PassportDraft;
+  compact?: boolean;
+  map?: boolean;
+  region?: boolean;
 }) {
   const labels = {
     purpose: "Цель",
@@ -20,9 +27,13 @@ export default function RidePassport({
     difficulty: "Сложность",
     regroupPolicy: "Ожидание",
   };
-  const rows = Object.entries(labels).map(([key, label]) => [
+  const rows: [string, string | null | undefined][] = Object.entries(
+    labels,
+  ).map(([key, label]) => [
     label,
-    ridePlanOptions[key][passport[key]],
+    Object.entries(ridePlanOptions[key as PassportChoiceKey]).find(
+      ([option]) => option === passport[key as PassportChoiceKey],
+    )?.[1],
   ]);
   rows.push(
     ["Дистанция", rangeText(passport.distanceKm, "км")],
@@ -51,7 +62,10 @@ export default function RidePassport({
         <p className={styles.area}>
           {passport.area.label}
           {passport.area.center && (
-            <small> · область около {passport.area.radiusM / 1000} км</small>
+            <small>
+              {" "}
+              · область около {Number(passport.area.radiusM) / 1000} км
+            </small>
           )}
         </p>
       )}

@@ -1,10 +1,13 @@
 "use client";
+import { errorMessage } from "../../lib/errors.ts";
+import type { RideItem, RideResponse } from "./ride-types.ts";
 import { useEffect, useRef, useState } from "react";
 import { socialApi } from "./social-primitives.tsx";
 import { useSite } from "./site-provider.tsx";
 import { useMotionFeedback } from "./motion.tsx";
 import SiteIcon from "./site-icon.tsx";
-const choices = [
+type Rsvp = "accepted" | "maybe" | "declined";
+const choices: [Rsvp, "yes" | "maybe" | "no", string][] = [
   ["accepted", "yes", "Иду"],
   ["maybe", "maybe", "Может быть"],
   ["declined", "no", "Не иду"],
@@ -14,8 +17,8 @@ export const responseLabels = {
   maybe: "Может быть",
   declined: "Не иду",
 };
-export function RecurringRideLabel({ ride }) {
-  if (ride.recurrence !== "weekly") return null;
+export function RecurringRideLabel({ ride }: { ride: RideItem }) {
+  if (ride.recurrence !== "weekly" || !ride.scheduledAt) return null;
   const day = new Date(ride.scheduledAt).toLocaleDateString("ru-RU", {
     weekday: "long",
     timeZone: ride.recurrenceTimezone,
@@ -33,14 +36,18 @@ export function RecurringRideLabel({ ride }) {
   );
 }
 /** Counts after a change of one person's answer, before the server confirms. */
-function shifted(counts, from, to) {
+function shifted(
+  counts: Record<string, number>,
+  from: string | null | undefined,
+  to: Rsvp,
+) {
   const next = { ...counts };
   if (from && next[from]) next[from] -= 1;
   next[to] = (next[to] || 0) + 1;
   return next;
 }
 /** The buttons at once, before the server answers. */
-const chosen = (v, response) => ({
+const chosen = (v: RideItem, response: Rsvp): RideItem => ({
   ...v,
   rsvp: response,
   participation: response,
@@ -56,14 +63,22 @@ const chosen = (v, response) => ({
  * pressed button. Answers go one at a time and the latest press wins: a
  * press during a request is sent right after it. A failed request rolls the
  * buttons back to the last saved answer and says why. */
-export default function RideRsvp({ ride, onResponse, compact = false }) {
+export default function RideRsvp({
+  ride,
+  onResponse,
+  compact = false,
+}: {
+  ride: RideItem;
+  onResponse?: (response: RideResponse) => void | Promise<void>;
+  compact?: boolean;
+}) {
   const { viewer } = useSite();
   const [state, setState] = useState(ride),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [status, setStatus] = useState("");
   const running = useRef(false),
-    queued = useRef(null);
+    queued = useRef<Rsvp | null>(null);
   // A refresh read before the last press must not flip the buttons back.
   useEffect(() => {
     if (!running.current) setState(ride);
@@ -78,7 +93,7 @@ export default function RideRsvp({ ride, onResponse, compact = false }) {
     ride.isOwner
   )
     return null;
-  async function answer(response) {
+  async function answer(response: Rsvp) {
     setError("");
     setStatus("");
     if (running.current) {
@@ -91,19 +106,23 @@ export default function RideRsvp({ ride, onResponse, compact = false }) {
     setBusy(true);
     setState((v) => chosen(v, response));
     let saved = state,
-      last = null,
+      last: RideResponse | null = null,
       failed = false,
-      choice = response;
+      choice: Rsvp | null = response;
     while (choice) {
       try {
-        last = await socialApi("rides/" + ride.id + "/rsvp", "PATCH", {
-          response: choice,
-          occurrenceAt: new Date(ride.scheduledAt).toISOString(),
-        });
+        last = await socialApi<RideResponse>(
+          "rides/" + ride.id + "/rsvp",
+          "PATCH",
+          {
+            response: choice,
+            occurrenceAt: new Date(ride.scheduledAt || "").toISOString(),
+          },
+        );
         saved = { ...saved, ...last };
       } catch (e) {
         failed = true;
-        setError(e.message);
+        setError(errorMessage(e));
         break;
       }
       choice = queued.current !== last.rsvp ? queued.current : null;

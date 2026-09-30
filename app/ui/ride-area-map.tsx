@@ -1,4 +1,6 @@
 "use client";
+import type { MouseEvent, KeyboardEvent } from "react";
+import type { Area } from "../../lib/ride-match-core.ts";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Minus, Plus, MapPin, X } from "lucide-react";
 import { MapAttribution } from "./ride-basemap.tsx";
@@ -25,7 +27,15 @@ function useRasterConfig() {
   const config = settings.map || mapDefaults;
   return config.enabled && isRasterProvider(config) ? config : null;
 }
-function Tiles({ viewport, template, onFail }) {
+function Tiles({
+  viewport,
+  template,
+  onFail,
+}: {
+  viewport: ReturnType<typeof pointViewport>;
+  template: string;
+  onFail: () => void;
+}) {
   return viewport.tiles.map((t) => (
     <image
       key={t.z + ":" + t.x + ":" + t.y}
@@ -34,31 +44,39 @@ function Tiles({ viewport, template, onFail }) {
       width="256"
       height="256"
       href={template
-        .replaceAll("{z}", t.z)
-        .replaceAll("{x}", t.x)
-        .replaceAll("{y}", t.y)}
+        .replaceAll("{z}", String(t.z))
+        .replaceAll("{x}", String(t.x))
+        .replaceAll("{y}", String(t.y))}
       onError={onFail}
     />
   ));
 }
-function Circle({ viewport, area, marker = false }) {
-  const [x, y] = viewport.point(area.center);
+function Circle({
+  viewport,
+  area,
+  marker = false,
+}: {
+  viewport: ReturnType<typeof pointViewport>;
+  area: Area;
+  marker?: boolean;
+}) {
+  const [x, y] = viewport.point(area.center || []);
   return (
     <>
       <circle
         className={styles.areaCircle}
         cx={x}
         cy={y}
-        r={Math.max(6, viewport.pixels(area.radiusM))}
+        r={Math.max(6, viewport.pixels(Number(area.radiusM)))}
       />
       {marker && <circle className={styles.areaCenter} cx={x} cy={y} r="4" />}
     </>
   );
 }
 /** Read-only preview for a stored area with centre and radius. */
-export function AreaPreview({ area }) {
+export function AreaPreview({ area }: { area?: Area }) {
   const config = useRasterConfig(),
-    ref = useRef(null),
+    ref = useRef<HTMLDivElement | null>(null),
     [visible, setVisible] = useState(false),
     [failed, setFailed] = useState(false);
   useEffect(() => {
@@ -80,13 +98,13 @@ export function AreaPreview({ area }) {
         : null,
     [center, radiusM],
   );
-  if (!viewport) return null;
+  if (!viewport || !area) return null;
   return (
     <div ref={ref} className={styles.areaMap}>
       <svg
         viewBox={`0 0 ${width} ${height}`}
         role="img"
-        aria-label={`Приблизительная область: круг около ${area.radiusM / 1000} км`}
+        aria-label={`Приблизительная область: круг около ${Number(area.radiusM) / 1000} км`}
       >
         {visible && config && !failed && (
           <Tiles
@@ -102,7 +120,7 @@ export function AreaPreview({ area }) {
   );
 }
 // A zoom where the whole circle comfortably fits the window.
-function zoomFor(radiusM, lat) {
+function zoomFor(radiusM: number, lat: number) {
   for (let zoom = 14; zoom > 3; zoom--) {
     const perPixel =
       (156543.03392 * Math.cos((lat * Math.PI) / 180)) / 2 ** zoom;
@@ -111,15 +129,23 @@ function zoomFor(radiusM, lat) {
   return 3;
 }
 /** Editable centre + radius. `value` is the whole area object ({label, …}). */
-export default function AreaPicker({ value = {}, onChange, disabled }) {
+export default function AreaPicker({
+  value = {},
+  onChange,
+  disabled,
+}: {
+  value?: Area;
+  onChange: (value: Area) => void;
+  disabled?: boolean;
+}) {
   const config = useRasterConfig(),
     [open, setOpen] = useState(!!value.center),
     [failed, setFailed] = useState(false),
     [zoom, setZoom] = useState(() =>
-      value.center ? zoomFor(value.radiusM, value.center[1]) : 10,
+      value.center ? zoomFor(Number(value.radiusM), value.center[1]) : 10,
     ),
     [view, setView] = useState(value.center || initialCenter);
-  const svg = useRef(null),
+  const svg = useRef<SVGSVGElement | null>(null),
     placed = useRef(value.center ? value.center.join(",") : "");
   // A centre that arrives from outside (preferences filled in, an edit form)
   // moves the view to it, so Enter never replaces it with the old view.
@@ -144,7 +170,7 @@ export default function AreaPicker({ value = {}, onChange, disabled }) {
       </p>
     );
   const radiusKm = value.radiusM ? value.radiusM / 1000 : 5;
-  const place = (center, radius = radiusKm) => {
+  const place = (center: number[], radius = radiusKm) => {
     const point = coarsePoint(center);
     placed.current = point.join(",");
     setView(point);
@@ -156,8 +182,8 @@ export default function AreaPicker({ value = {}, onChange, disabled }) {
     void radiusM;
     onChange(rest);
   };
-  function pick(e) {
-    const box = svg.current.getBoundingClientRect();
+  function pick(e: MouseEvent<SVGSVGElement>) {
+    const box = e.currentTarget.getBoundingClientRect();
     place(
       viewport.coordAt(
         ((e.clientX - box.left) / box.width) * width,
@@ -165,9 +191,9 @@ export default function AreaPicker({ value = {}, onChange, disabled }) {
       ),
     );
   }
-  function key(e) {
+  function key(e: KeyboardEvent<SVGSVGElement>) {
     const step = 48,
-      moves = {
+      moves: Record<string, number[]> = {
         ArrowLeft: [-step, 0],
         ArrowRight: [step, 0],
         ArrowUp: [0, -step],
@@ -268,7 +294,7 @@ export default function AreaPicker({ value = {}, onChange, disabled }) {
             value={radiusKm}
             onChange={(e) =>
               area
-                ? place(area.center, Number(e.target.value))
+                ? place(area.center || view, Number(e.target.value))
                 : place(view, Number(e.target.value))
             }
           >

@@ -1,4 +1,5 @@
 "use client";
+import type { PassportDraft } from "../../ui/ride-types.ts";
 import type * as React from "react";
 import { useId, useRef, useState } from "react";
 import {
@@ -901,7 +902,7 @@ function Icons() {
 }
 
 function RidePlanDemo({ intent = false }: { intent?: boolean }) {
-  const [passport, setPassport] = useState({
+  const [passport, setPassport] = useState<PassportDraft>({
     area: { label: "Измайловский парк" },
     purpose: "social",
     pace: "relaxed",

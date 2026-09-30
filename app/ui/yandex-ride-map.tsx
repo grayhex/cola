@@ -1,4 +1,7 @@
 "use client";
+import type { MapSettings } from "../../lib/map-settings.ts";
+import { errorMessage } from "../../lib/errors.ts";
+type YandexHandle = ReturnType<typeof createYandexRideMap>;
 import { useEffect, useMemo, useRef, useState } from "react";
 import { loadYandexMaps } from "../../lib/yandex-maps.ts";
 import { createYandexRideMap, yandexRoute } from "../../lib/yandex-ride-map.ts";
@@ -13,10 +16,15 @@ export default function YandexRideMap({
   config,
   view = "map",
   scrollZoom = false,
+}: {
+  geometry: number[][][];
+  config: MapSettings;
+  view?: string;
+  scrollZoom?: boolean;
 }) {
-  const frame = useRef(null);
-  const canvas = useRef(null);
-  const handle = useRef(null);
+  const frame = useRef<HTMLDivElement | null>(null);
+  const canvas = useRef<HTMLDivElement | null>(null);
+  const handle = useRef<YandexHandle | null>(null);
   const [attempt, setAttempt] = useState(0);
   const [visible, setVisible] = useState(false);
   const [state, setState] = useState({ ready: false, error: "" });
@@ -43,7 +51,7 @@ export default function YandexRideMap({
 
   useEffect(() => {
     let disposed = false;
-    let instance;
+    let instance: YandexHandle | undefined;
     setState({ ready: false, error: "" });
     if (!enabled || !visible) return;
     const failed = (message = unavailable) => {
@@ -51,12 +59,12 @@ export default function YandexRideMap({
     };
     loadYandexMaps(key, { retry: attempt > 0 })
       .then((api) => {
-        if (disposed) return;
-        instance = createYandexRideMap(api, canvas.current, route, {
+        const container = canvas.current;
+        if (disposed || !container || !route) return;
+        instance = createYandexRideMap(api, container, route, {
           color:
-            getComputedStyle(canvas.current)
-              .getPropertyValue("--accent")
-              .trim() || "#e7482f",
+            getComputedStyle(container).getPropertyValue("--accent").trim() ||
+            "#e7482f",
           scrollZoom,
           markerClass: styles.marker,
           onReady: () => {
@@ -67,11 +75,11 @@ export default function YandexRideMap({
         handle.current = instance;
       })
       .catch((error) => {
-        if (error.message === "YANDEX_MAPS_RELOAD_REQUIRED") {
+        if (errorMessage(error) === "YANDEX_MAPS_RELOAD_REQUIRED") {
           failed(
             "Ключ Яндекс Карт изменился. Обновите страницу для подключения нового ключа.",
           );
-        } else if (error.message === "YANDEX_MAPS_KEY_MISSING") {
+        } else if (errorMessage(error) === "YANDEX_MAPS_KEY_MISSING") {
           failed("Ключ Яндекс Карт не задан. Показана резервная карта OSM.");
         } else {
           failed();
@@ -139,7 +147,8 @@ export default function YandexRideMap({
             type="button"
             className="quiet"
             onClick={() => {
-              if (handle.current || !window.ymaps3) setAttempt((v) => v + 1);
+              if (handle.current || !("ymaps3" in window && window.ymaps3))
+                setAttempt((v) => v + 1);
               else window.location.reload();
             }}
           >

@@ -1,4 +1,5 @@
 "use client";
+import type { RideDto } from "./content-types.ts";
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import ShareButton from "./share-button.tsx";
@@ -21,7 +22,7 @@ const RideQr = dynamic(
 );
 
 /** The address as people read it; the QR itself keeps the encoded form. */
-function readable(url) {
+function readable(url: string) {
   try {
     return decodeURI(url);
   } catch {
@@ -31,7 +32,13 @@ function readable(url) {
 /** Link and QR of the ride's canonical page (#235). A public plan uses the
  * shared share menu; a closed one only copies the address, which opens for
  * invited people alone. Neither is a key to the page. */
-export default function RideShare({ ride, sharePath }) {
+export default function RideShare({
+  ride,
+  sharePath,
+}: {
+  ride: Pick<RideDto, "title" | "isPublic" | "bikePublic">;
+  sharePath?: string | null;
+}) {
   const [qr, setQr] = useState(false),
     [url, setUrl] = useState(""),
     [status, setStatus] = useState("");

@@ -1,4 +1,5 @@
 "use client";
+import type { MapSettings } from "../../lib/map-settings.ts";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { SharedView } from "./motion.tsx";
@@ -10,7 +11,7 @@ import {
   osmAttribution,
 } from "../../lib/map-settings.ts";
 import { useSite } from "./site-provider.tsx";
-export function MapAttribution({ config }) {
+export function MapAttribution({ config }: { config: MapSettings }) {
   // The Yandex SDK renders its own mandatory attribution; route-only previews
   // must not claim that an OSM basemap is being displayed.
   if (config.provider === "yandex") return null;
@@ -32,12 +33,19 @@ export default function RideBasemap({
   transitionId,
   href,
   selectedCoord,
+}: {
+  geometry?: number[][][];
+  forceRoute?: boolean;
+  thumbnail?: boolean;
+  transitionId?: string;
+  href?: string;
+  selectedCoord?: number[] | null;
 }) {
   const { personalSettings: settings } = useSite(),
     config = thumbnail
       ? { ...mapDefaults, enabled: settings.map?.enabled !== false }
       : settings.map || mapDefaults;
-  const ref = useRef(null),
+  const ref = useRef<HTMLDivElement | null>(null),
     [visible, setVisible] = useState(false),
     [failed, setFailed] = useState(false);
   useEffect(() => {
@@ -80,9 +88,9 @@ export default function RideBasemap({
               width="256"
               height="256"
               href={template
-                .replaceAll("{z}", t.z)
-                .replaceAll("{x}", t.x)
-                .replaceAll("{y}", t.y)}
+                .replaceAll("{z}", String(t.z))
+                .replaceAll("{x}", String(t.x))
+                .replaceAll("{y}", String(t.y))}
               onError={() => setFailed(true)}
             />
           ))}

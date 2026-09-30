@@ -62,11 +62,10 @@ function loadMotion() {
     throw error;
   }));
 }
-export function useMotionFeedback(
-  value: unknown,
-  { reveal = false }: { reveal?: boolean } = {},
-) {
-  const ref = useRef<HTMLDivElement>(null);
+export function useMotionFeedback<
+  T extends HTMLElement | SVGElement = HTMLDivElement,
+>(value: unknown, { reveal = false }: { reveal?: boolean } = {}) {
+  const ref = useRef<T>(null);
   const previous = useRef(value);
   const reduced = useReducedMotion();
   useEffect(() => {

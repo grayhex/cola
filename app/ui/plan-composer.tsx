@@ -1,4 +1,18 @@
 "use client";
+import { errorMessage } from "../../lib/errors.ts";
+import type { ReactNode } from "react";
+import type { AccountBikeDto } from "../../lib/contracts.ts";
+import type { RideDto } from "./content-types.ts";
+import type {
+  RideConfig,
+  PlanDraft,
+  RideSaveHandler,
+  GarageDto,
+} from "./ride-types.ts";
+type PlannerState =
+  | { status: "loading" }
+  | { status: "error"; error: string }
+  | { status: "ready"; bikes: AccountBikeDto[]; config: RideConfig };
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Modal from "./garage/modal.tsx";
@@ -17,26 +31,35 @@ export default function PlanComposer({
   title,
   onClose,
   onSaved,
+}: {
+  ride?: RideDto | null;
+  draft?: PlanDraft | null;
+  title?: string;
+  onClose: () => void;
+  onSaved: RideSaveHandler;
 }) {
-  const [state, setState] = useState({ status: "loading" }),
+  const [state, setState] = useState<PlannerState>({ status: "loading" }),
     [revision, setRevision] = useState(0);
   const dirty = useRef(false);
   const [ask, confirmation] = useConfirmation();
   useEffect(() => {
     let active = true;
     setState({ status: "loading" });
-    Promise.all([socialApi("bikes"), socialApi("rides/settings")])
+    Promise.all([
+      socialApi<GarageDto>("bikes"),
+      socialApi<RideConfig>("rides/settings"),
+    ])
       .then(([garage, config]) => {
         if (active) setState({ status: "ready", bikes: garage.bikes, config });
       })
       .catch((e) => {
-        if (active) setState({ status: "error", error: e.message });
+        if (active) setState({ status: "error", error: errorMessage(e) });
       });
     return () => {
       active = false;
     };
   }, [revision]);
-  const onDirty = useCallback((value) => {
+  const onDirty = useCallback((value: boolean) => {
     dirty.current = value;
   }, []);
   async function close() {
@@ -51,8 +74,8 @@ export default function PlanComposer({
   const ready = state.status === "ready";
   const current = ready ? selectableRideBikes(state.bikes) : [];
   // Editing keeps the plan's own bike even when it is no longer current.
-  const canPlan = ready && state.config.enabled && (!!current.length || ride);
-  const status = (children) => (
+  const canPlan = ready && state.config.enabled && (!!current.length || !!ride);
+  const status = (children: ReactNode) => (
     <div className="planning-body">
       <div className="planning-section">{children}</div>
     </div>
