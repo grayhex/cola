@@ -415,6 +415,39 @@ test("share, QR, chunk failure and reduced motion; one date of a series is cance
       "true",
     );
     await page.unroute("**/api/rides/*/rsvp");
+    // Refreshes can answer out of order: only the latest applies, so an
+    // older one cannot bring back the previous answer.
+    let release, requested, delivered;
+    const held = new Promise((resolve) => (release = resolve));
+    const staleRequested = new Promise((resolve) => (requested = resolve));
+    const staleDelivered = new Promise((resolve) => (delivered = resolve));
+    let stale = true;
+    await page.route("**/api/rides/public/**", async (route) => {
+      if (!stale || route.request().method() !== "GET") return route.fallback();
+      stale = false;
+      const response = await route.fetch();
+      requested();
+      await held;
+      await route.fulfill({ response });
+      delivered();
+    });
+    await rsvp.getByRole("button", { name: /^Может быть/ }).click();
+    await staleRequested;
+    const fresh = page.waitForResponse(
+      (r) =>
+        r.url().includes("/api/rides/public/") &&
+        r.request().method() === "GET",
+    );
+    await rsvp.getByRole("button", { name: /^Иду/ }).click();
+    await fresh;
+    release();
+    await staleDelivered;
+    await page.waitForTimeout(300);
+    await expect(rsvp.getByRole("button", { name: /^Иду/ })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await page.unroute("**/api/rides/public/**");
     // The organizer cancels only this date; the series goes on.
     const own = await organizer.newPage();
     own.on("dialog", (d) => d.accept());

@@ -80,13 +80,19 @@ export default function RidePage({
     };
   }, [share]);
   // After an answer or an organizer action the page shows the server's state
-  // (#235); permission-dependent values never outlive a failed refresh.
+  // (#235); permission-dependent values never outlive a failed refresh. Only
+  // the latest refresh applies: answers do not wait for it, so an older one
+  // that answers late would bring back the previous answer.
+  const reloads = useRef(0);
   const reload = useCallback(async () => {
+    const id = ++reloads.current;
     try {
       const data = await socialApi(detailPath(share));
+      if (id !== reloads.current) return;
       setRide(data.ride);
       setError("");
     } catch (e) {
+      if (id !== reloads.current) return;
       setRide((r) =>
         r && r.meetingVisibility === "participants" && !r.isOwner
           ? { ...r, meetingPoint: "", meetingHidden: true }
