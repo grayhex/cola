@@ -426,12 +426,17 @@ export default function OrganizeWorkspace({ initial, onFiltersChange }) {
     [notice, setNotice] = useState("");
   // A typed district waits for a pause; choices apply at once.
   const [query, setQuery] = useState(() => organizeQuery(initial).toString());
+  // The period is stamped with the current time, so a rebuilt query always
+  // differs from the last one: rebuild it only for new choices. Rebuilding
+  // after the first render sent the same request twice.
+  const queried = useRef(initial);
   useEffect(() => {
-    const timer = setTimeout(
-      () => setQuery(organizeQuery(filters).toString()),
-      250,
-    );
     onFiltersChange?.(filters);
+    if (filters === queried.current) return;
+    const timer = setTimeout(() => {
+      queried.current = filters;
+      setQuery(organizeQuery(filters).toString());
+    }, 250);
     return () => clearTimeout(timer);
   }, [filters, onFiltersChange]);
   useEffect(() => {
