@@ -33,6 +33,7 @@ function save(key, value) {
     );
   } catch {}
 }
+/** @param {{ username?: string, bikeId?: string, latest?: boolean, status?: string | null, filters?: Record<string, string> | null, restoreKey?: string, onReset?: () => void }} props */
 export default function RideList({
   username,
   bikeId,

@@ -116,9 +116,19 @@ export interface SourceDocument {
   fetchedAt: string;
   hash: string;
 }
+export interface SuggestedMetadata {
+  [key: string]: string | number | undefined;
+  weight?: number;
+  weightText?: string;
+  sizes?: string;
+  wheelSize?: string;
+  color?: string;
+  manufacturerProductId?: string;
+  manufacturerUrl?: string;
+}
 export interface ParsedBike {
   quality?: ExtractionQuality;
-  suggestedMetadata?: Record<string, string | number>;
+  suggestedMetadata?: SuggestedMetadata;
   unknownFields?: RawField[];
   warnings?: Reason[];
   canonicalName: string;
@@ -138,7 +148,7 @@ export interface Source {
 export interface Resolved {
   thumbnailId?: string;
   quality?: ExtractionQuality;
-  suggestedMetadata?: Record<string, string | number>;
+  suggestedMetadata?: SuggestedMetadata;
   unknownFields?: RawField[];
   warnings?: Reason[];
   status: "resolved";

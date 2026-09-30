@@ -16,7 +16,7 @@ import AccountIntegrations from "./account-integrations.tsx";
 import TogetherActions from "./together-actions.jsx";
 import { CompactDialog } from "./compact-ui.tsx";
 import { useSearchParams } from "next/navigation";
-import BikeGrid from "./bike-grid.jsx";
+import BikeGrid from "./bike-grid.tsx";
 import { BadgeShelf } from "./achievements.jsx";
 import { useRef, useCallback, useEffect, useState } from "react";
 import {
@@ -35,8 +35,8 @@ import {
 } from "./icons.tsx";
 import AuthPage from "./auth-page.tsx";
 import AccountSecurity from "./account-security.tsx";
-import Garage from "./garage.jsx";
-import BikeCard from "./bike-card.jsx";
+import Garage from "./garage.tsx";
+import BikeCard from "./bike-card.tsx";
 import {
   Avatar,
   SocialHeader,

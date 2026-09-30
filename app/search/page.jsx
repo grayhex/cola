@@ -1,5 +1,5 @@
 import DiscoverySearch from "../ui/discovery-search.jsx";
-import ExperienceSearch from "../ui/experience-search.jsx";
+import ExperienceSearch from "../ui/experience-search.tsx";
 export const metadata = { title: "Поиск · ColaBike" };
 export default async function Page({ searchParams }) {
   const params = await searchParams;

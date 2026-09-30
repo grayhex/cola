@@ -149,7 +149,7 @@ export async function modelLanding(
     searchExperience(q, viewer, { ...input, type: "journal" }),
   ]);
   return plain({
-    kind: "model",
+    kind: "model" as const,
     id: model.id,
     title: `${model.brand} ${model.name}`,
     brand: model.brand,
@@ -227,7 +227,7 @@ export async function partLanding(
     searchExperience(q, viewer, { ...input, type: "journal" }),
   ]);
   return plain({
-    kind: "part",
+    kind: "part" as const,
     id: model.id,
     title: model.name,
     category: model.category,

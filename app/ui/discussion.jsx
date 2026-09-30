@@ -312,6 +312,7 @@ function Thread({ root, user, bikeId, refresh }) {
     </div>
   );
 }
+/** @param {{ bike: { id: string, author?: { id: string } | null, kind?: string, solutionId?: string | null, isOwner?: boolean }, user: import("../../lib/contracts.ts").ViewerDto | null, entityType?: string, onSolution?: () => void }} props */
 export default function Discussion({
   bike,
   user,

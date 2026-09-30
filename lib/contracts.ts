@@ -1,4 +1,18 @@
 import type { discoverySearch } from "./discovery.ts";
+import type { BikeRow } from "./database-rows.ts";
+import type { listAssetLibrary } from "./site-asset-library.ts";
+import type { participationSummary } from "./participation.ts";
+import type { componentCatalog } from "./component-catalog.ts";
+import type { bikeCatalog } from "./bike-catalog.ts";
+import type { componentGallery } from "./component-photos.ts";
+import type { modelLanding, partLanding } from "./experience-landing.ts";
+import type { searchExperience } from "./search.ts";
+import type { reportPage } from "./reports.ts";
+import type { adminLegalDocuments } from "./legal-documents.ts";
+import type { getGameSettings } from "./gamification.ts";
+import type { GameRule } from "./game-rules.ts";
+import type { Settings as ResolverSettings } from "../services/bike-resolver/src/settings.ts";
+import type { Diagnostics } from "../services/bike-resolver/src/planner.ts";
 import type { listSessions } from "./account-data.ts";
 import type { legalMetadata } from "./legal-documents.ts";
 import type { followPage } from "./follows.ts";
@@ -180,6 +194,97 @@ export type AccountOverviewDto = JsonData<
   Awaited<ReturnType<typeof accountOverview>>
 >;
 export type AccountBikeDto = JsonData<Awaited<ReturnType<typeof decorateBike>>>;
+// Owner-only fields are absent from the public allowlist. Shared controls may
+// read them only on an owner snapshot; adding optional types changes no DTO.
+export type BikeDto = AccountBikeDto &
+  Partial<
+    Pick<
+      JsonData<BikeRow>,
+      "factory_spec" | "owner_id" | "created_at" | "updated_at"
+    >
+  >;
+export type AssetLibraryDto = JsonData<
+  Awaited<ReturnType<typeof listAssetLibrary>>
+>;
+export type ParticipationDto = Awaited<ReturnType<typeof participationSummary>>;
+export type ComponentCatalogDto = JsonData<
+  Awaited<ReturnType<typeof componentCatalog>>
+>;
+export type BikeCatalogDto = JsonData<Awaited<ReturnType<typeof bikeCatalog>>>;
+export type ComponentGalleryDto = JsonData<
+  Awaited<ReturnType<typeof componentGallery>>
+>;
+export type ModelLandingDto = NonNullable<
+  Awaited<ReturnType<typeof modelLanding>>
+>;
+export type PartLandingDto = NonNullable<
+  Awaited<ReturnType<typeof partLanding>>
+>;
+export type ExperienceLandingDto = ModelLandingDto | PartLandingDto;
+export type ExperienceSearchDto = JsonData<
+  Awaited<ReturnType<typeof searchExperience>>
+>;
+export type ReportPageDto = JsonData<Awaited<ReturnType<typeof reportPage>>>;
+export interface ManagedUser {
+  id: string;
+  email: string;
+  name: string;
+  role: "user" | "admin";
+  blocked: boolean;
+  created_at: string;
+  bikes: number;
+}
+export interface AdminAuditEvent {
+  id: string;
+  action: string;
+  target: string;
+  created_at: string;
+  actor: string | null;
+}
+export interface AdminOverviewDto extends SiteDefinition {
+  user: ViewerDto;
+  stats: { users: number; bikes: number; photos: number };
+  participation: ParticipationDto;
+}
+export type AdminLegalDto = JsonData<
+  Awaited<ReturnType<typeof adminLegalDocuments>>
+>;
+export type GameSettingsDto = Awaited<ReturnType<typeof getGameSettings>>;
+export type GameRuleDto = GameRule & { awarded: number };
+export interface GameRulesDto {
+  settings: GameSettingsDto;
+  rules: GameRuleDto[];
+}
+export interface AdminGameBike {
+  id: string;
+  name: string;
+  share_id: string;
+  leaderboard_excluded: boolean;
+}
+export interface BikePhotoCandidate {
+  id: string;
+  sourceUrl: string;
+}
+export interface ResolverBrand {
+  id: string;
+  name: string;
+  enabled: boolean;
+  adapterVersion: number;
+  limitation: string | null;
+}
+export interface ResolverBrandsDto {
+  brands: ResolverBrand[];
+  autoResolve: boolean;
+}
+export interface ResolverSettingsDto {
+  value: ResolverSettings;
+  version: number;
+  brands: ResolverBrand[];
+}
+export interface ResolverDiagnosticsDto {
+  extractorVersion: number;
+  sources: ReturnType<Diagnostics["snapshot"]>;
+}
 export type FollowPageDto = JsonData<
   NonNullable<Awaited<ReturnType<typeof followPage>>>
 >;

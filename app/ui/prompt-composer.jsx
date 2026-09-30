@@ -99,6 +99,7 @@ const PhotoInEditor = PhotoReference.extend({
 
 // One controlled Markdown contract and one WYSIWYG surface for articles, posts,
 // discussions and legal documents. Historical bodies require no migration.
+/** @param {{ label: string, value?: string, onChange: (value: string) => void, maxLength?: number, rows?: number, required?: boolean, disabled?: boolean, placeholder?: string, photos?: Array<{ id: string, url: string, alt?: string }>, inserter?: import("react").RefObject<((id: string, alt?: string) => void) | null>, children?: import("react").ReactNode }} props */
 export default function PromptComposer({
   label,
   value = "",

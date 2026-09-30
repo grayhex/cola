@@ -1,0 +1,317 @@
+"use client";
+import type {
+  BikeCatalogDto,
+  ComponentCatalogDto,
+} from "../../lib/contracts.ts";
+type CatalogModel = (
+  BikeCatalogDto["items"][number] | ComponentCatalogDto["items"][number]
+) & { category?: string; version: number; archived: boolean };
+type CatalogPage = {
+  items: CatalogModel[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
+import { errorMessage } from "../../lib/errors.ts";
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { socialApi, Pagination } from "../ui/social-primitives.tsx";
+import { productCategories } from "../../lib/component-products.ts";
+
+export default function ComponentModels({
+  kind = "component",
+}: {
+  kind?: "component" | "bike";
+}) {
+  const bike = kind === "bike";
+  const endpoint = "admin/" + (bike ? "bike-models" : "component-models");
+  const [query, setQuery] = useState(""),
+    [search, setSearch] = useState(""),
+    [page, setPage] = useState(1);
+  const [data, setData] = useState<CatalogPage | null>(null),
+    [editing, setEditing] = useState<CatalogModel | null>(null),
+    [revision, setRevision] = useState(0);
+  const [error, setError] = useState(""),
+    [message, setMessage] = useState(""),
+    [busy, setBusy] = useState(false);
+  const [targetQuery, setTargetQuery] = useState(""),
+    [targets, setTargets] = useState<CatalogModel[]>([]),
+    [targetId, setTargetId] = useState(""),
+    [confirmed, setConfirmed] = useState(false);
+  useEffect(() => {
+    let active = true;
+    setData(null);
+    setError("");
+    socialApi<CatalogPage>(
+      endpoint + "?" + new URLSearchParams({ q: query, page: String(page) }),
+    )
+      .then((d) => {
+        if (active) setData(d);
+      })
+      .catch((e) => {
+        if (active) setError(errorMessage(e));
+      });
+    return () => {
+      active = false;
+    };
+  }, [query, page, revision, endpoint]);
+  const field = <K extends keyof CatalogModel>(
+    key: K,
+    value: CatalogModel[K],
+  ) => setEditing((m) => ({ ...m!, [key]: value }));
+  async function save(merge = false) {
+    setBusy(true);
+    setError("");
+    setMessage("");
+    try {
+      const target = targets.find((t) => t.id === targetId);
+      await socialApi(
+        endpoint + "/" + editing!.id + (merge ? "/merge" : ""),
+        merge ? "POST" : "PATCH",
+        merge
+          ? {
+              targetId,
+              version: editing!.version,
+              targetVersion: target!.version,
+            }
+          : {
+              name: editing!.name,
+              ...(!bike ? { category: editing!.category } : {}),
+              brand: editing!.brand,
+              archived: editing!.archived,
+              version: editing!.version,
+            },
+      );
+      setEditing(null);
+      setRevision((n) => n + 1);
+      setMessage(
+        merge
+          ? "Модели объединены. Прежние ссылки сохранены."
+          : "Модель сохранена. Прежние ссылки сохранены.",
+      );
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function findTarget() {
+    setBusy(true);
+    setError("");
+    setTargetId("");
+    setConfirmed(false);
+    try {
+      setTargets(
+        (
+          await socialApi<CatalogPage>(
+            endpoint + "?" + new URLSearchParams({ q: targetQuery }),
+          )
+        ).items.filter(
+          (m) =>
+            m.id !== editing!.id &&
+            !m.archived &&
+            (bike || m.category === editing!.category),
+        ),
+      );
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <section
+      aria-label={
+        "Управление каталогом " + (bike ? "велосипедов" : "компонентов")
+      }
+    >
+      <h2>Каталог {bike ? "велосипедов" : "компонентов"}</h2>
+      <p className="help">
+        Самостоятельные страницы моделей. Изменения сохраняются здесь сразу.
+        Авторские названия в гаражах, объявлениях и снимках журнала остаются
+        прежними.
+      </p>
+      <form
+        className="list-add"
+        onSubmit={(e) => {
+          e.preventDefault();
+          setQuery(search);
+          setPage(1);
+        }}
+      >
+        <input
+          aria-label="Найти модель каталога"
+          value={search}
+          maxLength={150}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <button className="button secondary">Найти</button>
+      </form>
+      {error && (
+        <p className="error" role="alert">
+          {error}
+        </p>
+      )}
+      {message && <p role="status">{message}</p>}
+      {!data && !error && <p role="status">Загружаем модели…</p>}
+      {data && (
+        <>
+          {!data.items.length && <p>Модели не найдены.</p>}
+          {data.items.map((m) => (
+            <div className="list-row" key={m.id}>
+              <div>
+                <Link href={m.path}>{m.name}</Link>
+                <p className="help">
+                  {m.category ? m.category + " · " : ""}
+                  {m.brand || "Бренд не указан"}
+                  {m.archived ? " · В архиве" : ""}
+                </p>
+              </div>
+              <button
+                className="button secondary small"
+                disabled={busy}
+                onClick={() => {
+                  setEditing(m);
+                  setTargets([]);
+                  setTargetId("");
+                  setTargetQuery("");
+                  setConfirmed(false);
+                  setMessage("");
+                  setError("");
+                }}
+              >
+                Изменить
+              </button>
+            </div>
+          ))}
+          <Pagination {...data} onPage={setPage} />
+        </>
+      )}
+      {editing && (
+        <section
+          className="admin-panel"
+          aria-label={"Редактирование модели " + editing.name}
+        >
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              save();
+            }}
+          >
+            <h3>Редактирование модели</h3>
+            <div className="form-grid">
+              <label className="field">
+                <span>Название модели</span>
+                <input
+                  required
+                  maxLength={150}
+                  value={editing.name}
+                  onChange={(e) => field("name", e.target.value)}
+                />
+              </label>
+              {!bike && (
+                <label className="field">
+                  <span>Категория модели</span>
+                  <select
+                    required
+                    value={editing!.category}
+                    onChange={(e) => field("category", e.target.value)}
+                  >
+                    {productCategories.map((category) => (
+                      <option key={category}>{category}</option>
+                    ))}
+                  </select>
+                </label>
+              )}
+              <label className="field">
+                <span>Бренд модели</span>
+                <input
+                  required={bike}
+                  maxLength={100}
+                  value={editing.brand}
+                  onChange={(e) => field("brand", e.target.value)}
+                />
+              </label>
+            </div>
+            <label className="check">
+              <input
+                type="checkbox"
+                checked={editing.archived}
+                onChange={(e) => field("archived", e.target.checked)}
+              />
+              Убрать из витрины (страница и связи сохранятся)
+            </label>
+            <div className="form-actions">
+              <button className="button" disabled={busy}>
+                Сохранить модель
+              </button>
+              <button
+                type="button"
+                className="button secondary"
+                disabled={busy}
+                onClick={() => setEditing(null)}
+              >
+                Отмена
+              </button>
+            </div>
+          </form>
+          <details>
+            <summary>Объединить с другой моделью</summary>
+            <p className="help">
+              Проверьте категорию, размер и модификацию. Разные варианты нельзя
+              объединять только по сходству названий. Установки и старые ссылки
+              будут вести на выбранную модель.
+            </p>
+            <div className="list-add">
+              <input
+                aria-label="Поиск целевой модели"
+                maxLength={150}
+                value={targetQuery}
+                onChange={(e) => setTargetQuery(e.target.value)}
+              />
+              <button
+                className="button secondary"
+                disabled={busy || !targetQuery.trim()}
+                onClick={findTarget}
+              >
+                Найти для объединения
+              </button>
+            </div>
+            <label className="field">
+              <span>Сохранить модель</span>
+              <select
+                value={targetId}
+                onChange={(e) => {
+                  setTargetId(e.target.value);
+                  setConfirmed(false);
+                }}
+              >
+                <option value="">Выберите модель</option>
+                {targets.map((m) => (
+                  <option value={m.id} key={m.id}>
+                    {m.category} · {m.name} · {m.brand || "без бренда"}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="check">
+              <input
+                type="checkbox"
+                checked={confirmed}
+                onChange={(e) => setConfirmed(e.target.checked)}
+              />
+              Проверено: это одна и та же модель и модификация
+            </label>
+            <button
+              className="button secondary"
+              disabled={busy || !targetId || !confirmed}
+              onClick={() => save(true)}
+            >
+              Объединить модели
+            </button>
+          </details>
+        </section>
+      )}
+    </section>
+  );
+}

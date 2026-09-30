@@ -1,5 +1,6 @@
 import type { infer as inferType } from "zod";
 import type { resolverQuery as resolverQueryType } from "./bike-resolver-client.ts";
+import type { ResolveResult } from "./bike-resolver-client.ts";
 export interface TraceEvent {
   type: "event";
   event: string;
@@ -97,7 +98,7 @@ export async function resolveWithTrace(
   signal: AbortSignal,
   onEvent: (event: TraceEvent) => void,
   endpoint = "/api/bikes/resolve-stream",
-) {
+): Promise<ResolveResult & { previewId?: string }> {
   const response = await fetch(endpoint, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -106,7 +107,10 @@ export async function resolveWithTrace(
   });
   if (!response.ok) throw new Error("Не удалось выполнить поиск");
   for await (const value of readResolverStream(response.body)) {
-    if (value.type === "result") return value.result;
+    // The app's resolve endpoint validates the service result before streaming
+    // it. Keep that JSON boundary typed without changing bounded NDJSON parsing.
+    if (value.type === "result")
+      return value.result as ResolveResult & { previewId?: string };
     const event = safeTrace(value);
     if (event) onEvent(event);
   }

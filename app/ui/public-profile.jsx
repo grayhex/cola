@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import RideList from "./ride-list.jsx";
-import BikeGrid from "./bike-grid.jsx";
+import BikeGrid from "./bike-grid.tsx";
 import { BadgeShelf } from "./achievements.jsx";
 import { ReportButton } from "./community-controls.jsx";
 import { Bike, Route } from "./icons.tsx";
@@ -16,7 +16,7 @@ import {
   Pagination,
   socialApi,
 } from "./social-primitives.tsx";
-import BikeCard from "./bike-card.jsx";
+import BikeCard from "./bike-card.tsx";
 import { useSite } from "./site-provider.tsx";
 import ShareButton from "./share-button.tsx";
 import LocalDate from "./local-date.tsx";

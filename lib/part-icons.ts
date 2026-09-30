@@ -1,5 +1,5 @@
 // Original 32px line icons, authored for ColaBike. No third-party icon assets.
-export const iconPaths = {
+export const iconPaths: Record<string, string[]> = {
   frame: ["M5 24 12 9 20 24H5L24 9H12M19 5h7M22 5l6 19M10 6h5M12 6v3"],
   fork: ["M16 3v9M11 10h10M11 10v11l-4 7M21 10v11l4 7M8 28h4M21 28h4"],
   shock: ["M8 4l3 3M21 25l3 3M10 10l9-3 1 5-9 3 1 5 9-3 1 5-9 3M12 6l11 19"],
@@ -69,7 +69,7 @@ export const iconPaths = {
   other: ["M6 6h8v8H6zM18 6h8v8h-8zM6 18h8v8H6zM18 18h8v8h-8z"],
 };
 export const iconNames = Object.keys(iconPaths);
-export const categoryIcons = {
+export const categoryIcons: Record<string, string> = {
   Рама: "frame",
   Вилка: "fork",
   Амортизатор: "shock",
