@@ -16,6 +16,10 @@
 !services/bike-resolver/
 !services/bike-resolver/src/
 !services/bike-resolver/src/component-identity.js
+!services/bike-resolver/src/domain.ts
+!services/bike-resolver/src/context.ts
+!services/bike-resolver/src/settings.ts
+!services/bike-resolver/src/planner.ts
 !db/
 !db/*.sql
 !public/
