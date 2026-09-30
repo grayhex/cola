@@ -73,7 +73,8 @@ import {
   credentials,
   uuid,
 } from "../../../lib/validation.ts";
-import { allocateUsername, suggestUsername } from "../../../lib/usernames.ts";
+import { suggestUsername } from "../../../lib/usernames.ts";
+import { allocateUsername } from "../../../lib/username-allocation.ts";
 import { ownedBike, insertBike } from "../../../lib/repository.ts";
 
 export const runtime = "nodejs";

@@ -22,6 +22,8 @@ test("theme bootstrap chooses system, persisted preference and storage failure w
   for (const [saved, defaultTheme, dark, expected] of [
     [null, "system", true, "dark"],
     [null, "system", false, "light"],
+    [null, "light", true, "light"],
+    [null, "dark", false, "dark"],
     ["light", "dark", true, "light"],
     ["dark", "light", false, "dark"],
     ["system", "light", true, "dark"],
@@ -59,7 +61,7 @@ test("theme bootstrap chooses system, persisted preference and storage failure w
 });
 test("theme bootstrap rejects code and HTML payloads before script construction", () => {
   // CodeQL #2/#3: JSON.stringify alone would not protect an HTML script element.
-  // The enum boundary must reject these values before serialization instead.
+  // The bootstrap selects fixed enum literals; input never becomes script text.
   const payloads = [
     '</script><script>throw Error("injected")</script>',
     '</ScRiPt><img src=x onerror="alert(1)">',

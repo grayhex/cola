@@ -38,9 +38,15 @@ export function resolveTheme(preference: string, dark: boolean) {
       : "light"
     : validTheme(preference);
 }
-// Only validated enum values enter the parser-blocking bootstrap. No user HTML.
+// Choose fixed script literals, never serialize input into an HTML script.
 export function themeBootstrap(defaultTheme = "system") {
-  return `(function(){var p=${JSON.stringify(validTheme(defaultTheme))};try{var s=localStorage.getItem(${JSON.stringify(themeStorageKey)});if(['system','light','dark'].includes(s))p=s}catch(e){}var d=document.documentElement;d.dataset.themePreference=p;d.dataset.theme=p==='system'?(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):p})()`;
+  const initial =
+    defaultTheme === "light"
+      ? "'light'"
+      : defaultTheme === "dark"
+        ? "'dark'"
+        : "'system'";
+  return `(function(){var p=${initial};try{var s=localStorage.getItem('${themeStorageKey}');if(['system','light','dark'].includes(s))p=s}catch(e){}var d=document.documentElement;d.dataset.themePreference=p;d.dataset.theme=p==='system'?(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):p})()`;
 }
 
 export const backgroundDefaults = {

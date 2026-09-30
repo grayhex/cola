@@ -15,7 +15,7 @@ import {
   socialPage,
   reservedUsernames,
 } from "../../../../lib/social-validation.ts";
-import { allocateUsername } from "../../../../lib/usernames.ts";
+import { allocateUsername } from "../../../../lib/username-allocation.ts";
 import {
   getProfile,
   updateProfile,

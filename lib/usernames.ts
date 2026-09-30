@@ -1,5 +1,4 @@
 import type { PublicAuthor } from "./contracts.ts";
-import type { Queryable } from "./db.ts";
 // Readable usernames (#71). Pure and dependency-free: the registration form
 // suggests the same handle the server allocates when a client sends none.
 export const usernamePattern = /^[a-z0-9._-]{3,30}$/;
@@ -82,20 +81,6 @@ export function usernameCandidates(base: string, count = 50) {
   return [...new Set(list)].filter(
     (c) => usernamePattern.test(c) && !reservedUsernames.has(c),
   );
-}
-// First free candidate in one indexed query. The unique index still decides
-// races, so a caller that inserts the result retries on a username conflict.
-export async function allocateUsername(q: Queryable, base: string) {
-  const candidates = usernameCandidates(base);
-  const { rows } = await q.query<{ username: string }>(
-    "SELECT lower(username) AS username FROM users WHERE lower(username)=ANY($1::text[])",
-    [candidates],
-  );
-  const taken = new Set(rows.map((r) => r.username));
-  const free = candidates.find((c) => !taken.has(c));
-  if (free) return free;
-  const stem = base.slice(0, 23).replace(edgeSeparators, "") || "rider";
-  return stem + "-" + String(Math.floor(Math.random() * 1e6)).padStart(6, "0");
 }
 // Cards show a person by name; the handle is secondary and never the
 // meaningless default.
