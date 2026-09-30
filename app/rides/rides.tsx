@@ -4,8 +4,8 @@ import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { X } from "lucide-react";
 import { useSite } from "../ui/site-provider.tsx";
-import RideCreationActions from "../ui/ride-creation-actions.jsx";
-import RideList from "../ui/ride-list.jsx";
+import RideCreationActions from "../ui/ride-creation-actions.tsx";
+import RideList from "../ui/ride-list.tsx";
 import { CompactDialog } from "../ui/compact-ui.tsx";
 import SiteIcon from "../ui/site-icon.tsx";
 import { SocialHeader, SocialFooter } from "../ui/social-primitives.tsx";
@@ -20,7 +20,7 @@ import { readOrganize } from "../../lib/organize-filters.ts";
 
 // «Собрать компанию» (#234) loads only when a signed-in organizer opens it.
 const OrganizeWorkspace = dynamic(
-  () => import("../ui/organize-workspace.jsx"),
+  () => import("../ui/organize-workspace.tsx"),
   {
     ssr: false,
     loading: () => <p role="status">Открываем…</p>,

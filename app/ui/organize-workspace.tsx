@@ -21,7 +21,7 @@ import styles from "./organize-workspace.module.css";
 // is real, consenting interest — counts only — and proposes a ride on it. The
 // planner opens prefilled but saves nothing by itself; invitations are an
 // explicit choice after the plan is published, re-checked on the server.
-const PlanComposer = dynamic(() => import("./plan-composer.jsx"), {
+const PlanComposer = dynamic(() => import("./plan-composer.tsx"), {
   ssr: false,
 });
 

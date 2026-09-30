@@ -1,4 +1,4 @@
-import RidePage from "../../ui/ride-page.jsx";
+import RidePage from "../../ui/ride-page.tsx";
 import {
   metadataFor,
   canonicalPage,

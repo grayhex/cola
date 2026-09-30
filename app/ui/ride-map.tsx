@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
-import RideBasemap, { MapAttribution } from "./ride-basemap.jsx";
-import YandexRideMap from "./yandex-ride-map.jsx";
+import RideBasemap, { MapAttribution } from "./ride-basemap.tsx";
+import YandexRideMap from "./yandex-ride-map.tsx";
 import { useSite } from "./site-provider.tsx";
 import { mapDefaults, mapStyle } from "../../lib/map-settings.ts";
 import { bounds } from "../../lib/ride-geometry.ts";

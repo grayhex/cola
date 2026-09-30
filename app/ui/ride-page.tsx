@@ -2,21 +2,21 @@
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { SharedView } from "./motion.tsx";
-import RideSpeedChart from "./ride-speed-chart.jsx";
-import RideMap from "./ride-map.jsx";
-import RidePlanView from "./ride-plan-view.jsx";
+import RideSpeedChart from "./ride-speed-chart.tsx";
+import RideMap from "./ride-map.tsx";
+import RidePlanView from "./ride-plan-view.tsx";
 import { Heart } from "./icons.tsx";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { SocialHeader, SocialFooter, socialApi } from "./social-primitives.tsx";
-import { RideMetrics, rideDate } from "./ride-card.jsx";
+import { RideMetrics, rideDate } from "./ride-card.tsx";
 import { useSite } from "./site-provider.tsx";
 import { profilePath, publicPath } from "../../lib/public-urls.ts";
 import { personName } from "../../lib/usernames.ts";
 import ShareButton from "./share-button.tsx";
 import LocalDate from "./local-date.tsx";
 // The comment editor (Tiptap) loads after the ride itself.
-const RideAnalysis = dynamic(() => import("./ride-analysis.jsx"));
+const RideAnalysis = dynamic(() => import("./ride-analysis.tsx"));
 // A failed chunk leaves the ride, its agreement and RSVP working (#235).
 const Discussion = dynamic(
   () =>

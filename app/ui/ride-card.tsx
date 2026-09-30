@@ -1,8 +1,8 @@
 "use client";
 import Link from "next/link";
-import RidePassport from "./ride-passport.jsx";
+import RidePassport from "./ride-passport.tsx";
 import { SharedView } from "./motion.tsx";
-import RideRsvp, { RecurringRideLabel } from "./ride-rsvp.jsx";
+import RideRsvp, { RecurringRideLabel } from "./ride-rsvp.tsx";
 import { CalendarDays, FileSpreadsheet } from "lucide-react";
 import {
   defaultRideFields,
@@ -11,7 +11,7 @@ import {
 } from "../../lib/garmin-fields.ts";
 import { Heart } from "./icons.tsx";
 import { useSite } from "./site-provider.tsx";
-import RideBasemap from "./ride-basemap.jsx";
+import RideBasemap from "./ride-basemap.tsx";
 import { routePaths } from "../../lib/ride-geometry.ts";
 import { profilePath, publicPath } from "../../lib/public-urls.ts";
 import { personName } from "../../lib/usernames.ts";

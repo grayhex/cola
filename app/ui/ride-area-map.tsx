@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Minus, Plus, MapPin, X } from "lucide-react";
-import { MapAttribution } from "./ride-basemap.jsx";
+import { MapAttribution } from "./ride-basemap.tsx";
 import { useSite } from "./site-provider.tsx";
 import {
   mapDefaults,

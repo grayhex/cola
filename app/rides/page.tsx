@@ -1,4 +1,4 @@
-import Rides from "./rides.jsx";
+import Rides from "./rides.tsx";
 import { indexed } from "../../lib/indexing.ts";
 export const metadata = {
   title: "Покатушки · ColaBike",

@@ -1,4 +1,4 @@
-import Records from "../ui/records.jsx";
+import Records from "../ui/records.tsx";
 import { indexed } from "../../lib/indexing.ts";
 export const metadata = {
   title: "Рекорды · ColaBike",

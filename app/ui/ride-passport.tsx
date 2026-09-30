@@ -1,5 +1,5 @@
 import { ridePlanOptions } from "../../lib/ride-plan-options.ts";
-import { AreaPreview } from "./ride-area-map.jsx";
+import { AreaPreview } from "./ride-area-map.tsx";
 import styles from "./ride-passport.module.css";
 const rangeText = (v, unit) =>
   v?.min !== undefined && v?.max !== undefined

@@ -24,7 +24,7 @@ import {
   Weight,
   X,
 } from "lucide-react";
-import RidePlanFields from "../../ui/ride-plan-fields.jsx";
+import RidePlanFields from "../../ui/ride-plan-fields.tsx";
 import GlobalHeader from "../../ui/global-header.tsx";
 import { SocialFooter } from "../../ui/social-primitives.tsx";
 import SiteIcon, { slotIcons } from "../../ui/site-icon.tsx";

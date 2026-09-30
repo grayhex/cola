@@ -6,7 +6,7 @@ import {
   rideBikeStateError,
 } from "../../lib/bike-status.ts";
 import { socialApi } from "./social-primitives.tsx";
-import { RideRoutePreview, RideMetrics } from "./ride-card.jsx";
+import { RideRoutePreview, RideMetrics } from "./ride-card.tsx";
 import { garminFields, defaultRideFields } from "../../lib/garmin-fields.ts";
 
 // The recorded-ride form (#245): uploading a track under «Интеграции и

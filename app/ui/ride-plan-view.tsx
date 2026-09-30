@@ -2,9 +2,9 @@
 import { useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import RidePassport from "./ride-passport.jsx";
-import RideRsvp, { responseLabels } from "./ride-rsvp.jsx";
-import RideShare from "./ride-share.jsx";
+import RidePassport from "./ride-passport.tsx";
+import RideRsvp, { responseLabels } from "./ride-rsvp.tsx";
+import RideShare from "./ride-share.tsx";
 import { SharedView, useMotionFeedback } from "./motion.tsx";
 import { Avatar, socialApi } from "./social-primitives.tsx";
 import { useSite } from "./site-provider.tsx";
@@ -18,7 +18,7 @@ import styles from "./ride-plan.module.css";
 // Loaded on the first click; a failed chunk still leaves the login page.
 const RideAuthDialog = dynamic(
   () =>
-    import("./ride-auth-dialog.jsx").catch(() => ({
+    import("./ride-auth-dialog.tsx").catch(() => ({
       default: function AuthLink({ onClose }) {
         return (
           <p role="alert" className="error">

@@ -8,7 +8,7 @@
 
 Линия маршрута — акцентного цвета сайта поверх тёмной каймы (`routeCasing` в [yandex-ride-map.js](../../lib/yandex-ride-map.ts)): в MapLibre это слой `ride-casing` под слоем `ride`, в Яндексе — отдельные объекты `ride-casing-N` под `ride-segment-N`, в SVG-превью — путь `.route-casing`. Так маршрут виден и поверх жёлтых и оранжевых дорог подложки (#131). Контейнеры карт (`.map-engine`) не подчиняются общему правилу `max-width: 100%` для картинок и canvas: движки карт сами задают размеры своих слоёв.
 
-Код: [map-settings.js](../../lib/map-settings.ts), [ride-map.jsx](../../app/ui/ride-map.jsx), [ride-basemap.jsx](../../app/ui/ride-basemap.jsx), [admin map settings](../../app/admin/map-settings.tsx). Серверная схема находится в [admin-validation.js](../../lib/admin-validation.ts).
+Код: [map-settings.js](../../lib/map-settings.ts), [ride-map.jsx](../../app/ui/ride-map.tsx), [ride-basemap.jsx](../../app/ui/ride-basemap.tsx), [admin map settings](../../app/admin/map-settings.tsx). Серверная схема находится в [admin-validation.js](../../lib/admin-validation.ts).
 
 ## Провайдеры
 
@@ -25,7 +25,7 @@ Legacy `MAP_STYLE_URL` остаётся env-настройкой и переда
 
 ## Яндекс
 
-[Загрузчик](../../lib/yandex-maps.ts), [renderer](../../lib/yandex-ride-map.ts), [компонент](../../app/ui/yandex-ride-map.jsx) используют JS API v3, не недокументированные tile URLs. Ключ вводится в существующее поле; OAuth Client Secret, новые env и миграция БД для этого не нужны.
+[Загрузчик](../../lib/yandex-maps.ts), [renderer](../../lib/yandex-ride-map.ts), [компонент](../../app/ui/yandex-ride-map.tsx) используют JS API v3, не недокументированные tile URLs. Ключ вводится в существующее поле; OAuth Client Secret, новые env и миграция БД для этого не нужны.
 
 В кабинете провайдера ограничьте браузерный ключ нужным HTTP Referer. Порядок настройки и актуальные ограничения: [официальная документация Яндекса](https://yandex.ru/maps-api/docs/js-api/limit.html). Лимиты/стоимость проверяйте в своём кабинете, не по старому скриншоту.
 

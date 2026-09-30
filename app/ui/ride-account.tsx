@@ -4,10 +4,10 @@ import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import SiteIcon from "./site-icon.tsx";
 import AccountSectionHead from "./account-section.tsx";
-import RideForm from "./ride-form.jsx";
-import PlanComposer from "./plan-composer.jsx";
+import RideForm from "./ride-form.tsx";
+import PlanComposer from "./plan-composer.tsx";
 import { socialApi, Pagination } from "./social-primitives.tsx";
-import RideCard from "./ride-card.jsx";
+import RideCard from "./ride-card.tsx";
 
 // «Мои покатушки» (#245): the rider's own planned and completed rides and
 // their management. Track files, Garmin CSV and Ride with GPS live under

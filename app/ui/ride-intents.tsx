@@ -24,8 +24,8 @@ import AuthPage from "./auth-page.tsx";
 import { useConfirmation } from "./confirmation.tsx";
 import Modal from "./garage/modal.tsx";
 import { MotionList, SharedView, useMotionFeedback } from "./motion.tsx";
-import { AreaField, ExtraConditions } from "./ride-plan-fields.jsx";
-import RidePassport from "./ride-passport.jsx";
+import { AreaField, ExtraConditions } from "./ride-plan-fields.tsx";
+import RidePassport from "./ride-passport.tsx";
 import {
   intentLimits,
   validTimeZone,

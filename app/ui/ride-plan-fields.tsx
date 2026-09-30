@@ -2,8 +2,8 @@
 import { useState } from "react";
 import { ridePlanOptions } from "../../lib/ride-plan-options.ts";
 import { useMotionFeedback } from "./motion.tsx";
-import RidePassport from "./ride-passport.jsx";
-import AreaPicker from "./ride-area-map.jsx";
+import RidePassport from "./ride-passport.tsx";
+import AreaPicker from "./ride-area-map.tsx";
 import PassportTiles from "./passport-tiles.tsx";
 import styles from "./ride-passport.module.css";
 

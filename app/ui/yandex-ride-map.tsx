@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { loadYandexMaps } from "../../lib/yandex-maps.ts";
 import { createYandexRideMap, yandexRoute } from "../../lib/yandex-ride-map.ts";
-import RideBasemap from "./ride-basemap.jsx";
+import RideBasemap from "./ride-basemap.tsx";
 import styles from "./yandex-ride-map.module.css";
 
 const unavailable =

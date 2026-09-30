@@ -8,7 +8,7 @@ import styles from "./ride-plan.module.css";
 
 const RideQr = dynamic(
   () =>
-    import("./ride-qr.jsx").catch(() => ({
+    import("./ride-qr.tsx").catch(() => ({
       default: function QrUnavailable() {
         return (
           <p role="alert" className="error">

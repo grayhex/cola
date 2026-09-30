@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Modal from "./garage/modal.tsx";
-import PlanForm from "./plan-form.jsx";
+import PlanForm from "./plan-form.tsx";
 import { socialApi } from "./social-primitives.tsx";
 import { useConfirmation } from "./confirmation.tsx";
 import { selectableRideBikes } from "../../lib/bike-status.ts";

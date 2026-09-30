@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import { CalendarDays } from "lucide-react";
 import SiteIcon from "./site-icon.tsx";
 
-const loadDialogs = () => import("./together-dialogs.jsx");
+const loadDialogs = () => import("./together-dialogs.tsx");
 const saved = {
   intent: ["Намерение сохранено.", "/ride-intents", "Мои намерения"],
   plan: ["Покатушка запланирована.", "/account?tab=rides", "Мои покатушки"],

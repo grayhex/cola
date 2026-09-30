@@ -20,7 +20,7 @@ function isMarketNotice(n: NotificationDto): n is MarketNoticeDto {
 import { errorMessage } from "../../lib/errors.ts";
 import Link from "next/link";
 import { MarketCard } from "./market.tsx";
-import RideCard from "./ride-card.jsx";
+import RideCard from "./ride-card.tsx";
 import JournalCard from "./journal-card.tsx";
 import { MotionList } from "./motion.tsx";
 import {

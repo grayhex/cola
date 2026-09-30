@@ -1,4 +1,4 @@
-import RideIntents from "../ui/ride-intents.jsx";
+import RideIntents from "../ui/ride-intents.tsx";
 import { hidden } from "../../lib/indexing.ts";
 export const metadata = { title: "Хочу кататься · ColaBike", robots: hidden };
 export default function Page() {

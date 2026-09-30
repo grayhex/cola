@@ -27,7 +27,7 @@ import Photo from "../bike-photo.tsx";
 import BikeActions from "../bike-actions.tsx";
 import GroupedComponents from "../grouped-components.tsx";
 import { BikeGame } from "../achievements.tsx";
-import RideList from "../ride-list.jsx";
+import RideList from "../ride-list.tsx";
 import JournalList from "../journal-list.tsx";
 import { ArrowLeft, ChevronRight, Plus, X, Package, Lock } from "../icons.tsx";
 import api from "./api.ts";
