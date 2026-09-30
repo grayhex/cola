@@ -177,6 +177,17 @@ test("migration registry covers the schema without reusing the retired number", 
     );
 });
 
+test("Docker inline imports resolve exactly without bundler extension rewriting", async () => {
+  const source = await readFile(path.join(root, "Dockerfile"), "utf8");
+  for (const match of source.matchAll(
+    /\bimport\(\s*["'](\.{1,2}\/[^"']+)["']\s*\)/g,
+  ))
+    assert.ok(
+      await exists(path.resolve(root, match[1])),
+      `Dockerfile: missing Node runtime import ${match[1]}`,
+    );
+});
+
 test("literal relative imports in application, operator and Resolver sources resolve", async () => {
   const generated = new Map([
     ["lib/version.js", "scripts/build-version.js"],

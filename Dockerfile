@@ -54,7 +54,7 @@ COPY scripts/check-runtime.js scripts/migrate.js \
     scripts/audit-photo-files.js scripts/recalculate-photo-storage.js \
     scripts/cleanup-rides.js scripts/chat-sync.js scripts/chat-setup.js scripts/activity-sync.js \
     scripts/rebuild-factory-components.js ./scripts/
-RUN node --input-type=module -e "await import('./lib/rides.js'); await import('./lib/factory-import.ts')"
+RUN node --input-type=module -e "await import('./lib/rides.ts'); await import('./lib/factory-import.ts')"
 USER colabike
 CMD ["sh", "-c", "node scripts/check-runtime.js && node scripts/migrate.js"]
 
