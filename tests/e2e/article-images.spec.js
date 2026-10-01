@@ -48,6 +48,22 @@ test("article illustrations: blocks at the cursor, fit the column, open whole", 
   // between the paragraphs, not to the end of the article.
   await editor.locator("p").first().click();
   await page.keyboard.press("End");
+  // Finish the upload before releasing pending animation-frame callbacks.
+  // A late editor focus must not steal the caption's next keystrokes.
+  await page.evaluate(() => {
+    const raf = window.requestAnimationFrame.bind(window),
+      held = [];
+    window.requestAnimationFrame = (callback) =>
+      raf((time) => held.push(() => callback(time)));
+    window.releasePhotoFrames = () =>
+      new Promise((resolve) =>
+        raf(() => {
+          window.requestAnimationFrame = raf;
+          for (const callback of held) callback();
+          resolve();
+        }),
+      );
+  });
   const upload = page.getByLabel("Иллюстрация", { exact: true });
   await upload.setInputFiles({
     name: "tread.png",
@@ -64,6 +80,9 @@ test("article illustrations: blocks at the cursor, fit the column, open whole", 
 
   // The caption is typed under the picture; Enter keeps the form open.
   const caption = editor.getByLabel("Подпись к иллюстрации");
+  await caption.focus();
+  await page.evaluate(() => window.releasePhotoFrames());
+  await expect(caption).toBeFocused();
   await caption.fill("Протектор крупным планом");
   await caption.press("Enter");
   await expect(page).toHaveURL(/\/articles\/new$/);

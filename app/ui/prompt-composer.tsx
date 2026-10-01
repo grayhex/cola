@@ -76,13 +76,13 @@ const PhotoInEditor = PhotoReference.extend({
         if (typeof position !== "number") return;
         editor
           .chain()
-          .focus()
           .command(({ tr }) => {
             const after = tr.doc.resolve(position).after();
             tr.setSelection(Selection.near(tr.doc.resolve(after), 1));
             return true;
           })
           .run();
+        editor.view.focus();
       });
       dom.append(image, caption);
       return {
@@ -226,12 +226,16 @@ export default function PromptComposer({
         // never replaces the selected text or illustration.
         editor
           .chain()
-          .focus()
           .insertContentAt(editor.state.selection.to, {
             type: "paragraph",
             content: [{ type: "photoReference", attrs: { id: photoId, alt } }],
           })
+          .scrollIntoView()
           .run();
+        // The node view is already mounted by the transaction. Tiptap's
+        // focus command schedules another focus in an animation frame;
+        // that can steal typing from the new caption on mobile Safari.
+        editor.view.focus();
         return;
       }
       const area = source.current;
