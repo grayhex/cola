@@ -14,6 +14,7 @@ const sections = [
   "Интеграции и импорт",
   "Социальное",
   "Достижения",
+  "Велосипед недели",
   "Оформление",
   "Аккаунт",
 ];
@@ -164,6 +165,11 @@ test("sidebar, overview actions, one section shell, imports moved, old links and
   await expect(page).toHaveURL(/tab=bikes/);
   await page.goForward();
   await expect(page).toHaveURL(/tab=rides/);
+  await open("Велосипед недели");
+  await expect(page).toHaveURL(/tab=spotlight/);
+  await expect(
+    main.getByRole("heading", { name: "Велосипед недели", exact: true }),
+  ).toBeVisible();
   // Old import links land in «Интеграции и импорт» with the same intent.
   await page.goto("/account?tab=rides&action=add");
   await expect(page).toHaveURL(/tab=integrations&action=add/);
