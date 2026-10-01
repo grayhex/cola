@@ -1,9 +1,7 @@
 import type { SiteSettings } from "./contracts.ts";
-interface GraphicSlot {
-  kind?: "groups" | "categories";
-  name?: string;
-  key: keyof SiteSettings;
-}
+type GraphicSlot =
+  | { kind: "groups" | "categories"; name: string; key: string }
+  | { kind?: never; key: (typeof illustrationSlots)[number]["key"] };
 export const illustrationSlots = (
   [
     ["backgroundLightId", "Фон сайта · светлая тема", "Фон сайта", "Без фона"],

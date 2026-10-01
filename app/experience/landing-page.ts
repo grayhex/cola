@@ -1,0 +1,65 @@
+import type { Metadata } from "next";
+import type { ExperienceLandingDto } from "../../lib/contracts.ts";
+// Shared by the model and part landing routes (#74): one request-cached
+// load, the canonical redirect and metadata.
+import { cache } from "react";
+import { notFound, permanentRedirect } from "next/navigation";
+import { db } from "../../lib/db.ts";
+import { currentViewer } from "../../lib/viewer.ts";
+import { routeParam, absolutePublicUrl } from "../../lib/public-urls.ts";
+import { indexed, hidden } from "../../lib/indexing.ts";
+import { plural } from "../../lib/plural.ts";
+import { modelLanding, partLanding } from "../../lib/experience-landing.ts";
+
+const loaders = { model: modelLanding, part: partLanding };
+const load = cache(
+  async (kind: keyof typeof loaders, first: string, second: string) =>
+    loaders[kind](db, (await currentViewer())?.id || null, first, second),
+);
+
+// The page data, or a 404 for a never-public model. Other spellings of
+// the same name move permanently to the canonical address.
+export async function landing(
+  kind: keyof typeof loaders,
+  rawFirst: string,
+  rawSecond: string,
+) {
+  const first = routeParam(rawFirst),
+    second = routeParam(rawSecond);
+  const data = await load(kind, first, second);
+  if (!data) notFound();
+  const canonical =
+    data.kind === "model"
+      ? [data.brandSlug, data.slug]
+      : [data.categorySlug, data.slug];
+  if (!canonical[0] || !canonical[1]) notFound();
+  if (first !== canonical[0] || second !== canonical[1])
+    permanentRedirect(data.path);
+  return data;
+}
+
+export function landingMetadata(data: ExperienceLandingDto): Metadata {
+  const builds = `${data.builds} ${plural(data.builds, "сборка", "сборки", "сборок")}`;
+  const title = `${data.title} — опыт владельцев · ColaBike`;
+  const description =
+    data.kind === "model"
+      ? `${builds} ${data.title} на ColaBike: комплектации, фото, записи журнала и покатушки владельцев.`
+      : `${data.title} (${data.category.toLocaleLowerCase("ru")}) стоит в ${data.builds} ${plural(data.builds, "сборке", "сборках", "сборках")} на ColaBike: на каких велосипедах и что пишут владельцы.`;
+  const url = absolutePublicUrl(data.path);
+  return {
+    title: { absolute: title },
+    description,
+    // Thin pages still open for people, but search engines wait for more.
+    robots: data.indexed ? indexed : hidden,
+    alternates: { canonical: url },
+    openGraph: {
+      type: "website",
+      title,
+      description,
+      url,
+      siteName: "ColaBike",
+      locale: "ru_RU",
+    },
+    twitter: { card: "summary", title, description },
+  };
+}

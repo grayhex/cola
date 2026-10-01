@@ -10,7 +10,7 @@
 
 Основные разделы — **Велосипеды, Компоненты, Журнал, Статьи, Покатушки, Рынок, О проекте** (порядок и видимость задаются в админке); поиск, уведомления и аккаунт — отдельные действия. `/about` управляется в Админка → Дизайн → О проекте, общая навигация/графика — в настройках оформления.
 
-Код: [global-header.jsx](../../app/ui/global-header.tsx), [nav-popover.jsx](../../app/ui/nav-popover.tsx), [about-content.js](../../lib/about-content.ts), [navigation-settings.jsx](../../app/admin/navigation-settings.jsx).
+Код: [global-header.jsx](../../app/ui/global-header.tsx), [nav-popover.jsx](../../app/ui/nav-popover.tsx), [about-content.js](../../lib/about-content.ts), [navigation-settings.jsx](../../app/admin/navigation-settings.tsx).
 
 ## Данные и основные функции
 

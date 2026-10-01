@@ -17,8 +17,8 @@ ENV NEXT_TELEMETRY_DISABLED=1
 COPY next.config.mjs proxy.js tsconfig.json ./
 COPY app ./app
 COPY lib ./lib
-# The shared helper runs in web; domain/context are type-only inputs for Next.
-COPY services/bike-resolver/src/component-identity.js services/bike-resolver/src/domain.ts services/bike-resolver/src/context.ts ./services/bike-resolver/src/
+# The shared helper runs in web; the TS files are type-only inputs for Next.
+COPY services/bike-resolver/src/component-identity.js services/bike-resolver/src/domain.ts services/bike-resolver/src/context.ts services/bike-resolver/src/settings.ts services/bike-resolver/src/planner.ts ./services/bike-resolver/src/
 COPY scripts/build-version.js ./scripts/
 # Compiler cache stays in the local builder, never in an exported image/cache layer.
 # DB migrations and public files do not participate in web compilation.

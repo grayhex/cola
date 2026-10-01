@@ -1,0 +1,35 @@
+"use client";
+import { iconPaths, categoryIcons } from "../../lib/part-icons.ts";
+export default function PartIcon({
+  category,
+  name,
+  icons = {},
+  size = 26,
+}: {
+  category?: string;
+  name?: string;
+  icons?: Record<string, string>;
+  size?: number;
+}) {
+  const key =
+    name || icons[category || ""] || categoryIcons[category || ""] || "other";
+  return (
+    <svg
+      className="part-icon"
+      width={size}
+      height={size}
+      viewBox="0 0 32 32"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      {(iconPaths[key] || iconPaths.other).map((d, i) => (
+        <path key={i} d={d} />
+      ))}
+    </svg>
+  );
+}

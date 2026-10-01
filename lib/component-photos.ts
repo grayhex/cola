@@ -75,7 +75,7 @@ export async function componentGallery(
       version: number;
       created_at: Date;
       updated_at: Date;
-      source: unknown;
+      source: ComponentPhotoRow["source"];
       username: string;
       name: string;
       avatar_id: string;

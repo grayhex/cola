@@ -1,5 +1,5 @@
 "use client";
-import { ClassificationFilters } from "./bike-classification.jsx";
+import { ClassificationFilters } from "./bike-classification.tsx";
 import {
   readClassificationFilters,
   classificationLabels,

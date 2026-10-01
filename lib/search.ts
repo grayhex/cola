@@ -161,11 +161,42 @@ export function experienceFilter(
   );
 }
 
+type SearchPage<K extends SearchInput["type"], I> = {
+  items: I[];
+  total: number;
+  page: number;
+  pageSize: number;
+  type: K;
+};
+export type ExperienceSearchResult =
+  | SearchPage<"users", NonNullable<ReturnType<typeof publicAuthor>>>
+  | SearchPage<"journal", Awaited<ReturnType<typeof journalCards>>[number]>
+  | SearchPage<"bikes", Awaited<ReturnType<typeof showcase>>["bikes"][number]>;
+export function searchExperience(
+  q: Queryable,
+  viewer: string | null | undefined,
+  input: SearchInput & { type: "bikes" },
+): Promise<Extract<ExperienceSearchResult, { type: "bikes" }>>;
+export function searchExperience(
+  q: Queryable,
+  viewer: string | null | undefined,
+  input: SearchInput & { type: "journal" },
+): Promise<Extract<ExperienceSearchResult, { type: "journal" }>>;
+export function searchExperience(
+  q: Queryable,
+  viewer: string | null | undefined,
+  input: SearchInput & { type: "users" },
+): Promise<Extract<ExperienceSearchResult, { type: "users" }>>;
+export function searchExperience(
+  q: Queryable,
+  viewer: string | null | undefined,
+  input: SearchInput,
+): Promise<ExperienceSearchResult>;
 export async function searchExperience(
   q: Queryable,
   viewer: string | null | undefined,
   input: SearchInput,
-) {
+): Promise<ExperienceSearchResult> {
   const site = await getSite(q),
     params: unknown[] | undefined = [];
   let similarCategory: string | null = null;
@@ -254,34 +285,46 @@ export async function searchExperience(
       [...params, (input.page - 1) * 24],
     )
   ).rows;
-  let items;
+  function page<K extends SearchInput["type"], I extends { id: string }>(
+    type: K,
+    items: I[],
+  ): SearchPage<K, I> {
+    const index = new Map(items.map((i) => [i.id, i]));
+    return {
+      items: rows.flatMap((r) => (index.has(r.id) ? [index.get(r.id)!] : [])),
+      total,
+      page: input.page,
+      pageSize: 24,
+      type,
+    };
+  }
   if (input.type === "users")
-    items = rows.map((row) =>
-      publicAuthor({
-        id: row.id,
-        username: row.username!,
-        name: row.name!,
-        avatar_id: row.avatar_id,
-      }),
+    return page(
+      "users",
+      rows.map((row) =>
+        publicAuthor({
+          id: row.id,
+          username: row.username!,
+          name: row.name!,
+          avatar_id: row.avatar_id,
+        }),
+      ),
     );
-  else if (input.type === "journal")
-    items = await journalCards(
-      q,
-      rows.map((r) => r.id),
-      viewer,
+  if (input.type === "journal")
+    return page(
+      "journal",
+      await journalCards(
+        q,
+        rows.map((r) => r.id),
+        viewer,
+      ),
     );
-  else
-    items = rows.length
+  return page(
+    "bikes",
+    rows.length
       ? (await showcase(q, viewer, { ids: rows.map((r) => r.id) })).bikes
-      : [];
-  const index = new Map(items.map((i) => [i.id, i]));
-  return {
-    items: rows.flatMap((r) => (index.has(r.id) ? [index.get(r.id)!] : [])),
-    total,
-    page: input.page,
-    pageSize: 24,
-    type: input.type,
-  };
+      : [],
+  );
 }
 
 export type SearchInput = z.infer<typeof searchInput>;

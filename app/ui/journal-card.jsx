@@ -71,6 +71,7 @@ export function SaveEntry({ entry, onChange }) {
     </>
   );
 }
+/** @param {{ entry: import("../../lib/contracts.ts").JsonData<Awaited<ReturnType<typeof import("../../lib/journal-discovery.ts").journalCards>>[number]>, onSaved?: () => void }} props */
 export default function JournalCard({ entry, onSaved }) {
   const kind = entry.entryKind || entry.kind;
   const KindIcon = kindIcons[kind] || NotebookPen;

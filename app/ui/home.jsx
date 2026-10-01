@@ -18,9 +18,9 @@ import {
 import GlobalHeader from "./global-header.tsx";
 import { SocialFooter } from "./social-primitives.tsx";
 import { useSite } from "./site-provider.tsx";
-import BikeCard from "./bike-card.jsx";
+import BikeCard from "./bike-card.tsx";
 import { useAutoScroll } from "./use-auto-scroll.ts";
-import BikeCarousel from "./bike-carousel.jsx";
+import BikeCarousel from "./bike-carousel.tsx";
 import AchievementArt from "./achievement-art.jsx";
 import { ContentTypeLabel } from "./content-label.tsx";
 import SearchBox from "./search-box.tsx";

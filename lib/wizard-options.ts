@@ -6,7 +6,9 @@ export function limitedOptions(options: string[], value: string, limit = 8) {
     .slice(0, limit);
 }
 export function bicycleName(
-  bike: Pick<BikeInputType, "name" | "brand" | "model" | "trim" | "year">,
+  bike: Pick<BikeInputType, "name" | "brand" | "model" | "trim"> & {
+    year: number | string;
+  },
 ) {
   return (
     bike.name.trim() ||

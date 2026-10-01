@@ -20,7 +20,7 @@ export function Field({
     </label>
   );
 }
-export function Select({
+export function Select<const T extends string>({
   label,
   value,
   onChange,
@@ -28,9 +28,9 @@ export function Select({
   disabled = false,
 }: {
   label: string;
-  value: string;
-  onChange: (value: string) => void;
-  options: [string, string][];
+  value: T;
+  onChange: (value: T) => void;
+  options: readonly (readonly [T, string])[];
   disabled?: boolean;
 }) {
   return (
@@ -39,7 +39,7 @@ export function Select({
         aria-label={label}
         value={value}
         disabled={disabled}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => onChange(e.target.value as T)}
       >
         {options.map(([key, text]) => (
           <option key={key} value={key}>
@@ -52,7 +52,7 @@ export function Select({
 }
 
 // Controlled tabs with a single keyboard stop and linked, labelled panels.
-export function SectionTabs({
+export function SectionTabs<const T extends string>({
   label,
   items,
   value,
@@ -60,10 +60,10 @@ export function SectionTabs({
   children,
 }: {
   label: string;
-  items: [string, string][];
-  value: string;
-  onChange: (value: string) => void;
-  children: (key: string) => React.ReactNode;
+  items: readonly (readonly [T, string])[];
+  value: T;
+  onChange: (value: T) => void;
+  children: (key: T) => React.ReactNode;
 }) {
   const id = useId();
   return (

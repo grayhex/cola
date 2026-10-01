@@ -16,7 +16,7 @@ export default function ChoiceMenu({
   onChange,
 }: {
   label: string;
-  value: string;
+  value: string | null;
   choices: Choice[];
   onChange: (value: string) => void;
 }) {

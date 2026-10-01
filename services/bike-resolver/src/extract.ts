@@ -8,6 +8,7 @@ import {
 import {
   ResolverError,
   type ParsedBike,
+  type SuggestedMetadata,
   type SourceDocument,
   type RawField,
 } from "./domain.js";
@@ -499,7 +500,7 @@ export function parseDocument(
     coverage,
     strategies: [...new Set(result.chosen.map((f) => f.strategy))],
   };
-  const suggestedMetadata: Record<string, string | number> = {};
+  const suggestedMetadata: SuggestedMetadata = {};
   for (const f of result.chosen.filter((f) => metadataName.test(f.label))) {
     const key = normalize(f.label);
     if (/^(weight|net weight|вес)$/.test(key)) {

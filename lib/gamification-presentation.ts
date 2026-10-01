@@ -51,7 +51,17 @@ export function homeRecords<T extends { holder: unknown; subject: string }>(
 // How a rule decides, in one line for the admin list: "Дистанция покатушки
 // ≥ 100 км", "Минимум: вес велосипеда · MTB".
 export function ruleCondition(
-  rule: GameRuleType,
+  rule: Pick<
+    GameRuleType,
+    | "metric"
+    | "kind"
+    | "comparison"
+    | "threshold"
+    | "direction"
+    | "category"
+    | "minDistanceKm"
+    | "keywords"
+  >,
   categoryLabels: Record<string, string> = {},
 ) {
   const metric = metricByKey[rule.metric];

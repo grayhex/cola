@@ -11,7 +11,7 @@ export function componentIllustrationSlots(
   return installationNavigation(catalog).flatMap((group) => [
     {
       key: "group:" + group.id,
-      kind: "groups",
+      kind: "groups" as const,
       name: group.id,
       label: "Группа · " + group.name,
       group: group.name,
@@ -20,7 +20,7 @@ export function componentIllustrationSlots(
     },
     ...group.categories.map((category: string) => ({
       key: "category:" + category,
-      kind: "categories",
+      kind: "categories" as const,
       name: category,
       label: "Тип · " + category,
       group: group.name,

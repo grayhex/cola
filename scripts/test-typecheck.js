@@ -174,6 +174,30 @@ export function legalProbe(data: LegalMetadataDto): string {
   assert.equal((coreResult.match(/core\.tsx.*TS2322/g) || []).length, 3);
   assert.match(coreResult, /core\.tsx.*TS18047/);
   assert.match(coreResult, /core\.tsx.*TS2339/);
+  // Admin setting keys, modal modes and feature DTOs must retain their exact contracts.
+  await writeFile(
+    path.join(nativeApp, "catalog.tsx"),
+    `
+import type { SettingsChange } from ${JSON.stringify("../admin/types.ts")};
+import type { GarageModalState, BikeFormData } from ${JSON.stringify("../ui/garage/types.ts")};
+import type { ExperienceSearchDto } from ${JSON.stringify("../../lib/contracts.ts")};
+export function settingsProbe(change: SettingsChange) {
+  change("autoScrollSpeed", "fast");
+  change("brandLogoId", 42);
+}
+export const modal: GarageModalState = { type: "deletePhoto", section: "build" };
+export function bikeProbe(data: BikeFormData) { data.is_public = "yes"; }
+export function searchProbe(data: ExperienceSearchDto) {
+  if (data.type === "users") return data.items[0].email;
+  if (data.type === "journal") return data.items[0].weight;
+}
+`,
+  );
+  const catalogResult = check("tsconfig.json");
+  assert.equal((catalogResult.match(/catalog\.tsx.*TS2345/g) || []).length, 2);
+  assert.match(catalogResult, /catalog\.tsx.*TS2353/);
+  assert.match(catalogResult, /catalog\.tsx.*TS2322/);
+  assert.equal((catalogResult.match(/catalog\.tsx.*TS2339/g) || []).length, 2);
   await rm(nativeApp, { recursive: true, force: true });
   await rm(nativeApi, { recursive: true, force: true });
 

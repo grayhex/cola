@@ -7,7 +7,9 @@ export const eventPresentation = Object.freeze({
   article: { label: "Статья", tone: "teal" },
   achievement: { label: "Достижение", tone: "rose" },
 });
-export const bikeCategoryTone = Object.freeze({
+export const bikeCategoryTone: Readonly<
+  Record<string, "blue" | "green" | "teal" | "purple" | "amber" | "rose">
+> = Object.freeze({
   mtb: "blue",
   road_gravel: "green",
   urban_touring: "teal",
