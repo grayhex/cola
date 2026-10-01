@@ -54,6 +54,7 @@ try {
     "040_ride_interest_proposals",
     "041_component_descriptions",
     "042_ride_agreements",
+    "043_notification_email",
   ]) {
     const { rowCount } = await client.query(
       "SELECT 1 FROM schema_migrations WHERE version=$1",

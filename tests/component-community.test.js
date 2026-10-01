@@ -108,6 +108,13 @@ test("component media and shared discussion: upgrade, roles, quota, merges, mode
         "utf8",
       ),
     );
+    // Current notifications/export use the email settings schema (#148).
+    await db.exec(
+      await readFile(
+        new URL("../db/043_notification_email.sql", import.meta.url),
+        "utf8",
+      ),
+    );
     // Model edits write the description (#264).
     await db.exec(
       await readFile(

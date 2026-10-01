@@ -50,7 +50,7 @@ curl --fail --max-time 10 http://127.0.0.1:3000/api/status
 sudo ss -lntp | grep -E ':(3000|5432|8080)\b'
 ```
 
-Ожидается только `127.0.0.1:3000` на хосте; db/resolver не имеют host ports. Runtime проверяет production-настройки, затем миграции выполняются до старта Next. Ошибка Resolver не должна выключать ручной ввод, но после `--wait` проверяйте `app`, `db`, `bike-resolver`, `chat-sync`, `activity-sync` и успешное завершение `migrate`. Workers не имеют HTTP-healthcheck: их работу дополнительно проверяют по логам и очередям интеграций.
+Ожидается только `127.0.0.1:3000` на хосте; db/resolver не имеют host ports. Runtime проверяет production-настройки, затем миграции выполняются до старта Next. Ошибка Resolver не должна выключать ручной ввод, но после `--wait` проверяйте `app`, `db`, `bike-resolver`, `chat-sync`, `activity-sync`, `notification-email` и успешное завершение `migrate`. Workers не имеют HTTP-healthcheck: их работу дополнительно проверяют по логам и очередям интеграций.
 
 Не печатайте `docker compose config` без `--quiet` в общедоступный лог: он раскрывает секреты. Стабильное имя Compose project определяет имена volumes; сохраните существующее имя при обновлении. Не запускайте `down -v` для исправления сборки.
 
@@ -132,8 +132,8 @@ Forced-command отклоняет всё, кроме 40-символьного S
 Установленный deploy wrapper использует ту же команду Compose и не требует замены.
 
 `migrate` единожды собирает локальный образ `${COMPOSE_PROJECT_NAME}-ops:local`.
-`chat-sync` и `activity-sync` используют этот же образ без собственного build/export
-и без pull из registry; имя изолировано именем Compose-проекта. Оба worker стартуют
+`chat-sync`, `activity-sync` и `notification-email` используют этот же образ без собственного build/export
+и без pull из registry; имя изолировано именем Compose-проекта. Workers стартуют
 только после успешной миграции. На чистом хосте запускайте обычный полный `up --build` либо
 сначала `build migrate`: `up --no-build chat-sync` не создаст отсутствующий образ.
 CI проверяет build graph, холодный `up --build` с отдельным локальным тегом и

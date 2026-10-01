@@ -435,6 +435,23 @@ export async function exportAccount(
     )
   ).rows[0]?.value || { passport: {} };
   const link = (href: string) => absolute(origin, href);
+  const notificationEmailPreferences = (
+    await q.query<{
+      enabled: boolean;
+      discussions: boolean;
+      rides: boolean;
+      market: boolean;
+      updated_at: Date;
+    }>(
+      "SELECT enabled,discussions,rides,market,updated_at FROM notification_email_preferences WHERE user_id=$1",
+      [userId],
+    )
+  ).rows[0] || {
+    enabled: false,
+    discussions: false,
+    rides: false,
+    market: false,
+  };
   return {
     format: "colabike-export",
     version: 1,
@@ -477,6 +494,7 @@ export async function exportAccount(
     })),
     rideIntents,
     rideIntentPreferences,
+    notificationEmailPreferences,
     componentPhotos: componentPhotos.map((p) => ({
       ...p,
       url: link("/api/components/media/" + p.id),

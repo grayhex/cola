@@ -26,7 +26,7 @@ sudo env \
 
 ## Что происходит во время backup
 
-Скрипт берёт общий `/var/lock/colabike-deploy.lock`, запоминает запущенные `app`, `bike-resolver`, `chat-sync` и `activity-sync`, останавливает этих писателей, оставляет БД для `pg_dump` и архивирует volumes через текущий app image. Нужен ровно один app container для `volumes-from`. Другие внешние писатели должны быть остановлены оператором.
+Скрипт берёт общий `/var/lock/colabike-deploy.lock`, запоминает запущенные `app`, `bike-resolver`, `chat-sync`, `activity-sync` и `notification-email`, останавливает этих писателей, оставляет БД для `pg_dump` и архивирует volumes через текущий app image. Нужен ровно один app container для `volumes-from`. Другие внешние писатели должны быть остановлены оператором.
 
 После проверки checksums временный приватный каталог публикуется атомарным переименованием. При ошибке частичный backup не считается успешным. Ранее работавшие сервисы возобновляются в finally. Retention удаляет только валидные каталоги собственного формата сверх `--keep`.
 
@@ -58,7 +58,7 @@ sudo env \
   --backup /srv/restore-input/colabike-TIMESTAMP-ID --yes
 ```
 
-Пути и имя — пример, не команда для существующего проекта `cola`. Restore сначала проверяет архив, запускает db, проверяет пустоту public/bike_resolver, создаёт app container без запуска и проверяет пустоту файловых volumes. Затем выполняет `pg_restore` и распаковку. App, Resolver и оба worker остаются остановленными.
+Пути и имя — пример, не команда для существующего проекта `cola`. Restore сначала проверяет архив, запускает db, проверяет пустоту public/bike_resolver, создаёт app container без запуска и проверяет пустоту файловых volumes. Затем выполняет `pg_restore` и распаковку. App, Resolver и workers остаются остановленными.
 
 Запустите цель с **теми же** env/project/files, проверьте ready/status, вход, известные байки, приватность фото/GPX, journal/component media и назначения иконок/наград. Только после приёмки меняйте трафик. После неуспешного restore сохраняйте оригинальный backup, диагностируйте новую цель; никогда не удаляйте production volume ради прохождения emptiness check.
 

@@ -49,3 +49,9 @@ assert s["activity-sync"]["environment"] == s["app"]["environment"]
 assert s["activity-sync"]["command"] == ["node","scripts/activity-sync.js"]
 assert not s["activity-sync"].get("ports")
 assert any(v.get("target")=="/app/rides" for v in s["activity-sync"]["volumes"])
+assert s["notification-email"]["image"] == s["migrate"]["image"]
+assert s["notification-email"]["pull_policy"] == "never"
+assert s["notification-email"]["environment"] == s["app"]["environment"]
+assert s["notification-email"]["command"] == ["node", "scripts/notification-email.js"]
+assert s["notification-email"]["depends_on"]["migrate"]["condition"] == "service_completed_successfully"
+assert not s["notification-email"].get("ports")
