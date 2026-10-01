@@ -1,10 +1,11 @@
 "use client";
-import type { ReactNode, Dispatch, SetStateAction, CSSProperties } from "react";
-import type { ViewerDto } from "../../lib/contracts.ts";
+import type { ReactNode, Dispatch, SetStateAction } from "react";
 import type { CommunityHomeDto } from "./content-types.ts";
 import type { RecordHolder } from "../../lib/gamification.ts";
 import type { JsonData } from "../../lib/contracts.ts";
+import type { homeSnapshot } from "../../lib/discovery.ts";
 import Link from "next/link";
+import { preload } from "react-dom";
 import { useEffect, useRef, useState } from "react";
 import {
   ShoppingBag,
@@ -17,23 +18,23 @@ import {
   Pause,
   Play,
   Wrench,
-  Newspaper,
   Info,
 } from "lucide-react";
 import GlobalHeader from "./global-header.tsx";
 import { SocialFooter } from "./social-primitives.tsx";
 import { useSite } from "./site-provider.tsx";
-import BikeCard from "./bike-card.tsx";
 import { useAutoScroll } from "./use-auto-scroll.ts";
 import BikeCarousel from "./bike-carousel.tsx";
 import AchievementArt from "./achievement-art.tsx";
-import { ContentTypeLabel } from "./content-label.tsx";
-import SearchBox from "./search-box.tsx";
-import HeroArtwork from "./hero-artwork.tsx";
-import styles from "./home.module.css";
 import TogetherActions from "./together-actions.tsx";
-// A route over a ruled map: two riders meet on the way. Decoration only,
-// drawn with semantic tokens so both themes read as one system.
+import RidePulse from "./home-ride-pulse.tsx";
+import BikeWeek from "./home-bike-week.tsx";
+import { profilePath, publicPath } from "../../lib/public-urls.ts";
+import { metricValue } from "../../lib/game-metrics.ts";
+import { personName } from "../../lib/usernames.ts";
+import styles from "./home.module.css";
+export type HomeSnapshot = JsonData<Awaited<ReturnType<typeof homeSnapshot>>>;
+
 function TogetherArt() {
   return (
     <svg
@@ -44,51 +45,33 @@ function TogetherArt() {
     >
       <path
         className={styles.artRoute}
-        d="M24 184 C 70 180, 72 120, 118 118 S 176 150, 206 104 S 250 40, 296 36"
+        d="M24 184 C70 180 72 120 118 118 S176 150 206 104 S250 40 296 36"
       />
-      <path className={styles.artBranch} d="M60 36 C 96 52, 110 84, 118 118" />
+      <path className={styles.artBranch} d="M60 36 C96 52 110 84 118 118" />
       <circle className={styles.artStart} cx="24" cy="184" r="6" />
       <circle className={styles.artStart} cx="60" cy="36" r="6" />
       <circle className={styles.artMeet} cx="118" cy="118" r="11" />
-      <circle className={styles.artMeetCore} cx="118" cy="118" r="4" />
+      <circle className={styles.artFinish} cx="118" cy="118" r="4" />
       <circle className={styles.artFinish} cx="296" cy="36" r="7" />
-      <g className={styles.artTag} transform="translate(186 140)">
-        <rect width="104" height="40" rx="8" />
-        <text x="12" y="17">
-          СБ · 09:00
-        </text>
-        <text x="12" y="32">
-          2 райдера
-        </text>
-      </g>
     </svg>
   );
 }
-// Blocks 3–6 of the home page (#254): a band of the ruled column like the hero
-// and «Покататься вместе», its title in a thin rail inside the band with the
-// section's links on the right. `tone` picks one of the few band surfaces.
 function HomeBand({
   id,
   title,
   icon: Icon,
   action,
-  tone,
   children,
 }: {
   id: string;
   title: string;
   icon: typeof Bike;
   action?: ReactNode;
-  tone?: string;
   children: ReactNode;
 }) {
   return (
     <section className="frame" aria-labelledby={id + "-heading"}>
-      <div
-        className={"frame-inner " + styles.band}
-        data-tone={tone}
-        data-home-band={id}
-      >
+      <div className={"frame-inner " + styles.band} data-home-band={id}>
         <div className={styles.bandRail}>
           <h2 id={id + "-heading"}>
             <Icon size={16} aria-hidden="true" />
@@ -101,30 +84,6 @@ function HomeBand({
     </section>
   );
 }
-// «Покататься вместе» (#245): one large block right after the hero, the same
-// for a guest and a rider, with no personal data — the two actions open the
-// composers in a window; a guest follows them to sign in.
-function TogetherHero({ user }: { user: ViewerDto | null }) {
-  return (
-    <section className="frame" aria-labelledby="together-heading">
-      <div className={"frame-inner " + styles.together}>
-        <div className={styles.togetherCopy}>
-          <span className="eyebrow">Покатушки</span>
-          <h2 id="together-heading">Покататься вместе</h2>
-          <p>
-            Отметьте, когда хочется ехать, — подберём выезды и покажем, с кем
-            можно собраться. Велосипед в гараже не нужен.
-          </p>
-          <TogetherActions key={user?.id || "guest"} signedIn={!!user} />
-        </div>
-        <TogetherArt />
-      </div>
-    </section>
-  );
-}
-import { profilePath, publicPath } from "../../lib/public-urls.ts";
-import { metricValue } from "../../lib/game-metrics.ts";
-import { personName } from "../../lib/usernames.ts";
 const markers: Record<string, typeof Bike> = {
   market: ShoppingBag,
   planned: CalendarDays,
@@ -226,9 +185,6 @@ export function ActivityTicker({
     </section>
   );
 }
-// One row: a glimpse of the next card makes horizontal scrolling discoverable.
-const trendingSizes =
-  "(max-width: 600px) 82vw, (max-width: 1050px) 50vw, 400px";
 // A record is held by a bike, a ride or a rider (#106).
 function recordHolder(holder: JsonData<RecordHolder>): [string, string] {
   if (holder.kind === "ride") return [publicPath("ride", holder), holder.name];
@@ -236,27 +192,55 @@ function recordHolder(holder: JsonData<RecordHolder>): [string, string] {
     return [profilePath(holder.author.username), personName(holder.author)];
   return [publicPath("bike", holder), holder.name];
 }
-const emptyData = { popular: [], events: [], content: [], records: [] };
+
+const destinations = [
+  {
+    href: "/rides",
+    label: "Покатушки",
+    text: "Маршруты и компания для выезда",
+    icon: Route,
+  },
+  {
+    href: "/components",
+    label: "Компоненты",
+    text: "Детали для вашей сборки",
+    icon: Wrench,
+  },
+  {
+    href: "/articles",
+    label: "Статьи",
+    text: "Опыт и знания сообщества",
+    icon: BookOpen,
+  },
+  {
+    href: "/market",
+    label: "Рынок",
+    text: "Найти нужное, передать лишнее",
+    icon: ShoppingBag,
+  },
+];
+const heroSizes = "(max-width: 720px) 100vw, 90vw";
 export default function Home() {
   const { settings, viewer: user, t } = useSite(),
     [paused, setPaused] = useState(false),
-    [data, setData] = useState<CommunityHomeDto | null>(null),
+    [data, setData] = useState<HomeSnapshot | null>(null),
     [error, setError] = useState(""),
     [revision, setRevision] = useState(0);
   useEffect(() => {
     const controller = new AbortController();
-    fetch("/api/discovery/home", {
+    fetch("/api/discovery/home?view=landing", {
       signal: controller.signal,
       cache: "no-store",
     })
       .then((r) => {
         if (!r.ok) throw Error();
-        return r.json() as Promise<CommunityHomeDto>;
+        return r.json() as Promise<HomeSnapshot>;
       })
       .then((home) => {
-        if (controller.signal.aborted) return;
-        setData(home);
-        setError("");
+        if (!controller.signal.aborted) {
+          setData(home);
+          setError("");
+        }
       })
       .catch((e) => {
         if (e.name !== "AbortError")
@@ -264,72 +248,60 @@ export default function Home() {
       });
     return () => controller.abort();
   }, [revision]);
-  const content = data || emptyData;
+  useEffect(() => {
+    let last = Date.now();
+    const refresh = () => {
+      if (Date.now() - last > 60_000) {
+        last = Date.now();
+        setRevision((v) => v + 1);
+      }
+    };
+    window.addEventListener("focus", refresh);
+    return () => window.removeEventListener("focus", refresh);
+  }, []);
+  const content = data || { events: [], records: [] };
+  const hero = settings.heroBackgroundImageId
+    ? `/api/assets/${settings.heroBackgroundImageId}`
+    : null;
+  const heroSrcSet = hero
+    ? `${hero}?width=640 640w, ${hero}?width=1280 1280w`
+    : undefined;
+  if (hero)
+    preload(hero + "?width=1280", {
+      as: "image",
+      imageSrcSet: heroSrcSet,
+      imageSizes: heroSizes,
+      fetchPriority: "high",
+    });
   return (
     <>
       <GlobalHeader user={user} />
       <main className={styles.home}>
-        {/* Marketing intro (docs/development/design-system.md → Layout): the ruled column with the
-            headline, search and the administrator's pictures and colours. */}
         <section className="frame" aria-labelledby="hero-title">
-          <div
-            className={"frame-inner " + styles.hero}
-            style={
-              // Without its own colours the block takes the accent (#131).
-              settings.heroBackgroundMode === "custom"
-                ? ({
-                    "--hero-light": settings.heroBackgroundLight,
-                    "--hero-dark": settings.heroBackgroundDark,
-                  } as CSSProperties)
-                : undefined
-            }
-          >
-            <div className={styles.heroContent}>
-              <div className={styles.heroCopy}>
-                <div className={styles.heroTitle}>
-                  <HeroArtwork
-                    animation={settings.heroTitleAnimation}
-                    imageId={settings.heroImageId}
-                    playing={settings.heroAnimationsEnabled}
-                    compact
-                  />
-                  <h1 id="hero-title">
-                    {settings.heroHeadline.split("\n").map((line, i) => (
-                      <span key={i}>{line}</span>
-                    ))}
-                  </h1>
-                </div>
-                <p className={styles.description}>{settings.heroDescription}</p>
-                <div className={styles.heroSearch} data-home-search>
-                  <SearchBox hero />
-                </div>
-                <div className={styles.heroLinks}>
-                  <Link className="text-link" href="/bikes">
-                    {t("Смотреть велосипеды")} <ArrowRight size={14} />
-                  </Link>
-                  <span>или</span>
-                  <Link
-                    className="text-link"
-                    href="/account?tab=bikes&action=add"
-                  >
-                    {t("добавить свой")}
-                  </Link>
-                </div>
-              </div>
-              <div
-                className={styles.animationStage}
-                data-hero-animation
-                aria-hidden="true"
-              >
-                <HeroArtwork
-                  animation={settings.heroStageAnimation}
-                  darkAnimation={settings.heroStageDarkAnimation}
-                  imageId={settings.heroStageImageId}
-                  playing={settings.heroAnimationsEnabled}
+          <div className="frame-inner">
+            <div className={styles.hero}>
+              {hero && (
+                <img
+                  className={styles.heroImage}
+                  data-hero-background
+                  src={hero + "?width=1280"}
+                  srcSet={heroSrcSet}
+                  sizes={heroSizes}
+                  alt=""
+                  fetchPriority="high"
+                  decoding="async"
                 />
-                <span className={styles.stageLabel}>
-                  {t("colabike / в движении")}
+              )}
+              <div className={styles.heroCopy}>
+                <span className={styles.heroEyebrow}>
+                  Больше чем просто велосипеды
                 </span>
+                <h1 id="hero-title">
+                  {settings.heroHeadline.split("\n").map((line, i) => (
+                    <span key={i}>{line}</span>
+                  ))}
+                </h1>
+                <p className={styles.description}>{settings.heroDescription}</p>
               </div>
             </div>
             <ActivityTicker
@@ -340,128 +312,66 @@ export default function Home() {
             />
           </div>
         </section>
-        <TogetherHero user={user} />
+        <section className="frame" aria-labelledby="together-heading">
+          <div className={"frame-inner " + styles.together}>
+            <div className={styles.togetherCopy}>
+              <span className="eyebrow">Покатушки</span>
+              <h2 id="together-heading">Покататься вместе</h2>
+              <p>
+                Отметьте, когда хочется ехать, — подберём выезды и покажем, с
+                кем можно собраться. Велосипед в гараже не нужен.
+              </p>
+              <TogetherActions
+                key={user?.id || "guest"}
+                signedIn={!!user}
+                onSaved={() => setRevision((v) => v + 1)}
+              />
+              <TogetherArt />
+            </div>
+            <div className={styles.pulsePanel}>
+              {error && (
+                <p className="error" role="alert">
+                  {error}{" "}
+                  <button
+                    className="quiet"
+                    onClick={() => setRevision((v) => v + 1)}
+                  >
+                    Повторить
+                  </button>
+                </p>
+              )}
+              <RidePulse pulse={data?.pulse} user={user} error={!!error} />
+            </div>
+          </div>
+        </section>
         <HomeBand
-          id="popular"
-          title={t("Популярные велосипеды")}
+          id="bike-week"
+          title="Велосипед недели"
           icon={Bike}
           action={
-            <Link className="text-link" href="/bikes?sort=popular">
-              {t("Все велосипеды")} <ArrowRight size={14} />
+            <Link className="text-link" href="/bikes">
+              Все велосипеды <ArrowRight size={14} />
             </Link>
           }
         >
-          {/* One status row for the whole page: the blocks below keep their
-              geometry and say briefly that they are waiting for it. */}
-          {error && (
-            <p className={"error " + styles.status} role="alert">
-              {error}{" "}
-              <button
-                className="quiet"
-                onClick={() => setRevision((v) => v + 1)}
-              >
-                Повторить
-              </button>
-            </p>
-          )}
-          <BikeCarousel busy={!data && !error}>
-            {content.popular.map((b) => (
-              <BikeCard
-                key={b.id}
-                bike={b}
-                user={user}
-                headingLevel={3}
-                sizes={trendingSizes}
-              />
-            ))}
-            {!data &&
-              !error &&
-              Array.from({ length: 6 }, (_, i) => (
-                <div
-                  className={"skeleton " + styles.skeleton}
-                  key={i}
-                  aria-hidden="true"
-                />
-              ))}
-          </BikeCarousel>
-          {data && !content.popular.length && (
-            <p className="empty-state">
-              Пока нет публичных велосипедов. Ваш может стать первым.
-            </p>
-          )}
+          <BikeWeek bike={data?.bikeOfWeek} loading={!data && !error} />
         </HomeBand>
-        <HomeBand
-          id="community"
-          title={t("Что нового")}
-          icon={Newspaper}
-          tone="subtle"
-          action={
-            <nav className={styles.sectionLinks} aria-label="Разделы">
-              <Link className="text-link" href="/journal">
-                Журнал
+        <HomeBand id="popular" title="Популярное на ColaBike" icon={Route}>
+          <nav
+            className={styles.destinations}
+            aria-label="Популярное на ColaBike"
+          >
+            {destinations.map(({ href, label, text, icon: Icon }) => (
+              <Link key={href} href={href} className={styles.destination}>
+                <Icon size={22} aria-hidden="true" />
+                <span>
+                  <strong>{label}</strong>
+                  <small>{text}</small>
+                </span>
+                <ArrowRight size={16} aria-hidden="true" />
               </Link>
-              <Link className="text-link" href="/rides">
-                Покатушки
-              </Link>
-              <Link className="text-link" href="/market">
-                Рынок
-              </Link>
-            </nav>
-          }
-        >
-          {content.content.length > 0 && (
-            <div className={styles.stories}>
-              {content.content.map((item) => {
-                const Icon = markers[item.type] || BookOpen;
-                return (
-                  <article
-                    className={styles.story}
-                    key={item.id}
-                    data-event={item.type}
-                  >
-                    <div className={styles.storyHead}>
-                      <ContentTypeLabel type={item.type}>
-                        <Icon size={12} aria-hidden="true" />
-                      </ContentTypeLabel>
-                      <span className="meta">
-                        <span>{item.author}</span>
-                        {item.distanceM != null && (
-                          <span className="mono">
-                            {(item.distanceM / 1000).toLocaleString("ru-RU", {
-                              maximumFractionDigits: 1,
-                            })}{" "}
-                            км
-                          </span>
-                        )}
-                      </span>
-                    </div>
-                    <h3>
-                      <Link className={styles.storyLink} href={item.href}>
-                        {item.title}
-                      </Link>
-                    </h3>
-                    {item.excerpt && <p>{item.excerpt}</p>}
-                  </article>
-                );
-              })}
-            </div>
-          )}
-          {!data && !error && (
-            <div className={styles.stories} aria-hidden="true">
-              {Array.from({ length: 3 }, (_, i) => (
-                <div className={styles.story} key={i}>
-                  <span className={"skeleton " + styles.lineSkeleton} />
-                  <span className={"skeleton " + styles.lineSkeleton} />
-                </div>
-              ))}
-            </div>
-          )}
-          {data && !content.content.length && (
-            <p className="empty-state">
-              Здесь появятся новые истории, маршруты и сборки.
-            </p>
-          )}
-          {error && <p className={styles.waiting}>Появится после загрузки.</p>}
+            ))}
+          </nav>
         </HomeBand>
         <HomeBand
           id="records"
@@ -524,20 +434,20 @@ export default function Home() {
           )}
           {error && <p className={styles.waiting}>Появится после загрузки.</p>}
         </HomeBand>
-        <HomeBand id="about" title="О проекте" icon={Info} tone="ruled">
+
+        <HomeBand id="about" title="О проекте" icon={Info}>
           <div className={styles.about}>
             <span className={styles.aboutMark} aria-hidden="true">
-              <Wrench size={22} />
+              <Bike size={28} />
             </span>
             <p>
-              <strong>{t("У каждой сборки есть своя история.")}</strong>
+              <strong>Велосипед объединяет.</strong>
               <span>
-                ColaBike помогает сохранить её — от первой детали до нового
-                маршрута.
+                ColaBike — место для ваших сборок, историй и новых дорог.
               </span>
             </p>
             <Link className="button secondary" href="/about">
-              Подробнее о проекте <ArrowRight size={16} />
+              О проекте <ArrowRight size={16} />
             </Link>
           </div>
         </HomeBand>

@@ -4,7 +4,9 @@ export const appearanceDefaults: SiteSettings["appearance"] = {
   accent: "#F3B51B",
 };
 export const heroDefaults = {
-  // Preserve the old static first visit until the administrator enables autoplay.
+  heroBackgroundImageId: null,
+  // Legacy fields remain for stored-settings compatibility and asset protection;
+  // the static homepage uses only heroBackgroundImageId.
   heroAnimationsEnabled: false,
   heroImageId: null,
   heroStageImageId: null,
@@ -22,9 +24,9 @@ export const heroDefaults = {
   heroBackgroundMode: "accent" as const,
   heroBackgroundLight: "#FFFCF2",
   heroBackgroundDark: "#24221B",
-  heroHeadline: "Покажи свой велосипед.\nРасскажи, как он меняется.",
+  heroHeadline: "Новые дороги.\nНастоящие люди.",
   heroDescription:
-    "Велосипеды, сборки, истории и покатушки людей, которым есть что показать.",
+    "ColaBike — это сообщество, маршруты, знания и вдохновение. Здесь велосипед объединяет людей и помогает открывать новые места.",
 };
 export const themeModes = ["system", "light", "dark"];
 export const themeStorageKey = "cola:theme";

@@ -51,7 +51,12 @@ export function CompactDialog({
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const d = ref.current!;
-    if (open && !d.open) d.showModal();
+    if (open && !d.open) {
+      d.showModal();
+      // Child effects run before showModal; focus the search only after the
+      // native dialog is open so keyboard shortcuts are ready for typing.
+      d.querySelector<HTMLElement>("[data-autofocus]")?.focus();
+    }
     if (!open && d.open) d.close();
   }, [open]);
   useEffect(() => {
@@ -203,11 +208,7 @@ export function GlobalSearch() {
         ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k")
       ) {
         e.preventDefault();
-        const hero = document.querySelector<HTMLInputElement>(
-          "[data-home-search] input",
-        );
-        if (hero) hero.focus();
-        else setOpen(true);
+        setOpen(true);
       }
     };
     document.addEventListener("keydown", key);

@@ -269,6 +269,7 @@ try {
   for (const patch of [
     { faviconId: riveAsset.toUpperCase() },
     { heroImageId: riveAsset },
+    { heroBackgroundImageId: riveAsset },
     {
       componentIllustrations: {
         groups: { cockpit: riveAsset.toUpperCase() },

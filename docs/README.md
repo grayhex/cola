@@ -24,7 +24,7 @@
 | [Дизайн-система](development/design-system.md)         | Референсы Hugging Face, токены, типографика, компоненты |
 | [Интерфейс](development/ui.md)                         | Темы, редактор, SSR, формы и адаптивность               |
 | [Motion и View Transitions](development/motion.md)     | Переходы, обратная связь, reduced motion и измерения    |
-| [Rive](development/rive.md)                            | Сцены, исходники, экспорт, загрузка и fallback          |
+| [Графика hero и Rive](development/rive.md)             | Статичный hero, архив сцен, исходники и экспорт         |
 | [Ведение документации](development/documentation.md)   | Структура, источники истины и правила актуализации      |
 
 ## Модули приложения

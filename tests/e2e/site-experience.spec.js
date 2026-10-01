@@ -2,12 +2,11 @@ import { test, expect } from "@playwright/test";
 import { registerVerified } from "../fixtures/verified-user.js";
 import { testConsents } from "../fixtures/legal.js";
 import { randomUUID } from "node:crypto";
-import { readFile } from "node:fs/promises";
 import pg from "pg";
 import sharp from "sharp";
 const origin = process.env.TEST_ORIGIN || "http://localhost:3100";
 
-test("admin publishes a shared animation switch, uploaded Rive, brand/favicon and icon highlight", async ({
+test("admin publishes static hero, brand/favicon and icon highlight", async ({
   page,
 }, info) => {
   const db = new pg.Client({ connectionString: process.env.DATABASE_URL });
@@ -43,25 +42,29 @@ test("admin publishes a shared animation switch, uploaded Rive, brand/favicon an
     await expect(
       page.getByLabel("Графика главного блока", { exact: true }),
     ).toHaveCount(0);
-    await page.getByLabel("Анимации главной для всех посетителей").check();
+    await expect(
+      page.getByLabel("Анимации главной для всех посетителей"),
+    ).toHaveCount(0);
     await page.getByLabel("Скорость Live, пикселей в секунду").fill("36");
     await page
-      .getByLabel("Файл: Анимация · слева от заголовка", { exact: true })
+      .getByLabel("Файл: Фоновое изображение hero", { exact: true })
       .setInputFiles({
-        name: "uploaded-bike.riv",
-        mimeType: "application/octet-stream",
-        buffer: await readFile(
-          new URL(
-            "../../assets/rive/transparent-bike.source.riv",
-            import.meta.url,
-          ),
-        ),
+        name: "hero.png",
+        mimeType: "image/png",
+        buffer: await sharp({
+          create: {
+            width: 1280,
+            height: 640,
+            channels: 3,
+            background: "#19304a",
+          },
+        })
+          .png()
+          .toBuffer(),
       });
-    const animation = page.getByLabel("Анимация · слева от заголовка", {
-      exact: true,
-    });
-    await expect(animation).toHaveValue(/^[0-9a-f-]{36}$/);
-    assets.push(await animation.inputValue());
+    const hero = page.getByLabel("Фоновое изображение hero", { exact: true });
+    await expect(hero).toHaveValue(/^[0-9a-f-]{36}$/);
+    assets.push(await hero.inputValue());
     await page.getByRole("button", { name: "Сохранить", exact: true }).click();
     await expect(page.getByRole("status")).toContainText(
       "Настройки опубликованы",
@@ -130,9 +133,9 @@ test("admin publishes a shared animation switch, uploaded Rive, brand/favicon an
       "href",
       "/api/assets/" + assets[1],
     );
-    await expect(
-      page.locator('[data-rive-art="custom"] [data-rive-ready]'),
-    ).toBeVisible({ timeout: 20000 });
+    await expect(page.locator("[data-hero-background]")).toBeVisible({
+      timeout: 20000,
+    });
     expect(
       await page
         .locator('.global-header [data-icon="bike"]')
@@ -142,12 +145,6 @@ test("admin publishes a shared animation switch, uploaded Rive, brand/favicon an
     await expect(
       page.getByRole("button", { name: "Оживить велосипеды" }),
     ).toHaveCount(0);
-    await page.locator("footer summary").click();
-    await expect(
-      page
-        .locator("footer")
-        .getByRole("link", { name: "Riding Bike — rahiqueo" }),
-    ).toBeVisible();
     // A public visitor also receives the same switch; disabling does not delete assignments.
     const current = await (
       await page.request.get("/api/admin/overview")
@@ -165,8 +162,7 @@ test("admin publishes a shared animation switch, uploaded Rive, brand/favicon an
       const guest = await visitor.newPage();
       const runtimeRequests = [];
       guest.on("request", (r) => {
-        if (/\.wasm$/.test(r.url()) || r.url().endsWith(assets[0]))
-          runtimeRequests.push(r.url());
+        if (/\.(wasm|riv)$/.test(r.url())) runtimeRequests.push(r.url());
       });
       await guest.goto(origin, { waitUntil: "networkidle" });
       await expect(guest.locator("[data-rive-art] canvas")).toHaveCount(0);
@@ -192,37 +188,36 @@ test("admin publishes a shared animation switch, uploaded Rive, brand/favicon an
   }
 });
 
-test("popular carousel stays on one row and scrolls with keyboard, a single native scrollbar and mouse drag, without arrow buttons", async ({
+test("records rail stays on one row and scrolls with keyboard, a single native scrollbar and mouse drag, without arrow buttons", async ({
   page,
   isMobile,
 }, info) => {
-  await page.route("**/api/discovery/home", (route) =>
+  await page.route("**/api/discovery/home*", (route) =>
     route.fulfill({
       json: {
-        popular: Array.from({ length: 8 }, (_, i) => ({
-          id: "carousel-" + i,
-          share_id: "carousel-" + i,
-          name: "Carousel bike " + i,
-          category: "road",
-          photos: [],
-          author: { name: "Rider", username: "carousel-rider" },
-          likes: 0,
-          is_public: true,
+        records: Array.from({ length: 8 }, (_, i) => ({
+          key: "record-" + i,
+          name: "Рекорд " + i,
+          metric: "weight",
+          holder: {
+            kind: "bike",
+            shareId: "carousel-" + i,
+            name: "Carousel bike " + i,
+            value: 8 + i,
+          },
         })),
         events: [],
         content: [],
-        records: [],
       },
     }),
   );
   await page.goto("/");
   const region = page.getByRole("region", {
-    name: "Карусель популярных велосипедов",
+    name: "Рекорды сообщества",
   });
-  const rail = region.getByLabel(
-    "Велосипеды; используйте стрелки для прокрутки",
-    { exact: true },
-  );
+  const rail = region.getByLabel("Рекорды; используйте стрелки для прокрутки", {
+    exact: true,
+  });
   await expect(region.locator("article")).toHaveCount(8);
   const boxes = await region
     .locator("article")
@@ -329,23 +324,24 @@ test("primary menu opens on hover, crosses panels and preserves keyboard and tou
   await expect(page).toHaveURL(/\/bikes/);
 });
 
-test("Live scrolls independently of manual bikes, with pause and reduced motion respected", async ({
+test("Live scrolls independently of manual records, with pause and reduced motion respected", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1000, height: 1800 });
   await page.emulateMedia({ reducedMotion: "no-preference" });
-  await page.route("**/api/discovery/home", (route) =>
+  await page.route("**/api/discovery/home*", (route) =>
     route.fulfill({
       json: {
-        popular: Array.from({ length: 8 }, (_, i) => ({
-          id: "auto-" + i,
-          share_id: "auto-" + i,
-          name: "Automatic bike " + i,
-          category: "road",
-          photos: [],
-          author: { name: "Rider", username: "auto-rider" },
-          likes: 0,
-          is_public: true,
+        records: Array.from({ length: 8 }, (_, i) => ({
+          key: "record-" + i,
+          name: "Рекорд " + i,
+          metric: "weight",
+          holder: {
+            kind: "bike",
+            shareId: "carousel-" + i,
+            name: "Carousel bike " + i,
+            value: 8 + i,
+          },
         })),
         events: Array.from({ length: 12 }, (_, i) => ({
           id: "event-" + i,
@@ -355,15 +351,13 @@ test("Live scrolls independently of manual bikes, with pause and reduced motion 
           href: "/b/auto-" + i,
         })),
         content: [],
-        records: [],
       },
     }),
   );
   await page.goto("/");
-  const bikes = page.getByLabel(
-    "Велосипеды; используйте стрелки для прокрутки",
-    { exact: true },
-  );
+  const bikes = page.getByLabel("Рекорды; используйте стрелки для прокрутки", {
+    exact: true,
+  });
   const events = page.getByLabel("События; прокрутите, чтобы прочитать все", {
     exact: true,
   });

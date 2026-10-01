@@ -117,15 +117,17 @@ test("signed-in home: one «Покататься вместе» block, both comp
   // #245: the personal dashboard is gone, and so are its requests.
   for (const gone of ["Ты собираешься", "Подходит тебе", "Можно собраться"])
     await expect(page.getByText(gone, { exact: true })).toHaveCount(0);
-  expect(personal).toEqual([]);
+  expect(
+    personal.filter((url) => !url.endsWith("/ride-intents/pulse")),
+  ).toEqual([]);
   const buttons = block.getByRole("button");
   await expect(buttons).toHaveText(["Хочу кататься", "Организовать покатушку"]);
-  // Order: hero, the ride-together block, then the popular builds.
+  // Order: hero, ride-together, weekly bike, then four destinations.
   const top = async (selector) =>
     (await page.locator(selector).first().boundingBox()).y;
   expect(await top("#hero-title")).toBeLessThan(await top("#together-heading"));
   expect(await top("#together-heading")).toBeLessThan(
-    await top("#popular-heading"),
+    await top("#bike-week-heading"),
   );
   for (const [theme, system] of [
     ["light", "light"],
@@ -149,9 +151,9 @@ test("signed-in home: one «Покататься вместе» block, both comp
     // The block is its own surface: its background differs from the page.
     const [pageBg, blockBg] = await block.evaluate((el) => [
       getComputedStyle(document.body).backgroundColor,
-      getComputedStyle(el.querySelector(".frame-inner")).backgroundImage,
+      getComputedStyle(el.querySelector(".frame-inner")).backgroundColor,
     ]);
-    expect(blockBg).not.toBe("none");
+    expect(blockBg).not.toBe(pageBg);
     expect(pageBg).toBeTruthy();
     expect(
       await page.evaluate(

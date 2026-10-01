@@ -80,29 +80,15 @@ async function theme(page, value) {
   );
 }
 const home = {
-  popular: Array.from({ length: 5 }, (_, i) => ({
-    id: "hover-" + i,
-    share_id: "hover-" + i,
-    name: "Hover bike " + i,
-    category: "gravel",
-    photos: [],
-    author: { name: "Rider", username: "hover-rider" },
-    likes: 0,
-    is_public: true,
-  })),
-  totalBikes: 5,
   events: [],
-  content: [
-    {
-      id: "journal:hover",
-      type: "journal",
-      author: "Мария",
-      title: "Запись для проверки наведения",
-      href: "/journal/hover",
-      createdAt: "2026-09-21T08:00:00Z",
-      excerpt: "Короткий текст записи.",
-    },
-  ],
+  bikeOfWeek: null,
+  pulse: {
+    total: 0,
+    ready: 0,
+    considering: 0,
+    buckets: [],
+    asOf: "2026-10-01T09:00:00Z",
+  },
   records: ["light", "heavy", "long", "climb"].map((key, i) => ({
     key,
     name: "Рекорд " + (i + 1),
@@ -111,10 +97,10 @@ const home = {
   })),
 };
 
-test("home: card titles stay readable under the pointer and keyboard focus in both themes, whatever the accent", async ({
+test("home: record and destination titles stay readable under the pointer and keyboard focus in both themes, whatever the accent", async ({
   page,
 }, info) => {
-  await page.route("**/api/discovery/home", (route) =>
+  await page.route("**/api/discovery/home*", (route) =>
     route.fulfill({ json: home }),
   );
   await page.goto("/");
@@ -130,11 +116,12 @@ test("home: card titles stay readable under the pointer and keyboard focus in bo
     titleHover(emitted[0], "dark"),
   ]);
   const title = page
-    .locator('[data-home-band="popular"] article')
-    .first()
-    .locator(":is(h2, h3) :is(a, button)");
-  const story = page.locator('[data-home-band="community"] article').first();
-  const storyTitle = story.locator("h3 a");
+    .locator('[data-home-band="records"] article .item-link')
+    .first();
+  const storyTitle = page
+    .getByRole("navigation", { name: "Популярное на ColaBike" })
+    .getByRole("link")
+    .first();
   const background = (locator) =>
     locator.evaluate((el) => {
       for (let n = el; n; n = n.parentElement) {
@@ -209,7 +196,7 @@ test("home: records are a manual rail — scroll and keys move it, it never move
   page,
   isMobile,
 }, info) => {
-  await page.route("**/api/discovery/home", (route) =>
+  await page.route("**/api/discovery/home*", (route) =>
     route.fulfill({ json: home }),
   );
   if (!isMobile) await page.setViewportSize({ width: 1000, height: 900 });

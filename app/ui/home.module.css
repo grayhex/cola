@@ -1,92 +1,65 @@
-/* Home (#127, #254): one ruled column of six bands — the intro, «Покататься
-   вместе», popular builds, what's new, records and the closing «О проекте». */
 .home {
   min-width: 0;
 }
-
-/* Intro: the administrator's headline, picture, colours and animation.
-   The site's accent tints the block unless the administrator picked its
-   own colours (#131). */
 .hero {
+  position: relative;
+  isolation: isolate;
   overflow: hidden;
-  background: var(
-    --hero-light,
-    color-mix(in srgb, var(--accent) 14%, var(--bg))
-  );
-}
-:global([data-theme="dark"]) .hero {
-  background: var(
-    --hero-dark,
-    color-mix(in srgb, var(--accent) 12%, var(--bg))
-  );
-}
-.heroContent {
-  display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(220px, 0.8fr);
-  align-items: center;
-  gap: var(--space-8);
-  padding: var(--space-10) var(--space-10) var(--space-8);
-}
-.heroCopy {
-  min-width: 0;
-}
-.heroTitle {
   display: flex;
   align-items: center;
-  gap: var(--space-5);
+  min-height: clamp(320px, 28vw, 520px);
+  background: var(--marketing-bg);
+  color: var(--marketing-text);
+}
+.heroImage {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 75% center;
+}
+.hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(
+    90deg,
+    var(--marketing-shade) 0%,
+    var(--marketing-shade) 30%,
+    transparent 78%
+  );
+}
+.heroCopy {
+  width: min(62%, 780px);
+  padding: var(--space-10);
+}
+.heroEyebrow {
+  display: block;
   margin-bottom: var(--space-4);
+  color: var(--marketing-muted);
+  font: var(--weight-medium) var(--text-xs) / 1.5 var(--font-mono);
 }
-.heroTitle h1 {
-  margin: 0;
-  color: var(--text);
-  font-size: clamp(28px, 2.9vw, 44px);
+.hero h1 {
+  margin: 0 0 var(--space-5);
+  color: inherit;
+  font-size: clamp(32px, 3.2vw, 58px);
+  line-height: 1.08;
+  letter-spacing: -0.025em;
   font-weight: var(--weight-black);
-  line-height: 1.1;
-  letter-spacing: -0.02em;
 }
-.heroTitle h1 span {
+.hero h1 span {
   display: block;
 }
 .description {
-  max-width: 36rem;
-  margin: 0 0 var(--space-5);
-  color: var(--text-secondary);
-  font-size: var(--text-lg);
-  line-height: var(--leading-snug);
+  max-width: 34rem;
+  margin: 0;
+  color: var(--marketing-muted);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
 }
-.heroSearch {
-  width: 100%;
-  max-width: 640px;
-}
-.heroLinks {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-1) var(--space-2);
-  margin-top: var(--space-3);
-  /* Readable on the accent tint (4.5:1). */
-  color: var(--text-secondary);
-  font-size: var(--text-sm);
-}
-.heroLinks :global(.text-link) {
-  min-height: var(--control-sm);
-}
-.animationStage {
-  position: relative;
-  display: grid;
-  place-items: center;
-  align-self: stretch;
-  min-height: 240px;
-  overflow: hidden;
-  isolation: isolate;
-}
-.stageLabel {
-  position: absolute;
-  bottom: var(--space-2);
-  color: var(--text-secondary);
-  font: var(--weight-semibold) 11px / 1.5 var(--font-mono);
-}
-
 /* Live line under the intro. */
 .ticker {
   display: flex;
@@ -180,162 +153,320 @@
 .pause:hover {
   box-shadow: var(--shadow-inner);
 }
-/* Blocks 3–6 (#254): bands of the same ruled column as the hero and
-   «Покататься вместе». The title sits in a thin rail inside the band, the
-   section's links on the right; the band's surface is one of three:
-   neutral, a subtle tint or the faint map grid of «Покататься вместе». */
+
 .band {
-  display: grid;
   min-width: 0;
-}
-.band[data-tone="subtle"] {
-  background: var(--bg-subtle);
-}
-.band[data-tone="ruled"] {
-  background:
-    linear-gradient(
-      to right,
-      var(--surface-subtle) 20%,
-      color-mix(in srgb, var(--surface-subtle) 70%, transparent)
-    ),
-    linear-gradient(var(--line) 1px, transparent 1px) 0 0 / 32px 32px,
-    linear-gradient(90deg, var(--line) 1px, transparent 1px) 0 0 / 32px 32px,
-    var(--bg);
 }
 .bandRail {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-1) var(--space-4);
-  min-height: 44px;
-  padding: var(--space-1-5) var(--space-10);
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  min-height: 48px;
+  padding: var(--space-2) var(--space-10);
   border-bottom: 1px solid var(--line);
-  background: color-mix(in srgb, var(--surface-subtle) 55%, transparent);
+  background: var(--bg-subtle);
 }
 .bandRail h2 {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
   margin: 0;
-  color: var(--text);
   font-size: var(--text-smd);
   font-weight: var(--weight-semibold);
-  line-height: var(--leading-snug);
 }
 .bandRail h2 svg {
-  flex: none;
   color: var(--text-subtle);
 }
 .bandRail :global(.text-link) {
   font-size: var(--text-sm);
 }
 .bandBody {
-  display: grid;
-  gap: var(--space-4);
   min-width: 0;
-  padding: var(--space-6) var(--space-10) var(--space-8);
 }
-.bandBody > :global(.empty-state) {
-  margin: 0;
-}
-.sectionLinks {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-1) var(--space-4);
-  font-size: var(--text-sm);
-}
-.status {
-  margin: 0;
-}
+.bandBody > :global(.empty-state),
 .waiting {
-  margin: 0;
+  margin: var(--space-5) var(--space-10);
+}
+.waiting,
+.weekEmpty {
   color: var(--text-muted);
   font-size: var(--text-sm);
 }
-.skeleton {
-  min-height: 300px;
-  border-radius: var(--radius-lg);
+.weekEmpty {
+  margin: 0;
+  padding: var(--space-6) var(--space-10);
 }
-.recordSkeleton {
-  height: 78px;
-  border-radius: var(--radius-lg);
+.together {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: var(--surface-subtle);
 }
-.lineSkeleton {
-  display: block;
-  height: 14px;
-  border-radius: var(--radius-sm);
+.togetherCopy {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  padding: var(--space-8) var(--space-10);
 }
-.lineSkeleton + .lineSkeleton {
-  width: 70%;
+.togetherCopy h2 {
+  margin: var(--space-3) 0;
+  font-size: clamp(26px, 2.3vw, 40px);
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+}
+.togetherCopy p {
+  position: relative;
+  max-width: 34rem;
+  margin: 0 0 var(--space-5);
+  color: var(--text-secondary);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+}
+.togetherArt {
+  position: absolute;
+  width: 220px;
+  right: 0;
+  bottom: 0;
+  z-index: -1;
+  opacity: 0.12;
+}
+.artRoute,
+.artBranch {
+  fill: none;
+  stroke-linecap: round;
+  stroke-width: 4;
+}
+.artRoute {
+  stroke: var(--primary);
+}
+.artBranch {
+  stroke: var(--text-muted);
+  stroke-dasharray: 2 9;
+}
+.artStart {
+  fill: var(--surface);
+  stroke: var(--text-muted);
+  stroke-width: 3;
+}
+.artMeet {
+  fill: color-mix(in srgb, var(--primary) 18%, var(--surface));
+  stroke: var(--primary);
+  stroke-width: 2;
+}
+.artMeetCore,
+.artFinish {
+  fill: var(--primary);
 }
 
-/* «Что нового»: one ruled table of cells, three across on wide screens, two
-   on tablets, one on phones; rows share a height, nothing floats. */
-.stories {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  overflow: hidden;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  background: var(--surface);
+.pulsePanel {
+  border-left: 1px solid var(--line);
+  padding: var(--space-8) var(--space-10);
 }
-.story {
-  position: relative;
-  display: grid;
-  align-content: start;
-  gap: var(--space-1-5);
-  min-width: 0;
-  margin: 0 -1px -1px 0;
-  padding: var(--space-4) var(--space-5);
-  border-right: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
-  transition: background-color var(--duration-fast) var(--ease-out);
+.pulseHeadline {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin: 0 0 var(--space-4);
+  font-size: var(--text-base);
+  color: var(--text-secondary);
+  line-height: var(--leading-snug);
 }
-.story:hover,
-.story:focus-within {
-  background: var(--surface-hover);
+.pulseCount {
+  display: inline-block;
+  color: var(--success);
+  font-size: clamp(44px, 4vw, 64px);
+  font-weight: var(--weight-bold);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
 }
-.storyHead {
+.pulseBuckets {
   display: flex;
   flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+.pulseBuckets li {
+  display: flex;
   align-items: center;
-  gap: var(--space-1-5) var(--space-3);
-  min-width: 0;
+  gap: var(--space-2);
+  padding: var(--space-1-5) var(--space-2-5);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
 }
-.story h3 {
-  margin: 0;
-  font-size: var(--text-smd);
-  font-weight: var(--weight-semibold);
-  line-height: var(--leading-snug);
-  overflow-wrap: anywhere;
+.pulseBuckets strong {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
 }
-.storyLink {
-  color: var(--text-strong);
-}
-/* The title's link covers the cell. */
-.storyLink::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-}
-.story:is(:hover, :focus-within) .storyLink {
-  color: var(--title-hover);
-}
-.story p {
-  display: -webkit-box;
-  overflow: hidden;
-  margin: 0;
+.pulseSummary {
+  margin: var(--space-3) 0 var(--space-1);
   color: var(--text-secondary);
   font-size: var(--text-sm);
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
 }
-
-/* «Рекорды»: a lower band — up to four records in one manual rail (#264),
-   each with its illustration beside the holder and the value; the skeleton
-   keeps the same row. */
+.pulseNote {
+  margin: 0 0 var(--space-3);
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+.pulse :global(.text-link) {
+  font-size: var(--text-sm);
+}
+.pulsePeople {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2) var(--space-4);
+  list-style: none;
+  margin: var(--space-4) 0 0;
+  padding: var(--space-3) 0 0;
+  border-top: 1px solid var(--line);
+}
+.pulsePeople a {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  font-size: var(--text-sm);
+}
+.pulsePeople a > span:last-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.pulsePeople small {
+  display: block;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+.week {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr);
+}
+.weekPhoto {
+  position: relative;
+  isolation: isolate;
+  display: block;
+  min-height: 300px;
+  background: var(--marketing-bg);
+  color: var(--marketing-text);
+}
+.weekPhoto img {
+  position: absolute;
+  z-index: -2;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.weekPhoto::after {
+  content: "";
+  position: absolute;
+  inset: 40% 0 0;
+  z-index: -1;
+  background: linear-gradient(transparent, var(--marketing-bg));
+}
+.weekCaption {
+  position: absolute;
+  inset: auto var(--space-6) var(--space-5);
+  display: grid;
+  gap: var(--space-2);
+}
+.weekCaption small {
+  font-size: var(--text-xs);
+  color: var(--marketing-muted);
+}
+.weekCaption strong {
+  font-size: var(--text-2xl);
+  line-height: var(--leading-snug);
+}
+.weekComponents,
+.weekStory {
+  padding: var(--space-5) var(--space-6);
+  min-width: 0;
+  border-left: 1px solid var(--line);
+}
+.week h3 {
+  margin: 0 0 var(--space-4);
+  font-size: var(--text-base);
+}
+.weekComponents dl {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-sm);
+}
+.weekComponents dl > div {
+  display: grid;
+  grid-template-columns: minmax(70px, 0.7fr) minmax(0, 1fr);
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--line);
+}
+.weekComponents dt {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-muted);
+}
+.weekComponents dt svg {
+  flex: none;
+}
+.weekComponents dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.week :global(.text-link) {
+  font-size: var(--text-sm);
+  min-height: 36px;
+}
+.weekStory p {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 8;
+  overflow: hidden;
+  margin: var(--space-4) 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  overflow-wrap: anywhere;
+}
+.destinations {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.destination {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-5) var(--space-6);
+  border-right: 1px solid var(--line);
+  transition: background-color var(--duration-fast) var(--ease-out);
+}
+.destination:last-child {
+  border-right: 0;
+}
+.destination:hover,
+.destination:focus-visible {
+  background: var(--surface-hover);
+}
+.destination > svg {
+  flex: none;
+  color: var(--text-muted);
+}
+.destination > span {
+  flex: 1;
+  min-width: 0;
+}
+.destination strong {
+  display: block;
+  font-size: var(--text-base);
+}
+.destination small {
+  display: block;
+  margin-top: var(--space-1);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
 .records {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
@@ -345,11 +476,11 @@
   position: relative;
   display: flex;
   align-items: center;
-  gap: var(--space-4);
+  gap: var(--space-3);
   min-width: 0;
   padding: var(--space-3) var(--space-4);
   border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
+  border-radius: 0;
   background: var(--surface);
   transition: background-color var(--duration-fast) var(--ease-out);
 }
@@ -382,137 +513,158 @@
   content: "";
   position: absolute;
   inset: 0;
-  border-radius: var(--radius-lg);
+  border-radius: 0;
 }
 .record small {
   color: var(--text-secondary);
   font-size: var(--text-sm);
 }
 .band[data-home-band="records"] .bandBody {
-  padding-block: var(--space-5) var(--space-6);
+  padding: var(--space-4) var(--space-10);
 }
 
-/* «О проекте»: the closing band — one thought and one way to /about. */
-.band[data-home-band="about"] .bandBody {
-  padding-block: var(--space-6);
+.recordSkeleton {
+  height: 78px;
 }
 .about {
   display: flex;
   align-items: center;
   gap: var(--space-5);
-  min-width: 0;
+  padding: var(--space-6) var(--space-10);
+  background: var(--surface-subtle);
 }
 .aboutMark {
   display: grid;
-  flex: none;
   place-items: center;
+  flex: none;
   width: 52px;
   height: 52px;
-  border: 1px solid var(--line-strong);
-  border-radius: var(--radius-xl);
-  background: var(--surface);
   color: var(--text-secondary);
 }
 .about p {
   display: grid;
   flex: 1;
-  gap: 2px;
+  gap: var(--space-1);
   min-width: 0;
   margin: 0;
 }
-.about p strong {
+.about strong {
   font-size: var(--text-lg);
-  line-height: var(--leading-snug);
 }
 .about p span {
   color: var(--text-secondary);
   font-size: var(--text-sm);
 }
-
 @media (max-width: 1100px) {
-  .stories {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .heroCopy {
+    width: 70%;
   }
-}
-@media (max-width: 1023px) {
-  .bandRail {
-    padding-inline: var(--space-8);
+  .togetherCopy,
+  .pulsePanel {
+    padding: var(--space-6);
   }
-  .bandBody {
-    padding-inline: var(--space-8);
+  .destination {
+    padding: var(--space-4);
+    gap: var(--space-2);
+  }
+  .destination > svg:first-child {
+    display: none;
+  }
+  .weekComponents,
+  .weekStory {
+    padding: var(--space-4);
   }
 }
 @media (max-width: 720px) {
+  .hero {
+    min-height: 320px;
+    align-items: flex-start;
+  }
+  .heroCopy {
+    width: 100%;
+    padding: var(--space-8) var(--space-4);
+  }
+  .hero::before {
+    background: linear-gradient(
+      90deg,
+      var(--marketing-shade) 0%,
+      var(--marketing-shade) 45%,
+      transparent
+    );
+  }
+  .hero h1 {
+    font-size: clamp(30px, 7.8vw, 42px);
+  }
+  .description {
+    max-width: 28rem;
+    font-size: var(--text-sm);
+  }
+  .heroEyebrow {
+    font-size: var(--text-xs);
+  }
+  .together {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .togetherCopy,
+  .pulsePanel {
+    padding: var(--space-6) var(--space-4);
+  }
+  .pulsePanel {
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
+  .week {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .weekPhoto {
+    min-height: 0;
+    aspect-ratio: 4 / 3;
+  }
+  .weekComponents,
+  .weekStory {
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
+  .week :global(.text-link) {
+    min-height: 44px;
+  }
+  .destinations {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .destination {
+    border-bottom: 1px solid var(--line);
+  }
+  .destination:nth-child(2n) {
+    border-right: 0;
+  }
+  .destination:nth-last-child(-n + 2) {
+    border-bottom: 0;
+  }
   .bandRail {
     padding-inline: var(--space-4);
   }
-  .bandBody {
-    padding: var(--space-4) var(--space-4) var(--space-6);
+  .band[data-home-band="records"] .bandBody {
+    padding: var(--space-4);
   }
-  .stories {
-    grid-template-columns: minmax(0, 1fr);
+  .bandBody > :global(.empty-state),
+  .waiting {
+    margin-inline: var(--space-4);
+  }
+  .weekEmpty {
+    padding-inline: var(--space-4);
   }
   .about {
+    padding: var(--space-5) var(--space-4);
     flex-wrap: wrap;
-    align-items: flex-start;
   }
-  /* The text keeps a readable width; the button moves to its own row. */
   .about p {
-    flex: 1 1 200px;
-  }
-}
-
-@media (max-width: 1050px) {
-  /* Tablets: the intro takes the full width, the animation follows it. */
-  .heroContent {
-    grid-template-columns: minmax(0, 1fr);
-    gap: var(--space-4);
-    padding: var(--space-8) var(--space-6) var(--space-6);
-  }
-  .animationStage {
-    min-height: 0;
-  }
-}
-@media (max-width: 700px) {
-  /* A short intro keeps the first builds on the first screen: the
-     decorative stage is left out on phones. */
-  .heroContent {
-    grid-template-columns: minmax(0, 1fr);
-    padding: var(--space-5) var(--space-4) var(--space-4);
-  }
-  .animationStage {
-    display: none;
-  }
-  .heroTitle {
-    align-items: flex-start;
-    gap: var(--space-3);
-    margin-bottom: var(--space-3);
-  }
-  .heroTitle h1 {
-    font-size: clamp(24px, 6.5vw, 30px);
-  }
-  .description {
-    display: -webkit-box;
-    overflow: hidden;
-    margin-bottom: var(--space-3);
-    font-size: var(--text-smd);
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 3;
-  }
-  .heroLinks :global(.text-link),
-  .sectionLinks :global(.text-link) {
-    justify-content: center;
-    min-width: 44px;
-    min-height: 44px;
+    flex-basis: 200px;
   }
   .ticker {
     padding: 0 var(--space-3);
   }
   .tickerList a {
     min-height: 44px;
-  }
-  .track {
-    animation: none;
   }
   .rail {
     overflow-x: auto;
@@ -537,121 +689,9 @@
   }
 }
 
-/* «Покататься вместе» (#245): a band of the ruled column right after the
-   hero — large type and two actions on the left, a route drawing over a
-   faint map grid on the right, a surface of its own in both themes. */
-.together {
-  display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
-  align-items: center;
-  gap: var(--space-8);
-  overflow: hidden;
-  padding: var(--space-12) var(--space-10);
-  background:
-    linear-gradient(var(--line) 1px, transparent 1px) 0 0 / 40px 40px,
-    linear-gradient(90deg, var(--line) 1px, transparent 1px) 0 0 / 40px 40px,
-    var(--surface-gradient);
-}
-.together::before {
-  /* Fade the grid towards the copy so the text sits on a calm surface. */
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    to right,
-    var(--surface-subtle) 0%,
-    color-mix(in srgb, var(--surface-subtle) 88%, transparent) 45%,
-    transparent 100%
-  );
-  pointer-events: none;
-}
-.together > * {
-  position: relative;
-}
-.togetherCopy {
-  display: grid;
-  gap: var(--space-4);
-  justify-items: start;
-  min-width: 0;
-}
-.togetherCopy > h2 {
-  margin: 0;
-  font-size: var(--text-5xl);
-  font-weight: var(--weight-black);
-  line-height: 1.05;
-  letter-spacing: -0.025em;
-  text-wrap: balance;
-}
-.togetherCopy > p {
-  max-width: 36rem;
-  margin: 0;
-  color: var(--text-secondary);
-  font-size: var(--text-lg);
-  line-height: var(--leading-snug);
-}
-.togetherArt {
-  justify-self: end;
-  width: 100%;
-  max-width: 360px;
-  height: auto;
-}
-.artRoute,
-.artBranch {
-  fill: none;
-  stroke-linecap: round;
-  stroke-width: 4;
-}
-.artRoute {
-  stroke: var(--primary);
-}
-.artBranch {
-  stroke: var(--text-muted);
-  stroke-dasharray: 2 9;
-}
-.artStart {
-  fill: var(--surface);
-  stroke: var(--text-muted);
-  stroke-width: 3;
-}
-.artMeet {
-  fill: color-mix(in srgb, var(--primary) 18%, var(--surface));
-  stroke: var(--primary);
-  stroke-width: 2;
-}
-.artMeetCore,
-.artFinish {
-  fill: var(--primary);
-}
-.artTag rect {
-  fill: var(--surface);
-  stroke: var(--line-strong);
-}
-.artTag text {
-  fill: var(--text-secondary);
-  font: var(--weight-medium) 11px var(--font-mono);
-}
-@media (max-width: 1023px) {
-  .together {
-    padding: var(--space-10) var(--space-8);
-  }
-  .togetherCopy > h2 {
-    font-size: var(--text-4xl);
-  }
-}
-@media (max-width: 720px) {
-  .together {
-    grid-template-columns: minmax(0, 1fr);
-    gap: var(--space-4);
-    padding: var(--space-8) var(--space-4);
-  }
-  .togetherCopy > h2 {
-    font-size: var(--text-3xl);
-  }
-  .togetherCopy > p {
-    font-size: var(--text-base);
-  }
-  /* The drawing is decoration: a phone keeps the words and actions. */
-  .togetherArt {
-    display: none;
-  }
+.photoFallback {
+  display: block;
+  padding: var(--space-6);
+  font-size: var(--text-sm);
+  color: var(--marketing-muted);
 }

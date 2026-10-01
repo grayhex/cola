@@ -9,6 +9,11 @@
   /* The brand colour lives on :root only, so the admin setting (an inline
      :root style) reaches every themed scope below. */
   :root {
+    /* Static photographic marketing surfaces retain contrast in both themes. */
+    --marketing-bg: #0d1827;
+    --marketing-text: #ffffff;
+    --marketing-muted: #e1e7ed;
+    --marketing-shade: rgb(13 24 39 / 88%);
     --accent: #f3b51b;
     --accent-foreground: #000000;
   }

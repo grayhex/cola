@@ -1,4 +1,5 @@
 import { currentBikeWeek } from "./bike-week.ts";
+import { ridePulse } from "./ride-pulse.ts";
 import type { Classification as ClassificationType } from "./contracts.ts";
 interface ActivityRow {
   type: string;
@@ -269,3 +270,20 @@ export async function communityHome(
 }
 
 export type DiscoveryInput = z.infer<typeof discoveryInput>;
+
+// New landing view (#270): no bike-card/gallery hydration or unused stories.
+// Keep the original discovery home contract for existing API consumers.
+export async function homeSnapshot(q: Queryable) {
+  const [activity, hall, bikeOfWeek, pulse] = await Promise.all([
+    communityActivity(q),
+    records(q),
+    currentBikeWeek(q),
+    ridePulse(q),
+  ]);
+  return {
+    events: activity.events,
+    records: homeRecords(hall.records),
+    bikeOfWeek,
+    pulse,
+  };
+}

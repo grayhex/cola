@@ -2,7 +2,6 @@
 import type { SettingsProps, AssetUpload, AssetChoice } from "./types.ts";
 import { accentText } from "../../lib/appearance.ts";
 import AssetPicker from "./asset-picker.tsx";
-import AnimationPicker from "./animation-picker.tsx";
 import { Field, Select } from "./design-controls.tsx";
 import styles from "./design.module.css";
 
@@ -132,97 +131,21 @@ export function HomepageSettings({
       </Field>
       <p className="help">
         Скорость ленты событий. Наведение и фокус временно останавливают её;
-        кнопка рядом с Live ставит на паузу. Карусель велосипедов прокручивается
-        вручную.
+        кнопка рядом с Live ставит на паузу. Рекорды прокручиваются вручную.
       </p>
-      <label className="setting-row">
-        Анимации главной для всех посетителей
-        <input
-          type="checkbox"
-          checked={!!s.heroAnimationsEnabled}
-          onChange={(e) => onChange("heroAnimationsEnabled", e.target.checked)}
-        />
-      </label>
-      <p className="help">
-        При выключении остаются изображения. Настройка «Уменьшение движения» на
-        устройстве посетителя всегда имеет приоритет.
-      </p>
-      <div className={styles.graphicGrid}>
-        {(
-          [
-            ["Слева от заголовка", "heroImageId", "heroTitleAnimation"],
-            ["Справа от поиска", "heroStageImageId", "heroStageAnimation"],
-          ] as const
-        ).map(([title, imageKey, animationKey]) => (
-          <fieldset key={imageKey} className={styles.compactPanel}>
-            <legend>{title}</legend>
-            <AssetPicker
-              compact
-              label={"Изображение · " + title.toLowerCase()}
-              help="PNG, JPEG, WebP. Видно, когда анимация выключена или недоступна."
-              value={s[imageKey]}
-              assets={assets.filter((asset) => asset.format === "image")}
-              busy={busy}
-              emptyLabel="Без изображения"
-              onChange={(id) => onChange(imageKey, id)}
-              onUpload={async (file) => {
-                const asset = await onUpload(file);
-                if (asset) onChange(imageKey, asset.id);
-              }}
-            />
-            <AnimationPicker
-              label={"Анимация · " + title.toLowerCase()}
-              value={s[animationKey]}
-              assets={assets}
-              busy={busy}
-              onChange={(value) => onChange(animationKey, value)}
-              onUpload={onUpload}
-            />
-          </fieldset>
-        ))}
-      </div>
-      <details>
-        <summary>Другая анимация справа для тёмной темы</summary>
-        <AnimationPicker
-          label="Анимация · тёмная тема"
-          value={s.heroStageDarkAnimation}
-          assets={assets}
-          busy={busy}
-          onChange={(value) => onChange("heroStageDarkAnimation", value)}
-          onUpload={onUpload}
-        />
-        <p className="help">
-          Если не выбрана, используется основная. Встроенные сцены меняют
-          палитру автоматически.
-        </p>
-      </details>
-      <Select
-        label="Фон блока"
-        value={s.heroBackgroundMode}
-        onChange={(v) => onChange("heroBackgroundMode", v)}
-        options={[
-          ["accent", "Оттенок акцентного цвета"],
-          ["custom", "Свои цвета"],
-        ]}
+      <AssetPicker
+        label="Фоновое изображение hero"
+        help="Широкая статичная иллюстрация. Слева — спокойный фон под белый текст, сюжет — справа. PNG, JPEG или WebP автоматически оптимизируются."
+        value={s.heroBackgroundImageId}
+        assets={assets.filter((asset) => asset.format === "image")}
+        busy={busy}
+        emptyLabel="Тёмный фон без изображения"
+        onChange={(id) => onChange("heroBackgroundImageId", id)}
+        onUpload={async (file) => {
+          const asset = await onUpload(file);
+          if (asset) onChange("heroBackgroundImageId", asset.id);
+        }}
       />
-      {s.heroBackgroundMode === "custom" && (
-        <div className="admin-form-grid">
-          {(
-            [
-              ["heroBackgroundLight", "Фон блока · светлая тема"],
-              ["heroBackgroundDark", "Фон блока · тёмная тема"],
-            ] as const
-          ).map(([key, label]) => (
-            <Field key={key} label={label}>
-              <input
-                type="color"
-                value={s[key]}
-                onChange={(e) => onChange(key, e.target.value)}
-              />
-            </Field>
-          ))}
-        </div>
-      )}
       <Field
         label="Заголовок hero"
         help="Перенос строки разделяет две строки заголовка."
@@ -243,8 +166,8 @@ export function HomepageSettings({
         />
       </Field>
       <p className="help">
-        Популярные байки, события и новый контент формируются из публичных
-        материалов.
+        События и рекорды берутся из публичных материалов. Велосипед недели
+        настраивается в разделе «Главная → Велосипед недели».
       </p>
       <div className="admin-form-grid">
         {(

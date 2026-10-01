@@ -77,6 +77,7 @@ export default [
       "app/ui/bike-photo.tsx",
       "app/ui/bike-wizard.tsx",
       "app/ui/home.tsx",
+      "app/ui/home-bike-week.tsx",
       "app/ui/journal-card.tsx",
       "app/ui/journal-editor.tsx",
       "app/ui/journal-page.tsx",

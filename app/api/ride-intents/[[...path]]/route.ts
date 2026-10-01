@@ -8,6 +8,7 @@ import {
   EmailPolicyError,
 } from "../../../../lib/email-policy.ts";
 import { uuid } from "../../../../lib/validation.ts";
+import { ridePulsePeople } from "../../../../lib/ride-pulse.ts";
 import { traced, logError } from "../../../../lib/observability.ts";
 import {
   createIntentInput,
@@ -38,6 +39,8 @@ async function handler(
     const p = (await params).path || [],
       method = req.method,
       url = new URL(req.url);
+    if (p.length === 1 && p[0] === "pulse" && method === "GET")
+      return json(await ridePulsePeople(db, user.id));
     if (
       method !== "GET" &&
       !(await rateLimit("ride-intent-write:" + user.id, 40))

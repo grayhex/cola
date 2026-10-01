@@ -8,6 +8,7 @@ import { componentIllustrationIds } from "./component-illustrations.ts";
 import { animationAssetIds } from "./hero-graphics.ts";
 const imageKeys = new Set([
   ...illustrationSlots.map((slot) => slot.key),
+  "heroBackgroundImageId",
   "heroImageId",
   "heroStageImageId",
   "heroAnimationLightId",

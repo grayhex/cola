@@ -1,8 +1,4 @@
-import type {
-  JsonData,
-  SiteSettings,
-  PublicAuthor,
-} from "../../lib/contracts.ts";
+import type { JsonData, PublicAuthor } from "../../lib/contracts.ts";
 import type {
   journalDetail,
   journalList,
@@ -68,7 +64,6 @@ export type ReactionStateDto = Awaited<ReturnType<typeof reactionState>>;
 export type ProfileInitial = NonNullable<
   Awaited<ReturnType<typeof pageData<"profile">>>
 >;
-export type HeroAnimation = SiteSettings["heroTitleAnimation"];
 export type PhotoInserter = (id: string, alt?: string) => void;
 
 export type RideListDto = JsonData<Awaited<ReturnType<typeof rideList>>>;

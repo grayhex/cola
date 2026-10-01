@@ -8,23 +8,6 @@ import { readFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import { defaultSettings } from "../../lib/site-defaults.ts";
 const origin = process.env.TEST_ORIGIN || "http://localhost:3100";
-const bikes = Array.from({ length: 9 }, (_, i) => ({
-  id: `community-${i}`,
-  share_id: `community-share-${i}`,
-  name: ["Canyon Grail CF 8 AXS", "Cube Travel SL", "Conway URB C 601"][i % 3],
-  category: ["gravel", "road", "mtb"][i % 3],
-  photos: i === 7 ? [] : [{ id: `community-photo-${i % 3}` }],
-  author: {
-    name: ["Александр", "Мария", "Михаил"][i % 3],
-    username: `rider-${i}`,
-  },
-  weight: i === 0 ? 8.2 : null,
-  likes: 12 - i,
-  liked: false,
-  comments: i % 3,
-  is_owner: false,
-  is_public: true,
-}));
 const events = [
   {
     id: "bike:1",
@@ -57,15 +40,49 @@ const events = [
   },
 ];
 const home = {
-  popular: bikes,
-  totalBikes: 34,
   events,
-  content: events.slice(0, 3).map((e) => ({
-    ...e,
-    createdAt: "2026-09-21T08:00:00Z",
-    excerpt:
-      "Новые маршруты, любимые детали и истории, которые хочется сохранить.",
-  })),
+  pulse: {
+    total: 5,
+    ready: 3,
+    considering: 2,
+    timeZone: "Europe/Moscow",
+    asOf: "2026-10-01T09:00:00Z",
+    buckets: [
+      { key: "today", label: "Сегодня", count: 2 },
+      { key: "tomorrow", label: "Завтра", count: 1 },
+      { key: "weekend", label: "В выходные", count: 1 },
+      { key: "later", label: "Позже", count: 1 },
+    ],
+  },
+  bikeOfWeek: {
+    bike: {
+      id: "week",
+      shareId: "community-share-0",
+      name: "Canyon Grail CF 8 AXS",
+    },
+    cover: { id: "community-photo-0" },
+    owner: { name: "Александр", username: "rider-0" },
+    text: "Этот велосипед собран для долгих дорог. Лёгкая рама и надёжные компоненты помогают открывать новые маршруты.",
+    textSource: "owner",
+    components: [
+      "Рама",
+      "Вилка",
+      "Колёса",
+      "Тормоза",
+      "Трансмиссия",
+      "Седло",
+    ].map((category, i) => ({
+      category,
+      name: [
+        "Canyon Grail CF",
+        "Canyon Carbon",
+        "DT Swiss G1800",
+        "Shimano GRX",
+        "Shimano GRX 2×11",
+        "Selle Italia",
+      ][i],
+    })),
+  },
   records: [
     {
       key: "light",
@@ -148,7 +165,7 @@ async function fixture(page, data = home) {
   await db.query("UPDATE site_settings SET value=$1 WHERE id=1", [
     { ...original, ...defaultSettings },
   ]);
-  await page.route("**/api/discovery/home", (r) => r.fulfill({ json: data }));
+  await page.route("**/api/discovery/home*", (r) => r.fulfill({ json: data }));
   await page.route("**/api/community/notifications/count", (r) =>
     r.fulfill({ json: { unread: 0 } }),
   );
@@ -192,7 +209,7 @@ async function theme(page, label) {
   await expect(toggle).toHaveAttribute("aria-checked", String(dark));
 }
 
-test("homepage rhythm, photo-first popular bikes and stable Light/Dark at every breakpoint", async ({
+test("home v2 stays readable in Light/Dark at every breakpoint", async ({
   page,
 }, info) => {
   await fixture(page);
@@ -207,93 +224,30 @@ test("homepage rhythm, photo-first popular bikes and stable Light/Dark at every 
   ]) {
     await page.setViewportSize({ width, height });
     await page.goto("/");
-    await expect(page.locator("article[data-bike-id]")).toHaveCount(9);
-    await page.evaluate(() => document.fonts.ready);
+    await expect(page.locator("[data-ride-pulse]")).toContainText("5");
     for (const [label, mode] of [
       ["Светлая", "light"],
       ["Тёмная", "dark"],
     ]) {
       await theme(page, label);
-      await expect(page.locator("html")).toHaveAttribute("data-theme", mode);
       await noOverflow(page);
-      const header = await page.locator(".global-header").boundingBox();
-      expect(header.height).toBeLessThanOrEqual(68);
-      expect(await page.locator(".brand svg").getAttribute("fill")).toBe(
-        "none",
-      );
-      if (width === 1440) {
-        const ratios = await page.evaluate(() => {
-          // rgb(0-255) or, for color-mix() backgrounds, color(srgb 0-1).
-          const luminance = (value) => {
-            const numbers = value
-              .match(/[\d.]+/g)
-              .slice(0, 3)
-              .map(Number);
-            const c = (
-              value.startsWith("color(") ? numbers : numbers.map((n) => n / 255)
-            ).map((n) =>
-              n <= 0.04045 ? n / 12.92 : ((n + 0.055) / 1.055) ** 2.4,
-            );
-            return c[0] * 0.2126 + c[1] * 0.7152 + c[2] * 0.0722;
-          };
-          return [
-            document.querySelector("h1"),
-            document.querySelector("[data-home-search]").previousElementSibling,
-            ...document
-              .querySelector("article[data-bike-id]")
-              .querySelectorAll("h3, p, button"),
-          ].map((el) => {
-            let parent = el,
-              background;
-            do {
-              background = getComputedStyle(parent).backgroundColor;
-              parent = parent.parentElement;
-            } while (parent && background === "rgba(0, 0, 0, 0)");
-            const a = luminance(getComputedStyle(el).color),
-              b = luminance(background);
-            return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
-          });
-        });
-        for (const ratio of ratios) expect(ratio).toBeGreaterThanOrEqual(4.5);
-      }
-      const h = await page.locator("h1").evaluate((el) => ({
-        height: el.getBoundingClientRect().height,
-        line: parseFloat(getComputedStyle(el).lineHeight),
-      }));
-      expect(h.height / h.line).toBeLessThanOrEqual(width <= 390 ? 4.1 : 2.1);
-      // #83: the photo spans the card, the text below it stays short and
-      // all nine cards share one horizontal row, with a peek on phones.
-      const first = page.locator("article[data-bike-id]").first();
-      const card = await first.boundingBox();
-      const photo = await first.locator("a").first().boundingBox();
-      expect(photo.width).toBeGreaterThanOrEqual(card.width - 2);
-      expect(card.height - photo.height).toBeLessThan(200);
-      if (width > 600 && width <= 1050)
-        expect(card.width).toBeLessThan(width * 0.55);
-      if (width <= 600) expect(card.width).toBeLessThan(width * 0.85);
-      const last = await page
-        .locator("article[data-bike-id]")
-        .last()
-        .boundingBox();
-      expect(Math.abs(last.y - card.y)).toBeLessThan(2);
-      expect(last.x).toBeGreaterThan(card.x);
-      // #245 puts «Покататься вместе» between the hero and the builds. On a
-      // portrait phone the first build follows it directly: without that
-      // block it would still be on the first screen, so the hero cannot grow.
-      const together = await page
-        .locator("section[aria-labelledby=together-heading]")
-        .boundingBox();
-      expect(card.y).toBeGreaterThan(together.y + together.height);
-      if (width <= 390 && height > width)
-        expect(card.y - together.height + 120).toBeLessThanOrEqual(height);
       await expect(
-        page.locator(".global-header img, .garage-banner"),
+        page.locator(
+          "[data-home-search], [data-hero-animation], article[data-bike-id]",
+        ),
       ).toHaveCount(0);
-      if (width <= 390) {
-        const target = await first.getByRole("button").boundingBox();
-        expect(target.width).toBeGreaterThanOrEqual(44);
-        expect(target.height).toBeGreaterThanOrEqual(44);
-      }
+      await expect(
+        page
+          .getByRole("navigation", { name: "Популярное на ColaBike" })
+          .getByRole("link"),
+      ).toHaveCount(4);
+      const title = await page.locator("h1").boundingBox();
+      expect(title.height).toBeLessThan(width <= 390 ? 160 : 140);
+      const weekly = page.locator('[data-home-band="bike-week"]');
+      const image = await weekly.locator("img").boundingBox(),
+        parts = await weekly.locator("dl").boundingBox();
+      if (width <= 720) expect(parts.y).toBeGreaterThan(image.y + image.height);
+      else expect(parts.x).toBeGreaterThan(image.x);
       await page.screenshot({
         path: info.outputPath(`home-${width}x${height}-${mode}.png`),
         fullPage: true,
@@ -303,7 +257,7 @@ test("homepage rhythm, photo-first popular bikes and stable Light/Dark at every 
   }
 });
 
-test("home is one ruled column of six bands with rails inside, record art and a closing «О проекте» (#254)", async ({
+test("home v2 is one ruled column with weekly bike, four destinations, record art and About", async ({
   page,
   isMobile,
 }, info) => {
@@ -357,7 +311,7 @@ test("home is one ruled column of six bands with rails inside, record art and a 
   for (const [width, height] of widths) {
     await page.setViewportSize({ width, height });
     await page.goto("/");
-    await expect(page.locator("article[data-bike-id]")).toHaveCount(9);
+    await expect(page.locator("[data-ride-pulse]")).toContainText("5");
     // Six bands in order, each a band of the ruled column; nothing between.
     const bands = page.locator("main > section.frame");
     expect(
@@ -367,8 +321,8 @@ test("home is one ruled column of six bands with rails inside, record art and a 
     ).toEqual([
       "hero-title",
       "together-heading",
+      "bike-week-heading",
       "popular-heading",
-      "community-heading",
       "records-heading",
       "about-heading",
     ]);
@@ -385,7 +339,7 @@ test("home is one ruled column of six bands with rails inside, record art and a 
       );
     for (const column of columns) expect(column).toEqual(columns[0]);
     // Blocks 3–6 carry their title in a rail inside the band.
-    for (const id of ["popular", "community", "records", "about"]) {
+    for (const id of ["bike-week", "popular", "records", "about"]) {
       const band = page.locator(`[data-home-band="${id}"]`);
       const heading = band.getByRole("heading", { level: 2 });
       await expect(heading).toHaveCount(1);
@@ -397,25 +351,23 @@ test("home is one ruled column of six bands with rails inside, record art and a 
       expect((await heading.boundingBox()).y).toBeGreaterThanOrEqual(box.y);
     }
     const band = (id) => page.locator(`[data-home-band="${id}"]`).boundingBox();
-    const [popular, community, records, about] = await Promise.all(
-      ["popular", "community", "records", "about"].map(band),
+    const [weekly, popular, records, about] = await Promise.all(
+      ["bike-week", "popular", "records", "about"].map(band),
     );
-    expect(records.height).toBeLessThan(popular.height);
-    if (!isMobile) expect(records.height).toBeLessThan(community.height);
+    expect(records.height).toBeLessThan(weekly.height);
+    expect(popular.height).toBeGreaterThan(80);
     // The footer follows the closing band directly.
     const footer = await page.locator("footer").last().boundingBox();
     expect(Math.abs(footer.y - (about.y + about.height))).toBeLessThan(2);
-    // «Что нового»: a strict grid, cells of a row share top and height.
-    const cells = await page
-      .locator('[data-home-band="community"] article')
-      .evaluateAll((nodes) =>
-        nodes.map((n) => {
-          const r = n.getBoundingClientRect();
-          return [Math.round(r.top), Math.round(r.height)];
-        }),
-      );
-    expect(cells).toHaveLength(3);
-    if (width >= 1280) for (const cell of cells) expect(cell).toEqual(cells[0]);
+    const cells = page
+      .getByRole("navigation", { name: "Популярное на ColaBike" })
+      .getByRole("link");
+    await expect(cells).toHaveCount(4);
+    expect(
+      await cells.evaluateAll((nodes) =>
+        nodes.map((n) => new URL(n.href).pathname),
+      ),
+    ).toEqual(["/rides", "/components", "/articles", "/market"]);
     // Records: the rule's art, a fallback for a broken or missing one.
     const recordsBand = page.locator('[data-home-band="records"]');
     await recordsBand.scrollIntoViewIfNeeded();
@@ -559,7 +511,7 @@ test("search keyboard, groups, cancellation and real results navigation", async 
 }) => {
   await fixture(page);
   await page.goto("/");
-  await expect(page.locator("article[data-bike-id]")).toHaveCount(9);
+  await expect(page.locator("[data-ride-pulse]")).toContainText("5");
   await page.keyboard.press("/");
   const input = page.getByRole("combobox");
   await expect(input).toBeFocused();
@@ -581,7 +533,7 @@ test("search keyboard, groups, cancellation and real results navigation", async 
   await expect(page.getByText("Велосипеды с компонентом:")).toBeVisible();
   await page.goto("/");
   // Wait for the client-rendered gallery before typing after the hard navigation.
-  await expect(page.locator("article[data-bike-id]")).toHaveCount(9);
+  await expect(page.locator("[data-ride-pulse]")).toContainText("5");
   let release;
   await page.route("**/api/discovery/search?**", async (r) => {
     if (new URL(r.request().url()).searchParams.get("q") === "old")
@@ -603,6 +555,8 @@ test("search keyboard, groups, cancellation and real results navigation", async 
       })
       .catch(() => {});
   });
+  await page.keyboard.press("/");
+  await expect(input).toBeFocused();
   await input.fill("old");
   await expect.poll(() => !!release).toBe(true);
   await input.fill("new");
@@ -620,20 +574,17 @@ test("search keyboard, groups, cancellation and real results navigation", async 
 test("Live is readable with reduced motion; empty, missing images and long titles stay usable", async ({
   page,
 }) => {
-  await fixture(
-    page,
-    {
-      ...home,
-      popular: [
-        {
-          ...bikes[0],
-          name: "Очень длинное название велосипеда — сборка для многодневных путешествий через весь континент",
-          photos: [{ id: "community-photo-missing" }],
-        },
-      ],
+  await fixture(page, {
+    ...home,
+    bikeOfWeek: {
+      ...home.bikeOfWeek,
+      bike: {
+        ...home.bikeOfWeek.bike,
+        name: "Очень длинное название велосипеда — сборка для многодневных путешествий через весь континент",
+      },
+      cover: { id: "community-photo-missing" },
     },
-    { id: "viewer", name: "Участник", username: "viewer", preferences: {} },
-  );
+  });
   await page.route("**/api/photos/community-photo-missing*", (r) =>
     r.fulfill({ status: 404, body: "missing" }),
   );
@@ -657,30 +608,35 @@ test("Live is readable with reduced motion; empty, missing images and long title
     document.documentElement.style.fontSize = "200%";
   });
   await noOverflow(page);
-  await page.route("**/api/discovery/home", (r) =>
+  await page.route("**/api/discovery/home*", (r) =>
     r.fulfill({
       json: {
-        popular: [],
         events: [],
-        content: [],
         records: [],
-        totalBikes: 0,
+        bikeOfWeek: null,
+        pulse: {
+          ...home.pulse,
+          total: 0,
+          ready: 0,
+          considering: 0,
+          buckets: home.pulse.buckets.map((b) => ({ ...b, count: 0 })),
+        },
       },
     }),
   );
   await page.reload();
   await expect(page.getByText("Первые истории ещё впереди.")).toBeVisible();
   await noOverflow(page);
-  await page.route("**/api/discovery/home", (r) =>
+  await page.route("**/api/discovery/home*", (r) =>
     r.fulfill({ status: 500, json: { error: "unavailable" } }),
   );
   await page.reload();
   await expect(page.locator("main").getByRole("alert")).toContainText(
     "Не удалось",
   );
-  await page.route("**/api/discovery/home", (r) => r.fulfill({ json: home }));
+  await page.route("**/api/discovery/home*", (r) => r.fulfill({ json: home }));
   await page.getByRole("button", { name: "Повторить" }).click();
-  await expect(page.locator("article[data-bike-id]")).toHaveCount(9);
+  await expect(page.locator("[data-ride-pulse]")).toContainText("5");
 });
 
 test("admin appearance is explicit; hero upload, replacement and removal protect assigned content artwork", async ({
@@ -743,17 +699,14 @@ test("admin appearance is explicit; hero upload, replacement and removal protect
       .toBe("dark");
     await nav.getByRole("button", { name: "Внешний вид", exact: true }).click();
     await page
-      .getByLabel("Анимация · слева от заголовка", { exact: true })
-      .selectOption("");
-    await page
-      .getByLabel("Файл: Изображение · слева от заголовка", { exact: true })
+      .getByLabel("Файл: Фоновое изображение hero", { exact: true })
       .setInputFiles({
         name: "hero-test.png",
         mimeType: "image/png",
         buffer: png,
       });
     const picker = page.getByRole("combobox", {
-      name: "Изображение · слева от заголовка",
+      name: "Фоновое изображение hero",
       exact: true,
     });
     await expect(picker).not.toHaveValue("");
@@ -770,16 +723,16 @@ test("admin appearance is explicit; hero upload, replacement and removal protect
       .poll(
         async () =>
           (await (await page.request.get("/api/admin/overview")).json())
-            .settings.heroImageId,
+            .settings.heroBackgroundImageId,
       )
       .toBe(heroId);
     const preview = await page.context().newPage();
     await preview.goto("/");
     await expect(
       preview.locator(
-        `section[aria-labelledby="hero-title"] img[src="/api/assets/${heroId}"]`,
+        `section[aria-labelledby="hero-title"] img[data-hero-background]`,
       ),
-    ).toHaveAttribute("src", "/api/assets/" + heroId);
+    ).toHaveAttribute("src", "/api/assets/" + heroId + "?width=1280");
     await preview.close();
     expect(
       (
@@ -794,7 +747,7 @@ test("admin appearance is explicit; hero upload, replacement and removal protect
       .poll(
         async () =>
           (await (await page.request.get("/api/admin/overview")).json())
-            .settings.heroImageId,
+            .settings.heroBackgroundImageId,
       )
       .toBe(assets[1]);
     await page.screenshot({
@@ -803,7 +756,7 @@ test("admin appearance is explicit; hero upload, replacement and removal protect
     });
     await page
       .getByRole("button", {
-        name: "Сбросить: Изображение · слева от заголовка",
+        name: "Сбросить: Фоновое изображение hero",
         exact: true,
       })
       .click();
@@ -812,7 +765,7 @@ test("admin appearance is explicit; hero upload, replacement and removal protect
       .poll(
         async () =>
           (await (await page.request.get("/api/admin/overview")).json())
-            .settings.heroImageId,
+            .settings.heroBackgroundImageId,
       )
       .toBe(null);
     expect(

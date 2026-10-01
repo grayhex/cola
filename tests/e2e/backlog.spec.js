@@ -1,7 +1,6 @@
 import { registerVerified } from "../fixtures/verified-user.js";
 import { test as base, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
-import { writeFile } from "node:fs/promises";
 import pg from "pg";
 import sharp from "sharp";
 import { testConsents } from "../fixtures/legal.js";
@@ -439,35 +438,44 @@ test("admin backgrounds are independent per theme; native local SVG file upload 
       "Настройки опубликованы",
     );
     await section("Внешний вид").click();
-    await page.getByLabel("Анимации главной для всех посетителей").check();
+    await expect(
+      page.getByLabel("Анимации главной для всех посетителей"),
+    ).toHaveCount(0);
     const png = await sharp({
       create: { width: 80, height: 80, channels: 4, background: "#f43030" },
     })
       .png()
       .toBuffer();
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80"><image href="data:image/png;base64,${png.toString("base64")}" width="80" height="80"><animate attributeName="opacity" values="0.3;1;0.3" dur="2s" repeatCount="indefinite"/></image></svg>`;
-    const filename = info.outputPath("local-embedded-raster.svg");
-    await writeFile(filename, svg);
-    const upload = page.waitForResponse(
-      (r) =>
-        r.request().method() === "POST" &&
-        r.url().includes("/api/admin/assets?"),
+    // SVG remains a supported, sandboxed library format. Its old assignment
+    // is accepted for settings compatibility, without a homepage renderer.
+    const uploaded = await page.request.post(
+      "/api/admin/assets?name=local-embedded-raster.svg",
+      {
+        headers: { origin, "content-type": "image/svg+xml" },
+        data: svg,
+      },
     );
-    await page
-      .getByLabel("Файл: Анимация · справа от поиска", { exact: true })
-      .setInputFiles(filename);
-    const r = await upload;
-    expect(r.status()).toBe(201);
-    const animationPicker = page.getByLabel("Анимация · справа от поиска", {
-      exact: true,
-    });
-    await expect(animationPicker).toHaveValue(/^[0-9a-f-]{36}$/);
-    const animation = await animationPicker.inputValue();
+    expect(uploaded.status()).toBe(201);
+    const animation = (await uploaded.json()).id;
     assets.push(animation);
-    await page.getByRole("button", { name: "Сохранить", exact: true }).click();
-    await expect(page.getByRole("status")).toContainText(
-      "Настройки опубликованы",
-    );
+    const current = await (
+      await page.request.get("/api/admin/overview")
+    ).json();
+    expect(
+      (
+        await page.request.put("/api/admin/settings", {
+          headers: { origin },
+          data: {
+            version: current.settingsVersion,
+            value: {
+              ...current.settings,
+              heroStageAnimation: { kind: "svg", assetId: animation },
+            },
+          },
+        })
+      ).status(),
+    ).toBe(200);
     const response = await page.request.get("/api/assets/" + animation);
     expect(response.status()).toBe(200);
     expect(response.headers()["content-type"]).toBe("image/svg+xml");
@@ -520,22 +528,10 @@ test("admin backgrounds are independent per theme; native local SVG file upload 
       opacity: "0.35",
       repeat: "no-repeat",
     });
-    const stage = page.locator("[data-hero-animation]");
-    const art = stage.locator(`img[src="/api/assets/${animation}"]`).first();
-    const viewport = page.viewportSize();
-    const compact = viewport && viewport.width <= 700;
-    // The existing compact homepage omits the decorative stage. Validate
-    // its upload/rendering in touch landscape without changing that layout.
-    if (compact) {
-      await expect(stage).toBeHidden();
-      await page.setViewportSize({ width: 844, height: 390 });
-    }
-    await expect(art).toBeVisible();
-    await expect
-      .poll(() => art.evaluate((img) => img.naturalWidth))
-      .toBeGreaterThan(0);
+    // Legacy SVG assignments remain protected library assets, but v2 does
+    // not render an animation stage on any viewport.
+    await expect(page.locator("[data-hero-animation]")).toHaveCount(0);
     await noOverflow(page);
-    if (compact) await page.setViewportSize(viewport);
     await toggle.click();
     await expect.poll(background).toMatchObject({
       image: `url("${origin}/api/assets/${assets[1]}")`,
