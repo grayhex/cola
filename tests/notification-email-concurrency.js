@@ -25,7 +25,7 @@ try {
     [recipient],
   );
   await pool.query(
-    "INSERT INTO bikes(id,owner_id,share_id,name,category,is_public) VALUES($1,$2,$1,'Queue bike','road',true)",
+    "INSERT INTO bikes(id,owner_id,share_id,name,brand,model,year,category,weight,is_public) VALUES($1,$2,$1,'Queue bike','Cube','Travel',2020,'road',14,true)",
     [bike, recipient],
   );
   await pool.query(

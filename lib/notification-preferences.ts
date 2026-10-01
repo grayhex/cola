@@ -3,6 +3,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 import { mailEnabled } from "./mail.ts";
 import { CommunityError } from "./community-validation.ts";
+import { notificationEmailCategorySql } from "./notification-catalog.ts";
 
 export const notificationEmailInput = z
   .object({
@@ -58,9 +59,13 @@ export async function saveNotificationEmail(
       503,
     );
   await q.query(
-    `INSERT INTO notification_email_preferences(user_id,enabled,discussions,rides,market) VALUES($1,$2,$3,$4,$5)
+    `WITH saved AS (INSERT INTO notification_email_preferences(user_id,enabled,discussions,rides,market) VALUES($1,$2,$3,$4,$5)
     ON CONFLICT(user_id) DO UPDATE SET enabled=excluded.enabled,discussions=excluded.discussions,rides=excluded.rides,market=excluded.market,
-      unsubscribe_key=CASE WHEN excluded.enabled AND NOT notification_email_preferences.enabled THEN gen_random_uuid()::text||gen_random_uuid()::text ELSE notification_email_preferences.unsubscribe_key END,updated_at=now()`,
+      unsubscribe_key=CASE WHEN excluded.enabled AND NOT notification_email_preferences.enabled THEN gen_random_uuid()::text||gen_random_uuid()::text ELSE notification_email_preferences.unsubscribe_key END,updated_at=now()
+    RETURNING user_id,enabled,discussions,rides,market)
+    UPDATE notification_email_outbox o SET status='skipped',error_code='preferences',finished_at=now(),lease_token=NULL,lease_until=NULL
+    FROM notifications n,saved p WHERE o.notification_id=n.id AND o.recipient_id=p.user_id AND o.status IN ('pending','sending')
+      AND (NOT p.enabled OR NOT coalesce(CASE ${notificationEmailCategorySql("n.type")} WHEN 'discussions' THEN p.discussions WHEN 'rides' THEN p.rides WHEN 'market' THEN p.market END,false))`,
     [userId, value.enabled, value.discussions, value.rides, value.market],
   );
   return notificationEmailSettings(q, userId, env);
@@ -109,9 +114,12 @@ export async function unsubscribeNotificationEmail(
     return false;
   // The key predicate prevents a stale link disabling consent renewed in parallel.
   return !!(
-    await q.query(
-      "UPDATE notification_email_preferences SET enabled=false,updated_at=now() WHERE user_id=$1 AND unsubscribe_key=$2 RETURNING user_id",
+    await q.query<{ ok: boolean }>(
+      `WITH disabled AS (UPDATE notification_email_preferences SET enabled=false,updated_at=now() WHERE user_id=$1 AND unsubscribe_key=$2 RETURNING user_id),
+      cancelled AS (UPDATE notification_email_outbox o SET status='skipped',error_code='preferences',finished_at=now(),lease_token=NULL,lease_until=NULL
+        FROM disabled p WHERE o.recipient_id=p.user_id AND o.status IN ('pending','sending') RETURNING o.notification_id)
+      SELECT EXISTS(SELECT 1 FROM disabled) ok`,
       [id, row.unsubscribe_key],
     )
-  ).rowCount;
+  ).rows[0]?.ok;
 }

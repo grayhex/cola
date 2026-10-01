@@ -354,6 +354,83 @@ test("signed unsubscribe has no login dependency, expires, resists tampering and
     await s.db.close();
   }
 });
+test("revoked consent cannot revive pending or leased mail when enabled again", async () => {
+  for (const revoke of ["master", "category", "unsubscribe"]) {
+    const s = await setup();
+    try {
+      await s.add();
+      await s.db.query("UPDATE notifications SET dedup_key=dedup_key||':old'");
+      await s.add();
+      assert.equal((await claimNotificationEmails(s.db)).length, 1);
+      if (revoke === "unsubscribe") {
+        const key = (
+          await s.db.query(
+            "SELECT unsubscribe_key FROM notification_email_preferences WHERE user_id=$1",
+            [s.recipient],
+          )
+        ).rows[0].unsubscribe_key;
+        assert.equal(
+          await unsubscribeNotificationEmail(
+            s.db,
+            notificationUnsubscribeToken(s.recipient, key),
+          ),
+          true,
+        );
+      } else {
+        await saveNotificationEmail(
+          s.db,
+          s.recipient,
+          {
+            ...on,
+            ...(revoke === "master"
+              ? { enabled: false }
+              : { discussions: false }),
+          },
+          env,
+        );
+      }
+      await saveNotificationEmail(s.db, s.recipient, on, env);
+      await ready(s.db);
+      const result = await runNotificationEmailBatch(s.db, {
+        env,
+        send: async () => assert.fail("consent was revoked"),
+      });
+      assert.equal(result.claimed, 0, revoke);
+      assert.equal(
+        (
+          await s.db.query(
+            "SELECT queued_count FROM notification_email_preferences",
+          )
+        ).rows[0].queued_count,
+        0,
+      );
+      assert.equal(
+        (
+          await s.db.query(
+            "SELECT count(*)::int n FROM notification_email_outbox WHERE status='skipped' AND lease_token IS NULL",
+          )
+        ).rows[0].n,
+        2,
+      );
+      assert.equal(
+        (await notificationPage(s.db, s.recipient)).notifications.length,
+        2,
+      );
+      await s.db.query(
+        "UPDATE notifications SET dedup_key=dedup_key||':older'",
+      );
+      await s.add();
+      assert.equal(
+        (await runNotificationEmailBatch(s.db, { env, send: async () => {} }))
+          .sent,
+        1,
+        "new consent permits new events",
+      );
+    } finally {
+      await s.db.close();
+    }
+  }
+});
 test("delivery rechecks visibility, address, consent and blocking, and never sends comment bodies", async () => {
   const s = await setup();
   try {

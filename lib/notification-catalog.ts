@@ -58,15 +58,18 @@ export const notificationEmailEvents: Record<
 
 // A newly inserted event and its delivery are one database statement, even when
 // the caller uses an autocommit pool. No SMTP means no new external backlog.
-export function notificationEmailEnqueueSql(enabledParameter: string) {
+export function notificationEmailCategorySql(typeColumn = "type") {
   const categories = notificationEmailCategories
     .map(
       (category) =>
-        `WHEN type IN (${Object.entries(notificationEmailEvents)
+        `WHEN ${typeColumn} IN (${Object.entries(notificationEmailEvents)
           .filter(([, event]) => event.category === category)
           .map(([type]) => `'${type}'`)
           .join(",")}) THEN '${category}'`,
     )
     .join(" ");
-  return `SELECT cola_queue_notification_email(id,recipient_id,CASE ${categories} ELSE NULL END) FROM created WHERE ${enabledParameter}`;
+  return `CASE ${categories} ELSE NULL END`;
+}
+export function notificationEmailEnqueueSql(enabledParameter: string) {
+  return `SELECT cola_queue_notification_email(id,recipient_id,${notificationEmailCategorySql()}) FROM created WHERE ${enabledParameter}`;
 }
