@@ -21,6 +21,9 @@ test("weekly feature: server permissions, admin choice, service notice, owner pr
   ).rows[0].value;
   try {
     expect((await other.request.get("/api/bike-week/me")).status()).toBe(401);
+    expect((await other.request.get("/api/bike-week/bikes")).status()).toBe(
+      401,
+    );
     for (const request of [page.request, other.request]) {
       expect(
         (
@@ -38,6 +41,9 @@ test("weekly feature: server permissions, admin choice, service notice, owner pr
       users.push((await (await request.get("/api/me")).json()).user.id);
     }
     expect((await other.request.get("/api/bike-week/admin")).status()).toBe(
+      403,
+    );
+    expect((await other.request.get("/api/bike-week/bikes")).status()).toBe(
       403,
     );
     await q.query("UPDATE users SET role='admin' WHERE id=$1", [users[0]]);
@@ -101,13 +107,75 @@ test("weekly feature: server permissions, admin choice, service notice, owner pr
     expect(
       (await page.request.get("/api/bike-week/admin?week=2026-02-30")).status(),
     ).toBe(400);
+    expect(
+      (
+        await page.request.put("/api/bike-week/settings", {
+          headers: { origin },
+          data: {
+            ...preview.settings,
+            minimumLikes: 0,
+            minimumReactions: 0,
+            minimumParticipants: 0,
+            minimumScore: 0,
+            cooldownWeeks: 0,
+          },
+        })
+      ).status(),
+    ).toBe(200);
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto("/admin");
     await page.getByRole("tab", { name: "Главная", exact: true }).click();
     await page
       .getByRole("button", { name: "Велосипед недели", exact: true })
       .click();
-    await page.getByLabel("ID велосипеда для выбора").fill(bikeId);
+    const candidate = page
+      .getByRole("list", { name: "Кандидаты недели" })
+      .getByRole("button", { name: "Назначить Week touring" });
+    await expect(candidate).toBeDisabled();
+    await page
+      .getByLabel("Причина для журнала")
+      .fill("Candidate browser verification");
+    await candidate.click();
+    await expect(
+      page.getByRole("region", { name: "Текущий велосипед недели" }),
+    ).toContainText("Week touring");
+    await page
+      .getByRole("button", { name: "Пропустить неделю", exact: true })
+      .click();
+    await expect(
+      page.getByText("Статус: неделя пропущена", { exact: true }),
+    ).toBeVisible();
+    await page
+      .getByRole("button", {
+        name: "Вернуть автоматический выбор",
+        exact: true,
+      })
+      .click();
+    await expect(
+      page.getByRole("region", { name: "Текущий велосипед недели" }),
+    ).toContainText("Автоматический выбор по баллам");
+    expect(
+      (
+        await page.request.get("/api/bike-week/bikes?q=" + "x".repeat(101))
+      ).status(),
+    ).toBe(400);
+    await page
+      .getByRole("button", { name: "Назначить вручную", exact: true })
+      .click();
+    await page
+      .getByRole("searchbox", { name: "Найти публичный велосипед" })
+      .fill("missing-" + randomUUID());
+    await expect(
+      page.getByText("Нет подходящих велосипедов.", { exact: false }),
+    ).toBeVisible();
+    await page
+      .getByRole("searchbox", { name: "Найти публичный велосипед" })
+      .fill("Week touring");
+    const choice = page.getByRole("radio", { name: "Выбрать Week touring" });
+    await expect(choice).toBeVisible();
+    await choice.focus();
+    await page.keyboard.press("Space");
+    await expect(choice).toBeChecked();
     await page
       .getByLabel("Причина для журнала")
       .fill("Editorial browser verification");
@@ -119,6 +187,34 @@ test("weekly feature: server permissions, admin choice, service notice, owner pr
         .getByRole("status")
         .filter({ hasText: "Решение на неделю сохранено" }),
     ).toBeVisible();
+    await expect(
+      page.getByRole("region", { name: "Текущий велосипед недели" }),
+    ).toContainText("Week touring");
+    await expect(
+      page.getByText("Причина: Editorial browser verification", {
+        exact: false,
+      }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("region", { name: "Текущий велосипед недели" }),
+    ).toContainText("Назначен администратором");
+    for (const width of [390, 1440])
+      for (const theme of ["light", "dark"]) {
+        await page.setViewportSize({ width, height: 1000 });
+        await page.evaluate(
+          (v) => (document.documentElement.dataset.theme = v),
+          theme,
+        );
+        expect(
+          (await new AxeBuilder({ page }).include(".admin-content").analyze())
+            .violations,
+        ).toEqual([]);
+        await page.screenshot({
+          path: info.outputPath(`bike-week-admin-${width}-${theme}.png`),
+          fullPage: true,
+          animations: "disabled",
+        });
+      }
     await page.screenshot({
       path: info.outputPath("bike-week-admin.png"),
       fullPage: true,

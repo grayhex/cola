@@ -192,7 +192,7 @@ test("admin: the design system opens next to the admin menu; on a phone the save
   await expect(page.locator(".admin-save")).toHaveCount(0);
   expect(await noOverflow(page)).toBe(true);
   // Static hero settings still use the shared dirty/save bar.
-  await page.getByRole("button", { name: "Внешний вид", exact: true }).click();
+  await page.getByRole("button", { name: "Главная", exact: true }).click();
   await expect(
     page.getByLabel("Фоновое изображение hero", { exact: true }),
   ).toBeVisible();

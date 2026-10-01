@@ -7,6 +7,7 @@ import { bikeWeekStart } from "../../lib/bike-week-validation.ts";
 import { socialApi } from "../ui/social-primitives.tsx";
 import { errorMessage } from "../../lib/errors.ts";
 import styles from "../ui/bike-week.module.css";
+import BikeWeekPicker, { BikeWeekLabel } from "./bike-week-picker.tsx";
 type Preview = JsonData<Awaited<ReturnType<typeof bikeWeekPreview>>>;
 const fields = [
   ["windowDays", "Окно активности, дней", 1, 90],
@@ -28,9 +29,15 @@ export default function BikeWeekAdmin() {
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [message, setMessage] = useState("");
+  const [manual, setManual] = useState(false);
   useEffect(() => {
     let active = true;
     setData(null);
+    setBikeId("");
+    setReason("");
+    setManual(false);
+    setError("");
+    setMessage("");
     socialApi<Preview>("bike-week/admin?week=" + week)
       .then((v) => {
         if (active) {
@@ -61,13 +68,16 @@ export default function BikeWeekAdmin() {
       setBusy(false);
     }
   }
-  function decide(action: "override" | "skip" | "automatic") {
+  function decide(
+    action: "override" | "skip" | "automatic",
+    selectedId = bikeId,
+  ) {
     void act(
       () =>
         socialApi("bike-week/decision", "PUT", {
           week,
           action,
-          bikeId: action === "override" ? bikeId : null,
+          bikeId: action === "override" ? selectedId : null,
           reason,
         }),
       "Решение на неделю сохранено",
@@ -83,55 +93,58 @@ export default function BikeWeekAdmin() {
       {error && <p role="alert">{error}</p>}
       {message && <p role="status">{message}</p>}
       {settings && (
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            void act(
-              () => socialApi("bike-week/settings", "PUT", settings),
-              "Настройки сохранены",
-            );
-          }}
-        >
-          <fieldset disabled={busy}>
-            <legend>Механика выбора</legend>
-            <label className="ride-toggle">
-              <input
-                type="checkbox"
-                checked={settings.enabled}
-                onChange={(e) =>
-                  setSettings({ ...settings, enabled: e.target.checked })
-                }
-              />
-              Включить велосипед недели
-            </label>
-            <div className={styles.layout}>
-              {fields.map(([key, label, min, max]) => (
-                <label className="field" key={key}>
-                  <span>{label}</span>
-                  <input
-                    type="number"
-                    min={min}
-                    max={max}
-                    step={
-                      key.endsWith("Weight") || key === "minimumScore"
-                        ? "0.1"
-                        : "1"
-                    }
-                    required
-                    value={settings[key]}
-                    onChange={(e) =>
-                      setSettings({
-                        ...settings,
-                        [key]: Number(e.target.value),
-                      })
-                    }
-                  />
-                </label>
-              ))}
-            </div>
-            <button className="button">Сохранить настройки</button>
-          </fieldset>
-        </form>
+        <details>
+          <summary>Настройки автоматического выбора</summary>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              void act(
+                () => socialApi("bike-week/settings", "PUT", settings),
+                "Настройки сохранены",
+              );
+            }}
+          >
+            <fieldset disabled={busy}>
+              <legend>Механика выбора</legend>
+              <label className="ride-toggle">
+                <input
+                  type="checkbox"
+                  checked={settings.enabled}
+                  onChange={(e) =>
+                    setSettings({ ...settings, enabled: e.target.checked })
+                  }
+                />
+                Включить велосипед недели
+              </label>
+              <div className={styles.layout}>
+                {fields.map(([key, label, min, max]) => (
+                  <label className="field" key={key}>
+                    <span>{label}</span>
+                    <input
+                      type="number"
+                      min={min}
+                      max={max}
+                      step={
+                        key.endsWith("Weight") || key === "minimumScore"
+                          ? "0.1"
+                          : "1"
+                      }
+                      required
+                      value={settings[key]}
+                      onChange={(e) =>
+                        setSettings({
+                          ...settings,
+                          [key]: Number(e.target.value),
+                        })
+                      }
+                    />
+                  </label>
+                ))}
+              </div>
+              <button className="button">Сохранить настройки</button>
+            </fieldset>
+          </form>
+        </details>
       )}
       <h3>Расчёт и решение на неделю</h3>
       <label className="field">
@@ -157,8 +170,40 @@ export default function BikeWeekAdmin() {
                   invalid: "ожидает замены",
                 }[data.current.status]
               : "ещё не выбран"}
-            {data.current?.bike_id ? ` · ${data.current.bike_id}` : ""}
           </p>
+          {data.currentBike && (
+            <section
+              aria-label="Текущий велосипед недели"
+              className={styles.preview}
+            >
+              <BikeWeekLabel bike={data.currentBike} />
+              <p className="help">
+                {(data.decision?.action === "override" &&
+                  data.decision.bike_id === data.currentBike.id) ||
+                data.current?.source === "override"
+                  ? "Назначен администратором"
+                  : "Автоматический выбор по баллам"}
+              </p>
+            </section>
+          )}
+          {data.decision && (
+            <p className="help">
+              Решение администратора:{" "}
+              {data.decision.action === "skip"
+                ? "пропустить неделю"
+                : "ручное назначение"}
+              . Причина: {data.decision.reason}
+            </p>
+          )}
+          {data.decisionBike &&
+            data.decisionBike.id !== data.currentBike?.id && (
+              <section
+                aria-label="Запланированный велосипед недели"
+                className={styles.preview}
+              >
+                <BikeWeekLabel bike={data.decisionBike} />
+              </section>
+            )}
           <p className="help">
             Предпросмотр использует сохранённые настройки. Текущий победитель
             сохраняется до конца недели. Ручной выбор обходит баллы и перерыв,
@@ -176,38 +221,8 @@ export default function BikeWeekAdmin() {
           >
             Запустить выбор текущей недели
           </button>
-          <ul className={styles.candidates}>
-            {data.candidates.map((b) => (
-              <li key={b.id}>
-                <div>
-                  <strong>{b.name}</strong>
-                  <p className="help">
-                    {b.score} баллов · лайки {b.likes} · реакции {b.reactions} ·
-                    обсуждение {b.participants}
-                  </p>
-                </div>
-                <button
-                  className="quiet"
-                  disabled={busy}
-                  onClick={() => setBikeId(b.id)}
-                >
-                  Выбрать {b.name}
-                </button>
-              </li>
-            ))}
-          </ul>
-          {!data.candidates.length && (
-            <p className="help">Нет кандидатов с такими порогами.</p>
-          )}
           <fieldset disabled={busy}>
-            <legend>Ручное решение</legend>
-            <label className="field">
-              <span>ID велосипеда для выбора</span>
-              <input
-                value={bikeId}
-                onChange={(e) => setBikeId(e.target.value)}
-              />
-            </label>
+            <legend>Решение администратора</legend>
             <label className="field">
               <span>Причина для журнала</span>
               <input
@@ -215,16 +230,80 @@ export default function BikeWeekAdmin() {
                 maxLength={500}
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
+                aria-describedby="bike-week-reason-help"
               />
+              <small id="bike-week-reason-help">
+                Укажите причину перед назначением, пропуском недели или
+                возвратом автоматики.
+              </small>
             </label>
+            <button
+              type="button"
+              className="button secondary"
+              aria-expanded={manual}
+              aria-controls="bike-week-manual"
+              onClick={() => setManual((v) => !v)}
+            >
+              Назначить вручную
+            </button>
+            {manual && (
+              <div id="bike-week-manual" className={styles.manual}>
+                <BikeWeekPicker
+                  key={week}
+                  week={week}
+                  value={bikeId}
+                  onChange={setBikeId}
+                  disabled={busy}
+                />
+                <details>
+                  <summary>По ID · дополнительно</summary>
+                  <label className="field">
+                    <span>ID велосипеда для выбора</span>
+                    <input
+                      value={bikeId}
+                      onChange={(e) => setBikeId(e.target.value)}
+                    />
+                  </label>
+                </details>
+                <button
+                  className="button"
+                  disabled={!bikeId || reason.trim().length < 3}
+                  onClick={() => decide("override")}
+                >
+                  Назначить на неделю
+                </button>
+              </div>
+            )}
+            <h3>Кандидаты по автоматическим правилам</h3>
+            <ul className={styles.candidates} aria-label="Кандидаты недели">
+              {data.candidates.map((b) => (
+                <li key={b.id}>
+                  <div>
+                    {b.bike ? (
+                      <BikeWeekLabel bike={b.bike} />
+                    ) : (
+                      <strong>{b.name}</strong>
+                    )}
+                    <p className="help">
+                      {b.score} баллов · лайки {b.likes} · реакции {b.reactions}{" "}
+                      · обсуждение {b.participants}
+                    </p>
+                  </div>
+                  <button
+                    className="quiet"
+                    aria-label={"Назначить " + b.name}
+                    disabled={busy || reason.trim().length < 3}
+                    onClick={() => decide("override", b.id)}
+                  >
+                    Назначить
+                  </button>
+                </li>
+              ))}
+            </ul>
+            {!data.candidates.length && (
+              <p className="help">Нет кандидатов с такими порогами.</p>
+            )}
             <div className={styles.actions}>
-              <button
-                className="button"
-                disabled={!bikeId || reason.trim().length < 3}
-                onClick={() => decide("override")}
-              >
-                Назначить на неделю
-              </button>
               <button
                 className="quiet"
                 disabled={reason.trim().length < 3}

@@ -40,6 +40,51 @@
   border-bottom: 1px solid var(--line);
   overflow-wrap: anywhere;
 }
+.bikeChoice {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.bikeChoice > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.bikeChoice a {
+  font-weight: var(--weight-semibold);
+}
+.bikeChoice small {
+  display: block;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+.choiceId {
+  font-family: var(--font-mono);
+}
+.choicePhoto {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 80px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  background: var(--surface-subtle);
+}
+.choiceRadio {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+}
+.manual {
+  margin-block: var(--space-4);
+  padding: var(--space-4);
+  border: 1px solid var(--line);
+}
+.manual details {
+  margin-block: var(--space-4);
+}
 @media (max-width: 700px) {
   .layout {
     grid-template-columns: 1fr;

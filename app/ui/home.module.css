@@ -1,6 +1,12 @@
 .home {
   min-width: 0;
 }
+.home > :global(.frame) {
+  border-bottom: 0;
+}
+.home > :global(.frame) > :global(.frame-inner) {
+  border-bottom: 1px solid var(--line);
+}
 .hero {
   position: relative;
   isolation: isolate;
@@ -301,6 +307,9 @@
 .pulseBuckets strong {
   color: var(--text);
   font-variant-numeric: tabular-nums;
+}
+.pulseBuckets :global(.site-icon[data-highlight]) {
+  color: var(--icon-highlight);
 }
 .pulseSummary {
   margin: var(--space-3) 0 var(--space-1);

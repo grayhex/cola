@@ -10,6 +10,13 @@ import { plural } from "../../lib/plural.ts";
 import { personName } from "../../lib/usernames.ts";
 import { useMotionFeedback } from "./motion.tsx";
 import styles from "./home.module.css";
+import SiteIcon from "./site-icon.tsx";
+const bucketIcons = {
+  today: "pulseToday",
+  tomorrow: "pulseTomorrow",
+  weekend: "pulseWeekend",
+  later: "pulseLater",
+};
 
 type People = JsonData<Awaited<ReturnType<typeof ridePulsePeople>>>;
 function PulsePeople({ revision }: { revision?: string }) {
@@ -92,6 +99,7 @@ export default function RidePulse({
           <ul className={styles.pulseBuckets}>
             {pulse.buckets.map((bucket) => (
               <li key={bucket.key}>
+                <SiteIcon name={bucketIcons[bucket.key]} size={16} />
                 {bucket.label}
                 <strong>{bucket.count}</strong>
               </li>

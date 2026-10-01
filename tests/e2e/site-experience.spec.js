@@ -32,13 +32,11 @@ test("admin publishes static hero, brand/favicon and icon highlight", async ({
     await page.goto("/admin");
     await page.getByRole("tab", { name: "Дизайн", exact: true }).click();
     const nav = page.getByRole("navigation", { name: "Разделы админки" });
-    await expect(
-      nav.getByRole("button", { name: "Главная", exact: true }),
-    ).toHaveCount(0);
     await nav.getByRole("button", { name: "Внешний вид", exact: true }).click();
     await expect(
       page.getByLabel("Тема по умолчанию", { exact: true }),
     ).toBeVisible();
+    await nav.getByRole("button", { name: "Главная", exact: true }).click();
     await expect(
       page.getByLabel("Графика главного блока", { exact: true }),
     ).toHaveCount(0);
@@ -66,9 +64,9 @@ test("admin publishes static hero, brand/favicon and icon highlight", async ({
     await expect(hero).toHaveValue(/^[0-9a-f-]{36}$/);
     assets.push(await hero.inputValue());
     await page.getByRole("button", { name: "Сохранить", exact: true }).click();
-    await expect(page.getByRole("status")).toContainText(
-      "Настройки опубликованы",
-    );
+    await expect(
+      page.getByRole("status").filter({ hasText: "Настройки опубликованы" }),
+    ).toContainText("Настройки опубликованы");
     await nav.getByRole("button", { name: "Графика", exact: true }).click();
     const logoBytes = await sharp({
       create: { width: 80, height: 80, channels: 4, background: "#aa55dd" },

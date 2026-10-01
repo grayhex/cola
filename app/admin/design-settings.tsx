@@ -135,7 +135,8 @@ export function HomepageSettings({
       </p>
       <AssetPicker
         label="Фоновое изображение hero"
-        help="Широкая статичная иллюстрация. Слева — спокойный фон под белый текст, сюжет — справа. PNG, JPEG или WebP автоматически оптимизируются."
+        help="Рекомендуем: минимум 2400×1030 px, широкий формат около 21:9. Слева ~45% спокойного фона под текст, основной сюжет справа. PNG, JPEG или WebP автоматически оптимизируются."
+        recommendedSize={{ width: 2400, height: 1030 }}
         value={s.heroBackgroundImageId}
         assets={assets.filter((asset) => asset.format === "image")}
         busy={busy}
@@ -146,6 +147,13 @@ export function HomepageSettings({
           if (asset) onChange("heroBackgroundImageId", asset.id);
         }}
       />
+      <Field label="Надзаголовок hero">
+        <input
+          maxLength={100}
+          value={s.heroEyebrow}
+          onChange={(e) => onChange("heroEyebrow", e.target.value)}
+        />
+      </Field>
       <Field
         label="Заголовок hero"
         help="Перенос строки разделяет две строки заголовка."

@@ -19,6 +19,7 @@ export default function AssetPicker({
   compact = false,
   accept = "image/jpeg,image/png,image/webp",
   animation = false,
+  recommendedSize,
 }: {
   label: string;
   help?: string;
@@ -33,6 +34,7 @@ export default function AssetPicker({
   compact?: boolean;
   accept?: string;
   animation?: boolean;
+  recommendedSize?: { width: number; height: number };
 }) {
   const choices = animation
     ? assets
@@ -43,6 +45,17 @@ export default function AssetPicker({
     (selected?.format === "rive" ? null : value && "/api/assets/" + value);
   const fileInput = useRef<HTMLInputElement>(null);
   const [failedId, setFailedId] = useState<string | null | undefined>(null);
+  const [dimensions, setDimensions] = useState<{
+    id: typeof value;
+    width: number;
+    height: number;
+  } | null>(null);
+  const small =
+    recommendedSize &&
+    dimensions &&
+    dimensions.id === value &&
+    (dimensions.width < recommendedSize.width ||
+      dimensions.height < recommendedSize.height);
   return (
     <article
       className={"asset-picker " + (compact ? styles.compactPicker : "")}
@@ -54,6 +67,13 @@ export default function AssetPicker({
             alt=""
             loading="lazy"
             onError={() => setFailedId(value)}
+            onLoad={(e) =>
+              setDimensions({
+                id: value,
+                width: e.currentTarget.naturalWidth,
+                height: e.currentTarget.naturalHeight,
+              })
+            }
           />
         ) : (
           <div className="asset-picker-placeholder">
@@ -120,6 +140,14 @@ export default function AssetPicker({
         </div>
         {selected && !compact && (
           <small className="asset-picker-name">{selected.name}</small>
+        )}
+        {small && dimensions && (
+          <p className="notice" data-tone="warning" role="status">
+            Размер изображения {dimensions.width}×{dimensions.height} px меньше
+            рекомендуемого {recommendedSize.width}×{recommendedSize.height} px.
+            На широком экране оно может выглядеть размытым. Можно сохранить или
+            выбрать более крупный исходник.
+          </p>
         )}
       </div>
     </article>

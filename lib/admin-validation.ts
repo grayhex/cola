@@ -271,6 +271,11 @@ export const settingsInput = z
       .string()
       .regex(/^#[0-9a-fA-F]{6}$/)
       .default("#24221B"),
+    heroEyebrow: z
+      .string()
+      .trim()
+      .max(100)
+      .default("Больше чем просто велосипеды"),
     heroHeadline: z
       .string()
       .trim()

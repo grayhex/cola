@@ -1,4 +1,5 @@
 import sharp from "sharp";
+import { siteGraphicWidths } from "./media-sizes.ts";
 
 export async function preparePhoto(bytes: Buffer, { bikePhoto = true } = {}) {
   // Check the bytes, not only the caller-provided Content-Type. Never decode SVG/AVIF.
@@ -31,13 +32,12 @@ export async function preparePhoto(bytes: Buffer, { bikePhoto = true } = {}) {
 }
 
 // Bounded presentation sizes; the route checks ownership/public visibility first.
-// Matches mediaWidths in media-cache.js (kept separate to avoid an import cycle).
 export async function prepareThumbnail(bytes: Buffer, width: number) {
-  if (![160, 320, 640, 1280].includes(width))
+  if (!siteGraphicWidths.includes(width))
     throw new Error("INVALID_THUMBNAIL_SIZE");
   return sharp(bytes)
     .rotate()
     .resize({ width, height: width, fit: "inside", withoutEnlargement: true })
-    .webp({ quality: width <= 320 ? 78 : 82 })
+    .webp({ quality: width <= 320 ? 78 : width > 1280 ? 88 : 82 })
     .toBuffer();
 }

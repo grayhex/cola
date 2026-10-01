@@ -1,7 +1,12 @@
 "use client";
 import type { SiteSettings } from "../../lib/contracts.ts";
 import { useState } from "react";
-import { emojiSlots, customEmoji, noCustomEmojis } from "../../lib/ui-emoji.ts";
+import {
+  emojiSlots,
+  customEmoji,
+  noCustomEmojis,
+  pulseIconColors,
+} from "../../lib/ui-emoji.ts";
 import SiteIcon from "../ui/site-icon.tsx";
 // Interface icons are line icons; an emoji typed here replaces one of them
 // everywhere at the same size. An empty field keeps the standard icon.
@@ -26,7 +31,7 @@ export default function EmojiSettings({
         значок в навигации, кнопках и фильтрах; пустое поле возвращает
         стандартную иконку. Цвет выделения применяется при наведении и выборе; в
         светлой теме он немного темнее, в тёмной — светлее. У эмодзи меняется
-        фон выделения.
+        фон выделения. В блоке планов на главной цвет иконки виден постоянно.
       </p>
       <label className="field">
         <span>Найти значок</span>
@@ -55,7 +60,7 @@ export default function EmojiSettings({
               <input
                 type="color"
                 aria-label={"Цвет выделения: " + s.label}
-                value={colors[s.key] || "#7c5cff"}
+                value={colors[s.key] || pulseIconColors[s.key] || "#7c5cff"}
                 onChange={(e) =>
                   onColorChange({ ...colors, [s.key]: e.target.value })
                 }

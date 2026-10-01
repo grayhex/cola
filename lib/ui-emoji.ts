@@ -41,10 +41,20 @@ export const emojiSlots = [
   ["repeat", "Регулярная покатушка", "🔁"],
   ["reset", "Сбросить", "↺"],
   ["apply", "Применить", "✓"],
+  ["pulseToday", "Планы: Сегодня", ""],
+  ["pulseTomorrow", "Планы: Завтра", ""],
+  ["pulseWeekend", "Планы: В выходные", ""],
+  ["pulseLater", "Планы: Позже", ""],
 ].map(([key, label, emoji]) => ({ key, label, emoji }));
 export const defaultEmojis = Object.fromEntries(
   emojiSlots.map((s) => [s.key, s.emoji]),
 );
+export const pulseIconColors: Record<string, string> = {
+  pulseToday: "#b45309",
+  pulseTomorrow: "#2563eb",
+  pulseWeekend: "#0d9488",
+  pulseLater: "#7c3aed",
+};
 // Interface icons are line icons (#127). An administrator may replace one
 // with an emoji; an empty value or the old default emoji means "not chosen".
 export function customEmoji(

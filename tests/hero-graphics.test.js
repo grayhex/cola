@@ -42,7 +42,15 @@ test("settings accept local animation IDs and bounded colours; reject external s
       kind: "rive",
       assetId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
     },
-    iconColors: { bike: "#Bb55Dd" },
+    heroEyebrow: "Наши истории",
+    emojis: { ...defaultSettings.emojis, pulseToday: "✨" },
+    iconColors: {
+      bike: "#Bb55Dd",
+      pulseToday: "#123456",
+      pulseTomorrow: "#2563eb",
+      pulseWeekend: "#0d9488",
+      pulseLater: "#7c3aed",
+    },
   };
   assert.ok(settingsInput.safeParse(valid).success);
   for (const patch of [
@@ -63,6 +71,8 @@ test("settings accept local animation IDs and bounded colours; reject external s
     { heroGraphicMode: "rive" },
     { iconColors: { arbitrary: "#ffffff" } },
     { iconColors: { bike: "red;display:none" } },
+    { heroEyebrow: "x".repeat(101) },
+    { iconColors: { pulseToday: "red;display:none" } },
   ])
     assert.equal(
       settingsInput.safeParse({ ...valid, ...patch }).success,
