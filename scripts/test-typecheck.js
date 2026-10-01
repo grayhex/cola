@@ -2,13 +2,55 @@
 // The probes are temporary source files, not @ts-expect-error assertions that
 // could pass when a directory is accidentally excluded from the compiler.
 import assert from "node:assert/strict";
-import { mkdtemp, writeFile, rm } from "node:fs/promises";
+import {
+  cp,
+  mkdtemp,
+  writeFile,
+  rm,
+  readFile,
+  readdir,
+  symlink,
+} from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
-const root = fileURLToPath(new URL("../", import.meta.url));
+const sourceRoot = fileURLToPath(new URL("../", import.meta.url));
+// Negative compiler runs must never write fixtures or error caches into a checkout.
+const root = await mkdtemp(path.join(tmpdir(), "cola-typecheck-"));
 const dirs = [];
 try {
+  for (const name of [
+    "app",
+    "lib",
+    "tsconfig.json",
+    "proxy.ts",
+    "package.json",
+    "eslint.config.js",
+    "eslint.resolver.config.js",
+  ])
+    await cp(path.join(sourceRoot, name), path.join(root, name), {
+      recursive: true,
+    });
+  for (const name of ["node_modules", "services"])
+    await symlink(path.join(sourceRoot, name), path.join(root, name), "dir");
+  for (const name of ["next-env.d.ts", ".next/types", ".next/dev/types"])
+    try {
+      await cp(path.join(sourceRoot, name), path.join(root, name), {
+        recursive: true,
+      });
+    } catch (error) {
+      if (error.code !== "ENOENT") throw error;
+    }
+  await cp(
+    path.join(sourceRoot, "scripts/check-production-typescript.js"),
+    path.join(root, "scripts/check-production-typescript.js"),
+  );
+  const config = JSON.parse(
+    await readFile(path.join(root, "tsconfig.json"), "utf8"),
+  );
+  config.compilerOptions.incremental = false;
+  await writeFile(path.join(root, "tsconfig.json"), JSON.stringify(config));
   const api = await mkdtemp(path.join(root, "app/api/typecheck-probe-"));
   dirs.push(api);
   await writeFile(
@@ -148,6 +190,21 @@ export async function GET(request: Request) {
   assert.match(appResult, /view\.tsx.*TS2322/);
   assert.match(appResult, /view\.tsx.*TS2339/);
   assert.match(appResult, /route\.ts.*TS2339/);
+  // The real root proxy contract and its inclusion are both part of the gate.
+  assert.ok(config.include.includes("proxy.ts"));
+  await writeFile(
+    path.join(nativeApp, "proxy.ts"),
+    `
+import { proxy } from ${JSON.stringify("../../proxy.ts")};
+export function invalidRequest(request: Parameters<typeof proxy>[0]) {
+  return request.nonexistentProperty;
+}
+export const invalidProxy = proxy(42);
+`,
+  );
+  const proxyResult = check("tsconfig.json");
+  assert.match(proxyResult, /proxy\.ts.*TS2339/);
+  assert.match(proxyResult, /proxy\.ts.*TS2345/);
   // Real migrated UI boundaries must reject bad props, preferences and DTOs.
   await writeFile(
     path.join(nativeApp, "core.tsx"),
@@ -253,6 +310,10 @@ export const planner = <PlanComposer onClose={() => {}} onSaved={() => {}} draft
     [policyApi, "route.js"],
     [policyApp, "version.js"],
     [policyLib, "version.js"],
+    [root, "proxy.js"],
+    [root, "proxy.jsx"],
+    [root, "proxy.mjs"],
+    [root, "proxy.cjs"],
   ])
     await writeFile(path.join(dir, name), "export const value = 1;\n");
   const policy = run("scripts/check-production-typescript.js");
@@ -260,6 +321,8 @@ export const planner = <PlanComposer onClose={() => {}} onSaved={() => {}} draft
   for (const ext of ["js", "jsx", "mjs", "cjs"])
     assert.ok(policy.stderr.includes(`new.${ext}`), policy.stderr);
   assert.ok(policy.stderr.includes("route.js"), policy.stderr);
+  for (const ext of ["js", "jsx", "mjs", "cjs"])
+    assert.ok(policy.stderr.includes(`proxy.${ext}`), policy.stderr);
   for (const dir of [policyApp, policyLib])
     assert.ok(
       policy.stderr.includes(`${path.relative(root, dir)}/version.js`),
@@ -268,6 +331,8 @@ export const planner = <PlanComposer onClose={() => {}} onSaved={() => {}} draft
   await rm(policyApp, { recursive: true, force: true });
   await rm(policyLib, { recursive: true, force: true });
   await rm(policyApi, { recursive: true, force: true });
+  for (const ext of ["js", "jsx", "mjs", "cjs"])
+    await rm(path.join(root, `proxy.${ext}`));
 
   // Shared modules also run directly in workers and ops, without a TS loader.
   const runtimeLib = await mkdtemp(path.join(root, "lib/typecheck-probe-"));
@@ -295,12 +360,54 @@ export const planner = <PlanComposer onClose={() => {}} onSaved={() => {}} draft
   assert.equal(lint.status, 1, lint.stdout + lint.stderr);
   assert.match(lint.stdout, /@typescript-eslint\/no-explicit-any/);
   assert.match(lint.stdout, /@typescript-eslint\/ban-ts-comment/);
+  const resolverLint = run(
+    "node_modules/eslint/bin/eslint.js",
+    [
+      "--config",
+      "eslint.resolver.config.js",
+      "--stdin",
+      "--stdin-filename",
+      "services/bike-resolver/src/typecheck-probe.ts",
+    ],
+    "// @ts-ignore\nexport const unsafe: any = 1;\n",
+  );
+  assert.equal(
+    resolverLint.status,
+    1,
+    resolverLint.stdout + resolverLint.stderr,
+  );
+  assert.match(resolverLint.stdout, /@typescript-eslint\/no-explicit-any/);
+  assert.match(resolverLint.stdout, /@typescript-eslint\/ban-ts-comment/);
+  // A successful negative suite must leave a valid tree, not just expected errors.
+  const after = run("node_modules/@typescript/native/bin/tsc", [
+    "-p",
+    "tsconfig.json",
+    "--pretty",
+    "false",
+  ]);
+  assert.equal(after.status, 0, after.stdout + after.stderr);
   console.log(
     "Typecheck gates reject native API/DTO/null errors, strict TS/TSX errors, new JS, non-erasable shared TS and TS lint suppressions.",
   );
 } finally {
   for (const dir of dirs) await rm(dir, { recursive: true, force: true });
+  await rm(root, { recursive: true, force: true });
 }
+for (const dir of ["app", "app/api", "lib"])
+  assert.equal(
+    (await readdir(path.join(sourceRoot, dir))).some((name) =>
+      name.startsWith("typecheck-probe-"),
+    ),
+    false,
+    `Unexpected probe in checkout ${dir}`,
+  );
+const production = run(
+  "node_modules/@typescript/native/bin/tsc",
+  ["-p", "tsconfig.json", "--pretty", "false"],
+  undefined,
+  sourceRoot,
+);
+assert.equal(production.status, 0, production.stdout + production.stderr);
 function check(config) {
   const result = run("node_modules/@typescript/native/bin/tsc", [
     "-p",
@@ -311,9 +418,9 @@ function check(config) {
   assert.ok([1, 2].includes(result.status), result.stderr || result.stdout);
   return result.stdout;
 }
-function run(script, args = [], input) {
+function run(script, args = [], input, cwd = root) {
   return spawnSync(process.execPath, [script, ...args], {
-    cwd: root,
+    cwd,
     encoding: "utf8",
     input,
   });
