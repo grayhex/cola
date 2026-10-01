@@ -6,7 +6,7 @@ import { SocialHeader, SocialFooter } from "./social-primitives.tsx";
 import { useSite } from "./site-provider.tsx";
 import BikeCard from "./bike-card.tsx";
 import BikeGrid from "./bike-grid.tsx";
-import JournalCard from "./journal-card.jsx";
+import JournalCard from "./journal-card.tsx";
 import { plural } from "../../lib/plural.ts";
 import { Camera, Bike, MessageCircle, BookOpen } from "lucide-react";
 import { ComponentPath } from "./component-navigation.tsx";
@@ -16,7 +16,7 @@ import PartIcon from "./part-icon.tsx";
 import styles from "./experience-landing.module.css";
 import dynamic from "next/dynamic";
 const ComponentGallery = dynamic(() => import("./component-gallery.tsx"));
-const Discussion = dynamic(() => import("./discussion.jsx"), { ssr: false });
+const Discussion = dynamic(() => import("./discussion.tsx"), { ssr: false });
 
 const count = (n: number, one: string, few: string, many: string) =>
   `${n.toLocaleString("ru-RU")} ${plural(n, one, few, many)}`;

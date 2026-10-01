@@ -1,0 +1,84 @@
+import { notFound } from "next/navigation";
+import { db } from "../../../lib/db.ts";
+import { currentViewer } from "../../../lib/viewer.ts";
+import {
+  legalKinds,
+  legalTitles,
+  publishedLegalDocument,
+} from "../../../lib/legal-documents.ts";
+import GlobalHeader from "../../ui/global-header.tsx";
+import { SocialFooter } from "../../ui/social-primitives.tsx";
+import RichTextBody from "../../ui/rich-text-body.tsx";
+import { parseRichText } from "../../../lib/rich-text.ts";
+import { indexed } from "../../../lib/indexing.ts";
+import styles from "./page.module.css";
+export const dynamic = "force-dynamic";
+export async function generateMetadata({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ kind: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const { kind } = await params;
+  // Search engines index the current published revision only.
+  const current =
+    legalKinds.some((k) => k === kind) &&
+    (await searchParams).revision === undefined &&
+    (await publishedLegalDocument(db, kind));
+  return {
+    title:
+      (legalTitles[kind as keyof typeof legalTitles] || "Документ") +
+      " · ColaBike",
+    ...(current && { robots: indexed }),
+  };
+}
+export default async function Page({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ kind: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const { kind } = await params,
+    search = await searchParams;
+  if (!legalKinds.some((k) => k === kind)) notFound();
+  if (
+    search.revision !== undefined &&
+    !/^[1-9][0-9]{0,8}$/.test(String(search.revision))
+  )
+    notFound();
+  const document = await publishedLegalDocument(
+    db,
+    kind,
+    search.revision ? Number(search.revision) : null,
+  );
+  if (search.revision && !document) notFound();
+  return (
+    <>
+      <GlobalHeader user={await currentViewer()} />
+      <main className={styles.page}>
+        <h1>{legalTitles[kind as keyof typeof legalTitles]}</h1>
+        {document ? (
+          <>
+            <p className={styles.version}>
+              Редакция {document.revision} · Опубликовано{" "}
+              <time dateTime={new Date(document.published_at).toISOString()}>
+                {new Date(document.published_at).toLocaleDateString("ru-RU", {
+                  timeZone: "UTC",
+                })}
+              </time>
+            </p>
+            <RichTextBody doc={parseRichText(document.body)} />
+          </>
+        ) : (
+          <p>
+            Документ ещё не опубликован. Регистрация будет доступна после
+            публикации обоих документов.
+          </p>
+        )}
+      </main>
+      <SocialFooter />
+    </>
+  );
+}

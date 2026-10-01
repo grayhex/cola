@@ -16,7 +16,7 @@ import {
 import { useSite } from "./site-provider.tsx";
 import BikeCard from "./bike-card.tsx";
 import BikeGrid from "./bike-grid.tsx";
-import JournalCard from "./journal-card.jsx";
+import JournalCard from "./journal-card.tsx";
 import { CompactDialog } from "./compact-ui.tsx";
 import { SlidersHorizontal } from "./icons.tsx";
 import { profilePath } from "../../lib/public-urls.ts";

@@ -1,0 +1,605 @@
+"use client";
+import { errorMessage } from "../../lib/errors.ts";
+import type { ArticleSaved, PhotoInserter } from "./content-types.ts";
+import type { SiteSettings, ApiError } from "../../lib/contracts.ts";
+import type { ArticleDto, ArticleListDto } from "./content-types.ts";
+import EmailPolicyAction from "./email-policy-action.tsx";
+import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
+import {
+  SocialHeader,
+  SocialFooter,
+  AuthorLink,
+  Pagination,
+  socialApi,
+} from "./social-primitives.tsx";
+import { useSite } from "./site-provider.tsx";
+import SiteIcon from "./site-icon.tsx";
+import ChoiceMenu from "./choice-menu.tsx";
+import ArticleBody from "./article-body.tsx";
+import Discussion from "./discussion.tsx";
+import LocalDate from "./local-date.tsx";
+// Only authors need the editor; readers get the parsed article (#117).
+const PromptComposer = dynamic(() => import("./prompt-composer.tsx"), {
+  ssr: false,
+});
+// The server layout already knows the reader (#74).
+function useReader() {
+  return useSite().viewer;
+}
+export function ArticleCard({
+  article: a,
+  topics,
+}: {
+  article: ArticleListDto["articles"][number];
+  topics: SiteSettings["articleTopics"];
+}) {
+  const topic = topics.find((t) => t.id === a.topicId);
+  return (
+    <article className="article-card">
+      {a.cover && (
+        <a href={"/articles/" + a.shareId} tabIndex={-1} aria-hidden="true">
+          <img
+            className="article-cover"
+            src={a.cover + "?width=640"}
+            alt=""
+            loading="lazy"
+            decoding="async"
+          />
+        </a>
+      )}
+      <div className="article-card-content">
+        <div className="article-meta">
+          <span>
+            {topic?.emoji} {topic?.label || "Без рубрики"}
+          </span>
+          {a.status === "draft" && (
+            <span className="badge" data-tone="warning">
+              Черновик
+            </span>
+          )}
+        </div>
+        <h2>
+          <a href={"/articles/" + a.shareId}>{a.title || "Без заголовка"}</a>
+        </h2>
+        <p>{a.excerpt ?? a.body}</p>
+        <div className="article-meta">
+          <AuthorLink author={a.author} />
+          <span>{a.comments} комментариев</span>
+        </div>
+      </div>
+    </article>
+  );
+}
+export function Articles() {
+  const user = useReader(),
+    { settings } = useSite(),
+    topics = settings.articleTopics || [];
+  const [own, setOwn] = useState(false),
+    [topic, setTopic] = useState(""),
+    [search, setSearch] = useState(""),
+    [query, setQuery] = useState(""),
+    [page, setPage] = useState(1),
+    [data, setData] = useState<ArticleListDto | null>(null),
+    [error, setError] = useState("");
+  useEffect(
+    () => setOwn(new URLSearchParams(location.search).get("own") === "1"),
+    [],
+  );
+  useEffect(() => {
+    let alive = true;
+    setError("");
+    setData(null);
+    const qs = new URLSearchParams({
+      page: String(page),
+      q: query,
+      ...(own ? { own: "1" } : {}),
+      ...(topic ? { topic } : {}),
+    });
+    socialApi<ArticleListDto>("articles?" + qs)
+      .then((d) => {
+        if (alive) setData(d);
+      })
+      .catch((e) => {
+        if (alive) setError(e.message);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [own, topic, query, page, user?.id]);
+  return (
+    <>
+      <SocialHeader user={user} />
+      <main className="page articles-page">
+        <div className="section-heading">
+          <div>
+            <h1>Статьи</h1>
+            <p className="help">
+              База знаний: обслуживание, компоненты и опыт велосипедистов.
+            </p>
+          </div>
+          <Link href="/articles/new" className="button secondary">
+            <SiteIcon name="write" />
+            Написать статью
+          </Link>
+        </div>
+        <div className="entity-tabs ui-tabs" role="group" aria-label="Статьи">
+          <button
+            aria-pressed={!own}
+            onClick={() => {
+              setOwn(false);
+              setPage(1);
+            }}
+          >
+            <SiteIcon name="articles" />
+            База знаний
+          </button>
+          {user && (
+            <button
+              aria-pressed={own}
+              onClick={() => {
+                setOwn(true);
+                setPage(1);
+              }}
+            >
+              <SiteIcon name="profile" />
+              Мои статьи
+            </button>
+          )}
+        </div>
+        <div className="article-filters">
+          <ChoiceMenu
+            label="Рубрика статей"
+            value={topic}
+            onChange={(v) => {
+              setTopic(v);
+              setPage(1);
+            }}
+            choices={[
+              { value: "", label: "Все рубрики", emoji: "articles" },
+              ...topics.map((t) => ({
+                value: t.id,
+                label: t.label,
+                symbol: t.emoji,
+              })),
+            ]}
+          />
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              setQuery(search);
+              setPage(1);
+            }}
+            role="search"
+          >
+            <input
+              aria-label="Поиск по статьям"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              maxLength={100}
+              placeholder="Например, размеры покрышек"
+            />
+            <button className="button secondary">
+              <SiteIcon name="search" />
+              Найти
+            </button>
+          </form>
+        </div>
+        {error && (
+          <p role="alert" className="error">
+            {error}
+            <EmailPolicyAction message={error} />
+          </p>
+        )}
+        {data ? (
+          <>
+            <div className="articles-grid">
+              {data.articles.map((a) => (
+                <ArticleCard key={a.id} article={a} topics={topics} />
+              ))}
+            </div>
+            {!data.articles.length && (
+              <div className="empty-state">
+                <h2>
+                  {own ? "Ваши знания пригодятся другим" : "Пока нет статей"}
+                </h2>
+                <p>Поделитесь инструкцией, опытом или полезным разбором.</p>
+              </div>
+            )}
+            <Pagination {...data} onPage={setPage} />
+          </>
+        ) : (
+          !error && <p role="status">Загружаем статьи…</p>
+        )}
+      </main>
+      <SocialFooter />
+    </>
+  );
+}
+export function ArticlePage({
+  share,
+  initial = null,
+}: {
+  share: string;
+  initial?: { article: ArticleDto } | null;
+}) {
+  const user = useReader(),
+    { settings } = useSite();
+  const [article, setArticle] = useState(initial?.article || null),
+    [editing, setEditing] = useState(false),
+    [error, setError] = useState("");
+  // The server rendered the article for this viewer (#74).
+  const seed = useRef(initial);
+  useEffect(() => {
+    let alive = true;
+    const request =
+      seed.current ||
+      socialApi<{ article: ArticleDto }>("articles/public/" + share);
+    seed.current = null;
+    Promise.resolve(request)
+      .then((d) => {
+        if (alive) setArticle(d.article);
+      })
+      .catch((e) => {
+        if (alive) setError(e.message);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [share, user?.id]);
+  const topic = settings.articleTopics?.find((t) => t.id === article?.topicId);
+  return (
+    <>
+      <SocialHeader user={user} />
+      <main className="page narrow article-page">
+        <Link className="article-back" href="/articles">
+          ← Все статьи
+        </Link>
+        {error && (
+          <p className="error" role="alert">
+            {error}
+            <EmailPolicyAction message={error} />
+          </p>
+        )}
+        {article ? (
+          editing ? (
+            <ArticleEditor
+              initial={article}
+              onSaved={(a) => {
+                setArticle(a);
+                setEditing(false);
+              }}
+              onCancel={() => setEditing(false)}
+            />
+          ) : (
+            <>
+              <header className="article-heading">
+                <p className="article-meta">
+                  {topic?.emoji} {topic?.label || "Без рубрики"}
+                  {article.status === "draft" && " · Черновик"}
+                </p>
+                <h1>{article.title || "Без заголовка"}</h1>
+                <div className="article-meta">
+                  <AuthorLink author={article.author} />
+                  <LocalDate value={article.updatedAt} />
+                  {article.isOwner && (
+                    <button
+                      className="button secondary"
+                      onClick={() => setEditing(true)}
+                    >
+                      <SiteIcon name="write" />
+                      Редактировать
+                    </button>
+                  )}
+                </div>
+              </header>
+              <ArticleBody doc={article.bodyDoc} photos={article.photos} />
+              {article.isPublic && article.status === "published" && (
+                <Discussion bike={article} user={user} entityType="article" />
+              )}
+            </>
+          )
+        ) : (
+          !error && <p role="status">Загружаем статью…</p>
+        )}
+      </main>
+      <SocialFooter />
+    </>
+  );
+}
+export function NewArticle() {
+  const user = useReader();
+  const router = useRouter();
+  return (
+    <>
+      <SocialHeader user={user} />
+      <main className="page narrow article-page">
+        <h1>Новая статья</h1>
+        {user ? (
+          <ArticleEditor
+            onSaved={(a) => router.push("/articles/" + a.shareId)}
+          />
+        ) : (
+          <p>
+            <Link href="/account">Войдите</Link>, чтобы написать статью.
+          </p>
+        )}
+      </main>
+      <SocialFooter />
+    </>
+  );
+}
+function ArticleEditor({
+  initial,
+  onSaved,
+  onCancel,
+}: {
+  initial?: ArticleDto | null;
+  onSaved: (article: ArticleDto) => void | Promise<void>;
+  onCancel?: () => void;
+}) {
+  const router = useRouter();
+  const [ready, setReady] = useState(false);
+  useEffect(() => setReady(true), []);
+  const { settings } = useSite(),
+    topics = settings.articleTopics || [];
+  const [record, setRecord] = useState<ArticleSaved | null>(initial || null),
+    [form, setForm] = useState({
+      title: initial?.title || "",
+      body: initial?.body || "",
+      topicId: initial?.topicId || topics[0]?.id || "",
+    }),
+    [photos, setPhotos] = useState(initial?.photos || []),
+    [busy, setBusy] = useState(false),
+    [error, setError] = useState(""),
+    [dirty, setDirty] = useState(false);
+  // Filled in by the editor: puts an illustration where the author writes.
+  const inserter = useRef<PhotoInserter | null>(null);
+  const set = (key: "title" | "body" | "topicId", value: string) => {
+    setForm((v) => ({ ...v, [key]: value }));
+    setDirty(true);
+  };
+  useEffect(() => {
+    if (!dirty) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [dirty]);
+  async function save(status: "draft" | "published") {
+    const result = await socialApi<ArticleSaved>(
+      "articles" + (record ? "/" + record.id : ""),
+      record ? "PATCH" : "POST",
+      { ...form, status },
+    );
+    setRecord(result);
+    setDirty(false);
+    return result;
+  }
+  // An illustration becomes a block of its own at the cursor (#128); until
+  // the editor has loaded, it goes to the end.
+  function insertPhoto(id: string) {
+    if (inserter.current) inserter.current(id);
+    else
+      set(
+        "body",
+        form.body.replace(/\s*$/, "") + "\n\n![](photo:" + id + ")\n",
+      );
+  }
+  return (
+    <form
+      className="article-editor"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        setBusy(true);
+        setError("");
+        try {
+          const status =
+            (e.nativeEvent.submitter as HTMLButtonElement | null)?.value ||
+            "draft";
+          const result = await save(status as "draft" | "published");
+          const d = await socialApi<{ article: ArticleDto }>(
+            "articles/public/" + result.shareId,
+          );
+          onSaved(d.article);
+        } catch (e) {
+          setError(errorMessage(e));
+        } finally {
+          setBusy(false);
+        }
+      }}
+    >
+      <label className="field">
+        <span>Заголовок статьи</span>
+        <input
+          value={form.title}
+          // SSR is visible before React attaches onChange. Do not accept an
+          // early edit that the controlled value would erase during hydration.
+          disabled={!ready || busy}
+          maxLength={160}
+          onChange={(e) => set("title", e.target.value)}
+        />
+      </label>
+      <label className="field">
+        <span>Рубрика</span>
+        <select
+          aria-label="Рубрика"
+          required
+          value={form.topicId}
+          onChange={(e) => set("topicId", e.target.value)}
+        >
+          {!topics.some((t) => t.id === form.topicId) && (
+            <option value="">Выберите рубрику</option>
+          )}
+          {topics.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.emoji} {t.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <div className="article-composer">
+        <PromptComposer
+          label="Текст статьи"
+          value={form.body}
+          onChange={(body) => set("body", body)}
+          maxLength={20000}
+          rows={16}
+          disabled={busy}
+          photos={photos}
+          inserter={inserter}
+        />
+        <div className="article-toolbar">
+          <label className="button secondary">
+            <SiteIcon name="add" />
+            Иллюстрация
+            <input
+              aria-label="Иллюстрация"
+              className="visually-hidden"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              disabled={busy || photos.length >= 8}
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                e.target.value = "";
+                if (!file) return;
+                setBusy(true);
+                setError("");
+                try {
+                  const target = record || (await save("draft"));
+                  const r = await fetch(
+                    "/api/journal/" + target.id + "/photos",
+                    {
+                      method: "POST",
+                      headers: { "Content-Type": file.type },
+                      body: file,
+                    },
+                  );
+                  const photo: ArticleDto["photos"][number] &
+                    Partial<ApiError> = await r.json();
+                  if (!r.ok) throw Error(photo.error);
+                  setPhotos((v) => [...v, photo]);
+                  insertPhoto(photo.id);
+                } catch (e) {
+                  setError(errorMessage(e));
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            />
+          </label>
+          <small className="help">
+            {form.body.length}/20000 · {photos.length}/8 фото
+          </small>
+        </div>
+      </div>
+      {photos.length > 0 && (
+        <div className="article-attachments">
+          {photos.map((p) => (
+            <div key={p.id}>
+              <img src={p.url} alt="Иллюстрация статьи" />
+              <button
+                type="button"
+                className="quiet"
+                disabled={busy}
+                onClick={() => insertPhoto(p.id)}
+              >
+                Вставить
+              </button>
+              <button
+                type="button"
+                className="quiet"
+                disabled={busy}
+                aria-label="Удалить иллюстрацию"
+                onClick={async () => {
+                  setBusy(true);
+                  setError("");
+                  try {
+                    await socialApi(
+                      "journal/" + record!.id + "/photos/" + p.id,
+                      "DELETE",
+                    );
+                    setPhotos((v) => v.filter((photo) => photo.id !== p.id));
+                    set(
+                      "body",
+                      form.body.replaceAll(
+                        new RegExp(
+                          "!\\[[^\\]]*\\]\\(photo:" + p.id + "\\)",
+                          "g",
+                        ),
+                        "",
+                      ),
+                    );
+                  } catch (e) {
+                    setError(errorMessage(e));
+                  } finally {
+                    setBusy(false);
+                  }
+                }}
+              >
+                Удалить
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+      {error && (
+        <p role="alert" className="error">
+          {error}
+          <EmailPolicyAction message={error} />
+        </p>
+      )}
+      <div className="article-toolbar">
+        <button className="button secondary" disabled={busy} value="draft">
+          <SiteIcon name="saved" />
+          Сохранить черновик
+        </button>
+        <button
+          className="button secondary"
+          disabled={busy || !form.title.trim() || !form.body.trim()}
+          value="published"
+        >
+          <SiteIcon name="write" />
+          {initial?.status === "published" ? "Обновить статью" : "Опубликовать"}
+        </button>
+        {onCancel && (
+          <button
+            className="quiet"
+            type="button"
+            disabled={busy}
+            onClick={() => {
+              if (!dirty || confirm("Не сохранять изменения?")) onCancel();
+            }}
+          >
+            Отмена
+          </button>
+        )}
+        {record && (
+          <button
+            className="quiet danger"
+            type="button"
+            disabled={busy}
+            onClick={async () => {
+              if (!confirm("Удалить статью, иллюстрации и обсуждение?")) return;
+              setBusy(true);
+              try {
+                await socialApi("articles/" + record.id, "DELETE");
+                setDirty(false);
+                router.push("/articles?own=1");
+              } catch (e) {
+                setError(errorMessage(e));
+                setBusy(false);
+              }
+            }}
+          >
+            Удалить статью
+          </button>
+        )}
+      </div>
+    </form>
+  );
+}

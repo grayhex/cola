@@ -1,0 +1,11 @@
+import CommunityPage from "../ui/community-page.tsx";
+import { indexed } from "../../lib/indexing.ts";
+export const metadata = {
+  title: "Журнал · ColaBike",
+  description:
+    "Журнал владельцев велосипедов: сборки и апгрейды, обслуживание, впечатления и вопросы.",
+  robots: indexed,
+};
+export default function Page() {
+  return <CommunityPage kind="journal" />;
+}

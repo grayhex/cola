@@ -4,7 +4,7 @@ import { ridePlanOptions } from "../../lib/ride-plan-options.ts";
 import { useMotionFeedback } from "./motion.tsx";
 import RidePassport from "./ride-passport.jsx";
 import AreaPicker from "./ride-area-map.jsx";
-import PassportTiles from "./passport-tiles.jsx";
+import PassportTiles from "./passport-tiles.tsx";
 import styles from "./ride-passport.module.css";
 
 // The ride passport's inputs as parts (#253): the planners place the area,

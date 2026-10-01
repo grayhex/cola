@@ -3,7 +3,7 @@ import type { ReportPageDto } from "../../lib/contracts.ts";
 import { errorMessage } from "../../lib/errors.ts";
 import { useCallback, useRef, useEffect, useState } from "react";
 import { socialApi } from "../ui/social-primitives.tsx";
-import { PageControls } from "../ui/community-controls.jsx";
+import { PageControls } from "../ui/community-controls.tsx";
 import { profilePath } from "../../lib/public-urls.ts";
 export default function Reports({
   onManageUser,

@@ -17,7 +17,7 @@ import TogetherActions from "./together-actions.jsx";
 import { CompactDialog } from "./compact-ui.tsx";
 import { useSearchParams } from "next/navigation";
 import BikeGrid from "./bike-grid.tsx";
-import { BadgeShelf } from "./achievements.jsx";
+import { BadgeShelf } from "./achievements.tsx";
 import { useRef, useCallback, useEffect, useState } from "react";
 import {
   ExternalLink,

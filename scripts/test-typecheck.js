@@ -198,6 +198,26 @@ export function searchProbe(data: ExperienceSearchDto) {
   assert.match(catalogResult, /catalog\.tsx.*TS2353/);
   assert.match(catalogResult, /catalog\.tsx.*TS2322/);
   assert.equal((catalogResult.match(/catalog\.tsx.*TS2339/g) || []).length, 2);
+  // Content views consume distinct list/save DTOs and exact discussion targets.
+  await writeFile(
+    path.join(nativeApp, "content.tsx"),
+    `
+import Discussion from ${JSON.stringify("../ui/discussion.tsx")};
+import type { FeedDto, JournalSaved, MarketContactDto } from ${JSON.stringify("../ui/content-types.ts")};
+export function feedProbe(data: FeedDto) {
+  data.total = "1";
+  const item = data.items[0];
+  if (item.kind === "market") return item.geometry;
+  return item.author.email;
+}
+export function savedProbe(data: JournalSaved) { return data.photos; }
+export function contactProbe(data: MarketContactDto): string { return data; }
+export const discussion = <Discussion bike={{id:"probe"}} user={null} entityType="user" />;
+`,
+  );
+  const contentResult = check("tsconfig.json");
+  assert.equal((contentResult.match(/content\.tsx.*TS2322/g) || []).length, 3);
+  assert.equal((contentResult.match(/content\.tsx.*TS2339/g) || []).length, 3);
   await rm(nativeApp, { recursive: true, force: true });
   await rm(nativeApi, { recursive: true, force: true });
 

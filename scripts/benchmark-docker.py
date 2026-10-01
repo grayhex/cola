@@ -77,7 +77,9 @@ def build(label, read_cache, write_cache):
 
 try:
     build('cold', False, True)
-    source = context / 'app/ui/home.jsx'
+    source = context / 'app/ui/home.tsx'
+    if not source.exists():
+        source = context / 'app/ui/home.jsx'
     original = source.read_text()
     source.write_text(original + '\n// Reproducible source-only cache probe.\n')
     build('warm-source', True, True)

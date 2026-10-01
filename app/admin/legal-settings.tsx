@@ -5,7 +5,7 @@ type Documents = Record<LegalKind, AdminLegalDto["documents"][number]>;
 import { errorMessage } from "../../lib/errors.ts";
 import { useConfirmation } from "../ui/confirmation.tsx";
 import { useCallback, useEffect, useRef, useState } from "react";
-import PromptComposer from "../ui/prompt-composer.jsx";
+import PromptComposer from "../ui/prompt-composer.tsx";
 import { SectionTabs } from "./design-controls.tsx";
 import styles from "./legal-settings.module.css";
 const titles = {

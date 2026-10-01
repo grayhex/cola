@@ -1,0 +1,152 @@
+"use client";
+import { errorMessage } from "../../lib/errors.ts";
+
+import type { JournalDto, JournalCardDto } from "./content-types.ts";
+import Link from "next/link";
+import { useState } from "react";
+import { SharedView, useMotionFeedback } from "./motion.tsx";
+import {
+  Heart,
+  MessageCircle,
+  Bookmark,
+  BookmarkCheck,
+  CircleCheck,
+  NotebookPen,
+  Wrench,
+  CircleHelp,
+  Route,
+  FileText,
+} from "./icons.tsx";
+import { socialApi } from "./social-primitives.tsx";
+import { journalKinds } from "../../lib/journal-kinds.ts";
+import { profilePath, publicPath } from "../../lib/public-urls.ts";
+import { personName } from "../../lib/usernames.ts";
+const kindIcons: Record<string, typeof NotebookPen> = {
+  story: NotebookPen,
+  upgrade: Wrench,
+  question: CircleHelp,
+  ride: Route,
+  review: FileText,
+};
+export function SaveEntry({
+  entry,
+  onChange,
+}: {
+  entry: Pick<JournalDto, "id" | "saved">;
+  onChange?: (saved: boolean) => void;
+}) {
+  const [saved, setSaved] = useState(entry.saved),
+    [busy, setBusy] = useState(false),
+    [error, setError] = useState("");
+  const feedback = useMotionFeedback(saved);
+  return (
+    <>
+      <button
+        className="quiet"
+        data-hover="save"
+        aria-label={saved ? "Убрать из сохранённого" : "Сохранить запись"}
+        aria-pressed={saved}
+        disabled={busy}
+        aria-busy={busy}
+        onClick={async () => {
+          setBusy(true);
+          setError("");
+          const before = saved;
+          try {
+            const r = await socialApi<{ saved: boolean }>(
+              "journal/" + entry.id + "/save",
+              before ? "DELETE" : "PUT",
+            );
+            setSaved(r.saved);
+            onChange?.(r.saved);
+          } catch (e) {
+            setSaved(before);
+            setError(errorMessage(e));
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        <span ref={feedback} className="motion-feedback-icon">
+          {saved ? <BookmarkCheck size={16} /> : <Bookmark size={16} />}
+        </span>
+        {busy ? "Сохраняем…" : saved ? "Сохранено" : "Сохранить"}
+      </button>
+      {error && (
+        <span role="alert">
+          {error} <Link href="/account">Войти</Link>
+        </span>
+      )}
+    </>
+  );
+}
+export default function JournalCard({
+  entry,
+  onSaved,
+}: {
+  entry: JournalCardDto;
+  onSaved?: () => void;
+}) {
+  const kind = ("entryKind" in entry && entry.entryKind) || entry.kind;
+  const KindIcon = kindIcons[kind] || NotebookPen;
+  return (
+    <article className="journal-card">
+      {entry.photo && (
+        <Link
+          href={publicPath("journal", entry)}
+          className="journal-card-photo"
+        >
+          <img
+            src={entry.photo + "?width=640"}
+            alt="Фотография записи"
+            loading="lazy"
+            decoding="async"
+          />
+        </Link>
+      )}
+      <div className="journal-card-content">
+        <div className="journal-entry-meta">
+          <span>
+            <KindIcon size={16} />{" "}
+            {Object.entries(journalKinds).find(([key]) => key === kind)?.[1]}
+          </span>
+          {entry.solutionId && (
+            <span>
+              <CircleCheck size={16} /> Решено
+            </span>
+          )}
+        </div>
+        <SharedView kind="journal-title" id={entry.id}>
+          <h2>
+            <Link href={publicPath("journal", entry)}>{entry.title}</Link>
+          </h2>
+        </SharedView>
+        <p className="journal-excerpt">{entry.excerpt ?? entry.body}</p>
+        <a
+          className="journal-card-bike"
+          title={entry.bike.name}
+          href={publicPath("bike", { shareId: entry.bike.shareId })}
+        >
+          {entry.bike.name}
+        </a>
+        <div className="journal-card-social">
+          <a href={profilePath(entry.author.username)}>
+            {personName(entry.author)}
+          </a>
+          <span aria-label={"Лайки: " + entry.likes}>
+            <Heart size={13} />
+            {entry.likes}
+          </span>
+          <a
+            href={publicPath("journal", entry) + "#discussion"}
+            aria-label={"Комментарии: " + entry.comments}
+          >
+            <MessageCircle size={13} />
+            {entry.comments}
+          </a>
+          <SaveEntry entry={entry} onChange={onSaved} />
+        </div>
+      </div>
+    </article>
+  );
+}

@@ -83,6 +83,7 @@ export function RideMetrics({ metrics: m, compact = false, visibleMetrics }) {
     </dl>
   );
 }
+/** @param {{ride: import("./content-types.ts").RideListDto["rides"][number], owner?: boolean, onEdit?: (ride: import("./content-types.ts").RideListDto["rides"][number]) => void}} props */
 export default function RideCard({ ride: r, owner = false, onEdit }) {
   const { personalSettings: settings } = useSite();
   const href = publicPath("ride", r) + (owner ? "?owner=1" : "");

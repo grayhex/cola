@@ -28,7 +28,7 @@ import { usePhotoCarousel } from "./use-photo-carousel.ts";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import ZoomablePhoto from "./zoomable-photo.tsx";
 import { socialApi } from "./social-primitives.tsx";
-import { ReportButton } from "./community-controls.jsx";
+import { ReportButton } from "./community-controls.tsx";
 import EmailPolicyAction from "./email-policy-action.tsx";
 import { profilePath } from "../../lib/public-urls.ts";
 import { personName } from "../../lib/usernames.ts";

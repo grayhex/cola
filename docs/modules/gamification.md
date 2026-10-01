@@ -12,7 +12,7 @@
 
 API: `/api/game/records` (рекорды, награды с числом получивших и последним видимым получателем, параметры рейтинга), `/api/game/me`, `/api/game/profiles/<username>`, `/api/game/bikes/<id>`, `/api/game/bikes/<id>/reactions/<kind>`; для администратора `/api/game/admin/settings`, `/api/game/admin/rules` (GET/PUT), `/api/game/admin/image-prompt` (GET/PUT), `/api/game/admin/recalculate` (POST), `/api/game/admin/bikes`.
 
-UI: [records.jsx](../../app/ui/records.jsx), [records.module.css](../../app/ui/records.module.css), [achievements.jsx](../../app/ui/achievements.jsx), [achievement-art.jsx](../../app/ui/achievement-art.jsx), [редактор правил](../../app/admin/gamification.tsx), стили — [game.css](../../app/styles/game.css).
+UI: [records.jsx](../../app/ui/records.jsx), [records.module.css](../../app/ui/records.module.css), [achievements.jsx](../../app/ui/achievements.tsx), [achievement-art.jsx](../../app/ui/achievement-art.tsx), [редактор правил](../../app/admin/gamification.tsx), стили — [game.css](../../app/styles/game.css).
 
 ## Каталог метрик
 

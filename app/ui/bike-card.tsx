@@ -24,7 +24,33 @@ export default function BikeCard({
   headingLevel = 2,
   sizes,
 }: {
-  bike: BikeDto;
+  bike: Pick<
+    BikeDto,
+    | "id"
+    | "share_id"
+    | "brand"
+    | "model"
+    | "name"
+    | "category"
+    | "photos"
+    | "author"
+  > &
+    Partial<
+      Pick<
+        BikeDto,
+        | "year"
+        | "size"
+        | "weight"
+        | "is_former"
+        | "classification"
+        | "is_public"
+        | "is_owner"
+        | "liked"
+        | "likes"
+        | "comments"
+        | "scores"
+      >
+    >;
   onOpen?: () => void;
   user?: ViewerDto | null;
   onGuest?: () => void;

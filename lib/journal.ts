@@ -128,20 +128,16 @@ export async function journalDetail(
     )
   ).rows[0];
   if (!e) throw new CommunityError("Запись недоступна", 404);
-  const result: ReturnType<typeof journalDto> & {
-    bodyDoc?: ReturnType<typeof parseRichText>;
-    photos?: { id: string; url: string }[];
-    ride?: { id: string; shareId: string; title: string } | null;
-  } = journalDto(e, user);
+  const dto = journalDto(e, user);
   // Parsed here, so readers render the entry without the parser (#117).
-  result.bodyDoc = parseRichText(e.body);
-  result.photos = (
+  const bodyDoc = parseRichText(e.body);
+  const photos = (
     await q.query<{ id: string }>(
       "SELECT id FROM journal_photos WHERE entry_id=$1 ORDER BY created_at,id",
       [e.id],
     )
   ).rows.map((p) => ({ id: p.id, url: "/api/journal/media/" + p.id }));
-  result.ride = null;
+  let ride: { id: string; shareId: string; title: string } | null = null;
   if (e.ride_id) {
     const r = (
       await q.query<{ id: string; share_id: string; title: string }>(
@@ -149,9 +145,9 @@ export async function journalDetail(
         [e.ride_id, e.bike_id, user],
       )
     ).rows[0];
-    if (r) result.ride = { id: r.id, shareId: r.share_id, title: r.title };
+    if (r) ride = { id: r.id, shareId: r.share_id, title: r.title };
   }
-  return result;
+  return { ...dto, bodyDoc, photos, ride };
 }
 export async function journalList(
   q: Queryable,

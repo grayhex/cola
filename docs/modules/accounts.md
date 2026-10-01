@@ -8,7 +8,7 @@
 
 ## Точки входа
 
-`/account` (вкладка «Аккаунт» — `/account?tab=account`), `/@<username>` (старый `/u/<username>` перенаправляет), `/confirm-email`, `/api/auth/register`, `/api/auth/login`, `/api/auth/logout`, `/api/me`, `/api/account/*`; дополнительные операции профиля/предпочтений — в `app/api/social`. UI: [account.jsx](../../app/ui/account.tsx), [public-profile.jsx](../../app/ui/public-profile.jsx). Вход/регистрация используют существующий интерфейс гаража, а не независимую систему авторизации.
+`/account` (вкладка «Аккаунт» — `/account?tab=account`), `/@<username>` (старый `/u/<username>` перенаправляет), `/confirm-email`, `/api/auth/register`, `/api/auth/login`, `/api/auth/logout`, `/api/me`, `/api/account/*`; дополнительные операции профиля/предпочтений — в `app/api/social`. UI: [account.jsx](../../app/ui/account.tsx), [public-profile.jsx](../../app/ui/public-profile.tsx). Вход/регистрация используют существующий интерфейс гаража, а не независимую систему авторизации.
 
 ## Данные и основные функции
 

@@ -1,0 +1,519 @@
+"use client";
+import type { ViewerDto } from "../../lib/contracts.ts";
+import type {
+  CommentDto,
+  CommentPageDto,
+  ReplyPageDto,
+} from "./content-types.ts";
+type DiscussionEntity = "bike" | "component" | "article" | "journal" | "ride";
+interface Question {
+  solutionId?: string | null;
+  canSelect?: boolean;
+  refresh?: () => void | Promise<void>;
+}
+import { errorMessage } from "../../lib/errors.ts";
+import EmailPolicyAction from "./email-policy-action.tsx";
+import Link from "next/link";
+import {
+  useCallback,
+  useRef,
+  useEffect,
+  useState,
+  createContext,
+  useContext,
+} from "react";
+import { Avatar, socialApi } from "./social-primitives.tsx";
+import { ReportButton, PageControls } from "./community-controls.tsx";
+import dynamic from "next/dynamic";
+import RichTextBody from "./rich-text-body.tsx";
+import { MessagesSquare, Reply } from "./icons.tsx";
+import { profilePath } from "../../lib/public-urls.ts";
+import { personName, usernameLabel } from "../../lib/usernames.ts";
+// The composer brings the editor; guests read comments without it (#117).
+const PromptComposer = dynamic(() => import("./prompt-composer.tsx"), {
+  ssr: false,
+});
+const DiscussionKind = createContext<DiscussionEntity>("bike");
+const QuestionContext = createContext<Question | null>(null);
+const paths = (kind: DiscussionEntity) =>
+  kind === "component"
+    ? {
+        items: "components/",
+        comments: "components/comments/",
+        report: "component_comment" as const,
+      }
+    : kind === "article"
+      ? {
+          items: "articles/",
+          comments: "articles/comments/",
+          report: "journal_comment" as const,
+        }
+      : kind === "journal"
+        ? {
+            items: "journal/",
+            comments: "journal/comments/",
+            report: "journal_comment" as const,
+          }
+        : kind === "ride"
+          ? {
+              items: "rides/",
+              comments: "rides/comments/",
+              report: "ride_comment" as const,
+            }
+          : {
+              items: "community/bikes/",
+              comments: "community/comments/",
+              report: "comment" as const,
+            };
+function Editor({
+  initial = "",
+  label,
+  onSave,
+  onCancel,
+}: {
+  initial?: string;
+  label: string;
+  onSave: (body: string) => void | Promise<void>;
+  onCancel?: () => void;
+}) {
+  const [body, setBody] = useState(initial),
+    [busy, setBusy] = useState(false),
+    [error, setError] = useState("");
+  return (
+    <form
+      className="comment-editor"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        setBusy(true);
+        setError("");
+        try {
+          await onSave(body);
+          setBody("");
+        } catch (e) {
+          setError(errorMessage(e));
+        } finally {
+          setBusy(false);
+        }
+      }}
+    >
+      <PromptComposer
+        label={label}
+        value={body}
+        onChange={setBody}
+        rows={3}
+        required
+        maxLength={1000}
+        disabled={busy}
+      >
+        {onCancel && (
+          <button type="button" className="quiet" onClick={onCancel}>
+            Отмена
+          </button>
+        )}
+        <button className="button small" disabled={busy || !body.trim()}>
+          {busy
+            ? "Отправляем…"
+            : initial
+              ? "Сохранить комментарий"
+              : label === "Ваш ответ"
+                ? "Отправить ответ"
+                : "Отправить комментарий"}
+        </button>
+      </PromptComposer>
+      {error && (
+        <p className="error" role="alert">
+          {error}
+          <EmailPolicyAction message={error} />
+        </p>
+      )}
+    </form>
+  );
+}
+function Comment({
+  comment: c,
+  user,
+  bikeId,
+  refresh,
+  reply = false,
+}: {
+  comment: CommentDto;
+  user: ViewerDto | null;
+  bikeId: string;
+  refresh: () => Promise<void>;
+  reply?: boolean;
+}) {
+  const question = useContext(QuestionContext);
+  const api = paths(useContext(DiscussionKind));
+  const [editing, setEditing] = useState(false),
+    [answer, setAnswer] = useState(false),
+    [confirm, setConfirm] = useState(false),
+    [busy, setBusy] = useState(false),
+    [error, setError] = useState("");
+  return (
+    <article
+      className={"comment" + (reply ? " comment-reply" : "")}
+      id={"comment-" + c.id}
+    >
+      <div className="comment-heading">
+        {c.author ? (
+          <a className="person-identity" href={profilePath(c.author.username)}>
+            <Avatar person={c.author} size="small" />
+            <span>
+              <strong>{personName(c.author)}</strong>
+              {usernameLabel(c.author) && (
+                <small>{usernameLabel(c.author)}</small>
+              )}
+            </span>
+          </a>
+        ) : (
+          <span className="help">Комментарий недоступен</span>
+        )}
+        <time dateTime={c.createdAt}>
+          {new Date(c.createdAt).toLocaleDateString("ru-RU")}
+        </time>
+      </div>
+      {editing ? (
+        <Editor
+          initial={c.body || ""}
+          label="Изменить комментарий"
+          onCancel={() => setEditing(false)}
+          onSave={async (body) => {
+            await socialApi(api.comments + c.id, "PATCH", { body });
+            setEditing(false);
+            await refresh();
+          }}
+        />
+      ) : (
+        <>
+          {!c.unavailable && (
+            <RichTextBody className="comment-body" doc={c.bodyDoc} />
+          )}
+          <div className="comment-actions">
+            {!c.unavailable && question?.solutionId === c.id && (
+              <span className="journal-solution">Выбранный ответ · Решено</span>
+            )}
+            {!c.unavailable && question?.canSelect && (
+              <button
+                className="quiet"
+                disabled={busy}
+                onClick={async () => {
+                  setBusy(true);
+                  setError("");
+                  try {
+                    await socialApi("journal/" + bikeId + "/solution", "PUT", {
+                      commentId: question.solutionId === c.id ? null : c.id,
+                    });
+                    await question.refresh?.();
+                  } catch (e) {
+                    setError(errorMessage(e));
+                  } finally {
+                    setBusy(false);
+                  }
+                }}
+              >
+                {question.solutionId === c.id
+                  ? "Снять решение"
+                  : "Отметить решением"}
+              </button>
+            )}
+            {user && !reply && !c.unavailable && (
+              <button className="quiet" onClick={() => setAnswer((v) => !v)}>
+                <Reply size={14} aria-hidden="true" />
+                Ответить
+              </button>
+            )}
+            {c.canEdit && (
+              <button className="quiet" onClick={() => setEditing(true)}>
+                Изменить
+              </button>
+            )}
+            {c.canDelete && (
+              <button className="quiet" onClick={() => setConfirm((v) => !v)}>
+                Удалить
+              </button>
+            )}
+            {!c.unavailable && c.author?.id !== user?.id && (
+              <ReportButton
+                user={user}
+                entityType={api.report}
+                targetId={c.id}
+              />
+            )}
+          </div>
+        </>
+      )}
+      {confirm && (
+        <div className="comment-confirm">
+          <span>Удалить комментарий? Ответы сохранятся.</span>
+          <button
+            className="quiet"
+            disabled={busy}
+            onClick={async () => {
+              setBusy(true);
+              setError("");
+              try {
+                await socialApi(api.comments + c.id, "DELETE");
+                setConfirm(false);
+                await refresh();
+              } catch (e) {
+                setError(errorMessage(e));
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            Да, удалить
+          </button>
+          <button className="quiet" onClick={() => setConfirm(false)}>
+            Отмена
+          </button>
+        </div>
+      )}
+      {answer && (
+        <Editor
+          label="Ваш ответ"
+          onCancel={() => setAnswer(false)}
+          onSave={async (body) => {
+            await socialApi(api.items + bikeId + "/comments", "POST", {
+              body,
+              parentId: c.id,
+            });
+            setAnswer(false);
+            await refresh();
+          }}
+        />
+      )}
+      {error && (
+        <p role="alert" className="error">
+          {error}
+          <EmailPolicyAction message={error} />
+        </p>
+      )}
+    </article>
+  );
+}
+function Thread({
+  root,
+  user,
+  bikeId,
+  refresh,
+}: {
+  root: CommentPageDto["comments"][number];
+  user: ViewerDto | null;
+  bikeId: string;
+  refresh: () => Promise<void>;
+}) {
+  const api = paths(useContext(DiscussionKind));
+  const [page, setPage] = useState(1),
+    [expanded, setExpanded] = useState(false),
+    [data, setData] = useState<ReplyPageDto | null>(null),
+    [error, setError] = useState("");
+  useEffect(() => {
+    if (!expanded) return;
+    let alive = true;
+    socialApi<ReplyPageDto>(
+      api.items + bikeId + "/comments/" + root.id + "/replies?page=" + page,
+    )
+      .then((d) => {
+        if (alive) setData(d);
+      })
+      .catch((e) => {
+        if (alive) setError(e.message);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [expanded, page, root, api.items, bikeId]);
+  return (
+    <div className="comment-thread">
+      <Comment comment={root} user={user} bikeId={bikeId} refresh={refresh} />
+      <div className="comment-replies">
+        {(expanded && data ? data.comments : root.replies).map((c) => (
+          <Comment
+            key={c.id}
+            reply
+            comment={c}
+            user={user}
+            bikeId={bikeId}
+            refresh={refresh}
+          />
+        ))}
+      </div>
+      {root.replyCount > root.replies.length && !expanded && (
+        <button
+          className="quiet more-replies"
+          onClick={() => setExpanded(true)}
+        >
+          Все ответы · {root.replyCount}
+        </button>
+      )}
+      {expanded && data && <PageControls {...data} onPage={setPage} />}
+      {error && (
+        <p role="alert">
+          {error}
+          <EmailPolicyAction message={error} />
+        </p>
+      )}
+    </div>
+  );
+}
+export default function Discussion({
+  bike,
+  user,
+  entityType = "bike",
+  onSolution,
+}: {
+  bike: {
+    id: string;
+    author?: { id: string } | null;
+    kind?: string;
+    solutionId?: string | null;
+    isOwner?: boolean;
+  };
+  user: ViewerDto | null;
+  entityType?: DiscussionEntity;
+  onSolution?: () => void | Promise<void>;
+}) {
+  const api = paths(entityType);
+  const [data, setData] = useState<CommentPageDto | null>(null),
+    [page, setPage] = useState(1),
+    [focus, setFocus] = useState<string | null>(null),
+    [loaded, setLoaded] = useState(false),
+    [error, setError] = useState("");
+  useEffect(() => {
+    setFocus(new URLSearchParams(window.location.search).get("comment"));
+    setLoaded(true);
+  }, []);
+  const requests = useRef({ revision: 0 });
+  const refresh = useCallback(async () => {
+    const revision = ++requests.current.revision;
+    try {
+      const d = await socialApi<CommentPageDto>(
+        api.items +
+          bike.id +
+          "/comments?page=" +
+          page +
+          (focus ? "&focus=" + encodeURIComponent(focus) : ""),
+      );
+      if (revision !== requests.current.revision) return;
+      setData(d);
+      setError("");
+    } catch (e) {
+      if (revision === requests.current.revision) setError(errorMessage(e));
+    }
+  }, [api.items, bike.id, page, focus]);
+  useEffect(() => {
+    const pending = requests.current;
+    if (loaded) void refresh();
+    return () => {
+      pending.revision++;
+    };
+  }, [refresh, loaded]);
+  const hasData = !!data;
+  useEffect(() => {
+    if (focus && hasData)
+      document.getElementById("discussion")?.scrollIntoView({ block: "start" });
+  }, [focus, hasData]);
+  return (
+    <DiscussionKind.Provider value={entityType}>
+      <QuestionContext.Provider
+        value={
+          entityType === "journal" && bike.kind === "question"
+            ? {
+                solutionId: bike.solutionId,
+                canSelect: bike.isOwner,
+                refresh: onSolution,
+              }
+            : null
+        }
+      >
+        <section className="discussion" id="discussion">
+          <div className="section-heading">
+            <div>
+              <h2>
+                <MessagesSquare size={20} aria-hidden="true" />
+                {entityType === "component"
+                  ? "Обсуждение компонента"
+                  : entityType === "article"
+                    ? "Обсуждение статьи"
+                    : entityType === "journal"
+                      ? "Обсуждение записи"
+                      : entityType === "ride"
+                        ? "Обсуждение покатушки"
+                        : "Обсуждение сборки"}
+              </h2>
+              <p className="help">
+                {entityType === "article"
+                  ? "Вопросы, дополнения и личный опыт."
+                  : "Детали, идеи и опыт владельцев."}
+              </p>
+            </div>
+            {entityType !== "component" && bike.author?.id !== user?.id && (
+              <ReportButton
+                entityType={entityType === "article" ? "journal" : entityType}
+                targetId={bike.id}
+                user={user}
+              />
+            )}
+          </div>
+          {focus && (
+            <button
+              className="quiet"
+              onClick={() => {
+                setFocus(null);
+                setPage(1);
+              }}
+            >
+              Все комментарии
+            </button>
+          )}
+          {error && (
+            <p role="alert" className="error">
+              {error}
+              <EmailPolicyAction message={error} />
+            </p>
+          )}
+          {data?.comments.map((c) => (
+            <Thread
+              key={c.id}
+              root={c}
+              user={user}
+              bikeId={bike.id}
+              refresh={refresh}
+            />
+          ))}
+          {!data && !error && <p role="status">Загружаем обсуждение…</p>}
+          {data && !data.comments.length && (
+            <p className="help">
+              {entityType === "ride"
+                ? "Поделитесь впечатлениями о маршруте."
+                : entityType === "journal" ||
+                    entityType === "article" ||
+                    entityType === "component"
+                  ? "Задайте вопрос или поделитесь своим опытом."
+                  : "Первый вопрос о сборке может стать началом знакомства."}
+            </p>
+          )}
+          {data && <PageControls {...data} onPage={setPage} />}
+          {user ? (
+            <Editor
+              label="Ваш комментарий"
+              onSave={async (body) => {
+                await socialApi(api.items + bike.id + "/comments", "POST", {
+                  body,
+                });
+                setFocus(null);
+                setPage(1);
+                await refresh();
+              }}
+            />
+          ) : (
+            <Link className="button secondary small" href="/account">
+              Войти, чтобы участвовать в обсуждении
+            </Link>
+          )}
+        </section>
+      </QuestionContext.Provider>
+    </DiscussionKind.Provider>
+  );
+}

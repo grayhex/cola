@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Globe, LockKeyhole } from "lucide-react";
 import EmailPolicyAction from "./email-policy-action.tsx";
 import SiteIcon from "./site-icon.tsx";
-import PassportTiles from "./passport-tiles.jsx";
+import PassportTiles from "./passport-tiles.tsx";
 import { AreaField, ExtraConditions } from "./ride-plan-fields.jsx";
 import { RideRoutePreview, RideMetrics } from "./ride-card.jsx";
 import { useMotionFeedback } from "./motion.tsx";

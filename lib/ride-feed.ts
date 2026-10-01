@@ -57,25 +57,19 @@ export async function rideFeed(
   const listings = marketIds.length
     ? (await marketList(q, viewer, { ids: marketIds })).items
     : [];
-  const byId = new Map(
-    [...bikes.bikes, ...rides.rides, ...entries, ...listings].map((r) => [
-      r.id,
-      r,
-    ]),
-  );
+  const cards = [
+    ...bikes.bikes.map((item) => ({ ...item, kind: "bike" as const })),
+    ...rides.rides.map((item) => ({ ...item, kind: "ride" as const })),
+    ...entries.map((item) => ({
+      ...item,
+      kind: "journal" as const,
+      entryKind: item.kind,
+    })),
+    ...listings.map((item) => ({ ...item, kind: "market" as const })),
+  ];
+  const byId = new Map(cards.map((item) => [item.id, item]));
   return {
-    items: rows
-      .filter((r) => byId.has(r.id))
-      .map((r) => {
-        const item = byId.get(r.id)!;
-        return {
-          ...item,
-          kind: r.kind,
-          ...(r.kind === "journal"
-            ? { entryKind: "kind" in item ? item.kind : undefined }
-            : {}),
-        };
-      }),
+    items: rows.filter((r) => byId.has(r.id)).map((r) => byId.get(r.id)!),
     bikes: bikes.bikes,
     total,
     page,
