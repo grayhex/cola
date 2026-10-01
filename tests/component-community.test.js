@@ -122,6 +122,17 @@ test("component media and shared discussion: upgrade, roles, quota, merges, mode
         "utf8",
       ),
     );
+    for (const version of [
+      "040_ride_interest_proposals",
+      "042_ride_agreements",
+      "044_ride_notifications",
+    ])
+      await db.exec(
+        await readFile(
+          new URL("../db/" + version + ".sql", import.meta.url),
+          "utf8",
+        ),
+      );
     const raw = await sharp({
       create: { width: 800, height: 600, channels: 3, background: "#efac21" },
     })

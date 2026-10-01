@@ -32,7 +32,7 @@ test("notification email settings: opt-in, keyboard, themes, rollback and unsign
     }
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto("/account?tab=account");
-    const settings = page.getByRole("region", { name: "Уведомления по почте" });
+    const settings = page.getByRole("region", { name: "Уведомления" });
     const enabled = settings.getByLabel("Получать уведомления по почте", {
       exact: true,
     });
@@ -171,7 +171,7 @@ test("notification settings load failure can be retried without losing account c
     }),
   );
   await page.goto("/account?tab=account");
-  const settings = page.getByRole("region", { name: "Уведомления по почте" });
+  const settings = page.getByRole("region", { name: "Уведомления" });
   await expect(settings.getByRole("alert")).toContainText(
     "временно недоступны",
   );

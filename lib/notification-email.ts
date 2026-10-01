@@ -9,6 +9,8 @@ import { notificationPage } from "./notifications.ts";
 import { noticeExpiringListings, expiryNoticeDays } from "./market.ts";
 import { accountLink } from "./account.ts";
 import { rideOccurrence } from "./ride-occurrence.ts";
+import { releaseRideReminders } from "./ride-notifications.ts";
+import { interestInvitationAvailable } from "./ride-matching.ts";
 
 export interface EmailJob {
   notification_id: string;
@@ -69,14 +71,20 @@ async function finish(
     | null,
 ) {
   const delay = Math.min(6 * 3600, 60 * 2 ** Math.min(job.attempts - 1, 9));
-  return !!(
-    await q.query(
-      `UPDATE notification_email_outbox SET status=$3,error_code=$4,finished_at=CASE WHEN $3='pending' THEN NULL ELSE $5::timestamptz END,
+  const result = await q.query<{ recipient_id: string }>(
+    `UPDATE notification_email_outbox SET status=$3,error_code=$4,finished_at=CASE WHEN $3='pending' THEN NULL ELSE $5::timestamptz END,
     available_at=CASE WHEN $3='pending' THEN $5::timestamptz+make_interval(secs=>$6) ELSE available_at END,lease_token=NULL,lease_until=NULL
-    WHERE notification_id=$1 AND lease_token=$2 AND status='sending' RETURNING notification_id`,
-      [job.notification_id, job.lease_token, status, code, now, delay],
-    )
-  ).rowCount;
+    WHERE notification_id=$1 AND lease_token=$2 AND status='sending' RETURNING recipient_id`,
+    [job.notification_id, job.lease_token, status, code, now, delay],
+  );
+  // A rejected delivery used no SMTP attempt. Let the next valid notice for
+  // that person proceed instead of losing a short reminder window to stale mail.
+  if (result.rowCount && status === "skipped")
+    await q.query(
+      "UPDATE notification_email_preferences SET next_delivery_at=least(next_delivery_at,$2::timestamptz) WHERE user_id=$1",
+      [job.recipient_id, now],
+    );
+  return !!result.rowCount;
 }
 export async function pruneNotificationEmails(q: Queryable, now = new Date()) {
   await q.query(
@@ -106,8 +114,9 @@ async function delivery(
       market: boolean;
       unsubscribe_key: string;
       ride_id: string | null;
+      event_occurs_at: Date | null;
     }>(
-      `SELECT u.email,u.name,n.type,n.ride_id,p.enabled,p.discussions,p.rides,p.market,p.unsubscribe_key FROM notification_email_outbox o
+      `SELECT u.email,u.name,n.type,n.ride_id,n.event_occurs_at,p.enabled,p.discussions,p.rides,p.market,p.unsubscribe_key FROM notification_email_outbox o
     JOIN notifications n ON n.id=o.notification_id AND n.recipient_id=o.recipient_id JOIN users u ON u.id=o.recipient_id JOIN notification_email_preferences p ON p.user_id=u.id
     WHERE o.notification_id=$1 AND o.lease_token=$2 AND o.status='sending' AND o.lease_until>$3 AND o.expires_at>$3 AND NOT u.blocked AND u.email_verified_at IS NOT NULL`,
       [job.notification_id, job.lease_token, now],
@@ -118,7 +127,7 @@ async function delivery(
   if (!event || !row.enabled || !row[event.category])
     return { code: "preferences" as const };
   const notice = (
-    await notificationPage(q, job.recipient_id, 1, job.notification_id)
+    await notificationPage(q, job.recipient_id, 1, job.notification_id, now)
   ).notifications[0];
   if (!notice || notice.readAt) return { code: "unavailable" as const };
   if (
@@ -128,6 +137,25 @@ async function delivery(
   )
     return { code: "unavailable" as const };
   if (row.type === "ride_invite") {
+    if (!row.ride_id) return { code: "unavailable" as const };
+    const invitation = (
+      await q.query<{ source: string }>(
+        "SELECT source FROM ride_invitations WHERE ride_id=$1 AND user_id=$2",
+        [row.ride_id, job.recipient_id],
+      )
+    ).rows[0];
+    if (
+      invitation?.source === "interest" &&
+      (!row.event_occurs_at ||
+        !(await interestInvitationAvailable(
+          q,
+          row.ride_id,
+          job.recipient_id,
+          row.event_occurs_at,
+          now,
+        )))
+    )
+      return { code: "unavailable" as const };
     const ride = (
       await q.query<{ occurs_at: Date }>(
         `SELECT (${rideOccurrence}) occurs_at FROM rides r WHERE r.id=$1 AND r.status='planned'`,
@@ -184,6 +212,7 @@ export async function runNotificationEmailBatch(
     skipped: 0,
     disabled: !mailEnabled(env),
   };
+  await releaseRideReminders(q, currentTime(), !counts.disabled);
   if (counts.disabled) return counts;
   // An email about expiry must not depend on the owner opening notifications.
   const owners = await q.query<{ owner_id: string }>(

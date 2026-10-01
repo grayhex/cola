@@ -3,6 +3,7 @@ import {
   runNotificationEmailBatch,
   notificationEmailStatus,
 } from "../lib/notification-email.ts";
+import { rideReminderScheduleStatus } from "../lib/ride-notifications.ts";
 let stopped = false;
 for (const signal of ["SIGTERM", "SIGINT"])
   process.on(signal, () => {
@@ -14,6 +15,7 @@ try {
       JSON.stringify({
         event: "notification_email_status",
         statuses: await notificationEmailStatus(db),
+        reminders: await rideReminderScheduleStatus(db),
       }),
     );
   else
