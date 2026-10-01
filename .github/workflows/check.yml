@@ -85,6 +85,14 @@ jobs:
         run: pnpm typecheck && pnpm test:typecheck
       - name: Application unit and database tests
         run: pnpm test
+      - name: PostgreSQL records performance budgets and SQL plans
+        run: node scripts/explain-records.js > "$RUNNER_TEMP/records-performance.jsonl"
+      - name: Records performance evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: records-performance-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/records-performance.jsonl
       - name: Production build
         run: pnpm build
       - run: npm ci

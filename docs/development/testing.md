@@ -112,3 +112,7 @@ Backup drill создаёт собственные Compose projects и удал�
 ### CSP
 
 `tests/csp.test.js` проверяет настройки и очистку обоих форматов отчётов, `tests/csp-http.js` — настоящие заголовки/nonce, приёмник и лимиты. HTTP harness использует Report-Only, браузерный harness по умолчанию **enforce**, поэтому весь существующий Chromium/WebKit набор проверяет блокирующую политику; `tests/e2e/csp.spec.js` дополнительно проверяет отказ inline-script, доставку отчёта и разрешённый nonce. Не подменяйте приёмку живого Яндекса fixture SDK. Условия production enforcement — в [безопасности](../architecture/security.md#content-security-policy).
+
+## Главная, рейтинги и велосипед недели
+
+`node --test tests/bike-week.test.js tests/gamification.test.js tests/community-discovery.test.js` проверяет weekly lifecycle, privacy, соответствие компактных SQL-признаков настраиваемой оценке (включая Unicode/пробелы) и выдачу главной. `node scripts/test-ui.js tests/e2e/bike-week.spec.js --project=chromium` (также webkit-mobile) проверяет реальные API и UI. Конкуренция двух worker проверяется `bike-week-concurrency.js` в PostgreSQL HTTP harness. Performance gate `scripts/explain-records.js` создаёт disposable PostgreSQL БД и сохраняет SQL-планы/замеры артефактом CI; параметры и бюджеты — в [модуле рекордов](../modules/gamification.md#проверки). PGlite-режим запускается только с явным `--pglite`.

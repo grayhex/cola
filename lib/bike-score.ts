@@ -14,7 +14,7 @@ export const defaultScoring = {
     }>,
 };
 const clamp = (n: number) => Math.round(Math.max(0, Math.min(100, n)));
-const normalized = (s: string) =>
+export const normalizedScoreText = (s: string) =>
   String(s || "")
     .normalize("NFKC")
     .toLowerCase()
@@ -42,29 +42,23 @@ export function scoreBike(
       p.section === "build" && p.name?.trim(),
   );
   const unique = new Set(
-    parts.map((p) => normalized(p.category) + "|" + normalized(p.name)),
+    parts.map(
+      (p) =>
+        normalizedScoreText(p.category) + "|" + normalizedScoreText(p.name),
+    ),
   );
   const hasPhoto = !!bike.photos?.length;
-  const filled = clamp(
-    (hasPhoto ? config.photoPoints : 0) +
-      (100 - config.photoPoints) *
-        Math.min(1, unique.size / config.componentTarget),
-  );
-  // Both a real photo and the configured count are required for 100%.
-  const completeness =
-    hasPhoto && unique.size >= config.componentTarget
-      ? 100
-      : Math.min(99, filled);
-  let total = config.base[bike.category as keyof typeof config.base] ?? 50;
+  const completeness = bikeCompleteness(unique.size, hasPhoto, config);
+  let points = 0;
   for (const rule of config.rules) {
-    const tokens = normalized(rule.match).split(" ").filter(Boolean);
+    const tokens = normalizedScoreText(rule.match).split(" ").filter(Boolean);
     if (!tokens.length) continue;
     if (
       parts.some((p) => {
         const group =
           groups.find((g) => g.id === p.group_id) ||
           groups.find((g) => g.categories.includes(p.category));
-        const text = " " + normalized(p.name) + " ";
+        const text = " " + normalizedScoreText(p.name) + " ";
         return (
           (!rule.groupId || (group?.id || "other") === rule.groupId) &&
           (!rule.category || p.category === rule.category) &&
@@ -72,8 +66,22 @@ export function scoreBike(
         );
       })
     )
-      total += rule.points;
+      points += rule.points;
   }
+  return { completeness, upgrade: upgradeFromPoints(bike, config, points) };
+}
+export function upgradeFromPoints(
+  bike: {
+    category?: string;
+    weight?: string | number | null;
+    price?: string | number | null;
+    show_bike_price?: boolean;
+  },
+  config = defaultScoring,
+  points = 0,
+) {
+  let total =
+    (config.base[bike.category as keyof typeof config.base] ?? 50) + points;
   if (Number(bike.weight) > 0)
     total +=
       ((config.weight.reference - Number(bike.weight)) /
@@ -86,5 +94,19 @@ export function scoreBike(
       ((Number(bike.price) - config.price.reference) / config.price.reference) *
       10 *
       config.price.pointsPer10Percent;
-  return { completeness, upgrade: clamp(total) };
+  return clamp(total);
+}
+
+export function bikeCompleteness(
+  count: number,
+  hasPhoto: boolean,
+  config = defaultScoring,
+) {
+  const filled = clamp(
+    (hasPhoto ? config.photoPoints : 0) +
+      (100 - config.photoPoints) * Math.min(1, count / config.componentTarget),
+  );
+  return hasPhoto && count >= config.componentTarget
+    ? 100
+    : Math.min(99, filled);
 }

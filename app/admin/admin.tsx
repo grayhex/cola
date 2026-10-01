@@ -39,6 +39,7 @@ import CatalogEditor from "./catalog-editor.tsx";
 import MapSettings from "./map-settings.tsx";
 import RideSettings from "./ride-settings.tsx";
 import Gamification from "./gamification.tsx";
+import BikeWeekAdmin from "./bike-week.tsx";
 import Reports from "./reports.tsx";
 import ScoringSettings from "./scoring-settings.tsx";
 import { GroupSettings } from "./layout-settings.tsx";
@@ -96,6 +97,7 @@ const sections: [string, string, LucideIcon][] = [
   ["legal", "Документы", BookOpen],
   ["scoring", "Оценка велосипедов", Settings2],
   ["gamification", "Награды и рекорды", Trophy],
+  ["bike-week", "Велосипед недели", Trophy],
   ["rides", "Покатушки", Settings2],
   ["resolver", "Bike Resolver", Settings2],
   ["map", "Карта", Settings2],
@@ -115,6 +117,7 @@ const sections: [string, string, LucideIcon][] = [
   ["audit", "Журнал действий", History],
 ];
 const adminGroups = [
+  { id: "home", name: "Главная", icon: LayoutGrid, sections: ["bike-week"] },
   {
     id: "system",
     name: "Система",
@@ -595,6 +598,7 @@ export default function Admin() {
           )}
           {tab === "resolver" && <ResolverSettings />}
           {tab === "gamification" && <Gamification />}
+          {tab === "bike-week" && <BikeWeekAdmin />}
           {tab === "rides" && <RideSettings />}
           {tab === "map" && <MapSettings settings={draft} onChange={update} />}
           {tab === "about" && (

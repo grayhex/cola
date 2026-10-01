@@ -199,7 +199,10 @@ try {
           "tests/account-security-http.js",
           "tests/notification-email-http.js",
           ...(externalDatabase
-            ? ["tests/notification-email-concurrency.js"]
+            ? [
+                "tests/notification-email-concurrency.js",
+                "tests/bike-week-concurrency.js",
+              ]
             : []),
           ...(externalDatabase ? ["tests/quota-http.js"] : []),
         ])

@@ -1,3 +1,4 @@
+import type { SiteDefinition } from "./contracts.ts";
 import type { ExclusionInput as ExclusionInputType } from "./gamification-validation.ts";
 import type { GameRule } from "./game-rules.ts";
 interface GameAuthor {
@@ -17,13 +18,8 @@ interface LeaderboardBike extends GameAuthor {
   weight: string | null;
   show_bike_price: boolean;
   price: string | null;
-  components: {
-    section: string;
-    category: string;
-    name: string;
-    group_id: string;
-  }[];
-  photos: { id: string }[];
+  part_count: number;
+  cover_id: string | null;
   likes: number;
   wild: number;
   clean: number;
@@ -63,7 +59,11 @@ import type { Queryable } from "./db.ts";
 import { reactions } from "./gamification-definitions.ts";
 import { gameSettings } from "./gamification-validation.ts";
 import { getSite, audit } from "./site.ts";
-import { scoreBike } from "./bike-score.ts";
+import {
+  bikeCompleteness,
+  upgradeFromPoints,
+  normalizedScoreText,
+} from "./bike-score.ts";
 import { publicAuthor } from "./profile-dto.ts";
 import { personName } from "./usernames.ts";
 import { CommunityError } from "./community-validation.ts";
@@ -81,15 +81,18 @@ export async function getGameSettings(q: Queryable) {
 }
 // One bulk snapshot: hidden prices are removed by SQL before reaching the scoring/ranking layer.
 // Children aggregate once per relation, not once per badge or bike card.
+// ECMAScript String.trim's exact whitespace set, including NBSP and BOM.
+const scoreNamePresent = (column: "name" | "p.name") =>
+  String.raw`btrim(${column}, U&'\0009\000A\000B\000C\000D\0020\00A0\1680\2000\2001\2002\2003\2004\2005\2006\2007\2008\2009\200A\2028\2029\202F\205F\3000\FEFF')<>''`;
 export const leaderboardSQL = `WITH parts AS (
- SELECT bike_id,jsonb_agg(jsonb_build_object('section',section,'category',category,'name',name,'group_id',group_id)) AS components FROM components GROUP BY bike_id
-), images AS (SELECT bike_id,jsonb_agg(jsonb_build_object('id',id) ORDER BY is_cover DESC,created_at,id) AS photos FROM photos GROUP BY bike_id),
+ SELECT bike_id,count(DISTINCT trim(regexp_replace(lower(normalize(category,NFKC)),'[^[:alnum:]]+',' ','g'))||'|'||trim(regexp_replace(lower(normalize(name,NFKC)),'[^[:alnum:]]+',' ','g')))::int AS part_count FROM components WHERE section='build' AND ${scoreNamePresent("name")} GROUP BY bike_id
+), images AS (SELECT DISTINCT ON (bike_id) bike_id,id AS cover_id FROM photos ORDER BY bike_id,is_cover DESC,created_at,id),
  likes AS (SELECT l.bike_id,count(*)::int AS likes FROM bike_likes l JOIN users u ON u.id=l.user_id JOIN bikes b ON b.id=l.bike_id WHERE NOT u.blocked AND l.user_id<>b.owner_id GROUP BY l.bike_id),
  votes AS (SELECT r.bike_id,count(*) FILTER(WHERE kind='wild')::int AS wild,count(*) FILTER(WHERE kind='clean')::int AS clean,count(*) FILTER(WHERE kind='dream')::int AS dream,count(DISTINCT r.user_id)::int AS community FROM bike_reactions r JOIN users u ON u.id=r.user_id JOIN bikes b ON b.id=r.bike_id WHERE NOT u.blocked AND r.user_id<>b.owner_id GROUP BY r.bike_id)
  SELECT b.id,b.owner_id,b.share_id,b.name,b.brand,b.model,b.year,b.category,b.weight,b.show_bike_price,
  CASE WHEN b.show_bike_price THEN b.price ELSE NULL END AS price,
  u.username,u.name AS owner_name,u.avatar_id,
- coalesce(p.components,'[]') AS components,coalesce(i.photos,'[]') AS photos,
+ coalesce(p.part_count,0) AS part_count,i.cover_id,
  coalesce(l.likes,0) AS likes,coalesce(v.wild,0) AS wild,coalesce(v.clean,0) AS clean,coalesce(v.dream,0) AS dream,coalesce(v.community,0) AS community
  FROM bikes b JOIN users u ON u.id=b.owner_id LEFT JOIN parts p ON p.bike_id=b.id LEFT JOIN images i ON i.bike_id=b.id LEFT JOIN likes l ON l.bike_id=b.id LEFT JOIN votes v ON v.bike_id=b.id
  WHERE b.is_public AND NOT u.blocked AND NOT b.leaderboard_excluded`;
@@ -105,123 +108,151 @@ const author = (r: GameAuthor) =>
 // Bikes of the rating that a bike record can hold: the completeness
 // threshold, a shown price (a minimum price also needs the budget
 // conditions), the admin's weight bounds, a known year.
+type RankedBike = LeaderboardBike & { completeness: number; upgrade: number };
+type GameSettings = Awaited<ReturnType<typeof getGameSettings>>;
+function eligibleBike(rule: GameRule, b: RankedBike, settings: GameSettings) {
+  if (
+    b.completeness < settings.minimumCompleteness ||
+    (rule.category && b.category !== rule.category)
+  )
+    return false;
+  if (rule.metric === "price")
+    return (
+      b.show_bike_price &&
+      Number(b.price) > 0 &&
+      (rule.direction !== "min" ||
+        (Number(b.price) > settings.budgetMinimum &&
+          !!b.cover_id &&
+          !!b.brand.trim() &&
+          !!b.model.trim() &&
+          !!b.year))
+    );
+  if (rule.metric === "weight")
+    return (
+      Number(b.weight) >= settings.weightMinimum &&
+      Number(b.weight) <= settings.weightMaximum
+    );
+  if (rule.metric === "year") return Number(b.year) >= 1900;
+  return bikeValue(b, rule.metric) > 0;
+}
+const bikeValue = (b: RankedBike, metric: string) =>
+  Number(b[metric as keyof RankedBike]);
+const compareBikes = (rule: GameRule, a: RankedBike, b: RankedBike) =>
+  (bikeValue(a, rule.metric) - bikeValue(b, rule.metric)) *
+    (rule.direction === "min" ? 1 : -1) || a.id.localeCompare(b.id);
+// Kept as a reference for callers/tests needing a full ordering. Records uses
+// a single linear scan per distinct scope, never sorts the catalog for top-1.
 export function rankBikes(
   rule: GameRule,
-  candidates: (LeaderboardBike & ReturnType<typeof scoreBike>)[],
-  settings: {
-    currency: "RUB";
-    reactionsEnabled: boolean;
-    minimumCompleteness: number;
-    budgetMinimum: number;
-    weightMinimum: number;
-    weightMaximum: number;
-  },
+  candidates: RankedBike[],
+  settings: GameSettings,
 ) {
-  const m = rule.metric;
   return candidates
-    .filter((b) => {
-      if (b.completeness < settings.minimumCompleteness) return false;
-      if (rule.category && b.category !== rule.category) return false;
-      if (m === "price")
-        return (
-          b.show_bike_price &&
-          Number(b.price) > 0 &&
-          (rule.direction !== "min" ||
-            (Number(b.price) > settings.budgetMinimum &&
-              b.photos.length &&
-              b.brand.trim() &&
-              b.model.trim() &&
-              b.year))
-        );
-      if (m === "weight")
-        return (
-          Number(b.weight) >= settings.weightMinimum &&
-          Number(b.weight) <= settings.weightMaximum
-        );
-      if (m === "year") return Number(b.year) >= 1900;
-      return Number(b[m as keyof typeof b]) > 0;
-    })
-    .sort(
-      (a, b) =>
-        (Number(a[m as keyof typeof a]) - Number(b[m as keyof typeof b])) *
-          (rule.direction === "min" ? 1 : -1) || a.id.localeCompare(b.id),
-    );
+    .filter((b) => eligibleBike(rule, b, settings))
+    .sort((a, b) => compareBikes(rule, a, b));
+}
+function bikeHolder(
+  rule: GameRule,
+  candidates: RankedBike[],
+  settings: GameSettings,
+): HolderResult {
+  let eligible = 0,
+    best: RankedBike | null = null;
+  for (const b of candidates) {
+    if (!eligibleBike(rule, b, settings)) continue;
+    eligible++;
+    if (!best || compareBikes(rule, b, best) < 0) best = b;
+  }
+  return {
+    eligible,
+    holder: best
+      ? {
+          kind: "bike",
+          id: best.id,
+          shareId: best.share_id,
+          name: best.name,
+          cover: best.cover_id,
+          category: best.category,
+          author: author(best),
+          value: bikeValue(best, rule.metric),
+        }
+      : null,
+  };
 }
 
 // Ride and person records come from the metric functions of the database,
 // which count only public data.
-async function rideHolder(q: Queryable, rule: GameRule): Promise<HolderResult> {
-  const r = (
-    await q.query<{
-      value: string;
-      id: string;
-      share_id: string;
-      title: string;
-      bike_id: string;
-      bike_share_id: string;
-      bike_name: string;
-      owner_id: string;
-      username: string;
-      owner_name: string;
-      avatar_id: string;
-      eligible: string;
-    }>(
-      `SELECT v.value,r.id,r.share_id,r.title,b.id AS bike_id,b.share_id AS bike_share_id,b.name AS bike_name,
-        u.id AS owner_id,u.username,u.name AS owner_name,u.avatar_id,count(*) OVER() AS eligible
-       FROM game_ride_values($1,$2,$3,NULL) v JOIN rides r ON r.id=v.ride_id
-       JOIN bikes b ON b.id=v.bike_id JOIN users u ON u.id=v.user_id
-       WHERE NOT b.leaderboard_excluded
-       ORDER BY v.value ${rule.direction === "min" ? "ASC" : "DESC"},r.id LIMIT 1`,
-      [rule.metric, rule.category, rule.minDistanceKm],
-    )
-  ).rows[0];
-  return r
-    ? {
-        eligible: Number(r.eligible),
-        holder: {
-          kind: "ride",
-          id: r.id,
-          shareId: r.share_id,
-          name: r.title,
-          bike: { id: r.bike_id, shareId: r.bike_share_id, name: r.bike_name },
-          author: author(r),
-          value: Number(r.value),
-        },
-      }
-    : { eligible: 0, holder: null };
-}
-async function personHolder(
+type HolderPair = { min: HolderResult; max: HolderResult };
+// Each metric/filter scope is evaluated once for both directions. Transfer at
+// most two holders; neither all rides nor all people cross the DB boundary.
+async function metricHolders(
   q: Queryable,
   rule: GameRule,
-): Promise<HolderResult> {
-  const r = (
-    await q.query<{
-      value: string;
-      owner_id: string;
-      username: string;
-      owner_name: string;
-      avatar_id: string;
-      eligible: string;
-    }>(
-      `SELECT v.value,u.id AS owner_id,u.username,u.name AS owner_name,u.avatar_id,count(*) OVER() AS eligible
-       FROM game_user_values($1,$2,NULL) v JOIN users u ON u.id=v.user_id
-       WHERE v.value>0
-       ORDER BY v.value ${rule.direction === "min" ? "ASC" : "DESC"},u.id LIMIT 1`,
-      [rule.metric, rule.category],
-    )
-  ).rows[0];
-  return r
-    ? {
-        eligible: Number(r.eligible),
-        holder: {
-          kind: "profile",
-          id: r.owner_id,
-          name: personName(author(r)),
-          author: author(r),
-          value: Number(r.value),
-        },
+): Promise<HolderPair> {
+  const ride = rule.subject === "ride";
+  const source = ride
+    ? `SELECT v.value,r.id,r.share_id,r.title,b.id bike_id,b.share_id bike_share_id,b.name bike_name,
+    u.id owner_id,u.username,u.name owner_name,u.avatar_id
+    FROM game_ride_values($1,$2,$3,NULL) v JOIN rides r ON r.id=v.ride_id JOIN bikes b ON b.id=v.bike_id JOIN users u ON u.id=v.user_id WHERE NOT b.leaderboard_excluded`
+    : `SELECT v.value,u.id,u.id owner_id,u.username,u.name owner_name,u.avatar_id
+    FROM game_user_values($1,$2,NULL) v JOIN users u ON u.id=v.user_id WHERE v.value>0`;
+  const rows = (
+    await q.query<
+      GameAuthor & {
+        direction: "min" | "max";
+        value: string;
+        eligible: string;
+        id: string;
+        share_id: string;
+        title: string;
+        bike_id: string;
+        bike_share_id: string;
+        bike_name: string;
       }
-    : { eligible: 0, holder: null };
+    >(
+      `WITH vals AS MATERIALIZED (${source}), bounds AS (
+    SELECT count(*) eligible,min(value) lo,max(value) hi FROM vals
+  ), picked AS (
+    SELECT eligible,(SELECT min(id::text) FROM vals WHERE value=bounds.lo) low_id,
+      (SELECT min(id::text) FROM vals WHERE value=bounds.hi) high_id FROM bounds
+  ) SELECT d.direction,v.*,p.eligible FROM picked p
+    CROSS JOIN LATERAL (VALUES ('min',p.low_id),('max',p.high_id)) d(direction,id)
+    JOIN vals v ON v.id::text=d.id`,
+      ride
+        ? [rule.metric, rule.category, rule.minDistanceKm]
+        : [rule.metric, rule.category],
+    )
+  ).rows;
+  const result: HolderPair = {
+    min: { eligible: 0, holder: null },
+    max: { eligible: 0, holder: null },
+  };
+  for (const r of rows)
+    result[r.direction] = {
+      eligible: Number(r.eligible),
+      holder: ride
+        ? {
+            kind: "ride",
+            id: r.id,
+            shareId: r.share_id,
+            name: r.title,
+            bike: {
+              id: r.bike_id,
+              shareId: r.bike_share_id,
+              name: r.bike_name,
+            },
+            author: author(r),
+            value: Number(r.value),
+          }
+        : {
+            kind: "profile",
+            id: r.owner_id,
+            name: personName(author(r)),
+            author: author(r),
+            value: Number(r.value),
+          },
+    };
+  return result;
 }
 
 function recordDto(rule: GameRule, { eligible, holder }: HolderResult) {
@@ -240,56 +271,120 @@ function recordDto(rule: GameRule, { eligible, holder }: HolderResult) {
   };
 }
 
-export async function records(q: Queryable) {
-  const settings = await getGameSettings(q);
-  const rules = (await loadRules(q)).filter(
+// Explicit operation-local context, tied to the caller's query/transaction.
+// Never put viewer data, promises or transaction clients in a module cache.
+export interface GameContext {
+  site?: SiteDefinition;
+  settings?: GameSettings;
+  rules?: GameRule[];
+}
+export async function gameContext(
+  q: Queryable,
+): Promise<Required<GameContext>> {
+  return {
+    site: await getSite(q),
+    settings: await getGameSettings(q),
+    rules: await loadRules(q),
+  };
+}
+// Return scoring features, not full component names/notes. Match each custom
+// rule once per bike with the same normalized tokens and group precedence as
+// scoreBike. Disabled/private bikes and accessories never enter this aggregate.
+async function upgradePoints(q: Queryable, site: SiteDefinition) {
+  const rules = site.settings.scoring.rules
+    .map((r, index) => ({
+      ...r,
+      index,
+      tokens: normalizedScoreText(r.match).split(" ").filter(Boolean),
+    }))
+    .filter((r) => r.tokens.length);
+  if (!rules.length) return new Map<string, number>();
+  const rows = (
+    await q.query<{ bike_id: string; points: string }>(
+      `WITH rules AS (
+    SELECT * FROM jsonb_to_recordset($1::jsonb) AS r(index int, "groupId" text, category text, tokens jsonb, points float8)
+  ), matched AS (
+    SELECT DISTINCT p.bike_id,r.index,r.points FROM components p
+    JOIN bikes b ON b.id=p.bike_id AND b.is_public AND NOT b.leaderboard_excluded JOIN users u ON u.id=b.owner_id AND NOT u.blocked
+    CROSS JOIN rules r
+    WHERE p.section='build' AND ${scoreNamePresent("p.name")} AND (r.category='' OR r.category=p.category)
+    AND (r."groupId"='' OR r."groupId"=coalesce(
+      (SELECT g->>'id' FROM jsonb_array_elements($2::jsonb) WITH ORDINALITY AS groups(g,pos)
+       WHERE g->>'id'=p.group_id OR g->'categories' ? p.category ORDER BY (g->>'id'=p.group_id) DESC,pos LIMIT 1),'other'))
+    AND NOT EXISTS(SELECT 1 FROM jsonb_array_elements_text(r.tokens) t(token)
+      WHERE strpos(' '||trim(regexp_replace(lower(normalize(p.name,NFKC)),'[^[:alnum:]]+',' ','g'))||' ',' '||t.token||' ')=0)
+  ) SELECT bike_id,sum(points) points FROM matched GROUP BY bike_id`,
+      [JSON.stringify(rules), JSON.stringify(site.catalog.componentGroups)],
+    )
+  ).rows;
+  return new Map(rows.map((r) => [r.bike_id, Number(r.points)]));
+}
+export async function records(q: Queryable, context: GameContext = {}) {
+  const settings = context.settings || (await getGameSettings(q));
+  const rules = (context.rules || (await loadRules(q))).filter(
     (r) =>
       r.kind === "record" &&
       r.enabled &&
       metricByKey[r.metric] &&
       (settings.reactionsEnabled || !metricByKey[r.metric].reactions),
   );
-  const site = await getSite(q);
+  const site = context.site || (await getSite(q));
+  const points = rules.some((r) => r.metric === "upgrade")
+    ? await upgradePoints(q, site)
+    : new Map<string, number>();
   const bikes = rules.some((r) => r.subject === "bike")
     ? (await q.query<LeaderboardBike>(leaderboardSQL)).rows.map((b) => ({
         ...b,
-        ...scoreBike(b, site.settings.scoring, site.catalog.componentGroups),
+        upgrade: upgradeFromPoints(
+          b,
+          site.settings.scoring,
+          points.get(b.id) || 0,
+        ),
+        completeness: bikeCompleteness(
+          b.part_count,
+          !!b.cover_id,
+          site.settings.scoring,
+        ),
       }))
     : [];
-  const list: ReturnType<typeof recordDto>[] = [];
+  const scopes = new Map<string, HolderResult>();
+  const metricScopes = new Map<string, HolderPair>();
+  const list: GameRecord[] = [];
   for (const rule of rules) {
-    if (rule.subject === "ride")
-      list.push(recordDto(rule, await rideHolder(q, rule)));
-    else if (rule.subject === "user")
-      list.push(recordDto(rule, await personHolder(q, rule)));
-    else {
-      const valid = rankBikes(rule, bikes, settings),
-        b = valid[0];
-      list.push(
-        recordDto(rule, {
-          eligible: valid.length,
-          holder: b
-            ? {
-                kind: "bike",
-                id: b.id,
-                shareId: b.share_id,
-                name: b.name,
-                cover: b.photos[0]?.id || null,
-                category: b.category,
-                author: author(b),
-                value: Number(b[rule.metric as keyof typeof b]),
-              }
-            : null,
-        }),
-      );
+    const key = JSON.stringify([
+      rule.subject,
+      rule.metric,
+      rule.category,
+      rule.subject === "ride" ? rule.minDistanceKm : null,
+      rule.direction,
+    ]);
+    let result = scopes.get(key);
+    if (!result) {
+      if (rule.subject === "bike") result = bikeHolder(rule, bikes, settings);
+      else {
+        const scope = JSON.stringify([
+          rule.subject,
+          rule.metric,
+          rule.category,
+          rule.subject === "ride" ? rule.minDistanceKm : null,
+        ]);
+        let pair = metricScopes.get(scope);
+        if (!pair) {
+          pair = await metricHolders(q, rule);
+          metricScopes.set(scope, pair);
+        }
+        result = pair[rule.direction === "min" ? "min" : "max"];
+      }
+      scopes.set(key, result);
     }
+    list.push(recordDto(rule, result));
   }
   return { asOf: new Date().toISOString(), settings, records: list };
 }
 
 // Count and latest recipient share one visibility-filtered snapshot. No
 // source ride is stored for a personal award, so never guess one from activity.
-export async function awardCatalog(q: Queryable) {
+export async function awardCatalog(q: Queryable, context: GameContext = {}) {
   const recipients = new Map(
     (
       await q.query<{
@@ -335,7 +430,7 @@ export async function awardCatalog(q: Queryable) {
       },
     ]),
   );
-  return (await loadRules(q))
+  return (context.rules || (await loadRules(q)))
     .filter((r) => r.kind === "award" && r.enabled && metricByKey[r.metric])
     .map((r) => ({
       key: r.key,
@@ -393,9 +488,13 @@ export const holdsRecord = (
     ? (record.holder.kind === "bike" && record.holder.id === bikeId) ||
       (record.holder.kind === "ride" && record.holder.bike.id === bikeId)
     : record.holder.author.id === userId);
-export async function gameShelf(q: Queryable, options: ShelfOptions) {
+export async function gameShelf(
+  q: Queryable,
+  options: ShelfOptions,
+  context: GameContext = {},
+) {
   const issued = await awardShelf(q, options),
-    hall = await records(q);
+    hall = await records(q, context);
   // A profile is a collection of earned rules. A bicycle still owns its own
   // award, even when another bicycle of the same rider earned the same rule.
   // Filter after visibility checks, by stable rule key (never by its title).
@@ -438,7 +537,8 @@ async function progress(q: Queryable, rule: GameRule, userId: string) {
   return null;
 }
 export async function accountAchievements(q: Queryable, id: string) {
-  const shelf = await gameShelf(q, { userId: id, privateView: true });
+  const context = await gameContext(q);
+  const shelf = await gameShelf(q, { userId: id, privateView: true }, context);
   const earned = new Set(shelf.awards.map((a) => a.key));
   const locked: {
     key: string;
@@ -450,7 +550,7 @@ export async function accountAchievements(q: Queryable, id: string) {
     metric: string;
     progress: number | null;
   }[] = [];
-  for (const rule of (await loadRules(q)).filter(
+  for (const rule of context.rules.filter(
     (r) => r.kind === "award" && r.enabled && !earned.has(r.key),
   )) {
     const value = await progress(q, rule, id);

@@ -138,6 +138,7 @@ test("unified discovery enforces privacy, literal search, grouping, useful links
       "028_component_models",
       "029_component_community",
       "030_market_catalog_links",
+      "044_bike_week",
     ])
       await db.exec(
         await readFile(new URL(`../db/${m}.sql`, import.meta.url), "utf8"),

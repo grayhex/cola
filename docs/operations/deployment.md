@@ -50,7 +50,7 @@ curl --fail --max-time 10 http://127.0.0.1:3000/api/status
 sudo ss -lntp | grep -E ':(3000|5432|8080)\b'
 ```
 
-Ожидается только `127.0.0.1:3000` на хосте; db/resolver не имеют host ports. Runtime проверяет production-настройки, затем миграции выполняются до старта Next. Ошибка Resolver не должна выключать ручной ввод, но после `--wait` проверяйте `app`, `db`, `bike-resolver`, `chat-sync`, `activity-sync`, `notification-email` и успешное завершение `migrate`. Workers не имеют HTTP-healthcheck: их работу дополнительно проверяют по логам и очередям интеграций.
+Ожидается только `127.0.0.1:3000` на хосте; db/resolver не имеют host ports. Runtime проверяет production-настройки, затем миграции выполняются до старта Next. Ошибка Resolver не должна выключать ручной ввод, но после `--wait` проверяйте `app`, `db`, `bike-resolver`, `chat-sync`, `activity-sync`, `notification-email`, `bike-week` и успешное завершение `migrate`. Workers не имеют HTTP-healthcheck: их работу дополнительно проверяют по логам и очередям интеграций.
 
 Не печатайте `docker compose config` без `--quiet` в общедоступный лог: он раскрывает секреты. Стабильное имя Compose project определяет имена volumes; сохраните существующее имя при обновлении. Не запускайте `down -v` для исправления сборки.
 
@@ -132,7 +132,7 @@ Forced-command отклоняет всё, кроме 40-символьного S
 Установленный deploy wrapper использует ту же команду Compose и не требует замены.
 
 `migrate` единожды собирает локальный образ `${COMPOSE_PROJECT_NAME}-ops:local`.
-`chat-sync`, `activity-sync` и `notification-email` используют этот же образ без собственного build/export
+`chat-sync`, `activity-sync`, `notification-email` и `bike-week` используют этот же образ без собственного build/export
 и без pull из registry; имя изолировано именем Compose-проекта. Workers стартуют
 только после успешной миграции. На чистом хосте запускайте обычный полный `up --build` либо
 сначала `build migrate`: `up --no-build chat-sync` не создаст отсутствующий образ.
@@ -219,3 +219,7 @@ sudo cat /var/lib/colabike/verified-sha
 ### CSP rollout
 
 Compose передаёт `CSP_MODE` (по умолчанию `report-only`) и `CSP_MAP_ORIGINS` из env во время запуска. Значения не встраиваются в browser build. `enforce` включается только после матрицы совместимости и проверки живых карт; откат — `report-only`, аварийный baseline — `off`. Пересоздание app выполняет владелец стандартной процедурой deployment. Не добавляйте в nginx второй расширенный CSP, скрывающий заголовки приложения, и не кешируйте HTML с nonce. [Политика, источники, приёмник отчётов и приёмка](../architecture/security.md#content-security-policy).
+
+### Worker велосипеда недели
+
+`bike-week` использует общий ops image и стартует после миграций вместе с остальными сервисами Compose. Дополнительные env/cron не нужны. Проверка: `docker compose -f compose.prod.yaml --env-file .env.production logs --tail=20 bike-week`; штатный event — `bike_week_tick`, при ошибке — `bike_week_unavailable`. Одноразовый запуск из ops: `node scripts/bike-week.js --once`. Механика включается/настраивается в админке; worker не обращается к внешним провайдерам. После restore повторный запуск идемпотентен по неделе.

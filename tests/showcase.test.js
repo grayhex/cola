@@ -128,6 +128,7 @@ test("showcase privacy, owner/voter permissions, duplicate votes, revocation, bl
       "028_component_models",
       "029_component_community",
       "030_market_catalog_links",
+      "044_bike_week",
       "043_notification_email",
     ])
       await db.exec(
