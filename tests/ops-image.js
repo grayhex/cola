@@ -33,6 +33,7 @@ const require = createRequire(path.join(root, "package.json"));
 const scripts = [
   "activity-sync.js",
   "audit-photo-files.js",
+  "bike-week.js",
   "bootstrap-admin.js",
   "chat-setup.js",
   "chat-sync.js",
@@ -215,6 +216,19 @@ try {
         [...versions].sort(),
       );
       assert.deepEqual(await counts(q), { users: 0, bikes: 0, rides: 0 });
+      const weeklyTick = JSON.parse(
+        runScript("scripts/bike-week.js", env, ["--once"]),
+      );
+      assert.equal(weeklyTick.event, "bike_week_tick");
+      assert.equal(weeklyTick.status, "empty");
+      assert.deepEqual(
+        JSON.parse(runScript("scripts/bike-week.js", env, ["--once"])),
+        weeklyTick,
+      );
+      assert.equal(
+        (await q.query("SELECT count(*)::int n FROM bike_weeks")).rows[0].n,
+        1,
+      );
       runScript("scripts/migrate.js", env);
       assert.deepEqual(
         await history(q),
