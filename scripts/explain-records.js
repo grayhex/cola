@@ -10,7 +10,7 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
 import { records, gameShelf, leaderboardSQL } from "../lib/gamification.ts";
-import { communityHome } from "../lib/discovery.ts";
+import { communityHome, homeSnapshot } from "../lib/discovery.ts";
 import { defaultSettings, defaultCatalog } from "../lib/site-defaults.ts";
 const args = process.argv.slice(2),
   embedded = args.includes("--pglite");
@@ -122,6 +122,7 @@ try {
       );
       const paths = {
         home: (q) => communityHome(q, viewer),
+        landing: (q) => homeSnapshot(q),
         records: (q) => records(q),
         shelf: (q) => gameShelf(q, { userId: viewer }),
       };
@@ -142,7 +143,7 @@ try {
       for (const [key, run] of Object.entries(paths)) {
         let previous;
         for (const [version, fn] of [
-          ...(baseline ? [["baseline", oldPaths[key]]] : []),
+          ...(baseline && oldPaths[key] ? [["baseline", oldPaths[key]]] : []),
           ["optimized", run],
         ]) {
           for (let iteration = 0; iteration < 3; iteration++) {
@@ -201,7 +202,14 @@ try {
                 );
               assert(
                 sqlCount <=
-                  (key === "home" ? 11 : key === "shelf" ? 7 : 6) + scopes,
+                  (key === "home"
+                    ? 11
+                    : key === "landing"
+                      ? 9
+                      : key === "shelf"
+                        ? 7
+                        : 6) +
+                    scopes,
                 `${key} query budget: ${sqlCount}`,
               );
               assert(

@@ -221,7 +221,12 @@ test("Garmin import without track, chosen fields, GPX mismatch and future planni
     fullPage: true,
   });
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: planTitle })).toBeVisible();
+  await expect(
+    page
+      .getByRole("region", { name: "Последние события сообщества" })
+      .getByRole("link")
+      .filter({ hasText: planTitle }),
+  ).toBeVisible();
 });
 
 test("market publishes images and price, enters home feed, and closes a listing", async ({
@@ -358,7 +363,10 @@ test("market publishes images and price, enters home feed, and closes a listing"
   });
   await page.goto("/");
   await expect(
-    page.getByRole("heading", { name: "Gravel wheelset" }),
+    page
+      .getByRole("region", { name: "Последние события сообщества" })
+      .getByRole("link")
+      .filter({ hasText: "Gravel wheelset" }),
   ).toBeVisible();
   await page.goto(url);
   await page.getByRole("button", { name: "Отметить проданным" }).click();
@@ -371,7 +379,6 @@ test("market publishes images and price, enters home feed, and closes a listing"
 
 test("OSM thumbnails with Yandex setting, bounded design headings, SVG themes and footer versions", async ({
   page,
-  isMobile,
 }, info) => {
   const user = await register(page),
     bikeId = await bike(page);
@@ -479,14 +486,7 @@ test("OSM thumbnails with Yandex setting, bounded design headings, SVG themes an
       )
         await toggle.click();
       await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
-      if (!isMobile) {
-        const visible = page.locator("[data-hero-animation] img:visible");
-        await expect(visible).toHaveCount(1);
-        await expect(visible).toHaveAttribute(
-          "src",
-          "/api/assets/" + ids[theme === "light" ? 0 : 1],
-        );
-      }
+      await expect(page.locator("[data-hero-animation]")).toHaveCount(0);
       await noOverflow(page);
       await page.screenshot({
         path: info.outputPath("home-" + theme + ".png"),

@@ -82,36 +82,21 @@ async function image(request, name, background) {
 const noOverflow = (page) =>
   page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1);
 
-test("the home hero takes the site's accent, and its search button carries it", async ({
+test("home has a static dark marketing surface and search in the global header", async ({
   page,
 }, info) => {
-  await page.emulateMedia({ colorScheme: "light" });
   await page.goto("/");
-  const colors = await page.evaluate(() => {
-    const probe = document.createElement("div");
-    document.body.append(probe);
-    const paint = (value) => {
-      probe.style.background = value;
-      return getComputedStyle(probe).backgroundColor;
-    };
-    const result = {
-      tint: paint("color-mix(in srgb, var(--accent) 14%, var(--bg))"),
-      accent: paint("var(--accent)"),
-      hero: getComputedStyle(
-        document.querySelector(
-          'section[aria-labelledby="hero-title"] .frame-inner',
-        ),
-      ).backgroundColor,
-      button: getComputedStyle(
-        document.querySelector("[data-home-search] button"),
-      ).backgroundColor,
-    };
-    probe.remove();
-    return result;
-  });
-  expect(colors.hero).toBe(colors.tint);
-  expect(colors.button).toBe(colors.accent);
-  await page.screenshot({ path: info.outputPath("home-hero.png") });
+  await expect(page.locator("#hero-title")).toBeVisible();
+  await expect(page.locator("main input, [data-hero-animation]")).toHaveCount(
+    0,
+  );
+  await page
+    .getByRole("button", { name: "Поиск ColaBike", exact: true })
+    .click();
+  await expect(
+    page.getByRole("dialog", { name: "Поиск ColaBike" }),
+  ).toBeVisible();
+  await page.screenshot({ path: info.outputPath("home-search.png") });
 });
 
 test("the bike page: the year is a label next to size and weight; owner's actions take two rows on a phone", async ({
@@ -206,11 +191,12 @@ test("admin: the design system opens next to the admin menu; on a phone the save
   // Nothing to save on this section.
   await expect(page.locator(".admin-save")).toHaveCount(0);
   expect(await noOverflow(page)).toBe(true);
-  // «Главная»: the block takes the accent unless the administrator picks
-  // their own colours.
+  // Static hero settings still use the shared dirty/save bar.
   await page.getByRole("button", { name: "Внешний вид", exact: true }).click();
-  const background = page.getByLabel("Фон блока", { exact: true });
-  await expect(background).toHaveValue("accent");
+  await expect(
+    page.getByLabel("Фоновое изображение hero", { exact: true }),
+  ).toBeVisible();
+  const headline = page.getByRole("textbox", { name: /^Заголовок hero/ });
   await expect(page.getByLabel("Фон блока · светлая тема")).toHaveCount(0);
   const bar = page.locator(".admin-save");
   const position = () => bar.evaluate((el) => getComputedStyle(el).position);
@@ -218,8 +204,8 @@ test("admin: the design system opens next to the admin menu; on a phone the save
     expect(await position()).toBe("static");
     await expect(bar).toContainText("Изменения сохранены");
   } else expect(await position()).toBe("sticky");
-  await background.selectOption("custom");
-  await expect(page.getByLabel("Фон блока · светлая тема")).toBeVisible();
+  await headline.fill("Новые дороги.\nНовая история.");
+  await expect(headline).toHaveValue("Новые дороги.\nНовая история.");
   await expect(bar).toContainText("Есть несохранённые изменения");
   if (isMobile) {
     expect(await position()).toBe("fixed");

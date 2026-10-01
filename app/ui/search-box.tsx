@@ -8,7 +8,6 @@ import styles from "./search-box.module.css";
 export default function SearchBox({
   initialQuery = "",
   filters = {},
-  hero = false,
   contained = false,
   autoFocus = false,
   onNavigate,
@@ -16,7 +15,6 @@ export default function SearchBox({
 }: {
   initialQuery?: string;
   filters?: Record<string, string>;
-  hero?: boolean;
   contained?: boolean;
   autoFocus?: boolean;
   onNavigate?: () => void;
@@ -132,7 +130,7 @@ export default function SearchBox({
   return (
     <div
       ref={root}
-      className={`${styles.root} ${hero ? styles.hero : ""} ${contained ? styles.contained : ""}`}
+      className={`${styles.root} ${contained ? styles.contained : ""}`}
       onBlur={(e) => {
         if (e.relatedTarget && !e.currentTarget.contains(e.relatedTarget))
           setOpen(false);
@@ -142,6 +140,7 @@ export default function SearchBox({
         <Search size={21} aria-hidden="true" />
         <input
           ref={input}
+          data-autofocus={autoFocus || undefined}
           type="search"
           name="q"
           role="combobox"

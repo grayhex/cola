@@ -3,6 +3,7 @@ import { currentUser } from "../../../../lib/auth.ts";
 import { withPublicReferences } from "../../../../lib/public-response.ts";
 import {
   communityHome,
+  homeSnapshot,
   discoveryInput,
   discoverySearch,
 } from "../../../../lib/discovery.ts";
@@ -32,6 +33,9 @@ export const GET = traced(async function GET(
         );
       return json(await discoverySearch(db, parsed.data));
     }
+    const view = new URL(request.url).searchParams.get("view");
+    if (view === "landing") return json(await homeSnapshot(db));
+    if (view) return json({ error: "Неизвестный вид главной" }, 400);
     const user = await currentUser();
     return json(await communityHome(db, user?.id));
   } catch (error) {

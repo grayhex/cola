@@ -249,6 +249,7 @@ export const settingsInput = z
     backgroundDarkOpacity: z.number().int().min(0).max(100).default(20),
     backgroundLightMode: z.enum(["cover", "tile"]).default("cover"),
     backgroundDarkMode: z.enum(["cover", "tile"]).default("cover"),
+    heroBackgroundImageId: asset.default(null),
     heroAnimationsEnabled: z.boolean().default(false),
     heroImageId: asset.default(null),
     heroStageImageId: asset.default(null),
@@ -275,13 +276,13 @@ export const settingsInput = z
       .trim()
       .min(1)
       .max(150)
-      .default("Покажи свой велосипед.\nРасскажи, как он меняется."),
+      .default("Новые дороги.\nНастоящие люди."),
     heroDescription: z
       .string()
       .trim()
       .max(300)
       .default(
-        "Велосипеды, сборки, истории и покатушки людей, которым есть что показать.",
+        "ColaBike — это сообщество, маршруты, знания и вдохновение. Здесь велосипед объединяет людей и помогает открывать новые места.",
       ),
     showAboutStats: z.boolean().default(true),
     summaryPosition: z.enum(["left", "right", "below"]),

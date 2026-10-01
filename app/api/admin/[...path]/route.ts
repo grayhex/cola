@@ -259,7 +259,11 @@ async function handler(
           }
         if (p[0] === "settings") {
           const settings = value as ContractsTypes.SiteSettings;
-          for (const key of ["heroImageId", "heroStageImageId"] as const) {
+          for (const key of [
+            "heroBackgroundImageId",
+            "heroImageId",
+            "heroStageImageId",
+          ] as const) {
             if (!settings[key]) continue;
             const asset = await q.query<{ filename: string }>(
               "SELECT filename FROM site_assets WHERE id=$1",
@@ -267,8 +271,7 @@ async function handler(
             );
             if (assetFormat(asset.rows[0]?.filename) !== "image")
               return {
-                error:
-                  "Для изображения главной выберите PNG, JPEG или WebP; SVG назначьте в поле анимации",
+                error: "Для изображения главной выберите PNG, JPEG или WebP",
                 status: 400,
               };
           }

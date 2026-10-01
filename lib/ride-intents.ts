@@ -32,6 +32,10 @@ import { intentLimits } from "./ride-intent-time.ts";
 
 const activeWindow =
   "EXISTS (SELECT 1 FROM ride_intent_windows w WHERE w.intent_id=i.id AND w.ends_at>now())";
+// The public pulse only aggregates this existing community visibility scope.
+// Identities still require an active, signed-in viewer.
+export const activeCommunityIntent = (clock = "now()") =>
+  `NOT u.blocked AND i.visibility='community' AND i.status='active' AND EXISTS (SELECT 1 FROM ride_intent_windows w WHERE w.intent_id=i.id AND w.ends_at>${clock})`;
 const visible = `NOT u.blocked AND i.status<>'deleted' AND EXISTS (SELECT 1 FROM users v WHERE v.id=$1 AND NOT v.blocked)
   AND (i.owner_id=$1 OR (i.visibility='community' AND i.status='active' AND ${activeWindow}))`;
 const select = `SELECT i.*,u.name,u.username,u.avatar_id,
@@ -87,7 +91,9 @@ export async function listIntents(
   viewerId: string,
   { own = true, page = 1 } = {},
 ) {
-  const where = `${visible} AND ${own ? "i.owner_id=$1" : `i.visibility='community' AND i.status='active' AND ${activeWindow}`}`;
+  const where = own
+    ? `${visible} AND i.owner_id=$1`
+    : `${activeCommunityIntent()} AND EXISTS(SELECT 1 FROM users v WHERE v.id=$1 AND NOT v.blocked)`;
   const args = [viewerId];
   const total = Number(
     (
