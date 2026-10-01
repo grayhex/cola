@@ -11,6 +11,9 @@ const allowed = new Set(["lib/version.js"]);
 const unexpected = [];
 const runtimeErrors = [];
 for (const dir of ["app", "lib"]) await walk(dir);
+// The Next request proxy is runtime code outside app/lib, not a config file.
+for (const entry of await readdir(root))
+  if (/^proxy\.(?:[cm]?js|jsx)$/.test(entry)) unexpected.push(entry);
 if (unexpected.length) {
   console.error(
     "New production JavaScript is forbidden; use .ts/.tsx:\n" +
