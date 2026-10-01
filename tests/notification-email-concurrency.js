@@ -38,7 +38,7 @@ try {
     await a.query("BEGIN");
     const event = randomUUID();
     await a.query(
-      "INSERT INTO notifications(id,recipient_id,actor_id,type,bike_id,comment_id,dedup_key) VALUES($1,$2,$3,'comment',$4,$5,$1::text)",
+      "INSERT INTO notifications(id,recipient_id,actor_id,type,bike_id,comment_id,dedup_key) VALUES($1::uuid,$2,$3,'comment',$4,$5,$1::uuid::text)",
       [event, recipient, actor, bike, comment],
     );
     await a.query("SELECT cola_queue_notification_email($1,$2,'discussions')", [
