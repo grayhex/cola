@@ -13,11 +13,7 @@ function safeImage(value?: string) {
 }
 // Render only vendor-hosted images. Untrusted attachments cannot embed arbitrary
 // tracking pixels, documents, video players or HTML from a third-party domain.
-export function Images({
-  attachments = [],
-}: {
-  attachments?: AttachmentProps["attachments"];
-}) {
+export function Images({ attachments = [] }: AttachmentProps) {
   return attachments.map((file, i) => {
     const url =
       "type" in file &&
