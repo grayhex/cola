@@ -160,6 +160,17 @@ async function paired(page, name) {
     throw error;
   }
 }
+async function markDocument(page) {
+  const token = randomUUID();
+  // The marker belongs to this Document and disappears on a full reload.
+  await page.evaluate((token) => {
+    document.motionDocumentToken = token;
+  }, token);
+  return token;
+}
+async function documentToken(page) {
+  return page.evaluate(() => document.motionDocumentToken);
+}
 async function theme(page, value) {
   await page.addInitScript(
     (value) => localStorage.setItem("cola:theme", value),
@@ -192,13 +203,13 @@ for (const color of ["light", "dark"]) {
     const link = card.getByRole("link", { name: bike.name, exact: true });
     await link.focus();
     const scroll = await page.evaluate(() => scrollY);
-    const clock = await page.evaluate(() => performance.timeOrigin);
+    const token = await markDocument(page);
     // Hover lets Next finish its normal prefetch; there is no custom router.
     await link.hover();
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL(new RegExp(publicPath("bike", bike) + "$"));
     await expect(page.locator("main h1")).toHaveText(bike.name);
-    expect(await page.evaluate(() => performance.timeOrigin)).toBe(clock);
+    expect(await documentToken(page)).toBe(token);
     await paired(page, `cola-bike-photo-${bike.id}`);
     await page.keyboard.press("Tab");
     await expect(page.locator(":focus")).toBeVisible();
@@ -214,7 +225,7 @@ for (const color of ["light", "dark"]) {
       .toBeGreaterThanOrEqual(Math.max(0, scroll - 80));
     await page.goForward();
     await expect(page.locator("main h1")).toHaveText(bike.name);
-    expect(await page.evaluate(() => performance.timeOrigin)).toBe(clock);
+    expect(await documentToken(page)).toBe(token);
     expect(errors).toEqual([]);
   });
 }
@@ -228,11 +239,11 @@ test("journal title continues into the entry without a document reload", async (
     .getByRole("link", { name: entry.title, exact: true });
   await expect(link).toBeVisible();
   await link.hover();
-  const clock = await page.evaluate(() => performance.timeOrigin);
+  const token = await markDocument(page);
   await link.click();
   await expect(page.locator("main h1")).toHaveText(entry.title);
   await paired(page, `cola-journal-title-${entry.id}`);
-  expect(await page.evaluate(() => performance.timeOrigin)).toBe(clock);
+  expect(await documentToken(page)).toBe(token);
   await page.goBack();
   await expect(link).toBeVisible();
   await page.goForward();
@@ -264,7 +275,7 @@ test("SVG map preview opens the ride, preserves attribution links and works with
   await expect(link.locator("a")).toHaveCount(0);
   await expect(link.locator("image")).toHaveCount(0);
   await link.hover();
-  const clock = await page.evaluate(() => performance.timeOrigin);
+  const token = await markDocument(page);
   await link.click();
   await expect(page.locator("main h1")).toHaveText(ride.title);
   await paired(page, `cola-ride-title-${ride.id}`);
@@ -273,7 +284,7 @@ test("SVG map preview opens the ride, preserves attribution links and works with
     page.locator(".ride-page .ride-route path").first(),
   ).toBeVisible();
   await expect(page.locator(".ride-page .ride-route image")).toHaveCount(0);
-  expect(await page.evaluate(() => performance.timeOrigin)).toBe(clock);
+  expect(await documentToken(page)).toBe(token);
   await page.screenshot({
     path: info.outputPath("motion-ride-fallback.png"),
     fullPage: true,
