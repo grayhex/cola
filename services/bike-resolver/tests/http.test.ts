@@ -11,6 +11,28 @@ import { ManufacturerHttpClient } from "../src/http.js";
 import { withResolution } from "../src/context.js";
 const client = () =>
   new ManufacturerHttpClient(pino({ level: "silent" }), 0, 1000);
+it.each(["ENOTFOUND", "EAI_AGAIN", "ECONNREFUSED"])(
+  "preserves network error classification for %s",
+  async (code) => {
+    vi.mocked(lookup).mockRejectedValueOnce(
+      Object.assign(new Error("fixture"), { code }),
+    );
+    const http = new ManufacturerHttpClient(
+      pino({ level: "silent" }),
+      0,
+      1000,
+      undefined,
+      { attempts: 1 },
+    );
+    await expect(
+      http.get("https://cube.eu/", ["cube.eu"]),
+    ).rejects.toMatchObject({
+      reason: code === "ECONNREFUSED" ? "connection_failed" : "dns_failed",
+      retryable: true,
+    });
+    expect(fetch).not.toHaveBeenCalled();
+  },
+);
 it("Commons policy honours Retry-After without retries, identifies the client and forbids redirect downgrade", async () => {
   const backoff = vi.fn();
   const http = new ManufacturerHttpClient(

@@ -9,6 +9,29 @@ import { SettingsStore } from "../src/settings.js";
 import { ManufacturerHttpClient } from "../src/http.js";
 import { commonsFixture } from "./fixtures/component-photos.js";
 
+it("skips malformed Commons pages and images without trusting external JSON", () => {
+  const valid = commonsFixture().query.pages[1];
+  expect(
+    commonsResults({
+      query: {
+        pages: { valid, empty: null, invalid: { imageinfo: [false, null] } },
+      },
+    }),
+  ).toHaveLength(1);
+  for (const field of ["size", "width", "height", "url", "descriptionurl"])
+    expect(
+      commonsResults({
+        query: {
+          pages: [
+            { ...valid, imageinfo: [{ ...valid.imageinfo[0], [field]: {} }] },
+          ],
+        },
+      }),
+    ).toEqual([]);
+  for (const payload of [null, false, "invalid", []])
+    expect(() => commonsResults(payload)).toThrow("Commons unavailable");
+});
+
 it("Commons returns bounded plain-text attribution, safe URLs and supported licenses only", () => {
   const data = commonsFixture();
   expect(commonsResults(data)[0]).toMatchObject({

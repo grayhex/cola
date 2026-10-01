@@ -13,12 +13,28 @@ import {
   type SourceDocument,
 } from "./domain.js";
 import type { SettingsStore } from "./settings.js";
+import { jsonRecord, jsonRecords } from "./json-values.js";
+import { z } from "zod";
+
+const cubeProductSchema = z.object({
+  mainId: z.union([z.string(), z.number()]),
+  description: z.string().nullish(),
+  description2: z.string().nullish(),
+  specs: z.unknown(),
+  pictureUrl: z.string().nullish(),
+});
 
 // Public portal data used by info.cube.eu itself. No user credentials or JS execution.
-export function parseCubePayload(product: any, features: any[]) {
-  const english = (rows: any[]) => rows?.find((x) => x.languageId === 2);
+export function parseCubePayload(input: unknown, featureInput: unknown) {
+  const parsedProduct = cubeProductSchema.safeParse(input);
+  if (!parsedProduct.success || !Array.isArray(featureInput))
+    throw new ResolverError("parse_error", "CUBE public data format changed");
+  const product = parsedProduct.data;
+  const features = jsonRecords(featureInput);
+  const english = (rows: unknown) =>
+    jsonRecords(rows).find((x) => x.languageId === 2);
   const raw: Record<string, string> = Object.create(null);
-  for (const spec of product.specs || []) {
+  for (const spec of jsonRecords(product.specs)) {
     const label = english(
       features.find((f) => f.productFeatureId === spec.productSpecTypeId)
         ?.languageData,
@@ -70,13 +86,14 @@ export function parseCubePayload(product: any, features: any[]) {
 export function extractImages(doc: SourceDocument) {
   const $ = load(doc.body),
     found: string[] = [];
-  const add = (v: any) => {
+  const add = (v: unknown) => {
     if (Array.isArray(v)) {
       v.forEach(add);
       return;
     }
     if (v && typeof v === "object") {
-      add(v.url || v.contentUrl);
+      const image = jsonRecord(v);
+      add(image?.url || image?.contentUrl);
       return;
     }
     if (typeof v !== "string") return;
@@ -90,7 +107,10 @@ export function extractImages(doc: SourceDocument) {
     } catch {}
   };
   for (const p of jsonObjects($))
-    if (["Product", "ProductGroup", "Bicycle"].includes(p["@type"]))
+    if (
+      typeof p["@type"] === "string" &&
+      ["Product", "ProductGroup", "Bicycle"].includes(p["@type"])
+    )
       add(p.image);
   $('meta[property="og:image"],meta[name="twitter:image"]').each((_, e) => {
     add($(e).attr("content"));
@@ -155,10 +175,14 @@ export class ManualSources {
       ["connect-api.cube.eu"],
       headers,
     );
-    const product = JSON.parse(productDoc.body)?.[0],
-      features = JSON.parse(featureDoc.body);
-    if (!product || !Array.isArray(features))
+    const products: unknown = JSON.parse(productDoc.body),
+      features: unknown = JSON.parse(featureDoc.body);
+    const parsedProduct = cubeProductSchema.safeParse(
+      Array.isArray(products) ? products[0] : undefined,
+    );
+    if (!parsedProduct.success || !Array.isArray(features))
       throw new ResolverError("parse_error", "CUBE public data format changed");
+    const product = parsedProduct.data;
     return { product, parsed: parseCubePayload(product, features) };
   }
   rememberPhoto(url: string, page: string): string | undefined {
@@ -288,7 +312,8 @@ export class ManualSources {
     let urls = extractImages(doc);
     if (new URL(doc.url).hostname === "info.cube.eu") {
       const { product } = await this.cube(doc);
-      if (product.pictureUrl) urls = [product.pictureUrl, ...urls];
+      if (typeof product.pictureUrl === "string" && product.pictureUrl)
+        urls = [product.pictureUrl, ...urls];
     }
     for (const [id, p] of this.photos)
       if (p.expires < Date.now()) this.photos.delete(id);

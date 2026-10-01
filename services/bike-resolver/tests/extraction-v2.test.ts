@@ -1,6 +1,6 @@
 import { it, expect } from "vitest";
 import { readFileSync } from "node:fs";
-import { parseDocument } from "../src/extract.js";
+import { parseDocument, extractMetadata } from "../src/extract.js";
 import { decodeDocument } from "../src/charset.js";
 import { sourceIdentity } from "../src/source-url.js";
 import { withResolution, abortable } from "../src/context.js";
@@ -21,6 +21,39 @@ const pairs = [
   ["Fork", "Fox Rhythm"],
   ["Rear Derailleur", "Shimano XT"],
 ];
+it("handles malformed embedded rows without losing valid specification or scalar IDs", () => {
+  const result = parseDocument(
+    doc(
+      '<script type="application/ld+json">' +
+        JSON.stringify({
+          "@type": ["Product", null],
+          name: "Fixture Bike",
+          productID: 42,
+          additionalProperty: [
+            null,
+            false,
+            ...pairs.map(([name, value]) => ({ name, value })),
+          ],
+        }) +
+        "</script>",
+    ),
+  );
+  expect(result.components).toHaveLength(3);
+  expect(result.manufacturerProductId).toBe("42");
+  const meta = extractMetadata(
+    doc(
+      '<script type="application/ld+json">' +
+        JSON.stringify({
+          "@type": "Product",
+          name: "Fixture",
+          productID: {},
+          additionalProperty: [null],
+        }) +
+        "</script>",
+    ),
+  );
+  expect(meta.manufacturerProductId).toBeUndefined();
+});
 it("extracts the live Specialized semantic layout independent of generated class names", () => {
   const result = parseDocument(
     doc(

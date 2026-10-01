@@ -1,4 +1,5 @@
 import { load, type CheerioAPI } from "cheerio";
+import { jsonRecord, jsonRecords } from "./json-values.js";
 import { componentType, normalize, normalizeComponent } from "./normalize.js";
 import {
   componentText,
@@ -28,12 +29,14 @@ const excluded =
 const metadataName =
   /^(weight|net weight|вес|weight size|available sizes|sizes|размеры|wheel size|диаметр кол[её]с|color|colour|bike color|цвет|product id|model year|year|сезон|год|год выпуска)$/i;
 type Rows = { row: string; label: string; value: string };
-export function jsonObjects($: CheerioAPI): any[] {
-  const out: any[] = [];
+type DomNode = ReturnType<CheerioAPI>[number];
+export function jsonObjects($: CheerioAPI): Record<string, unknown>[] {
+  const out: Record<string, unknown>[] = [];
   let visited = 0;
-  const walk = (v: any, depth = 0) => {
+  const walk = (v: unknown, depth = 0) => {
     if (!v || typeof v !== "object" || depth > 30 || visited++ > 30000) return;
-    if (!Array.isArray(v)) out.push(v);
+    const record = jsonRecord(v);
+    if (record) out.push(record);
     for (const x of Object.values(v)) walk(x, depth + 1);
   };
   $("script:not([src])").each((_, e) => {
@@ -49,7 +52,8 @@ export function jsonObjects($: CheerioAPI): any[] {
     }
     for (const m of text.matchAll(/self\.__next_f\.push\((\[.*\])\)/g)) {
       try {
-        const chunk = JSON.parse(m[1])[1];
+        const payload: unknown = JSON.parse(m[1]);
+        const chunk: unknown = Array.isArray(payload) ? payload[1] : undefined;
         if (typeof chunk === "string")
           for (const line of chunk.split("\n")) {
             const colon = line.indexOf(":");
@@ -63,14 +67,18 @@ export function jsonObjects($: CheerioAPI): any[] {
   });
   return out;
 }
-const isProduct = (o: any) =>
+const isProduct = (o: Record<string, unknown>) =>
   [o["@type"]]
     .flat()
-    .some((t) => ["Product", "ProductGroup", "Bicycle"].includes(t));
+    .some(
+      (t) =>
+        typeof t === "string" &&
+        ["Product", "ProductGroup", "Bicycle"].includes(t),
+    );
 function metadata(
   doc: SourceDocument,
   $: CheerioAPI,
-  objects: any[],
+  objects: Record<string, unknown>[],
   options: { name?: string; year?: number | null; id?: string } = {},
 ) {
   const products = objects.filter(isProduct),
@@ -92,10 +100,11 @@ function metadata(
     options.year ||
       product?.modelYear ||
       products
-        .flatMap((p) =>
-          Array.isArray(p.additionalProperty) ? p.additionalProperty : [],
-        )
-        .find((p) => /^(model year|year)$/i.test(p.name))?.value ||
+        .flatMap((p) => jsonRecords(p.additionalProperty))
+        .find(
+          (p) =>
+            typeof p.name === "string" && /^(model year|year)$/i.test(p.name),
+        )?.value ||
       "",
   );
   const titleYear = (name + " " + $("title").text()).match(
@@ -106,13 +115,18 @@ function metadata(
     year:
       Number(yearText.match(/\b(19\d{2}|20\d{2})\b/)?.[1] || titleYear?.[1]) ||
       null,
-    manufacturerProductId:
+    manufacturerProductId: productId(
       options.id ||
-      product?.productID ||
-      product?.productGroupID ||
-      product?.sku,
+        product?.productID ||
+        product?.productGroupID ||
+        product?.sku,
+    ),
   };
 }
+const productId = (value: unknown) =>
+  typeof value === "string" || typeof value === "number"
+    ? String(value)
+    : undefined;
 export function extractMetadata(
   doc: SourceDocument,
   options: Parameters<typeof metadata>[3] = {},
@@ -128,14 +142,14 @@ function pipeline(doc: SourceDocument, rows?: Rows) {
   $('[role="tooltip"], .tooltip, .hint, script, style')
     .filter((_, el) => !$(el).is("script"))
     .remove();
-  let primarySpecTable: any = null;
+  let primarySpecTable: DomNode | null = null;
   const fields: RawField[] = [],
-    sections = new Set<any>();
+    sections = new Set<DomNode | undefined>();
   const known = (label: string) =>
     componentType(label) !== "other" || metadataName.test(label);
   const validLabel = (label: string) =>
     label.length <= 120 && !excluded.test(label);
-  const inSection = (el: any) =>
+  const inSection = (el: DomNode) =>
     $(el)
       .parents()
       .addBack()
@@ -151,8 +165,8 @@ function pipeline(doc: SourceDocument, rows?: Rows) {
     const level = Number(el.tagName?.slice(1)) || 3;
     let node = $(el).next();
     while (node.length) {
-      const tag =
-        node.get(0)?.type === "tag" ? (node.get(0) as any).tagName : "";
+      const sibling = node.get(0);
+      const tag = sibling?.type === "tag" ? sibling.tagName : "";
       if (/^h[1-6]$/.test(tag) && Number(tag.slice(1)) <= level) break;
       sections.add(node.get(0));
       node = node.next();
@@ -218,9 +232,7 @@ function pipeline(doc: SourceDocument, rows?: Rows) {
     const products = objects.filter(isProduct),
       primary =
         products.find((p) => p["@type"] === "ProductGroup") || products[0];
-    for (const v of Array.isArray(primary?.additionalProperty)
-      ? primary.additionalProperty
-      : [])
+    for (const v of jsonRecords(primary?.additionalProperty))
       if (
         typeof v.name === "string" &&
         ["string", "number", "boolean"].includes(typeof v.value)
@@ -235,7 +247,7 @@ function pipeline(doc: SourceDocument, rows?: Rows) {
         "technicalSpecifications",
       ]) {
         if (!Array.isArray(p[key])) continue;
-        for (const v of p[key]) {
+        for (const v of jsonRecords(p[key])) {
           const label = v?.name || v?.label;
           const value = v?.value || v?.description;
           if (typeof label === "string" && typeof value === "string")
