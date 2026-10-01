@@ -51,7 +51,7 @@ import {
 } from "../ui/icons.tsx";
 import { chatApi } from "./chat-api.ts";
 import NewConversation from "./new-conversation.tsx";
-import { plainText } from "./chat-content.tsx";
+import { Images, plainText } from "./chat-content.tsx";
 import { socialApi } from "../ui/social-primitives.tsx";
 import { publicPath } from "../../lib/public-urls.ts";
 import { rideTimeLabel } from "../../lib/ride-announcement.ts";
@@ -210,6 +210,8 @@ function ConversationList({
   return <div className="chat-channel-items">{children}</div>;
 }
 const components: Partial<ComponentContextValue> = {
+  // Stream v14 accepts renderer overrides through ComponentProvider, not Channel.
+  Attachment: Images,
   ChannelListHeader: () => null,
   ChannelListUI: ConversationList,
   ChannelListItemUI: ConversationRow,
