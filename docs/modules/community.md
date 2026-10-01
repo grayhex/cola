@@ -8,11 +8,11 @@
 
 ## Точки входа
 
-Публичные профили, социальная вкладка аккаунта, `/feed`, уведомления; HTTP-группы `app/api/social`, `app/api/community` и объектные маршруты bikes/rides/journal/components. [discussion.jsx](../../app/ui/discussion.tsx) и [social-primitives.jsx](../../app/ui/social-primitives.tsx) используются совместно несколькими разделами.
+Публичные профили, социальная вкладка аккаунта, `/feed`, уведомления; HTTP-группы `app/api/social`, `app/api/community` и объектные маршруты bikes/rides/journal/components. [discussion.tsx](../../app/ui/discussion.tsx) и [social-primitives.tsx](../../app/ui/social-primitives.tsx) используются совместно несколькими разделами.
 
 ## Данные и основные функции
 
-Схемы: [010_community.sql](../../db/010_community.sql), [012_rides.sql](../../db/012_rides.sql), [014_journal.sql](../../db/014_journal.sql), [015_discovery.sql](../../db/015_discovery.sql). Лента `rideFeed` обслуживает смешанную выдачу и журнал через существующий `/api/community/feed`. [entity-social.js](../../lib/entity-social.ts) выбирает известный тип объекта для общей логики комментариев; клиент не задаёт произвольные SQL-таблицы.
+Схемы: [010_community.sql](../../db/010_community.sql), [012_rides.sql](../../db/012_rides.sql), [014_journal.sql](../../db/014_journal.sql), [015_discovery.sql](../../db/015_discovery.sql). Лента `rideFeed` обслуживает смешанную выдачу и журнал через существующий `/api/community/feed`. [entity-social.ts](../../lib/entity-social.ts) выбирает известный тип объекта для общей логики комментариев; клиент не задаёт произвольные SQL-таблицы.
 
 Подписка на пользователя и подписка на велосипед — отдельные связи. Социальные показатели вычисляются из видимых/действующих объектов, а не из сохранённых публичных копий приватного содержимого.
 
@@ -36,7 +36,7 @@
 
 Поиск и импорт фотографий моделей: [источник, права, ограничения и приёмка](component-photo-search.md).
 
-`component-social.js` адаптирует существующий движок `comments.js` к устойчивой каталожной модели: те же пагинация 20/3, ответы одного уровня, tombstones, проверка автора, общие жалобы и UI. После объединения читаются обе исходные ветки, а новый ответ сохраняет FK исходного родителя.
+`component-social.ts` адаптирует существующий движок `comments.ts` к устойчивой каталожной модели: те же пагинация 20/3, ответы одного уровня, tombstones, проверка автора, общие жалобы и UI. После объединения читаются обе исходные ветки, а новый ответ сохраняет FK исходного родителя.
 
 Текущий каталог событий `notifications.type`: `follow`, `like`, `comment`, `reply`, `ride_like`, `ride_comment`, `ride_reply`, `ride_invite`, `journal_like`, `journal_comment`, `journal_reply`, `market_expiring`, **`component_reply`**. Статьи используют `journal_*` в БД и `article_*` в публичном DTO.
 

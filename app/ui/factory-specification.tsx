@@ -7,7 +7,7 @@ import { useConfirmation } from "./confirmation.tsx";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { LoaderCircle, Check, RefreshCw } from "./icons.tsx";
 import { factoryCategory } from "../../lib/factory-components.ts";
-import { componentText } from "../../services/bike-resolver/src/component-identity.js";
+import { componentText } from "../../services/bike-resolver/src/component-identity.ts";
 const messages: Record<string, string> = {
   not_found: "Комплектация не найдена. Продолжите вручную.",
   unsupported_brand: "Автозаполнение для этого производителя пока недоступно.",

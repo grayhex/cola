@@ -86,7 +86,7 @@ SolidColor (18/37), GradientStop (19/38), KeyFrameColor (37/88), согласн�
 
 React package `@rive-app/react-canvas-lite` 4.35.0 (проверен npm registry
 27.09.2026) использует Canvas lite 2.43.1: без текста, аудио и WebGL. React 19
-входит в peer range. Import находится в отдельном chunk `rive-canvas.jsx`,
+входит в peer range. Import находится в отдельном chunk `rive-canvas.tsx`,
 смонтированном только при включённой настройке и видимости через IntersectionObserver. На остальных routes
 runtime не загружается.
 

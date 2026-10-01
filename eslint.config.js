@@ -51,7 +51,7 @@ export default [
     },
   },
   {
-    files: ["app/**/*.{js,jsx,ts,tsx}"],
+    files: ["app/**/*.{ts,tsx}"],
     languageOptions: { globals: { ...globals.browser, ...globals.node } },
     plugins: { "react-hooks": reactHooks, "@next/next": nextPlugin },
     rules: {

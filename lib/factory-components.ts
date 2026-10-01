@@ -1,10 +1,10 @@
-import type { Part } from "../services/bike-resolver/src/component-identity.js";
+import type { Part } from "../services/bike-resolver/src/component-identity.ts";
 import {
   componentIdentity,
   componentText,
   splitComponentField,
   absentComponent,
-} from "../services/bike-resolver/src/component-identity.js";
+} from "../services/bike-resolver/src/component-identity.ts";
 // Localized display categories; complete original data remains in bikes.factory_spec.
 const categories: Record<string, string> = {
   frame: "Рама",

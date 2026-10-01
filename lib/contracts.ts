@@ -21,7 +21,7 @@ import type { accountOverview } from "./profiles.ts";
 import type { profileInput } from "./social-validation.ts";
 import type { settingsInput as settingsInputType } from "./admin-validation.ts";
 import type { catalogInput as catalogInputType } from "./admin-validation.ts";
-// Type-only boundaries shared by native TS and legacy JSDoc. Keep runtime
+// Type-only boundaries shared by native TS producers and consumers. Keep runtime
 // schemas/DTO mappers authoritative; these types do not validate external data.
 import type { z } from "zod";
 import type { bikeInput, componentInput, credentials } from "./validation.ts";

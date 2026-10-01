@@ -6,7 +6,7 @@ import { randomUUID } from "node:crypto";
 import { bikeInput, componentInput, uuid } from "./validation.ts";
 import { insertBike } from "./repository.ts";
 import { factoryOrigins, assignFactoryBrand } from "./factory-provenance.ts";
-import { componentIdentity } from "../services/bike-resolver/src/component-identity.js";
+import { componentIdentity } from "../services/bike-resolver/src/component-identity.ts";
 
 export const wizardInput = z.object({
   requestId: uuid,

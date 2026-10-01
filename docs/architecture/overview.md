@@ -26,13 +26,13 @@ flowchart TD
 
 Compose содержит пять долгоживущих сервисов: `app`, `db`, `bike-resolver`, `chat-sync` и `activity-sync`. Одноразовый `migrate` применяет схему перед запуском app и workers. Оба worker используют общий образ `ops`; включение и настройка провайдеров описаны в [чате](../integrations/chat.md) и [синхронизации активностей](../integrations/activity-sync.md). Nginx установлен на хосте и не входит в Compose. База физически общая, но доменные таблицы приложения и схема `bike_resolver` имеют разных владельцев логики. Отдельного Redis, брокера очередей или Elasticsearch нет: задания интеграций хранятся в PostgreSQL. Файловая очистка обслуживается `scripts/cleanup-rides.js`. Переписка и вложения Stream хранятся у провайдера, а оригиналы импортированных поездок — в локальном rides volume.
 
-Основной код — React в смешанной JS/TS-фазе миграции #256: новый production-код пишется на strict TypeScript/TSX, backend/API и core UI (shared/auth/account) проверяются единым strict typecheck; оставшийся legacy UI ещё использует JavaScript. Resolver — TypeScript/Fastify. Общие типы viewer, публичных DTO и API-границ находятся в `lib/contracts.ts`; Zod и DTO-mappers остаются runtime-источником истины. Версии зависимостей смотрите в [package.json](../../package.json), [package.json Resolver](../../services/bike-resolver/package.json) и lock-файлах; Docker-образы в [Dockerfile](../../Dockerfile) и [Compose](../../compose.prod.yaml). Не путайте Node приложения с runtime, на котором выполняется Marketplace action в CI.
+Основной код — React/Next с native strict TypeScript/TSX во всём `app/` и `lib/`. Единый root typecheck проверяет backend, HTTP, UI и общие границы; обычные JS/JSX/MJS/CJS запрещены production policy. Единственное исключение — генерируемый `lib/version.js`, его контракт — `lib/version.d.ts`. Resolver — отдельный strict TypeScript/Fastify-сервис; shared normalizer `services/bike-resolver/src/component-identity.ts` используется приложением, сервисом и workers. Общие типы viewer, публичных DTO и API-границ находятся в `lib/contracts.ts`; Zod и DTO-mappers остаются runtime-источником истины. Версии зависимостей смотрите в [package.json](../../package.json), [package.json Resolver](../../services/bike-resolver/package.json) и lock-файлах; Docker-образы в [Dockerfile](../../Dockerfile) и [Compose](../../compose.prod.yaml). Не путайте Node приложения с runtime, на котором выполняется Marketplace action в CI.
 
 ## Карта кода
 
 | Область                             | Ответственность                                                           |
 | ----------------------------------- | ------------------------------------------------------------------------- |
-| `app/**/page.jsx`, `app/layout.tsx` | Маршруты Next, общий layout, начальные настройки                          |
+| `app/**/page.tsx`, `app/layout.tsx` | Маршруты Next, общий layout, начальные настройки                          |
 | `app/ui/`                           | Клиентские компоненты, запросы, локальный черновик и состояния интерфейса |
 | `app/api/`                          | HTTP, авторизация, Origin, лимиты, входные схемы, вызов доменных функций  |
 | `lib/`                              | SQL и доменная логика, DTO, валидация, файлы, настройки, клиент Resolver  |
@@ -51,7 +51,7 @@ Compose содержит пять долгоживущих сервисов: `ap
 
 ## Граница парсера
 
-Браузер не обращается к Resolver напрямую. Запрос идёт через [bike-resolver-client.js](../../lib/bike-resolver-client.ts) и [resolver-proxy.js](../../lib/resolver-proxy.ts). Resolver возвращает результат с происхождением данных, но не создаёт пользователя, велосипед или установленные компоненты. Приложение выдаёт preview владельцу и сохраняет выбранный результат через собственные правила.
+Браузер не обращается к Resolver напрямую. Запрос идёт через [bike-resolver-client.ts](../../lib/bike-resolver-client.ts) и [resolver-proxy.ts](../../lib/resolver-proxy.ts). Resolver возвращает результат с происхождением данных, но не создаёт пользователя, велосипед или установленные компоненты. Приложение выдаёт preview владельцу и сохраняет выбранный результат через собственные правила.
 
 Недоступность Resolver ухудшает автозаполнение, но не должна блокировать ручное создание/редактирование. Подложка карты аналогично не является источником GPX-метрик: её отказ оставляет маршрут и данные поездки.
 

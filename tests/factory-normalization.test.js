@@ -4,7 +4,7 @@ import { factoryEntries } from "../lib/factory-components.ts";
 import {
   componentIdentity,
   componentText,
-} from "../services/bike-resolver/src/component-identity.js";
+} from "../services/bike-resolver/src/component-identity.ts";
 
 const part = (type, value, extra = {}) => ({
   type,
