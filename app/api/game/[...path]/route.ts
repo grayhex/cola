@@ -11,6 +11,7 @@ import {
 } from "../../../../lib/community-validation.ts";
 import {
   records,
+  gameContext,
   awardCatalog,
   gameShelf,
   accountAchievements,
@@ -50,8 +51,13 @@ async function handler(
       return fail("Недопустимый источник запроса", 403);
     const user = await currentUser();
     // Records and every award with how many people have it (#106).
-    if (p.length === 1 && p[0] === "records" && m === "GET")
-      return json({ ...(await records(db)), awards: await awardCatalog(db) });
+    if (p.length === 1 && p[0] === "records" && m === "GET") {
+      const context = await gameContext(db);
+      return json({
+        ...(await records(db, context)),
+        awards: await awardCatalog(db, context),
+      });
+    }
     if (p[0] === "profiles" && p.length === 2 && m === "GET") {
       const u = (
         await db.query<{ id: string }>(

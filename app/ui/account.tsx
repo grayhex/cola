@@ -11,6 +11,7 @@ import type { ReadonlyURLSearchParams } from "next/navigation";
 type Tab = keyof typeof tabs;
 import type * as React from "react";
 import { errorMessage } from "../../lib/errors.ts";
+import BikeWeekStory from "./bike-week-story.tsx";
 import RideAccount from "./ride-account.tsx";
 import AccountIntegrations from "./account-integrations.tsx";
 import TogetherActions from "./together-actions.tsx";
@@ -58,6 +59,7 @@ const tabIcons = {
   integrations: Cable,
   social: Users,
   achievements: Trophy,
+  spotlight: Trophy,
   appearance: Palette,
   account: Settings2,
 };
@@ -69,6 +71,7 @@ const tabs = {
   integrations: "Интеграции и импорт",
   social: "Социальное",
   achievements: "Достижения",
+  spotlight: "Велосипед недели",
   appearance: "Оформление",
   account: "Аккаунт",
 };
@@ -821,6 +824,7 @@ export default function Account() {
                   </>
                 )}
                 {tab === "rides" && <RideAccount bikes={bikes} />}
+                {tab === "spotlight" && <BikeWeekStory />}
                 {tab === "integrations" && (
                   <AccountIntegrations bikes={bikes} onImported={reload} />
                 )}

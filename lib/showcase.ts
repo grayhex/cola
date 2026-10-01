@@ -1,3 +1,4 @@
+import { classificationOf } from "./bike-classification.ts";
 import type { SiteDefinition as SiteDefinitionType } from "./contracts.ts";
 import type { Queryable as QueryableType } from "./repository.ts";
 import type { BikeRow } from "./database-rows.ts";
@@ -101,13 +102,14 @@ export async function showcase(
     sort?: string;
     ids?: string[] | null;
   } = {},
+  context?: { site: SiteDefinitionType },
 ) {
-  const site = await getSite(q);
+  const site = context?.site || (await getSite(q));
   const winners =
     selectedIds ||
     (sort === "records"
       ? // Bikes holding records; rides and riders hold theirs elsewhere.
-        (await records(q)).records
+        (await records(q, { site })).records
           .filter((r) => r.holder?.kind === "bike")
           .map((r) => r.holder!.id)
       : null);
@@ -283,4 +285,91 @@ export async function vote(
     [bikeId],
   );
   return { likes: counts.rows[0].count, liked: enabled };
+}
+
+// Homepage projection: rank the same public population and hydrate only nine
+// cards. No components, factory snapshot, prices, scoring or gallery payload.
+export async function homeShowcase(q: Queryable, viewerId?: string | null) {
+  const count = await q.query<{ total: number }>(
+    "SELECT count(*)::int total FROM bikes b JOIN users u ON u.id=b.owner_id WHERE b.is_public AND NOT u.blocked",
+  );
+  const result = await q.query<
+    Pick<
+      BikeRow,
+      | "id"
+      | "share_id"
+      | "name"
+      | "brand"
+      | "model"
+      | "category"
+      | "classification"
+      | "weight"
+      | "size"
+      | "owner_id"
+    > & {
+      author_name: string;
+      author_username: string;
+      author_avatar_id: string | null;
+      likes: number;
+      liked: boolean;
+      comments: number;
+      photo_id: string | null;
+      is_cover: boolean;
+      source_page_url: string | null;
+    }
+  >(
+    `WITH cards AS MATERIALIZED (
+    SELECT b.id,b.share_id,b.name,b.brand,b.model,b.category,b.classification,b.weight,b.size,b.owner_id,
+      u.name author_name,u.username author_username,u.avatar_id author_avatar_id,
+      (SELECT count(*)::int FROM bike_likes l JOIN users lu ON lu.id=l.user_id WHERE l.bike_id=b.id AND NOT lu.blocked) likes
+    FROM bikes b JOIN users u ON u.id=b.owner_id WHERE b.is_public AND NOT u.blocked
+    ORDER BY likes DESC,b.id LIMIT 9
+  ) SELECT b.*,EXISTS(SELECT 1 FROM bike_likes WHERE bike_id=b.id AND user_id=$1) liked,
+    (${visibleCommentCount}) comments,p.id photo_id,p.is_cover,p.source_page_url
+    FROM cards b LEFT JOIN LATERAL (
+      SELECT id,is_cover,source_page_url FROM photos WHERE bike_id=b.id ORDER BY is_cover DESC,created_at,id LIMIT 1
+    ) p ON true ORDER BY b.likes DESC,b.id`,
+    [viewerId || null],
+  );
+  const badges = result.rows.length
+    ? await cardBadges(
+        q,
+        result.rows.map((b) => b.id),
+      )
+    : new Map();
+  return {
+    total: count.rows[0].total,
+    bikes: result.rows.map((b) => ({
+      id: b.id,
+      share_id: b.share_id,
+      name: b.name,
+      brand: b.brand,
+      model: b.model,
+      category: b.category,
+      classification: classificationOf(b),
+      weight: b.weight,
+      size: b.size,
+      is_owner: b.owner_id === viewerId,
+      is_public: true,
+      author: publicAuthor({
+        id: b.owner_id,
+        name: b.author_name,
+        username: b.author_username,
+        avatar_id: b.author_avatar_id,
+      }),
+      photos: b.photo_id
+        ? [
+            {
+              id: b.photo_id,
+              is_cover: b.is_cover,
+              source_page_url: b.source_page_url,
+            },
+          ]
+        : [],
+      likes: b.likes,
+      liked: b.liked,
+      comments: b.comments,
+      badges: badges.get(b.id),
+    })),
+  };
 }

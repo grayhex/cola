@@ -163,13 +163,14 @@ test("three-column bike, raster map, six-ride accordion, preferences and grouped
     await page.goto("/admin");
     const adminGroups = page.getByRole("tablist", { name: "Группы админки" });
     await expect(adminGroups).toHaveAttribute("aria-orientation", "vertical");
-    await expect(adminGroups.getByRole("tab")).toHaveCount(5);
+    await expect(adminGroups.getByRole("tab")).toHaveCount(6);
     await page.getByRole("button", { name: "Карта", exact: true }).click();
     await page.getByLabel("Подключать подложку").uncheck();
     await page.getByRole("button", { name: "Сохранить", exact: true }).click();
     await expect(page.getByRole("status")).toHaveText(
       "Настройки опубликованы на сайте",
     );
+    const home = adminGroups.getByRole("tab", { name: "Главная", exact: true });
     const system = adminGroups.getByRole("tab", {
       name: "Система",
       exact: true,
@@ -200,9 +201,10 @@ test("three-column bike, raster map, six-ride accordion, preferences and grouped
     for (const [key, target] of [
       ["ArrowUp", system],
       ["End", catalog],
-      ["ArrowDown", system],
+      ["ArrowDown", home],
       ["ArrowUp", catalog],
-      ["Home", system],
+      ["Home", home],
+      ["ArrowDown", system],
       ["ArrowDown", design],
     ]) {
       await page.keyboard.press(key);
@@ -239,6 +241,9 @@ test("three-column bike, raster map, six-ride accordion, preferences and grouped
       }),
     ).toBeVisible();
     await page.keyboard.press("Home");
+    await expect(home).toBeFocused();
+    await page.keyboard.press("ArrowDown");
+    await expect(system).toBeFocused();
     await page.keyboard.press("ArrowDown");
     await expect(design).toBeFocused();
     await page.keyboard.press("Enter");

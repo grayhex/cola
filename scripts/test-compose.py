@@ -55,3 +55,10 @@ assert s["notification-email"]["environment"] == s["app"]["environment"]
 assert s["notification-email"]["command"] == ["node", "scripts/notification-email.js"]
 assert s["notification-email"]["depends_on"]["migrate"]["condition"] == "service_completed_successfully"
 assert not s["notification-email"].get("ports")
+
+assert s["bike-week"]["image"] == s["migrate"]["image"]
+assert s["bike-week"]["pull_policy"] == "never"
+assert s["bike-week"]["environment"] == s["app"]["environment"]
+assert s["bike-week"]["command"] == ["node", "scripts/bike-week.js"]
+assert s["bike-week"]["depends_on"]["migrate"]["condition"] == "service_completed_successfully"
+assert not s["bike-week"].get("ports")

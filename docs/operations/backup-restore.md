@@ -26,7 +26,7 @@ sudo env \
 
 ## Что происходит во время backup
 
-Скрипт берёт общий `/var/lock/colabike-deploy.lock`, запоминает запущенные `app`, `bike-resolver`, `chat-sync`, `activity-sync` и `notification-email`, останавливает этих писателей, оставляет БД для `pg_dump` и архивирует volumes через текущий app image. Нужен ровно один app container для `volumes-from`. Другие внешние писатели должны быть остановлены оператором.
+Скрипт берёт общий `/var/lock/colabike-deploy.lock`, запоминает запущенные `app`, `bike-resolver`, `chat-sync`, `activity-sync`, `notification-email` и `bike-week`, останавливает этих писателей, оставляет БД для `pg_dump` и архивирует volumes через текущий app image. Нужен ровно один app container для `volumes-from`. Другие внешние писатели должны быть остановлены оператором.
 
 После проверки checksums временный приватный каталог публикуется атомарным переименованием. При ошибке частичный backup не считается успешным. Ранее работавшие сервисы возобновляются в finally. Retention удаляет только валидные каталоги собственного формата сверх `--keep`.
 

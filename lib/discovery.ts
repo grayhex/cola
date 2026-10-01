@@ -1,3 +1,4 @@
+import { currentBikeWeek } from "./bike-week.ts";
 import type { Classification as ClassificationType } from "./contracts.ts";
 interface ActivityRow {
   type: string;
@@ -21,7 +22,7 @@ import {
   classificationOf,
 } from "./bike-classification.ts";
 import { z } from "zod";
-import { showcase } from "./showcase.ts";
+import { homeShowcase } from "./showcase.ts";
 import { records } from "./gamification.ts";
 import { homeRecords } from "./gamification-presentation.ts";
 import { journalPublic, journalFrom } from "./journal.ts";
@@ -252,54 +253,16 @@ export async function communityHome(
   q: Queryable,
   viewer: string | null | undefined = null,
 ) {
-  const [popular, activity, hall] = await Promise.all([
-    showcase(q, viewer, { sort: "popular" }),
+  const [popular, activity, hall, bikeOfWeek] = await Promise.all([
+    homeShowcase(q, viewer),
     communityActivity(q),
     records(q),
+    currentBikeWeek(q),
   ]);
   return {
-    popular: popular.bikes
-      .slice(0, 9)
-      .map(
-        ({
-          id,
-          share_id,
-          name,
-          brand,
-          model,
-          category,
-          classification,
-          weight,
-          size,
-          photos,
-          author,
-          likes,
-          liked,
-          comments,
-          badges,
-          is_owner,
-          is_public,
-        }) => ({
-          id,
-          share_id,
-          name,
-          brand,
-          model,
-          category,
-          classification,
-          weight,
-          size,
-          is_owner,
-          is_public,
-          photos: photos.slice(0, 1),
-          author,
-          likes,
-          liked,
-          comments,
-          badges,
-        }),
-      ),
+    popular: popular.bikes,
     totalBikes: popular.total,
+    bikeOfWeek,
     ...activity,
     records: homeRecords(hall.records),
   };

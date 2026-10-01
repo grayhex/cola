@@ -75,7 +75,7 @@ const from = ` FROM notifications n LEFT JOIN users a ON a.id=n.actor_id
  LEFT JOIN component_comments cc ON cc.id=n.component_comment_id`;
 const visible = (
   clock = "now()",
-) => `n.recipient_id=$1 AND ((n.type='market_expiring' AND ml.owner_id=n.recipient_id) OR ${rideNoticeVisible(clock)} OR NOT a.blocked AND (
+) => `n.recipient_id=$1 AND ((n.type='bike_week' AND b.owner_id=n.recipient_id AND b.is_public AND NOT o.blocked AND NOT b.leaderboard_excluded AND EXISTS(SELECT 1 FROM bike_weeks w WHERE w.bike_id=b.id AND w.owner_id=n.recipient_id AND w.status='selected' AND w.week_start=date_trunc('week',(${clock}) AT TIME ZONE 'Europe/Moscow')::date AND n.dedup_key='bike_week:'||w.week_start::text||':'||b.id::text)) OR (n.type='market_expiring' AND ml.owner_id=n.recipient_id) OR ${rideNoticeVisible(clock)} OR NOT a.blocked AND (
  (n.type='component_reply' AND cm.first_public_at IS NOT NULL AND cc.deleted_at IS NULL AND cc.author_id=n.actor_id) OR
  (n.type='follow' AND EXISTS(SELECT 1 FROM user_follows f WHERE f.follower_id=n.actor_id AND f.following_id=n.recipient_id)) OR
  (b.is_public AND NOT o.blocked AND (
@@ -145,79 +145,94 @@ export async function notificationPage(
   );
   return {
     notifications: r.rows.slice(0, 20).map((n) =>
-      n.type === "market_expiring"
-        ? marketNotice(n)
-        : {
+      n.type === "bike_week"
+        ? {
             id: n.id,
-            type:
-              n.entry_kind === "article"
-                ? n.type.replace("journal_", "article_")
-                : n.type,
+            type: "bike_week" as const,
             createdAt: n.created_at,
             readAt: n.read_at,
-            actor: n.actor_id
-              ? publicAuthor({
-                  id: n.actor_id,
-                  username: n.username,
-                  name: n.name,
-                  avatar_id: n.avatar_id,
-                })
-              : null,
-            target:
-              n.type === "component_reply"
-                ? {
-                    type: "component",
-                    id: n.component_id,
-                    name: n.component_name,
-                    href:
-                      partLandingPath(n.category_slug, n.slug) +
-                      "?comment=" +
-                      n.component_comment_id +
-                      "#discussion",
-                  }
-                : n.type.startsWith("journal_")
+            actor: null,
+            target: {
+              type: "bike-week" as const,
+              id: n.bike_id,
+              name: n.bike_name,
+              href: "/account?tab=spotlight",
+            },
+          }
+        : n.type === "market_expiring"
+          ? marketNotice(n)
+          : {
+              id: n.id,
+              type:
+                n.entry_kind === "article"
+                  ? n.type.replace("journal_", "article_")
+                  : n.type,
+              createdAt: n.created_at,
+              readAt: n.read_at,
+              actor: n.actor_id
+                ? publicAuthor({
+                    id: n.actor_id,
+                    username: n.username,
+                    name: n.name,
+                    avatar_id: n.avatar_id,
+                  })
+                : null,
+              target:
+                n.type === "component_reply"
                   ? {
-                      type: n.entry_kind === "article" ? "article" : "journal",
-                      id: n.entry_id,
-                      name: n.entry_title,
+                      type: "component",
+                      id: n.component_id,
+                      name: n.component_name,
                       href:
-                        (n.entry_kind === "article" ? "/articles/" : "/j/") +
-                        n.entry_share +
-                        (n.entry_comment_id
-                          ? "?comment=" + n.entry_comment_id + "#discussion"
-                          : ""),
+                        partLandingPath(n.category_slug, n.slug) +
+                        "?comment=" +
+                        n.component_comment_id +
+                        "#discussion",
                     }
-                  : n.type.startsWith("ride_")
+                  : n.type.startsWith("journal_")
                     ? {
-                        type: "ride",
-                        id: n.ride_id,
-                        name: n.ride_title,
+                        type:
+                          n.entry_kind === "article" ? "article" : "journal",
+                        id: n.entry_id,
+                        name: n.entry_title,
                         href:
-                          "/r/" +
-                          n.ride_share_id +
-                          (n.ride_comment_id
-                            ? "?comment=" + n.ride_comment_id + "#discussion"
+                          (n.entry_kind === "article" ? "/articles/" : "/j/") +
+                          n.entry_share +
+                          (n.entry_comment_id
+                            ? "?comment=" + n.entry_comment_id + "#discussion"
                             : ""),
                       }
-                    : n.type === "follow"
+                    : n.type.startsWith("ride_")
                       ? {
-                          type: "profile",
-                          id: n.actor_id,
-                          name: n.name,
-                          href: profilePath(n.username),
-                        }
-                      : {
-                          type: "bike",
-                          id: n.bike_id,
-                          name: n.bike_name,
+                          type: "ride",
+                          id: n.ride_id,
+                          name: n.ride_title,
                           href:
-                            "/b/" +
-                            n.share_id +
-                            (n.comment_id
-                              ? "?comment=" + n.comment_id + "#discussion"
+                            "/r/" +
+                            n.ride_share_id +
+                            (n.ride_comment_id
+                              ? "?comment=" + n.ride_comment_id + "#discussion"
                               : ""),
-                        },
-          },
+                        }
+                      : n.type === "follow"
+                        ? {
+                            type: "profile",
+                            id: n.actor_id,
+                            name: n.name,
+                            href: profilePath(n.username),
+                          }
+                        : {
+                            type: "bike",
+                            id: n.bike_id,
+                            name: n.bike_name,
+                            href:
+                              "/b/" +
+                              n.share_id +
+                              (n.comment_id
+                                ? "?comment=" + n.comment_id + "#discussion"
+                                : ""),
+                          },
+            },
     ),
     page,
     hasMore: r.rows.length > 20,
@@ -229,7 +244,7 @@ export async function notificationPage(
 function marketNotice(n: NotificationRow) {
   return {
     id: n.id,
-    type: n.type,
+    type: "market_expiring" as const,
     createdAt: n.created_at,
     readAt: n.read_at,
     actor: null,

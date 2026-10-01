@@ -35,30 +35,10 @@ const base = {
 };
 async function setup() {
   const db = new PGlite();
-  for (const m of [
-    "001_initial",
-    "002_admin",
-    "003_factory_spec",
-    "004_garage_layout",
-    "005_bike_wizard",
-    "007_showcase",
-    "008_beta_limits",
-    "009_social_core",
-    "010_community",
-    "011_gamification",
-    "012_rides",
-    "014_journal",
-    "015_discovery",
-    "016_product_ui",
-    "017_rides_market",
-    "018_articles_rsvp",
-    "020_bike_classification",
-    "026_market_expiry",
-    "027_game_rules",
-    "028_component_models",
-    "029_component_community",
-    "030_market_catalog_links",
-  ])
+  for (const m of (await readdir(new URL("../db/", import.meta.url)))
+    .filter((f) => f.endsWith(".sql"))
+    .sort()
+    .map((f) => f.slice(0, -4)))
     await db.exec(
       await readFile(new URL("../db/" + m + ".sql", import.meta.url), "utf8"),
     );

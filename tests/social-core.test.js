@@ -38,22 +38,10 @@ async function setup(social = true) {
   const db = new PGlite();
   for (const m of migrations) await db.exec(await sql(m));
   if (social) {
-    await db.exec(await sql("009_social_core"));
-    await db.exec(await sql("010_community"));
-    await db.exec(await sql("011_gamification"));
-    await db.exec(await sql("012_rides"));
-    await db.exec(await sql("014_journal"));
-    await db.exec(await sql("015_discovery"));
-    await db.exec(await sql("016_product_ui"));
-    await db.exec(await sql("017_rides_market"));
-    await db.exec(await sql("018_articles_rsvp"));
-    await db.exec(await sql("020_bike_classification"));
-    await db.exec(await sql("026_market_expiry"));
-    await db.exec(await sql("027_game_rules"));
-    await db.exec(await sql("028_component_models"));
-    await db.exec(await sql("029_component_community"));
-    await db.exec(await sql("030_market_catalog_links"));
-    await db.exec(await sql("043_notification_email"));
+    for (const file of (await readdir(new URL("../db/", import.meta.url)))
+      .filter((f) => f.endsWith(".sql") && f >= "009")
+      .sort())
+      await db.exec(await sql(file.slice(0, -4)));
   }
   await db.query("INSERT INTO site_settings(id,value) VALUES(1,$1)", [
     JSON.stringify(defaultSettings),

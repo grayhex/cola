@@ -913,3 +913,97 @@ test("profile shelves group repeated bicycle awards by rule key after visibility
     await q.close();
   }
 });
+
+test("compact record features preserve configured scoring and Unicode completeness without component/gallery payloads", async () => {
+  const q = await setup();
+  try {
+    const owner = await rider(q, "feature-score"),
+      id = await bike(q, owner);
+    const parts = [
+      ["build", "Переключатель", "  SHIMANO—Di2  ", "drivetrain"],
+      ["build", "переключатель", "shimano di2", "drivetrain"],
+      ["build", "Руль", "Ｃａｒｂｏｎ bar", "invalid"],
+      ["build", "Рама", "\u00a0\t\n", "frame"],
+      ["accessories", "Фонарь", "Shimano Di2", "other"],
+    ];
+    for (const [section, category, name, group] of parts)
+      await q.query(
+        "INSERT INTO components(id,bike_id,section,category,name,group_id) VALUES($1,$2,$3,$4,$5,$6)",
+        [randomUUID(), id, section, category, name, group],
+      );
+    const scoring = {
+      ...defaultSettings.scoring,
+      componentTarget: 3,
+      photoPoints: 40,
+      rules: [
+        {
+          groupId: "drivetrain",
+          category: "",
+          match: "shimano di2",
+          points: 7,
+        },
+        { groupId: "cockpit", category: "Руль", match: "carbon", points: 9 },
+        { groupId: "other", category: "", match: "shimano", points: 20 },
+        { groupId: "", category: "", match: "!!!", points: 50 },
+      ],
+    };
+    await q.query(
+      "UPDATE site_settings SET value=jsonb_set(value,'{scoring}',$1)",
+      [scoring],
+    );
+    await q.query(
+      "UPDATE gamification_settings SET value=jsonb_set(value,'{minimumCompleteness}','0')",
+    );
+    const { scoreBike } = await import("../lib/bike-score.ts");
+    const expected = scoreBike(
+      {
+        category: "road",
+        weight: 10,
+        price: 10000,
+        show_bike_price: true,
+        components: parts.map(([section, category, name, group_id]) => ({
+          section,
+          category,
+          name,
+          group_id,
+        })),
+        photos: [{}],
+      },
+      scoring,
+      defaultCatalog.componentGroups,
+    );
+    const queries = [];
+    const measured = {
+      query: async (sql, params) => {
+        queries.push(sql);
+        return q.query(sql, params);
+      },
+    };
+    const hall = await records(measured);
+    assert.equal(holder(hall, "upgrade").value, expected.upgrade);
+    assert.equal(holder(hall, "complete").value, expected.completeness);
+    const raw = (await q.query(leaderboardSQL)).rows[0];
+    assert(!Object.hasOwn(raw, "components"));
+    assert(!Object.hasOwn(raw, "photos"));
+    assert.equal(
+      queries.filter((sql) => sql.includes("FROM site_settings")).length,
+      1,
+    );
+    const originalQueries = queries.length;
+    queries.length = 0;
+    await q.query(
+      "INSERT INTO game_rules(key,kind,subject,metric,direction,name) SELECT 'duplicate_'||n,'record','user','total_distance',CASE WHEN n%2=0 THEN 'min' ELSE 'max' END,'Duplicate '||n FROM generate_series(1,30) n",
+    );
+    await records(measured);
+    assert(
+      queries.length <= originalQueries + 1,
+      "rules with the same scope share one metric query across min/max",
+    );
+    await q.query("UPDATE bikes SET show_bike_price=false WHERE id=$1", [id]);
+    assert.equal(holder(await records(q), "expensive"), null);
+    await q.query("UPDATE users SET blocked=true WHERE id=$1", [owner]);
+    assert((await records(q)).records.every((r) => !r.holder));
+  } finally {
+    await q.close();
+  }
+});

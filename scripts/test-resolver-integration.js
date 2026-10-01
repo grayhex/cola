@@ -203,6 +203,7 @@ try {
             ? [
                 "tests/notification-email-concurrency.js",
                 "tests/ride-notifications-concurrency.js",
+                "tests/bike-week-concurrency.js",
               ]
             : []),
           ...(externalDatabase ? ["tests/quota-http.js"] : []),

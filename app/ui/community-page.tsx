@@ -498,6 +498,23 @@ export default function CommunityPage({
                     onExtend={() => extend(n)}
                     onRead={() => read(n.id).catch((e) => setError(e.message))}
                   />
+                ) : n.type === "bike_week" ? (
+                  <li key={n.id} className={n.readAt ? "" : "unread"}>
+                    <div>
+                      <p>Ваш велосипед — велосипед недели: {n.target.name}</p>
+                      <Link
+                        href={n.target.href}
+                        onClick={() => {
+                          read(n.id).catch(() => {});
+                        }}
+                      >
+                        Подготовить материал для главной
+                      </Link>
+                      <time dateTime={n.createdAt}>
+                        {noticeTime(n.createdAt)}
+                      </time>
+                    </div>
+                  </li>
                 ) : (
                   <li key={n.id} className={n.readAt ? "" : "unread"}>
                     {n.actor && (

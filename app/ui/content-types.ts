@@ -129,7 +129,10 @@ export type NotificationPageDto = JsonData<
   Awaited<ReturnType<typeof notificationPage>>
 >;
 export type NotificationDto = NotificationPageDto["notifications"][number];
-export type MarketNoticeDto = Extract<NotificationDto, { actor: null }>;
+export type MarketNoticeDto = Extract<
+  NotificationDto,
+  { actor: null; type: "market_expiring" }
+>;
 export type CommentDto = JsonData<ReturnType<typeof commentDto>>;
 export type CommentPageDto = JsonData<Awaited<ReturnType<typeof commentPage>>>;
 export type ReplyPageDto = JsonData<Awaited<ReturnType<typeof replyPage>>>;
