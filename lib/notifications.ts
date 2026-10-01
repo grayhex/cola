@@ -256,7 +256,7 @@ export async function readNotifications(
   id: string | null = null,
 ) {
   const r = await q.query<{ id: string }>(
-    "UPDATE notifications SET read_at=coalesce(read_at,now()) WHERE recipient_id=$1 AND (($2::uuid IS NULL AND read_at IS NULL) OR id=$2) RETURNING id",
+    "UPDATE notifications SET read_at=coalesce(read_at,now()) WHERE recipient_id=$1 AND deliver_after<=now() AND (($2::uuid IS NULL AND read_at IS NULL) OR id=$2) RETURNING id",
     [userId, id],
   );
   return id ? !!r.rowCount : true;

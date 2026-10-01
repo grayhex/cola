@@ -180,6 +180,50 @@ try {
     1,
   );
   assert(sent.at(-1).subject.includes("отменена"));
+  // "Read all" consumes current notices, not the durable future schedule.
+  assert.equal((await rider("account/notifications", "PATCH", on)).status, 200);
+  const future = new Date(
+    Math.ceil((Date.now() + 48 * 3600000) / 60000) * 60000,
+  ).toISOString();
+  const planned = await owner("rides/plan", "POST", {
+    ...fields,
+    isPublic: true,
+    invitations: [],
+    scheduledAt: future,
+  });
+  assert.equal(planned.status, 201);
+  assert.equal(
+    (
+      await rider(`rides/${planned.body.id}/rsvp`, "PATCH", {
+        response: "accepted",
+        occurrenceAt: future,
+      })
+    ).status,
+    200,
+  );
+  assert.equal(
+    (await rider("community/notifications/read-all", "PATCH", {})).status,
+    200,
+  );
+  assert.equal(
+    (
+      await q.query(
+        "SELECT read_at FROM notifications WHERE ride_id=$1 AND type='ride_reminder'",
+        [planned.body.id],
+      )
+    ).rows[0].read_at,
+    null,
+  );
+  assert.equal(
+    (
+      await runNotificationEmailBatch(q, {
+        now: new Date(+new Date(future) - 24 * 3600000),
+        send: async (m) => sent.push(m),
+      })
+    ).sent,
+    1,
+  );
+  assert(sent.at(-1).subject.includes("Напоминание"));
   assert(
     !JSON.stringify(
       (
@@ -191,7 +235,7 @@ try {
     ).includes("SECRET HOME"),
   );
   console.log(
-    "Ride notifications HTTP: isolated preferences, default reminder, RSVP idempotency, private access, reconfirmation and cancellation passed.",
+    "Ride notifications HTTP: isolated preferences, default reminder, RSVP idempotency, private access, reconfirmation, cancellation and future read-all passed.",
   );
 } finally {
   await q.query("DELETE FROM users WHERE id=ANY($1::uuid[])", [

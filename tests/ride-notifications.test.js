@@ -13,7 +13,7 @@ import {
   rideEdit,
   rideDetail,
 } from "../lib/rides.ts";
-import { notificationPage } from "../lib/notifications.ts";
+import { notificationPage, readNotifications } from "../lib/notifications.ts";
 import { saveNotificationEmail } from "../lib/notification-preferences.ts";
 import { runNotificationEmailBatch } from "../lib/notification-email.ts";
 import { releaseRideReminders, rideNotice } from "../lib/ride-notifications.ts";
@@ -246,6 +246,19 @@ test("one default reminder, fake clock, late join, downtime and SMTP-disabled in
     const before = new Date(+new Date(start) - 24 * hour - 1),
       due = new Date(+before + 1),
       mail = [];
+    await readNotifications(s.db, s.rider);
+    const scheduled = (
+      await s.db.query(
+        "SELECT id,read_at FROM notifications WHERE ride_id=$1 AND type='ride_reminder'",
+        [ride.id],
+      )
+    ).rows[0];
+    assert.equal(
+      scheduled.read_at,
+      null,
+      "read-all cannot consume a future reminder",
+    );
+    assert.equal(await readNotifications(s.db, s.rider, scheduled.id), false);
     assert.equal(
       (
         await runNotificationEmailBatch(s.db, {

@@ -155,8 +155,23 @@ try {
     await tx((q) => respondRide(q, cancelled.id, rider, "accepted", start));
     await releaseRideReminders(b);
     await pool.query(
-      "UPDATE notification_email_preferences SET next_delivery_at=now() WHERE user_id=$1",
+      "UPDATE notification_email_preferences SET next_delivery_at=now()-interval '1 minute' WHERE user_id=$1",
       [rider],
+    );
+    // PostgreSQL's microsecond now() may be ahead of Node's millisecond clock
+    // in the same tick. Place the fixture unequivocally inside the due window.
+    await pool.query(
+      "UPDATE notification_email_outbox SET available_at=now()-interval '1 minute' WHERE recipient_id=$1 AND status='pending'",
+      [rider],
+    );
+    assert.equal(
+      (
+        await pool.query(
+          "SELECT status FROM notification_email_outbox o JOIN notifications n ON n.id=o.notification_id WHERE n.ride_id=$1 AND n.type='ride_reminder'",
+          [cancelled.id],
+        )
+      ).rows[0]?.status,
+      "pending",
     );
     const [lease] = await claimNotificationEmails(b);
     assert(lease);
@@ -179,7 +194,7 @@ try {
       0,
     );
     await pool.query(
-      "UPDATE notification_email_preferences SET next_delivery_at=now() WHERE user_id=$1",
+      "UPDATE notification_email_preferences SET next_delivery_at=now()-interval '1 minute' WHERE user_id=$1",
       [rider],
     );
     const messages = [];
