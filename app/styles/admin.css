@@ -298,6 +298,25 @@
     gap: var(--space-1);
     margin-bottom: var(--space-2);
   }
+  .catalog-model-row {
+    grid-template-columns: minmax(0, 1fr) max-content;
+    gap: var(--space-3);
+  }
+  .catalog-model-row > div {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .catalog-model-row > button {
+    white-space: nowrap;
+  }
+  @media (max-width: 480px) {
+    .catalog-model-row {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .catalog-model-row > button {
+      justify-self: start;
+    }
+  }
   .icon-picker {
     display: flex;
     align-items: center;

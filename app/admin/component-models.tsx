@@ -158,7 +158,7 @@ export default function ComponentModels({
         <>
           {!data.items.length && <p>Модели не найдены.</p>}
           {data.items.map((m) => (
-            <div className="list-row" key={m.id}>
+            <div className="list-row catalog-model-row" key={m.id}>
               <div>
                 <Link href={m.path}>{m.name}</Link>
                 <p className="help">

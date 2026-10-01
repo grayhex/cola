@@ -112,9 +112,47 @@ try {
   const reply = (await a(comments, "POST", { body: "Answer", parentId: c }))
     .body.id;
   assert(reply);
+  const nested = await b(comments, "POST", { body: "Nested", parentId: reply });
+  assert.equal(nested.status, 201);
   assert.equal(
-    (await b(comments, "POST", { body: "Nested", parentId: reply })).status,
-    400,
+    (await guest(comments + "/" + reply + "/replies")).body.comments[0].id,
+    nested.body.id,
+  );
+  const deep = await a(comments, "POST", {
+    body: "Fourth level",
+    parentId: nested.body.id,
+  });
+  assert.equal(deep.status, 201);
+  const focused = (await guest(comments + "?focus=" + deep.body.id)).body;
+  assert.deepEqual(
+    focused.focusPath.map((n) => n.id),
+    [c, reply, nested.body.id, deep.body.id],
+  );
+  assert.equal(focused.focusPath.at(-1).parentId, nested.body.id);
+  await a("community/comments/" + deep.body.id, "DELETE");
+  assert.equal(
+    (
+      await b(comments, "POST", {
+        body: "Deleted deep",
+        parentId: deep.body.id,
+      })
+    ).status,
+    404,
+  );
+  await db.query("UPDATE users SET blocked=true WHERE id=$1", [ids[1]]);
+  assert.equal(
+    (
+      await a(comments, "POST", {
+        body: "Blocked deep",
+        parentId: nested.body.id,
+      })
+    ).status,
+    404,
+  );
+  await db.query("UPDATE users SET blocked=false WHERE id=$1", [ids[1]]);
+  assert.equal(
+    (await b("community/comments/" + nested.body.id, "DELETE")).status,
+    200,
   );
   let events = (await a("community/notifications")).body;
   assert.equal(events.unread, 3);

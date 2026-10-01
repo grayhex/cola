@@ -1,4 +1,5 @@
 "use client";
+import PlanningGraphic from "./planning-graphic.tsx";
 import { errorMessage } from "../../lib/errors.ts";
 import type { ReactNode } from "react";
 import type { AccountBikeDto } from "../../lib/contracts.ts";
@@ -83,6 +84,7 @@ export default function PlanComposer({
   return (
     <>
       <Modal
+        graphic={<PlanningGraphic slot="planDialogGraphic" />}
         wide
         title={
           title || (ride ? "Изменить покатушку" : "Организовать покатушку")

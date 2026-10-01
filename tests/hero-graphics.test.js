@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { siteAssetIds, siteAssetUsage } from "../lib/site-assets.ts";
 import { migrateHeroGraphics } from "../lib/hero-graphics.ts";
 import { prepareRive } from "../lib/rive-upload.ts";
 import { settingsInput } from "../lib/admin-validation.ts";
@@ -139,4 +140,35 @@ test("site read upgrades old fields but an explicit new assignment wins", async 
   assert.equal(site.settings.heroAnimationsEnabled, true);
   assert.equal("heroGraphicMode" in site.settings, false);
   assert.equal("heroAnimationLightId" in site.settings, false);
+});
+
+test("planning graphics are independent local typed references and protect published assets", () => {
+  const image = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    rive = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+  const settings = settingsInput.parse({
+    ...defaultSettings,
+    intentDialogGraphic: { kind: "image", assetId: image },
+    planDialogGraphic: { kind: "rive", assetId: rive },
+  });
+  assert.deepEqual(siteAssetIds(settings), [image, rive]);
+  assert.deepEqual(siteAssetUsage(settings)[image], [
+    "Новое намерение · графика",
+  ]);
+  assert.deepEqual(siteAssetUsage(settings)[rive], [
+    "Организовать покатушку · графика",
+  ]);
+  for (const key of ["intentDialogGraphic", "planDialogGraphic"]) {
+    assert(
+      settingsInput.safeParse({
+        ...settings,
+        [key]: { kind: "svg", assetId: image },
+      }).success,
+    );
+    for (const graphic of [
+      { kind: "video", assetId: image },
+      { kind: "image", assetId: "https://example.test/a.png" },
+      { kind: "rive", assetId: rive, url: "https://example.test/a.riv" },
+    ])
+      assert(!settingsInput.safeParse({ ...settings, [key]: graphic }).success);
+  }
 });

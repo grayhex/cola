@@ -295,15 +295,18 @@ test("component media and shared discussion: upgrade, roles, quota, merges, mode
         body: "Мне подходит",
       }),
     );
-    await denied(
-      tx((q) =>
-        componentSocial.create(q, model, other, {
-          parentId: reply.id,
-          body: "Too deep",
-        }),
-      ),
-      400,
+    const nested = await tx((q) =>
+      componentSocial.create(q, model, other, {
+        parentId: reply.id,
+        body: "Nested",
+      }),
     );
+    assert.equal(
+      (await componentSocial.replies(db, model, reply.id, other)).comments[0]
+        .id,
+      nested.id,
+    );
+    await tx((q) => componentSocial.change(q, nested.id, other));
     await tx((q) =>
       componentSocial.create(q, model, stranger, {
         parentId: root.id,

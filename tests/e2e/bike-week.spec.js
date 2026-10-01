@@ -68,14 +68,11 @@ test("weekly feature: server permissions, admin choice, service notice, owner pr
       (
         await page.request.post(`/api/bikes/${bikeId}/photos`, {
           headers: { origin, "Content-Type": "image/png" },
-          data: await sharp({
-            create: {
-              width: 600,
-              height: 400,
-              channels: 3,
-              background: "#58636b",
-            },
-          })
+          data: await sharp(
+            Buffer.from(
+              '<svg xmlns="http://www.w3.org/2000/svg" width="800" height="400"><g fill="none" stroke="#6b7b91" stroke-width="14"><circle cx="140" cy="260" r="125"/><circle cx="660" cy="260" r="125"/><path d="M140 260L305 80 420 260H140M305 80H560L420 260M660 260L545 55H610M265 70H330"/></g></svg>',
+            ),
+          )
             .png()
             .toBuffer(),
         })
@@ -124,18 +121,27 @@ test("weekly feature: server permissions, admin choice, service notice, owner pr
     ).toBe(200);
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto("/admin");
-    await page.getByRole("tab", { name: "Главная", exact: true }).click();
+    await page.getByRole("tab", { name: "Механики", exact: true }).click();
     await page
       .getByRole("button", { name: "Велосипед недели", exact: true })
       .click();
     const candidate = page
       .getByRole("list", { name: "Кандидаты недели" })
-      .getByRole("button", { name: "Назначить Week touring" });
-    await expect(candidate).toBeDisabled();
+      .getByRole("button", { name: "Выбрать Week touring" });
+    await expect(candidate).toBeEnabled();
+    await candidate.click();
+    const assign = page.getByRole("button", {
+      name: "Назначить на неделю",
+      exact: true,
+    });
+    await expect(assign).toBeDisabled();
     await page
       .getByLabel("Причина для журнала")
       .fill("Candidate browser verification");
-    await candidate.click();
+    await assign.click();
+    await page
+      .getByRole("button", { name: "Назначить вручную", exact: true })
+      .click();
     await expect(
       page.getByRole("region", { name: "Текущий велосипед недели" }),
     ).toContainText("Week touring");
@@ -220,6 +226,41 @@ test("weekly feature: server permissions, admin choice, service notice, owner pr
       fullPage: true,
       animations: "disabled",
     });
+    // Text actions get their own column; icon-only reference lists retain three controls.
+    await page.getByRole("tab", { name: "Каталог", exact: true }).click();
+    const iconRow = page.locator(".list-row:not(.catalog-model-row)").first();
+    await expect(iconRow).toBeVisible();
+    expect(
+      (
+        await iconRow.evaluate((e) => getComputedStyle(e).gridTemplateColumns)
+      ).split(" "),
+    ).toHaveLength(4);
+    await page
+      .getByRole("button", { name: "Каталог велосипедов", exact: true })
+      .click();
+    const modelRow = page.locator(".catalog-model-row").first();
+    await expect(modelRow).toBeVisible();
+    for (const width of [320, 390, 1440]) {
+      await page.setViewportSize({ width, height: 1000 });
+      const dimensions = await modelRow.evaluate((row) => {
+        const button = row.querySelector("button"),
+          r = row.getBoundingClientRect(),
+          b = button.getBoundingClientRect();
+        return {
+          fits:
+            button.scrollWidth <= button.clientWidth &&
+            b.right <= r.right + 1 &&
+            b.left >= r.left,
+          lines: getComputedStyle(button).whiteSpace,
+        };
+      });
+      expect(dimensions.fits).toBe(true);
+      expect(dimensions.lines).toBe("nowrap");
+      await page.screenshot({
+        path: info.outputPath(`catalog-edit-${width}.png`),
+        fullPage: true,
+      });
+    }
     expect(
       (
         await other.request.put("/api/bike-week/me", {
@@ -293,6 +334,74 @@ test("weekly feature: server permissions, admin choice, service notice, owner pr
       (await q.query("SELECT description FROM bikes WHERE id=$1", [bikeId]))
         .rows[0].description,
     ).toBe("Original public description");
+    const storyUrl = page.url();
+    await page.goto("/");
+    const weekBand = page.locator('[data-home-band="bike-week"]');
+    const image = weekBand.getByRole("img", {
+      name: "Week touring",
+      exact: true,
+    });
+    await expect(image).toBeVisible();
+    await image.scrollIntoViewIfNeeded();
+    await expect
+      .poll(() => image.evaluate((e) => e.complete && e.naturalWidth > 0))
+      .toBe(true);
+    expect(await image.evaluate((e) => getComputedStyle(e).objectFit)).toBe(
+      "contain",
+    );
+    const photoResponse = await page.request.get(
+      await image.getAttribute("src"),
+    );
+    expect((await sharp(await photoResponse.body()).metadata()).hasAlpha).toBe(
+      true,
+    );
+    for (const width of [390, 1440])
+      for (const theme of ["light", "dark"]) {
+        await page.setViewportSize({ width, height: 1000 });
+        await page.evaluate((v) => {
+          document.documentElement.dataset.theme = v;
+        }, theme);
+        const colors = await image.evaluate((e) => {
+          const link = e.closest("a");
+          const sample = document.createElement("span");
+          sample.style.backgroundColor = "var(--surface)";
+          link.append(sample);
+          const result = [
+            getComputedStyle(link).backgroundColor,
+            getComputedStyle(sample).backgroundColor,
+          ];
+          sample.remove();
+          return result;
+        });
+        expect(colors[0]).toBe(colors[1]);
+        const bands = await page
+          .locator("[data-home-band]")
+          .evaluateAll((nodes) =>
+            nodes.map((e) => ({
+              padding: parseFloat(getComputedStyle(e).paddingTop),
+              left: e.getBoundingClientRect().left,
+              right: e.getBoundingClientRect().right,
+            })),
+          );
+        expect(bands).toHaveLength(4);
+        for (const band of bands) {
+          expect(band.padding).toBe(16);
+          expect(band.left).toBeGreaterThanOrEqual(0);
+          expect(band.right).toBeLessThanOrEqual(width);
+        }
+        expect(
+          (
+            await new AxeBuilder({ page })
+              .include('[data-home-band="bike-week"]')
+              .analyze()
+          ).violations,
+        ).toEqual([]);
+        await page.screenshot({
+          path: info.outputPath(`home-bands-${width}-${theme}.png`),
+          fullPage: true,
+        });
+      }
+    await page.goto(storyUrl);
     await page.getByRole("button", { name: "Отказаться от участия" }).click();
     await expect(
       page.getByRole("status").filter({ hasText: "отказались" }),

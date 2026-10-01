@@ -211,15 +211,18 @@ test("journal lifecycle: snapshots, linked ride, reused social features, visibil
       (await journalSocial.page(q, saved.id, other)).comments[0].replies[0].id,
       reply.id,
     );
-    await assert.rejects(
-      q.transaction((t) =>
-        journalSocial.create(t, saved.id, other, {
-          body: "Nested",
-          parentId: reply.id,
-        }),
-      ),
-      /основной/,
+    const nested = await q.transaction((t) =>
+      journalSocial.create(t, saved.id, other, {
+        body: "Nested",
+        parentId: reply.id,
+      }),
     );
+    assert.equal(
+      (await journalSocial.replies(q, saved.id, reply.id, other)).comments[0]
+        .id,
+      nested.id,
+    );
+    await q.transaction((t) => journalSocial.change(t, nested.id, other));
     await assert.rejects(
       q.transaction((t) =>
         journalSocial.change(t, comment.id, owner, "Hijack"),

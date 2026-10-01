@@ -32,19 +32,21 @@ export default function BikeWeek({
         href={href}
         aria-label={"Велосипед недели: " + bike.bike.name}
       >
-        {failed !== photo ? (
-          <img
-            src={photo + "?width=640"}
-            srcSet={`${photo}?width=640 640w, ${photo}?width=1280 1280w`}
-            sizes="(max-width: 720px) 100vw, 40vw"
-            loading="lazy"
-            decoding="async"
-            alt={bike.bike.name}
-            onError={() => setFailed(photo)}
-          />
-        ) : (
-          <span className={styles.photoFallback}>Фото недоступно</span>
-        )}
+        <span className={styles.weekImage}>
+          {failed !== photo ? (
+            <img
+              src={photo + "?width=640"}
+              srcSet={`${photo}?width=640 640w, ${photo}?width=1280 1280w`}
+              sizes="(max-width: 720px) 100vw, 40vw"
+              loading="lazy"
+              decoding="async"
+              alt={bike.bike.name}
+              onError={() => setFailed(photo)}
+            />
+          ) : (
+            <span className={styles.photoFallback}>Фото недоступно</span>
+          )}
+        </span>
         <span className={styles.weekCaption}>
           <small>Выбор сообщества</small>
           <strong>{bike.bike.name}</strong>

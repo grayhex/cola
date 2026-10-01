@@ -262,6 +262,16 @@ export const settingsInput = z
       name: "riding-bike",
     }),
     heroStageDarkAnimation: animation.default(null),
+    intentDialogGraphic: z
+      .object({ kind: z.enum(["image", "svg", "rive"]), assetId: z.uuid() })
+      .strict()
+      .nullable()
+      .default(null),
+    planDialogGraphic: z
+      .object({ kind: z.enum(["image", "svg", "rive"]), assetId: z.uuid() })
+      .strict()
+      .nullable()
+      .default(null),
     heroBackgroundMode: z.enum(["accent", "custom"]).default("accent"),
     heroBackgroundLight: z
       .string()

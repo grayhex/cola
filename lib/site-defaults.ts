@@ -37,6 +37,8 @@ export const defaultSettings: SiteSettings = {
   mapScrollZoom: false,
   aboutGuideImageId: null,
   aboutTechnologyImageId: null,
+  intentDialogGraphic: null,
+  planDialogGraphic: null,
   authImageId: null,
   authRegisterImageId: null,
   footerImage1Id: null,

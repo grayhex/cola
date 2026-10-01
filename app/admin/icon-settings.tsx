@@ -4,6 +4,7 @@ import type { SiteCatalog } from "../../lib/contracts.ts";
 import { useState } from "react";
 import {
   illustrationSlots,
+  planningGraphicSlots,
   graphicAsset,
   filterGraphicSlots,
   footerLinkHref,
@@ -30,11 +31,26 @@ export default function IconSettings({
   const [section, setSection] = useState("branding");
   const sectionSlots = [
     ...illustrationSlots,
+    ...planningGraphicSlots,
     ...componentIllustrationSlots(catalog),
   ].filter((slot) => slot.section === section);
   const groups = [...new Set(sectionSlots.map((slot) => slot.group))];
   const slots = filterGraphicSlots(sectionSlots, search, group);
-  function assign(slot: (typeof sectionSlots)[number], id: string | null) {
+  function assign(
+    slot: (typeof sectionSlots)[number],
+    id: string | null,
+    uploaded?: AssetChoice,
+  ) {
+    if ("planning" in slot) {
+      const asset = uploaded || assets.find((a) => a.id === id);
+      const kind =
+        asset?.format === "rive"
+          ? "rive"
+          : asset?.format === "svg"
+            ? "svg"
+            : "image";
+      return onChange(slot.key, id && asset ? { kind, assetId: id } : null);
+    }
     if (!("kind" in slot)) return onChange(slot.key, id);
     onChange("componentIllustrations", {
       ...settings.componentIllustrations,
@@ -112,17 +128,26 @@ export default function IconSettings({
               compact
               label={slot.label}
               help={slot.group}
-              value={graphicAsset(settings, slot)}
+              value={
+                "planning" in slot
+                  ? settings[slot.key]?.assetId
+                  : graphicAsset(settings, slot)
+              }
               assets={assets}
               busy={busy}
               emptyLabel={slot.emptyLabel}
               previewClassName="wide"
               Fallback={Image}
-              accept="image/jpeg,image/png,image/webp"
+              animation={"planning" in slot}
+              accept={
+                "planning" in slot
+                  ? "image/jpeg,image/png,image/webp,image/svg+xml,.riv"
+                  : "image/jpeg,image/png,image/webp,image/svg+xml"
+              }
               onChange={(id) => assign(slot, id)}
               onUpload={async (file) => {
                 const asset = await onUpload(file);
-                if (asset) assign(slot, asset.id);
+                if (asset) assign(slot, asset.id, asset);
               }}
             />
           );
