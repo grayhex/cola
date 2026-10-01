@@ -13,7 +13,11 @@ import { gpx, loop } from "./ride-fixtures.js";
 const base = process.env.TEST_ORIGIN || "http://localhost:3100";
 const mailDir = process.env.MAIL_CAPTURE_DIR;
 const uploadDir = process.env.UPLOAD_DIR;
-assert.ok(mailDir && uploadDir, "the harness sets mail and upload folders");
+const rideDir = process.env.RIDES_DIR;
+assert.ok(
+  mailDir && uploadDir && rideDir,
+  "the harness sets mail, upload and ride folders",
+);
 const evil = "https://evil.test";
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -253,6 +257,8 @@ const ride = await bob("rides", "POST", {
   privacyRadiusM: 500,
 });
 assert.equal(ride.status, 201, JSON.stringify(ride.body));
+const rideFile = path.join(rideDir, `ride-${ride.body.id}.gpx.gz`);
+assert.ok((await readFile(rideFile)).length, "the ride original is stored");
 const { bike: saved } = (await bob("bikes/" + bikeId)).body;
 // Carol follows Bob and comments on his bike; Bob comments on hers.
 const { user: bobUser } = (await bob("me")).body;
@@ -340,7 +346,8 @@ assert.ok(
     (n) => n.actor?.username === bobUser.username,
   ),
 );
-// Files: the photo leaves the disk now, the ride track waits in its queue.
+// Files: the photo leaves the disk now; the worker may already have drained
+// the ride queue. An unqueued original must be gone, never silently orphaned.
 assert.ok(
   !(await readdir(uploadDir)).includes(photoFiles[0]),
   "the bike photo is removed",
@@ -352,15 +359,18 @@ try {
     (await db.query("SELECT 1 FROM users WHERE id=$1", [bobUser.id])).rowCount,
     0,
   );
-  assert.equal(
-    (
-      await db.query("SELECT 1 FROM ride_file_gc WHERE id=$1 AND kind='ride'", [
-        ride.body.id,
-      ])
-    ).rowCount,
-    1,
-    "the ride file is queued for removal",
-  );
+  const queued = (
+    await db.query("SELECT 1 FROM ride_file_gc WHERE id=$1 AND kind='ride'", [
+      ride.body.id,
+    ])
+  ).rowCount;
+  if (queued === 0)
+    await assert.rejects(
+      readFile(rideFile),
+      { code: "ENOENT" },
+      "an unqueued ride original has already been removed",
+    );
+  else assert.equal(queued, 1, "the ride file is queued for removal");
 } finally {
   await db.end();
 }
