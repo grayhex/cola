@@ -368,6 +368,7 @@ export default function Garage({
         </Main>
       ) : bike ? (
         <BikeDetail
+          key={bike.id + ":" + (userId || "guest")}
           Main={Main}
           bike={bike}
           share={share}

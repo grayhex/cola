@@ -47,6 +47,8 @@ export default function RideList({
   filters = null,
   restoreKey = "",
   onReset,
+  preview = false,
+  onTotal,
 }: {
   username?: string;
   bikeId?: string;
@@ -55,6 +57,8 @@ export default function RideList({
   filters?: Record<string, string> | null;
   restoreKey?: string;
   onReset?: () => void;
+  preview?: boolean;
+  onTotal?: (total: number | null) => void;
 }) {
   const { personalSettings: settings } = useSite();
   const [data, setData] = useState<RideListDto | null>(null),
@@ -62,6 +66,7 @@ export default function RideList({
     [error, setError] = useState(""),
     [loading, setLoading] = useState(true),
     [revision, setRevision] = useState(0);
+  const [expanded, setExpanded] = useState(false);
   const seq = useRef(0),
     restoring = useRef<number | null>(null),
     query = JSON.stringify([username, bikeId, status, filters]);
@@ -83,6 +88,7 @@ export default function RideList({
   }, [restoreKey]);
   useEffect(() => {
     const id = ++seq.current;
+    let active = true;
     setLoading(true);
     setError("");
     socialApi<RideListDto>(
@@ -96,18 +102,24 @@ export default function RideList({
         }),
     )
       .then((d) => {
-        if (id !== seq.current) return; // an older filter answered late
+        if (!active || id !== seq.current) return; // an older filter answered late
         startTransition(() => setData(d));
         save(restoreKey, { data: d, page });
       })
       .catch((e) => {
-        if (id === seq.current) setError(errorMessage(e));
+        if (active && id === seq.current) setError(errorMessage(e));
       })
       .finally(() => {
-        if (id === seq.current) setLoading(false);
+        if (active && id === seq.current) setLoading(false);
       });
+    return () => {
+      active = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `query` covers the filter object
   }, [query, page, revision, restoreKey]);
+  useEffect(() => {
+    onTotal?.(error ? null : (data?.total ?? null));
+  }, [data, error, onTotal]);
   // Restore the scroll only once the saved rows are laid out.
   useEffect(() => {
     if (restoring.current === null || !data) return;
@@ -139,12 +151,18 @@ export default function RideList({
   // An empty rides column on a bike page shrinks to one line.
   if (latest && data?.total === 0)
     return (
-      <section className="ride-list bike-rides bike-rides-empty">
+      <section
+        id={preview ? "bike-rides" : undefined}
+        className="ride-list bike-rides bike-rides-empty"
+      >
         <p className="help">Покатушек с этим велосипедом пока нет</p>
       </section>
     );
   return (
-    <section className={"ride-list" + (latest ? " bike-rides" : "")}>
+    <section
+      id={preview ? "bike-rides" : undefined}
+      className={"ride-list" + (latest ? " bike-rides" : "")}
+    >
       <h2>Покатушки</h2>
       {error && (
         <p role="alert" className="error">
@@ -172,27 +190,28 @@ export default function RideList({
             className={list ? "ride-accordion" : "ride-grid"}
             aria-busy={loading}
           >
-            {data.rides.map((r) =>
-              list ? (
-                <details className="ride-list-item" key={r.id}>
-                  <summary>
-                    <strong>{r.title}</strong>
-                    <small>
-                      {rideDate(r.date)} ·{" "}
-                      {(Number(r.metrics.distanceM) / 1000).toLocaleString(
-                        "ru-RU",
-                        {
-                          maximumFractionDigits: 1,
-                        },
-                      )}{" "}
-                      км
-                    </small>
-                  </summary>
-                  <RideCard ride={r} />
-                </details>
-              ) : (
-                <RideCard key={r.id} ride={r} />
-              ),
+            {(preview && !expanded ? data.rides.slice(0, 3) : data.rides).map(
+              (r) =>
+                list ? (
+                  <details className="ride-list-item" key={r.id}>
+                    <summary>
+                      <strong>{r.title}</strong>
+                      <small>
+                        {rideDate(r.date)} ·{" "}
+                        {(Number(r.metrics.distanceM) / 1000).toLocaleString(
+                          "ru-RU",
+                          {
+                            maximumFractionDigits: 1,
+                          },
+                        )}{" "}
+                        км
+                      </small>
+                    </summary>
+                    <RideCard ride={r} />
+                  </details>
+                ) : (
+                  <RideCard key={r.id} ride={r} />
+                ),
             )}
           </div>
           {!data.total && !error && status === "planned" && (
@@ -214,7 +233,15 @@ export default function RideList({
               </div>
             </div>
           )}
-          <Pagination {...data} onPage={setPage} />
+          {preview && !expanded ? (
+            data.total > 3 && (
+              <button className="quiet" onClick={() => setExpanded(true)}>
+                Все покатушки · {data.total}
+              </button>
+            )
+          ) : (
+            <Pagination {...data} onPage={setPage} />
+          )}
         </>
       ) : (
         !error && <p role="status">Загружаем покатушки…</p>

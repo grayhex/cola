@@ -60,8 +60,8 @@ test("bike title stays readable next to a long author name and username", async 
     await expect(authorLink).not.toContainText("@");
     // #121, #131: never the parser's model under a custom name; the year
     // is a label next to the size and the weight. Description, public
-    // price and the manufacturer link are visible without the optional
-    // summary block (#77).
+    // price and the manufacturer link have one visible home: the overview
+    // or the heading fallback when the optional summary is disabled (#291).
     await expect(page.locator(".bike-subtitle")).toHaveCount(0);
     await expect(
       page.locator('.bike-heading [data-bike-label="year"]'),
@@ -69,11 +69,20 @@ test("bike title stays readable next to a long author name and username", async 
     await expect(page.locator(".bike-heading")).not.toContainText(
       "Specialized Stumpjumper EVO",
     );
-    const intro = page.locator(".bike-heading .bike-intro");
-    await expect(intro).toContainText("Трейлы по выходным");
-    await expect(intro).toContainText(/250\s000\s₽/);
+    const facts = page.locator(
+      ".bike-heading .bike-intro, #overview:not([hidden])",
+    );
+    await expect(facts).toHaveCount(1);
+    const overview = page.locator("#overview:not([hidden])");
+    if (
+      (await overview.count()) &&
+      (await overview.getAttribute("open")) === null
+    )
+      await overview.locator("summary").click();
+    await expect(facts).toContainText("Трейлы по выходным");
+    await expect(facts).toContainText(/250\s000\s₽/);
     await expect(
-      intro.getByRole("link", { name: "Сайт производителя", exact: true }),
+      facts.getByRole("link", { name: "Сайт производителя", exact: true }),
     ).toHaveAttribute("href", "https://www.specialized.com/");
     // No rides yet: one compact line instead of an empty column.
     await expect(page.locator(".bike-rides-empty")).toHaveText(

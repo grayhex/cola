@@ -5,9 +5,8 @@ import pg from "pg";
 import sharp from "sharp";
 import { randomUUID } from "node:crypto";
 const origin = process.env.TEST_ORIGIN || "http://localhost:3100";
-test("three-column bike, raster map, six-ride accordion, preferences and grouped admin", async ({
+test("sequential bike sections, raster map, six-ride accordion, preferences and grouped admin", async ({
   page,
-  isMobile,
 }, info) => {
   const db = new pg.Client({ connectionString: process.env.DATABASE_URL });
   await db.connect();
@@ -103,6 +102,8 @@ test("three-column bike, raster map, six-ride accordion, preferences and grouped
         ],
       );
     await page.goto("/b/" + share);
+    await expect(page.locator(".bike-rides .ride-list-item")).toHaveCount(3);
+    await page.getByRole("button", { name: "Все покатушки · 6" }).click();
     await expect(page.locator(".bike-rides .ride-list-item")).toHaveCount(6);
     await expect(page.locator(".bike-rides .ride-list-item[open]")).toHaveCount(
       0,
@@ -120,24 +121,18 @@ test("three-column bike, raster map, six-ride accordion, preferences and grouped
     ).toBeVisible();
     const boxes = await Promise.all(
       [".showcase", ".specifications", ".bike-rides"].map((c) =>
-        page.locator(".bike-detail > " + c).boundingBox(),
+        page.locator(".bike-detail " + c).boundingBox(),
       ),
     );
-    if (!isMobile) {
-      expect(boxes[0].x + boxes[0].width).toBeLessThanOrEqual(boxes[1].x);
-      expect(boxes[1].x + boxes[1].width).toBeLessThanOrEqual(boxes[2].x);
-      expect(Math.abs(boxes[0].y - boxes[2].y)).toBeLessThan(3);
-    } else {
-      expect(boxes[0].y).toBeLessThan(boxes[1].y);
-      expect(boxes[1].y).toBeLessThan(boxes[2].y);
-    }
+    expect(boxes[0].y + boxes[0].height).toBeLessThanOrEqual(boxes[1].y);
+    expect(boxes[1].y + boxes[1].height).toBeLessThanOrEqual(boxes[2].y);
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth + 1,
       ),
     ).toBe(true);
     await page.screenshot({
-      path: info.outputPath("bike-three-columns.png"),
+      path: info.outputPath("bike-sequential-sections.png"),
       fullPage: true,
       animations: "disabled",
     });
@@ -156,6 +151,10 @@ test("three-column bike, raster map, six-ride accordion, preferences and grouped
       .click();
     await expect(page.getByRole("status")).toHaveText("Оформление сохранено");
     await page.goto("/b/" + share);
+    await expect(
+      page.locator(".bike-rides .ride-grid > .ride-card"),
+    ).toHaveCount(3);
+    await page.getByRole("button", { name: "Все покатушки · 6" }).click();
     await expect(
       page.locator(".bike-rides .ride-grid > .ride-card"),
     ).toHaveCount(6);

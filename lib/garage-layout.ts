@@ -126,7 +126,7 @@ export const defaultBlocks: DetailBlock[] = [
   {
     id: "summary",
     name: "О велосипеде",
-    enabled: false,
+    enabled: true,
     variant: "compact",
     open: true,
   },
@@ -135,7 +135,7 @@ export const defaultBlocks: DetailBlock[] = [
     name: "Галерея",
     enabled: true,
     variant: "compact",
-    open: false,
+    open: true,
   },
   {
     id: "specifications",
@@ -145,15 +145,6 @@ export const defaultBlocks: DetailBlock[] = [
     open: true,
   },
 ];
-// Keep equipment on the first mobile screen; the open description follows it.
-defaultBlocks.sort(
-  (a, b) =>
-    ["heading", "photos", "specifications", "summary", "gallery"].indexOf(
-      a.id,
-    ) -
-    ["heading", "photos", "specifications", "summary", "gallery"].indexOf(b.id),
-);
-
 export function groupedComponents<
   T extends { group_id?: string; category: string },
 >(components: T[], groups = defaultGroups, order: string[] = []) {

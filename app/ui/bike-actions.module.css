@@ -119,42 +119,33 @@
     border-left: 0;
   }
 }
-/* Phones: slightly smaller buttons in two rows, the reader's and the
-   owner's (#131). Tools, following and sharing keep their icons; their
-   names stay for screen readers and in the tooltip. */
-@media (max-width: 560px) {
-  .group {
-    gap: var(--space-1);
-  }
+
+.more :global(.nav-trigger) {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  min-height: 32px;
+  padding: 0 var(--space-2-5);
+  border: 1px solid var(--control-line);
+  border-radius: var(--radius-lg);
+  background: var(--control-bg);
+  color: var(--control-text);
+  font: var(--weight-medium) 13px / 1.2 var(--font-sans);
+}
+.more :global(.nav-popover) {
+  right: 0;
+  left: auto;
+  min-width: 180px;
+  max-width: calc(100vw - 2 * var(--gutter));
+}
+.more .danger {
+  border-top: 1px solid var(--line);
+}
+@media (max-width: 700px) {
   .bar .action,
   .bar :global(.hf-like),
-  .bar .share :global(.share-button) {
-    min-height: 30px;
-    font-size: 12px;
-  }
-  .bar .action,
   .bar .share :global(.share-button),
-  .bar :global(.hf-like) > span,
-  .bar :global(.hf-like) > strong {
-    padding: 0 var(--space-2);
-  }
-  .count {
-    margin-right: calc(-1 * var(--space-2));
-    padding: 0 var(--space-2);
-  }
-  .bar .iconOnly,
-  .bar .share :global(.share-button) {
-    justify-content: center;
-    width: 32px;
-    padding: 0;
-  }
-  .iconOnly > span,
-  .bar .share :global(.share-button) > span {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
+  .more :global(.nav-trigger) {
+    min-height: 44px;
   }
 }

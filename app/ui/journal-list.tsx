@@ -13,16 +13,19 @@ export default function JournalList({
   bike,
   owner = false,
   editable = false,
+  preview = false,
 }: {
   bike: BikeDto;
   owner?: boolean;
   editable?: boolean;
+  preview?: boolean;
 }) {
   const [data, setData] = useState<JournalListDto | null>(null),
     [page, setPage] = useState(1),
     [error, setError] = useState(""),
     [change, setChange] = useState<{ componentIds: string[] } | null>(null),
     [busy, setBusy] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const previous = useRef<{ id: string; parts: BikeDto["components"] } | null>(
     null,
   );
@@ -48,6 +51,7 @@ export default function JournalList({
   useEffect(() => {
     let active = true;
     setData(null);
+    setError("");
     socialApi<JournalListDto>("journal?bikeId=" + bike.id + "&page=" + page)
       .then((d) => {
         if (active) setData(d);
@@ -114,39 +118,53 @@ export default function JournalList({
       )}
       {error && <p role="alert">{error}</p>}
       {!data && !error && <p role="status">Загружаем журнал…</p>}
-      {data?.entries.map((e) => (
-        <article className="journal-list-entry" key={e.id}>
-          <div className="journal-entry-meta">
-            <span>
-              {
-                Object.entries(journalKinds).find(
-                  ([kind]) => kind === e.kind,
-                )?.[1]
-              }
-            </span>
-            <time>
-              {e.eventDate || new Date(e.createdAt).toLocaleDateString("ru-RU")}
-            </time>
-            {e.status === "draft" ? (
-              <span>Черновик</span>
-            ) : !e.isPublic || !e.bikePublic ? (
-              <span>Приватная запись</span>
-            ) : null}
-          </div>
-          <h3>
-            <a href={publicPath("journal", e)}>{e.title || "Без заголовка"}</a>
-          </h3>
-          <p>{e.excerpt ?? e.body}</p>
-          <small>
-            <Heart size={12} aria-label="Лайки" /> {e.likes} · Комментарии{" "}
-            {e.comments}
-          </small>
-        </article>
-      ))}
+      {(preview && !expanded ? data?.entries.slice(0, 3) : data?.entries)?.map(
+        (e) => (
+          <article className="journal-list-entry" key={e.id}>
+            <div className="journal-entry-meta">
+              <span>
+                {
+                  Object.entries(journalKinds).find(
+                    ([kind]) => kind === e.kind,
+                  )?.[1]
+                }
+              </span>
+              <time>
+                {e.eventDate ||
+                  new Date(e.createdAt).toLocaleDateString("ru-RU")}
+              </time>
+              {e.status === "draft" ? (
+                <span>Черновик</span>
+              ) : !e.isPublic || !e.bikePublic ? (
+                <span>Приватная запись</span>
+              ) : null}
+            </div>
+            <h3>
+              <a href={publicPath("journal", e)}>
+                {e.title || "Без заголовка"}
+              </a>
+            </h3>
+            <p>{e.excerpt ?? e.body}</p>
+            <small>
+              <Heart size={12} aria-label="Лайки" /> {e.likes} · Комментарии{" "}
+              {e.comments}
+            </small>
+          </article>
+        ),
+      )}
       {data && !data.entries.length && (
         <p className="help">История этого велосипеда ещё не началась.</p>
       )}
-      {data && <PageControls {...data} onPage={setPage} />}
+      {data &&
+        (preview && !expanded ? (
+          (data.entries.length > 3 || data.hasMore) && (
+            <button className="quiet" onClick={() => setExpanded(true)}>
+              Все записи
+            </button>
+          )
+        ) : (
+          <PageControls {...data} onPage={setPage} />
+        ))}
     </section>
   );
 }

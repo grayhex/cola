@@ -2,6 +2,7 @@
 import type { BikeDto } from "../../lib/contracts.ts";
 import type { useBikeReaction } from "./use-bike-reaction.ts";
 import { useId } from "react";
+import NavPopover from "./nav-popover.tsx";
 import { BikeLike } from "./bike-labels.tsx";
 import BikeFollow from "./bike-follow.tsx";
 import ShareButton from "./share-button.tsx";
@@ -13,13 +14,12 @@ import {
   Lock,
   Pencil,
   Trash2,
+  Ellipsis,
 } from "./icons.tsx";
 import { publicPath } from "../../lib/public-urls.ts";
 import styles from "./bike-actions.module.css";
 
-// Everything a reader and the owner can do with a bike, in one place (#121):
-// small labelled buttons under the photo, with counts in their own segment,
-// instead of icons over the photo and next to the title.
+// Shared callbacks, separate owner and social rows on the detail page (#291).
 export default function BikeActions({
   bike,
   title,
@@ -32,7 +32,9 @@ export default function BikeActions({
   onEdit,
   onDelete,
   t = (s) => s,
+  section,
 }: {
+  section: "owner" | "social";
   bike: BikeDto;
   title: string;
   editable: boolean;
@@ -46,17 +48,14 @@ export default function BikeActions({
   t?: (text: string) => string;
 }) {
   const accessId = useId();
-  if (!bike.is_public && !editable) return null;
+  if (section === "owner" ? !editable : !bike.is_public) return null;
   return (
-    <div className={`bike-actions ${styles.bar}`} data-bike-actions>
-      {bike.is_public && (
+    <div className={`bike-actions ${styles.bar}`} data-bike-actions={section}>
+      {section === "social" && bike.is_public && (
         <div className={styles.group} role="group" aria-label={t("Реакции")}>
           <BikeLike bike={bike} reaction={reaction} t={t} />
           {!bike.is_owner && (
-            <BikeFollow
-              bikeId={bike.id}
-              className={`${styles.action} ${styles.iconOnly}`}
-            />
+            <BikeFollow bikeId={bike.id} className={styles.action} />
           )}
           <a className={styles.action} data-hover="comment" href="#discussion">
             <MessageCircle size={15} aria-hidden="true" />
@@ -77,7 +76,7 @@ export default function BikeActions({
           )}
         </div>
       )}
-      {editable && (
+      {section === "owner" && editable && (
         <div
           className={styles.group}
           role="group"
@@ -85,22 +84,22 @@ export default function BikeActions({
         >
           <button
             type="button"
-            className={`${styles.action} ${styles.iconOnly}`}
+            className={styles.action}
+            title={t("Редактировать")}
+            onClick={onEdit}
+          >
+            <Pencil size={15} aria-hidden="true" />
+            <span>{t("Редактировать")}</span>
+          </button>
+          <button
+            type="button"
+            className={styles.action}
             title={t("Добавить фото")}
             disabled={busy}
             onClick={onAddPhoto}
           >
             <ImagePlus size={15} aria-hidden="true" />
             <span>{t("Добавить фото")}</span>
-          </button>
-          <button
-            type="button"
-            className={`${styles.action} ${styles.iconOnly}`}
-            title={t("Найти фото")}
-            onClick={onFindPhoto}
-          >
-            <Search size={15} aria-hidden="true" />
-            <span>{t("Найти фото")}</span>
           </button>
           <button
             type="button"
@@ -114,29 +113,38 @@ export default function BikeActions({
             ) : (
               <Lock size={15} aria-hidden="true" />
             )}
-            <span>{t("Доступ")}</span>
+            <span>{t("Приватность")}</span>
             <strong className={styles.count} id={accessId} aria-hidden="true">
               {bike.is_public ? t("Все") : t("Только вы")}
             </strong>
           </button>
-          <button
-            type="button"
-            className={`${styles.action} ${styles.iconOnly}`}
-            title={t("Редактировать")}
-            onClick={onEdit}
+          <NavPopover
+            label={t("Ещё")}
+            className={styles.more}
+            trigger={
+              <>
+                <Ellipsis size={15} aria-hidden="true" />
+                <span>{t("Ещё")}</span>
+              </>
+            }
           >
-            <Pencil size={15} aria-hidden="true" />
-            <span>{t("Редактировать")}</span>
-          </button>
-          <button
-            type="button"
-            className={`${styles.action} ${styles.iconOnly} ${styles.danger}`}
-            title={t("Удалить")}
-            onClick={onDelete}
-          >
-            <Trash2 size={15} aria-hidden="true" />
-            <span>{t("Удалить")}</span>
-          </button>
+            <button
+              type="button"
+              className="nav-menu-link"
+              onClick={onFindPhoto}
+            >
+              <Search size={15} aria-hidden="true" />
+              <span>{t("Найти фото")}</span>
+            </button>
+            <button
+              type="button"
+              className={`nav-menu-link ${styles.danger}`}
+              onClick={onDelete}
+            >
+              <Trash2 size={15} aria-hidden="true" />
+              <span>{t("Удалить")}</span>
+            </button>
+          </NavPopover>
         </div>
       )}
     </div>

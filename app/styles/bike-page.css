@@ -1,7 +1,5 @@
-/* The bike page (#127, docs/development/design-system.md → Рабочий режим): a Hugging Face model
-   page — the name and labels, one row of actions, then three columns on
-   wide screens: photo, build list, rides. Journal, game and discussion run
-   full width below. Garage modals and the bike and part forms live here too. */
+/* Bike detail (#291): gallery and identity, overview/passport, one build,
+   rides, journal and discussion. Garage forms retain their shared styles. */
 @layer tokens, base, components, layout, features;
 @layer features {
   /* ── Frame ──────────────────────────────────────────────────────────── */
@@ -17,120 +15,229 @@
     margin: 0;
     padding: 0;
   }
-  /* Blocks space themselves with a bottom margin rather than a gap, so a
-     block that is switched off or empty leaves no double gap behind. */
+  /* One reading order in both the public page and the account (#291). */
   .bike-detail {
     display: flex;
     flex-direction: column;
+    gap: var(--space-6);
   }
   .bike-detail > * {
     min-width: 0;
-    margin: 0 0 var(--space-4);
+    margin: 0;
   }
-  .bike-detail > .gallery-details {
-    margin-top: calc(-1 * var(--space-2));
+  .bike-hero {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-8);
+    align-items: start;
   }
-  .bike-detail > :last-child {
-    margin-bottom: 0;
+  .bike-hero:not(:has(.bike-media)) {
+    grid-template-columns: minmax(0, 1fr);
   }
-  /* Phones and tablets: one column; the actions follow the photo (#121). */
-  .bike-detail > .breadcrumbs {
-    order: 0;
+  .bike-media,
+  .bike-identity {
+    min-width: 0;
+    display: grid;
+    gap: var(--space-4);
   }
-  .bike-detail > .bike-heading {
-    order: 1;
+  .bike-identity {
+    padding: var(--space-2) 0;
   }
-  .bike-detail > .bike-meta-line {
-    order: 2;
+  .bike-detail .bike-heading {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-3);
   }
-  .bike-detail > .showcase,
-  .bike-detail > .bike-actions {
-    order: 3;
+  .bike-detail .bike-heading .detail-actions {
+    justify-content: flex-start;
+    padding: 0;
   }
-  .bike-detail > .gallery-details {
-    order: 4;
+  .bike-detail .bike-heading .detail-actions .author-link {
+    max-width: 100%;
   }
-  .bike-detail > .bike-summary {
-    order: 5;
+  .bike-detail .photo-stage,
+  .bike-detail .component-group,
+  .bike-detail .component-group-title,
+  .bike-detail .ride-card {
+    border-radius: 0;
   }
-  .bike-detail > .specifications {
-    order: 6;
+  /* The full bike fits even when a card's personal photo mode is cover. */
+  .bike-detail .photo-stage .hero-photo:not(.photo-empty) {
+    object-fit: contain;
   }
-  .bike-detail > .bike-rides {
-    order: 7;
+  .bike-metrics {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-4) var(--space-6);
+    margin: 0;
+    padding: var(--space-4) 0;
+    border-block: 1px solid var(--line);
   }
-  .bike-detail > .bike-journal {
-    order: 8;
+  .bike-metrics dt {
+    font-size: var(--text-xs);
+    color: var(--text-muted);
   }
-  .bike-detail > .bike-game {
-    order: 9;
+  .bike-metrics dd {
+    margin: var(--space-1) 0 0;
+    color: var(--text);
+    font: var(--weight-semibold) var(--text-xl) / 1.4 var(--font-mono);
   }
-  .bike-detail > .discussion {
-    order: 10;
+  .bike-excerpt {
+    margin: 0;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    overflow-wrap: anywhere;
   }
-  /* Wide screens: photo | build | rides start on one line. The last photo
-     row is flexible, so a long build list never pushes the gallery down. */
-  @media (min-width: 1200px) {
+  .bike-excerpt a {
+    color: var(--text);
+    text-decoration: underline;
+  }
+  .bike-section-nav {
+    display: flex;
+    gap: var(--space-4);
+    overflow-x: auto;
+    border-bottom: 1px solid var(--line);
+  }
+  .bike-section-nav a {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    min-width: 44px;
+    min-height: 44px;
+    padding: var(--space-2);
+    border-bottom: 2px solid transparent;
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: var(--text-sm);
+  }
+  .bike-section-nav a:hover,
+  .bike-section-nav a:focus-visible {
+    color: var(--text);
+    border-bottom-color: var(--text);
+    background: var(--surface-hover);
+  }
+  .bike-detail [id] {
+    scroll-margin-top: calc(var(--header-height) + var(--space-6));
+  }
+  .bike-overview-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-8);
+    padding-top: var(--space-4);
+  }
+  .bike-overview-grid:not(:has(.bike-about)),
+  .bike-overview-grid:not(:has(.bike-passport)) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .bike-overview-grid > section {
+    min-width: 0;
+  }
+  .bike-detail .bike-summary h2 {
+    font-size: var(--text-lg);
+    margin: 0 0 var(--space-3);
+  }
+  .bike-about > p {
+    margin: 0;
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+    line-height: 1.6;
+    color: var(--text-secondary);
+  }
+  .bike-passport dl {
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 var(--space-5);
+  }
+  .bike-passport dl > div {
+    padding: var(--space-2) 0;
+    border-bottom: 1px solid var(--line);
+    min-width: 0;
+  }
+  .bike-passport dt {
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+  }
+  .bike-passport dd {
+    margin: var(--space-1) 0 0;
+    color: var(--text);
+    font-size: var(--text-sm);
+    overflow-wrap: anywhere;
+  }
+  .bike-passport > .part-link {
+    margin-top: var(--space-3);
+  }
+  .bike-detail .component-groups {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: start;
+    gap: var(--space-4);
+  }
+  .bike-detail .component-group-title {
+    background: var(--surface-subtle);
+  }
+  .bike-detail
+    > :is(
+      .specifications,
+      .bike-rides,
+      .bike-game,
+      .bike-journal,
+      .discussion
+    ) {
+    border: 0;
+    border-top: 1px solid var(--line);
+    border-radius: 0;
+    padding-top: var(--space-5);
+    margin: 0;
+  }
+  .bike-detail .bike-rides .ride-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .bike-detail .game-shelves {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-4);
+  }
+  .bike-detail .comment {
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    border-radius: 0;
+  }
+  .bike-detail .comment-heading {
+    background: none;
+    border: 0;
+    padding-inline: 0;
+  }
+  .bike-detail .comment-body {
+    padding-inline: 0;
+  }
+  .bike-detail .comment-actions {
+    padding-left: 0;
+  }
+  .bike-detail .configurable-block[data-variant="card"] {
+    border-radius: 0;
+    box-shadow: none;
+  }
+  @media (max-width: 1199px) {
+    .bike-detail .component-groups {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  @media (max-width: 900px) {
+    .bike-hero,
+    .bike-overview-grid {
+      grid-template-columns: minmax(0, 1fr);
+      gap: var(--space-5);
+    }
+  }
+  @media (max-width: 700px) {
     .bike-detail {
-      display: grid;
-      grid-template-columns:
-        minmax(0, 1.1fr) minmax(0, 1fr)
-        minmax(280px, 0.85fr);
-      grid-template-rows: repeat(6, auto) 1fr;
-      align-items: start;
-      column-gap: var(--space-5);
+      gap: var(--space-5);
     }
-    .bike-detail > * {
-      grid-column: 1 / -1;
+    .bike-detail .component-groups,
+    .bike-detail .bike-rides .ride-grid,
+    .bike-detail .game-shelves {
+      grid-template-columns: minmax(0, 1fr);
     }
-    .bike-detail > .breadcrumbs {
-      grid-row: 1;
-    }
-    .bike-detail > .bike-heading {
-      grid-row: 2;
-    }
-    .bike-detail > .bike-meta-line {
-      grid-row: 3;
-    }
-    .bike-detail > .bike-actions {
-      grid-row: 4;
-    }
-    .bike-detail > .showcase {
-      grid-column: 1;
-      grid-row: 5;
-    }
-    .bike-detail > .gallery-details {
-      grid-column: 1;
-      grid-row: 6;
-    }
-    .bike-detail > .bike-summary {
-      grid-column: 1;
-      grid-row: 7;
-    }
-    .bike-detail > .specifications {
-      grid-column: 2;
-      grid-row: 5 / span 3;
-    }
-    .bike-detail > .bike-rides {
-      grid-column: 3;
-      grid-row: 5 / span 3;
-    }
-    .bike-detail > .bike-journal {
-      grid-row: 8;
-    }
-    .bike-detail > .bike-game {
-      grid-row: 9;
-    }
-    .bike-detail > .discussion {
-      grid-row: 10;
-    }
-    /* No rides yet: the build list takes their column. */
-    .bike-detail:has(> .bike-rides-empty) {
-      grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.85fr);
-    }
-    .bike-detail > .bike-rides.bike-rides-empty {
-      grid-column: 1 / -1;
-      grid-row: auto;
+    .bike-section-nav {
+      gap: var(--space-2);
     }
   }
 
@@ -1645,9 +1752,6 @@
   @media (max-width: 700px) {
     .detail {
       padding-top: var(--space-3);
-    }
-    .bike-detail > * {
-      margin-bottom: var(--space-3);
     }
     .bike-heading {
       grid-template-columns: minmax(0, 1fr);
