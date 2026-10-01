@@ -119,7 +119,7 @@ test("the bike page: the year is a label next to size and weight; owner's action
   );
   await expect(labels.locator('[data-bike-label="size"]')).toBeVisible();
   await expect(labels.locator('[data-bike-label="weight"]')).toBeVisible();
-  const actions = page.locator("[data-bike-actions]");
+  const actions = page.locator('[data-bike-actions="owner"]');
   await expect(
     actions.getByRole("button", { name: "Редактировать" }),
   ).toBeVisible();
@@ -136,7 +136,7 @@ test("the bike page: the year is a label next to size and weight; owner's action
   if (isMobile) {
     // Tools keep their icons; their names stay for screen readers.
     const edit = actions.getByRole("button", { name: "Редактировать" });
-    expect((await edit.boundingBox()).width).toBeLessThanOrEqual(34);
+    expect((await edit.boundingBox()).width).toBeGreaterThan(80);
     await expect(edit).toHaveAttribute("title", "Редактировать");
   }
   expect(await noOverflow(page)).toBe(true);

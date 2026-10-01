@@ -203,7 +203,7 @@ test("public pages hydrate their server HTML and stay interactive", async ({
   page.on("pageerror", (e) => ownerErrors.push(e.message));
   await page.goto(pages[0][0]);
   await expect(
-    page.getByRole("button", { name: "Доступ", exact: true }),
+    page.getByRole("button", { name: "Приватность", exact: true }),
   ).toBeVisible();
   await page.waitForLoadState("networkidle");
   expect(await duplicateIds(page)).toEqual([]);

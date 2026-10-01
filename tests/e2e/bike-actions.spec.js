@@ -5,10 +5,10 @@ import { randomUUID } from "node:crypto";
 import sharp from "sharp";
 const origin = process.env.TEST_ORIGIN || "http://localhost:3100";
 
-// #121: what a reader and the owner can do with a bike sits in one place:
+// #291: what a reader and the owner can do with a bike sits in one place:
 // small outlined buttons with labels, counts in their own segment, nothing
 // on top of the photo. Under the photo on a phone, one row on wide screens.
-test("bike actions: labelled compact buttons in one place, none on the photo", async ({
+test("bike actions: separate owner/social rows, labelled controls and overflow", async ({
   page,
   browser,
   isMobile,
@@ -60,7 +60,7 @@ test("bike actions: labelled compact buttons in one place, none on the photo", a
   // Every control is small but still easy to hit, and says what it does.
   async function compact(bar) {
     const sizes = await bar
-      .locator("button, a")
+      .locator("button:visible, a:visible")
       .evaluateAll((els) =>
         els.map((el) => [
           el.getBoundingClientRect().height,
@@ -70,13 +70,13 @@ test("bike actions: labelled compact buttons in one place, none on the photo", a
     expect(sizes.length).toBeGreaterThan(0);
     for (const [height, text] of sizes) {
       expect(height, text).toBeGreaterThanOrEqual(24);
-      expect(height, text).toBeLessThanOrEqual(40);
+      expect(height, text).toBeLessThanOrEqual(isMobile ? 48 : 40);
       expect(text.length, "a visible label").toBeGreaterThan(1);
     }
   }
   const tops = (bar) =>
     bar
-      .locator("button, a")
+      .locator("button:visible, a:visible")
       .evaluateAll((els) =>
         els.map((el) => Math.round(el.getBoundingClientRect().top)),
       );
@@ -117,7 +117,7 @@ test("bike actions: labelled compact buttons in one place, none on the photo", a
     if (isMobile)
       expect(box.y).toBeGreaterThanOrEqual(stage.y + stage.height - 1);
     else {
-      expect(box.y + box.height).toBeLessThanOrEqual(stage.y + 1);
+      expect(box.x).toBeGreaterThanOrEqual(stage.x + stage.width);
       expect(new Set(await tops(bar)).size, "one row").toBe(1);
     }
     expect(
@@ -130,24 +130,21 @@ test("bike actions: labelled compact buttons in one place, none on the photo", a
   }
 
   await page.goto(path);
-  const bar = page.locator("[data-bike-actions]");
+  const bar = page.locator('[data-bike-actions="owner"]');
   const tools = bar.getByRole("group", { name: "Управление велосипедом" });
-  for (const name of [
-    "Добавить фото",
-    "Найти фото",
-    "Доступ",
-    "Редактировать",
-    "Удалить",
-  ])
+  for (const name of ["Добавить фото", "Приватность", "Редактировать"])
     await expect(
       tools.getByRole("button", { name, exact: true }),
     ).toBeVisible();
-  const access = tools.getByRole("button", { name: "Доступ", exact: true });
+  const access = tools.getByRole("button", {
+    name: "Приватность",
+    exact: true,
+  });
   await expect(access).toHaveAccessibleDescription("Все");
   await expect(access).toContainText("Все");
   // Owners count their likes but do not follow their own bike.
   await expect(
-    bar.getByRole("button", { name: "Нравится: 0", exact: true }),
+    page.getByRole("button", { name: "Нравится: 0", exact: true }),
   ).toBeDisabled();
   await expect(
     page.getByRole("button", { name: "Подписаться на велосипед" }),
@@ -156,7 +153,18 @@ test("bike actions: labelled compact buttons in one place, none on the photo", a
     page.locator(".bike-heading .detail-actions button"),
   ).toHaveCount(0);
   await compact(bar);
-  if (!isMobile) expect(new Set(await tops(bar)).size, "one row").toBe(1);
+  const more = tools.getByRole("button", { name: "Ещё", exact: true });
+  await more.focus();
+  await page.keyboard.press("ArrowDown");
+  await expect(
+    tools.getByRole("button", { name: "Найти фото", exact: true }),
+  ).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(more).toBeFocused();
+  if (!isMobile)
+    expect(new Set(await tops(bar)).size, "compact rows").toBeLessThanOrEqual(
+      2,
+    );
   await page.screenshot({
     path: info.outputPath("bike-actions-owner.png"),
     fullPage: true,
@@ -171,9 +179,11 @@ test("bike actions: labelled compact buttons in one place, none on the photo", a
   await chooser;
   for (const [name, title] of [
     ["Найти фото", "Выбор фотографий"],
-    ["Доступ", "Доступ к велосипеду"],
+    ["Приватность", "Доступ к велосипеду"],
     ["Удалить", "Удалить велосипед?"],
   ]) {
+    if (["Найти фото", "Удалить"].includes(name))
+      await tools.getByRole("button", { name: "Ещё", exact: true }).click();
     await tools.getByRole("button", { name, exact: true }).click();
     const dialog = page.getByRole("dialog", { name: title });
     await expect(dialog).toBeVisible();

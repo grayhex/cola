@@ -138,7 +138,7 @@ test("registration, touch autocomplete, bike/photo, public feed, like and revoke
   await expect(
     page.getByRole("heading", { name: bikeName, exact: true }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Доступ", exact: true }).click();
+  await page.getByRole("button", { name: "Приватность", exact: true }).click();
   await page
     .getByRole("button", { name: "Опубликовать на витрине", exact: true })
     .click();
@@ -195,7 +195,7 @@ test("registration, touch autocomplete, bike/photo, public feed, like and revoke
       .filter({ hasText: /Ссылка скопирована|Не удалось скопировать ссылку/ }),
   ).toBeVisible();
   await expect(shareMenu).toHaveCount(0);
-  await page.getByRole("button", { name: "Доступ", exact: true }).click();
+  await page.getByRole("button", { name: "Приватность", exact: true }).click();
   await page
     .getByRole("button", { name: "Закрыть доступ", exact: true })
     .click();
