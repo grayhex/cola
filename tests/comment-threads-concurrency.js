@@ -43,7 +43,7 @@ try {
   for (const id of [owner, a, b])
     await db.query(
       "INSERT INTO users(id,email,name,password_hash,username) VALUES($1,$2,'Thread race','hash',$3)",
-      [id, id + "@example.test", "thread-" + id.slice(9)],
+      [id, id + "@example.test", "thread-" + id.slice(-12)],
     );
   await db.query(
     "INSERT INTO bikes(id,owner_id,share_id,name,year,category,is_public) VALUES($1,$2,$1,'Nested race',2026,'road',true)",
