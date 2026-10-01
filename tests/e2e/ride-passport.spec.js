@@ -63,8 +63,7 @@ async function pick(page, scope, tile, option) {
   const sheet = page.getByRole("dialog", { name: new RegExp("^" + tile) });
   await sheet.getByRole("button", { name: option, exact: true }).click();
   await expect(sheet).toHaveCount(0);
-  // Closing the sheet restores focus on the next frame. Finish that handoff
-  // before moving to another control, especially before keyboard activation.
+  // Finish the focus handoff before keyboard activation of another control.
   await expect(opener).toBeFocused();
 }
 async function range(page, scope, tile, title, min, max) {
@@ -79,6 +78,29 @@ async function range(page, scope, tile, title, min, max) {
   await expect(sheet).toHaveCount(0);
   await expect(opener).toBeFocused();
 }
+
+test("a late passport sheet close event preserves the next keyboard target", async ({
+  page,
+}) => {
+  await page.goto("/account?tab=rides&action=plan");
+  const dialog = page.getByRole("dialog", { name: "Организовать покатушку" });
+  await range(page, dialog, "Дистанция", "Дистанция, км", 20, 40);
+  const advanced = dialog.locator("summary", { hasText: "Дополнительно" });
+  await advanced.focus();
+  await expect(advanced).toBeFocused();
+  // Native close is queued separately from dialog.close(). Deliver it after
+  // the user has moved on, then let any scheduled focus callback run.
+  await dialog.locator("dialog.sheet").evaluate(async (sheet) => {
+    sheet.dispatchEvent(new Event("close"));
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+  });
+  await expect(advanced).toBeFocused();
+  await advanced.press("Enter");
+  await expect(dialog.getByLabel("Велосипед", { exact: true })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Дистанция, км" })).toHaveCount(
+    0,
+  );
+});
 
 test("planner (#253): when and where first, tiles, visibility, advanced, themes, edit and live RSVP privacy", async ({
   page,
