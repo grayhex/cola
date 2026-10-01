@@ -327,8 +327,11 @@ test("a ride's route keeps a dark casing in previews", async ({ page }) => {
   await page.route("https://tile.openstreetmap.org/**", (route) =>
     route.abort(),
   );
-  await page.goto("/rides");
+  // The shared feed is paginated and other fixtures have the same date.
+  // Check this bike's preview without relying on the UUID tie-break order.
+  await page.goto("/b/" + b.share_id + "#bike-rides");
   const card = page.locator(".ride-card", { hasText: "Круг с каймой" });
+  await card.scrollIntoViewIfNeeded();
   const route = card.locator(".ride-route");
   await expect(route.locator("path.route-casing")).not.toHaveCount(0);
   const casing = await route
