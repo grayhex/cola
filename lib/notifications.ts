@@ -5,6 +5,8 @@ import { publicAuthor } from "./profile-dto.ts";
 import { profilePath } from "./public-urls.ts";
 import { expiryNoticeDays } from "./market.ts";
 import { partLandingPath } from "./experience-catalog.ts";
+import { mailEnabled } from "./mail.ts";
+import { notificationEmailEnqueueSql } from "./notification-catalog.ts";
 // Keep one lifetime follow/like event; comments/replies coalesce per actor/bike/15m.
 // Never reset created_at or read_at on conflict, including unlike/like and refollow.
 
@@ -39,9 +41,10 @@ export async function notify(
   if (!recipient || recipient === actor) return;
   const key = `${type}:${actor}:${component || entry || ride || bike || ""}`;
   await q.query(
-    `INSERT INTO notifications(id,recipient_id,actor_id,type,bike_id,comment_id,dedup_key,ride_id,ride_comment_id,entry_id,entry_comment_id,component_id,component_comment_id)
+    `WITH created AS (INSERT INTO notifications(id,recipient_id,actor_id,type,bike_id,comment_id,dedup_key,ride_id,ride_comment_id,entry_id,entry_comment_id,component_id,component_comment_id)
  SELECT $1,$2,$3,$4,$5,$6,$7 || CASE WHEN $4 IN ('comment','reply','ride_comment','ride_reply','journal_comment','journal_reply','component_reply') THEN ':' || floor(extract(epoch from now())/900)::bigint::text ELSE '' END,$8,$9,$10,$11,$12,$13 WHERE EXISTS(SELECT 1 FROM users WHERE id=$2 AND NOT blocked) AND EXISTS(SELECT 1 FROM users WHERE id=$3 AND NOT blocked)
- ON CONFLICT(recipient_id,dedup_key) DO NOTHING`,
+ ON CONFLICT(recipient_id,dedup_key) DO NOTHING RETURNING id,recipient_id,type)
+ ${notificationEmailEnqueueSql("$14::boolean")}`,
     [
       randomUUID(),
       recipient,
@@ -56,6 +59,7 @@ export async function notify(
       entryComment,
       component,
       componentComment,
+      mailEnabled(),
     ],
   );
 }
@@ -122,14 +126,19 @@ interface NotificationRow {
   name: string;
   avatar_id: string;
 }
-export async function notificationPage(q: Queryable, id: string, page = 1) {
+export async function notificationPage(
+  q: Queryable,
+  id: string,
+  page = 1,
+  notificationId: string | null = null,
+) {
   const r = await q.query<NotificationRow>(
     `SELECT n.id,n.type,n.created_at,n.read_at,n.comment_id,n.ride_comment_id,n.entry_comment_id,n.component_comment_id,cm.id component_id,cm.name component_name,cm.category_slug,cm.slug,ml.id AS listing_id,ml.share_id AS listing_share,ml.title AS listing_title,ml.status AS listing_status,ml.expires_at AS listing_expires,(ml.expires_at<=now()) AS listing_expired,(ml.expires_at<=now()+make_interval(days=>${expiryNoticeDays})) AS listing_due,e.id AS entry_id,e.kind AS entry_kind,e.share_id AS entry_share,e.title AS entry_title,r.id AS ride_id,r.share_id AS ride_share_id,r.title AS ride_title,b.id AS bike_id,b.share_id,b.name AS bike_name,a.id AS actor_id,a.username,a.name,a.avatar_id` +
       from +
       " WHERE " +
       visible +
-      " ORDER BY n.created_at DESC,n.id LIMIT 21 OFFSET $2",
-    [id, (page - 1) * 20],
+      " AND ($3::uuid IS NULL OR n.id=$3) ORDER BY n.created_at DESC,n.id LIMIT 21 OFFSET $2",
+    [id, (page - 1) * 20, notificationId],
   );
   return {
     notifications: r.rows.slice(0, 20).map((n) =>

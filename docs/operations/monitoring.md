@@ -50,6 +50,8 @@ sudo env \
 
 ## Базовая диагностика VPS
 
+Общий email-worker — `notification-email`: [состояния/лимиты и команды](../modules/community.md#email-outbox-148). Проверяйте counts pending/sending/failed и возраст очереди через `node scripts/notification-email.js --status` в ops image. `disabled=true` означает отсутствие настроенного канала; readiness сайта от него не зависит. Не логируйте SMTP error messages: они могут содержать адреса. Категории ошибок и счётчики достаточны для первичной диагностики.
+
 ```bash
 cd /opt/stacks/cola
 docker compose --env-file .env.production -f compose.prod.yaml ps

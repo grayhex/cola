@@ -32,6 +32,8 @@ bash scripts/test-backup-drill.sh
 
 После #260 отрицательные пробы проверяют также content/feed/save/contact DTO, targets обсуждения, RSVP, preview, телеметрию и отсутствие приватных полей автора и интеграции. Поездки и планирование покрывают `rides`, `ride-intents`, `ride-passport`, `ride-organize`, `ride-agreements`, `ride-home`, `rides-market` и `activity-sync`. Карты и графики дополнительно проверяйте на мобильной ширине, клавиатурой и при reduced motion; fixture Яндекса/Ride with GPS не подтверждает доступность живого провайдера.
 
+`notification-email.test.js` проверяет атомарную очередь, квоту, текущие согласие/адрес/видимость, signed unsubscribe, retry/lease/retention и реальные ответы локального SMTP-relay 451/250/550. `notification-email-http.js` входит в общий HTTP-набор; `notification-email-concurrency.js` с настоящим PostgreSQL проверяет пересечение двух worker, восстановление lease и fencing старой попытки. UI: `node scripts/test-ui.js tests/e2e/notification-email.spec.js --project=chromium` (повторить для `webkit-mobile`). Это изолированные проверки; живой SMTP-smoke и операторский запуск после deploy подтверждаются отдельно.
+
 Опциональный `COMMUNITY_ARTWORK_DIR` указывает на локальную папку с `bike-1.webp`…`bike-3.webp` для визуального сравнения с реальными публичными ресурсами. Без него тесты создают нейтральные локальные изображения. Это входные данные теста, не новая система управления графикой сайта.
 
 ## Что означает каждый уровень

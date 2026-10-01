@@ -19,6 +19,8 @@ import { listingTypeKeys } from "./market-types.ts";
 import { mkdir, open, readFile, unlink, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 import { CommunityError } from "./community-validation.ts";
+import { mailEnabled } from "./mail.ts";
+import { notificationEmailEnqueueSql } from "./notification-catalog.ts";
 import { publicAuthor } from "./profile-dto.ts";
 import { limits, componentPhotoBytes } from "./limits.ts";
 import { participation } from "./participation.ts";
@@ -252,7 +254,11 @@ export async function extendListing(q: Queryable, id: string, owner: unknown) {
 // The site's notice to an owner: once per term, when the term has three days
 // left or is already over. Runs when the owner's notifications are read, so
 // no scheduler is needed for a notice shown on the site.
-export async function noticeExpiringListings(q: Queryable, owner: unknown) {
+export async function noticeExpiringListings(
+  q: Queryable,
+  owner: unknown,
+  emailEnabled = mailEnabled(),
+) {
   await q.query(
     `WITH due AS (
       UPDATE market_listings m SET expiry_notice_for=m.expires_at
@@ -261,10 +267,11 @@ export async function noticeExpiringListings(q: Queryable, owner: unknown) {
          AND m.expiry_notice_for IS DISTINCT FROM m.expires_at
          AND EXISTS(SELECT 1 FROM users WHERE id=$1 AND NOT blocked)
       RETURNING m.id,m.expires_at)
-     INSERT INTO notifications(id,recipient_id,actor_id,type,listing_id,dedup_key)
+     , created AS (INSERT INTO notifications(id,recipient_id,actor_id,type,listing_id,dedup_key)
      SELECT gen_random_uuid(),$1,NULL,'market_expiring',id,'market_expiring:'||id||':'||floor(extract(epoch FROM expires_at))::bigint
-       FROM due ON CONFLICT(recipient_id,dedup_key) DO NOTHING`,
-    [owner, expiryNoticeDays],
+       FROM due ON CONFLICT(recipient_id,dedup_key) DO NOTHING RETURNING id,recipient_id,type)
+     ${notificationEmailEnqueueSql("$3::boolean")}`,
+    [owner, expiryNoticeDays, emailEnabled],
   );
 }
 export async function setListingSaved(

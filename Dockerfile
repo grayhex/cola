@@ -52,7 +52,7 @@ COPY db ./db
 COPY scripts/check-runtime.js scripts/migrate.js \
     scripts/bootstrap-admin.js scripts/set-admin.js scripts/reset-password.js \
     scripts/audit-photo-files.js scripts/recalculate-photo-storage.js \
-    scripts/cleanup-rides.js scripts/chat-sync.js scripts/chat-setup.js scripts/activity-sync.js \
+    scripts/cleanup-rides.js scripts/chat-sync.js scripts/chat-setup.js scripts/activity-sync.js scripts/notification-email.js \
     scripts/rebuild-factory-components.js ./scripts/
 RUN node --input-type=module -e "await import('./lib/rides.ts'); await import('./lib/factory-import.ts')"
 USER colabike

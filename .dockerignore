@@ -40,6 +40,7 @@
 !scripts/chat-sync.js
 !scripts/chat-setup.js
 !scripts/activity-sync.js
+!scripts/notification-email.js
 # Generated assets are rebuilt from the installed, locked package.
 public/maplibre/
 public/rive/runtime/

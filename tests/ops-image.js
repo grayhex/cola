@@ -39,6 +39,7 @@ const scripts = [
   "check-runtime.js",
   "cleanup-rides.js",
   "migrate.js",
+  "notification-email.js",
   "rebuild-factory-components.js",
   "recalculate-photo-storage.js",
   "reset-password.js",
@@ -67,6 +68,7 @@ const { defaultSettings, defaultCatalog } = await load("lib/site-defaults.ts");
 const { bootstrapAdmin } = await load("scripts/bootstrap-admin.js");
 await load("lib/rides.ts");
 await load("lib/activity-worker.ts");
+await load("lib/notification-email.ts");
 execFileSync(process.execPath, ["scripts/activity-sync.js", "--once"], {
   env: { ...process.env, RWGPS_ENABLED: "false" },
 });
@@ -190,6 +192,18 @@ try {
     [...versions].sort(),
   );
   runScript("scripts/check-runtime.js");
+  const mailWorker = JSON.parse(
+    runScript(
+      "scripts/notification-email.js",
+      {
+        ...process.env,
+        SMTP_URL: "",
+        MAIL_CAPTURE_DIR: "",
+      },
+      ["--once"],
+    ),
+  );
+  assert.equal(mailWorker.disabled, true);
 
   await isolatedDatabase(
     "empty database, repeat, bootstrap rollback",

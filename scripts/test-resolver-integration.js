@@ -197,6 +197,10 @@ try {
           "tests/legal-http.js",
           "tests/account-http.js",
           "tests/account-security-http.js",
+          "tests/notification-email-http.js",
+          ...(externalDatabase
+            ? ["tests/notification-email-concurrency.js"]
+            : []),
           ...(externalDatabase ? ["tests/quota-http.js"] : []),
         ])
     await new Promise((resolve, reject) => {

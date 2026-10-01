@@ -35,6 +35,7 @@ import {
 } from "./icons.tsx";
 import AuthPage from "./auth-page.tsx";
 import AccountSecurity from "./account-security.tsx";
+import AccountNotifications from "./account-notifications.tsx";
 import Garage from "./garage.tsx";
 import BikeCard from "./bike-card.tsx";
 import {
@@ -921,6 +922,7 @@ export default function Account() {
                         />
                       }
                     />
+                    <AccountNotifications />
                   </section>
                 )}
               </div>

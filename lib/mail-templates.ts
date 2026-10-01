@@ -14,12 +14,14 @@ function layout({
   action,
   link,
   footer,
+  unsubscribe,
 }: {
   greeting: string;
   lines: string[];
   action: string;
   link: string;
   footer: string;
+  unsubscribe?: string;
 }) {
   const text = [
     greeting,
@@ -29,6 +31,7 @@ function layout({
     link,
     "",
     footer,
+    ...(unsubscribe ? [unsubscribe] : []),
     "",
     "ColaBike",
   ].join("\n");
@@ -39,12 +42,44 @@ ${lines.map((line) => `<p style="margin:0 0 12px;font-size:15px;line-height:1.5"
 <p style="margin:24px 0"><a href="${escape(link)}" style="display:inline-block;background:#1f2328;color:#ffffff;text-decoration:none;padding:12px 18px;border-radius:6px;font-weight:600">${escape(action)}</a></p>
 <p style="margin:0 0 12px;font-size:13px;color:#57606a;word-break:break-all">${escape(link)}</p>
 <p style="margin:16px 0 0;font-size:13px;color:#57606a">${escape(footer)}</p>
+${unsubscribe ? `<p style="font-size:13px"><a href="${escape(unsubscribe)}">Отключить уведомления по почте</a></p>` : ""}
 </div></body></html>`;
   return { text, html };
 }
 
 const greet = (name: string | null | undefined) =>
   name ? `Здравствуйте, ${name}!` : "Здравствуйте!";
+
+export function notificationMail({
+  name,
+  subject,
+  line,
+  target,
+  actor,
+  link,
+  unsubscribe,
+}: {
+  name: string;
+  subject: string;
+  line: string;
+  target: string;
+  actor?: string;
+  link: string;
+  unsubscribe: string;
+}) {
+  return {
+    subject: subject + " · ColaBike",
+    ...layout({
+      greeting: greet(name),
+      lines: [line, ...(actor ? [actor] : []), target],
+      action: "Открыть на ColaBike",
+      link,
+      unsubscribe,
+      footer:
+        "Вы включили эти уведомления в кабинете. Их отключение не затрагивает письма безопасности и восстановление доступа.",
+    }),
+  };
+}
 
 export function passwordResetMail({
   name,
