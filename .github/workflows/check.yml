@@ -109,7 +109,9 @@ jobs:
     name: Browser · ${{ matrix.project }}
     needs: prepare
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    # Includes browser/OS installation, the full suite and visual artifacts.
+    # WebKit's 17.5-minute suite plus slow package mirrors can exceed 25 min.
+    timeout-minutes: 35
     strategy:
       fail-fast: false
       max-parallel: 2
