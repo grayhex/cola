@@ -18,7 +18,7 @@ type RangeTile = TileBase & {
   step: number;
 };
 type PassportTile = ChoiceTile | RangeTile;
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ChevronRight,
   Clock,
@@ -268,6 +268,14 @@ export default function PassportTiles({
   const [open, setOpen] = useState<ChoiceKey | RangeKey | null>(null);
   const returnTo = useRef<HTMLButtonElement | null>(null);
   const tile = passportTiles.find((t) => t.key === open);
+  useEffect(() => {
+    if (open) return;
+    // CompactDialog's child effect has closed the native dialog. Restore once
+    // for this state change; a queued native close event must not steal focus
+    // after the user has already moved to the next field.
+    returnTo.current?.focus({ preventScroll: true });
+    returnTo.current = null;
+  }, [open]);
   function pick(next: string | Range | undefined) {
     const passport = { ...value };
     if (!open) return;
@@ -289,8 +297,6 @@ export default function PassportTiles({
   }
   function close() {
     setOpen(null);
-    // The sheet is a separate top-layer dialog: give focus back to its tile.
-    requestAnimationFrame(() => returnTo.current?.focus());
   }
   return (
     <>

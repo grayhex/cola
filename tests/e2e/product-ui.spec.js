@@ -165,12 +165,13 @@ test("the cabinet offers once to replace an automatic username (#71)", async ({
 test("all product routes and account sections share clear light/dark UI; composer, profile menu and real speed data work", async ({
   page,
   context,
+  browser,
 }, info) => {
   test.setTimeout(180000);
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await context.route("https://tile.openstreetmap.org/**", (r) => r.abort());
-  await registerVerified(page.request, {
+  const registration = await registerVerified(page.request, {
     headers: { origin },
     data: {
       ...testConsents,
@@ -179,7 +180,9 @@ test("all product routes and account sections share clear light/dark UI; compose
       password,
     },
   });
+  expect(registration.status()).toBe(201);
   const { user } = await (await page.request.get("/api/me")).json();
+  const signedIn = await context.storageState();
   const db = new pg.Client({ connectionString: process.env.DATABASE_URL });
   await db.connect();
   await db.query(
@@ -281,10 +284,17 @@ test("all product routes and account sections share clear light/dark UI; compose
   try {
     for (const mode of ["light", "dark"]) {
       for (const [url, ready, name] of routes) {
-        // Audit each direct URL in its own page. Replacing an active document
-        // cancels Next prefetches, which WebKit reports as fetch pageerrors.
-        // Navigation/history behavior is covered separately in gallery tests.
-        const page = await context.newPage();
+        // Each visual case starts with the same real session and fresh browser
+        // state. Do not carry cookie/storage changes through dozens of pages.
+        // Navigation and session continuity have dedicated browser tests.
+        const audit = await browser.newContext({
+          ...info.project.use,
+          storageState: signedIn,
+        });
+        await audit.route("https://tile.openstreetmap.org/**", (r) =>
+          r.abort(),
+        );
+        const page = await audit.newPage();
         page.on("pageerror", (e) => errors.push(e.message));
         await page.addInitScript(
           (mode) => localStorage.setItem("cola:theme", mode),
@@ -292,7 +302,16 @@ test("all product routes and account sections share clear light/dark UI; compose
         );
         try {
           await page.goto(url);
-          await expect(page.locator(ready).first()).toBeVisible();
+          await expect(
+            page.locator(ready).first(),
+            `${name} · ${mode}`,
+          ).toBeVisible();
+          // A guest rendering of a public page is not a valid signed-in audit.
+          const me = await page.request.get("/api/me");
+          expect(me.ok(), `${name} · ${mode}: session response`).toBe(true);
+          expect((await me.json()).user?.id, `${name} · ${mode}: session`).toBe(
+            user.id,
+          );
           if (await page.locator(".discussion").count()) {
             await expect(
               page
@@ -333,7 +352,7 @@ test("all product routes and account sections share clear light/dark UI; compose
             animations: "disabled",
           });
         } finally {
-          await page.close();
+          await audit.close();
         }
       }
     }
