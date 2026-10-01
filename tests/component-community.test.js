@@ -98,36 +98,17 @@ test("component media and shared discussion: upgrade, roles, quota, merges, mode
         "utf8",
       ),
     );
-    await db.exec(
-      await readFile(
-        new URL("../db/044_bike_week.sql", import.meta.url),
-        "utf8",
-      ),
-    );
     assert.deepEqual(
       (await db.query("SELECT * FROM components ORDER BY id")).rows,
       snapshot,
     );
-    await db.exec(
-      await readFile(
-        new URL("../db/032_component_photo_search.sql", import.meta.url),
-        "utf8",
-      ),
-    );
-    // Current notifications/export use the email settings schema (#148).
-    await db.exec(
-      await readFile(
-        new URL("../db/043_notification_email.sql", import.meta.url),
-        "utf8",
-      ),
-    );
-    // Model edits write the description (#264).
-    await db.exec(
-      await readFile(
-        new URL("../db/041_component_descriptions.sql", import.meta.url),
-        "utf8",
-      ),
-    );
+    // Current notification readers require the current ride and weekly schemas.
+    for (const file of (await readdir(new URL("../db/", import.meta.url)))
+      .filter((f) => f.endsWith(".sql") && f >= "031")
+      .sort())
+      await db.exec(
+        await readFile(new URL("../db/" + file, import.meta.url), "utf8"),
+      );
     const raw = await sharp({
       create: { width: 800, height: 600, channels: 3, background: "#efac21" },
     })
@@ -278,14 +259,6 @@ test("component media and shared discussion: upgrade, roles, quota, merges, mode
       bytes.length,
     ]);
     assert.equal(await componentPhotoBytes(db, owner.id), bytes.length);
-    // The export contract also includes intentions; this historical 029 fixture
-    // needs their independent schema before calling the current exporter.
-    await db.exec(
-      await readFile(
-        new URL("../db/037_ride_intents.sql", import.meta.url),
-        "utf8",
-      ),
-    );
     assert.equal(
       (await exportAccount(db, owner.id, "https://example.test"))
         .componentPhotos[0].id,

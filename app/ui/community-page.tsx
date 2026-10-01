@@ -62,6 +62,10 @@ const eventText: Record<string, string> = {
   journal_comment: "прокомментировал запись",
   journal_reply: "ответил вам в журнале",
   ride_invite: "приглашает на покатушку",
+  ride_changed: "изменил договорённости покатушки",
+  ride_cancelled: "отменил покатушку",
+  ride_response: "участники обновили ответы на покатушку",
+  ride_reminder: "напоминание о подтверждённой покатушке",
   ride_like: "понравилась ваша покатушка",
   ride_comment: "прокомментировал покатушку",
   ride_reply: "ответил вам",
@@ -494,7 +498,7 @@ export default function CommunityPage({
                     onExtend={() => extend(n)}
                     onRead={() => read(n.id).catch((e) => setError(e.message))}
                   />
-                ) : n.actor === null ? (
+                ) : n.type === "bike_week" ? (
                   <li key={n.id} className={n.readAt ? "" : "unread"}>
                     <div>
                       <p>Ваш велосипед — велосипед недели: {n.target.name}</p>
@@ -513,20 +517,26 @@ export default function CommunityPage({
                   </li>
                 ) : (
                   <li key={n.id} className={n.readAt ? "" : "unread"}>
-                    <a
-                      href={profilePath(n.actor.username)}
-                      aria-label={"Профиль: " + personName(n.actor)}
-                    >
-                      <Avatar person={n.actor} />
-                    </a>
+                    {n.actor && (
+                      <a
+                        href={profilePath(n.actor.username)}
+                        aria-label={"Профиль: " + personName(n.actor)}
+                      >
+                        <Avatar person={n.actor} />
+                      </a>
+                    )}
                     <div>
                       <p>
-                        <a
-                          className="notification-actor"
-                          href={profilePath(n.actor.username)}
-                        >
-                          {personName(n.actor)}
-                        </a>
+                        {n.actor ? (
+                          <a
+                            className="notification-actor"
+                            href={profilePath(n.actor.username)}
+                          >
+                            {personName(n.actor)}
+                          </a>
+                        ) : (
+                          <span className="notification-actor">ColaBike ·</span>
+                        )}
                         {" " + eventText[n.type] + " "}
                         {n.type !== "follow" && (
                           <a

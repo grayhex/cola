@@ -49,6 +49,26 @@ export const notificationEmailEvents: Record<
     subject: "Приглашение на покатушку",
     line: "Вас пригласили на покатушку. Ответьте на странице поездки: приглашение само по себе не означает участие.",
   },
+  ride_changed: {
+    category: "rides",
+    subject: "Изменились договорённости покатушки",
+    line: "Организатор изменил время, место или маршрут. Проверьте актуальные условия и подтвердите участие заново.",
+  },
+  ride_cancelled: {
+    category: "rides",
+    subject: "Покатушка отменена",
+    line: "Организатор отменил этот выезд. Актуальное состояние — на странице покатушки.",
+  },
+  ride_response: {
+    category: "rides",
+    subject: "Участники обновили ответы",
+    line: "Ответы на вашу покатушку изменились. Актуальная сводка участников — на странице поездки.",
+  },
+  ride_reminder: {
+    category: "rides",
+    subject: "Напоминание о покатушке",
+    line: "До подтверждённой вами покатушки осталось меньше суток. Проверьте актуальные договорённости перед выездом.",
+  },
   market_expiring: {
     category: "market",
     subject: "Срок объявления на ColaBike",
@@ -70,6 +90,13 @@ export function notificationEmailCategorySql(typeColumn = "type") {
     .join(" ");
   return `CASE ${categories} ELSE NULL END`;
 }
-export function notificationEmailEnqueueSql(enabledParameter: string) {
-  return `SELECT cola_queue_notification_email(id,recipient_id,${notificationEmailCategorySql()}) FROM created WHERE ${enabledParameter}`;
+export function notificationEmailEnqueueSql(
+  enabledParameter: string,
+  { available, expires }: { available?: string; expires?: string } = {},
+) {
+  const timing =
+    available || expires
+      ? `,${available || "now()"},${expires || "now()+interval '7 days'"}`
+      : "";
+  return `SELECT cola_queue_notification_email(id,recipient_id,${notificationEmailCategorySql()}${timing}) FROM created WHERE ${enabledParameter}`;
 }

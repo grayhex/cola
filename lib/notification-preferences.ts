@@ -11,12 +11,14 @@ export const notificationEmailInput = z
     discussions: z.boolean(),
     rides: z.boolean(),
     market: z.boolean(),
+    reminders: z.boolean().optional(),
   })
   .strict();
 export type NotificationEmailPreferences = z.infer<
   typeof notificationEmailInput
 >;
 export interface NotificationEmailSettings extends NotificationEmailPreferences {
+  reminders: boolean;
   available: boolean;
   verified: boolean;
 }
@@ -25,6 +27,7 @@ export const defaultNotificationEmail: NotificationEmailPreferences = {
   discussions: false,
   rides: false,
   market: false,
+  reminders: true,
 };
 export async function notificationEmailSettings(
   q: Queryable,
@@ -32,9 +35,9 @@ export async function notificationEmailSettings(
   env = process.env,
 ): Promise<NotificationEmailSettings> {
   const { rows } = await q.query<
-    NotificationEmailPreferences & { verified: boolean }
+    NotificationEmailPreferences & { verified: boolean; reminders: boolean }
   >(
-    `SELECT coalesce(p.enabled,false) enabled,coalesce(p.discussions,false) discussions,coalesce(p.rides,false) rides,coalesce(p.market,false) market,u.email_verified_at IS NOT NULL verified FROM users u LEFT JOIN notification_email_preferences p ON p.user_id=u.id WHERE u.id=$1 AND NOT u.blocked`,
+    `SELECT coalesce(p.enabled,false) enabled,coalesce(p.discussions,false) discussions,coalesce(p.rides,false) rides,coalesce(p.market,false) market,coalesce(p.ride_reminders,true) reminders,u.email_verified_at IS NOT NULL verified FROM users u LEFT JOIN notification_email_preferences p ON p.user_id=u.id WHERE u.id=$1 AND NOT u.blocked`,
     [userId],
   );
   if (!rows[0]) throw new CommunityError("Пользователь недоступен", 404);
@@ -59,14 +62,21 @@ export async function saveNotificationEmail(
       503,
     );
   await q.query(
-    `WITH saved AS (INSERT INTO notification_email_preferences(user_id,enabled,discussions,rides,market) VALUES($1,$2,$3,$4,$5)
-    ON CONFLICT(user_id) DO UPDATE SET enabled=excluded.enabled,discussions=excluded.discussions,rides=excluded.rides,market=excluded.market,
+    `WITH saved AS (INSERT INTO notification_email_preferences(user_id,enabled,discussions,rides,market,ride_reminders) VALUES($1,$2,$3,$4,$5,$6)
+    ON CONFLICT(user_id) DO UPDATE SET enabled=excluded.enabled,discussions=excluded.discussions,rides=excluded.rides,market=excluded.market,ride_reminders=excluded.ride_reminders,
       unsubscribe_key=CASE WHEN excluded.enabled AND NOT notification_email_preferences.enabled THEN gen_random_uuid()::text||gen_random_uuid()::text ELSE notification_email_preferences.unsubscribe_key END,updated_at=now()
-    RETURNING user_id,enabled,discussions,rides,market)
+    RETURNING user_id,enabled,discussions,rides,market,ride_reminders)
     UPDATE notification_email_outbox o SET status='skipped',error_code='preferences',finished_at=now(),lease_token=NULL,lease_until=NULL
     FROM notifications n,saved p WHERE o.notification_id=n.id AND o.recipient_id=p.user_id AND o.status IN ('pending','sending')
-      AND (NOT p.enabled OR NOT coalesce(CASE ${notificationEmailCategorySql("n.type")} WHEN 'discussions' THEN p.discussions WHEN 'rides' THEN p.rides WHEN 'market' THEN p.market END,false))`,
-    [userId, value.enabled, value.discussions, value.rides, value.market],
+      AND (NOT p.enabled OR (n.type='ride_reminder' AND NOT p.ride_reminders) OR NOT coalesce(CASE ${notificationEmailCategorySql("n.type")} WHEN 'discussions' THEN p.discussions WHEN 'rides' THEN p.rides WHEN 'market' THEN p.market END,false))`,
+    [
+      userId,
+      value.enabled,
+      value.discussions,
+      value.rides,
+      value.market,
+      value.reminders ?? current.reminders,
+    ],
   );
   return notificationEmailSettings(q, userId, env);
 }

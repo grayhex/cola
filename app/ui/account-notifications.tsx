@@ -12,6 +12,7 @@ const empty: NotificationEmailPreferences = {
   discussions: false,
   rides: false,
   market: false,
+  reminders: true,
 };
 export default function AccountNotifications() {
   const [data, setData] = useState<NotificationEmailSettings | null>(null),
@@ -31,8 +32,8 @@ export default function AccountNotifications() {
       .then((value) => {
         if (disposed) return;
         setData(value);
-        const { enabled, discussions, rides, market } = value;
-        saved.current = { enabled, discussions, rides, market };
+        const { enabled, discussions, rides, market, reminders } = value;
+        saved.current = { enabled, discussions, rides, market, reminders };
         setForm(saved.current);
       })
       .catch((e) => {
@@ -50,7 +51,7 @@ export default function AccountNotifications() {
       className="account-notifications"
       aria-labelledby="notification-email-title"
     >
-      <h3 id="notification-email-title">Уведомления по почте</h3>
+      <h3 id="notification-email-title">Уведомления</h3>
       <p className="help">
         Важные события — на подтверждённый адрес. Получать предложения покатушек
         и подписаться на письма — отдельные настройки.
@@ -77,6 +78,7 @@ export default function AccountNotifications() {
                 discussions: value.discussions,
                 rides: value.rides,
                 market: value.market,
+                reminders: value.reminders,
               };
               setForm(saved.current);
               setMessage("Настройки уведомлений сохранены");
@@ -89,7 +91,22 @@ export default function AccountNotifications() {
           }}
         >
           <fieldset disabled={busy} className="notification-email-fields">
-            <legend className="sr-only">Письма от ColaBike</legend>
+            <legend className="sr-only">Уведомления ColaBike</legend>
+            <label className="check">
+              <input
+                type="checkbox"
+                checked={form.reminders}
+                onChange={(e) =>
+                  setForm({ ...form, reminders: e.target.checked })
+                }
+              />
+              <span>Напоминать перед подтверждённой покатушкой</span>
+            </label>
+            <p className="help">
+              На сайте — за 24 часа до старта. При позднем подтверждении — один
+              раз, если до старта больше 5 минут. Письмо придёт только при
+              включённой почте и категории «Покатушки» ниже.
+            </p>
             <label className="check">
               <input
                 type="checkbox"

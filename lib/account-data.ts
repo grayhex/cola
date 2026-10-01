@@ -441,9 +441,10 @@ export async function exportAccount(
       discussions: boolean;
       rides: boolean;
       market: boolean;
+      reminders: boolean;
       updated_at: Date;
     }>(
-      "SELECT enabled,discussions,rides,market,updated_at FROM notification_email_preferences WHERE user_id=$1",
+      "SELECT enabled,discussions,rides,market,ride_reminders reminders,updated_at FROM notification_email_preferences WHERE user_id=$1",
       [userId],
     )
   ).rows[0] || {
@@ -451,6 +452,7 @@ export async function exportAccount(
     discussions: false,
     rides: false,
     market: false,
+    reminders: true,
   };
   return {
     format: "colabike-export",

@@ -228,6 +228,35 @@ function Participation({
             {text}
           </p>
           <RideRsvp ride={ride} onResponse={onAnswer} />
+          {ride.reminder && (
+            <p className="help" data-testid="ride-reminder-status">
+              {!ride.reminder.enabled
+                ? "Напоминание отключено."
+                : ride.participation === "reconfirm"
+                  ? "Напоминание появится после нового подтверждения участия."
+                  : ride.reminder.at
+                    ? ride.reminder.released
+                      ? "Напоминание доступно в уведомлениях."
+                      : "Напоминание на сайте: " +
+                        new Date(ride.reminder.at).toLocaleString("ru-RU", {
+                          timeZone: ride.recurrenceTimezone,
+                          day: "numeric",
+                          month: "short",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        }) +
+                        "."
+                    : ride.participation === "accepted"
+                      ? "До старта меньше 5 минут — напоминание уже не отправляется."
+                      : "Напоминание появится после ответа «Иду»."}{" "}
+              {ride.reminder.emailEnabled
+                ? "Письма о покатушках включены."
+                : "Письма о покатушках выключены."}{" "}
+              <Link href="/account?tab=account#notification-email-title">
+                Настройки уведомлений
+              </Link>
+            </p>
+          )}
         </>
       )}
       {ride.status === "planned" && upcoming && viewer && (

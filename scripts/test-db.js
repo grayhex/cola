@@ -222,7 +222,13 @@ await db.exec(
   ),
 );
 await db.exec(
-  await readFile(new URL("../db/044_bike_week.sql", import.meta.url), "utf8"),
+  await readFile(
+    new URL("../db/044_ride_notifications.sql", import.meta.url),
+    "utf8",
+  ),
+);
+await db.exec(
+  await readFile(new URL("../db/045_bike_week.sql", import.meta.url), "utf8"),
 );
 await seedLegalDocuments(db);
 const server = new PGLiteSocketServer({
