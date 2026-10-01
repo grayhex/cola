@@ -208,11 +208,8 @@ export function buildApp(
       return reply.code(503).send({ error: "Источник фотографий недоступен" });
     }
   });
-  app.get("/v1/photos/:id", async (req, reply) => {
-    const id = z
-      .string()
-      .uuid()
-      .safeParse((req.params as any).id);
+  app.get<{ Params: { id: string } }>("/v1/photos/:id", async (req, reply) => {
+    const id = z.string().uuid().safeParse(req.params.id);
     if (!id.success) return reply.code(400).send({ error: "invalid_input" });
     try {
       return await manual.photo(id.data);
@@ -236,19 +233,22 @@ export function buildApp(
       });
     }
   });
-  app.get("/v1/component-photos/:id", async (req, reply) => {
-    const id = z.uuid().safeParse((req.params as any).id);
-    if (!id.success) return reply.code(400).send({ error: "invalid_input" });
-    try {
-      return await withResolution(AbortSignal.timeout(15000), undefined, () =>
-        componentPhotos.photo(id.data),
-      );
-    } catch {
-      return reply
-        .code(503)
-        .send({ error: "Фото недоступно или поиск устарел. Повторите поиск." });
-    }
-  });
+  app.get<{ Params: { id: string } }>(
+    "/v1/component-photos/:id",
+    async (req, reply) => {
+      const id = z.uuid().safeParse(req.params.id);
+      if (!id.success) return reply.code(400).send({ error: "invalid_input" });
+      try {
+        return await withResolution(AbortSignal.timeout(15000), undefined, () =>
+          componentPhotos.photo(id.data),
+        );
+      } catch {
+        return reply.code(503).send({
+          error: "Фото недоступно или поиск устарел. Повторите поиск.",
+        });
+      }
+    },
+  );
   const brands = () =>
     resolver.adapters.map((a) => ({
       id: a.id,

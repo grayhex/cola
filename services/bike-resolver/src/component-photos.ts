@@ -4,6 +4,7 @@ import pino from "pino";
 import { z } from "zod";
 import { ManufacturerHttpClient, validateUrl } from "./http.js";
 import { SettingsStore } from "./settings.js";
+import { jsonRecord, jsonRecords } from "./json-values.js";
 
 export const componentPhotoQuery = z
   .object({
@@ -123,15 +124,38 @@ type Credit = {
   license: string;
   licenseUrl: string;
 };
-export function commonsResults(data: any): Credit[] {
-  if (data?.error || !data || typeof data !== "object")
-    throw new Error("Commons unavailable");
-  const pages: any[] = Object.values(data.query?.pages || {});
-  pages.sort((a, b) => (a?.index ?? 100) - (b?.index ?? 100));
+const commonsImageSchema = z.object({
+  mime: z.string(),
+  size: z.number(),
+  width: z.number(),
+  height: z.number(),
+  url: z.string(),
+  descriptionurl: z.string(),
+  thumburl: z.string().optional(),
+  thumbmime: z.string().optional(),
+  thumbwidth: z.number().optional(),
+  thumbheight: z.number().optional(),
+  extmetadata: z.unknown(),
+});
+export function commonsResults(input: unknown): Credit[] {
+  const data = jsonRecord(input);
+  if (!data || data.error) throw new Error("Commons unavailable");
+  const pageData = jsonRecord(data.query)?.pages;
+  const pages = jsonRecords(
+    Array.isArray(pageData)
+      ? pageData
+      : Object.values(jsonRecord(pageData) || {}),
+  );
+  const index = (page: Record<string, unknown>) =>
+    typeof page.index === "number" ? page.index : 100;
+  pages.sort((a, b) => index(a) - index(b));
   const found: Credit[] = [];
   for (const page of pages.slice(0, 12)) {
-    const image = page?.imageinfo?.[0],
-      meta = image?.extmetadata;
+    const parsed = commonsImageSchema.safeParse(jsonRecords(page.imageinfo)[0]);
+    if (!parsed.success) continue;
+    const image = parsed.data,
+      meta = jsonRecord(image.extmetadata);
+    const metaValue = (key: string) => jsonRecord(meta?.[key])?.value;
     const rendition = image?.thumburl
       ? {
           url: image.thumburl,
@@ -144,21 +168,26 @@ export function commonsResults(data: any): Credit[] {
       !image ||
       !meta ||
       !["image/jpeg", "image/png", "image/webp"].includes(image.mime) ||
+      typeof rendition.mime !== "string" ||
       !["image/jpeg", "image/png", "image/webp"].includes(rendition.mime) ||
       ![image.size, image.width, image.height].every(
-        (v) => Number.isSafeInteger(v) && v > 0,
+        (v) => typeof v === "number" && Number.isSafeInteger(v) && v > 0,
       ) ||
       ![rendition.width, rendition.height].every(
-        (v) => Number.isSafeInteger(v) && v > 0,
+        (v) => typeof v === "number" && Number.isSafeInteger(v) && v > 0,
       ) ||
       (!image.thumburl && image.size > 8 * 1024 * 1024) ||
+      typeof rendition.width !== "number" ||
+      typeof rendition.height !== "number" ||
       rendition.width * rendition.height > 40000000 ||
       Math.min(rendition.width, rendition.height) < 400 ||
       Math.max(rendition.width, rendition.height) < 600
     )
       continue;
     try {
-      const license = new URL(meta.LicenseUrl?.value);
+      const licenseValue = metaValue("LicenseUrl");
+      if (typeof licenseValue !== "string") continue;
+      const license = new URL(licenseValue);
       const licensePath = license.pathname.replace(/\/deed\.[a-z-]+$/i, "");
       // Only licenses whose attribution can be represented completely here.
       if (
@@ -172,16 +201,16 @@ export function commonsResults(data: any): Credit[] {
         )
       )
         continue;
-      const creator = text(meta.Artist?.value, 500);
-      if (!creator || !text(meta.LicenseShortName?.value)) continue;
+      const creator = text(metaValue("Artist"), 500);
+      if (!creator || !text(metaValue("LicenseShortName"))) continue;
       const source = {
         provider: "Wikimedia Commons",
         url: commonsUrl(image.descriptionurl, [hosts[0]]),
         imageUrl: commonsUrl(rendition.url, imageHosts),
         title: text(page.title, 300).replace(/^File:/, ""),
         creator,
-        credit: text(meta.Attribution?.value || meta.Credit?.value),
-        license: text(meta.LicenseShortName.value, 80),
+        credit: text(metaValue("Attribution") || metaValue("Credit")),
+        license: text(metaValue("LicenseShortName"), 80),
         licenseUrl: "https://creativecommons.org" + licensePath,
       };
       if (source.url.length > 2048 || source.imageUrl.length > 2048) continue;
@@ -255,7 +284,8 @@ export class ComponentPhotoSearch {
           maxlag: "5",
         }).toString();
         const doc = await this.http.get(url.href, [hosts[0]]);
-        sources = commonsResults(JSON.parse(doc.body));
+        const payload: unknown = JSON.parse(doc.body);
+        sources = commonsResults(payload);
         if (sources.length) break;
       }
       if (this.cache.size >= 40)

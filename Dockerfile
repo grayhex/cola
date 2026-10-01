@@ -14,7 +14,7 @@ RUN node scripts/copy-maplibre-worker.js && node scripts/copy-rive-runtime.js
 
 FROM dependencies AS builder
 ENV NEXT_TELEMETRY_DISABLED=1
-COPY next.config.mjs proxy.js tsconfig.json ./
+COPY next.config.mjs proxy.ts tsconfig.json ./
 COPY app ./app
 COPY lib ./lib
 # The shared helper runs in web; the TS files are type-only inputs for Next.

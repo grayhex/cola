@@ -2,6 +2,7 @@ import { decodeDocument } from "./charset.js";
 import { resolutionContext, trace, checkAbort, abortable } from "./context.js";
 import { sourceIdentity } from "./source-url.js";
 import { lookup } from "node:dns/promises";
+import type { LookupFunction } from "node:net";
 import { createHash } from "node:crypto";
 import { Agent, fetch } from "undici";
 import ipaddr from "ipaddr.js";
@@ -187,15 +188,13 @@ export class ManufacturerHttpClient {
             );
           const address = addresses[attempt % addresses.length];
           // Pin the checked address to this connection: no second DNS lookup/rebinding window.
+          const pinnedLookup: LookupFunction = (_host, opts, cb) => {
+            if (opts.all) cb(null, [address]);
+            else cb(null, address.address, address.family);
+          };
           dispatcher = new Agent({
             connect: {
-              lookup: ((_host: unknown, opts: any, cb: any) =>
-                cb(
-                  null,
-                  ...(opts?.all
-                    ? [[address]]
-                    : [address.address, address.family]),
-                )) as any,
+              lookup: pinnedLookup,
             },
           });
           const response = await fetch(u, {
@@ -336,7 +335,10 @@ export class ManufacturerHttpClient {
               "upstream_unavailable",
               "Manufacturer connection failed",
               true,
-              ["ENOTFOUND", "EAI_AGAIN"].includes((e as any)?.code)
+              e !== null &&
+                typeof e === "object" &&
+                "code" in e &&
+                (e.code === "ENOTFOUND" || e.code === "EAI_AGAIN")
                 ? "dns_failed"
                 : "connection_failed",
             );

@@ -4,6 +4,7 @@ const first = await fetch(base + "/about", {
   headers: {
     "x-cola-nonce": "attacker",
     "Content-Security-Policy": "script-src 'nonce-attacker'",
+    "Content-Security-Policy-Report-Only": "script-src 'nonce-attacker-report'",
   },
 });
 const policy = first.headers.get("content-security-policy-report-only");
@@ -42,6 +43,14 @@ assert.equal(
   ),
   null,
 );
+for (const resource of ["/favicon.svg", "/robots.txt", "/sitemap.xml"])
+  assert.equal(
+    (await fetch(base + resource)).headers.get(
+      "content-security-policy-report-only",
+    ),
+    null,
+    `proxy excludes ${resource}`,
+  );
 const post = (body, headers = {}) =>
   fetch(base + "/api/csp-reports", {
     method: "POST",

@@ -7,7 +7,7 @@
 !pnpm-workspace.yaml
 !next.config.mjs
 !tsconfig.json
-!proxy.js
+!proxy.ts
 !app/
 !app/**
 !lib/

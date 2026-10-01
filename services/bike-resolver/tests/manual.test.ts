@@ -94,4 +94,43 @@ describe("manual sources", () => {
       parseCubePayload({ ...product, specs: [] }, features),
     ).toThrow();
   });
+  it("ignores malformed CUBE rows and rejects an invalid top-level payload", () => {
+    const features = [
+      null,
+      false,
+      ...["FRAME", "FORK", "BRAKE SYSTEM"].map((description, i) => ({
+        productFeatureId: i,
+        languageData: [null, { languageId: 2, description }],
+      })),
+    ];
+    const product = {
+      mainId: 350600,
+      description: "Travel SL",
+      specs: [
+        null,
+        false,
+        ...["Aluminium", "Rigid fork", "Shimano XT BR-T8000"].map(
+          (value, i) => ({
+            productSpecTypeId: i,
+            languageData: [
+              null,
+              { languageId: 2, productSpecValueDescription: value },
+            ],
+          }),
+        ),
+      ],
+    };
+    expect(parseCubePayload(product, features).components).toHaveLength(3);
+    for (const payload of [null, [], false, "invalid"])
+      expect(() => parseCubePayload(payload, features)).toThrow(
+        "format changed",
+      );
+    expect(() => parseCubePayload(product, {})).toThrow("format changed");
+    expect(() =>
+      parseCubePayload({ ...product, mainId: {} }, features),
+    ).toThrow("format changed");
+    expect(() =>
+      parseCubePayload({ ...product, description: [] }, features),
+    ).toThrow("format changed");
+  });
 });
