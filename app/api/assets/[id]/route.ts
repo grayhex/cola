@@ -5,6 +5,7 @@ import path from "node:path";
 import { uuid } from "../../../../lib/validation.ts";
 import { fail } from "../../../../lib/http.ts";
 import { traced } from "../../../../lib/observability.ts";
+import { siteGraphicWidths } from "../../../../lib/media-sizes.ts";
 import {
   immutableMediaCache,
   mediaEtag,
@@ -28,6 +29,7 @@ export const GET = traced(
     if (!rows[0]) return fail("Изображение не найдено", 404);
     const requestedWidth = mediaWidth(
       new URL(req.url).searchParams.get("width"),
+      siteGraphicWidths,
     );
     if (requestedWidth === undefined)
       return fail("Недопустимый размер изображения");

@@ -697,7 +697,7 @@ test("admin appearance is explicit; hero upload, replacement and removal protect
             .settings.appearance.theme,
       )
       .toBe("dark");
-    await nav.getByRole("button", { name: "Внешний вид", exact: true }).click();
+    await nav.getByRole("button", { name: "Главная", exact: true }).click();
     await page
       .getByLabel("Файл: Фоновое изображение hero", { exact: true })
       .setInputFiles({
@@ -732,7 +732,7 @@ test("admin appearance is explicit; hero upload, replacement and removal protect
       preview.locator(
         `section[aria-labelledby="hero-title"] img[data-hero-background]`,
       ),
-    ).toHaveAttribute("src", "/api/assets/" + heroId + "?width=1280");
+    ).toHaveAttribute("src", "/api/assets/" + heroId + "?width=2400");
     await preview.close();
     expect(
       (

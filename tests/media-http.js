@@ -223,8 +223,8 @@ try {
       },
       body: await sharp({
         create: {
-          width: 1600,
-          height: 1200,
+          width: 2400,
+          height: 1030,
           channels: 4,
           background: "#335577",
         },
@@ -269,6 +269,22 @@ try {
     (await guest.raw("/api/assets/" + assetId + "?width=161")).status,
     400,
   );
+  for (const size of [1920, 2400]) {
+    const url = `/api/assets/${assetId}?width=${size}`;
+    const large = await guest.raw(url);
+    assert.equal(large.status, 200);
+    assert.equal(await width(large), size);
+    assert.equal(
+      large.headers.get("cache-control"),
+      asset.headers.get("cache-control"),
+    );
+    assert.equal(
+      large.headers.get("content-security-policy"),
+      asset.headers.get("content-security-policy"),
+    );
+    assert.notEqual(large.headers.get("etag"), smallEtag);
+    assert.equal((await guest.raw(url, large.headers.get("etag"))).status, 304);
+  }
   assert.equal((await owner("admin/assets/" + assetId, "DELETE")).status, 200);
   assert.equal(
     (await guest.raw("/api/assets/" + assetId + "?width=160", smallEtag))

@@ -45,7 +45,7 @@ import {
   X,
 } from "lucide-react";
 import { useSite } from "./site-provider.tsx";
-import { customEmoji } from "../../lib/ui-emoji.ts";
+import { customEmoji, pulseIconColors } from "../../lib/ui-emoji.ts";
 // One line icon per interface slot of lib/ui-emoji.ts (#127).
 export const slotIcons: Record<string, LucideIcon> = {
   home: House,
@@ -91,6 +91,10 @@ export const slotIcons: Record<string, LucideIcon> = {
   reset: RotateCcw,
   apply: Check,
   date: Calendar,
+  pulseToday: Sun,
+  pulseTomorrow: CalendarPlus,
+  pulseWeekend: TreePine,
+  pulseLater: Calendar,
 };
 // Interface icon: the administrator's emoji when one is set for the slot,
 // otherwise the line icon, both at the same size (docs/development/design-system.md → Icons).
@@ -108,7 +112,7 @@ export default function SiteIcon({
   const site = useSite();
   const config = settings || site?.settings;
   const emoji = customEmoji(config?.emojis, name);
-  const color = config?.iconColors?.[name];
+  const color = config?.iconColors?.[name] || pulseIconColors[name];
   const style = {
     "--icon-size": size + "px",
     ...(/^#[0-9a-f]{6}$/i.test(color || "") ? { "--icon-color": color } : {}),

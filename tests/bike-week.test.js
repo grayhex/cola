@@ -11,6 +11,7 @@ import {
   decideBikeWeek,
   saveBikeWeekSettings,
   getBikeWeekSettings,
+  searchBikeWeekChoices,
 } from "../lib/bike-week.ts";
 import {
   bikeWeekStart,
@@ -97,6 +98,58 @@ async function activity(
   }
 }
 const tx = (q, fn) => q.transaction(fn);
+test("admin search bypasses score and cooldown but excludes private, blocked, opted-out and incomplete bikes", async () => {
+  const q = await setup();
+  try {
+    const owner = await user(q),
+      blocked = await user(q);
+    const publicBike = await bike(q, owner),
+      privateBike = await bike(q, owner),
+      excluded = await bike(q, owner),
+      declined = await bike(q, owner),
+      incomplete = await bike(q, owner);
+    await bike(q, blocked);
+    await q.query("UPDATE users SET name='Searchable Author' WHERE id=$1", [
+      owner,
+    ]);
+    await q.query("UPDATE users SET blocked=true WHERE id=$1", [blocked]);
+    await q.query("UPDATE bikes SET is_public=false WHERE id=$1", [
+      privateBike,
+    ]);
+    await q.query("UPDATE bikes SET leaderboard_excluded=true WHERE id=$1", [
+      excluded,
+    ]);
+    await q.query("DELETE FROM components WHERE bike_id=$1", [incomplete]);
+    await q.query(
+      "INSERT INTO bike_week_declines(week_start,bike_id) VALUES($1,$2)",
+      [week, declined],
+    );
+    await q.query(
+      "INSERT INTO bike_week_history(week_start,bike_id,owner_id,event) VALUES('2026-09-21',$1,$2,'selected')",
+      [publicBike, owner],
+    );
+    assert.equal(
+      (await bikeWeekPreview(q, week)).candidates.length,
+      0,
+      "automatic thresholds still apply",
+    );
+    for (const query of ["", "Touring", "SEARCHABLE AUTHOR", publicBike]) {
+      const rows = await searchBikeWeekChoices(q, week, query);
+      assert.deepEqual(
+        rows.map((b) => b.id),
+        [publicBike],
+      );
+      assert(rows[0].photo_id);
+      assert.equal(rows[0].owner_name, "Searchable Author");
+      assert(!("email" in rows[0]));
+    }
+    assert.deepEqual(await searchBikeWeekChoices(q, week, "%_"), []);
+    await q.query("UPDATE bikes SET is_public=false WHERE id=$1", [publicBike]);
+    assert.deepEqual(await searchBikeWeekChoices(q, week, publicBike), []);
+  } finally {
+    await q.close();
+  }
+});
 test("Moscow calendar, bounded settings and explicit owner publication", () => {
   assert.equal(bikeWeekStart(new Date("2026-09-27T20:59:59Z")), "2026-09-21");
   assert.equal(bikeWeekStart(new Date("2026-09-27T21:00:00Z")), week);

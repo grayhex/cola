@@ -11,20 +11,22 @@ import {
 import os from "node:os";
 import path from "node:path";
 import { prepareThumbnail } from "./images.ts";
+import { mediaWidths, siteGraphicWidths } from "./media-sizes.ts";
+export { mediaWidths } from "./media-sizes.ts";
 
 // Served sizes are a closed set: arbitrary widths would let clients fill the
 // cache and the CPU with unique variants.
-export const mediaWidths = Object.freeze([160, 320, 640, 1280]);
 // Bump when variant encoding changes so browsers and the cache refresh.
 const pipeline = "v1";
 
 // null: original; number: allowed variant; undefined: invalid request.
-export function mediaWidth(value: string | null | undefined) {
+export function mediaWidth(
+  value: string | null | undefined,
+  widths = mediaWidths,
+) {
   if (value === null || value === undefined || value === "") return null;
   const width = Number(value);
-  return mediaWidths.includes(width) && String(width) === value
-    ? width
-    : undefined;
+  return widths.includes(width) && String(width) === value ? width : undefined;
 }
 
 // Media IDs are never reused for other bytes, so ID + size identify content.
@@ -93,7 +95,8 @@ export async function mediaVariant(
   readOriginal: () => Promise<Buffer>,
   env = process.env,
 ) {
-  if (!mediaWidths.includes(width)) throw new Error("INVALID_MEDIA_WIDTH");
+  if (!siteGraphicWidths.includes(width))
+    throw new Error("INVALID_MEDIA_WIDTH");
   const file = variantPath(id, width, env);
   try {
     return await readFile(file);
@@ -143,7 +146,7 @@ export async function cachedDerivative(
 export async function purgeMediaVariants(ids: string[], env = process.env) {
   await Promise.all(
     ids.flatMap((id: string) =>
-      mediaWidths.map((width) =>
+      siteGraphicWidths.map((width) =>
         rm(variantPath(id, width, env), { force: true }).catch(() => {}),
       ),
     ),

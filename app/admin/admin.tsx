@@ -102,6 +102,7 @@ const sections: [string, string, LucideIcon][] = [
   ["resolver", "Bike Resolver", Settings2],
   ["map", "Карта", Settings2],
   ["design", "Внешний вид", Palette],
+  ["homepage", "Главная", LayoutGrid],
   ["navigation", "Меню", Menu],
   ["graphics", "Графика", Image],
   ["emojis", "Значки", Palette],
@@ -130,6 +131,7 @@ const adminGroups = [
     icon: Palette,
     sections: [
       "design",
+      "homepage",
       "navigation",
       "graphics",
       "emojis",
@@ -169,6 +171,26 @@ const settingsTabs = new Set([
     .sections.filter((id) => id !== "uikit"),
 ]);
 const catalogTabs = new Set(["catalog", "groups"]);
+
+function AdminPanel({
+  group,
+  children,
+}: {
+  group: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <main className="admin-content">
+      <div
+        id="admin-group-panel"
+        role="tabpanel"
+        aria-labelledby={"admin-group-" + group}
+      >
+        {children}
+      </div>
+    </main>
+  );
+}
 
 export default function Admin() {
   const { settings, catalog, setSite, viewer } = useSite();
@@ -532,12 +554,7 @@ export default function Admin() {
             ))}
           </div>
         </aside>
-        <main
-          className="admin-content"
-          id="admin-group-panel"
-          role="tabpanel"
-          aria-labelledby={"admin-group-" + group.id}
-        >
+        <AdminPanel group={group.id}>
           <div className="admin-title">
             <div>
               <span className="eyebrow">COLABIKE / ADMIN</span>
@@ -723,16 +740,16 @@ export default function Admin() {
             </>
           )}
           {tab === "design" && (
-            <>
-              <ThemeSettings settings={draft} onChange={update} />
-              <HomepageSettings
-                settings={draft}
-                onChange={update}
-                assets={assets}
-                busy={locked}
-                onUpload={uploadGraphic}
-              />
-            </>
+            <ThemeSettings settings={draft} onChange={update} />
+          )}
+          {tab === "homepage" && (
+            <HomepageSettings
+              settings={draft}
+              onChange={update}
+              assets={assets}
+              busy={locked}
+              onUpload={uploadGraphic}
+            />
           )}
           {tab === "navigation" && (
             <NavigationSettings settings={draft} onChange={update} />
@@ -1008,7 +1025,7 @@ export default function Admin() {
               </div>
             </div>
           )}
-        </main>
+        </AdminPanel>
       </div>
       <dialog
         ref={dialog}

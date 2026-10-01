@@ -24,6 +24,7 @@ export const heroDefaults = {
   heroBackgroundMode: "accent" as const,
   heroBackgroundLight: "#FFFCF2",
   heroBackgroundDark: "#24221B",
+  heroEyebrow: "Больше чем просто велосипеды",
   heroHeadline: "Новые дороги.\nНастоящие люди.",
   heroDescription:
     "ColaBike — это сообщество, маршруты, знания и вдохновение. Здесь велосипед объединяет людей и помогает открывать новые места.",

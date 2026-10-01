@@ -4,6 +4,7 @@ import { mkdtemp, readdir, rm, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import sharp from "sharp";
+import { siteGraphicWidths } from "../lib/media-sizes.ts";
 import {
   immutableMediaCache,
   mediaEtag,
@@ -24,6 +25,9 @@ test("only the closed set of widths is accepted", () => {
     assert.equal(mediaWidth(width), Number(width));
   for (const bad of ["100", "0640", "640.0", "2400", "abc", "-1", "1e3"])
     assert.equal(mediaWidth(bad), undefined, bad);
+  for (const width of ["1920", "2400"])
+    assert.equal(mediaWidth(width, siteGraphicWidths), Number(width));
+  assert.equal(mediaWidth("2560", siteGraphicWidths), undefined);
 });
 
 test("ETags identify ID and size; revalidation matches strong and weak forms", () => {
@@ -113,6 +117,39 @@ test("variants are generated once, cached, bounded and purged", async () => {
       "v1-old-2-640.webp",
       "v1-old-3-640.webp",
     ]);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("large site graphics keep available resolution and never enlarge a small source", async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), "cola-hero-media-"));
+  const env = { MEDIA_CACHE_DIR: dir };
+  try {
+    const original = await sharp({
+      create: { width: 2400, height: 1030, channels: 3, background: "#123456" },
+    })
+      .webp()
+      .toBuffer();
+    for (const size of [1920, 2400]) {
+      const bytes = await mediaVariant(
+        "asset-large",
+        size,
+        async () => original,
+        env,
+      );
+      assert.equal((await sharp(bytes).metadata()).width, size);
+    }
+    const small = await sharp(original).resize(640).toBuffer();
+    const bytes = await mediaVariant(
+      "asset-small",
+      2400,
+      async () => small,
+      env,
+    );
+    assert.equal((await sharp(bytes).metadata()).width, 640);
+    await purgeMediaVariants(["asset-large", "asset-small"], env);
+    assert.deepEqual(await readdir(dir), []);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

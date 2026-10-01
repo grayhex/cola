@@ -176,3 +176,35 @@ test("home migration selects approved raster only and preserves explicit admin s
     await q.close();
   }
 });
+
+test("hero eyebrow migration is idempotent and preserves all administrator copy", async () => {
+  const q = await setup();
+  try {
+    const migration = await readFile(
+      new URL("../db/047_home_visual_settings.sql", import.meta.url),
+      "utf8",
+    );
+    const copy = {
+      heroHeadline: "Custom headline",
+      heroDescription: "Custom description",
+    };
+    await q.query("INSERT INTO site_settings(id,value) VALUES(1,$1)", [copy]);
+    await q.exec(migration);
+    assert.deepEqual(
+      (await q.query("SELECT value FROM site_settings")).rows[0].value,
+      { ...copy, heroEyebrow: "Больше чем просто велосипеды" },
+    );
+    for (const heroEyebrow of ["Custom eyebrow", ""]) {
+      await q.query("UPDATE site_settings SET value=$1", [
+        { ...copy, heroEyebrow },
+      ]);
+      await q.exec(migration);
+      assert.deepEqual(
+        (await q.query("SELECT value FROM site_settings")).rows[0].value,
+        { ...copy, heroEyebrow },
+      );
+    }
+  } finally {
+    await q.close();
+  }
+});

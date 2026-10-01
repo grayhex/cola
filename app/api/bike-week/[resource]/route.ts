@@ -11,6 +11,7 @@ import {
   bikeWeekDecisionInput,
   weekInput,
   bikeWeekStart,
+  bikeWeekSearchInput,
 } from "../../../../lib/bike-week-validation.ts";
 import {
   currentBikeWeek,
@@ -20,6 +21,7 @@ import {
   saveBikeWeekSettings,
   decideBikeWeek,
   selectBikeWeek,
+  searchBikeWeekChoices,
 } from "../../../../lib/bike-week.ts";
 export const runtime = "nodejs",
   dynamic = "force-dynamic";
@@ -50,6 +52,16 @@ async function handler(
     }
     if (user.role !== "admin")
       return fail("Доступ только для администратора", 403);
+    if (resource === "bikes" && method === "GET") {
+      const params = new URL(req.url).searchParams;
+      const input = bikeWeekSearchInput.parse({
+        week: params.get("week") || bikeWeekStart(),
+        q: params.get("q") || "",
+      });
+      return json({
+        bikes: await searchBikeWeekChoices(db, input.week, input.q),
+      });
+    }
     if (resource === "admin" && method === "GET")
       return json(
         await bikeWeekPreview(

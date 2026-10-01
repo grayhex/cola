@@ -6,6 +6,7 @@ import type { JsonData } from "../../lib/contracts.ts";
 import type { homeSnapshot } from "../../lib/discovery.ts";
 import Link from "next/link";
 import { preload } from "react-dom";
+import { heroWidths } from "../../lib/media-sizes.ts";
 import { useEffect, useRef, useState } from "react";
 import {
   ShoppingBag,
@@ -219,7 +220,9 @@ const destinations = [
     icon: ShoppingBag,
   },
 ];
-const heroSizes = "(max-width: 720px) 100vw, 90vw";
+// Match frame-inner: 1536px cap, responsive gutters and two 1px rails.
+const heroSizes =
+  "(min-width: 1584px) 1534px, (min-width: 768px) calc(100vw - 50px), (min-width: 360px) calc(100vw - 34px), calc(100vw - 26px)";
 export default function Home() {
   const { settings, viewer: user, t } = useSite(),
     [paused, setPaused] = useState(false),
@@ -264,10 +267,10 @@ export default function Home() {
     ? `/api/assets/${settings.heroBackgroundImageId}`
     : null;
   const heroSrcSet = hero
-    ? `${hero}?width=640 640w, ${hero}?width=1280 1280w`
+    ? heroWidths.map((width) => `${hero}?width=${width} ${width}w`).join(", ")
     : undefined;
   if (hero)
-    preload(hero + "?width=1280", {
+    preload(hero + "?width=2400", {
       as: "image",
       imageSrcSet: heroSrcSet,
       imageSizes: heroSizes,
@@ -284,7 +287,7 @@ export default function Home() {
                 <img
                   className={styles.heroImage}
                   data-hero-background
-                  src={hero + "?width=1280"}
+                  src={hero + "?width=2400"}
                   srcSet={heroSrcSet}
                   sizes={heroSizes}
                   alt=""
@@ -294,7 +297,7 @@ export default function Home() {
               )}
               <div className={styles.heroCopy}>
                 <span className={styles.heroEyebrow}>
-                  Больше чем просто велосипеды
+                  {settings.heroEyebrow}
                 </span>
                 <h1 id="hero-title">
                   {settings.heroHeadline.split("\n").map((line, i) => (

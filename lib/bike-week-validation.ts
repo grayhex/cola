@@ -51,3 +51,7 @@ export const bikeWeekDecisionInput = z
   .refine((v) => v.action !== "override" || !!v.bikeId, {
     message: "Выберите велосипед",
   });
+export const bikeWeekSearchInput = z.object({
+  week: weekInput,
+  q: z.string().trim().max(100).default(""),
+});

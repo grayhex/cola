@@ -61,6 +61,34 @@ interface WeekRow {
   window_start: Date;
   window_end: Date;
 }
+export interface BikeWeekChoice {
+  id: string;
+  share_id: string;
+  name: string;
+  owner_name: string;
+  username: string;
+  photo_id: string | null;
+}
+const choiceFields = `b.id,b.share_id,b.name,u.name owner_name,u.username,
+  (SELECT id FROM photos WHERE bike_id=b.id ORDER BY is_cover DESC,created_at,id LIMIT 1) photo_id`;
+// Read-only picker for an administrator. The existing decision path still
+// validates eligibility under locks when the chosen bike is assigned.
+export async function searchBikeWeekChoices(
+  q: Queryable,
+  week: string,
+  search = "",
+) {
+  return (
+    await q.query<BikeWeekChoice>(
+      `SELECT ${choiceFields} FROM bikes b JOIN users u ON u.id=b.owner_id
+     WHERE ${eligible}
+       AND NOT EXISTS(SELECT 1 FROM bike_week_declines d WHERE d.week_start=$1::date AND d.bike_id=b.id)
+       AND ($2='' OR position(lower($2) in lower(concat_ws(' ',b.name,b.brand,b.model,u.name,u.username,b.id::text)))>0)
+     ORDER BY b.name,b.id LIMIT 20`,
+      [week, search.replace(/^@/, "")],
+    )
+  ).rows;
+}
 const windowFor = (week: string, days: number) => {
   const end = new Date(week + "T00:00:00+03:00");
   return { start: new Date(end.getTime() - days * 86400000), end };
@@ -267,19 +295,44 @@ export async function selectBikeWeek(
 
 export async function bikeWeekPreview(q: Queryable, week = bikeWeekStart()) {
   const settings = await getBikeWeekSettings(q);
+  const current = await weekRow(q, week);
+  const decision =
+    (
+      await q.query<{
+        action: "override" | "skip";
+        bike_id: string | null;
+        reason: string;
+      }>(
+        "SELECT action,bike_id,reason FROM bike_week_decisions WHERE week_start=$1",
+        [week],
+      )
+    ).rows[0] || null;
+  const ranked = await candidates(q, week, settings);
+  const ids = [
+    ...ranked.map((b) => b.id),
+    current?.bike_id,
+    decision?.bike_id,
+  ].filter((id): id is string => !!id);
+  const details = (
+    await q.query<BikeWeekChoice>(
+      `SELECT ${choiceFields} FROM bikes b JOIN users u ON u.id=b.owner_id
+     WHERE b.id=ANY($1::uuid[]) AND ${eligible}
+       AND NOT EXISTS(SELECT 1 FROM bike_week_declines d WHERE d.week_start=$2::date AND d.bike_id=b.id)`,
+      [ids, week],
+    )
+  ).rows;
   return {
     week,
     settings,
     window: windowFor(week, settings.windowDays),
-    current: await weekRow(q, week),
-    candidates: await candidates(q, week, settings),
-    decision:
-      (
-        await q.query(
-          "SELECT action,bike_id,reason FROM bike_week_decisions WHERE week_start=$1",
-          [week],
-        )
-      ).rows[0] || null,
+    current,
+    currentBike: details.find((b) => b.id === current?.bike_id) || null,
+    decisionBike: details.find((b) => b.id === decision?.bike_id) || null,
+    candidates: ranked.map((b) => ({
+      ...b,
+      bike: details.find((d) => d.id === b.id) || null,
+    })),
+    decision,
   };
 }
 export async function decideBikeWeek(

@@ -4,6 +4,7 @@ import sharp from "sharp";
 import { randomUUID } from "node:crypto";
 import { mkdir, writeFile, rm, readFile } from "node:fs/promises";
 import path from "node:path";
+import AxeBuilder from "@axe-core/playwright";
 let db, original, id, filename;
 test.beforeAll(async () => {
   db = new pg.Client({ connectionString: process.env.DATABASE_URL });
@@ -14,13 +15,13 @@ test.beforeAll(async () => {
   filename = id + ".webp";
   const buffer = process.env.HOME_HERO_FIXTURE
     ? await sharp(await readFile(process.env.HOME_HERO_FIXTURE))
-        .resize(1920)
+        .resize(2400)
         .webp({ quality: 82 })
         .toBuffer()
     : await sharp({
         create: {
-          width: 1920,
-          height: 820,
+          width: 2400,
+          height: 1030,
           channels: 3,
           background: "#19304a",
         },
@@ -57,7 +58,7 @@ for (const theme of ["light", "dark", "system"])
       theme,
     );
     await page.emulateMedia({ colorScheme: "dark", reducedMotion: "reduce" });
-    for (const width of [390, 1920]) {
+    for (const width of [390, 1440, 1600, 1920]) {
       await page.setViewportSize({ width, height: 1000 });
       await page.goto("/", { waitUntil: "networkidle" });
       const img = page.locator("[data-hero-background]");
@@ -77,8 +78,45 @@ for (const theme of ["light", "dark", "system"])
       expect(
         requests
           .filter((u) => u.includes("/api/assets/" + id))
-          .every((u) => /width=(640|1280)$/.test(u)),
+          .every((u) => /width=(640|1280|1920|2400)$/.test(u)),
       ).toBe(true);
+      const preload = page.locator(
+        'link[rel="preload"][as="image"][imagesrcset]',
+      );
+      expect(await preload.getAttribute("imagesrcset")).toBe(
+        await img.getAttribute("srcset"),
+      );
+      expect(await preload.getAttribute("imagesizes")).toBe(
+        await img.getAttribute("sizes"),
+      );
+      if (width >= 1440) {
+        expect(await img.evaluate((e) => e.currentSrc)).toMatch(
+          /width=(1920|2400)$/,
+        );
+        if (await page.evaluate(() => devicePixelRatio > 1))
+          expect(await img.evaluate((e) => e.currentSrc)).toMatch(
+            /width=2400$/,
+          );
+      }
+      expect(
+        await page
+          .locator("main > .frame")
+          .evaluateAll((frames) =>
+            frames.every(
+              (frame) =>
+                getComputedStyle(frame).borderBottomWidth === "0px" &&
+                getComputedStyle(frame.querySelector(".frame-inner"))
+                  .borderBottomWidth === "1px",
+            ),
+          ),
+      ).toBe(true);
+      const pulse = page.locator("[data-ride-pulse]");
+      await expect(pulse.locator("li .site-icon")).toHaveCount(4);
+      await expect(pulse.locator("li svg.site-icon")).toHaveCount(4);
+      if (width === 390 || width === 1920)
+        expect(
+          (await new AxeBuilder({ page }).include("main").analyze()).violations,
+        ).toEqual([]);
       const sources = await img.evaluate(
         (e) =>
           performance
@@ -103,3 +141,40 @@ for (const theme of ["light", "dark", "system"])
         .getByRole("combobox"),
     ).toBeFocused();
   });
+test("desktop retina uses the largest hero without a duplicate preload", async ({
+  browser,
+}, info) => {
+  const context = await browser.newContext({
+    baseURL: process.env.TEST_ORIGIN || "http://localhost:3100",
+    deviceScaleFactor: 2,
+  });
+  try {
+    const page = await context.newPage();
+    for (const width of [1440, 1600, 1920]) {
+      await page.setViewportSize({ width, height: 1000 });
+      await page.goto("/", { waitUntil: "networkidle" });
+      const img = page.locator("[data-hero-background]");
+      await expect
+        .poll(() =>
+          img.evaluate(
+            (e) => e.complete && e.currentSrc.endsWith("width=2400"),
+          ),
+        )
+        .toBe(true);
+      expect(
+        await img.evaluate(
+          (e) =>
+            performance
+              .getEntriesByType("resource")
+              .filter((r) => r.name === e.currentSrc).length,
+        ),
+      ).toBe(1);
+    }
+    await page.screenshot({
+      path: info.outputPath("hero-retina-1920.png"),
+      fullPage: true,
+    });
+  } finally {
+    await context.close();
+  }
+});
