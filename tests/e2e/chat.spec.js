@@ -307,3 +307,126 @@ test("messenger: discover people, accessible selector, DM and group, drafts and 
     await thirdContext.close();
   }
 });
+
+test("attachment allowlist blocks external and non-image content with report-only CSP", async ({
+  page,
+  browser,
+}, info) => {
+  const context = await browser.newContext({ baseURL: origin });
+  try {
+    const alice = await register(page, "Attachment recipient");
+    const bob = await register(await context.newPage(), "Attachment sender");
+    const fixture = chatBrowserFixture([alice, bob]);
+    await fixture.install(page, alice);
+    // Production defaults to report-only. Do not let CI's enforcing CSP hide a
+    // missing renderer: the attachment allowlist must work independently of CSP.
+    await page.route("**/messages**", async (route) => {
+      if (route.request().resourceType() !== "document")
+        return route.continue();
+      const response = await route.fetch();
+      const headers = response.headers();
+      headers["content-security-policy-report-only"] =
+        headers["content-security-policy"] ||
+        headers["content-security-policy-report-only"];
+      delete headers["content-security-policy"];
+      await route.fulfill({ response, headers });
+    });
+    const allowed = "https://safe.stream-io-cdn.com/allowed.png";
+    const requests = [];
+    await page.route(
+      /https?:\/\/(?:safe\.stream-io-cdn\.com|tracking\.invalid|safe\.stream-io-cdn\.com\.evil\.invalid)\//,
+      async (route) => {
+        requests.push(route.request().url());
+        await route.fulfill({
+          contentType: "image/png",
+          body: Buffer.from(
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
+            "base64",
+          ),
+        });
+      },
+    );
+    const document = await page.goto("/messages?to=" + bob.id);
+    expect(document.headers()["content-security-policy"]).toBeUndefined();
+    expect(
+      document.headers()["content-security-policy-report-only"],
+    ).toBeTruthy();
+    await expect(
+      page.locator(".chat-conversation textarea").first(),
+    ).toBeVisible();
+    const channel = [...fixture.channels.values()][0];
+    const sender = channel.members.find(
+      (m) => m.user_id !== channel.created_by.id,
+    ).user;
+    const attachments = [
+      { type: "image", image_url: allowed, title: "Allowed vendor image" },
+      { type: "image", image_url: "https://tracking.invalid/pixel.png" },
+      {
+        type: "image",
+        image_url: "http://safe.stream-io-cdn.com/insecure.png",
+      },
+      {
+        type: "image",
+        image_url: "https://safe.stream-io-cdn.com.evil.invalid/pixel.png",
+      },
+      {
+        type: "file",
+        asset_url: "https://safe.stream-io-cdn.com/file.pdf",
+        title: "Blocked file",
+      },
+      {
+        type: "video",
+        asset_url: "https://tracking.invalid/video.mp4",
+        thumb_url: "https://tracking.invalid/thumb.png",
+        title: "Blocked video",
+      },
+      {
+        type: "link",
+        title_link: "https://tracking.invalid/link",
+        image_url: "https://tracking.invalid/link.png",
+        title: "Blocked link",
+      },
+    ];
+    const created = new Date().toISOString();
+    channel.messages.push({
+      id: randomUUID(),
+      cid: channel.cid,
+      type: "regular",
+      user: sender,
+      text: "Attachment security fixture",
+      attachments,
+      created_at: created,
+      updated_at: created,
+      own_reactions: [],
+      latest_reactions: [],
+      reaction_counts: {},
+      reaction_scores: {},
+      reply_count: 0,
+    });
+    channel.last_message_at = created;
+    await page.reload();
+    await expect(
+      page
+        .locator(".chat-text")
+        .filter({ hasText: "Attachment security fixture" }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("Вложение недоступно", { exact: true }),
+    ).toHaveCount(attachments.length - 1);
+    await expect(page.locator(".chat-image")).toHaveAttribute("src", allowed);
+    await expect(
+      page.getByRole("link", { name: "Открыть изображение", exact: true }),
+    ).toHaveAttribute("href", allowed);
+    await expect
+      .poll(() => requests.filter((url) => url === allowed).length)
+      .toBeGreaterThan(0);
+    expect(requests.filter((url) => url !== allowed)).toEqual([]);
+    await page.screenshot({
+      path: info.outputPath("attachment-allowlist.png"),
+      fullPage: true,
+    });
+    expect(fixture.unexpected).toEqual([]);
+  } finally {
+    await context.close();
+  }
+});
