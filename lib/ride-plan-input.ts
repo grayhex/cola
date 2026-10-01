@@ -77,7 +77,7 @@ meeting point for participants turns it on (the server enforces the same),
 a public one turns off what the server forced for a hidden point, and a
 protection the organiser chose earlier with a public point is kept. */
 export function planPrivacy(
-  ride: { privacyEnabled: boolean; meetingVisibility?: string } | null,
+  ride: { privacyEnabled?: boolean; meetingVisibility?: string } | null,
   meetingVisibility: string,
 ) {
   if (meetingVisibility === "participants") return true;

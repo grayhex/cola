@@ -1,4 +1,5 @@
 "use client";
+import type { PassportDraft } from "../../ui/ride-types.ts";
 import type * as React from "react";
 import { useId, useRef, useState } from "react";
 import {
@@ -24,7 +25,7 @@ import {
   Weight,
   X,
 } from "lucide-react";
-import RidePlanFields from "../../ui/ride-plan-fields.jsx";
+import RidePlanFields from "../../ui/ride-plan-fields.tsx";
 import GlobalHeader from "../../ui/global-header.tsx";
 import { SocialFooter } from "../../ui/social-primitives.tsx";
 import SiteIcon, { slotIcons } from "../../ui/site-icon.tsx";
@@ -901,7 +902,7 @@ function Icons() {
 }
 
 function RidePlanDemo({ intent = false }: { intent?: boolean }) {
-  const [passport, setPassport] = useState({
+  const [passport, setPassport] = useState<PassportDraft>({
     area: { label: "Измайловский парк" },
     purpose: "social",
     pace: "relaxed",

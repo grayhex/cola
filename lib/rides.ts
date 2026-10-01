@@ -1415,7 +1415,7 @@ export async function respondRide(
   q: Queryable,
   id: string,
   user: string,
-  response: string,
+  response: "accepted" | "maybe" | "declined",
   occurrenceAt: string | null = null,
   invitationOnly = false,
 ) {
@@ -1519,7 +1519,7 @@ export async function respondRideInvitation(
   q: Queryable,
   id: string,
   user: string,
-  response: string,
+  response: "accepted" | "maybe" | "declined",
 ) {
   return respondRide(q, id, user, response, null, true);
 }

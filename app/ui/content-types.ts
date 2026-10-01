@@ -26,7 +26,12 @@ import type {
   reactionState,
 } from "../../lib/gamification.ts";
 import type { pageData } from "../../lib/social-page.ts";
-import type { rideList, rideDetail } from "../../lib/rides.ts";
+import type {
+  rideList,
+  rideDetail,
+  ownerRide,
+  publicRide,
+} from "../../lib/rides.ts";
 import type { communityHome, discoverySearch } from "../../lib/discovery.ts";
 import type { marketContact, extendListing } from "../../lib/market.ts";
 import type {
@@ -67,7 +72,15 @@ export type HeroAnimation = SiteSettings["heroTitleAnimation"];
 export type PhotoInserter = (id: string, alt?: string) => void;
 
 export type RideListDto = JsonData<Awaited<ReturnType<typeof rideList>>>;
-export type RideDto = JsonData<Awaited<ReturnType<typeof rideDetail>>>;
+type OwnerRideFields = Partial<
+  Omit<
+    JsonData<ReturnType<typeof ownerRide>>,
+    keyof JsonData<ReturnType<typeof publicRide>>
+  >
+>;
+export type RideDto = JsonData<Awaited<ReturnType<typeof rideDetail>>> &
+  OwnerRideFields;
+export type RideCardDto = RideListDto["rides"][number] & OwnerRideFields;
 export type CommunityHomeDto = JsonData<
   Awaited<ReturnType<typeof communityHome>>
 >;

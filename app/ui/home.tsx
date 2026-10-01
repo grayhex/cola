@@ -31,7 +31,7 @@ import { ContentTypeLabel } from "./content-label.tsx";
 import SearchBox from "./search-box.tsx";
 import HeroArtwork from "./hero-artwork.tsx";
 import styles from "./home.module.css";
-import TogetherActions from "./together-actions.jsx";
+import TogetherActions from "./together-actions.tsx";
 // A route over a ruled map: two riders meet on the way. Decoration only,
 // drawn with semantic tokens so both themes read as one system.
 function TogetherArt() {

@@ -2,7 +2,7 @@
 import type { PublicProfile } from "../../lib/contracts.ts";
 import type { ProfileInitial } from "./content-types.ts";
 import Link from "next/link";
-import RideList from "./ride-list.jsx";
+import RideList from "./ride-list.tsx";
 import BikeGrid from "./bike-grid.tsx";
 import { BadgeShelf } from "./achievements.tsx";
 import { ReportButton } from "./community-controls.tsx";

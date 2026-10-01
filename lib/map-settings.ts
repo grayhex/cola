@@ -1,3 +1,4 @@
+import type { StyleSpecification } from "maplibre-gl";
 /** Map provider from Система → Карты; mapInput in admin-validation.js checks it. */
 
 export const mapDefaults: MapSettings = {
@@ -18,7 +19,9 @@ export function tileTemplate(config: MapSettings) {
     config.provider === "osm" ? mapDefaults.tileUrl : config.tileUrl
   ).replaceAll("{key}", encodeURIComponent(config.publicKey || ""));
 }
-export function mapStyle(config: MapSettings) {
+export function mapStyle(
+  config: MapSettings,
+): string | StyleSpecification | null {
   // Yandex has its own SDK renderer, never a MapLibre/XYZ tile endpoint.
   if (!config.enabled || config.provider === "yandex") return null;
   if (config.provider === "style")

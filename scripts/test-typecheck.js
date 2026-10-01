@@ -218,6 +218,25 @@ export const discussion = <Discussion bike={{id:"probe"}} user={null} entityType
   const contentResult = check("tsconfig.json");
   assert.equal((contentResult.match(/content\.tsx.*TS2322/g) || []).length, 3);
   assert.equal((contentResult.match(/content\.tsx.*TS2339/g) || []).length, 3);
+  // Ride forms, telemetry and serialized integration DTOs remain distinct.
+  await writeFile(
+    path.join(nativeApp, "rides.tsx"),
+    `
+import PlanComposer from ${JSON.stringify("../ui/plan-composer.tsx")};
+import type { RideDto } from ${JSON.stringify("../ui/content-types.ts")};
+import type { RideResponse, RidePreview, RideAnalysisSeries, IntentPreferencesDto, ActivityDto } from ${JSON.stringify("../ui/ride-types.ts")};
+export function responseProbe(data: RideResponse) { data.rsvp = "organizer"; }
+export function previewProbe(data: RidePreview) { data.previewId = 1; }
+export function analysisProbe(data: RideAnalysisSeries) { data.segments[0][0].hrBpm = "1"; }
+export function authorProbe(data: RideDto) { return data.author.email; }
+export function preferencesProbe(data: IntentPreferencesDto) { return data.windows; }
+export function activityProbe(data: ActivityDto) { return data.accessToken; }
+export const planner = <PlanComposer onClose={() => {}} onSaved={() => {}} draft={{passport: {distanceKm: {min: "1"}}}} />;
+`,
+  );
+  const ridesResult = check("tsconfig.json");
+  assert.equal((ridesResult.match(/rides\.tsx.*TS2322/g) || []).length, 4);
+  assert.equal((ridesResult.match(/rides\.tsx.*TS2339/g) || []).length, 3);
   await rm(nativeApp, { recursive: true, force: true });
   await rm(nativeApi, { recursive: true, force: true });
 
