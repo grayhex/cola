@@ -19,7 +19,12 @@ import { randomUUID } from "node:crypto";
 import { rideBikeStateError } from "./bike-status.ts";
 import { garminFields, defaultRideFields } from "./garmin-fields.ts";
 import { assertMatchingTrack } from "./garmin-csv.ts";
-import { notify } from "./notifications.ts";
+import {
+  rideNotice,
+  invalidateRideNotices,
+  scheduleRideReminders,
+  rideReminderStatus,
+} from "./ride-notifications.ts";
 import { z } from "zod";
 import { uuid } from "./validation.ts";
 import { RideError } from "./ride-gpx.ts";
@@ -388,6 +393,10 @@ export async function rideDetail(
             })
           ] || "pending"
         : null,
+    reminder:
+      viewer && planned && !isOwner
+        ? await rideReminderStatus(q, row.id, viewer)
+        : null,
     invitations: isOwner
       ? (
           await q.query<{ username: string; name: string; response: string }>(
@@ -748,6 +757,7 @@ async function reviseAgreement(
     },
   );
   if (!changes.length) return changes;
+  await invalidateRideNotices(q, existing.id);
   if (changes.includes("start")) {
     // A leftover answer at the new time (from before #235) gives way to the
     // answer of the date that moved.
@@ -768,6 +778,7 @@ async function reviseAgreement(
     "UPDATE rides SET agreement_revision=agreement_revision+1,agreement_changes=$2,agreement_changed_at=now(),updated_at=now() WHERE id=$1",
     [existing.id, changes],
   );
+  await rideNotice(q, existing.id, "ride_changed", { occursAt: now.occurs_at });
   return changes;
 }
 
@@ -1233,23 +1244,21 @@ async function inviteRiders(
   ).rows.map((r) => r.user_id);
   // A revoked invitation ends that person's participation in the dates ahead
   // (#235): the hidden meeting place closes, counts drop. Past answers stay.
-  if (revoked.length)
+  if (revoked.length) {
+    await invalidateRideNotices(q, ride.id, { recipients: revoked });
     await q.query(
       "DELETE FROM ride_rsvps WHERE ride_id=$1 AND user_id=ANY($2::uuid[]) AND occurs_at>now()",
       [ride.id, revoked],
     );
+  }
   for (const user of users) {
     if (user.id === owner) continue;
-    await q.query(
-      "INSERT INTO ride_invitations(ride_id,user_id) VALUES($1,$2) ON CONFLICT DO NOTHING",
+    const inserted = await q.query(
+      "INSERT INTO ride_invitations(ride_id,user_id) VALUES($1,$2) ON CONFLICT DO NOTHING RETURNING user_id",
       [ride.id, user.id],
     );
-    await notify(q, {
-      recipient: user.id,
-      actor: owner,
-      type: "ride_invite",
-      ride: ride.id,
-    });
+    if (inserted.rowCount)
+      await rideNotice(q, ride.id, "ride_invite", { recipients: [user.id] });
   }
 }
 
@@ -1500,6 +1509,20 @@ export async function respondRide(
     "INSERT INTO ride_rsvps(ride_id,user_id,occurs_at,response,revision) VALUES($1,$2,$3,$4,$5) ON CONFLICT(ride_id,user_id,occurs_at) DO UPDATE SET response=EXCLUDED.response,revision=EXCLUDED.revision,updated_at=now()",
     [id, user, row.occurs_at, response, row.agreement_revision],
   );
+  if (response !== "accepted")
+    await invalidateRideNotices(q, id, {
+      recipients: [user],
+      remindersOnly: true,
+    });
+  else await scheduleRideReminders(q, new Date(), { ride: id, user });
+  if (
+    previous?.response !== response ||
+    previous?.revision !== row.agreement_revision
+  )
+    await rideNotice(q, id, "ride_response", {
+      recipients: [row.owner_id],
+      occursAt: row.occurs_at,
+    });
   const counts = (
     await q.query<{ state: string; n: number }>(
       `SELECT ${answerState} AS state,count(*)::int n FROM ride_rsvps v JOIN users u ON u.id=v.user_id JOIN rides r ON r.id=v.ride_id WHERE v.ride_id=$1 AND v.occurs_at=$2 AND NOT u.blocked GROUP BY 1`,
@@ -1513,6 +1536,7 @@ export async function respondRide(
     participation: response,
     rsvpCounts: Object.fromEntries(counts.map((c) => [c.state, c.n])),
     scheduledAt: row.occurs_at,
+    reminder: await rideReminderStatus(q, id, user),
   };
 }
 export async function respondRideInvitation(
@@ -1576,21 +1600,32 @@ export async function cancelPlannedRide(
       "SELECT id FROM users WHERE id=$1 FOR UPDATE",
       [owner],
     );
+    const before = (
+      await q.query<{ occurs_at: Date | null }>(
+        `SELECT ${rideOccurrence} occurs_at FROM rides r WHERE r.id=$1 AND r.owner_id=$2 AND r.status='planned' FOR UPDATE`,
+        [id, owner],
+      )
+    ).rows[0];
+    if (!before) throw new RideError("Покатушка недоступна", 404);
+    await invalidateRideNotices(q, id);
     const r = await q.query<{ id: string }>(
       "UPDATE rides SET status='cancelled',updated_at=now() WHERE id=$1 AND owner_id=$2 AND status='planned' RETURNING id",
       [id, owner],
     );
     if (!r.rowCount) throw new RideError("Покатушка недоступна", 404);
+    await rideNotice(q, id, "ride_cancelled", { occursAt: before.occurs_at });
     return { ok: true, scope: "ride" };
   }
   const row = await lockOwnPlan(q, id, owner);
   if (+new Date(occurrenceAt) !== +new Date(row.occurs_at))
     throw new RideError("Дата покатушки изменилась. Обновите страницу.", 409);
   if (row.recurrence !== "weekly") {
+    await invalidateRideNotices(q, id);
     await q.query(
       "UPDATE rides SET status='cancelled',updated_at=now() WHERE id=$1",
       [id],
     );
+    await rideNotice(q, id, "ride_cancelled", { occursAt: row.occurs_at });
     return { ok: true, scope: "ride" };
   }
   const ahead = (
@@ -1609,6 +1644,8 @@ export async function cancelPlannedRide(
      VALUES($1,($2::timestamptz AT TIME ZONE $3)::date,$2) ON CONFLICT DO NOTHING`,
     [id, row.occurs_at, row.recurrence_timezone],
   );
+  await invalidateRideNotices(q, id, { occursAt: row.occurs_at });
+  await rideNotice(q, id, "ride_cancelled", { occursAt: row.occurs_at });
   await q.query("UPDATE rides SET updated_at=now() WHERE id=$1", [id]);
   return { ok: true, scope: "occurrence", occurrenceAt: row.occurs_at };
 }

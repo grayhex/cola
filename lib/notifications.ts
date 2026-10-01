@@ -7,6 +7,7 @@ import { expiryNoticeDays } from "./market.ts";
 import { partLandingPath } from "./experience-catalog.ts";
 import { mailEnabled } from "./mail.ts";
 import { notificationEmailEnqueueSql } from "./notification-catalog.ts";
+import { rideNoticeVisible } from "./ride-notification-policy.ts";
 // Keep one lifetime follow/like event; comments/replies coalesce per actor/bike/15m.
 // Never reset created_at or read_at on conflict, including unlike/like and refollow.
 
@@ -72,22 +73,23 @@ const from = ` FROM notifications n LEFT JOIN users a ON a.id=n.actor_id
  LEFT JOIN journal_entries e ON e.id=n.entry_id LEFT JOIN bikes eb ON eb.id=e.bike_id LEFT JOIN users eo ON eo.id=e.owner_id LEFT JOIN journal_comments ec ON ec.id=n.entry_comment_id
  LEFT JOIN component_models cs ON cs.id=n.component_id LEFT JOIN component_models cm ON cm.id=coalesce(cs.merged_into,cs.id)
  LEFT JOIN component_comments cc ON cc.id=n.component_comment_id`;
-const visible = `n.recipient_id=$1 AND ((n.type='market_expiring' AND ml.owner_id=n.recipient_id) OR NOT a.blocked AND (
+const visible = (
+  clock = "now()",
+) => `n.recipient_id=$1 AND ((n.type='market_expiring' AND ml.owner_id=n.recipient_id) OR ${rideNoticeVisible(clock)} OR NOT a.blocked AND (
  (n.type='component_reply' AND cm.first_public_at IS NOT NULL AND cc.deleted_at IS NULL AND cc.author_id=n.actor_id) OR
- (n.type='ride_invite' AND NOT ro.blocked AND EXISTS(SELECT 1 FROM ride_invitations i WHERE i.ride_id=r.id AND i.user_id=n.recipient_id)) OR
  (n.type='follow' AND EXISTS(SELECT 1 FROM user_follows f WHERE f.follower_id=n.actor_id AND f.following_id=n.recipient_id)) OR
  (b.is_public AND NOT o.blocked AND (
   (n.type='like' AND EXISTS(SELECT 1 FROM bike_likes l WHERE l.bike_id=b.id AND l.user_id=n.actor_id)) OR
   (n.type IN ('comment','reply') AND c.deleted_at IS NULL AND c.author_id=n.actor_id))) OR (r.is_public AND rb.is_public AND NOT ro.blocked AND ((n.type='ride_like' AND EXISTS(SELECT 1 FROM ride_likes l WHERE l.ride_id=r.id AND l.user_id=n.actor_id)) OR (n.type IN ('ride_comment','ride_reply') AND rc.deleted_at IS NULL AND rc.author_id=n.actor_id))) OR
  (e.status='published' AND e.is_public AND (e.kind='article' OR eb.is_public) AND NOT eo.blocked AND ((n.type='journal_like' AND EXISTS(SELECT 1 FROM journal_likes l WHERE l.entry_id=e.id AND l.user_id=n.actor_id)) OR (n.type IN ('journal_comment','journal_reply') AND ec.deleted_at IS NULL AND ec.author_id=n.actor_id)))))`;
-export async function unreadCount(q: Queryable, id: string) {
+export async function unreadCount(q: Queryable, id: string, now = new Date()) {
   const r = await q.query<{ id: string }>(
     "SELECT n.id" +
       from +
       " WHERE " +
-      visible +
+      visible("$2::timestamptz") +
       " AND n.read_at IS NULL ORDER BY n.created_at DESC,n.id LIMIT 100",
-    [id],
+    [id, now],
   );
   return { unread: r.rows.length, capped: r.rows.length === 100 };
 }
@@ -131,14 +133,15 @@ export async function notificationPage(
   id: string,
   page = 1,
   notificationId: string | null = null,
+  now = new Date(),
 ) {
   const r = await q.query<NotificationRow>(
     `SELECT n.id,n.type,n.created_at,n.read_at,n.comment_id,n.ride_comment_id,n.entry_comment_id,n.component_comment_id,cm.id component_id,cm.name component_name,cm.category_slug,cm.slug,ml.id AS listing_id,ml.share_id AS listing_share,ml.title AS listing_title,ml.status AS listing_status,ml.expires_at AS listing_expires,(ml.expires_at<=now()) AS listing_expired,(ml.expires_at<=now()+make_interval(days=>${expiryNoticeDays})) AS listing_due,e.id AS entry_id,e.kind AS entry_kind,e.share_id AS entry_share,e.title AS entry_title,r.id AS ride_id,r.share_id AS ride_share_id,r.title AS ride_title,b.id AS bike_id,b.share_id,b.name AS bike_name,a.id AS actor_id,a.username,a.name,a.avatar_id` +
       from +
       " WHERE " +
-      visible +
+      visible("$4::timestamptz") +
       " AND ($3::uuid IS NULL OR n.id=$3) ORDER BY n.created_at DESC,n.id LIMIT 21 OFFSET $2",
-    [id, (page - 1) * 20, notificationId],
+    [id, (page - 1) * 20, notificationId, now],
   );
   return {
     notifications: r.rows.slice(0, 20).map((n) =>
@@ -152,12 +155,14 @@ export async function notificationPage(
                 : n.type,
             createdAt: n.created_at,
             readAt: n.read_at,
-            actor: publicAuthor({
-              id: n.actor_id,
-              username: n.username,
-              name: n.name,
-              avatar_id: n.avatar_id,
-            }),
+            actor: n.actor_id
+              ? publicAuthor({
+                  id: n.actor_id,
+                  username: n.username,
+                  name: n.name,
+                  avatar_id: n.avatar_id,
+                })
+              : null,
             target:
               n.type === "component_reply"
                 ? {
@@ -216,7 +221,7 @@ export async function notificationPage(
     ),
     page,
     hasMore: r.rows.length > 20,
-    ...(await unreadCount(q, id)),
+    ...(await unreadCount(q, id, now)),
   };
 }
 // The listing's state is read now, not stored with the notice: the text

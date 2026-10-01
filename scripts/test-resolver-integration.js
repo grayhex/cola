@@ -198,8 +198,12 @@ try {
           "tests/account-http.js",
           "tests/account-security-http.js",
           "tests/notification-email-http.js",
+          "tests/ride-notifications-http.js",
           ...(externalDatabase
-            ? ["tests/notification-email-concurrency.js"]
+            ? [
+                "tests/notification-email-concurrency.js",
+                "tests/ride-notifications-concurrency.js",
+              ]
             : []),
           ...(externalDatabase ? ["tests/quota-http.js"] : []),
         ])

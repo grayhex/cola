@@ -3,7 +3,7 @@ import type * as RideMatchCoreTypes from "./ride-match-core.ts";
 import type * as ZodTypes from "zod";
 import type * as RideMatchInputTypes from "./ride-match-input.ts";
 import { publicAuthor } from "./profile-dto.ts";
-import { notify } from "./notifications.ts";
+import { rideNotice } from "./ride-notifications.ts";
 import { plannedEnd } from "./ride-plan.ts";
 import { rideOccurrence } from "./rides.ts";
 import {
@@ -607,6 +607,37 @@ again on the server: an intent that became private, expired, was withdrawn,
 no longer allows suggestions or no longer fits the chosen time is not
 invited by the old list. Existing invitations and refusals are kept as they
 are; the per-ride cap is the plan form's. */
+export async function interestInvitationAvailable(
+  q: Queryable,
+  rideId: string,
+  userId: string,
+  occursAt: Date,
+  now = new Date(),
+) {
+  const owner = (
+    await q.query<{ owner_id: string }>(
+      "SELECT owner_id FROM rides WHERE id=$1",
+      [rideId],
+    )
+  ).rows[0];
+  if (!owner) return false;
+  try {
+    const found = await occurrenceCandidates(
+      q,
+      owner.owner_id,
+      rideId,
+      occursAt.toISOString(),
+      1,
+      +now,
+    );
+    return (
+      found.interest.suggestable.has(userId) && !found.declined.has(userId)
+    );
+  } catch (error) {
+    if (error instanceof MatchError) return false;
+    throw error;
+  }
+}
 export async function inviteFromInterest(
   q: Queryable,
   viewerId: string,
@@ -681,11 +712,9 @@ export async function inviteFromInterest(
     }
     total++;
     found.invited.add(userId);
-    await notify(q, {
-      recipient: userId,
-      actor: viewerId,
-      type: "ride_invite",
-      ride: rideId,
+    await rideNotice(q, rideId, "ride_invite", {
+      recipients: [userId],
+      occursAt: found.occursAt,
     });
     results.push({ userId, status: "invited" });
   }

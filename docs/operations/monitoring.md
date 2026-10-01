@@ -52,6 +52,8 @@ sudo env \
 
 Общий email-worker — `notification-email`: [состояния/лимиты и команды](../modules/community.md#email-outbox-148). Проверяйте counts pending/sending/failed и возраст очереди через `node scripts/notification-email.js --status` в ops image. `disabled=true` означает отсутствие настроенного канала; readiness сайта от него не зависит. Не логируйте SMTP error messages: они могут содержать адреса. Категории ошибок и счётчики достаточны для первичной диагностики.
 
+Этот же worker исполняет [напоминания поездок #236](../modules/rides.md#события-и-напоминания-236), включая in-app при отключённом SMTP. `--status` возвращает отдельные агрегаты `reminders`: `scheduled`, `due`, `released`, `cancelled`, `expired`; без пользователей и мест встречи. Растущий `due` проверяйте вместе с логами worker и доступом/текущей ревизией планов, а pending/failed outbox — с настройками почты. Разовый `--once` делает настоящий проход расписания, а не только диагностику. Backup/restore останавливает общий worker; после запуска пропущенный reminder выпускается один раз лишь пока до старта больше 5 минут.
+
 ```bash
 cd /opt/stacks/cola
 docker compose --env-file .env.production -f compose.prod.yaml ps
