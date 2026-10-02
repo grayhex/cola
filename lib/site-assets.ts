@@ -3,7 +3,7 @@ type AssetSettings = Partial<SiteSettings> & {
   heroAnimationLightId?: string;
   heroAnimationDarkId?: string;
 };
-import { illustrationSlots } from "./design-graphics.ts";
+import { illustrationSlots, planningGraphicSlots } from "./design-graphics.ts";
 import { componentIllustrationIds } from "./component-illustrations.ts";
 import { animationAssetIds } from "./hero-graphics.ts";
 const imageKeys = new Set([
@@ -20,6 +20,7 @@ export function siteAssetIds(settings: AssetSettings = {}) {
     ...new Set(
       [
         ...animationAssetIds(settings),
+        ...planningGraphicSlots.map(({ key }) => settings[key]?.assetId),
         ...componentIllustrationIds(settings),
         ...Object.entries(settings)
           .filter(
@@ -50,6 +51,8 @@ export function siteAssetUsage(
   for (const [key, id] of Object.entries(settings)) {
     if (imageKeys.has(key)) add(id, "Оформление сайта");
   }
+  for (const { key, label } of planningGraphicSlots)
+    add(settings[key]?.assetId, label);
   for (const id of animationAssetIds(settings)) add(id, "Анимация главной");
   for (const id of componentIllustrationIds(settings))
     add(id, "Категории компонентов");

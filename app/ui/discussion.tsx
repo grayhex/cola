@@ -70,11 +70,13 @@ function Editor({
   label,
   onSave,
   onCancel,
+  replyTo,
 }: {
   initial?: string;
   label: string;
   onSave: (body: string) => void | Promise<void>;
   onCancel?: () => void;
+  replyTo?: string;
 }) {
   const [body, setBody] = useState(initial),
     [busy, setBusy] = useState(false),
@@ -96,6 +98,7 @@ function Editor({
         }
       }}
     >
+      {replyTo && <p className="help">Ответ для {replyTo}</p>}
       <PromptComposer
         label={label}
         value={body}
@@ -135,12 +138,14 @@ function Comment({
   bikeId,
   refresh,
   reply = false,
+  parent,
 }: {
   comment: CommentDto;
   user: ViewerDto | null;
   bikeId: string;
-  refresh: () => Promise<void>;
+  refresh: (focusId?: string | null) => Promise<void>;
   reply?: boolean;
+  parent?: CommentDto;
 }) {
   const question = useContext(QuestionContext);
   const api = paths(useContext(DiscussionKind));
@@ -153,6 +158,8 @@ function Comment({
     <article
       className={"comment" + (reply ? " comment-reply" : "")}
       id={"comment-" + c.id}
+      tabIndex={-1}
+      data-parent-id={c.parentId || undefined}
     >
       <div className="comment-heading">
         {c.author ? (
@@ -172,6 +179,14 @@ function Comment({
           {new Date(c.createdAt).toLocaleDateString("ru-RU")}
         </time>
       </div>
+      {parent && (
+        <a className="comment-parent help" href={"#comment-" + parent.id}>
+          Ответ для{" "}
+          {parent.author
+            ? usernameLabel(parent.author) || personName(parent.author)
+            : "недоступного комментария"}
+        </a>
+      )}
       {editing ? (
         <Editor
           initial={c.body || ""}
@@ -216,7 +231,7 @@ function Comment({
                   : "Отметить решением"}
               </button>
             )}
-            {user && !reply && !c.unavailable && (
+            {user && !c.unavailable && (
               <button className="quiet" onClick={() => setAnswer((v) => !v)}>
                 <Reply size={14} aria-hidden="true" />
                 Ответить
@@ -254,7 +269,7 @@ function Comment({
               try {
                 await socialApi(api.comments + c.id, "DELETE");
                 setConfirm(false);
-                await refresh();
+                await refresh(null);
               } catch (e) {
                 setError(errorMessage(e));
               } finally {
@@ -272,14 +287,23 @@ function Comment({
       {answer && (
         <Editor
           label="Ваш ответ"
+          replyTo={
+            c.author
+              ? usernameLabel(c.author) || personName(c.author)
+              : "участника"
+          }
           onCancel={() => setAnswer(false)}
           onSave={async (body) => {
-            await socialApi(api.items + bikeId + "/comments", "POST", {
-              body,
-              parentId: c.id,
-            });
+            const created = await socialApi<{ id: string }>(
+              api.items + bikeId + "/comments",
+              "POST",
+              {
+                body,
+                parentId: c.id,
+              },
+            );
             setAnswer(false);
-            await refresh();
+            await refresh(created.id);
           }}
         />
       )}
@@ -297,11 +321,19 @@ function Thread({
   user,
   bikeId,
   refresh,
+  initialReplies = [],
+  focusPath,
+  depth = 0,
+  parent,
 }: {
-  root: CommentPageDto["comments"][number];
+  root: CommentDto;
   user: ViewerDto | null;
   bikeId: string;
-  refresh: () => Promise<void>;
+  refresh: (focusId?: string | null) => Promise<void>;
+  initialReplies?: CommentDto[];
+  focusPath: CommentDto[];
+  depth?: number;
+  parent?: CommentDto;
 }) {
   const api = paths(useContext(DiscussionKind));
   const [page, setPage] = useState(1),
@@ -311,6 +343,8 @@ function Thread({
   useEffect(() => {
     if (!expanded) return;
     let alive = true;
+    setData(null);
+    setError("");
     socialApi<ReplyPageDto>(
       api.items + bikeId + "/comments/" + root.id + "/replies?page=" + page,
     )
@@ -318,40 +352,70 @@ function Thread({
         if (alive) setData(d);
       })
       .catch((e) => {
-        if (alive) setError(e.message);
+        if (alive) setError(errorMessage(e));
       });
     return () => {
       alive = false;
     };
   }, [expanded, page, root, api.items, bikeId]);
+  const replies = [...(expanded && data ? data.comments : initialReplies)];
+  // A deep link may land beyond the first page. Include only its immediate
+  // path child; every other branch still needs an explicit bounded request.
+  const child = focusPath.find((c) => c.parentId === root.id);
+  if (child && !replies.some((c) => c.id === child.id)) replies.push(child);
   return (
-    <div className="comment-thread">
-      <Comment comment={root} user={user} bikeId={bikeId} refresh={refresh} />
-      <div className="comment-replies">
-        {(expanded && data ? data.comments : root.replies).map((c) => (
-          <Comment
-            key={c.id}
-            reply
-            comment={c}
-            user={user}
-            bikeId={bikeId}
-            refresh={refresh}
-          />
-        ))}
-      </div>
-      {root.replyCount > root.replies.length && !expanded && (
+    <div className="comment-thread" data-depth={depth}>
+      <Comment
+        comment={root}
+        user={user}
+        bikeId={bikeId}
+        refresh={refresh}
+        reply={depth > 0}
+        parent={parent}
+      />
+      {!!replies.length && (
+        <div
+          className={
+            "comment-replies" + (depth >= 3 ? " comment-replies-flat" : "")
+          }
+        >
+          {replies.map((c) => (
+            <Thread
+              key={c.id}
+              root={c}
+              user={user}
+              bikeId={bikeId}
+              refresh={refresh}
+              focusPath={focusPath}
+              depth={depth + 1}
+              parent={root}
+            />
+          ))}
+        </div>
+      )}
+      {root.replyCount > replies.length && !expanded && (
         <button
           className="quiet more-replies"
           onClick={() => setExpanded(true)}
         >
-          Все ответы · {root.replyCount}
+          Показать ещё ответы · {root.replyCount}
         </button>
       )}
+      {expanded && !data && !error && <p role="status">Загружаем ответы…</p>}
       {expanded && data && <PageControls {...data} onPage={setPage} />}
       {error && (
         <p role="alert">
           {error}
           <EmailPolicyAction message={error} />
+          <button
+            className="quiet"
+            onClick={() => {
+              setExpanded(false);
+              setError("");
+            }}
+          >
+            Закрыть ответы
+          </button>
         </p>
       )}
     </div>
@@ -385,23 +449,33 @@ export default function Discussion({
     setLoaded(true);
   }, []);
   const requests = useRef({ revision: 0 });
-  const refresh = useCallback(async () => {
-    const revision = ++requests.current.revision;
-    try {
-      const d = await socialApi<CommentPageDto>(
-        api.items +
-          bike.id +
-          "/comments?page=" +
-          page +
-          (focus ? "&focus=" + encodeURIComponent(focus) : ""),
-      );
-      if (revision !== requests.current.revision) return;
-      setData(d);
-      setError("");
-    } catch (e) {
-      if (revision === requests.current.revision) setError(errorMessage(e));
-    }
-  }, [api.items, bike.id, page, focus]);
+  const refresh = useCallback(
+    async (focusId?: string | null) => {
+      if (focusId !== undefined && focusId !== focus) {
+        setFocus(focusId);
+        return;
+      }
+      const revision = ++requests.current.revision;
+      try {
+        const d = await socialApi<CommentPageDto>(
+          api.items +
+            bike.id +
+            "/comments?page=" +
+            page +
+            (focus ? "&focus=" + encodeURIComponent(focus) : ""),
+        );
+        if (revision !== requests.current.revision) return;
+        setData(d);
+        setError("");
+      } catch (e) {
+        if (revision === requests.current.revision) {
+          setData(null);
+          setError(errorMessage(e));
+        }
+      }
+    },
+    [api.items, bike.id, page, focus],
+  );
   useEffect(() => {
     const pending = requests.current;
     if (loaded) void refresh();
@@ -409,11 +483,12 @@ export default function Discussion({
       pending.revision++;
     };
   }, [refresh, loaded]);
-  const hasData = !!data;
   useEffect(() => {
-    if (focus && hasData)
-      document.getElementById("discussion")?.scrollIntoView({ block: "start" });
-  }, [focus, hasData]);
+    if (!focus || !data) return;
+    const target = document.getElementById("comment-" + focus);
+    target?.scrollIntoView({ block: "center" });
+    target?.focus({ preventScroll: true });
+  }, [focus, data]);
   return (
     <DiscussionKind.Provider value={entityType}>
       <QuestionContext.Provider
@@ -477,6 +552,8 @@ export default function Discussion({
             <Thread
               key={c.id}
               root={c}
+              initialReplies={c.replies}
+              focusPath={data.focusPath}
               user={user}
               bikeId={bike.id}
               refresh={refresh}
@@ -502,9 +579,8 @@ export default function Discussion({
                 await socialApi(api.items + bike.id + "/comments", "POST", {
                   body,
                 });
-                setFocus(null);
                 setPage(1);
-                await refresh();
+                await refresh(null);
               }}
             />
           ) : (

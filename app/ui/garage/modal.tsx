@@ -10,12 +10,14 @@ export default function Modal({
   children,
   dismissible = true,
   wide = false,
+  graphic,
 }: {
   title: React.ReactNode;
   onClose: () => void;
   children: React.ReactNode;
   dismissible?: boolean;
   wide?: boolean;
+  graphic?: React.ReactNode;
 }) {
   const { t } = useSite();
   const ref = useRef<HTMLDialogElement>(null),
@@ -78,7 +80,10 @@ export default function Modal({
       aria-labelledby="dialog-title"
     >
       <div className="modal-head">
-        <h2 id="dialog-title">{title}</h2>
+        <div className="modal-heading-content">
+          {graphic}
+          <h2 id="dialog-title">{title}</h2>
+        </div>
         <button className="icon" aria-label={t("Закрыть")} onClick={onClose}>
           <X size={20} />
         </button>

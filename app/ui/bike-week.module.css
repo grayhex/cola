@@ -1,3 +1,47 @@
+.admin {
+  display: grid;
+  gap: var(--space-5);
+}
+.admin > h2,
+.admin > p {
+  margin: 0;
+}
+.admin :global(.admin-panel) {
+  margin: 0;
+  min-width: 0;
+}
+.admin :global(.admin-panel) > h2 {
+  margin: 0 0 var(--space-4);
+}
+.admin > section {
+  display: grid;
+  gap: var(--space-4);
+}
+.admin > section > p,
+.admin > section > h2 {
+  margin: 0;
+}
+.admin > section > button {
+  justify-self: start;
+}
+.settingsForm {
+  margin-top: var(--space-4);
+}
+.fields {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.fields > legend {
+  margin-bottom: var(--space-3);
+  font-weight: var(--weight-semibold);
+}
+.fields > :global(.button) {
+  justify-self: start;
+}
 .layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);

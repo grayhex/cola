@@ -134,7 +134,12 @@ test("comments support bounded threads, ownership, soft deletion, blocked author
     );
     const top = await add(b, "Original"),
       reply = await add(a, "Answer", top.id);
-    await assert.rejects(add(c, "Too deep", reply.id), /основной/);
+    const nested = await add(c, "Nested", reply.id);
+    assert.equal(
+      (await replyPage(db, id, reply.id, null)).comments[0].id,
+      nested.id,
+    );
+    await db.transaction((q) => changeComment(q, nested.id, c));
     const other = await insertBike(db, a.id, bike);
     await assert.rejects(
       db.transaction((q) =>

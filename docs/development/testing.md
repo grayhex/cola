@@ -44,6 +44,8 @@ bash scripts/test-backup-drill.sh
 
 Опциональный `COMMUNITY_ARTWORK_DIR` указывает на локальную папку с `bike-1.webp`…`bike-3.webp` для визуального сравнения с реальными публичными ресурсами. Без него тесты создают нейтральные локальные изображения. Это входные данные теста, не новая система управления графикой сайта.
 
+Для #293: `comment-threads.test.js` проверяет upgrade с существующих одноуровневых веток для всех сущностей, 12 уровней, immediate parent/notification, скрытых родителей, immutable/cross-entity FK, пагинацию и SQL-бюджет. `comment-threads-concurrency.js` входит в PostgreSQL HTTP harness и удерживает пересекающиеся встречные ответы до проверки блокировки. `community-http` и `component-community-http` проверяют вложенные ответы через настоящий API, прежние права и квоты. `comment-threads.spec.js`, `planning-graphics.spec.js` и `bike-week.spec.js` покрывают глубокий фокус, дерево/пагинацию, клавиатуру, обе темы/System, axe, reduced motion, независимые uploads и защиту assets; запускаются в Chromium и WebKit. Снимки сохраняются в browser-review artifact.
+
 ## Что означает каждый уровень
 
 | Уровень                 | Что доказывает                                                                                                                                                                                                                                                        | Чего не доказывает                                                           |

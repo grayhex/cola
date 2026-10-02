@@ -1,0 +1,32 @@
+.graphic {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: var(--space-20);
+  height: var(--space-14);
+  color: var(--text-muted);
+}
+.graphic img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.canvas {
+  position: absolute;
+  inset: 0;
+  background: var(--surface);
+}
+.canvas > div {
+  width: 100%;
+  height: 100%;
+}
+.graphic:has([data-rive-ready]) .fallback {
+  visibility: hidden;
+}
+@media (max-width: 600px) {
+  .graphic {
+    width: var(--space-10);
+    height: var(--space-10);
+  }
+}

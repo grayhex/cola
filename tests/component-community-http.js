@@ -268,9 +268,13 @@ try {
     }),
     404,
   );
+  const nested = await expectStatus(
+    stranger(comments, "POST", { parentId: reply.id, body: "Nested" }),
+    201,
+  );
   await expectStatus(
-    stranger(comments, "POST", { parentId: reply.id, body: "Too deep" }),
-    400,
+    stranger("components/comments/" + nested.id, "DELETE"),
+    200,
   );
   await expectStatus(
     stranger("components/comments/" + root.id, "PATCH", { body: "Not mine" }),

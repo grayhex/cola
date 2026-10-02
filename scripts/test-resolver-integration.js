@@ -182,7 +182,12 @@ try {
           "tests/showcase-http.js",
           "tests/social-http.js",
           "tests/community-http.js",
-          ...(externalDatabase ? ["tests/community-concurrency.js"] : []),
+          ...(externalDatabase
+            ? [
+                "tests/community-concurrency.js",
+                "tests/comment-threads-concurrency.js",
+              ]
+            : []),
           "tests/rides-http.js",
           "tests/ride-agreements-http.js",
           ...(externalDatabase ? ["tests/ride-agreements-concurrency.js"] : []),

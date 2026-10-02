@@ -1,4 +1,5 @@
 "use client";
+import PlanningGraphic from "./planning-graphic.tsx";
 import type { FormEvent } from "react";
 import type {
   IntentDto,
@@ -196,6 +197,7 @@ export function IntentComposer({
   return (
     <>
       <Modal
+        graphic={<PlanningGraphic slot="intentDialogGraphic" />}
         wide
         title={draft.id ? "Изменить намерение" : "Новое намерение"}
         onClose={close}

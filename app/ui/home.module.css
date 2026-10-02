@@ -162,8 +162,10 @@
 
 .band {
   min-width: 0;
+  padding-top: var(--space-4);
 }
 .bandRail {
+  border-top: 1px solid var(--line-strong);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -355,39 +357,43 @@
 }
 .weekPhoto {
   position: relative;
-  isolation: isolate;
-  display: block;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
   min-height: 300px;
-  background: var(--marketing-bg);
-  color: var(--marketing-text);
+  background: var(--surface);
+  color: var(--text);
+}
+.weekImage {
+  position: relative;
+  min-height: 180px;
 }
 .weekPhoto img {
   position: absolute;
-  z-index: -2;
   width: 100%;
   height: 100%;
-  object-fit: cover;
-}
-.weekPhoto::after {
-  content: "";
-  position: absolute;
-  inset: 40% 0 0;
-  z-index: -1;
-  background: linear-gradient(transparent, var(--marketing-bg));
+  object-fit: contain;
+  object-position: center;
 }
 .weekCaption {
-  position: absolute;
-  inset: auto var(--space-6) var(--space-5);
+  position: relative;
+  grid-row: 2;
+  align-self: end;
+  margin: var(--space-3);
+  padding: var(--space-2) var(--space-3);
   display: grid;
-  gap: var(--space-2);
+  gap: var(--space-1);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
 }
 .weekCaption small {
   font-size: var(--text-xs);
-  color: var(--marketing-muted);
+  color: var(--text-muted);
 }
 .weekCaption strong {
-  font-size: var(--text-2xl);
+  font-size: var(--text-xl);
   line-height: var(--leading-snug);
+  overflow-wrap: anywhere;
 }
 .weekComponents,
 .weekStory {
@@ -702,5 +708,5 @@
   display: block;
   padding: var(--space-6);
   font-size: var(--text-sm);
-  color: var(--marketing-muted);
+  color: var(--text-muted);
 }

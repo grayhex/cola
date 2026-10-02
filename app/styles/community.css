@@ -18,7 +18,8 @@
     border-radius: var(--radius-xl);
     background: var(--surface);
   }
-  .comment:target {
+  .comment:target,
+  .comment:focus {
     border-color: var(--focus);
     box-shadow: var(--focus-ring);
   }
@@ -43,6 +44,11 @@
     color: var(--text-muted);
     font: var(--weight-regular) var(--text-xs) / 1.4 var(--font-mono);
     white-space: nowrap;
+  }
+  .comment-parent {
+    display: block;
+    padding: var(--space-2) var(--space-4) 0;
+    overflow-wrap: anywhere;
   }
   .comment-body {
     margin: 0;
@@ -69,8 +75,13 @@
     padding-left: var(--space-4);
     border-left: 1px solid var(--line);
   }
-  .comment-reply + .comment-reply {
-    margin-top: var(--space-3);
+  .comment-replies:empty {
+    display: none;
+  }
+  .comment-replies.comment-replies-flat {
+    margin-left: 0;
+    padding-left: 0;
+    border-left: 0;
   }
   .more-replies {
     margin: var(--space-2) 0 0 var(--space-10);
@@ -276,6 +287,7 @@
 
   @media (max-width: 700px) {
     .comment-heading {
+      flex-wrap: wrap;
       padding: var(--space-2) var(--space-3);
     }
     .comment-body {

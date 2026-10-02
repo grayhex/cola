@@ -1187,6 +1187,15 @@
     gap: var(--space-4);
     margin-bottom: var(--space-5);
   }
+  .modal-heading-content {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    min-width: 0;
+  }
+  .modal-head > .icon {
+    flex: none;
+  }
   .dialog-head h2,
   .modal-head h2 {
     margin: 0;

@@ -279,6 +279,8 @@ async function handler(
             "heroTitleAnimation",
             "heroStageAnimation",
             "heroStageDarkAnimation",
+            "intentDialogGraphic",
+            "planDialogGraphic",
           ] as const) {
             const selected = settings[key];
             if (!selected || !("assetId" in selected) || !selected.assetId)

@@ -242,6 +242,12 @@ await db.exec(
     "utf8",
   ),
 );
+await db.exec(
+  await readFile(
+    new URL("../db/048_comment_threads.sql", import.meta.url),
+    "utf8",
+  ),
+);
 await seedLegalDocuments(db);
 const server = new PGLiteSocketServer({
   db,

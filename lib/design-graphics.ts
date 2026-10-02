@@ -115,3 +115,22 @@ export function filterGraphicSlots<T extends { group: string; label: string }>(
       [slot.label, slot.group].join(" ").toLocaleLowerCase("ru").includes(term),
   );
 }
+
+export const planningGraphicSlots = [
+  {
+    key: "intentDialogGraphic",
+    label: "Новое намерение · графика",
+    group: "Планировщики",
+    emptyLabel: "Без графики",
+    section: "system",
+    planning: true,
+  },
+  {
+    key: "planDialogGraphic",
+    label: "Организовать покатушку · графика",
+    group: "Планировщики",
+    emptyLabel: "Без графики",
+    section: "system",
+    planning: true,
+  },
+] as const;

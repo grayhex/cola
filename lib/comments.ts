@@ -14,6 +14,7 @@ interface CommentRow {
   name: string | null;
   avatar_id: string | null;
   blocked: boolean | null;
+  reply_count?: number;
 }
 export type CommentPageArgs = [
   bikeId: string,
@@ -41,8 +42,20 @@ import { parseRichText } from "./rich-text.ts";
 const alive = "c.deleted_at IS NULL AND a.id IS NOT NULL AND NOT a.blocked";
 const columns =
   "c.id,c.bike_id,c.parent_id,c.body,c.created_at,c.updated_at,c.deleted_at,a.id AS author_id,a.username,a.name,a.avatar_id,a.blocked";
-const replyAlive =
-  "r.deleted_at IS NULL AND ra.id IS NOT NULL AND NOT ra.blocked";
+// A hidden node is only a structural tombstone when a readable descendant
+// remains. Walk by the existing parent index; never return hidden text/authors.
+function readable(comment: string, author: string) {
+  return `(${comment}.deleted_at IS NULL AND ${author}.id IS NOT NULL AND NOT ${author}.blocked) OR EXISTS (
+    WITH RECURSIVE descendants AS (
+      SELECT d.id,d.author_id,d.deleted_at FROM bike_comments d WHERE d.parent_id=${comment}.id
+      UNION ALL
+      SELECT d.id,d.author_id,d.deleted_at FROM bike_comments d JOIN descendants p ON d.parent_id=p.id
+    ) SELECT 1 FROM descendants d JOIN users da ON da.id=d.author_id
+      WHERE d.deleted_at IS NULL AND NOT da.blocked
+  )`;
+}
+const childCount = `(SELECT count(*)::int FROM bike_comments r LEFT JOIN users ra ON ra.id=r.author_id WHERE r.parent_id=c.id AND (${readable("r", "ra")})) AS reply_count`;
+const nodeColumns = `${columns},${childCount}`;
 export const visibleCommentCount = `SELECT count(*)::int FROM bike_comments cc JOIN users ca ON ca.id=cc.author_id WHERE cc.bike_id=b.id AND cc.deleted_at IS NULL AND NOT ca.blocked`;
 export async function publicCommentBike(q: Queryable, id: string) {
   const b = (
@@ -62,6 +75,7 @@ export function commentDto(
   return {
     id: row.id,
     parentId: row.parent_id,
+    replyCount: Number(row.reply_count || 0),
     body: hidden ? null : row.body,
     // Parsed here, so readers render comments without the parser (#117).
     bodyDoc: hidden ? null : parseRichText(row.body),
@@ -89,21 +103,27 @@ export async function commentPage(
   focus: string | null = null,
 ) {
   await publicCommentBike(q, bikeId);
-  let root: string | null = null;
-  if (focus) {
-    const r = (
-      await q.query<{ root: string }>(
-        `SELECT coalesce(c.parent_id,c.id) root FROM bike_comments c JOIN users a ON a.id=c.author_id WHERE c.id=$1 AND c.bike_id=$2 AND ${alive}`,
-        [focus, bikeId],
-      )
-    ).rows[0];
-    if (!r) throw new CommunityError("Комментарий недоступен", 404);
-    root = r.root;
-  }
+  // Only the ancestor chain, not the entire subtree, accompanies a deep link.
+  const focusRows = focus
+    ? (
+        await q.query<CommentRow>(
+          `WITH RECURSIVE path AS (
+          SELECT c.*,0 AS depth FROM bike_comments c JOIN users a ON a.id=c.author_id
+          WHERE c.id=$1 AND c.bike_id=$2 AND ${alive}
+          UNION ALL
+          SELECT c.*,p.depth+1 FROM bike_comments c JOIN path p ON c.id=p.parent_id
+        ) SELECT ${nodeColumns} FROM path c LEFT JOIN users a ON a.id=c.author_id ORDER BY c.depth DESC`,
+          [focus, bikeId],
+        )
+      ).rows
+    : [];
+  if (focus && !focusRows.length)
+    throw new CommunityError("Комментарий недоступен", 404);
+  const root = focusRows[0]?.id || null;
   const rows = (
     await q.query<CommentRow>(
-      `SELECT ${columns} FROM bike_comments c LEFT JOIN users a ON a.id=c.author_id
- WHERE c.bike_id=$1 AND c.parent_id IS NULL AND ($3::uuid IS NULL OR c.id=$3) AND ((${alive}) OR EXISTS(SELECT 1 FROM bike_comments r JOIN users ra ON ra.id=r.author_id WHERE r.parent_id=c.id AND ${replyAlive}))
+      `SELECT ${nodeColumns} FROM bike_comments c LEFT JOIN users a ON a.id=c.author_id
+ WHERE c.bike_id=$1 AND c.parent_id IS NULL AND ($3::uuid IS NULL OR c.id=$3) AND (${readable("c", "a")})
  ORDER BY c.created_at,c.id LIMIT 21 OFFSET $2`,
       [bikeId, root ? 0 : (page - 1) * 20, root],
     )
@@ -112,18 +132,24 @@ export async function commentPage(
     ids = roots.map((r) => r.id);
   const replies = ids.length
     ? (
-        await q.query<CommentRow & { rank: string; reply_count: string }>(
-          `SELECT * FROM (SELECT ${columns},row_number() OVER(PARTITION BY c.parent_id ORDER BY c.created_at,c.id) AS rank,count(*) OVER(PARTITION BY c.parent_id) AS reply_count FROM bike_comments c JOIN users a ON a.id=c.author_id WHERE c.parent_id=ANY($1::uuid[]) AND ${alive}) r WHERE rank<=3 OR id=$2 ORDER BY created_at,id`,
-          [ids, focus],
+        await q.query<CommentRow>(
+          `SELECT ${nodeColumns} FROM bike_comments c LEFT JOIN users a ON a.id=c.author_id
+          WHERE c.id IN (
+            SELECT preview.id FROM unnest($1::uuid[]) roots(parent_id)
+            CROSS JOIN LATERAL (
+              SELECT c.id FROM bike_comments c LEFT JOIN users a ON a.id=c.author_id
+              WHERE c.parent_id=roots.parent_id AND (${readable("c", "a")})
+              ORDER BY c.created_at,c.id LIMIT 3
+            ) preview
+            UNION SELECT id FROM bike_comments WHERE id=ANY($2::uuid[]) AND parent_id=ANY($1::uuid[])
+          ) ORDER BY c.created_at,c.id`,
+          [ids, focusRows.map((r) => r.id)],
         )
       ).rows
     : [];
   return {
     comments: roots.map((r) => ({
       ...commentDto(r, user),
-      replyCount: Number(
-        replies.find((x) => x.parent_id === r.id)?.reply_count || 0,
-      ),
       replies: replies
         .filter((x) => x.parent_id === r.id)
         .map((x) => commentDto(x, user)),
@@ -131,6 +157,7 @@ export async function commentPage(
     page,
     hasMore: !root && rows.length > 20,
     focused: !!root,
+    focusPath: focusRows.map((r) => commentDto(r, user)),
   };
 }
 export async function replyPage(
@@ -143,14 +170,14 @@ export async function replyPage(
   await publicCommentBike(q, bikeId);
   const root = (
     await q.query<{ "?column?": number }>(
-      "SELECT 1 FROM bike_comments WHERE id=$1 AND bike_id=$2 AND parent_id IS NULL",
+      "SELECT 1 FROM bike_comments WHERE id=$1 AND bike_id=$2",
       [parent, bikeId],
     )
   ).rows[0];
   if (!root) throw new CommunityError("Обсуждение недоступно", 404);
   const rows = (
     await q.query<CommentRow>(
-      `SELECT ${columns} FROM bike_comments c JOIN users a ON a.id=c.author_id WHERE c.parent_id=$1 AND ${alive} ORDER BY c.created_at,c.id LIMIT 21 OFFSET $2`,
+      `SELECT ${nodeColumns} FROM bike_comments c LEFT JOIN users a ON a.id=c.author_id WHERE c.parent_id=$1 AND (${readable("c", "a")}) ORDER BY c.created_at,c.id LIMIT 21 OFFSET $2`,
       [parent, (page - 1) * 20],
     )
   ).rows;
@@ -160,12 +187,17 @@ export async function replyPage(
     hasMore: rows.length > 20,
   };
 }
-async function lockBike(q: Queryable, bikeId: string, user: { id: string }) {
+async function lockBike(
+  q: Queryable,
+  bikeId: string,
+  user: { id: string },
+  recipient?: string | null,
+) {
   const b = await publicCommentBike(q, bikeId);
   const users = (
     await q.query<{ id: string; blocked: boolean }>(
       "SELECT id,blocked FROM users WHERE id=ANY($1::uuid[]) ORDER BY id FOR UPDATE",
-      [[...new Set([b.owner_id, user.id])]],
+      [[...new Set([b.owner_id, user.id, recipient].filter(Boolean))]],
     )
   ).rows;
   if (users.some((u) => u.blocked) || !users.some((u) => u.id === user.id))
@@ -182,7 +214,17 @@ export async function createComment(
   user: Pick<CurrentUserType, "id" | "role">,
   input: CommentInputType,
 ) {
-  const bike = await lockBike(q, bikeId, user);
+  // Reserve every notification participant in one sorted lock order, before
+  // the entity/comment locks. Revalidate the parent after waiting for them.
+  const recipient = input.parentId
+    ? (
+        await q.query<{ author_id: string | null }>(
+          "SELECT author_id FROM bike_comments WHERE id=$1 AND bike_id=$2",
+          [input.parentId, bikeId],
+        )
+      ).rows[0]?.author_id
+    : null;
+  const bike = await lockBike(q, bikeId, user, recipient);
   let parent;
   if (input.parentId) {
     parent = (
@@ -192,8 +234,6 @@ export async function createComment(
       )
     ).rows[0];
     if (!parent) throw new CommunityError("Комментарий недоступен", 404);
-    if (parent.parent_id)
-      throw new CommunityError("Можно ответить только на основной комментарий");
   }
   const id = randomUUID();
   await q.query(

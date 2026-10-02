@@ -68,7 +68,7 @@ SolidColor (18/37), GradientStop (19/38), KeyFrameColor (37/88), согласн�
 
 Закреплённые Rive packages сохраняются для воспроизводимого экспорта и
 проверок файлов. React-компонента `rive-canvas.tsx` после #270 больше нет;
-клиентский граф импортов главной не включает Rive runtime.
+клиентский граф импортов главной не включает Rive runtime. После #293 общий декоративный renderer `planning-rive.tsx` использует тот же pinned runtime только для явно открытого planning dialog с назначенным Rive asset. Reduced motion оставляет статичный fallback без JS/WASM; закрытие освобождает canvas.
 
 `pnpm dev/build` копируют **оба** WASM файла из закреплённого npm package в
 `public/rive/runtime/2.43.1/`. Docker builder выполняет тот же шаг и переносит

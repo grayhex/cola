@@ -118,7 +118,6 @@ const sections: [string, string, LucideIcon][] = [
   ["audit", "Журнал действий", History],
 ];
 const adminGroups = [
-  { id: "home", name: "Главная", icon: LayoutGrid, sections: ["bike-week"] },
   {
     id: "system",
     name: "Система",
@@ -151,7 +150,7 @@ const adminGroups = [
     id: "mechanics",
     name: "Механики",
     icon: Trophy,
-    sections: ["scoring", "gamification"],
+    sections: ["scoring", "gamification", "bike-week"],
   },
   {
     id: "catalog",

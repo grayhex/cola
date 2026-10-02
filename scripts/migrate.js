@@ -59,6 +59,7 @@ try {
     "045_bike_week",
     "046_home_redesign",
     "047_home_visual_settings",
+    "048_comment_threads",
   ]) {
     const { rowCount } = await client.query(
       "SELECT 1 FROM schema_migrations WHERE version=$1",
