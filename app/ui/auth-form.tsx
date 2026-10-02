@@ -147,16 +147,23 @@ export default function AuthForm({
   switchMode,
   // Context-specific first line, e.g. answering a ride (#235).
   intro = null,
+  external = null,
 }: {
-  mode: "login" | "register";
+  mode: "login" | "register" | "complete";
   busy: boolean;
   onSubmit: (
     data: Record<string, FormDataEntryValue | boolean | number | null>,
   ) => Promise<void>;
   switchMode: () => void;
   intro?: Partial<Record<"login" | "register", React.ReactNode>> | null;
+  // First sign-in with an external provider (#151): no password, the name and
+  // address come from the provider, the rest is as in registration.
+  external?: { name: string; email: string | null } | null;
 }) {
-  const { settings, t } = useSite();
+  const { settings, t, yandexIdEnabled } = useSite();
+  // Registration and the completion of a provider sign-in share the username
+  // and the explicit acceptance of both documents.
+  const signup = mode !== "login";
   const [authError, setAuthError] = useState("");
   const [person, setPerson] = useState({ name: "", email: "" }),
     [usernameState, setUsernameState] = useState("idle");
@@ -214,9 +221,9 @@ export default function AuthForm({
     setPrivacyAccepted(false);
     snapshot.current = null;
     setLegal(null);
-    if (mode === "register") loadLegal();
+    if (signup) loadLegal();
     const focus = () => {
-      if (mode === "register") loadLegal();
+      if (signup) loadLegal();
     };
     window.addEventListener("focus", focus);
     return () => {
@@ -224,7 +231,7 @@ export default function AuthForm({
       pending.current?.abort();
       window.removeEventListener("focus", focus);
     };
-  }, [mode, loadLegal]);
+  }, [signup, loadLegal]);
   return (
     <form
       className="auth-form"
@@ -239,7 +246,7 @@ export default function AuthForm({
           setAuthError("Пароли не совпадают");
           return;
         }
-        if (mode === "register" && usernameState === "taken") {
+        if (signup && usernameState === "taken") {
           setAuthError("Это имя пользователя занято. Выберите другое.");
           return;
         }
@@ -249,7 +256,7 @@ export default function AuthForm({
         submitLock.current = true;
         setSubmitting(true);
         try {
-          if (mode === "register") {
+          if (signup) {
             if (!termsAccepted || !privacyAccepted || !legal?.ready) {
               setAuthError("Примите оба документа для регистрации.");
               return;
@@ -266,7 +273,7 @@ export default function AuthForm({
           await onSubmit(data);
           // The server rechecks revisions atomically; recover from a publication
           // that raced the preflight without clearing any entered credentials.
-          if (mode === "register" && alive.current) await loadLegal();
+          if (signup && alive.current) await loadLegal();
         } finally {
           submitLock.current = false;
           if (alive.current) setSubmitting(false);
@@ -274,12 +281,14 @@ export default function AuthForm({
       }}
     >
       <p className="form-intro">
-        {intro?.[mode] ||
-          (mode === "register"
-            ? t("Сохраните комплектацию и фотографии своих велосипедов.")
-            : t("Войдите, чтобы открыть свои велосипеды."))}
+        {(mode !== "complete" && intro?.[mode]) ||
+          (mode === "complete"
+            ? "Последний шаг: выберите имя пользователя и примите документы."
+            : mode === "register"
+              ? t("Сохраните комплектацию и фотографии своих велосипедов.")
+              : t("Войдите, чтобы открыть свои велосипеды."))}
       </p>
-      {mode === "register" && (
+      {signup && (
         <>
           <Field label={t("Ваше имя")}>
             <input
@@ -288,48 +297,68 @@ export default function AuthForm({
               maxLength={60}
               autoComplete="name"
               autoFocus
+              defaultValue={external?.name || ""}
               onChange={(e) =>
                 setPerson((p) => ({ ...p, name: e.target.value }))
               }
             />
           </Field>
           <UsernameField
-            suggestion={suggestUsername(person.name, person.email, "")}
+            suggestion={suggestUsername(
+              person.name || external?.name || "",
+              person.email || external?.email || "",
+              "",
+            )}
             onStatus={setUsernameState}
           />
         </>
       )}
-      <Field label={t("Электронная почта")}>
-        <input
-          name="email"
-          type="email"
-          required
-          maxLength={254}
-          autoComplete="email"
-          inputMode="email"
-          autoCapitalize="none"
-          spellCheck={false}
-          placeholder="name@example.com"
-          pattern={"[^\\s@]+@[^\\s@]+\\.[^\\s@]+"}
-          autoFocus={mode === "login"}
-          onChange={(e) =>
-            mode === "register" &&
-            setPerson((p) => ({ ...p, email: e.target.value }))
-          }
-        />
-      </Field>
-      <Field label={t("Пароль")}>
-        <input
-          name="password"
-          type="password"
-          minLength={10}
-          maxLength={128}
-          required
-          autoComplete={
-            mode === "register" ? "new-password" : "current-password"
-          }
-        />
-      </Field>
+      {mode === "complete" && external?.email && (
+        <p className={`help ${styles.externalEmail}`}>
+          Почта из Яндекса: {external.email}. Подтвердите её по ссылке из
+          письма: до этого публиковать записи нельзя.
+        </p>
+      )}
+      {(mode !== "complete" || !external?.email) && (
+        <Field label={t("Электронная почта")}>
+          <input
+            name="email"
+            type="email"
+            required
+            maxLength={254}
+            autoComplete="email"
+            inputMode="email"
+            autoCapitalize="none"
+            spellCheck={false}
+            placeholder="name@example.com"
+            pattern={"[^\\s@]+@[^\\s@]+\\.[^\\s@]+"}
+            autoFocus={mode === "login"}
+            onChange={(e) =>
+              signup && setPerson((p) => ({ ...p, email: e.target.value }))
+            }
+          />
+        </Field>
+      )}
+      {mode === "complete" && !external?.email && (
+        <p className={`help ${styles.externalEmail}`}>
+          Яндекс не передал адрес. Укажите свой: на него придёт ссылка для
+          подтверждения, он нужен и для восстановления доступа.
+        </p>
+      )}
+      {mode !== "complete" && (
+        <Field label={t("Пароль")}>
+          <input
+            name="password"
+            type="password"
+            minLength={10}
+            maxLength={128}
+            required
+            autoComplete={
+              mode === "register" ? "new-password" : "current-password"
+            }
+          />
+        </Field>
+      )}
       {mode === "register" && (
         <p className="help">{t("Минимум 10 символов.")}</p>
       )}
@@ -351,7 +380,7 @@ export default function AuthForm({
           />
         </Field>
       )}
-      {mode === "register" && (
+      {signup && (
         <>
           <fieldset
             className={styles.consents}
@@ -421,27 +450,49 @@ export default function AuthForm({
       {authError && <p role="alert">{authError}</p>}
       <button
         className="button block"
-        disabled={busy || submitting || (mode === "register" && !legal?.ready)}
+        disabled={busy || submitting || (signup && !legal?.ready)}
       >
-        {busy
-          ? t("Подождите…")
-          : mode === "register"
-            ? t("Создать аккаунт")
-            : t("Войти")}
+        {busy ? t("Подождите…") : signup ? t("Создать аккаунт") : t("Войти")}
         <ArrowUpRight size={17} aria-hidden="true" />
       </button>
-      {(mode === "register" || settings.registrationOpen) && (
-        <button
-          type="button"
-          disabled={busy || submitting}
-          className="quiet switch-auth"
-          onClick={switchMode}
-        >
-          {mode === "register"
-            ? t("Уже есть аккаунт? Войти")
-            : t("Нет аккаунта? Зарегистрироваться")}
-        </button>
+      {mode !== "complete" && yandexIdEnabled && (
+        <>
+          <p className={styles.or}>или</p>
+          <button
+            type="button"
+            className="button secondary block"
+            disabled={busy || submitting}
+            onClick={() => {
+              // Back to the page the person was on; the sign-in pages go to the account.
+              const here = location.pathname + location.search;
+              const target = ["/login", "/register"].includes(location.pathname)
+                ? "/account"
+                : here;
+              // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+              location.assign(
+                "/api/auth/yandex/start?return=" + encodeURIComponent(target),
+              );
+            }}
+          >
+            {mode === "register"
+              ? "Зарегистрироваться через Яндекс"
+              : "Войти через Яндекс"}
+          </button>
+        </>
       )}
+      {mode !== "complete" &&
+        (mode === "register" || settings.registrationOpen) && (
+          <button
+            type="button"
+            disabled={busy || submitting}
+            className="quiet switch-auth"
+            onClick={switchMode}
+          >
+            {mode === "register"
+              ? t("Уже есть аккаунт? Войти")
+              : t("Нет аккаунта? Зарегистрироваться")}
+          </button>
+        )}
     </form>
   );
 }

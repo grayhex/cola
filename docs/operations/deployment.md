@@ -28,6 +28,8 @@ BIKE_RESOLVER_TOKEN=<ещё один случайный секрет>
 
 Почта нужна для восстановления пароля и подтверждения адреса: `SMTP_URL=smtps://user:password@smtp.example.com:465` (или `smtp://…:587`, STARTTLS обязателен) и `MAIL_FROM="ColaBike <noreply@colabike.ru>"`. Подойдёт SMTP почтового сервиса домена или транзакционного провайдера; настройте SPF/DKIM для домена отправителя. Без `SMTP_URL` сайт запускается, в журнале старта будет `"mail":"disabled"`, а восстановление пароля отвечает 503 — тогда владелец использует `scripts/reset-password.js` ([аккаунт](../modules/accounts.md#восстановление-пароля-и-подтверждение-почты)). `MAIL_CAPTURE_DIR` предназначен только для тестов и в production отклоняется.
 
+Вход через Яндекс ID необязателен: `YANDEX_ID_ENABLED=true`, `YANDEX_ID_CLIENT_ID`, `YANDEX_ID_CLIENT_SECRET`; Redirect URI приложения — `<APP_ORIGIN>/api/auth/yandex/callback`. Неполная настройка при `DEPLOYMENT_MODE=production` останавливает старт; без настройки сайт работает по почте и паролю. Регистрация приложения и проверки перед включением — [в главе об аккаунте](../modules/accounts.md#вход-через-яндекс-id-151).
+
 Необязательные `ERROR_TRACKER_DSN` (HTTPS DSN Sentry или GlitchTip) и `SLOW_REQUEST_MS` описаны в [мониторинге](monitoring.md#журнал-ошибок-и-трекер).
 
 Необязательная `PUBLIC_SITE_URL` задаёт адрес для `canonical` и превью ссылок в мессенджерах, если он отличается от `APP_ORIGIN`. Это должен быть публичный HTTPS-адрес без пути, например `https://colabike.ru`, иначе приложение не стартует. Без неё используется `APP_ORIGIN` ([публичные адреса](../modules/public-urls.md)).

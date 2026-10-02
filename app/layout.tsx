@@ -24,6 +24,7 @@ import { getSite } from "../lib/site.ts";
 import { hidden } from "../lib/indexing.ts";
 import { currentViewer } from "../lib/viewer.ts";
 import { chatConfig } from "../lib/chat-config.ts";
+import { yandexIdConfig } from "../lib/yandex-id.ts";
 export const dynamic = "force-dynamic";
 export async function generateMetadata() {
   const { settings } = await getSite();
@@ -77,6 +78,7 @@ export default async function Layout({
           viewer={viewer}
           nonce={nonce}
           chatEnabled={!!chatConfig()}
+          yandexIdEnabled={!!yandexIdConfig()}
         >
           {children}
         </SiteProvider>

@@ -1,4 +1,16 @@
 import AuthPage from "../ui/auth-page.tsx";
-export default function Login() {
-  return <AuthPage />;
+import { identityNotice } from "../../lib/identity-messages.ts";
+export default async function Login({
+  searchParams,
+}: {
+  searchParams: Promise<{ identity?: string | string[] }>;
+}) {
+  const { identity } = await searchParams;
+  return (
+    <AuthPage
+      notice={
+        identityNotice(typeof identity === "string" ? identity : "") || ""
+      }
+    />
+  );
 }

@@ -1,6 +1,7 @@
 import { cspMode, mapOrigins } from "./csp.ts";
 import { parseDsn } from "./error-tracker.ts";
 import { mailConfig } from "./mail.ts";
+import { yandexIdConfigProblem } from "./yandex-id.ts";
 export function validateRuntime(env = process.env) {
   if (env.DEPLOYMENT_MODE !== "production") return { mode: "local" };
   function reject(message: string): never {
@@ -69,6 +70,9 @@ export function validateRuntime(env = process.env) {
         'MAIL_FROM is required with SMTP_URL, e.g. "ColaBike <noreply@colabike.ru>"',
       );
   }
+  // Yandex ID is optional; a half-filled configuration is a deployment error.
+  const yandexProblem = yandexIdConfigProblem(env);
+  if (yandexProblem) reject(yandexProblem);
   // Mail is optional, but without it password recovery is unavailable: log it.
   return {
     mode: "production",

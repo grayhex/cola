@@ -202,7 +202,7 @@ export interface UserRow {
   id: string;
   email: string;
   name: string;
-  password_hash: string;
+  password_hash: string | null;
   created_at: Date;
   role: "user" | "admin";
   blocked: boolean;

@@ -247,3 +247,24 @@
     min-height: 44px;
   }
 }
+
+/* The divider between the password form and a provider button (#151). */
+.or {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: var(--space-4) 0 var(--space-3);
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+.or::before,
+.or::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+.externalEmail {
+  margin: 0 0 var(--space-4);
+}
