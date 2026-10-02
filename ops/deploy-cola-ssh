@@ -7,13 +7,17 @@
 #   deploy ALL=(root) NOPASSWD: /usr/local/sbin/deploy-cola
 set -euo pipefail
 
-sha="${SSH_ORIGINAL_COMMAND:-}"
+request="${SSH_ORIGINAL_COMMAND:-}"
 
-if [[ ! "$sha" =~ ^[0-9a-f]{40}$ ]]; then
-  logger -t deploy-cola-ssh "rejected request: ${sha:0:80}"
-  echo "expected a full 40-character commit SHA" >&2
+if [[ "$request" =~ ^([0-9a-f]{40})\ prebuilt\ ([1-9][0-9]*)\ ([1-9][0-9]*)$ ]]; then
+  args=("${BASH_REMATCH[1]}" prebuilt "${BASH_REMATCH[2]}" "${BASH_REMATCH[3]}")
+elif [[ "$request" =~ ^[0-9a-f]{40}$ ]]; then
+  args=("$request")
+else
+  logger -t deploy-cola-ssh "rejected malformed deployment request"
+  echo "expected SHA [prebuilt RUN_ID ATTEMPT]" >&2
   exit 64
 fi
 
-logger -t deploy-cola-ssh "deploy requested: $sha"
-exec sudo -n /usr/local/sbin/deploy-cola "$sha"
+logger -t deploy-cola-ssh "deploy requested: ${args[*]}"
+exec sudo -n /usr/local/sbin/deploy-cola "${args[@]}"

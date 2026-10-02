@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   verify-manual:
@@ -38,11 +39,10 @@ jobs:
         )
       )
     # No runner on the production server: a GitHub-hosted job reaches it over SSH
-    # with a key that can only pass a commit SHA to deploy-cola (forced command).
+    # with a forced command accepting only SHA and CI run identifiers.
     runs-on: ubuntu-latest
-    # A cold VPS build exceeded 20 min in deploy #90; keep a finite budget
-    # with time left to remove the SSH key after the deployment step times out.
-    timeout-minutes: 40
+    # Images are already built/tested by CI; leave time for transfer and cleanup.
+    timeout-minutes: 30
     # Secrets live in this environment; restrict it to the main branch in Settings.
     environment:
       name: production
@@ -52,10 +52,24 @@ jobs:
       cancel-in-progress: false
     env:
       TARGET_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+      CI_RUN_ID: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.id || github.run_id }}
+      CI_RUN_ATTEMPT: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.run_attempt || github.run_attempt }}
     steps:
       - name: Validate target commit
         run: |
           [[ "$TARGET_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::Unexpected SHA: $TARGET_SHA"; exit 1; }
+          [[ "$CI_RUN_ID" =~ ^[1-9][0-9]*$ && "$CI_RUN_ATTEMPT" =~ ^[1-9][0-9]*$ ]] || exit 1
+
+      - name: Download the exact CI image archive
+        timeout-minutes: 5
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          name="production-images-$TARGET_SHA-$CI_RUN_ATTEMPT"
+          artifact_id=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$CI_RUN_ID/artifacts?name=$name" \
+            --jq 'if .total_count == 1 and (.artifacts[0].expired | not) then .artifacts[0].id else error("Missing CI images: rerun full CI") end')
+          [[ "$artifact_id" =~ ^[1-9][0-9]*$ ]] || exit 1
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$artifact_id/zip" > "$RUNNER_TEMP/production-images.zip"
 
       - name: Prepare SSH
         env:
@@ -67,8 +81,8 @@ jobs:
           printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
           printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
 
-      - name: Deploy exactly the verified main commit
-        timeout-minutes: 38
+      - name: Deploy the verified main images without rebuilding on the VPS
+        timeout-minutes: 22
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT || '22' }}
@@ -76,7 +90,8 @@ jobs:
           ssh -i ~/.ssh/deploy_key -p "$DEPLOY_PORT" \
             -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
             -o ConnectTimeout=20 -o ServerAliveInterval=30 \
-            "deploy@$DEPLOY_HOST" "$TARGET_SHA"
+            "deploy@$DEPLOY_HOST" "$TARGET_SHA prebuilt $CI_RUN_ID $CI_RUN_ATTEMPT" \
+            < "$RUNNER_TEMP/production-images.zip"
 
       - name: Remove key
         if: always()

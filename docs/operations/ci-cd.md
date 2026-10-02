@@ -37,25 +37,26 @@ Browser artifacts разделены по проекту/attempt и хранят
 
 ## Production
 
-`deploy` из [deploy.yml](../../.github/workflows/deploy.yml) работает на `ubuntu-latest`, без runner на VPS. Автоматический путь принимает только успешный `CI · ColaBike` для события `push` в `main` этого репозитория. Ручной запуск доступен для `main` и сначала повторяет тот же CI через `verify-manual`. Deploy-job сам не делает checkout или сборку: он передаёт `TARGET_SHA` по SSH.
+`deploy` из [deploy.yml](../../.github/workflows/deploy.yml) работает на `ubuntu-latest`, без runner на VPS. Автоматический путь принимает только успешный `CI · ColaBike` для события `push` в `main` этого репозитория. Ручной запуск доступен для `main` и сначала повторяет тот же CI через `verify-manual`. Operations после runtime/restore drill сохраняет те же три образа в `production-images-SHA-ATTEMPT` на 3 дня. Deploy-job скачивает исходный ZIP через GitHub API и передаёт его по SSH stdin вместе с `SHA prebuilt RUN_ID ATTEMPT`. На VPS нет повторной компиляции Next или установки зависимостей.
 
-Бюджет deploy-job — 40 минут, SSH-step — 38 минут; остаток оставлен для удаления
-ключа и завершения job. Это отдельный бюджет холодной сборки на VPS, а не изменение
-лимитов или обязательных проверок CI. Compose по-прежнему ждёт healthchecks до
-180 секунд после сборки. Причина изменения и действия после timeout описаны в
+Бюджет deploy-job — 30 минут, скачивания — 5 минут, SSH-step — 22 минуты. Сервер
+ждёт lock до 60 секунд, ограничивает проверку/приём/загрузку образов 14 минутами,
+Compose — 5 минутами (healthchecks до 180 секунд). Истёкший или отсутствующий
+artifact требует полного CI заново; fallback на сборку VPS отсутствует.
+Причина изменения и действия после timeout описаны в
 [runbook](deployment.md#незавершённый-deploy-и-повторный-запуск).
 
 Job использует environment `production` и его secrets: `DEPLOY_SSH_KEY`, `DEPLOY_KNOWN_HOSTS`, `DEPLOY_HOST`, `DEPLOY_PORT` (если не задан — порт 22). Соединение идёт пользователем `deploy` с `StrictHostKeyChecking=yes`; значения секретов в репозитории не хранятся. Ограничение environment веткой `main` настраивается отдельно в GitHub. Установка и назначение каждого секрета — в [deployment](deployment.md#ssh-доступ-для-github-actions).
 
-Оператор устанавливает [ops/deploy-cola-ssh](../../ops/deploy-cola-ssh) и [ops/deploy-cola](../../ops/deploy-cola) в `/usr/local/sbin` с root ownership. Forced-command из `authorized_keys` проверяет полный SHA из `SSH_ORIGINAL_COMMAND` и вызывает `sudo -n /usr/local/sbin/deploy-cola`. Git выполняется от владельца `/opt/stacks/cola` с read-only SSH deploy key, сборка образов и Docker — wrapper от root на VPS. Concurrency group `cola-production` сериализует выкладки; это имя группы, не label runner.
+Оператор устанавливает [ops/deploy-cola-ssh](../../ops/deploy-cola-ssh), [ops/deploy-cola](../../ops/deploy-cola) и [ops/deploy-cola-images.py](../../ops/deploy-cola-images.py) в `/usr/local/sbin` с root ownership. Forced-command проверяет строгий формат SHA/run/attempt и вызывает единственную разрешённую sudo-команду `deploy-cola`. Git выполняется от владельца `/opt/stacks/cola`, Docker — wrapper от root. Нужны Python 3, исходящий HTTPS к публичному GitHub API и Docker amd64; дополнительный PAT, registry и новые secrets не нужны. Concurrency group `cola-production` сериализует выкладки; это имя группы, не label runner.
 
-Wrapper принимает 40-символьный SHA, fetch-ит main, требует точное равенство текущему remote main, отказывается от tracked edits, переключает checkout, проверяет Compose и ждёт healthchecks. При `.env.production` выбирает отдельный production file. После успеха сохраняет SHA в `/var/lib/colabike/verified-sha`. Специальных действий по созданию или проверке демонстрационных профилей нет.
+Wrapper fetch-ит main, требует точное равенство SHA текущему remote main, отказывается от tracked edits и проверяет Compose. По GitHub API сервер независимо проверяет repository, workflow, событие, SHA, attempt и успешный CI. Для ручной выкладки проверяется `verify-manual / check` того же attempt. Затем проверяются размер и SHA-256 всего ZIP из доверенных metadata GitHub; до этого Docker не вызывается. При ошибке API или несовпадении проверка закрывается отказом. Проверяются три image tag, revision label, платформа и image IDs; образы получают реальные project-scoped теги Compose. `up --no-build` выполняет миграции и healthchecks. При `.env.production` выбирается отдельный production file. Только после успеха сохраняется `/var/lib/colabike/verified-sha`.
 
-**`verified-sha` — журнал успешной выкладки, не свободный rollback target.** Запуск без аргумента берёт этот SHA, но всё равно требует совпадения с текущим main. Устаревший SHA завершается ошибкой; автоматического rollback и атомарной выкладки без простоя нет. Wrapper сам не получает CI-attestation: доверенная передача SHA — ответственность workflow.
+**`verified-sha` — журнал успешной выкладки, не свободный rollback target.** Старый SHA-only режим оставлен для совместимости установленного workflow и операторского bootstrap: он собирает на VPS с лимитом 35 минут и по-прежнему доверяет переданному workflow SHA. Запуск без аргумента берёт `verified-sha`, но требует совпадения с текущим main. Новый workflow всегда использует проверяемый prebuilt-режим. Автоматического rollback и атомарной выкладки без простоя нет.
 
 ## Обслуживание и ограничения
 
-Merge файла `ops/...` **не обновляет установленную копию** в `/usr/local/sbin`. Если содержимое wrapper изменилось, после review оператор устанавливает её отдельно. Пользователь `deploy` не должен иметь права менять wrappers. Перенос исходника `deploy-cola-ssh` в `ops/` не меняет его содержимое или установленный путь: сам по себе он не требует переустановки на VPS.
+Merge файла `ops/...` **не обновляет установленную копию** в `/usr/local/sbin`. Перед включением prebuilt workflow оператор устанавливает все три файла из проверенного commit по [runbook](deployment.md#переход-на-готовые-образы-ci). Старая установленная версия отвергнет новый протокол сразу; она не начнёт долгую сборку. Пользователь `deploy` не должен иметь права менять wrappers.
 
 Перед ручным вмешательством отмените или дождитесь активного deploy и согласуйте backup lock. Не используйте `git reset --hard` как обычное обновление: wrapper намеренно сохраняет tracked edits. Branch protection, review и secrets настраиваются отдельно от исходного кода.
 

@@ -8,7 +8,7 @@
 
 До запуска настройте SSH по ключу, рабочий sudo и доступ через консоль провайдера. Запрет root/password SSH применяйте только после проверки новой сессии по ключу. Проверяйте effective `sshd -T`: порядок drop-in файлов влияет на фактически принятые значения. Firewall должен разрешать SSH и HTTP/HTTPS, не PostgreSQL или Resolver. Docker-публикация портов требует отдельной проверки, не полагайтесь только на список UFW.
 
-Проверьте реальный объём диска, файловой системы и свободное место. Сборка выполняется на VPS, требует ресурсов и может использовать swap. Наличие тарифа «50 ГБ» не доказывает, что корневой раздел уже расширен. Не выполняйте изменение разделов без проверки `lsblk`, типа файловой системы и резервной копии.
+Проверьте реальный объём диска, файловой системы и свободное место. Автоматический deploy загружает готовые CI images; место нужно для ZIP, `images.tar.gz`, новых Docker layers и сохранённых прежних образов. VPS должен быть amd64, иметь Python 3 и HTTPS-доступ к `api.github.com`. Ручной bootstrap со сборкой дополнительно требует CPU/RAM и может использовать swap. Наличие тарифа «50 ГБ» не доказывает, что корневой раздел уже расширен. Не выполняйте изменение разделов без проверки `lsblk`, типа файловой системы и резервной копии.
 
 ## Репозиторий и конфигурация
 
@@ -84,11 +84,12 @@ Email — пример. Скрипт работает только с сущес
 Это инструкция первоначальной настройки оператором. Изменение скриптов в `ops/` само по себе не обновляет установленные root-owned wrappers: их обновление выполняется оператором после review.
 
 1. Подготовьте отдельного пользователя `deploy` с рабочей оболочкой для forced-command, без входа по паролю и без Docker group. У владельца `/opt/stacks/cola` должен работать read-only доступ к репозиторию; `deploy` не должен изменять checkout и `.env.production`.
-2. Из проверенного checkout установите оба root-owned скрипта (каталог назначения также не должен быть доступен `deploy` на запись):
+2. Из проверенного checkout установите три root-owned скрипта (каталог назначения также не должен быть доступен `deploy` на запись):
 
    ```bash
    sudo install -o root -g root -m 0755 ops/deploy-cola /usr/local/sbin/deploy-cola
    sudo install -o root -g root -m 0755 ops/deploy-cola-ssh /usr/local/sbin/deploy-cola-ssh
+   sudo install -o root -g root -m 0755 ops/deploy-cola-images.py /usr/local/sbin/deploy-cola-images.py
    ```
 
 3. Через `sudo visudo -f /etc/sudoers.d/cola-deploy` разрешите единственную команду и проверьте файл:
@@ -120,7 +121,30 @@ Email — пример. Скрипт работает только с сущес
 
    Host key сверяйте через доверенный канал (например, консоль провайдера); не считайте непроверенный результат `ssh-keyscan` подтверждением подлинности. Настройки защиты `main` и environment проверяются отдельно: файлы репозитория их не применяют.
 
-Forced-command отклоняет всё, кроме 40-символьного SHA. Затем `deploy-cola` требует, чтобы SHA совпадал с текущим `origin/main`, проверяет чистоту tracked-файлов, собирает Compose и ждёт healthchecks. Даже корректный SHA запускает реальную выкладку: не используйте его как безвредный тест SSH. При разрешённой оператором выкладке проверьте Actions, healthchecks и `/var/lib/colabike/verified-sha`; недоступную production-проверку отмечайте отдельно.
+Forced-command принимает только `SHA prebuilt RUN_ID ATTEMPT` либо прежний 40-символьный SHA для совместимости. `deploy-cola` требует текущий `origin/main` и чистоту tracked-файлов. В prebuilt-режиме сервер сверяет CI и digest архива через GitHub API, загружает три образа и запускает Compose с `--no-build`; ошибка не включает локальную сборку. Даже корректный запрос запускает реальную выкладку: не используйте его как безвредный тест SSH. При разрешённой оператором выкладке проверьте Actions, healthchecks и `/var/lib/colabike/verified-sha`; недоступную production-проверку отмечайте отдельно.
+
+### Переход на готовые образы CI
+
+После review, **до merge** workflow, оператор устанавливает все три файла из точного проверенного commit. Это изменение root-owned tooling; merge его не выполняет. Дождитесь завершения старого deploy и сохраните текущие wrappers для операторского возврата. Из checkout владельца репозитория:
+
+```bash
+cd /opt/stacks/cola
+reviewed_sha=REPLACE_WITH_REVIEWED_40_CHARACTER_SHA
+[[ "$reviewed_sha" =~ ^[0-9a-f]{40}$ ]] || exit 1
+git fetch origin "$reviewed_sha"
+deploy_tools=$(mktemp -d)
+for file in deploy-cola deploy-cola-ssh deploy-cola-images.py; do
+  git show "$reviewed_sha:ops/$file" > "$deploy_tools/$file" || exit 1
+done
+bash -n "$deploy_tools/deploy-cola" "$deploy_tools/deploy-cola-ssh"
+python3 -m py_compile "$deploy_tools/deploy-cola-images.py"
+sudo install -o root -g root -m 0755 "$deploy_tools/deploy-cola-images.py" /usr/local/sbin/deploy-cola-images.py
+sudo install -o root -g root -m 0755 "$deploy_tools/deploy-cola" /usr/local/sbin/deploy-cola
+sudo install -o root -g root -m 0755 "$deploy_tools/deploy-cola-ssh" /usr/local/sbin/deploy-cola-ssh
+rm -r "$deploy_tools"
+```
+
+Команды не переключают production checkout и не запускают контейнеры. Sudoers, authorized_keys и secrets остаются прежними. После установки и разрешённого merge дождитесь CI итогового main и нового Deploy. Старый run без image artifact повторять бесполезно; если artifact истёк или выбран повтор только failed jobs без нового operations artifact, запустите полный ручной Deploy из main: он повторит весь CI. Не подменяйте SHA/run/attempt и не передавайте архивы из PR.
 
 ## Одноразовые миграции и операторские команды
 
@@ -129,7 +153,7 @@ Forced-command отклоняет всё, кроме 40-символьного S
 зависимость `service_completed_successfully` разрешает запуск web только после
 успеха. `restart app` не запускает SQL. История и транзакционная advisory-блокировка
 миграций сохранены; повторный общий `up` безопасно проверяет ту же историю.
-Установленный deploy wrapper использует ту же команду Compose и не требует замены.
+Автоматический prebuilt deploy загружает эти образы заранее и использует `up --no-build` с теми же зависимостями и healthchecks. Для перехода wrapper нужно обновить по инструкции выше.
 
 `migrate` единожды собирает локальный образ `${COMPOSE_PROJECT_NAME}-ops:local`.
 `chat-sync`, `activity-sync`, `notification-email` и `bike-week` используют этот же образ без собственного build/export
@@ -153,7 +177,7 @@ CI проверяет build graph, холодный `up --build` с отдель
 
 ## Незавершённый deploy и повторный запуск
 
-В workflow заданы лимиты 40 минут для job и 38 минут для SSH-step. Их актуальные значения — в [deploy.yml](../../.github/workflows/deploy.yml); время сборки зависит от ресурсов VPS и кеша. Если выкладка не завершилась, проверьте сервер до повтора.
+Deploy `36930668668` остановился по лимиту 38 минут: зависимости были закешированы, ops и Resolver завершились, а Next оставался на `Creating an optimized production build` примерно 37,5 минуты. Лог не доказывает OOM; для причины зависания нужны метрики VPS. Новый путь убирает эту повторную компиляцию: передаёт уже проверенные CI images. Лимиты — 30 минут для job и 22 минуты для SSH-step; на сервере отдельно ограничены lock, загрузка и Compose. Актуальные значения — в [deploy.yml](../../.github/workflows/deploy.yml) и wrappers. Если выкладка не завершилась, проверьте сервер до повтора.
 
 Отмена SSH-job не доказывает остановку удалённого BuildKit/Compose. Перед повтором
 оператор проверяет состояние; lock-файл не удаляют и процессы не убивают вслепую:

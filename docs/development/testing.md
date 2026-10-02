@@ -17,10 +17,15 @@ pnpm test:integration
 pnpm exec playwright install --with-deps chromium webkit
 pnpm test:e2e
 python3 scripts/test-compose.py
+python3 scripts/test-deploy-images.py
 bash scripts/test-backup-drill.sh
 ```
 
 Команды — перечень уровней, не требование запускать тяжёлый полный drill после каждой правки текста. CI проверяет полный набор согласно [workflow](../../.github/workflows/check.yml). Узкую регрессию сначала запускайте адресно: `node --test tests/map-settings.test.js` или нужный Resolver fixture.
+
+`test-deploy-images.py` проверяет доверие к run/attempt/main, ручной aggregate check, отказы для failed/fork/PR, digest/размер/состав архива, revision/platform и строгий SSH-протокол. В operations после runtime drill режим `--docker SHA PATH_TO_IMAGES_TAR_GZ` упаковывает и проверяет ZIP, удаляет исходные теги, загружает реальные образы заново и проверяет одинаковые IDs и запуск Node под project-scoped тегами обоих Compose файлов. Это не заменяет проверку сети, свободного диска и установленных root-owned wrappers на production.
+
+Регрессия `bike-week.spec.js` задерживает реальный ответ поиска и выдаёт его между pointer down/up на кнопке назначения: кнопка должна сохранить координату, PUT — завершиться успешно, UI — показать подтверждение. Тест не маскирует сдвиг увеличенным timeout или повторным кликом.
 
 Бюджет браузерного CI job — 35 минут на установку браузера и системных пакетов, весь набор Playwright и загрузку визуальных artifacts. Полный WebKit-прогон занимает около 17,5 минуты, установка на медленном package mirror может превышать 8 минут; общий лимит учитывает оба этапа. Таймауты отдельных тестов и проверки Playwright задаются отдельно в конфигурации и spec-файлах.
 

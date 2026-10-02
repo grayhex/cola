@@ -192,7 +192,9 @@ jobs:
         with:
           ref: ${{ needs.prepare.outputs.sha }}
       - name: Compose assertions
-        run: python3 scripts/test-compose.py
+        run: |
+          python3 scripts/test-compose.py
+          python3 scripts/test-deploy-images.py
       - uses: docker/setup-buildx-action@v4
       - name: Build final application image
         uses: docker/build-push-action@v7
@@ -202,6 +204,7 @@ jobs:
           load: true
           push: false
           tags: cola-ci-app:${{ needs.prepare.outputs.sha }}
+          labels: org.opencontainers.image.revision=${{ needs.prepare.outputs.sha }}
           cache-from: type=gha,scope=cola-app
           # Main maintains the shared cache; long PRs may opt in with ci:build-cache.
           cache-to: ${{ ((github.event_name == 'push' && github.ref == 'refs/heads/main') || contains(github.event.pull_request.labels.*.name, 'ci:build-cache')) && 'type=gha,scope=cola-app,mode=max' || '' }}
@@ -213,6 +216,7 @@ jobs:
           load: true
           push: false
           tags: cola-ci-ops:${{ needs.prepare.outputs.sha }}
+          labels: org.opencontainers.image.revision=${{ needs.prepare.outputs.sha }}
           cache-from: type=gha,scope=cola-ops
           # Main maintains the shared cache; long PRs may opt in with ci:build-cache.
           cache-to: ${{ ((github.event_name == 'push' && github.ref == 'refs/heads/main') || contains(github.event.pull_request.labels.*.name, 'ci:build-cache')) && 'type=gha,scope=cola-ops,mode=max' || '' }}
@@ -223,6 +227,7 @@ jobs:
           load: true
           push: false
           tags: cola-ci-resolver:${{ needs.prepare.outputs.sha }}
+          labels: org.opencontainers.image.revision=${{ needs.prepare.outputs.sha }}
           cache-from: type=gha,scope=cola-resolver
           cache-to: type=gha,scope=cola-resolver,mode=max
       - name: Shared ops image cold-start contract
@@ -235,6 +240,26 @@ jobs:
           COLA_TEST_APP_IMAGE: cola-ci-app:${{ needs.prepare.outputs.sha }}
           COLA_TEST_RESOLVER_IMAGE: cola-ci-resolver:${{ needs.prepare.outputs.sha }}
         run: bash scripts/test-backup-drill.sh
+      - name: Package and round-trip the tested deployment images
+        env:
+          TESTED_SHA: ${{ needs.prepare.outputs.sha }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/production-images"
+          docker image save "cola-ci-app:$TESTED_SHA" "cola-ci-ops:$TESTED_SHA" "cola-ci-resolver:$TESTED_SHA" \
+            | gzip -1 > "$RUNNER_TEMP/production-images/images.tar.gz"
+          python3 scripts/test-deploy-images.py --docker "$TESTED_SHA" "$RUNNER_TEMP/production-images/images.tar.gz"
+      - name: Publish tested main images for production
+        if: >-
+          github.repository == 'grayhex/cola' && github.ref == 'refs/heads/main' &&
+          (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+        uses: actions/upload-artifact@v7
+        with:
+          name: production-images-${{ needs.prepare.outputs.sha }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/production-images/images.tar.gz
+          archive: true
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 3
 
   # Preserve the required status "check": skip, cancellation and failure cannot pass.
   check:

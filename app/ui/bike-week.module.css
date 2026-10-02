@@ -126,6 +126,9 @@
   padding: var(--space-4);
   border: 1px solid var(--line);
 }
+.manual > :global(.button) {
+  margin-bottom: var(--space-4);
+}
 .manual details {
   margin-block: var(--space-4);
 }

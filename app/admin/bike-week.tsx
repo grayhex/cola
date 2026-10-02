@@ -296,6 +296,13 @@ export default function BikeWeekAdmin() {
             </button>
             {manual && (
               <div id="bike-week-manual" className={styles.manual}>
+                <button
+                  className="button"
+                  disabled={!bikeId || reason.trim().length < 3}
+                  onClick={() => decide("override")}
+                >
+                  Назначить на неделю
+                </button>
                 <BikeWeekPicker
                   key={week}
                   week={week}
@@ -313,13 +320,6 @@ export default function BikeWeekAdmin() {
                     />
                   </label>
                 </details>
-                <button
-                  className="button"
-                  disabled={!bikeId || reason.trim().length < 3}
-                  onClick={() => decide("override")}
-                >
-                  Назначить на неделю
-                </button>
               </div>
             )}
             <div className={styles.actions}>

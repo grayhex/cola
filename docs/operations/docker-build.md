@@ -22,7 +22,13 @@ CI сравнивает выдаваемые web bytes с пакетами ops �
 builder может его переиспользовать. GHA layer cache не переносит содержимое mount;
 новый hosted runner компилирует с пустым compiler cache. Отдельный backend не вводится.
 `load: true` остаётся для web, ops и Resolver в operations: все три запускаются
-в disposable drill. Benchmark экспортирует OCI для измерения слоёв без load/push.
+в disposable drill. После drill CI сохраняет эти точные образы через `docker image save | gzip -1`,
+проверяет ZIP/load/tag round-trip и равенство image IDs для обоих Compose файлов.
+Main публикует bundle на 3 дня; production получает его по SSH, проверяет digest
+через GitHub API и запускает `up --no-build`. VPS compiler cache для обычной
+выкладки больше не нужен. Перенос экономит повторную сборку, но время передачи
+зависит от размера bundle и сети; измеряйте его в новом deploy, не обещайте секунды заранее.
+Benchmark экспортирует OCI для измерения слоёв без load/push.
 
 ## Воспроизводимое сравнение
 

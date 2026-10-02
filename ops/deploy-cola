@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
-# COLA_VERIFIED_DEPLOY_V2
+# COLA_VERIFIED_DEPLOY_V3
 # Install once as root at /usr/local/sbin/deploy-cola. CI supplies its tested SHA.
 
 repo=/opt/stacks/cola
 state_dir=/var/lib/colabike
 
 exec 9>/var/lock/colabike-deploy.lock
-flock 9
+flock -w 60 9 || { echo "Another deployment still holds the server lock" >&2; exit 1; }
 
 [[ -d "$repo/.git" ]] || { echo "Repository not found: $repo" >&2; exit 1; }
 mkdir -p "$state_dir"
@@ -17,6 +17,14 @@ sha=${1:-$(cat "$state_dir/verified-sha" 2>/dev/null || true)}
   echo "A tested commit SHA is required for the first deployment" >&2
   exit 1
 }
+
+prebuilt=false
+if [[ $# == 4 && "$2" == prebuilt && "$3" =~ ^[1-9][0-9]*$ && "$4" =~ ^[1-9][0-9]*$ ]]; then
+  prebuilt=true
+elif [[ $# -gt 1 ]]; then
+  echo "Expected SHA [prebuilt RUN_ID ATTEMPT]" >&2
+  exit 64
+fi
 
 repo_owner=$(stat -c '%U' "$repo")
 [[ "$repo_owner" =~ ^[a-z_][a-z0-9_-]*$ ]] || {
@@ -53,7 +61,14 @@ if [[ -f .env.production ]]; then
 fi
 
 "${compose[@]}" config --quiet
-"${compose[@]}" up --build -d --wait --wait-timeout 180
+if "$prebuilt"; then
+  # Fail closed: invalid/missing CI images must never fall back to a VPS build.
+  timeout --kill-after=30s 14m python3 /usr/local/sbin/deploy-cola-images.py "$sha" "$3" "$4" -- "${compose[@]}"
+  timeout --kill-after=30s 5m "${compose[@]}" up --no-build -d --wait --wait-timeout 180
+else
+  # Legacy bootstrap/operator path, kept for existing installed workflows.
+  timeout --kill-after=30s 35m "${compose[@]}" up --build -d --wait --wait-timeout 180
+fi
 "${compose[@]}" ps
 
 printf '%s\n' "$sha" > "$state_dir/verified-sha"
