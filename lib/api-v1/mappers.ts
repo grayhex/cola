@@ -1,6 +1,14 @@
 import type { CurrentUser, PublicAuthor, SocialBike } from "../contracts.ts";
 import type { visibleBikeById } from "../showcase.ts";
-import type { Bike, BikeSummary, Me } from "./schemas.ts";
+import type { listSessions } from "../account-data.ts";
+import type { TokenGrant } from "../device-sessions.ts";
+import type {
+  AccountSession,
+  Bike,
+  BikeSummary,
+  Me,
+  SessionGrant,
+} from "./schemas.ts";
 import type { ClassificationSource } from "../bike-classification.ts";
 import { classificationOf } from "../bike-classification.ts";
 
@@ -32,6 +40,37 @@ export function toMe(user: CurrentUser): Me {
     emailVerifiedAt: user.email_verified_at
       ? iso(user.email_verified_at)
       : null,
+  };
+}
+
+type SessionRow = Awaited<ReturnType<typeof listSessions>>[number];
+
+export function toAccountSession(session: SessionRow): AccountSession {
+  return {
+    id: session.id,
+    kind: session.kind,
+    deviceName: session.deviceName,
+    platform: session.platform,
+    appVersion: session.appVersion,
+    userAgent: session.userAgent,
+    createdAt: iso(session.createdAt),
+    lastSeenAt: iso(session.lastSeenAt),
+    current: session.current === true,
+  };
+}
+
+export function toSessionGrant(
+  grant: TokenGrant,
+  session: SessionRow,
+  user: CurrentUser,
+): SessionGrant {
+  return {
+    session: toAccountSession({ ...session, current: true }),
+    accessToken: grant.accessToken,
+    accessTokenExpiresAt: iso(grant.accessTokenExpiresAt),
+    refreshToken: grant.refreshToken,
+    refreshTokenExpiresAt: iso(grant.refreshTokenExpiresAt),
+    user: toMe(user),
   };
 }
 

@@ -1,8 +1,7 @@
 import { db } from "../db.ts";
 import { getSite } from "../site.ts";
 import { visibleBikeById, visibleBikePage } from "../showcase.ts";
-import { viewerFromCredential } from "../viewer-session.ts";
-import { requestCredential } from "./credentials.ts";
+import { viewerOf } from "./viewer.ts";
 import { decodeCursor, encodeCursor } from "./cursor.ts";
 import { ApiError, notFound } from "./errors.ts";
 import { toBike, toBikeSummary, toMe } from "./mappers.ts";
@@ -20,8 +19,7 @@ const signIn = () => new ApiError("unauthorized", "Войдите в аккау�
 /** GET /api/v1/me */
 export function handleMe(req: Request) {
   return safely(async () => {
-    const credential = requestCredential(req.headers);
-    const viewer = await viewerFromCredential(db, credential);
+    const viewer = await viewerOf(req.headers);
     if (!viewer) throw signIn();
     return ok(toMe(viewer));
   });
@@ -30,10 +28,9 @@ export function handleMe(req: Request) {
 /** GET /api/v1/bikes */
 export function handleListBikes(req: Request) {
   return safely(async () => {
-    const credential = requestCredential(req.headers);
+    const viewer = await viewerOf(req.headers);
     const query = parseListQuery(new URL(req.url));
     const after = query.cursor ? decodeCursor(query.cursor) : null;
-    const viewer = await viewerFromCredential(db, credential);
     if (query.scope === "mine" && !viewer) throw signIn();
     const page = await visibleBikePage(db, viewer?.id ?? null, {
       scope: query.scope,
@@ -55,12 +52,11 @@ export function handleGetBike(
   { params }: { params: Promise<{ id: string }> },
 ) {
   return safely(async () => {
-    const credential = requestCredential(req.headers);
+    const viewer = await viewerOf(req.headers);
     const { id } = await params;
     // A value that is not a UUID cannot name a bike.
     if (!bikeIdSchema.safeParse(id).success)
       throw notFound("Велосипед не найден.");
-    const viewer = await viewerFromCredential(db, credential);
     // A private bike, a blocked owner's bike and a missing one look the same.
     const bike = await visibleBikeById(
       db,

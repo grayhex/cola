@@ -165,15 +165,22 @@ try {
   );
   assert.equal(served.body.openapi, "3.1.0");
   assert.equal(served.body.servers[0].url, base + "/api/v1");
-  // Every documented operation exists on the server.
+  // Every documented operation exists on the server: a guest without a body
+  // gets that operation's own refusal, never the unknown-address 404 or a 405.
   for (const [route, methods] of Object.entries(served.body.paths))
     for (const method of Object.keys(methods)) {
       const response = await guest.v1(route.replace("{id}", first), {
         method: method.toUpperCase(),
+        cookies: false,
       });
       assert.ok(
-        [200, 401].includes(response.status),
+        [200, 400, 401, 404].includes(response.status),
         `${method} ${route} is implemented (${response.status})`,
+      );
+      assert.notEqual(
+        response.body?.error?.message,
+        "Такого адреса в API v1 нет.",
+        `${method} ${route} is a real route`,
       );
     }
 
@@ -193,20 +200,36 @@ try {
     "unauthorized",
     "malformed session",
   );
-  for (const authorization of ["Bearer abc.def", "Basic Zm9vOmJhcg=="]) {
-    assertError(
-      await guest.v1("/me", { headers: { authorization } }),
-      401,
-      "unsupported_authentication",
-      "Authorization without a cookie",
-    );
-    assertError(
-      await owner.api.v1("/me", { headers: { authorization } }),
-      401,
-      "unsupported_authentication",
-      "Authorization with a valid cookie is refused, not ignored",
-    );
-  }
+  // A Bearer token of the wrong shape is refused, never served as a guest
+  // (device sessions are tests/device-sessions-http.js, #303).
+  assertError(
+    await guest.v1("/me", { headers: { authorization: "Bearer abc.def" } }),
+    401,
+    "invalid_token",
+    "Bearer of the wrong shape",
+  );
+  assertError(
+    await guest.v1("/me", {
+      headers: { authorization: "Basic Zm9vOmJhcg==" },
+    }),
+    401,
+    "unsupported_authentication",
+    "a foreign Authorization scheme without a cookie",
+  );
+  assertError(
+    await owner.api.v1("/me", {
+      headers: { authorization: "Basic Zm9vOmJhcg==" },
+    }),
+    401,
+    "unsupported_authentication",
+    "a foreign scheme with a valid cookie is refused, not ignored",
+  );
+  assertError(
+    await owner.api.v1("/me", { headers: { authorization: "Bearer abc.def" } }),
+    400,
+    "ambiguous_authentication",
+    "cookie and Bearer together",
+  );
   const me = await owner.api.v1("/me");
   assert.equal(me.status, 200, me.text);
   assert.deepEqual(meSchema.parse(me.body), me.body);
@@ -328,9 +351,9 @@ try {
     await owner.api.v1("/bikes?limit=2", {
       headers: { authorization: "Bearer x" },
     }),
-    401,
-    "unsupported_authentication",
-    "list with Authorization",
+    400,
+    "ambiguous_authentication",
+    "list with a cookie and Authorization",
   );
 
   // ---- GET /bikes/{id}: public, private, hidden prices, blocked owner.

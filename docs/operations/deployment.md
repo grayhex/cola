@@ -28,6 +28,8 @@ BIKE_RESOLVER_TOKEN=<ещё один случайный секрет>
 
 Почта нужна для восстановления пароля и подтверждения адреса: `SMTP_URL=smtps://user:password@smtp.example.com:465` (или `smtp://…:587`, STARTTLS обязателен) и `MAIL_FROM="ColaBike <noreply@colabike.ru>"`. Подойдёт SMTP почтового сервиса домена или транзакционного провайдера; настройте SPF/DKIM для домена отправителя. Без `SMTP_URL` сайт запускается, в журнале старта будет `"mail":"disabled"`, а восстановление пароля отвечает 503 — тогда владелец использует `scripts/reset-password.js` ([аккаунт](../modules/accounts.md#восстановление-пароля-и-подтверждение-почты)). `MAIL_CAPTURE_DIR` предназначен только для тестов и в production отклоняется.
 
+Сессии нативных клиентов API v1 настраиваются необязательными `DEVICE_ACCESS_TOKEN_MINUTES` (15), `DEVICE_REFRESH_IDLE_DAYS` (60) и `DEVICE_REFRESH_ABSOLUTE_DAYS` (180); неверное значение заменяется значением по умолчанию, простой не превышает абсолютный срок. Миграция `050` аддитивна: существующие сессии остаются браузерными.
+
 Вход через Яндекс ID необязателен: `YANDEX_ID_ENABLED=true`, `YANDEX_ID_CLIENT_ID`, `YANDEX_ID_CLIENT_SECRET`; Redirect URI приложения — `<APP_ORIGIN>/api/auth/yandex/callback`. Неполная настройка при `DEPLOYMENT_MODE=production` останавливает старт; без настройки сайт работает по почте и паролю. Регистрация приложения и проверки перед включением — [в главе об аккаунте](../modules/accounts.md#вход-через-яндекс-id-151).
 
 Необязательные `ERROR_TRACKER_DSN` (HTTPS DSN Sentry или GlitchTip) и `SLOW_REQUEST_MS` описаны в [мониторинге](monitoring.md#журнал-ошибок-и-трекер).

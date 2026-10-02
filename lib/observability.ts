@@ -7,6 +7,9 @@ const context = new AsyncLocalStorage<{ id: string; route: string }>();
 // SQL or values that identify people: emails, IPs, tokens/IDs and quoted values.
 
 const patterns: [RegExp, string][] = [
+  // Device session tokens (#303): never in a log, whatever their length.
+  [/\bcola_(?:at|rt)_[A-Za-z0-9_-]+/g, "[token]"],
+  [/\bBearer\s+[A-Za-z0-9._~+/=-]+/gi, "Bearer [token]"],
   [/[^\s@"'<>(),;:]+@[^\s@"'<>(),;:]+\.[a-z]{2,}/gi, "[email]"],
   [/(https?:\/\/[^\s?#"'<>]+)[?#][^\s"'<>]*/gi, "$1?[query]"],
   [
@@ -88,6 +91,23 @@ export function logError(event: string, error: unknown) {
   };
   console.error(JSON.stringify(record));
   reportError(record);
+}
+
+/**
+ * A structured event for the log, such as a session being created. Fields are
+ * ids and counts chosen by the caller, never request headers or token values.
+ */
+export function logEvent(event: string, fields: Record<string, unknown> = {}) {
+  const store = context.getStore();
+  console.log(
+    JSON.stringify({
+      level: "info",
+      event,
+      requestId: store?.id,
+      route: store?.route,
+      ...fields,
+    }),
+  );
 }
 
 // Paths without query strings; IDs, tokens and numbers become placeholders.
