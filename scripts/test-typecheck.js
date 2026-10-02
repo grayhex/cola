@@ -166,6 +166,22 @@ export async function rows(db: Queryable) {
   const rowResult = check("tsconfig.json");
   assert.equal((rowResult.match(/rows\.ts.*TS2322/g) || []).length, 2);
   assert.match(rowResult, /rows\.ts.*TS2531/);
+  // The /api/v1 contract is typed end to end: a field outside the response
+  // schema, an unknown role and an unknown error code do not compile.
+  await writeFile(
+    path.join(nativeLib, "contract.ts"),
+    `
+import type { Me } from ${JSON.stringify("../api-v1/schemas.ts")};
+import { ApiError } from ${JSON.stringify("../api-v1/errors.ts")};
+export const leak: Me = { id: "id", username: "u", name: "n", email: "e", role: "user", bio: "", location: "", avatarUrl: null, createdAt: "t", emailVerifiedAt: null, preferences: {} };
+export const role: Me["role"] = "owner";
+export const error = new ApiError("teapot", "unknown code");
+`,
+  );
+  const contractResult = check("tsconfig.json");
+  assert.match(contractResult, /contract\.ts.*TS2353/);
+  assert.match(contractResult, /contract\.ts.*TS2322/);
+  assert.match(contractResult, /contract\.ts.*TS2345/);
   await rm(nativeLib, { recursive: true, force: true });
 
   // Strict native code must also be checked under app/ and app/api/.

@@ -32,6 +32,7 @@
     "modules/site-customization.md",
     "modules/navigation-about.md",
     "modules/public-urls.md",
+    "modules/api-v1.md",
     "resolver/architecture.md",
     "resolver/sources.md",
     "resolver/diagnostics.md",

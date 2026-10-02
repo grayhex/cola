@@ -1,0 +1,55 @@
+import type { ZodError } from "zod";
+
+// The error envelope of /api/v1 (#134): a stable machine-readable `code` that
+// clients branch on, and a message for people. Never an SQL or stack detail.
+
+export const apiErrorCodes = [
+  "invalid_request",
+  "unauthorized",
+  "unsupported_authentication",
+  "not_found",
+  "method_not_allowed",
+  "internal_error",
+] as const;
+export type ApiErrorCode = (typeof apiErrorCodes)[number];
+
+export const errorStatus: Record<ApiErrorCode, number> = {
+  invalid_request: 400,
+  unauthorized: 401,
+  unsupported_authentication: 401,
+  not_found: 404,
+  method_not_allowed: 405,
+  internal_error: 500,
+};
+
+export interface ErrorDetail {
+  path: string;
+  message: string;
+}
+
+export class ApiError extends Error {
+  declare code: ApiErrorCode;
+  declare details: ErrorDetail[] | undefined;
+  declare headers: Record<string, string> | undefined;
+  constructor(
+    code: ApiErrorCode,
+    message: string,
+    extra: { details?: ErrorDetail[]; headers?: Record<string, string> } = {},
+  ) {
+    super(message);
+    this.name = "ApiError";
+    this.code = code;
+    this.details = extra.details;
+    this.headers = extra.headers;
+  }
+}
+
+/** Zod issues as client-readable details: where, and what is wrong. */
+export function detailsOf(error: ZodError): ErrorDetail[] {
+  return error.issues.map((issue) => ({
+    path: issue.path.map(String).join("."),
+    message: issue.message,
+  }));
+}
+
+export const notFound = (message: string) => new ApiError("not_found", message);

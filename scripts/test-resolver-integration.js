@@ -175,6 +175,7 @@ try {
           "tests/component-photo-search-http.js",
           "tests/market-catalog-http.js",
           "tests/viewer-http.js",
+          "tests/api-v1-http.js",
           "tests/admin-http.js",
           "tests/resolver-http.js",
           "tests/layout-http.js",
