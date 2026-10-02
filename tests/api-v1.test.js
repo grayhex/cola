@@ -165,7 +165,7 @@ test("viewer layer: last use is refreshed at most every five minutes", async () 
   assert.ok((await lastSeen(old)) > stale + 500, "an old mark is refreshed");
 });
 
-test("credentials: the session cookie is the only credential; Authorization is refused, not ignored", () => {
+test("credentials: a session cookie or a device Bearer token, never both, never a guess", () => {
   const token = randomBytes(32).toString("base64url");
   assert.equal(readSessionCookie(null), null);
   assert.equal(readSessionCookie("theme=dark"), null);
@@ -184,17 +184,64 @@ test("credentials: the session cookie is the only credential; Authorization is r
     requestCredential(new Headers({ cookie: "cola_session=" + token })),
     { scheme: "cookie", token },
   );
-  for (const authorization of ["Bearer abc", "Basic Zm9vOmJhcg=="])
+  const refused = (headers, code, message) =>
     assert.throws(
-      () =>
-        requestCredential(
-          new Headers({ authorization, cookie: "cola_session=" + token }),
-        ),
-      (error) =>
-        error instanceof ApiError &&
-        error.code === "unsupported_authentication",
-      "a client that sends Authorization is never served as a guest or by cookie",
+      () => requestCredential(new Headers(headers)),
+      (error) => error instanceof ApiError && error.code === code,
+      message,
     );
+  // Another scheme is never served as a guest or by cookie.
+  for (const cookie of [undefined, "cola_session=" + token])
+    refused(
+      { authorization: "Basic Zm9vOmJhcg==", ...(cookie ? { cookie } : {}) },
+      "unsupported_authentication",
+      "a foreign Authorization scheme is unsupported",
+    );
+  refused({ authorization: "" }, "unsupported_authentication", "empty header");
+  // Bearer (#303): the cookie and the header together are ambiguous, never
+  // resolved silently, and a token of the wrong shape never becomes a guest.
+  const access = "cola_at_" + randomBytes(32).toString("base64url");
+  const refresh = "cola_rt_" + randomBytes(32).toString("base64url");
+  assert.deepEqual(
+    requestCredential(new Headers({ authorization: "Bearer " + access })),
+    { scheme: "bearer", token: access },
+  );
+  assert.deepEqual(
+    requestCredential(new Headers({ authorization: "bearer   " + access })),
+    { scheme: "bearer", token: access },
+    "the scheme name is case-insensitive",
+  );
+  for (const cookie of ["cola_session=" + token, "cola_session=short"])
+    refused(
+      { authorization: "Bearer " + access, cookie },
+      "ambiguous_authentication",
+      "cookie and Bearer together",
+    );
+  assert.deepEqual(
+    requestCredential(
+      new Headers({ authorization: "Bearer " + access, cookie: "theme=dark" }),
+    ),
+    { scheme: "bearer", token: access },
+    "an unrelated cookie is not a session",
+  );
+  for (const bad of [
+    "abc.def",
+    token, // a browser session token
+    refresh, // a refresh token is never an access token
+    access + "x",
+    access.slice(0, -1),
+    "cola_at_" + "!".repeat(43),
+  ])
+    refused(
+      { authorization: "Bearer " + bad },
+      "invalid_token",
+      "a token of the wrong shape is refused at once: " + bad.slice(0, 12),
+    );
+  refused(
+    { authorization: "Bearer" },
+    "unsupported_authentication",
+    "no token",
+  );
 });
 
 test("cursor: opaque, exact to the microsecond, and a forged one is a 400", () => {
@@ -639,25 +686,29 @@ test("OpenAPI: documents exactly the implemented operations, every $ref resolves
   assert.equal(document.openapi, "3.1.0");
   assert.deepEqual(document.servers, [{ url: "https://cola.example/api/v1" }]);
 
-  // The operations of the document are the GET routes under app/api/v1:
-  // nothing documented that does not exist, nothing implemented undocumented.
+  // The operations of the document are the handled methods of the route files
+  // under app/api/v1: nothing documented that does not exist, nothing
+  // implemented undocumented. A method that is only methodNotAllowed is not one.
   const files = await routeFiles(path.join(root, "app/api/v1"));
   const implemented = files
     .filter(({ route }) => !route.includes("..."))
-    .filter(({ source }) => /export const GET\b/.test(source))
-    .map(({ route }) => "GET " + route.replace(/\[(\w+)\]/g, "{$1}"))
+    .flatMap(({ route, source }) =>
+      [
+        ...source.matchAll(
+          /export const (GET|POST|PUT|PATCH|DELETE)\s*=\s*traced\(\s*(\w+)/g,
+        ),
+      ]
+        .filter(([, , handler]) => handler !== "methodNotAllowed")
+        .map(
+          ([, method]) => method + " " + route.replace(/\[(\w+)\]/g, "{$1}"),
+        ),
+    )
     .sort();
   assert.deepEqual(operationsOf(document), implemented);
   assert.ok(
     files.some(({ route }) => route.includes("[[...path]]")),
     "unknown addresses under /api/v1 get the API's own 404",
   );
-  for (const { route, source } of files)
-    assert.doesNotMatch(
-      source,
-      /export const (POST|PUT|PATCH|DELETE)\s*=\s*traced\((?!methodNotAllowed|handleUnknownPath)/,
-      route + ": this slice has no write operation",
-    );
 
   const ids = Object.values(document.paths).flatMap((methods) =>
     Object.values(methods).map((operation) => operation.operationId),
@@ -673,6 +724,7 @@ test("OpenAPI: documents exactly the implemented operations, every $ref resolves
   assert.deepEqual(
     Object.keys(document.components.schemas).sort(),
     [
+      "AccountSession",
       "Bike",
       "BikeAuthor",
       "BikeClassification",
@@ -682,8 +734,13 @@ test("OpenAPI: documents exactly the implemented operations, every $ref resolves
       "BikePriceVisibility",
       "BikeScores",
       "BikeSummary",
+      "CreateSessionRequest",
+      "DeviceInput",
       "Error",
       "Me",
+      "RefreshRequest",
+      "SessionGrant",
+      "SessionList",
     ],
     "a new public schema is a visible, deliberate change",
   );
@@ -723,8 +780,12 @@ test("OpenAPI: documents exactly the implemented operations, every $ref resolves
   const text = JSON.stringify(document);
   assert.doesNotMatch(text, /"\$id"|"\$schema"|9007199254740991/);
   assert.equal(document.components.securitySchemes.cookieSession.in, "cookie");
-  assert.ok(
-    !("bearer" in document.components.securitySchemes),
-    "no Bearer scheme is advertised",
+  assert.deepEqual(
+    {
+      type: document.components.securitySchemes.bearerAuth.type,
+      scheme: document.components.securitySchemes.bearerAuth.scheme,
+    },
+    { type: "http", scheme: "bearer" },
+    "device sessions advertise Bearer (#303)",
   );
 });

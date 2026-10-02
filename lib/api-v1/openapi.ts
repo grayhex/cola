@@ -54,6 +54,14 @@ const success = (description: string, schema: string) => ({
   headers: requestIdHeader,
   content: json(schema),
 });
+const requestBody = (schema: string) => ({
+  required: true,
+  content: json(schema),
+});
+const noContent = (description: string) => ({
+  description,
+  headers: requestIdHeader,
+});
 const failure = (description: string) => ({
   description,
   headers: requestIdHeader,
@@ -115,9 +123,9 @@ const parameters = {
   },
 };
 
-const description = `Первый срез API ColaBike: текущий пользователь и чтение велосипедов.
+const description = `API ColaBike: вход устройств, текущий пользователь и чтение велосипедов.
 
-**Вход.** Используется сессия, которую выдаёт вход на сайте, — HttpOnly cookie \`${SESSION_COOKIE}\`. Токены для мобильных клиентов пока не выпускаются: заголовок \`Authorization\` отклоняется ответом 401 \`unsupported_authentication\`, чтобы запрос не был молча обслужен как гостевой. Все операции этого среза читают данные; CORS не включён.
+**Вход.** Два способа. Браузер — HttpOnly cookie \`${SESSION_COOKIE}\`, которую выдаёт вход на сайте. Нативный клиент — сессия устройства: \`POST /auth/sessions\` возвращает пару непрозрачных токенов, токен доступа (\`cola_at_…\`, 15 минут) передаётся как \`Authorization: Bearer\`, одноразовый refresh-токен (\`cola_rt_…\`) обновляется через \`POST /auth/sessions/refresh\`. Cookie и Bearer в одном запросе — 400 \`ambiguous_authentication\`; другие схемы Authorization — 401 \`unsupported_authentication\`. Просроченный токен доступа — 401 \`token_expired\`, любой другой негодный — 401 \`invalid_token\`. CORS не включён.
 
 **Ошибки.** Тело ошибки — \`{ "error": { "code", "message", "details?" } }\`; клиент ветвится по \`code\`. Неизвестный адрес под \`/api/v1\` отвечает 404, неподдерживаемый метод — 405 с заголовком \`Allow\`. Каждый ответ несёт \`X-Request-ID\` для обращения в поддержку.
 
@@ -125,7 +133,7 @@ const description = `Первый срез API ColaBike: текущий поль
 
 **Видимость.** Публичный велосипед видят все, приватный — только владелец. Чужой приватный и несуществующий велосипед неотличимы: оба дают 404. Велосипеды заблокированных владельцев никому не видны.
 
-**Что не входит.** Журнал, поездки, поиск, рынок и операции записи, а также токены мобильного клиента — отдельные срезы.`;
+**Что не входит.** Журнал, поездки, поиск, рынок и операции записи, а также нативный вход через внешних провайдеров — отдельные срезы.`;
 
 export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
   const { schemas } = z.toJSONSchema(schemaRegistry, {
@@ -143,6 +151,10 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
     servers: [{ url: `${origin}/api/v1` }],
     tags: [
       { name: "Account", description: "Текущий пользователь." },
+      {
+        name: "Sessions",
+        description: "Вход устройства, обновление токенов и список сессий.",
+      },
       { name: "Bikes", description: "Чтение велосипедов." },
       { name: "Contract", description: "Описание самого API." },
     ],
@@ -154,11 +166,14 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
           summary: "Текущий пользователь",
           description:
             "Только явно перечисленные поля. Без входа, с заблокированным аккаунтом и с истёкшей сессией — 401.",
-          security: [{ cookieSession: [] }],
+          security: [{ cookieSession: [] }, { bearerAuth: [] }],
           responses: {
             "200": success("Текущий пользователь.", "Me"),
+            "400": failure(
+              "Одновременно cookie сессии и заголовок Authorization.",
+            ),
             "401": failure(
-              "Нет входа или заголовок Authorization не поддерживается.",
+              "Нет входа, сессия или токен недействительны, токен доступа истёк (`token_expired`) либо схема Authorization не поддерживается.",
             ),
             "500": failure("Внутренняя ошибка."),
           },
@@ -171,7 +186,7 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
           summary: "Список велосипедов",
           description:
             "Новые сверху. Страницы идут по курсору, а не по номеру: велосипед, опубликованный во время просмотра, не сдвигает следующую страницу, ничто не повторяется и не пропускается. Общего количества нет. Чужие приватные велосипеды и велосипеды заблокированных владельцев не попадают в список никогда.",
-          security: [{}, { cookieSession: [] }],
+          security: [{}, { cookieSession: [] }, { bearerAuth: [] }],
           parameters: [
             { $ref: "#/components/parameters/Scope" },
             { $ref: "#/components/parameters/Category" },
@@ -185,7 +200,7 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
               "Неверный параметр: неизвестный, повторённый, вне диапазона или неверный курсор.",
             ),
             "401": failure(
-              "`scope=mine` без входа или заголовок Authorization не поддерживается.",
+              "`scope=mine` без входа, недействительный или истёкший токен, либо схема Authorization не поддерживается.",
             ),
             "500": failure("Внутренняя ошибка."),
           },
@@ -198,14 +213,114 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
           summary: "Карточка велосипеда",
           description:
             "Публичный велосипед виден всем. Приватный — только владельцу, остальные получают 404. Владелец видит свои цены и настройки их показа; остальные — только цены, которые владелец разрешил показывать.",
-          security: [{}, { cookieSession: [] }],
+          security: [{}, { cookieSession: [] }, { bearerAuth: [] }],
           parameters: [{ $ref: "#/components/parameters/BikeId" }],
           responses: {
             "200": success("Велосипед.", "Bike"),
-            "401": failure("Заголовок Authorization не поддерживается."),
+            "401": failure(
+              "Недействительный или истёкший токен, либо схема Authorization не поддерживается.",
+            ),
             "404": failure(
               "Велосипеда нет, он приватный и чужой, или его владелец заблокирован.",
             ),
+            "500": failure("Внутренняя ошибка."),
+          },
+        },
+      },
+      "/auth/sessions": {
+        post: {
+          operationId: "createSession",
+          tags: ["Sessions"],
+          summary: "Вход с устройства",
+          description:
+            "Почта и пароль, как на сайте (те же ограничения частоты и блокировки), плюс описание устройства. Возвращает сессию устройства и пару токенов. Токены показываются только в этом ответе. Подтверждённая почта для входа не нужна, как и в вебе. Одновременно у человека не больше 20 сессий устройств: самая давно не использованная завершается.",
+          security: [],
+          requestBody: requestBody("CreateSessionRequest"),
+          responses: {
+            "201": success("Сессия устройства и токены.", "SessionGrant"),
+            "400": failure("Неверное тело запроса."),
+            "401": failure(
+              "`invalid_credentials`: неверная почта или пароль либо аккаунт заблокирован; ответ одинаков во всех этих случаях.",
+            ),
+            "429": failure("Слишком много попыток; заголовок `Retry-After`."),
+            "500": failure("Внутренняя ошибка."),
+          },
+        },
+        get: {
+          operationId: "listSessions",
+          tags: ["Sessions"],
+          summary: "Сессии аккаунта",
+          description:
+            "Браузеры и устройства со входом: сначала текущая сессия, затем по последней активности. Хешей и токенов в ответе нет.",
+          security: [{ cookieSession: [] }, { bearerAuth: [] }],
+          responses: {
+            "200": success("Активные сессии.", "SessionList"),
+            "400": failure(
+              "Одновременно cookie сессии и заголовок Authorization.",
+            ),
+            "401": failure("Нет входа или токен недействителен либо истёк."),
+            "500": failure("Внутренняя ошибка."),
+          },
+        },
+      },
+      "/auth/sessions/refresh": {
+        post: {
+          operationId: "refreshSession",
+          tags: ["Sessions"],
+          summary: "Обновление токенов",
+          description:
+            "Refresh-токен одноразовый: ответ содержит новую пару, а старый refresh-токен больше не работает. Предъявление уже заменённого токена вне короткого допуска на потерянный ответ считается кражей и завершает сессию. Обновляйте токены в один поток: два параллельных запроса одним токеном оставят в силе только последнюю выданную пару. Любая ошибка отвечает `invalid_token`: клиент возвращается ко входу.",
+          security: [],
+          requestBody: requestBody("RefreshRequest"),
+          responses: {
+            "200": success("Новая пара токенов.", "SessionGrant"),
+            "400": failure("Неверное тело запроса."),
+            "401": failure(
+              "`invalid_token`: токен неизвестен, просрочен, использован повторно, или аккаунт заблокирован.",
+            ),
+            "429": failure(
+              "Слишком много обновлений; заголовок `Retry-After`.",
+            ),
+            "500": failure("Внутренняя ошибка."),
+          },
+        },
+      },
+      "/auth/sessions/current": {
+        delete: {
+          operationId: "revokeCurrentSession",
+          tags: ["Sessions"],
+          summary: "Выход на этом устройстве",
+          description:
+            "Завершает сессию, которой сделан запрос. С cookie требует заголовок Origin сайта (защита от CSRF); с Bearer-токеном он не нужен.",
+          security: [{ cookieSession: [] }, { bearerAuth: [] }],
+          responses: {
+            "204": noContent("Сессия завершена."),
+            "400": failure(
+              "Одновременно cookie сессии и заголовок Authorization.",
+            ),
+            "401": failure("Нет входа или токен недействителен либо истёк."),
+            "403": failure("Cookie без допустимого заголовка Origin."),
+            "500": failure("Внутренняя ошибка."),
+          },
+        },
+      },
+      "/auth/sessions/{id}": {
+        delete: {
+          operationId: "revokeSession",
+          tags: ["Sessions"],
+          summary: "Завершить сессию",
+          description:
+            "Завершает любую сессию своего аккаунта по её публичному идентификатору (из списка сессий). Чужая и несуществующая сессия неотличимы: 404.",
+          security: [{ cookieSession: [] }, { bearerAuth: [] }],
+          parameters: [{ $ref: "#/components/parameters/SessionId" }],
+          responses: {
+            "204": noContent("Сессия завершена."),
+            "400": failure(
+              "Одновременно cookie сессии и заголовок Authorization.",
+            ),
+            "401": failure("Нет входа или токен недействителен либо истёк."),
+            "403": failure("Cookie без допустимого заголовка Origin."),
+            "404": failure("Такой сессии у аккаунта нет."),
             "500": failure("Внутренняя ошибка."),
           },
         },
@@ -237,6 +352,13 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
         Limit: parameters.limit,
         Cursor: parameters.cursor,
         BikeId: parameters.bikeId,
+        SessionId: {
+          name: "id",
+          in: "path",
+          required: true,
+          description: "Публичный идентификатор сессии из списка сессий.",
+          schema: { type: "string", format: "uuid" },
+        },
       },
       headers: {
         RequestId: {
@@ -250,7 +372,14 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
           in: "cookie",
           name: SESSION_COOKIE,
           description:
-            "HttpOnly-сессия, которую выдаёт вход на сайте. API v1 её не выдаёт и не продлевает.",
+            "HttpOnly-сессия, которую выдаёт вход на сайте. API v1 её не выдаёт и не продлевает. Для изменяющих запросов нужен заголовок Origin сайта.",
+        },
+        bearerAuth: {
+          type: "http",
+          scheme: "bearer",
+          bearerFormat: "cola_at_… (непрозрачный токен доступа)",
+          description:
+            "Токен доступа сессии устройства из `POST /auth/sessions` (15 минут по умолчанию). Просроченный — 401 `token_expired`, обновите его `POST /auth/sessions/refresh`; недействительный или отозванный — 401 `invalid_token`, нужен новый вход. Заголовок `Authorization` вместе с cookie сессии отвергается (400 `ambiguous_authentication`).",
         },
       },
     },

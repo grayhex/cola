@@ -48,7 +48,7 @@ const noPasswordMessage =
 
 // ── Devices ──────────────────────────────────────────────────────────────
 
-/** Active sessions, newest first; `current` marks this browser. */
+/** Active sessions, newest first; `current` marks this browser or device. */
 export async function listSessions(
   q: Queryable,
   userId: string,
@@ -59,9 +59,13 @@ export async function listSessions(
     created_at: Date;
     last_seen_at: Date;
     user_agent: string;
+    kind: "browser" | "device";
+    device_name: string | null;
+    platform: "ios" | "android" | "other" | null;
+    app_version: string | null;
     current: boolean | null;
   }>(
-    `SELECT id,created_at,last_seen_at,user_agent,token_hash=$2 AS current
+    `SELECT id,created_at,last_seen_at,user_agent,kind,device_name,platform,app_version,token_hash=$2 AS current
      FROM sessions WHERE user_id=$1 AND expires_at>now()
      ORDER BY (token_hash=$2) DESC,last_seen_at DESC`,
     [userId, currentHash],
@@ -71,6 +75,10 @@ export async function listSessions(
     createdAt: r.created_at,
     lastSeenAt: r.last_seen_at,
     userAgent: r.user_agent,
+    kind: r.kind,
+    deviceName: r.device_name,
+    platform: r.platform,
+    appVersion: r.app_version,
     current: r.current,
   }));
 }

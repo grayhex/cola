@@ -498,6 +498,26 @@ export default function CommunityPage({
                     onExtend={() => extend(n)}
                     onRead={() => read(n.id).catch((e) => setError(e.message))}
                   />
+                ) : n.type === "session_reuse" ? (
+                  <li key={n.id} className={n.readAt ? "" : "unread"}>
+                    <div>
+                      <p>
+                        Токен устройства использовали повторно, сессия
+                        завершена. Если это были не вы, смените пароль.
+                      </p>
+                      <Link
+                        href={n.target.href}
+                        onClick={() => {
+                          read(n.id).catch(() => {});
+                        }}
+                      >
+                        Проверить устройства
+                      </Link>
+                      <time dateTime={n.createdAt}>
+                        {noticeTime(n.createdAt)}
+                      </time>
+                    </div>
+                  </li>
                 ) : n.type === "bike_week" ? (
                   <li key={n.id} className={n.readAt ? "" : "unread"}>
                     <div>

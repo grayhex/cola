@@ -24,6 +24,9 @@ export const limits = Object.freeze({
   authAccount: 15,
   authIp: 40,
   authGlobal: 10000,
+  // Token refresh of device sessions (#303): per address and per session.
+  refreshIp: 120,
+  refreshSession: 30,
 });
 export class QuotaError extends Error {
   declare status: number;

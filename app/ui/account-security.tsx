@@ -374,7 +374,12 @@ function Devices() {
             <li key={s.id}>
               <MonitorSmartphone size={18} aria-hidden="true" />
               <span>
-                <strong>{deviceName(s.userAgent)}</strong>
+                <strong>
+                  {s.kind === "device" && s.deviceName
+                    ? s.deviceName +
+                      (s.appVersion ? " · приложение " + s.appVersion : "")
+                    : deviceName(s.userAgent)}
+                </strong>
                 {s.current && (
                   <span className="badge" data-tone="success">
                     Этот браузер

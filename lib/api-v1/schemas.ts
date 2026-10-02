@@ -207,7 +207,93 @@ export const errorSchema = named(
   }),
 );
 
+const platform = z.enum(["ios", "android", "other"]);
+
+export const deviceInputSchema = named(
+  "DeviceInput",
+  "Описание устройства, которое входит в аккаунт. Показывается человеку в списке его устройств.",
+  z.strictObject({
+    name: z
+      .string()
+      .trim()
+      .min(1)
+      .max(100)
+      .describe("Название устройства, например «iPhone Ивана»."),
+    platform,
+    appVersion: z.string().trim().min(1).max(40).optional(),
+  }),
+);
+
+export const createSessionRequestSchema = named(
+  "CreateSessionRequest",
+  "Вход с устройства по почте и паролю.",
+  z.strictObject({
+    email: z.string().min(3).max(254),
+    password: z.string().min(1).max(128),
+    device: deviceInputSchema,
+  }),
+);
+
+export const refreshRequestSchema = named(
+  "RefreshRequest",
+  "Обмен refresh-токена на новую пару. Refresh-токен передаётся только в теле этого запроса.",
+  z.strictObject({
+    refreshToken: z
+      .string()
+      .regex(/^cola_rt_[A-Za-z0-9_-]{43}$/, "Неверный формат refresh-токена"),
+  }),
+);
+
+export const accountSessionSchema = named(
+  "AccountSession",
+  "Сессия аккаунта: браузер или устройство. Хеши и токены не передаются.",
+  z.strictObject({
+    id,
+    kind: z.enum(["browser", "device"]),
+    deviceName: z.string().nullable(),
+    platform: platform.nullable(),
+    appVersion: z.string().nullable(),
+    userAgent: z.string(),
+    createdAt: instant,
+    lastSeenAt: instant,
+    current: z
+      .boolean()
+      .describe("Сессия, которой сделан этот запрос (по токену или cookie)."),
+  }),
+);
+
+export const sessionListSchema = named(
+  "SessionList",
+  "Активные сессии аккаунта: сначала текущая, затем по последней активности.",
+  z.strictObject({ items: z.array(accountSessionSchema) }),
+);
+
+export const sessionGrantSchema = named(
+  "SessionGrant",
+  "Новая сессия устройства и пара токенов. Токены показываются только в этом ответе: храните их в Keychain/Keystore.",
+  z.strictObject({
+    session: accountSessionSchema,
+    accessToken: z
+      .string()
+      .describe(
+        "Короткоживущий токен доступа (`cola_at_…`), заголовок `Authorization: Bearer`.",
+      ),
+    accessTokenExpiresAt: instant,
+    refreshToken: z
+      .string()
+      .describe(
+        "Одноразовый refresh-токен (`cola_rt_…`). Каждый обмен выдаёт новый; обновляйте токен в один поток.",
+      ),
+    refreshTokenExpiresAt: instant.describe(
+      "Когда refresh-токен перестанет работать, если им не пользоваться. Абсолютный срок сессии больше.",
+    ),
+    user: meSchema,
+  }),
+);
+
 export type Me = z.infer<typeof meSchema>;
+export type SessionGrant = z.infer<typeof sessionGrantSchema>;
+export type AccountSession = z.infer<typeof accountSessionSchema>;
 export type BikeSummary = z.infer<typeof bikeSummarySchema>;
 export type Bike = z.infer<typeof bikeSchema>;
 export type BikePage = z.infer<typeof bikePageSchema>;
