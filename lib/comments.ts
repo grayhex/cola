@@ -1,7 +1,7 @@
 import type { CurrentUser as CurrentUserType } from "./contracts.ts";
 import type { CommentInput as CommentInputType } from "./community-validation.ts";
 export type CommentActor = Pick<CurrentUserType, "id" | "role">;
-interface CommentRow {
+export interface CommentRow {
   id: string;
   bike_id: string;
   parent_id: string | null;
@@ -95,6 +95,39 @@ export function commentDto(
       !hidden && !!user && (user.id === row.author_id || user.role === "admin"),
   };
 }
+/** The chain from a readable comment up to its root, root first (a deep link). */
+async function focusChain(q: Queryable, bikeId: string, focus: string) {
+  return (
+    await q.query<CommentRow>(
+      `WITH RECURSIVE path AS (
+          SELECT c.*,0 AS depth FROM bike_comments c JOIN users a ON a.id=c.author_id
+          WHERE c.id=$1 AND c.bike_id=$2 AND ${alive}
+          UNION ALL
+          SELECT c.*,p.depth+1 FROM bike_comments c JOIN path p ON c.id=p.parent_id
+        ) SELECT ${nodeColumns} FROM path c LEFT JOIN users a ON a.id=c.author_id ORDER BY c.depth DESC`,
+      [focus, bikeId],
+    )
+  ).rows;
+}
+/** The first three readable replies of each root, plus the focused chain's nodes. */
+async function replyPreviews(q: Queryable, ids: string[], focusIds: string[]) {
+  if (!ids.length) return [];
+  return (
+    await q.query<CommentRow>(
+      `SELECT ${nodeColumns} FROM bike_comments c LEFT JOIN users a ON a.id=c.author_id
+          WHERE c.id IN (
+            SELECT preview.id FROM unnest($1::uuid[]) roots(parent_id)
+            CROSS JOIN LATERAL (
+              SELECT c.id FROM bike_comments c LEFT JOIN users a ON a.id=c.author_id
+              WHERE c.parent_id=roots.parent_id AND (${readable("c", "a")})
+              ORDER BY c.created_at,c.id LIMIT 3
+            ) preview
+            UNION SELECT id FROM bike_comments WHERE id=ANY($2::uuid[]) AND parent_id=ANY($1::uuid[])
+          ) ORDER BY c.created_at,c.id`,
+      [ids, focusIds],
+    )
+  ).rows;
+}
 export async function commentPage(
   q: Queryable,
   bikeId: string,
@@ -104,19 +137,7 @@ export async function commentPage(
 ) {
   await publicCommentBike(q, bikeId);
   // Only the ancestor chain, not the entire subtree, accompanies a deep link.
-  const focusRows = focus
-    ? (
-        await q.query<CommentRow>(
-          `WITH RECURSIVE path AS (
-          SELECT c.*,0 AS depth FROM bike_comments c JOIN users a ON a.id=c.author_id
-          WHERE c.id=$1 AND c.bike_id=$2 AND ${alive}
-          UNION ALL
-          SELECT c.*,p.depth+1 FROM bike_comments c JOIN path p ON c.id=p.parent_id
-        ) SELECT ${nodeColumns} FROM path c LEFT JOIN users a ON a.id=c.author_id ORDER BY c.depth DESC`,
-          [focus, bikeId],
-        )
-      ).rows
-    : [];
+  const focusRows = focus ? await focusChain(q, bikeId, focus) : [];
   if (focus && !focusRows.length)
     throw new CommunityError("Комментарий недоступен", 404);
   const root = focusRows[0]?.id || null;
@@ -130,23 +151,11 @@ export async function commentPage(
   ).rows;
   const roots = rows.slice(0, 20),
     ids = roots.map((r) => r.id);
-  const replies = ids.length
-    ? (
-        await q.query<CommentRow>(
-          `SELECT ${nodeColumns} FROM bike_comments c LEFT JOIN users a ON a.id=c.author_id
-          WHERE c.id IN (
-            SELECT preview.id FROM unnest($1::uuid[]) roots(parent_id)
-            CROSS JOIN LATERAL (
-              SELECT c.id FROM bike_comments c LEFT JOIN users a ON a.id=c.author_id
-              WHERE c.parent_id=roots.parent_id AND (${readable("c", "a")})
-              ORDER BY c.created_at,c.id LIMIT 3
-            ) preview
-            UNION SELECT id FROM bike_comments WHERE id=ANY($2::uuid[]) AND parent_id=ANY($1::uuid[])
-          ) ORDER BY c.created_at,c.id`,
-          [ids, focusRows.map((r) => r.id)],
-        )
-      ).rows
-    : [];
+  const replies = await replyPreviews(
+    q,
+    ids,
+    focusRows.map((r) => r.id),
+  );
   return {
     comments: roots.map((r) => ({
       ...commentDto(r, user),
@@ -187,6 +196,98 @@ export async function replyPage(
     hasMore: rows.length > 20,
   };
 }
+// Keyset flavours for API v1 (#301): the same rows, the same `readable` rule
+// and the same previews as the pages above, but by position instead of OFFSET.
+// The order is oldest first, then id; `cursorAt` is the creation time as
+// PostgreSQL prints it (microseconds), so equal milliseconds neither repeat
+// nor drop a comment.
+export interface CommentCursor {
+  createdAt: string;
+  id: string;
+}
+const cursorColumn = `to_char(c.created_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS cursor_at`;
+type KeysetRow = CommentRow & { cursor_at: string };
+const after = (cursor: CommentCursor | null) => [
+  cursor?.createdAt ?? null,
+  cursor?.id ?? null,
+];
+const nextOf = (rows: KeysetRow[], limit: number): CommentCursor | null => {
+  const last = rows[limit - 1];
+  return rows.length > limit && last
+    ? { createdAt: last.cursor_at, id: last.id }
+    : null;
+};
+
+/** Root comments of a bike by position, with a preview of three replies each. */
+export async function commentKeysetPage(
+  q: Queryable,
+  bikeId: string,
+  {
+    limit,
+    cursor,
+    focus,
+  }: { limit: number; cursor: CommentCursor | null; focus: string | null },
+) {
+  await publicCommentBike(q, bikeId);
+  const chain = focus ? await focusChain(q, bikeId, focus) : [];
+  if (focus && !chain.length)
+    throw new CommunityError("Комментарий недоступен", 404);
+  // A deep link shows its own thread; paging is for the plain list.
+  const root = chain[0]?.id ?? null;
+  const [at, id] = after(cursor);
+  const rows = (
+    await q.query<KeysetRow>(
+      `SELECT ${nodeColumns},${cursorColumn} FROM bike_comments c LEFT JOIN users a ON a.id=c.author_id
+       WHERE c.bike_id=$1 AND c.parent_id IS NULL AND ($3::uuid IS NULL OR c.id=$3) AND (${readable("c", "a")})
+         AND ($4::timestamptz IS NULL OR (c.created_at,c.id)>($4::timestamptz,$5::uuid))
+       ORDER BY c.created_at,c.id LIMIT $2`,
+      [bikeId, limit + 1, root, at, id],
+    )
+  ).rows;
+  const roots = rows.slice(0, limit);
+  const replies = await replyPreviews(
+    q,
+    roots.map((r) => r.id),
+    chain.map((r) => r.id),
+  );
+  return {
+    roots: roots.map((r) => ({
+      comment: r,
+      replies: replies.filter((x) => x.parent_id === r.id),
+    })),
+    next: root ? null : nextOf(rows, limit),
+    focusPath: chain,
+  };
+}
+
+/** Replies to one comment by position, oldest first. */
+export async function replyKeysetPage(
+  q: Queryable,
+  bikeId: string,
+  parent: string,
+  { limit, cursor }: { limit: number; cursor: CommentCursor | null },
+) {
+  await publicCommentBike(q, bikeId);
+  const root = (
+    await q.query<{ "?column?": number }>(
+      "SELECT 1 FROM bike_comments WHERE id=$1 AND bike_id=$2",
+      [parent, bikeId],
+    )
+  ).rows[0];
+  if (!root) throw new CommunityError("Обсуждение недоступно", 404);
+  const [at, id] = after(cursor);
+  const rows = (
+    await q.query<KeysetRow>(
+      `SELECT ${nodeColumns},${cursorColumn} FROM bike_comments c LEFT JOIN users a ON a.id=c.author_id
+       WHERE c.parent_id=$1 AND (${readable("c", "a")})
+         AND ($3::timestamptz IS NULL OR (c.created_at,c.id)>($3::timestamptz,$4::uuid))
+       ORDER BY c.created_at,c.id LIMIT $2`,
+      [parent, limit + 1, at, id],
+    )
+  ).rows;
+  return { replies: rows.slice(0, limit), next: nextOf(rows, limit) };
+}
+
 async function lockBike(
   q: Queryable,
   bikeId: string,

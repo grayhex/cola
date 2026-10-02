@@ -185,6 +185,7 @@ try {
           "tests/viewer-http.js",
           "tests/api-v1-http.js",
           "tests/api-v1-users-http.js",
+          "tests/api-v1-journal-http.js",
           "tests/admin-http.js",
           "tests/resolver-http.js",
           "tests/layout-http.js",

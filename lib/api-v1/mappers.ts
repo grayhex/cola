@@ -1,11 +1,17 @@
 import type { CurrentUser, PublicAuthor, SocialBike } from "../contracts.ts";
 import type { visibleBikeById } from "../showcase.ts";
 import type { listSessions } from "../account-data.ts";
+import type { CommentRow } from "../comments.ts";
+import type { JournalViewRow } from "../journal.ts";
+import { richExcerpt } from "../rich-text.ts";
 import type { TokenGrant } from "../device-sessions.ts";
 import type {
   AccountSession,
   Bike,
   BikeSummary,
+  Comment,
+  JournalEntry,
+  JournalSummary,
   Me,
   Profile,
   Relationship,
@@ -261,5 +267,117 @@ export function toProfile(
       following: Number(counts.following),
     },
     relationship: signedIn ? toRelationship(row) : null,
+  };
+}
+
+// Journal and comments (#301). Fields are picked by name, so a column added to
+// a table or to a legacy DTO never reaches a client on its own.
+const author = (row: {
+  owner_id: string;
+  username: string;
+  author_name: string;
+  avatar_id: string | null;
+}) => ({
+  id: row.owner_id,
+  username: row.username,
+  name: row.author_name,
+  avatarUrl: avatarUrl(row.avatar_id),
+});
+
+const dateOnly = (value: string | Date | null) =>
+  value === null
+    ? null
+    : (value instanceof Date ? value.toISOString() : value).slice(0, 10);
+
+function toEntrySummary(row: JournalViewRow, viewer: string | null) {
+  return {
+    id: row.id,
+    kind: row.kind as JournalSummary["kind"],
+    title: row.title,
+    status: row.status,
+    isPublic: row.is_public,
+    eventDate: dateOnly(row.event_date),
+    mileage: row.mileage,
+    createdAt: iso(row.created_at),
+    updatedAt: iso(row.updated_at),
+    bike: { id: row.bike_id as string, name: row.bike_name },
+    author: author(row),
+    likes: row.likes,
+    comments: row.comments,
+    liked: viewer !== null && !!row.liked,
+  };
+}
+
+export function toJournalSummary(
+  row: JournalViewRow,
+  viewer: string | null,
+): JournalSummary {
+  return {
+    ...toEntrySummary(row, viewer),
+    excerpt: richExcerpt(row.body, 240),
+  };
+}
+
+/**
+ * The entry with its component snapshot. A price is shown to the owner and
+ * otherwise only when the owner shows prices of that section, as on the bike.
+ */
+export function toJournalEntry(
+  row: JournalViewRow,
+  photos: { id: string }[],
+  viewer: string | null,
+): JournalEntry {
+  const owner = row.owner_id === viewer;
+  return {
+    ...toEntrySummary(row, viewer),
+    body: row.body,
+    components: row.components.map((part) => ({
+      id: part.id,
+      modelId: part.model_id ?? null,
+      section: part.section,
+      category: part.category,
+      name: part.name,
+      notes: part.notes ?? "",
+      url: part.url ?? "",
+      groupId: part.group_id ?? "",
+      sortOrder: part.sort_order ?? 0,
+      price:
+        owner ||
+        (part.section === "build"
+          ? row.show_component_prices
+          : row.show_accessory_prices)
+          ? amount(part.price)
+          : null,
+      capturedAt: part.capturedAt
+        ? new Date(part.capturedAt).toISOString()
+        : null,
+    })),
+    photos: photos.map((photo) => ({
+      id: photo.id,
+      url: "/api/journal/media/" + photo.id,
+    })),
+  };
+}
+
+/** A hidden, deleted or blocked author's comment is a tombstone: no text, no author. */
+export function toComment(row: CommentRow): Comment {
+  const hidden = !!row.deleted_at || !row.author_id || !!row.blocked;
+  return {
+    id: row.id,
+    parentId: row.parent_id,
+    author: hidden
+      ? null
+      : {
+          id: row.author_id as string,
+          username: row.username as string,
+          name: row.name as string,
+          avatarUrl: avatarUrl(row.avatar_id),
+        },
+    body: hidden ? null : row.body,
+    createdAt: iso(row.created_at),
+    editedAt:
+      !hidden && row.updated_at > row.created_at ? iso(row.updated_at) : null,
+    deleted: hidden,
+    replyCount: Number(row.reply_count || 0),
   };
 }

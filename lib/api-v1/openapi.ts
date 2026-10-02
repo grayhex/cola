@@ -116,6 +116,28 @@ const parameters = {
       "Непрозрачный курсор из `nextCursor` предыдущей страницы. Не разбирайте и не собирайте его самостоятельно.",
     schema: { type: "string", minLength: 1, maxLength: 200 },
   },
+  journalId: {
+    name: "id",
+    in: "path",
+    required: true,
+    description: "Идентификатор записи журнала (UUID).",
+    schema: { type: "string", format: "uuid" },
+  },
+  commentId: {
+    name: "commentId",
+    in: "path",
+    required: true,
+    description: "Идентификатор комментария (UUID).",
+    schema: { type: "string", format: "uuid" },
+  },
+  focus: {
+    name: "focus",
+    in: "query",
+    required: false,
+    description:
+      "Идентификатор комментария для глубокой ссылки. Ответ — ветка его корня (в `items` один корень со своими ответами) и цепочка от корня до комментария в `focusPath`; страниц больше нет, поэтому вместе с `cursor` параметр не принимается.",
+    schema: { type: "string", format: "uuid" },
+  },
   userRef: {
     name: "ref",
     in: "path",
@@ -134,7 +156,7 @@ const parameters = {
   },
 };
 
-const description = `API ColaBike: вход устройств, текущий пользователь, чтение велосипедов и людей.
+const description = `API ColaBike: вход устройств, текущий пользователь, чтение велосипедов, людей, журнала и комментариев.
 
 **Вход.** Два способа. Браузер — HttpOnly cookie \`${SESSION_COOKIE}\`, которую выдаёт вход на сайте. Нативный клиент — сессия устройства: \`POST /auth/sessions\` возвращает пару непрозрачных токенов, токен доступа (\`cola_at_…\`, 15 минут) передаётся как \`Authorization: Bearer\`, одноразовый refresh-токен (\`cola_rt_…\`) обновляется через \`POST /auth/sessions/refresh\`. Cookie и Bearer в одном запросе — 400 \`ambiguous_authentication\`; другие схемы Authorization — 401 \`unsupported_authentication\`. Просроченный токен доступа — 401 \`token_expired\`, любой другой негодный — 401 \`invalid_token\`. CORS не включён.
 
@@ -171,6 +193,14 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
         description: "Вход устройства, обновление токенов и список сессий.",
       },
       { name: "Bikes", description: "Чтение велосипедов." },
+      {
+        name: "Journal",
+        description: "Записи журнала велосипеда.",
+      },
+      {
+        name: "Comments",
+        description: "Комментарии к велосипедам и записям: один вид на всё.",
+      },
       {
         name: "Users",
         description: "Публичные профили, их велосипеды и подписки.",
@@ -344,6 +374,162 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
           },
         },
       },
+      "/bikes/{id}/journal": {
+        get: {
+          operationId: "listBikeJournal",
+          tags: ["Journal"],
+          summary: "Записи журнала велосипеда",
+          description:
+            "Новые сверху, курсор. Владелец видит и черновики, остальные — только опубликованные публичные записи публичного велосипеда. Записи заблокированных авторов не показываются. Приватный, чужой и несуществующий велосипед неотличимы: 404.",
+          security: [{}, { cookieSession: [] }, { bearerAuth: [] }],
+          parameters: [
+            { $ref: "#/components/parameters/BikeId" },
+            { $ref: "#/components/parameters/Limit" },
+            { $ref: "#/components/parameters/Cursor" },
+          ],
+          responses: {
+            "200": success("Страница записей.", "JournalPage"),
+            "400": failure(
+              "Неверный параметр, неверный курсор либо cookie вместе с Authorization.",
+            ),
+            "401": failure(
+              "Недействительный или истёкший токен либо неподдерживаемая схема Authorization.",
+            ),
+            "404": shared("NotFound"),
+            "500": shared("InternalError"),
+          },
+        },
+      },
+      "/journal/{id}": {
+        get: {
+          operationId: "getJournalEntry",
+          tags: ["Journal"],
+          summary: "Запись журнала",
+          description:
+            "Запись целиком: текст в Markdown, снимок компонентов на момент записи (цены — по правилам цен велосипеда), фотографии, счётчики и `liked` вошедшего зрителя. Публичная опубликованная запись публичного велосипеда видна всем; черновик и закрытая запись — только владельцу, остальным 404, как и записи заблокированного автора.",
+          security: [{}, { cookieSession: [] }, { bearerAuth: [] }],
+          parameters: [{ $ref: "#/components/parameters/JournalId" }],
+          responses: {
+            "200": success("Запись.", "JournalEntry"),
+            "400": failure(
+              "Одновременно cookie сессии и заголовок Authorization.",
+            ),
+            "401": failure(
+              "Недействительный или истёкший токен либо неподдерживаемая схема Authorization.",
+            ),
+            "404": shared("NotFound"),
+            "500": shared("InternalError"),
+          },
+        },
+      },
+      "/bikes/{id}/comments": {
+        get: {
+          operationId: "listBikeComments",
+          tags: ["Comments"],
+          summary: "Комментарии велосипеда",
+          description:
+            "Корневые комментарии, старые сверху, курсор; у каждого превью из не более чем трёх первых ответов и `replyCount`. Ответы вложены на один уровень. Удалённый, скрытый или комментарий заблокированного автора виден «надгробием» (`deleted`, без текста и автора), только пока под ним есть читаемые ответы. Комментарии есть только у публичных объектов: у закрытых, черновиков и объектов заблокированных владельцев — 404, даже для владельца. `focus` возвращает ветку и цепочку для глубокой ссылки.",
+          security: [{}, { cookieSession: [] }, { bearerAuth: [] }],
+          parameters: [
+            { $ref: "#/components/parameters/BikeId" },
+            { $ref: "#/components/parameters/Limit" },
+            { $ref: "#/components/parameters/Cursor" },
+            { $ref: "#/components/parameters/Focus" },
+          ],
+          responses: {
+            "200": success("Страница комментариев.", "CommentPage"),
+            "400": failure(
+              "Неверный параметр или курсор, `focus` вместе с `cursor` либо cookie вместе с Authorization.",
+            ),
+            "401": failure(
+              "Недействительный или истёкший токен либо неподдерживаемая схема Authorization.",
+            ),
+            "404": shared("NotFound"),
+            "500": shared("InternalError"),
+          },
+        },
+      },
+      "/bikes/{id}/comments/{commentId}/replies": {
+        get: {
+          operationId: "listBikeReplies",
+          tags: ["Comments"],
+          summary: "Ответы на комментарий велосипеда",
+          description:
+            "Ответы на один комментарий, старые сверху, курсор. Те же правила видимости и «надгробия», что у списка комментариев.",
+          security: [{}, { cookieSession: [] }, { bearerAuth: [] }],
+          parameters: [
+            { $ref: "#/components/parameters/BikeId" },
+            { $ref: "#/components/parameters/CommentId" },
+            { $ref: "#/components/parameters/Limit" },
+            { $ref: "#/components/parameters/Cursor" },
+          ],
+          responses: {
+            "200": success("Страница ответов.", "ReplyPage"),
+            "400": failure(
+              "Неверный параметр, неверный курсор либо cookie вместе с Authorization.",
+            ),
+            "401": failure(
+              "Недействительный или истёкший токен либо неподдерживаемая схема Authorization.",
+            ),
+            "404": shared("NotFound"),
+            "500": shared("InternalError"),
+          },
+        },
+      },
+      "/journal/{id}/comments": {
+        get: {
+          operationId: "listJournalComments",
+          tags: ["Comments"],
+          summary: "Комментарии записи",
+          description:
+            "Корневые комментарии, старые сверху, курсор; у каждого превью из не более чем трёх первых ответов и `replyCount`. Ответы вложены на один уровень. Удалённый, скрытый или комментарий заблокированного автора виден «надгробием» (`deleted`, без текста и автора), только пока под ним есть читаемые ответы. Комментарии есть только у публичных объектов: у закрытых, черновиков и объектов заблокированных владельцев — 404, даже для владельца. `focus` возвращает ветку и цепочку для глубокой ссылки.",
+          security: [{}, { cookieSession: [] }, { bearerAuth: [] }],
+          parameters: [
+            { $ref: "#/components/parameters/JournalId" },
+            { $ref: "#/components/parameters/Limit" },
+            { $ref: "#/components/parameters/Cursor" },
+            { $ref: "#/components/parameters/Focus" },
+          ],
+          responses: {
+            "200": success("Страница комментариев.", "CommentPage"),
+            "400": failure(
+              "Неверный параметр или курсор, `focus` вместе с `cursor` либо cookie вместе с Authorization.",
+            ),
+            "401": failure(
+              "Недействительный или истёкший токен либо неподдерживаемая схема Authorization.",
+            ),
+            "404": shared("NotFound"),
+            "500": shared("InternalError"),
+          },
+        },
+      },
+      "/journal/{id}/comments/{commentId}/replies": {
+        get: {
+          operationId: "listJournalReplies",
+          tags: ["Comments"],
+          summary: "Ответы на комментарий записи",
+          description:
+            "Ответы на один комментарий, старые сверху, курсор. Те же правила видимости и «надгробия», что у списка комментариев.",
+          security: [{}, { cookieSession: [] }, { bearerAuth: [] }],
+          parameters: [
+            { $ref: "#/components/parameters/JournalId" },
+            { $ref: "#/components/parameters/CommentId" },
+            { $ref: "#/components/parameters/Limit" },
+            { $ref: "#/components/parameters/Cursor" },
+          ],
+          responses: {
+            "200": success("Страница ответов.", "ReplyPage"),
+            "400": failure(
+              "Неверный параметр, неверный курсор либо cookie вместе с Authorization.",
+            ),
+            "401": failure(
+              "Недействительный или истёкший токен либо неподдерживаемая схема Authorization.",
+            ),
+            "404": shared("NotFound"),
+            "500": shared("InternalError"),
+          },
+        },
+      },
       "/users/{ref}": {
         get: {
           operationId: "getUser",
@@ -473,6 +659,9 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
         Cursor: parameters.cursor,
         BikeId: parameters.bikeId,
         UserRef: parameters.userRef,
+        JournalId: parameters.journalId,
+        CommentId: parameters.commentId,
+        Focus: parameters.focus,
         SessionId: {
           name: "id",
           in: "path",

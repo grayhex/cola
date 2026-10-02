@@ -116,27 +116,47 @@ export function journalDto(e: JournalViewRow, user: string | null) {
     comments: e.comments,
   };
 }
+/**
+ * The entry a viewer may read, by share id (web) or id (API v1): an owner's own,
+ * or a published public entry of a public bike by someone not blocked.
+ */
+export async function journalRow(
+  q: Queryable,
+  key: unknown,
+  user: string | null,
+  by: "share" | "id",
+) {
+  return (
+    (
+      await q.query<JournalViewRow>(
+        `SELECT ${journalColumns}${journalFrom} WHERE e.${by === "id" ? "id" : "share_id"}=$1 AND NOT u.blocked AND (e.owner_id=$2 OR (${journalPublic}))`,
+        [key, user],
+      )
+    ).rows[0] || null
+  );
+}
+export async function journalPhotos(q: Queryable, entry: string) {
+  return (
+    await q.query<{ id: string }>(
+      "SELECT id FROM journal_photos WHERE entry_id=$1 ORDER BY created_at,id",
+      [entry],
+    )
+  ).rows;
+}
 export async function journalDetail(
   q: Queryable,
   share: unknown,
   user: string | null = null,
 ) {
-  const e = (
-    await q.query<JournalViewRow>(
-      `SELECT ${journalColumns}${journalFrom} WHERE e.share_id=$1 AND NOT u.blocked AND (e.owner_id=$2 OR (${journalPublic}))`,
-      [share, user],
-    )
-  ).rows[0];
+  const e = await journalRow(q, share, user, "share");
   if (!e) throw new CommunityError("Запись недоступна", 404);
   const dto = journalDto(e, user);
   // Parsed here, so readers render the entry without the parser (#117).
   const bodyDoc = parseRichText(e.body);
-  const photos = (
-    await q.query<{ id: string }>(
-      "SELECT id FROM journal_photos WHERE entry_id=$1 ORDER BY created_at,id",
-      [e.id],
-    )
-  ).rows.map((p) => ({ id: p.id, url: "/api/journal/media/" + p.id }));
+  const photos = (await journalPhotos(q, e.id)).map((p) => ({
+    id: p.id,
+    url: "/api/journal/media/" + p.id,
+  }));
   let ride: { id: string; shareId: string; title: string } | null = null;
   if (e.ride_id) {
     const r = (
@@ -168,6 +188,37 @@ export async function journalList(
     }),
     page,
     hasMore: rows.length > 20,
+  };
+}
+/**
+ * A bike's entries by position, newest first (API v1): the same visibility as
+ * the list above (an owner sees their drafts, everyone else only published
+ * public entries of a public bike), by `(created_at, id)` instead of OFFSET.
+ */
+export async function journalKeysetPage(
+  q: Queryable,
+  bike: string,
+  user: string | null,
+  limit: number,
+  after: { createdAt: string; id: string } | null,
+) {
+  const rows = (
+    await q.query<JournalViewRow & { cursor_at: string }>(
+      `SELECT ${journalColumns},to_char(e.created_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS cursor_at${journalFrom}
+       WHERE e.bike_id=$1 AND NOT u.blocked AND (e.owner_id=$2 OR (${journalPublic}))
+         AND ($3::timestamptz IS NULL OR (e.created_at,e.id)<($3::timestamptz,$4::uuid))
+       ORDER BY e.created_at DESC,e.id DESC LIMIT $5`,
+      [bike, user, after?.createdAt ?? null, after?.id ?? null, limit + 1],
+    )
+  ).rows;
+  const page = rows.slice(0, limit);
+  const last = page[page.length - 1];
+  return {
+    rows: page,
+    next:
+      rows.length > limit && last
+        ? { createdAt: last.cursor_at, id: last.id }
+        : null,
   };
 }
 export async function journalBikeLock(
