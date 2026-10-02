@@ -110,10 +110,40 @@ test("registration requires two explicit consents with versioned links between p
     path: info.outputPath("registration-consents.png"),
     fullPage: true,
   });
+  // The server's answer and the page change are awaited one after the other,
+  // and the page change gets the time a loaded CI WebKit needs. A missing
+  // /account then says whether the request failed, came late or only the
+  // navigation was dropped (main run 36982258021: the registration stayed on
+  // /register in WebKit mobile, the same code passed in the next run).
+  const failed = [];
+  page.on("requestfailed", (request) => {
+    // Next aborts its own link prefetches on every navigation; they say nothing.
+    if (
+      request.isNavigationRequest() ||
+      new URL(request.url()).pathname.startsWith("/api/")
+    )
+      failed.push(
+        `${request.method()} ${request.url()}: ${request.failure()?.errorText}`,
+      );
+  });
+  const registered = page.waitForResponse(
+    (response) =>
+      new URL(response.url()).pathname === "/api/auth/register" &&
+      response.request().method() === "POST",
+  );
   await terms.check();
   await privacy.check();
   await submit.click();
-  await expect(page).toHaveURL(/\/account$/);
+  expect((await registered).status()).toBe(201);
+  try {
+    await expect(page).toHaveURL(/\/account$/, { timeout: 20000 });
+  } catch (error) {
+    throw new Error(
+      `${error instanceof Error ? error.message : error}\n` +
+        `Registration answered 201; failed requests: ${failed.join("; ") || "none"}`,
+      { cause: error },
+    );
+  }
   const db = new pg.Client({ connectionString: process.env.DATABASE_URL });
   await db.connect();
   try {
