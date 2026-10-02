@@ -128,6 +128,17 @@ test("weekly feature: server permissions, admin choice, service notice, owner pr
     const candidate = page
       .getByRole("list", { name: "Кандидаты недели" })
       .getByRole("button", { name: "Выбрать Week touring" });
+    // Search results used to push the submit button between pointer down/up.
+    // Hold a real response until the pointer is down: no timing sleeps/retries.
+    let showSearchResults;
+    await page.route(
+      "**/api/bike-week/bikes?**",
+      async (route) => {
+        const response = await route.fetch();
+        showSearchResults = () => route.fulfill({ response });
+      },
+      { times: 1 },
+    );
     await expect(candidate).toBeEnabled();
     await candidate.click();
     const assign = page.getByRole("button", {
@@ -138,7 +149,33 @@ test("weekly feature: server permissions, admin choice, service notice, owner pr
     await page
       .getByLabel("Причина для журнала")
       .fill("Candidate browser verification");
-    await assign.click();
+    await expect(assign).toBeEnabled();
+    await expect.poll(() => !!showSearchResults).toBe(true);
+    await assign.scrollIntoViewIfNeeded();
+    const beforeSearch = await assign.boundingBox();
+    const assigned = page.waitForResponse(
+      (r) =>
+        r.url().endsWith("/api/bike-week/decision") &&
+        r.request().method() === "PUT",
+    );
+    await page.mouse.move(
+      beforeSearch.x + beforeSearch.width / 2,
+      beforeSearch.y + beforeSearch.height / 2,
+    );
+    await page.mouse.down();
+    await showSearchResults();
+    await expect(
+      page.getByRole("radio", { name: "Выбрать Week touring" }),
+    ).toBeVisible();
+    const afterSearch = await assign.boundingBox();
+    await page.mouse.up();
+    expect(afterSearch.y).toBeCloseTo(beforeSearch.y, 0);
+    expect((await assigned).status()).toBe(200);
+    await expect(
+      page
+        .getByRole("status")
+        .filter({ hasText: "Решение на неделю сохранено" }),
+    ).toBeVisible();
     await page
       .getByRole("button", { name: "Назначить вручную", exact: true })
       .click();
