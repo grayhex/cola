@@ -15,6 +15,7 @@ import zipfile
 
 REPOSITORY = "grayhex/cola"
 MAX_ARCHIVE_BYTES = 4 * 1024**3
+STATE_DIRECTORY = Path("/var/lib/colabike")
 
 
 def require(condition, message):
@@ -134,7 +135,7 @@ def command_json(command):
     return json.loads(result.stdout)
 
 
-def verified_image_id(tag, expected_config):
+def verified_image_id(tag, expected_config, work_dir):
     """Return a daemon ID only after verifying the authenticated config digest.
 
     Classic Docker uses the config digest as Id. The containerd image store
@@ -145,7 +146,7 @@ def verified_image_id(tag, expected_config):
     loaded_id = command_json(["docker", "image", "inspect", tag])[0]["Id"]
     require(re.fullmatch(r"sha256:[0-9a-f]{64}", loaded_id), "Invalid loaded image ID")
     if loaded_id != expected_config:
-        with tempfile.TemporaryDirectory(prefix="colabike-verify-image-") as directory:
+        with tempfile.TemporaryDirectory(prefix="colabike-verify-image-", dir=work_dir) as directory:
             exported = Path(directory) / "image.tar"
             subprocess.run(["docker", "image", "save", "--output", str(exported), loaded_id],
                            check=True, timeout=240)
@@ -173,7 +174,8 @@ def load_images(bundle, sha, compose):
     require(all(len(tags) == 1 for tags in aliases.values()), "Ambiguous Compose image tags")
     subprocess.run(["docker", "image", "load", "--input", str(bundle)], check=True, timeout=240)
     # Verify every identity before changing any production alias.
-    loaded_ids = {tag: verified_image_id(tag, expected_config) for tag, expected_config in images.items()}
+    loaded_ids = {tag: verified_image_id(tag, expected_config, bundle.parent)
+                  for tag, expected_config in images.items()}
     for service, tag in image_tags(sha).items():
         subprocess.run(["docker", "image", "tag", loaded_ids[tag], aliases[service][0]], check=True, timeout=30)
 
@@ -185,11 +187,14 @@ def main():
     require(compose[:2] == ["docker", "compose"], "Expected Docker Compose")
     artifact = trusted_artifact(sha, run_id, attempt)
     print(f"Receiving verified CI images: run={run_id} attempt={attempt} bytes={artifact['size_in_bytes']}", flush=True)
-    with tempfile.TemporaryDirectory(prefix="colabike-images-") as directory:
+    # The root-owned wrapper creates this state directory. /tmp can be a small
+    # RAM-backed filesystem; keep the archive and nested exports on disk.
+    with tempfile.TemporaryDirectory(prefix="colabike-images-", dir=STATE_DIRECTORY) as directory:
         archive = Path(directory) / "artifact.zip"
         bundle = Path(directory) / "images.tar.gz"
         receive_archive(sys.stdin.buffer, archive, artifact)
         unpack_images(archive, bundle)
+        archive.unlink()  # The authenticated extracted bundle is sufficient now.
         load_images(bundle, sha, compose)
     print("Verified CI images loaded; no VPS build needed", flush=True)
 
