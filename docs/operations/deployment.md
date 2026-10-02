@@ -128,11 +128,14 @@ Forced-command принимает только `SHA prebuilt RUN_ID ATTEMPT` л�
 После review, **до merge** workflow, оператор устанавливает все три файла из точного проверенного commit. Это изменение root-owned tooling; merge его не выполняет. Дождитесь завершения старого deploy и сохраните текущие wrappers для операторского возврата. Из checkout владельца репозитория:
 
 ```bash
+bash <<'BASH'
+set -euo pipefail
 cd /opt/stacks/cola
 reviewed_sha=REPLACE_WITH_REVIEWED_40_CHARACTER_SHA
-[[ "$reviewed_sha" =~ ^[0-9a-f]{40}$ ]] || exit 1
+[[ "$reviewed_sha" =~ ^[0-9a-f]{40}$ ]] || { echo "Подставьте полный SHA проверенного commit" >&2; exit 1; }
 git fetch origin "$reviewed_sha"
 deploy_tools=$(mktemp -d)
+trap 'rm -rf -- "$deploy_tools"' EXIT
 for file in deploy-cola deploy-cola-ssh deploy-cola-images.py; do
   git show "$reviewed_sha:ops/$file" > "$deploy_tools/$file" || exit 1
 done
@@ -141,10 +144,18 @@ python3 -m py_compile "$deploy_tools/deploy-cola-images.py"
 sudo install -o root -g root -m 0755 "$deploy_tools/deploy-cola-images.py" /usr/local/sbin/deploy-cola-images.py
 sudo install -o root -g root -m 0755 "$deploy_tools/deploy-cola" /usr/local/sbin/deploy-cola
 sudo install -o root -g root -m 0755 "$deploy_tools/deploy-cola-ssh" /usr/local/sbin/deploy-cola-ssh
-rm -r "$deploy_tools"
+BASH
 ```
 
 Команды не переключают production checkout и не запускают контейнеры. Sudoers, authorized_keys и secrets остаются прежними. После установки и разрешённого merge дождитесь CI итогового main и нового Deploy. Старый run без image artifact повторять бесполезно; если artifact истёк или выбран повтор только failed jobs без нового operations artifact, запустите полный ручной Deploy из main: он повторит весь CI. Не подменяйте SHA/run/attempt и не передавайте архивы из PR.
+
+### Loaded image identity mismatch после перехода
+
+В первоначальном helper из PR #295 поле Docker `Id` сравнивалось с SHA-256 конфигурации из доверенного архива. Это корректно для classic image store, но containerd image store возвращает digest manifest/index. Ошибка после `Loaded image` возникает до изменения production-тегов, запуска Compose и записи `verified-sha`; checkout при этом уже может быть обновлён.
+
+Обновите root-owned helper из проверенного исправленного commit по инструкции выше. Исправление сохраняет проверку CI и SHA-256 ZIP. Если daemon ID отличается от config digest, helper экспортирует образ по неизменяемому daemon ID во временный TAR и проверяет точные байты конфигурации, включая ссылки на слои и параметры запуска. Только после проверки всех трёх образов production-теги назначаются их проверенным daemon IDs. Нужен дополнительный временный запас диска под один несжатый образ; TAR удаляется после проверки. Несовпадение конфигурации или ошибка экспорта останавливает выкладку.
+
+Для подтверждения backend достаточно `sudo docker info --format '{{json .DriverStatus}}'`: containerd показывает `io.containerd.snapshotter.v1`. Проверку хэшей не отключайте и backend работающего Docker не переключайте ради обхода ошибки. После обновления helper можно повторить failed deploy job, если его target всё ещё текущий main, а CI artifact не истёк; иначе нужен полный ручной Deploy из main. Сам по себе retry прежнего helper ничего не исправляет.
 
 ## Одноразовые миграции и операторские команды
 
