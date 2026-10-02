@@ -7,7 +7,10 @@ import type {
   Bike,
   BikeSummary,
   Me,
+  Profile,
+  Relationship,
   SessionGrant,
+  UserSummary,
 } from "./schemas.ts";
 import type { ClassificationSource } from "../bike-classification.ts";
 import { classificationOf } from "../bike-classification.ts";
@@ -200,5 +203,63 @@ export function toBike(bike: BikeSource): Bike {
       price: amount(part.price),
     })),
     photos: bike.photos.map(toPhoto),
+  };
+}
+
+// People (#300). The relationship is the viewer's, so a guest gets null, and a
+// row is turned into a DTO field by field like everything else here.
+interface PersonRow {
+  id: string;
+  username: string;
+  name: string;
+  avatar_id: string | null;
+  is_self: boolean;
+  is_following: boolean;
+  followed_by: boolean;
+}
+
+export function toRelationship(
+  row: Pick<PersonRow, "is_self" | "is_following" | "followed_by">,
+): Relationship {
+  return {
+    isSelf: row.is_self,
+    following: row.is_following,
+    followedBy: row.followed_by,
+    friends: row.is_following && row.followed_by,
+  };
+}
+
+const avatarUrl = (avatarId: string | null) =>
+  avatarId ? "/api/avatars/" + avatarId : null;
+
+export function toUserSummary(row: PersonRow, signedIn: boolean): UserSummary {
+  return {
+    id: row.id,
+    username: row.username,
+    name: row.name,
+    avatarUrl: avatarUrl(row.avatar_id),
+    relationship: signedIn ? toRelationship(row) : null,
+  };
+}
+
+export function toProfile(
+  row: PersonRow & { bio: string; location: string; created_at: Date },
+  counts: { bikes: string; followers: string; following: string },
+  signedIn: boolean,
+): Profile {
+  return {
+    id: row.id,
+    username: row.username,
+    name: row.name,
+    avatarUrl: avatarUrl(row.avatar_id),
+    bio: row.bio,
+    location: row.location,
+    createdAt: iso(row.created_at),
+    counts: {
+      bikes: Number(counts.bikes),
+      followers: Number(counts.followers),
+      following: Number(counts.following),
+    },
+    relationship: signedIn ? toRelationship(row) : null,
   };
 }
