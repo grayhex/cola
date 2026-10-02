@@ -1,7 +1,6 @@
 import { cspMode, mapOrigins } from "./csp.ts";
 import { parseDsn } from "./error-tracker.ts";
 import { mailConfig } from "./mail.ts";
-import { yandexIdConfigProblem } from "./yandex-id.ts";
 export function validateRuntime(env = process.env) {
   if (env.DEPLOYMENT_MODE !== "production") return { mode: "local" };
   function reject(message: string): never {
@@ -71,8 +70,15 @@ export function validateRuntime(env = process.env) {
       );
   }
   // Yandex ID is optional; a half-filled configuration is a deployment error.
-  const yandexProblem = yandexIdConfigProblem(env);
-  if (yandexProblem) reject(yandexProblem);
+  // Kept here, not imported: the runner image ships only a few lib files for
+  // the startup check (see the Dockerfile).
+  if (
+    env.YANDEX_ID_ENABLED === "true" &&
+    !(env.YANDEX_ID_CLIENT_ID && env.YANDEX_ID_CLIENT_SECRET)
+  )
+    reject(
+      "YANDEX_ID_CLIENT_ID and YANDEX_ID_CLIENT_SECRET are required when YANDEX_ID_ENABLED=true",
+    );
   // Mail is optional, but without it password recovery is unavailable: log it.
   return {
     mode: "production",

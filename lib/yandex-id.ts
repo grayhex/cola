@@ -64,14 +64,6 @@ export function yandexIdConfig(env = process.env): YandexIdConfig | null {
   };
 }
 
-/** A partly filled configuration is a deployment mistake, not "disabled". */
-export function yandexIdConfigProblem(env = process.env) {
-  if (env.YANDEX_ID_ENABLED !== "true") return null;
-  return env.YANDEX_ID_CLIENT_ID && env.YANDEX_ID_CLIENT_SECRET
-    ? null
-    : "YANDEX_ID_CLIENT_ID and YANDEX_ID_CLIENT_SECRET are required when YANDEX_ID_ENABLED=true";
-}
-
 const random = () => randomBytes(32).toString("base64url");
 
 /** A fresh `state`/verifier pair: 256 random bits each, URL safe. */
