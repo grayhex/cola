@@ -358,8 +358,9 @@
   .ride-list {
     margin-block: var(--space-6);
   }
+  /* The bike page spaces its panels with its own gap (#291). */
   .bike-detail > .ride-list {
-    margin-block: 0 var(--space-4);
+    margin-block: 0;
   }
   .ride-list-item {
     margin-bottom: var(--space-2);

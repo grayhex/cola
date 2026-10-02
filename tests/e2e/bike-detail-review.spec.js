@@ -176,11 +176,28 @@ test("bike detail full-page review and request budget", async ({
       ["owner", page],
     ]) {
       await tab.goto(path);
-      await expect(tab.locator(".ride-list .ride-card").first()).toBeVisible();
+      await expect(
+        tab.locator(".ride-list .ride-compact, .ride-list .ride-card").first(),
+      ).toBeVisible();
       await expect(tab.locator(".journal-list-entry").first()).toBeVisible();
       await expect(tab.locator("#discussion")).toBeVisible();
       for (const width of [1440, 1920, 390]) {
         await tab.setViewportSize({ width, height: 1000 });
+        // The composition of #291: the picture and its thumbnails side by
+        // side with the identity on wide screens, one column on a phone.
+        const [stage, strip, identity] = await Promise.all(
+          [".photo-stage", ".gallery", ".bike-identity"].map((selector) =>
+            tab.locator(selector).boundingBox(),
+          ),
+        );
+        if (width > 900) {
+          expect(identity.x).toBeGreaterThanOrEqual(stage.x + stage.width);
+          expect(strip.y - (stage.y + stage.height)).toBeLessThan(24);
+          expect(strip.y).toBeGreaterThanOrEqual(stage.y + stage.height);
+        } else {
+          expect(strip.y).toBeGreaterThanOrEqual(stage.y + stage.height);
+          expect(identity.y).toBeGreaterThanOrEqual(strip.y + strip.height);
+        }
         for (const theme of ["light", "dark"]) {
           await tab.evaluate((t) => {
             localStorage.setItem("cola:theme", t);
@@ -221,18 +238,43 @@ test("bike detail full-page review and request budget", async ({
       await expect(
         reader.locator(".bike-metrics").getByText("3", { exact: true }),
       ).toBeVisible();
-      await expect(reader.locator(".bike-about p")).toHaveCount(1);
-      await expect(reader.locator(".gallery-details")).toHaveCount(1);
+      await expect(reader.locator(".bike-about p")).toHaveCount(2);
+      await expect(reader.locator(".gallery .thumb")).toHaveCount(3);
       await expect(reader.locator(".journal-list-entry")).toHaveCount(3);
       await reader
         .getByRole("button", { name: "Все записи", exact: true })
         .click();
       await expect(reader.locator(".journal-list-entry")).toHaveCount(4);
-      await reader.getByRole("tab", { name: /Аксессуары/ }).click();
+      // The menu follows the reader: the section under the header is current.
+      const menu = reader.getByRole("navigation", {
+        name: "Разделы велосипеда",
+      });
+      const current = (name) =>
+        expect(menu.getByRole("link", { name, exact: true })).toHaveAttribute(
+          "aria-current",
+          "location",
+        );
+      await reader.evaluate(() => {
+        const top = document.getElementById("specifications");
+        window.scrollTo(0, top.getBoundingClientRect().top + scrollY - 100);
+      });
+      await current("Комплектация");
+      await reader.evaluate(() =>
+        window.scrollTo(0, document.body.scrollHeight),
+      );
+      await current("Комментарии");
+      await reader.evaluate(() => window.scrollTo(0, 0));
+      await current("Обзор");
+      // One list holds every part: the build and the accessories.
+      await expect(reader.locator(".specifications .compact-part")).toHaveCount(
+        9,
+      );
       await reader
         .getByRole("button", { name: /Оборудование и аксессуары/ })
         .click();
-      await expect(reader.locator(".compact-part")).toHaveCount(1);
+      await expect(
+        reader.locator(".spec-accessories .compact-part"),
+      ).toBeVisible();
     }
   } finally {
     await setSettings(original.settings);

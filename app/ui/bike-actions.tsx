@@ -7,7 +7,6 @@ import { BikeLike } from "./bike-labels.tsx";
 import BikeFollow from "./bike-follow.tsx";
 import ShareButton from "./share-button.tsx";
 import {
-  MessageCircle,
   ImagePlus,
   Search,
   Globe,
@@ -20,6 +19,7 @@ import { publicPath } from "../../lib/public-urls.ts";
 import styles from "./bike-actions.module.css";
 
 // Shared callbacks, separate owner and social rows on the detail page (#291).
+// The comments link of the first design is the «Комментарии» figure now.
 export default function BikeActions({
   bike,
   title,
@@ -52,18 +52,18 @@ export default function BikeActions({
   return (
     <div className={`bike-actions ${styles.bar}`} data-bike-actions={section}>
       {section === "social" && bike.is_public && (
-        <div className={styles.group} role="group" aria-label={t("Реакции")}>
-          <BikeLike bike={bike} reaction={reaction} t={t} />
+        <div
+          className={`${styles.group} ${styles.social}`}
+          role="group"
+          aria-label={t("Реакции")}
+        >
+          <BikeLike bike={bike} reaction={reaction} t={t} showCount={false} />
           {!bike.is_owner && (
-            <BikeFollow bikeId={bike.id} className={styles.action} />
+            <BikeFollow
+              bikeId={bike.id}
+              className={`${styles.action} ${styles.primary}`}
+            />
           )}
-          <a className={styles.action} data-hover="comment" href="#discussion">
-            <MessageCircle size={15} aria-hidden="true" />
-            <span>{t("Обсуждение")}</span>
-            {bike.comments != null && (
-              <strong className={styles.count}>{bike.comments}</strong>
-            )}
-          </a>
           <ShareButton
             path={publicPath("bike", bike)}
             title={title}

@@ -1,11 +1,6 @@
 "use client";
 import type * as React from "react";
 import { useState } from "react";
-import {
-  classificationLabels,
-  classificationOf,
-  useLabels,
-} from "../../../lib/bike-classification.ts";
 import type {
   BikeDto,
   ViewerDto,
@@ -18,24 +13,24 @@ import type {
   BikeSetter,
   PhotoSetter,
   ModalSetter,
-  PartSection,
   Run,
   MainElement,
 } from "./types.ts";
 import type { useBikeReaction } from "../use-bike-reaction.ts";
 import dynamic from "next/dynamic";
-import { SharedView } from "../motion.tsx";
-import { defaultBlocks } from "../../../lib/garage-layout.ts";
-import { componentText } from "../../../services/bike-resolver/src/component-identity.ts";
-import { BikeLabels } from "../bike-labels.tsx";
-import { AuthorLink } from "../social-primitives.tsx";
-import Photo from "../bike-photo.tsx";
-import BikeActions from "../bike-actions.tsx";
-import GroupedComponents from "../grouped-components.tsx";
+import Link from "next/link";
+import { detailLayout } from "../../../lib/garage-layout.ts";
+import { overviewPanels } from "../../../lib/bike-passport.ts";
+import { experienceHref } from "../../../lib/experience-catalog.ts";
+import BikeGallery from "./bike-gallery.tsx";
+import BikeIdentity from "./bike-identity.tsx";
+import BikeOverview from "./bike-overview.tsx";
+import BikeSpecifications from "./bike-specifications.tsx";
+import { useActiveSection } from "./use-active-section.ts";
 import { BikeGame } from "../achievements.tsx";
 import RideList from "../ride-list.tsx";
 import JournalList from "../journal-list.tsx";
-import { ArrowLeft, ChevronRight, Plus, X, Package, Lock } from "../icons.tsx";
+import { ArrowLeft, ChevronRight } from "../icons.tsx";
 import api from "./api.ts";
 
 // Keep the reader's page independent of the comment editor bundle.
@@ -47,6 +42,9 @@ const rub = (v: string | number) =>
     maximumFractionDigits: 0,
   }).format(Number(v));
 
+// The page of one bike, public and in the account (#291): the picture and the
+// identity side by side, a menu of anchors, then the overview with the
+// passport, the build, rides, the owner's entries, the awards and comments.
 export default function BikeDetail({
   Main,
   bike,
@@ -60,8 +58,6 @@ export default function BikeDetail({
   busy,
   photo,
   setPhoto,
-  tab,
-  setTab,
   setSelected,
   setModal,
   file,
@@ -82,8 +78,6 @@ export default function BikeDetail({
   busy: boolean;
   photo: PublicPhoto | null;
   setPhoto: PhotoSetter;
-  tab: PartSection;
-  setTab: (tab: PartSection) => void;
   setSelected: BikeSetter;
   setModal: ModalSetter;
   file: React.RefObject<HTMLInputElement | null>;
@@ -92,42 +86,33 @@ export default function BikeDetail({
   refresh: () => Promise<void>;
   setNotice: (message: string) => void;
 }) {
-  const blocks = settings.detailBlocks || defaultBlocks;
-  const block = (id: (typeof defaultBlocks)[number]["id"]) =>
-    blocks.find((b) => b.id === id) || defaultBlocks.find((b) => b.id === id)!;
-  // The page layout fixes where each block goes (#121, #127); settings
-  // switch blocks off and pick their look.
-  const blockProps = (id: (typeof defaultBlocks)[number]["id"]) => ({
-    hidden: !block(id).enabled,
-    "data-variant": block(id).variant,
-  });
-  const modelName = [bike?.brand, bike?.model, bike?.trim]
+  // The saved blocks switch parts of a fixed composition on and off.
+  const layout = detailLayout(settings.detailBlocks);
+  const modelName = [bike.brand, bike.model, bike.trim]
     .filter(Boolean)
     .join(" ");
   // A public build is counted on its model's page (#74); a private one only
   // leads to the search.
   const modelHref =
-    bike?.is_public && bike.catalog_model_id
+    bike.is_public && bike.catalog_model_id
       ? "/bike-models/" + bike.catalog_model_id
       : "/experience?" +
         new URLSearchParams({
-          brand: bike?.brand || "",
-          model: bike?.model || "",
+          brand: bike.brand || "",
+          model: bike.model || "",
         });
   const [rideTotal, setRideTotal] = useState<number | null>(null);
   // Never retain a selected photo which was removed by a refreshed DTO.
   const activePhoto =
     bike.photos.find((p) => p.id === photo?.id) || bike.photos[0] || null;
-  const descriptionVisible = settings.summaryFields?.description !== false;
-  const intro = !block("summary").enabled && {
-    description: descriptionVisible && bike.description,
-    price:
-      bike.show_bike_price &&
-      bike.price != null &&
-      settings.summaryFields?.price !== false,
-    link:
-      settings.summaryFields?.manufacturer !== false && bike.manufacturer_url,
-  };
+  const panels = overviewPanels(
+    bike,
+    {
+      showMileage: settings.showMileage,
+      summaryFields: settings.summaryFields,
+    },
+    rub,
+  );
   const actions = {
     bike,
     title: bike.name || modelName,
@@ -141,51 +126,24 @@ export default function BikeDetail({
     onDelete: () => setModal({ type: "deleteBike" }),
     t,
   };
-  const passport = [
-    ["Тип", classificationLabels(bike).join(" · ")],
+  // A visitor has nothing to read in an empty build; the owner has the
+  // «add» actions there.
+  const specifications =
+    layout.specifications && (editable || bike.components.length > 0);
+  // Only sections that are on the page are in the menu.
+  const sections = (
     [
-      "Назначение",
-      classificationOf(bike)
-        .uses.map((key) => useLabels[key])
-        .filter(Boolean)
-        .join(", "),
-    ],
-    ["Бренд / модель", modelName],
-    ["Модельный год", bike.year],
-    ["Размер рамы", bike.size],
-    ["Цвет", bike.color],
-    [
-      "Вес",
-      bike.weight != null && Number(bike.weight) > 0
-        ? Number(bike.weight).toLocaleString("ru-RU") + " кг"
-        : null,
-    ],
-    ["Статус", bike.is_former ? "Бывший" : "Текущий"],
-    [
-      "Пробег",
-      settings.showMileage && bike.mileage != null
-        ? Number(bike.mileage).toLocaleString("ru-RU") + " км"
-        : null,
-    ],
-    [
-      "Стоимость велосипеда",
-      bike.show_bike_price &&
-      bike.price != null &&
-      settings.summaryFields?.price !== false
-        ? rub(bike.price)
-        : null,
-    ],
-  ].filter(
-    ([label, value]) =>
-      value !== null &&
-      value !== undefined &&
-      value !== "" &&
-      (settings.summaryFields?.metadata !== false ||
-        label === "Стоимость велосипеда"),
-  );
+      [panels.about || panels.passport, "overview", t("Обзор")],
+      [specifications, "specifications", t("Комплектация")],
+      [bike.is_public, "bike-rides", t("Покатушки")],
+      [bike.id !== "demo", "journal", t("Записи")],
+      [bike.is_public, "discussion", t("Комментарии")],
+    ] as const
+  ).filter(([visible]) => visible);
+  const active = useActiveSection(sections.map(([, id]) => id));
   return (
     <Main className="detail bike-detail">
-      <div className="breadcrumbs">
+      <nav className="breadcrumbs" aria-label={t("Путь к велосипеду")}>
         {!share ? (
           <button
             className="quiet"
@@ -194,447 +152,119 @@ export default function BikeDetail({
               setPhoto(null);
             }}
           >
-            <ArrowLeft size={16} />
+            <ArrowLeft size={16} aria-hidden="true" />
             {t("Мои велосипеды")}
           </button>
         ) : (
-          <span>
-            {share ? (
-              <AuthorLink author={bike.author} />
-            ) : (
-              t("Пример вашего будущего гаража")
-            )}
-          </span>
+          <Link href="/bikes">{t("Велосипеды")}</Link>
         )}
-        <ChevronRight size={14} />
-        <a href={modelHref} title="Опыт владельцев этой модели">
-          {bike.brand} {bike.model}
-        </a>
-      </div>
-      <div className="bike-hero">
-        {(block("photos").enabled ||
-          (block("gallery").enabled && bike.photos.length > 0)) && (
-          <div className="bike-media">
-            <div
-              className="showcase configurable-block"
-              {...blockProps("photos")}
+        {bike.brand && (
+          <>
+            <ChevronRight size={14} aria-hidden="true" />
+            <a
+              href={experienceHref({ brand: bike.brand })}
+              title="Опыт владельцев этой марки"
             >
-              <div className="photo-stage">
-                <span className="photo-index">
-                  {String(
-                    Math.max(
-                      1,
-                      bike.photos.findIndex((p) => p.id === activePhoto?.id) +
-                        1,
-                    ),
-                  ).padStart(2, "0")}{" "}
-                  / {String(Math.max(1, bike.photos.length)).padStart(2, "0")}
-                </span>
-                <button
-                  className="photo-open"
-                  onClick={() => {
-                    setPhoto(activePhoto);
-                    setModal({ type: "photoView" });
-                  }}
-                >
-                  {/* The photo's description (or the placeholder text) ends
-                the name, so the visible text is part of it (#119). */}
-                  <span className="visually-hidden">
-                    {t("Открыть фото целиком")}:{" "}
-                  </span>
-                  <SharedView kind="bike-photo" id={bike.id}>
-                    <Photo
-                      bike={bike}
-                      photo={activePhoto}
-                      className="hero-photo"
-                      sizes="(max-width: 900px) 100vw, 50vw"
-                      priority
-                    />
-                  </SharedView>
-                </button>
-                {activePhoto?.source_page_url && (
-                  <a
-                    className="photo-credit"
-                    href={activePhoto.source_page_url!}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Источник фотографии
-                  </a>
-                )}
-                {bike.id === "demo" && !settings.demoImageId && (
-                  <a
-                    className="photo-credit"
-                    href="https://www.canyon.com/en-si/outlet-bikes/gravel-bikes/grizl-al-7-raw/50051247.html"
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    {t("Фото: Canyon · пример сборки")}
-                  </a>
-                )}
-              </div>
-            </div>
-            {bike.photos.length > 0 && (
-              <details
-                className="gallery-details configurable-block"
-                {...blockProps("gallery")}
-                open={block("gallery").open}
-              >
-                <summary>Фотографии · {bike.photos.length}</summary>
-                <div className="gallery">
-                  {bike.photos.map((p) => (
-                    <div className="thumb-wrap" key={p.id}>
-                      <button
-                        className={
-                          "thumb " + (activePhoto?.id === p.id ? "active" : "")
-                        }
-                        aria-label={t("Показать фотографию")}
-                        onClick={() => setPhoto(p)}
-                      >
-                        <Photo bike={bike} photo={p} sizes="160px" />
-                      </button>
-                      {editable && (
-                        <div className="thumb-actions">
-                          <button
-                            className="quiet"
-                            disabled={busy || p.is_cover}
-                            onClick={() =>
-                              run(async () => {
-                                await api(
-                                  `bikes/${bike.id}/photos/${p.id}`,
-                                  "PATCH",
-                                );
-                                await refresh();
-                                setNotice(t("Обложка обновлена"));
-                              })
-                            }
-                          >
-                            {p.is_cover ? t("Обложка") : t("На обложку")}
-                          </button>
-                          <button
-                            className="icon"
-                            aria-label={t("Удалить фото")}
-                            onClick={() =>
-                              setModal({ type: "deletePhoto", photo: p })
-                            }
-                          >
-                            <X size={14} />
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </details>
-            )}
-          </div>
+              {bike.brand}
+            </a>
+          </>
         )}
-        <div className="bike-identity">
-          <BikeActions {...actions} section="owner" />
-          <div
-            className="bike-heading configurable-block"
-            {...blockProps("heading")}
-          >
-            <div>
-              <div className="bike-detail-title-row">
-                <h1>{bike.name || modelName}</h1>
-              </div>
-              {/* The name almost always carries the year: it goes into the
-              labels next to the size and the weight (#131). Brand and
-              model stay in the specification (#121). */}
-              <div className="bike-heading-labels">
-                <BikeLabels bike={bike} />
-              </div>
-            </div>
-            <div className="detail-actions">
-              {share && <AuthorLink author={bike.author} />}
-              {!editable && !share && (
-                <button
-                  className="button secondary"
-                  onClick={() => auth("register")}
-                >
-                  {t("Добавить свой байк")}
-                  <Plus size={17} />
-                </button>
-              )}
-            </div>
-            {block("summary").enabled &&
-              descriptionVisible &&
-              bike.description &&
-              bike.description.length > 240 && (
-                <p className="bike-excerpt">
-                  {bike.description.slice(0, 200).trimEnd()}…{" "}
-                  <a href="#overview">Читать описание</a>
-                </p>
-              )}
-            {intro && (intro.description || intro.price || intro.link) && (
-              <div className="bike-intro">
-                {intro.description && <p>{bike.description}</p>}
-                {(intro.price || intro.link) && (
-                  <p className="bike-intro-facts">
-                    {intro.price && (
-                      <span>
-                        {t("Стоимость велосипеда")}:{" "}
-                        <strong>{rub(bike.price!)}</strong>
-                      </span>
-                    )}
-                    {intro.link && (
-                      <a
-                        className="part-link"
-                        href={bike.manufacturer_url}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        {t("Сайт производителя")}
-                      </a>
-                    )}
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
-          {block("heading").enabled && (
-            <dl className="bike-metrics" aria-label="Показатели велосипеда">
-              <div>
-                <dt>Детали</dt>
-                <dd>{bike.components.length}</dd>
-              </div>
-              {bike.is_public && (
-                <>
-                  <div>
-                    <dt>Нравится</dt>
-                    <dd>{detailReaction.likes ?? bike.likes}</dd>
-                  </div>
-                  <div>
-                    <dt>Комментарии</dt>
-                    <dd>{bike.comments}</dd>
-                  </div>
-                  {rideTotal !== null && (
-                    <div>
-                      <dt>Покатушки</dt>
-                      <dd>{rideTotal}</dd>
-                    </div>
-                  )}
-                </>
-              )}
-            </dl>
-          )}
-          <BikeActions {...actions} section="social" />
-        </div>
+        {bike.model && (
+          <>
+            <ChevronRight size={14} aria-hidden="true" />
+            <a href={modelHref} title="Опыт владельцев этой модели">
+              {[bike.model, bike.trim].filter(Boolean).join(" ")}
+            </a>
+          </>
+        )}
+      </nav>
+      <div className="bike-hero">
+        {layout.photos && (
+          <BikeGallery
+            bike={bike}
+            photo={activePhoto}
+            thumbnails={layout.thumbnails}
+            editable={editable}
+            busy={busy}
+            t={t}
+            onSelect={setPhoto}
+            onOpen={() => {
+              setPhoto(activePhoto);
+              setModal({ type: "photoView" });
+            }}
+            onCover={(p) =>
+              run(async () => {
+                await api(`bikes/${bike.id}/photos/${p.id}`, "PATCH");
+                await refresh();
+                setNotice(t("Обложка обновлена"));
+              })
+            }
+            onDelete={(p) => setModal({ type: "deletePhoto", photo: p })}
+            demoCredit={bike.id === "demo" && !settings.demoImageId}
+          />
+        )}
+        <BikeIdentity
+          bike={bike}
+          catalog={catalog}
+          actions={actions}
+          metrics={layout.metrics}
+          // The quote is the description: it follows the setting that
+          // makes the description public.
+          quote={layout.metrics && panels.about}
+          specifications={specifications}
+          rideTotal={rideTotal}
+          likes={detailReaction.likes ?? bike.likes}
+          onRegister={!editable && !share ? () => auth("register") : undefined}
+          t={t}
+        />
       </div>
       <nav className="bike-section-nav" aria-label="Разделы велосипеда">
-        {block("summary").enabled && <a href="#overview">Обзор</a>}
-        {block("specifications").enabled && (
-          <a href="#specifications">Комплектация</a>
-        )}
-        {bike.is_public && <a href="#bike-rides">Покатушки</a>}
-        {bike.id !== "demo" && <a href="#journal">Записи</a>}
-        {bike.is_public && <a href="#discussion">Комментарии</a>}
-      </nav>
-      <details
-        className="bike-summary configurable-block"
-        id="overview"
-        {...blockProps("summary")}
-        open={block("summary").open}
-      >
-        <summary>{t("Обзор")}</summary>
-        <div className="bike-overview-grid">
-          {descriptionVisible && (
-            <section className="bike-about" aria-labelledby="bike-about-title">
-              <h2 id="bike-about-title">{t("О велосипеде")}</h2>
-              {bike.description ? (
-                <p>{bike.description}</p>
-              ) : (
-                <>
-                  <p className="help">{t("Описание пока не добавлено.")}</p>
-                  {editable && (
-                    <button className="quiet" onClick={actions.onEdit}>
-                      {t("Добавить описание")}
-                    </button>
-                  )}
-                </>
-              )}
-            </section>
-          )}
-          {(passport.length > 0 ||
-            (bike.manufacturer_url &&
-              settings.summaryFields?.manufacturer !== false)) && (
-            <section
-              className="bike-passport"
-              aria-labelledby="bike-passport-title"
-            >
-              <h2 id="bike-passport-title">{t("Паспорт велосипеда")}</h2>
-              <dl>
-                {passport.map(([label, value]) => (
-                  <div key={label}>
-                    <dt>{t(String(label))}</dt>
-                    <dd>{value}</dd>
-                  </div>
-                ))}
-              </dl>
-              {bike.manufacturer_url &&
-                settings.summaryFields?.manufacturer !== false && (
-                  <a
-                    className="part-link"
-                    href={bike.manufacturer_url}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    {t("Сайт производителя")}
-                  </a>
-                )}
-            </section>
-          )}
-        </div>
-      </details>
-      <section
-        className="specifications configurable-block"
-        id="specifications"
-        {...blockProps("specifications")}
-      >
-        {bike.factory_spec && (
-          <details className="factory-source">
-            <summary>
-              Заводская комплектация · {bike.factory_spec.source.manufacturer}
-            </summary>
-            <p className="help">
-              Текущие компоненты можно менять независимо от заводской
-              комплектации.{" "}
-              <a
-                href={bike.factory_spec.source.url}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Источник
-              </a>
-            </p>
-            <dl className="resolver-preview">
-              {bike.factory_spec.components.map((c, i) => (
-                <div key={i}>
-                  <dt>{componentText(c.raw.label)}</dt>
-                  <dd>{componentText(c.raw.value)}</dd>
-                </div>
-              ))}
-            </dl>
-          </details>
-        )}
-        <div className="tabs-row">
-          <div
-            className="tabs"
-            role="tablist"
-            aria-label={t("Разделы конфигурации")}
+        {sections.map(([, id, label]) => (
+          <a
+            key={id}
+            href={"#" + id}
+            aria-current={active === id ? "location" : undefined}
           >
-            {(
-              [
-                ["build", t("Комплектация")],
-                ["accessories", t("Аксессуары")],
-              ] as const
-            ).map(([key, label]) => (
-              <button
-                key={key}
-                role="tab"
-                aria-selected={tab === key}
-                aria-controls="parts-panel"
-                id={"tab-" + key}
-                onClick={() => setTab(key)}
-                className={tab === key ? "active" : ""}
-              >
-                {label}
-                <span>
-                  {bike.components.filter((p) => p.section === key).length}
-                </span>
-              </button>
-            ))}
-          </div>
-          {editable && (
-            <button
-              className="text-link add-component"
-              title={
-                tab === "build"
-                  ? t("Добавить компонент")
-                  : t("Добавить аксессуар")
-              }
-              onClick={() => setModal({ type: "part", section: tab })}
-            >
-              <Plus size={17} />
-              {t("Добавить")}{" "}
-              {tab === "build" ? t("компонент") : t("аксессуар")}
-            </button>
-          )}
-        </div>
-        <div id="parts-panel" role="tabpanel" aria-labelledby={"tab-" + tab}>
-          <div className="spec-label">
-            <span>
-              {tab === "build" ? t("ОСНОВА И ДЕТАЛИ") : t("ВСЁ ДЛЯ ПОЕЗДКИ")}
-            </span>
-            <span>{t("АКТУАЛЬНАЯ КОНФИГУРАЦИЯ")}</span>
-          </div>
-          {bike.components.filter((c) => c.section === tab).length ? (
-            <GroupedComponents
-              bike={bike}
-              section={tab}
-              catalog={catalog}
-              editable={editable}
-              rub={rub}
-              onEdit={(c) =>
-                setModal({ type: "part", part: c, section: c.section })
-              }
-              onDelete={(c) => setModal({ type: "deletePart", part: c })}
-              onOrder={(order) =>
-                run(async () => {
-                  await api("bikes/" + bike.id + "/order", "PUT", order);
-                  await refresh();
-                })
-              }
-            />
-          ) : (
-            <div className="empty-parts">
-              <Package size={28} strokeWidth={1} />
-              <h3>
-                {tab === "build"
-                  ? t("Всё начинается с первой детали")
-                  : t("Место для полезных дополнений")}
-              </h3>
-              <p>
-                {tab === "build"
-                  ? t("Добавьте компоненты, из которых собран ваш велосипед.")
-                  : t("Свет, сумки, велокомпьютер — всё, что берёте с собой.")}
-              </p>
-              {editable && (
-                <button
-                  className="button secondary"
-                  onClick={() => setModal({ type: "part", section: tab })}
-                >
-                  <Plus size={16} />
-                  {t("Добавить")}
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-        {(tab === "build"
-          ? bike.show_component_prices
-          : bike.show_accessory_prices) &&
-          bike.components.some((c) => c.section === tab && c.price != null) && (
-            <div className="cost">
-              <Lock size={14} />
-              <span>{t("Стоимость выбранного раздела")}</span>
-              <strong>
-                {rub(
-                  bike.components
-                    .filter((c) => c.section === tab)
-                    .reduce((s, c) => s + Number(c.price || 0), 0),
-                )}
-              </strong>
-            </div>
-          )}
-      </section>
+            {label}
+          </a>
+        ))}
+      </nav>
+      {(panels.about || panels.passport) && (
+        <BikeOverview
+          bike={bike}
+          panels={panels}
+          editable={editable}
+          onEdit={actions.onEdit}
+          t={t}
+        />
+      )}
+      {specifications && (
+        <BikeSpecifications
+          bike={bike}
+          catalog={catalog}
+          editable={editable}
+          rub={rub}
+          t={t}
+          onAdd={(section) => setModal({ type: "part", section })}
+          onEdit={(c) =>
+            setModal({ type: "part", part: c, section: c.section })
+          }
+          onDelete={(c) => setModal({ type: "deletePart", part: c })}
+          onOrder={(order) =>
+            run(async () => {
+              await api("bikes/" + bike.id + "/order", "PUT", order);
+              await refresh();
+            })
+          }
+        />
+      )}
       {bike.is_public && (
         <RideList
           key={"rides:" + bike.id}
           bikeId={bike.id}
           latest
           preview
+          compact
           onTotal={setRideTotal}
         />
       )}
@@ -666,7 +296,13 @@ export default function BikeDetail({
         />
       )}
       {bike.is_public && (
-        <Discussion key={"discussion:" + bike.id} bike={bike} user={user} />
+        <Discussion
+          key={"discussion:" + bike.id}
+          bike={bike}
+          user={user}
+          variant="panel"
+          count={bike.comments}
+        />
       )}
     </Main>
   );

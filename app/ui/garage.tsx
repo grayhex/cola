@@ -1,7 +1,7 @@
 "use client";
 import type * as React from "react";
 import type { ApiError, BikeDto, PublicPhoto } from "../../lib/contracts.ts";
-import type { GarageModalState, PartSection } from "./garage/types.ts";
+import type { GarageModalState } from "./garage/types.ts";
 import { errorMessage, errorStatus } from "../../lib/errors.ts";
 import {
   startTransition,
@@ -72,7 +72,6 @@ export default function Garage({
     [notice, setNotice] = useState(""),
     [modal, setModal] = useState<GarageModalState | null>(null),
     [busy, setBusy] = useState(false),
-    [tab, setTab] = useState<PartSection>("build"),
     [localSort, setLocalSort] = useState("new"),
     [localFilters, setLocalFilters] = useState<string[]>([]),
     [localQuery, setLocalQuery] = useState(""),
@@ -269,7 +268,6 @@ export default function Garage({
     }
     setSelected(b);
     setPhoto(null);
-    setTab("build");
     window.scrollTo({ top: 0 });
   }
   async function close() {
@@ -381,8 +379,6 @@ export default function Garage({
           busy={busy}
           photo={photo}
           setPhoto={setPhoto}
-          tab={tab}
-          setTab={setTab}
           setSelected={setSelected}
           setModal={setModal}
           file={file}

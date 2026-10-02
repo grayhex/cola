@@ -151,12 +151,13 @@ test("sequential bike sections, raster map, six-ride accordion, preferences and 
       .click();
     await expect(page.getByRole("status")).toHaveText("Оформление сохранено");
     await page.goto("/b/" + share);
+    // The row of small cards of the bike page (#291).
     await expect(
-      page.locator(".bike-rides .ride-grid > .ride-card"),
+      page.locator(".bike-rides .ride-compact-grid > .ride-compact"),
     ).toHaveCount(3);
     await page.getByRole("button", { name: "Все покатушки · 6" }).click();
     await expect(
-      page.locator(".bike-rides .ride-grid > .ride-card"),
+      page.locator(".bike-rides .ride-compact-grid > .ride-compact"),
     ).toHaveCount(6);
     await expect(page.locator(".bike-rides .ride-route image")).toHaveCount(0);
     await page.goto("/admin");

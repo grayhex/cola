@@ -53,7 +53,7 @@ test("component change offers an explicit draft, never automatic publication", a
   ).toBe(201);
   await page.goto("/account?tab=bikes&bike=" + bike.id);
   await expect(
-    page.getByRole("heading", { name: "Журнал велосипеда", exact: true }),
+    page.getByRole("heading", { name: "Записи владельца", exact: true }),
   ).toBeVisible();
   const group = page
     .locator(".component-group")

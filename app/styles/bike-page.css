@@ -15,7 +15,8 @@
     margin: 0;
     padding: 0;
   }
-  /* One reading order in both the public page and the account (#291). */
+  /* One reading order in both the public page and the account (#291):
+     the first screen, a menu of anchors, then panels one under another. */
   .bike-detail {
     display: flex;
     flex-direction: column;
@@ -25,6 +26,69 @@
     min-width: 0;
     margin: 0;
   }
+  .bike-detail [id] {
+    scroll-margin-top: calc(var(--header-height) + var(--space-6));
+  }
+
+  /* A panel: a hairline, a small radius, a calm surface. Panels hold the
+     overview, the build, rides, entries, awards and comments. */
+  .bike-detail .bike-panel,
+  .bike-detail > .bike-game {
+    min-width: 0;
+    padding: var(--space-5);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    background: var(--surface-subtle);
+  }
+  .bike-detail .panel-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2) var(--space-4);
+    margin: 0 0 var(--space-4);
+  }
+  .bike-detail .panel-heading :is(h2, h3) {
+    min-width: 0;
+    margin: 0;
+    color: var(--text-strong);
+    font-size: var(--text-xl);
+    font-weight: var(--weight-semibold);
+    line-height: var(--leading-tight);
+  }
+  .bike-detail .panel-heading h3 {
+    font-size: var(--text-lg);
+  }
+  .bike-detail .panel-heading h3 small {
+    margin-left: var(--space-1);
+    color: var(--text-muted);
+    font: var(--weight-regular) var(--text-xs) / 1 var(--font-mono);
+  }
+  .bike-detail .panel-heading-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--space-2) var(--space-4);
+    margin-left: auto;
+  }
+  /* «All rides →», «Add part»: a plain link in the panel's corner. */
+  .bike-detail .panel-heading :is(button, a).text-link {
+    min-height: var(--control-sm);
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--info);
+    font: var(--weight-medium) var(--text-sm) / 1.2 var(--font-sans);
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .bike-detail .panel-heading :is(button, a).text-link:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  /* ── First screen: the picture and the identity ─────────────────────── */
   .bike-hero {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -34,195 +98,343 @@
   .bike-hero:not(:has(.bike-media)) {
     grid-template-columns: minmax(0, 1fr);
   }
-  .bike-media,
+  .bike-media {
+    min-width: 0;
+    display: grid;
+    gap: var(--space-3);
+  }
   .bike-identity {
     min-width: 0;
     display: grid;
-    gap: var(--space-4);
+    align-content: start;
+    gap: var(--space-5);
   }
-  .bike-identity {
-    padding: var(--space-2) 0;
-  }
-  .bike-detail .bike-heading {
-    grid-template-columns: minmax(0, 1fr);
-    gap: var(--space-3);
-  }
-  .bike-detail .bike-heading .detail-actions {
-    justify-content: flex-start;
-    padding: 0;
-  }
-  .bike-detail .bike-heading .detail-actions .author-link {
-    max-width: 100%;
-  }
-  .bike-detail .photo-stage,
-  .bike-detail .component-group,
-  .bike-detail .component-group-title,
-  .bike-detail .ride-card {
-    border-radius: 0;
-  }
-  /* The full bike fits even when a card's personal photo mode is cover. */
-  .bike-detail .photo-stage .hero-photo:not(.photo-empty) {
-    object-fit: contain;
-  }
-  .bike-metrics {
+  /* The brand on the left, the owner's tools on the right. */
+  .bike-topline {
     display: flex;
     flex-wrap: wrap;
-    gap: var(--space-4) var(--space-6);
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2) var(--space-4);
+  }
+  .bike-kicker {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
     margin: 0;
-    padding: var(--space-4) 0;
-    border-block: 1px solid var(--line);
+    color: var(--text-secondary);
+    font: var(--weight-semibold) var(--text-base) / 1.2 var(--font-sans);
+    letter-spacing: 0.02em;
+    overflow-wrap: anywhere;
   }
-  .bike-metrics dt {
+  .bike-former {
+    padding: 1px var(--space-2);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-md);
     font-size: var(--text-xs);
-    color: var(--text-muted);
+    font-weight: var(--weight-medium);
+    letter-spacing: 0;
   }
-  .bike-metrics dd {
-    margin: var(--space-1) 0 0;
+  .bike-topline > [data-bike-actions] {
+    margin-left: auto;
+    justify-content: flex-end;
+  }
+  .bike-heading {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-3);
+    text-align: var(--heading-align, left);
+  }
+  .bike-detail-title-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2) var(--space-3);
+  }
+  .bike-detail-title-row h1 {
+    min-width: 0;
+    margin: 0;
+    color: var(--text-strong);
+    font-size: clamp(var(--text-2xl), 2.8vw, var(--text-4xl));
+    font-weight: var(--weight-bold);
+    line-height: var(--leading-tight);
+    letter-spacing: -0.015em;
+    overflow-wrap: anywhere;
+    text-wrap: balance;
+  }
+  .bike-subtitle {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: var(--text-lg);
+    line-height: var(--leading-snug);
+    overflow-wrap: anywhere;
+  }
+  .bike-heading .detail-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-start;
+    gap: var(--space-2) var(--space-4);
+    padding: var(--space-1) 0 0;
+  }
+  .bike-author-link {
+    gap: var(--space-3);
+    max-width: 100%;
     color: var(--text);
-    font: var(--weight-semibold) var(--text-xl) / 1.4 var(--font-mono);
+  }
+  .bike-author-link .social-avatar {
+    width: 56px;
+    height: 56px;
+    font-size: var(--text-xl);
+  }
+  .bike-author-link > span:last-child {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    min-width: 0;
+    gap: 2px;
+  }
+  .bike-author-link strong {
+    color: var(--text-strong);
+    font-size: var(--text-base);
+    font-weight: var(--weight-semibold);
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .bike-author-link small {
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Real figures only, each in its own tile; the ones with a section
+     scroll to it. */
+  .bike-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(136px, 1fr));
+    gap: var(--space-3);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .bike-metrics > li {
+    min-width: 0;
+  }
+  .bike-metrics :is(a, div) {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2-5);
+    height: 100%;
+    padding: var(--space-3);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    background: var(--surface-subtle);
+    color: var(--text);
+    transition:
+      background-color var(--duration-fast) var(--ease-out),
+      border-color var(--duration-fast) var(--ease-out);
+  }
+  .bike-metrics a:hover {
+    border-color: var(--line-strong);
+    background: var(--surface-hover);
+  }
+  .bike-metrics svg {
+    color: var(--text-secondary);
+  }
+  .bike-metrics span {
+    display: grid;
+    min-width: 0;
+    gap: 2px;
+  }
+  .bike-metrics strong {
+    color: var(--text-strong);
+    font: var(--weight-semibold) var(--text-xl) / 1.2 var(--font-sans);
+    font-variant-numeric: tabular-nums;
+  }
+  .bike-metrics small {
+    color: var(--text-secondary);
+    font-size: var(--text-xs);
+    overflow-wrap: anywhere;
+  }
+
+  /* A few words of the owner under the buttons. */
+  .bike-quote {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    column-gap: var(--space-4);
+    row-gap: var(--space-2);
+    margin: 0;
+    padding: var(--space-4) var(--space-5);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    background: var(--surface-subtle);
+  }
+  .bike-quote > svg {
+    grid-row: 1 / span 3;
+    margin-top: 2px;
+    color: var(--text-secondary);
+  }
+  .bike-quote blockquote {
+    margin: 0;
   }
   .bike-excerpt {
     margin: 0;
-    color: var(--text-secondary);
-    line-height: 1.6;
+    color: var(--text);
+    font-size: var(--text-lg);
+    line-height: 1.5;
     overflow-wrap: anywhere;
   }
-  .bike-excerpt a {
-    color: var(--text);
-    text-decoration: underline;
+  .bike-quote figcaption {
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
   }
+  .bike-quote > a {
+    justify-self: start;
+    color: var(--info);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+  }
+  .bike-quote > a:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  /* ── Menu of anchors, like tabs but one page ────────────────────────── */
   .bike-section-nav {
     display: flex;
-    gap: var(--space-4);
+    gap: var(--space-2);
     overflow-x: auto;
     border-bottom: 1px solid var(--line);
+    scrollbar-width: thin;
   }
   .bike-section-nav a {
     display: inline-flex;
     flex: none;
     align-items: center;
     min-width: 44px;
-    min-height: 44px;
-    padding: var(--space-2);
+    min-height: 48px;
+    margin-bottom: -1px;
+    padding: 0 var(--space-5);
     border-bottom: 2px solid transparent;
     color: var(--text-secondary);
+    font: var(--weight-medium) var(--text-base) / 1 var(--font-sans);
     text-decoration: none;
-    font-size: var(--text-sm);
+    transition: color var(--duration-fast) var(--ease-out);
   }
-  .bike-section-nav a:hover,
-  .bike-section-nav a:focus-visible {
-    color: var(--text);
-    border-bottom-color: var(--text);
+  .bike-section-nav a:hover {
     background: var(--surface-hover);
+    color: var(--text);
   }
-  .bike-detail [id] {
-    scroll-margin-top: calc(var(--header-height) + var(--space-6));
+  .bike-section-nav a[aria-current="location"] {
+    border-bottom-color: var(--text-strong);
+    color: var(--text-strong);
   }
-  .bike-overview-grid {
+
+  /* ── Overview: the owner's words and the passport ───────────────────── */
+  .bike-overview {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--space-8);
-    padding-top: var(--space-4);
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+    gap: var(--space-5);
+    align-items: stretch;
   }
-  .bike-overview-grid:not(:has(.bike-about)),
-  .bike-overview-grid:not(:has(.bike-passport)) {
+  .bike-overview[data-panels="1"] {
     grid-template-columns: minmax(0, 1fr);
   }
-  .bike-overview-grid > section {
-    min-width: 0;
+  .bike-about > h2,
+  .bike-passport > h2 {
+    margin: 0 0 var(--space-4);
+    color: var(--text-strong);
+    font-size: var(--text-xl);
+    font-weight: var(--weight-semibold);
   }
-  .bike-detail .bike-summary h2 {
-    font-size: var(--text-lg);
-    margin: 0 0 var(--space-3);
+  .bike-about-text {
+    display: grid;
+    gap: var(--space-4);
+    max-width: 76ch;
   }
-  .bike-about > p {
+  .bike-about-text p {
     margin: 0;
-    white-space: pre-line;
+    color: var(--text);
+    line-height: 1.65;
     overflow-wrap: anywhere;
-    line-height: 1.6;
+    white-space: pre-line;
+  }
+  .bike-about-empty {
+    display: grid;
+    justify-items: start;
+    gap: var(--space-2);
     color: var(--text-secondary);
   }
-  .bike-passport dl {
+  .bike-about-empty p {
     margin: 0;
+    font-size: var(--text-sm);
+  }
+  .bike-passport dl {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0 var(--space-5);
+    margin: 0;
   }
   .bike-passport dl > div {
-    padding: var(--space-2) 0;
-    border-bottom: 1px solid var(--line);
+    display: grid;
+    grid-template-columns: minmax(0, 0.42fr) minmax(0, 1fr);
+    align-items: center;
+    gap: var(--space-3);
     min-width: 0;
+    padding: var(--space-2-5) 0;
+    border-top: 1px solid var(--line);
   }
   .bike-passport dt {
-    color: var(--text-muted);
-    font-size: var(--text-xs);
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    min-width: 0;
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+  }
+  .bike-passport dt svg {
+    color: var(--text-secondary);
   }
   .bike-passport dd {
-    margin: var(--space-1) 0 0;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
+    margin: 0;
     color: var(--text);
     font-size: var(--text-sm);
     overflow-wrap: anywhere;
+  }
+  .status-dot {
+    flex: none;
+    width: 10px;
+    height: 10px;
+    border-radius: var(--radius-full);
+    background: var(--success);
+  }
+  .status-dot[data-tone="former"] {
+    background: var(--text-subtle);
   }
   .bike-passport > .part-link {
     margin-top: var(--space-3);
   }
-  .bike-detail .component-groups {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    align-items: start;
-    gap: var(--space-4);
-  }
-  .bike-detail .component-group-title {
-    background: var(--surface-subtle);
-  }
-  .bike-detail
-    > :is(
-      .specifications,
-      .bike-rides,
-      .bike-game,
-      .bike-journal,
-      .discussion
-    ) {
-    border: 0;
-    border-top: 1px solid var(--line);
-    border-radius: 0;
-    padding-top: var(--space-5);
-    margin: 0;
-  }
-  .bike-detail .bike-rides .ride-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
+
+  /* Awards: records and awards side by side in the same panel (#106). It
+     comes before the responsive rules below, which fold it on a phone. */
   .bike-detail .game-shelves {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: var(--space-4);
   }
-  .bike-detail .comment {
-    border: 0;
-    border-bottom: 1px solid var(--line);
-    border-radius: 0;
-  }
-  .bike-detail .comment-heading {
-    background: none;
-    border: 0;
-    padding-inline: 0;
-  }
-  .bike-detail .comment-body {
-    padding-inline: 0;
-  }
-  .bike-detail .comment-actions {
-    padding-left: 0;
-  }
-  .bike-detail .configurable-block[data-variant="card"] {
-    border-radius: 0;
-    box-shadow: none;
-  }
+
   @media (max-width: 1199px) {
-    .bike-detail .component-groups {
+    .bike-detail .component-groups,
+    .bike-detail .ride-compact-grid,
+    .bike-detail .journal-cards {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
   @media (max-width: 900px) {
     .bike-hero,
-    .bike-overview-grid {
+    .bike-overview {
       grid-template-columns: minmax(0, 1fr);
       gap: var(--space-5);
     }
@@ -231,13 +443,24 @@
     .bike-detail {
       gap: var(--space-5);
     }
+    .bike-detail .bike-panel,
+    .bike-detail > .bike-game {
+      padding: var(--space-4);
+    }
     .bike-detail .component-groups,
-    .bike-detail .bike-rides .ride-grid,
+    .bike-detail .ride-compact-grid,
+    .bike-detail .journal-cards,
     .bike-detail .game-shelves {
       grid-template-columns: minmax(0, 1fr);
     }
     .bike-section-nav {
-      gap: var(--space-2);
+      gap: 0;
+    }
+    .bike-section-nav a {
+      padding: 0 var(--space-3);
+    }
+    .bike-passport dl > div {
+      grid-template-columns: minmax(0, 0.5fr) minmax(0, 1fr);
     }
   }
 
@@ -267,103 +490,13 @@
   .breadcrumbs .quiet {
     margin-left: calc(-1 * var(--space-2));
   }
-  /* Name and labels on the left, the author on the right. */
-  .bike-heading {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: start;
-    gap: var(--space-2) var(--space-4);
-    text-align: var(--heading-align, left);
-  }
-  .bike-heading > div:first-child {
-    min-width: 0;
-  }
-  .bike-detail-title-row {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--space-2) var(--space-3);
-  }
-  .bike-detail-title-row h1 {
-    min-width: 0;
-    margin: 0;
-    color: var(--text-strong);
-    font-size: var(--text-3xl);
-    font-weight: var(--weight-bold);
-    line-height: var(--leading-tight);
-    letter-spacing: -0.015em;
-    overflow-wrap: anywhere;
-    text-wrap: balance;
-  }
-  .bike-heading-labels {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--space-1);
-    margin-top: var(--space-2-5);
-  }
-  .bike-heading .detail-actions {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: flex-end;
-    gap: var(--space-2);
-    padding-top: var(--space-1-5);
-  }
-  .bike-heading .detail-actions .author-link {
-    max-width: min(40vw, 260px);
-  }
-  .bike-intro {
-    grid-column: 1 / -1;
-    min-width: 0;
-    max-width: 72ch;
-    color: var(--text-secondary);
-    font-size: var(--text-base);
-    line-height: var(--leading-normal);
-  }
-  .bike-intro p {
-    margin: 0 0 var(--space-1-5);
-    overflow-wrap: anywhere;
-    white-space: pre-line;
-  }
-  .bike-intro-facts {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: var(--space-1) var(--space-4);
-    font-size: var(--text-sm);
-  }
-  .bike-intro-facts strong {
-    color: var(--text);
-    font-weight: var(--weight-semibold);
-  }
-  /* Colour and mileage: a mono line of facts under the heading. */
-  .bike-meta-line {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    max-width: 100%;
-    overflow-x: auto;
-    color: var(--text-muted);
-    font: var(--weight-regular) var(--text-xs) / 1.5 var(--font-mono);
-    white-space: nowrap;
-    scrollbar-width: none;
-  }
-  .bike-meta-line:empty {
-    display: none;
-  }
-  .bike-meta-line > span + span::before {
-    content: "·";
-    margin-right: var(--space-2);
-    color: var(--text-subtle);
-  }
 
   /* ── Photo ──────────────────────────────────────────────────────────── */
   .photo-stage {
     position: relative;
     overflow: hidden;
     border: 1px solid var(--line);
-    border-radius: var(--radius-xl);
+    border-radius: var(--radius-md);
     background: var(--bg-subtle);
   }
   .photo-open {
@@ -450,63 +583,27 @@
     }
   }
 
-  /* Gallery: a disclosure with thumbnails under the photo. */
-  .gallery-details > summary,
-  .bike-summary > summary,
-  .factory-source > summary,
-  .price-settings > summary {
-    display: flex;
-    align-items: center;
-    gap: var(--space-1-5);
-    min-height: var(--control-sm);
-    color: var(--text-secondary);
-    font-size: var(--text-sm);
-    font-weight: var(--weight-semibold);
-    list-style: none;
-    cursor: pointer;
-  }
-  :is(.gallery-details, .bike-summary, .factory-source, .price-settings)
-    > summary::-webkit-details-marker {
-    display: none;
-  }
-  :is(.gallery-details, .bike-summary, .factory-source, .price-settings)
-    > summary::before {
-    content: "";
-    flex: none;
-    width: 6px;
-    height: 6px;
-    margin: 0 var(--space-1) 0 2px;
-    border-right: 1.5px solid currentColor;
-    border-bottom: 1.5px solid currentColor;
-    transform: rotate(-45deg);
-    transition: transform var(--duration-fast) var(--ease-out);
-  }
-  :is(.gallery-details, .bike-summary, .factory-source, .price-settings)[open]
-    > summary::before {
-    transform: rotate(45deg);
-  }
-  :is(.gallery-details, .bike-summary, .factory-source, .price-settings)
-    > summary:hover {
-    color: var(--text);
-  }
+  /* Thumbnails: one row right under the picture. */
   .gallery {
     display: flex;
     gap: var(--space-2);
-    padding: var(--space-2) 0 var(--space-1);
+    margin: 0;
+    padding: 0 0 var(--space-1);
     overflow-x: auto;
+    list-style: none;
   }
-  .thumb-wrap {
+  .gallery > li {
     flex: none;
-    width: 96px;
+    width: clamp(88px, 14vw, 132px);
   }
   .thumb {
     display: block;
-    width: 96px;
-    height: 72px;
+    width: 100%;
+    aspect-ratio: 4 / 3;
     padding: 0;
     overflow: hidden;
     border: 1px solid var(--line);
-    border-radius: var(--radius-lg);
+    border-radius: var(--radius-md);
     background: var(--bg-subtle);
     cursor: pointer;
   }
@@ -523,61 +620,87 @@
     height: 100%;
     object-fit: cover;
   }
-  .thumb-actions {
+  /* The owner's tools for the picture in the frame: cover and delete. */
+  .photo-tools {
+    position: absolute;
+    top: var(--space-2);
+    right: var(--space-2);
+    z-index: 1;
+    display: flex;
+    gap: var(--space-1);
+  }
+  .photo-tools button {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    min-height: var(--control-sm);
+    padding: 0 var(--space-2);
+    border: 1px solid var(--control-line);
+    border-radius: var(--radius-md);
+    background: color-mix(in srgb, var(--surface) 92%, transparent);
+    color: var(--control-text);
+    font: var(--weight-medium) var(--text-xs) / 1 var(--font-sans);
+    cursor: pointer;
+  }
+  .photo-tools button:hover:not(:disabled) {
+    background: var(--surface-hover);
+  }
+  .photo-tools button:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+  .photo-tools .danger {
+    color: var(--danger);
+  }
+  @media (max-width: 700px) {
+    .photo-tools button {
+      min-height: var(--control-md);
+      min-width: var(--control-md);
+      justify-content: center;
+    }
+  }
+
+  /* Folded blocks: the factory specification, price settings. */
+  .factory-source > summary,
+  .price-settings > summary {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    margin-top: var(--space-1);
-  }
-  .thumb-actions .quiet {
+    gap: var(--space-1-5);
     min-height: var(--control-sm);
-    padding: 0 var(--space-1);
-    font-size: var(--text-xs);
-  }
-  .thumb-actions .icon {
-    width: var(--control-sm);
-    min-width: var(--control-sm);
-    height: var(--control-sm);
-  }
-
-  /* "About the bike": an optional passport block (off by default). */
-  .bike-summary > .eyebrow {
-    display: block;
-    margin-top: var(--space-3);
-  }
-  .bike-summary h2 {
-    margin: var(--space-1) 0 var(--space-3);
-    font-size: var(--text-2xl);
-    font-weight: var(--weight-bold);
-    line-height: var(--leading-tight);
-  }
-  .bike-summary > p {
-    margin: 0 0 var(--space-3);
     color: var(--text-secondary);
     font-size: var(--text-sm);
-    line-height: var(--leading-normal);
-    overflow-wrap: anywhere;
+    font-weight: var(--weight-semibold);
+    list-style: none;
+    cursor: pointer;
   }
-  .summary-bottom {
-    display: flex;
-    align-items: baseline;
-    gap: var(--space-2);
-    margin-bottom: var(--space-2);
-    color: var(--text-muted);
-    font-size: var(--text-sm);
+  :is(.factory-source, .price-settings) > summary::-webkit-details-marker {
+    display: none;
   }
-  .summary-bottom span {
+  :is(.factory-source, .price-settings) > summary::before {
+    content: "";
+    flex: none;
+    width: 6px;
+    height: 6px;
+    margin: 0 var(--space-1) 0 2px;
+    border-right: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor;
+    transform: rotate(-45deg);
+    transition: transform var(--duration-fast) var(--ease-out);
+  }
+  :is(.factory-source, .price-settings)[open] > summary::before {
+    transform: rotate(45deg);
+  }
+  :is(.factory-source, .price-settings) > summary:hover {
     color: var(--text);
-    font: var(--weight-semibold) var(--text-2xl) / 1 var(--font-mono);
   }
 
-  /* ── Build list ─────────────────────────────────────────────────────── */
+  /* ── Build ──────────────────────────────────────────────────────────── */
   .factory-source {
-    margin-bottom: var(--space-3);
+    margin-bottom: var(--space-4);
     padding: var(--space-1) var(--space-3);
     border: 1px solid var(--line);
-    border-radius: var(--radius-lg);
-    background: var(--surface-subtle);
+    border-radius: var(--radius-md);
+    background: var(--surface);
   }
   .factory-source > .help {
     margin: var(--space-1) 0 var(--space-2);
@@ -601,147 +724,93 @@
     font-size: var(--text-sm);
     overflow-wrap: anywhere;
   }
-  /* Build | accessories: underlined tabs with a mono count. */
-  .tabs-row {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: var(--space-1) var(--space-3);
-    margin-bottom: var(--space-3);
-    border-bottom: 1px solid var(--line);
+  /* Accessories: the same cards under the build. */
+  .spec-accessories {
+    margin-top: var(--space-6);
+    padding-top: var(--space-5);
+    border-top: 1px solid var(--line);
   }
-  .tabs {
-    display: flex;
+  .spec-accessories .empty-parts {
+    padding: var(--space-5) var(--space-4);
+  }
+  .specifications .text-link.add-component {
     gap: var(--space-1);
-    min-width: 0;
   }
-  .tabs button {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-1-5);
-    min-height: 40px;
-    margin-bottom: -1px;
-    padding: 0 var(--space-2-5);
-    border: 0;
-    border-bottom: 2px solid transparent;
-    background: none;
-    color: var(--text-muted);
-    font: var(--weight-semibold) var(--text-sm) / 1 var(--font-sans);
-    cursor: pointer;
-  }
-  .tabs button:hover {
-    color: var(--text);
-  }
-  .tabs button[aria-selected="true"] {
-    border-bottom-color: var(--text);
-    color: var(--text);
-  }
-  .tabs button span {
-    min-width: 20px;
-    padding: 2px var(--space-1-5);
-    border-radius: var(--radius-md);
-    background: var(--surface-hover);
-    color: var(--text-secondary);
-    font: var(--weight-regular) var(--text-xs) / 1.3 var(--font-mono);
-    text-align: center;
-  }
-  .tabs-row .add-component {
-    min-height: 40px;
-    margin-bottom: 2px;
-    font-size: var(--text-sm);
-  }
-  /* In a narrow column "add" keeps only its icon, next to the tabs. */
-  .specifications {
-    container-type: inline-size;
-  }
-  @container (max-width: 520px) {
-    .tabs-row {
-      flex-wrap: nowrap;
-    }
-    .tabs-row .add-component {
-      flex: none;
-      justify-content: center;
-      width: var(--control-md);
-      margin-left: auto;
-      font-size: 0;
-    }
-    .tabs-row .add-component svg {
-      width: 20px;
-      height: 20px;
-    }
-  }
-  .spec-label {
-    display: flex;
-    justify-content: space-between;
-    gap: var(--space-3);
-    margin: 0 0 var(--space-2);
-    color: var(--text-muted);
-    font: var(--weight-regular) 11px / 1.5 var(--font-mono);
-    letter-spacing: 0.08em;
-  }
-  /* Groups: a file-list panel per group, rows of parts inside. */
+
+  /* Groups: a card per group, the picture of the group on the left and
+     «category — installed part» rows on the right. */
   .component-groups {
     display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    gap: var(--space-2);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-4);
   }
   .component-group {
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr);
+    column-gap: var(--space-4);
+    min-width: 0;
+    padding: var(--space-4);
     border: 1px solid var(--line);
-    border-radius: var(--radius-lg);
+    border-radius: var(--radius-md);
     background: var(--surface);
+  }
+  .component-group-icon {
+    display: grid;
+    place-items: start center;
+    padding-top: 2px;
+    color: var(--text-secondary);
+  }
+  .component-group-body {
+    min-width: 0;
   }
   .component-group-title {
     display: flex;
     align-items: center;
     gap: var(--space-1);
-    padding: 0 var(--space-1) 0 var(--space-3);
-    border-radius: var(--radius-lg);
-    background: linear-gradient(
-      to right,
-      var(--surface-subtle),
-      var(--surface)
-    );
+    padding-bottom: var(--space-2);
+    border-bottom: 1px solid var(--line);
+  }
+  /* A folded card is only its title: no rule under it. */
+  .component-group-title:has(.component-group-toggle[aria-expanded="false"]) {
+    padding-bottom: 0;
+    border-bottom-color: transparent;
   }
   .component-group-title h3 {
     flex: 1;
     min-width: 0;
     margin: 0;
-    font-size: var(--text-sm);
+    font-size: var(--text-lg);
+    font-weight: var(--weight-semibold);
   }
   .component-group-toggle {
     display: flex;
     align-items: center;
     gap: var(--space-2);
     width: 100%;
-    min-height: 40px;
+    min-height: 32px;
     padding: 0;
     border: 0;
     background: none;
-    color: var(--text);
-    font: var(--weight-semibold) var(--text-sm) / var(--leading-tight)
+    color: var(--text-strong);
+    font: var(--weight-semibold) var(--text-lg) / var(--leading-tight)
       var(--font-sans);
     text-align: left;
     cursor: pointer;
-  }
-  .component-group-toggle > svg:first-child {
-    flex: none;
-    color: var(--text-secondary);
   }
   .component-group-toggle small {
     color: var(--text-muted);
     font: var(--weight-regular) var(--text-xs) / 1 var(--font-mono);
   }
-  .component-group-toggle > svg:last-child {
+  .component-group-toggle > svg {
     flex: none;
     margin-left: auto;
     color: var(--text-muted);
     transition: transform var(--duration-fast) var(--ease-out);
   }
-  .component-group-toggle[aria-expanded="true"] > svg:last-child {
+  .component-group-toggle[aria-expanded="true"] > svg {
     transform: rotate(180deg);
   }
-  .component-group > [hidden] {
+  .component-group-body > [hidden] {
     display: none;
   }
   /* Before hydration groups open by width: open on wide screens only. */
@@ -766,26 +835,37 @@
   }
   .compact-part {
     display: flex;
-    align-items: center;
-    gap: var(--space-3);
-    padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
+    align-items: flex-start;
+    gap: var(--space-2);
+    padding: var(--space-2) 0;
     border-top: 1px solid var(--line);
   }
+  .component-group-body
+    > div:not(.component-group-title)
+    > .compact-part:first-child {
+    border-top: 0;
+  }
   .compact-part-main {
-    display: flex;
+    display: grid;
     flex: 1;
-    flex-direction: column;
-    gap: 1px;
+    grid-template-columns: minmax(72px, 0.42fr) minmax(0, 1fr);
+    column-gap: var(--space-3);
+    row-gap: 2px;
     min-width: 0;
   }
   .compact-part-main > small {
-    color: var(--text-muted);
-    font-size: var(--text-xs);
+    grid-column: 1;
+    grid-row: 1;
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    overflow-wrap: anywhere;
   }
   .compact-part-main > strong {
+    grid-column: 2;
+    grid-row: 1;
     color: var(--text);
     font-size: var(--text-sm);
-    font-weight: var(--weight-semibold);
+    font-weight: var(--weight-medium);
     line-height: var(--leading-snug);
     overflow-wrap: anywhere;
   }
@@ -794,9 +874,12 @@
     text-decoration: none;
   }
   .compact-part-main > strong a:hover {
-    color: var(--accent-text);
+    color: var(--title-hover);
     text-decoration: underline;
     text-underline-offset: 3px;
+  }
+  .compact-part-main > :is(.part-notes, .part-link) {
+    grid-column: 2;
   }
   .part-notes {
     color: var(--text-secondary);
@@ -887,12 +970,6 @@
   [data-bike-layout="spacious"] .compact-part-main > strong {
     font-size: var(--text-base);
   }
-  @media (min-width: 701px) and (max-width: 1199px) {
-    [data-bike-layout="dense"] .component-groups {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      align-items: start;
-    }
-  }
   .cost {
     display: flex;
     flex-wrap: wrap;
@@ -911,7 +988,7 @@
   .empty-parts {
     padding: var(--space-8) var(--space-4);
     border: 1px dashed var(--line-dashed);
-    border-radius: var(--radius-xl);
+    border-radius: var(--radius-md);
     color: var(--text-muted);
     text-align: center;
   }
@@ -929,8 +1006,22 @@
     max-width: 36ch;
     font-size: var(--text-sm);
   }
+  @media (max-width: 700px) {
+    .component-group {
+      grid-template-columns: 28px minmax(0, 1fr);
+      column-gap: var(--space-3);
+      padding: var(--space-3);
+    }
+    .component-group-icon svg {
+      width: 28px;
+      height: 28px;
+    }
+    .compact-part-main {
+      grid-template-columns: minmax(64px, 0.4fr) minmax(0, 1fr);
+    }
+  }
 
-  /* ── Rides column ───────────────────────────────────────────────────── */
+  /* ── Rides: small cards in a row ────────────────────────────────────── */
   .bike-rides > h2 {
     margin: 0 0 var(--space-1);
     font-size: var(--text-lg);
@@ -946,23 +1037,224 @@
   .bike-rides-empty {
     padding: var(--space-2) var(--space-3);
     border: 1px dashed var(--line-dashed);
-    border-radius: var(--radius-lg);
+    border-radius: var(--radius-md);
   }
   .bike-rides-empty .help {
     margin: 0;
   }
-
-  /* Blocks the administrator can restyle or switch off. */
-  .configurable-block[hidden],
-  .configurable-block [hidden] {
-    display: none;
+  .ride-compact-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-4);
   }
-  .configurable-block[data-variant="card"]:not(.showcase) {
-    padding: var(--space-4);
+  .ride-compact {
+    display: grid;
+    grid-template-columns: 96px minmax(0, 1fr);
+    align-items: center;
+    gap: var(--space-4);
+    min-width: 0;
+    padding: var(--space-3);
     border: 1px solid var(--line);
-    border-radius: var(--radius-xl);
+    border-radius: var(--radius-md);
     background: var(--surface);
-    box-shadow: var(--shadow-xs);
+    transition: border-color var(--duration-fast) var(--ease-out);
+  }
+  .ride-compact:hover {
+    border-color: var(--line-strong);
+  }
+  .ride-compact-thumb {
+    display: grid;
+    place-items: center;
+    width: 96px;
+    height: 96px;
+    overflow: hidden;
+    border-radius: var(--radius-sm);
+    background: var(--bg-subtle);
+    color: var(--text-muted);
+  }
+  .ride-compact-thumb .ride-route {
+    width: 100%;
+    height: 100%;
+  }
+  .ride-compact-body {
+    display: grid;
+    gap: var(--space-1);
+    min-width: 0;
+  }
+  .ride-compact h3 {
+    margin: 0;
+    font-size: var(--text-base);
+    font-weight: var(--weight-semibold);
+    line-height: var(--leading-snug);
+    overflow-wrap: anywhere;
+  }
+  .ride-compact h3 a:hover {
+    color: var(--title-hover);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .ride-compact .help {
+    margin: 0;
+    font-size: var(--text-sm);
+  }
+  .ride-compact-facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1) var(--space-3);
+    margin: var(--space-1) 0 0;
+    padding: 0;
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    list-style: none;
+  }
+  .ride-compact-facts li {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1-5);
+  }
+
+  /* ── Owner's entries: a card with the kind of entry on its left edge ── */
+  .journal-cards {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-4);
+  }
+  .bike-detail .journal-list-entry {
+    display: grid;
+    grid-template-columns: 72px minmax(0, 1fr);
+    min-width: 0;
+    padding: 0;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    background: var(--surface);
+    transition: border-color var(--duration-fast) var(--ease-out);
+  }
+  .bike-detail .journal-list-entry:hover {
+    border-color: var(--line-strong);
+  }
+  .journal-kind-icon {
+    display: grid;
+    place-items: center;
+    border-right: 1px solid var(--line);
+    background: var(--surface-subtle);
+    color: var(--text-secondary);
+  }
+  .journal-entry-body {
+    display: grid;
+    align-content: start;
+    gap: var(--space-1);
+    min-width: 0;
+    padding: var(--space-3) var(--space-4);
+  }
+  .bike-detail .journal-list-entry h3 {
+    margin: 0;
+    font-size: var(--text-base);
+    line-height: var(--leading-snug);
+  }
+  .bike-detail .journal-list-entry h3 a:hover {
+    color: var(--title-hover);
+  }
+  .journal-entry-body > small {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+  }
+  .bike-detail .journal-list-entry p {
+    margin: 0;
+    -webkit-line-clamp: 2;
+  }
+  .bike-detail .journal-prompt {
+    margin-bottom: var(--space-4);
+  }
+  .bike-detail .bike-journal > .help {
+    margin: 0;
+  }
+
+  /* ── Comments: one row per thread starter ───────────────────────────── */
+  .discussion-panel .comment-thread {
+    border-top: 1px solid var(--line);
+  }
+  .discussion-panel .panel-heading + .comment-thread {
+    border-top: 0;
+  }
+  .discussion-panel .comment {
+    display: grid;
+    grid-template-columns: minmax(150px, 220px) 96px minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: var(--space-4);
+    padding: var(--space-2) 0;
+    border: 0;
+    border-radius: 0;
+    background: none;
+  }
+  .discussion-panel .comment-heading {
+    display: contents;
+  }
+  .discussion-panel .comment .person-identity {
+    grid-column: 1;
+    grid-row: 1;
+    min-width: 0;
+  }
+  .discussion-panel .comment-heading time {
+    grid-column: 2;
+    grid-row: 1;
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+  }
+  .discussion-panel .comment-body {
+    grid-column: 3;
+    grid-row: 1;
+    min-width: 0;
+    padding: 0;
+  }
+  .discussion-panel .comment-actions {
+    grid-column: 4;
+    grid-row: 1;
+    padding: 0;
+  }
+  .discussion-panel .comment-parent {
+    grid-column: 3 / -1;
+    grid-row: 2;
+  }
+  .discussion-panel .comment > :is(.comment-confirm, .comment-editor, .error) {
+    grid-column: 1 / -1;
+  }
+  .discussion-panel .comment-replies {
+    margin-left: var(--space-8);
+  }
+  .discussion-panel .more-replies {
+    margin: 0 0 var(--space-2) var(--space-8);
+  }
+  .discussion-panel > .comment-editor,
+  .discussion-panel > .button {
+    margin-top: var(--space-4);
+  }
+  @media (max-width: 700px) {
+    .discussion-panel .comment {
+      grid-template-columns: minmax(0, 1fr) auto;
+      row-gap: var(--space-1);
+    }
+    .discussion-panel .comment-body,
+    .discussion-panel .comment-actions,
+    .discussion-panel .comment-parent {
+      grid-column: 1 / -1;
+    }
+    .discussion-panel .comment-body {
+      grid-row: 2;
+    }
+    .discussion-panel .comment-parent {
+      grid-row: 3;
+    }
+    .discussion-panel .comment-actions {
+      grid-row: 4;
+    }
+    .discussion-panel .comment-replies,
+    .discussion-panel .more-replies {
+      margin-left: var(--space-4);
+    }
   }
 
   /* The garage's page-level error with its retry button. */
@@ -1753,37 +2045,40 @@
     .detail {
       padding-top: var(--space-3);
     }
+    /* The path is a navigation: its targets are 44 px on a phone. */
+    .breadcrumbs :is(a, .quiet) {
+      display: inline-flex;
+      align-items: center;
+      min-width: 44px;
+      min-height: 44px;
+    }
     .bike-heading {
-      grid-template-columns: minmax(0, 1fr);
       gap: var(--space-2);
     }
     .bike-detail-title-row h1 {
       font-size: var(--text-2xl);
     }
+    .bike-subtitle {
+      font-size: var(--text-base);
+    }
     .bike-heading .detail-actions {
-      justify-content: flex-start;
       padding-top: 0;
     }
-    .bike-heading .detail-actions .author-link {
-      max-width: 100%;
+    .bike-quote {
+      padding: var(--space-3) var(--space-4);
     }
-    .spec-label {
-      display: none;
+    .bike-excerpt {
+      font-size: var(--text-base);
     }
-    .tabs button {
-      min-height: 44px;
-      padding: 0 var(--space-2);
-    }
-    .tabs-row .add-component {
-      min-height: 44px;
+    .bike-detail .panel-heading :is(button, a).text-link {
+      min-height: var(--control-md);
     }
     .component-group-toggle {
       min-height: 44px;
     }
     .compact-part-actions summary,
     .order-actions .icon,
-    .part-menu .icon,
-    .thumb-actions .icon {
+    .part-menu .icon {
       width: 44px;
       min-width: 44px;
       height: 44px;

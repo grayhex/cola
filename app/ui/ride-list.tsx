@@ -10,10 +10,11 @@ import {
   startTransition,
 } from "react";
 import { socialApi, Pagination } from "./social-primitives.tsx";
-import RideCard, { rideDate } from "./ride-card.tsx";
+import RideCard, { RideCompactCard, rideDate } from "./ride-card.tsx";
 import { useSite } from "./site-provider.tsx";
 import { apiFilters } from "../../lib/ride-filters.ts";
 import { plural } from "../../lib/plural.ts";
+import { ArrowRight } from "./icons.tsx";
 
 // Back/forward returns to the same public list and scroll position (#233):
 // the last public page is kept per filter set in this tab only.
@@ -48,6 +49,7 @@ export default function RideList({
   restoreKey = "",
   onReset,
   preview = false,
+  compact = false,
   onTotal,
 }: {
   username?: string;
@@ -58,6 +60,8 @@ export default function RideList({
   restoreKey?: string;
   onReset?: () => void;
   preview?: boolean;
+  // The bike page's row of small cards under a panel heading (#291).
+  compact?: boolean;
   onTotal?: (total: number | null) => void;
 }) {
   const { personalSettings: settings } = useSite();
@@ -158,12 +162,36 @@ export default function RideList({
         <p className="help">Покатушек с этим велосипедом пока нет</p>
       </section>
     );
+  const panel = latest && compact;
+  const shown = preview && !expanded ? data?.rides.slice(0, 3) : data?.rides;
+  const expandButton = (className: string) =>
+    preview &&
+    !expanded &&
+    data &&
+    data.total > 3 && (
+      <button className={className} onClick={() => setExpanded(true)}>
+        Все покатушки · {data.total}
+        {panel && <ArrowRight size={16} aria-hidden="true" />}
+      </button>
+    );
   return (
     <section
       id={preview ? "bike-rides" : undefined}
-      className={"ride-list" + (latest ? " bike-rides" : "")}
+      className={
+        "ride-list" +
+        (latest ? " bike-rides" : "") +
+        (panel ? " bike-panel" : "")
+      }
+      aria-labelledby={panel ? "bike-rides-title" : undefined}
     >
-      <h2>Покатушки</h2>
+      {panel ? (
+        <div className="panel-heading">
+          <h2 id="bike-rides-title">Последние покатушки</h2>
+          {expandButton("text-link")}
+        </div>
+      ) : (
+        <h2>Покатушки</h2>
+      )}
       {error && (
         <p role="alert" className="error">
           {error}{" "}
@@ -174,7 +202,7 @@ export default function RideList({
       )}
       {data ? (
         <>
-          <p className="help" aria-live="polite">
+          <p className={panel ? "visually-hidden" : "help"} aria-live="polite">
             {data.total}{" "}
             {plural(data.total, "покатушка", "покатушки", "покатушек")}
             {status !== "planned" &&
@@ -187,31 +215,38 @@ export default function RideList({
               SharedView names held React commits, so quick filter changes
               stalled (#233). Stale answers are still dropped by sequence. */}
           <div
-            className={list ? "ride-accordion" : "ride-grid"}
+            className={
+              list
+                ? "ride-accordion"
+                : panel
+                  ? "ride-compact-grid"
+                  : "ride-grid"
+            }
             aria-busy={loading}
           >
-            {(preview && !expanded ? data.rides.slice(0, 3) : data.rides).map(
-              (r) =>
-                list ? (
-                  <details className="ride-list-item" key={r.id}>
-                    <summary>
-                      <strong>{r.title}</strong>
-                      <small>
-                        {rideDate(r.date)} ·{" "}
-                        {(Number(r.metrics.distanceM) / 1000).toLocaleString(
-                          "ru-RU",
-                          {
-                            maximumFractionDigits: 1,
-                          },
-                        )}{" "}
-                        км
-                      </small>
-                    </summary>
-                    <RideCard ride={r} />
-                  </details>
-                ) : (
-                  <RideCard key={r.id} ride={r} />
-                ),
+            {shown?.map((r) =>
+              list ? (
+                <details className="ride-list-item" key={r.id}>
+                  <summary>
+                    <strong>{r.title}</strong>
+                    <small>
+                      {rideDate(r.date)} ·{" "}
+                      {(Number(r.metrics.distanceM) / 1000).toLocaleString(
+                        "ru-RU",
+                        {
+                          maximumFractionDigits: 1,
+                        },
+                      )}{" "}
+                      км
+                    </small>
+                  </summary>
+                  <RideCard ride={r} />
+                </details>
+              ) : panel ? (
+                <RideCompactCard key={r.id} ride={r} />
+              ) : (
+                <RideCard key={r.id} ride={r} />
+              ),
             )}
           </div>
           {!data.total && !error && status === "planned" && (
@@ -234,11 +269,7 @@ export default function RideList({
             </div>
           )}
           {preview && !expanded ? (
-            data.total > 3 && (
-              <button className="quiet" onClick={() => setExpanded(true)}>
-                Все покатушки · {data.total}
-              </button>
-            )
+            !panel && expandButton("quiet")
           ) : (
             <Pagination {...data} onPage={setPage} />
           )}
