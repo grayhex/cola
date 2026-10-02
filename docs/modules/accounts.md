@@ -12,7 +12,7 @@
 
 ## Данные и основные функции
 
-[auth.ts](../../lib/auth.ts): `currentUser`, `startSession`, `endSession`, `rateLimit`. [password.ts](../../lib/password.ts): `hashPassword`, `verifyPassword`, `digest`. [profile-dto.ts](../../lib/profile-dto.ts): `publicAuthor` формирует разрешённое представление автора. Валидация профиля — [social-validation.ts](../../lib/social-validation.ts).
+[auth.ts](../../lib/auth.ts): `currentUser`, `startSession`, `endSession`, `rateLimit` — браузерный адаптер: cookie `cola_session` через cookie jar Next. Правило «чья это сессия» (она есть, не истекла, пользователь не заблокирован) — в [viewer-session.ts](../../lib/viewer-session.ts), без зависимости от Next; им же пользуется [API v1](api-v1.md). [password.ts](../../lib/password.ts): `hashPassword`, `verifyPassword`, `digest`. [profile-dto.ts](../../lib/profile-dto.ts): `publicAuthor` формирует разрешённое представление автора. Валидация профиля — [social-validation.ts](../../lib/social-validation.ts).
 
 Базовые таблицы `users`, `sessions`; расширение профиля — [009_social_core.sql](../../db/009_social_core.sql). `username` имеет нормализованный уникальный индекс и ограничения зарезервированных имён. Личные `preferences` не публикуются как поля автора. Аватар хранится в том же photos volume, но выдаётся через свой endpoint.
 

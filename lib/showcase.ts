@@ -12,6 +12,8 @@ import { publicSocial } from "./public-dto.ts";
 import { hydrate } from "./repository.ts";
 import { scoreBike, defaultScoring } from "./bike-score.ts";
 import { getSite } from "./site.ts";
+import { publicBikeSql, readableBikeSql } from "./bike-visibility.ts";
+import type { SocialBike } from "./contracts.ts";
 export async function decorateBike(
   q: Queryable,
   bike: BikeRow,
@@ -65,19 +67,209 @@ export async function decorateBike(
 }
 // A bike page: guests and other riders get the public DTO; editing fields
 // and hidden prices go to the signed-in owner only.
-export async function visibleBike(
+export function visibleBike(
   q: Queryable,
   shareId: string,
   viewerId: string | null | undefined,
   site: SiteDefinitionType,
 ) {
+  return readVisibleBike(q, "share_id", shareId, viewerId, site);
+}
+// The same page rule by the stable id (#134): /api/v1 addresses a bike by it,
+// because share_id changes whenever the bike is made private.
+export function visibleBikeById(
+  q: Queryable,
+  id: string,
+  viewerId: string | null | undefined,
+  site: SiteDefinitionType,
+) {
+  return readVisibleBike(q, "id", id, viewerId, site);
+}
+// `column` comes from this closed set; the value is a parameter.
+async function readVisibleBike(
+  q: Queryable,
+  column: "id" | "share_id",
+  value: string,
+  viewerId: string | null | undefined,
+  site: SiteDefinitionType,
+) {
   const { rows } = await q.query<BikeRow>(
-    "SELECT b.* FROM bikes b JOIN users u ON u.id=b.owner_id WHERE b.share_id=$1 AND (b.is_public=true OR b.owner_id=$2) AND u.blocked=false",
-    [shareId, viewerId || null],
+    `SELECT b.* FROM bikes b JOIN users u ON u.id=b.owner_id WHERE b.${column}=$1 AND ${readableBikeSql("$2")}`,
+    [value, viewerId || null],
   );
   return rows[0]
     ? decorateBike(q, rows[0], viewerId, site, rows[0].owner_id !== viewerId)
     : null;
+}
+
+// A bike card: the bike row, its author and the viewer's reactions. Shared by
+// the web showcase and the keyset page below, so both read the same facts.
+type CardRow = BikeRow & {
+  author_name: string;
+  author_username: string;
+  author_avatar_id: string | null;
+  likes: number;
+  liked: boolean;
+  comments: number;
+};
+// `viewer` is the $n placeholder that holds the viewer's id (or null).
+const cardSocialColumns = (viewer: string) =>
+  ",u.name AS author_name,u.username AS author_username,u.avatar_id AS author_avatar_id,(SELECT count(*)::int FROM bike_likes l JOIN users lu ON lu.id=l.user_id WHERE l.bike_id=b.id AND lu.blocked=false) AS likes,EXISTS(SELECT 1 FROM bike_likes l WHERE l.bike_id=b.id AND l.user_id=" +
+  viewer +
+  ") AS liked,(" +
+  visibleCommentCount +
+  ") AS comments";
+interface CardComponent {
+  id: string;
+  model_id: string | null;
+  bike_id: string;
+  section: "build" | "accessories";
+  category: string;
+  name: string;
+  notes: string;
+  url: string;
+  group_id: string;
+  sort_order: number;
+  price: string | null;
+}
+interface CardPhoto {
+  id: string;
+  bike_id: string;
+  is_cover: boolean;
+  source_page_url: string | null;
+}
+// Components and photos of a page of bikes: two queries however many bikes.
+async function cardParts(q: QueryableType, ids: string[]) {
+  const [parts, photos] = await Promise.all([
+    q.query<CardComponent>(
+      "SELECT id,model_id,bike_id,section,category,name,notes,url,group_id,sort_order,price FROM components WHERE bike_id=ANY($1::uuid[]) ORDER BY sort_order,created_at,id",
+      [ids],
+    ),
+    q.query<CardPhoto>(
+      "SELECT id,bike_id,is_cover,source_page_url FROM photos WHERE bike_id=ANY($1::uuid[]) ORDER BY is_cover DESC,created_at,id",
+      [ids],
+    ),
+  ]);
+  const index = <T extends { bike_id: string }>(rows: T[]) => {
+    const map: Map<string, T[]> = new Map(ids.map((id: string) => [id, []]));
+    for (const row of rows) map.get(row.bike_id)?.push(row);
+    return map;
+  };
+  return { byPart: index(parts.rows), byPhoto: index(photos.rows) };
+}
+// Hydrate the bike row; publicSocial remains the explicit allowlist.
+// New ownership metadata follows the same DTO path as account/detail views.
+function cardBike(
+  b: CardRow,
+  byPart: Map<string, CardComponent[]>,
+  byPhoto: Map<string, CardPhoto[]>,
+  viewerId: string | null | undefined,
+  site: SiteDefinitionType,
+): SocialBike {
+  const full = {
+    ...b,
+    components: byPart.get(b.id)!,
+    photos: byPhoto.get(b.id)!,
+  };
+  return publicSocial(full, {
+    author: {
+      id: b.owner_id,
+      username: b.author_username,
+      name: b.author_name,
+      avatar_id: b.author_avatar_id,
+    },
+    isOwner: viewerId === b.owner_id,
+    likes: b.likes,
+    liked: b.liked,
+    comments: b.comments,
+    scores: scoreBike(
+      full,
+      site.settings.scoring || defaultScoring,
+      site.catalog.componentGroups,
+    ),
+  });
+}
+
+/**
+ * Where the next page starts (#134): the last bike's creation time, as the
+ * text PostgreSQL produced (microseconds survive; a JS Date would round them
+ * and skip or repeat bikes that share a millisecond), and its id.
+ */
+export interface BikeCursor {
+  createdAt: string;
+  id: string;
+}
+/**
+ * One page of the bikes a viewer may list, newest first (#134). Keyset, not
+ * offset: a bike published while someone pages never shifts the next page,
+ * so no bike repeats or is skipped. `scope` "public" is every public bike of
+ * an account in good standing; "mine" is the viewer's own, private included.
+ */
+export async function visibleBikePage(
+  q: QueryableType,
+  viewerId: string | null,
+  {
+    scope,
+    categories,
+    search,
+    limit,
+    after,
+  }: {
+    scope: "public" | "mine";
+    categories: string[];
+    search: string;
+    limit: number;
+    after: BikeCursor | null;
+  },
+  context?: { site: SiteDefinitionType },
+): Promise<{ bikes: SocialBike[]; next: BikeCursor | null }> {
+  if (scope === "mine" && !viewerId) return { bikes: [], next: null };
+  const site = context?.site || (await getSite(q));
+  const params: unknown[] = [viewerId];
+  const add = (value: unknown) => {
+    params.push(value);
+    return "$" + params.length;
+  };
+  const clauses = [
+    scope === "mine"
+      ? "b.owner_id=$1::uuid AND u.blocked=false"
+      : publicBikeSql,
+  ];
+  if (search)
+    clauses.push(
+      `strpos(lower(b.name || ' ' || b.brand || ' ' || b.model || ' ' || u.name),lower(${add(search)}))>0`,
+    );
+  if (after)
+    clauses.push(
+      `(b.created_at,b.id)<(${add(after.createdAt)}::timestamptz,${add(after.id)}::uuid)`,
+    );
+  const where =
+    " FROM bikes b JOIN users u ON u.id=b.owner_id WHERE " +
+    clauses.join(" AND ") +
+    classificationWhere({}, params, categories);
+  const result = await q.query<CardRow & { cursor_at: string }>(
+    "SELECT b.*,to_char(b.created_at AT TIME ZONE 'UTC','YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"') AS cursor_at" +
+      cardSocialColumns("$1") +
+      where +
+      " ORDER BY b.created_at DESC,b.id DESC LIMIT " +
+      add(limit + 1),
+    params,
+  );
+  const rows = result.rows.slice(0, limit);
+  const last = rows[rows.length - 1];
+  const next =
+    result.rows.length > limit && last
+      ? { createdAt: last.cursor_at, id: last.id }
+      : null;
+  if (!rows.length) return { bikes: [], next: null };
+  const { byPart, byPhoto } = await cardParts(
+    q,
+    rows.map((b) => b.id),
+  );
+  return {
+    bikes: rows.map((b) => cardBike(b, byPart, byPhoto, viewerId, site)),
+    next,
+  };
 }
 
 export async function showcase(
@@ -115,7 +307,7 @@ export async function showcase(
       : null);
   const params = [search, ownerId, followingId, winners];
   const where =
-    " FROM bikes b JOIN users u ON u.id=b.owner_id WHERE b.is_public=true AND u.blocked=false AND ($2::uuid IS NULL OR b.owner_id=$2) AND ($3::uuid IS NULL OR EXISTS(SELECT 1 FROM user_follows f WHERE f.follower_id=$3 AND f.following_id=b.owner_id)) AND ($4::uuid[] IS NULL OR b.id=ANY($4)) AND ($1='' OR strpos(lower(b.name || ' ' || b.brand || ' ' || b.model || ' ' || u.name),lower($1))>0)" +
+    ` FROM bikes b JOIN users u ON u.id=b.owner_id WHERE ${publicBikeSql} AND ($2::uuid IS NULL OR b.owner_id=$2) AND ($3::uuid IS NULL OR EXISTS(SELECT 1 FROM user_follows f WHERE f.follower_id=$3 AND f.following_id=b.owner_id)) AND ($4::uuid[] IS NULL OR b.id=ANY($4)) AND ($1='' OR strpos(lower(b.name || ' ' || b.brand || ' ' || b.model || ' ' || u.name),lower($1))>0)` +
     classificationWhere(
       classification,
       params,
@@ -127,22 +319,9 @@ export async function showcase(
   );
   // Hydrate the bike row; publicSocial below remains the explicit allowlist.
   // New ownership metadata follows the same DTO path as account/detail views.
-  const result = await q.query<
-    BikeRow & {
-      author_name: string;
-      author_username: string;
-      author_avatar_id: string | null;
-      likes: number;
-      liked: boolean;
-      comments: number;
-    }
-  >(
+  const result = await q.query<CardRow>(
     "SELECT b.*" +
-      ",u.name AS author_name,u.username AS author_username,u.avatar_id AS author_avatar_id,(SELECT count(*)::int FROM bike_likes l JOIN users lu ON lu.id=l.user_id WHERE l.bike_id=b.id AND lu.blocked=false) AS likes,EXISTS(SELECT 1 FROM bike_likes l WHERE l.bike_id=b.id AND l.user_id=$" +
-      (params.length + 2) +
-      ") AS liked,(" +
-      visibleCommentCount +
-      ") AS comments" +
+      cardSocialColumns("$" + (params.length + 2)) +
       where +
       " ORDER BY " +
       (followingId
@@ -157,70 +336,15 @@ export async function showcase(
   const ids = result.rows.map((b) => b.id);
   if (!ids.length)
     return { bikes: [], total: count.rows[0].total, page, pageSize: 24 };
-  const [parts, photos, badges] = await Promise.all([
-    q.query<{
-      id: string;
-      model_id: string | null;
-      bike_id: string;
-      section: "build" | "accessories";
-      category: string;
-      name: string;
-      notes: string;
-      url: string;
-      group_id: string;
-      sort_order: number;
-      price: string | null;
-    }>(
-      "SELECT id,model_id,bike_id,section,category,name,notes,url,group_id,sort_order,price FROM components WHERE bike_id=ANY($1::uuid[]) ORDER BY sort_order,created_at,id",
-      [ids],
-    ),
-    q.query<{
-      id: string;
-      bike_id: string;
-      is_cover: boolean;
-      source_page_url: string | null;
-    }>(
-      "SELECT id,bike_id,is_cover,source_page_url FROM photos WHERE bike_id=ANY($1::uuid[]) ORDER BY is_cover DESC,created_at,id",
-      [ids],
-    ),
+  const [{ byPart, byPhoto }, badges] = await Promise.all([
+    cardParts(q, ids),
     cardBadges(q, ids),
   ]);
-
-  const index = <T extends { bike_id: string }>(rows: T[]) => {
-    const map: Map<string, T[]> = new Map(ids.map((id: string) => [id, []]));
-    for (const row of rows) map.get(row.bike_id)?.push(row);
-    return map;
-  };
-  const byPart = index(parts.rows),
-    byPhoto = index(photos.rows);
   return {
-    bikes: result.rows.map((b) => {
-      const full = {
-        ...b,
-        components: byPart.get(b.id)!,
-        photos: byPhoto.get(b.id)!,
-      };
-      return {
-        ...publicSocial(full, {
-          author: {
-            id: b.owner_id,
-            username: b.author_username,
-            name: b.author_name,
-            avatar_id: b.author_avatar_id,
-          },
-          isOwner: viewerId === b.owner_id,
-          likes: b.likes,
-          liked: b.liked,
-          comments: b.comments,
-          scores: scoreBike(
-            full,
-            site.settings.scoring || defaultScoring,
-            site.catalog.componentGroups,
-          ),
-        }),
-        badges: badges.get(b.id),
-      };
-    }),
+    bikes: result.rows.map((b) => ({
+      ...cardBike(b, byPart, byPhoto, viewerId, site),
+      badges: badges.get(b.id),
+    })),
     total: count.rows[0].total,
     page,
     pageSize: 24,

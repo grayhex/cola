@@ -12,6 +12,7 @@ import { checkBikeQuota } from "./limits.ts";
 import { randomUUID } from "node:crypto";
 import { publicBike } from "./validation.ts";
 import { getSite } from "./site.ts";
+import { publicBikeSql } from "./bike-visibility.ts";
 import { CommunityError } from "./community-validation.ts";
 export async function validatePurposes(
   q: Queryable | undefined,
@@ -86,7 +87,7 @@ export async function sharedBike(
   shareId: string,
 ): Promise<PublicBikeType | null> {
   const { rows } = await db.query<BikeRow>(
-    "SELECT b.* FROM bikes b JOIN users u ON u.id=b.owner_id WHERE b.share_id=$1 AND b.is_public=true AND u.blocked=false",
+    `SELECT b.* FROM bikes b JOIN users u ON u.id=b.owner_id WHERE b.share_id=$1 AND ${publicBikeSql}`,
     [shareId],
   );
   return rows[0] ? hydrate(db, rows[0], true) : null;
