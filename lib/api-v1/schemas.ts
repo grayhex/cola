@@ -24,8 +24,8 @@ const id = z.uuid();
 const instant = z.iso.datetime();
 
 export const authorSchema = named(
-  "BikeAuthor",
-  "Публичные данные автора велосипеда.",
+  "Author",
+  "Публичные данные автора: велосипеда, записи, комментария.",
   z.strictObject({
     id,
     username: z.string(),
@@ -379,12 +379,152 @@ export const userPageSchema = named(
   }),
 );
 
+const journalKind = z.enum(["build", "service", "review", "question", "story"]);
+const entryStatus = z.enum(["draft", "published"]);
+
+export const bikeRefSchema = named(
+  "BikeRef",
+  "Велосипед, к которому относится запись.",
+  z.strictObject({ id, name: z.string() }),
+);
+
+export const entryPhotoSchema = named(
+  "EntryPhoto",
+  "Фотография записи журнала; доступ к файлу проверяется как к записи.",
+  z.strictObject({
+    id,
+    url: z.string().describe("Путь к файлу относительно адреса сайта."),
+  }),
+);
+
+const entrySummaryShape = {
+  id,
+  kind: journalKind,
+  title: z.string(),
+  status: entryStatus.describe(
+    "Черновик виден только владельцу; остальные видят только опубликованное.",
+  ),
+  isPublic: z.boolean(),
+  eventDate: z.iso.date().nullable(),
+  mileage: z.int().nullable().describe("Пробег в километрах на момент записи."),
+  createdAt: instant,
+  updatedAt: instant,
+  bike: bikeRefSchema,
+  author: authorSchema,
+  likes: z.int(),
+  comments: z
+    .int()
+    .describe("Видимые комментарии без удалённых и заблокированных авторов."),
+  liked: z
+    .boolean()
+    .describe("Поставил ли лайк вошедший зритель; для гостя false."),
+};
+
+export const journalSummarySchema = named(
+  "JournalSummary",
+  "Запись журнала в списке: без полного текста, фотографий и снимка компонентов.",
+  z.strictObject({
+    ...entrySummaryShape,
+    excerpt: z.string().describe("Начало текста без разметки, до 240 знаков."),
+  }),
+);
+
+export const journalComponentSchema = named(
+  "JournalComponent",
+  "Компонент в снимке записи на момент её сохранения. Цена приходит по правилам цен велосипеда, иначе null.",
+  componentSchema.extend({
+    capturedAt: instant.nullable().describe("Когда снимок сделан."),
+  }),
+);
+
+export const journalEntrySchema = named(
+  "JournalEntry",
+  "Запись журнала целиком. `body` — исходный текст в разметке Markdown; фотографии записи перечислены отдельно.",
+  z.strictObject({
+    ...entrySummaryShape,
+    body: z.string(),
+    components: z.array(journalComponentSchema),
+    photos: z.array(entryPhotoSchema),
+  }),
+);
+
+export const journalPageSchema = named(
+  "JournalPage",
+  "Страница записей журнала велосипеда, новые сверху.",
+  z.strictObject({
+    items: z.array(journalSummarySchema),
+    nextCursor: z
+      .string()
+      .nullable()
+      .describe("Курсор следующей страницы или null, если страниц больше нет."),
+  }),
+);
+
+export const commentSchema = named(
+  "Comment",
+  "Комментарий. Один вид для велосипедов, записей и других целей. Удалённый, скрытый или комментарий заблокированного автора остаётся «надгробием» только пока под ним есть читаемые ответы: тогда `deleted` = true, а `body` и `author` — null.",
+  z.strictObject({
+    id,
+    parentId: id
+      .nullable()
+      .describe(
+        "Корневой комментарий или null; ответы вкладываются на один уровень.",
+      ),
+    author: authorSchema.nullable(),
+    body: z.string().nullable(),
+    createdAt: instant,
+    editedAt: instant
+      .nullable()
+      .describe("Когда комментарий правили; null, если не правили."),
+    deleted: z.boolean(),
+    replyCount: z.int().describe("Читаемые ответы."),
+  }),
+);
+
+export const commentThreadSchema = named(
+  "CommentThread",
+  "Корневой комментарий и превью его ответов: не больше трёх первых.",
+  z.strictObject({ comment: commentSchema, replies: z.array(commentSchema) }),
+);
+
+export const commentPageSchema = named(
+  "CommentPage",
+  "Страница корневых комментариев, старые сверху.",
+  z.strictObject({
+    items: z.array(commentThreadSchema),
+    nextCursor: z
+      .string()
+      .nullable()
+      .describe("Курсор следующей страницы или null, если страниц больше нет."),
+    focusPath: z
+      .array(commentSchema)
+      .describe(
+        "С `focus`: цепочка от корня до нужного комментария, иначе пустой массив. Тогда `items` — одна ветка этого корня, страниц больше нет.",
+      ),
+  }),
+);
+
+export const replyPageSchema = named(
+  "ReplyPage",
+  "Страница ответов на комментарий, старые сверху.",
+  z.strictObject({
+    items: z.array(commentSchema),
+    nextCursor: z
+      .string()
+      .nullable()
+      .describe("Курсор следующей страницы или null, если страниц больше нет."),
+  }),
+);
+
 export type Me = z.infer<typeof meSchema>;
 export type SessionGrant = z.infer<typeof sessionGrantSchema>;
 export type Profile = z.infer<typeof profileSchema>;
 export type UserSummary = z.infer<typeof userSummarySchema>;
 export type UserPage = z.infer<typeof userPageSchema>;
 export type Relationship = z.infer<typeof relationshipSchema>;
+export type JournalSummary = z.infer<typeof journalSummarySchema>;
+export type JournalEntry = z.infer<typeof journalEntrySchema>;
+export type Comment = z.infer<typeof commentSchema>;
 export type AccountSession = z.infer<typeof accountSessionSchema>;
 export type BikeSummary = z.infer<typeof bikeSummarySchema>;
 export type Bike = z.infer<typeof bikeSchema>;
@@ -465,6 +605,20 @@ export const pageQuerySchema = z.strictObject({
   cursor: listQuerySchema.shape.cursor,
 });
 export const parsePageQuery = (url: URL) => parseQuery(url, pageQuerySchema);
+
+/** Comments add `focus`, a deep link to one comment; it replaces paging. */
+export const commentsQuerySchema = z
+  .strictObject({
+    limit: pageQuerySchema.shape.limit,
+    cursor: pageQuerySchema.shape.cursor,
+    focus: z.uuid().optional(),
+  })
+  .refine((query) => !(query.focus && query.cursor), {
+    message: "С focus курсор не нужен: ответ — одна ветка",
+    path: ["cursor"],
+  });
+export const parseCommentsQuery = (url: URL) =>
+  parseQuery(url, commentsQuerySchema);
 
 /**
  * `{ref}` of /users: a UUID (36 characters) or a username (3 to 30), so the two
