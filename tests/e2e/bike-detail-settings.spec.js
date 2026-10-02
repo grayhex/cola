@@ -140,6 +140,10 @@ test("bike detail settings, passport, anchors, guest rights and owner without ph
           .locator("#specifications")
           .evaluate((el) => el.getBoundingClientRect().top),
       ).toBeGreaterThanOrEqual(60);
+      // A live theme switch is scanned after it has settled: with reduced
+      // motion the new colours apply at once, not halfway through a colour
+      // transition (WebKit measured tiles and menu links in the middle of it).
+      await tab.emulateMedia({ reducedMotion: "reduce" });
       for (const theme of ["light", "dark"]) {
         await tab.evaluate(
           (t) => (document.documentElement.dataset.theme = t),
