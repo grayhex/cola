@@ -155,7 +155,7 @@ java -jar openapi-generator-cli-7.25.0.jar generate -i openapi.json -g kotlin \
 
 ## Что дальше
 
-Карта следующих вертикальных срезов (пользователи, журнал и комментарии, покатушки, поиск, компоненты, рынок, запись) и предложение по токенам мобильного клиента — в [#156](https://github.com/grayhex/cola/issues/156); ближайшие срезы оформлены как [#300](https://github.com/grayhex/cola/issues/300), [#301](https://github.com/grayhex/cola/issues/301), [#302](https://github.com/grayhex/cola/issues/302), токены устройств — [#303](https://github.com/grayhex/cola/issues/303). [#151](https://github.com/grayhex/cola/issues/151) подключает внешние идентичности к границе `viewer-session.ts`, не меняя v1.
+Карта следующих вертикальных срезов (пользователи, журнал и комментарии, покатушки, поиск, компоненты, рынок, запись) и принятое решение по токенам мобильного клиента — в [#156](https://github.com/grayhex/cola/issues/156); токены устройств выполняются первыми ([#303](https://github.com/grayhex/cola/issues/303)), срезы чтения оформлены как [#300](https://github.com/grayhex/cola/issues/300), [#301](https://github.com/grayhex/cola/issues/301), [#302](https://github.com/grayhex/cola/issues/302). [#151](https://github.com/grayhex/cola/issues/151) подключает внешние идентичности к границе `viewer-session.ts`, не меняя v1.
 
 Правила, которых придерживаются все следующие операции:
 
