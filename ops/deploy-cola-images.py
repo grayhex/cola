@@ -134,6 +134,34 @@ def command_json(command):
     return json.loads(result.stdout)
 
 
+def verified_image_id(tag, expected_config):
+    """Return a daemon ID only after verifying the authenticated config digest.
+
+    Classic Docker uses the config digest as Id. The containerd image store
+    uses a manifest/index digest instead. Export the immutable daemon ID in
+    that case and compare the original config bytes, not inspect's JSON view.
+    The config also commits to the ordered rootfs diff IDs and runtime options.
+    """
+    loaded_id = command_json(["docker", "image", "inspect", tag])[0]["Id"]
+    require(re.fullmatch(r"sha256:[0-9a-f]{64}", loaded_id), "Invalid loaded image ID")
+    if loaded_id != expected_config:
+        with tempfile.TemporaryDirectory(prefix="colabike-verify-image-") as directory:
+            exported = Path(directory) / "image.tar"
+            subprocess.run(["docker", "image", "save", "--output", str(exported), loaded_id],
+                           check=True, timeout=240)
+            require(0 < exported.stat().st_size <= MAX_ARCHIVE_BYTES, "Oversized loaded image export")
+            with tarfile.open(exported, "r:") as archive:
+                manifest = json.load(archive.extractfile("manifest.json"))
+                require(len(manifest) == 1, "Expected one loaded image manifest")
+                config = archive.extractfile(manifest[0]["Config"]).read()
+                actual_config = f"sha256:{hashlib.sha256(config).hexdigest()}"
+            require(actual_config == expected_config,
+                    f"Loaded image config mismatch: {tag} expected={expected_config} "
+                    f"actual={actual_config} daemon_id={loaded_id}")
+    print(f"Verified image {tag}: config={expected_config} daemon_id={loaded_id}", flush=True)
+    return loaded_id
+
+
 def load_images(bundle, sha, compose):
     require(command_json(["docker", "info", "--format", "{{json .Architecture}}"])
             in ("x86_64", "amd64"), "Production image requires an amd64 Docker host")
@@ -145,11 +173,9 @@ def load_images(bundle, sha, compose):
     require(all(len(tags) == 1 for tags in aliases.values()), "Ambiguous Compose image tags")
     subprocess.run(["docker", "image", "load", "--input", str(bundle)], check=True, timeout=240)
     # Verify every identity before changing any production alias.
-    for tag, expected_id in images.items():
-        loaded = command_json(["docker", "image", "inspect", tag])[0]
-        require(loaded["Id"] == expected_id, "Loaded image identity mismatch")
+    loaded_ids = {tag: verified_image_id(tag, expected_config) for tag, expected_config in images.items()}
     for service, tag in image_tags(sha).items():
-        subprocess.run(["docker", "image", "tag", images[tag], aliases[service][0]], check=True, timeout=30)
+        subprocess.run(["docker", "image", "tag", loaded_ids[tag], aliases[service][0]], check=True, timeout=30)
 
 
 def main():

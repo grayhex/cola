@@ -141,6 +141,77 @@ class ArchiveTests(unittest.TestCase):
                 deploy.inspect_bundle(bundle, SHA)
 
 
+class ImageLoadingTests(unittest.TestCase):
+    def load(self, containerd=False, corrupt=False, export_failure=False):
+        with tempfile.TemporaryDirectory() as directory:
+            bundle = Path(directory) / "images.tar.gz"
+            ArchiveTests().bundle(bundle)
+            expected = deploy.inspect_bundle(bundle, SHA)
+            tags = deploy.image_tags(SHA)
+            ids = {tag: "sha256:" + hashlib.sha256(tag.encode()).hexdigest()
+                   if containerd else expected[tag] for tag in tags.values()}
+            targets = {service: {"tags": [f"production-{service}"]} for service in tags}
+            retags, exports = [], []
+
+            def query(command):
+                if command[1] == "info":
+                    return "x86_64"
+                if command[1] == "compose":
+                    return {"target": targets}
+                return [{"Id": ids[command[-1]]}]
+
+            def run(command, **kwargs):
+                if command[2] == "tag":
+                    retags.append(command[3:])
+                elif command[2] == "save":
+                    # Export by immutable daemon ID, never by a mutable tag.
+                    image_id = command[-1]
+                    exports.append(image_id)
+                    tag = next(tag for tag, value in ids.items() if value == image_id)
+                    if export_failure:
+                        raise subprocess.CalledProcessError(1, command)
+                    with tarfile.open(bundle, "r:gz") as source:
+                        manifest = json.load(source.extractfile("manifest.json"))
+                        entry = next(entry for entry in manifest if entry["RepoTags"] == [tag])
+                        config = source.extractfile(entry["Config"]).read()
+                    if corrupt and tag == tags["migrate"]:
+                        # Preserve revision/platform, but change runnable configuration.
+                        parsed = json.loads(config)
+                        parsed["config"]["Cmd"] = ["unexpected-command"]
+                        config = json.dumps(parsed).encode()
+                    with tarfile.open(command[4], "w") as archive:
+                        for name, data in [(entry["Config"], config), ("manifest.json", json.dumps([
+                                {"Config": entry["Config"], "RepoTags": None, "Layers": []}]).encode())]:
+                            member = tarfile.TarInfo(name)
+                            member.size = len(data)
+                            archive.addfile(member, io.BytesIO(data))
+                return subprocess.CompletedProcess(command, 0)
+
+            with patch.object(deploy, "command_json", side_effect=query), \
+                    patch.object(deploy.subprocess, "run", side_effect=run):
+                if corrupt or export_failure:
+                    with self.assertRaises((ValueError, subprocess.CalledProcessError)):
+                        deploy.load_images(bundle, SHA, ["docker", "compose"])
+                    self.assertEqual(retags, [], "No production alias may change before ALL images verify")
+                else:
+                    deploy.load_images(bundle, SHA, ["docker", "compose"])
+                    self.assertEqual(retags, [[ids[tag], targets[service]["tags"][0]]
+                                             for service, tag in tags.items()])
+            return exports
+
+    def test_classic_config_ids_need_no_export(self):
+        self.assertEqual(self.load(), [])
+
+    def test_containerd_manifest_ids_verify_config_then_tag_daemon_ids(self):
+        self.assertEqual(len(self.load(containerd=True)), 3)
+
+    def test_wrong_config_with_same_revision_cannot_change_any_alias(self):
+        self.assertEqual(len(self.load(containerd=True, corrupt=True)), 2)
+
+    def test_export_failure_cannot_change_any_alias(self):
+        self.assertEqual(len(self.load(containerd=True, export_failure=True)), 1)
+
+
 class ForcedCommandTests(unittest.TestCase):
     def test_command_grammar_and_literal_arguments(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -208,6 +279,9 @@ class ForcedCommandTests(unittest.TestCase):
 
 def docker_round_trip(sha, bundle):
     before = deploy.inspect_bundle(bundle, sha)
+    # Also supports a fresh daemon with a different image store than the builder.
+    subprocess.run(["docker", "image", "load", "--input", str(bundle)], check=True, timeout=240)
+    daemon_ids = {tag: deploy.command_json(["docker", "image", "inspect", tag])[0]["Id"] for tag in before}
     with tempfile.TemporaryDirectory() as directory:
         directory = Path(directory)
         uploaded, received, extracted = (directory / name for name in ["uploaded.zip", "received.zip", "images.tar.gz"])
@@ -231,12 +305,12 @@ def docker_round_trip(sha, bundle):
                 try:
                     for service, tag in deploy.image_tags(sha).items():
                         alias = targets[service]["tags"][0]
-                        actual = deploy.command_json(["docker", "image", "inspect", alias])[0]["Id"]
-                        assert actual == before[tag], f"Changed image identity: {service}"
+                        actual = deploy.verified_image_id(alias, before[tag])
+                        assert actual == daemon_ids[tag], f"Changed daemon image identity: {service}"
                         subprocess.run(["docker", "run", "--rm", "--entrypoint", "node", alias, "--version"], check=True)
                 finally:
                     subprocess.run(["docker", "image", "rm", *aliases], check=True)
-    print("Deployment images: authenticated archive round-trip, identical IDs, both Compose projects, all three runtimes OK")
+    print("Deployment images: authenticated config digests, stable daemon IDs, both Compose projects, all three runtimes OK")
 
 
 if __name__ == "__main__":

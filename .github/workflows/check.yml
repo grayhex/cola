@@ -248,6 +248,17 @@ jobs:
           docker image save "cola-ci-app:$TESTED_SHA" "cola-ci-ops:$TESTED_SHA" "cola-ci-resolver:$TESTED_SHA" \
             | gzip -1 > "$RUNNER_TEMP/production-images/images.tar.gz"
           python3 scripts/test-deploy-images.py --docker "$TESTED_SHA" "$RUNNER_TEMP/production-images/images.tar.gz"
+      - name: Set up a separate containerd image store
+        uses: docker/setup-docker-action@v5
+        with:
+          daemon-config: |
+            {"features": {"containerd-snapshotter": true}}
+      - name: Verify the same tested archive on containerd
+        env:
+          TESTED_SHA: ${{ needs.prepare.outputs.sha }}
+        run: |
+          docker info --format '{{json .DriverStatus}}' | python3 -c 'import json, sys; assert ["driver-type", "io.containerd.snapshotter.v1"] in json.load(sys.stdin)'
+          python3 scripts/test-deploy-images.py --docker "$TESTED_SHA" "$RUNNER_TEMP/production-images/images.tar.gz"
       - name: Publish tested main images for production
         if: >-
           github.repository == 'grayhex/cola' && github.ref == 'refs/heads/main' &&
