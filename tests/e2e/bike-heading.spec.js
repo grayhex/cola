@@ -57,32 +57,32 @@ test("bike title stays readable next to a long author name and username", async 
       ".bike-heading .detail-actions .author-link",
     );
     await expect(authorLink).toContainText(author);
-    await expect(authorLink).not.toContainText("@");
-    // #121, #131: never the parser's model under a custom name; the year
-    // is a label next to the size and the weight. Description, public
-    // price and the manufacturer link have one visible home: the overview
-    // or the heading fallback when the optional summary is disabled (#291).
-    await expect(page.locator(".bike-subtitle")).toHaveCount(0);
-    await expect(
-      page.locator('.bike-heading [data-bike-label="year"]'),
-    ).toHaveText("2023");
+    // The handle is the quiet second line of the author, never the name.
+    await expect(authorLink.locator("strong")).toHaveText(author);
+    await expect(authorLink.locator("small")).toHaveText("@" + username);
+    // #121, #131, #291: the brand above the name, the type under it; never
+    // the parser's model under a custom name. The year is a fact of the
+    // passport, and the description, the public price and the manufacturer's
+    // link have one home: the overview.
+    await expect(page.locator(".bike-kicker")).toHaveText("Specialized");
+    await expect(page.locator(".bike-subtitle")).toHaveText("MTB");
     await expect(page.locator(".bike-heading")).not.toContainText(
       "Specialized Stumpjumper EVO",
     );
-    const facts = page.locator(
-      ".bike-heading .bike-intro, #overview:not([hidden])",
+    await expect(page.locator(".bike-heading")).not.toContainText(
+      "Модельный год",
     );
-    await expect(facts).toHaveCount(1);
-    const overview = page.locator("#overview:not([hidden])");
-    if (
-      (await overview.count()) &&
-      (await overview.getAttribute("open")) === null
-    )
-      await overview.locator("summary").click();
-    await expect(facts).toContainText("Трейлы по выходным");
-    await expect(facts).toContainText(/250\s000\s₽/);
+    const overview = page.locator("#overview");
+    await expect(overview.locator('[data-passport="year"] dd')).toHaveText(
+      "2023",
+    );
+    await expect(overview.locator('[data-passport="year"] dt')).toHaveText(
+      "Модельный год",
+    );
+    await expect(overview).toContainText("Трейлы по выходным");
+    await expect(overview).toContainText(/250\s000\s₽/);
     await expect(
-      facts.getByRole("link", { name: "Сайт производителя", exact: true }),
+      overview.getByRole("link", { name: "Сайт производителя", exact: true }),
     ).toHaveAttribute("href", "https://www.specialized.com/");
     // No rides yet: one compact line instead of an empty column.
     await expect(page.locator(".bike-rides-empty")).toHaveText(

@@ -1,3 +1,6 @@
+import type { BikeDto, SiteCatalog } from "./contracts.ts";
+import { classificationLabels } from "./bike-classification.ts";
+
 export const defaultGroups = [
   {
     id: "frame",
@@ -145,6 +148,47 @@ export const defaultBlocks: DetailBlock[] = [
     open: true,
   },
 ];
+/**
+ * What the saved `detailBlocks` switch on for the bike page (#291). The
+ * composition is fixed: `photos` hides the picture column, `gallery` the
+ * thumbnail row under the picture (so it needs the picture), `specifications`
+ * the build, `heading` the metric tiles and the quote. The overview with the
+ * description and the passport belongs to every page: a saved
+ * `summary.enabled: false` is the default of the time when the block was
+ * optional (and `open: false` a folded gallery), not a choice about this
+ * layout, so neither hides or folds a section any more.
+ */
+export function detailLayout(blocks: readonly DetailBlock[] | undefined) {
+  const enabled = (id: DetailBlock["id"]) =>
+    (
+      blocks?.find((block) => block.id === id) ??
+      defaultBlocks.find((block) => block.id === id)!
+    ).enabled;
+  return {
+    metrics: enabled("heading"),
+    photos: enabled("photos"),
+    thumbnails: enabled("photos") && enabled("gallery"),
+    overview: true,
+    specifications: enabled("specifications"),
+  };
+}
+/**
+ * A short quote from a description for the bike's first screen, or null when
+ * it would only repeat the whole text that "About the bike" shows below.
+ */
+export function bikeExcerpt(description: string | null | undefined, max = 180) {
+  const text = (description || "").trim();
+  if (!text) return null;
+  const paragraphs = text
+    .split(/\n\s*\n/)
+    .map((p) => p.replace(/\s+/g, " ").trim());
+  const first = paragraphs[0];
+  const whole = paragraphs.join(" ");
+  if (first.length <= max) return whole === first ? null : first;
+  const cut = first.slice(0, max);
+  const space = cut.lastIndexOf(" ");
+  return (space > max * 0.6 ? cut.slice(0, space) : cut).trimEnd() + "…";
+}
 export function groupedComponents<
   T extends { group_id?: string; category: string },
 >(components: T[], groups = defaultGroups, order: string[] = []) {
@@ -178,6 +222,28 @@ export function groupedComponents<
         bi = order.indexOf(b.id);
       return (ai < 0 ? 999 : ai) - (bi < 0 ? 999 : bi);
     });
+}
+/**
+ * The line under the name of a bike (#291): its type and the first two parts
+ * of its drivetrain, as the owner entered them. Nothing is guessed from the
+ * model name and an empty drivetrain leaves the type alone.
+ */
+export function bikeSubtitle(
+  bike: Pick<BikeDto, "components" | "group_order" | "category"> &
+    Partial<Pick<BikeDto, "classification">>,
+  catalog: Pick<SiteCatalog, "componentGroups">,
+) {
+  const drivetrain = groupedComponents(
+    bike.components.filter((c) => c.section === "build"),
+    catalog.componentGroups,
+    bike.group_order || [],
+  ).find((group) => group.id === "drivetrain");
+  return [
+    classificationLabels(bike).join(" / "),
+    ...(drivetrain?.components ?? []).slice(0, 2).map((c) => c.name),
+  ]
+    .filter(Boolean)
+    .join(" · ");
 }
 export function moveItem<T>(items: T[], index: number, direction: number) {
   const next = [...items];

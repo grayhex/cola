@@ -342,17 +342,16 @@ test("independent classification filters survive URL reload and find electric fo
   ).toHaveCount(1);
   await expect(page).toHaveURL(/electric=0/);
   await page.goto("/b/" + bike.share_id);
-  const labels = page.locator(".bike-labels");
-  await expect(labels).toContainText("L");
-  expect(
-    await labels
-      .locator(".hf-label")
-      .first()
-      .evaluate((e) => parseFloat(getComputedStyle(e).fontSize)),
-  ).toBeLessThanOrEqual(12);
+  // #291: the facets are the line under the name, the size a passport fact.
+  await expect(page.locator(".bike-subtitle")).toHaveText(
+    "Commuter / Folding / E-bike",
+  );
+  await expect(
+    page.locator('.bike-passport [data-passport="size"] dd'),
+  ).toHaveText("L");
   await noOverflow(page);
   await page.screenshot({
-    path: info.outputPath("bike-compact-labels.png"),
+    path: info.outputPath("bike-classification-line.png"),
     fullPage: true,
     animations: "disabled",
   });

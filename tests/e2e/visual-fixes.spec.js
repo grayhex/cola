@@ -99,7 +99,7 @@ test("home has a static dark marketing surface and search in the global header",
   await page.screenshot({ path: info.outputPath("home-search.png") });
 });
 
-test("the bike page: the year is a label next to size and weight; owner's actions take two rows on a phone", async ({
+test("the bike page: the year, size and weight are passport facts; owner's actions take two rows on a phone", async ({
   page,
   browser,
   isMobile,
@@ -107,18 +107,22 @@ test("the bike page: the year is a label next to size and weight; owner's action
   await account(page.request, "Owner");
   const b = await bike(page.request);
   await page.goto("/b/" + b.share_id);
-  await expect(page.locator(".bike-subtitle")).toHaveCount(0);
+  // #291: the type is the line under the name; the general facts are rows of
+  // the passport, not labels under the title.
+  await expect(page.locator(".bike-subtitle")).toHaveText("Gravel");
   await expect(page.locator(".bike-heading")).not.toContainText(
     "Модельный год",
   );
-  const labels = page.locator(".bike-heading .bike-labels");
-  await expect(labels.locator('[data-bike-label="year"]')).toHaveText("2023");
-  await expect(labels.locator('[data-bike-label="year"]')).toHaveAttribute(
-    "aria-label",
-    "Модельный год: 2023",
-  );
-  await expect(labels.locator('[data-bike-label="size"]')).toBeVisible();
-  await expect(labels.locator('[data-bike-label="weight"]')).toBeVisible();
+  const passport = page.locator(".bike-passport");
+  for (const [key, label, value] of [
+    ["year", "Модельный год", "2023"],
+    ["size", "Размер рамы", "M"],
+    ["weight", "Вес", /^9,2\s?кг$/],
+  ]) {
+    const row = passport.locator(`[data-passport="${key}"]`);
+    await expect(row.locator("dt")).toHaveText(label);
+    await expect(row.locator("dd")).toHaveText(value);
+  }
   const actions = page.locator('[data-bike-actions="owner"]');
   await expect(
     actions.getByRole("button", { name: "Редактировать" }),
@@ -330,7 +334,7 @@ test("a ride's route keeps a dark casing in previews", async ({ page }) => {
   // The shared feed is paginated and other fixtures have the same date.
   // Check this bike's preview without relying on the UUID tie-break order.
   await page.goto("/b/" + b.share_id + "#bike-rides");
-  const card = page.locator(".ride-card", { hasText: "Круг с каймой" });
+  const card = page.locator(".ride-compact", { hasText: "Круг с каймой" });
   await card.scrollIntoViewIfNeeded();
   const route = card.locator(".ride-route");
   await expect(route.locator("path.route-casing")).not.toHaveCount(0);

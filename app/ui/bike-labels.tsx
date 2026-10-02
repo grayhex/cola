@@ -63,11 +63,14 @@ export function BikeLike({
   reaction,
   t = (s) => s,
   compact = false,
+  showCount = true,
 }: {
   bike: Partial<Pick<BikeDto, "is_owner">>;
   reaction: ReturnType<typeof useBikeReaction>;
   t?: (text: string) => string;
   compact?: boolean;
+  // The bike page shows the figure in its own tile (#291).
+  showCount?: boolean;
 }) {
   const feedback = useMotionFeedback(reaction.liked);
   return (
@@ -88,8 +91,13 @@ export function BikeLike({
           <SiteIcon name="heart" size={compact ? 14 : 16} />
         </span>
         {!compact && t("Нравится")}
-      </span>{" "}
-      <strong>{reaction.likes ?? 0}</strong>
+      </span>
+      {showCount && (
+        <>
+          {" "}
+          <strong>{reaction.likes ?? 0}</strong>
+        </>
+      )}
     </button>
   );
 }

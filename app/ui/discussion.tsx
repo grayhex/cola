@@ -26,13 +26,15 @@ import { Avatar, socialApi } from "./social-primitives.tsx";
 import { ReportButton, PageControls } from "./community-controls.tsx";
 import dynamic from "next/dynamic";
 import RichTextBody from "./rich-text-body.tsx";
-import { MessagesSquare, Reply } from "./icons.tsx";
+import { ArrowRight, MessagesSquare, Reply } from "./icons.tsx";
 import { profilePath } from "../../lib/public-urls.ts";
 import { personName, usernameLabel } from "../../lib/usernames.ts";
 // The composer brings the editor; guests read comments without it (#117).
 const PromptComposer = dynamic(() => import("./prompt-composer.tsx"), {
   ssr: false,
 });
+// How many threads the short panel of a bike shows before «all comments».
+const shownThreads = 3;
 const DiscussionKind = createContext<DiscussionEntity>("bike");
 const QuestionContext = createContext<Question | null>(null);
 const paths = (kind: DiscussionEntity) =>
@@ -426,6 +428,8 @@ export default function Discussion({
   user,
   entityType = "bike",
   onSolution,
+  variant,
+  count,
 }: {
   bike: {
     id: string;
@@ -437,8 +441,14 @@ export default function Discussion({
   user: ViewerDto | null;
   entityType?: DiscussionEntity;
   onSolution?: () => void | Promise<void>;
+  // The bike page shows a short panel: «Комментарии (N)», the first three
+  // threads and a button for the rest (#291). Other pages keep the full block.
+  variant?: "panel";
+  count?: number;
 }) {
   const api = paths(entityType);
+  const panel = variant === "panel";
+  const [expanded, setExpanded] = useState(false);
   const [data, setData] = useState<CommentPageDto | null>(null),
     [page, setPage] = useState(1),
     [focus, setFocus] = useState<string | null>(null),
@@ -483,6 +493,10 @@ export default function Discussion({
       pending.revision++;
     };
   }, [refresh, loaded]);
+  // A link to one comment must show it, not hide it behind «all comments».
+  useEffect(() => {
+    if (focus) setExpanded(true);
+  }, [focus]);
   useEffect(() => {
     if (!focus || !data) return;
     const target = document.getElementById("comment-" + focus);
@@ -502,35 +516,71 @@ export default function Discussion({
             : null
         }
       >
-        <section className="discussion" id="discussion">
-          <div className="section-heading">
-            <div>
-              <h2>
-                <MessagesSquare size={20} aria-hidden="true" />
-                {entityType === "component"
-                  ? "Обсуждение компонента"
-                  : entityType === "article"
-                    ? "Обсуждение статьи"
-                    : entityType === "journal"
-                      ? "Обсуждение записи"
-                      : entityType === "ride"
-                        ? "Обсуждение покатушки"
-                        : "Обсуждение сборки"}
+        <section
+          className={
+            "discussion" + (panel ? " bike-panel discussion-panel" : "")
+          }
+          id="discussion"
+          aria-labelledby={panel ? "discussion-title" : undefined}
+        >
+          {panel ? (
+            <div className="panel-heading">
+              <h2 id="discussion-title">
+                Комментарии{count != null && ` (${count})`}
               </h2>
-              <p className="help">
-                {entityType === "article"
-                  ? "Вопросы, дополнения и личный опыт."
-                  : "Детали, идеи и опыт владельцев."}
-              </p>
+              <div className="panel-heading-actions">
+                {entityType !== "component" && bike.author?.id !== user?.id && (
+                  <ReportButton
+                    entityType={
+                      entityType === "article" ? "journal" : entityType
+                    }
+                    targetId={bike.id}
+                    user={user}
+                  />
+                )}
+                {data &&
+                  !expanded &&
+                  (data.comments.length > shownThreads || data.hasMore) && (
+                    <button
+                      className="text-link"
+                      onClick={() => setExpanded(true)}
+                    >
+                      Все комментарии
+                      <ArrowRight size={16} aria-hidden="true" />
+                    </button>
+                  )}
+              </div>
             </div>
-            {entityType !== "component" && bike.author?.id !== user?.id && (
-              <ReportButton
-                entityType={entityType === "article" ? "journal" : entityType}
-                targetId={bike.id}
-                user={user}
-              />
-            )}
-          </div>
+          ) : (
+            <div className="section-heading">
+              <div>
+                <h2>
+                  <MessagesSquare size={20} aria-hidden="true" />
+                  {entityType === "component"
+                    ? "Обсуждение компонента"
+                    : entityType === "article"
+                      ? "Обсуждение статьи"
+                      : entityType === "journal"
+                        ? "Обсуждение записи"
+                        : entityType === "ride"
+                          ? "Обсуждение покатушки"
+                          : "Обсуждение сборки"}
+                </h2>
+                <p className="help">
+                  {entityType === "article"
+                    ? "Вопросы, дополнения и личный опыт."
+                    : "Детали, идеи и опыт владельцев."}
+                </p>
+              </div>
+              {entityType !== "component" && bike.author?.id !== user?.id && (
+                <ReportButton
+                  entityType={entityType === "article" ? "journal" : entityType}
+                  targetId={bike.id}
+                  user={user}
+                />
+              )}
+            </div>
+          )}
           {focus && (
             <button
               className="quiet"
@@ -548,17 +598,21 @@ export default function Discussion({
               <EmailPolicyAction message={error} />
             </p>
           )}
-          {data?.comments.map((c) => (
-            <Thread
-              key={c.id}
-              root={c}
-              initialReplies={c.replies}
-              focusPath={data.focusPath}
-              user={user}
-              bikeId={bike.id}
-              refresh={refresh}
-            />
-          ))}
+          {data &&
+            (panel && !expanded
+              ? data.comments.slice(0, shownThreads)
+              : data.comments
+            ).map((c) => (
+              <Thread
+                key={c.id}
+                root={c}
+                initialReplies={panel && !expanded ? [] : c.replies}
+                focusPath={data.focusPath}
+                user={user}
+                bikeId={bike.id}
+                refresh={refresh}
+              />
+            ))}
           {!data && !error && <p role="status">Загружаем обсуждение…</p>}
           {data && !data.comments.length && (
             <p className="help">
@@ -571,7 +625,9 @@ export default function Discussion({
                   : "Первый вопрос о сборке может стать началом знакомства."}
             </p>
           )}
-          {data && <PageControls {...data} onPage={setPage} />}
+          {data && !(panel && !expanded) && (
+            <PageControls {...data} onPage={setPage} />
+          )}
           {user ? (
             <Editor
               label="Ваш комментарий"
@@ -579,6 +635,8 @@ export default function Discussion({
                 await socialApi(api.items + bike.id + "/comments", "POST", {
                   body,
                 });
+                // The short panel opens, so the new comment is not hidden.
+                setExpanded(true);
                 setPage(1);
                 await refresh(null);
               }}

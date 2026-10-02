@@ -1,6 +1,7 @@
-/* The bike's action row (#121, #127): compact Hugging Face buttons — a
-   gradient with a hairline, an icon and a label, a count or state in its
-   own segment. Reader actions and owner tools are two groups of one row. */
+/* The bike's action rows (#121, #127, #291): the owner's tools in a compact
+   toolbar, the reader's actions as three wide buttons under the figures.
+   Outlined buttons with a hairline, an icon and a label; a count or state
+   sits in its own segment. */
 .bar {
   display: flex;
   flex-wrap: wrap;
@@ -12,34 +13,34 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-1-5);
+  gap: var(--space-2);
   min-width: 0;
 }
-.group + .group {
-  padding-left: var(--space-3);
-  border-left: 1px solid var(--line);
-}
-/* Buttons of both groups, the like and the share button alike. */
+/* Buttons of both rows, the like and the share button alike. */
 .bar .action,
 .bar :global(.hf-like),
-.bar .share :global(.share-button) {
+.bar .share :global(.share-button),
+.more :global(.nav-trigger) {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-1-5);
+  justify-content: center;
+  gap: var(--space-2);
   width: auto;
   min-width: 0;
-  min-height: 32px;
+  min-height: 36px;
   margin: 0;
-  padding: 0 var(--space-2-5);
+  padding: 0 var(--space-3);
   border: 1px solid var(--control-line);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   background: var(--control-bg);
   color: var(--control-text);
-  font: var(--weight-medium) 13px / 1.2 var(--font-sans);
+  font: var(--weight-medium) var(--text-sm) / 1.2 var(--font-sans);
   text-decoration: none;
   white-space: nowrap;
   cursor: pointer;
-  transition: box-shadow var(--duration-fast) var(--ease-out);
+  transition:
+    box-shadow var(--duration-fast) var(--ease-out),
+    background-color var(--duration-fast) var(--ease-out);
 }
 .bar :global(.hf-like) {
   align-items: stretch;
@@ -50,8 +51,8 @@
 .bar :global(.hf-like) > strong {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-1-5);
-  padding: 0 var(--space-2-5);
+  gap: var(--space-2);
+  padding: 0 var(--space-3);
 }
 .bar :global(.hf-like) > strong {
   border-left: 1px solid var(--control-line);
@@ -60,7 +61,9 @@
 }
 .bar .action:hover:not(:disabled),
 .bar :global(.hf-like):hover:not(:disabled),
-.bar .share :global(.share-button):hover {
+.bar .share :global(.share-button):hover,
+.more :global(.nav-trigger):hover {
+  background: var(--control-bg-hover);
   box-shadow: var(--shadow-inner);
 }
 .bar .action:disabled {
@@ -86,8 +89,8 @@
   display: flex;
   align-self: stretch;
   align-items: center;
-  margin: 0 calc(-1 * var(--space-2-5)) 0 var(--space-1);
-  padding: 0 var(--space-2-5);
+  margin: 0 calc(-1 * var(--space-3)) 0 var(--space-1);
+  padding: 0 var(--space-3);
   border-left: 1px solid var(--control-line);
   color: var(--text-muted);
   font-weight: var(--weight-medium);
@@ -107,31 +110,77 @@
   color: var(--danger);
   font-size: 13px;
 }
-@media (max-width: 1199px) {
-  .bar {
-    flex-direction: column;
-    align-items: stretch;
-    gap: var(--space-2);
+
+/* Like · Subscribe · Share: one row of wide buttons, the main action in
+   the middle and filled. */
+.social {
+  flex: 1 1 100%;
+  gap: var(--space-3);
+}
+.social > :global(.hf-like),
+.social > .action,
+.social > .share {
+  flex: 1 1 0;
+  min-width: 0;
+}
+.social > .primary {
+  flex-grow: 1.6;
+}
+.social .share {
+  display: flex;
+}
+.bar .social :global(.hf-like),
+.bar .social .action,
+.bar .social .share :global(.share-button) {
+  min-height: 40px;
+}
+.social .share :global(.share-button) {
+  flex: 1;
+}
+.bar :global(.hf-like) > span {
+  flex: 1;
+  justify-content: center;
+}
+/* The filled button: black on white, white on dark. Once the reader
+   follows, the pressed state above takes over. */
+.bar .primary {
+  --icon-color: var(--primary-foreground);
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+.bar .primary:hover:not(:disabled) {
+  --icon-color: var(--primary-foreground);
+  background: var(--primary-hover);
+  box-shadow: none;
+}
+.bar .primary[aria-pressed="true"] {
+  --icon-color: var(--text-muted);
+}
+.bar .primary[aria-pressed="true"]:hover:not(:disabled) {
+  --icon-color: var(--text-muted);
+  background: var(--accent-soft);
+}
+
+/* In a narrow column (a phone, a half-width column) the main button takes
+   the first row and the other two share the second. The column decides, not
+   the screen: the owner's toolbar is not a container, it sizes to its
+   buttons. */
+.bar[data-bike-actions="social"] {
+  container-type: inline-size;
+}
+@container (max-width: 459px) {
+  .social > .primary {
+    flex: 1 1 100%;
+    order: -1;
   }
-  .group + .group {
-    padding: var(--space-2) 0 0;
-    border-top: 1px solid var(--line);
-    border-left: 0;
+  .social > :global(.hf-like),
+  .social > .share {
+    flex-basis: calc(50% - var(--space-2));
   }
 }
 
-.more :global(.nav-trigger) {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1-5);
-  min-height: 32px;
-  padding: 0 var(--space-2-5);
-  border: 1px solid var(--control-line);
-  border-radius: var(--radius-lg);
-  background: var(--control-bg);
-  color: var(--control-text);
-  font: var(--weight-medium) 13px / 1.2 var(--font-sans);
-}
+/* The owner's tools sit at the right of the brand line. */
 .more :global(.nav-popover) {
   right: 0;
   left: auto;
@@ -145,7 +194,27 @@
   .bar .action,
   .bar :global(.hf-like),
   .bar .share :global(.share-button),
-  .more :global(.nav-trigger) {
+  .more :global(.nav-trigger),
+  .bar .social :global(.hf-like),
+  .bar .social .action,
+  .bar .social .share :global(.share-button) {
     min-height: 44px;
+  }
+  .social {
+    gap: var(--space-2);
+  }
+  /* Three buttons keep a row on a phone; the main one is the widest. */
+  .bar .social .action,
+  .bar .social :global(.hf-like) > span,
+  .bar .social .share :global(.share-button) {
+    padding-inline: var(--space-2);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bar .action,
+  .bar :global(.hf-like),
+  .bar .share :global(.share-button),
+  .more :global(.nav-trigger) {
+    transition: none;
   }
 }

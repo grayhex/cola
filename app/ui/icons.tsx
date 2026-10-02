@@ -1,5 +1,6 @@
 export {
   ArrowDown,
+  ArrowRight,
   Download,
   MonitorSmartphone,
   ArrowLeft,
@@ -105,4 +106,11 @@ export {
   RemoveFormatting,
   Ellipsis,
   ShoppingBag,
+  Ruler,
+  Tag,
+  Weight,
+  CalendarDays,
+  Timer,
+  Banknote,
+  Mountain,
 } from "lucide-react";

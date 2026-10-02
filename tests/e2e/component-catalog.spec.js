@@ -89,9 +89,17 @@ test("product catalog separates installation text, paired products and public na
       2,
     );
     await page.goto(publicPath("bike", bike));
+    // Groups open by width once the page is hydrated; a click before that
+    // does nothing and one at that moment closes the group again, so retry
+    // until every group is open.
     for (const button of await page.locator(".component-group-toggle").all())
-      if ((await button.getAttribute("aria-expanded")) === "false")
-        await button.click();
+      await expect(async () => {
+        if ((await button.getAttribute("aria-expanded")) === "false")
+          await button.click();
+        await expect(button).toHaveAttribute("aria-expanded", "true", {
+          timeout: 500,
+        });
+      }).toPass();
     await expect(page.locator(".compact-part")).toHaveCount(7);
     for (const [, name] of parts.slice(4)) {
       const part = page.locator(".compact-part").filter({ hasText: name });

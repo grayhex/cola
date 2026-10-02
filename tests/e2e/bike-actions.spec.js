@@ -96,8 +96,11 @@ test("bike actions: separate owner/social rows, labelled controls and overflow",
         exact: true,
       }),
     ).toContainText("Подписаться");
+    // The comments figure is the way to the discussion.
     await expect(
-      reactions.getByRole("link", { name: /^Обсуждение/ }),
+      reader.locator(".bike-metrics").getByRole("link", {
+        name: /Комментарии/,
+      }),
     ).toHaveAttribute("href", "#discussion");
     await expect(
       reactions.getByRole("button", { name: "Поделиться", exact: true }),

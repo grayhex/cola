@@ -113,8 +113,9 @@ test("ride upload, SVG, privacy, profile and bike; works without tiles", async (
   expect(
     errors.filter((e) => /hydrat|did not match|#41[89]|#42[1-5]/i.test(e)),
   ).toEqual([]);
+  // The bike page lists its rides as the compact cards of #291.
   await page.goto(publicPath("bike", data.rides[0].bike));
-  await expect(page.locator(".ride-list .ride-card")).toHaveCount(1);
+  await expect(page.locator(".ride-list .ride-compact")).toHaveCount(1);
 });
 
 test("MapLibre initializes with intercepted OSM tiles, no external traffic", async ({
