@@ -13,6 +13,7 @@ import tarfile
 import tempfile
 import unittest
 from unittest.mock import patch
+from types import SimpleNamespace
 import warnings
 import zipfile
 
@@ -141,8 +142,45 @@ class ArchiveTests(unittest.TestCase):
                 deploy.inspect_bundle(bundle, SHA)
 
 
+class StagingTests(unittest.TestCase):
+    def test_main_stages_on_disk_and_cleans_up_without_default_tmp(self):
+        with tempfile.TemporaryDirectory() as directory:
+            state = Path(directory)
+            fixture = state / "fixture.tar.gz"
+            ArchiveTests().bundle(fixture)
+            payload = io.BytesIO()
+            with zipfile.ZipFile(payload, "w") as archive:
+                archive.write(fixture, "images.tar.gz")
+            content = payload.getvalue()
+            metadata = {"size_in_bytes": len(content), "digest": "sha256:" + hashlib.sha256(content).hexdigest()}
+
+            def load(bundle, sha, compose):
+                self.assertEqual(bundle.parent.parent, state)
+                self.assertEqual(bundle.parent.stat().st_mode & 0o777, 0o700)
+                self.assertFalse((bundle.parent / "artifact.zip").exists())
+                self.assertEqual(len(deploy.inspect_bundle(bundle, sha)), 3)
+
+            for corrupt in [False, True]:
+                with self.subTest(corrupt=corrupt), \
+                        patch.object(deploy, "STATE_DIRECTORY", state), \
+                        patch.object(deploy, "trusted_artifact", return_value=metadata), \
+                        patch.object(deploy, "load_images", side_effect=load) as loader, \
+                        patch.object(sys, "argv", ["images.py", SHA, "123", "2", "--", "docker", "compose"]), \
+                        patch.object(sys, "stdin", SimpleNamespace(buffer=io.BytesIO(
+                            b"X" + content[1:] if corrupt else content))), \
+                        patch.object(tempfile, "tempdir", str(fixture)):
+                    if corrupt:
+                        with self.assertRaisesRegex(ValueError, "digest mismatch"):
+                            deploy.main()
+                        loader.assert_not_called()
+                    else:
+                        deploy.main()
+                        loader.assert_called_once()
+                self.assertEqual(list(state.glob("colabike-images-*")), [])
+
+
 class ImageLoadingTests(unittest.TestCase):
-    def load(self, containerd=False, corrupt=False, export_failure=False):
+    def load(self, containerd=False, corrupt=False, export_failure=False, unavailable_tmp=False):
         with tempfile.TemporaryDirectory() as directory:
             bundle = Path(directory) / "images.tar.gz"
             ArchiveTests().bundle(bundle)
@@ -164,6 +202,8 @@ class ImageLoadingTests(unittest.TestCase):
                 if command[2] == "tag":
                     retags.append(command[3:])
                 elif command[2] == "save":
+                    if unavailable_tmp:
+                        self.assertTrue(Path(command[4]).is_relative_to(bundle.parent))
                     # Export by immutable daemon ID, never by a mutable tag.
                     image_id = command[-1]
                     exports.append(image_id)
@@ -188,7 +228,8 @@ class ImageLoadingTests(unittest.TestCase):
                 return subprocess.CompletedProcess(command, 0)
 
             with patch.object(deploy, "command_json", side_effect=query), \
-                    patch.object(deploy.subprocess, "run", side_effect=run):
+                    patch.object(deploy.subprocess, "run", side_effect=run), \
+                    patch.object(tempfile, "tempdir", str(bundle) if unavailable_tmp else tempfile.gettempdir()):
                 if corrupt or export_failure:
                     with self.assertRaises((ValueError, subprocess.CalledProcessError)):
                         deploy.load_images(bundle, SHA, ["docker", "compose"])
@@ -198,6 +239,9 @@ class ImageLoadingTests(unittest.TestCase):
                     self.assertEqual(retags, [[ids[tag], targets[service]["tags"][0]]
                                              for service, tag in tags.items()])
             return exports
+
+    def test_containerd_export_does_not_need_default_tmp(self):
+        self.assertEqual(len(self.load(containerd=True, unavailable_tmp=True)), 3)
 
     def test_classic_config_ids_need_no_export(self):
         self.assertEqual(self.load(), [])
@@ -305,7 +349,7 @@ def docker_round_trip(sha, bundle):
                 try:
                     for service, tag in deploy.image_tags(sha).items():
                         alias = targets[service]["tags"][0]
-                        actual = deploy.verified_image_id(alias, before[tag])
+                        actual = deploy.verified_image_id(alias, before[tag], directory)
                         assert actual == daemon_ids[tag], f"Changed daemon image identity: {service}"
                         subprocess.run(["docker", "run", "--rm", "--entrypoint", "node", alias, "--version"], check=True)
                 finally:
