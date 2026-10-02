@@ -155,7 +155,7 @@ const columns = `r.*,${rideOccurrence} AS occurs_at,
  (SELECT count(*)::int FROM ride_comments c JOIN users a ON a.id=c.author_id WHERE c.ride_id=r.id AND c.deleted_at IS NULL AND NOT a.blocked) AS comments`;
 // Imported metrics (heart rate, power, calories) leave the account only when
 // the owner shows them; the owner's own responses carry all of them.
-const shownMetrics = (r: RideRow) => {
+export const shownMetrics = (r: RideRow) => {
   const shown = new Set(r.visible_metrics || defaultRideFields);
   return Object.fromEntries(
     Object.entries(r.import_metrics || {}).filter(([key]) => shown.has(key)),
@@ -195,6 +195,21 @@ function viewerParticipation(
     },
   };
 }
+/**
+ * Whether the viewer may read the meeting point (#235): everyone for a public
+ * one, only the organizer and people who said "going" for one marked "only for
+ * participants". One rule for the web, the legacy API and API v1.
+ */
+export function meetingVisible(
+  r: RideViewRow,
+  viewer: string | null | undefined,
+) {
+  return (
+    r.source_kind !== "planned" ||
+    r.meeting_visibility !== "participants" ||
+    !!(r.viewer_active && (r.owner_id === viewer || r.rsvp === "accepted"))
+  );
+}
 export function publicRide(r: RideViewRow, viewer: string | null | undefined) {
   return {
     id: r.id,
@@ -211,22 +226,12 @@ export function publicRide(r: RideViewRow, viewer: string | null | undefined) {
     hasTrack: r.has_track,
     visibleMetrics: r.visible_metrics,
     features: r.features || [],
-    meetingPoint:
-      r.source_kind !== "planned" ||
-      r.meeting_visibility !== "participants" ||
-      (r.viewer_active && (r.owner_id === viewer || r.rsvp === "accepted"))
-        ? r.meeting_point || ""
-        : "",
+    meetingPoint: meetingVisible(r, viewer) ? r.meeting_point || "" : "",
     ...(r.source_kind === "planned"
       ? {
           passport: r.plan_passport || {},
           meetingVisibility: r.meeting_visibility || "public",
-          meetingHidden:
-            r.meeting_visibility === "participants" &&
-            !(
-              r.viewer_active &&
-              (r.owner_id === viewer || r.rsvp === "accepted")
-            ),
+          meetingHidden: !meetingVisible(r, viewer),
           expectedEndAt: plannedEnd(r),
         }
       : {}),
@@ -326,6 +331,36 @@ async function organizerAnswers(
     truncated: items.length > 200,
   };
 }
+/**
+ * The stored analysis of a finished ride with a track, public or the owner's
+ * full series; null when there is none or it is out of date. One reader for the
+ * web, the legacy API and API v1.
+ */
+async function analysisSeries(q: Queryable, row: RideViewRow, full: boolean) {
+  if (!row.has_track || row.status !== "completed") return null;
+  return (
+    (
+      await q.query<{ series: RideAnalysisContractTypes.AnalysisSeries }>(
+        `SELECT ${full ? "owner_series" : "public_series"} AS series FROM ride_analysis WHERE ride_id=$1 AND version=$2 AND source_hash=$3 AND privacy_enabled=$4 AND privacy_radius_m=$5`,
+        [
+          row.id,
+          ANALYSIS_VERSION,
+          row.gpx_hash,
+          row.privacy_enabled,
+          row.privacy_radius_m,
+        ],
+      )
+    ).rows[0] ?? null
+  );
+}
+/** What every reader but the owner may see of a ride's analysis (API v1). */
+export async function publicRideAnalysis(q: Queryable, row: RideViewRow) {
+  return permittedAnalysis(
+    (await analysisSeries(q, row, false))?.series,
+    row.visible_metrics || defaultRideFields,
+    false,
+  );
+}
 export async function rideDetail(
   q: Queryable,
   share: string,
@@ -344,23 +379,7 @@ export async function rideDetail(
   const planned = row.source_kind === "planned",
     isOwner = !!viewer && row.owner_id === viewer;
   const fullAnalysis = owner && row.owner_id === viewer;
-  const cached =
-    row.has_track && row.status === "completed"
-      ? (
-          await q.query<{
-            series: RideAnalysisContractTypes.AnalysisSeries;
-          }>(
-            `SELECT ${fullAnalysis ? "owner_series" : "public_series"} AS series FROM ride_analysis WHERE ride_id=$1 AND version=$2 AND source_hash=$3 AND privacy_enabled=$4 AND privacy_radius_m=$5`,
-            [
-              row.id,
-              ANALYSIS_VERSION,
-              row.gpx_hash,
-              row.privacy_enabled,
-              row.privacy_radius_m,
-            ],
-          )
-        ).rows[0]
-      : null;
+  const cached = await analysisSeries(q, row, fullAnalysis);
   return {
     ...(owner && row.owner_id === viewer
       ? ownerRide(row, viewer)
@@ -515,6 +534,117 @@ export async function rideList(
     page,
     pageSize: 24,
   };
+}
+/**
+ * What API v1 shows of a ride: the legacy public rule plus "not called off".
+ * A called-off ride answers 404 like a hidden one; its page does not exist for
+ * a client that is not the organizer or an invitee.
+ */
+export const apiRide = `${effectiveRide} AND r.status<>'cancelled'`;
+// PostgreSQL's own text of a timestamp: microseconds, UTC. A cursor made of it
+// loses nothing to the rounding that Date makes.
+const cursorText = (expression: string) =>
+  `to_char((${expression}) AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"')`;
+export interface RideCursor {
+  createdAt: string;
+  id: string;
+}
+export type RideKeysetRow = RideViewRow & { cursor_at: string };
+function ridePage(
+  rows: RideKeysetRow[],
+  limit: number,
+): { rows: RideKeysetRow[]; next: RideCursor | null } {
+  const page = rows.slice(0, limit);
+  const last = page[page.length - 1];
+  return {
+    rows: page,
+    next:
+      rows.length > limit && last
+        ? { createdAt: last.cursor_at, id: last.id }
+        : null,
+  };
+}
+/** Whether API v1 shows this ride to anyone; no card is built. */
+export async function apiRideVisible(q: Queryable, id: string) {
+  return (
+    (await q.query(`SELECT 1${rideFrom} WHERE r.id=$1 AND ${apiRide}`, [id]))
+      .rows.length > 0
+  );
+}
+/**
+ * One public ride by its id for API v1, or undefined. Hidden, private,
+ * called-off, of a private bike or of a blocked author are all the same.
+ */
+export async function apiRideRow(
+  q: Queryable,
+  id: string,
+  viewer: string | null,
+) {
+  return (
+    await q.query<RideViewRow>(
+      `SELECT ${columns}${rideFrom} WHERE r.id=$2 AND ${apiRide}`,
+      [viewer, id],
+    )
+  ).rows[0];
+}
+/**
+ * Finished public rides, newest first (API v1), optionally of one bike. The
+ * position is `(coalesce(started_at, created_at), id)`: a track without times
+ * has no start, and is listed by when it was added.
+ */
+export async function rideKeysetPage(
+  q: Queryable,
+  viewer: string | null,
+  {
+    bikeId = null,
+    limit,
+    after,
+  }: { bikeId?: string | null; limit: number; after: RideCursor | null },
+) {
+  const position = "coalesce(r.started_at,r.created_at)";
+  return ridePage(
+    (
+      await q.query<RideKeysetRow>(
+        `SELECT ${columns},${cursorText(position)} AS cursor_at${rideFrom}
+         WHERE r.status='completed' AND ${apiRide} AND ($2::uuid IS NULL OR r.bike_id=$2)
+           AND ($3::timestamptz IS NULL OR (${position},r.id)<($3::timestamptz,$4::uuid))
+         ORDER BY ${position} DESC,r.id DESC LIMIT $5`,
+        [
+          viewer,
+          bikeId,
+          after?.createdAt ?? null,
+          after?.id ?? null,
+          limit + 1,
+        ],
+      )
+    ).rows,
+    limit,
+  );
+}
+/**
+ * Public plans that have not happened yet, soonest first (API v1). A weekly
+ * series is listed once, at its next date. That date moves forward with the
+ * clock, so a series whose date passes between two pages may come back at its
+ * next week's date; each item says which date it shows (`scheduledAt`).
+ */
+export async function upcomingKeysetPage(
+  q: Queryable,
+  viewer: string | null,
+  { limit, after }: { limit: number; after: RideCursor | null },
+) {
+  const occurrence = `(${rideOccurrence})`;
+  return ridePage(
+    (
+      await q.query<RideKeysetRow>(
+        `SELECT ${columns},${cursorText(occurrence)} AS cursor_at${rideFrom}
+         WHERE r.status='planned' AND r.source_kind='planned' AND ${apiRide} AND ${occurrence}>now()
+           AND ($2::timestamptz IS NULL OR (${occurrence},r.id)>($2::timestamptz,$3::uuid))
+         ORDER BY ${occurrence} ASC,r.id ASC LIMIT $4`,
+        [viewer, after?.createdAt ?? null, after?.id ?? null, limit + 1],
+      )
+    ).rows,
+    limit,
+  );
 }
 /** The viewer's own next plans (#233): organised, accepted, "maybe", pending
 invitations and recent cancellations of dates they had answered. Access is

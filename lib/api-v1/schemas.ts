@@ -516,6 +516,209 @@ export const replyPageSchema = named(
   }),
 );
 
+const rideMetricsSchema = named(
+  "RideMetrics",
+  "Показатели покатушки. Для плана без трека расстояния нет (null).",
+  z.strictObject({
+    distanceM: z.int().nullable(),
+    elapsedTimeS: z.int().nullable(),
+    movingTimeS: z.int().nullable(),
+    avgSpeedMps: z.number().nullable(),
+    elevationGainM: z.number().nullable(),
+  }),
+);
+
+const participantsSchema = named(
+  "RideParticipants",
+  "Сколько человек ответили на план; без имён.",
+  z.strictObject({
+    going: z.int().describe("Ответили «еду»."),
+    maybe: z.int().describe("Ответили «возможно»."),
+  }),
+);
+
+const rideSummaryShape = {
+  id,
+  title: z.string(),
+  status: z
+    .enum(["completed", "planned"])
+    .describe("Состоявшаяся покатушка или план; отменённых в API нет."),
+  kind: z
+    .enum(["recorded", "planned"])
+    .describe("Откуда данные: запись трека или план покатушки."),
+  startedAt: instant
+    .nullable()
+    .describe(
+      "Начало состоявшейся покатушки; null у плана и у трека без времени.",
+    ),
+  scheduledAt: instant
+    .nullable()
+    .describe(
+      "Ближайшая дата плана (у еженедельной серии — следующая); у состоявшейся покатушки null.",
+    ),
+  recurrence: z.enum(["none", "weekly"]),
+  hasTrack: z.boolean(),
+  metrics: rideMetricsSchema,
+  bike: bikeRefSchema,
+  author: authorSchema,
+  likes: z.int(),
+  comments: z.int(),
+  liked: z
+    .boolean()
+    .describe("Поставил ли лайк вошедший зритель; для гостя false."),
+  participants: participantsSchema
+    .nullable()
+    .describe("Количество ответивших на план, без имён; у состоявшейся null."),
+};
+
+export const rideSummarySchema = named(
+  "RideSummary",
+  "Покатушка в списке: без геометрии и без описания, чтобы список оставался лёгким.",
+  z.strictObject(rideSummaryShape),
+);
+
+export const rideLineSchema = named(
+  "RideGeometry",
+  "Публичная геометрия в формате GeoJSON MultiLineString: координаты [долгота, широта]. Участки внутри зоны приватности обрезаны, поэтому линий может быть несколько, и между ними нельзя проводить отрезок.",
+  z.strictObject({
+    type: z.literal("MultiLineString"),
+    coordinates: z.array(z.array(z.array(z.number()).min(2).max(3))),
+  }),
+);
+
+const rangeSchema = named(
+  "RideRange",
+  "Диапазон значений плана от `min` до `max`.",
+  z.strictObject({ min: z.number(), max: z.number() }),
+);
+
+const areaSchema = named(
+  "RideArea",
+  "Район плана: подпись и, если задан, грубая область на карте.",
+  z.strictObject({
+    label: z.string(),
+    center: z
+      .array(z.number())
+      .length(2)
+      .optional()
+      .describe("Центр области с точностью до сотой градуса, не точка."),
+    radiusM: z.int().optional(),
+  }),
+);
+
+export const ridePassportSchema = named(
+  "RidePassport",
+  "Паспорт плана: ожидания организатора. Все поля необязательны; значения `purpose`, `pace`, `surface`, `difficulty` и `regroupPolicy` — открытый набор строк, неизвестное значение клиент показывает как есть.",
+  z.strictObject({
+    area: areaSchema.optional(),
+    purpose: z.string().optional(),
+    pace: z.string().optional(),
+    surface: z.string().optional(),
+    difficulty: z.string().optional(),
+    regroupPolicy: z.string().optional(),
+    distanceKm: rangeSchema.optional(),
+    durationMinutes: rangeSchema.optional(),
+    groupSize: rangeSchema.optional(),
+    speedKmh: rangeSchema.optional(),
+    beginnerFriendly: z.boolean().optional(),
+  }),
+);
+
+export const rideSchema = named(
+  "Ride",
+  "Покатушка целиком. Геометрия только публичная (участки у начала и конца внутри радиуса приватности обрезаны), точка встречи «только участникам» скрыта от остальных. Владельческих полей (приватность, число точек, полные серии, `isPublic`) нет: они в личных ответах владельца.",
+  z.strictObject({
+    ...rideSummaryShape,
+    description: z.string(),
+    features: z.array(z.string()),
+    meetingPoint: z
+      .string()
+      .nullable()
+      .describe(
+        "Текст точки встречи; null, если её нет или она скрыта (`meetingHidden`).",
+      ),
+    meetingHidden: z
+      .boolean()
+      .describe(
+        "Точка встречи есть, но показывается только организатору и принявшим участие.",
+      ),
+    expectedEndAt: instant
+      .nullable()
+      .describe("Ожидаемое окончание ближайшей даты плана."),
+    recruitmentClosed: z
+      .boolean()
+      .describe("Организатор закрыл набор на ближайшую дату."),
+    passport: ridePassportSchema.nullable().describe("Только у плана."),
+    geometry: rideLineSchema
+      .nullable()
+      .describe("Null, если у покатушки нет публичного трека."),
+    bounds: z
+      .array(z.number())
+      .length(4)
+      .nullable()
+      .describe(
+        "Рамка публичной геометрии [запад, юг, восток, север] или null.",
+      ),
+    extraMetrics: z
+      .record(z.string(), z.number())
+      .describe(
+        "Показатели датчиков и устройства (пульс, мощность, калории…), которые автор разрешил показывать; пусто, если ничего не открыто.",
+      ),
+  }),
+);
+
+export const ridePageSchema = named(
+  "RidePage",
+  "Страница покатушек.",
+  z.strictObject({
+    items: z.array(rideSummarySchema),
+    nextCursor: z
+      .string()
+      .nullable()
+      .describe("Курсор следующей страницы или null, если страниц больше нет."),
+  }),
+);
+
+const analysisPointSchema = named(
+  "RideAnalysisPoint",
+  "Точка публичной серии. Датчик, который автор не открыл, отсутствует; абсолютного времени нет, только время в пути `elapsedS`.",
+  z.strictObject({
+    coord: z.array(z.number()).length(2),
+    distanceM: z.number().nullable(),
+    elapsedS: z.number().nullable(),
+    elevationM: z.number().nullable(),
+    speedMps: z.number().nullable(),
+    gradePct: z.number().nullable(),
+    hrBpm: z.number().nullable().optional(),
+    cadenceRpm: z.number().nullable().optional(),
+    powerW: z.number().nullable().optional(),
+    gaps: z
+      .int()
+      .describe(
+        "Битовая маска каналов, у которых между предыдущей показанной точкой и этой были пропуски значений (линию в таком месте не интерполируют): elevationM = 1, speedMps = 2, gradePct = 4, hrBpm = 8, cadenceRpm = 16, powerW = 32.",
+      ),
+  }),
+);
+
+export const rideAnalysisSchema = named(
+  "RideAnalysis",
+  "Публичные серии разбора трека для графиков. Участки в зонах приватности обрезаны, как у геометрии.",
+  z.strictObject({
+    channels: z
+      .array(z.string())
+      .describe("Каналы, у которых есть значения; открытый набор имён."),
+    pointCount: z
+      .int()
+      .describe(
+        "Сколько точек показано; число точек исходного трека не передаётся.",
+      ),
+    downsampled: z.boolean(),
+    segments: z
+      .array(z.array(analysisPointSchema))
+      .describe("Непрерывные участки; между ними разрывы."),
+  }),
+);
+
 export type Me = z.infer<typeof meSchema>;
 export type SessionGrant = z.infer<typeof sessionGrantSchema>;
 export type Profile = z.infer<typeof profileSchema>;
@@ -525,6 +728,9 @@ export type Relationship = z.infer<typeof relationshipSchema>;
 export type JournalSummary = z.infer<typeof journalSummarySchema>;
 export type JournalEntry = z.infer<typeof journalEntrySchema>;
 export type Comment = z.infer<typeof commentSchema>;
+export type RideSummary = z.infer<typeof rideSummarySchema>;
+export type Ride = z.infer<typeof rideSchema>;
+export type RideAnalysis = z.infer<typeof rideAnalysisSchema>;
 export type AccountSession = z.infer<typeof accountSessionSchema>;
 export type BikeSummary = z.infer<typeof bikeSummarySchema>;
 export type Bike = z.infer<typeof bikeSchema>;

@@ -3,6 +3,7 @@ import { commentKeysetPage, replyKeysetPage } from "../comments.ts";
 import { CommunityError } from "../community-validation.ts";
 import { entitySocial } from "../entity-social.ts";
 import { journalKeysetPage, journalPhotos, journalRow } from "../journal.ts";
+import { apiRideVisible } from "../rides.ts";
 import { readableBikeSql } from "../bike-visibility.ts";
 import { decodeCursor, encodeCursor } from "./cursor.ts";
 import { notFound } from "./errors.ts";
@@ -20,7 +21,10 @@ type IdParams = { params: Promise<{ id: string }> };
 type ReplyParams = { params: Promise<{ id: string; commentId: string }> };
 
 /** The engines throw their own 404; the API answers it in its own envelope. */
-async function readable<T>(run: () => Promise<T>, what: string): Promise<T> {
+export async function readable<T>(
+  run: () => Promise<T>,
+  what: string,
+): Promise<T> {
   try {
     return await run();
   } catch (error) {
@@ -31,7 +35,7 @@ async function readable<T>(run: () => Promise<T>, what: string): Promise<T> {
 }
 
 /** A path id must be a UUID; anything else cannot name an object. */
-function idOf(value: string, what: string) {
+export function idOf(value: string, what: string) {
   if (!bikeIdSchema.safeParse(value).success) throw notFound(what);
   return value.toLowerCase();
 }
@@ -76,10 +80,33 @@ export function handleGetJournalEntry(req: Request, { params }: IdParams) {
   });
 }
 
-type Target = "bike" | "journal";
+type Target = "bike" | "journal" | "ride";
 const entryComments = entitySocial("journal");
+const rideComments = entitySocial("ride");
 const targetMissing = (target: Target) =>
-  target === "bike" ? "Велосипед не найден." : "Запись не найдена.";
+  ({
+    bike: "Велосипед не найден.",
+    journal: "Запись не найдена.",
+    ride: "Покатушка не найдена.",
+  })[target];
+
+/**
+ * Comments follow their object. A ride's engine guard lets a called-off ride
+ * through, API v1 does not: the same rule as the ride itself decides first.
+ */
+async function rideReadable(id: string, target: Target) {
+  if (target === "ride" && !(await apiRideVisible(db, id)))
+    throw notFound(targetMissing(target));
+}
+
+/** The comment engine of a target; the bike one is the base. */
+function engineOf(target: Target) {
+  return target === "journal"
+    ? entryComments
+    : target === "ride"
+      ? rideComments
+      : null;
+}
 
 function commentsOf(target: Target) {
   return (req: Request, { params }: IdParams) =>
@@ -95,11 +122,13 @@ function commentsOf(target: Target) {
         cursor,
         focus: query.focus ?? null,
       };
+      await rideReadable(id, target);
+      const engine = engineOf(target);
       const page = await readable(
         () =>
-          target === "bike"
-            ? commentKeysetPage(db, id, options)
-            : entryComments.keysetPage(db, id, options),
+          engine
+            ? engine.keysetPage(db, id, options)
+            : commentKeysetPage(db, id, options),
         query.focus ? "Комментарий не найден." : targetMissing(target),
       );
       return ok({
@@ -123,11 +152,13 @@ function repliesOf(target: Target) {
       const id = idOf(rawId, targetMissing(target));
       const parent = idOf(commentId, "Комментарий не найден.");
       const options = { limit: query.limit, cursor };
+      await rideReadable(id, target);
+      const engine = engineOf(target);
       const page = await readable(
         () =>
-          target === "bike"
-            ? replyKeysetPage(db, id, parent, options)
-            : entryComments.keysetReplies(db, id, parent, options),
+          engine
+            ? engine.keysetReplies(db, id, parent, options)
+            : replyKeysetPage(db, id, parent, options),
         "Комментарий не найден.",
       );
       return ok({
@@ -140,6 +171,8 @@ function repliesOf(target: Target) {
 /** GET /api/v1/bikes/{id}/comments and /api/v1/journal/{id}/comments */
 export const handleBikeComments = commentsOf("bike");
 export const handleJournalComments = commentsOf("journal");
+export const handleRideComments = commentsOf("ride");
 /** GET …/comments/{commentId}/replies */
 export const handleBikeReplies = repliesOf("bike");
 export const handleJournalReplies = repliesOf("journal");
+export const handleRideReplies = repliesOf("ride");

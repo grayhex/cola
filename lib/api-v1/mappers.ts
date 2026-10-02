@@ -3,6 +3,14 @@ import type { visibleBikeById } from "../showcase.ts";
 import type { listSessions } from "../account-data.ts";
 import type { CommentRow } from "../comments.ts";
 import type { JournalViewRow } from "../journal.ts";
+import type { RideViewRow } from "../database-rows.ts";
+import type {
+  AnalysisPoint,
+  AnalysisChannel,
+} from "../ride-analysis-contract.ts";
+import { bounds } from "../ride-geometry.ts";
+import { meetingVisible, shownMetrics } from "../rides.ts";
+import { plannedEnd } from "../ride-plan.ts";
 import { richExcerpt } from "../rich-text.ts";
 import type { TokenGrant } from "../device-sessions.ts";
 import type {
@@ -15,6 +23,9 @@ import type {
   Me,
   Profile,
   Relationship,
+  Ride,
+  RideAnalysis,
+  RideSummary,
   SessionGrant,
   UserSummary,
 } from "./schemas.ts";
@@ -305,6 +316,148 @@ function toEntrySummary(row: JournalViewRow, viewer: string | null) {
     likes: row.likes,
     comments: row.comments,
     liked: viewer !== null && !!row.liked,
+  };
+}
+
+const instantOf = (value: Date | string | null | undefined) =>
+  value == null ? null : new Date(value).toISOString();
+const numberOrNull = (value: string | number | null | undefined) =>
+  value == null ? null : Number(value);
+
+/** The cards of the lists: what a ride is, who rode it and the counters. */
+export function toRideSummary(
+  row: RideViewRow,
+  viewer: string | null,
+): RideSummary {
+  void viewer;
+  const planned = row.status === "planned";
+  const counts = row.rsvp_counts ?? {};
+  return {
+    id: row.id,
+    title: row.title,
+    status: planned ? "planned" : "completed",
+    kind: row.source_kind === "planned" ? "planned" : "recorded",
+    startedAt: planned ? null : instantOf(row.started_at),
+    scheduledAt: planned ? instantOf(row.occurs_at ?? row.started_at) : null,
+    recurrence: row.recurrence === "weekly" ? "weekly" : "none",
+    hasTrack: row.has_track,
+    metrics: {
+      // A plan without a track has no distance; the column only holds a zero.
+      distanceM:
+        row.source_kind === "planned" && !row.has_track ? null : row.distance_m,
+      elapsedTimeS: row.elapsed_time_s,
+      movingTimeS: row.moving_time_s,
+      avgSpeedMps: numberOrNull(row.avg_speed_mps),
+      elevationGainM: numberOrNull(row.elevation_gain_m),
+    },
+    bike: { id: row.bike_id, name: row.bike_name },
+    author: author(row),
+    likes: row.likes,
+    comments: row.comments,
+    liked: row.liked,
+    // Counts only; who answered is never part of the public contract.
+    participants: planned
+      ? { going: counts.accepted ?? 0, maybe: counts.maybe ?? 0 }
+      : null,
+  };
+}
+
+const passportRanges = [
+  "distanceKm",
+  "durationMinutes",
+  "groupSize",
+  "speedKmh",
+] as const;
+const passportTexts = [
+  "purpose",
+  "pace",
+  "surface",
+  "difficulty",
+  "regroupPolicy",
+] as const;
+/** The plan's passport by field name: unknown keys of the stored JSON are dropped. */
+function toPassport(source: RideViewRow["plan_passport"]): Ride["passport"] {
+  const passport: NonNullable<Ride["passport"]> = {};
+  const value = source as Record<string, unknown>;
+  const area = source.area;
+  if (area?.label)
+    passport.area = {
+      label: area.label,
+      ...(area.center ? { center: [...area.center] } : {}),
+      ...(area.radiusM !== undefined ? { radiusM: area.radiusM } : {}),
+    };
+  for (const key of passportTexts) {
+    const text = value[key];
+    if (typeof text === "string") passport[key] = text;
+  }
+  for (const key of passportRanges) {
+    const range = source[key];
+    if (range) passport[key] = { min: range.min, max: range.max };
+  }
+  if (typeof source.beginnerFriendly === "boolean")
+    passport.beginnerFriendly = source.beginnerFriendly;
+  return passport;
+}
+
+/**
+ * The ride card. Geometry is the stored public one (already trimmed around the
+ * start and the end), the meeting point follows `meetingVisible`, and nothing
+ * of the owner's own view (privacy settings, point count, full series,
+ * `isPublic`) is read here.
+ */
+export function toRide(row: RideViewRow, viewer: string | null): Ride {
+  const planned = row.source_kind === "planned";
+  const visible = meetingVisible(row, viewer);
+  const segments = row.public_geometry.filter((line) => line.length > 1);
+  const extra: Record<string, number> = {};
+  for (const [key, value] of Object.entries(shownMetrics(row)))
+    if (typeof value === "number" && Number.isFinite(value)) extra[key] = value;
+  return {
+    ...toRideSummary(row, viewer),
+    description: row.description,
+    features: row.features ?? [],
+    meetingPoint: visible && row.meeting_point ? row.meeting_point : null,
+    meetingHidden: !visible && !!row.meeting_point,
+    expectedEndAt:
+      planned && row.status === "planned" ? instantOf(plannedEnd(row)) : null,
+    recruitmentClosed: planned && !!row.recruitment_closed,
+    passport: planned ? toPassport(row.plan_passport) : null,
+    geometry: segments.length
+      ? { type: "MultiLineString", coordinates: segments }
+      : null,
+    bounds: segments.length ? bounds(segments) : null,
+    extraMetrics: extra,
+  };
+}
+
+const sensorChannels = ["hrBpm", "cadenceRpm", "powerW"] as const;
+/** The public series by field name; a sensor the author did not open is absent. */
+export function toRideAnalysis(series: {
+  channels: AnalysisChannel[];
+  pointCount: number;
+  downsampled: boolean;
+  segments: AnalysisPoint[][];
+}): RideAnalysis {
+  return {
+    channels: series.channels,
+    pointCount: series.pointCount,
+    downsampled: series.downsampled,
+    segments: series.segments.map((run) =>
+      run.map((point) => ({
+        coord: [point.coord[0], point.coord[1]],
+        distanceM: point.distanceM,
+        elapsedS: point.elapsedS,
+        elevationM: point.elevationM,
+        speedMps: point.speedMps,
+        gradePct: point.gradePct,
+        ...Object.fromEntries(
+          sensorChannels
+            .filter((key) => point[key] !== undefined)
+            .map((key) => [key, point[key]]),
+        ),
+        gaps: point.gaps,
+      })),
+    ),
   };
 }
 
