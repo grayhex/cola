@@ -4,6 +4,10 @@ import type * as React from "react";
 import { errorMessage } from "../../lib/errors.ts";
 import { useEffect, useId, useState } from "react";
 import { socialApi } from "./social-primitives.tsx";
+import {
+  identityNotice,
+  identitySuccess,
+} from "../../lib/identity-messages.ts";
 import { LogOut, Download, Trash2, MonitorSmartphone } from "./icons.tsx";
 import Link from "next/link";
 import { useSite } from "./site-provider.tsx";
@@ -216,6 +220,134 @@ function PasswordChange() {
   );
 }
 
+interface MethodsDto {
+  hasPassword: boolean;
+  providers: {
+    provider: "yandex";
+    enabled: boolean;
+    linked: boolean;
+    linkedAt: string | null;
+  }[];
+}
+
+// Sign-in methods (#151): the password and external providers. Linking and
+// unlinking ask for the password again; the server also refuses to remove the
+// last way to sign in. A provider that is not configured is not offered.
+function SignInMethods() {
+  const [info, setInfo] = useState<MethodsDto | null>(null);
+  const [state, run] = useAction();
+  const [notice, setNotice] = useState<{ text: string; ok: boolean } | null>(
+    null,
+  );
+  const load = () =>
+    socialApi<MethodsDto>("account/identities")
+      .then(setInfo)
+      .catch(() => setInfo(null));
+  useEffect(() => {
+    load();
+    // The provider round trip returns here with a fixed notice code.
+    const url = new URL(location.href);
+    const code = url.searchParams.get("identity");
+    const text = identityNotice(code);
+    if (text) setNotice({ text, ok: identitySuccess(code) });
+    if (code) {
+      url.searchParams.delete("identity");
+      history.replaceState(null, "", url);
+    }
+  }, []);
+  const yandex = info?.providers.find((p) => p.provider === "yandex");
+  if (!info || !yandex || (!yandex.enabled && !yandex.linked))
+    return notice ? (
+      <p className="error" role="alert">
+        {notice.text}
+      </p>
+    ) : null;
+  return (
+    <section aria-labelledby="account-methods">
+      <h3 id="account-methods">Способы входа</h3>
+      <p className="help">
+        {info.hasPassword
+          ? "Вход по почте и паролю включён."
+          : "Пароль не задан: вы входите только через Яндекс. Задать пароль можно через «Забыли пароль?» на странице входа."}
+      </p>
+      {notice && (
+        <p
+          className={notice.ok ? "notice" : "error"}
+          data-tone={notice.ok ? "success" : undefined}
+          role={notice.ok ? "status" : "alert"}
+        >
+          {notice.text}
+        </p>
+      )}
+      <form
+        className="account-form"
+        onSubmit={async (e) => {
+          e.preventDefault();
+          const form = e.currentTarget;
+          const password = String(new FormData(form).get("password") || "");
+          setNotice(null);
+          if (yandex.linked) {
+            const ok = await run(
+              () =>
+                socialApi("account/identities/yandex", "DELETE", { password }),
+              "Яндекс отвязан от аккаунта.",
+            );
+            if (ok) {
+              form.reset();
+              await load();
+            }
+            return;
+          }
+          const result = await run(() =>
+            socialApi<{ url: string }>(
+              "account/identities/yandex/link",
+              "POST",
+              { password },
+            ),
+          );
+          // Yandex asks the person to confirm, then returns to this tab.
+          if (result) location.assign(result.url);
+        }}
+      >
+        <p>
+          <strong>Яндекс ID</strong>
+          {yandex.linked &&
+            yandex.linkedAt &&
+            " · привязан " + when(yandex.linkedAt)}
+        </p>
+        {info.hasPassword ? (
+          <>
+            <label className="field">
+              <span>Текущий пароль</span>
+              <input
+                name="password"
+                type="password"
+                required
+                maxLength={128}
+                autoComplete="current-password"
+              />
+            </label>
+            <Status state={state} />
+            <div className="form-actions">
+              <button className="button secondary" disabled={state.busy}>
+                {state.busy
+                  ? "Подождите…"
+                  : yandex.linked
+                    ? "Отвязать Яндекс"
+                    : "Привязать Яндекс"}
+              </button>
+            </div>
+          </>
+        ) : (
+          <p className="help">
+            Это единственный способ входа, отвязать его нельзя.
+          </p>
+        )}
+      </form>
+    </section>
+  );
+}
+
 function Devices() {
   const [sessions, setSessions] = useState<SessionsDto | null>(null);
   const [state, run] = useAction();
@@ -414,6 +546,7 @@ export default function AccountSecurity({
         </p>
         <PasswordChange />
       </section>
+      <SignInMethods />
       <section aria-labelledby="account-devices">
         <h3 id="account-devices">Устройства</h3>
         <p className="help">

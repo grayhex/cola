@@ -16,6 +16,7 @@ interface SiteContext extends SiteSnapshot {
   t: (text: string) => string;
   viewer: ViewerDto | null;
   chatEnabled: boolean;
+  yandexIdEnabled: boolean;
   setViewer: (user: ViewerDto | null) => void;
   refreshViewer: () => Promise<ViewerDto | null>;
   setPreferences: React.Dispatch<React.SetStateAction<UserPreferences>>;
@@ -67,12 +68,14 @@ export default function SiteProvider({
   nonce,
   viewer: initialViewer = null,
   chatEnabled = false,
+  yandexIdEnabled = false,
   children,
 }: {
   initial?: SiteSnapshot;
   nonce?: string;
   viewer?: ViewerDto | null;
   chatEnabled?: boolean;
+  yandexIdEnabled?: boolean;
   children: React.ReactNode;
 }) {
   // A client navigation/refresh must retain the original document nonce.
@@ -181,6 +184,7 @@ export default function SiteProvider({
         t,
         viewer,
         chatEnabled,
+        yandexIdEnabled,
         setViewer,
         refreshViewer,
         setPreferences,

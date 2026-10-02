@@ -21,7 +21,7 @@ async function lockedUser(q: Queryable, userId: string) {
       name: string;
       email: string;
       role: string;
-      password_hash: string;
+      password_hash: string | null;
       avatar_id: string;
     }>(
       "SELECT id,name,email,role,password_hash,avatar_id FROM users WHERE id=$1 AND NOT blocked FOR UPDATE",
@@ -34,8 +34,17 @@ async function checkPassword(
   user: Awaited<ReturnType<typeof lockedUser>>,
   password: string,
 ) {
-  return !!user && (await verifyPassword(password, user.password_hash));
+  return (
+    !!user &&
+    user.password_hash !== null &&
+    (await verifyPassword(password, user.password_hash))
+  );
 }
+
+// An account made through an external provider has no password until it sets
+// one through recovery (#151); these actions then have nothing to confirm with.
+const noPasswordMessage =
+  "У аккаунта нет пароля. Задайте его через «Забыли пароль?» и повторите.";
 
 // ── Devices ──────────────────────────────────────────────────────────────
 
@@ -94,6 +103,8 @@ export async function changePassword(
   currentHash: string | null,
 ) {
   const user = await lockedUser(q, userId);
+  if (user && user.password_hash === null)
+    return { error: noPasswordMessage, status: 409 };
   if (!(await checkPassword(user, current)))
     return { error: "Текущий пароль не подходит", status: 403 };
   if (current === next)
@@ -126,6 +137,8 @@ export async function requestEmailChange(
   email: string,
 ) {
   const user = await lockedUser(q, userId);
+  if (user && user.password_hash === null)
+    return { error: noPasswordMessage, status: 409 };
   if (!(await checkPassword(user, password)))
     return { error: "Пароль не подходит", status: 403 };
   if (email === user.email)
@@ -235,6 +248,8 @@ export async function deleteAccount(
   password: string,
 ) {
   const user = await lockedUser(q, userId);
+  if (user && user.password_hash === null)
+    return { error: noPasswordMessage, status: 409 };
   if (!(await checkPassword(user, password)))
     return { error: "Пароль не подходит", status: 403 };
   if (user.role === "admin")

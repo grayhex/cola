@@ -50,6 +50,10 @@ const environment = {
   ACTIVITY_TOKEN_KEY: "12".repeat(32),
   COLA_RWGPS_FIXTURE: "1",
   RWGPS_FIXTURE_FILE: path.join(dir, "rwgps.json"),
+  YANDEX_ID_ENABLED: "true",
+  YANDEX_ID_CLIENT_ID: "fixture-yandex-client",
+  YANDEX_ID_CLIENT_SECRET: "fixture-yandex-secret",
+  COLA_YANDEX_FIXTURE: "1",
   MAP_STYLE_URL: process.argv.includes("--e2e")
     ? base + "/test-map-style.json"
     : "",
@@ -139,6 +143,8 @@ try {
     ...(chatFixture ? ["--import", "./tests/fixtures/chat-provider.js"] : []),
     "--import",
     "./tests/fixtures/rwgps-provider.js",
+    "--import",
+    "./tests/fixtures/yandex-provider.js",
     "node_modules/next/dist/bin/next",
     "start",
     "--hostname",
@@ -164,6 +170,7 @@ try {
           "tests/csp-modes-http.js",
           "tests/chat-disabled-http.js",
           "tests/email-policy-http.js",
+          "tests/identities-http.js",
           "tests/http-smoke.js",
           "tests/media-http.js",
           "tests/market-http.js",

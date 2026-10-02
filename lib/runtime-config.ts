@@ -69,6 +69,16 @@ export function validateRuntime(env = process.env) {
         'MAIL_FROM is required with SMTP_URL, e.g. "ColaBike <noreply@colabike.ru>"',
       );
   }
+  // Yandex ID is optional; a half-filled configuration is a deployment error.
+  // Kept here, not imported: the runner image ships only a few lib files for
+  // the startup check (see the Dockerfile).
+  if (
+    env.YANDEX_ID_ENABLED === "true" &&
+    !(env.YANDEX_ID_CLIENT_ID && env.YANDEX_ID_CLIENT_SECRET)
+  )
+    reject(
+      "YANDEX_ID_CLIENT_ID and YANDEX_ID_CLIENT_SECRET are required when YANDEX_ID_ENABLED=true",
+    );
   // Mail is optional, but without it password recovery is unavailable: log it.
   return {
     mode: "production",

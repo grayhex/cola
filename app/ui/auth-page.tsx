@@ -13,14 +13,17 @@ import styles from "./auth.module.css";
 export default function AuthPage({
   initialMode = "login",
   onAuthenticated,
+  notice = "",
 }: {
   initialMode?: "login" | "register";
   onAuthenticated?: () => void;
+  // The outcome of a provider round trip, already mapped to text (#151).
+  notice?: string;
 }) {
   const { settings } = useSite();
   const [mode, setMode] = useState(initialMode),
     [busy, setBusy] = useState(false),
-    [error, setError] = useState("");
+    [error, setError] = useState(notice);
   const register = mode === "register";
   return (
     <>
