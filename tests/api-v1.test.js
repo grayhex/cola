@@ -737,17 +737,56 @@ test("OpenAPI: documents exactly the implemented operations, every $ref resolves
       "CreateSessionRequest",
       "DeviceInput",
       "Error",
+      "ErrorBody",
+      "ErrorCode",
+      "ErrorDetail",
       "Me",
+      "Profile",
+      "ProfileCounts",
       "RefreshRequest",
+      "Relationship",
       "SessionGrant",
       "SessionList",
+      "UserPage",
+      "UserSummary",
     ],
     "a new public schema is a visible, deliberate change",
   );
-  assert.deepEqual(
-    document.components.schemas.Error.properties.error.properties.code.enum,
-    [...apiErrorCodes],
+  // Contract hygiene (#300): the schemas of an error are named (no ErrorError),
+  // and the code is an open string; the known set lives in ErrorCode.
+  assert.deepEqual(document.components.schemas.ErrorCode.enum, [
+    ...apiErrorCodes,
+  ]);
+  assert.equal(
+    document.components.schemas.ErrorBody.properties.code.type,
+    "string",
+    "a new error code must not break a generated client",
   );
+  assert.equal(
+    document.components.schemas.ErrorBody.properties.code.enum,
+    undefined,
+  );
+  assert.equal(
+    document.components.schemas.Error.properties.error.$ref,
+    "#/components/schemas/ErrorBody",
+  );
+  assert.doesNotMatch(
+    JSON.stringify(document),
+    /ErrorError|InnerInner|DetailsInner/,
+    "no generator-made names",
+  );
+  assert.deepEqual(document.info.license, {
+    name: "Пользовательское соглашение ColaBike",
+    url: "https://cola.example/legal/terms",
+  });
+  for (const [route, methods] of Object.entries(document.paths))
+    for (const operation of Object.values(methods))
+      for (const [status, response] of Object.entries(operation.responses))
+        if (response.$ref)
+          assert.ok(
+            document.components.responses[response.$ref.split("/").pop()],
+            route + " " + status,
+          );
 
   const list = document.paths["/bikes"].get;
   const documented = list.parameters.map((ref) =>

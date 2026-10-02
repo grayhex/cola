@@ -62,6 +62,9 @@ const noContent = (description: string) => ({
   description,
   headers: requestIdHeader,
 });
+const shared = (name: string) => ({
+  $ref: `#/components/responses/${name}`,
+});
 const failure = (description: string) => ({
   description,
   headers: requestIdHeader,
@@ -97,7 +100,7 @@ const parameters = {
     name: "limit",
     in: "query",
     required: false,
-    description: "Сколько велосипедов вернуть на страницу.",
+    description: "Сколько элементов вернуть на страницу.",
     schema: {
       type: "integer",
       minimum: LIST_LIMIT.min,
@@ -113,6 +116,14 @@ const parameters = {
       "Непрозрачный курсор из `nextCursor` предыдущей страницы. Не разбирайте и не собирайте его самостоятельно.",
     schema: { type: "string", minLength: 1, maxLength: 200 },
   },
+  userRef: {
+    name: "ref",
+    in: "path",
+    required: true,
+    description:
+      "Человек: UUID (36 знаков) или текущий username (от 3 до 30 знаков), различие однозначно. Прежний username после переименования не распознаётся (404): стабильный ключ — `id`.",
+    schema: { type: "string", minLength: 3, maxLength: 36 },
+  },
   bikeId: {
     name: "id",
     in: "path",
@@ -123,7 +134,7 @@ const parameters = {
   },
 };
 
-const description = `API ColaBike: вход устройств, текущий пользователь и чтение велосипедов.
+const description = `API ColaBike: вход устройств, текущий пользователь, чтение велосипедов и людей.
 
 **Вход.** Два способа. Браузер — HttpOnly cookie \`${SESSION_COOKIE}\`, которую выдаёт вход на сайте. Нативный клиент — сессия устройства: \`POST /auth/sessions\` возвращает пару непрозрачных токенов, токен доступа (\`cola_at_…\`, 15 минут) передаётся как \`Authorization: Bearer\`, одноразовый refresh-токен (\`cola_rt_…\`) обновляется через \`POST /auth/sessions/refresh\`. Cookie и Bearer в одном запросе — 400 \`ambiguous_authentication\`; другие схемы Authorization — 401 \`unsupported_authentication\`. Просроченный токен доступа — 401 \`token_expired\`, любой другой негодный — 401 \`invalid_token\`. CORS не включён.
 
@@ -147,6 +158,10 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
       title: "ColaBike API",
       version: API_VERSION,
       description,
+      license: {
+        name: "Пользовательское соглашение ColaBike",
+        url: `${origin}/legal/terms`,
+      },
     },
     servers: [{ url: `${origin}/api/v1` }],
     tags: [
@@ -156,6 +171,10 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
         description: "Вход устройства, обновление токенов и список сессий.",
       },
       { name: "Bikes", description: "Чтение велосипедов." },
+      {
+        name: "Users",
+        description: "Публичные профили, их велосипеды и подписки.",
+      },
       { name: "Contract", description: "Описание самого API." },
     ],
     paths: {
@@ -175,7 +194,7 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
             "401": failure(
               "Нет входа, сессия или токен недействительны, токен доступа истёк (`token_expired`) либо схема Authorization не поддерживается.",
             ),
-            "500": failure("Внутренняя ошибка."),
+            "500": shared("InternalError"),
           },
         },
       },
@@ -202,7 +221,7 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
             "401": failure(
               "`scope=mine` без входа, недействительный или истёкший токен, либо схема Authorization не поддерживается.",
             ),
-            "500": failure("Внутренняя ошибка."),
+            "500": shared("InternalError"),
           },
         },
       },
@@ -223,7 +242,7 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
             "404": failure(
               "Велосипеда нет, он приватный и чужой, или его владелец заблокирован.",
             ),
-            "500": failure("Внутренняя ошибка."),
+            "500": shared("InternalError"),
           },
         },
       },
@@ -243,7 +262,7 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
               "`invalid_credentials`: неверная почта или пароль либо аккаунт заблокирован; ответ одинаков во всех этих случаях.",
             ),
             "429": failure("Слишком много попыток; заголовок `Retry-After`."),
-            "500": failure("Внутренняя ошибка."),
+            "500": shared("InternalError"),
           },
         },
         get: {
@@ -259,7 +278,7 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
               "Одновременно cookie сессии и заголовок Authorization.",
             ),
             "401": failure("Нет входа или токен недействителен либо истёк."),
-            "500": failure("Внутренняя ошибка."),
+            "500": shared("InternalError"),
           },
         },
       },
@@ -281,7 +300,7 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
             "429": failure(
               "Слишком много обновлений; заголовок `Retry-After`.",
             ),
-            "500": failure("Внутренняя ошибка."),
+            "500": shared("InternalError"),
           },
         },
       },
@@ -300,7 +319,7 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
             ),
             "401": failure("Нет входа или токен недействителен либо истёк."),
             "403": failure("Cookie без допустимого заголовка Origin."),
-            "500": failure("Внутренняя ошибка."),
+            "500": shared("InternalError"),
           },
         },
       },
@@ -321,7 +340,107 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
             "401": failure("Нет входа или токен недействителен либо истёк."),
             "403": failure("Cookie без допустимого заголовка Origin."),
             "404": failure("Такой сессии у аккаунта нет."),
-            "500": failure("Внутренняя ошибка."),
+            "500": shared("InternalError"),
+          },
+        },
+      },
+      "/users/{ref}": {
+        get: {
+          operationId: "getUser",
+          tags: ["Users"],
+          summary: "Публичный профиль",
+          description:
+            "Имя, username, аватар, «о себе», место, дата регистрации и счётчики (публичные велосипеды, подписчики, подписки без заблокированных людей). `relationship` — отношения вошедшего зрителя с человеком, для гостя null. Почта, настройки и роль не передаются никогда. Заблокированный человек, неизвестный `{ref}` и прежний username неотличимы: 404.",
+          security: [{}, { cookieSession: [] }, { bearerAuth: [] }],
+          parameters: [{ $ref: "#/components/parameters/UserRef" }],
+          responses: {
+            "200": success("Профиль.", "Profile"),
+            "400": failure(
+              "Одновременно cookie сессии и заголовок Authorization.",
+            ),
+            "401": failure(
+              "Недействительный или истёкший токен либо неподдерживаемая схема Authorization.",
+            ),
+            "404": shared("NotFound"),
+            "500": shared("InternalError"),
+          },
+        },
+      },
+      "/users/{ref}/bikes": {
+        get: {
+          operationId: "listUserBikes",
+          tags: ["Users"],
+          summary: "Публичные велосипеды человека",
+          description:
+            "Та же страница `BikePage` и то же правило видимости, что у `/bikes`, но только велосипеды одного владельца; новые сверху, курсор. Приватные велосипеды сюда не попадают, даже когда спрашивает сам владелец: свои, включая приватные, — `/bikes?scope=mine`.",
+          security: [{}, { cookieSession: [] }, { bearerAuth: [] }],
+          parameters: [
+            { $ref: "#/components/parameters/UserRef" },
+            { $ref: "#/components/parameters/Limit" },
+            { $ref: "#/components/parameters/Cursor" },
+          ],
+          responses: {
+            "200": success("Страница велосипедов.", "BikePage"),
+            "400": failure(
+              "Неверный параметр, неверный курсор либо cookie вместе с Authorization.",
+            ),
+            "401": failure(
+              "Недействительный или истёкший токен либо неподдерживаемая схема Authorization.",
+            ),
+            "404": shared("NotFound"),
+            "500": shared("InternalError"),
+          },
+        },
+      },
+      "/users/{ref}/followers": {
+        get: {
+          operationId: "listFollowers",
+          tags: ["Users"],
+          summary: "Подписчики",
+          description:
+            "Кто подписан на человека: новые подписки сверху (время подписки, затем id), курсор, без общего количества — оно в `Profile.counts`. Подписка, добавленная во время просмотра, не сдвигает следующие страницы. Заблокированные люди в списке не появляются.",
+          security: [{}, { cookieSession: [] }, { bearerAuth: [] }],
+          parameters: [
+            { $ref: "#/components/parameters/UserRef" },
+            { $ref: "#/components/parameters/Limit" },
+            { $ref: "#/components/parameters/Cursor" },
+          ],
+          responses: {
+            "200": success("Страница людей.", "UserPage"),
+            "400": failure(
+              "Неверный параметр, неверный курсор либо cookie вместе с Authorization.",
+            ),
+            "401": failure(
+              "Недействительный или истёкший токен либо неподдерживаемая схема Authorization.",
+            ),
+            "404": shared("NotFound"),
+            "500": shared("InternalError"),
+          },
+        },
+      },
+      "/users/{ref}/following": {
+        get: {
+          operationId: "listFollowing",
+          tags: ["Users"],
+          summary: "Подписки",
+          description:
+            "На кого подписан человек; порядок, курсор и правила те же, что у подписчиков.",
+          security: [{}, { cookieSession: [] }, { bearerAuth: [] }],
+          parameters: [
+            { $ref: "#/components/parameters/UserRef" },
+            { $ref: "#/components/parameters/Limit" },
+            { $ref: "#/components/parameters/Cursor" },
+          ],
+          responses: {
+            "200": success("Страница людей.", "UserPage"),
+            "400": failure(
+              "Неверный параметр, неверный курсор либо cookie вместе с Authorization.",
+            ),
+            "401": failure(
+              "Недействительный или истёкший токен либо неподдерживаемая схема Authorization.",
+            ),
+            "404": shared("NotFound"),
+            "500": shared("InternalError"),
           },
         },
       },
@@ -339,6 +458,7 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
               headers: requestIdHeader,
               content: { "application/json": { schema: { type: "object" } } },
             },
+            "405": failure("Другой метод: разрешены GET, HEAD и OPTIONS."),
           },
         },
       },
@@ -352,6 +472,7 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
         Limit: parameters.limit,
         Cursor: parameters.cursor,
         BikeId: parameters.bikeId,
+        UserRef: parameters.userRef,
         SessionId: {
           name: "id",
           in: "path",
@@ -359,6 +480,12 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
           description: "Публичный идентификатор сессии из списка сессий.",
           schema: { type: "string", format: "uuid" },
         },
+      },
+      responses: {
+        InternalError: failure("Внутренняя ошибка, код `internal_error`."),
+        NotFound: failure(
+          "Такого объекта нет или он вам недоступен: приватный, чужой, скрытый, заблокированного владельца; ответ одинаков во всех этих случаях.",
+        ),
       },
       headers: {
         RequestId: {

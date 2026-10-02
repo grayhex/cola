@@ -32,6 +32,33 @@ export async function profileRow(
     ).rows[0] || null
   );
 }
+/** The same row by the stable id (API v1): a blocked person has no profile. */
+export async function profileRowById(
+  q: Queryable,
+  id: string,
+  viewerId: string | null | undefined,
+) {
+  return (
+    (
+      await q.query<{
+        id: string;
+        username: string;
+        name: string;
+        avatar_id: string;
+        bio: string;
+        location: string;
+        created_at: Date;
+        is_self: boolean;
+        is_following: boolean;
+        followed_by: boolean;
+      }>(
+        `SELECT ${authorColumns},u.bio,u.location,u.created_at,${relationshipColumns}
+    FROM users u WHERE u.id=$1::uuid AND u.blocked=false`,
+        [id, viewerId || null],
+      )
+    ).rows[0] || null
+  );
+}
 export async function profileCounts(q: Queryable, id: string) {
   return (
     await q.query<{

@@ -214,12 +214,15 @@ export async function visibleBikePage(
     search,
     limit,
     after,
+    ownerId = null,
   }: {
     scope: "public" | "mine";
     categories: string[];
     search: string;
     limit: number;
     after: BikeCursor | null;
+    /** Only this owner's bikes (a profile page), still by the public rule. */
+    ownerId?: string | null;
   },
   context?: { site: SiteDefinitionType },
 ): Promise<{ bikes: SocialBike[]; next: BikeCursor | null }> {
@@ -235,6 +238,7 @@ export async function visibleBikePage(
       ? "b.owner_id=$1::uuid AND u.blocked=false"
       : publicBikeSql,
   ];
+  if (ownerId) clauses.push(`b.owner_id=${add(ownerId)}::uuid`);
   if (search)
     clauses.push(
       `strpos(lower(b.name || ' ' || b.brand || ' ' || b.model || ' ' || u.name),lower(${add(search)}))>0`,

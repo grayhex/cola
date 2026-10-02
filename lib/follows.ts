@@ -49,6 +49,52 @@ export async function followPage(
     pageSize: 20,
   };
 }
+/**
+ * One page of a person's followers or following by keyset (API v1): newest
+ * follow first, ties by user id, no total. `after` is the last row's follow
+ * time (microseconds, as PostgreSQL prints it) and user id; a follow added
+ * during the walk sorts before the cursor and shifts nothing. People of
+ * blocked accounts never appear.
+ */
+export async function followKeysetPage(
+  q: Queryable,
+  targetId: string,
+  viewerId: string | null,
+  kind: "followers" | "following",
+  limit: number,
+  after: { createdAt: string; id: string } | null,
+) {
+  const incoming = kind === "followers";
+  const params: unknown[] = [targetId, viewerId];
+  const keyset = after
+    ? ` AND (f.created_at,u.id)<($${params.push(after.createdAt)}::timestamptz,$${params.push(after.id)}::uuid)`
+    : "";
+  const result = await q.query<{
+    id: string;
+    username: string;
+    name: string;
+    avatar_id: string;
+    is_self: boolean;
+    is_following: boolean;
+    followed_by: boolean;
+    cursor_at: string;
+  }>(
+    `SELECT ${authorColumns},${relationshipColumns},to_char(f.created_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS cursor_at
+     FROM user_follows f JOIN users u ON u.id=${incoming ? "f.follower_id" : "f.following_id"}
+     WHERE ${incoming ? "f.following_id" : "f.follower_id"}=$1::uuid AND NOT u.blocked${keyset}
+     ORDER BY f.created_at DESC,u.id DESC LIMIT $${params.push(limit + 1)}`,
+    params,
+  );
+  const rows = result.rows.slice(0, limit);
+  const last = rows[rows.length - 1];
+  return {
+    rows,
+    next:
+      result.rows.length > limit && last
+        ? { createdAt: last.cursor_at, id: last.id }
+        : null,
+  };
+}
 // Transaction required. Stable lock order serializes opposite follows and admin blocking.
 export async function setFollow(
   q: Queryable,

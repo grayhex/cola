@@ -192,19 +192,43 @@ export const meSchema = named(
   }),
 );
 
+export const errorDetailSchema = named(
+  "ErrorDetail",
+  "Что именно не так в запросе: путь параметра или поля и сообщение.",
+  z.strictObject({ path: z.string(), message: z.string() }),
+);
+
+/**
+ * The codes the server uses today. The set is open: a new code is an additive
+ * change, so a client must handle any other value by the HTTP status.
+ */
+export const errorCodeSchema = named(
+  "ErrorCode",
+  "Известные коды ошибок. Набор открыт: клиент обязан обработать неизвестный код по HTTP-статусу. Схема `Error` намеренно хранит код строкой, а не этим перечислением, чтобы новый код не ломал разбор у выпущенных приложений.",
+  z.enum(apiErrorCodes),
+);
+
+export const errorBodySchema = named(
+  "ErrorBody",
+  "Содержимое ошибки: код для программы, сообщение для людей, подробности.",
+  z.strictObject({
+    code: z
+      .string()
+      .describe(
+        "Код ошибки, по нему ветвится клиент. Набор открыт, известные значения перечислены в схеме `ErrorCode`.",
+      ),
+    message: z.string(),
+    details: z
+      .array(errorDetailSchema)
+      .optional()
+      .describe("Что именно не так: путь параметра и сообщение."),
+  }),
+);
+
 export const errorSchema = named(
   "Error",
-  "Ошибка. Клиент ветвится по `code`; `message` — для людей.",
-  z.strictObject({
-    error: z.strictObject({
-      code: z.enum(apiErrorCodes),
-      message: z.string(),
-      details: z
-        .array(z.strictObject({ path: z.string(), message: z.string() }))
-        .optional()
-        .describe("Что именно не так: путь параметра и сообщение."),
-    }),
-  }),
+  "Ошибка. Клиент ветвится по `error.code`; `message` — для людей. Набор кодов открыт.",
+  z.strictObject({ error: errorBodySchema }),
 );
 
 const platform = z.enum(["ios", "android", "other"]);
@@ -291,8 +315,76 @@ export const sessionGrantSchema = named(
   }),
 );
 
+export const relationshipSchema = named(
+  "Relationship",
+  "Отношения вошедшего зрителя с человеком. Для гостя вместо них null.",
+  z.strictObject({
+    isSelf: z.boolean(),
+    following: z.boolean().describe("Зритель подписан на человека."),
+    followedBy: z.boolean().describe("Человек подписан на зрителя."),
+    friends: z.boolean().describe("Подписки взаимны."),
+  }),
+);
+
+export const userSummarySchema = named(
+  "UserSummary",
+  "Человек в списке: публичные данные автора и отношения зрителя.",
+  z.strictObject({
+    id,
+    username: z.string(),
+    name: z.string(),
+    avatarUrl: z
+      .string()
+      .nullable()
+      .describe("Путь к изображению относительно адреса сайта или null."),
+    relationship: relationshipSchema.nullable(),
+  }),
+);
+
+export const profileCountsSchema = named(
+  "ProfileCounts",
+  "Счётчики профиля: публичные велосипеды и подписки без заблокированных людей.",
+  z.strictObject({
+    bikes: z.int(),
+    followers: z.int(),
+    following: z.int(),
+  }),
+);
+
+export const profileSchema = named(
+  "Profile",
+  "Публичный профиль. Почта, настройки и роль не передаются никогда.",
+  z.strictObject({
+    id,
+    username: z.string(),
+    name: z.string(),
+    avatarUrl: z.string().nullable(),
+    bio: z.string(),
+    location: z.string(),
+    createdAt: instant,
+    counts: profileCountsSchema,
+    relationship: relationshipSchema.nullable(),
+  }),
+);
+
+export const userPageSchema = named(
+  "UserPage",
+  "Страница людей: подписчики или подписки.",
+  z.strictObject({
+    items: z.array(userSummarySchema),
+    nextCursor: z
+      .string()
+      .nullable()
+      .describe("Курсор следующей страницы или null, если страниц больше нет."),
+  }),
+);
+
 export type Me = z.infer<typeof meSchema>;
 export type SessionGrant = z.infer<typeof sessionGrantSchema>;
+export type Profile = z.infer<typeof profileSchema>;
+export type UserSummary = z.infer<typeof userSummarySchema>;
+export type UserPage = z.infer<typeof userPageSchema>;
+export type Relationship = z.infer<typeof relationshipSchema>;
 export type AccountSession = z.infer<typeof accountSessionSchema>;
 export type BikeSummary = z.infer<typeof bikeSummarySchema>;
 export type Bike = z.infer<typeof bikeSchema>;
@@ -339,8 +431,11 @@ export type ListQuery = z.infer<typeof listQuerySchema>;
 /** The category filter as a list of keys, in the form the shared query takes. */
 export const categoriesOf = categoryKeys;
 
-/** Validated query of GET /api/v1/bikes; a repeated or unknown parameter is an error. */
-export function parseListQuery(url: URL): ListQuery {
+/** A query string checked against `schema`: a repeated or unknown parameter is an error. */
+export function parseQuery<T extends z.ZodType>(
+  url: URL,
+  schema: T,
+): z.infer<T> {
   const entries = [...url.searchParams];
   const repeated = entries
     .map(([key]) => key)
@@ -352,10 +447,34 @@ export function parseListQuery(url: URL): ListQuery {
         message: "Параметр передан несколько раз",
       })),
     });
-  const result = listQuerySchema.safeParse(Object.fromEntries(entries));
+  const result = schema.safeParse(Object.fromEntries(entries));
   if (!result.success)
     throw new ApiError("invalid_request", "Проверьте параметры запроса.", {
       details: detailsOf(result.error),
     });
   return result.data;
 }
+
+/** Validated query of GET /api/v1/bikes. */
+export const parseListQuery = (url: URL): ListQuery =>
+  parseQuery(url, listQuerySchema);
+
+/** limit and cursor, the whole query of the lists of a person (bikes, followers, following). */
+export const pageQuerySchema = z.strictObject({
+  limit: listQuerySchema.shape.limit,
+  cursor: listQuerySchema.shape.cursor,
+});
+export const parsePageQuery = (url: URL) => parseQuery(url, pageQuerySchema);
+
+/**
+ * `{ref}` of /users: a UUID (36 characters) or a username (3 to 30), so the two
+ * can never be confused. An old username from the rename history is not a ref;
+ * the stable key is the id.
+ */
+export const userRefSchema = z.union([
+  z.uuid().transform((value) => ({ id: value.toLowerCase() })),
+  z
+    .string()
+    .regex(/^[A-Za-z0-9._-]{3,30}$/)
+    .transform((value) => ({ username: value })),
+]);
