@@ -1,15 +1,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFile, readdir, mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readdir, rm } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { randomUUID } from "node:crypto";
-import { PGlite } from "@electric-sql/pglite";
+import type { z } from "zod";
 import { bikeInput } from "../lib/validation.ts";
 import { insertBike, hydrate, ownedBike } from "../lib/repository.ts";
 import { showcase } from "../lib/showcase.ts";
 import { publicBike } from "../lib/public-dto.ts";
-import { defaultSettings, defaultCatalog } from "../lib/site-defaults.ts";
 import {
   previewRide,
   saveRide,
@@ -18,6 +17,7 @@ import {
   rideDefaults,
   rideDetail,
   deleteRide,
+  garminImportInput,
 } from "../lib/rides.ts";
 import { getOriginal } from "../lib/ride-storage.ts";
 import { parseGarminCsv } from "../lib/garmin-csv.ts";
@@ -31,8 +31,19 @@ import {
 import { listingPriceLabel } from "../lib/market-types.ts";
 import { garminCsv } from "./garmin-fixtures.js";
 import { gpx, loop } from "./ride-fixtures.js";
+import type { Queryable } from "../lib/db.ts";
+import {
+  migrateOnly,
+  seedSiteDefaults,
+  testDatabase,
+  type TestDatabase,
+} from "./support/database.ts";
+import { userRow } from "./support/people.ts";
+import { present } from "./support/assertions.ts";
+import { ownerFields } from "./support/rides.ts";
+import { one } from "./support/rows.ts";
 
-const inputBike = (extra = {}) =>
+const inputBike = (extra: Partial<z.input<typeof bikeInput>> = {}) =>
   bikeInput.parse({
     name: "Ownership fixture",
     brand: "Test",
@@ -46,7 +57,8 @@ const inputBike = (extra = {}) =>
     is_public: true,
     ...extra,
   });
-const offer = (extra = {}) =>
+// No listing type: an edit that does not name one keeps the saved one.
+const offer = (extra: Partial<z.input<typeof listingInput>> = {}) =>
   listingInput.parse({
     title: "Test wheel",
     description: "Synthetic listing",
@@ -58,38 +70,21 @@ const offer = (extra = {}) =>
     status: "active",
     ...extra,
   });
-const migrations = async () =>
-  (await readdir(new URL("../db/", import.meta.url)))
-    .filter((f) => f.endsWith(".sql"))
-    .sort();
-async function schema(db, beforeNew = false) {
-  for (const f of await migrations()) {
-    // A database from before 021 has none of the later migrations either.
-    if (beforeNew && f >= "021_former_bikes_market_types.sql") continue;
-    await db.exec(
-      await readFile(new URL("../db/" + f, import.meta.url), "utf8"),
-    );
-  }
-  await db.query("INSERT INTO site_settings(id,value) VALUES(1,$1)", [
-    JSON.stringify(defaultSettings),
-  ]);
-  await db.query("INSERT INTO site_catalog(id,value) VALUES(1,$1)", [
-    JSON.stringify(defaultCatalog),
-  ]);
-}
-async function user(db, username) {
-  const id = randomUUID();
-  await db.query(
-    "INSERT INTO users(id,email,name,password_hash,username) VALUES($1,$2,$3,'hash',$3)",
-    [id, id + "@example.test", username],
+async function schema(db: TestDatabase, beforeNew = false) {
+  // A database from before 021 has none of the later migrations either.
+  await migrateOnly(
+    db,
+    (f) => !beforeNew || f < "021_former_bikes_market_types.sql",
   );
-  return id;
+  await seedSiteDefaults(db);
 }
-const formerError = (error) =>
-  error.status === 409 && /бывшего велосипеда/.test(error.message);
+async function user(db: Queryable, username: string) {
+  return (await userRow(db, { name: username, username })).id;
+}
+const formerError = { status: 409, message: /бывшего велосипеда/ };
 
 test("ownership status blocks every new ride path before writes and preserves existing GPX/history", async () => {
-  const db = new PGlite();
+  const db = await testDatabase({ migrated: false });
   const dir = await mkdtemp(path.join(tmpdir(), "cola-ownership-"));
   const oldDir = process.env.RIDES_DIR;
   process.env.RIDES_DIR = dir;
@@ -103,20 +98,23 @@ test("ownership status blocks every new ride path before writes and preserves ex
     const former = await db.transaction((q) =>
       insertBike(q, owner, inputBike({ name: "Old bicycle", is_former: true })),
     );
-    const row = await ownedBike(db, former, owner);
+    const row = present(await ownedBike(db, former, owner));
     assert.equal(row.is_former, true);
     assert.equal(row.category, "mtb");
     assert.equal((await hydrate(db, row)).is_former, true);
     assert.equal(
-      (await showcase(db, null)).bikes.find((b) => b.id === former).is_former,
+      present((await showcase(db, null)).bikes.find((b) => b.id === former))
+        .is_former,
       true,
     );
-    const dto = publicBike({
+    // The row carries private fields on purpose; the DTO must drop them.
+    const source = {
       ...row,
-      price: 321,
+      price: "321",
       factory_spec: { secret: "private" },
       show_bike_price: false,
-    });
+    };
+    const dto = publicBike(source);
     assert.equal(dto.is_former, true);
     assert.equal("owner_id" in dto, false);
     assert.equal("factory_spec" in dto, false);
@@ -174,12 +172,15 @@ test("ownership status blocks every new ride path before writes and preserves ex
         importGarmin(
           q,
           owner,
-          {
+          garminImportInput.parse({
             bikeId: former,
+            csv: garminCsv(),
+            utcOffsetMinutes: 0,
+            units: "metric",
             selected: [0],
             visibleMetrics: [],
             isPublic: false,
-          },
+          }),
           csv,
           rideDefaults,
         ),
@@ -241,7 +242,7 @@ test("ownership status blocks every new ride path before writes and preserves ex
       formerError,
     );
     const existing = await rideDetail(db, ride.shareId, owner, true);
-    assert.equal(existing.privacyEnabled, true);
+    assert.equal(ownerFields.parse(existing).privacyEnabled, true);
     assert.equal(existing.bike.id, current);
     assert.deepEqual(await getOriginal(ride.id), bytes);
     await db.query("UPDATE bikes SET is_former=false WHERE id=$1", [former]);
@@ -268,52 +269,56 @@ test("ownership status blocks every new ride path before writes and preserves ex
 });
 
 test("market intent, combined filters, pagination, rubles and ownership use the real schema", async () => {
-  const db = new PGlite();
+  const db = await testDatabase({ migrated: false });
   try {
     await schema(db);
     const owner = await user(db, "market_owner"),
       other = await user(db, "market_other");
-    const created = {};
-    for (const listingType of ["sale", "wanted", "exchange", "free"])
-      created[listingType] = await db.transaction((q) =>
-        saveListing(
-          q,
-          owner,
-          offer({
-            listingType,
-            price:
-              listingType === "wanted" || listingType === "exchange"
-                ? null
-                : 50,
-          }),
+    const created = new Map<string, Awaited<ReturnType<typeof saveListing>>>();
+    const made = (type: string) => present(created.get(type));
+    for (const listingType of ["sale", "wanted", "exchange", "free"] as const)
+      created.set(
+        listingType,
+        await db.transaction((q) =>
+          saveListing(
+            q,
+            owner,
+            offer({
+              listingType,
+              price:
+                listingType === "wanted" || listingType === "exchange"
+                  ? null
+                  : 50,
+            }),
+          ),
         ),
       );
-    for (const [type, value] of Object.entries(created)) {
+    for (const [type, value] of created) {
       const listing = await marketDetail(db, value.shareId, null);
       assert.equal(listing.listingType, type);
       assert.equal(listing.currency, "RUB");
       assert.equal(listing.isOwner, false);
       assert.equal("owner_id" in listing, false);
     }
-    const free = await marketDetail(db, created.free.shareId, null);
+    const free = await marketDetail(db, made("free").shareId, null);
     assert.equal(free.price, 0);
     assert.equal(listingPriceLabel(free), "Бесплатно");
     await db.transaction((q) =>
-      saveListing(q, owner, offer({ price: 123 }), created.free.id),
+      saveListing(q, owner, offer({ price: 123 }), made("free").id),
     );
     assert.equal(
-      (await marketDetail(db, created.free.shareId, null)).listingType,
+      (await marketDetail(db, made("free").shareId, null)).listingType,
       "free",
     );
-    assert.equal((await marketDetail(db, created.free.shareId, null)).price, 0);
+    assert.equal((await marketDetail(db, made("free").shareId, null)).price, 0);
     await assert.rejects(
       db.query("UPDATE market_listings SET price=12 WHERE id=$1", [
-        created.free.id,
+        made("free").id,
       ]),
       /market_free_price/,
     );
     await assert.rejects(
-      db.transaction((q) => saveListing(q, other, offer(), created.free.id)),
+      db.transaction((q) => saveListing(q, other, offer(), made("free").id)),
       /недоступно/,
     );
     for (const currency of ["USD", "EUR"])
@@ -332,7 +337,7 @@ test("market intent, combined filters, pagination, rubles and ownership use the 
       search: "wheel",
     });
     assert.equal(filtered.total, 1);
-    assert.equal(filtered.items[0].id, created.wanted.id);
+    assert.equal(filtered.items[0].id, made("wanted").id);
     assert.equal(
       (await marketList(db, null, { listingType: "wanted", condition: "new" }))
         .total,
@@ -387,7 +392,7 @@ test("market intent, combined filters, pagination, rubles and ownership use the 
       0,
     );
     await assert.rejects(
-      marketDetail(db, created.free.shareId, null),
+      marketDetail(db, made("free").shareId, null),
       /недоступно/,
     );
   } finally {
@@ -396,14 +401,15 @@ test("market intent, combined filters, pagination, rubles and ownership use the 
 });
 
 test("market price, city and sort share one WHERE for count and page; contacts stay out of cards", async () => {
-  const db = new PGlite();
+  const db = await testDatabase({ migrated: false });
   try {
     await schema(db);
     const owner = await user(db, "market_seller"),
       buyer = await user(db, "market_buyer");
-    const add = (extra) =>
+    const add = (extra: Parameters<typeof offer>[0]) =>
       db.transaction((q) => saveListing(q, owner, offer(extra)));
-    const titles = (list) => list.items.map((i) => i.title);
+    const titles = (list: { items: { title: string }[] }) =>
+      list.items.map((i) => i.title);
     const cheap = await add({
       title: "Cheap",
       price: 500,
@@ -507,7 +513,7 @@ test("market price, city and sort share one WHERE for count and page; contacts s
 });
 
 test("migration 021 keeps existing bikes, planned history and foreign-currency amounts unchanged", async () => {
-  const db = new PGlite();
+  const db = await testDatabase({ migrated: false });
   try {
     await schema(db, true);
     const owner = await user(db, "upgrade_owner");
@@ -526,13 +532,8 @@ test("migration 021 keeps existing bikes, planned history and foreign-currency a
     const before = (
       await db.query("SELECT * FROM rides WHERE id=$1", [ride.id])
     ).rows[0];
-    for (const f of (await migrations()).filter(
-      (f) => f >= "021_former_bikes_market_types.sql",
-    ))
-      await db.exec(
-        await readFile(new URL("../db/" + f, import.meta.url), "utf8"),
-      );
-    assert.equal((await ownedBike(db, bike, owner)).is_former, false);
+    await migrateOnly(db, (f) => f >= "021_former_bikes_market_types.sql");
+    assert.equal(present(await ownedBike(db, bike, owner)).is_former, false);
     // Later migrations add columns; the ones the ride had stay as they were.
     const after = (await db.query("SELECT * FROM rides WHERE id=$1", [ride.id]))
       .rows[0];

@@ -1,8 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { readFile, readdir } from "node:fs/promises";
-import { PGlite } from "@electric-sql/pglite";
+import type { z } from "zod";
 import {
   projectPoint,
   unprojectPoint,
@@ -19,6 +18,13 @@ import {
 } from "../lib/ride-filters.ts";
 import { rideList, upcomingRides } from "../lib/rides.ts";
 import { ridePassportInput } from "../lib/ride-plan.ts";
+import type { RideRow } from "../lib/database-rows.ts";
+import type { Passport } from "../lib/ride-match-core.ts";
+import { testDatabase } from "./support/database.ts";
+import { bikeRow } from "./support/bikes.ts";
+import { present } from "./support/assertions.ts";
+import { userRow } from "./support/people.ts";
+import { planRow, rsvpRow, type RideResponse } from "./support/rides.ts";
 
 test("area picker geometry: Mercator round trip, coarse 0.01° grid, circle size", () => {
   for (const zoom of [3, 10, 15])
@@ -50,21 +56,21 @@ test("area picker geometry: Mercator round trip, coarse 0.01° grid, circle size
 });
 
 test("date presets are local and bounded; URL filters accept only public known values", () => {
-  const at = (iso) => new Date(iso);
+  const at = (iso: string) => new Date(iso);
   // Wednesday → Saturday 00:00 … Monday 00:00 local.
-  const wed = presetRange("weekend", at("2030-05-01T15:00:00"));
+  const wed = present(presetRange("weekend", at("2030-05-01T15:00:00")));
   assert.equal(wed.from.getDay(), 6);
   assert.equal(wed.from.getHours(), 0);
   assert.equal(wed.to.getDay(), 1);
   assert.equal((+wed.to - +wed.from) / 86400000, 2);
   // Saturday afternoon starts now; Sunday ends at Monday midnight.
-  const sat = presetRange("weekend", at("2030-05-04T15:00:00"));
+  const sat = present(presetRange("weekend", at("2030-05-04T15:00:00")));
   assert.equal(+sat.from, +at("2030-05-04T15:00:00"));
   assert.equal(sat.to.getDay(), 1);
-  const sun = presetRange("weekend", at("2030-05-05T15:00:00"));
+  const sun = present(presetRange("weekend", at("2030-05-05T15:00:00")));
   assert.equal(sun.to.getDay(), 1);
   assert.ok(+sun.to - +sun.from < 86400000);
-  const today = presetRange("today", at("2030-05-01T15:00:00"));
+  const today = present(presetRange("today", at("2030-05-01T15:00:00")));
   assert.equal(today.to.getHours(), 0);
   assert.equal(presetRange("never"), null);
   const filters = readFilters(
@@ -90,64 +96,48 @@ test("date presets are local and bounded; URL filters accept only public known v
   );
 });
 
-async function migrated() {
-  const db = new PGlite();
-  for (const file of (await readdir(new URL("../db/", import.meta.url)))
-    .filter((f) => f.endsWith(".sql"))
-    .sort())
-    await db.exec(
-      await readFile(new URL("../db/" + file, import.meta.url), "utf8"),
-    );
-  return db;
-}
+const migrated = testDatabase;
+type PlanFilter = NonNullable<
+  NonNullable<Parameters<typeof rideList>[2]>["plan"]
+>;
 const H = 3600000;
 const base = Date.now() + 48 * H;
-const soon = (hours) => new Date(base + hours * H).toISOString();
+const soon = (hours: number) => new Date(base + hours * H).toISOString();
 
 test("upcoming rides: organizer, accepted, maybe, pending invitation, cancellations and access", async () => {
   const db = await migrated();
   try {
     let n = 0;
-    const user = async (blocked = false) => {
-      const id = randomUUID();
-      await db.query(
-        "INSERT INTO users(id,email,name,password_hash,username,blocked) VALUES($1,$2,'Rider','hash',$3,$4)",
-        [id, id + "@test.invalid", "home" + n++, blocked],
-      );
-      return id;
-    };
-    const bike = async (owner, isPublic = true) => {
-      const id = randomUUID();
-      await db.query(
-        "INSERT INTO bikes(id,owner_id,share_id,name,year,category,is_public) VALUES($1,$2,$1,'Bike',2026,'gravel',$3)",
-        [id, owner, isPublic],
-      );
-      return id;
-    };
-    const plan = async (owner, b, start, o = {}) => {
-      const id = randomUUID();
-      await db.query(
-        `INSERT INTO rides(id,owner_id,bike_id,share_id,title,source_hash,status,source_kind,has_track,meeting_point,started_at,is_public,
-          distance_m,point_count,public_point_count,public_geometry,privacy_radius_m,plan_passport,meeting_visibility)
-         VALUES($1::uuid,$2,$3,$1::uuid,$4,'p:'||$1::text,$5,'planned',false,'Gate 7',$6,$7,0,0,0,'[]',500,$8,'participants')`,
-        [
-          id,
-          owner,
-          b,
-          o.title || "Plan",
-          o.status || "planned",
-          start,
-          o.isPublic ?? true,
-          JSON.stringify(o.passport || {}),
-        ],
-      );
-      return id;
-    };
-    const rsvp = (ride, u, at, response) =>
-      db.query(
-        "INSERT INTO ride_rsvps(ride_id,user_id,occurs_at,response) VALUES($1,$2,$3,$4)",
-        [ride, u, at, response],
-      );
+    const user = async (blocked = false) =>
+      (await userRow(db, { username: "home" + n++, blocked })).id;
+    const bike = async (owner: string, isPublic = true) =>
+      (await bikeRow(db, owner, { is_public: isPublic })).id;
+    const plan = async (
+      owner: string,
+      b: string,
+      start: string,
+      o: {
+        title?: string;
+        status?: RideRow["status"];
+        isPublic?: boolean;
+        passport?: Passport;
+      } = {},
+    ) =>
+      (
+        await planRow(db, owner, b, start, {
+          title: o.title || "Plan",
+          status: o.status || "planned",
+          meeting_point: "Gate 7",
+          is_public: o.isPublic ?? true,
+          plan_passport: o.passport || {},
+        })
+      ).id;
+    const rsvp = (
+      ride: string,
+      u: string,
+      at: string,
+      response: RideResponse,
+    ) => rsvpRow(db, ride, u, at, response);
     const me = await user(),
       org = await user(),
       blocked = await user(true);
@@ -235,23 +225,23 @@ test("upcoming rides: organizer, accepted, maybe, pending invitation, cancellati
 test("public upcoming filters: future only, passport choices, duration buckets and escaped area text", async () => {
   const db = await migrated();
   try {
-    const owner = randomUUID(),
-      b = randomUUID();
-    await db.query(
-      "INSERT INTO users(id,email,name,password_hash,username) VALUES($1,$2,'R','h','filters')",
-      [owner, owner + "@test.invalid"],
-    );
-    await db.query(
-      "INSERT INTO bikes(id,owner_id,share_id,name,year,category,is_public) VALUES($1,$2,$1,'B',2026,'gravel',true)",
-      [b, owner],
-    );
-    const add = (title, start, passport, end = null, isPublic = true) =>
-      db.query(
-        `INSERT INTO rides(id,owner_id,bike_id,share_id,title,source_hash,status,source_kind,has_track,started_at,plan_ends_at,is_public,
-          distance_m,point_count,public_point_count,public_geometry,privacy_radius_m,plan_passport)
-         VALUES(gen_random_uuid(),$1,$2,gen_random_uuid(),$3,'s'||$3,'planned','planned',false,$4,$5,$6,0,0,0,'[]',500,$7)`,
-        [owner, b, title, start, end, isPublic, JSON.stringify(passport)],
-      );
+    const owner = (await userRow(db, { name: "R", username: "filters" })).id,
+      b = (await bikeRow(db, owner, { name: "B" })).id;
+    const add = (
+      title: string,
+      start: string,
+      passport: Passport,
+      end: string | null = null,
+      isPublic = true,
+    ) =>
+      planRow(db, owner, b, start, {
+        title,
+        meeting_point: "",
+        meeting_visibility: "public",
+        plan_ends_at: end,
+        is_public: isPublic,
+        plan_passport: passport,
+      });
     await add("Past", new Date(Date.now() - 48 * H).toISOString(), {
       pace: "relaxed",
     });
@@ -268,7 +258,7 @@ test("public upcoming filters: future only, passport choices, duration buckets a
     });
     await add("Unknown", soon(4), { area: { label: "100%_парк" } });
     await add("Private", soon(5), { pace: "relaxed" }, null, false);
-    const titles = async (plan) =>
+    const titles = async (plan: PlanFilter) =>
       (await rideList(db, null, { status: "planned", plan })).rides.map(
         (r) => r.title,
       );
@@ -284,7 +274,7 @@ test("public upcoming filters: future only, passport choices, duration buckets a
     // Buckets never overlap: exactly 120 min is short, exactly 240 is medium.
     await add("Exactly two hours", soon(6), {}, soon(8));
     await add("Exactly four hours", soon(7), {}, soon(11));
-    const bucket = async (key) =>
+    const bucket = async (key: keyof typeof durationBuckets) =>
       titles(
         Object.fromEntries(
           Object.entries(durationBuckets[key][1]).map(([k, v]) => [k, v]),
