@@ -1,8 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFile, readdir } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
-import { PGlite } from "@electric-sql/pglite";
 import { defaultCatalog } from "../lib/site-defaults.ts";
 import {
   productCategories,
@@ -17,47 +15,57 @@ import {
   editComponentModel,
   mergeComponentModels,
 } from "../lib/component-catalog.ts";
+import type { BikeRow, ComponentRow } from "../lib/database-rows.ts";
+import type { FactorySpec } from "../lib/database-rows.ts";
+import type { Resolved } from "../services/bike-resolver/src/domain.ts";
+import { invalid } from "./support/negative.ts";
+import { migrateOnly, testDatabase } from "./support/database.ts";
+import { bikeRow, componentRow } from "./support/bikes.ts";
+import { present } from "./support/assertions.ts";
+import { userRow } from "./support/people.ts";
+import { one } from "./support/rows.ts";
 import { factoryEntries } from "../lib/factory-components.ts";
 import { saveFactorySpecification } from "../lib/factory-import.ts";
 import { rebuildFactoryComponents } from "../lib/factory-rebuild.ts";
 
 test("product migration preserves specifications, consolidates paired models and blocks catalog pollution on every write", async () => {
-  const db = new PGlite();
-  const sql = async (file) =>
-    db.exec(await readFile(new URL("../db/" + file, import.meta.url), "utf8"));
+  const db = await testDatabase({ migrated: false });
   try {
-    for (const file of (await readdir(new URL("../db/", import.meta.url)))
-      .filter((f) => f.endsWith(".sql") && f < "033")
-      .sort())
-      await sql(file);
+    await migrateOnly(db, (f) => f < "033");
     await db.query(
       "INSERT INTO site_catalog(id,value) VALUES(1,$1) ON CONFLICT(id) DO UPDATE SET value=$1",
       [defaultCatalog],
     );
-    const owner = randomUUID(),
-      bikeId = randomUUID();
-    await db.query(
-      "INSERT INTO users(id,email,name,password_hash,role) VALUES($1::uuid,$1::text,'Owner','x','admin')",
-      [owner],
-    );
-    const spec = {
-      components: [{ type: "headset", description: "интегрированная рулевая" }],
-      original: "untouched",
-    };
-    await db.query(
-      "INSERT INTO bikes(id,share_id,owner_id,name,brand,model,year,category,is_public,factory_spec) VALUES($1,$1,$2,'Bike','Cube','Travel',2021,'road',true,$3)",
-      [bikeId, owner, spec],
-    );
-    const install = async (category, name, bike = bikeId) => {
-      const id = randomUUID();
-      await db.query(
-        "INSERT INTO components(id,bike_id,section,category,name,notes,price,url,group_id) VALUES($1,$2,'build',$3,$4,'Original notes',1234,'https://example.test/purchase','custom')",
-        [id, bike, category, name],
-      );
-      return (await db.query("SELECT * FROM components WHERE id=$1", [id]))
-        .rows[0];
-    };
-    const paired = [];
+    const owner = (
+        await userRow(db, { name: "Owner", username: "owner", role: "admin" })
+      ).id,
+      // A specification as old imports stored it, not the current shape.
+      spec = invalid<FactorySpec>({
+        components: [
+          { type: "headset", description: "интегрированная рулевая" },
+        ],
+        original: "untouched",
+      }),
+      bikeId = (
+        await bikeRow(db, owner, {
+          name: "Bike",
+          brand: "Cube",
+          model: "Travel",
+          year: 2021,
+          category: "road",
+          factory_spec: spec,
+        })
+      ).id;
+    const install = (category: string, name: string, bike = bikeId) =>
+      componentRow(db, bike, {
+        category,
+        name,
+        notes: "Original notes",
+        price: "1234",
+        url: "https://example.test/purchase",
+        group_id: "custom",
+      });
+    const paired: [ComponentRow, ComponentRow][] = [];
     for (const [front, rear, name] of [
       ["Передняя покрышка", "Задняя покрышка", "Schwalbe Marathon"],
       ["Передний обод", "Задний обод", "DT Swiss EX 511"],
@@ -124,18 +132,16 @@ test("product migration preserves specifications, consolidates paired models and
       "INSERT INTO market_listings(id,share_id,owner_id,title,category,condition,price,currency,component_model_id) VALUES($1,$1,$2,'Listing stays','components','used',100,'RUB',$3)",
       [listing, owner, excluded[0].model_id],
     );
-    const before = (await db.query("SELECT * FROM components ORDER BY id"))
-      .rows;
-    await db.transaction(async (q) =>
-      q.exec(
-        await readFile(
-          new URL("../db/033_component_products.sql", import.meta.url),
-          "utf8",
-        ),
-      ),
-    );
-    const after = (await db.query("SELECT * FROM components ORDER BY id")).rows;
-    const row = (id) => after.find((p) => p.id === id);
+    const before = (
+      await db.query<ComponentRow>("SELECT * FROM components ORDER BY id")
+    ).rows;
+    await migrateOnly(db, (f) => f === "033_component_products.sql");
+    const after = (
+      await db.query<ComponentRow>("SELECT * FROM components ORDER BY id")
+    ).rows;
+    const row = (id: string) => present(after.find((p) => p.id === id));
+    const found = async (id: string | null) =>
+      present(await resolveComponentModel(db, present(id)));
     assert.deepEqual(
       after.map((part) =>
         Object.fromEntries(
@@ -151,8 +157,13 @@ test("product migration preserves specifications, consolidates paired models and
       ),
     );
     assert.deepEqual(
-      (await db.query("SELECT factory_spec FROM bikes WHERE id=$1", [bikeId]))
-        .rows[0].factory_spec,
+      (
+        await one<{ factory_spec: unknown }>(
+          db,
+          "SELECT factory_spec FROM bikes WHERE id=$1",
+          [bikeId],
+        )
+      ).factory_spec,
       spec,
     );
     for (const [front, rear] of paired) {
@@ -163,16 +174,10 @@ test("product migration preserves specifications, consolidates paired models and
         installationPosition(front.category),
       );
       assert.equal(row(rear.id).position, installationPosition(rear.category));
-      const model = await resolveComponentModel(db, row(front.id).model_id);
+      const model = await found(row(front.id).model_id);
       assert.equal(model.category, productCategory(front.category));
-      assert.equal(
-        (await resolveComponentModel(db, front.model_id)).id,
-        model.id,
-      );
-      assert.equal(
-        (await resolveComponentModel(db, rear.model_id)).id,
-        model.id,
-      );
+      assert.equal((await found(front.model_id)).id, model.id);
+      assert.equal((await found(rear.model_id)).id, model.id);
     }
     assert.notEqual(row(distinct[0].id).model_id, row(distinct[1].id).model_id);
     assert.notEqual(
@@ -181,7 +186,10 @@ test("product migration preserves specifications, consolidates paired models and
     );
     for (const p of excluded) {
       assert.equal(row(p.id).model_id, null, p.name);
-      assert.equal(await resolveComponentModel(db, p.model_id), null);
+      assert.equal(
+        await resolveComponentModel(db, invalid<string>(p.model_id)),
+        null,
+      );
       assert.equal(
         (await install(p.category, p.name)).model_id,
         null,
@@ -237,8 +245,13 @@ test("product migration preserves specifications, consolidates paired models and
     assert.equal(catalog.total, 10);
     assert(catalog.items.every((m) => productCategories.includes(m.category)));
     assert(catalog.items.every((m) => m.builds === 1));
-    const policy = (await db.query("SELECT * FROM component_product_policy"))
-      .rows;
+    const policy = (
+      await db.query<{
+        product_category: string;
+        installation_category: string;
+        position: string;
+      }>("SELECT * FROM component_product_policy")
+    ).rows;
     assert.equal(
       policy.length,
       productCategories.length + Object.keys(pairedCategories).length,
@@ -288,7 +301,7 @@ test("product migration preserves specifications, consolidates paired models and
       ).rows[0].model_id,
       null,
     );
-    const model = await resolveComponentModel(db, edited.model_id);
+    const model = await found(edited.model_id);
     await assert.rejects(
       db.transaction((q) =>
         editComponentModel(q, owner, model.id, {
@@ -299,11 +312,8 @@ test("product migration preserves specifications, consolidates paired models and
       ),
       /только к комплектации/,
     );
-    const front = await resolveComponentModel(
-        db,
-        row(derailleurs[0].id).model_id,
-      ),
-      rear = await resolveComponentModel(db, row(derailleurs[1].id).model_id);
+    const front = await found(row(derailleurs[0].id).model_id),
+      rear = await found(row(derailleurs[1].id).model_id);
     await assert.rejects(
       db.transaction((q) =>
         mergeComponentModels(q, owner, front.id, {
@@ -321,14 +331,17 @@ test("product migration preserves specifications, consolidates paired models and
       "INSERT INTO bikes(id,share_id,owner_id,name,brand,model,year,category,is_public) VALUES($1,$1,$2,'Factory','Cube','Travel',2021,'road',true)",
       [fresh, owner],
     );
-    const bike = (await db.query("SELECT * FROM bikes WHERE id=$1", [fresh]))
-      .rows[0];
-    const raw = (type, description) => ({
+    const bike = await one<BikeRow>(db, "SELECT * FROM bikes WHERE id=$1", [
+      fresh,
+    ]);
+    const raw = (type: string, description: string) => ({
       type,
       description,
       raw: { label: type, value: description },
     });
-    const source = {
+    // Only the components matter to the import; the rest of a resolved
+    // specification is not what this test is about.
+    const source = invalid<Resolved>({
       components: [
         raw("front_tire", "Schwalbe Marathon 40-622"),
         raw("rear_tire", "Schwalbe Marathon 40-622"),
@@ -338,7 +351,7 @@ test("product migration preserves specifications, consolidates paired models and
         raw("other", "катафот"),
         raw("pedals", "None included"),
       ],
-    };
+    });
     assert.equal(factoryEntries(source).length, 6);
     assert.equal(
       (
@@ -349,9 +362,10 @@ test("product migration preserves specifications, consolidates paired models and
       6,
     );
     const installed = (
-      await db.query("SELECT * FROM components WHERE bike_id=$1 ORDER BY id", [
-        fresh,
-      ])
+      await db.query<ComponentRow>(
+        "SELECT * FROM components WHERE bike_id=$1 ORDER BY id",
+        [fresh],
+      )
     ).rows;
     assert.equal(installed.filter((p) => p.model_id).length, 2);
     assert.equal(

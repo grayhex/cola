@@ -1,8 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { PGlite } from "@electric-sql/pglite";
-import { readFile, readdir } from "node:fs/promises";
+import type { z } from "zod";
 import { randomUUID } from "node:crypto";
+import type { MailMessage } from "../lib/mail.ts";
 import {
   planRide,
   planInput,
@@ -17,13 +17,20 @@ import { notificationPage, readNotifications } from "../lib/notifications.ts";
 import { saveNotificationEmail } from "../lib/notification-preferences.ts";
 import { runNotificationEmailBatch } from "../lib/notification-email.ts";
 import { releaseRideReminders, rideNotice } from "../lib/ride-notifications.ts";
+import { processEnv } from "./support/env.ts";
+import { testDatabase } from "./support/database.ts";
+import { bikeRow } from "./support/bikes.ts";
+import { userRow } from "./support/people.ts";
+import { ownerFields } from "./support/rides.ts";
+import { present } from "./support/assertions.ts";
+import { one } from "./support/rows.ts";
 import { inviteFromInterest } from "../lib/ride-matching.ts";
 import { createIntent } from "../lib/ride-intents.ts";
 const hour = 3600000,
-  env = {
+  env = processEnv({
     MAIL_CAPTURE_DIR: "/tmp/cola-ride-mail-test",
     APP_ORIGIN: "https://cola.example.test",
-  };
+  });
 const on = {
   enabled: true,
   discussions: false,
@@ -31,36 +38,36 @@ const on = {
   market: false,
   reminders: true,
 };
-const at = (h) =>
+const at = (h: number) =>
   new Date(Math.floor((Date.now() + h * hour) / 60000) * 60000).toISOString();
+type PlannedRide = Awaited<ReturnType<typeof planRide>>;
 async function setup() {
-  const db = new PGlite(),
+  const db = await testDatabase(),
     old = process.env.MAIL_CAPTURE_DIR;
   process.env.MAIL_CAPTURE_DIR = env.MAIL_CAPTURE_DIR;
-  for (const f of (await readdir(new URL("../db/", import.meta.url)))
-    .filter((f) => f.endsWith(".sql"))
-    .sort())
-    await db.exec(
-      await readFile(new URL("../db/" + f, import.meta.url), "utf8"),
-    );
-  const user = async (name) => {
-    const id = randomUUID();
-    await db.query(
-      "INSERT INTO users(id,email,username,name,password_hash,email_verified_at) VALUES($1,$2,$3,$3,'hash',now())",
-      [id, id + "@example.test", name],
-    );
-    return id;
-  };
+  const user = async (name: string) =>
+    (
+      await userRow(db, {
+        username: name,
+        name,
+        email_verified_at: new Date(),
+      })
+    ).id;
   const owner = await user("organizer"),
     rider = await user("rider"),
-    bike = randomUUID();
-  await db.query(
-    "INSERT INTO bikes(id,owner_id,share_id,name,brand,model,year,category,weight,is_public) VALUES($1,$2,$1,'Bike','Cube','Travel',2020,'road',14,true)",
-    [bike, owner],
-  );
+    bike = (
+      await bikeRow(db, owner, {
+        name: "Bike",
+        brand: "Cube",
+        model: "Travel",
+        year: 2020,
+        category: "road",
+        weight: 14,
+      })
+    ).id;
   await saveNotificationEmail(db, rider, on, env);
-  const tx = (fn) => db.transaction(fn);
-  const plan = async (changes) =>
+  const tx = db.transaction;
+  const plan = async (changes?: Partial<z.input<typeof planInput>>) =>
     tx((q) =>
       planRide(
         q,
@@ -83,9 +90,13 @@ async function setup() {
         rideDefaults,
       ),
     );
-  const edit = async (ride, changes) =>
+  const edit = async (
+    ride: PlannedRide,
+    changes: Partial<z.input<typeof rideEdit>>,
+  ) =>
     tx(async (q) => {
       const r = await rideDetail(q, ride.shareId, owner, true);
+      const owned = ownerFields.parse(r);
       return saveRide(
         q,
         owner,
@@ -94,8 +105,8 @@ async function setup() {
           title: r.title,
           description: r.description,
           isPublic: r.isPublic,
-          privacyEnabled: r.privacyEnabled,
-          privacyRadiusM: r.privacyRadiusM,
+          privacyEnabled: owned.privacyEnabled,
+          privacyRadiusM: owned.privacyRadiusM,
           ...changes,
         }),
         rideDefaults,
@@ -197,7 +208,7 @@ test("ride event + email is atomic, revision-bound and coalesces organizer respo
       "reconfirm",
     );
     await s.unlock();
-    const mail = [];
+    const mail: MailMessage[] = [];
     assert.equal(
       (
         await runNotificationEmailBatch(s.db, {
@@ -226,7 +237,7 @@ test("ride event + email is atomic, revision-bound and coalesces organizer respo
       ).sent,
       1,
     );
-    assert(mail.at(-1).subject.includes("отменена"));
+    assert(present(mail.at(-1)).subject.includes("отменена"));
     assert.equal(
       (await notificationPage(s.db, s.rider)).notifications.filter(
         (n) => n.type === "ride_reminder",
@@ -245,14 +256,13 @@ test("one default reminder, fake clock, late join, downtime and SMTP-disabled in
     await s.tx((q) => respondRide(q, ride.id, s.rider, "accepted"));
     const before = new Date(+new Date(start) - 24 * hour - 1),
       due = new Date(+before + 1),
-      mail = [];
+      mail: MailMessage[] = [];
     await readNotifications(s.db, s.rider);
-    const scheduled = (
-      await s.db.query(
-        "SELECT id,read_at FROM notifications WHERE ride_id=$1 AND type='ride_reminder'",
-        [ride.id],
-      )
-    ).rows[0];
+    const scheduled = await one<{ id: string; read_at: Date | null }>(
+      s.db,
+      "SELECT id,read_at FROM notifications WHERE ride_id=$1 AND type='ride_reminder'",
+      [ride.id],
+    );
     assert.equal(
       scheduled.read_at,
       null,
@@ -330,7 +340,7 @@ test("one default reminder, fake clock, late join, downtime and SMTP-disabled in
     const offline = await s.plan({ scheduledAt: at(2) });
     await s.tx((q) => respondRide(q, offline.id, s.rider, "accepted"));
     await s.db.query("DELETE FROM notification_email_outbox");
-    const result = await runNotificationEmailBatch(s.db, { env: {} });
+    const result = await runNotificationEmailBatch(s.db, { env: processEnv() });
     assert.equal(result.disabled, true);
     assert(
       (await notificationPage(s.db, s.rider)).notifications.some(

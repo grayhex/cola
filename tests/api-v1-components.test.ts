@@ -1,10 +1,7 @@
 import test, { after } from "node:test";
 import assert from "node:assert/strict";
-import { PGlite } from "@electric-sql/pglite";
-import { readFile, readdir } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
+import type { ComponentPhotoRow } from "../lib/database-rows.ts";
 import {
   componentCatalogFilters,
   componentModelCard,
@@ -12,8 +9,6 @@ import {
 } from "../lib/component-catalog.ts";
 import { componentPhotoList } from "../lib/component-photos.ts";
 import { componentSocial } from "../lib/component-social.ts";
-import { insertBike } from "../lib/repository.ts";
-import { bikeInput } from "../lib/validation.ts";
 import {
   decodeCursor,
   decodeRankCursor,
@@ -27,85 +22,65 @@ import {
   parseComponentCatalogQuery,
 } from "../lib/api-v1/schemas.ts";
 import { toComponentModel, toComponentPhoto } from "../lib/api-v1/mappers.ts";
+import { testDatabase } from "./support/database.ts";
+import { bikeThroughWriter, componentRow } from "./support/bikes.ts";
+import { componentPhotoRow } from "./support/components.ts";
+import { present } from "./support/assertions.ts";
+import { labelledUser } from "./support/people.ts";
+import { one } from "./support/rows.ts";
 
 // API v1, the component catalog (#317): the list in two orders with a cursor,
 // the card of a model (merged and archived ones), the public gallery and the
 // comments through the shared engine. The server end to end is
 // tests/api-v1-components-http.js.
 
-const root = fileURLToPath(new URL("../", import.meta.url));
-const db = new PGlite();
-for (const file of (await readdir(path.join(root, "db")))
-  .filter((name) => name.endsWith(".sql"))
-  .sort())
-  await db.exec(await readFile(path.join(root, "db", file), "utf8"));
+const db = await testDatabase();
 after(() => db.close());
 
 const run = randomUUID().slice(0, 6);
-const stamp = (n, micro = 100) =>
+const stamp = (n: number, micro = 100) =>
   `2026-09-${String(n).padStart(2, "0")}T10:00:00.${String(micro).padStart(6, "0")}Z`;
-async function addUser(label, blocked = false) {
-  const id = randomUUID();
-  await db.query(
-    "INSERT INTO users(id,email,name,password_hash,username,blocked) VALUES($1,$2,$3,'hash',$4,$5)",
-    [
-      id,
-      id + "@test.invalid",
-      "Имя " + label,
-      (label + "-" + id.slice(0, 8)).toLowerCase(),
-      blocked,
-    ],
-  );
-  return id;
+async function addUser(label: string, blocked = false) {
+  return (await labelledUser(db, label, { blocked })).id;
 }
-async function addBike(owner, isPublic = true) {
-  return insertBike(
-    db,
-    owner,
-    bikeInput.parse({
-      name: "Bike " + randomUUID().slice(0, 6),
-      brand: "Cube",
-      model: "Nuroad",
-      year: 2024,
-      category: "gravel",
-      description: "",
-      color: "",
-      size: "",
-      weight: null,
-      is_public: isPublic,
-    }),
-  );
+async function addBike(owner: string, isPublic = true) {
+  return bikeThroughWriter(db, owner, { is_public: isPublic });
 }
 // Installing a part creates its catalog model by itself (the trigger), and
 // a public bike publishes the model.
-const install = (bike, name, category = "Рама") =>
-  db.query(
-    "INSERT INTO components(id,bike_id,section,category,name) VALUES($1,$2,'build',$3,$4)",
-    [randomUUID(), bike, category, name],
-  );
-const modelId = async (name) =>
-  (await db.query("SELECT id FROM component_models WHERE name=$1", [name]))
-    .rows[0].id;
-async function addPhoto(model, author, options = {}) {
-  const id = randomUUID();
-  await db.query(
-    `INSERT INTO component_photos(id,model_id,author_id,filename,size_bytes,width,height,caption,sort_order,hidden,created_at,source)
-     VALUES($1,$2,$3,$4,1000,800,600,$5,$6,$7,$8,$9)`,
-    [
-      id,
-      model,
-      author,
-      id + ".webp",
-      options.caption ?? "",
-      options.order ?? 0,
-      options.hidden ?? false,
-      options.at ?? stamp(5),
-      options.source ? JSON.stringify(options.source) : null,
-    ],
-  );
-  return id;
+const install = (bike: string, name: string, category = "Рама") =>
+  componentRow(db, bike, { category, name });
+const modelId = async (name: string) =>
+  (
+    await one<{ id: string }>(
+      db,
+      "SELECT id FROM component_models WHERE name=$1",
+      [name],
+    )
+  ).id;
+async function addPhoto(
+  model: string,
+  author: string,
+  options: {
+    caption?: string;
+    order?: number;
+    hidden?: boolean;
+    at?: string;
+    source?: ComponentPhotoRow["source"];
+  } = {},
+) {
+  return (
+    await componentPhotoRow(db, model, author, {
+      caption: options.caption ?? "",
+      sort_order: options.order ?? 0,
+      hidden: options.hidden ?? false,
+      created_at: options.at ?? stamp(5),
+      source: options.source ?? null,
+    })
+  ).id;
 }
-const page = (extra = {}) =>
+type ModelQuery = Parameters<typeof componentModelKeysetPage>[1];
+const page = (extra: Partial<ModelQuery> = {}) =>
   componentModelKeysetPage(db, {
     q: "",
     category: "",
@@ -115,7 +90,8 @@ const page = (extra = {}) =>
     after: null,
     ...extra,
   });
-const ids = (result) => result.rows.map((row) => row.id);
+const ids = (result: { rows: { id: string }[] }) =>
+  result.rows.map((row) => row.id);
 
 const owner = await addUser("owner");
 const second = await addUser("second");
@@ -151,19 +127,20 @@ const id = {
 await db.query("UPDATE component_models SET archived=true WHERE id=$1", [
   id.archived,
 ]);
-for (const [key, n] of [
+const published: [keyof typeof id, number][] = [
   ["popular", 3],
   ["middle", 4],
   ["rare", 5],
   ["archived", 6],
-])
+];
+for (const [key, n] of published)
   await db.query("UPDATE component_models SET first_public_at=$2 WHERE id=$1", [
     id[key],
     stamp(n),
   ]);
 
 test("the query schema and the two cursors", () => {
-  const url = (query) => new URL("https://cola.example/x?" + query);
+  const url = (query: string) => new URL("https://cola.example/x?" + query);
   const parsed = parseComponentCatalogQuery(
     url("sort=popular&brand=Shimano&limit=5"),
   );
@@ -180,7 +157,7 @@ test("the query schema and the two cursors", () => {
   ])
     assert.throws(
       () => parseComponentCatalogQuery(url(bad)),
-      (e) => e.code === "invalid_request",
+      { code: "invalid_request" },
       bad,
     );
   assert.ok(componentCatalogQuerySchema);
@@ -189,18 +166,13 @@ test("the query schema and the two cursors", () => {
   const rank = { rank: 7, id: randomUUID() };
   assert.deepEqual(decodeRankCursor(encodeRankCursor(rank)), rank);
   // One list's cursor is not the other's.
-  assert.throws(
-    () => decodeRankCursor(encodeCursor(point)),
-    (e) => e.code === "invalid_request",
-  );
-  assert.throws(
-    () => decodeCursor(encodeRankCursor(rank)),
-    (e) => e.code === "invalid_request",
-  );
-  assert.throws(
-    () => decodeRankCursor("junk"),
-    (e) => e.code === "invalid_request",
-  );
+  assert.throws(() => decodeRankCursor(encodeCursor(point)), {
+    code: "invalid_request",
+  });
+  assert.throws(() => decodeCursor(encodeRankCursor(rank)), {
+    code: "invalid_request",
+  });
+  assert.throws(() => decodeRankCursor("junk"), { code: "invalid_request" });
   assert.throws(
     () =>
       decodeRankCursor(
@@ -208,7 +180,7 @@ test("the query schema and the two cursors", () => {
           "base64url",
         ),
       ),
-    (e) => e.code === "invalid_request",
+    { code: "invalid_request" },
   );
 });
 
@@ -221,7 +193,7 @@ test("the list shows published, unarchived, unmerged models; builds count public
     "newest first",
   );
   assert.equal(
-    listed.rows.find((row) => row.id === id.popular).builds,
+    present(listed.rows.find((row) => row.id === id.popular)).builds,
     3,
     "a private bike and a blocked owner do not count",
   );
@@ -237,9 +209,9 @@ test("the list shows published, unarchived, unmerged models; builds count public
 });
 
 test("new: a cursor walk visits every model once, whatever is published meanwhile", async () => {
-  const seen = [];
-  let after = null;
-  let fresh = null;
+  const seen: string[] = [];
+  let after: ModelQuery["after"] = null;
+  let fresh = "";
   for (let step = 0; step < 10; step++) {
     const result = await page({ q: run, limit: 1, after });
     seen.push(...ids(result));
@@ -252,6 +224,7 @@ test("new: a cursor walk visits every model once, whatever is published meanwhil
       );
     }
     if (!result.next) break;
+    assert.ok("createdAt" in result.next);
     after = decodeCursor(encodeCursor(result.next));
   }
   assert.deepEqual(seen, [id.rare, id.middle, id.popular]);
@@ -313,7 +286,7 @@ test("the card: a merged id leads to the canonical model, an archived one reads,
     merged,
     into,
   ]);
-  const viaOld = await componentModelCard(db, merged);
+  const viaOld = present(await componentModelCard(db, merged));
   assert.equal(viaOld.id, into, "the canonical id");
   assert.ok(
     !ids(await page()).includes(merged),
@@ -322,7 +295,7 @@ test("the card: a merged id leads to the canonical model, an archived one reads,
   await db.query("UPDATE component_models SET merged_into=NULL WHERE id=$1", [
     merged,
   ]);
-  const archived = await componentModelCard(db, id.archived);
+  const archived = present(await componentModelCard(db, id.archived));
   assert.equal(archived.archived, true);
   assert.equal(await componentModelCard(db, id.hiddenOnly), null);
   assert.equal(await componentModelCard(db, randomUUID()), null);
@@ -330,7 +303,9 @@ test("the card: a merged id leads to the canonical model, an archived one reads,
 });
 
 test("the DTO has the page's own fields and nothing about installations", async () => {
-  const card = toComponentModel(await componentModelCard(db, id.popular));
+  const card = toComponentModel(
+    present(await componentModelCard(db, id.popular)),
+  );
   assert.deepEqual(componentModelSchema.parse(card), card);
   assert.equal(card.builds, 3);
   assert.equal(card.coverUrl, null);
@@ -386,9 +361,9 @@ test("the gallery: cover first, hidden photos and blocked authors' photos out, t
     assert.deepEqual(componentPhotoSchema.parse(photo), photo);
   assert.equal(photos[0].isCover, true);
   assert.equal(photos[1].isCover, false);
-  assert.equal(photos[2].source.license, "CC BY-SA 4.0");
+  assert.equal(present(photos[2]?.source).license, "CC BY-SA 4.0");
   assert.ok(
-    !("imageUrl" in photos[2].source),
+    !("imageUrl" in present(photos[2]?.source)),
     "the source's file address is internal",
   );
   assert.equal(photos[1].source, null);
@@ -402,16 +377,22 @@ test("the gallery: cover first, hidden photos and blocked authors' photos out, t
     "filename",
   ])
     assert.ok(!keys.includes(`"${hiddenKey}"`), hiddenKey);
-  await assert.rejects(
-    componentPhotoList(db, id.hiddenOnly),
-    (e) => e.status === 404,
-  );
+  await assert.rejects(componentPhotoList(db, id.hiddenOnly), { status: 404 });
 });
 
 test("comments of a model: the same Comment as everywhere, merged models together, hidden models a 404", async () => {
   const model = id.middle;
   const author = await addUser("commenter");
-  const comment = async (target, text, options = {}) => {
+  const comment = async (
+    target: string,
+    text: string,
+    options: {
+      author?: string;
+      parent?: string;
+      deleted?: boolean;
+      at?: string;
+    } = {},
+  ) => {
     const commentId = randomUUID();
     await db.query(
       "INSERT INTO component_comments(id,model_id,author_id,parent_id,body,created_at,updated_at,deleted_at) VALUES($1,$2,$3,$4,$5,$6,$6,$7)",
@@ -474,6 +455,6 @@ test("comments of a model: the same Comment as everywhere, merged models togethe
       cursor: null,
       focus: null,
     }),
-    (e) => e.status === 404,
+    { status: 404 },
   );
 });

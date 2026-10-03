@@ -1,15 +1,9 @@
 import test, { after } from "node:test";
 import assert from "node:assert/strict";
-import { PGlite } from "@electric-sql/pglite";
-import { readFile, readdir } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { followKeysetPage } from "../lib/follows.ts";
 import { profileCounts, profileRow, profileRowById } from "../lib/profiles.ts";
-import { insertBike } from "../lib/repository.ts";
 import { visibleBikePage } from "../lib/showcase.ts";
-import { bikeInput } from "../lib/validation.ts";
 import { toProfile, toUserSummary } from "../lib/api-v1/mappers.ts";
 import {
   errorSchema,
@@ -20,45 +14,33 @@ import {
   userRefSchema,
   userSummarySchema,
 } from "../lib/api-v1/schemas.ts";
+import { testDatabase } from "./support/database.ts";
+import { bikeThroughWriter } from "./support/bikes.ts";
+import { labelledUser } from "./support/people.ts";
 import { decodeCursor, encodeCursor } from "../lib/api-v1/cursor.ts";
 
 // API v1, people (#300): the profile and follow reads and their rules. The
 // HTTP layer end to end is tests/api-v1-users-http.js.
 
-const root = fileURLToPath(new URL("../", import.meta.url));
-const db = new PGlite();
-for (const file of (await readdir(path.join(root, "db")))
-  .filter((name) => name.endsWith(".sql"))
-  .sort())
-  await db.exec(await readFile(path.join(root, "db", file), "utf8"));
+type VisibleQuery = Parameters<typeof visibleBikePage>[2];
+type FollowCursor = Parameters<typeof followKeysetPage>[5];
+const db = await testDatabase();
 after(() => db.close());
 
-async function addUser(label, { blocked = false } = {}) {
-  const id = randomUUID();
-  const username = (label + "-" + id.slice(0, 8)).toLowerCase();
-  await db.query(
-    "INSERT INTO users(id,email,name,password_hash,username,blocked,bio,location) VALUES($1,$2,$3,'hash',$4,$5,'О себе','Тула')",
-    [id, id + "@test.invalid", "Имя " + label, username, blocked],
-  );
-  return { id, username };
+async function addUser(label: string, { blocked = false } = {}) {
+  const row = await labelledUser(db, label, {
+    blocked,
+    bio: "О себе",
+    location: "Тула",
+  });
+  return { id: row.id, username: row.username };
 }
-async function addBike(owner, isPublic = true, createdAt = null) {
-  const id = await insertBike(
-    db,
-    owner.id,
-    bikeInput.parse({
-      name: "Bike " + randomUUID().slice(0, 8),
-      brand: "Cube",
-      model: "Nuroad",
-      year: 2024,
-      category: "gravel",
-      description: "",
-      color: "",
-      size: "",
-      weight: null,
-      is_public: isPublic,
-    }),
-  );
+async function addBike(
+  owner: { id: string },
+  isPublic = true,
+  createdAt: string | null = null,
+) {
+  const id = await bikeThroughWriter(db, owner.id, { is_public: isPublic });
   if (createdAt)
     await db.query("UPDATE bikes SET created_at=$1 WHERE id=$2", [
       createdAt,
@@ -66,7 +48,11 @@ async function addBike(owner, isPublic = true, createdAt = null) {
     ]);
   return id;
 }
-const follow = (follower, target, at = null) =>
+const follow = (
+  follower: { id: string },
+  target: { id: string },
+  at: string | null = null,
+) =>
   db.query(
     "INSERT INTO user_follows(follower_id,following_id,created_at) VALUES($1,$2,coalesce($3::timestamptz,now()))",
     [follower.id, target.id, at],
@@ -217,7 +203,7 @@ test("DTOs are strict and carry no private field", async () => {
       text,
       /x@y\.z|password|preferences|"role"|blocked|admin/,
     );
-    const keys = [];
+    const keys: string[] = [];
     JSON.stringify(dto, (key, value) => (keys.push(key), value));
     assert.ok(
       keys.every((key) => !key.includes("_")),
@@ -236,7 +222,7 @@ test("a person's bikes: public ones of that owner only, private never, blocked o
   const publicBike = await addBike(owner, true);
   const privateBike = await addBike(owner, false);
   const othersBike = await addBike(other, true);
-  const page = (viewerId, extra = {}) =>
+  const page = (viewerId: string | null, extra: Partial<VisibleQuery> = {}) =>
     visibleBikePage(db, viewerId, {
       scope: "public",
       categories: [],
@@ -316,9 +302,9 @@ test("followers and following: keyset, ties by id, no repeats when a follow is a
     "2026-09-03T10:00:00.000200Z",
   ];
   for (const [i, fan] of fans.entries()) await follow(fan, target, instants[i]);
-  const walk = async (limit, midWalk) => {
-    const seen = [];
-    let after = null;
+  const walk = async (limit: number, midWalk?: () => Promise<unknown>) => {
+    const seen: string[] = [];
+    let after: FollowCursor = null;
     let step = 0;
     for (;;) {
       const page = await followKeysetPage(
@@ -436,7 +422,7 @@ test("the page query is limit and cursor only; the error code set is open", () =
   ])
     assert.throws(
       () => parsePageQuery(new URL("http://x.test/" + query)),
-      (e) => e.code === "invalid_request",
+      { code: "invalid_request" },
       query,
     );
   // A client written today must parse an error with a code added tomorrow.

@@ -67,7 +67,7 @@ Motion загружается по взаимодействию. При `prefers
 
 ## Проверка и приёмка
 
-- `node --test tests/component-navigation.test.js tests/component-catalog.test.js`:
+- `node --test tests/component-navigation.test.js tests/component-catalog.test.ts`:
   полнота типов, настройки групп, экранирование URL, публичность обложек и merge.
 - `pnpm test`, `pnpm lint`, `pnpm typecheck`, `pnpm build`, `pnpm test:integration`.
 - `pnpm test:e2e`: Chromium и мобильный WebKit; существующие сценарии каталога,

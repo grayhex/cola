@@ -1,9 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { PGlite } from "@electric-sql/pglite";
-import { readFile, readdir, mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { randomUUID } from "node:crypto";
 import {
   previewRide,
   saveRide,
@@ -21,49 +19,40 @@ import {
 } from "../lib/ride-comments.ts";
 import { notificationPage } from "../lib/notifications.ts";
 import { createReport, moderateReport, reportPage } from "../lib/reports.ts";
-import { defaultSettings, defaultCatalog } from "../lib/site-defaults.ts";
 import { rideFeed } from "../lib/ride-feed.ts";
 import { gpx, loop } from "./ride-fixtures.js";
+import { seedSiteDefaults, testDatabase } from "./support/database.ts";
+import { bikeRow } from "./support/bikes.ts";
+import { userRow, viewer } from "./support/people.ts";
+import { present } from "./support/assertions.ts";
 test("rides ownership, previews, privacy, social, feed, moderation, delete and storage lifecycle", async () => {
   const dir = await mkdtemp(tmpdir() + "/cola-rides-");
   process.env.RIDES_DIR = dir;
-  const db = new PGlite();
+  const db = await testDatabase();
   try {
-    for (const f of (await readdir(new URL("../db/", import.meta.url)))
-      .filter((f) => f.endsWith(".sql"))
-      .sort())
-      await db.exec(
-        await readFile(new URL("../db/" + f, import.meta.url), "utf8"),
-      );
-    await db.query("INSERT INTO site_settings(id,value) VALUES(1,$1)", [
-      JSON.stringify(defaultSettings),
-    ]);
-    await db.query("INSERT INTO site_catalog(id,value) VALUES(1,$1)", [
-      JSON.stringify(defaultCatalog),
-    ]);
-    const owner = randomUUID(),
-      other = randomUUID(),
-      bike = randomUUID(),
-      bike2 = randomUUID();
-    for (const [id, name] of [
-      [owner, "ridera"],
-      [other, "riderb"],
-    ])
-      await db.query(
-        "INSERT INTO users(id,email,name,password_hash,username) VALUES($1,$2,$2,'hash',$2)",
-        [id, name],
-      );
-    for (const id of [bike, bike2])
-      await db.query(
-        "INSERT INTO bikes(id,owner_id,share_id,name,year,category,is_public) VALUES($1,$2,$1,'Test',2026,'road',true)",
-        [id, owner],
-      );
-    const tx = (fn) => db.transaction(fn),
+    await seedSiteDefaults(db);
+    const owner = (
+        await userRow(db, {
+          name: "ridera",
+          username: "ridera",
+          email: "ridera",
+        })
+      ).id,
+      other = (
+        await userRow(db, {
+          name: "riderb",
+          username: "riderb",
+          email: "riderb",
+        })
+      ).id;
+    const bike = (await bikeRow(db, owner, { name: "Test", category: "road" }))
+        .id,
+      bike2 = (await bikeRow(db, owner, { name: "Test", category: "road" })).id;
+    const tx = db.transaction,
       preview = await tx((q) =>
         previewRide(q, owner, gpx([loop]), rideDefaults),
       );
-    const input = {
-      previewId: preview.previewId,
+    const ride = {
       bikeId: bike,
       title: "Loop",
       description: "",
@@ -71,6 +60,8 @@ test("rides ownership, previews, privacy, social, feed, moderation, delete and s
       privacyEnabled: true,
       privacyRadiusM: 500,
     };
+    // The first save binds the preview; an edit has none.
+    const input = { previewId: preview.previewId, ...ride };
     await assert.rejects(
       tx((q) => saveRide(q, other, input, rideDefaults)),
       /свой велосипед/,
@@ -78,15 +69,20 @@ test("rides ownership, previews, privacy, social, feed, moderation, delete and s
     const saved = await tx((q) => saveRide(q, owner, input, rideDefaults));
     const r = await rideDetail(db, saved.shareId, other);
     assert.equal(r.title, "Loop");
-    assert.equal(r.analysis.visibility, "public");
-    assert.ok(r.analysis.pointCount > 0 && r.analysis.pointCount < loop.length);
-    const ownAnalysis = (await rideDetail(db, saved.shareId, owner, true))
-      .analysis;
+    const publicAnalysis = present(r.analysis);
+    assert.equal(publicAnalysis.visibility, "public");
+    assert.ok(
+      publicAnalysis.pointCount > 0 && publicAnalysis.pointCount < loop.length,
+    );
+    const ownAnalysis = present(
+      (await rideDetail(db, saved.shareId, owner, true)).analysis,
+    );
     assert.equal(ownAnalysis.pointCount, loop.length);
     assert.equal(ownAnalysis.visibility, "owner");
-    assert.ok(ownAnalysis.segments[0][0].timestampS);
+    assert.ok(present(ownAnalysis.segments[0]?.[0]).timestampS);
     assert.equal(
-      (await rideDetail(db, saved.shareId, other, true)).analysis.visibility,
+      present((await rideDetail(db, saved.shareId, other, true)).analysis)
+        .visibility,
       "public",
     );
     await assert.rejects(
@@ -129,19 +125,17 @@ test("rides ownership, previews, privacy, social, feed, moderation, delete and s
     await tx((q) => likeRide(q, saved.id, other, true));
     assert.equal((await rideDetail(db, saved.shareId, other)).likes, 1);
     const comment = await tx((q) =>
-      createRideComment(q, saved.id, { id: other }, { body: "Nice" }),
+      createRideComment(q, saved.id, viewer({ id: other }), { body: "Nice" }),
     );
     await tx((q) =>
-      createRideComment(
-        q,
-        saved.id,
-        { id: owner },
-        { body: "Thanks", parentId: comment.id },
-      ),
+      createRideComment(q, saved.id, viewer({ id: owner }), {
+        body: "Thanks",
+        parentId: comment.id,
+      }),
     );
     assert.equal(
-      (await rideCommentPage(db, saved.id, { id: owner })).comments[0].replies
-        .length,
+      (await rideCommentPage(db, saved.id, viewer({ id: owner }))).comments[0]
+        .replies.length,
       1,
     );
     assert.equal((await notificationPage(db, owner)).notifications.length, 2);
@@ -164,8 +158,7 @@ test("rides ownership, previews, privacy, social, feed, moderation, delete and s
     await assert.rejects(rideDetail(db, saved.shareId, other), /недоступна/);
     assert.equal((await rideList(db, other)).total, 0);
     assert.equal((await notificationPage(db, owner)).notifications.length, 0);
-    const edit = { ...input, bikeId: bike2, privacyRadiusM: 1000 };
-    delete edit.previewId;
+    const edit = { ...ride, bikeId: bike2, privacyRadiusM: 1000 };
     await tx((q) => saveRide(q, owner, edit, rideDefaults, saved.id));
     assert.notDeepEqual(
       (await rideDetail(db, saved.shareId, other)).geometry,
@@ -176,19 +169,19 @@ test("rides ownership, previews, privacy, social, feed, moderation, delete and s
       /foreign key/,
     );
     await tx((q) =>
-      createReport(
-        q,
-        { id: other },
-        { entityType: "ride", targetId: saved.id, reason: "spam" },
-      ),
+      createReport(q, viewer({ id: other }), {
+        entityType: "ride",
+        targetId: saved.id,
+        reason: "spam",
+      }),
     );
     const reports = await reportPage(db);
-    assert.match(reports.reports[0].target.href, /\/r\//);
+    assert.match(present(reports.reports[0]?.target.href), /\/r\//);
     await tx((q) =>
       moderateReport(
         q,
-        reports.reports[0].id,
-        { id: owner, role: "admin" },
+        present(reports.reports[0]).id,
+        viewer({ id: owner, role: "admin" }),
         "hide_ride",
       ),
     );

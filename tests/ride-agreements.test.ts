@@ -1,9 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { randomUUID } from "node:crypto";
-import { readFile, readdir, mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { PGlite } from "@electric-sql/pglite";
+import type { z } from "zod";
 import {
   agreementChanges,
   areaChanged,
@@ -34,10 +33,21 @@ import {
 import { loadSocialCard, loadSocialPreview } from "../lib/social-preview.ts";
 import { cardContent } from "../lib/social-card.ts";
 import { notificationPage } from "../lib/notifications.ts";
+import { ownerFields, type RideResponse } from "./support/rides.ts";
 import { gpx, loop } from "./ride-fixtures.js";
+import { testDatabase } from "./support/database.ts";
+import { bikeRow } from "./support/bikes.ts";
+import { present } from "./support/assertions.ts";
+import { userRow } from "./support/people.ts";
+import { one } from "./support/rows.ts";
 
 const hour = 3600000;
-const at = (hours) =>
+// What a ride detail says about its date, as the text the answers take.
+const iso = (value: Date | string | null | undefined) =>
+  new Date(present(value, "date")).toISOString();
+const stamp = (value: Date | string | null | undefined) =>
+  +new Date(present(value, "date"));
+const at = (hours: number) =>
   new Date(Math.round((Date.now() + hours * hour) / 60000) * 60000)
     .toISOString()
     .replace(".000Z", "Z");
@@ -85,7 +95,8 @@ test("a typo keeps the agreement; a new place, start or route is a new edition",
     ["start", "place", "route"],
   );
   // One state per person and date.
-  const state = (o) => participationState({ agreementRevision: 2, ...o });
+  const state = (o: Partial<Parameters<typeof participationState>[0]>) =>
+    participationState({ agreementRevision: 2, ...o });
   assert.equal(state({ owner: true, response: "accepted" }), "organizer");
   assert.equal(state({ invited: true }), "invited");
   assert.equal(state({}), "none");
@@ -143,34 +154,20 @@ test("the public announcement carries date, zone, format, area and organizer onl
   assert.equal(card.meta, "Общение");
 });
 
+type PlanDraft = Partial<z.input<typeof planInput>>;
+type PlannedRide = Awaited<ReturnType<typeof planRide>>;
 async function setup() {
-  const db = new PGlite(),
+  const db = await testDatabase(),
     dir = await mkdtemp(tmpdir() + "/cola-agreements-"),
     before = process.env.RIDES_DIR;
   process.env.RIDES_DIR = dir;
-  for (const f of (await readdir(new URL("../db/", import.meta.url)))
-    .filter((f) => f.endsWith(".sql"))
-    .sort())
-    await db.exec(
-      await readFile(new URL("../db/" + f, import.meta.url), "utf8"),
-    );
   let n = 0;
-  const user = async (name = "Rider") => {
-    const id = randomUUID();
-    await db.query(
-      "INSERT INTO users(id,email,name,password_hash,username) VALUES($1,$2,$3,'hash',$4)",
-      [id, id + "@example.test", name, "agree" + n++],
-    );
-    return id;
-  };
+  const user = async (name = "Rider") =>
+    (await userRow(db, { name, username: "agree" + n++ })).id;
   const owner = await user("Организатор"),
-    bike = randomUUID();
-  await db.query(
-    "INSERT INTO bikes(id,owner_id,share_id,name,year,category,is_public) VALUES($1,$2,$1,'Bike',2026,'gravel',true)",
-    [bike, owner],
-  );
-  const tx = (fn) => db.transaction(fn);
-  const plan = (o = {}) =>
+    bike = (await bikeRow(db, owner)).id;
+  const tx = db.transaction;
+  const plan = (o: PlanDraft = {}) =>
     tx((q) =>
       planRide(
         q,
@@ -195,9 +192,15 @@ async function setup() {
         rideDefaults,
       ),
     );
-  const edit = (ride, changes) =>
+  const edit = (
+    ride: PlannedRide,
+    changes: Partial<z.input<typeof rideEdit>>,
+  ) =>
     tx(async (q) => {
       const current = await rideDetail(q, ride.shareId, owner, true);
+      // The owner's view carries the editable fields the public one hides;
+      // the detail's type does not list them, so they are checked here.
+      const owned = ownerFields.parse(current);
       return saveRide(
         q,
         owner,
@@ -206,9 +209,9 @@ async function setup() {
           title: current.title,
           description: current.description,
           isPublic: current.isPublic,
-          privacyEnabled: current.privacyEnabled,
-          privacyRadiusM: current.privacyRadiusM,
-          scheduledAt: new Date(current.startedAt).toISOString(),
+          privacyEnabled: owned.privacyEnabled,
+          privacyRadiusM: owned.privacyRadiusM,
+          scheduledAt: iso(owned.startedAt),
           meetingPoint: current.meetingPoint,
           passport: current.passport,
           meetingVisibility: current.meetingVisibility,
@@ -243,30 +246,31 @@ test("one participation state per person and date, public and private, with and 
     const rider = await t.user(), // no bike: may still answer
       friend = await t.user(),
       stranger = await t.user();
-    const detail = (viewer) => rideDetail(db, ride.shareId, viewer);
-    const respond = (viewer, response, when) =>
+    const detail = (viewer: string | null) =>
+      rideDetail(db, ride.shareId, viewer);
+    const respond = (viewer: string, response: RideResponse, when?: string) =>
       tx((q) => respondRide(q, ride.id, viewer, response, when));
     let d = await detail(rider);
     assert.equal(d.participation, "none");
     assert.equal(d.canJoin, true);
     assert.equal(d.meetingHidden, true);
     assert.equal(d.answers, undefined, "only the organizer sees answers");
-    await respond(rider, "accepted", d.scheduledAt);
+    await respond(rider, "accepted", iso(d.scheduledAt));
     // A repeated answer is idempotent.
-    await respond(rider, "accepted", d.scheduledAt);
+    await respond(rider, "accepted", iso(d.scheduledAt));
     d = await detail(rider);
     assert.equal(d.participation, "accepted");
     assert.equal(d.rsvp, "accepted");
     assert.deepEqual(d.rsvpCounts, { accepted: 1 });
     assert.equal(d.meetingPoint, "Кафе у станции");
     // The organizer answers nothing and sees people by name.
-    await assert.rejects(respond(owner, "accepted", d.scheduledAt), {
+    await assert.rejects(respond(owner, "accepted", iso(d.scheduledAt)), {
       status: 409,
     });
     const organizer = await detail(owner);
     assert.equal(organizer.participation, "organizer");
-    assert.deepEqual(organizer.answers.counts, { accepted: 1 });
-    assert.equal(organizer.answers.people[0].author.id, rider);
+    assert.deepEqual(present(organizer.answers).counts, { accepted: 1 });
+    assert.equal(present(organizer.answers).people[0].author.id, rider);
     assert.doesNotMatch(JSON.stringify(organizer), /@example\.test/);
     // Invitation + RSVP at once: one state everywhere.
     await t.edit(ride, { invitations: ["agree2"] });
@@ -278,12 +282,15 @@ test("one participation state per person and date, public and private, with and 
     assert.equal(d.participation, "maybe");
     assert.equal(d.invitation, "maybe");
     const listed = (await rideList(db, friend, { status: "planned" })).rides;
-    assert.equal(listed.find((r) => r.id === ride.id).participation, "maybe");
+    assert.equal(
+      present(listed.find((r) => r.id === ride.id)).participation,
+      "maybe",
+    );
     assert.deepEqual(
       (await detail(owner)).invitations.map((i) => i.response),
       ["maybe"],
     );
-    assert.deepEqual((await detail(owner)).answers.counts, {
+    assert.deepEqual(present((await detail(owner)).answers).counts, {
       accepted: 1,
       maybe: 1,
     });
@@ -318,6 +325,15 @@ test("one participation state per person and date, public and private, with and 
       (await rideDetail(db, closed.shareId, friend)).meetingPoint,
       "Кафе у станции",
     );
+    const invites = async () =>
+      (
+        await one<{ n: number }>(
+          db,
+          "SELECT count(*)::int n FROM notifications WHERE recipient_id=$1 AND ride_id=$2 AND type='ride_invite' AND cancelled_at IS NULL",
+          [friend, closed.id],
+        )
+      ).n;
+    assert.equal(await invites(), 1, "the invitation notice exists");
     await t.edit(closed, { invitations: [] });
     await assert.rejects(rideDetail(db, closed.shareId, friend), {
       status: 404,
@@ -333,19 +349,20 @@ test("one participation state per person and date, public and private, with and 
     );
     assert(
       !(await notificationPage(db, friend)).notifications.some(
-        (n) => n.type === "ride_invite" && n.ride?.id === closed.id,
+        (n) => n.type === "ride_invite" && n.target.id === closed.id,
       ),
     );
+    assert.equal(await invites(), 0, "the notice is withdrawn with it");
     // On a public plan the revoked person may join again while it is open.
     await t.edit(ride, { invitations: [] });
     d = await detail(friend);
     assert.equal(d.participation, "none");
-    await respond(friend, "declined", d.scheduledAt);
-    await respond(friend, "accepted", d.scheduledAt);
+    await respond(friend, "declined", iso(d.scheduledAt));
+    await respond(friend, "accepted", iso(d.scheduledAt));
     assert.equal((await detail(friend)).participation, "accepted");
     // Blocked people and plans in the past answer nothing.
     await db.query("UPDATE users SET blocked=true WHERE id=$1", [stranger]);
-    await assert.rejects(respond(stranger, "accepted", d.scheduledAt), {
+    await assert.rejects(respond(stranger, "accepted", iso(d.scheduledAt)), {
       status: 404,
     });
     await db.query(
@@ -373,8 +390,8 @@ test("closing recruitment keeps accepted and invited people, and reopens for the
       [1, 2, 3, 4, 5].map(() => t.user()),
     );
     let d = await rideDetail(db, ride.shareId, going);
-    const date = d.scheduledAt;
-    const respond = (viewer, response) =>
+    const date = iso(d.scheduledAt);
+    const respond = (viewer: string, response: RideResponse) =>
       tx((q) => respondRide(q, ride.id, viewer, response, date));
     await respond(going, "accepted");
     await respond(maybe, "maybe");
@@ -403,7 +420,7 @@ test("closing recruitment keeps accepted and invited people, and reopens for the
       declined: 2,
     });
     // The desired size (2–3) is no quota: a fourth invited person still joins.
-    const preview = await loadSocialPreview(db, "ride", ride.shareId);
+    const preview = present(await loadSocialPreview(db, "ride", ride.shareId));
     assert.match(preview.description, /набор закрыт/);
     // Reopening lets new people in again.
     await tx((q) => setRideRecruitment(q, ride.id, owner, true, date));
@@ -437,8 +454,11 @@ test("a substantial edit asks to confirm again; a typo, title or format edit doe
       [1, 2, 3].map(() => t.user()),
     );
     let d = await rideDetail(db, ride.shareId, going);
-    const respond = (viewer, response, when = d.scheduledAt) =>
-      tx((q) => respondRide(q, ride.id, viewer, response, when));
+    const respond = (
+      viewer: string,
+      response: RideResponse,
+      when = iso(d.scheduledAt),
+    ) => tx((q) => respondRide(q, ride.id, viewer, response, when));
     await respond(going, "accepted");
     await respond(maybe, "maybe");
     await respond(refused, "declined");
@@ -448,13 +468,13 @@ test("a substantial edit asks to confirm again; a typo, title or format edit doe
       passport: { area: { label: "Сокольники" }, pace: "moderate" },
     });
     d = await rideDetail(db, ride.shareId, going);
-    assert.equal(d.agreement.revision, 1);
+    assert.equal(present(d.agreement).revision, 1);
     assert.equal(d.participation, "accepted");
     // A new place: a new edition; "going" and "maybe" confirm again.
     await t.edit(ride, { meetingPoint: "Главный вход в парк" });
     d = await rideDetail(db, ride.shareId, going);
-    assert.equal(d.agreement.revision, 2);
-    assert.deepEqual(d.agreement.changes, ["place"]);
+    assert.equal(present(d.agreement).revision, 2);
+    assert.deepEqual(present(d.agreement).changes, ["place"]);
     assert.equal(d.participation, "reconfirm");
     assert.equal(d.rsvp, null, "the old answer is not agreement");
     assert.equal(d.previousRsvp, "accepted");
@@ -469,7 +489,10 @@ test("a substantial edit asks to confirm again; a typo, title or format edit doe
     );
     const organizer = await rideDetail(db, ride.shareId, owner);
     assert.deepEqual(organizer.rsvpCounts, { reconfirm: 2, declined: 1 });
-    assert.deepEqual(organizer.answers.counts, { reconfirm: 2, declined: 1 });
+    assert.deepEqual(present(organizer.answers).counts, {
+      reconfirm: 2,
+      declined: 1,
+    });
     const upcoming = await upcomingRides(db, going);
     assert.equal(upcoming[0].changedAfterAnswer, true);
     await respond(going, "accepted");
@@ -484,8 +507,8 @@ test("a substantial edit asks to confirm again; a typo, title or format edit doe
     const later = at(72);
     await t.edit(ride, { scheduledAt: later });
     d = await rideDetail(db, ride.shareId, going);
-    assert.equal(+new Date(d.scheduledAt), +new Date(later));
-    assert.deepEqual(d.agreement.changes, ["start"]);
+    assert.equal(stamp(d.scheduledAt), +new Date(later));
+    assert.deepEqual(present(d.agreement).changes, ["start"]);
     assert.equal(d.participation, "reconfirm");
     assert.equal(
       (await rideDetail(db, ride.shareId, refused)).participation,
@@ -498,9 +521,9 @@ test("a substantial edit asks to confirm again; a typo, title or format edit doe
       attachRideTrack(q, owner, ride.id, gpx([loop]), rideDefaults),
     );
     d = await rideDetail(db, ride.shareId, going);
-    assert.deepEqual(d.agreement.changes, ["route"]);
+    assert.deepEqual(present(d.agreement).changes, ["route"]);
     assert.equal(d.participation, "reconfirm");
-    assert.equal(d.agreement.revision, 4);
+    assert.equal(present(d.agreement).revision, 4);
   } finally {
     await t.close();
   }
@@ -521,24 +544,30 @@ test("one date of a series is cancelled or revised without touching the others",
     });
     const rider = await t.user(),
       other = await t.user();
-    const first = (await rideDetail(db, ride.shareId, rider)).scheduledAt;
-    await tx((q) => respondRide(q, ride.id, rider, "accepted", first));
+    const first = present(
+      (await rideDetail(db, ride.shareId, rider)).scheduledAt,
+    );
+    await tx((q) =>
+      respondRide(q, ride.id, rider, "accepted", first.toISOString()),
+    );
     await assert.rejects(
-      tx((q) => cancelPlannedRide(q, ride.id, rider, first)),
+      tx((q) => cancelPlannedRide(q, ride.id, rider, first.toISOString())),
       { status: 404 },
     );
     await assert.rejects(
       tx((q) => cancelPlannedRide(q, ride.id, owner, at(24))),
       { status: 409 },
     );
-    const result = await tx((q) => cancelPlannedRide(q, ride.id, owner, first));
+    const result = await tx((q) =>
+      cancelPlannedRide(q, ride.id, owner, first.toISOString()),
+    );
     assert.equal(result.scope, "occurrence");
     let d = await rideDetail(db, ride.shareId, rider);
     assert.equal(d.status, "planned");
-    const second = d.scheduledAt;
+    const second = present(d.scheduledAt);
     assert.equal(+new Date(second) - +new Date(first), 7 * 24 * hour);
     assert.deepEqual(
-      d.cancelledOccurrences.map((x) => +new Date(x)),
+      present(d.cancelledOccurrences).map((x) => +new Date(x)),
       [+new Date(first)],
     );
     assert.equal(d.participation, "none", "a new date starts unanswered");
@@ -551,14 +580,18 @@ test("one date of a series is cancelled or revised without touching the others",
     ).rows[0];
     assert.equal(kept.response, "accepted");
     const upcoming = await upcomingRides(db, rider);
-    const cancelled = upcoming.find((r) => r.occurrenceCancelled);
+    const cancelled = present(upcoming.find((r) => r.occurrenceCancelled));
     assert.equal(cancelled.role, "cancelled");
-    assert.equal(+new Date(cancelled.scheduledAt), +new Date(first));
+    assert.equal(stamp(cancelled.scheduledAt), +new Date(first));
     assert.equal(cancelled.meetingPoint, "");
     // The next date takes its own answers.
-    await tx((q) => respondRide(q, ride.id, other, "maybe", second));
+    await tx((q) =>
+      respondRide(q, ride.id, other, "maybe", second.toISOString()),
+    );
     await assert.rejects(
-      tx((q) => respondRide(q, ride.id, other, "accepted", first)),
+      tx((q) =>
+        respondRide(q, ride.id, other, "accepted", first.toISOString()),
+      ),
       { status: 409 },
     );
     // A revision of the series now asks only the current date's answers.
@@ -582,15 +615,15 @@ test("one date of a series is cancelled or revised without touching the others",
     });
     d = await rideDetail(db, ride.shareId, rider);
     assert.equal(
-      +new Date(d.scheduledAt),
+      stamp(d.scheduledAt),
       +new Date(second) + hour,
       "the cancelled date does not come back",
     );
     // Matching does not offer the cancelled date either.
-    const preview = await loadSocialPreview(db, "ride", ride.shareId);
+    const preview = present(await loadSocialPreview(db, "ride", ride.shareId));
     assert.match(preview.description, /каждую неделю/);
-    const card = await loadSocialCard(db, preview);
-    assert.equal(+new Date(card.occursAt), +new Date(d.scheduledAt));
+    const card = present(await loadSocialCard(db, preview));
+    assert.equal(stamp(card.occursAt), stamp(d.scheduledAt));
     assert(!JSON.stringify({ preview, card }).includes("кафе"));
     // Cancelling the whole series still works.
     await tx((q) => cancelPlannedRide(q, ride.id, owner));
@@ -599,7 +632,7 @@ test("one date of a series is cancelled or revised without touching the others",
       "cancelled",
     );
     assert.match(
-      (await loadSocialPreview(db, "ride", ride.shareId)).description,
+      present(await loadSocialPreview(db, "ride", ride.shareId)).description,
       /^Покатушка отменена/,
     );
   } finally {

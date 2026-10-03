@@ -1,10 +1,7 @@
 import test, { after } from "node:test";
 import assert from "node:assert/strict";
-import { PGlite } from "@electric-sql/pglite";
-import { readFile, readdir } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
+import type { JournalRow } from "../lib/database-rows.ts";
 import { commentKeysetPage, replyKeysetPage } from "../lib/comments.ts";
 import { entitySocial } from "../lib/entity-social.ts";
 import {
@@ -12,13 +9,17 @@ import {
   journalPhotos,
   journalRow,
 } from "../lib/journal.ts";
-import { insertBike } from "../lib/repository.ts";
-import { bikeInput } from "../lib/validation.ts";
 import {
   toComment,
   toJournalEntry,
   toJournalSummary,
 } from "../lib/api-v1/mappers.ts";
+import { testDatabase } from "./support/database.ts";
+import { bikeThroughWriter } from "./support/bikes.ts";
+import { invalid } from "./support/negative.ts";
+import { present } from "./support/assertions.ts";
+import { journalEntryRow } from "./support/notifications.ts";
+import { labelledUser } from "./support/people.ts";
 import { decodeCursor, encodeCursor } from "../lib/api-v1/cursor.ts";
 import {
   commentSchema,
@@ -32,47 +33,19 @@ import {
 // target, tombstones, previews, deep links and keyset paging. The HTTP layer
 // end to end is tests/api-v1-journal-http.js.
 
-const root = fileURLToPath(new URL("../", import.meta.url));
-const db = new PGlite();
-for (const file of (await readdir(path.join(root, "db")))
-  .filter((name) => name.endsWith(".sql"))
-  .sort())
-  await db.exec(await readFile(path.join(root, "db", file), "utf8"));
+const db = await testDatabase();
 after(() => db.close());
 
-const stamp = (n, micro = 100) =>
+const stamp = (n: number, micro = 100) =>
   `2026-09-${String(n).padStart(2, "0")}T10:00:00.${String(micro).padStart(6, "0")}Z`;
-async function addUser(label, { blocked = false } = {}) {
-  const id = randomUUID();
-  await db.query(
-    "INSERT INTO users(id,email,name,password_hash,username,blocked) VALUES($1,$2,$3,'hash',$4,$5)",
-    [
-      id,
-      id + "@test.invalid",
-      "Имя " + label,
-      (label + "-" + id.slice(0, 8)).toLowerCase(),
-      blocked,
-    ],
-  );
-  return id;
+async function addUser(label: string, { blocked = false } = {}) {
+  return (await labelledUser(db, label, { blocked })).id;
 }
-async function addBike(owner, { isPublic = true, prices = false } = {}) {
-  const id = await insertBike(
-    db,
-    owner,
-    bikeInput.parse({
-      name: "Bike " + randomUUID().slice(0, 6),
-      brand: "Cube",
-      model: "Nuroad",
-      year: 2024,
-      category: "gravel",
-      description: "",
-      color: "",
-      size: "",
-      weight: null,
-      is_public: isPublic,
-    }),
-  );
+async function addBike(
+  owner: string,
+  { isPublic = true, prices = false } = {},
+) {
+  const id = await bikeThroughWriter(db, owner, { is_public: isPublic });
   if (prices)
     await db.query(
       "UPDATE bikes SET show_component_prices=true,show_accessory_prices=true WHERE id=$1",
@@ -80,7 +53,9 @@ async function addBike(owner, { isPublic = true, prices = false } = {}) {
     );
   return id;
 }
-const snapshot = [
+// The shape a stored snapshot has in the table, which is wider than the
+// declared type of the column.
+const snapshot = invalid<JournalRow["components"]>([
   {
     id: randomUUID(),
     model_id: null,
@@ -107,10 +82,10 @@ const snapshot = [
     price: "99",
     capturedAt: "2026-09-01T10:00:00.000Z",
   },
-];
+]);
 async function addEntry(
-  owner,
-  bike,
+  owner: string,
+  bike: string,
   {
     status = "published",
     isPublic = true,
@@ -118,34 +93,39 @@ async function addEntry(
     at = stamp(1),
     components = snapshot,
     title = "Запись",
+  }: {
+    status?: JournalRow["status"];
+    isPublic?: boolean;
+    kind?: JournalRow["kind"];
+    at?: string;
+    components?: JournalRow["components"];
+    title?: string;
   } = {},
 ) {
-  const id = randomUUID();
-  await db.query(
-    `INSERT INTO journal_entries(id,share_id,owner_id,bike_id,kind,title,body,status,is_public,event_date,mileage,components,created_at,updated_at)
-     VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,'2026-08-30',1200,$10::jsonb,$11,$11)`,
-    [
-      id,
-      randomUUID(),
-      owner,
-      bike,
+  return (
+    await journalEntryRow(db, owner, bike, {
       kind,
       title,
-      "# Заголовок\n\nТекст **записи**.",
+      body: "# Заголовок\n\nТекст **записи**.",
       status,
-      isPublic,
-      JSON.stringify(components),
-      at,
-    ],
-  );
-  return id;
+      is_public: isPublic,
+      mileage: 1200,
+      components,
+      created_at: at,
+      updated_at: at,
+    })
+  ).id;
 }
 async function addComment(
-  table,
-  target,
-  author,
-  body,
-  { parent = null, at = stamp(2), deleted = false } = {},
+  table: "bike_comments" | "journal_comments",
+  target: string,
+  author: string,
+  body: string,
+  {
+    parent = null,
+    at = stamp(2),
+    deleted = false,
+  }: { parent?: string | null; at?: string; deleted?: boolean } = {},
 ) {
   const id = randomUUID();
   const column = table === "bike_comments" ? "bike_id" : "entry_id";
@@ -156,8 +136,8 @@ async function addComment(
   return id;
 }
 const forbiddenKey = /_|email|password|preferences|owner|share|blocked|role/;
-function keysOf(value) {
-  const keys = [];
+function keysOf(value: unknown) {
+  const keys: string[] = [];
   JSON.stringify(value, (key, child) => (keys.push(key), child));
   return keys.filter(Boolean);
 }
@@ -174,7 +154,8 @@ test("an entry: owner sees drafts and closed entries, everyone else only publish
   });
   const closed = await addEntry(owner, publicBike, { isPublic: false });
   const onPrivate = await addEntry(owner, privateBike);
-  const seen = async (id, viewer) => !!(await journalRow(db, id, viewer, "id"));
+  const seen = async (id: string, viewer: string | null) =>
+    !!(await journalRow(db, id, viewer, "id"));
   for (const viewer of [null, other, owner])
     assert.equal(await seen(open, viewer), true, "open");
   for (const [label, id] of [
@@ -207,7 +188,7 @@ test("JournalEntry: strict, camelCase, prices by the bike's settings, liked by t
     hiddenEntry,
     reader,
   ]);
-  const read = async (id, viewer) => {
+  const read = async (id: string, viewer: string | null) => {
     const row = await journalRow(db, id, viewer, "id");
     return toJournalEntry(row, await journalPhotos(db, id), viewer);
   };
@@ -271,9 +252,13 @@ test("a bike's journal pages by position without repeats while entries appear", 
     isPublic: false,
     at: stamp(5),
   });
-  const walk = async (viewer, limit, midWalk) => {
-    const seen = [];
-    let after = null;
+  const walk = async (
+    viewer: string | null,
+    limit: number,
+    midWalk?: () => Promise<unknown>,
+  ) => {
+    const seen: string[] = [];
+    let after: Parameters<typeof journalKeysetPage>[4] = null;
     let first = true;
     for (;;) {
       const page = await journalKeysetPage(db, bike, viewer, limit, after);
@@ -302,24 +287,41 @@ test("a bike's journal pages by position without repeats while entries appear", 
   );
 });
 
-for (const [name, table, make, social] of [
-  ["a bike", "bike_comments", async (owner) => addBike(owner), null],
-  [
-    "a journal entry",
-    "journal_comments",
-    async (owner) => addEntry(owner, await addBike(owner)),
-    entitySocial("journal"),
-  ],
-]) {
-  const roots = (id, options) =>
+interface CommentCase {
+  name: string;
+  table: "bike_comments" | "journal_comments";
+  make: (owner: string) => Promise<string>;
+  social: ReturnType<typeof entitySocial> | null;
+}
+type CommentOptions = Parameters<typeof commentKeysetPage>[2];
+const commentCases: CommentCase[] = [
+  {
+    name: "a bike",
+    table: "bike_comments",
+    make: async (owner) => addBike(owner),
+    social: null,
+  },
+  {
+    name: "a journal entry",
+    table: "journal_comments",
+    make: async (owner) => addEntry(owner, await addBike(owner)),
+    social: entitySocial("journal"),
+  },
+];
+for (const { name, table, make, social } of commentCases) {
+  const plain: CommentOptions = { limit: 50, cursor: null, focus: null };
+  const roots = (id: string, options: Partial<CommentOptions>) =>
     social
-      ? social.keysetPage(db, id, options)
-      : commentKeysetPage(db, id, options);
-  const replies = (id, parent, options) =>
+      ? social.keysetPage(db, id, { ...plain, ...options })
+      : commentKeysetPage(db, id, { ...plain, ...options });
+  const replies = (
+    id: string,
+    parent: string,
+    options: Partial<CommentOptions>,
+  ) =>
     social
-      ? social.keysetReplies(db, id, parent, options)
-      : replyKeysetPage(db, id, parent, options);
-  const plain = { limit: 50, cursor: null, focus: null };
+      ? social.keysetReplies(db, id, parent, { ...plain, ...options })
+      : replyKeysetPage(db, id, parent, { ...plain, ...options });
 
   test(`comments of ${name}: one Comment, tombstones only above readable replies, previews of three`, async () => {
     const owner = await addUser("host");
@@ -399,7 +401,10 @@ for (const [name, table, make, social] of [
         replyCount: 0,
       },
     );
-    assert.equal(first.comment.author.username.startsWith("alice"), true);
+    assert.equal(
+      present(first.comment.author).username.startsWith("alice"),
+      true,
+    );
     for (const tomb of [deleted, blocked]) {
       assert.equal(tomb.comment.deleted, true);
       assert.equal(tomb.comment.body, null);
@@ -423,7 +428,7 @@ for (const [name, table, make, social] of [
     );
     const next = await replies(target, c5, {
       limit: 2,
-      cursor: decodeCursor(encodeCursor(more.next)),
+      cursor: decodeCursor(encodeCursor(present(more.next))),
     });
     assert.deepEqual(
       next.replies.map((r) => r.id),
@@ -460,9 +465,9 @@ for (const [name, table, make, social] of [
       stamp(5),
     ])
       ids.push(await addComment(table, target, a, "К " + ids.length, { at }));
-    const walk = async (limit, midWalk) => {
-      const seen = [];
-      let cursor = null;
+    const walk = async (limit: number, midWalk?: () => Promise<unknown>) => {
+      const seen: string[] = [];
+      let cursor: CommentOptions["cursor"] = null;
       let first = true;
       for (;;) {
         const page = await roots(target, { limit, cursor, focus: null });
@@ -484,7 +489,7 @@ for (const [name, table, make, social] of [
     );
     for (const limit of [1, 2, 3, 6])
       assert.deepEqual(await walk(limit), whole, "limit " + limit);
-    const late = [];
+    const late: string[] = [];
     const during = await walk(2, async () =>
       late.push(await addComment(table, target, a, "Позже", { at: stamp(25) })),
     );
@@ -539,7 +544,7 @@ for (const [name, table, make, social] of [
     for (const bad of [gone, randomUUID()])
       await assert.rejects(
         roots(target, { limit: 20, cursor: null, focus: bad }),
-        (e) => e.status === 404,
+        { status: 404 },
         "focus " + bad,
       );
     const other = await make(owner);
@@ -548,16 +553,16 @@ for (const [name, table, make, social] of [
     });
     await assert.rejects(
       roots(target, { limit: 20, cursor: null, focus: foreign }),
-      (e) => e.status === 404,
+      { status: 404 },
       "a comment of another target",
     );
     await assert.rejects(
       replies(target, foreign, { limit: 20, cursor: null }),
-      (e) => e.status === 404,
+      { status: 404 },
     );
     await assert.rejects(
       replies(target, randomUUID(), { limit: 20, cursor: null }),
-      (e) => e.status === 404,
+      { status: 404 },
     );
     const noCommentsOnPlain = await roots(target, plain);
     assert.deepEqual(noCommentsOnPlain.focusPath, [], "no focus, no chain");
@@ -571,7 +576,7 @@ test("comments need a public target: closed bikes, drafts and blocked owners hav
   await addComment("bike_comments", closedBike, a, "x");
   await assert.rejects(
     commentKeysetPage(db, closedBike, { limit: 5, cursor: null, focus: null }),
-    (e) => e.status === 404,
+    { status: 404 },
   );
   const bike = await addBike(owner);
   const draft = await addEntry(owner, bike, {
@@ -583,12 +588,12 @@ test("comments need a public target: closed bikes, drafts and blocked owners hav
   for (const entry of [draft, hiddenEntry, randomUUID()])
     await assert.rejects(
       social.keysetPage(db, entry, { limit: 5, cursor: null, focus: null }),
-      (e) => e.status === 404,
+      { status: 404 },
     );
   await db.query("UPDATE users SET blocked=true WHERE id=$1", [owner]);
   await assert.rejects(
     commentKeysetPage(db, bike, { limit: 5, cursor: null, focus: null }),
-    (e) => e.status === 404,
+    { status: 404 },
   );
 });
 
@@ -634,7 +639,7 @@ test("the comments query: limit, cursor and focus; focus replaces the cursor", (
   ])
     assert.throws(
       () => parseCommentsQuery(new URL("http://x.test/" + query)),
-      (e) => e.code === "invalid_request",
+      { code: "invalid_request" },
       query,
     );
 });

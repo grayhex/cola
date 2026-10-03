@@ -1,10 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFile, readdir, mkdtemp, rm, access } from "node:fs/promises";
+import { mkdtemp, rm, access } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { randomUUID } from "node:crypto";
-import { PGlite } from "@electric-sql/pglite";
 import { parseGarminCsv, assertMatchingTrack } from "../lib/garmin-csv.ts";
 import { prepareSvg } from "../lib/svg-asset.ts";
 import { parseGpx } from "../lib/ride-gpx.ts";
@@ -14,6 +12,7 @@ import {
   rideDefaults,
   rideList,
   rideDetail,
+  garminImportInput,
   saveRide,
   planRide,
   attachRideTrack,
@@ -32,9 +31,13 @@ import {
 } from "../lib/market.ts";
 import { notificationPage } from "../lib/notifications.ts";
 import { communityActivity } from "../lib/discovery.ts";
-import { defaultSettings, defaultCatalog } from "../lib/site-defaults.ts";
 import { garminCsv } from "./garmin-fixtures.js";
 import { gpx, loop } from "./ride-fixtures.js";
+import { seedSiteDefaults, testDatabase } from "./support/database.ts";
+import { bikeRow } from "./support/bikes.ts";
+import { field, present } from "./support/assertions.ts";
+import { listingDraft } from "./support/market.ts";
+import { userRow } from "./support/people.ts";
 
 test("Garmin parses quoted CSV, timezone, thousands, negatives, missing data and all sample columns", () => {
   const p = parseGarminCsv("\uFEFF" + garminCsv({ "Avg HR": "--" }));
@@ -66,16 +69,24 @@ test("Garmin parses quoted CSV, timezone, thousands, negatives, missing data and
     /велосипедных/,
   );
   const ride = {
-    started_at: r.startedAt,
+    started_at: new Date(r.startedAt),
     distance_m: 10000,
     elapsed_time_s: 3600,
   };
+  // The check reads three metrics; the rest are those of a real track.
+  const base = parseGpx(gpx([loop])).metrics;
+  const track = (
+    m: Pick<typeof base, "startedAt" | "distanceM" | "elapsedTimeS">,
+  ) => ({ ...base, ...m });
   assert.doesNotThrow(() =>
-    assertMatchingTrack(ride, {
-      startedAt: r.startedAt,
-      distanceM: 10100,
-      elapsedTimeS: 3590,
-    }),
+    assertMatchingTrack(
+      ride,
+      track({
+        startedAt: r.startedAt,
+        distanceM: 10100,
+        elapsedTimeS: 3590,
+      }),
+    ),
   );
   for (const m of [
     { startedAt: null, distanceM: 10000, elapsedTimeS: 3600 },
@@ -83,7 +94,7 @@ test("Garmin parses quoted CSV, timezone, thousands, negatives, missing data and
     { startedAt: r.startedAt, distanceM: 20000, elapsedTimeS: 3600 },
     { startedAt: r.startedAt, distanceM: 10000, elapsedTimeS: 7200 },
   ])
-    assert.throws(() => assertMatchingTrack(ride, m));
+    assert.throws(() => assertMatchingTrack(ride, track(m)));
 });
 test("animated SVG keeps local CSS and SMIL and rejects active or external content", async () => {
   const safe =
@@ -103,58 +114,37 @@ test("animated SVG keeps local CSS and SMIL and rejects active or external conte
     );
 });
 test("Garmin lifecycle, safe GPX binding, planned invitations and market publication keep access boundaries", async () => {
-  const db = new PGlite(),
+  const db = await testDatabase(),
     dir = await mkdtemp(path.join(tmpdir(), "cola-new-features-"));
   process.env.RIDES_DIR = path.join(dir, "rides");
   process.env.UPLOAD_DIR = path.join(dir, "photos");
   try {
-    for (const f of (await readdir(new URL("../db/", import.meta.url)))
-      .filter((f) => f.endsWith(".sql"))
-      .sort())
-      await db.exec(
-        await readFile(new URL("../db/" + f, import.meta.url), "utf8"),
-      );
-    await db.query("INSERT INTO site_settings(id,value) VALUES(1,$1)", [
-      JSON.stringify(defaultSettings),
-    ]);
-    await db.query("INSERT INTO site_catalog(id,value) VALUES(1,$1)", [
-      JSON.stringify(defaultCatalog),
-    ]);
-    const owner = randomUUID(),
-      friend = randomUUID(),
-      other = randomUUID(),
-      bike = randomUUID();
-    for (const [id, name] of [
-      [owner, "owner"],
-      [friend, "friend"],
-      [other, "other"],
-    ])
-      await db.query(
-        "INSERT INTO users(id,email,name,password_hash,username) VALUES($1,$2,$3,'hash',$3)",
-        [id, id + "@example.test", name],
-      );
-    await db.query(
-      "INSERT INTO bikes(id,owner_id,share_id,name,year,category,is_public) VALUES($1,$2,$3,'Tourer',2026,'gravel',true)",
-      [bike, owner, randomUUID()],
-    );
+    await seedSiteDefaults(db);
+    const owner = (await userRow(db, { name: "owner", username: "owner" })).id,
+      friend = (await userRow(db, { name: "friend", username: "friend" })).id,
+      other = (await userRow(db, { name: "other", username: "other" })).id,
+      bike = (await bikeRow(db, owner, { name: "Tourer" })).id;
     const bytes = gpx([loop]),
       metrics = parseGpx(bytes).metrics,
-      hhmmss = (s) =>
+      hhmmss = (s: number) =>
         [Math.floor(s / 3600), Math.floor((s % 3600) / 60), s % 60]
           .map((v) => String(v).padStart(2, "0"))
           .join(":");
     const csv = garminCsv({
-        Distance: (metrics.distanceM / 1000).toFixed(3),
-        Time: hhmmss(metrics.elapsedTimeS),
-        "Elapsed Time": hhmmss(metrics.elapsedTimeS),
+        Distance: (present(metrics.distanceM) / 1000).toFixed(3),
+        Time: hhmmss(present(metrics.elapsedTimeS)),
+        "Elapsed Time": hhmmss(present(metrics.elapsedTimeS)),
       }),
       parsed = parseGarminCsv(csv);
-    const input = {
+    const input = garminImportInput.parse({
       bikeId: bike,
+      csv,
+      utcOffsetMinutes: 0,
+      units: "metric",
       isPublic: true,
       selected: [0],
       visibleMetrics: ["distanceM", "avgHr", "maxPower"],
-    };
+    });
     const result = await db.transaction((q) =>
         importGarmin(q, owner, input, parsed, rideDefaults),
       ),
@@ -225,9 +215,9 @@ test("Garmin lifecycle, safe GPX binding, planned invitations and market publica
     );
     const attached = await rideDetail(db, ride.shareId, owner, true);
     assert.equal(attached.hasTrack, true);
-    assert.ok(attached.analysis.pointCount > 0);
+    assert.ok(present(attached.analysis).pointCount > 0);
     assert(attached.geometry.length);
-    assert.equal(attached.metrics.maxPower, 1234);
+    assert.equal(field(attached.metrics, "maxPower"), 1234);
     await assert.rejects(
       () => db.transaction((q) => previewRide(q, owner, bytes, rideDefaults)),
       /уже загружена/,
@@ -311,7 +301,7 @@ test("Garmin lifecycle, safe GPX binding, planned invitations and market publica
         (i) => i.id === "planned:" + planned.id,
       ),
     );
-    const listingInput = {
+    const listingInput = listingDraft({
       title: "Gravel wheel",
       description: "Good condition",
       category: "components",
@@ -321,7 +311,7 @@ test("Garmin lifecycle, safe GPX binding, planned invitations and market publica
       location: "Test city",
       contact: "@owner",
       status: "draft",
-    };
+    });
     const listing = await db.transaction((q) =>
       saveListing(q, owner, listingInput),
     );
@@ -374,7 +364,7 @@ test("Garmin lifecycle, safe GPX binding, planned invitations and market publica
     await db.transaction((q) => deleteListing(q, listing.id, owner));
     await cleanupMarketPhotos(db);
     await assert.rejects(() =>
-      access(path.join(process.env.UPLOAD_DIR, "market-" + photo.id + ".webp")),
+      access(path.join(dir, "photos", "market-" + photo.id + ".webp")),
     );
   } finally {
     await db.close();

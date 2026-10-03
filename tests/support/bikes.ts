@@ -1,5 +1,8 @@
 import { randomUUID } from "node:crypto";
 import type { Queryable } from "../../lib/db.ts";
+import { insertBike } from "../../lib/repository.ts";
+import { bikeInput } from "../../lib/validation.ts";
+import type { z } from "zod";
 import type {
   BikeRow,
   ComponentRow,
@@ -105,4 +108,32 @@ export async function completeBikeRow(
   for (const category of completeBuildCategories)
     await componentRow(q, bike.id, { category, name: "Shimano " + category });
   return bike;
+}
+
+/**
+ * A bike made the way the application makes one: the validated body through
+ * the repository's writer (`insertBike`), not a raw row. Returns its id.
+ */
+export function bikeThroughWriter(
+  q: Queryable,
+  ownerId: string,
+  overrides: Partial<z.input<typeof bikeInput>> = {},
+): Promise<string> {
+  return insertBike(
+    q,
+    ownerId,
+    bikeInput.parse({
+      name: "Bike " + randomUUID().slice(0, 6),
+      brand: "Cube",
+      model: "Nuroad",
+      year: 2024,
+      category: "gravel",
+      description: "",
+      color: "",
+      size: "",
+      weight: null,
+      is_public: true,
+      ...overrides,
+    }),
+  );
 }

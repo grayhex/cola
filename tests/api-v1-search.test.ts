@@ -1,10 +1,8 @@
 import test, { after } from "node:test";
 import assert from "node:assert/strict";
-import { PGlite } from "@electric-sql/pglite";
-import { readFile, readdir } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
+import type { z } from "zod";
+import type { JournalRow } from "../lib/database-rows.ts";
 import { componentHits } from "../lib/discovery.ts";
 import {
   experienceBikeRefine,
@@ -14,8 +12,6 @@ import {
 } from "../lib/search.ts";
 import { rideKeysetPage, upcomingKeysetPage } from "../lib/rides.ts";
 import { visibleBikePage } from "../lib/showcase.ts";
-import { insertBike } from "../lib/repository.ts";
-import { bikeInput } from "../lib/validation.ts";
 import { decodeCursor, encodeCursor } from "../lib/api-v1/cursor.ts";
 import {
   componentSearchQuerySchema,
@@ -26,39 +22,42 @@ import {
   usersSearchQuerySchema,
 } from "../lib/api-v1/schemas.ts";
 import { toJournalSummary } from "../lib/api-v1/mappers.ts";
+import { testDatabase } from "./support/database.ts";
+import { bikeThroughWriter, componentRow } from "./support/bikes.ts";
+import { present } from "./support/assertions.ts";
+import { journalEntryRow } from "./support/notifications.ts";
+import { invalid } from "./support/negative.ts";
+import { rideRow } from "./support/rides.ts";
+import { labelledUser } from "./support/people.ts";
 
 // API v1 search (#315): the experience search by keyset, people, component
 // suggestions and the text of ride lists. The HTTP layer end to end is
 // tests/api-v1-search-http.js.
 
-const root = fileURLToPath(new URL("../", import.meta.url));
-const db = new PGlite();
-for (const file of (await readdir(path.join(root, "db")))
-  .filter((name) => name.endsWith(".sql"))
-  .sort())
-  await db.exec(await readFile(path.join(root, "db", file), "utf8"));
+const db = await testDatabase();
 after(() => db.close());
 
 const run = randomUUID().slice(0, 6);
-const stamp = (n, micro = 100) =>
+const stamp = (n: number, micro = 100) =>
   `2026-09-${String(n).padStart(2, "0")}T10:00:00.${String(micro).padStart(6, "0")}Z`;
-async function addUser(label, { blocked = false, name, at = stamp(1) } = {}) {
-  const id = randomUUID();
-  await db.query(
-    "INSERT INTO users(id,email,name,password_hash,username,blocked,created_at) VALUES($1,$2,$3,'hash',$4,$5,$6)",
-    [
-      id,
-      id + "@test.invalid",
-      name ?? "Имя " + label,
-      (label + "-" + id.slice(0, 8)).toLowerCase(),
+async function addUser(
+  label: string,
+  {
+    blocked = false,
+    name,
+    at = stamp(1),
+  }: { blocked?: boolean; name?: string; at?: string } = {},
+) {
+  return (
+    await labelledUser(db, label, {
       blocked,
-      at,
-    ],
-  );
-  return id;
+      created_at: at,
+      ...(name === undefined ? {} : { name }),
+    })
+  ).id;
 }
 async function addBike(
-  owner,
+  owner: string,
   {
     isPublic = true,
     brand = "Cube",
@@ -66,34 +65,41 @@ async function addBike(
     year = 2024,
     name,
     at,
+  }: {
+    isPublic?: boolean;
+    brand?: string;
+    model?: string;
+    year?: number;
+    name?: string;
+    at?: string;
   } = {},
 ) {
-  const id = await insertBike(
-    db,
-    owner,
-    bikeInput.parse({
-      name: name ?? `${brand} ${model} ${randomUUID().slice(0, 4)}`,
-      brand,
-      model,
-      year,
-      category: "gravel",
-      description: "",
-      color: "",
-      size: "",
-      weight: null,
-      is_public: isPublic,
-    }),
-  );
+  const id = await bikeThroughWriter(db, owner, {
+    name: name ?? `${brand} ${model} ${randomUUID().slice(0, 4)}`,
+    brand,
+    model,
+    year,
+    is_public: isPublic,
+  });
   if (at)
     await db.query("UPDATE bikes SET created_at=$2 WHERE id=$1", [id, at]);
   return id;
 }
-const addComponent = (bike, name, category = "Рама") =>
-  db.query(
-    "INSERT INTO components(id,bike_id,section,category,name) VALUES($1,$2,'build',$3,$4)",
-    [randomUUID(), bike, category, name],
-  );
-async function addEntry(owner, bike, options = {}) {
+const addComponent = (bike: string, name: string, category = "Рама") =>
+  componentRow(db, bike, { category, name });
+async function addEntry(
+  owner: string,
+  bike: string,
+  options: {
+    status?: JournalRow["status"];
+    isPublic?: boolean;
+    kind?: JournalRow["kind"];
+    at?: string;
+    title?: string;
+    body?: string;
+    components?: JournalRow["components"];
+  } = {},
+) {
   const {
     status = "published",
     isPublic = true,
@@ -103,29 +109,31 @@ async function addEntry(owner, bike, options = {}) {
     body = "Текст записи",
     components = [],
   } = options;
-  const id = randomUUID();
-  await db.query(
-    `INSERT INTO journal_entries(id,share_id,owner_id,bike_id,kind,title,body,status,is_public,event_date,mileage,components,created_at,updated_at,published_at)
-     VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,'2026-08-30',1200,$10::jsonb,$11,$11,$12)`,
-    [
-      id,
-      randomUUID(),
-      owner,
-      bike,
+  return (
+    await journalEntryRow(db, owner, bike, {
       kind,
       title,
       body,
       status,
-      isPublic,
-      JSON.stringify(components),
-      at,
-      status === "published" ? at : null,
-    ],
-  );
-  return id;
+      is_public: isPublic,
+      mileage: 1200,
+      components,
+      created_at: at,
+      updated_at: at,
+      published_at: status === "published" ? at : null,
+    })
+  ).id;
 }
-const input = (extra = {}) => searchInput.parse({ type: "bikes", ...extra });
-async function bikePage(viewer, extra = {}, { limit = 50, after = null } = {}) {
+const input = (extra: Partial<z.input<typeof searchInput>> = {}) =>
+  searchInput.parse({ type: "bikes", ...extra });
+type CursorOf = ReturnType<typeof decodeCursor> | null;
+type RideQuery = Parameters<typeof rideKeysetPage>[2];
+type BikeCursor = Parameters<typeof visibleBikePage>[2]["after"];
+async function bikePage(
+  viewer: string | null,
+  extra: Partial<z.input<typeof searchInput>> = {},
+  { limit = 50, after = null }: { limit?: number; after?: BikeCursor } = {},
+) {
   return visibleBikePage(db, viewer, {
     scope: "public",
     categories: [],
@@ -135,7 +143,8 @@ async function bikePage(viewer, extra = {}, { limit = 50, after = null } = {}) {
     refine: await experienceBikeRefine(db, input(extra)),
   });
 }
-const ids = (page) => (page.bikes ?? page.rows).map((row) => row.id);
+const ids = (page: { bikes?: { id: string }[]; rows?: { id: string }[] }) =>
+  present(page.bikes ?? page.rows).map((row) => row.id);
 
 test("the query schema is the site's search without page and type, plus a cursor", () => {
   const legacy = Object.keys(searchInput.shape)
@@ -148,7 +157,7 @@ test("the query schema is the site's search without page and type, plus a cursor
 });
 
 test("query parsing: facets, unknown and repeated parameters, a text for people", () => {
-  const url = (query) => new URL("https://cola.example/x?" + query);
+  const url = (query: string) => new URL("https://cola.example/x?" + query);
   const parsed = parseExperienceQuery(
     url("q=cube&brand=Cube&year=2024&exact=1&limit=5"),
   );
@@ -171,18 +180,17 @@ test("query parsing: facets, unknown and repeated parameters, a text for people"
   ])
     assert.throws(
       () => parseExperienceQuery(url(bad)),
-      (e) => e.code === "invalid_request",
+      { code: "invalid_request" },
       bad,
     );
   assert.throws(
     () => parseUsersSearchQuery(url("")),
-    (e) => e.code === "invalid_request",
+    { code: "invalid_request" },
     "a text is required",
   );
-  assert.throws(
-    () => parseUsersSearchQuery(url("q=%20%20")),
-    (e) => e.code === "invalid_request",
-  );
+  assert.throws(() => parseUsersSearchQuery(url("q=%20%20")), {
+    code: "invalid_request",
+  });
   assert.equal(parseUsersSearchQuery(url("q=ив")).q, "ив");
   assert.equal(componentSearchQuerySchema.safeParse({}).success, false);
   assert.equal(componentSearchQuerySchema.parse({ q: "x" }).limit, 12);
@@ -283,14 +291,10 @@ test("bikes: similar to a bike, by its brand and model, not itself; a hidden one
       !ids(page).includes(stranger) &&
       !ids(page).includes(closed),
   );
-  await assert.rejects(
-    bikePage(null, { similar: closed }),
-    (e) => e.status === 404,
-  );
-  await assert.rejects(
-    bikePage(null, { similar: randomUUID() }),
-    (e) => e.status === 404,
-  );
+  await assert.rejects(bikePage(null, { similar: closed }), { status: 404 });
+  await assert.rejects(bikePage(null, { similar: randomUUID() }), {
+    status: 404,
+  });
 });
 
 test("bikes: keyset paging walks every match once, newest first, whatever is added meanwhile", async () => {
@@ -300,9 +304,9 @@ test("bikes: keyset paging walks every match once, newest first, whatever is add
   for (let i = 0; i < 5; i++)
     made.push(await addBike(owner, { brand, model: "M", at: stamp(10 + i) }));
   made.push(await addBike(owner, { brand, model: "M", at: stamp(14, 500000) }));
-  const seen = [];
-  let after = null;
-  let fresh = null;
+  const seen: string[] = [];
+  let after: BikeCursor = null;
+  let fresh = "";
   for (let step = 0; step < 10; step++) {
     const page = await bikePage(null, { brand }, { limit: 2, after });
     seen.push(...ids(page));
@@ -345,7 +349,9 @@ test("journal: public published entries only, by text, kind and component snapsh
   const third = await addEntry(owner, bike, {
     title: "Без слова",
     at: stamp(5),
-    components: [{ name: "Ротор" + run, category: "Тормоза" }],
+    components: invalid<JournalRow["components"]>([
+      { name: "Ротор" + run, category: "Тормоза" },
+    ]),
   });
   const hidden = [
     await addEntry(owner, bike, {
@@ -357,7 +363,10 @@ test("journal: public published entries only, by text, kind and component snapsh
     await addEntry(owner, closedBike, { title: word }),
     await addEntry(barred, barredBike, { title: word }),
   ];
-  const search = (extra, options = {}) =>
+  const search = (
+    extra: Partial<z.input<typeof searchInput>>,
+    options: { viewer?: string; limit?: number; after?: CursorOf } = {},
+  ) =>
     experienceJournalKeyset(
       db,
       options.viewer ?? null,
@@ -421,7 +430,10 @@ test("people: by name or username, never blocked ones, newest accounts first, ke
     "INSERT INTO user_follows(follower_id,following_id) VALUES($1,$2)",
     [viewer, b],
   );
-  const search = (text, options = {}) =>
+  const search = (
+    text: string,
+    options: { viewer?: string; limit?: number; after?: CursorOf } = {},
+  ) =>
     experienceUserKeyset(
       db,
       options.viewer ?? null,
@@ -433,8 +445,8 @@ test("people: by name or username, never blocked ones, newest accounts first, ke
   assert.deepEqual(ids(page), [c, b, a]);
   assert.ok(!ids(page).includes(barred));
   assert.deepEqual(ids(await search("pb-")).slice(0, 1), [b], "by username");
-  const seen = [];
-  let after = null;
+  const seen: string[] = [];
+  let after: CursorOf = null;
   for (let step = 0; step < 5; step++) {
     const next = await search(mark, { limit: 2, after });
     seen.push(...ids(next));
@@ -443,8 +455,14 @@ test("people: by name or username, never blocked ones, newest accounts first, ke
   }
   assert.deepEqual(seen, [c, b, a]);
   const own = await search(mark, { viewer });
-  assert.equal(own.rows.find((row) => row.id === b).is_following, true);
-  assert.equal(own.rows.find((row) => row.id === a).is_following, false);
+  assert.equal(
+    present(own.rows.find((row) => row.id === b)).is_following,
+    true,
+  );
+  assert.equal(
+    present(own.rows.find((row) => row.id === a)).is_following,
+    false,
+  );
 });
 
 test("component suggestions: public bikes only, by popularity then name, a literal match", async () => {
@@ -483,21 +501,22 @@ test("rides: the text finds a title, a description, an author and a bike; the pa
   const bike = await addBike(owner, { name: "Серебряный" + run });
   const other = await addUser("rider2");
   const otherBike = await addBike(other);
-  const add = (author, withBike, title, description = "") =>
-    db
-      .query(
-        `INSERT INTO rides(id,share_id,owner_id,bike_id,title,description,distance_m,point_count,public_point_count,public_geometry,is_public,privacy_radius_m,source_hash,started_at)
-         VALUES($1,$1,$2,$3,$4,$5,1000,0,0,'[]',true,500,$6,now()-interval '2 days') RETURNING id`,
-        [
-          randomUUID(),
-          author,
-          withBike,
-          title,
-          description,
-          "h" + randomUUID(),
-        ],
-      )
-      .then((r) => r.rows[0].id);
+  const add = async (
+    author: string,
+    withBike: string,
+    title: string,
+    description = "",
+  ) =>
+    (
+      await rideRow(db, author, withBike, {
+        title,
+        description,
+        distance_m: 1000,
+        point_count: 0,
+        public_point_count: 0,
+        started_at: new Date(Date.now() - 2 * 86400000),
+      })
+    ).id;
   const byTitle = await add(other, otherBike, "Закат над озером" + run);
   const byDescription = await add(
     other,
@@ -507,7 +526,7 @@ test("rides: the text finds a title, a description, an author and a bike; the pa
   );
   const byAuthor = await add(owner, bike, "Просто круг");
   const plain = await add(other, otherBike, "Ничего особенного");
-  const search = async (text, options = {}) =>
+  const search = async (text: string, options: Partial<RideQuery> = {}) =>
     ids(
       await rideKeysetPage(db, null, {
         limit: 50,

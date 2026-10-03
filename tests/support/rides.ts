@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { z } from "zod";
+import { z } from "zod";
 import type { Queryable } from "../../lib/db.ts";
 import type {
   RideIntentRow,
@@ -195,3 +195,16 @@ export function rideRow(
     ["public_geometry", "visible_metrics"],
   );
 }
+
+export type RideResponse = RideRsvpRow["response"];
+
+/**
+ * What the owner's ride detail carries for editing. The detail's declared type
+ * lists only what every viewer gets, so a test that edits a plan reads these
+ * fields through this schema (checked and typed, no casts).
+ */
+export const ownerFields = z.looseObject({
+  privacyEnabled: z.boolean(),
+  privacyRadiusM: z.number(),
+  startedAt: z.union([z.date(), z.string()]),
+});

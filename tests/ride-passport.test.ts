@@ -1,9 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
+import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { PGlite } from "@electric-sql/pglite";
 import {
   ridePassportInput,
   plannedDetails,
@@ -22,6 +21,11 @@ import {
 } from "../lib/rides.ts";
 import { loadSocialPreview, loadSocialCard } from "../lib/social-preview.ts";
 import { gpx, loop } from "./ride-fixtures.js";
+import { migrateOnly, testDatabase } from "./support/database.ts";
+import { bikeRow } from "./support/bikes.ts";
+import { present } from "./support/assertions.ts";
+import { userRow } from "./support/people.ts";
+import { ownerFields } from "./support/rides.ts";
 
 test("shared passport validates units, unknowns, coarse areas and total duration", () => {
   assert.deepEqual(ridePassportInput.parse({}), {});
@@ -50,9 +54,11 @@ test("shared passport validates units, unknowns, coarse areas and total duration
     area: { label: "Park" },
   });
   assert.deepEqual(
-    ridePassportInput.parse({
-      area: { label: "Park", center: [37.123456, 55.765432], radiusM: 1500 },
-    }).area.center,
+    present(
+      ridePassportInput.parse({
+        area: { label: "Park", center: [37.123456, 55.765432], radiusM: 1500 },
+      }).area,
+    ).center,
     [37.12, 55.77],
   );
   const input = {
@@ -79,52 +85,30 @@ test("shared passport validates units, unknowns, coarse areas and total duration
 });
 
 test("migration preserves legacy visibility; meeting access follows this occurrence, bike and active membership", async () => {
-  const db = new PGlite(),
+  const db = await testDatabase({ migrated: false }),
     dir = await mkdtemp(tmpdir() + "/cola-passport-"),
     before = process.env.RIDES_DIR;
   process.env.RIDES_DIR = dir;
   try {
-    const migrations = (await readdir(new URL("../db/", import.meta.url)))
-      .filter((f) => f.endsWith(".sql"))
-      .sort();
-    for (const file of migrations.filter((f) => f < "036"))
-      await db.exec(
-        await readFile(new URL("../db/" + file, import.meta.url), "utf8"),
-      );
-    const owner = randomUUID(),
-      reader = randomUUID(),
-      bike = randomUUID(),
+    await migrateOnly(db, (f) => f < "036");
+    const owner = (await userRow(db, { username: "passport0" })).id,
+      reader = (await userRow(db, { username: "passport1" })).id,
+      bike = (await bikeRow(db, owner, { name: "Bike" })).id,
       legacy = randomUUID();
-    for (const [i, id] of [owner, reader].entries())
-      await db.query(
-        "INSERT INTO users(id,email,name,password_hash,username) VALUES($1,$2,'Rider','hash',$3)",
-        [id, id + "@example.test", "passport" + i],
-      );
-    await db.query(
-      "INSERT INTO bikes(id,owner_id,share_id,name,year,category,is_public) VALUES($1,$2,$1,'Bike',2026,'gravel',true)",
-      [bike, owner],
-    );
+    // A ride of the schema before 036 has no passport: raw SQL on purpose.
     await db.query(
       "INSERT INTO rides(id,owner_id,bike_id,share_id,title,source_hash,status,source_kind,has_track,meeting_point,started_at,is_public,distance_m,point_count,public_point_count,public_geometry,privacy_radius_m) VALUES($1,$2,$3,$1,'Legacy','legacy','planned','planned',false,'Old public meeting','2031-03-29T09:00:00Z',true,0,0,0,'[]',500)",
       [legacy, owner, bike],
     );
-    await db.exec(
-      await readFile(
-        new URL("../db/036_ride_passport.sql", import.meta.url),
-        "utf8",
-      ),
-    );
+    await migrateOnly(db, (f) => f === "036_ride_passport.sql");
     // The code below needs the current schema, not the one right after 036;
     // later migrations keep the legacy visibility too.
-    for (const file of migrations.filter((f) => f > "036_ride_passport.sql"))
-      await db.exec(
-        await readFile(new URL("../db/" + file, import.meta.url), "utf8"),
-      );
-    const old = await rideDetail(db, legacy);
+    await migrateOnly(db, (f) => f > "036_ride_passport.sql");
+    const old = await rideDetail(db, legacy, null);
     assert.equal(old.meetingPoint, "Old public meeting");
     assert.deepEqual(old.passport, {});
     assert.equal(old.meetingVisibility, "public");
-    const tx = (fn) => db.transaction(fn);
+    const tx = db.transaction;
     const input = planInput.parse({
       bikeId: bike,
       title: "Morning loop",
@@ -143,30 +127,42 @@ test("migration preserves legacy visibility; meeting access follows this occurre
         beginnerFriendly: false,
       },
     });
+    const meeting = present(input.meetingPoint);
     const plan = await tx((q) => planRide(q, owner, input, rideDefaults));
-    const detail = (viewer) => rideDetail(db, plan.shareId, viewer);
+    const detail = (viewer: string | null = null) =>
+      rideDetail(db, plan.shareId, viewer);
     assert.equal((await detail()).meetingPoint, "");
     assert.equal((await detail(reader)).meetingHidden, true);
     assert.equal((await detail(owner)).meetingPoint, input.meetingPoint);
     assert.equal(
-      (await rideDetail(db, plan.shareId, owner, true)).privacyEnabled,
+      ownerFields.parse(await rideDetail(db, plan.shareId, owner, true))
+        .privacyEnabled,
       true,
     );
-    assert.deepEqual((await detail()).passport.area.center, [37.12, 55.77]);
+    assert.deepEqual(
+      present((await detail()).passport?.area).center,
+      [37.12, 55.77],
+    );
     await db.query(
       "INSERT INTO ride_invitations(ride_id,user_id) VALUES($1,$2)",
       [plan.id, reader],
     );
     assert.equal((await detail(reader)).meetingPoint, "");
-    for (const response of ["accepted", "declined", "maybe", "accepted"]) {
+    for (const response of [
+      "accepted",
+      "declined",
+      "maybe",
+      "accepted",
+    ] as const) {
       await tx((q) =>
         respondRide(q, plan.id, reader, response, input.scheduledAt),
       );
       const expected = response === "accepted" ? input.meetingPoint : "";
       assert.equal((await detail(reader)).meetingPoint, expected);
       assert.equal(
-        (await rideList(db, reader)).rides.find((r) => r.id === plan.id)
-          .meetingPoint,
+        present(
+          (await rideList(db, reader)).rides.find((r) => r.id === plan.id),
+        ).meetingPoint,
         expected,
       );
     }
@@ -189,13 +185,9 @@ test("migration preserves legacy visibility; meeting access follows this occurre
     );
     assert.equal(publicDetail.analysis, null);
     const preview = await loadSocialPreview(db, "ride", plan.shareId);
-    const card = await loadSocialCard(db, preview);
+    const card = present(await loadSocialCard(db, present(preview)));
     assert.deepEqual(card.geometry, publicDetail.geometry);
-    assert(
-      !JSON.stringify({ preview, card, publicDetail }).includes(
-        input.meetingPoint,
-      ),
-    );
+    assert(!JSON.stringify({ preview, card, publicDetail }).includes(meeting));
     await db.query(
       "UPDATE rides SET started_at=started_at-interval '7 days',plan_ends_at=plan_ends_at-interval '7 days' WHERE id=$1",
       [plan.id],
@@ -215,7 +207,7 @@ test("migration preserves legacy visibility; meeting access follows this occurre
       privacyRadiusM: 500,
     };
     await tx((q) => saveRide(q, owner, edit, rideDefaults, plan.id));
-    assert.equal((await detail()).passport.pace, "relaxed");
+    assert.equal(present((await detail()).passport).pace, "relaxed");
     assert.equal((await detail()).meetingPoint, "");
     await tx((q) =>
       saveRide(
@@ -263,7 +255,7 @@ test("migration preserves legacy visibility; meeting access follows this occurre
       ),
       /только плановой/,
     );
-    assert(!("passport" in (await rideDetail(db, legacy))));
+    assert(!("passport" in (await rideDetail(db, legacy, null))));
   } finally {
     if (before === undefined) delete process.env.RIDES_DIR;
     else process.env.RIDES_DIR = before;
