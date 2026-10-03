@@ -49,7 +49,8 @@ export function safeReturnPath(raw: unknown) {
 // ── Redirect state ───────────────────────────────────────────────────────
 
 interface FlowRow {
-  purpose: "login" | "link";
+  purpose: "login" | "link" | "native";
+  app_challenge: string | null;
   code_verifier: string;
   user_id: string | null;
   session_hash: string | null;
@@ -60,19 +61,21 @@ export async function saveFlow(
   q: Queryable,
   flow: {
     provider: IdentityProvider;
-    purpose: "login" | "link";
+    purpose: "login" | "link" | "native";
     state: string;
     browser: string;
     verifier: string;
     returnPath: string;
     userId?: string;
     sessionHash?: string | null;
+    /** A native flow only: S256 challenge of the app's verifier (#304). */
+    appChallenge?: string;
   },
 ) {
   await q.query("DELETE FROM external_auth_flows WHERE expires_at<now()");
   await q.query(
-    `INSERT INTO external_auth_flows(state_hash,provider,purpose,browser_hash,code_verifier,user_id,session_hash,return_path)
-     VALUES($1,$2,$3,$4,$5,$6,$7,$8)`,
+    `INSERT INTO external_auth_flows(state_hash,provider,purpose,browser_hash,code_verifier,user_id,session_hash,return_path,app_challenge)
+     VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
     [
       digest(flow.state),
       flow.provider,
@@ -82,6 +85,7 @@ export async function saveFlow(
       flow.userId ?? null,
       flow.sessionHash ?? null,
       flow.returnPath,
+      flow.appChallenge ?? null,
     ],
   );
 }
@@ -102,7 +106,7 @@ export async function consumeFlow(
       await q.query<FlowRow>(
         `DELETE FROM external_auth_flows
          WHERE state_hash=$1 AND provider=$2 AND browser_hash=$3 AND expires_at>now()
-         RETURNING purpose,code_verifier,user_id,session_hash,return_path`,
+         RETURNING purpose,code_verifier,user_id,session_hash,return_path,app_challenge`,
         [digest(state), provider, digest(browser)],
       )
     ).rows[0] || null
@@ -145,6 +149,7 @@ interface PendingRow {
   name: string;
   email: string | null;
   return_path: string;
+  app_challenge: string | null;
 }
 
 /** Parks a verified provider account until username and consents are given. */
@@ -156,13 +161,15 @@ export async function savePendingSignup(
     name: string;
     email: string | null;
     returnPath: string;
+    /** A native sign-in: the challenge of the app that will get the code. */
+    appChallenge?: string | null;
   },
 ) {
   const token = randomBytes(32).toString("base64url");
   await q.query("DELETE FROM external_signups WHERE expires_at<now()");
   await q.query(
-    `INSERT INTO external_signups(token_hash,provider,subject,name,email,return_path)
-     VALUES($1,$2,$3,$4,$5,$6)`,
+    `INSERT INTO external_signups(token_hash,provider,subject,name,email,return_path,app_challenge)
+     VALUES($1,$2,$3,$4,$5,$6,$7)`,
     [
       digest(token),
       signup.provider,
@@ -170,6 +177,7 @@ export async function savePendingSignup(
       signup.name,
       signup.email,
       signup.returnPath,
+      signup.appChallenge ?? null,
     ],
   );
   return token;
@@ -183,7 +191,7 @@ export async function readPendingSignup(
   return (
     (
       await q.query<PendingRow>(
-        "SELECT provider,subject,name,email,return_path FROM external_signups WHERE token_hash=$1 AND expires_at>now()",
+        "SELECT provider,subject,name,email,return_path,app_challenge FROM external_signups WHERE token_hash=$1 AND expires_at>now()",
         [digest(token)],
       )
     ).rows[0] || null
@@ -207,6 +215,8 @@ export type CompletionResult =
       name: string;
       username: string;
       returnPath: string;
+      /** Set when the sign-in was started by the native app (#304). */
+      appChallenge: string | null;
     }
   | { ok: false; status: number; code: string; error: string };
 
@@ -231,7 +241,7 @@ export async function completeSignup(
         const pending = (
           await q.query<PendingRow>(
             `DELETE FROM external_signups WHERE token_hash=$1 AND expires_at>now()
-             RETURNING provider,subject,name,email,return_path`,
+             RETURNING provider,subject,name,email,return_path,app_challenge`,
             [digest(token)],
           )
         ).rows[0];
@@ -294,6 +304,7 @@ export async function completeSignup(
           name,
           username,
           returnPath: pending.return_path,
+          appChallenge: pending.app_challenge,
         };
       });
     } catch (e) {

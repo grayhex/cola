@@ -9,8 +9,10 @@ import {
   refreshDeviceSession,
   sessionOfRefreshToken,
 } from "../device-sessions.ts";
+import type { TokenGrant } from "../device-sessions.ts";
 import { limits } from "../limits.ts";
 import { logEvent } from "../observability.ts";
+import { redeemNativeCode } from "../native-auth.ts";
 import { digest, verifyPassword } from "../password.ts";
 import { credentials } from "../validation.ts";
 import { sessionHashOf, viewerById } from "../viewer-session.ts";
@@ -51,57 +53,88 @@ const noContent = () =>
 // Matches the web sign-in: an unknown address costs the same as a wrong password.
 const absentHash = "00000000000000000000000000000000:" + "00".repeat(64);
 
+/** The person a sign-in with e-mail and password belongs to, or an error. */
+async function userOfPassword(
+  req: Request,
+  input: { email: string; password: string },
+) {
+  const email = credentials.shape.email.safeParse(input.email);
+  // The same budgets as the web sign-in: per address, per account and global.
+  if (
+    !(await allowAuth(req, email.success ? email.data : input.email, rateLimit))
+  )
+    throw tooMany();
+  const user = email.success
+    ? (
+        await db.query<{
+          id: string;
+          password_hash: string | null;
+          blocked: boolean;
+        }>("SELECT id,password_hash,blocked FROM users WHERE email=$1", [
+          email.data,
+        ])
+      ).rows[0]
+    : undefined;
+  const valid = await verifyPassword(
+    input.password,
+    user?.password_hash || absentHash,
+  );
+  if (!user || !user.password_hash || !valid || user.blocked)
+    throw new ApiError(
+      "invalid_credentials",
+      "Неверная почта или пароль либо аккаунт заблокирован.",
+    );
+  return user.id;
+}
+
 /** POST /api/v1/auth/sessions */
 export function handleCreateSession(req: Request) {
   return safely(async () => {
     const input = await parseJsonBody(req, createSessionRequestSchema);
-    const email = credentials.shape.email.safeParse(input.email);
-    // The same budgets as the web sign-in: per address, per account and global.
-    if (
-      !(await allowAuth(
-        req,
-        email.success ? email.data : input.email,
-        rateLimit,
-      ))
-    )
-      throw tooMany();
-    const user = email.success
-      ? (
-          await db.query<{
-            id: string;
-            password_hash: string | null;
-            blocked: boolean;
-          }>("SELECT id,password_hash,blocked FROM users WHERE email=$1", [
-            email.data,
-          ])
-        ).rows[0]
-      : undefined;
-    const valid = await verifyPassword(
-      input.password,
-      user?.password_hash || absentHash,
-    );
-    if (!user || !user.password_hash || !valid || user.blocked)
-      throw new ApiError(
-        "invalid_credentials",
-        "Неверная почта или пароль либо аккаунт заблокирован.",
-      );
-    const grant = await transaction((q) =>
-      createDeviceSession(
-        q,
-        user.id,
-        {
-          name: input.device.name,
-          platform: input.device.platform,
-          appVersion: input.device.appVersion ?? null,
-        },
-        req.headers.get("user-agent") ?? "",
-      ),
-    );
+    const device = {
+      name: input.device.name,
+      platform: input.device.platform,
+      appVersion: input.device.appVersion ?? null,
+    };
+    const agent = req.headers.get("user-agent") ?? "";
+    let grant: TokenGrant & { userId: string };
+    if (input.code !== undefined && input.codeVerifier !== undefined) {
+      // Native sign-in (#304): the one-time code of the app. The code is taken
+      // in its own statement, outside the transaction of the session, so that
+      // a failed attempt stays spent (a rollback would give it back for another
+      // guess). Budgets as for passwords, keyed by the code.
+      const { code, codeVerifier } = input;
+      if (!(await allowAuth(req, "native:" + code, rateLimit))) throw tooMany();
+      const userId = await redeemNativeCode(db, code, codeVerifier);
+      if (!userId)
+        throw new ApiError(
+          "invalid_credentials",
+          "Код входа недействителен, просрочен или уже использован. Начните вход заново.",
+        );
+      grant = {
+        userId,
+        ...(await transaction((q) =>
+          createDeviceSession(q, userId, device, agent),
+        )),
+      };
+    } else if (input.email !== undefined && input.password !== undefined) {
+      const userId = await userOfPassword(req, {
+        email: input.email,
+        password: input.password,
+      });
+      grant = {
+        userId,
+        ...(await transaction((q) =>
+          createDeviceSession(q, userId, device, agent),
+        )),
+      };
+    } else throw new ApiError("invalid_request", "Проверьте поля запроса.");
     logEvent("session_created", {
       sessionId: grant.sessionId,
       platform: input.device.platform,
+      method: input.code !== undefined ? "native_code" : "password",
     });
-    return ok(await grantBody(grant, user.id), 201);
+    return ok(await grantBody(grant, grant.userId), 201);
   });
 }
 

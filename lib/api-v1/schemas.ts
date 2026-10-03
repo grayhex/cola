@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { categoryFilterLabels } from "../bike-classification.ts";
+import { nativeCodePattern, verifierPattern } from "../native-auth.ts";
 import { ApiError, apiErrorCodes, detailsOf } from "./errors.ts";
 
 // The /api/v1 contract (#134), written once. These schemas describe the
@@ -250,12 +251,35 @@ export const deviceInputSchema = named(
 
 export const createSessionRequestSchema = named(
   "CreateSessionRequest",
-  "Вход с устройства по почте и паролю.",
-  z.strictObject({
-    email: z.string().min(3).max(254),
-    password: z.string().min(1).max(128),
-    device: deviceInputSchema,
-  }),
+  "Вход с устройства: либо `email` и `password`, либо `code` и `codeVerifier` (нативный вход через внешнего провайдера: одноразовый код ColaBike и секрет, чей S256-образ приложение отправило в начале входа). Ровно один способ.",
+  z
+    .strictObject({
+      email: z.string().min(3).max(254).optional(),
+      password: z.string().min(1).max(128).optional(),
+      code: z
+        .string()
+        .regex(nativeCodePattern, "Неверный формат кода входа")
+        .optional()
+        .describe("Одноразовый код с ссылки приложения; живёт две минуты."),
+      codeVerifier: z
+        .string()
+        .regex(verifierPattern, "Неверный формат code_verifier")
+        .optional()
+        .describe(
+          "Секрет приложения (RFC 7636, 43–128 знаков), S256-образ которого ушёл в начале входа.",
+        ),
+      device: deviceInputSchema,
+    })
+    .refine(
+      (body) =>
+        (body.email !== undefined && body.password !== undefined) !==
+          (body.code !== undefined && body.codeVerifier !== undefined) &&
+        (body.email === undefined) === (body.password === undefined) &&
+        (body.code === undefined) === (body.codeVerifier === undefined),
+      {
+        message: "Нужна одна пара: email и password либо code и codeVerifier",
+      },
+    ),
 );
 
 export const refreshRequestSchema = named(

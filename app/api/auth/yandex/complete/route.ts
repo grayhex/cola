@@ -11,6 +11,11 @@ import {
   completeSignup,
   completionInput,
 } from "../../../../../lib/identities.ts";
+import {
+  issueNativeCode,
+  nativeAuthReturnUrl,
+  nativeReturn,
+} from "../../../../../lib/native-auth.ts";
 import { LegalError } from "../../../../../lib/legal-documents.ts";
 import { sendAfterResponse } from "../../../../../lib/account-mail.ts";
 import {
@@ -61,7 +66,10 @@ export const POST = traced(async function POST(req) {
     return json({ error: result.error, code: result.code }, result.status);
   }
   await clearFlowCookie(SIGNUP_COOKIE);
-  await startSession(result.userId);
+  // A first sign-in that a native app started (#304): no web session is opened
+  // in this browser; the app gets its one-time code on its own HTTPS link.
+  const app = result.appChallenge ? nativeAuthReturnUrl() : null;
+  if (!app) await startSession(result.userId);
   // The provider does not promise a confirmed address, so the usual link is sent.
   if (mailEnabled()) {
     const verification = await requestEmailVerification(db, result.userId);
@@ -82,7 +90,16 @@ export const POST = traced(async function POST(req) {
         name: result.name,
         username: result.username,
       },
-      returnPath: result.returnPath,
+      returnPath:
+        app && result.appChallenge
+          ? nativeReturn(app, {
+              code: await issueNativeCode(
+                db,
+                result.userId,
+                result.appChallenge,
+              ),
+            }).toString()
+          : result.returnPath,
     },
     201,
   );
