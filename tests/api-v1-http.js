@@ -174,7 +174,7 @@ try {
         cookies: false,
       });
       assert.ok(
-        [200, 400, 401, 404].includes(response.status),
+        [200, 400, 401, 404, 415].includes(response.status),
         `${method} ${route} is implemented (${response.status})`,
       );
       assert.notEqual(

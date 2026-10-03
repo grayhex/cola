@@ -88,7 +88,7 @@ export function handleGetBike(
  * ref, a blocked person and an old username all look the same. Only the
  * current username resolves; the stable key is the id.
  */
-async function profileOf(ref: string, viewerId: string | null) {
+export async function profileOf(ref: string, viewerId: string | null) {
   const parsed = userRefSchema.safeParse(ref);
   const row = !parsed.success
     ? null

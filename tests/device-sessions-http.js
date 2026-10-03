@@ -130,7 +130,15 @@ try {
     headers: { "Content-Type": "text/plain" },
     body: "{}",
   });
-  assert.equal(text.status, 400, "a body that is not JSON");
+  assert.equal(text.status, 415, "a body that is not JSON");
+  assert.equal((await text.json()).error.code, "unsupported_media_type");
+  const huge = await fetch(base + "/api/v1/auth/sessions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email: "a".repeat(20000) }),
+  });
+  assert.equal(huge.status, 413, "a body over the limit");
+  assert.equal((await huge.json()).error.code, "payload_too_large");
   const wrong = await bad(
     { email: owner.email, password: "wrong-password-123", device },
     "wrong password",
