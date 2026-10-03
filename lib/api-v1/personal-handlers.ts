@@ -2,13 +2,16 @@ import { db } from "../db.ts";
 import { savedKeysetPage } from "../journal-discovery.ts";
 import { savedApiKeysetPage } from "../market.ts";
 import { notificationKeysetPage, unreadCount } from "../notifications.ts";
+import { myUpcomingEntries, ownRideKeysetPage } from "../rides.ts";
 import { noticeExpiringListings } from "../market.ts";
 import { decodeCursor, encodeCursor } from "./cursor.ts";
 import { ApiError } from "./errors.ts";
 import {
   toJournalSummary,
   toMarketListing,
+  toMyUpcomingRide,
   toNotification,
+  toOwnRideSummary,
 } from "./mappers.ts";
 import { ok, safely } from "./respond.ts";
 import { parseNoQuery, parsePageQuery } from "./schemas.ts";
@@ -83,5 +86,33 @@ export function handleSavedMarket(req: Request) {
       items: page.items.map(toMarketListing),
       nextCursor: page.next ? encodeCursor(page.next) : null,
     });
+  });
+}
+
+/** GET /api/v1/me/rides */
+export function handleMyRides(req: Request) {
+  return safely(async () => {
+    const viewer = await signedIn(req);
+    const query = parsePageQuery(new URL(req.url));
+    const after = query.cursor ? decodeCursor(query.cursor) : null;
+    const page = await ownRideKeysetPage(db, viewer.id, {
+      limit: query.limit,
+      after,
+    });
+    return ok({
+      items: page.rows.map((row) => toOwnRideSummary(row, viewer.id)),
+      nextCursor: page.next ? encodeCursor(page.next) : null,
+    });
+  });
+}
+
+/** GET /api/v1/me/rides/upcoming */
+export function handleMyUpcomingRides(req: Request) {
+  return safely(async () => {
+    const viewer = await signedIn(req);
+    // A short list without a cursor: no parameters at all.
+    parseNoQuery(new URL(req.url));
+    const entries = await myUpcomingEntries(db, viewer.id);
+    return ok({ items: entries.map((e) => toMyUpcomingRide(e, viewer.id)) });
   });
 }

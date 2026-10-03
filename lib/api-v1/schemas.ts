@@ -705,6 +705,71 @@ export const ridePageSchema = named(
   }),
 );
 
+export const ownRideSummarySchema = named(
+  "OwnRideSummary",
+  "Своя покатушка в списке владельца: любое состояние, публичная или нет. Владельческие поля (`isPublic`, зона приватности, число точек) есть только здесь, в публичном `RideSummary` их нет.",
+  z.strictObject({
+    ...rideSummaryShape,
+    status: z
+      .enum(["completed", "planned", "cancelled"])
+      .describe("Состоявшаяся, запланированная или отменённая."),
+    isPublic: z.boolean(),
+    privacyEnabled: z
+      .boolean()
+      .describe("Включена ли зона приватности вокруг начала и конца трека."),
+    privacyRadiusM: z.int().describe("Радиус зоны приватности, метры."),
+    pointCount: z.int().describe("Число точек загруженного трека."),
+  }),
+);
+
+export const ownRidePageSchema = named(
+  "OwnRidePage",
+  "Страница своих покатушек, новые сверху.",
+  z.strictObject({
+    items: z.array(ownRideSummarySchema),
+    nextCursor: z
+      .string()
+      .nullable()
+      .describe("Курсор следующей страницы или null, если страниц больше нет."),
+  }),
+);
+
+export const myUpcomingRideSchema = named(
+  "MyUpcomingRide",
+  "Ближайший план человека и его роль в нём. Точка встречи — по правилам участников: скрыта, пока человек не принял условия.",
+  z.strictObject({
+    ...rideSummaryShape,
+    status: z
+      .enum(["planned", "cancelled"])
+      .describe("`cancelled` — весь план отменён, а человек на него отвечал."),
+    role: z
+      .enum(["organizer", "accepted", "maybe", "invited", "cancelled"])
+      .describe(
+        "Роль человека: организатор, «еду», «возможно», приглашён без ответа или ответил на отменённую дату.",
+      ),
+    occurrenceCancelled: z
+      .boolean()
+      .describe(
+        "Отменена одна дата серии, на которую человек отвечал; сама серия идёт дальше.",
+      ),
+    changedAfterAnswer: z
+      .boolean()
+      .describe(
+        "Условия плана изменились после ответа человека: ответ нужно подтвердить.",
+      ),
+    meetingPoint: z.string().nullable(),
+    meetingHidden: z
+      .boolean()
+      .describe("Точка встречи есть, но человеку пока не показывается."),
+  }),
+);
+
+export const myUpcomingRidesSchema = named(
+  "MyUpcomingRides",
+  "Ближайшие планы человека: свои, принятые, «возможно», приглашения и недавние отмены; до 20 штук на 60 дней вперёд, ближайшие первыми. Без курсора.",
+  z.strictObject({ items: z.array(myUpcomingRideSchema) }),
+);
+
 const analysisPointSchema = named(
   "RideAnalysisPoint",
   "Точка публичной серии. Датчик, который автор не открыл, отсутствует; абсолютного времени нет, только время в пути `elapsedS`.",
@@ -1078,6 +1143,8 @@ export type ComponentHit = z.infer<typeof componentHitSchema>;
 export type ComponentModel = z.infer<typeof componentModelSchema>;
 export type ComponentPhoto = z.infer<typeof componentPhotoSchema>;
 export type RideSummary = z.infer<typeof rideSummarySchema>;
+export type OwnRideSummary = z.infer<typeof ownRideSummarySchema>;
+export type MyUpcomingRide = z.infer<typeof myUpcomingRideSchema>;
 export type Ride = z.infer<typeof rideSchema>;
 export type RideAnalysis = z.infer<typeof rideAnalysisSchema>;
 export type AccountSession = z.infer<typeof accountSessionSchema>;

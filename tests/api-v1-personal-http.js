@@ -12,7 +12,9 @@ import {
   journalPageSchema,
   marketPageSchema,
   notificationCountSchema,
+  myUpcomingRidesSchema,
   notificationPageSchema,
+  ownRidePageSchema,
 } from "../lib/api-v1/schemas.ts";
 
 const base = process.env.TEST_ORIGIN || "http://localhost:3100";
@@ -329,6 +331,135 @@ try {
     listings[1],
   ]);
   assert.deepEqual(idsOf(await me.token("/me/saved/market")), [listings[0]]);
+
+  // Own rides: every state, only mine, whatever the bike's privacy.
+  const hours = (n) => new Date(Date.now() + n * 3600000).toISOString();
+  const addRide = async (owner, bikeId, options = {}) => {
+    const id = randomUUID();
+    const status = options.status ?? "completed";
+    const planned = status !== "completed";
+    await db.query(
+      `INSERT INTO rides(id,share_id,owner_id,bike_id,title,description,status,source_kind,has_track,is_public,started_at,distance_m,point_count,public_point_count,public_geometry,privacy_enabled,privacy_radius_m,source_hash,recurrence,meeting_point,meeting_visibility,plan_passport,import_metrics)
+       VALUES($1,$1,$2,$3,$4,'описание',$5,$6,false,$7,$8,$9,2,2,'[]',true,500,$10,'none',$11,$12,'{}','{}')`,
+      [
+        id,
+        owner,
+        bikeId,
+        options.title ?? "Покатушка " + id.slice(0, 6),
+        status,
+        planned ? "planned" : "gpx",
+        options.isPublic ?? true,
+        options.startedAt ?? hours(-48),
+        planned ? 0 : 12000,
+        "fixture-" + id,
+        options.meeting ?? "",
+        options.visibility ?? "public",
+      ],
+    );
+    return id;
+  };
+  const rides = [
+    await addRide(me.id, bike, { startedAt: hours(-10) }),
+    await addRide(me.id, bike, { startedAt: hours(-20), isPublic: false }),
+    await addRide(me.id, bike, {
+      status: "planned",
+      startedAt: hours(30),
+      meeting: "Мост",
+      visibility: "participants",
+    }),
+  ];
+  await addRide(actor.id, theirs);
+  assertError(await guest("/me/rides"), 401, "unauthorized", "guest rides");
+  assertError(
+    await guest("/me/rides/upcoming"),
+    401,
+    "unauthorized",
+    "guest upcoming",
+  );
+  const mine = await me.token("/me/rides");
+  assert.equal(mine.status, 200, mine.text);
+  ownRidePageSchema.parse(mine.body);
+  assert.deepEqual(new Set(idsOf(mine)), new Set(rides));
+  assert.equal(mine.body.items.filter((item) => !item.isPublic).length, 1);
+  assert.ok(
+    mine.body.items.every(
+      (item) => item.privacyEnabled && item.privacyRadiusM === 500,
+    ),
+  );
+  assert.deepEqual(idsOf(await me.cookie("/me/rides")), idsOf(mine));
+  const ridesWalk = [];
+  let ridesCursor = null;
+  for (let guardian = 0; guardian < 6; guardian++) {
+    const r = await me.token(
+      "/me/rides?limit=1" + (ridesCursor ? "&cursor=" + ridesCursor : ""),
+    );
+    assert.equal(r.status, 200, r.text);
+    ridesWalk.push(...idsOf(r));
+    if (!r.body.nextCursor) break;
+    ridesCursor = r.body.nextCursor;
+  }
+  assert.deepEqual(ridesWalk, idsOf(mine));
+  assert.deepEqual(idsOf(await stranger.token("/me/rides")), []);
+  assertError(
+    await me.token("/me/rides?page=2"),
+    400,
+    "invalid_request",
+    "rides page",
+  );
+  assertError(
+    await me.token("/me/rides?cursor=garbage"),
+    400,
+    "invalid_request",
+    "rides cursor",
+  );
+  // The public list never has the private one, and the owner's fields stay out of it.
+  const publicRides = await guest("/rides");
+  assert.ok(!idsOf(publicRides).includes(rides[1]));
+  assert.ok(
+    !publicRides.text.includes("privacyRadiusM") &&
+      !publicRides.text.includes("pointCount"),
+  );
+
+  // Upcoming plans with a role; the meeting point by the participants' rule.
+  const plan = await addRide(actor.id, theirs, {
+    status: "planned",
+    startedAt: hours(10),
+    meeting: "У фонтана",
+    visibility: "participants",
+  });
+  await db.query(
+    "INSERT INTO ride_invitations(ride_id,user_id) VALUES($1,$2)",
+    [plan, me.id],
+  );
+  const upcoming = await me.token("/me/rides/upcoming");
+  assert.equal(upcoming.status, 200, upcoming.text);
+  myUpcomingRidesSchema.parse(upcoming.body);
+  assert.deepEqual(idsOf(upcoming), [plan, rides[2]], "soonest first");
+  assert.deepEqual(
+    upcoming.body.items.map((item) => item.role),
+    ["invited", "organizer"],
+  );
+  assert.equal(upcoming.body.items[0].meetingPoint, null);
+  assert.equal(upcoming.body.items[0].meetingHidden, true);
+  assert.equal(upcoming.body.items[1].meetingPoint, "Мост");
+  const when = (
+    await db.query("SELECT started_at FROM rides WHERE id=$1", [plan])
+  ).rows[0].started_at;
+  await db.query(
+    "INSERT INTO ride_rsvps(ride_id,user_id,occurs_at,response) VALUES($1,$2,$3,'accepted')",
+    [plan, me.id, when],
+  );
+  const accepted = await me.cookie("/me/rides/upcoming");
+  assert.equal(accepted.body.items[0].role, "accepted");
+  assert.equal(accepted.body.items[0].meetingPoint, "У фонтана");
+  assert.deepEqual(idsOf(await stranger.token("/me/rides/upcoming")), []);
+  assertError(
+    await me.token("/me/rides/upcoming?limit=5"),
+    400,
+    "invalid_request",
+    "upcoming takes no parameters",
+  );
+  assert.ok(!accepted.text.includes("@example.test"));
 
   // Methods and credentials.
   assertError(

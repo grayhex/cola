@@ -14,6 +14,7 @@ import { bounds } from "../ride-geometry.ts";
 import type { marketApiCard } from "../market.ts";
 import type { notificationCard } from "../notifications.ts";
 import { meetingVisible, shownMetrics } from "../rides.ts";
+import type { myUpcomingEntries } from "../rides.ts";
 import { plannedEnd } from "../ride-plan.ts";
 import { richExcerpt } from "../rich-text.ts";
 import type { TokenGrant } from "../device-sessions.ts";
@@ -29,8 +30,10 @@ import type {
   MarketListing,
   MarketListingDetail,
   Me,
+  MyUpcomingRide,
   Notification,
   NotificationTarget,
+  OwnRideSummary,
   Profile,
   Relationship,
   Ride,
@@ -369,6 +372,56 @@ export function toRideSummary(
     participants: planned
       ? { going: counts.accepted ?? 0, maybe: counts.maybe ?? 0 }
       : null,
+  };
+}
+
+/**
+ * The owner's list card: the public summary plus the owner's own fields. A plan
+ * that was called off is still a plan (its date, its counters); the status says
+ * so.
+ */
+export function toOwnRideSummary(
+  row: RideViewRow,
+  viewer: string | null,
+): OwnRideSummary {
+  const cancelledPlan =
+    row.status === "cancelled" && row.source_kind === "planned";
+  return {
+    ...toRideSummary(
+      cancelledPlan ? { ...row, status: "planned" } : row,
+      viewer,
+    ),
+    status:
+      row.status === "cancelled"
+        ? "cancelled"
+        : row.status === "planned"
+          ? "planned"
+          : "completed",
+    isPublic: row.is_public,
+    privacyEnabled: row.privacy_enabled,
+    privacyRadiusM: row.privacy_radius_m,
+    pointCount: row.point_count,
+  };
+}
+
+/** A next plan of the person with their role; the meeting point follows the participants' rule. */
+export function toMyUpcomingRide(
+  entry: Awaited<ReturnType<typeof myUpcomingEntries>>[number],
+  viewer: string,
+): MyUpcomingRide {
+  const view = entry.view;
+  const shown = !entry.cancelled && meetingVisible(view, viewer);
+  return {
+    ...toRideSummary({ ...view, status: "planned" }, viewer),
+    // The counts are those of the next live date; a called-off date shows the
+    // date the person answered, and the counts of another date would be wrong.
+    ...(entry.cancelled ? { participants: null } : {}),
+    status: view.status === "cancelled" ? "cancelled" : "planned",
+    role: entry.role,
+    occurrenceCancelled: entry.occurrenceCancelled,
+    changedAfterAnswer: entry.changedAfterAnswer,
+    meetingPoint: shown && view.meeting_point ? view.meeting_point : null,
+    meetingHidden: !shown && !!view.meeting_point,
   };
 }
 
