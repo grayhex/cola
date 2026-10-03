@@ -545,6 +545,13 @@ export const apiRide = `${effectiveRide} AND r.status<>'cancelled'`;
 // loses nothing to the rounding that Date makes.
 const cursorText = (expression: string) =>
   `to_char((${expression}) AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"')`;
+/**
+ * The text search of rides: a literal match, case and form insensitive, in
+ * the title, the description, the author's name and username and the bike's
+ * name: the same rule as the site search.
+ */
+const rideTextMatch = (parameter: string) =>
+  `strpos(lower(normalize(r.title||' '||r.description||' '||u.name||' '||u.username||' '||b.name,NFKC)),lower(normalize(${parameter}::text,NFKC)))>0`;
 export interface RideCursor {
   createdAt: string;
   id: string;
@@ -599,7 +606,13 @@ export async function rideKeysetPage(
     bikeId = null,
     limit,
     after,
-  }: { bikeId?: string | null; limit: number; after: RideCursor | null },
+    text = "",
+  }: {
+    bikeId?: string | null;
+    limit: number;
+    after: RideCursor | null;
+    text?: string;
+  },
 ) {
   const position = "coalesce(r.started_at,r.created_at)";
   return ridePage(
@@ -608,6 +621,7 @@ export async function rideKeysetPage(
         `SELECT ${columns},${cursorText(position)} AS cursor_at${rideFrom}
          WHERE r.status='completed' AND ${apiRide} AND ($2::uuid IS NULL OR r.bike_id=$2)
            AND ($3::timestamptz IS NULL OR (${position},r.id)<($3::timestamptz,$4::uuid))
+           AND ($6::text IS NULL OR ${rideTextMatch("$6")})
          ORDER BY ${position} DESC,r.id DESC LIMIT $5`,
         [
           viewer,
@@ -615,6 +629,7 @@ export async function rideKeysetPage(
           after?.createdAt ?? null,
           after?.id ?? null,
           limit + 1,
+          text || null,
         ],
       )
     ).rows,
@@ -630,7 +645,11 @@ export async function rideKeysetPage(
 export async function upcomingKeysetPage(
   q: Queryable,
   viewer: string | null,
-  { limit, after }: { limit: number; after: RideCursor | null },
+  {
+    limit,
+    after,
+    text = "",
+  }: { limit: number; after: RideCursor | null; text?: string },
 ) {
   const occurrence = `(${rideOccurrence})`;
   return ridePage(
@@ -639,8 +658,15 @@ export async function upcomingKeysetPage(
         `SELECT ${columns},${cursorText(occurrence)} AS cursor_at${rideFrom}
          WHERE r.status='planned' AND r.source_kind='planned' AND ${apiRide} AND ${occurrence}>now()
            AND ($2::timestamptz IS NULL OR (${occurrence},r.id)>($2::timestamptz,$3::uuid))
+           AND ($5::text IS NULL OR ${rideTextMatch("$5")})
          ORDER BY ${occurrence} ASC,r.id ASC LIMIT $4`,
-        [viewer, after?.createdAt ?? null, after?.id ?? null, limit + 1],
+        [
+          viewer,
+          after?.createdAt ?? null,
+          after?.id ?? null,
+          limit + 1,
+          text || null,
+        ],
       )
     ).rows,
     limit,
