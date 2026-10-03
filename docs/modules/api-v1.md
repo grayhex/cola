@@ -313,6 +313,7 @@
 - **Только аддитивные изменения** внутри `/api/v1`: новое поле, операция, необязательный параметр, значение, которое клиент и так обязан допускать. Ломающее изменение выходит как `/api/v2`, `v1` живёт рядом. Клиент игнорирует неизвестные поля.
 - **Набор кодов ошибок открыт.** `error.code` в схеме — обычная строка, а не перечисление: новый код не ломает разбор у выпущенных приложений (закрытый enum в Kotlin ломал бы его). Известные сегодня коды перечислены в схеме `ErrorCode`; клиент обязан обработать неизвестный код по HTTP-статусу. Схема `ErrorCode` нарочно ни на что не ссылается (Redocly предупреждает `no-unused-components`).
 - **Именованные схемы вместо безымянных вложенных**: `Error` → `ErrorBody` → `ErrorDetail`; в документе нет имён, придуманных генератором (`ErrorError`, `ErrorErrorDetailsInner`), тест это проверяет. Новая вложенная схема сразу получает имя через `named(...)`.
+- **Флаг — обычный `boolean`**, даже если значение всегда одно: `z.literal(true)` превращается в генераторе в перечисление из одного значения, и с запасным значением для неизвестных членов Kotlin-клиент не компилируется (#325). Тест не пускает в документ `const` и `enum` у `boolean`.
 - **Общие 4xx-ответы** (`InternalError`, `NotFound`) вынесены в `components.responses` и подключаются ссылкой; `info.license` указывает на пользовательское соглашение сайта (`/legal/terms`): отдельной лицензии на API нет, условия задаёт соглашение.
 - Списки — только keyset-курсор; на домен один предикат видимости; ответ собирают mappers по именам полей (подробнее — «Что дальше»).
 
@@ -362,14 +363,29 @@
 
 Повторено с каталогом компонентов (#317, 03.10.2026): TypeScript-пример (каталог в двух порядках с непрозрачным курсором, кредиты фото) компилируется `tsc --strict`; Kotlin-клиент компилируется и разбирает реальные ответы (`ComponentModelPage`, `ComponentModel`, `ComponentPhotoList`, `CommentPage`). Redocly: валиден, два прежних предупреждения.
 
+Проверка для Android-клиента (#325, 03.10.2026) прошла сквозным сценарием: сгенерированные классы API ходили в настоящий одноразовый сервер с Bearer-токеном. Программа выполнила вход по паролю с устройством, затем `/me`, `/bikes` (`mine` и публичный список), карточку велосипеда и список сессий: `device` текущая, `browser` с `platform: null`. После этого она проверила:
+
+- ротацию refresh-токена;
+- повтор старого refresh: 401 `invalid_token`, и вся сессия отозвана, включая новый access-токен;
+- выход через `DELETE /auth/sessions/current`, гостя и неверный пароль: 401 `unauthorized` и `invalid_credentials`.
+
+Неизвестное значение перечисления и неизвестное поле разбираются без ошибки. Найдено четыре проблемы:
+
+- `MarketBikeLink.isPublic` был `const: true`, из-за чего клиент не компилировался. Теперь это обычный `boolean`, правило закреплено тестом (раздел «Эволюция контракта и гигиена»).
+- Шаблон Moshi регистрирует адаптеры перечислений с запасным значением без `nullSafe()`, поэтому `null` в nullable-перечислении (`AccountSession.platform` у browser-сессии) роняет разбор. Для Android выбран `kotlinx_serialization`: адаптеры нормально принимают `null`, не нужны reflection и `kotlin-reflect`.
+- С `kotlinx_serialization` `BigDecimal` во вложенных массивах (`RideGeometry.coordinates`) не компилируется. Лечится `--type-mappings=number=kotlin.Double`.
+- Сериализатор по умолчанию (`encodeDefaults = true`) отправляет `null` вместо пропущенных необязательных полей, и строгая схема входа отвечает 400. Клиент должен включить `explicitNulls = false` через `Serializer.kotlinxSerializationJsonConfiguration` до первого запроса, сгенерированный код при этом не правится. Пропущенное поле и `null` в моделях неразличимы, поэтому операциям записи, где `null` что-то снимает, такой клиент не подходит без отдельной схемы.
+
+Та же конфигурация на контракте со срезами R7a–R7c (50 адресов) тоже компилируется. Не проверено: Android-устройство и эмулятор, production за прокси, App Link и Яндекс ID.
+
 Повторить проверку:
 
 ```sh
 curl -sS https://<сайт>/api/v1/openapi.json -o openapi.json
 npx openapi-typescript@7.13.0 openapi.json -o schema.d.ts   # затем tsc --strict по примеру клиента
 java -jar openapi-generator-cli-7.25.0.jar generate -i openapi.json -g kotlin \
-  --library jvm-okhttp4 -o kotlin-client \
-  --additional-properties=packageName=ru.colabike.api,serializationLibrary=moshi
+  --library jvm-okhttp4 -o kotlin-client --type-mappings=number=kotlin.Double \
+  --additional-properties=packageName=ru.colabike.api,serializationLibrary=kotlinx_serialization,enumUnknownDefaultCase=true
 (cd kotlin-client && gradle compileKotlin)
 ```
 

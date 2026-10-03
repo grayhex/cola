@@ -681,6 +681,21 @@ function walkRefs(value, refs = new Set()) {
   return refs;
 }
 
+function booleanConstants(value, at = "#", found = []) {
+  if (Array.isArray(value))
+    value.forEach((item, i) => booleanConstants(item, at + "/" + i, found));
+  else if (value && typeof value === "object") {
+    if (
+      [value.type].flat().includes("boolean") &&
+      ("const" in value || "enum" in value)
+    )
+      found.push(at);
+    for (const [key, child] of Object.entries(value))
+      booleanConstants(child, at + "/" + key, found);
+  }
+  return found;
+}
+
 test("OpenAPI: documents exactly the implemented operations, every $ref resolves, parameters match the parser", async () => {
   const document = buildOpenApiDocument("https://cola.example");
   assert.equal(document.openapi, "3.1.0");
@@ -826,6 +841,14 @@ test("OpenAPI: documents exactly the implemented operations, every $ref resolves
     JSON.stringify(document),
     /ErrorError|InnerInner|DetailsInner/,
     "no generator-made names",
+  );
+  // A boolean constant becomes a one-value enum in a generated client, and
+  // with the unknown-value fallback that open enums need the Kotlin client
+  // does not compile (#325). A flag is a plain boolean.
+  assert.deepEqual(
+    booleanConstants(document),
+    [],
+    "a boolean is never a const or an enum",
   );
   assert.deepEqual(document.info.license, {
     name: "Пользовательское соглашение ColaBike",
