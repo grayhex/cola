@@ -16,18 +16,23 @@ import {
   notificationPage,
   unreadCount,
 } from "../lib/notifications.ts";
+import { myUpcomingEntries, ownRideKeysetPage } from "../lib/rides.ts";
 import { insertBike } from "../lib/repository.ts";
 import { bikeInput } from "../lib/validation.ts";
 import {
   toJournalSummary,
   toMarketListing,
+  toMyUpcomingRide,
   toNotification,
+  toOwnRideSummary,
 } from "../lib/api-v1/mappers.ts";
 import {
   journalSummarySchema,
   marketListingSchema,
   notificationCountSchema,
+  myUpcomingRidesSchema,
   notificationSchema,
+  ownRideSummarySchema,
   parseNoQuery,
 } from "../lib/api-v1/schemas.ts";
 
@@ -375,4 +380,213 @@ test("an operation without parameters refuses every parameter", () => {
     assert.throws(() => parseNoQuery(new URL("http://x/m" + query)), {
       code: "invalid_request",
     });
+});
+
+const hours = (n) => new Date(Date.now() + n * 3600000).toISOString();
+async function addRide(owner, bike, options = {}) {
+  const {
+    status = "completed",
+    isPublic = true,
+    startedAt = hours(-48),
+    meeting = "",
+    visibility = "public",
+    title = "Ride " + randomUUID().slice(0, 6),
+  } = options;
+  const id = randomUUID();
+  const planned = status !== "completed";
+  await db.query(
+    `INSERT INTO rides(id,share_id,owner_id,bike_id,title,description,status,source_kind,has_track,is_public,started_at,distance_m,point_count,public_point_count,public_geometry,privacy_enabled,privacy_radius_m,source_hash,recurrence,meeting_point,meeting_visibility,plan_passport,import_metrics)
+     VALUES($1,$1,$2,$3,$4,'описание',$5,$6,false,$7,$8,$9,2,2,'[]',true,500,$10,'none',$11,$12,'{}','{}')`,
+    [
+      id,
+      owner,
+      bike,
+      title,
+      status,
+      planned ? "planned" : "gpx",
+      isPublic,
+      startedAt,
+      planned ? 0 : 12000,
+      "fixture-" + id,
+      meeting,
+      visibility,
+    ],
+  );
+  return id;
+}
+
+test("own rides: every state, only mine, the keyset walk is whole", async () => {
+  const mine = await addUser("rider");
+  const mineBike = await addBike(mine);
+  const theirsBike = await addBike(actor);
+  const same = hours(-100);
+  const expected = [
+    await addRide(mine, mineBike, { startedAt: hours(-10) }),
+    await addRide(mine, mineBike, { startedAt: hours(-20), isPublic: false }),
+    await addRide(mine, mineBike, { startedAt: same }),
+    await addRide(mine, mineBike, { startedAt: same }),
+    await addRide(mine, mineBike, { status: "planned", startedAt: hours(72) }),
+    await addRide(mine, mineBike, {
+      status: "planned",
+      startedAt: hours(48),
+      isPublic: false,
+    }),
+    await addRide(mine, mineBike, {
+      status: "cancelled",
+      startedAt: hours(24),
+    }),
+  ];
+  await addRide(actor, theirsBike);
+  const walk = async (limit) => {
+    const seen = [];
+    let after = null;
+    for (let guard = 0; guard < 20; guard++) {
+      const page = await ownRideKeysetPage(db, mine, { limit, after });
+      for (const row of page.rows)
+        ownRideSummarySchema.parse(toOwnRideSummary(row, mine));
+      seen.push(...page.rows.map((row) => row.id));
+      if (!page.next) return seen;
+      after = page.next;
+    }
+    throw new Error("the walk does not end");
+  };
+  const whole = await walk(50);
+  assert.deepEqual(new Set(whole), new Set(expected));
+  for (const limit of [1, 2, 3])
+    assert.deepEqual(await walk(limit), whole, "limit " + limit);
+  // Newest first by the start (a plan by its date).
+  const cards = (
+    await ownRideKeysetPage(db, mine, { limit: 50, after: null })
+  ).rows.map((row) => toOwnRideSummary(row, mine));
+  const times = cards.map((card) =>
+    Date.parse(card.startedAt ?? card.scheduledAt),
+  );
+  assert.deepEqual(
+    times,
+    [...times].sort((a, b) => b - a),
+  );
+  const by = (status) => cards.filter((card) => card.status === status);
+  assert.equal(by("cancelled").length, 1);
+  assert.ok(by("cancelled")[0].scheduledAt, "a called-off plan keeps its date");
+  assert.equal(by("planned").length, 2);
+  assert.equal(cards.filter((card) => !card.isPublic).length, 2);
+  assert.ok(
+    cards.every((card) => card.privacyEnabled && card.privacyRadiusM === 500),
+  );
+  // Nobody else's rides, however public.
+  assert.deepEqual(
+    (await ownRideKeysetPage(db, actor, { limit: 50, after: null })).rows
+      .length,
+    1,
+  );
+});
+
+test("upcoming plans: the role in each, the meeting point by the participants' rule", async () => {
+  const organizer = await addUser("organizer");
+  const guest = await addUser("guest");
+  const outsider = await addUser("outsider");
+  const bikeO = await addBike(organizer);
+  const bikeG = await addBike(guest);
+  const own = await addRide(guest, bikeG, {
+    status: "planned",
+    startedAt: hours(5),
+    meeting: "У фонтана",
+  });
+  const going = await addRide(organizer, bikeO, {
+    status: "planned",
+    startedAt: hours(10),
+    meeting: "Площадь",
+    visibility: "participants",
+  });
+  const invited = await addRide(organizer, bikeO, {
+    status: "planned",
+    startedAt: hours(20),
+    meeting: "Мост",
+    visibility: "participants",
+  });
+  const maybe = await addRide(organizer, bikeO, {
+    status: "planned",
+    startedAt: hours(30),
+  });
+  const stranger = await addRide(organizer, bikeO, {
+    status: "planned",
+    startedAt: hours(40),
+  });
+  const closed = await addRide(organizer, bikeO, {
+    status: "planned",
+    startedAt: hours(50),
+    isPublic: false,
+  });
+  const called = await addRide(organizer, bikeO, {
+    status: "cancelled",
+    startedAt: hours(60),
+  });
+  const answer = (ride, who, response, at) =>
+    db.query(
+      "INSERT INTO ride_rsvps(ride_id,user_id,occurs_at,response) VALUES($1,$2,$3,$4)",
+      [ride, who, at, response],
+    );
+  const start = async (ride) =>
+    (await db.query("SELECT started_at FROM rides WHERE id=$1", [ride])).rows[0]
+      .started_at;
+  await answer(going, guest, "accepted", await start(going));
+  await answer(maybe, guest, "maybe", await start(maybe));
+  await answer(called, guest, "accepted", await start(called));
+  await db.query(
+    "INSERT INTO ride_invitations(ride_id,user_id) VALUES($1,$2)",
+    [invited, guest],
+  );
+  await db.query(
+    "INSERT INTO ride_invitations(ride_id,user_id) VALUES($1,$2)",
+    [closed, outsider],
+  );
+  const items = async (who) =>
+    (await myUpcomingEntries(db, who)).map((entry) =>
+      toMyUpcomingRide(entry, who),
+    );
+  const mineItems = await items(guest);
+  myUpcomingRidesSchema.parse({ items: mineItems });
+  const role = (ride) => mineItems.find((item) => item.id === ride)?.role;
+  assert.equal(role(own), "organizer");
+  assert.equal(role(going), "accepted");
+  assert.equal(role(invited), "invited");
+  assert.equal(role(maybe), "maybe");
+  assert.equal(role(called), "cancelled");
+  assert.equal(
+    role(stranger),
+    undefined,
+    "a plan without an answer or an invitation is not mine",
+  );
+  assert.equal(role(closed), undefined);
+  // Soonest first.
+  const times = mineItems.map((item) => Date.parse(item.scheduledAt));
+  assert.deepEqual(
+    times,
+    [...times].sort((a, b) => a - b),
+  );
+  // The meeting point: mine to the organizer, the participants' after "going",
+  // hidden from an invitee who has not answered, and none for a called-off plan.
+  const point = (ride) => mineItems.find((item) => item.id === ride);
+  assert.equal(point(own).meetingPoint, "У фонтана");
+  assert.equal(point(going).meetingPoint, "Площадь");
+  assert.equal(point(invited).meetingPoint, null);
+  assert.equal(point(invited).meetingHidden, true);
+  assert.equal(point(called).meetingPoint, null);
+  assert.equal(point(called).status, "cancelled");
+  // An edit of the conditions after the answer is shown.
+  await db.query("UPDATE rides SET agreement_revision=2 WHERE id=$1", [going]);
+  assert.equal(
+    (await items(guest)).find((item) => item.id === going).changedAfterAnswer,
+    true,
+  );
+  assert.equal(
+    (await items(guest)).find((item) => item.id === maybe).changedAfterAnswer,
+    false,
+  );
+  // Another person has none of these; the invited of a private plan sees it.
+  assert.deepEqual(
+    (await items(outsider)).map((item) => item.id),
+    [closed],
+  );
+  assert.ok(!JSON.stringify(mineItems).includes("@test.invalid"));
 });

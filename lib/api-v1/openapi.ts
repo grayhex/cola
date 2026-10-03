@@ -472,6 +472,48 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
           },
         },
       },
+      "/me/rides": {
+        get: {
+          operationId: "listMyRides",
+          tags: ["Personal"],
+          summary: "Мои покатушки",
+          description:
+            "Все свои покатушки в любом состоянии (состоявшиеся, запланированные, отменённые; публичные и нет), новые сверху, курсор по `(начало или дата добавления, id)`. Владельческие поля — `isPublic`, зона приватности, число точек. Геометрия и серии трека в списки не входят: карточка `/rides/{id}` отдаёт публичную геометрию.",
+          security: [{ cookieSession: [] }, { bearerAuth: [] }],
+          parameters: refs("Limit", "Cursor"),
+          responses: {
+            "200": success("Страница своих покатушек.", "OwnRidePage"),
+            "400": failure(
+              "Неверный или повторённый параметр, неверный курсор либо cookie вместе с Authorization.",
+            ),
+            "401": failure(
+              "Нет входа, сессия или токен недействительны, токен доступа истёк (`token_expired`) либо схема Authorization не поддерживается.",
+            ),
+            "500": shared("InternalError"),
+          },
+        },
+      },
+      "/me/rides/upcoming": {
+        get: {
+          operationId: "listMyUpcomingRides",
+          tags: ["Personal"],
+          summary: "Мои ближайшие планы",
+          description:
+            "Свои планы, планы с ответами «еду» и «возможно», приглашения без ответа и недавние отмены дат, на которые человек отвечал: до 20 штук на 60 дней вперёд, ближайшие первыми, без курсора и без параметров. `role` говорит, кем человек в плане выступает. Точка встречи — по правилам участников. Имена ответивших не передаются.",
+          security: [{ cookieSession: [] }, { bearerAuth: [] }],
+          parameters: [],
+          responses: {
+            "200": success("Ближайшие планы человека.", "MyUpcomingRides"),
+            "400": failure(
+              "Неверный или повторённый параметр, неверный курсор либо cookie вместе с Authorization.",
+            ),
+            "401": failure(
+              "Нет входа, сессия или токен недействительны, токен доступа истёк (`token_expired`) либо схема Authorization не поддерживается.",
+            ),
+            "500": shared("InternalError"),
+          },
+        },
+      },
       "/bikes": {
         get: {
           operationId: "listBikes",
