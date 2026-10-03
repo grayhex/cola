@@ -200,6 +200,7 @@ try {
           "tests/api-v1-comments-write-http.js",
           "tests/api-v1-media-http.js",
           "tests/admin-http.js",
+          "tests/app-config-http.js",
           "tests/resolver-http.js",
           "tests/layout-http.js",
           "tests/wizard-http.js",

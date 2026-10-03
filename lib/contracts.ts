@@ -9,6 +9,7 @@ import type { modelLanding, partLanding } from "./experience-landing.ts";
 import type { searchExperience } from "./search.ts";
 import type { reportPage } from "./reports.ts";
 import type { adminLegalDocuments } from "./legal-documents.ts";
+import type { adminMobileSettings } from "./mobile-settings.ts";
 import type { getGameSettings } from "./gamification.ts";
 import type { GameRule } from "./game-rules.ts";
 import type { Settings as ResolverSettings } from "../services/bike-resolver/src/settings.ts";
@@ -248,6 +249,11 @@ export interface AdminOverviewDto extends SiteDefinition {
 }
 export type AdminLegalDto = JsonData<
   Awaited<ReturnType<typeof adminLegalDocuments>>
+>;
+// The native app settings editor (#338): stored value, version and the public
+// answer apps receive now.
+export type AdminMobileDto = JsonData<
+  Awaited<ReturnType<typeof adminMobileSettings>>
 >;
 export type GameSettingsDto = Awaited<ReturnType<typeof getGameSettings>>;
 export type GameRuleDto = GameRule & { awarded: number };

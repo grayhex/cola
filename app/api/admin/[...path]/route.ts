@@ -13,6 +13,7 @@ import { prepareSvg } from "../../../../lib/svg-asset.ts";
 import { prepareRive } from "../../../../lib/rive-upload.ts";
 import { assetFormat } from "../../../../lib/hero-graphics.ts";
 import { gameAssetInUse } from "../../../../lib/gamification-assets.ts";
+import { mobileAssetInUse } from "../../../../lib/mobile-settings.ts";
 import { traced, logError } from "../../../../lib/observability.ts";
 import {
   bikeResolverClient,
@@ -501,6 +502,12 @@ async function handler(
             return {
               error:
                 "Иллюстрация используется в достижениях. Сначала замените её в разделе «Награды и рекорды».",
+              status: 409,
+            };
+          if (await mobileAssetInUse(q, p[1]))
+            return {
+              error:
+                "Изображение используется в мобильном приложении. Сначала замените его в разделе «Мобильное приложение».",
               status: 409,
             };
           await q.query("DELETE FROM site_assets WHERE id=$1", [p[1]]);
