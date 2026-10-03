@@ -1,8 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFile, readdir } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
-import { PGlite } from "@electric-sql/pglite";
+import type { z } from "zod";
 import { defaultCatalog, defaultSettings } from "../lib/site-defaults.ts";
 import {
   bikeCatalog,
@@ -32,11 +31,18 @@ import {
   mergeComponentModels,
   resolveComponentModel,
 } from "../lib/component-catalog.ts";
+import { migrateOnly, testDatabase } from "./support/database.ts";
+import { bikeRow } from "./support/bikes.ts";
+import { present } from "./support/assertions.ts";
+import { processEnv } from "./support/env.ts";
+import type { BikeRow, MarketRow } from "../lib/database-rows.ts";
+import { userRow } from "./support/people.ts";
+import { one } from "./support/rows.ts";
 import { modelLanding } from "../lib/experience-landing.ts";
 import { socialMetadata } from "../lib/social-metadata.ts";
 import { loadSocialPreview } from "../lib/social-preview.ts";
 
-const offer = (extra = {}) =>
+const offer = (extra: Partial<z.input<typeof listingInput>> = {}) =>
   listingInput.parse({
     title: "My advertisement",
     description: "My independent description",
@@ -49,29 +55,43 @@ const offer = (extra = {}) =>
     ...extra,
   });
 test("market catalog: populated migration, independent fields, private/foreign bicycles and durable identities", async () => {
-  const db = new PGlite(),
-    owner = randomUUID(),
-    other = randomUUID(),
-    admin = randomUUID();
-  const sql = async (f) =>
-    db.exec(await readFile(new URL("../db/" + f, import.meta.url), "utf8"));
-  const tx = (fn) => db.transaction(fn);
-  const bike = async (name, pub = true, who = owner, brand = "Cube") => {
-    const id = randomUUID();
-    await db.query(
-      "INSERT INTO bikes(id,share_id,owner_id,name,brand,model,year,category,is_public) VALUES($1,$1,$2,$3,$4,$3,2024,'road',$5)",
-      [id, who, name, brand, pub],
+  const db = await testDatabase({ migrated: false });
+  let owner = "",
+    other = "",
+    admin = "";
+  const sql = (f: string) => migrateOnly(db, (name) => name === f);
+  const tx = db.transaction;
+  const catalogModelOf = async (bikeId: string) =>
+    present(
+      (
+        await one<{ catalog_model_id: string | null }>(
+          db,
+          "SELECT catalog_model_id FROM bikes WHERE id=$1",
+          [bikeId],
+        )
+      ).catalog_model_id,
     );
-    return (await db.query("SELECT * FROM bikes WHERE id=$1", [id])).rows[0];
-  };
-  const save = (extra = {}, id) =>
-    tx((q) => saveListing(q, owner, offer(extra), id));
-  const detail = (m, viewer = null) => marketDetail(db, m.shareId, viewer);
+  const foundBike = async (id: string | null) =>
+    present(await resolveBikeModel(db, present(id)));
+  const bikeAt = async (brand: string, name: string) =>
+    present(await bikeModelAtPath(db, brand, name));
+  const bike = async (name: string, pub = true, who = owner, brand = "Cube") =>
+    bikeRow(db, who, {
+      name,
+      brand,
+      model: name,
+      year: 2024,
+      category: "road",
+      is_public: pub,
+    });
+  const save = (
+    extra: Partial<z.input<typeof listingInput>> = {},
+    id?: string,
+  ) => tx((q) => saveListing(q, owner, offer(extra), id));
+  const detail = (m: { shareId: string }, viewer: string | null = null) =>
+    marketDetail(db, m.shareId, viewer);
   try {
-    for (const f of (await readdir(new URL("../db/", import.meta.url)))
-      .filter((f) => f.endsWith(".sql") && f < "030")
-      .sort())
-      await sql(f);
+    await migrateOnly(db, (f) => f < "030");
     await db.query("INSERT INTO site_settings(id,value) VALUES(1,$1)", [
       JSON.stringify(defaultSettings),
     ]);
@@ -85,11 +105,9 @@ test("market catalog: populated migration, independent fields, private/foreign b
         ],
       }),
     ]);
-    for (const id of [owner, other, admin])
-      await db.query(
-        "INSERT INTO users(id,email,name,password_hash,role) VALUES($1,$3,$3,'x',$2)",
-        [id, id === admin ? "admin" : "user", id],
-      );
+    owner = (await userRow(db, { username: "market-owner" })).id;
+    other = (await userRow(db, { username: "market-other" })).id;
+    admin = (await userRow(db, { username: "market-admin", role: "admin" })).id;
     const original = await bike("Travel"),
       alias = await bike("Тревел", true, owner, "Куб"),
       hidden = await bike("Secret bike", false),
@@ -99,38 +117,34 @@ test("market catalog: populated migration, independent fields, private/foreign b
       "INSERT INTO market_listings(id,share_id,owner_id,title,description,category,condition,status) VALUES($1,$1,$2,'Legacy','Legacy description','bikes','used','sold')",
       [oldId, owner],
     );
-    const before = (
-      await db.query("SELECT * FROM market_listings WHERE id=$1", [oldId])
-    ).rows[0];
+    const before = await one<MarketRow>(
+      db,
+      "SELECT * FROM market_listings WHERE id=$1",
+      [oldId],
+    );
     await sql("030_market_catalog_links.sql");
     // Model edits write the description (#264).
     await sql("041_component_descriptions.sql");
-    const migrated = (
-      await db.query("SELECT * FROM market_listings WHERE id=$1", [oldId])
-    ).rows[0];
+    const migrated = await one<MarketRow>(
+      db,
+      "SELECT * FROM market_listings WHERE id=$1",
+      [oldId],
+    );
     const { component_model_id, bike_model_id, linked_bike_id, ...same } =
       migrated;
     assert.deepEqual(same, before);
     assert.equal(component_model_id, null);
     assert.equal(bike_model_id, null);
     assert.equal(linked_bike_id, null);
-    const { catalog_model_id: modelId, ...unchanged } = (
-      await db.query("SELECT * FROM bikes WHERE id=$1", [original.id])
-    ).rows[0];
-    assert.deepEqual(unchanged, original);
-    assert.equal(
-      (
-        await db.query("SELECT catalog_model_id FROM bikes WHERE id=$1", [
-          alias.id,
-        ])
-      ).rows[0].catalog_model_id,
-      modelId,
+    const { catalog_model_id: catalogModel, ...unchanged } = await one<BikeRow>(
+      db,
+      "SELECT * FROM bikes WHERE id=$1",
+      [original.id],
     );
-    const hiddenId = (
-      await db.query("SELECT catalog_model_id FROM bikes WHERE id=$1", [
-        hidden.id,
-      ])
-    ).rows[0].catalog_model_id;
+    const modelId = present(catalogModel);
+    assert.deepEqual(unchanged, original);
+    assert.equal(await catalogModelOf(alias.id), modelId);
+    const hiddenId = await catalogModelOf(hidden.id);
     assert.equal(await resolveBikeModel(db, hiddenId), null);
     assert(
       !(await bikeCatalog(db, bikeCatalogInput.parse({}))).items.some(
@@ -142,13 +156,16 @@ test("market catalog: populated migration, independent fields, private/foreign b
       linkedBikeId: hidden.id,
     });
     const mine = await detail(privateOffer, owner);
-    assert.equal(mine.ownedBike.name, "Secret bike");
-    assert.equal(mine.ownedBike.path, null);
+    assert.equal(present(mine.ownedBike).name, "Secret bike");
+    assert.equal(present(mine.ownedBike).path, null);
     const publicOffer = await save({
       bikeModelId: modelId,
       linkedBikeId: original.id,
     });
-    assert.equal((await detail(publicOffer)).linkedBike.name, original.name);
+    assert.equal(
+      present((await detail(publicOffer)).linkedBike).name,
+      original.name,
+    );
     const anonymous = await detail(privateOffer);
     assert.equal(anonymous.linkedBike, null);
     assert(!("linkedBikeId" in anonymous));
@@ -182,10 +199,12 @@ test("market catalog: populated migration, independent fields, private/foreign b
     await save({}, privateOffer.id); // Older clients omit new fields: retain them.
     assert.equal((await detail(privateOffer, owner)).linkedBikeId, hidden.id);
     assert.equal(
-      new Date((await detail(privateOffer, owner)).expiresAt).getTime(),
-      new Date(term).getTime(),
+      new Date(
+        present((await detail(privateOffer, owner)).expiresAt),
+      ).getTime(),
+      new Date(present(term)).getTime(),
     );
-    const initial = await resolveBikeModel(db, modelId);
+    const initial = await foundBike(modelId);
     await assert.rejects(
       tx((q) =>
         editBikeModel(q, other, modelId, {
@@ -205,25 +224,22 @@ test("market catalog: populated migration, independent fields, private/foreign b
         version: initial.version,
       }),
     );
-    assert.equal((await bikeModelAtPath(db, "Куб", "Тревел")).id, modelId);
-    assert.equal(
-      (await bikeModelAtPath(db, "Cube", "Travel")).name,
-      "Travel Revised",
-    );
+    assert.equal((await bikeAt("Куб", "Тревел")).id, modelId);
+    assert.equal((await bikeAt("Cube", "Travel")).name, "Travel Revised");
     let d = await detail(privateOffer);
-    assert.equal(d.bikeModel.name, "Cube Travel Revised");
+    assert.equal(present(d.bikeModel).name, "Cube Travel Revised");
     assert.equal(d.title, offer().title);
     assert.equal(d.description, offer().description);
     assert.equal(Number(d.price), 123);
-    assert.equal((await modelLanding(db, null, "cube", "travel")).builds, 2);
+    assert.equal(
+      present(await modelLanding(db, null, "cube", "travel")).builds,
+      2,
+    );
     const plus = await bike("Variant+X"),
       space = await bike("Variant X"),
-      target = await resolveBikeModel(db, space.catalog_model_id);
+      target = await foundBike(space.catalog_model_id);
     assert.notEqual(plus.catalog_model_id, space.catalog_model_id);
-    assert.notEqual(
-      (await resolveBikeModel(db, plus.catalog_model_id)).slug,
-      target.slug,
-    );
+    assert.notEqual((await foundBike(plus.catalog_model_id)).slug, target.slug);
     await assert.rejects(
       tx((q) =>
         editBikeModel(q, admin, modelId, {
@@ -242,9 +258,12 @@ test("market catalog: populated migration, independent fields, private/foreign b
         targetVersion: 1,
       }),
     );
-    assert.equal((await detail(privateOffer)).bikeModel.id, target.id);
-    assert.equal((await bikeModelAtPath(db, "cube", "travel")).id, target.id);
-    assert.equal((await modelLanding(db, null, "cube", "travel")).builds, 3);
+    assert.equal(present((await detail(privateOffer)).bikeModel).id, target.id);
+    assert.equal((await bikeAt("cube", "travel")).id, target.id);
+    assert.equal(
+      present(await modelLanding(db, null, "cube", "travel")).builds,
+      3,
+    );
     assert.equal(
       (
         await db.query(
@@ -264,7 +283,10 @@ test("market catalog: populated migration, independent fields, private/foreign b
     );
     await assert.rejects(save({ bikeModelId: target.id }), { status: 404 });
     await save({ bikeModelId: target.id }, privateOffer.id); // Existing canonical link can be kept after merge/archive.
-    assert.equal((await detail(privateOffer)).bikeModel.archived, true);
+    assert.equal(
+      present((await detail(privateOffer)).bikeModel).archived,
+      true,
+    );
     assert(
       !(await listingModelChoices(db, "bikes", "Variant X")).items.some(
         (m) => m.id === target.id,
@@ -274,12 +296,15 @@ test("market catalog: populated migration, independent fields, private/foreign b
       owner,
     ]);
     assert.equal((await detail(publicOffer)).linkedBike, null);
-    assert.equal((await modelLanding(db, null, "cube", "travel")).builds, 0);
+    assert.equal(
+      present(await modelLanding(db, null, "cube", "travel")).builds,
+      0,
+    );
     await db.query("DELETE FROM bikes WHERE owner_id=$1", [owner]);
     assert.equal((await detail(privateOffer, owner)).linkedBikeId, null);
-    assert.equal((await detail(publicOffer)).bikeModel.id, target.id);
+    assert.equal(present((await detail(publicOffer)).bikeModel).id, target.id);
     assert.equal(
-      (await modelLanding(db, null, "cube", "travel")).id,
+      present(await modelLanding(db, null, "cube", "travel")).id,
       target.id,
     );
     await assert.rejects(
@@ -297,10 +322,18 @@ test("market catalog: populated migration, independent fields, private/foreign b
       "INSERT INTO components(id,bike_id,section,category,name) VALUES($1,$2,'build','Седло','Brooks Test')",
       [partId, b.id],
     );
-    const cId = (
-      await db.query("SELECT model_id FROM components WHERE id=$1", [partId])
-    ).rows[0].model_id;
-    const c = await resolveComponentModel(db, cId),
+    const componentModelOf = async (componentId: string) =>
+      present(
+        (
+          await one<{ model_id: string | null }>(
+            db,
+            "SELECT model_id FROM components WHERE id=$1",
+            [componentId],
+          )
+        ).model_id,
+      );
+    const cId = await componentModelOf(partId);
+    const c = present(await resolveComponentModel(db, cId)),
       offerC = await save({ category: "components", componentModelId: cId });
     await tx((q) =>
       editComponentModel(q, admin, cId, {
@@ -311,15 +344,16 @@ test("market catalog: populated migration, independent fields, private/foreign b
         version: c.version,
       }),
     );
-    assert.equal((await detail(offerC)).componentModel.name, "Brooks Renamed");
+    assert.equal(
+      present((await detail(offerC)).componentModel).name,
+      "Brooks Renamed",
+    );
     const p2 = randomUUID();
     await db.query(
       "INSERT INTO components(id,bike_id,section,category,name) VALUES($1,$2,'build','Седло','Other Saddle')",
       [p2, b.id],
     );
-    const c2 = (
-      await db.query("SELECT model_id FROM components WHERE id=$1", [p2])
-    ).rows[0].model_id;
+    const c2 = await componentModelOf(p2);
     await tx((q) =>
       mergeComponentModels(q, admin, cId, {
         targetId: c2,
@@ -327,9 +361,9 @@ test("market catalog: populated migration, independent fields, private/foreign b
         targetVersion: 1,
       }),
     );
-    assert.equal((await detail(offerC)).componentModel.id, c2);
+    assert.equal(present((await detail(offerC)).componentModel).id, c2);
     await db.query("DELETE FROM bikes WHERE id=$1", [b.id]);
-    assert.equal((await detail(offerC)).componentModel.id, c2);
+    assert.equal(present((await detail(offerC)).componentModel).id, c2);
     // Expiry/sold/contact behavior and old unlinked ads keep their previous contracts.
     await db.query(
       "UPDATE market_listings SET expires_at=now()-interval '1 day' WHERE id=$1",
@@ -340,15 +374,16 @@ test("market catalog: populated migration, independent fields, private/foreign b
       status: 404,
     });
     assert.equal(
-      socialMetadata(await loadSocialPreview(db, "market", offerC.shareId), {
-        APP_ORIGIN: "https://example.test",
-      }).robots.index,
+      socialMetadata(
+        await loadSocialPreview(db, "market", offerC.shareId),
+        processEnv({ APP_ORIGIN: "https://example.test" }),
+      ).robots?.index,
       false,
     );
     await tx((q) => extendListing(q, offerC.id, owner));
     assert.equal((await detail(offerC)).expired, false);
     await save({ category: "components", status: "sold" }, offerC.id);
-    assert.equal((await detail(offerC)).componentModel.id, c2);
+    assert.equal(present((await detail(offerC)).componentModel).id, c2);
     assert.equal((await marketDetail(db, oldId, null)).status, "sold");
   } finally {
     await db.close();

@@ -1,11 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { readFile, readdir, mkdtemp, rm, access } from "node:fs/promises";
+import { mkdtemp, rm, access } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import sharp from "sharp";
-import { PGlite } from "@electric-sql/pglite";
 import { defaultCatalog, defaultSettings } from "../lib/site-defaults.ts";
 import { preparePhoto } from "../lib/images.ts";
 import {
@@ -25,48 +24,59 @@ import {
 import { notificationPage } from "../lib/notifications.ts";
 import { createReport, reportPage, moderateReport } from "../lib/reports.ts";
 import { componentPhotoBytes, checkPhotoQuota, limits } from "../lib/limits.ts";
+import { migrateOnly, testDatabase } from "./support/database.ts";
+import { bikeRow, componentRow } from "./support/bikes.ts";
+import { present } from "./support/assertions.ts";
+import { userRow, viewer } from "./support/people.ts";
+import { one } from "./support/rows.ts";
 import { exportAccount } from "../lib/account-data.ts";
 
 test("component media and shared discussion: upgrade, roles, quota, merges, moderation and lifetime", async () => {
-  const db = new PGlite(),
+  const db = await testDatabase({ migrated: false }),
     dir = await mkdtemp(path.join(os.tmpdir(), "cola-components-"));
   const oldDir = process.env.UPLOAD_DIR;
   process.env.UPLOAD_DIR = dir;
-  const tx = (fn) => db.transaction(fn);
-  const user = async (role = "user", verified = true) => {
-    const id = randomUUID();
-    await db.query(
-      "INSERT INTO users(id,email,name,password_hash,role,email_verified_at) VALUES($1,$2,'Author','x',$3,$4)",
-      [id, id + "@example.test", role, verified ? new Date() : null],
-    );
-    return { id, role };
+  const tx = db.transaction;
+  const user = async (role: "user" | "admin" = "user", verified = true) => {
+    const row = await userRow(db, {
+      name: "Author",
+      role,
+      email_verified_at: verified ? new Date() : null,
+    });
+    return viewer({
+      id: row.id,
+      role,
+      email_verified_at: row.email_verified_at,
+    });
   };
-  const bike = async (u, isPublic = true) => {
-    const id = randomUUID();
-    await db.query(
-      "INSERT INTO bikes(id,share_id,owner_id,name,brand,model,year,category,is_public) VALUES($1,$1,$2,'Private name','Cube','Travel',2024,'road',$3)",
-      [id, u.id, isPublic],
+  const bike = async (u: { id: string }, isPublic = true) =>
+    (
+      await bikeRow(db, u.id, {
+        name: "Private name",
+        brand: "Cube",
+        model: "Travel",
+        year: 2024,
+        category: "road",
+        is_public: isPublic,
+      })
+    ).id;
+  const install = async (bikeId: string, name: string) => {
+    const row = await componentRow(db, bikeId, { name });
+    return present(
+      (
+        await one<{ model_id: string | null }>(
+          db,
+          "SELECT model_id FROM components WHERE id=$1",
+          [row.id],
+        )
+      ).model_id,
+      "model of the installed component",
     );
-    return id;
   };
-  const install = async (bikeId, name) => {
-    const id = randomUUID();
-    await db.query(
-      "INSERT INTO components(id,bike_id,section,category,name) VALUES($1,$2,'build','Седло',$3)",
-      [id, bikeId, name],
-    );
-    return (await db.query("SELECT model_id FROM components WHERE id=$1", [id]))
-      .rows[0].model_id;
-  };
-  const denied = (promise, status) =>
-    assert.rejects(promise, (e) => e.status === status);
+  const denied = (promise: Promise<unknown>, status: number) =>
+    assert.rejects(promise, { status });
   try {
-    for (const f of (await readdir(new URL("../db/", import.meta.url)))
-      .filter((f) => f.endsWith(".sql") && f < "029")
-      .sort())
-      await db.exec(
-        await readFile(new URL("../db/" + f, import.meta.url), "utf8"),
-      );
+    await migrateOnly(db, (f) => f < "029");
     await db.query("INSERT INTO site_catalog(id,value) VALUES(1,$1)", [
       JSON.stringify(defaultCatalog),
     ]);
@@ -86,29 +96,18 @@ test("component media and shared discussion: upgrade, roles, quota, merges, mode
     const privateOnly = await install(privateBike, "Never public");
     const snapshot = (await db.query("SELECT * FROM components ORDER BY id"))
       .rows;
-    await db.exec(
-      await readFile(
-        new URL("../db/029_component_community.sql", import.meta.url),
-        "utf8",
-      ),
-    );
-    await db.exec(
-      await readFile(
-        new URL("../db/030_market_catalog_links.sql", import.meta.url),
-        "utf8",
-      ),
+    await migrateOnly(
+      db,
+      (f) =>
+        f === "029_component_community.sql" ||
+        f === "030_market_catalog_links.sql",
     );
     assert.deepEqual(
       (await db.query("SELECT * FROM components ORDER BY id")).rows,
       snapshot,
     );
     // Current notification readers require the current ride and weekly schemas.
-    for (const file of (await readdir(new URL("../db/", import.meta.url)))
-      .filter((f) => f.endsWith(".sql") && f >= "031")
-      .sort())
-      await db.exec(
-        await readFile(new URL("../db/" + file, import.meta.url), "utf8"),
-      );
+    await migrateOnly(db, (f) => f >= "031");
     const raw = await sharp({
       create: { width: 800, height: 600, channels: 3, background: "#efac21" },
     })
@@ -223,10 +222,10 @@ test("component media and shared discussion: upgrade, roles, quota, merges, mode
       }),
     );
     assert.equal(photoReport.created, true);
-    const report = (await reportPage(db)).reports.find(
-      (r) => r.targetId === first,
+    const report = present(
+      (await reportPage(db)).reports.find((r) => r.targetId === first),
     );
-    assert.match(report.target.href, /#photo-/);
+    assert.match(present(report.target.href), /#photo-/);
     await tx((q) =>
       moderateReport(q, report.id, admin, "hide_component_photo"),
     );
@@ -329,8 +328,8 @@ test("component media and shared discussion: upgrade, roles, quota, merges, mode
         reason: "abuse",
       }),
     );
-    const commentReport = (await reportPage(db)).reports.find(
-      (r) => r.targetId === reply.id,
+    const commentReport = present(
+      (await reportPage(db)).reports.find((r) => r.targetId === reply.id),
     );
     await tx((q) =>
       moderateReport(q, commentReport.id, admin, "delete_comment"),
@@ -340,8 +339,8 @@ test("component media and shared discussion: upgrade, roles, quota, merges, mode
       0,
     );
     // Merge keeps both immutable threads and media; replies to the old root use its FK.
-    const original = await resolveComponentModel(db, model),
-      target = await resolveComponentModel(db, second);
+    const original = present(await resolveComponentModel(db, model)),
+      target = present(await resolveComponentModel(db, second));
     await tx((q) =>
       mergeComponentModels(q, admin.id, model, {
         version: original.version,
@@ -368,7 +367,7 @@ test("component media and shared discussion: upgrade, roles, quota, merges, mode
       ).rows[0].model_id,
       model,
     );
-    const rename = await resolveComponentModel(db, second);
+    const rename = present(await resolveComponentModel(db, second));
     await tx((q) =>
       editComponentModel(q, admin.id, second, {
         ...rename,
@@ -408,9 +407,11 @@ test("component media and shared discussion: upgrade, roles, quota, merges, mode
       403,
     );
     await tx((q) => componentSocial.change(q, root.id, owner, null));
-    const tombstone = (
-      await componentSocial.page(db, second, owner)
-    ).comments.find((c) => c.id === root.id);
+    const tombstone = present(
+      (await componentSocial.page(db, second, owner)).comments.find(
+        (c) => c.id === root.id,
+      ),
+    );
     assert.equal(tombstone.unavailable, true);
     assert.equal(tombstone.body, null);
     assert.ok(tombstone.replies.length);

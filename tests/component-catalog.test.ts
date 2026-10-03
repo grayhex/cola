@@ -1,8 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFile, readdir } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
-import { PGlite } from "@electric-sql/pglite";
 import { defaultCatalog, defaultSettings } from "../lib/site-defaults.ts";
 import {
   componentCatalog,
@@ -12,40 +10,56 @@ import {
   mergeComponentModels,
   resolveComponentModel,
 } from "../lib/component-catalog.ts";
+import { migrateOnly, testDatabase } from "./support/database.ts";
+import { bikeRow, componentRow } from "./support/bikes.ts";
+import { present } from "./support/assertions.ts";
+import { userRow } from "./support/people.ts";
+import { one } from "./support/rows.ts";
+import type { ComponentRow } from "../lib/database-rows.ts";
 import { partLanding } from "../lib/experience-landing.ts";
 import { searchExperience, searchInput } from "../lib/search.ts";
 
 test("component catalog: populated upgrade, variants, privacy, durable links and administrative lifecycle", async () => {
-  const db = new PGlite();
-  const sql = async (f) =>
-    db.exec(await readFile(new URL("../db/" + f, import.meta.url), "utf8"));
-  const owner = randomUUID(),
-    blocked = randomUUID();
-  const bike = async (isPublic = true, user = owner) => {
-    const id = randomUUID();
-    await db.query(
-      "INSERT INTO bikes(id,share_id,owner_id,name,brand,model,year,category,is_public) VALUES($1,$1,$2,'Bike','Cube','Travel',2024,'road',$3)",
-      [id, user, isPublic],
-    );
-    return id;
-  };
-  const part = async (bikeId, name, category = "Седло") => {
-    const id = randomUUID();
-    await db.query(
-      "INSERT INTO components(id,bike_id,section,category,name,notes,price) VALUES($1,$2,'build',$3,$4,'Author text',1234)",
-      [id, bikeId, category, name],
-    );
-    return (await db.query("SELECT * FROM components WHERE id=$1", [id]))
-      .rows[0];
-  };
+  const db = await testDatabase({ migrated: false });
+  const sql = (f: string) => migrateOnly(db, (name) => name === f);
+  let owner = "",
+    blocked = "";
+  const bike = async (isPublic = true, user = owner) =>
+    (
+      await bikeRow(db, user, {
+        brand: "Cube",
+        model: "Travel",
+        year: 2024,
+        category: "road",
+        is_public: isPublic,
+      })
+    ).id;
+  const part = (bikeId: string, name: string, category = "Седло") =>
+    componentRow(db, bikeId, {
+      category,
+      name,
+      notes: "Author text",
+      price: "1234",
+    });
   const list = (input = {}) =>
     componentCatalog(db, componentCatalogInput.parse(input));
-  const tx = (fn) => db.transaction(fn);
+  const tx = db.transaction;
+  const modelOf = async (componentId: string) =>
+    present(
+      (
+        await one<{ model_id: string | null }>(
+          db,
+          "SELECT model_id FROM components WHERE id=$1",
+          [componentId],
+        )
+      ).model_id,
+    );
+  const found = async (id: string | null) =>
+    present(await resolveComponentModel(db, present(id)));
+  const atPath = async (category: string, slug: string) =>
+    present(await componentModelAtPath(db, category, slug));
   try {
-    for (const f of (await readdir(new URL("../db/", import.meta.url)))
-      .filter((f) => f.endsWith(".sql") && f < "028")
-      .sort())
-      await sql(f);
+    await migrateOnly(db, (f) => f < "028");
     await db.query("INSERT INTO site_catalog(id,value) VALUES(1,$1)", [
       JSON.stringify({
         ...defaultCatalog,
@@ -63,12 +77,20 @@ test("component catalog: populated upgrade, variants, privacy, durable links and
     await db.query("INSERT INTO site_settings(id,value) VALUES(1,$1)", [
       JSON.stringify(defaultSettings),
     ]);
-    for (const id of [owner, blocked])
-      await db.query(
-        "INSERT INTO users(id,email,name,password_hash,blocked) VALUES($1,$2,$2,'x',$3)",
-        [id, id, id === blocked],
-      );
-    await db.query("UPDATE users SET role='admin' WHERE id=$1", [owner]);
+    owner = (
+      await userRow(db, {
+        name: "admin",
+        username: "catalog-admin",
+        role: "admin",
+      })
+    ).id;
+    blocked = (
+      await userRow(db, {
+        name: "blocked",
+        username: "catalog-blocked",
+        blocked: true,
+      })
+    ).id;
     const publicBike = await bike(),
       secondBike = await bike(),
       privateBike = await bike(false),
@@ -95,25 +117,17 @@ test("component catalog: populated upgrade, variants, privacy, durable links and
     await sql("030_market_catalog_links.sql");
     // Model edits write the description (#264).
     await sql("041_component_descriptions.sql");
-    const migrated = (
-      await db.query("SELECT * FROM components WHERE id=$1", [original.id])
-    ).rows[0];
-    const { model_id: id, ...unchanged } = migrated;
-    assert.deepEqual(unchanged, original);
-    assert.equal(
-      (
-        await db.query("SELECT model_id FROM components WHERE id=$1", [
-          alias.id,
-        ])
-      ).rows[0].model_id,
-      id,
+    const migrated = await one<ComponentRow>(
+      db,
+      "SELECT * FROM components WHERE id=$1",
+      [original.id],
     );
+    const { model_id: migratedModel, ...unchanged } = migrated;
+    const id = present(migratedModel);
+    assert.deepEqual(unchanged, original);
+    assert.equal(await modelOf(alias.id), id);
     assert.notEqual(
-      (
-        await db.query("SELECT model_id FROM components WHERE id=$1", [
-          variant.id,
-        ])
-      ).rows[0].model_id,
+      await modelOf(variant.id),
       id,
       "punctuation variants are not guessed to be duplicates",
     );
@@ -131,17 +145,13 @@ test("component catalog: populated upgrade, variants, privacy, durable links and
     assert.equal(result.items[0].brand, "Brooks");
     assert.deepEqual(result.brands, ["Brooks"]);
     assert(!JSON.stringify(result).includes("Secret"));
-    const privateId = (
-      await db.query("SELECT model_id FROM components WHERE id=$1", [
-        unknown.id,
-      ])
-    ).rows[0].model_id;
+    const privateId = await modelOf(unknown.id);
     assert.equal(await resolveComponentModel(db, privateId), null);
     assert.equal(
       await componentModelAtPath(db, "седло", "secret-saddle-987"),
       null,
     );
-    const photo = async (modelId, authorId, sort = 0) => {
+    const photo = async (modelId: string, authorId: string, sort = 0) => {
       const photoId = randomUUID();
       await db.query(
         "INSERT INTO component_photos(id,model_id,author_id,filename,size_bytes,width,height,sort_order) VALUES($1::uuid,$2,$3,$1::text,10,800,600,$4)",
@@ -149,7 +159,7 @@ test("component catalog: populated upgrade, variants, privacy, durable links and
       );
       return photoId;
     };
-    const coverOf = async (modelId) =>
+    const coverOf = async (modelId: string) =>
       (await list()).items.find((m) => m.id === modelId)?.coverUrl;
     assert.equal(await coverOf(id), null);
     const fallbackPhoto = await photo(id, owner, 1),
@@ -177,24 +187,18 @@ test("component catalog: populated upgrade, variants, privacy, durable links and
       "blocked author cannot supply a public cover",
     );
     await db.query("DELETE FROM component_photos WHERE model_id=$1", [id]);
-    const initial = await resolveComponentModel(db, id);
-    assert.equal((await componentModelAtPath(db, "Седло", "Брукс C17")).id, id);
+    const initial = await found(id);
+    assert.equal((await atPath("Седло", "Брукс C17")).id, id);
 
     // Colliding slugs get separate, stable addresses, not a silent merge.
     const plus = await part(publicBike, "Model+X"),
       space = await part(publicBike, "Model X");
     assert.notEqual(plus.model_id, space.model_id);
-    const plusModel = await resolveComponentModel(db, plus.model_id),
-      spaceModel = await resolveComponentModel(db, space.model_id);
+    const plusModel = await found(plus.model_id),
+      spaceModel = await found(space.model_id);
     assert.notEqual(plusModel.slug, spaceModel.slug);
     assert.equal(
-      (
-        await componentModelAtPath(
-          db,
-          spaceModel.category_slug,
-          spaceModel.slug,
-        )
-      ).id,
+      (await atPath(spaceModel.category_slug, spaceModel.slug)).id,
       space.model_id,
     );
 
@@ -208,11 +212,11 @@ test("component catalog: populated upgrade, variants, privacy, durable links and
       }),
     );
     assert.equal(
-      (await componentModelAtPath(db, "седло", "brooks-c17")).slug,
+      (await atPath("седло", "brooks-c17")).slug,
       "brooks-c17-classic",
     );
     assert.equal(
-      (await partLanding(db, null, "седло", "brooks-c17")).builds,
+      present(await partLanding(db, null, "седло", "brooks-c17")).builds,
       2,
     );
     assert.equal(
@@ -243,8 +247,8 @@ test("component catalog: populated upgrade, variants, privacy, durable links and
       ),
       /уже изменена/,
     );
-    const beforeMerge = await resolveComponentModel(db, plus.model_id),
-      target = await resolveComponentModel(db, space.model_id);
+    const beforeMerge = await found(plus.model_id),
+      target = await found(space.model_id);
     await assert.rejects(
       tx((q) =>
         editComponentModel(q, owner, beforeMerge.id, {
@@ -272,19 +276,9 @@ test("component catalog: populated upgrade, variants, privacy, durable links and
         targetVersion: target.version,
       }),
     );
-    assert.equal(
-      (await resolveComponentModel(db, beforeMerge.id)).id,
-      target.id,
-    );
-    assert.equal(
-      (await componentModelAtPath(db, "седло", beforeMerge.slug)).id,
-      target.id,
-    );
-    assert.equal(
-      (await db.query("SELECT model_id FROM components WHERE id=$1", [plus.id]))
-        .rows[0].model_id,
-      beforeMerge.id,
-    );
+    assert.equal((await found(beforeMerge.id)).id, target.id);
+    assert.equal((await atPath("седло", beforeMerge.slug)).id, target.id);
+    assert.equal(await modelOf(plus.id), beforeMerge.id);
     assert.equal(
       (await list({ q: "Model" })).items[0].builds,
       1,
@@ -318,23 +312,23 @@ test("component catalog: populated upgrade, variants, privacy, durable links and
         targetVersion: 2,
       }),
     );
-    assert.equal((await resolveComponentModel(db, beforeMerge.id)).id, id);
-    assert.equal((await resolveComponentModel(db, target.id)).id, id);
+    assert.equal((await found(beforeMerge.id)).id, id);
+    assert.equal((await found(target.id)).id, id);
     await db.query("UPDATE bikes SET is_public=false WHERE id=ANY($1)", [
       [publicBike, secondBike],
     ]);
-    let page = await partLanding(db, null, "седло", "brooks-c17");
+    let page = present(await partLanding(db, null, "седло", "brooks-c17"));
     assert.equal(page.builds, 0);
     assert.equal(page.bikes.length, 0);
     assert.equal(page.entries.length, 0);
     assert.equal(
-      (await resolveComponentModel(db, id)).first_public_at.getTime(),
-      initial.first_public_at.getTime(),
+      present((await found(id)).first_public_at).getTime(),
+      present(initial.first_public_at).getTime(),
     );
     await db.query("DELETE FROM bikes WHERE id=ANY($1)", [
       [publicBike, secondBike],
     ]);
-    page = await partLanding(db, null, "седло", "brooks-c17");
+    page = present(await partLanding(db, null, "седло", "brooks-c17"));
     assert.equal(page.id, id);
     assert.equal(page.builds, 0);
     assert.equal(
@@ -352,7 +346,7 @@ test("component catalog: populated upgrade, variants, privacy, durable links and
     );
     assert(!(await list()).items.some((m) => m.id === id));
     assert.equal(
-      (await componentModelAtPath(db, "седло", "brooks-c17")).id,
+      (await atPath("седло", "brooks-c17")).id,
       id,
       "archive retains the page",
     );
