@@ -516,6 +516,85 @@ try {
     1,
   );
 
+  // A replay is not a new comment: it neither spends the allowance nor is
+  // refused by it, and a burst of identical retries is one charge.
+  const careful = await member("careful");
+  const spent = async (who) =>
+    (
+      await db.query(
+        "SELECT coalesce(max(count),0)::int n FROM rate_limits WHERE key=$1",
+        ["comments:" + who.id],
+      )
+    ).rows[0].n;
+  const burstKey = randomUUID();
+  const retries = await Promise.all(
+    Array.from({ length: 5 }, () =>
+      careful.token(route, {
+        method: "POST",
+        body: { body: "Повтор" },
+        headers: { "idempotency-key": burstKey },
+      }),
+    ),
+  );
+  assert.ok(
+    retries.every((r) => r.status === 201),
+    retries.map((r) => r.status).join(),
+  );
+  assert.equal(new Set(retries.map((r) => r.body.id)).size, 1);
+  assert.equal(
+    await spent(careful),
+    1,
+    "five identical retries are one charge",
+  );
+  for (let i = 0; i < 19; i++)
+    assert.equal(
+      (
+        await careful.token(route, {
+          method: "POST",
+          body: { body: "Ещё " + i },
+        })
+      ).status,
+      201,
+    );
+  assertError(
+    await careful.token(route, { method: "POST", body: { body: "Лишний" } }),
+    429,
+    "rate_limited",
+    "over the allowance",
+  );
+  const replayed = await careful.token(route, {
+    method: "POST",
+    body: { body: "Повтор" },
+    headers: { "idempotency-key": burstKey },
+  });
+  assert.equal(
+    replayed.status,
+    201,
+    "a stored answer is returned even at the limit: " + replayed.text,
+  );
+  assert.equal(replayed.headers.get("idempotency-replayed"), "true");
+  assertError(
+    await careful.token(route, {
+      method: "POST",
+      body: { body: "Новый" },
+      headers: { "idempotency-key": randomUUID() },
+    }),
+    429,
+    "rate_limited",
+    "a new keyed request is still refused",
+  );
+  assert.ok(
+    Number(
+      (
+        await careful.token(route, {
+          method: "POST",
+          body: { body: "x" },
+          headers: { "idempotency-key": randomUUID() },
+        })
+      ).headers.get("retry-after"),
+    ) > 0,
+  );
+
   // The budget of new comments is the site's: 20 a window, then 429.
   const talker = await member("talker");
   let limited = null;

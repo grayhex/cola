@@ -1,6 +1,7 @@
 import { rateLimit } from "../auth.ts";
 import type { CurrentUser } from "../contracts.ts";
 import { db } from "../db.ts";
+import type { Queryable } from "../db.ts";
 import { sameOrigin } from "../http.ts";
 import { ApiError } from "./errors.ts";
 import { authenticate } from "./viewer.ts";
@@ -48,5 +49,25 @@ export async function limited(key: string, maximum: number) {
     "rate_limited",
     "Слишком много действий. Попробуйте позже.",
     { headers: { "Retry-After": String(rows[0]?.seconds ?? 900) } },
+  );
+}
+
+/**
+ * `limited` inside the transaction of an idempotent creation: the allowance is
+ * spent by the request that actually creates the object, never by a replay of
+ * its stored answer (which reaches this code never), and a request that fails
+ * leaves it unspent. Same window and table as `limited`.
+ */
+export async function limitedIn(q: Queryable, key: string, maximum: number) {
+  await q.query("DELETE FROM rate_limits WHERE expires_at < now()");
+  const { rows } = await q.query<{ count: number; seconds: number }>(
+    "INSERT INTO rate_limits VALUES($1,1,now()+interval '15 minutes') ON CONFLICT(key) DO UPDATE SET count=rate_limits.count+1 RETURNING count,greatest(1,ceil(extract(epoch from expires_at-now()))::int) AS seconds",
+    [key],
+  );
+  if (rows[0].count <= maximum) return;
+  throw new ApiError(
+    "rate_limited",
+    "Слишком много действий. Попробуйте позже.",
+    { headers: { "Retry-After": String(rows[0].seconds) } },
   );
 }

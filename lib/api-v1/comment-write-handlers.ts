@@ -25,7 +25,7 @@ import {
   createCommentRequestSchema,
   editCommentRequestSchema,
 } from "./schemas.ts";
-import { limited, writer } from "./write.ts";
+import { limited, limitedIn, writer } from "./write.ts";
 
 // Writing comments through /api/v1 (#330). The engine is the site's own
 // (`createComment`/`changeComment` and the wrappers of journal entries, rides
@@ -106,19 +106,24 @@ function createOf(target: Target) {
       const id = idOf((await params).id, targetMissing(target));
       requireVerifiedEmail(viewer);
       const input = await parseJsonBody(req, createCommentRequestSchema, 8192);
-      // The site's budget of new comments: one for both transports.
-      await limited("comments:" + viewer.id, limits.comments);
       await rideReadable(id, target);
       const engine = engineOf(target);
+      // The site's budget of new comments: one for both transports. With a
+      // key, a replay of a stored answer must not spend it, so the allowance
+      // is taken inside the transaction, by the request that creates.
+      const key = idempotencyKey(req.headers);
+      const budget = "comments:" + viewer.id;
+      if (key === null) await limited(budget, limits.comments);
       const { response, replayed } = await idempotent(
         transaction,
         {
           userId: viewer.id,
           route: `POST ${new URL(req.url).pathname}`,
-          key: idempotencyKey(req.headers),
+          key,
           body: input,
         },
         async (q) => {
+          if (key !== null) await limitedIn(q, budget, limits.comments);
           const created = await throughEngine(
             () =>
               engine
