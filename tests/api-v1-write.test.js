@@ -343,3 +343,54 @@ test("idempotency: expired rows of people who never come back are cleaned too, a
   assert.equal(await count("api_idempotency", "user_id=$1", [gone]), 0);
   assert.equal(await count("api_idempotency", "user_id=$1", [other]), 1);
 });
+
+test("comment bodies: trimmed text of one to a thousand characters, the keys of the contract only (#330)", async () => {
+  const { createCommentRequestSchema, editCommentRequestSchema } =
+    await import("../lib/api-v1/schemas.ts");
+  const parent = randomUUID();
+  assert.deepEqual(
+    createCommentRequestSchema.parse({ body: "  Привет  ", parentId: parent }),
+    { body: "Привет", parentId: parent },
+  );
+  assert.deepEqual(
+    createCommentRequestSchema.parse({ body: "x".repeat(1000) }),
+    {
+      body: "x".repeat(1000),
+    },
+  );
+  assert.equal(
+    createCommentRequestSchema.parse({ body: "ok", parentId: null }).parentId,
+    null,
+  );
+  for (const bad of [
+    {},
+    { body: "" },
+    { body: "   " },
+    { body: "x".repeat(1001) },
+    { body: "a\0b" },
+    { body: 5 },
+    { body: "ok", parentId: "not-a-uuid" },
+    { body: "ok", extra: true },
+  ]) {
+    assert.equal(
+      createCommentRequestSchema.safeParse(bad).success,
+      false,
+      JSON.stringify(bad),
+    );
+    if ("parentId" in bad || "extra" in bad) continue;
+    assert.equal(
+      editCommentRequestSchema.safeParse(bad).success,
+      false,
+      JSON.stringify(bad),
+    );
+  }
+  assert.equal(
+    editCommentRequestSchema.safeParse({ body: "ok", parentId: parent })
+      .success,
+    false,
+  );
+  assert.equal(
+    editCommentRequestSchema.parse({ body: " новый " }).body,
+    "новый",
+  );
+});
