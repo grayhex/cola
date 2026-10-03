@@ -3,7 +3,6 @@ import assert from "node:assert/strict";
 import type { z } from "zod";
 import { randomUUID } from "node:crypto";
 import type { MailMessage } from "../lib/mail.ts";
-import type { Queryable } from "../lib/db.ts";
 import {
   planRide,
   planInput,

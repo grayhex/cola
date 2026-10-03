@@ -3,7 +3,6 @@ import assert from "node:assert/strict";
 import { mkdtemp, rm, access } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { randomUUID } from "node:crypto";
 import { parseGarminCsv, assertMatchingTrack } from "../lib/garmin-csv.ts";
 import { prepareSvg } from "../lib/svg-asset.ts";
 import { parseGpx } from "../lib/ride-gpx.ts";
@@ -39,7 +38,6 @@ import { bikeRow } from "./support/bikes.ts";
 import { field, present } from "./support/assertions.ts";
 import { listingDraft } from "./support/market.ts";
 import { userRow } from "./support/people.ts";
-import { one } from "./support/rows.ts";
 
 test("Garmin parses quoted CSV, timezone, thousands, negatives, missing data and all sample columns", () => {
   const p = parseGarminCsv("\uFEFF" + garminCsv({ "Avg HR": "--" }));

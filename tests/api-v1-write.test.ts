@@ -1,47 +1,40 @@
 import test, { after } from "node:test";
 import assert from "node:assert/strict";
-import { PGlite } from "@electric-sql/pglite";
-import { readFile, readdir } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { z } from "zod";
 import { EmailPolicyError } from "../lib/email-policy.ts";
 import { safely } from "../lib/api-v1/respond.ts";
-import { ApiError, apiErrorCodes, errorStatus } from "../lib/api-v1/errors.ts";
+import {
+  ApiError,
+  apiErrorCodes,
+  errorStatus,
+  type ApiErrorCode,
+} from "../lib/api-v1/errors.ts";
+import type { Queryable } from "../lib/db.ts";
 import {
   IDEMPOTENCY_DAYS,
+  type IdempotentResponse,
   idempotencyKey,
   idempotent,
 } from "../lib/api-v1/idempotency.ts";
 import { checkIfMatch, etagOf, parseJsonBody } from "../lib/api-v1/request.ts";
+import { testDatabase } from "./support/database.ts";
+import { one } from "./support/rows.ts";
+import { labelledUser } from "./support/people.ts";
 
 // Conventions of the writing operations of API v1 (#305): the body, idempotent
 // creation and optimistic locking. The switches and the Origin rule are
 // tests/api-v1-write-http.js; a race on one key is tests/api-v1-write-concurrency.js.
 
-const root = fileURLToPath(new URL("../", import.meta.url));
-const db = new PGlite();
-for (const file of (await readdir(path.join(root, "db")))
-  .filter((name) => name.endsWith(".sql"))
-  .sort())
-  await db.exec(await readFile(path.join(root, "db", file), "utf8"));
+const db = await testDatabase();
 after(() => db.close());
-const transaction = (fn) => db.transaction((tx) => fn(tx));
 
-async function addUser(label) {
-  const id = randomUUID();
-  await db.query(
-    "INSERT INTO users(id,email,name,password_hash,username) VALUES($1,$2,$3,'hash',$4)",
-    [id, id + "@test.invalid", label, (label + id.slice(0, 8)).toLowerCase()],
-  );
-  return id;
-}
-const refused = (code) => (error) =>
+const addUser = async (label: string) => (await labelledUser(db, label)).id;
+const refused = (code: ApiErrorCode) => (error: unknown) =>
   error instanceof ApiError && error.code === code;
 
 test("error codes of writing: documented statuses, and the set is the old one plus the new", () => {
-  const added = {
+  const added: Partial<Record<ApiErrorCode, number>> = {
     email_verification_required: 403,
     conflict: 409,
     precondition_failed: 412,
@@ -49,15 +42,22 @@ test("error codes of writing: documented statuses, and the set is the old one pl
     payload_too_large: 413,
     unsupported_media_type: 415,
   };
-  for (const [code, status] of Object.entries(added)) {
-    assert.ok(apiErrorCodes.includes(code), code);
-    assert.equal(errorStatus[code], status, code);
+  for (const [name, status] of Object.entries(added)) {
+    const code = apiErrorCodes.find((known) => known === name);
+    assert.ok(code, name);
+    assert.equal(errorStatus[code], status, name);
   }
   for (const code of ["forbidden", "rate_limited", "not_found"])
-    assert.ok(apiErrorCodes.includes(code));
+    assert.ok(
+      apiErrorCodes.some((known) => known === code),
+      code,
+    );
 });
 
-const body = (text, headers = { "content-type": "application/json" }) =>
+const body = (
+  text: string,
+  headers: Record<string, string> = { "content-type": "application/json" },
+) =>
   new Request("https://cola.example/x", {
     method: "POST",
     headers,
@@ -83,7 +83,10 @@ test("body: JSON only, bounded, validated", async () => {
   );
   await assert.rejects(
     parseJsonBody(body('{"title":"a","extra":1}'), schema),
-    (error) => refused("invalid_request")(error) && error.details?.length > 0,
+    (error: unknown) =>
+      refused("invalid_request")(error) &&
+      error instanceof ApiError &&
+      (error.details?.length ?? 0) > 0,
   );
   await assert.rejects(
     parseJsonBody(
@@ -105,7 +108,7 @@ test("If-Match: the version the client saw, strongly compared", () => {
   );
   assert.notEqual(current, etagOf("comment", "id-2", stamp));
   assert.notEqual(current, etagOf("entry", "id-1", stamp));
-  const headers = (value) =>
+  const headers = (value?: string) =>
     new Headers(value === undefined ? {} : { "if-match": value });
   checkIfMatch(headers(current), current);
   checkIfMatch(headers("*"), current);
@@ -147,25 +150,32 @@ test("Idempotency-Key header: a UUID or nothing", () => {
     );
 });
 
-async function count(table, where, args) {
+async function count(table: string, where: string, args: unknown[]) {
   return (
-    await db.query(
+    await one<{ n: number }>(
+      db,
       `SELECT count(*)::int AS n FROM ${table} WHERE ${where}`,
       args,
     )
-  ).rows[0].n;
+  ).n;
 }
 await db.exec("CREATE TABLE made(id uuid PRIMARY KEY, title text NOT NULL)");
-const create = (title) => async (q) => {
-  const id = randomUUID();
-  await q.query("INSERT INTO made(id,title) VALUES($1,$2)", [id, title]);
-  return {
-    status: 201,
-    body: { id, title },
-    headers: { Location: "/made/" + id },
+const create =
+  (title: string) =>
+  async (q: Queryable): Promise<IdempotentResponse> => {
+    const id = randomUUID();
+    await q.query("INSERT INTO made(id,title) VALUES($1,$2)", [id, title]);
+    return {
+      status: 201,
+      body: { id, title },
+      headers: { Location: "/made/" + id },
+    };
   };
-};
-const options = (user, key, extra = {}) => ({
+const options = (
+  user: string,
+  key: string | null,
+  extra: { body?: unknown; route?: string; required?: boolean } = {},
+) => ({
   userId: user,
   route: "POST /api/v1/things",
   key,
@@ -173,11 +183,15 @@ const options = (user, key, extra = {}) => ({
   ...extra,
 });
 
+const madeBody = z.object({ id: z.string() });
+const madeId = (answer: { response: IdempotentResponse }) =>
+  madeBody.parse(answer.response.body).id;
+
 test("idempotent creation: a repeat replays the first answer and creates nothing", async () => {
   const user = await addUser("first");
   const key = randomUUID();
   const first = await idempotent(
-    transaction,
+    db.transaction,
     options(user, key),
     create("один"),
   );
@@ -185,7 +199,7 @@ test("idempotent creation: a repeat replays the first answer and creates nothing
   assert.equal(first.response.status, 201);
   // The same body with the keys in another order is the same request.
   const second = await idempotent(
-    transaction,
+    db.transaction,
     options(user, key, {
       body: { nested: { y: 2, x: 1 }, tags: ["a", "b"], title: "один" },
     }),
@@ -195,17 +209,17 @@ test("idempotent creation: a repeat replays the first answer and creates nothing
   assert.equal(second.response.status, 201);
   assert.deepEqual(second.response.body, first.response.body);
   assert.deepEqual(second.response.headers, first.response.headers);
-  assert.equal(await count("made", "id=$1", [first.response.body.id]), 1);
+  assert.equal(await count("made", "id=$1", [madeId(first)]), 1);
   assert.equal(await count("made", "title=$1", ["не должен выполниться"]), 0);
 });
 
 test("idempotent creation: another body under the same key is a conflict", async () => {
   const user = await addUser("conflict");
   const key = randomUUID();
-  await idempotent(transaction, options(user, key), create("а"));
+  await idempotent(db.transaction, options(user, key), create("а"));
   await assert.rejects(
     idempotent(
-      transaction,
+      db.transaction,
       options(user, key, { body: { title: "другое" } }),
       create("б"),
     ),
@@ -217,24 +231,24 @@ test("idempotent creation: another body under the same key is a conflict", async
 test("idempotent creation: the key belongs to the person and to the request", async () => {
   const [a, b] = [await addUser("a"), await addUser("b")];
   const key = randomUUID();
-  const one = await idempotent(transaction, options(a, key), create("a"));
-  const other = await idempotent(transaction, options(b, key), create("b"));
+  const one = await idempotent(db.transaction, options(a, key), create("a"));
+  const other = await idempotent(db.transaction, options(b, key), create("b"));
   const elsewhere = await idempotent(
-    transaction,
+    db.transaction,
     options(a, key, { route: "POST /api/v1/other" }),
     create("c"),
   );
   assert.equal(other.replayed, false, "another person");
   assert.equal(elsewhere.replayed, false, "another request");
-  assert.notEqual(other.response.body.id, one.response.body.id);
-  assert.notEqual(elsewhere.response.body.id, one.response.body.id);
+  assert.notEqual(madeId(other), madeId(one));
+  assert.notEqual(madeId(elsewhere), madeId(one));
 });
 
 test("idempotent creation: a failed request leaves no key, so the repeat runs again", async () => {
   const user = await addUser("failing");
   const key = randomUUID();
   await assert.rejects(
-    idempotent(transaction, options(user, key), async (q) => {
+    idempotent(db.transaction, options(user, key), async (q) => {
       await q.query("INSERT INTO made(id,title) VALUES($1,'ушло')", [
         randomUUID(),
       ]);
@@ -248,7 +262,11 @@ test("idempotent creation: a failed request leaves no key, so the repeat runs ag
     0,
     "nothing was created",
   );
-  const retry = await idempotent(transaction, options(user, key), create("ok"));
+  const retry = await idempotent(
+    db.transaction,
+    options(user, key),
+    create("ok"),
+  );
   assert.equal(retry.replayed, false);
   assert.equal(retry.response.status, 201);
 });
@@ -258,7 +276,7 @@ test("idempotent creation: a key is forgotten after a day", async () => {
   const user = await addUser("expiry");
   const key = randomUUID();
   const first = await idempotent(
-    transaction,
+    db.transaction,
     options(user, key),
     create("старый"),
   );
@@ -267,37 +285,37 @@ test("idempotent creation: a key is forgotten after a day", async () => {
     [user],
   );
   const again = await idempotent(
-    transaction,
+    db.transaction,
     options(user, key),
     create("новый"),
   );
   assert.equal(again.replayed, false);
-  assert.notEqual(again.response.body.id, first.response.body.id);
+  assert.notEqual(madeId(again), madeId(first));
   // Within the day the key still holds.
   await db.query(
     "UPDATE api_idempotency SET created_at=now()-interval '23 hours' WHERE user_id=$1",
     [user],
   );
   const held = await idempotent(
-    transaction,
+    db.transaction,
     options(user, key),
     create("лишний"),
   );
   assert.equal(held.replayed, true);
-  assert.equal(held.response.body.id, again.response.body.id);
+  assert.equal(madeId(held), madeId(again));
 });
 
 test("idempotent creation: without a key it just runs, unless the key is required", async () => {
   const user = await addUser("nokey");
-  const a = await idempotent(transaction, options(user, null), create("x"));
-  const b = await idempotent(transaction, options(user, null), create("x"));
+  const a = await idempotent(db.transaction, options(user, null), create("x"));
+  const b = await idempotent(db.transaction, options(user, null), create("x"));
   assert.equal(a.replayed, false);
   assert.equal(b.replayed, false);
-  assert.notEqual(a.response.body.id, b.response.body.id);
+  assert.notEqual(madeId(a), madeId(b));
   assert.equal(await count("api_idempotency", "user_id=$1", [user]), 0);
   await assert.rejects(
     idempotent(
-      transaction,
+      db.transaction,
       options(user, null, { required: true }),
       create("y"),
     ),
@@ -308,7 +326,7 @@ test("idempotent creation: without a key it just runs, unless the key is require
 
 test("idempotency rows go with the account", async () => {
   const user = await addUser("gone");
-  await idempotent(transaction, options(user, randomUUID()), create("z"));
+  await idempotent(db.transaction, options(user, randomUUID()), create("z"));
   assert.equal(await count("api_idempotency", "user_id=$1", [user]), 1);
   await db.query("DELETE FROM users WHERE id=$1", [user]);
   assert.equal(await count("api_idempotency", "user_id=$1", [user]), 0);
@@ -319,9 +337,11 @@ test("the email policy of #139 reaches a client as email_verification_required",
     throw new EmailPolicyError();
   });
   assert.equal(response.status, 403);
-  const body = await response.json();
-  assert.equal(body.error.code, "email_verification_required");
-  assert.ok(body.error.message.length > 10);
+  const { error } = z
+    .object({ error: z.object({ code: z.string(), message: z.string() }) })
+    .parse(await response.json());
+  assert.equal(error.code, "email_verification_required");
+  assert.ok(error.message.length > 10);
   assert.equal(response.headers.get("cache-control"), "no-store");
 });
 
@@ -329,7 +349,7 @@ test("idempotency: expired rows of people who never come back are cleaned too, a
   const gone = await addUser("inactive");
   for (let i = 0; i < 3; i++)
     await idempotent(
-      transaction,
+      db.transaction,
       options(gone, randomUUID()),
       create("старая " + i),
     );
@@ -339,7 +359,11 @@ test("idempotency: expired rows of people who never come back are cleaned too, a
   );
   assert.equal(await count("api_idempotency", "user_id=$1", [gone]), 3);
   const other = await addUser("active");
-  await idempotent(transaction, options(other, randomUUID()), create("свежая"));
+  await idempotent(
+    db.transaction,
+    options(other, randomUUID()),
+    create("свежая"),
+  );
   assert.equal(await count("api_idempotency", "user_id=$1", [gone]), 0);
   assert.equal(await count("api_idempotency", "user_id=$1", [other]), 1);
 });

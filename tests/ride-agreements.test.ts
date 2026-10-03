@@ -1,10 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { randomUUID } from "node:crypto";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import type { z } from "zod";
-import type { Queryable } from "../lib/db.ts";
 import {
   agreementChanges,
   areaChanged,

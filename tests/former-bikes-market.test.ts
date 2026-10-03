@@ -41,7 +41,6 @@ import {
 import { userRow } from "./support/people.ts";
 import { present } from "./support/assertions.ts";
 import { ownerFields } from "./support/rides.ts";
-import { one } from "./support/rows.ts";
 
 const inputBike = (extra: Partial<z.input<typeof bikeInput>> = {}) =>
   bikeInput.parse({

@@ -23,7 +23,7 @@ test("component catalog: populated upgrade, variants, privacy, durable links and
   const db = await testDatabase({ migrated: false });
   const sql = (f: string) => migrateOnly(db, (name) => name === f);
   let owner = "",
-    blocked = "";
+    blocked: string;
   const bike = async (isPublic = true, user = owner) =>
     (
       await bikeRow(db, user, {

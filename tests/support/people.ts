@@ -41,3 +41,23 @@ export function viewer(overrides: Partial<CurrentUser> = {}): CurrentUser {
     ...given(overrides),
   };
 }
+
+/**
+ * A person known by a label in a test: "Имя label" and a username made of the
+ * label and a slice of the id. The address is `…@test.invalid`, the domain the
+ * privacy assertions of the API tests look for in answers.
+ */
+export function labelledUser(
+  q: Queryable,
+  label: string,
+  overrides: Columns<UserRow> = {},
+): Promise<UserRow> {
+  const id = overrides.id ?? randomUUID();
+  return userRow(q, {
+    id,
+    email: id + "@test.invalid",
+    name: "Имя " + label,
+    username: (label + "-" + id.slice(0, 8)).toLowerCase(),
+    ...given(overrides),
+  });
+}

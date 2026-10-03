@@ -226,7 +226,7 @@ test("market catalog: populated migration, independent fields, private/foreign b
     );
     assert.equal((await bikeAt("Куб", "Тревел")).id, modelId);
     assert.equal((await bikeAt("Cube", "Travel")).name, "Travel Revised");
-    let d = await detail(privateOffer);
+    const d = await detail(privateOffer);
     assert.equal(present(d.bikeModel).name, "Cube Travel Revised");
     assert.equal(d.title, offer().title);
     assert.equal(d.description, offer().description);

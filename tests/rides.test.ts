@@ -2,7 +2,6 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { randomUUID } from "node:crypto";
 import {
   previewRide,
   saveRide,
@@ -26,7 +25,6 @@ import { seedSiteDefaults, testDatabase } from "./support/database.ts";
 import { bikeRow } from "./support/bikes.ts";
 import { userRow, viewer } from "./support/people.ts";
 import { present } from "./support/assertions.ts";
-import { one } from "./support/rows.ts";
 test("rides ownership, previews, privacy, social, feed, moderation, delete and storage lifecycle", async () => {
   const dir = await mkdtemp(tmpdir() + "/cola-rides-");
   process.env.RIDES_DIR = dir;

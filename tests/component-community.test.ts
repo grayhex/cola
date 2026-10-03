@@ -1,6 +1,5 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { randomUUID } from "node:crypto";
 import { mkdtemp, rm, access } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
