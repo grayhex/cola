@@ -499,6 +499,21 @@ export async function savedApiKeysetPage(
         : null,
   };
 }
+/** Listings on the market by id, as API cards, in no particular order (the feed). */
+export async function marketApiCardsById(
+  q: Queryable,
+  ids: string[],
+  viewer: string | null | undefined,
+) {
+  if (!ids.length) return [];
+  const rows = (
+    await q.query<MarketViewRow>(
+      `SELECT ${columns}${marketFrom} WHERE m.id=ANY($1::uuid[]) AND ${marketPublic}`,
+      [ids],
+    )
+  ).rows;
+  return rows.map((r) => marketApiCard(r, viewer));
+}
 async function lockOwner(q: Queryable, owner: unknown) {
   if (
     !(

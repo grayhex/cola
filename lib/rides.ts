@@ -594,6 +594,20 @@ export async function apiRideRow(
     )
   ).rows[0];
 }
+/** Public rides by id, in no particular order, for API v1 lists that were chosen elsewhere (the feed). */
+export async function apiRideRowsById(
+  q: Queryable,
+  ids: string[],
+  viewer: string | null,
+) {
+  if (!ids.length) return [];
+  return (
+    await q.query<RideViewRow>(
+      `SELECT ${columns}${rideFrom} WHERE r.id=ANY($2::uuid[]) AND ${apiRide}`,
+      [viewer, ids],
+    )
+  ).rows;
+}
 /**
  * Finished public rides, newest first (API v1), optionally of one bike. The
  * position is `(coalesce(started_at, created_at), id)`: a track without times

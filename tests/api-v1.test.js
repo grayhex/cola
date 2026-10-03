@@ -754,6 +754,8 @@ test("OpenAPI: documents exactly the implemented operations, every $ref resolves
       "ErrorBody",
       "ErrorCode",
       "ErrorDetail",
+      "FeedItem",
+      "FeedPage",
       "FollowResult",
       "JournalComponent",
       "JournalEntry",

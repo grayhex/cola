@@ -6,6 +6,7 @@ import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { savedKeysetPage } from "../lib/journal-discovery.ts";
+import { feedKeysetPage } from "../lib/ride-feed.ts";
 import {
   noticeExpiringListings,
   savedApiKeysetPage,
@@ -21,12 +22,14 @@ import { insertBike } from "../lib/repository.ts";
 import { bikeInput } from "../lib/validation.ts";
 import {
   toJournalSummary,
+  toFeedItem,
   toMarketListing,
   toMyUpcomingRide,
   toNotification,
   toOwnRideSummary,
 } from "../lib/api-v1/mappers.ts";
 import {
+  feedItemSchema,
   journalSummarySchema,
   marketListingSchema,
   notificationCountSchema,
@@ -592,4 +595,148 @@ test("upcoming plans: the role in each, the meeting point by the participants' r
     [closed],
   );
   assert.ok(!JSON.stringify(mineItems).includes("@test.invalid"));
+});
+
+test("feed: what the person follows, newest first; a walk by cursor is whole", async () => {
+  const reader = await addUser("feed-reader");
+  const followed = await addUser("feed-followed");
+  const stranger = await addUser("feed-stranger");
+  const lonely = await addUser("feed-lonely");
+  await db.query(
+    "INSERT INTO user_follows(follower_id,following_id) VALUES($1,$2)",
+    [reader, followed],
+  );
+  const bike = await addBike(followed);
+  const strangerBike = await addBike(stranger);
+  const lonelyBike = await addBike(lonely);
+  // One bike followed by itself, not by its owner.
+  await db.query("INSERT INTO bike_follows(user_id,bike_id) VALUES($1,$2)", [
+    reader,
+    lonelyBike,
+  ]);
+  const ride = await addRide(followed, bike, { startedAt: hours(-30) });
+  const linkedRide = await addRide(followed, bike, { startedAt: hours(-31) });
+  await addRide(followed, bike, { status: "cancelled", startedAt: hours(10) });
+  const entry = await addEntry(followed, bike, { at: day(2) });
+  const linkedEntry = await addEntry(followed, bike, { at: day(3) });
+  await db.query("UPDATE journal_entries SET ride_id=$1 WHERE id=$2", [
+    linkedRide,
+    linkedEntry,
+  ]);
+  const listing = await addListing(followed, { at: day(4) });
+  await addListing(followed, { status: "sold" });
+  // Nothing of the one who is not followed.
+  await addRide(stranger, strangerBike);
+  await addEntry(stranger, strangerBike);
+  await addListing(stranger);
+  const at = new Map([
+    [bike, 1],
+    [entry, 2],
+    [linkedEntry, 3],
+    [listing, 4],
+    [ride, 4],
+    [linkedRide, 5],
+    [lonelyBike, 6],
+  ]);
+  for (const [id, n] of at) {
+    for (const table of [
+      "bikes",
+      "journal_entries",
+      "market_listings",
+      "rides",
+    ])
+      await db.query(`UPDATE ${table} SET published_at=$2 WHERE id=$1`, [
+        id,
+        day(n),
+      ]);
+  }
+  const walk = async (type, limit) => {
+    const seen = [];
+    let after = null;
+    for (let guard = 0; guard < 30; guard++) {
+      const page = await feedKeysetPage(db, reader, { type, limit, after });
+      for (const item of page.items) {
+        const card = toFeedItem(item, reader);
+        feedItemSchema.parse(card);
+        assert.equal(
+          [card.bike, card.ride, card.journal, card.listing].filter(Boolean)
+            .length,
+          1,
+        );
+        seen.push(card);
+      }
+      if (!page.next) return seen;
+      after = page.next;
+    }
+    throw new Error("the walk does not end");
+  };
+  const order = (ids) =>
+    [...ids].sort((a, b) => at.get(b) - at.get(a) || (a < b ? -1 : 1));
+  const idOf = (card) =>
+    (card.bike ?? card.ride ?? card.journal ?? card.listing).id;
+  const all = await walk("all", 50);
+  assert.deepEqual(
+    all.map(idOf),
+    order([bike, entry, linkedEntry, listing, ride, lonelyBike]),
+  );
+  assert.ok(
+    !all.map(idOf).includes(linkedRide),
+    "a ride with its entry is the entry",
+  );
+  for (const limit of [1, 2, 3])
+    assert.deepEqual(
+      (await walk("all", limit)).map(idOf),
+      all.map(idOf),
+      "limit " + limit,
+    );
+  assert.deepEqual(
+    (await walk("rides", 2)).map(idOf),
+    order([ride, linkedRide]),
+  );
+  assert.deepEqual(
+    (await walk("journal", 1)).map(idOf),
+    order([entry, linkedEntry]),
+  );
+  assert.deepEqual(
+    all.map((card) => card.type),
+    order([bike, entry, linkedEntry, listing, ride, lonelyBike]).map(
+      (id) =>
+        ({
+          [bike]: "bike",
+          [entry]: "journal",
+          [linkedEntry]: "journal",
+          [listing]: "market",
+          [ride]: "ride",
+          [lonelyBike]: "bike",
+        })[id],
+    ),
+  );
+  // The instant is the publication, to the millisecond.
+  assert.equal(
+    all.find((card) => idOf(card) === listing).publishedAt,
+    new Date(day(4)).toISOString(),
+  );
+  // Nobody else's feed; a person who follows nobody has none.
+  assert.deepEqual(
+    (
+      await feedKeysetPage(db, stranger, {
+        type: "all",
+        limit: 50,
+        after: null,
+      })
+    ).items,
+    [],
+  );
+  // A bike made private takes its rides and entries out; the listing stays.
+  await db.query("UPDATE bikes SET is_public=false WHERE id=$1", [bike]);
+  assert.deepEqual(
+    (await walk("all", 50)).map(idOf),
+    order([listing, lonelyBike]),
+  );
+  await db.query("UPDATE bikes SET is_public=true WHERE id=$1", [bike]);
+  // A listing that is sold leaves the feed.
+  await db.query("UPDATE market_listings SET status='sold' WHERE id=$1", [
+    listing,
+  ]);
+  assert.ok(!(await walk("all", 50)).map(idOf).includes(listing));
 });
