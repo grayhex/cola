@@ -80,7 +80,9 @@ export function handleJournalSave(req: Request, { params }: IdParams) {
   return safely(async () => {
     const viewer = await writer(req);
     const entry = idOf((await params).id, "Запись не найдена.");
-    await limited("saves:" + viewer.id, 120);
+    // The legacy save route charges the budget of journal writes: one budget
+    // for both transports.
+    await limited("journal-write:" + viewer.id, 20);
     const result = await found(() =>
       transaction((q) => setSaved(q, entry, viewer.id, enabledBy(req))),
     );

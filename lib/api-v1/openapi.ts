@@ -301,6 +301,10 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
           responses: {
             "201": success("Сессия устройства и токены.", "SessionGrant"),
             "400": failure("Неверное тело запроса."),
+            "413": failure("`payload_too_large`: тело больше лимита."),
+            "415": failure(
+              "`unsupported_media_type`: тело не `application/json`.",
+            ),
             "401": failure(
               "`invalid_credentials`: неверная почта или пароль либо аккаунт заблокирован; ответ одинаков во всех этих случаях.",
             ),
@@ -337,6 +341,10 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
           responses: {
             "200": success("Новая пара токенов.", "SessionGrant"),
             "400": failure("Неверное тело запроса."),
+            "413": failure("`payload_too_large`: тело больше лимита."),
+            "415": failure(
+              "`unsupported_media_type`: тело не `application/json`.",
+            ),
             "401": failure(
               "`invalid_token`: токен неизвестен, просрочен, использован повторно, или аккаунт заблокирован.",
             ),

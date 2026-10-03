@@ -10,6 +10,8 @@ import { ApiError } from "./errors.ts";
 // that failed leaves no key, so repeating it simply runs again.
 
 export const IDEMPOTENCY_DAYS = 1;
+/** Expired rows of anyone removed by one keyed request at most. */
+const CLEANUP_BATCH = 200;
 const uuidPattern =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -85,10 +87,19 @@ export async function idempotent(
   }
   const hash = createHash("sha256").update(canonical(body)).digest("hex");
   return transaction(async (q) => {
-    // An expired key is forgotten here, before it can be matched.
+    // An expired key is forgotten here, before it can be matched; and a bounded
+    // batch of anyone's expired rows goes with it, so rows of people who never
+    // send another keyed request do not pile up. SKIP LOCKED: cleaning never
+    // waits for a request that is still running.
     await q.query(
       `DELETE FROM api_idempotency WHERE user_id=$1 AND created_at<now()-make_interval(days=>${IDEMPOTENCY_DAYS})`,
       [userId],
+    );
+    await q.query(
+      `DELETE FROM api_idempotency WHERE (user_id,route,key) IN (
+         SELECT user_id,route,key FROM api_idempotency
+         WHERE created_at<now()-make_interval(days=>${IDEMPOTENCY_DAYS})
+         ORDER BY created_at LIMIT ${CLEANUP_BATCH} FOR UPDATE SKIP LOCKED)`,
     );
     const claimed = await q.query(
       `INSERT INTO api_idempotency(user_id,route,key,request_hash,status,response)

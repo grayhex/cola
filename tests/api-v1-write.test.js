@@ -324,3 +324,22 @@ test("the email policy of #139 reaches a client as email_verification_required",
   assert.ok(body.error.message.length > 10);
   assert.equal(response.headers.get("cache-control"), "no-store");
 });
+
+test("idempotency: expired rows of people who never come back are cleaned too, a batch at a time", async () => {
+  const gone = await addUser("inactive");
+  for (let i = 0; i < 3; i++)
+    await idempotent(
+      transaction,
+      options(gone, randomUUID()),
+      create("старая " + i),
+    );
+  await db.query(
+    "UPDATE api_idempotency SET created_at=now()-interval '3 days' WHERE user_id=$1",
+    [gone],
+  );
+  assert.equal(await count("api_idempotency", "user_id=$1", [gone]), 3);
+  const other = await addUser("active");
+  await idempotent(transaction, options(other, randomUUID()), create("свежая"));
+  assert.equal(await count("api_idempotency", "user_id=$1", [gone]), 0);
+  assert.equal(await count("api_idempotency", "user_id=$1", [other]), 1);
+});
