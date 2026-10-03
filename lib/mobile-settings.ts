@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { AppConfig } from "./api-v1/schemas.ts";
 import { chatConfig } from "./chat-config.ts";
 import type { Queryable } from "./db.ts";
+import type { MobileSettingsRow } from "./database-rows.ts";
 import { assetFormat } from "./hero-graphics.ts";
 import {
   changedBlocks,
@@ -47,13 +48,7 @@ export class MobileSettingsError extends Error {
   }
 }
 
-interface MobileRow {
-  value: unknown;
-  version: number;
-  onboarding_revision: number;
-  notice_revision: number;
-  updated_at: Date;
-}
+type MobileRow = Omit<MobileSettingsRow, "id">;
 const columns = "value,version,onboarding_revision,notice_revision,updated_at";
 
 async function readRow(q: Queryable): Promise<MobileRow> {

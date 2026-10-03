@@ -28,9 +28,11 @@ import {
   deleteUnusedAssets,
   listAssetLibrary,
 } from "../lib/site-asset-library.ts";
-import type { Queryable } from "../lib/db.ts";
+import type { MobileSettingsRow } from "../lib/database-rows.ts";
+import { siteAssetRow } from "./support/assets.ts";
 import { seedSiteDefaults, testDatabase } from "./support/database.ts";
 import { processEnv } from "./support/env.ts";
+import { userRow } from "./support/people.ts";
 
 // Settings of the native apps (#338): the stored schema, the link allowlist,
 // the public DTO and the versioned, audited save that protects its images.
@@ -42,7 +44,9 @@ const settings = (patch: (value: MobileSettings) => void = () => {}) => {
   patch(value);
   return value;
 };
-const row = (value: unknown, version = 1) => ({
+// The stored row as the service reads it.
+const row = (value: unknown, version = 1): MobileSettingsRow => ({
+  id: 1,
   value,
   version,
   onboarding_revision: 1,
@@ -549,20 +553,7 @@ test("ETag follows the answer: same config, same tag; any change, a new one", ()
 const db = await testDatabase();
 after(() => db.close());
 await seedSiteDefaults(db);
-const actor = randomUUID();
-await db.query(
-  "INSERT INTO users(id,email,name,password_hash,username,role) VALUES($1,$2,'Admin','hash',$3,'admin')",
-  [actor, actor + "@example.test", "a" + actor.slice(0, 8)],
-);
-async function addAsset(q: Queryable, extension = "webp") {
-  const id = randomUUID();
-  await q.query("INSERT INTO site_assets(id,name,filename) VALUES($1,$2,$3)", [
-    id,
-    "Файл " + id.slice(0, 4),
-    `site-${id}.${extension}`,
-  ]);
-  return id;
-}
+const actor = (await userRow(db, { role: "admin" })).id;
 const audits: { action: string; target: string }[] = [];
 const save = (input: unknown) =>
   db.transaction((q) =>
@@ -601,7 +592,7 @@ test("the migration gives a default row: version 1, public defaults", async () =
 
 test("saving: versioned, audited, conflicts refused, images locked and raster only", async () => {
   const before = await adminMobileSettings(db, env);
-  const image = await addAsset(db);
+  const image = (await siteAssetRow(db)).id;
   const value = settings((v) => {
     v.launch = { ...v.launch, enabled: true, assetId: image };
   });
@@ -644,7 +635,10 @@ test("saving: versioned, audited, conflicts refused, images locked and raster on
     409,
     "asset_missing",
   );
-  const vector = await addAsset(db, "svg");
+  const svg = randomUUID();
+  const vector = (
+    await siteAssetRow(db, { id: svg, filename: `site-${svg}.svg` })
+  ).id;
   await rejectsWith(
     save({
       value: settings((v) => {
@@ -669,7 +663,7 @@ test("assigned images are used: the library marks them and deletion skips them",
   assert.deepEqual(library.find((asset) => asset.id === image)?.usage, [
     "Мобильное приложение",
   ]);
-  const spare = await addAsset(db);
+  const spare = (await siteAssetRow(db)).id;
   const result = await db.transaction((q) =>
     deleteUnusedAssets(q, [image, spare]),
   );

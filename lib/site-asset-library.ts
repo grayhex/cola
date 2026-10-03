@@ -1,5 +1,6 @@
 import type { SiteSettings as SiteSettingsType } from "./contracts.ts";
 import type { Queryable } from "./db.ts";
+import type { SiteAssetRow } from "./database-rows.ts";
 import { siteAssetUsage } from "./site-assets.ts";
 import { assetFormat } from "./hero-graphics.ts";
 import { mobileAssetIds } from "./mobile-config.ts";
@@ -33,12 +34,7 @@ async function readUsage(q: Queryable) {
 
 export async function listAssetLibrary(q: Queryable) {
   const usage = await readUsage(q);
-  const { rows } = await q.query<{
-    id: string;
-    name: string;
-    filename: string;
-    created_at: Date;
-  }>(
+  const { rows } = await q.query<SiteAssetRow>(
     "SELECT id,name,filename,created_at FROM site_assets ORDER BY created_at DESC,id",
   );
   return rows.map(({ filename, ...asset }) => ({
