@@ -12,7 +12,10 @@ import type {
 } from "../ride-analysis-contract.ts";
 import { bounds } from "../ride-geometry.ts";
 import type { marketApiCard } from "../market.ts";
+import type { FeedEntry } from "../ride-feed.ts";
+import type { notificationCard } from "../notifications.ts";
 import { meetingVisible, shownMetrics } from "../rides.ts";
+import type { myUpcomingEntries } from "../rides.ts";
 import { plannedEnd } from "../ride-plan.ts";
 import { richExcerpt } from "../rich-text.ts";
 import type { TokenGrant } from "../device-sessions.ts";
@@ -22,12 +25,17 @@ import type {
   BikeSummary,
   Comment,
   ComponentModel,
+  FeedItem,
   ComponentPhoto,
   JournalEntry,
   JournalSummary,
   MarketListing,
   MarketListingDetail,
   Me,
+  MyUpcomingRide,
+  Notification,
+  NotificationTarget,
+  OwnRideSummary,
   Profile,
   Relationship,
   Ride,
@@ -369,6 +377,78 @@ export function toRideSummary(
   };
 }
 
+/**
+ * The owner's list card: the public summary plus the owner's own fields. A plan
+ * that was called off is still a plan (its date, its counters); the status says
+ * so.
+ */
+export function toOwnRideSummary(
+  row: RideViewRow,
+  viewer: string | null,
+): OwnRideSummary {
+  const cancelledPlan =
+    row.status === "cancelled" && row.source_kind === "planned";
+  return {
+    ...toRideSummary(
+      cancelledPlan ? { ...row, status: "planned" } : row,
+      viewer,
+    ),
+    status:
+      row.status === "cancelled"
+        ? "cancelled"
+        : row.status === "planned"
+          ? "planned"
+          : "completed",
+    isPublic: row.is_public,
+    privacyEnabled: row.privacy_enabled,
+    privacyRadiusM: row.privacy_radius_m,
+    pointCount: row.point_count,
+  };
+}
+
+/** A next plan of the person with their role; the meeting point follows the participants' rule. */
+export function toMyUpcomingRide(
+  entry: Awaited<ReturnType<typeof myUpcomingEntries>>[number],
+  viewer: string,
+): MyUpcomingRide {
+  const view = entry.view;
+  const shown = !entry.cancelled && meetingVisible(view, viewer);
+  return {
+    ...toRideSummary({ ...view, status: "planned" }, viewer),
+    // The counts are those of the next live date; a called-off date shows the
+    // date the person answered, and the counts of another date would be wrong.
+    ...(entry.cancelled ? { participants: null } : {}),
+    status: view.status === "cancelled" ? "cancelled" : "planned",
+    role: entry.role,
+    occurrenceCancelled: entry.occurrenceCancelled,
+    changedAfterAnswer: entry.changedAfterAnswer,
+    meetingPoint: shown && view.meeting_point ? view.meeting_point : null,
+    meetingHidden: !shown && !!view.meeting_point,
+  };
+}
+
+/** A publication of the feed: the card of its kind, the other three null. */
+export function toFeedItem(entry: FeedEntry, viewer: string): FeedItem {
+  const base = {
+    publishedAt: instantOf(entry.at) ?? "",
+    bike: null,
+    ride: null,
+    journal: null,
+    listing: null,
+  };
+  if (entry.kind === "bike")
+    return { ...base, type: "bike", bike: toBikeSummary(entry.bike) };
+  if (entry.kind === "ride")
+    return { ...base, type: "ride", ride: toRideSummary(entry.ride, viewer) };
+  if (entry.kind === "journal")
+    return {
+      ...base,
+      type: "journal",
+      journal: toJournalSummary(entry.entry, viewer),
+    };
+  return { ...base, type: "market", listing: toMarketListing(entry.listing) };
+}
+
 const passportRanges = [
   "distanceKm",
   "durationMinutes",
@@ -494,6 +574,41 @@ export function toMarketListingDetail(
   card: ReturnType<typeof marketApiCard> & { saved: boolean },
 ): MarketListingDetail {
   return { ...toMarketListing(card), saved: card.saved };
+}
+
+/**
+ * A notice. The card the site builds already follows the visibility rule at
+ * read time; here its fields are picked by name, and the site address becomes
+ * `path`.
+ */
+export function toNotification(
+  card: ReturnType<typeof notificationCard>,
+): Notification {
+  const target: {
+    type: string;
+    id: string;
+    name: string;
+    href: string;
+    expiresAt?: Date;
+    state?: NotificationTarget["state"];
+  } = card.target;
+  return {
+    id: card.id,
+    type: card.type,
+    createdAt: instantOf(card.createdAt) ?? "",
+    readAt: instantOf(card.readAt),
+    actor: toAuthor(card.actor),
+    target: {
+      type: target.type,
+      id: target.id,
+      name: target.name,
+      path: target.href,
+      ...(target.expiresAt
+        ? { expiresAt: instantOf(target.expiresAt) ?? "" }
+        : {}),
+      ...(target.state ? { state: target.state } : {}),
+    },
+  };
 }
 
 /** A catalog model by name: the page's own fields, nothing of the installations. */

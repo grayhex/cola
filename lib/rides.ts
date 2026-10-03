@@ -594,6 +594,20 @@ export async function apiRideRow(
     )
   ).rows[0];
 }
+/** Public rides by id, in no particular order, for API v1 lists that were chosen elsewhere (the feed). */
+export async function apiRideRowsById(
+  q: Queryable,
+  ids: string[],
+  viewer: string | null,
+) {
+  if (!ids.length) return [];
+  return (
+    await q.query<RideViewRow>(
+      `SELECT ${columns}${rideFrom} WHERE r.id=ANY($2::uuid[]) AND ${apiRide}`,
+      [viewer, ids],
+    )
+  ).rows;
+}
 /**
  * Finished public rides, newest first (API v1), optionally of one bike. The
  * position is `(coalesce(started_at, created_at), id)`: a track without times
@@ -672,13 +686,34 @@ export async function upcomingKeysetPage(
     limit,
   );
 }
+/**
+ * The person's own rides, every state (finished, planned, called off, public or
+ * not), newest first by `(coalesce(started_at, created_at), id)` and a cursor
+ * (API v1, #326). The owner's view: nothing here is another person's.
+ */
+export async function ownRideKeysetPage(
+  q: Queryable,
+  viewer: string,
+  { limit, after }: { limit: number; after: RideCursor | null },
+) {
+  const position = "coalesce(r.started_at,r.created_at)";
+  return ridePage(
+    (
+      await q.query<RideKeysetRow>(
+        `SELECT ${columns},${cursorText(position)} AS cursor_at${rideFrom}
+         WHERE r.owner_id=$1 AND NOT u.blocked
+           AND ($2::timestamptz IS NULL OR (${position},r.id)<($2::timestamptz,$3::uuid))
+         ORDER BY ${position} DESC,r.id DESC LIMIT $4`,
+        [viewer, after?.createdAt ?? null, after?.id ?? null, limit + 1],
+      )
+    ).rows,
+    limit,
+  );
+}
 /** The viewer's own next plans (#233): organised, accepted, "maybe", pending
 invitations and recent cancellations of dates they had answered. Access is
 rechecked like rideDetail; the meeting point follows publicRide rules. */
-export async function upcomingRides(
-  q: RepositoryTypes.Queryable,
-  viewer: string,
-) {
+async function upcomingEntries(q: RepositoryTypes.Queryable, viewer: string) {
   const occurrence = `(${rideOccurrence})`;
   const answered = `(SELECT min(v.occurs_at) FROM ride_rsvps v WHERE v.ride_id=r.id AND v.user_id=$1 AND v.occurs_at>now() AND v.response IN ('accepted','maybe'))`;
   const rows = (
@@ -715,28 +750,24 @@ export async function upcomingRides(
       [viewer],
     )
   ).rows.map((row) => ({ ...row, occurrence_cancelled: true }));
-  const items = [...rows, ...skipped]
+  return [...rows, ...skipped]
     .map((row) => {
       const cancelled =
         row.status === "cancelled" || !!row.occurrence_cancelled;
       const role =
         row.owner_id === viewer
-          ? "organizer"
+          ? ("organizer" as const)
           : cancelled
-            ? "cancelled"
+            ? ("cancelled" as const)
             : row.rsvp === "accepted" || row.rsvp === "maybe"
               ? row.rsvp
-              : "invited";
-      const ride = publicRide(
-        cancelled
+              : ("invited" as const);
+      return {
+        // A cancelled date shows the date the person had answered.
+        view: cancelled
           ? { ...row, occurs_at: row.answered_occurrence ?? null }
           : row,
-        viewer,
-      );
-      return {
-        ...ride,
-        // A cancelled meeting is no longer an agreement to show.
-        ...(cancelled ? { meetingPoint: "", meetingHidden: true } : {}),
+        cancelled,
         role,
         occurrenceCancelled: !!row.occurrence_cancelled,
         // An answer given to an earlier edition of the conditions (#235); a
@@ -746,13 +777,29 @@ export async function upcomingRides(
           (row.rsvp_revision ?? 1) < (row.agreement_revision || 1),
       };
     })
-    .sort(
-      (a, b) =>
-        +new Date(a.scheduledAt === null ? 0 : (a.scheduledAt ?? NaN)) -
-          +new Date(b.scheduledAt === null ? 0 : (b.scheduledAt ?? NaN)) ||
-        (a.id < b.id ? -1 : 1),
-    );
-  return items.slice(0, 20);
+    .sort((a, b) => {
+      const at = (e: { view: DatabaseRowsTypes.RideViewRow }) => {
+        const when = e.view.occurs_at || e.view.started_at;
+        return when ? +new Date(when) : 0;
+      };
+      return at(a) - at(b) || (a.view.id < b.view.id ? -1 : 1);
+    })
+    .slice(0, 20);
+}
+/** The viewer's next plans as rows with their role: for API v1 and the site. */
+export const myUpcomingEntries = upcomingEntries;
+export async function upcomingRides(
+  q: RepositoryTypes.Queryable,
+  viewer: string,
+) {
+  return (await upcomingEntries(q, viewer)).map((entry) => ({
+    ...publicRide(entry.view, viewer),
+    // A cancelled meeting is no longer an agreement to show.
+    ...(entry.cancelled ? { meetingPoint: "", meetingHidden: true } : {}),
+    role: entry.role,
+    occurrenceCancelled: entry.occurrenceCancelled,
+    changedAfterAnswer: entry.changedAfterAnswer,
+  }));
 }
 export async function bikeRideStats(
   q: Queryable,

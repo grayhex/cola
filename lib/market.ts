@@ -469,6 +469,51 @@ export async function savedListings(
     pageSize: 24,
   };
 }
+/**
+ * The saved listings that are on the market now, newest save first, by a
+ * cursor instead of OFFSET (API v1, #321); the rule of `savedListings`.
+ */
+export async function savedApiKeysetPage(
+  q: Queryable,
+  viewer: string,
+  limit: number,
+  after: { createdAt: string; id: string } | null,
+) {
+  const rows = (
+    await q.query<MarketViewRow & { cursor_at: string }>(
+      `SELECT ${columns},to_char(s.created_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') cursor_at
+       FROM market_saves s JOIN market_listings m ON m.id=s.listing_id JOIN users u ON u.id=m.owner_id
+       WHERE s.user_id=$1 AND ${marketPublic}
+         AND ($2::timestamptz IS NULL OR s.created_at<$2::timestamptz OR (s.created_at=$2::timestamptz AND m.id>$3::uuid))
+       ORDER BY s.created_at DESC,m.id LIMIT $4`,
+      [viewer, after?.createdAt ?? null, after?.id ?? null, limit + 1],
+    )
+  ).rows;
+  const page = rows.slice(0, limit),
+    last = page[page.length - 1];
+  return {
+    items: page.map((r) => marketApiCard(r, viewer)),
+    next:
+      rows.length > limit && last
+        ? { createdAt: last.cursor_at, id: last.id }
+        : null,
+  };
+}
+/** Listings on the market by id, as API cards, in no particular order (the feed). */
+export async function marketApiCardsById(
+  q: Queryable,
+  ids: string[],
+  viewer: string | null | undefined,
+) {
+  if (!ids.length) return [];
+  const rows = (
+    await q.query<MarketViewRow>(
+      `SELECT ${columns}${marketFrom} WHERE m.id=ANY($1::uuid[]) AND ${marketPublic}`,
+      [ids],
+    )
+  ).rows;
+  return rows.map((r) => marketApiCard(r, viewer));
+}
 async function lockOwner(q: Queryable, owner: unknown) {
   if (
     !(

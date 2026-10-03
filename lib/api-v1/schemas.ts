@@ -705,6 +705,71 @@ export const ridePageSchema = named(
   }),
 );
 
+export const ownRideSummarySchema = named(
+  "OwnRideSummary",
+  "Своя покатушка в списке владельца: любое состояние, публичная или нет. Владельческие поля (`isPublic`, зона приватности, число точек) есть только здесь, в публичном `RideSummary` их нет.",
+  z.strictObject({
+    ...rideSummaryShape,
+    status: z
+      .enum(["completed", "planned", "cancelled"])
+      .describe("Состоявшаяся, запланированная или отменённая."),
+    isPublic: z.boolean(),
+    privacyEnabled: z
+      .boolean()
+      .describe("Включена ли зона приватности вокруг начала и конца трека."),
+    privacyRadiusM: z.int().describe("Радиус зоны приватности, метры."),
+    pointCount: z.int().describe("Число точек загруженного трека."),
+  }),
+);
+
+export const ownRidePageSchema = named(
+  "OwnRidePage",
+  "Страница своих покатушек, новые сверху.",
+  z.strictObject({
+    items: z.array(ownRideSummarySchema),
+    nextCursor: z
+      .string()
+      .nullable()
+      .describe("Курсор следующей страницы или null, если страниц больше нет."),
+  }),
+);
+
+export const myUpcomingRideSchema = named(
+  "MyUpcomingRide",
+  "Ближайший план человека и его роль в нём. Точка встречи — по правилам участников: скрыта, пока человек не принял условия.",
+  z.strictObject({
+    ...rideSummaryShape,
+    status: z
+      .enum(["planned", "cancelled"])
+      .describe("`cancelled` — весь план отменён, а человек на него отвечал."),
+    role: z
+      .enum(["organizer", "accepted", "maybe", "invited", "cancelled"])
+      .describe(
+        "Роль человека: организатор, «еду», «возможно», приглашён без ответа или ответил на отменённую дату.",
+      ),
+    occurrenceCancelled: z
+      .boolean()
+      .describe(
+        "Отменена одна дата серии, на которую человек отвечал; сама серия идёт дальше.",
+      ),
+    changedAfterAnswer: z
+      .boolean()
+      .describe(
+        "Условия плана изменились после ответа человека: ответ нужно подтвердить.",
+      ),
+    meetingPoint: z.string().nullable(),
+    meetingHidden: z
+      .boolean()
+      .describe("Точка встречи есть, но человеку пока не показывается."),
+  }),
+);
+
+export const myUpcomingRidesSchema = named(
+  "MyUpcomingRides",
+  "Ближайшие планы человека: свои, принятые, «возможно», приглашения и недавние отмены; до 20 штук на 60 дней вперёд, ближайшие первыми. Без курсора.",
+  z.strictObject({ items: z.array(myUpcomingRideSchema) }),
+);
+
 const analysisPointSchema = named(
   "RideAnalysisPoint",
   "Точка публичной серии. Датчик, который автор не открыл, отсутствует; абсолютного времени нет, только время в пути `elapsedS`.",
@@ -1004,8 +1069,98 @@ export const marketSavedSchema = named(
   z.strictObject({ saved: z.boolean() }),
 );
 
+export type Notification = z.infer<typeof notificationSchema>;
+export type NotificationTarget = z.infer<typeof notificationTargetSchema>;
 export type MarketListing = z.infer<typeof marketListingSchema>;
 export type MarketListingDetail = z.infer<typeof marketListingDetailSchema>;
+export const notificationTargetSchema = named(
+  "NotificationTarget",
+  "О чём уведомление: объект, его название и путь на сайте (с якорем комментария, если уведомление о нём). Название и путь вычисляются при чтении, поэтому следуют переименованиям и продлению.",
+  z.strictObject({
+    type: z
+      .string()
+      .describe(
+        "bike, ride, journal, article, component, profile, market, account или bike-week; набор открыт.",
+      ),
+    id,
+    name: z.string(),
+    path: z.string().describe("Путь на сайте относительно его адреса."),
+    expiresAt: instant
+      .optional()
+      .describe("Только у `market_expiring`: конец срока объявления."),
+    state: z
+      .enum(["closed", "expired", "expiring", "extended"])
+      .optional()
+      .describe(
+        "Только у `market_expiring`: состояние объявления сейчас (закрыто, срок вышел, скоро выйдет, продлено).",
+      ),
+  }),
+);
+
+export const notificationSchema = named(
+  "Notification",
+  "Уведомление вошедшему. Показывается только то, что получатель вправе видеть сейчас: приватное, скрытое и заблокированное не просачивается, а отменённое действие (снятый лайк, удалённый комментарий) уведомления не оставляет.",
+  z.strictObject({
+    id,
+    type: z
+      .string()
+      .describe(
+        "follow, like, comment, reply, ride_like, ride_comment, ride_reply, journal_like, journal_comment, journal_reply, article_*, component_reply, market_expiring, session_reuse, bike_week и другие; набор открыт, неизвестный тип клиент показывает общим видом.",
+      ),
+    createdAt: instant,
+    readAt: instant.nullable(),
+    actor: authorSchema
+      .nullable()
+      .describe("Кто это сделал; null у уведомлений от самого сайта."),
+    target: notificationTargetSchema,
+  }),
+);
+
+export const notificationPageSchema = named(
+  "NotificationPage",
+  "Страница уведомлений, новые сверху.",
+  z.strictObject({
+    items: z.array(notificationSchema),
+    nextCursor: z
+      .string()
+      .nullable()
+      .describe("Курсор следующей страницы или null, если страниц больше нет."),
+  }),
+);
+
+export const notificationCountSchema = named(
+  "NotificationCount",
+  "Число непрочитанных: считается до 100; при `capped` их не меньше 100.",
+  z.strictObject({ unread: z.int(), capped: z.boolean() }),
+);
+
+export const feedItemSchema = named(
+  "FeedItem",
+  "Публикация в ленте: ровно одно из полей `bike`, `ride`, `journal`, `listing` заполнено, остальные null; какое — говорит `type`. Это те же карточки, что в списках (`BikeSummary`, `RideSummary`, `JournalSummary`, `MarketListing`).",
+  z.strictObject({
+    type: z.enum(["bike", "ride", "journal", "market"]),
+    publishedAt: instant.describe(
+      "Когда опубликовано: по этому времени лента упорядочена.",
+    ),
+    bike: bikeSummarySchema.nullable(),
+    ride: rideSummarySchema.nullable(),
+    journal: journalSummarySchema.nullable(),
+    listing: marketListingSchema.nullable(),
+  }),
+);
+
+export const feedPageSchema = named(
+  "FeedPage",
+  "Страница ленты, новые сверху. Лента состоит из публикаций тех, на кого подписан человек (и велосипедов, за которыми он следит); страница читается заново по видимости зрителя, поэтому скрытое между страницами не показывается.",
+  z.strictObject({
+    items: z.array(feedItemSchema),
+    nextCursor: z
+      .string()
+      .nullable()
+      .describe("Курсор следующей страницы или null, если страниц больше нет."),
+  }),
+);
+
 export type Me = z.infer<typeof meSchema>;
 export type SessionGrant = z.infer<typeof sessionGrantSchema>;
 export type Profile = z.infer<typeof profileSchema>;
@@ -1019,6 +1174,9 @@ export type ComponentHit = z.infer<typeof componentHitSchema>;
 export type ComponentModel = z.infer<typeof componentModelSchema>;
 export type ComponentPhoto = z.infer<typeof componentPhotoSchema>;
 export type RideSummary = z.infer<typeof rideSummarySchema>;
+export type OwnRideSummary = z.infer<typeof ownRideSummarySchema>;
+export type MyUpcomingRide = z.infer<typeof myUpcomingRideSchema>;
+export type FeedItem = z.infer<typeof feedItemSchema>;
 export type Ride = z.infer<typeof rideSchema>;
 export type RideAnalysis = z.infer<typeof rideAnalysisSchema>;
 export type AccountSession = z.infer<typeof accountSessionSchema>;
@@ -1091,6 +1249,9 @@ export function parseQuery<T extends z.ZodType>(
   return result.data;
 }
 
+/** For an operation without parameters: any parameter at all is a 400. */
+export const parseNoQuery = (url: URL) => parseQuery(url, z.strictObject({}));
+
 /** Validated query of GET /api/v1/bikes. */
 export const parseListQuery = (url: URL): ListQuery =>
   parseQuery(url, listQuerySchema);
@@ -1101,6 +1262,14 @@ export const pageQuerySchema = z.strictObject({
   cursor: listQuerySchema.shape.cursor,
 });
 export const parsePageQuery = (url: URL) => parseQuery(url, pageQuerySchema);
+
+/** The feed: which publications, with a cursor. */
+export const feedQuerySchema = z.strictObject({
+  type: z.enum(["all", "rides", "journal"]).default("all"),
+  limit: pageQuerySchema.shape.limit,
+  cursor: pageQuerySchema.shape.cursor,
+});
+export const parseFeedQuery = (url: URL) => parseQuery(url, feedQuerySchema);
 
 /** Comments add `focus`, a deep link to one comment; it replaces paging. */
 export const commentsQuerySchema = z

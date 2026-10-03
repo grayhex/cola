@@ -9,6 +9,7 @@ import {
   marketQuerySchema,
   componentSearchQuerySchema,
   experienceQuerySchema,
+  feedQuerySchema,
   schemaRegistry,
   usersSearchQuerySchema,
 } from "./schemas.ts";
@@ -174,6 +175,9 @@ const marketNotes: Record<string, string> = {
     "Username продавца: объявления одного человека. Неизвестный и заблокированный продавец — 404.",
   sort: "`new` — новые сверху (по умолчанию), `price_asc` — дешевле сверху, `price_desc` — дороже сверху; объявления без цены в конце. Курсор одного порядка в другом — 400.",
 };
+const feedNotes: Record<string, string> = {
+  type: "`all` — всё; `rides` — только покатушки; `journal` — только записи журнала.",
+};
 const refs = (...names: string[]) =>
   names.map((name) => ({ $ref: `#/components/parameters/${name}` }));
 
@@ -327,6 +331,11 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
         name: "Sessions",
         description: "Вход устройства, обновление токенов и список сессий.",
       },
+      {
+        name: "Personal",
+        description:
+          "Личные ответы вошедшему: уведомления, сохранённое. Никому, кроме самого человека.",
+      },
       { name: "Bikes", description: "Чтение велосипедов." },
       {
         name: "Journal",
@@ -375,6 +384,157 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
             "200": success("Текущий пользователь.", "Me"),
             "400": failure(
               "Одновременно cookie сессии и заголовок Authorization.",
+            ),
+            "401": failure(
+              "Нет входа, сессия или токен недействительны, токен доступа истёк (`token_expired`) либо схема Authorization не поддерживается.",
+            ),
+            "500": shared("InternalError"),
+          },
+        },
+      },
+      "/me/feed": {
+        get: {
+          operationId: "getFeed",
+          tags: ["Personal"],
+          summary: "Моя лента",
+          description:
+            "Публикации тех, на кого подписан человек, и велосипедов, за которыми он следит: велосипеды, покатушки, записи журнала и объявления, новые сверху, курсор по `(время публикации, id)`. `type`: `all` (по умолчанию), `rides` или `journal`. Покатушка, к которой есть публичная запись журнала, в `all` не повторяется отдельной карточкой (есть запись). Отменённых покатушек нет. Каждая страница читается заново по видимости зрителя: скрытое между страницами не показывается. В каждом элементе заполнено одно поле из `bike`, `ride`, `journal`, `listing`.",
+          security: [{ cookieSession: [] }, { bearerAuth: [] }],
+          parameters: queryParameters(
+            feedQuerySchema,
+            ["limit", "cursor"],
+            feedNotes,
+          ).concat(refs("Limit", "Cursor")),
+          responses: {
+            "200": success("Страница ленты.", "FeedPage"),
+            "400": failure(
+              "Неверный или повторённый параметр, неверный курсор либо cookie вместе с Authorization.",
+            ),
+            "401": failure(
+              "Нет входа, сессия или токен недействительны, токен доступа истёк (`token_expired`) либо схема Authorization не поддерживается.",
+            ),
+            "500": shared("InternalError"),
+          },
+        },
+      },
+      "/me/notifications": {
+        get: {
+          operationId: "listNotifications",
+          tags: ["Personal"],
+          summary: "Мои уведомления",
+          description:
+            "Новые сверху, курсор по `(время, id)`. Видимость вычисляется при чтении, как на сайте: уведомление о том, что получатель уже не вправе видеть (приватное, скрытое, заблокированное, отменённый лайк, удалённый комментарий), не показывается. Чтение уведомлений, как и на сайте, создаёт напоминание о конце срока объявления (раз за срок). Пометка «прочитано» — отдельная операция записи.",
+          security: [{ cookieSession: [] }, { bearerAuth: [] }],
+          parameters: refs("Limit", "Cursor"),
+          responses: {
+            "200": success("Страница уведомлений.", "NotificationPage"),
+            "400": failure(
+              "Неверный или повторённый параметр, неверный курсор либо cookie вместе с Authorization.",
+            ),
+            "401": failure(
+              "Нет входа, сессия или токен недействительны, токен доступа истёк (`token_expired`) либо схема Authorization не поддерживается.",
+            ),
+            "500": shared("InternalError"),
+          },
+        },
+      },
+      "/me/notifications/count": {
+        get: {
+          operationId: "getNotificationCount",
+          tags: ["Personal"],
+          summary: "Число непрочитанных",
+          description:
+            "Считается до 100: при `capped` непрочитанных не меньше 100.",
+          security: [{ cookieSession: [] }, { bearerAuth: [] }],
+          parameters: [],
+          responses: {
+            "200": success("Число непрочитанных.", "NotificationCount"),
+            "400": failure(
+              "Неверный или повторённый параметр, неверный курсор либо cookie вместе с Authorization.",
+            ),
+            "401": failure(
+              "Нет входа, сессия или токен недействительны, токен доступа истёк (`token_expired`) либо схема Authorization не поддерживается.",
+            ),
+            "500": shared("InternalError"),
+          },
+        },
+      },
+      "/me/saved/journal": {
+        get: {
+          operationId: "listSavedJournal",
+          tags: ["Personal"],
+          summary: "Сохранённые записи журнала",
+          description:
+            "Новые сохранения сверху, курсор по `(время сохранения, id)`. Запись, которую скрыли или сняли с публикации, остаётся сохранённой, но не показывается.",
+          security: [{ cookieSession: [] }, { bearerAuth: [] }],
+          parameters: refs("Limit", "Cursor"),
+          responses: {
+            "200": success("Страница сохранённых записей.", "JournalPage"),
+            "400": failure(
+              "Неверный или повторённый параметр, неверный курсор либо cookie вместе с Authorization.",
+            ),
+            "401": failure(
+              "Нет входа, сессия или токен недействительны, токен доступа истёк (`token_expired`) либо схема Authorization не поддерживается.",
+            ),
+            "500": shared("InternalError"),
+          },
+        },
+      },
+      "/me/saved/market": {
+        get: {
+          operationId: "listSavedMarket",
+          tags: ["Personal"],
+          summary: "Сохранённые объявления",
+          description:
+            "Новые сохранения сверху, курсор по `(время сохранения, id)`. Проданное, истёкшее и скрытое объявление остаётся сохранённым, но не показывается; добавить и убрать — `PUT/DELETE /market/{id}/save`.",
+          security: [{ cookieSession: [] }, { bearerAuth: [] }],
+          parameters: refs("Limit", "Cursor"),
+          responses: {
+            "200": success("Страница сохранённых объявлений.", "MarketPage"),
+            "400": failure(
+              "Неверный или повторённый параметр, неверный курсор либо cookie вместе с Authorization.",
+            ),
+            "401": failure(
+              "Нет входа, сессия или токен недействительны, токен доступа истёк (`token_expired`) либо схема Authorization не поддерживается.",
+            ),
+            "500": shared("InternalError"),
+          },
+        },
+      },
+      "/me/rides": {
+        get: {
+          operationId: "listMyRides",
+          tags: ["Personal"],
+          summary: "Мои покатушки",
+          description:
+            "Все свои покатушки в любом состоянии (состоявшиеся, запланированные, отменённые; публичные и нет), новые сверху, курсор по `(начало или дата добавления, id)`. Владельческие поля — `isPublic`, зона приватности, число точек. Геометрия и серии трека в списки не входят: карточка `/rides/{id}` отдаёт публичную геометрию.",
+          security: [{ cookieSession: [] }, { bearerAuth: [] }],
+          parameters: refs("Limit", "Cursor"),
+          responses: {
+            "200": success("Страница своих покатушек.", "OwnRidePage"),
+            "400": failure(
+              "Неверный или повторённый параметр, неверный курсор либо cookie вместе с Authorization.",
+            ),
+            "401": failure(
+              "Нет входа, сессия или токен недействительны, токен доступа истёк (`token_expired`) либо схема Authorization не поддерживается.",
+            ),
+            "500": shared("InternalError"),
+          },
+        },
+      },
+      "/me/rides/upcoming": {
+        get: {
+          operationId: "listMyUpcomingRides",
+          tags: ["Personal"],
+          summary: "Мои ближайшие планы",
+          description:
+            "Свои планы, планы с ответами «еду» и «возможно», приглашения без ответа и недавние отмены дат, на которые человек отвечал: до 20 штук на 60 дней вперёд, ближайшие первыми, без курсора и без параметров. `role` говорит, кем человек в плане выступает. Точка встречи — по правилам участников. Имена ответивших не передаются.",
+          security: [{ cookieSession: [] }, { bearerAuth: [] }],
+          parameters: [],
+          responses: {
+            "200": success("Ближайшие планы человека.", "MyUpcomingRides"),
+            "400": failure(
+              "Неверный или повторённый параметр, неверный курсор либо cookie вместе с Authorization.",
             ),
             "401": failure(
               "Нет входа, сессия или токен недействительны, токен доступа истёк (`token_expired`) либо схема Authorization не поддерживается.",

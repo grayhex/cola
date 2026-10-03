@@ -65,6 +65,38 @@ export async function savedPage(q: Queryable, viewer: string, page = 1) {
     pageSize: 24,
   };
 }
+/**
+ * The saved entries that are still public, newest save first, by
+ * `(saved_at, id)` and a cursor instead of OFFSET (API v1, #321). The rule is
+ * the page's: an entry that was hidden or unpublished stays saved but is not
+ * shown.
+ */
+export async function savedKeysetPage(
+  q: Queryable,
+  viewer: string,
+  limit: number,
+  after: { createdAt: string; id: string } | null,
+) {
+  const rows = (
+    await q.query<JournalViewRowType & { cursor_at: string }>(
+      `SELECT ${journalColumns},to_char(s.created_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') cursor_at${journalFrom}
+       JOIN journal_saves s ON s.entry_id=e.id AND s.user_id=$1
+       WHERE ${journalPublic}
+         AND ($3::timestamptz IS NULL OR s.created_at<$3::timestamptz OR (s.created_at=$3::timestamptz AND e.id>$4::uuid))
+       ORDER BY s.created_at DESC,e.id LIMIT $5`,
+      [viewer, viewer, after?.createdAt ?? null, after?.id ?? null, limit + 1],
+    )
+  ).rows;
+  const page = rows.slice(0, limit),
+    last = page[page.length - 1];
+  return {
+    rows: page,
+    next:
+      rows.length > limit && last
+        ? { createdAt: last.cursor_at, id: last.id }
+        : null,
+  };
+}
 export async function setSaved(
   q: Queryable,
   entry: unknown,

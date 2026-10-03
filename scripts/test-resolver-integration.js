@@ -193,6 +193,7 @@ try {
           "tests/api-v1-search-http.js",
           "tests/api-v1-components-http.js",
           "tests/api-v1-market-http.js",
+          "tests/api-v1-personal-http.js",
           "tests/admin-http.js",
           "tests/resolver-http.js",
           "tests/layout-http.js",

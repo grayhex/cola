@@ -221,6 +221,20 @@ export async function journalKeysetPage(
         : null,
   };
 }
+/** Public entries by id, in no particular order, for API v1 lists chosen elsewhere (the feed). */
+export async function journalRowsById(
+  q: Queryable,
+  ids: string[],
+  viewer: string | null,
+) {
+  if (!ids.length) return [];
+  return (
+    await q.query<JournalViewRow>(
+      `SELECT ${journalColumns}${journalFrom} WHERE e.id=ANY($1::uuid[]) AND ${journalPublic}`,
+      [ids, viewer],
+    )
+  ).rows;
+}
 export async function journalBikeLock(
   q: Queryable,
   bike: unknown,
