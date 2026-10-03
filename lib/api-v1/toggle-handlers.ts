@@ -2,6 +2,7 @@ import { db, transaction } from "../db.ts";
 import { CommunityError } from "../community-validation.ts";
 import { setFollow } from "../follows.ts";
 import { setSaved } from "../journal-discovery.ts";
+import { setListingSaved } from "../market.ts";
 import { limits } from "../limits.ts";
 import { profileCounts } from "../profiles.ts";
 import { vote } from "../showcase.ts";
@@ -85,6 +86,22 @@ export function handleJournalSave(req: Request, { params }: IdParams) {
     await limited("journal-write:" + viewer.id, 20);
     const result = await found(() =>
       transaction((q) => setSaved(q, entry, viewer.id, enabledBy(req))),
+    );
+    return ok({ saved: result.saved });
+  });
+}
+
+/** PUT/DELETE /api/v1/market/{id}/save */
+export function handleListingSave(req: Request, { params }: IdParams) {
+  return safely(async () => {
+    const viewer = await writer(req);
+    const listing = idOf((await params).id, "Объявление не найдено.");
+    // The budget of the site's own market writes: one budget for both.
+    await limited("market-write:" + viewer.id, 30);
+    const result = await found(() =>
+      transaction((q) =>
+        setListingSaved(q, listing, viewer.id, enabledBy(req)),
+      ),
     );
     return ok({ saved: result.saved });
   });

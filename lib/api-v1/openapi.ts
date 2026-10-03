@@ -6,6 +6,7 @@ import {
   LIST_LIMIT,
   SEARCH_MAX,
   componentCatalogQuerySchema,
+  marketQuerySchema,
   componentSearchQuerySchema,
   experienceQuerySchema,
   schemaRegistry,
@@ -106,7 +107,11 @@ const queryNotes: Record<string, string> = {
   fatbike: "`1` — Fatbike, `0` — не Fatbike.",
 };
 /** Query parameters of an operation, from the schema its parser uses. */
-function queryParameters(schema: z.ZodType, skip: string[] = []): Json[] {
+function queryParameters(
+  schema: z.ZodType,
+  skip: string[] = [],
+  notes: Record<string, string> = {},
+): Json[] {
   const converted = z.toJSONSchema(schema, {
     target: "draft-2020-12",
     io: "input",
@@ -118,7 +123,9 @@ function queryParameters(schema: z.ZodType, skip: string[] = []): Json[] {
       name,
       in: "query",
       required: converted.required?.includes(name) ?? false,
-      ...(queryNotes[name] ? { description: queryNotes[name] } : {}),
+      ...((notes[name] ?? queryNotes[name])
+        ? { description: notes[name] ?? queryNotes[name] }
+        : {}),
       schema: optionalForm(clean(definition) as Json),
     }));
 }
@@ -139,6 +146,34 @@ function optionalForm(schema: Json): Json {
   }
   return out;
 }
+const SAVE_RESPONSES = {
+  "200": success("Итоговое состояние избранного.", "MarketSaved"),
+  "400": failure("Одновременно cookie сессии и заголовок Authorization."),
+  "401": failure(
+    "Нет входа, сессия или токен недействительны, токен доступа истёк (`token_expired`) либо схема Authorization не поддерживается.",
+  ),
+  "403": failure("Cookie-запрос не с адреса сайта (нужен заголовок `Origin`)."),
+  "404": failure("Объявление недоступно."),
+  "429": failure(
+    "Слишком много действий; секунды до конца окна — в `Retry-After`.",
+  ),
+  "500": shared("InternalError"),
+};
+// The market's own sentences for names the other lists use in another sense.
+const marketNotes: Record<string, string> = {
+  q: "Текст поиска по названию, описанию и месту, до 150 знаков; без учёта регистра.",
+  category: "Категория объявления.",
+  type: "Намерение: sale — продам, wanted — куплю, exchange — обмен, free — отдам даром.",
+  condition: "Состояние товара.",
+  price_min:
+    "Цена от, целые рубли. Объявления без цены в выборку с границей не попадают.",
+  price_max:
+    "Цена до, целые рубли. Объявления без цены в выборку с границей не попадают.",
+  city: "Часть названия места, без учёта регистра.",
+  seller:
+    "Username продавца: объявления одного человека. Неизвестный и заблокированный продавец — 404.",
+  sort: "`new` — новые сверху (по умолчанию), `price_asc` — дешевле сверху, `price_desc` — дороже сверху; объявления без цены в конце. Курсор одного порядка в другом — 400.",
+};
 const refs = (...names: string[]) =>
   names.map((name) => ({ $ref: `#/components/parameters/${name}` }));
 
@@ -199,6 +234,13 @@ const parameters = {
     in: "path",
     required: true,
     description: "Идентификатор комментария (UUID).",
+    schema: { type: "string", format: "uuid" },
+  },
+  marketListingId: {
+    name: "id",
+    in: "path",
+    required: true,
+    description: "Идентификатор объявления (UUID).",
     schema: { type: "string", format: "uuid" },
   },
   componentModelId: {
@@ -303,6 +345,11 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
       {
         name: "Components",
         description: "Публичный каталог моделей компонентов: карточки, фото.",
+      },
+      {
+        name: "Market",
+        description:
+          "Барахолка: действующие объявления, карточка, контакт по запросу, избранное.",
       },
       {
         name: "Search",
@@ -1226,6 +1273,126 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
           },
         },
       },
+      "/market": {
+        get: {
+          operationId: "listMarket",
+          tags: ["Market"],
+          summary: "Объявления барахолки",
+          description:
+            "Только объявления, которые на рынке сейчас: опубликованные, в пределах срока, продавец не заблокирован. Проданное, истёкшее и черновики сюда не попадают (по `id` проданное и истёкшее читаются с пометкой). Свои действующие объявления зритель видит в общей ленте как все остальные. Порядок `sort=new` — по дате публикации, курсор по `(published_at, id)`; в порядках цены курсор хранит цену последнего объявления, объявления без цены идут в конце; курсор одного порядка в другом — 400. Контакт в карточке не отдаётся: `/market/{id}/contact`.",
+          security: [{}, { cookieSession: [] }, { bearerAuth: [] }],
+          parameters: queryParameters(
+            marketQuerySchema,
+            ["limit", "cursor"],
+            marketNotes,
+          ).concat(refs("Limit", "Cursor")),
+          responses: {
+            "200": success("Страница объявлений.", "MarketPage"),
+            "400": failure(
+              "Неверный или повторённый параметр, неверный курсор либо cookie вместе с Authorization.",
+            ),
+            "401": failure(
+              "Недействительный или истёкший токен либо неподдерживаемая схема Authorization.",
+            ),
+            "404": failure("Продавец из `seller` не найден."),
+            "500": shared("InternalError"),
+          },
+        },
+      },
+      "/market/{id}": {
+        get: {
+          operationId: "getMarketListing",
+          tags: ["Market"],
+          summary: "Объявление",
+          description:
+            "Карточка с отметкой `saved` вошедшего зрителя. Проданное и истёкшее объявление читается с пометкой (`status`, `expired`). Черновик читает только владелец; скрытое, чужой черновик, объявление заблокированного продавца и неизвестный `id` — одинаковый 404. `contact` и `expiresAt` — только владельцу.",
+          security: [{}, { cookieSession: [] }, { bearerAuth: [] }],
+          parameters: refs("MarketListingId"),
+          responses: {
+            "200": success("Объявление.", "MarketListingDetail"),
+            "400": failure(
+              "Неверный или повторённый параметр, неверный курсор либо cookie вместе с Authorization.",
+            ),
+            "401": failure(
+              "Недействительный или истёкший токен либо неподдерживаемая схема Authorization.",
+            ),
+            "404": shared("NotFound"),
+            "500": shared("InternalError"),
+          },
+        },
+      },
+      "/market/{id}/contact": {
+        get: {
+          operationId: "getMarketContact",
+          tags: ["Market"],
+          summary: "Контакт продавца",
+          description:
+            "Контакт одного объявления: нужен вход, подтверждённая почта и укладывается в лимит запросов контактов (20 за окно, общий с сайтом). Контакт объявления, которое уже не на рынке (проданное, истёкшее), чужому не отдаётся: 404. Владелец читает свой контакт всегда.",
+          security: [{ cookieSession: [] }, { bearerAuth: [] }],
+          parameters: refs("MarketListingId"),
+          responses: {
+            "200": success("Контакт.", "MarketContact"),
+            "400": failure(
+              "Неверный или повторённый параметр, неверный курсор либо cookie вместе с Authorization.",
+            ),
+            "401": failure(
+              "Недействительный или истёкший токен либо неподдерживаемая схема Authorization.",
+            ),
+            "403": failure(
+              "Почта не подтверждена (`email_verification_required`).",
+            ),
+            "404": shared("NotFound"),
+            "429": failure(
+              "Слишком много запросов контактов; секунды до конца окна — в `Retry-After`.",
+            ),
+            "500": shared("InternalError"),
+          },
+        },
+      },
+      "/market/{id}/others": {
+        get: {
+          operationId: "listMarketSellerOthers",
+          tags: ["Market"],
+          summary: "Другие объявления продавца",
+          description:
+            "До четырёх других действующих объявлений того же продавца, новые сверху, и их общее число. Все остальные: `/market?seller=`. Доступно, если читается само объявление.",
+          security: [{}, { cookieSession: [] }, { bearerAuth: [] }],
+          parameters: refs("MarketListingId"),
+          responses: {
+            "200": success("Объявления продавца.", "MarketOthers"),
+            "400": failure(
+              "Неверный или повторённый параметр, неверный курсор либо cookie вместе с Authorization.",
+            ),
+            "401": failure(
+              "Недействительный или истёкший токен либо неподдерживаемая схема Authorization.",
+            ),
+            "404": shared("NotFound"),
+            "500": shared("InternalError"),
+          },
+        },
+      },
+      "/market/{id}/save": {
+        put: {
+          operationId: "saveMarketListing",
+          tags: ["Market"],
+          summary: "Добавить объявление в избранное",
+          description:
+            "Переключатель идемпотентен: `PUT` ставит состояние, `DELETE` снимает, повтор ничего не меняет, ответ — итоговое состояние. Сохранить можно только объявление, которое на рынке сейчас; снять можно любое.",
+          security: [{ cookieSession: [] }, { bearerAuth: [] }],
+          parameters: refs("MarketListingId"),
+          responses: SAVE_RESPONSES,
+        },
+        delete: {
+          operationId: "unsaveMarketListing",
+          tags: ["Market"],
+          summary: "Убрать объявление из избранного",
+          description:
+            "Переключатель идемпотентен: `PUT` ставит состояние, `DELETE` снимает, повтор ничего не меняет, ответ — итоговое состояние.",
+          security: [{ cookieSession: [] }, { bearerAuth: [] }],
+          parameters: refs("MarketListingId"),
+          responses: SAVE_RESPONSES,
+        },
+      },
       "/users/{ref}": {
         get: {
           operationId: "getUser",
@@ -1359,6 +1526,7 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
         RideId: parameters.rideId,
         RideText: parameters.rideText,
         ComponentModelId: parameters.componentModelId,
+        MarketListingId: parameters.marketListingId,
         CommentId: parameters.commentId,
         Focus: parameters.focus,
         SessionId: {

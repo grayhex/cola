@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { categoryFilterLabels } from "../bike-classification.ts";
 import { classificationQueryShape } from "../classification-validation.ts";
+import { listingTypeKeys } from "../market-types.ts";
 import { nativeCodePattern, verifierPattern } from "../native-auth.ts";
 import { ApiError, apiErrorCodes, detailsOf } from "./errors.ts";
 
@@ -873,6 +874,134 @@ export const componentPhotoListSchema = named(
   }),
 );
 
+const marketCatalogLinkSchema = named(
+  "MarketCatalogLink",
+  "Модель каталога, к которой привязано объявление. Имя и путь следуют правкам каталога; слитая модель отдаёт каноническую.",
+  z.strictObject({
+    id,
+    name: z.string(),
+    path: z.string().describe("Путь страницы модели относительно сайта."),
+    archived: z.boolean(),
+  }),
+);
+
+const marketBikeLinkSchema = named(
+  "MarketBikeLink",
+  "Публичный велосипед продавца, к которому привязано объявление. Приватный велосипед не показывается, даже если привязан.",
+  z.strictObject({
+    id,
+    name: z.string(),
+    path: z.string().describe("Путь страницы велосипеда относительно сайта."),
+    isPublic: z.literal(true),
+  }),
+);
+
+const marketListingShape = {
+  id,
+  title: z.string(),
+  description: z.string(),
+  category: z.enum(["bikes", "components", "accessories"]),
+  listingType: z.enum(listingTypeKeys),
+  condition: z.enum(["new", "used"]),
+  price: z
+    .number()
+    .nullable()
+    .describe(
+      "Цена в `currency`; null — «по договорённости»/обмен/бюджет не указан. У `listingType=free` — 0.",
+    ),
+  currency: z
+    .string()
+    .describe(
+      "Валюта цены. Новые объявления только в RUB; старые могли быть в USD/EUR.",
+    ),
+  location: z.string(),
+  hasContact: z
+    .boolean()
+    .describe(
+      "Указан ли контакт. Сам контакт отдаёт `/market/{id}/contact` (вход, подтверждённая почта, лимит); владельцу он приходит в `contact`.",
+    ),
+  contact: z
+    .string()
+    .optional()
+    .describe("Только владельцу объявления; остальным поля нет."),
+  status: z
+    .enum(["draft", "active", "sold"])
+    .describe("Черновик виден только владельцу."),
+  expired: z
+    .boolean()
+    .describe(
+      "Срок размещения вышел: объявление не в списках, страница открывается с пометкой и без контакта.",
+    ),
+  expiresAt: instant
+    .optional()
+    .describe("Только владельцу: конец срока размещения."),
+  createdAt: instant,
+  publishedAt: instant.nullable(),
+  path: z.string().describe("Путь страницы объявления относительно сайта."),
+  photos: z.array(
+    z.strictObject({
+      id,
+      url: z
+        .string()
+        .describe(
+          "Путь к фото относительно сайта; `?width=` — уменьшенный вариант. Доступ проверяется при каждом запросе.",
+        ),
+    }),
+  ),
+  author: authorSchema,
+  isOwner: z.boolean(),
+  componentModel: marketCatalogLinkSchema.nullable(),
+  bikeModel: marketCatalogLinkSchema.nullable(),
+  linkedBike: marketBikeLinkSchema.nullable(),
+};
+
+export const marketListingSchema = named(
+  "MarketListing",
+  "Объявление барахолки. Контакт не входит в карточку; срок размещения виден только владельцу.",
+  z.strictObject(marketListingShape),
+);
+
+export const marketListingDetailSchema = named(
+  "MarketListingDetail",
+  "Объявление с отметкой «в избранном» вошедшего зрителя (для гостя false).",
+  z.strictObject({ ...marketListingShape, saved: z.boolean() }),
+);
+
+export const marketPageSchema = named(
+  "MarketPage",
+  "Страница объявлений в действующих и неблокированных продавцов. В порядке цены курсор хранит цену последнего объявления; объявления без цены идут в конце.",
+  z.strictObject({
+    items: z.array(marketListingSchema),
+    nextCursor: z
+      .string()
+      .nullable()
+      .describe("Курсор следующей страницы или null, если страниц больше нет."),
+  }),
+);
+
+export const marketOthersSchema = named(
+  "MarketOthers",
+  "До четырёх других действующих объявлений того же продавца, новые сверху, и их общее число.",
+  z.strictObject({
+    items: z.array(marketListingSchema),
+    total: z.int(),
+  }),
+);
+
+export const marketContactSchema = named(
+  "MarketContact",
+  "Контакт продавца. Отдаётся по одному объявлению, только вошедшему человеку с подтверждённой почтой, с лимитом запросов.",
+  z.strictObject({ contact: z.string() }),
+);
+
+export const marketSavedSchema = named(
+  "MarketSaved",
+  "Состояние избранного после операции.",
+  z.strictObject({ saved: z.boolean() }),
+);
+
+export type MarketListing = z.infer<typeof marketListingSchema>;
+export type MarketListingDetail = z.infer<typeof marketListingDetailSchema>;
 export type Me = z.infer<typeof meSchema>;
 export type SessionGrant = z.infer<typeof sessionGrantSchema>;
 export type Profile = z.infer<typeof profileSchema>;
@@ -1073,6 +1202,36 @@ export const componentCatalogQuerySchema = z.strictObject({
 });
 export const parseComponentCatalogQuery = (url: URL) =>
   parseQuery(url, componentCatalogQuerySchema);
+
+/** A price bound: whole rubles, as on the site. */
+const priceBound = z
+  .union([
+    z.literal(""),
+    z
+      .string()
+      .regex(/^\d{1,10}$/, "Ожидается целое число")
+      .transform(Number)
+      .pipe(z.int().min(0).max(9999999999)),
+  ])
+  .default("");
+/** The market: the site's filters and orders, with a cursor instead of a page. */
+export const marketQuerySchema = z.strictObject({
+  q: searchText.default(""),
+  category: z.enum(["", "bikes", "components", "accessories"]).default(""),
+  type: z.enum(["", ...listingTypeKeys]).default(""),
+  condition: z.enum(["", "new", "used"]).default(""),
+  price_min: priceBound,
+  price_max: priceBound,
+  city: z.string().trim().max(100).default(""),
+  seller: z
+    .union([z.literal(""), z.string().regex(/^[A-Za-z0-9._-]{3,30}$/)])
+    .default(""),
+  sort: z.enum(["new", "price_asc", "price_desc"]).default("new"),
+  limit: pageQuerySchema.shape.limit,
+  cursor: pageQuerySchema.shape.cursor,
+});
+export const parseMarketQuery = (url: URL) =>
+  parseQuery(url, marketQuerySchema);
 
 /**
  * `{ref}` of /users: a UUID (36 characters) or a username (3 to 30), so the two
