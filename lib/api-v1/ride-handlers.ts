@@ -11,7 +11,7 @@ import { notFound } from "./errors.ts";
 import { idOf } from "./journal-handlers.ts";
 import { toRide, toRideAnalysis, toRideSummary } from "./mappers.ts";
 import { ok, safely } from "./respond.ts";
-import { parsePageQuery } from "./schemas.ts";
+import { parseRidesQuery } from "./schemas.ts";
 import { viewerOf } from "./viewer.ts";
 
 // Ride reads of /api/v1 (#302). Who may see what is decided in lib/rides.ts by
@@ -32,7 +32,7 @@ async function listPage(
   bike: Promise<{ id: string }> | null,
 ) {
   const viewer = await viewerOf(req.headers);
-  const query = parsePageQuery(new URL(req.url));
+  const query = parseRidesQuery(new URL(req.url));
   const after = query.cursor ? decodeCursor(query.cursor) : null;
   let bikeId: string | null = null;
   if (bike) {
@@ -47,6 +47,7 @@ async function listPage(
     bikeId,
     limit: query.limit,
     after,
+    text: query.q,
   });
   return ok({
     items: result.rows.map((row) => toRideSummary(row, viewer?.id ?? null)),

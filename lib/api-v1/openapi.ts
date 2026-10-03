@@ -2,7 +2,14 @@ import { z } from "zod";
 import { categoryFilterLabels } from "../bike-classification.ts";
 import { publicOrigin } from "../public-urls.ts";
 import { SESSION_COOKIE } from "../viewer-session.ts";
-import { LIST_LIMIT, SEARCH_MAX, schemaRegistry } from "./schemas.ts";
+import {
+  LIST_LIMIT,
+  SEARCH_MAX,
+  componentSearchQuerySchema,
+  experienceQuerySchema,
+  schemaRegistry,
+  usersSearchQuerySchema,
+} from "./schemas.ts";
 
 // The OpenAPI 3.1 document of /api/v1 (#134). It describes exactly the
 // operations that exist; there is no contract here for the rest of the site.
@@ -71,6 +78,68 @@ const failure = (description: string) => ({
   content: json("Error"),
 });
 
+// What each parameter of the generated query lists says. The schema in
+// schemas.ts is the parser, so the names, values and bounds cannot drift from
+// the code; only the sentences are written here.
+const queryNotes: Record<string, string> = {
+  q: "Текст поиска, до 150 знаков; без учёта регистра и формы записи, с правилами написания каталога.",
+  category: "Тип велосипеда (ключ из фильтра витрины).",
+  exact: "`1` — точное совпадение модели и компонента вместо вхождения.",
+  brand: "Бренд велосипеда.",
+  model: "Модель велосипеда.",
+  component: "Название компонента.",
+  componentCategory: "Категория компонента.",
+  bikeModelId: "Модель каталога велосипедов (UUID).",
+  componentModelId: "Модель каталога компонентов (UUID).",
+  year: "Модельный год.",
+  purpose: "Назначение велосипеда (ключ каталога).",
+  kind: "Тип записи журнала: build, service, review, question, story.",
+  similar:
+    "Идентификатор публичного велосипеда: ищутся похожие на него (его бренд, модель, назначение и категория).",
+  subtype: "Подтип по классификации.",
+  suspension: "Подвеска по классификации.",
+  construction: "Конструкция по классификации.",
+  use: "Назначение по классификации.",
+  electric: "`1` — электро, `0` — без электропривода.",
+  fatbike: "`1` — Fatbike, `0` — не Fatbike.",
+};
+/** Query parameters of an operation, from the schema its parser uses. */
+function queryParameters(schema: z.ZodType, skip: string[] = []): Json[] {
+  const converted = z.toJSONSchema(schema, {
+    target: "draft-2020-12",
+    io: "input",
+    unrepresentable: "any",
+  }) as { properties: Record<string, Json>; required?: string[] };
+  return Object.entries(converted.properties)
+    .filter(([name]) => !skip.includes(name))
+    .map(([name, definition]) => ({
+      name,
+      in: "query",
+      required: converted.required?.includes(name) ?? false,
+      ...(queryNotes[name] ? { description: queryNotes[name] } : {}),
+      schema: optionalForm(clean(definition) as Json),
+    }));
+}
+/**
+ * The parser takes an empty value as "not given". The document says it by
+ * leaving the parameter out, which also keeps "" out of enums: a generator
+ * cannot make a name of it (Kotlin enums with an empty member do not compile).
+ */
+function optionalForm(schema: Json): Json {
+  const { anyOf, default: fallback, enum: values, ...rest } = schema;
+  const out: Json = { ...rest };
+  if (fallback !== "" && fallback !== undefined) out.default = fallback;
+  if (Array.isArray(values)) out.enum = values.filter((value) => value !== "");
+  else if (values !== undefined) out.enum = values;
+  if (Array.isArray(anyOf)) {
+    const left = (anyOf as Json[]).filter((option) => option.const !== "");
+    return left.length === 1 ? { ...left[0], ...out } : { ...out, anyOf: left };
+  }
+  return out;
+}
+const refs = (...names: string[]) =>
+  names.map((name) => ({ $ref: `#/components/parameters/${name}` }));
+
 const categories = Object.keys(categoryFilterLabels).join(", ");
 
 const parameters = {
@@ -129,6 +198,14 @@ const parameters = {
     required: true,
     description: "Идентификатор комментария (UUID).",
     schema: { type: "string", format: "uuid" },
+  },
+  rideText: {
+    name: "q",
+    in: "query",
+    required: false,
+    description:
+      "Текст: ищется в названии, описании, имени и username автора и названии велосипеда; без учёта регистра и формы записи.",
+    schema: { type: "string", maxLength: 150 },
   },
   rideId: {
     name: "id",
@@ -213,6 +290,11 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
         name: "Comments",
         description:
           "Комментарии к велосипедам, записям и покатушкам: один вид на всё.",
+      },
+      {
+        name: "Search",
+        description:
+          "Поиск велосипедов, записей журнала и людей по опыту сборок и подсказки по компонентам.",
       },
       {
         name: "Users",
@@ -562,6 +644,7 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
           parameters: [
             { $ref: "#/components/parameters/Limit" },
             { $ref: "#/components/parameters/Cursor" },
+            { $ref: "#/components/parameters/RideText" },
           ],
           responses: {
             "200": success("Страница покатушек.", "RidePage"),
@@ -587,6 +670,7 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
           parameters: [
             { $ref: "#/components/parameters/Limit" },
             { $ref: "#/components/parameters/Cursor" },
+            { $ref: "#/components/parameters/RideText" },
           ],
           responses: {
             "200": success("Страница планов.", "RidePage"),
@@ -657,6 +741,7 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
             { $ref: "#/components/parameters/BikeId" },
             { $ref: "#/components/parameters/Limit" },
             { $ref: "#/components/parameters/Cursor" },
+            { $ref: "#/components/parameters/RideText" },
           ],
           responses: {
             "200": success("Страница покатушек.", "RidePage"),
@@ -891,6 +976,111 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
           },
         },
       },
+      "/experience/bikes": {
+        get: {
+          operationId: "searchExperienceBikes",
+          tags: ["Search"],
+          summary: "Поиск велосипедов",
+          description:
+            "Поиск по опыту сборок: текст и грани сайта (бренд, модель, год, назначение, компонент, классификация) с правилами написания каталога; `similar` — похожие на велосипед. Новые сверху, курсор по `(создан, id)`; те же видимость и `BikeSummary`, что у `/bikes` (там же простой поиск по тексту `q`). Чужой приватный и заблокированного владельца не находятся. Неизвестный или непубличный `similar` — 404.",
+          security: [{}, { cookieSession: [] }, { bearerAuth: [] }],
+          parameters: queryParameters(experienceQuerySchema, [
+            "limit",
+            "cursor",
+          ]).concat(refs("Limit", "Cursor")),
+          responses: {
+            "200": success("Страница велосипедов.", "BikePage"),
+            "400": failure(
+              "Неверный или повторённый параметр, неверный курсор либо cookie вместе с Authorization.",
+            ),
+            "401": failure(
+              "Недействительный или истёкший токен либо неподдерживаемая схема Authorization.",
+            ),
+            "404": shared("NotFound"),
+            "500": shared("InternalError"),
+          },
+        },
+      },
+      "/experience/journal": {
+        get: {
+          operationId: "searchExperienceJournal",
+          tags: ["Search"],
+          summary: "Поиск записей журнала",
+          description:
+            "Те же текст и грани, что у поиска велосипедов, по публичным опубликованным записям публичных велосипедов (компоненты берутся из снимка записи; `kind` — тип записи). Новые сверху, курсор по `(опубликована, id)`; `JournalSummary` как у `/bikes/{id}/journal`.",
+          security: [{}, { cookieSession: [] }, { bearerAuth: [] }],
+          parameters: queryParameters(experienceQuerySchema, [
+            "limit",
+            "cursor",
+          ]).concat(refs("Limit", "Cursor")),
+          responses: {
+            "200": success("Страница записей.", "JournalPage"),
+            "400": failure(
+              "Неверный или повторённый параметр, неверный курсор либо cookie вместе с Authorization.",
+            ),
+            "401": failure(
+              "Недействительный или истёкший токен либо неподдерживаемая схема Authorization.",
+            ),
+            "404": shared("NotFound"),
+            "500": shared("InternalError"),
+          },
+        },
+      },
+      "/experience/users": {
+        get: {
+          operationId: "searchExperienceUsers",
+          tags: ["Search"],
+          summary: "Поиск людей",
+          description:
+            "Люди, у которых имя или username содержит текст; текст обязателен (это поиск, не каталог). Новые аккаунты сверху, курсор по `(регистрация, id)`; заблокированных нет. `UserSummary` с `relationship` для вошедшего.",
+          security: [{}, { cookieSession: [] }, { bearerAuth: [] }],
+          parameters: queryParameters(usersSearchQuerySchema, [
+            "limit",
+            "cursor",
+          ]).concat(refs("Limit", "Cursor")),
+          responses: {
+            "200": success("Страница людей.", "UserPage"),
+            "400": failure(
+              "Неверный или повторённый параметр, неверный курсор либо cookie вместе с Authorization.",
+            ),
+            "401": failure(
+              "Недействительный или истёкший токен либо неподдерживаемая схема Authorization.",
+            ),
+            "500": shared("InternalError"),
+          },
+        },
+      },
+      "/search/components": {
+        get: {
+          operationId: "searchComponents",
+          tags: ["Search"],
+          summary: "Подсказки по компонентам",
+          description:
+            "Названия компонентов публичных велосипедов, содержащие текст, и число велосипедов, на которых каждое встречается: по убыванию числа, затем по названию. Короткий список для строки поиска, не страницы (курсора нет); текст обязателен.",
+          security: [{}, { cookieSession: [] }, { bearerAuth: [] }],
+          parameters: queryParameters(componentSearchQuerySchema, [
+            "limit",
+          ]).concat([
+            {
+              name: "limit",
+              in: "query",
+              required: false,
+              description: "Сколько подсказок вернуть, 1–24, по умолчанию 12.",
+              schema: { type: "integer", minimum: 1, maximum: 24, default: 12 },
+            },
+          ]),
+          responses: {
+            "200": success("Подсказки.", "ComponentHitList"),
+            "400": failure(
+              "Неверный или повторённый параметр, неверный курсор либо cookie вместе с Authorization.",
+            ),
+            "401": failure(
+              "Недействительный или истёкший токен либо неподдерживаемая схема Authorization.",
+            ),
+            "500": shared("InternalError"),
+          },
+        },
+      },
       "/users/{ref}": {
         get: {
           operationId: "getUser",
@@ -1022,6 +1212,7 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
         UserRef: parameters.userRef,
         JournalId: parameters.journalId,
         RideId: parameters.rideId,
+        RideText: parameters.rideText,
         CommentId: parameters.commentId,
         Focus: parameters.focus,
         SessionId: {

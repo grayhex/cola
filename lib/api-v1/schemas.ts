@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { categoryFilterLabels } from "../bike-classification.ts";
+import { classificationQueryShape } from "../classification-validation.ts";
 import { nativeCodePattern, verifierPattern } from "../native-auth.ts";
 import { ApiError, apiErrorCodes, detailsOf } from "./errors.ts";
 
@@ -767,6 +768,21 @@ export const saveResultSchema = named(
   z.strictObject({ saved: z.boolean() }),
 );
 
+export const componentHitSchema = named(
+  "ComponentHit",
+  "Название компонента публичных велосипедов и число публичных велосипедов, на которых оно встречается.",
+  z.strictObject({
+    name: z.string(),
+    bikes: z.int(),
+  }),
+);
+
+export const componentHitListSchema = named(
+  "ComponentHitList",
+  "Подсказки по компонентам: короткий список по убыванию числа велосипедов, затем по названию. Не страницы: курсора нет.",
+  z.strictObject({ items: z.array(componentHitSchema) }),
+);
+
 export type Me = z.infer<typeof meSchema>;
 export type SessionGrant = z.infer<typeof sessionGrantSchema>;
 export type Profile = z.infer<typeof profileSchema>;
@@ -776,6 +792,7 @@ export type Relationship = z.infer<typeof relationshipSchema>;
 export type JournalSummary = z.infer<typeof journalSummarySchema>;
 export type JournalEntry = z.infer<typeof journalEntrySchema>;
 export type Comment = z.infer<typeof commentSchema>;
+export type ComponentHit = z.infer<typeof componentHitSchema>;
 export type RideSummary = z.infer<typeof rideSummarySchema>;
 export type Ride = z.infer<typeof rideSchema>;
 export type RideAnalysis = z.infer<typeof rideAnalysisSchema>;
@@ -873,6 +890,85 @@ export const commentsQuerySchema = z
   });
 export const parseCommentsQuery = (url: URL) =>
   parseQuery(url, commentsQuerySchema);
+
+/** A search text: trimmed, at most SEARCH_MAX characters, never a NUL byte. */
+const searchText = z
+  .string()
+  .trim()
+  .max(SEARCH_MAX)
+  .refine((value) => !value.includes("\0"), "Недопустимый символ");
+
+/** Lists of rides take a text as well: title, description, author and bike. */
+export const ridesQuerySchema = z.strictObject({
+  limit: pageQuerySchema.shape.limit,
+  cursor: pageQuerySchema.shape.cursor,
+  q: searchText.default(""),
+});
+export const parseRidesQuery = (url: URL) => parseQuery(url, ridesQuerySchema);
+
+const facetText = searchText.default("");
+/**
+ * The experience search (#315): the text and facets of the site's search
+ * (spelling rules of the catalog, brand, model, year, purpose, component,
+ * classification), with a cursor instead of a page. Unknown and repeated
+ * parameters are errors.
+ */
+export const experienceQuerySchema = z.strictObject({
+  ...classificationQueryShape,
+  category: z.enum(["", ...Object.keys(categoryFilterLabels)]).default(""),
+  q: facetText,
+  exact: z.enum(["", "1"]).default(""),
+  brand: facetText,
+  model: facetText,
+  component: facetText,
+  componentCategory: facetText,
+  bikeModelId: z.union([z.literal(""), z.uuid()]).default(""),
+  componentModelId: z.union([z.literal(""), z.uuid()]).default(""),
+  year: z
+    .union([
+      z.literal(""),
+      z
+        .string()
+        .regex(/^\d{4}$/, "Ожидается год")
+        .transform(Number)
+        .pipe(z.int().min(1900).max(2100)),
+    ])
+    .default(""),
+  purpose: z
+    .string()
+    .regex(/^[a-z0-9_-]{0,30}$/)
+    .default(""),
+  kind: z
+    .enum(["", "build", "service", "review", "question", "story"])
+    .default(""),
+  similar: z.union([z.literal(""), z.uuid()]).default(""),
+  limit: pageQuerySchema.shape.limit,
+  cursor: pageQuerySchema.shape.cursor,
+});
+export const parseExperienceQuery = (url: URL) =>
+  parseQuery(url, experienceQuerySchema);
+
+/** People search: a text is required (a search, not a directory). */
+export const usersSearchQuerySchema = z.strictObject({
+  q: searchText.min(1),
+  limit: pageQuerySchema.shape.limit,
+  cursor: pageQuerySchema.shape.cursor,
+});
+export const parseUsersSearchQuery = (url: URL) =>
+  parseQuery(url, usersSearchQuerySchema);
+
+/** Component suggestions: a text is required, the list is short. */
+export const componentSearchQuerySchema = z.strictObject({
+  q: searchText.min(1),
+  limit: z
+    .string()
+    .regex(/^\d{1,2}$/, "Ожидается целое число")
+    .transform(Number)
+    .pipe(z.int().min(1).max(24))
+    .default(12),
+});
+export const parseComponentSearchQuery = (url: URL) =>
+  parseQuery(url, componentSearchQuerySchema);
 
 /**
  * `{ref}` of /users: a UUID (36 characters) or a username (3 to 30), so the two

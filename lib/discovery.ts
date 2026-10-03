@@ -59,6 +59,25 @@ const literalMatch = (expression: string) =>
 const thumb = (id: string | null) =>
   id ? `/api/photos/${id}?width=160` : null;
 
+/**
+ * Component names of public bikes that contain the text, with the number of
+ * public bikes that carry each: the suggestions behind a search box (API v1,
+ * #315). Same literal, case and form insensitive match as the site search;
+ * ordered by popularity, then by name. A short list, not a paged one.
+ */
+export async function componentHits(q: Queryable, text: string, limit: number) {
+  return (
+    await q.query<{ name: string; bikes: number }>(
+      `SELECT min(p.name) AS name,count(DISTINCT b.id)::int AS bikes
+       FROM components p JOIN bikes b ON b.id=p.bike_id JOIN users u ON u.id=b.owner_id
+       WHERE b.is_public AND NOT u.blocked AND ${literalMatch("p.name")}
+       GROUP BY lower(normalize(p.name,NFKC))
+       ORDER BY bikes DESC,name LIMIT $2`,
+      [text, limit],
+    )
+  ).rows;
+}
+
 export async function discoverySearch(q: Queryable, input: DiscoveryInput) {
   const term = input.q || input.component;
   const params = [term];

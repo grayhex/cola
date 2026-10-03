@@ -215,6 +215,7 @@ export async function visibleBikePage(
     limit,
     after,
     ownerId = null,
+    refine,
   }: {
     scope: "public" | "mine";
     categories: string[];
@@ -223,6 +224,12 @@ export async function visibleBikePage(
     after: BikeCursor | null;
     /** Only this owner's bikes (a profile page), still by the public rule. */
     ownerId?: string | null;
+    /**
+     * More conditions on `b` and `u`, appended with AND: it receives the
+     * parameter list, pushes its own values and returns SQL (" AND …") or "".
+     * The experience search (#315) narrows the same page this way.
+     */
+    refine?: (params: unknown[]) => string;
   },
   context?: { site: SiteDefinitionType },
 ): Promise<{ bikes: SocialBike[]; next: BikeCursor | null }> {
@@ -250,6 +257,7 @@ export async function visibleBikePage(
   const where =
     " FROM bikes b JOIN users u ON u.id=b.owner_id WHERE " +
     clauses.join(" AND ") +
+    (refine ? refine(params) : "") +
     classificationWhere({}, params, categories);
   const result = await q.query<CardRow & { cursor_at: string }>(
     "SELECT b.*,to_char(b.created_at AT TIME ZONE 'UTC','YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"') AS cursor_at" +

@@ -739,6 +739,8 @@ test("OpenAPI: documents exactly the implemented operations, every $ref resolves
       "Comment",
       "CommentPage",
       "CommentThread",
+      "ComponentHit",
+      "ComponentHitList",
       "CreateSessionRequest",
       "DeviceInput",
       "EntryPhoto",

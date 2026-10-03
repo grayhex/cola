@@ -7,7 +7,9 @@ import { z } from "zod";
 import { getSite } from "./site.ts";
 import { showcase } from "./showcase.ts";
 import { journalCards } from "./journal-discovery.ts";
-import { journalPublic, journalFrom } from "./journal.ts";
+import { journalColumns, journalFrom, journalPublic } from "./journal.ts";
+import type { JournalViewRow } from "./journal.ts";
+import { authorColumns, relationshipColumns } from "./profiles.ts";
 import { publicAuthor } from "./profile-dto.ts";
 import { CommunityError } from "./community-validation.ts";
 const term = z
@@ -168,6 +170,37 @@ type SearchPage<K extends SearchInput["type"], I> = {
   pageSize: number;
   type: K;
 };
+/**
+ * The bike a "similar" search starts from: its brand, model and purpose narrow
+ * the search, and its category is kept to compare with. A private, blocked or
+ * missing bike is a 404. Useful for unnamed custom builds too: category and
+ * purpose, no fabricated model.
+ */
+export async function resolveSimilar(q: Queryable, input: SearchInput) {
+  if (!input.similar) return { input, category: null as string | null };
+  const b = (
+    await q.query<{
+      brand: string;
+      model: string;
+      category: string;
+      purposes: string[];
+      id: string;
+    }>(
+      "SELECT b.brand,b.model,b.category,b.purposes,b.id FROM bikes b JOIN users u ON u.id=b.owner_id WHERE b.id=$1 AND b.is_public AND NOT u.blocked",
+      [input.similar],
+    )
+  ).rows[0];
+  if (!b) throw new CommunityError("Велосипед недоступен", 404);
+  return {
+    input: {
+      ...input,
+      brand: b.model ? b.brand : "",
+      model: b.model || "",
+      purpose: b.purposes[0] || "",
+    },
+    category: b.category as string | null,
+  };
+}
 export type ExperienceSearchResult =
   | SearchPage<"users", NonNullable<ReturnType<typeof publicAuthor>>>
   | SearchPage<"journal", Awaited<ReturnType<typeof journalCards>>[number]>
@@ -199,30 +232,9 @@ export async function searchExperience(
 ): Promise<ExperienceSearchResult> {
   const site = await getSite(q),
     params: unknown[] | undefined = [];
-  let similarCategory: string | null = null;
-  if (input.similar) {
-    const b = (
-      await q.query<{
-        brand: string;
-        model: string;
-        category: string;
-        purposes: string[];
-        id: string;
-      }>(
-        "SELECT b.brand,b.model,b.category,b.purposes,b.id FROM bikes b JOIN users u ON u.id=b.owner_id WHERE b.id=$1 AND b.is_public AND NOT u.blocked",
-        [input.similar],
-      )
-    ).rows[0];
-    if (!b) throw new CommunityError("Велосипед недоступен", 404);
-    // Useful for unnamed custom builds too: category/purpose, no fabricated model.
-    input = {
-      ...input,
-      brand: b.model ? b.brand : "",
-      model: b.model || "",
-      purpose: b.purposes[0] || "",
-    };
-    similarCategory = b.category;
-  }
+  const resolved = await resolveSimilar(q, input);
+  input = resolved.input;
+  const similarCategory = resolved.category;
   let from, where;
   if (input.type === "users") {
     params.push(input.q);
@@ -328,3 +340,130 @@ export async function searchExperience(
 }
 
 export type SearchInput = z.infer<typeof searchInput>;
+
+// ── API v1 (#315): the experience search by keyset ───────────────────────
+
+export interface ExperienceCursor {
+  createdAt: string;
+  id: string;
+}
+const microseconds = (column: string) =>
+  `to_char(${column} AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"')`;
+
+/**
+ * The conditions of the bike experience search for `visibleBikePage`: the
+ * spelling rules of the catalog, facets and the "similar" bike. The page rule
+ * and the order (`created_at DESC, id DESC`) stay those of /bikes.
+ */
+export async function experienceBikeRefine(q: Queryable, input: SearchInput) {
+  const site = await getSite(q);
+  const resolved = await resolveSimilar(q, input);
+  return (params: unknown[]) => {
+    let sql = experienceFilter(site.catalog, resolved.input, params);
+    if (input.similar) {
+      params.push(input.similar);
+      sql += " AND b.id<>$" + params.length;
+      if (resolved.category) {
+        params.push(resolved.category);
+        sql += " AND b.category=$" + params.length;
+      }
+    }
+    return sql;
+  };
+}
+
+/**
+ * Public journal entries matching the experience search, newest published
+ * first: `(coalesce(published_at, created_at), id) DESC`. The rows are the full `journalColumns`
+ * rows, so the same mapper as /bikes/{id}/journal builds the cards.
+ */
+export async function experienceJournalKeyset(
+  q: Queryable,
+  viewer: string | null,
+  input: SearchInput,
+  limit: number,
+  after: ExperienceCursor | null,
+) {
+  const site = await getSite(q);
+  const resolved = await resolveSimilar(q, input);
+  // An entry published before the date was kept stands by its creation.
+  const published = "coalesce(e.published_at,e.created_at)";
+  // $1 is unused by the columns; typing it keeps PostgreSQL from guessing.
+  const params: unknown[] = [null, viewer];
+  let where = ` WHERE $1::uuid IS NULL AND ${journalPublic}${experienceFilter(site.catalog, resolved.input, params, true)}`;
+  if (input.similar) {
+    params.push(input.similar);
+    where += " AND b.id<>$" + params.length;
+    if (resolved.category) {
+      params.push(resolved.category);
+      where += " AND b.category=$" + params.length;
+    }
+  }
+  if (after) {
+    params.push(after.createdAt, after.id);
+    where += ` AND (${published},e.id)<($${params.length - 1}::timestamptz,$${params.length}::uuid)`;
+  }
+  params.push(limit + 1);
+  const result = await q.query<JournalViewRow & { cursor_at: string }>(
+    `SELECT ${journalColumns},${microseconds(published)} AS cursor_at${journalFrom}${where}
+     ORDER BY ${published} DESC,e.id DESC LIMIT $${params.length}`,
+    params,
+  );
+  const rows = result.rows.slice(0, limit);
+  const last = rows[rows.length - 1];
+  return {
+    rows,
+    next:
+      result.rows.length > limit && last
+        ? { createdAt: last.cursor_at, id: last.id }
+        : null,
+  };
+}
+
+/**
+ * People whose name or username contains the text, newest accounts first:
+ * `(created_at, id) DESC`. The legacy list is by name; a name is no stable
+ * key for a cursor, and a cursor made of the registration time is the one the
+ * other lists already use. Blocked people never appear. The text is required
+ * by the caller: this is a search, not a directory.
+ */
+export async function experienceUserKeyset(
+  q: Queryable,
+  viewer: string | null,
+  text: string,
+  limit: number,
+  after: ExperienceCursor | null,
+) {
+  const params: unknown[] = [text, viewer];
+  let keyset = "";
+  if (after) {
+    params.push(after.createdAt, after.id);
+    keyset = ` AND (u.created_at,u.id)<($${params.length - 1}::timestamptz,$${params.length}::uuid)`;
+  }
+  params.push(limit + 1);
+  const result = await q.query<{
+    id: string;
+    username: string;
+    name: string;
+    avatar_id: string | null;
+    is_self: boolean;
+    is_following: boolean;
+    followed_by: boolean;
+    cursor_at: string;
+  }>(
+    `SELECT ${authorColumns},${relationshipColumns},${microseconds("u.created_at")} AS cursor_at
+     FROM users u
+     WHERE NOT u.blocked AND strpos(experience_normalize(u.name||' '||u.username),experience_normalize($1::text))>0${keyset}
+     ORDER BY u.created_at DESC,u.id DESC LIMIT $${params.length}`,
+    params,
+  );
+  const rows = result.rows.slice(0, limit);
+  const last = rows[rows.length - 1];
+  return {
+    rows,
+    next:
+      result.rows.length > limit && last
+        ? { createdAt: last.cursor_at, id: last.id }
+        : null,
+  };
+}
