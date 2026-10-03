@@ -9,6 +9,7 @@ import { testConsents } from "./fixtures/legal.js";
 import { verifyCapturedEmail } from "./fixtures/verified-user.js";
 import {
   errorSchema,
+  feedPageSchema,
   journalPageSchema,
   marketPageSchema,
   notificationCountSchema,
@@ -460,6 +461,125 @@ try {
     "upcoming takes no parameters",
   );
   assert.ok(!accepted.text.includes("@example.test"));
+
+  // The feed: what a followed person publishes, newest first.
+  const feedAuthor = await member("feed-author");
+  assert.equal(
+    (await me.token(`/users/${feedAuthor.username}/follow`, { method: "PUT" }))
+      .status,
+    200,
+  );
+  const feedBike = (
+    await feedAuthor.web("/bikes", "POST", bikeBody("Лента " + run))
+  ).body.id;
+  const feedEntry = randomUUID();
+  await db.query(
+    `INSERT INTO journal_entries(id,share_id,owner_id,bike_id,kind,title,body,status,is_public,event_date,mileage,components,created_at,updated_at,published_at)
+     VALUES($1,$2,$3,$4,'build','Запись ленты','Текст','published',true,'2026-08-30',100,'[]'::jsonb,now(),now(),now()+interval '1 minute')`,
+    [feedEntry, randomUUID(), feedAuthor.id, feedBike],
+  );
+  const feedRide = await addRide(feedAuthor.id, feedBike, {
+    startedAt: hours(-5),
+  });
+  await db.query(
+    "UPDATE rides SET published_at=now()+interval '2 minutes' WHERE id=$1",
+    [feedRide],
+  );
+  const feedListing = randomUUID();
+  await db.query(
+    `INSERT INTO market_listings(id,share_id,owner_id,title,description,category,condition,price,currency,location,contact,status,listing_type,published_at,expires_at)
+     VALUES($1,$2,$3,$4,'Описание','components','used',100,'RUB','Москва','tg: @x','active','sale',now()+interval '3 minutes',now()+interval '30 days')`,
+    [feedListing, randomUUID(), feedAuthor.id, "Лот ленты " + run],
+  );
+  assertError(await guest("/me/feed"), 401, "unauthorized", "guest feed");
+  const feed = await me.token("/me/feed");
+  assert.equal(feed.status, 200, feed.text);
+  feedPageSchema.parse(feed.body);
+  const feedIds = feed.body.items.map(
+    (item) => (item.bike ?? item.ride ?? item.journal ?? item.listing).id,
+  );
+  assert.deepEqual(
+    feedIds,
+    [feedListing, feedRide, feedEntry, feedBike],
+    "newest first",
+  );
+  assert.deepEqual(
+    feed.body.items.map((item) => item.type),
+    ["market", "ride", "journal", "bike"],
+  );
+  assert.ok(
+    feed.body.items.every(
+      (item) =>
+        [item.bike, item.ride, item.journal, item.listing].filter(Boolean)
+          .length === 1,
+    ),
+  );
+  assert.ok(
+    !feed.text.includes("contact") && !feed.text.includes("@example.test"),
+  );
+  assert.deepEqual((await me.cookie("/me/feed")).body, feed.body);
+  const feedWalk = [];
+  let feedCursor = null;
+  for (let guardian = 0; guardian < 8; guardian++) {
+    const r = await me.token(
+      "/me/feed?limit=1" + (feedCursor ? "&cursor=" + feedCursor : ""),
+    );
+    assert.equal(r.status, 200, r.text);
+    feedWalk.push(
+      ...r.body.items.map(
+        (item) => (item.bike ?? item.ride ?? item.journal ?? item.listing).id,
+      ),
+    );
+    if (!r.body.nextCursor) break;
+    feedCursor = r.body.nextCursor;
+  }
+  assert.deepEqual(feedWalk, feedIds);
+  const onlyRides = await me.token("/me/feed?type=rides");
+  assert.deepEqual(
+    onlyRides.body.items.map((item) => item.type),
+    ["ride"],
+  );
+  const onlyJournal = await me.token("/me/feed?type=journal");
+  assert.deepEqual(
+    onlyJournal.body.items.map((item) => item.type),
+    ["journal"],
+  );
+  assert.deepEqual((await stranger.token("/me/feed")).body.items, []);
+  assertError(
+    await me.token("/me/feed?type=market"),
+    400,
+    "invalid_request",
+    "feed type",
+  );
+  assertError(
+    await me.token("/me/feed?mode=new"),
+    400,
+    "invalid_request",
+    "feed mode",
+  );
+  assertError(
+    await me.token("/me/feed?cursor=garbage"),
+    400,
+    "invalid_request",
+    "feed cursor",
+  );
+  // A bike made private takes its entries and rides out of the feed.
+  await db.query("UPDATE bikes SET is_public=false WHERE id=$1", [feedBike]);
+  assert.deepEqual(
+    (await me.token("/me/feed")).body.items.map((item) => item.type),
+    ["market"],
+  );
+  await db.query("UPDATE bikes SET is_public=true WHERE id=$1", [feedBike]);
+  // Stop following: an empty feed.
+  assert.equal(
+    (
+      await me.token(`/users/${feedAuthor.username}/follow`, {
+        method: "DELETE",
+      })
+    ).status,
+    200,
+  );
+  assert.deepEqual((await me.token("/me/feed")).body.items, []);
 
   // Methods and credentials.
   assertError(

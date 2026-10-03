@@ -1,5 +1,6 @@
 import { db } from "../db.ts";
 import { savedKeysetPage } from "../journal-discovery.ts";
+import { feedKeysetPage } from "../ride-feed.ts";
 import { savedApiKeysetPage } from "../market.ts";
 import { notificationKeysetPage, unreadCount } from "../notifications.ts";
 import { myUpcomingEntries, ownRideKeysetPage } from "../rides.ts";
@@ -8,13 +9,14 @@ import { decodeCursor, encodeCursor } from "./cursor.ts";
 import { ApiError } from "./errors.ts";
 import {
   toJournalSummary,
+  toFeedItem,
   toMarketListing,
   toMyUpcomingRide,
   toNotification,
   toOwnRideSummary,
 } from "./mappers.ts";
 import { ok, safely } from "./respond.ts";
-import { parseNoQuery, parsePageQuery } from "./schemas.ts";
+import { parseFeedQuery, parseNoQuery, parsePageQuery } from "./schemas.ts";
 import { authenticate } from "./viewer.ts";
 
 // Personal reads of /api/v1 (#321): only for the person asking, so a guest is
@@ -114,5 +116,23 @@ export function handleMyUpcomingRides(req: Request) {
     parseNoQuery(new URL(req.url));
     const entries = await myUpcomingEntries(db, viewer.id);
     return ok({ items: entries.map((e) => toMyUpcomingRide(e, viewer.id)) });
+  });
+}
+
+/** GET /api/v1/me/feed */
+export function handleFeed(req: Request) {
+  return safely(async () => {
+    const viewer = await signedIn(req);
+    const query = parseFeedQuery(new URL(req.url));
+    const after = query.cursor ? decodeCursor(query.cursor) : null;
+    const page = await feedKeysetPage(db, viewer.id, {
+      type: query.type,
+      limit: query.limit,
+      after,
+    });
+    return ok({
+      items: page.items.map((entry) => toFeedItem(entry, viewer.id)),
+      nextCursor: page.next ? encodeCursor(page.next) : null,
+    });
   });
 }

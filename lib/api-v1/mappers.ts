@@ -12,6 +12,7 @@ import type {
 } from "../ride-analysis-contract.ts";
 import { bounds } from "../ride-geometry.ts";
 import type { marketApiCard } from "../market.ts";
+import type { FeedEntry } from "../ride-feed.ts";
 import type { notificationCard } from "../notifications.ts";
 import { meetingVisible, shownMetrics } from "../rides.ts";
 import type { myUpcomingEntries } from "../rides.ts";
@@ -24,6 +25,7 @@ import type {
   BikeSummary,
   Comment,
   ComponentModel,
+  FeedItem,
   ComponentPhoto,
   JournalEntry,
   JournalSummary,
@@ -423,6 +425,28 @@ export function toMyUpcomingRide(
     meetingPoint: shown && view.meeting_point ? view.meeting_point : null,
     meetingHidden: !shown && !!view.meeting_point,
   };
+}
+
+/** A publication of the feed: the card of its kind, the other three null. */
+export function toFeedItem(entry: FeedEntry, viewer: string): FeedItem {
+  const base = {
+    publishedAt: instantOf(entry.at) ?? "",
+    bike: null,
+    ride: null,
+    journal: null,
+    listing: null,
+  };
+  if (entry.kind === "bike")
+    return { ...base, type: "bike", bike: toBikeSummary(entry.bike) };
+  if (entry.kind === "ride")
+    return { ...base, type: "ride", ride: toRideSummary(entry.ride, viewer) };
+  if (entry.kind === "journal")
+    return {
+      ...base,
+      type: "journal",
+      journal: toJournalSummary(entry.entry, viewer),
+    };
+  return { ...base, type: "market", listing: toMarketListing(entry.listing) };
 }
 
 const passportRanges = [

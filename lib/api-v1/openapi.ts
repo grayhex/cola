@@ -9,6 +9,7 @@ import {
   marketQuerySchema,
   componentSearchQuerySchema,
   experienceQuerySchema,
+  feedQuerySchema,
   schemaRegistry,
   usersSearchQuerySchema,
 } from "./schemas.ts";
@@ -173,6 +174,9 @@ const marketNotes: Record<string, string> = {
   seller:
     "Username продавца: объявления одного человека. Неизвестный и заблокированный продавец — 404.",
   sort: "`new` — новые сверху (по умолчанию), `price_asc` — дешевле сверху, `price_desc` — дороже сверху; объявления без цены в конце. Курсор одного порядка в другом — 400.",
+};
+const feedNotes: Record<string, string> = {
+  type: "`all` — всё; `rides` — только покатушки; `journal` — только записи журнала.",
 };
 const refs = (...names: string[]) =>
   names.map((name) => ({ $ref: `#/components/parameters/${name}` }));
@@ -380,6 +384,31 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
             "200": success("Текущий пользователь.", "Me"),
             "400": failure(
               "Одновременно cookie сессии и заголовок Authorization.",
+            ),
+            "401": failure(
+              "Нет входа, сессия или токен недействительны, токен доступа истёк (`token_expired`) либо схема Authorization не поддерживается.",
+            ),
+            "500": shared("InternalError"),
+          },
+        },
+      },
+      "/me/feed": {
+        get: {
+          operationId: "getFeed",
+          tags: ["Personal"],
+          summary: "Моя лента",
+          description:
+            "Публикации тех, на кого подписан человек, и велосипедов, за которыми он следит: велосипеды, покатушки, записи журнала и объявления, новые сверху, курсор по `(время публикации, id)`. `type`: `all` (по умолчанию), `rides` или `journal`. Покатушка, к которой есть публичная запись журнала, в `all` не повторяется отдельной карточкой (есть запись). Отменённых покатушек нет. Каждая страница читается заново по видимости зрителя: скрытое между страницами не показывается. В каждом элементе заполнено одно поле из `bike`, `ride`, `journal`, `listing`.",
+          security: [{ cookieSession: [] }, { bearerAuth: [] }],
+          parameters: queryParameters(
+            feedQuerySchema,
+            ["limit", "cursor"],
+            feedNotes,
+          ).concat(refs("Limit", "Cursor")),
+          responses: {
+            "200": success("Страница ленты.", "FeedPage"),
+            "400": failure(
+              "Неверный или повторённый параметр, неверный курсор либо cookie вместе с Authorization.",
             ),
             "401": failure(
               "Нет входа, сессия или токен недействительны, токен доступа истёк (`token_expired`) либо схема Authorization не поддерживается.",

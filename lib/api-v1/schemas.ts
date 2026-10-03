@@ -1130,6 +1130,33 @@ export const notificationCountSchema = named(
   z.strictObject({ unread: z.int(), capped: z.boolean() }),
 );
 
+export const feedItemSchema = named(
+  "FeedItem",
+  "Публикация в ленте: ровно одно из полей `bike`, `ride`, `journal`, `listing` заполнено, остальные null; какое — говорит `type`. Это те же карточки, что в списках (`BikeSummary`, `RideSummary`, `JournalSummary`, `MarketListing`).",
+  z.strictObject({
+    type: z.enum(["bike", "ride", "journal", "market"]),
+    publishedAt: instant.describe(
+      "Когда опубликовано: по этому времени лента упорядочена.",
+    ),
+    bike: bikeSummarySchema.nullable(),
+    ride: rideSummarySchema.nullable(),
+    journal: journalSummarySchema.nullable(),
+    listing: marketListingSchema.nullable(),
+  }),
+);
+
+export const feedPageSchema = named(
+  "FeedPage",
+  "Страница ленты, новые сверху. Лента состоит из публикаций тех, на кого подписан человек (и велосипедов, за которыми он следит); страница читается заново по видимости зрителя, поэтому скрытое между страницами не показывается.",
+  z.strictObject({
+    items: z.array(feedItemSchema),
+    nextCursor: z
+      .string()
+      .nullable()
+      .describe("Курсор следующей страницы или null, если страниц больше нет."),
+  }),
+);
+
 export type Me = z.infer<typeof meSchema>;
 export type SessionGrant = z.infer<typeof sessionGrantSchema>;
 export type Profile = z.infer<typeof profileSchema>;
@@ -1145,6 +1172,7 @@ export type ComponentPhoto = z.infer<typeof componentPhotoSchema>;
 export type RideSummary = z.infer<typeof rideSummarySchema>;
 export type OwnRideSummary = z.infer<typeof ownRideSummarySchema>;
 export type MyUpcomingRide = z.infer<typeof myUpcomingRideSchema>;
+export type FeedItem = z.infer<typeof feedItemSchema>;
 export type Ride = z.infer<typeof rideSchema>;
 export type RideAnalysis = z.infer<typeof rideAnalysisSchema>;
 export type AccountSession = z.infer<typeof accountSessionSchema>;
@@ -1230,6 +1258,14 @@ export const pageQuerySchema = z.strictObject({
   cursor: listQuerySchema.shape.cursor,
 });
 export const parsePageQuery = (url: URL) => parseQuery(url, pageQuerySchema);
+
+/** The feed: which publications, with a cursor. */
+export const feedQuerySchema = z.strictObject({
+  type: z.enum(["all", "rides", "journal"]).default("all"),
+  limit: pageQuerySchema.shape.limit,
+  cursor: pageQuerySchema.shape.cursor,
+});
+export const parseFeedQuery = (url: URL) => parseQuery(url, feedQuerySchema);
 
 /** Comments add `focus`, a deep link to one comment; it replaces paging. */
 export const commentsQuerySchema = z
