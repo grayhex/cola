@@ -93,7 +93,7 @@ export async function unreadCount(q: Queryable, id: string, now = new Date()) {
   );
   return { unread: r.rows.length, capped: r.rows.length === 100 };
 }
-interface NotificationRow {
+export interface NotificationRow {
   id: string;
   type: string;
   created_at: Date;
@@ -128,6 +128,114 @@ interface NotificationRow {
   name: string;
   avatar_id: string;
 }
+// One notice as the site and the API show it: the text follows what the
+// notice is about now, and the address is a path on the site.
+export function notificationCard(n: NotificationRow) {
+  return n.type === "session_reuse"
+    ? {
+        id: n.id,
+        type: "session_reuse" as const,
+        createdAt: n.created_at,
+        readAt: n.read_at,
+        actor: null,
+        target: {
+          type: "account" as const,
+          id: n.id,
+          name: "Безопасность аккаунта",
+          href: "/account?tab=account",
+        },
+      }
+    : n.type === "bike_week"
+      ? {
+          id: n.id,
+          type: "bike_week" as const,
+          createdAt: n.created_at,
+          readAt: n.read_at,
+          actor: null,
+          target: {
+            type: "bike-week" as const,
+            id: n.bike_id,
+            name: n.bike_name,
+            href: "/account?tab=spotlight",
+          },
+        }
+      : n.type === "market_expiring"
+        ? marketNotice(n)
+        : {
+            id: n.id,
+            type:
+              n.entry_kind === "article"
+                ? n.type.replace("journal_", "article_")
+                : n.type,
+            createdAt: n.created_at,
+            readAt: n.read_at,
+            actor: n.actor_id
+              ? publicAuthor({
+                  id: n.actor_id,
+                  username: n.username,
+                  name: n.name,
+                  avatar_id: n.avatar_id,
+                })
+              : null,
+            target:
+              n.type === "component_reply"
+                ? {
+                    type: "component",
+                    id: n.component_id,
+                    name: n.component_name,
+                    href:
+                      partLandingPath(n.category_slug, n.slug) +
+                      "?comment=" +
+                      n.component_comment_id +
+                      "#discussion",
+                  }
+                : n.type.startsWith("journal_")
+                  ? {
+                      type: n.entry_kind === "article" ? "article" : "journal",
+                      id: n.entry_id,
+                      name: n.entry_title,
+                      href:
+                        (n.entry_kind === "article" ? "/articles/" : "/j/") +
+                        n.entry_share +
+                        (n.entry_comment_id
+                          ? "?comment=" + n.entry_comment_id + "#discussion"
+                          : ""),
+                    }
+                  : n.type.startsWith("ride_")
+                    ? {
+                        type: "ride",
+                        id: n.ride_id,
+                        name: n.ride_title,
+                        href:
+                          "/r/" +
+                          n.ride_share_id +
+                          (n.ride_comment_id
+                            ? "?comment=" + n.ride_comment_id + "#discussion"
+                            : ""),
+                      }
+                    : n.type === "follow"
+                      ? {
+                          type: "profile",
+                          id: n.actor_id,
+                          name: n.name,
+                          href: profilePath(n.username),
+                        }
+                      : {
+                          type: "bike",
+                          id: n.bike_id,
+                          name: n.bike_name,
+                          href:
+                            "/b/" +
+                            n.share_id +
+                            (n.comment_id
+                              ? "?comment=" + n.comment_id + "#discussion"
+                              : ""),
+                        },
+          };
+}
+// A function: the notice days come from market.ts, which imports this module.
+const notificationColumns = () =>
+  `n.id,n.type,n.created_at,n.read_at,n.comment_id,n.ride_comment_id,n.entry_comment_id,n.component_comment_id,cm.id component_id,cm.name component_name,cm.category_slug,cm.slug,ml.id AS listing_id,ml.share_id AS listing_share,ml.title AS listing_title,ml.status AS listing_status,ml.expires_at AS listing_expires,(ml.expires_at<=now()) AS listing_expired,(ml.expires_at<=now()+make_interval(days=>${expiryNoticeDays})) AS listing_due,e.id AS entry_id,e.kind AS entry_kind,e.share_id AS entry_share,e.title AS entry_title,r.id AS ride_id,r.share_id AS ride_share_id,r.title AS ride_title,b.id AS bike_id,b.share_id,b.name AS bike_name,a.id AS actor_id,a.username,a.name,a.avatar_id`;
 export async function notificationPage(
   q: Queryable,
   id: string,
@@ -136,7 +244,7 @@ export async function notificationPage(
   now = new Date(),
 ) {
   const r = await q.query<NotificationRow>(
-    `SELECT n.id,n.type,n.created_at,n.read_at,n.comment_id,n.ride_comment_id,n.entry_comment_id,n.component_comment_id,cm.id component_id,cm.name component_name,cm.category_slug,cm.slug,ml.id AS listing_id,ml.share_id AS listing_share,ml.title AS listing_title,ml.status AS listing_status,ml.expires_at AS listing_expires,(ml.expires_at<=now()) AS listing_expired,(ml.expires_at<=now()+make_interval(days=>${expiryNoticeDays})) AS listing_due,e.id AS entry_id,e.kind AS entry_kind,e.share_id AS entry_share,e.title AS entry_title,r.id AS ride_id,r.share_id AS ride_share_id,r.title AS ride_title,b.id AS bike_id,b.share_id,b.name AS bike_name,a.id AS actor_id,a.username,a.name,a.avatar_id` +
+    `SELECT ${notificationColumns()}` +
       from +
       " WHERE " +
       visible("$4::timestamptz") +
@@ -144,117 +252,42 @@ export async function notificationPage(
     [id, (page - 1) * 20, notificationId, now],
   );
   return {
-    notifications: r.rows.slice(0, 20).map((n) =>
-      n.type === "session_reuse"
-        ? {
-            id: n.id,
-            type: "session_reuse" as const,
-            createdAt: n.created_at,
-            readAt: n.read_at,
-            actor: null,
-            target: {
-              type: "account" as const,
-              id: n.id,
-              name: "Безопасность аккаунта",
-              href: "/account?tab=account",
-            },
-          }
-        : n.type === "bike_week"
-          ? {
-              id: n.id,
-              type: "bike_week" as const,
-              createdAt: n.created_at,
-              readAt: n.read_at,
-              actor: null,
-              target: {
-                type: "bike-week" as const,
-                id: n.bike_id,
-                name: n.bike_name,
-                href: "/account?tab=spotlight",
-              },
-            }
-          : n.type === "market_expiring"
-            ? marketNotice(n)
-            : {
-                id: n.id,
-                type:
-                  n.entry_kind === "article"
-                    ? n.type.replace("journal_", "article_")
-                    : n.type,
-                createdAt: n.created_at,
-                readAt: n.read_at,
-                actor: n.actor_id
-                  ? publicAuthor({
-                      id: n.actor_id,
-                      username: n.username,
-                      name: n.name,
-                      avatar_id: n.avatar_id,
-                    })
-                  : null,
-                target:
-                  n.type === "component_reply"
-                    ? {
-                        type: "component",
-                        id: n.component_id,
-                        name: n.component_name,
-                        href:
-                          partLandingPath(n.category_slug, n.slug) +
-                          "?comment=" +
-                          n.component_comment_id +
-                          "#discussion",
-                      }
-                    : n.type.startsWith("journal_")
-                      ? {
-                          type:
-                            n.entry_kind === "article" ? "article" : "journal",
-                          id: n.entry_id,
-                          name: n.entry_title,
-                          href:
-                            (n.entry_kind === "article"
-                              ? "/articles/"
-                              : "/j/") +
-                            n.entry_share +
-                            (n.entry_comment_id
-                              ? "?comment=" + n.entry_comment_id + "#discussion"
-                              : ""),
-                        }
-                      : n.type.startsWith("ride_")
-                        ? {
-                            type: "ride",
-                            id: n.ride_id,
-                            name: n.ride_title,
-                            href:
-                              "/r/" +
-                              n.ride_share_id +
-                              (n.ride_comment_id
-                                ? "?comment=" +
-                                  n.ride_comment_id +
-                                  "#discussion"
-                                : ""),
-                          }
-                        : n.type === "follow"
-                          ? {
-                              type: "profile",
-                              id: n.actor_id,
-                              name: n.name,
-                              href: profilePath(n.username),
-                            }
-                          : {
-                              type: "bike",
-                              id: n.bike_id,
-                              name: n.bike_name,
-                              href:
-                                "/b/" +
-                                n.share_id +
-                                (n.comment_id
-                                  ? "?comment=" + n.comment_id + "#discussion"
-                                  : ""),
-                            },
-              },
-    ),
+    notifications: r.rows.slice(0, 20).map(notificationCard),
     page,
     hasMore: r.rows.length > 20,
     ...(await unreadCount(q, id, now)),
+  };
+}
+/**
+ * The same notices and the same visibility rule as `notificationPage`, by
+ * `(created_at DESC, id)` and a cursor instead of OFFSET (API v1, #321).
+ */
+export async function notificationKeysetPage(
+  q: Queryable,
+  recipient: string,
+  limit: number,
+  after: { createdAt: string; id: string } | null,
+  now = new Date(),
+) {
+  const rows = (
+    await q.query<NotificationRow & { cursor_at: string }>(
+      `SELECT ${notificationColumns()},to_char(n.created_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') cursor_at` +
+        from +
+        " WHERE " +
+        visible("$2::timestamptz") +
+        " AND ($3::timestamptz IS NULL OR n.created_at<$3::timestamptz OR (n.created_at=$3::timestamptz AND n.id>$4::uuid))" +
+        " ORDER BY n.created_at DESC,n.id LIMIT $5",
+      [recipient, now, after?.createdAt ?? null, after?.id ?? null, limit + 1],
+    )
+  ).rows;
+  const page = rows.slice(0, limit),
+    last = page[page.length - 1];
+  return {
+    items: page.map(notificationCard),
+    next:
+      rows.length > limit && last
+        ? { createdAt: last.cursor_at, id: last.id }
+        : null,
   };
 }
 // The listing's state is read now, not stored with the notice: the text
@@ -274,12 +307,12 @@ function marketNotice(n: NotificationRow) {
       expiresAt: n.listing_expires,
       state:
         n.listing_status !== "active"
-          ? "closed"
+          ? ("closed" as const)
           : n.listing_expired
-            ? "expired"
+            ? ("expired" as const)
             : n.listing_due
-              ? "expiring"
-              : "extended",
+              ? ("expiring" as const)
+              : ("extended" as const),
     },
   };
 }

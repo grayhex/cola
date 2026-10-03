@@ -12,6 +12,7 @@ import type {
 } from "../ride-analysis-contract.ts";
 import { bounds } from "../ride-geometry.ts";
 import type { marketApiCard } from "../market.ts";
+import type { notificationCard } from "../notifications.ts";
 import { meetingVisible, shownMetrics } from "../rides.ts";
 import { plannedEnd } from "../ride-plan.ts";
 import { richExcerpt } from "../rich-text.ts";
@@ -28,6 +29,8 @@ import type {
   MarketListing,
   MarketListingDetail,
   Me,
+  Notification,
+  NotificationTarget,
   Profile,
   Relationship,
   Ride,
@@ -494,6 +497,41 @@ export function toMarketListingDetail(
   card: ReturnType<typeof marketApiCard> & { saved: boolean },
 ): MarketListingDetail {
   return { ...toMarketListing(card), saved: card.saved };
+}
+
+/**
+ * A notice. The card the site builds already follows the visibility rule at
+ * read time; here its fields are picked by name, and the site address becomes
+ * `path`.
+ */
+export function toNotification(
+  card: ReturnType<typeof notificationCard>,
+): Notification {
+  const target: {
+    type: string;
+    id: string;
+    name: string;
+    href: string;
+    expiresAt?: Date;
+    state?: NotificationTarget["state"];
+  } = card.target;
+  return {
+    id: card.id,
+    type: card.type,
+    createdAt: instantOf(card.createdAt) ?? "",
+    readAt: instantOf(card.readAt),
+    actor: toAuthor(card.actor),
+    target: {
+      type: target.type,
+      id: target.id,
+      name: target.name,
+      path: target.href,
+      ...(target.expiresAt
+        ? { expiresAt: instantOf(target.expiresAt) ?? "" }
+        : {}),
+      ...(target.state ? { state: target.state } : {}),
+    },
+  };
 }
 
 /** A catalog model by name: the page's own fields, nothing of the installations. */
