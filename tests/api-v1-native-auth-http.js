@@ -8,7 +8,8 @@ import pg from "pg";
 import { testConsents } from "./fixtures/legal.js";
 
 const base = process.env.TEST_ORIGIN || "http://localhost:3100";
-const appLink = "https://app.colabike.test/auth/callback";
+// The production return path of the Android client.
+const appLink = "https://colabike.ru/app/auth";
 const db = new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 1 });
 const run = randomUUID().slice(0, 8);
 const encode = (value) =>
@@ -478,8 +479,38 @@ try {
     true,
   );
 
+  // ── The App Link is ours: Digital Asset Links for the Android client ───
+  // Public, JSON, no redirect, no cookie, no session, cacheable; the fixture
+  // fingerprint of the test run, the applicationId of the client (#325).
+  const links = await fetch(base + "/.well-known/assetlinks.json", {
+    redirect: "manual",
+  });
+  assert.equal(links.status, 200);
+  assert.match(links.headers.get("content-type") || "", /^application\/json/);
+  assert.match(links.headers.get("cache-control") || "", /public/);
+  assert.equal(links.headers.get("set-cookie"), null);
+  assert.deepEqual(await links.json(), [
+    {
+      relation: ["delegate_permission/common.handle_all_urls"],
+      target: {
+        namespace: "android_app",
+        package_name: "ru.colabike.app",
+        sha256_cert_fingerprints: [
+          "11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00",
+        ],
+      },
+    },
+  ]);
+  // Only the file the system asks for, and only to read.
+  assert.equal(
+    (await fetch(base + "/.well-known/assetlinks.json", { method: "POST" }))
+      .status,
+    405,
+  );
+  assert.equal((await fetch(base + "/.well-known/other.json")).status, 404);
+
   console.log(
-    "PASS: API v1 native sign-in: challenge, redirects to the app link, first sign-in, one-time code exchange and refusals.",
+    "PASS: API v1 native sign-in: challenge, redirects to the app link, first sign-in, one-time code exchange, refusals and asset links.",
   );
 } finally {
   await db.end();

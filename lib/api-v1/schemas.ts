@@ -1189,6 +1189,96 @@ export const editCommentRequestSchema = named(
   }),
 );
 
+export const chatTokenSchema = named(
+  "ChatToken",
+  "Всё, что нужно нативному клиенту Stream Chat, чтобы подключить человека: публичный ключ приложения, его профиль в чате и короткоживущий токен. Секрет приложения сюда никогда не попадает.",
+  z.strictObject({
+    apiKey: z.string().describe("Публичный ключ приложения Stream Chat."),
+    user: z.strictObject({
+      id: z
+        .string()
+        .describe(
+          "Идентификатор человека в Stream Chat (не идентификатор ColaBike).",
+        ),
+      name: z.string(),
+      image: z.string().nullable().describe("Полный адрес аватара или null."),
+    }),
+    token: z
+      .string()
+      .describe(
+        "JWT человека в Stream Chat; живёт недолго, при истечении запросите новый.",
+      ),
+    expiresAt: instant.describe("Когда токен перестаёт действовать."),
+    channelType: z
+      .string()
+      .describe(
+        "Тип каналов ColaBike в Stream Chat: с ним клиент открывает и создаёт каналы.",
+      ),
+  }),
+);
+
+export const createChatChannelRequestSchema = named(
+  "CreateChatChannelRequest",
+  "Новый канал. Личный диалог (`dm`): ровно один собеседник, без названия; повторный запрос откроет тот же диалог. Группа (`group`): название до 80 знаков и от 2 до 7 других участников. Нельзя включить себя, повторы, заблокированных и тех, у кого не подтверждена почта.",
+  z
+    .strictObject({
+      kind: z.enum(["dm", "group"]),
+      name: z.string().trim().min(1).max(80).optional(),
+      members: z
+        .array(id)
+        .min(1)
+        .max(7)
+        .describe("Другие участники (UUID людей ColaBike)."),
+    })
+    .superRefine((value, context) => {
+      if (
+        value.kind === "dm" &&
+        (value.members.length !== 1 || value.name !== undefined)
+      )
+        context.addIssue({
+          code: "custom",
+          path: [value.members.length !== 1 ? "members" : "name"],
+          message: "Для личного диалога нужен один собеседник и нет названия",
+        });
+      if (
+        value.kind === "group" &&
+        (value.name === undefined || value.members.length < 2)
+      )
+        context.addIssue({
+          code: "custom",
+          path: [value.name === undefined ? "name" : "members"],
+          message: "Для группы нужны название и не меньше двух участников",
+        });
+    }),
+);
+
+export const chatChannelSchema = named(
+  "ChatChannel",
+  "Созданный или открытый канал: `cid` вида `тип:id`, по нему клиент Stream Chat открывает канал.",
+  z.strictObject({ cid: z.string() }),
+);
+
+export const chatPeopleQuerySchema = z.strictObject({
+  q: z.string().trim().max(80).default(""),
+});
+export const parseChatPeopleQuery = (url: URL) =>
+  parseQuery(url, chatPeopleQuerySchema);
+
+export const chatPeopleSchema = named(
+  "ChatPeople",
+  "Кому можно написать. Без запроса — те, на кого подписан человек; с запросом (от 2 знаков) — поиск по имени и логину. Только подтверждённые и не заблокированные; право написать проверяется ещё раз при создании канала.",
+  z.strictObject({
+    people: z.array(authorSchema),
+    mode: z.enum(["following", "search"]),
+  }),
+);
+
+export const chatUnreadSchema = named(
+  "ChatUnread",
+  "Число непрочитанных сообщений во всех каналах человека.",
+  z.strictObject({ unread: z.int() }),
+);
+
 export type CreateCommentRequest = z.infer<typeof createCommentRequestSchema>;
 export type Me = z.infer<typeof meSchema>;
 export type SessionGrant = z.infer<typeof sessionGrantSchema>;

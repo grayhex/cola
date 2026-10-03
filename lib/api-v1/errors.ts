@@ -22,6 +22,7 @@ export const apiErrorCodes = [
   "unsupported_media_type",
   "rate_limited",
   "internal_error",
+  "service_unavailable",
 ] as const;
 export type ApiErrorCode = (typeof apiErrorCodes)[number];
 
@@ -44,6 +45,7 @@ export const errorStatus: Record<ApiErrorCode, number> = {
   unsupported_media_type: 415,
   rate_limited: 429,
   internal_error: 500,
+  service_unavailable: 503,
 };
 
 export interface ErrorDetail {

@@ -79,6 +79,16 @@ export function validateRuntime(env = process.env) {
     reject(
       "YANDEX_ID_CLIENT_ID and YANDEX_ID_CLIENT_SECRET are required when YANDEX_ID_ENABLED=true",
     );
+  // The Android App Link statement (#324) is optional; a value that is not a
+  // SHA-256 fingerprint would silently verify nothing. Kept inline, like the
+  // check above, for the same reason.
+  for (const part of (env.ANDROID_CERT_SHA256 || "")
+    .split(/[\s,;]+/)
+    .filter(Boolean))
+    if (!/^(?:[0-9A-Fa-f]{2}:){31}[0-9A-Fa-f]{2}$|^[0-9A-Fa-f]{64}$/.test(part))
+      reject(
+        "ANDROID_CERT_SHA256 must list SHA-256 fingerprints (AA:BB:… or 64 hex digits)",
+      );
   // Mail is optional, but without it password recovery is unavailable: log it.
   return {
     mode: "production",

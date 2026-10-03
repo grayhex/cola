@@ -7,6 +7,7 @@ import {
   SEARCH_MAX,
   componentCatalogQuerySchema,
   marketQuerySchema,
+  chatPeopleQuerySchema,
   componentSearchQuerySchema,
   experienceQuerySchema,
   feedQuerySchema,
@@ -303,6 +304,8 @@ const description = `API ColaBike: вход устройств, текущий �
 
 **Кэш.** Ответы зависят от того, кто спрашивает, и не кэшируются (\`Cache-Control: no-store\`), кроме самого документа.
 
+**Изображения.** Адреса фото (\`url\`, \`avatarUrl\`, \`coverUrl\`) — пути сайта относительно его адреса. Публичные открываются без входа; приватные (фото закрытого велосипеда, картинки черновика журнала) — владельцу, с тем же \`Authorization: Bearer\` (или cookie), что и API; чужому и гостю — 404, недействительному токену — 401. Ответы зависят от зрителя (\`Vary: Cookie, Authorization\`), поддерживают \`ETag\`/304 и \`?width=\`.
+
 **Видимость.** Публичный велосипед видят все, приватный — только владелец. Чужой приватный и несуществующий велосипед неотличимы: оба дают 404. Велосипеды заблокированных владельцев никому не видны.
 
 **Что не входит.** Личные ответы владельца о покатушках, участие в них, поиск, рынок и операции записи, а также нативный вход через внешних провайдеров — отдельные срезы.`;
@@ -339,6 +342,97 @@ const writeFailures = (extra: Json = {}) => ({
   ),
   "500": shared("InternalError"),
 });
+const chatFailures = (extra: Json = {}) => ({
+  "400": failure(
+    "Параметры или тело не подходят либо cookie вместе с Authorization.",
+  ),
+  "401": failure(
+    "Нет входа, сессия или токен недействительны, токен доступа истёк (`token_expired`) либо схема Authorization не поддерживается.",
+  ),
+  "403": failure(
+    "Cookie-запрос на изменение не с адреса сайта (нужен заголовок `Origin`) или почта не подтверждена (`email_verification_required`).",
+  ),
+  ...extra,
+  "429": failure(
+    "Слишком много запросов; секунды до конца окна — в `Retry-After`.",
+  ),
+  "500": shared("InternalError"),
+  "503": failure(
+    "Сообщения отключены или сервис чата недоступен (`service_unavailable`): основной сайт работает, повторите позже.",
+  ),
+});
+function withChat(document: Json) {
+  const paths = document.paths as Record<string, Json>;
+  const security = [{ cookieSession: [] }, { bearerAuth: [] }];
+  paths["/chat/token"] = {
+    post: {
+      operationId: "createChatToken",
+      tags: ["Chat"],
+      summary: "Токен для Stream Chat",
+      description:
+        "Подключает человека к чату: регистрирует его профиль у провайдера и выдаёт короткоживущий токен (5 минут) с публичным ключом приложения. Секрет приложения не возвращается никогда. Нужна подтверждённая почта; сессия проверяется ещё раз, отозванная — 401. Тела нет. Когда токен истёк, клиент запрашивает новый.",
+      security,
+      parameters: [],
+      responses: {
+        "200": success("Данные для подключения.", "ChatToken"),
+        ...chatFailures(),
+      },
+    },
+  };
+  paths["/chat/channels"] = {
+    post: {
+      operationId: "createChatChannel",
+      tags: ["Chat"],
+      summary: "Создать или открыть канал",
+      description:
+        "Личный диалог открывается повторно тем же каналом; группа создаётся новой. Нельзя написать себе, заблокированному и тому, у кого не подтверждена почта (404). С заголовком `Idempotency-Key` (UUID) повтор того же запроса в течение суток отдаёт тот же канал (`Idempotency-Replayed: true`), а не вторую группу; тот же ключ с другим телом — 409 `conflict`. Бюджет — 10 за окно, общий с сайтом.",
+      security,
+      parameters: [],
+      requestBody: requestBody("CreateChatChannelRequest"),
+      responses: {
+        "201": success("Канал создан или открыт.", "ChatChannel"),
+        ...chatFailures({
+          "404": failure("Участник недоступен для сообщений."),
+          "409": failure("`Idempotency-Key` уже использован с другим телом."),
+          "413": failure("Тело больше 4096 байт."),
+          "415": failure("Тело не `application/json`."),
+        }),
+      },
+    },
+  };
+  paths["/chat/people"] = {
+    get: {
+      operationId: "listChatPeople",
+      tags: ["Chat"],
+      summary: "Кому написать",
+      description:
+        "Без `q` — те, на кого подписан человек; с `q` (от 2 знаков, до 80) — поиск по имени и логину, не больше 20 человек. Только подтверждённые и не заблокированные.",
+      security,
+      parameters: queryParameters(chatPeopleQuerySchema, [], {
+        q: "Часть имени или логина; пусто — те, на кого вы подписаны.",
+      }),
+      responses: {
+        "200": success("Люди, которым можно написать.", "ChatPeople"),
+        ...chatFailures(),
+      },
+    },
+  };
+  paths["/chat/unread"] = {
+    get: {
+      operationId: "getChatUnread",
+      tags: ["Chat"],
+      summary: "Непрочитанные сообщения",
+      description:
+        "Общее число непрочитанных у провайдера; 0, пока человек не подключался к чату.",
+      security,
+      parameters: [],
+      responses: {
+        "200": success("Число непрочитанных.", "ChatUnread"),
+        ...chatFailures(),
+      },
+    },
+  };
+}
 function withCommentWrites(document: Json) {
   const paths = document.paths as Record<string, Json>;
   for (const target of commentTargets) {
@@ -441,6 +535,11 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
         name: "Comments",
         description:
           "Комментарии к велосипедам, записям и покатушкам: один вид на всё.",
+      },
+      {
+        name: "Chat",
+        description:
+          "Мост к Stream Chat для нативного клиента: токен, каналы, кому написать, непрочитанные. Сообщения идут напрямую между клиентом и провайдером.",
       },
       {
         name: "Components",
@@ -1819,5 +1918,6 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
     },
   };
   withCommentWrites(document);
+  withChat(document);
   return document;
 }

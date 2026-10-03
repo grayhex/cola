@@ -47,6 +47,7 @@ import {
   notModified,
   notModifiedResponse,
 } from "../../../../lib/media-cache.ts";
+import { mediaVary, mediaViewer } from "../../../../lib/media-viewer.ts";
 import { logError, traced } from "../../../../lib/observability.ts";
 export const runtime = "nodejs",
   dynamic = "force-dynamic";
@@ -69,9 +70,12 @@ async function handler(
           width = mediaWidth(url.searchParams.get("width"));
         if (width === undefined) return fail("Неверный размер изображения");
         // Access is checked on every request, including revalidation.
-        const filename = await journalPhotoFilename(db, id, user?.id),
+        // A draft's picture is its owner's, by cookie or by Bearer (#324).
+        const who = await mediaViewer(req, user);
+        if ("denied" in who) return who.denied;
+        const filename = await journalPhotoFilename(db, id, who.viewer?.id),
           etag = mediaEtag(id, width),
-          headers = { Vary: "Cookie" };
+          headers = mediaVary;
         if (notModified(req, etag))
           return notModifiedResponse(etag, { headers });
         const original = () => readJournalPhotoFile(filename);
