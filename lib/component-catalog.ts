@@ -46,6 +46,18 @@ export const componentCounts = `SELECT coalesce(source.merged_into,source.id) mo
  JOIN component_models source ON source.id=p.model_id
  JOIN bikes b ON b.id=p.bike_id JOIN users u ON u.id=b.owner_id
  WHERE b.is_public AND NOT u.blocked GROUP BY 1`;
+/** Models the catalog lists: published, not merged away, and (for the public) not archived. */
+const catalogVisible = (admin: boolean) =>
+  "m.first_public_at IS NOT NULL AND m.merged_into IS NULL" +
+  (admin ? "" : " AND NOT m.archived");
+const catalogWhere = (
+  admin: boolean,
+) => ` FROM component_models m WHERE ${catalogVisible(admin)}
+    AND ($1='' OR strpos(lower(m.name||' '||m.brand),lower($1))>0
+      OR EXISTS(SELECT 1 FROM component_model_names n JOIN component_models source ON source.id=n.model_id
+        WHERE coalesce(source.merged_into,source.id)=m.id AND strpos(n.name_key,component_key($1))>0))
+    AND ($2='' OR component_key(m.category)=component_key($2))
+    AND ($3='' OR component_key(m.brand)=component_key($3))`;
 const publicModel = (
   m: ComponentModelRow & { builds?: number; cover_id?: string | null },
 ) => ({
@@ -59,21 +71,116 @@ const publicModel = (
   coverUrl: m.cover_id ? "/api/components/media/" + m.cover_id : null,
 });
 
+export type CatalogNext =
+  { createdAt: string; id: string } | { rank: number; id: string };
+const MICROSECONDS = `'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'`;
+export type CatalogRow = ComponentModelRow & {
+  builds: number;
+  cover_id: string | null;
+  cursor_at: string;
+};
+/**
+ * The catalog by keyset (API v1, #317): the same filters and visibility as
+ * `componentCatalog` (published, not merged away, not archived), newest first
+ * by `(first_public_at, id) DESC` or by popularity `(builds DESC, id)`. The
+ * popularity cursor keeps the count the last item had; see `RankCursor`.
+ */
+export async function componentModelKeysetPage(
+  q: Queryable,
+  input: {
+    q: string;
+    category: string;
+    brand: string;
+    sort: "new" | "popular";
+    limit: number;
+    after:
+      { createdAt: string; id: string } | { rank: number; id: string } | null;
+  },
+) {
+  const params: unknown[] = [input.q, input.category, input.brand];
+  const add = (value: unknown) => "$" + params.push(value);
+  let keyset = "";
+  if (input.after && "rank" in input.after)
+    keyset = ` WHERE (t.builds<${add(input.after.rank)} OR (t.builds=$${params.length} AND t.id>${add(input.after.id)}::uuid))`;
+  else if (input.after && "createdAt" in input.after)
+    keyset = ` WHERE (t.first_public_at,t.id)<(${add(input.after.createdAt)}::timestamptz,${add(input.after.id)}::uuid)`;
+  const order =
+    input.sort === "new"
+      ? "t.first_public_at DESC,t.id DESC"
+      : "t.builds DESC,t.id";
+  const rows = (
+    await q.query<CatalogRow>(
+      `WITH counts AS (${componentCounts}), page AS (
+         SELECT m.*,coalesce((SELECT builds FROM counts WHERE model_id=m.id),0)::int builds,
+           (SELECT p.id FROM component_photos p JOIN users a ON a.id=p.author_id
+            JOIN component_models source ON source.id=p.model_id
+            WHERE coalesce(source.merged_into,source.id)=m.id AND NOT p.hidden AND NOT a.blocked
+            ORDER BY (p.id=m.cover_photo_id) DESC NULLS LAST,p.sort_order,p.created_at,p.id LIMIT 1) cover_id,
+           to_char(m.first_public_at AT TIME ZONE 'UTC',${MICROSECONDS}) cursor_at
+         ${catalogWhere(false)}
+       ) SELECT * FROM page t${keyset} ORDER BY ${order} LIMIT ${add(input.limit + 1)}`,
+      params,
+    )
+  ).rows;
+  const page = rows.slice(0, input.limit);
+  const last = page[page.length - 1];
+  let next: CatalogNext | null = null;
+  if (rows.length > input.limit && last)
+    next =
+      input.sort === "new"
+        ? { createdAt: last.cursor_at, id: last.id }
+        : { rank: last.builds, id: last.id };
+  return { rows: page, next };
+}
+
+/**
+ * One model by id for API v1: a merged id leads to the canonical model; an
+ * unpublished or unknown one is null. An archived model is read here though the
+ * catalog does not list it.
+ */
+export async function componentModelCard(q: Queryable, id: string) {
+  const model = await resolveComponentModel(q, id);
+  if (!model) return null;
+  return (
+    (
+      await q.query<CatalogRow>(
+        `WITH counts AS (${componentCounts}) SELECT m.*,
+           coalesce((SELECT builds FROM counts WHERE model_id=m.id),0)::int builds,
+           (SELECT p.id FROM component_photos p JOIN users a ON a.id=p.author_id
+            JOIN component_models source ON source.id=p.model_id
+            WHERE coalesce(source.merged_into,source.id)=m.id AND NOT p.hidden AND NOT a.blocked
+            ORDER BY (p.id=m.cover_photo_id) DESC NULLS LAST,p.sort_order,p.created_at,p.id LIMIT 1) cover_id,
+           '' cursor_at
+         FROM component_models m WHERE m.id=$1`,
+        [model.id],
+      )
+    ).rows[0] ?? null
+  );
+}
+
+/** The categories and brands of the listed models, for filters. */
+export async function componentCatalogFilters(q: Queryable) {
+  const options = (
+    await q.query<{ category: string; brand: string }>(
+      `SELECT DISTINCT m.category,m.brand FROM component_models m WHERE ${catalogVisible(false)} ORDER BY 1,2`,
+    )
+  ).rows;
+  return {
+    categories: [...new Set(options.map((r) => r.category))],
+    brands: [...new Set(options.map((r) => r.brand).filter(Boolean))].sort(
+      (a, b) => a.localeCompare(b, "ru"),
+    ),
+  };
+}
+
 /** A bounded public DTO. Never return installations, owners or private dates. */
 export async function componentCatalog(
   q: Queryable,
   input: z.infer<typeof componentCatalogInput>,
   admin = false,
 ) {
-  const visibility =
-    "m.first_public_at IS NOT NULL AND m.merged_into IS NULL" +
-    (admin ? "" : " AND NOT m.archived");
-  const where = ` FROM component_models m WHERE ${visibility}
-    AND ($1='' OR strpos(lower(m.name||' '||m.brand),lower($1))>0
-      OR EXISTS(SELECT 1 FROM component_model_names n JOIN component_models source ON source.id=n.model_id
-        WHERE coalesce(source.merged_into,source.id)=m.id AND strpos(n.name_key,component_key($1))>0))
-    AND ($2='' OR component_key(m.category)=component_key($2))
-    AND ($3='' OR component_key(m.brand)=component_key($3))`;
+  const visibility = catalogVisible(admin);
+  const where = catalogWhere(admin);
   const params = [input.q, input.category, input.brand];
   const total = (
     await q.query<{ total: number }>(

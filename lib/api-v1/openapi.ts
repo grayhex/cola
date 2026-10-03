@@ -5,6 +5,7 @@ import { SESSION_COOKIE } from "../viewer-session.ts";
 import {
   LIST_LIMIT,
   SEARCH_MAX,
+  componentCatalogQuerySchema,
   componentSearchQuerySchema,
   experienceQuerySchema,
   schemaRegistry,
@@ -96,6 +97,7 @@ const queryNotes: Record<string, string> = {
   kind: "Тип записи журнала: build, service, review, question, story.",
   similar:
     "Идентификатор публичного велосипеда: ищутся похожие на него (его бренд, модель, назначение и категория).",
+  sort: "`new` — по появлению в каталоге (по умолчанию), `popular` — по числу сборок.",
   subtype: "Подтип по классификации.",
   suspension: "Подвеска по классификации.",
   construction: "Конструкция по классификации.",
@@ -199,6 +201,13 @@ const parameters = {
     description: "Идентификатор комментария (UUID).",
     schema: { type: "string", format: "uuid" },
   },
+  componentModelId: {
+    name: "id",
+    in: "path",
+    required: true,
+    description: "Идентификатор модели компонента (UUID).",
+    schema: { type: "string", format: "uuid" },
+  },
   rideText: {
     name: "q",
     in: "query",
@@ -290,6 +299,10 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
         name: "Comments",
         description:
           "Комментарии к велосипедам, записям и покатушкам: один вид на всё.",
+      },
+      {
+        name: "Components",
+        description: "Публичный каталог моделей компонентов: карточки, фото.",
       },
       {
         name: "Search",
@@ -1081,6 +1094,138 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
           },
         },
       },
+      "/component-models": {
+        get: {
+          operationId: "listComponentModels",
+          tags: ["Components"],
+          summary: "Каталог моделей компонентов",
+          description:
+            "Опубликованные неархивные модели, не слитые в другие. Фильтры: `q` (название, бренд и прежние написания), `category`, `brand`. `sort=new` — новые сверху, курсор по `(появилась, id)`; `sort=popular` — по числу сборок публичных велосипедов, курсор хранит значение числа на момент страницы, поэтому при изменении числа между страницами модель может встретиться дважды или пропуститься. Курсор одного порядка в другом — 400.",
+          security: [{}, { cookieSession: [] }, { bearerAuth: [] }],
+          parameters: queryParameters(componentCatalogQuerySchema, [
+            "limit",
+            "cursor",
+          ]).concat(refs("Limit", "Cursor")),
+          responses: {
+            "200": success("Страница моделей.", "ComponentModelPage"),
+            "400": failure(
+              "Неверный или повторённый параметр, неверный курсор либо cookie вместе с Authorization.",
+            ),
+            "401": failure(
+              "Недействительный или истёкший токен либо неподдерживаемая схема Authorization.",
+            ),
+            "500": shared("InternalError"),
+          },
+        },
+      },
+      "/component-models/filters": {
+        get: {
+          operationId: "listComponentFilters",
+          tags: ["Components"],
+          summary: "Фильтры каталога",
+          description:
+            "Категории и бренды перечисляемых моделей: значения для `category` и `brand`.",
+          security: [{}, { cookieSession: [] }, { bearerAuth: [] }],
+          parameters: [],
+          responses: {
+            "200": success("Категории и бренды.", "ComponentFilters"),
+            "400": failure(
+              "Неверный или повторённый параметр, неверный курсор либо cookie вместе с Authorization.",
+            ),
+            "401": failure(
+              "Недействительный или истёкший токен либо неподдерживаемая схема Authorization.",
+            ),
+            "500": shared("InternalError"),
+          },
+        },
+      },
+      "/component-models/{id}": {
+        get: {
+          operationId: "getComponentModel",
+          tags: ["Components"],
+          summary: "Модель компонента",
+          description:
+            "Карточка модели: название, бренд, категория, описание, число публичных сборок, обложка. Слитая модель отдаёт каноническую; архивная читается, но в каталоге не перечисляется (`archived`). Установки и их владельцы не передаются. Неопубликованная и неизвестная модель — 404.",
+          security: [{}, { cookieSession: [] }, { bearerAuth: [] }],
+          parameters: refs("ComponentModelId"),
+          responses: {
+            "200": success("Модель.", "ComponentModel"),
+            "400": failure(
+              "Неверный или повторённый параметр, неверный курсор либо cookie вместе с Authorization.",
+            ),
+            "401": failure(
+              "Недействительный или истёкший токен либо неподдерживаемая схема Authorization.",
+            ),
+            "404": shared("NotFound"),
+            "500": shared("InternalError"),
+          },
+        },
+      },
+      "/component-models/{id}/photos": {
+        get: {
+          operationId: "listComponentPhotos",
+          tags: ["Components"],
+          summary: "Фотографии модели",
+          description:
+            "Галерея: до 60 публичных фотографий, обложка первой, с источником и лицензией для фото из внешних источников. Скрытых фотографий и фотографий заблокированных авторов нет; состояния правки и модерации не передаются.",
+          security: [{}, { cookieSession: [] }, { bearerAuth: [] }],
+          parameters: refs("ComponentModelId"),
+          responses: {
+            "200": success("Галерея.", "ComponentPhotoList"),
+            "400": failure(
+              "Неверный или повторённый параметр, неверный курсор либо cookie вместе с Authorization.",
+            ),
+            "401": failure(
+              "Недействительный или истёкший токен либо неподдерживаемая схема Authorization.",
+            ),
+            "404": shared("NotFound"),
+            "500": shared("InternalError"),
+          },
+        },
+      },
+      "/component-models/{id}/comments": {
+        get: {
+          operationId: "listComponentComments",
+          tags: ["Comments"],
+          summary: "Комментарии модели",
+          description:
+            "Корневые комментарии, старые сверху, курсор; превью до трёх ответов и `replyCount`; те же правила и «надгробия», что у остальных объектов. Комментарии слитых моделей собраны под канонической.",
+          security: [{}, { cookieSession: [] }, { bearerAuth: [] }],
+          parameters: refs("ComponentModelId", "Limit", "Cursor", "Focus"),
+          responses: {
+            "200": success("Страница комментариев.", "CommentPage"),
+            "400": failure(
+              "Неверный или повторённый параметр, неверный курсор либо cookie вместе с Authorization.",
+            ),
+            "401": failure(
+              "Недействительный или истёкший токен либо неподдерживаемая схема Authorization.",
+            ),
+            "404": shared("NotFound"),
+            "500": shared("InternalError"),
+          },
+        },
+      },
+      "/component-models/{id}/comments/{commentId}/replies": {
+        get: {
+          operationId: "listComponentReplies",
+          tags: ["Comments"],
+          summary: "Ответы на комментарий модели",
+          description: "Ответы на один комментарий, старые сверху, курсор.",
+          security: [{}, { cookieSession: [] }, { bearerAuth: [] }],
+          parameters: refs("ComponentModelId", "CommentId", "Limit", "Cursor"),
+          responses: {
+            "200": success("Страница ответов.", "ReplyPage"),
+            "400": failure(
+              "Неверный или повторённый параметр, неверный курсор либо cookie вместе с Authorization.",
+            ),
+            "401": failure(
+              "Недействительный или истёкший токен либо неподдерживаемая схема Authorization.",
+            ),
+            "404": shared("NotFound"),
+            "500": shared("InternalError"),
+          },
+        },
+      },
       "/users/{ref}": {
         get: {
           operationId: "getUser",
@@ -1213,6 +1358,7 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
         JournalId: parameters.journalId,
         RideId: parameters.rideId,
         RideText: parameters.rideText,
+        ComponentModelId: parameters.componentModelId,
         CommentId: parameters.commentId,
         Focus: parameters.focus,
         SessionId: {

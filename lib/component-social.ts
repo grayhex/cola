@@ -78,6 +78,17 @@ export const componentSocial = {
     comments.commentPage(query(q), ...a),
   replies: (q: Queryable, ...a: comments.ReplyPageArgs) =>
     comments.replyPage(query(q), ...a),
+  keysetPage: (
+    q: Queryable,
+    id: string,
+    options: Parameters<typeof comments.commentKeysetPage>[2],
+  ) => comments.commentKeysetPage(query(q), id, options),
+  keysetReplies: (
+    q: Queryable,
+    id: string,
+    parent: string,
+    options: Parameters<typeof comments.replyKeysetPage>[3],
+  ) => comments.replyKeysetPage(query(q), id, parent, options),
   async create(
     q: Queryable,
     id: string,
