@@ -783,6 +783,96 @@ export const componentHitListSchema = named(
   z.strictObject({ items: z.array(componentHitSchema) }),
 );
 
+export const componentModelSchema = named(
+  "ComponentModel",
+  "Модель компонента из публичного каталога. Установки, владельцы и приватные даты не передаются: только то, что показывает страница модели. Слитая модель отдаёт каноническую (`id` — её).",
+  z.strictObject({
+    id,
+    category: z.string(),
+    brand: z.string(),
+    name: z.string(),
+    description: z.string(),
+    path: z
+      .string()
+      .describe("Путь страницы модели на сайте относительно его адреса."),
+    builds: z
+      .int()
+      .describe("Число публичных велосипедов без заблокированных владельцев."),
+    firstPublicAt: instant,
+    coverUrl: z
+      .string()
+      .nullable()
+      .describe("Путь к обложке относительно адреса сайта или null."),
+    archived: z
+      .boolean()
+      .describe(
+        "Архивная модель читается по `id`, но в каталоге не перечисляется.",
+      ),
+  }),
+);
+
+export const componentModelPageSchema = named(
+  "ComponentModelPage",
+  "Страница каталога моделей компонентов. При `sort=popular` порядок по числу сборок, а оно меняется: если число сборок модели изменилось между двумя страницами, модель может встретиться дважды или пропуститься.",
+  z.strictObject({
+    items: z.array(componentModelSchema),
+    nextCursor: z
+      .string()
+      .nullable()
+      .describe("Курсор следующей страницы или null, если страниц больше нет."),
+  }),
+);
+
+export const componentFiltersSchema = named(
+  "ComponentFilters",
+  "Категории и бренды перечисляемых моделей каталога: значения для фильтров.",
+  z.strictObject({
+    categories: z.array(z.string()),
+    brands: z.array(z.string()),
+  }),
+);
+
+export const componentPhotoSourceSchema = named(
+  "ComponentPhotoSource",
+  "Источник и лицензия фотографии из Wikimedia Commons: показывать вместе с фотографией.",
+  z.strictObject({
+    provider: z.string(),
+    url: z.string(),
+    title: z.string(),
+    creator: z.string(),
+    credit: z.string(),
+    license: z.string(),
+    licenseUrl: z.string(),
+  }),
+);
+
+export const componentPhotoSchema = named(
+  "ComponentPhoto",
+  "Публичная фотография модели компонента. Скрытых фотографий и фотографий заблокированных авторов нет; состояния правки и модерации не передаются.",
+  z.strictObject({
+    id,
+    url: z.string().describe("Путь к файлу относительно адреса сайта."),
+    width: z.int(),
+    height: z.int(),
+    caption: z.string(),
+    source: componentPhotoSourceSchema
+      .nullable()
+      .describe("Для фото из внешнего источника; у загруженных null."),
+    author: authorSchema,
+    createdAt: instant,
+    isCover: z.boolean(),
+  }),
+);
+
+export const componentPhotoListSchema = named(
+  "ComponentPhotoList",
+  "Галерея модели: до 60 фотографий, обложка первой.",
+  z.strictObject({
+    modelId: id,
+    items: z.array(componentPhotoSchema),
+  }),
+);
+
 export type Me = z.infer<typeof meSchema>;
 export type SessionGrant = z.infer<typeof sessionGrantSchema>;
 export type Profile = z.infer<typeof profileSchema>;
@@ -793,6 +883,8 @@ export type JournalSummary = z.infer<typeof journalSummarySchema>;
 export type JournalEntry = z.infer<typeof journalEntrySchema>;
 export type Comment = z.infer<typeof commentSchema>;
 export type ComponentHit = z.infer<typeof componentHitSchema>;
+export type ComponentModel = z.infer<typeof componentModelSchema>;
+export type ComponentPhoto = z.infer<typeof componentPhotoSchema>;
 export type RideSummary = z.infer<typeof rideSummarySchema>;
 export type Ride = z.infer<typeof rideSchema>;
 export type RideAnalysis = z.infer<typeof rideAnalysisSchema>;
@@ -969,6 +1061,18 @@ export const componentSearchQuerySchema = z.strictObject({
 });
 export const parseComponentSearchQuery = (url: URL) =>
   parseQuery(url, componentSearchQuerySchema);
+
+/** The component catalog: the site's filters and an order, with a cursor. */
+export const componentCatalogQuerySchema = z.strictObject({
+  q: searchText.default(""),
+  category: z.string().trim().max(60).default(""),
+  brand: z.string().trim().max(100).default(""),
+  sort: z.enum(["new", "popular"]).default("new"),
+  limit: pageQuerySchema.shape.limit,
+  cursor: pageQuerySchema.shape.cursor,
+});
+export const parseComponentCatalogQuery = (url: URL) =>
+  parseQuery(url, componentCatalogQuerySchema);
 
 /**
  * `{ref}` of /users: a UUID (36 characters) or a username (3 to 30), so the two

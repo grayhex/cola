@@ -3,7 +3,9 @@ import type { visibleBikeById } from "../showcase.ts";
 import type { listSessions } from "../account-data.ts";
 import type { CommentRow } from "../comments.ts";
 import type { JournalViewRow } from "../journal.ts";
-import type { RideViewRow } from "../database-rows.ts";
+import type { ComponentPhotoRow, RideViewRow } from "../database-rows.ts";
+import type { CatalogRow } from "../component-catalog.ts";
+import { partLandingPath } from "../experience-catalog.ts";
 import type {
   AnalysisPoint,
   AnalysisChannel,
@@ -18,6 +20,8 @@ import type {
   Bike,
   BikeSummary,
   Comment,
+  ComponentModel,
+  ComponentPhoto,
   JournalEntry,
   JournalSummary,
   Me,
@@ -427,6 +431,59 @@ export function toRide(row: RideViewRow, viewer: string | null): Ride {
       : null,
     bounds: segments.length ? bounds(segments) : null,
     extraMetrics: extra,
+  };
+}
+
+/** A catalog model by name: the page's own fields, nothing of the installations. */
+export function toComponentModel(row: CatalogRow): ComponentModel {
+  return {
+    id: row.id,
+    category: row.category,
+    brand: row.brand,
+    name: row.name,
+    description: row.description,
+    path: partLandingPath(row.category_slug, row.slug),
+    builds: row.builds,
+    firstPublicAt: instantOf(row.first_public_at) ?? "",
+    coverUrl: row.cover_id ? "/api/components/media/" + row.cover_id : null,
+    archived: row.archived,
+  };
+}
+
+/** A public photo; `first` is the cover. Moderation and editing state stay out. */
+export function toComponentPhoto(
+  row: ComponentPhotoRow & {
+    username: string;
+    name: string;
+    avatar_id: string;
+  },
+  first: boolean,
+): ComponentPhoto {
+  return {
+    id: row.id,
+    url: "/api/components/media/" + row.id,
+    width: row.width,
+    height: row.height,
+    caption: row.caption,
+    source: row.source
+      ? {
+          provider: row.source.provider,
+          url: row.source.url,
+          title: row.source.title,
+          creator: row.source.creator,
+          credit: row.source.credit,
+          license: row.source.license,
+          licenseUrl: row.source.licenseUrl,
+        }
+      : null,
+    author: author({
+      owner_id: row.author_id,
+      username: row.username,
+      author_name: row.name,
+      avatar_id: row.avatar_id,
+    }),
+    createdAt: instantOf(row.created_at) ?? "",
+    isCover: first,
   };
 }
 

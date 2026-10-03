@@ -1,6 +1,7 @@
 import { db } from "../db.ts";
 import { commentKeysetPage, replyKeysetPage } from "../comments.ts";
 import { CommunityError } from "../community-validation.ts";
+import { componentSocial } from "../component-social.ts";
 import { entitySocial } from "../entity-social.ts";
 import { journalKeysetPage, journalPhotos, journalRow } from "../journal.ts";
 import { apiRideVisible } from "../rides.ts";
@@ -80,7 +81,7 @@ export function handleGetJournalEntry(req: Request, { params }: IdParams) {
   });
 }
 
-type Target = "bike" | "journal" | "ride";
+type Target = "bike" | "journal" | "ride" | "component";
 const entryComments = entitySocial("journal");
 const rideComments = entitySocial("ride");
 const targetMissing = (target: Target) =>
@@ -88,6 +89,7 @@ const targetMissing = (target: Target) =>
     bike: "Велосипед не найден.",
     journal: "Запись не найдена.",
     ride: "Покатушка не найдена.",
+    component: "Модель не найдена.",
   })[target];
 
 /**
@@ -105,7 +107,9 @@ function engineOf(target: Target) {
     ? entryComments
     : target === "ride"
       ? rideComments
-      : null;
+      : target === "component"
+        ? componentSocial
+        : null;
 }
 
 function commentsOf(target: Target) {
@@ -172,7 +176,9 @@ function repliesOf(target: Target) {
 export const handleBikeComments = commentsOf("bike");
 export const handleJournalComments = commentsOf("journal");
 export const handleRideComments = commentsOf("ride");
+export const handleComponentComments = commentsOf("component");
 /** GET …/comments/{commentId}/replies */
 export const handleBikeReplies = repliesOf("bike");
 export const handleJournalReplies = repliesOf("journal");
 export const handleRideReplies = repliesOf("ride");
+export const handleComponentReplies = repliesOf("component");

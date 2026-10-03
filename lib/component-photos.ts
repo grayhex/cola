@@ -53,6 +53,25 @@ export const componentGalleryEdit = z
   .strict()
   .refine((v) => v.coverId !== undefined || v.order !== undefined);
 
+/**
+ * The public gallery of a model (API v1, #317): photos that are not hidden and
+ * whose author is not blocked, cover first, then in the curators' order. No
+ * moderation or editing state is part of it; the first is the cover.
+ */
+export async function componentPhotoList(q: Queryable, id: string) {
+  const model = await publicComponent(q, id);
+  const rows = (
+    await q.query<
+      ComponentPhotoRow & { username: string; name: string; avatar_id: string }
+    >(
+      `SELECT p.*,a.username,a.name,a.avatar_id ${joined}
+       WHERE m.id=$1 AND NOT p.hidden AND NOT a.blocked
+       ORDER BY (p.id=m.cover_photo_id) DESC NULLS LAST,p.sort_order,p.created_at,p.id LIMIT 60`,
+      [model.id],
+    )
+  ).rows;
+  return { modelId: model.id, rows };
+}
 export async function componentGallery(
   q: Queryable,
   id: string,
