@@ -357,7 +357,10 @@ try {
     `/component-models/${id.popular}/photos`,
     `/component-models/${id.popular}/comments`,
   ]) {
-    for (const method of ["POST", "PUT", "PATCH", "DELETE"])
+    // A comment collection takes POST since W1 (#330): its own tests.
+    for (const method of /\/comments$/.test(path)
+      ? ["PUT", "PATCH", "DELETE"]
+      : ["POST", "PUT", "PATCH", "DELETE"])
       assertError(
         await guest(path, { method, origin: base }),
         405,
