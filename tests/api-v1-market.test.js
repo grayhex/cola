@@ -139,7 +139,7 @@ async function walk(sort, limit, extra = {}) {
     seen.push(...ids(result));
     if (!result.next) return seen;
     // The cursor survives its own text form, as a client keeps it.
-    after = decodeMarketCursor(encodeMarketCursor(result.next), sort !== "new");
+    after = decodeMarketCursor(encodeMarketCursor(result.next, sort), sort);
   }
   throw new Error("the walk does not end");
 }
@@ -197,21 +197,32 @@ test("filters are the site's", async () => {
 
 test("a cursor belongs to its order, and its text is checked", async () => {
   const first = await page(reader, { limit: 1 });
-  const plain = encodeMarketCursor(first.next);
-  const priced = encodeMarketCursor({ ...first.next, price: "100.00" });
+  const plain = encodeMarketCursor(first.next, "new");
+  const priced = encodeMarketCursor(
+    { ...first.next, price: "100.00" },
+    "price_asc",
+  );
   assert.equal(
     JSON.stringify(Object.keys(JSON.parse(Buffer.from(plain, "base64url")))),
     '["t","i"]',
   );
-  assert.throws(() => decodeMarketCursor(plain, true), {
+  for (const sort of ["price_asc", "price_desc"])
+    assert.throws(() => decodeMarketCursor(plain, sort), {
+      code: "invalid_request",
+    });
+  assert.throws(() => decodeMarketCursor(priced, "new"), {
     code: "invalid_request",
   });
-  assert.throws(() => decodeMarketCursor(priced, false), {
+  // The same position means the opposite page in the opposite order.
+  assert.throws(() => decodeMarketCursor(priced, "price_desc"), {
     code: "invalid_request",
   });
-  assert.equal(decodeMarketCursor(priced, true).price, "100.00");
-  const nullPrice = encodeMarketCursor({ ...first.next, price: null });
-  assert.equal(decodeMarketCursor(nullPrice, true).price, null);
+  assert.equal(decodeMarketCursor(priced, "price_asc").price, "100.00");
+  const nullPrice = encodeMarketCursor(
+    { ...first.next, price: null },
+    "price_desc",
+  );
+  assert.equal(decodeMarketCursor(nullPrice, "price_desc").price, null);
   for (const bad of [
     "!!!",
     Buffer.from("{}").toString("base64url"),
@@ -221,10 +232,14 @@ test("a cursor belongs to its order, and its text is checked", async () => {
     Buffer.from(JSON.stringify({ p: "1", t: "2026-09-01", i: a })).toString(
       "base64url",
     ),
+    // A price cursor without its order.
+    Buffer.from(JSON.stringify({ p: "1", t: day(1), i: a })).toString(
+      "base64url",
+    ),
     // The bike list's cursor is not a market cursor in a price order.
     encodeCursor({ createdAt: first.next.publishedAt, id: first.next.id }),
   ])
-    assert.throws(() => decodeMarketCursor(bad, true), {
+    assert.throws(() => decodeMarketCursor(bad, "price_asc"), {
       code: "invalid_request",
     });
 });

@@ -42,7 +42,7 @@ export function handleMarket(req: Request) {
     const viewer = await viewerOf(req.headers);
     const query = parseMarketQuery(new URL(req.url));
     const after = query.cursor
-      ? decodeMarketCursor(query.cursor, query.sort !== "new")
+      ? decodeMarketCursor(query.cursor, query.sort)
       : null;
     // The heading names the seller even when nothing of theirs is on sale, so
     // an unknown or blocked seller is a 404 and not an empty page.
@@ -72,7 +72,7 @@ export function handleMarket(req: Request) {
     });
     return ok({
       items: page.items.map(toMarketListing),
-      nextCursor: page.next ? encodeMarketCursor(page.next) : null,
+      nextCursor: page.next ? encodeMarketCursor(page.next, query.sort) : null,
     });
   });
 }

@@ -4,6 +4,7 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import pg from "pg";
+import sharp from "sharp";
 import { testConsents } from "./fixtures/legal.js";
 import { verifyCapturedEmail } from "./fixtures/verified-user.js";
 import {
@@ -94,6 +95,8 @@ async function member(label, verified = true) {
     id: registered.body.user.id,
     username: registered.body.user.username,
     web,
+    cookieValue: () => cookie,
+    bearer: async () => "Bearer " + grant.body.accessToken,
     cookie: withCookie,
     token: withToken,
   };
@@ -245,6 +248,12 @@ try {
   );
   const priced = await market("&sort=price_asc&limit=1");
   assertError(
+    await market("&sort=price_desc&cursor=" + priced.body.nextCursor),
+    400,
+    "invalid_request",
+    "price cursor in the opposite order",
+  );
+  assertError(
     await market("&cursor=" + priced.body.nextCursor),
     400,
     "invalid_request",
@@ -351,6 +360,46 @@ try {
     405,
     "method_not_allowed",
     "method",
+  );
+
+  // Photos of a draft are the owner's: the media route reads a Bearer token as
+  // well as a cookie, and nobody else gets the file.
+  const png = await sharp({
+    create: { width: 64, height: 48, channels: 3, background: "#336699" },
+  })
+    .png()
+    .toBuffer();
+  const uploaded = await fetch(`${base}/api/market/${draft}/photos`, {
+    method: "POST",
+    headers: {
+      cookie: seller.cookieValue(),
+      origin: base,
+      "content-type": "image/png",
+    },
+    body: png,
+  });
+  assert.equal(uploaded.status, 201, await uploaded.text());
+  const photo = (await seller.token("/market/" + draft)).body.photos[0];
+  assert.match(photo.url, /^\/api\/market\/media\/[0-9a-f-]{36}$/);
+  const media = (credential) =>
+    fetch(base + photo.url, {
+      headers: credential ? { authorization: credential } : {},
+    });
+  assert.equal((await media(null)).status, 404, "guest");
+  assert.equal(
+    (await media(await seller.bearer())).status,
+    200,
+    "owner with a token",
+  );
+  assert.equal(
+    (await media(await reader.bearer())).status,
+    404,
+    "another person with a token",
+  );
+  assert.equal(
+    (await media("Bearer cola_at_nope")).status,
+    401,
+    "a token that finds nobody",
   );
 
   // The contact: signed in, verified email, a budget.
