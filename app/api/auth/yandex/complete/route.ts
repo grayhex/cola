@@ -10,7 +10,13 @@ import {
 import {
   completeSignup,
   completionInput,
+  readPendingSignup,
 } from "../../../../../lib/identities.ts";
+import {
+  issueNativeCode,
+  nativeAuthReturnUrl,
+  nativeReturn,
+} from "../../../../../lib/native-auth.ts";
 import { LegalError } from "../../../../../lib/legal-documents.ts";
 import { sendAfterResponse } from "../../../../../lib/account-mail.ts";
 import {
@@ -48,6 +54,19 @@ export const POST = traced(async function POST(req) {
   } catch {
     return fail("Проверьте заполнение полей");
   }
+  // A parked sign-in of the native app (#304) ends in a code for the app, never
+  // in a web session of this browser: if the app's link was withdrawn since,
+  // nothing is created and the parked sign-in stays until it expires.
+  const parked = await readPendingSignup(db, token);
+  if (parked?.app_challenge && !nativeAuthReturnUrl())
+    return json(
+      {
+        error:
+          "Вход из приложения сейчас недоступен. Начните вход в приложении заново.",
+        code: "native_unavailable",
+      },
+      409,
+    );
   let result;
   try {
     result = await completeSignup(transaction, token, input, raw);
@@ -61,7 +80,11 @@ export const POST = traced(async function POST(req) {
     return json({ error: result.error, code: result.code }, result.status);
   }
   await clearFlowCookie(SIGNUP_COOKIE);
-  await startSession(result.userId);
+  // A first sign-in that a native app started (#304): no web session is opened
+  // in this browser; the app gets its one-time code on its own HTTPS link.
+  const app = result.appChallenge ? nativeAuthReturnUrl() : null;
+  // Only a sign-in that never came from the app opens a web session.
+  if (!result.appChallenge) await startSession(result.userId);
   // The provider does not promise a confirmed address, so the usual link is sent.
   if (mailEnabled()) {
     const verification = await requestEmailVerification(db, result.userId);
@@ -82,7 +105,16 @@ export const POST = traced(async function POST(req) {
         name: result.name,
         username: result.username,
       },
-      returnPath: result.returnPath,
+      returnPath:
+        app && result.appChallenge
+          ? nativeReturn(app, {
+              code: await issueNativeCode(
+                db,
+                result.userId,
+                result.appChallenge,
+              ),
+            }).toString()
+          : result.returnPath,
     },
     201,
   );

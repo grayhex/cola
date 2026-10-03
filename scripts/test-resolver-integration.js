@@ -54,6 +54,7 @@ const environment = {
   YANDEX_ID_CLIENT_ID: "fixture-yandex-client",
   YANDEX_ID_CLIENT_SECRET: "fixture-yandex-secret",
   COLA_YANDEX_FIXTURE: "1",
+  NATIVE_AUTH_RETURN_URL: "https://app.colabike.test/auth/callback",
   MAP_STYLE_URL: process.argv.includes("--e2e")
     ? base + "/test-map-style.json"
     : "",
@@ -188,6 +189,7 @@ try {
           "tests/api-v1-journal-http.js",
           "tests/api-v1-rides-http.js",
           "tests/api-v1-write-http.js",
+          "tests/api-v1-native-auth-http.js",
           "tests/admin-http.js",
           "tests/resolver-http.js",
           "tests/layout-http.js",
