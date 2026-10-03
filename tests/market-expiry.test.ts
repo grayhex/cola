@@ -3,12 +3,10 @@
 // now() follows the mocked Date, so SQL and JS move together.
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFile, readdir } from "node:fs/promises";
-import { randomUUID } from "node:crypto";
-import { PGlite } from "@electric-sql/pglite";
-import { defaultSettings, defaultCatalog } from "../lib/site-defaults.ts";
+import type { z } from "zod";
+import type { Queryable } from "../lib/db.ts";
+import { defaultSettings } from "../lib/site-defaults.ts";
 import {
-  listingInput,
   saveListing,
   marketList,
   marketDetail,
@@ -24,53 +22,45 @@ import { communityActivity } from "../lib/discovery.ts";
 import { sitemapEntries } from "../lib/indexing.ts";
 import { loadSocialPreview } from "../lib/social-preview.ts";
 import { socialMetadata } from "../lib/social-metadata.ts";
+import type { listingInput } from "../lib/market.ts";
+import {
+  seedSiteDefaults,
+  testDatabase,
+  type TestDatabase,
+} from "./support/database.ts";
+import { listingDraft } from "./support/market.ts";
+import { present } from "./support/assertions.ts";
+import { processEnv } from "./support/env.ts";
+import { userRow } from "./support/people.ts";
 
 const day = 86400000;
 const start = new Date("2026-10-01T09:00:00Z").getTime();
-const env = { APP_ORIGIN: "https://colabike.example" };
+const env = processEnv({ APP_ORIGIN: "https://colabike.example" });
 
 async function schema() {
-  const db = new PGlite();
-  for (const f of (await readdir(new URL("../db/", import.meta.url)))
-    .filter((f) => f.endsWith(".sql"))
-    .sort())
-    await db.exec(
-      await readFile(new URL("../db/" + f, import.meta.url), "utf8"),
-    );
-  await db.query("INSERT INTO site_settings(id,value) VALUES(1,$1)", [
-    JSON.stringify(defaultSettings),
-  ]);
-  await db.query("INSERT INTO site_catalog(id,value) VALUES(1,$1)", [
-    JSON.stringify(defaultCatalog),
-  ]);
+  const db = await testDatabase();
+  await seedSiteDefaults(db);
   return db;
 }
-async function user(db, username) {
-  const id = randomUUID();
-  await db.query(
-    "INSERT INTO users(id,email,name,password_hash,username) VALUES($1,$2,$3,'hash',$3)",
-    [id, id + "@example.test", username],
-  );
-  return id;
+async function user(db: Queryable, username: string) {
+  return (await userRow(db, { name: username, username })).id;
 }
-const offer = (extra = {}) =>
-  listingInput.parse({
-    title: "Wheelset",
-    description: "Synthetic listing",
-    category: "components",
-    listingType: "sale",
-    condition: "used",
-    price: 1000,
-    location: "Test city",
-    contact: "+7 900 000-00-00",
-    status: "active",
-    ...extra,
-  });
-const publish = (db, owner, extra, id) =>
-  db.transaction((q) => saveListing(q, owner, offer(extra), id));
-const listed = async (db, viewer, options) =>
-  (await marketList(db, viewer, options)).items.map((m) => m.title);
-const notices = async (db, owner) =>
+type Offer = Partial<z.input<typeof listingInput>>;
+const publish = (db: TestDatabase, owner: string, extra: Offer, id?: string) =>
+  db.transaction((q) => saveListing(q, owner, listingDraft(extra), id));
+const listed = async (
+  db: Queryable,
+  viewer: string | null,
+  options?: Parameters<typeof marketList>[2],
+) => (await marketList(db, viewer, options)).items.map((m) => m.title);
+// Only the expiry notices carry a state; the type of the target says so.
+const stateOf = (notice: { target: object }): unknown =>
+  "state" in notice.target ? notice.target.state : undefined;
+const endOf = (listing: { expiresAt?: Date | null }) => {
+  assert.ok(listing.expiresAt, "the owner sees the end of the term");
+  return new Date(listing.expiresAt).getTime();
+};
+const notices = async (db: Queryable, owner: string) =>
   (await notificationPage(db, owner)).notifications.filter(
     (n) => n.type === "market_expiring",
   );
@@ -85,10 +75,7 @@ test("a listing expires after its term, the owner hears three days ahead and ext
     const detail = () => marketDetail(db, listing.shareId, null);
     const own = await marketDetail(db, listing.shareId, seller);
     // The default term is 60 days; only the owner sees the date.
-    assert.equal(
-      new Date(own.expiresAt).getTime() - start,
-      defaultSettings.marketListingDays * day,
-    );
+    assert.equal(endOf(own) - start, defaultSettings.marketListingDays * day);
     assert.equal("expiresAt" in (await detail()), false);
     assert.equal((await detail()).expired, false);
 
@@ -100,10 +87,11 @@ test("a listing expires after its term, the owner hears three days ahead and ext
     t.mock.timers.setTime(start + 58 * day);
     await noticeExpiringListings(db, seller);
     await noticeExpiringListings(db, seller);
-    let [notice, ...more] = await notices(db, seller);
+    const [first, ...more] = await notices(db, seller);
+    let notice = present(first);
     assert.equal(more.length, 0);
     assert.equal(notice.actor, null);
-    assert.equal(notice.target.state, "expiring");
+    assert.equal(stateOf(notice), "expiring");
     assert.equal(notice.target.id, own.id);
     assert.equal((await unreadCount(db, seller)).unread, 1);
     // Nobody else gets it.
@@ -130,6 +118,7 @@ test("a listing expires after its term, the owner hears three days ahead and ext
       "+7 900 000-00-00",
     );
     const preview = await loadSocialPreview(db, "market", listing.shareId);
+    assert.ok(preview);
     assert.equal(preview.closed, true);
     assert.deepEqual(socialMetadata(preview, env).robots, {
       index: false,
@@ -140,7 +129,7 @@ test("a listing expires after its term, the owner hears three days ahead and ext
     assert.equal(mine.length, 1);
     assert.equal(mine[0].expired, true);
     [notice] = await notices(db, seller);
-    assert.equal(notice.target.state, "expired");
+    assert.equal(stateOf(notice), "expired");
     // Nobody but the owner extends it.
     await assert.rejects(
       db.transaction((q) => extendListing(q, own.id, buyer)),
@@ -151,14 +140,11 @@ test("a listing expires after its term, the owner hears three days ahead and ext
     const extended = await db.transaction((q) =>
       extendListing(q, own.id, seller),
     );
-    assert.equal(
-      new Date(extended.expiresAt).getTime(),
-      start + 61 * day + 60 * day,
-    );
+    assert.equal(endOf(extended), start + 61 * day + 60 * day);
     assert.deepEqual(await listed(db, buyer), ["Gravel wheels"]);
     assert.equal((await detail()).expired, false);
     assert.equal(
-      (await loadSocialPreview(db, "market", listing.shareId)).closed,
+      (await loadSocialPreview(db, "market", listing.shareId))?.closed,
       false,
     );
     assert.equal((await sitemap()).length, 1);
@@ -168,7 +154,7 @@ test("a listing expires after its term, the owner hears three days ahead and ext
       1,
     );
     [notice] = await notices(db, seller);
-    assert.equal(notice.target.state, "extended");
+    assert.equal(stateOf(notice), "extended");
     // The new term earns its own notice when it ends.
     t.mock.timers.setTime(start + 61 * day + 58 * day);
     await noticeExpiringListings(db, seller);
@@ -181,7 +167,7 @@ test("a listing expires after its term, the owner hears three days ahead and ext
       { title: "Gravel wheels", status: "sold" },
       own.id,
     );
-    assert.equal((await notices(db, seller))[0].target.state, "closed");
+    assert.equal(stateOf((await notices(db, seller))[0]!), "closed");
     await assert.rejects(
       db.transaction((q) => extendListing(q, own.id, seller)),
       { status: 409 },
@@ -198,9 +184,7 @@ test("editing keeps the term, publishing again starts a new one, the admin sets 
     const seller = await user(db, "edit_seller");
     const listing = await publish(db, seller, { title: "Saddle" });
     const term = async () =>
-      new Date(
-        (await marketDetail(db, listing.shareId, seller)).expiresAt,
-      ).getTime();
+      endOf(await marketDetail(db, listing.shareId, seller));
     t.mock.timers.setTime(start + 10 * day);
     await publish(db, seller, { title: "Saddle, new photos" }, listing.id);
     assert.equal(await term(), start + 60 * day);
@@ -220,9 +204,7 @@ test("editing keeps the term, publishing again starts a new one, the admin sets 
     );
     const short = await publish(db, seller, { title: "Pedals" });
     assert.equal(
-      new Date(
-        (await marketDetail(db, short.shareId, seller)).expiresAt,
-      ).getTime(),
+      endOf(await marketDetail(db, short.shareId, seller)),
       start + 94 * day,
     );
     await db.transaction((q) => extendListing(q, listing.id, seller));
@@ -290,9 +272,13 @@ test("saved listings show only what is on the market: not sold, expired or hidde
   try {
     const seller = await user(db, "saves_seller"),
       buyer = await user(db, "saves_buyer");
-    const ids = {};
-    for (const title of ["Sold", "Hidden", "Expiring", "Kept"])
-      ids[title] = await publish(db, seller, { title });
+    // One after another, as a person would publish them.
+    const ids = {
+      Sold: await publish(db, seller, { title: "Sold" }),
+      Hidden: await publish(db, seller, { title: "Hidden" }),
+      Expiring: await publish(db, seller, { title: "Expiring" }),
+      Kept: await publish(db, seller, { title: "Kept" }),
+    };
     for (const { id } of Object.values(ids))
       assert.deepEqual(
         await db.transaction((q) => setListingSaved(q, id, buyer, true)),

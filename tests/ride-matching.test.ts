@@ -1,8 +1,19 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { readFile, readdir } from "node:fs/promises";
-import { PGlite } from "@electric-sql/pglite";
+import type { z } from "zod";
+import type {
+  RideIntentRow,
+  RideRow,
+  RideRsvpRow,
+} from "../lib/database-rows.ts";
+import { testDatabase, type TestDatabase } from "./support/database.ts";
+import { bikeRow } from "./support/bikes.ts";
+import { present } from "./support/assertions.ts";
+import { userRow } from "./support/people.ts";
+import { one } from "./support/rows.ts";
+import type { Queryable } from "../lib/db.ts";
+import { intentRow, invitationRow, planRow, rsvpRow } from "./support/rides.ts";
 import {
   evaluate,
   explain,
@@ -29,16 +40,32 @@ import {
   inviteFromInterest,
 } from "../lib/ride-matching.ts";
 import { resolveLocal } from "../lib/ride-intent-time.ts";
+import type {
+  InterestWindow,
+  Offer,
+  Passport,
+  Range,
+  TimeWindow,
+  Want,
+} from "../lib/ride-match-core.ts";
 
 const H = 3600000;
-const at = (/** @type {string} */ iso) => Date.parse(iso);
+const at = (iso: string) => Date.parse(iso);
 const park = { label: "Парк", center: [37.6, 55.75], radiusM: 5000 };
-const want = (windows, passport = {}, extra = {}) => ({
+const want = (
+  windows: TimeWindow[] | null,
+  passport: Passport = {},
+  extra: Partial<Want> = {},
+): Want => ({
   windows,
   passport,
   ...extra,
 });
-const offer = (start, duration, passport = {}) => ({
+const offer = (
+  start: number,
+  duration: Range | null,
+  passport: Passport = {},
+): Offer => ({
   start,
   duration,
   passport,
@@ -49,7 +76,7 @@ test("time feasibility: start and whole duration inside one window, not just the
     { start: at("2030-05-04T08:00Z"), end: at("2030-05-04T10:00Z") },
     { start: at("2030-05-04T14:00Z"), end: at("2030-05-04T18:00Z") },
   ];
-  const cases = [
+  const cases: [string, string, Range | null, string][] = [
     // [name, start, duration, expected code]
     ["exact", "2030-05-04T14:00Z", { min: 120, max: 120 }, "time_fits"],
     [
@@ -215,7 +242,7 @@ test("area: equal labels are never a match; text filter is only partial; coordin
     offer(0, null, { area: spb }),
   );
   assert.equal(
-    byLabel.reasons.find((r) => r.field === "area").code,
+    byLabel.reasons.find((r) => r.field === "area")?.code,
     "area_unknown",
   );
   const text = evaluate(
@@ -223,7 +250,7 @@ test("area: equal labels are never a match; text filter is only partial; coordin
     offer(0, null, { area: spb }),
   );
   assert.equal(
-    text.reasons.find((r) => r.field === "area").code,
+    text.reasons.find((r) => r.field === "area")?.code,
     "area_label_text",
   );
   assert.equal(text.eligible, true);
@@ -268,12 +295,12 @@ test("hard filters: conflicts exclude, unknowns stay visible unless strict — n
 test("group slots: a common window for everyone, never a chain of pairwise overlaps", () => {
   const t = at("2030-05-04T08:00Z");
   const w = (
-    userId,
-    from,
-    to,
-    readiness = "ready",
+    userId: string,
+    from: number,
+    to: number,
+    readiness: InterestWindow["readiness"] = "ready",
     intentId = randomUUID(),
-  ) => ({
+  ): InterestWindow => ({
     userId,
     intentId,
     readiness,
@@ -351,7 +378,7 @@ test("group slots: a common window for everyone, never a chain of pairwise overl
 });
 
 test("query contract rejects ambiguous, partial and duplicate parameters", () => {
-  const parse = (schema, text) =>
+  const parse = (schema: z.ZodType, text: string) =>
     schema.safeParse(queryObject(new URLSearchParams(text)));
   assert.equal(parse(riderQuery, "").success, true);
   assert.equal(parse(riderQuery, "pace=sporty&strict=1&page=2").success, true);
@@ -394,93 +421,71 @@ test("query contract rejects ambiguous, partial and duplicate parameters", () =>
   assert.equal(parse(planQuery, "pace=sporty").success, false);
 });
 
-async function migrated() {
-  const db = new PGlite();
-  for (const file of (await readdir(new URL("../db/", import.meta.url)))
-    .filter((f) => f.endsWith(".sql"))
-    .sort())
-    await db.exec(
-      await readFile(new URL("../db/" + file, import.meta.url), "utf8"),
-    );
-  return db;
-}
-function fixtures(db) {
+const migrated = testDatabase;
+type PlanOptions = Partial<Pick<RideRow, "title" | "status">> & {
+  end?: number;
+  isPublic?: boolean;
+  recurrence?: string;
+  zone?: string;
+  passport?: Passport;
+  invite?: string[];
+};
+type IntentOptions = Partial<
+  Pick<RideIntentRow, "readiness" | "visibility" | "status">
+> & { passport?: Passport; allow?: boolean };
+function fixtures(db: TestDatabase) {
   let n = 0;
-  const iso = (/** @type {number} */ ms) => new Date(ms).toISOString();
   return {
     async user(blocked = false) {
-      const id = randomUUID();
-      await db.query(
-        "INSERT INTO users(id,email,name,password_hash,username,blocked) VALUES($1,$2,'Rider','hash',$3,$4)",
-        [id, id + "@test.invalid", "match" + n++, blocked],
-      );
-      return id;
+      return (
+        await userRow(db, { name: "Rider", username: "match" + n++, blocked })
+      ).id;
     },
-    async bike(owner, isPublic = true) {
-      const id = randomUUID();
-      await db.query(
-        "INSERT INTO bikes(id,owner_id,share_id,name,year,category,is_public) VALUES($1,$2,$1,'Bike',2026,'gravel',$3)",
-        [id, owner, isPublic],
-      );
-      return id;
+    async bike(owner: string, isPublic = true) {
+      return (await bikeRow(db, owner, { is_public: isPublic })).id;
     },
-    async plan(owner, bike, start, o = {}) {
-      const id = randomUUID();
-      await db.query(
-        `INSERT INTO rides(id,owner_id,bike_id,share_id,title,source_hash,status,source_kind,has_track,meeting_point,
-          started_at,plan_ends_at,is_public,distance_m,point_count,public_point_count,public_geometry,privacy_radius_m,
-          recurrence,recurrence_timezone,plan_passport,meeting_visibility)
-         VALUES($1::uuid,$2,$3,$1::uuid,$4,'planned:'||$1::text,$5,'planned',false,'Secret gate 7',$6,$7,$8,0,0,0,'[]',500,$9,$10,$11,'participants')`,
-        [
-          id,
-          owner,
-          bike,
-          o.title || "Plan",
-          o.status || "planned",
-          iso(start),
-          o.end ? iso(o.end) : null,
-          o.isPublic ?? true,
-          o.recurrence || "none",
-          o.zone || "Europe/Moscow",
-          JSON.stringify(o.passport || {}),
-        ],
-      );
-      for (const user of o.invite || [])
-        await db.query(
-          "INSERT INTO ride_invitations(ride_id,user_id) VALUES($1,$2)",
-          [id, user],
-        );
-      return id;
+    async plan(
+      owner: string,
+      bike: string,
+      start: number,
+      o: PlanOptions = {},
+    ) {
+      const ride = await planRow(db, owner, bike, start, {
+        title: o.title || "Plan",
+        status: o.status || "planned",
+        plan_ends_at: o.end ? new Date(o.end) : null,
+        is_public: o.isPublic ?? true,
+        recurrence: o.recurrence || "none",
+        recurrence_timezone: o.zone || "Europe/Moscow",
+        plan_passport: o.passport || {},
+      });
+      for (const user of o.invite || []) await invitationRow(db, ride.id, user);
+      return ride.id;
     },
-    async intent(owner, windows, o = {}) {
-      const id = randomUUID();
-      await db.query(
-        `INSERT INTO ride_intents(id,owner_id,readiness,time_zone,passport,visibility,allow_suggestions,status,request_hash)
-         VALUES($1,$2,$3,'Europe/Moscow',$4,$5,$6,$7,'hash')`,
-        [
-          id,
-          owner,
-          o.readiness || "ready",
-          JSON.stringify(
-            o.passport || { area: { label: "Парк" }, purpose: "social" },
-          ),
-          o.visibility || "community",
-          o.allow ?? true,
-          o.status || "active",
-        ],
-      );
-      for (const [start, end] of windows)
-        await db.query(
-          "INSERT INTO ride_intent_windows(intent_id,starts_at,ends_at) VALUES($1,$2,$3)",
-          [id, iso(start), iso(end)],
-        );
-      return id;
+    async intent(
+      owner: string,
+      windows: [number, number][],
+      o: IntentOptions = {},
+    ) {
+      return (
+        await intentRow(db, owner, windows, {
+          readiness: o.readiness || "ready",
+          passport: o.passport || {
+            area: { label: "Парк" },
+            purpose: "social",
+          },
+          visibility: o.visibility || "community",
+          allow_suggestions: o.allow ?? true,
+          status: o.status || "active",
+        })
+      ).id;
     },
-    rsvp: (ride, user, start, response = "accepted") =>
-      db.query(
-        "INSERT INTO ride_rsvps(ride_id,user_id,occurs_at,response) VALUES($1,$2,$3,$4)",
-        [ride, user, iso(start), response],
-      ),
+    rsvp: (
+      ride: string,
+      user: string,
+      start: number,
+      response: RideRsvpRow["response"] = "accepted",
+    ) => rsvpRow(db, ride, user, start, response),
   };
 }
 const rq = (text = "") =>
@@ -496,7 +501,7 @@ const day0 = (() => {
   const d = new Date();
   return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 2, 8);
 })();
-const h = (/** @type {number} */ n) => day0 + n * H;
+const h = (n: number) => day0 + n * H;
 
 test("rider matching: visibility, blocks, RSVP, invitations, time feasibility and ranking", async () => {
   const db = await migrated();
@@ -628,7 +633,7 @@ test("rider matching: visibility, blocks, RSVP, invitations, time feasibility an
     );
     assert.deepEqual(
       byText.items.map(
-        (i) => i.match.reasons.find((r) => r.field === "area").code,
+        (i) => i.match.reasons.find((r) => r.field === "area")?.code,
       ),
       ["area_label_text", "area_unknown"],
     );
@@ -724,7 +729,7 @@ test("organizer interest: unique people, private/blocked/withdrawn excluded, nam
       new Set(first.people.items.map((p) => p.author.id)),
       new Set([u1, u6]),
     );
-    const six = first.people.items.find((p) => p.author.id === u6);
+    const six = present(first.people.items.find((p) => p.author.id === u6));
     assert.equal(six.readiness, "ready");
     assert.equal(six.invited, true);
     assert.doesNotMatch(
@@ -777,11 +782,12 @@ test("organizer draft: one start or common slots; A↔B and B↔C never make A+B
       dq(period + "&durationMin=60&durationMax=60"),
     );
     assert.equal(slots.mode, "slots");
-    assert.ok(slots.slots.every((s) => s.counts.total <= 2));
-    assert.equal(slots.slots[0].counts.total, 2);
-    assert.equal(slots.slots[0].startFrom, new Date(h(1)).toISOString());
-    const bc = slots.slots.find(
-      (s) => s.startFrom === new Date(h(2)).toISOString(),
+    const list = present(slots.slots);
+    assert.ok(list.every((s) => s.counts.total <= 2));
+    assert.equal(list[0]?.counts.total, 2);
+    assert.equal(list[0]?.startFrom, new Date(h(1)).toISOString());
+    const bc = present(
+      list.find((s) => s.startFrom === new Date(h(2)).toISOString()),
     );
     assert.equal(bc.counts.total, 2);
     assert.deepEqual(
@@ -805,7 +811,7 @@ test("organizer draft: one start or common slots; A↔B and B↔C never make A+B
       ),
     );
     assert.equal(one.mode, "occurrence");
-    assert.equal(one.counts.total, 2);
+    assert.equal(present(one.counts).total, 2);
     await assert.rejects(
       draftInterest(db, org, dq("start=2000-01-01T00:00:00Z")),
       { status: 400 },
@@ -822,9 +828,10 @@ INSERT INTO ride_intent_windows(intent_id,starts_at,ends_at)
  FROM generate_series(1,1010) g;`);
     const start = encodeURIComponent(new Date(h(1.5)).toISOString());
     const crowd = await draftInterest(db, org, dq(`start=${start}&page=50`));
-    assert.equal(crowd.people.total, 1012); // 1010 + a and b above
-    assert.equal(crowd.people.pages, 50);
-    assert.equal(crowd.people.items.length, 20);
+    const people = present(crowd.people);
+    assert.equal(people.total, 1012); // 1010 + a and b above
+    assert.equal(people.pages, 50);
+    assert.equal(people.items.length, 20);
   } finally {
     await db.close();
   }
@@ -932,14 +939,14 @@ test("invitations from interest (#234): re-checked on the server, refusals kept,
     await f.intent(trainer, [[h(0), h(4)]], {
       passport: { area: { label: "Парк" }, purpose: "training" },
     });
-    const input = (/** @type {string[]} */ userIds) =>
+    const input = (userIds: string[]) =>
       interestInvitationsInput.parse({
         occurrenceAt: new Date(h(1)).toISOString(),
         userIds,
       });
     const view = await planInterest(db, org, plan, pq());
     assert.equal(
-      view.people.items.find((p) => p.author.id === d).declined,
+      present(view.people.items.find((p) => p.author.id === d)).declined,
       true,
     );
     assert.equal(
@@ -1055,7 +1062,7 @@ test("weekly occurrences in SQL keep local time across DST, like RSVP occurrence
   const db = await migrated();
   try {
     // Fixed dates: this checks only the SQL expansion, not the "future" filter.
-    const r = await db.query(
+    const r = await db.query<{ occurs_at: Date }>(
       `SELECT o.occurs_at FROM (VALUES ('2026-10-17T08:00:00Z'::timestamptz,'Europe/Berlin','weekly')) r(started_at,recurrence_timezone,recurrence)
        ${planOccurrences.replaceAll("$2::timestamptz", "'2026-10-20T00:00:00Z'::timestamptz").replaceAll("$3::timestamptz", "'2026-11-05T00:00:00Z'::timestamptz")}
        ORDER BY 1`,
@@ -1103,21 +1110,24 @@ INSERT INTO ride_intent_windows(intent_id,starts_at,ends_at)
     await db.exec(
       "ALTER TABLE rides ENABLE TRIGGER awards_ride; ALTER TABLE bikes ENABLE TRIGGER awards_bike; ANALYZE;",
     );
-    /** @type {{sql: string, params: any[]}[]} */
-    let log = [];
-    const q = {
-      query: (sql, params = []) => {
+    let log: { sql: string; params: unknown[] }[] = [];
+    const q: Queryable = {
+      query: <Row extends object>(sql: string, params: unknown[] = []) => {
         log.push({ sql, params });
-        return db.query(sql, params);
+        return db.query<Row>(sql, params);
       },
     };
-    const id = async (sql) => (await db.query(sql)).rows[0];
-    const rider = (await id("SELECT md5('u'||2)::uuid AS id")).id; // has intents
-    const guest = (await id("SELECT md5('u'||9999)::uuid AS id")).id;
-    const plan = await id(
+    const id = async <Row extends object>(sql: string) =>
+      await one<Row>(db, sql);
+    const rider = (await id<{ id: string }>("SELECT md5('u'||2)::uuid AS id"))
+      .id; // has intents
+    const guest = (
+      await id<{ id: string }>("SELECT md5('u'||9999)::uuid AS id")
+    ).id;
+    const plan = await id<{ owner_id: string; id: string }>(
       "SELECT owner_id,id FROM rides WHERE status='planned' AND recurrence='none' AND started_at>now()+interval '2 days' ORDER BY started_at,id LIMIT 1",
     );
-    const cases = [
+    const cases: [string, () => Promise<unknown>, number][] = [
       ["rider intents", () => matchRides(q, rider, rq()), 4],
       [
         "rider filters",

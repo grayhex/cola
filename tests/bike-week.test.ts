@@ -1,8 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { PGlite } from "@electric-sql/pglite";
 import { randomUUID } from "node:crypto";
-import { readFile, readdir } from "node:fs/promises";
 import {
   selectBikeWeek,
   currentBikeWeek,
@@ -20,63 +18,34 @@ import {
   weekInput,
 } from "../lib/bike-week-validation.ts";
 import { notificationPage } from "../lib/notifications.ts";
-import { defaultSettings, defaultCatalog } from "../lib/site-defaults.ts";
+import type { Queryable } from "../lib/db.ts";
+import {
+  seedSiteDefaults,
+  testDatabase,
+  type TestDatabase,
+} from "./support/database.ts";
+import { completeBikeRow } from "./support/bikes.ts";
+import { present } from "./support/assertions.ts";
+import { userRow } from "./support/people.ts";
+import { one } from "./support/rows.ts";
 const now = new Date("2026-10-01T09:00:00Z"),
   week = "2026-09-28",
   stamp = "2026-09-26T12:00:00Z";
 async function setup() {
-  const q = new PGlite();
-  for (const f of (await readdir(new URL("../db", import.meta.url)))
-    .filter((f) => f.endsWith(".sql"))
-    .sort())
-    await q.exec(
-      await readFile(new URL("../db/" + f, import.meta.url), "utf8"),
-    );
-  await q.query("INSERT INTO site_settings VALUES(1,$1,1,now())", [
-    defaultSettings,
-  ]);
-  await q.query("INSERT INTO site_catalog VALUES(1,$1,1,now())", [
-    defaultCatalog,
-  ]);
+  const q = await testDatabase();
+  await seedSiteDefaults(q);
   return q;
 }
-async function user(q) {
-  const id = randomUUID();
-  await q.query(
-    "INSERT INTO users(id,email,name,password_hash,username) VALUES($1,$2,'Rider','hash',$3)",
-    [id, id + "@example.test", "u" + id.replaceAll("-", "").slice(0, 20)],
-  );
-  return id;
+async function user(q: Queryable) {
+  return (await userRow(q)).id;
 }
-async function bike(q, owner, id = randomUUID()) {
-  await q.query(
-    "INSERT INTO bikes(id,owner_id,share_id,name,brand,model,year,category,is_public,description) VALUES($1,$2,$3,'Touring','Cube','Travel',2026,'road',true,'Public story')",
-    [id, owner, randomUUID()],
-  );
-  await q.query(
-    "INSERT INTO photos(id,bike_id,filename,is_cover) VALUES($1,$2,$3,true)",
-    [randomUUID(), id, id + ".webp"],
-  );
-  for (const category of [
-    "Рама",
-    "Вилка",
-    "Тормоза",
-    "Колёса",
-    "Руль",
-    "Седло",
-    "Педали",
-    "Цепь",
-  ])
-    await q.query(
-      "INSERT INTO components(id,bike_id,section,category,name) VALUES($1,$2,'build',$3,$4)",
-      [randomUUID(), id, category, "Shimano " + category],
-    );
-  return id;
+async function bike(q: Queryable, owner: string, id = randomUUID()) {
+  return (await completeBikeRow(q, owner, { id })).id;
 }
 async function activity(
-  q,
-  bikeId,
-  actor,
+  q: Queryable,
+  bikeId: string,
+  actor: string,
   kinds = ["like", "clean", "dream", "comment", "comment"],
 ) {
   for (const kind of kinds) {
@@ -97,7 +66,8 @@ async function activity(
       );
   }
 }
-const tx = (q, fn) => q.transaction(fn);
+const tx = <T>(q: TestDatabase, fn: (c: Queryable) => Promise<T>) =>
+  q.transaction(fn);
 test("admin search bypasses score and cooldown but excludes private, blocked, opted-out and incomplete bikes", async () => {
   const q = await setup();
   try {
@@ -220,7 +190,7 @@ test("weekly scoring ignores self, blocked, deleted and outside-window activity;
       ).rows[0].actor_id,
       null,
     );
-    const dto = await currentBikeWeek(q, now);
+    const dto = present(await currentBikeWeek(q, now));
     assert.equal(dto.bike.id, first);
     assert.equal(dto.components.length, 7);
     assert.equal(dto.text, "Public story");
@@ -241,12 +211,14 @@ test("weekly scoring ignores self, blocked, deleted and outside-window activity;
         ),
       /недоступно/,
     );
-    const published = await tx(q, (c) =>
-      updateBikeWeekStory(
-        c,
-        a,
-        { action: "publish", text: "My explicit story" },
-        now,
+    const published = present(
+      await tx(q, (c) =>
+        updateBikeWeekStory(
+          c,
+          a,
+          { action: "publish", text: "My explicit story" },
+          now,
+        ),
       ),
     );
     assert.equal(published.textSource, "owner");
@@ -298,11 +270,11 @@ test("private/block/exclusion/deletion invalidation, refusal, override/skip and 
         now,
       ),
     );
-    assert.equal((await currentBikeWeek(q, now)).bike.id, a);
+    assert.equal(present(await currentBikeWeek(q, now)).bike.id, a);
     await q.query("UPDATE bikes SET is_public=false WHERE id=$1", [a]);
     assert.equal(await currentBikeWeek(q, now), null);
     await tx(q, (c) => selectBikeWeek(c, now));
-    assert.equal((await currentBikeWeek(q, now)).bike.id, b);
+    assert.equal(present(await currentBikeWeek(q, now)).bike.id, b);
     await tx(q, (c) =>
       updateBikeWeekStory(c, other, { action: "decline" }, now),
     );
@@ -359,7 +331,7 @@ test("private/block/exclusion/deletion invalidation, refusal, override/skip and 
     );
     const next = new Date("2026-10-05T10:00:00Z");
     await tx(q, (c) => selectBikeWeek(c, next));
-    assert.equal((await currentBikeWeek(q, next)).bike.id, a);
+    assert.equal(present(await currentBikeWeek(q, next)).bike.id, a);
     await q.query("UPDATE users SET blocked=true WHERE id=$1", [owner]);
     assert.equal(await currentBikeWeek(q, next), null);
     await tx(q, (c) => selectBikeWeek(c, next));
@@ -387,15 +359,20 @@ test("private/block/exclusion/deletion invalidation, refusal, override/skip and 
     await q.query("DELETE FROM bikes WHERE id=$1", [b]);
     assert.equal(await currentBikeWeek(q, third), null);
     assert(
-      (await q.query("SELECT count(*)::int n FROM bike_week_history")).rows[0]
-        .n >= 8,
+      (
+        await one<{ n: number }>(
+          q,
+          "SELECT count(*)::int n FROM bike_week_history",
+        )
+      ).n >= 8,
     );
     assert(
       (
-        await q.query(
+        await one<{ n: number }>(
+          q,
           "SELECT count(*)::int n FROM admin_audit WHERE action LIKE 'bike-week.%'",
         )
-      ).rows[0].n >= 4,
+      ).n >= 4,
     );
   } finally {
     await q.close();

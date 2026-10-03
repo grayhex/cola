@@ -1,10 +1,6 @@
 import test, { after } from "node:test";
 import assert from "node:assert/strict";
-import { PGlite } from "@electric-sql/pglite";
-import { readFile, readdir } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { savedKeysetPage } from "../lib/journal-discovery.ts";
 import { feedKeysetPage } from "../lib/ride-feed.ts";
 import {
@@ -38,36 +34,42 @@ import {
   ownRideSummarySchema,
   parseNoQuery,
 } from "../lib/api-v1/schemas.ts";
+import { present } from "./support/assertions.ts";
+import { testDatabase } from "./support/database.ts";
+import { listingRow } from "./support/market.ts";
+import {
+  bikeCommentRow,
+  journalEntryRow,
+  noticeRow,
+} from "./support/notifications.ts";
+import { userRow } from "./support/people.ts";
+import { rideRow, rsvpRow } from "./support/rides.ts";
+import { one } from "./support/rows.ts";
 
 // API v1, personal reads (#321): notices and saved items of the person asking.
 // The rules are the site's (visibility at read time), only the paging differs.
 // The server end to end is tests/api-v1-personal-http.js.
 
-const root = fileURLToPath(new URL("../", import.meta.url));
-const db = new PGlite();
-for (const file of (await readdir(path.join(root, "db")))
-  .filter((name) => name.endsWith(".sql"))
-  .sort())
-  await db.exec(await readFile(path.join(root, "db", file), "utf8"));
+type FeedType = Parameters<typeof feedKeysetPage>[2]["type"];
+type FeedCard = ReturnType<typeof toFeedItem>;
+type Cursor = Awaited<ReturnType<typeof savedKeysetPage>>["next"];
+const db = await testDatabase();
 after(() => db.close());
 
-const day = (n, micro = 100) =>
+const day = (n: number, micro = 100) =>
   `2026-09-${String(n).padStart(2, "0")}T10:00:00.${String(micro).padStart(6, "0")}Z`;
-async function addUser(label, blocked = false) {
+async function addUser(label: string, blocked = false) {
   const id = randomUUID();
-  await db.query(
-    "INSERT INTO users(id,email,name,password_hash,username,blocked) VALUES($1,$2,$3,'hash',$4,$5)",
-    [
+  return (
+    await userRow(db, {
       id,
-      id + "@test.invalid",
-      "Имя " + label,
-      (label + "-" + id.slice(0, 8)).toLowerCase(),
+      name: "Имя " + label,
+      username: (label + "-" + id.slice(0, 8)).toLowerCase(),
       blocked,
-    ],
-  );
-  return id;
+    })
+  ).id;
 }
-async function addBike(owner, isPublic = true) {
+async function addBike(owner: string, isPublic = true) {
   return insertBike(
     db,
     owner,
@@ -85,63 +87,60 @@ async function addBike(owner, isPublic = true) {
     }),
   );
 }
-async function addComment(bike, author, at) {
-  const id = randomUUID();
-  await db.query(
-    "INSERT INTO bike_comments(id,bike_id,author_id,body,created_at,updated_at) VALUES($1,$2,$3,'Привет',$4,$4)",
-    [id, bike, author, at],
-  );
-  return id;
+async function addComment(bike: string, author: string, at: string) {
+  return (
+    await bikeCommentRow(db, bike, author, { created_at: at, updated_at: at })
+  ).id;
 }
-async function notice(recipient, actor, type, extra, at) {
-  const id = randomUUID();
-  await db.query(
-    "INSERT INTO notifications(id,recipient_id,actor_id,type,bike_id,comment_id,dedup_key,created_at) VALUES($1,$2,$3,$4,$5,$6,$8,$7)",
-    [
-      id,
-      recipient,
-      actor,
-      type,
-      extra.bike ?? null,
-      extra.comment ?? null,
-      at,
-      id,
-    ],
-  );
-  return id;
+async function notice(
+  recipient: string,
+  actor: string,
+  type: string,
+  extra: { bike?: string; comment?: string },
+  at: string,
+) {
+  return (
+    await noticeRow(db, recipient, type, {
+      actor_id: actor,
+      bike_id: extra.bike ?? null,
+      comment_id: extra.comment ?? null,
+      created_at: at,
+    })
+  ).id;
 }
 async function addListing(
-  owner,
-  { status = "active", at = day(10), title } = {},
+  owner: string,
+  {
+    status = "active",
+    at = day(10),
+    title,
+  }: { status?: "active" | "sold" | "draft"; at?: string; title?: string } = {},
 ) {
-  const id = randomUUID();
-  await db.query(
-    `INSERT INTO market_listings(id,share_id,owner_id,title,description,category,condition,price,currency,status,listing_type,published_at,expires_at)
-     VALUES($1,$2,$3,$4,'Описание','components','used',100,'RUB',$5,'sale',$6,$7)`,
-    [
-      id,
-      randomUUID(),
-      owner,
-      title ?? "Лот " + id.slice(0, 6),
+  return (
+    await listingRow(db, owner, {
+      title,
+      price: 100,
       status,
-      at,
-      status === "active" ? "2099-01-01T00:00:00Z" : null,
-    ],
-  );
-  return id;
+      published_at: at,
+      expires_at: status === "active" ? "2099-01-01T00:00:00Z" : null,
+    })
+  ).id;
 }
 async function addEntry(
-  owner,
-  bike,
-  { status = "published", at = day(1) } = {},
+  owner: string,
+  bike: string,
+  {
+    status = "published",
+    at = day(1),
+  }: { status?: "draft" | "published"; at?: string } = {},
 ) {
-  const id = randomUUID();
-  await db.query(
-    `INSERT INTO journal_entries(id,share_id,owner_id,bike_id,kind,title,body,status,is_public,event_date,mileage,components,created_at,updated_at)
-     VALUES($1,$2,$3,$4,'build','Запись','Текст записи',$5,true,'2026-08-30',100,'[]'::jsonb,$6,$6)`,
-    [id, randomUUID(), owner, bike, status, at],
-  );
-  return id;
+  return (
+    await journalEntryRow(db, owner, bike, {
+      status,
+      created_at: at,
+      updated_at: at,
+    })
+  ).id;
 }
 
 const me = await addUser("me");
@@ -150,9 +149,9 @@ const barred = await addUser("barred");
 const bike = await addBike(me);
 const their = await addBike(actor);
 
-async function walk(limit) {
-  const seen = [];
-  let after = null;
+async function walk(limit: number) {
+  const seen: string[] = [];
+  let after: Awaited<ReturnType<typeof notificationKeysetPage>>["next"] = null;
   for (let guard = 0; guard < 30; guard++) {
     const page = await notificationKeysetPage(db, me, limit, after);
     seen.push(...page.items.map((item) => item.id));
@@ -244,13 +243,17 @@ test("notices: the card is the contract's, with the site's paths", async () => {
     toNotification,
   );
   for (const item of items) notificationSchema.parse(item);
-  const byType = (type) => items.find((item) => item.type === type);
+  const byType = (type: string) =>
+    present(items.find((item) => item.type === type));
   assert.equal(byType("follow").target.type, "profile");
   assert.match(byType("follow").target.path, /^\/@/);
   assert.equal(byType("like").target.type, "bike");
   assert.match(byType("like").target.path, /^\/b\//);
   assert.match(byType("comment").target.path, /\?comment=.+#discussion$/);
-  assert.equal(byType("like").actor.username.startsWith("actor-"), true);
+  assert.equal(
+    present(byType("like").actor).username.startsWith("actor-"),
+    true,
+  );
   assert.ok(!JSON.stringify(items).includes("@test.invalid"));
   assert.ok(items.every((item) => item.readAt === null));
 });
@@ -277,7 +280,7 @@ test("notices: the end of a listing's term and a security notice", async () => {
   assert.equal(market[0].target.state, "expiring");
   assert.ok(market[0].target.expiresAt);
   assert.equal(market[0].target.name, "Скоро");
-  const reuse = items.find((item) => item.type === "session_reuse");
+  const reuse = present(items.find((item) => item.type === "session_reuse"));
   assert.equal(reuse.actor, null);
   assert.equal(reuse.target.type, "account");
   assert.match(reuse.target.path, /^\/account/);
@@ -295,24 +298,25 @@ test("the count is the site's", async () => {
 });
 
 test("saved entries: newest save first, only what is still public", async () => {
-  const entries = [];
+  const entries: string[] = [];
   for (let i = 0; i < 4; i++)
     entries.push(await addEntry(actor, their, { at: day(1 + i) }));
   const draft = await addEntry(actor, their, { status: "draft" });
-  const save = (entry, at) =>
+  const save = (entry: string, at: string) =>
     db.query(
       "INSERT INTO journal_saves(user_id,entry_id,created_at) VALUES($1,$2,$3)",
       [me, entry, at],
     );
-  await save(entries[0], day(5));
-  await save(entries[1], day(6));
+  const [e0, e1, e2, e3] = entries as [string, string, string, string];
+  await save(e0, day(5));
+  await save(e1, day(6));
   // The same instant: the id is the last word.
-  await save(entries[2], day(7));
-  await save(entries[3], day(7));
+  await save(e2, day(7));
+  await save(e3, day(7));
   await save(draft, day(8));
-  const walk = async (limit) => {
-    const seen = [];
-    let after = null;
+  const walk = async (limit: number) => {
+    const seen: string[] = [];
+    let after: Cursor = null;
     for (let guard = 0; guard < 20; guard++) {
       const page = await savedKeysetPage(db, me, limit, after);
       for (const row of page.rows)
@@ -323,9 +327,7 @@ test("saved entries: newest save first, only what is still public", async () => 
     }
     throw new Error("the walk does not end");
   };
-  const expected = [entries[2], entries[3]]
-    .sort()
-    .concat([entries[1], entries[0]]);
+  const expected = [e2, e3].sort().concat([e1, e0]);
   for (const limit of [1, 2, 3, 50])
     assert.deepEqual(await walk(limit), expected, "limit " + limit);
   // Unpublished stays saved, not shown.
@@ -338,26 +340,27 @@ test("saved entries: newest save first, only what is still public", async () => 
 });
 
 test("saved listings: newest save first, only what is on the market", async () => {
-  const live = [];
+  const live: string[] = [];
   for (let i = 0; i < 3; i++)
     live.push(await addListing(actor, { at: day(1 + i) }));
   const sold = await addListing(actor, { status: "sold" });
   const hidden = await addListing(barred);
-  const save = (listing, at) =>
+  const save = (listing: string, at: string) =>
     db.query(
       "INSERT INTO market_saves(user_id,listing_id,created_at) VALUES($1,$2,$3)",
       [me, listing, at],
     );
-  await save(live[0], day(5));
-  await save(live[1], day(6));
-  await save(live[2], day(6));
+  const [l0, l1, l2] = live as [string, string, string];
+  await save(l0, day(5));
+  await save(l1, day(6));
+  await save(l2, day(6));
   await save(sold, day(9));
   await save(hidden, day(9));
   await db.query("UPDATE users SET blocked=true WHERE id=$1", [barred]);
   const legacy = (await savedListings(db, me)).items.map((item) => item.id);
-  const walk = async (limit) => {
-    const seen = [];
-    let after = null;
+  const walk = async (limit: number) => {
+    const seen: string[] = [];
+    let after: Cursor = null;
     for (let guard = 0; guard < 20; guard++) {
       const page = await savedApiKeysetPage(db, me, limit, after);
       for (const item of page.items)
@@ -385,37 +388,30 @@ test("an operation without parameters refuses every parameter", () => {
     });
 });
 
-const hours = (n) => new Date(Date.now() + n * 3600000).toISOString();
-async function addRide(owner, bike, options = {}) {
-  const {
-    status = "completed",
-    isPublic = true,
-    startedAt = hours(-48),
-    meeting = "",
-    visibility = "public",
-    title = "Ride " + randomUUID().slice(0, 6),
-  } = options;
-  const id = randomUUID();
+const hours = (n: number) => new Date(Date.now() + n * 3600000).toISOString();
+interface RideOptions {
+  status?: "completed" | "planned" | "cancelled";
+  isPublic?: boolean;
+  startedAt?: string;
+  meeting?: string;
+  visibility?: "public" | "participants";
+  title?: string;
+}
+async function addRide(owner: string, bike: string, options: RideOptions = {}) {
+  const { status = "completed", isPublic = true } = options;
   const planned = status !== "completed";
-  await db.query(
-    `INSERT INTO rides(id,share_id,owner_id,bike_id,title,description,status,source_kind,has_track,is_public,started_at,distance_m,point_count,public_point_count,public_geometry,privacy_enabled,privacy_radius_m,source_hash,recurrence,meeting_point,meeting_visibility,plan_passport,import_metrics)
-     VALUES($1,$1,$2,$3,$4,'описание',$5,$6,false,$7,$8,$9,2,2,'[]',true,500,$10,'none',$11,$12,'{}','{}')`,
-    [
-      id,
-      owner,
-      bike,
-      title,
+  return (
+    await rideRow(db, owner, bike, {
+      title: options.title,
       status,
-      planned ? "planned" : "gpx",
-      isPublic,
-      startedAt,
-      planned ? 0 : 12000,
-      "fixture-" + id,
-      meeting,
-      visibility,
-    ],
-  );
-  return id;
+      source_kind: planned ? "planned" : "gpx",
+      is_public: isPublic,
+      started_at: options.startedAt ?? hours(-48),
+      distance_m: planned ? 0 : 12000,
+      meeting_point: options.meeting,
+      meeting_visibility: options.visibility,
+    })
+  ).id;
 }
 
 test("own rides: every state, only mine, the keyset walk is whole", async () => {
@@ -440,9 +436,9 @@ test("own rides: every state, only mine, the keyset walk is whole", async () => 
     }),
   ];
   await addRide(actor, theirsBike);
-  const walk = async (limit) => {
-    const seen = [];
-    let after = null;
+  const walk = async (limit: number) => {
+    const seen: string[] = [];
+    let after: Cursor = null;
     for (let guard = 0; guard < 20; guard++) {
       const page = await ownRideKeysetPage(db, mine, { limit, after });
       for (const row of page.rows)
@@ -462,15 +458,18 @@ test("own rides: every state, only mine, the keyset walk is whole", async () => 
     await ownRideKeysetPage(db, mine, { limit: 50, after: null })
   ).rows.map((row) => toOwnRideSummary(row, mine));
   const times = cards.map((card) =>
-    Date.parse(card.startedAt ?? card.scheduledAt),
+    Date.parse(present(card.startedAt ?? card.scheduledAt)),
   );
   assert.deepEqual(
     times,
     [...times].sort((a, b) => b - a),
   );
-  const by = (status) => cards.filter((card) => card.status === status);
+  const by = (status: string) => cards.filter((card) => card.status === status);
   assert.equal(by("cancelled").length, 1);
-  assert.ok(by("cancelled")[0].scheduledAt, "a called-off plan keeps its date");
+  assert.ok(
+    by("cancelled")[0]?.scheduledAt,
+    "a called-off plan keeps its date",
+  );
   assert.equal(by("planned").length, 2);
   assert.equal(cards.filter((card) => !card.isPublic).length, 2);
   assert.ok(
@@ -524,14 +523,22 @@ test("upcoming plans: the role in each, the meeting point by the participants' r
     status: "cancelled",
     startedAt: hours(60),
   });
-  const answer = (ride, who, response, at) =>
-    db.query(
-      "INSERT INTO ride_rsvps(ride_id,user_id,occurs_at,response) VALUES($1,$2,$3,$4)",
-      [ride, who, at, response],
+  const answer = (
+    ride: string,
+    who: string,
+    response: "accepted" | "maybe",
+    at: Date,
+  ) => rsvpRow(db, ride, who, at, response);
+  const start = async (ride: string) =>
+    present(
+      (
+        await one<{ started_at: Date | null }>(
+          db,
+          "SELECT started_at FROM rides WHERE id=$1",
+          [ride],
+        )
+      ).started_at,
     );
-  const start = async (ride) =>
-    (await db.query("SELECT started_at FROM rides WHERE id=$1", [ride])).rows[0]
-      .started_at;
   await answer(going, guest, "accepted", await start(going));
   await answer(maybe, guest, "maybe", await start(maybe));
   await answer(called, guest, "accepted", await start(called));
@@ -543,13 +550,14 @@ test("upcoming plans: the role in each, the meeting point by the participants' r
     "INSERT INTO ride_invitations(ride_id,user_id) VALUES($1,$2)",
     [closed, outsider],
   );
-  const items = async (who) =>
+  const items = async (who: string) =>
     (await myUpcomingEntries(db, who)).map((entry) =>
       toMyUpcomingRide(entry, who),
     );
   const mineItems = await items(guest);
   myUpcomingRidesSchema.parse({ items: mineItems });
-  const role = (ride) => mineItems.find((item) => item.id === ride)?.role;
+  const role = (ride: string) =>
+    mineItems.find((item) => item.id === ride)?.role;
   assert.equal(role(own), "organizer");
   assert.equal(role(going), "accepted");
   assert.equal(role(invited), "invited");
@@ -562,14 +570,15 @@ test("upcoming plans: the role in each, the meeting point by the participants' r
   );
   assert.equal(role(closed), undefined);
   // Soonest first.
-  const times = mineItems.map((item) => Date.parse(item.scheduledAt));
+  const times = mineItems.map((item) => Date.parse(present(item.scheduledAt)));
   assert.deepEqual(
     times,
     [...times].sort((a, b) => a - b),
   );
   // The meeting point: mine to the organizer, the participants' after "going",
   // hidden from an invitee who has not answered, and none for a called-off plan.
-  const point = (ride) => mineItems.find((item) => item.id === ride);
+  const point = (ride: string) =>
+    present(mineItems.find((item) => item.id === ride));
   assert.equal(point(own).meetingPoint, "У фонтана");
   assert.equal(point(going).meetingPoint, "Площадь");
   assert.equal(point(invited).meetingPoint, null);
@@ -582,11 +591,13 @@ test("upcoming plans: the role in each, the meeting point by the participants' r
   // An edit of the conditions after the answer is shown.
   await db.query("UPDATE rides SET agreement_revision=2 WHERE id=$1", [going]);
   assert.equal(
-    (await items(guest)).find((item) => item.id === going).changedAfterAnswer,
+    present((await items(guest)).find((item) => item.id === going))
+      .changedAfterAnswer,
     true,
   );
   assert.equal(
-    (await items(guest)).find((item) => item.id === maybe).changedAfterAnswer,
+    present((await items(guest)).find((item) => item.id === maybe))
+      .changedAfterAnswer,
     false,
   );
   // Another person has none of these; the invited of a private plan sees it.
@@ -650,9 +661,9 @@ test("feed: what the person follows, newest first; a walk by cursor is whole", a
         day(n),
       ]);
   }
-  const walk = async (type, limit) => {
-    const seen = [];
-    let after = null;
+  const walk = async (type: FeedType, limit: number) => {
+    const seen: FeedCard[] = [];
+    let after: Awaited<ReturnType<typeof feedKeysetPage>>["next"] = null;
     for (let guard = 0; guard < 30; guard++) {
       const page = await feedKeysetPage(db, reader, { type, limit, after });
       for (const item of page.items) {
@@ -670,10 +681,11 @@ test("feed: what the person follows, newest first; a walk by cursor is whole", a
     }
     throw new Error("the walk does not end");
   };
-  const order = (ids) =>
-    [...ids].sort((a, b) => at.get(b) - at.get(a) || (a < b ? -1 : 1));
-  const idOf = (card) =>
-    (card.bike ?? card.ride ?? card.journal ?? card.listing).id;
+  const rank = (id: string) => present(at.get(id));
+  const order = (ids: string[]) =>
+    [...ids].sort((a, b) => rank(b) - rank(a) || (a < b ? -1 : 1));
+  const idOf = (card: FeedCard) =>
+    present(card.bike ?? card.ride ?? card.journal ?? card.listing).id;
   const all = await walk("all", 50);
   assert.deepEqual(
     all.map(idOf),
@@ -713,7 +725,7 @@ test("feed: what the person follows, newest first; a walk by cursor is whole", a
   );
   // The instant is the publication, to the millisecond.
   assert.equal(
-    all.find((card) => idOf(card) === listing).publishedAt,
+    present(all.find((card) => idOf(card) === listing)).publishedAt,
     new Date(day(4)).toISOString(),
   );
   // Nobody else's feed; a person who follows nobody has none.

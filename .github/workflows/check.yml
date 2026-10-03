@@ -82,7 +82,7 @@ jobs:
         run: pnpm lint
       # Native strict production TS/TSX, exact generated exception and negative probes.
       - name: Type check
-        run: pnpm typecheck && pnpm test:typecheck
+        run: pnpm typecheck && pnpm typecheck:tests && pnpm test:typecheck
       - name: Application unit and database tests
         run: pnpm test
       - name: PostgreSQL records performance budgets and SQL plans

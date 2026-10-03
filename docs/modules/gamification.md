@@ -58,7 +58,7 @@ UI: [records.tsx](../../app/ui/records.tsx), [records.module.css](../../app/ui/r
 
 ## Проверки
 
-[gamification.test.js](../../tests/gamification.test.js) — приёмка #106: администратор создаёт «Гонщика» и «Черепаху», награды выдаются после пересчёта и остаются, рекорд переходит к новому лидеру, скрытые данные (приватная покатушка, приватный велосипед, скрытая цена, скрытая максимальная скорость, блокировка) не влияют, миграция сохраняет награды, иллюстрации и описания. [game-rules-validation.test.js](../../tests/game-rules-validation.test.js) — схема правил, [gamification-presentation.test.js](../../tests/gamification-presentation.test.js) — группы, блок главной, подписи, [gamification-http.js](../../tests/gamification-http.js) и [gamification-rules-http.js](../../tests/gamification-rules-http.js) — API, права и защита иллюстраций, [gamification.spec.js](../../tests/e2e/gamification.spec.js) и [gamification-layout.spec.js](../../tests/e2e/gamification-layout.spec.js) — страницы и редактор.
+[gamification.test.ts](../../tests/gamification.test.ts) — приёмка #106: администратор создаёт «Гонщика» и «Черепаху», награды выдаются после пересчёта и остаются, рекорд переходит к новому лидеру, скрытые данные (приватная покатушка, приватный велосипед, скрытая цена, скрытая максимальная скорость, блокировка) не влияют, миграция сохраняет награды, иллюстрации и описания. [game-rules-validation.test.js](../../tests/game-rules-validation.test.js) — схема правил, [gamification-presentation.test.js](../../tests/gamification-presentation.test.js) — группы, блок главной, подписи, [gamification-http.js](../../tests/gamification-http.js) и [gamification-rules-http.js](../../tests/gamification-rules-http.js) — API, права и защита иллюстраций, [gamification.spec.js](../../tests/e2e/gamification.spec.js) и [gamification-layout.spec.js](../../tests/e2e/gamification-layout.spec.js) — страницы и редактор.
 
 Новая метрика требует SQL в функции значений, строки в каталоге и тестов на приватность. Не привязывайте логику к названию: его меняет администратор.
 
@@ -84,7 +84,7 @@ Ops-worker `bike-week` выполняется раз в минуту. Transactio
 
 `GET /api/bike-week/current` и `bikeOfWeek` в `/api/discovery/home` возвращают только bike/share ID, имя/бренд/модель, обложку, публичного владельца, текст с `textSource`, 5–7 компонентов и даты. Нет score, истории кандидатов, цен и полного BOM. Главная читает snapshot одним ограниченным SQL, не запускает подбор. API владельца — `GET/PUT /api/bike-week/me`; admin — `GET .../admin?week=YYYY-MM-DD`, `PUT .../settings`, `PUT .../decision`, `POST .../run`. Записывающие маршруты проверяют Origin и роль/владение на сервере.
 
-Проверки: `bike-week.test.js` (lifecycle/anti-gaming/ties/cooldown/отказ/приватность/DTO), `bike-week-concurrency.js` (пересекающиеся транзакции настоящего PostgreSQL в HTTP harness), `e2e/bike-week.spec.js` (права/Origin/уведомление/редактор/темы/390 и 1440 px/клавиатура/axe). Разметка нового блока главной и публичный архив входят в последующие задачи, а не в этот модуль.
+Проверки: `bike-week.test.ts` (lifecycle/anti-gaming/ties/cooldown/отказ/приватность/DTO), `bike-week-concurrency.js` (пересекающиеся транзакции настоящего PostgreSQL в HTTP harness), `e2e/bike-week.spec.js` (права/Origin/уведомление/редактор/темы/390 и 1440 px/клавиатура/axe). Разметка нового блока главной и публичный архив входят в последующие задачи, а не в этот модуль.
 
 ## Hall of Fame: текущий снимок (#157)
 
@@ -100,4 +100,4 @@ Ops-worker `bike-week` выполняется раз в минуту. Transactio
 
 Публичный `gameSettings()` возвращает только разрешённые параметры рейтинга. Prompt не попадает в `/api/site`, Hall of Fame, личные полки или экспорт аккаунта. Сохранение рейтинга обновляет его ключи и сохраняет prompt; сохранение prompt не меняет рейтинг, правила, выдачи и изображения. Вывод — обычный текст в textarea, без HTML/Markdown-рендеринга, внешних AI API и автоматической генерации.
 
-Проверки #157/#176: `gamification.test.js` — порядок и приватность получателей; `game-prompt.test.js` — границы текста, права и перезапуск БД; `gamification-http.js` / `game-prompt-http.js` — реальные API, Origin, отзыв роли и сохранность наград; `gamification-layout.spec.js` / `game-prompt.spec.js` — оба размера экрана, темы, длинные имена, даты, экранирование текста и axe.
+Проверки #157/#176: `gamification.test.ts` — порядок и приватность получателей; `game-prompt.test.js` — границы текста, права и перезапуск БД; `gamification-http.js` / `game-prompt-http.js` — реальные API, Origin, отзыв роли и сохранность наград; `gamification-layout.spec.js` / `game-prompt.spec.js` — оба размера экрана, темы, длинные имена, даты, экранирование текста и axe.

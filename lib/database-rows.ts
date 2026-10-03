@@ -327,3 +327,76 @@ export interface RideViewRow extends RideRow {
   answered_occurrence?: Date | null;
   occurrence_cancelled?: boolean;
 }
+
+// Tables of ride intentions and answers (migrations 018, 037, 040). Rows as the
+// services read them and as the test builders in tests/support write them.
+export interface RideIntentRow {
+  id: string;
+  owner_id: string;
+  readiness: "ready" | "considering";
+  time_zone: string;
+  passport: Passport;
+  meet_new_people: boolean | null;
+  visibility: "private" | "community";
+  allow_suggestions: boolean;
+  status: "active" | "cancelled" | "deleted";
+  request_hash: string;
+  created_at: Date;
+  updated_at: Date;
+}
+export interface RideIntentWindowRow {
+  intent_id: string;
+  starts_at: Date;
+  ends_at: Date;
+}
+export interface RideRsvpRow {
+  ride_id: string;
+  user_id: string;
+  occurs_at: Date;
+  response: "accepted" | "declined" | "maybe";
+  updated_at: Date;
+  revision: number;
+}
+export interface RideInvitationRow {
+  ride_id: string;
+  user_id: string;
+  response: "pending" | "accepted" | "declined";
+  created_at: Date;
+  source: "direct" | "interest";
+}
+
+// Notices and comments as stored (the notice list read by the viewer is
+// NotificationRow in notifications.ts: the joined view, not this table).
+export interface NotificationRecord {
+  id: string;
+  recipient_id: string;
+  actor_id: string | null;
+  type: string;
+  bike_id: string | null;
+  comment_id: string | null;
+  dedup_key: string;
+  created_at: Date;
+  read_at: Date | null;
+  ride_id: string | null;
+  ride_comment_id: string | null;
+  entry_id: string | null;
+  entry_comment_id: string | null;
+  listing_id: string | null;
+  component_id: string | null;
+  component_comment_id: string | null;
+  event_occurs_at: Date | null;
+  event_revision: number | null;
+  deliver_after: Date;
+  released_at: Date | null;
+  cancelled_at: Date | null;
+}
+export interface BikeCommentRow {
+  id: string;
+  bike_id: string;
+  author_id: string | null;
+  parent_id: string | null;
+  body: string;
+  created_at: Date;
+  updated_at: Date;
+  deleted_at: Date | null;
+}

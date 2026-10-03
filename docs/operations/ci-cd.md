@@ -17,7 +17,7 @@
 
 ## Проверки и кеши
 
-`prepare` один раз фиксирует SHA. Далее параллельны Application/Resolver/HTTP (форматирование, lint, typecheck, unit, build и HTTP), Chromium, WebKit mobile и Docker/backup. Браузеры имеют отдельные базы и runners, внутри каждого один worker. `check` требует `success` от всех обязательных групп, не трактует skip/cancel как успех. Изменения приложения, схемы, зависимостей и runtime-упаковки проходят полный набор; проверки не отключаются ради ускорения.
+`prepare` один раз фиксирует SHA. Далее параллельны Application/Resolver/HTTP (форматирование, lint, typecheck production и тестов, unit, build и HTTP), Chromium, WebKit mobile и Docker/backup. Браузеры имеют отдельные базы и runners, внутри каждого один worker. `check` требует `success` от всех обязательных групп, не трактует skip/cancel как успех. Изменения приложения, схемы, зависимостей и runtime-упаковки проходят полный набор; проверки не отключаются ради ускорения.
 
 pnpm store кешируется по платформе, Node и lock/workspace-файлам; npm download cache Resolver — по его `package-lock.json`. Кеш не заменяет установку с зафиксированным lock. Docker использует отдельные BuildKit layer caches для web, ops и Resolver. Operations собирает три конечных образа один раз, затем передаёт их в drill без повторной сборки. Локальный drill без готовых образов собирает их сам.
 

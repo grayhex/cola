@@ -1,8 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { PGlite } from "@electric-sql/pglite";
-import { readFile, readdir } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
+import type { Queryable } from "../lib/db.ts";
+import type { JournalRow } from "../lib/database-rows.ts";
 import {
   records,
   awardCatalog,
@@ -13,9 +13,21 @@ import {
   accountAchievements,
   leaderboardSQL,
 } from "../lib/gamification.ts";
-import { defaultSettings, defaultCatalog } from "../lib/site-defaults.ts";
+import { defaultCatalog, defaultSettings } from "../lib/site-defaults.ts";
 import { gameSettingsInput } from "../lib/gamification-validation.ts";
 import { defaultGamification } from "../lib/gamification-definitions.ts";
+import {
+  seedSiteDefaults,
+  testDatabase,
+  migrateOnly,
+  type TestDatabase,
+} from "./support/database.ts";
+import { bikeRow, photoRow } from "./support/bikes.ts";
+import { userRow } from "./support/people.ts";
+import { present } from "./support/assertions.ts";
+import { one } from "./support/rows.ts";
+import { journalEntryRow } from "./support/notifications.ts";
+import { rideRow } from "./support/rides.ts";
 import {
   loadRules,
   saveRules,
@@ -23,53 +35,52 @@ import {
   rulesInput,
 } from "../lib/game-rules.ts";
 async function setup() {
-  const q = new PGlite();
-  for (const f of (await readdir(new URL("../db", import.meta.url)))
-    .filter((f) => f.endsWith(".sql"))
-    .sort())
-    await q.exec(
-      await readFile(new URL("../db/" + f, import.meta.url), "utf8"),
-    );
-  await q.query("INSERT INTO site_settings(id,value) VALUES(1,$1)", [
-    defaultSettings,
-  ]);
-  await q.query("INSERT INTO site_catalog(id,value) VALUES(1,$1)", [
-    defaultCatalog,
-  ]);
+  const q = await testDatabase();
+  await seedSiteDefaults(q);
   return q;
 }
-async function rider(q, name) {
-  const id = randomUUID();
-  await q.query(
-    "INSERT INTO users(id,email,name,password_hash,username) VALUES($1,$2,$3,'hash',$3)",
-    [id, name + "@example.test", name],
-  );
-  return id;
+async function rider(q: Queryable, name: string) {
+  return (
+    await userRow(q, { email: name + "@example.test", name, username: name })
+  ).id;
+}
+interface BikeOptions {
+  price?: number;
+  weight?: number;
+  category?: string;
+  visible?: boolean;
+  publicBike?: boolean;
 }
 async function bike(
-  q,
-  owner,
+  q: Queryable,
+  owner: string,
   {
     price = 10000,
     weight = 10,
     category = "road",
     visible = true,
     publicBike = true,
-  } = {},
+  }: BikeOptions = {},
 ) {
-  const id = randomUUID();
-  await q.query(
-    "INSERT INTO bikes(id,owner_id,share_id,name,brand,model,year,category,price,weight,show_bike_price,is_public) VALUES($1,$2,$3,'Build','Cube','Travel',2020,$4,$5,$6,$7,$8)",
-    [id, owner, randomUUID(), category, price, weight, visible, publicBike],
-  );
-  await q.query("INSERT INTO photos(id,bike_id,filename) VALUES($1,$2,$3)", [
-    randomUUID(),
-    id,
-    randomUUID() + ".webp",
-  ]);
-  return id;
+  const row = await bikeRow(q, owner, {
+    name: "Build",
+    brand: "Cube",
+    model: "Travel",
+    year: 2020,
+    category,
+    price,
+    weight,
+    show_bike_price: visible,
+    is_public: publicBike,
+  });
+  await photoRow(q, row.id);
+  return row.id;
 }
-const holder = (r, key) => r.records.find((r) => r.key === key)?.holder;
+const holder = (r: Awaited<ReturnType<typeof records>>, key: string) =>
+  r.records.find((record) => record.key === key)?.holder;
+// The holder of a record that has one.
+const held = (r: Awaited<ReturnType<typeof records>>, key: string) =>
+  present(holder(r, key));
 test("Hall of Fame selects the latest visible recipient by timestamp then ID, with public context and distinct counts", async () => {
   const q = await setup();
   try {
@@ -95,49 +106,47 @@ test("Hall of Fame selects the latest visible recipient by timestamp then ID, wi
       "UPDATE achievement_awards SET awarded_at=$1 WHERE achievement_key='first_public'",
       [stamp],
     );
-    const item = async (key) =>
+    const find = async (key: string) =>
       (await awardCatalog(q)).find((a) => a.key === key);
+    const item = async (key: string) => present(await find(key));
+    const latest = async (key: string) =>
+      present((await item(key)).latestRecipient);
     let award = await item("wireless");
+    const recipient = present(award.latestRecipient);
     assert.equal(award.earners, 2); // Two bikes of one person count only once.
-    assert.equal(award.latestRecipient.bike.id, anotherBike); // Equal timestamps: greater ID wins.
-    assert.equal(award.latestRecipient.author.id, second);
-    assert.equal(
-      new Date(award.latestRecipient.awardedAt).toISOString(),
-      stamp,
-    );
-    assert.deepEqual(Object.keys(award.latestRecipient.author).sort(), [
+    assert.equal(present(recipient.bike).id, anotherBike); // Equal timestamps: greater ID wins.
+    assert.equal(recipient.author.id, second);
+    assert.equal(new Date(recipient.awardedAt).toISOString(), stamp);
+    assert.deepEqual(Object.keys(recipient.author).sort(), [
       "avatar",
       "id",
       "name",
       "username",
     ]);
-    assert.equal(
-      (await item("first_public")).latestRecipient.author.id,
-      second,
-    );
-    assert.equal((await item("first_public")).latestRecipient.bike, null);
+    assert.equal((await latest("first_public")).author.id, second);
+    assert.equal((await latest("first_public")).bike, null);
     assert.equal((await item("century")).latestRecipient, null);
     assert.equal((await item("century")).earners, 0);
     await q.query(
       "UPDATE achievement_awards SET awarded_at=$1 WHERE bike_id=$2",
       [next, firstBike],
     );
-    assert.equal((await item("wireless")).latestRecipient.bike.id, firstBike); // Timestamp precedes ID.
+    assert.equal(present((await latest("wireless")).bike).id, firstBike); // Timestamp precedes ID.
     await q.query(
       "UPDATE bikes SET name='Renamed public bike',is_public=false WHERE id=$1",
       [firstBike],
     );
     award = await item("wireless");
     assert.equal(award.earners, 1);
-    assert.equal(award.latestRecipient.bike.id, anotherBike);
+    assert.equal(present(present(award.latestRecipient).bike).id, anotherBike);
     assert.ok(!JSON.stringify(award).includes(firstBike));
     await q.query("UPDATE users SET blocked=true WHERE id=$1", [second]);
     assert.equal((await item("wireless")).latestRecipient, null);
     assert.equal((await item("wireless")).earners, 0);
-    assert.equal((await item("first_public")).latestRecipient.author.id, first);
+    assert.equal((await latest("first_public")).author.id, first);
     await q.query("UPDATE bikes SET is_public=true WHERE id=$1", [firstBike]);
     assert.equal(
-      (await item("wireless")).latestRecipient.bike.name,
+      present((await latest("wireless")).bike).name,
       "Renamed public bike",
     );
     await q.query("DELETE FROM bikes WHERE id=$1", [firstBike]);
@@ -145,7 +154,7 @@ test("Hall of Fame selects the latest visible recipient by timestamp then ID, wi
     await q.query(
       "UPDATE game_rules SET enabled=false WHERE key='first_public'",
     );
-    assert.equal(await item("first_public"), undefined);
+    assert.equal(await find("first_public"), undefined);
     const snapshot = await records(q);
     assert.ok(Number.isFinite(Date.parse(snapshot.asOf)));
     assert.ok(
@@ -243,10 +252,10 @@ test("dynamic holders, category lightest, price privacy, budget anti gaming and 
         category: "gravel",
       });
     let r = await records(q);
-    assert.equal(holder(r, "expensive").id, road);
-    assert.equal(holder(r, "budget").id, gravel);
-    assert.equal(holder(r, "lightest_mtb").id, mtb);
-    assert.equal(holder(r, "lightest_road").id, road);
+    assert.equal(held(r, "expensive").id, road);
+    assert.equal(held(r, "budget").id, gravel);
+    assert.equal(held(r, "lightest_mtb").id, mtb);
+    assert.equal(held(r, "lightest_road").id, road);
     const hidden = await bike(q, b, {
       price: 987654321,
       visible: false,
@@ -255,14 +264,14 @@ test("dynamic holders, category lightest, price privacy, budget anti gaming and 
     await bike(q, b, { price: 1, weight: 0 });
     const privateId = await bike(q, b, { price: 999999999, publicBike: false });
     r = await records(q);
-    assert.equal(holder(r, "expensive").id, road);
-    assert.equal(holder(r, "budget").id, gravel);
+    assert.equal(held(r, "expensive").id, road);
+    assert.equal(held(r, "budget").id, gravel);
     assert(!JSON.stringify(r).includes("987654321"));
     assert(!JSON.stringify(r).includes(privateId));
     await q.query("UPDATE bikes SET price=100000 WHERE id=$1", [mtb]);
-    assert.equal(holder(await records(q), "expensive").id, mtb);
+    assert.equal(held(await records(q), "expensive").id, mtb);
     await excludeBike(q, a, mtb, { excluded: true, reason: "Invalid build" });
-    assert.equal(holder(await records(q), "expensive").id, road);
+    assert.equal(held(await records(q), "expensive").id, road);
     assert.equal(
       (
         await q.query(
@@ -272,13 +281,15 @@ test("dynamic holders, category lightest, price privacy, budget anti gaming and 
       1,
     );
     await excludeBike(q, a, mtb, { excluded: false, reason: "Verified" });
-    assert.equal(holder(await records(q), "expensive").id, mtb);
+    assert.equal(held(await records(q), "expensive").id, mtb);
     await q.query("UPDATE bikes SET show_bike_price=false WHERE id=$1", [mtb]);
-    assert.equal(holder(await records(q), "expensive").id, road);
+    assert.equal(held(await records(q), "expensive").id, road);
     await q.query("UPDATE users SET blocked=true WHERE id=$1", [a]);
     assert.equal(holder(await records(q), "lightest_road"), null);
-    const raw = (await q.query(leaderboardSQL)).rows.find(
-      (x) => x.id === hidden,
+    const raw = present(
+      (
+        await q.query<{ id: string; price: string | null }>(leaderboardSQL)
+      ).rows.find((x) => x.id === hidden),
     );
     assert.equal(raw.price, null);
   } finally {
@@ -292,39 +303,46 @@ test("self reactions rejected, duplicates idempotent, valid community leaders an
       b = await rider(q, "bravo"),
       c = await rider(q, "charlie"),
       id = await bike(q, a);
-    await assert.rejects(
-      () => reactToBike(q, id, a, "wild", true),
-      (e) => e.status === 403,
-    );
+    await assert.rejects(() => reactToBike(q, id, a, "wild", true), {
+      status: 403,
+    });
     await reactToBike(q, id, b, "wild", true);
     await reactToBike(q, id, b, "wild", true);
     await reactToBike(q, id, b, "dream", true);
-    let r = await records(q);
-    assert.equal(holder(r, "wild").value, 1);
-    assert.equal(holder(r, "community").value, 1);
+    const r = await records(q);
+    assert.equal(held(r, "wild").value, 1);
+    assert.equal(held(r, "community").value, 1);
     await reactToBike(q, id, c, "clean", true);
-    assert.equal(holder(await records(q), "community").value, 2);
+    assert.equal(held(await records(q), "community").value, 2);
     await q.query("UPDATE users SET blocked=true WHERE id=$1", [c]);
-    assert.equal(holder(await records(q), "community").value, 1);
-    await assert.rejects(
-      () => reactToBike(q, id, c, "wild", true),
-      (e) => e.status === 401,
-    );
+    assert.equal(held(await records(q), "community").value, 1);
+    await assert.rejects(() => reactToBike(q, id, c, "wild", true), {
+      status: 401,
+    });
     await q.query("UPDATE bikes SET is_public=false WHERE id=$1", [id]);
     assert.equal(holder(await records(q), "community"), null);
-    await assert.rejects(
-      () => reactToBike(q, id, b, "clean", true),
-      (e) => e.status === 404,
-    );
+    await assert.rejects(() => reactToBike(q, id, b, "clean", true), {
+      status: 404,
+    });
   } finally {
     await q.close();
   }
 });
 // Rides and journal entries for the rules of #106.
+interface GameRideOptions {
+  km?: number;
+  gain?: number;
+  kmh?: number;
+  maxKmh?: number | null;
+  showMax?: boolean;
+  visible?: boolean;
+  startedAt?: Date;
+  status?: string;
+}
 async function ride(
-  q,
-  owner,
-  bikeId,
+  q: Queryable,
+  owner: string,
+  bikeId: string,
   {
     km = 20,
     gain = 100,
@@ -334,50 +352,57 @@ async function ride(
     visible = true,
     startedAt = new Date(),
     status = "completed",
-  } = {},
+  }: GameRideOptions = {},
 ) {
-  const id = randomUUID();
-  await q.query(
-    `INSERT INTO rides(id,share_id,owner_id,bike_id,title,started_at,distance_m,avg_speed_mps,elevation_gain_m,point_count,public_point_count,public_geometry,is_public,privacy_radius_m,source_hash,status,import_metrics,visible_metrics)
-     VALUES($1,$2,$3,$4,'Покатушка',$5,$6,$7,$8,2,2,'{"type":"LineString","coordinates":[]}',$9,500,$10,$11,$12,$13)`,
-    [
-      id,
-      randomUUID(),
-      owner,
-      bikeId,
-      startedAt,
-      Math.round(km * 1000),
-      kmh / 3.6,
-      gain,
-      visible,
-      randomUUID(),
+  return (
+    await rideRow(q, owner, bikeId, {
+      title: "Покатушка",
+      started_at: startedAt,
+      distance_m: Math.round(km * 1000),
+      avg_speed_mps: kmh / 3.6,
+      elevation_gain_m: gain,
+      is_public: visible,
       status,
-      maxKmh === null ? {} : { maxSpeedMps: maxKmh / 3.6 },
-      showMax
-        ? JSON.stringify(["distanceM", "avgSpeedMps", "maxSpeedMps"])
+      import_metrics: maxKmh === null ? {} : { maxSpeedMps: maxKmh / 3.6 },
+      visible_metrics: showMax
+        ? ["distanceM", "avgSpeedMps", "maxSpeedMps"]
         : null,
-    ],
-  );
-  return id;
+    })
+  ).id;
 }
 async function entry(
-  q,
-  owner,
-  bikeId,
-  { kind = "story", visible = true, status = "published" } = {},
+  q: Queryable,
+  owner: string,
+  bikeId: string,
+  {
+    kind = "story",
+    visible = true,
+    status = "published",
+  }: {
+    kind?: JournalRow["kind"];
+    visible?: boolean;
+    status?: JournalRow["status"];
+  } = {},
 ) {
-  await q.query(
-    "INSERT INTO journal_entries(id,share_id,owner_id,bike_id,kind,title,body,status,is_public,published_at) VALUES($1,$2,$3,$4,$5,'Запись','Текст',$6,$7,now())",
-    [randomUUID(), randomUUID(), owner, bikeId, kind, status, visible],
-  );
+  await journalEntryRow(q, owner, bikeId, {
+    kind,
+    title: "Запись",
+    body: "Текст",
+    status,
+    is_public: visible,
+    published_at: new Date(),
+    event_date: null,
+    mileage: null,
+  });
 }
-const has = async (q, userId, key) =>
+const has = async (q: Queryable, userId: string, key: string) =>
   (
-    await q.query(
+    await one<{ n: number }>(
+      q,
       "SELECT count(*)::int AS n FROM achievement_awards WHERE user_id=$1 AND achievement_key=$2",
       [userId, key],
     )
-  ).rows[0].n;
+  ).n;
 // What the admin editor sends: a rule without its service fields.
 const inputFields = [
   "key",
@@ -394,26 +419,17 @@ const inputFields = [
   "imageId",
   "enabled",
 ];
-const asInput = (rule) =>
+const asInput = (rule: Record<string, unknown>) =>
   Object.fromEntries(inputFields.map((field) => [field, rule[field]]));
-const inTransaction = (q) => (fn) => q.transaction(fn);
+const inTransaction = (q: TestDatabase) => q.transaction;
 
 test("migration backfills existing public milestones; blocked votes never earn a new milestone", async () => {
-  const q = new PGlite();
+  const q = await testDatabase({ migrated: false });
   try {
-    const files = (await readdir(new URL("../db", import.meta.url)))
-      .filter((f) => f.endsWith(".sql"))
-      .sort();
-    for (const f of files.filter((f) => f < "011"))
-      await q.exec(
-        await readFile(new URL("../db/" + f, import.meta.url), "utf8"),
-      );
+    await migrateOnly(q, (f) => f < "011");
     const owner = await rider(q, "legacy"),
       id = await bike(q, owner);
-    for (const f of files.filter((f) => f >= "011"))
-      await q.exec(
-        await readFile(new URL("../db/" + f, import.meta.url), "utf8"),
-      );
+    await migrateOnly(q, (f) => f >= "011");
     assert(
       (await awardShelf(q, { userId: owner })).some(
         (a) => a.key === "first_public",
@@ -455,10 +471,9 @@ test("switched-off records and the reaction switch remove titles without deletin
       (await records(q)).records.map((r) => r.key),
       ["budget"],
     );
-    await assert.rejects(
-      () => reactToBike(q, id, v, "clean", true),
-      (e) => e.status === 409,
-    );
+    await assert.rejects(() => reactToBike(q, id, v, "clean", true), {
+      status: 409,
+    });
     assert.equal(
       (await q.query("SELECT count(*)::int AS n FROM bike_reactions")).rows[0]
         .n,
@@ -468,7 +483,7 @@ test("switched-off records and the reaction switch remove titles without deletin
     await q.query("UPDATE gamification_settings SET value=$1", [
       defaultGamification,
     ]);
-    assert.equal(holder(await records(q), "dream").id, id);
+    assert.equal(held(await records(q), "dream").id, id);
     await q.query("UPDATE bikes SET brand='' WHERE id=$1", [id]);
     assert.equal(holder(await records(q), "budget"), null);
     await q.query("UPDATE gamification_settings SET value=$1", [
@@ -535,7 +550,10 @@ test("rules from the catalog: an admin creates «Гонщик» and «Череп
         ],
       }),
     );
-    assert.equal(saved.find((r) => r.key === "rule_speedster").subject, "ride");
+    assert.equal(
+      present(saved.find((r) => r.key === "rule_speedster")).subject,
+      "ride",
+    );
     assert.equal(
       (
         await q.query(
@@ -551,21 +569,23 @@ test("rules from the catalog: an admin creates «Гонщик» and «Череп
     assert.equal(await has(q, fast, "rule_speedster"), 1);
     assert.equal(await has(q, slow, "rule_speedster"), 0);
     assert.equal((await recalculateAwards(inTransaction(q), admin)).awarded, 0);
-    const award = (await awardShelf(q, { userId: fast })).find(
-      (a) => a.key === "rule_speedster",
+    const award = present(
+      (await awardShelf(q, { userId: fast })).find(
+        (a) => a.key === "rule_speedster",
+      ),
     );
     assert.equal(award.name, "Гонщик");
     assert.equal(award.scope, "user");
     // The record: the slowest ride from 10 km, not the short one.
-    let turtle = holder(await records(q), "rule_slowpoke");
-    assert.equal(turtle.kind, "ride");
+    let turtle = held(await records(q), "rule_slowpoke");
+    assert.ok(turtle.kind === "ride");
     assert.equal(turtle.id, crawl);
     assert.equal(turtle.bike.id, slowBike);
     assert.equal(turtle.author.id, slow);
     assert.equal(turtle.value, 14);
     // A new leader takes the record.
     const slower = await ride(q, fast, fastBike, { km: 11, kmh: 10 });
-    turtle = holder(await records(q), "rule_slowpoke");
+    turtle = held(await records(q), "rule_slowpoke");
     assert.equal(turtle.id, slower);
     assert.equal(turtle.author.id, fast);
     // The award stays when its condition no longer holds.
@@ -596,11 +616,11 @@ test("saving rules keeps built-ins and history: no deletion of awarded or built-
       owner = await rider(q, "owner");
     await bike(q, owner);
     const rules = (await loadRules(q)).map(asInput);
-    const save = (list) =>
+    const save = (list: unknown[]) =>
       saveRules(q, admin, rulesInput.parse({ rules: list }));
     await assert.rejects(
       () => save(rules.filter((r) => r.key !== "marathon")),
-      (e) => e.status === 400 && /нельзя удалить/.test(e.message),
+      { status: 400, message: /нельзя удалить/ },
     );
     const custom = {
       key: "rule_first",
@@ -614,10 +634,10 @@ test("saving rules keeps built-ins and history: no deletion of awarded or built-
     await save([...rules, custom]);
     await recalculateAwards(inTransaction(q), admin);
     assert.equal(await has(q, owner, "rule_first"), 1);
-    await assert.rejects(
-      () => save(rules),
-      (e) => e.status === 409 && /«Витрина»/.test(e.message),
-    );
+    await assert.rejects(() => save(rules), {
+      status: 409,
+      message: /«Витрина»/,
+    });
     await assert.rejects(
       () =>
         save(
@@ -627,7 +647,7 @@ test("saving rules keeps built-ins and history: no deletion of awarded or built-
               : r,
           ),
         ),
-      (e) => e.status === 400,
+      { status: 400 },
     );
     await assert.rejects(
       () =>
@@ -635,7 +655,7 @@ test("saving rules keeps built-ins and history: no deletion of awarded or built-
           ...rules,
           { ...custom, imageId: "00000000-0000-4000-8000-00000000000a" },
         ]),
-      (e) => e.status === 409,
+      { status: 409 },
     );
     // A rule nobody earned can go.
     const unused = { ...custom, key: "rule_unused", threshold: 50 };
@@ -669,9 +689,9 @@ test("hidden data never counts: a private ride, a private bike, a blocked owner,
     for (const key of ["century", "mountain_goat", "racer"])
       assert.equal(await has(q, a, key), 0, key);
     const r = await records(q);
-    assert.equal(holder(r, "marathon").id, hiddenSpeed);
-    assert.equal(holder(r, "marathon").value, 30);
-    assert.equal(holder(r, "climber").value, 200);
+    assert.equal(held(r, "marathon").id, hiddenSpeed);
+    assert.equal(held(r, "marathon").value, 30);
+    assert.equal(held(r, "climber").value, 200);
     const serialized = JSON.stringify(r);
     for (const secret of ["300", "250", "5000", "4000"])
       assert(!serialized.includes('"value":' + secret), secret);
@@ -686,7 +706,7 @@ test("hidden data never counts: a private ride, a private bike, a blocked owner,
     await ride(q, b, other, { km: 10 });
     await q.query("UPDATE users SET blocked=true WHERE id=$1", [a]);
     const after = await records(q);
-    assert.equal(holder(after, "marathon").author.id, b);
+    assert.equal(held(after, "marathon").author.id, b);
     assert.equal(
       (await awardShelf(q, { userId: a, privateView: true })).length,
       0,
@@ -748,28 +768,28 @@ test("new awards and records: Без проводов, Сотка, Горный 
       startedAt: new Date(Date.now() - 40 * 86400000),
     });
     const r = await records(q);
-    assert.equal(holder(r, "marathon").value, 500);
-    assert.equal(holder(r, "climber").value, 1200);
-    const mileage = holder(r, "mileage_30d");
+    assert.equal(held(r, "marathon").value, 500);
+    assert.equal(held(r, "climber").value, 1200);
+    const mileage = held(r, "mileage_30d");
     assert.equal(mileage.kind, "profile");
     assert.equal(mileage.id, b);
     assert.equal(mileage.value, 60);
-    assert.equal(holder(r, "veteran").id, heavy);
-    assert.equal(holder(r, "veteran").value, 1995);
-    assert.equal(holder(r, "heavy").id, heavy);
-    assert.equal(holder(r, "heavy").value, 24);
+    assert.equal(held(r, "veteran").id, heavy);
+    assert.equal(held(r, "veteran").value, 1995);
+    assert.equal(held(r, "heavy").id, heavy);
+    assert.equal(held(r, "heavy").value, 24);
     // Progress to what is still ahead: the best public ride.
     const c = await rider(q, "beginner"),
       own = await bike(q, c);
     await ride(q, c, own, { km: 60, gain: 350 });
     await ride(q, c, own, { km: 45, gain: 500, visible: false });
     const account = await accountAchievements(q, c);
-    const century = account.locked.find((x) => x.key === "century");
+    const century = present(account.locked.find((x) => x.key === "century"));
     assert.equal(century.progress, 60);
     assert.equal(century.target, 100);
     assert.equal(century.metric, "ride_distance");
     assert.equal(
-      account.locked.find((x) => x.key === "mountain_goat").progress,
+      present(account.locked.find((x) => x.key === "mountain_goat")).progress,
       350,
     );
     assert(!account.locked.some((x) => x.key === "first_public"));
@@ -778,15 +798,9 @@ test("new awards and records: Без проводов, Сотка, Горный 
   }
 });
 test("settings migration keeps awards, records, illustrations and descriptions", async () => {
-  const q = new PGlite();
+  const q = await testDatabase({ migrated: false });
   try {
-    const files = (await readdir(new URL("../db", import.meta.url)))
-      .filter((f) => f.endsWith(".sql"))
-      .sort();
-    for (const f of files.filter((f) => f < "027"))
-      await q.exec(
-        await readFile(new URL("../db/" + f, import.meta.url), "utf8"),
-      );
+    await migrateOnly(q, (f) => f < "027");
     const owner = await rider(q, "legacy");
     await bike(q, owner);
     const art = randomUUID(),
@@ -806,16 +820,14 @@ test("settings migration keeps awards, records, illustrations and descriptions",
       },
     ]);
     const before = (
-      await q.query("SELECT id,awarded_at FROM achievement_awards ORDER BY id")
+      await q.query<{ id: string; awarded_at: Date }>(
+        "SELECT id,awarded_at FROM achievement_awards ORDER BY id",
+      )
     ).rows;
     assert.ok(before.length > 0);
-    await q.exec(
-      await readFile(
-        new URL("../db/027_game_rules.sql", import.meta.url),
-        "utf8",
-      ),
-    );
-    const rules = new Map((await loadRules(q)).map((r) => [r.key, r]));
+    await migrateOnly(q, (f) => f === "027_game_rules.sql");
+    const loaded = new Map((await loadRules(q)).map((r) => [r.key, r]));
+    const rules = { get: (key: string) => present(loaded.get(key)) };
     assert.equal(rules.get("expensive").imageId, art);
     assert.equal(rules.get("budget").imageId, null);
     assert.equal(rules.get("first_public").imageId, art);
@@ -837,7 +849,7 @@ test("settings migration keeps awards, records, illustrations and descriptions",
       before,
     );
     const shelf = await awardShelf(q, { userId: owner });
-    const first = shelf.find((a) => a.key === "first_public");
+    const first = present(shelf.find((a) => a.key === "first_public"));
     assert.equal(first.name, "Первый выход");
     assert.equal(first.description, "Дебют");
     assert.equal(first.imageId, art);
@@ -879,13 +891,13 @@ test("profile shelves group repeated bicycle awards by rule key after visibility
     const account = await accountAchievements(q, owner);
     assert.equal(account.awards.filter((a) => a.key === "wireless").length, 1);
     assert.equal(
-      account.awards.find((a) => a.key === "wireless").bikeId,
+      present(account.awards.find((a) => a.key === "wireless")).bikeId,
       hidden,
     );
     for (const bikeId of [first, second]) {
       const shelf = await gameShelf(q, { bikeId });
       assert.equal(
-        shelf.awards.find((a) => a.key === "wireless").bikeId,
+        present(shelf.awards.find((a) => a.key === "wireless")).bikeId,
         bikeId,
       );
     }
@@ -972,16 +984,16 @@ test("compact record features preserve configured scoring and Unicode completene
       scoring,
       defaultCatalog.componentGroups,
     );
-    const queries = [];
-    const measured = {
-      query: async (sql, params) => {
+    const queries: string[] = [];
+    const measured: Queryable = {
+      query: async <Row extends object>(sql: string, params?: unknown[]) => {
         queries.push(sql);
-        return q.query(sql, params);
+        return q.query<Row>(sql, params);
       },
     };
     const hall = await records(measured);
-    assert.equal(holder(hall, "upgrade").value, expected.upgrade);
-    assert.equal(holder(hall, "complete").value, expected.completeness);
+    assert.equal(held(hall, "upgrade").value, expected.upgrade);
+    assert.equal(held(hall, "complete").value, expected.completeness);
     const raw = (await q.query(leaderboardSQL)).rows[0];
     assert(!Object.hasOwn(raw, "components"));
     assert(!Object.hasOwn(raw, "photos"));

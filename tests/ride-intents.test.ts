@@ -1,8 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { readFile, readdir } from "node:fs/promises";
-import { PGlite } from "@electric-sql/pglite";
 import {
   localInstants,
   resolveLocal,
@@ -20,17 +18,19 @@ import {
   saveIntentPreferences,
 } from "../lib/ride-intents.ts";
 import { exportAccount } from "../lib/account-data.ts";
+import { invalid } from "./support/negative.ts";
+import { testDatabase } from "./support/database.ts";
+import { userRow } from "./support/people.ts";
+import { intentDraft } from "./support/rides.ts";
 const body = (
   date = new Date(Date.now() + 86400000).toISOString().slice(0, 10),
-) => ({
-  readiness: "considering",
-  timeZone: "Europe/Moscow",
-  windows: [{ startLocal: date + "T10:00", endLocal: date + "T15:00" }],
-  passport: {
-    area: { label: "Парк", center: [37.123456, 55.654321], radiusM: 3000 },
-    purpose: "social",
-  },
-});
+) =>
+  intentDraft(
+    {
+      windows: [{ startLocal: date + "T10:00", endLocal: date + "T15:00" }],
+    },
+    date,
+  );
 test("availability windows: UTC, midnight, DST gaps/folds, half-hour shifts and quick dates", () => {
   assert.equal(
     resolveLocal("2026-09-30T00:30", "Europe/Moscow"),
@@ -142,22 +142,11 @@ test("strict intent contract: mandatory basics, optional unknowns, limits and fu
   );
 });
 test("intent DB: independent of garage, ownership, visibility/expiry, quotas, retry tombstones and account lifecycle", async () => {
-  const db = new PGlite();
+  const db = await testDatabase();
   try {
-    for (const file of (await readdir(new URL("../db/", import.meta.url)))
-      .filter((f) => f.endsWith(".sql"))
-      .sort())
-      await db.exec(
-        await readFile(new URL("../db/" + file, import.meta.url), "utf8"),
-      );
-    const owner = randomUUID(),
-      other = randomUUID();
-    for (const [i, id] of [owner, other].entries())
-      await db.query(
-        "INSERT INTO users(id,email,name,password_hash,username) VALUES($1,$2,'Rider','hash',$3)",
-        [id, id + "@test.invalid", "intent" + i],
-      );
-    const tx = (fn) => db.transaction(fn),
+    const owner = (await userRow(db, { username: "intent0" })).id,
+      other = (await userRow(db, { username: "intent1" })).id;
+    const tx = db.transaction,
       input = { ...body(), requestId: randomUUID() };
     const first = await tx((q) => createIntent(q, owner, input));
     const id = first.intent.id;
@@ -171,7 +160,9 @@ test("intent DB: independent of garage, ownership, visibility/expiry, quotas, re
       tx((q) => createIntent(q, owner, { ...input, readiness: "ready" })),
       { status: 409 },
     );
-    await assert.rejects(intentDetail(db, null, id), { status: 404 });
+    await assert.rejects(intentDetail(db, invalid<string>(null), id), {
+      status: 404,
+    });
     await assert.rejects(intentDetail(db, other, id), { status: 404 });
     assert.equal((await listIntents(db, other, { own: false })).total, 0);
     const visible = {
@@ -183,7 +174,7 @@ test("intent DB: independent of garage, ownership, visibility/expiry, quotas, re
     const viewed = await intentDetail(db, other, id);
     assert.equal(viewed.own, false);
     assert.equal(viewed.allowSuggestions, undefined);
-    assert.equal(viewed.author.email, undefined);
+    assert.equal("email" in viewed.author, false);
     assert.equal((await listIntents(db, other, { own: false })).total, 1);
     await assert.rejects(
       tx((q) => updateIntent(q, other, id, visible)),
