@@ -1157,6 +1157,35 @@ export const feedPageSchema = named(
   }),
 );
 
+export const createCommentRequestSchema = named(
+  "CreateCommentRequest",
+  "Новый комментарий. `parentId` — комментарий того же объекта, на который отвечают; чужой или недоступный комментарий — 404.",
+  z.strictObject({
+    body: z
+      .string()
+      .trim()
+      .min(1)
+      .max(1000)
+      .refine((value) => !value.includes("\0"), "Недопустимый символ")
+      .describe("Текст, от 1 до 1000 знаков после обрезки пробелов."),
+    parentId: id.nullable().optional(),
+  }),
+);
+
+export const editCommentRequestSchema = named(
+  "EditCommentRequest",
+  "Новый текст своего комментария.",
+  z.strictObject({
+    body: z
+      .string()
+      .trim()
+      .min(1)
+      .max(1000)
+      .refine((value) => !value.includes("\0"), "Недопустимый символ"),
+  }),
+);
+
+export type CreateCommentRequest = z.infer<typeof createCommentRequestSchema>;
 export type Me = z.infer<typeof meSchema>;
 export type SessionGrant = z.infer<typeof sessionGrantSchema>;
 export type Profile = z.infer<typeof profileSchema>;

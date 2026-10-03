@@ -307,13 +307,104 @@ const description = `API ColaBike: вход устройств, текущий �
 
 **Что не входит.** Личные ответы владельца о покатушках, участие в них, поиск, рынок и операции записи, а также нативный вход через внешних провайдеров — отдельные срезы.`;
 
+// Writing comments (#330): one set of operations for the four objects that have
+// comments, added to the paths of their reads.
+const commentTargets = [
+  { path: "bikes", id: "BikeId", name: "велосипеда", tag: "Bike" },
+  { path: "journal", id: "JournalId", name: "записи журнала", tag: "Journal" },
+  { path: "rides", id: "RideId", name: "покатушки", tag: "Ride" },
+  {
+    path: "component-models",
+    id: "ComponentModelId",
+    name: "модели компонента",
+    tag: "Component",
+  },
+] as const;
+const writeFailures = (extra: Json = {}) => ({
+  "400": failure(
+    "Тело не разобрано или не подходит, неверный `Idempotency-Key` либо cookie вместе с Authorization.",
+  ),
+  "401": failure(
+    "Нет входа, сессия или токен недействительны, токен доступа истёк (`token_expired`) либо схема Authorization не поддерживается.",
+  ),
+  "403": failure(
+    "Cookie-запрос не с адреса сайта (нужен заголовок `Origin`), почта не подтверждена (`email_verification_required`) или чужой комментарий (`forbidden`).",
+  ),
+  "404": shared("NotFound"),
+  ...extra,
+  "413": failure("Тело больше 8192 байт."),
+  "415": failure("Тело не `application/json`."),
+  "429": failure(
+    "Слишком много действий; секунды до конца окна — в `Retry-After`.",
+  ),
+  "500": shared("InternalError"),
+});
+function withCommentWrites(document: Json) {
+  const paths = document.paths as Record<string, Json>;
+  for (const target of commentTargets) {
+    const collection = `/${target.path}/{id}/comments`;
+    const item = `${collection}/{commentId}`;
+    const id = { $ref: `#/components/parameters/${target.id}` };
+    const commentId = { $ref: "#/components/parameters/CommentId" };
+    const security = [{ cookieSession: [] }, { bearerAuth: [] }];
+    paths[collection] = {
+      ...paths[collection],
+      post: {
+        operationId: `create${target.tag}Comment`,
+        tags: ["Comments"],
+        summary: `Написать комментарий к объекту: ${target.name}`,
+        description:
+          "Новый комментарий или ответ (`parentId`). Нужна подтверждённая почта. Бюджет новых комментариев общий с сайтом (20 за окно). С заголовком `Idempotency-Key` (UUID) повтор того же запроса в течение суток отдаёт тот же комментарий (заголовок `Idempotency-Replayed: true`), а не второй; тот же ключ с другим телом — 409 `conflict`. Права и уведомления те же, что на сайте: комментировать можно только публичное, заблокированный автор и заблокированный владелец — 404.",
+        security,
+        parameters: [id],
+        requestBody: requestBody("CreateCommentRequest"),
+        responses: {
+          "201": success("Комментарий создан.", "Comment"),
+          ...writeFailures({
+            "409": failure("`Idempotency-Key` уже использован с другим телом."),
+          }),
+        },
+      },
+    };
+    paths[item] = {
+      patch: {
+        operationId: `edit${target.tag}Comment`,
+        tags: ["Comments"],
+        summary: `Исправить свой комментарий: ${target.name}`,
+        description:
+          "Правит текст своего комментария; чужой — 403, удалённый — 404. Комментарий должен принадлежать объекту из пути. Условного обновления (`If-Match`) нет: правит один автор, и последняя правка побеждает. Нужна подтверждённая почта.",
+        security,
+        parameters: [id, commentId],
+        requestBody: requestBody("EditCommentRequest"),
+        responses: {
+          "200": success("Комментарий после правки.", "Comment"),
+          ...writeFailures(),
+        },
+      },
+      delete: {
+        operationId: `delete${target.tag}Comment`,
+        tags: ["Comments"],
+        summary: `Удалить комментарий: ${target.name}`,
+        description:
+          "Удаляет свой комментарий (администратор — любой, с записью в журнал аудита): остаётся «надгробие», пока под ним есть читаемые ответы. Повтор удаления тоже 204. Подтверждённая почта не нужна.",
+        security,
+        parameters: [id, commentId],
+        responses: {
+          "204": noContent("Комментарий удалён."),
+          ...writeFailures(),
+        },
+      },
+    };
+  }
+}
+
 export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
   const { schemas } = z.toJSONSchema(schemaRegistry, {
     target: "draft-2020-12",
     io: "output",
     uri: (id) => `#/components/schemas/${id}`,
   });
-  return {
+  const document: Json = {
     openapi: "3.1.0",
     info: {
       title: "ColaBike API",
@@ -1727,4 +1818,6 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
       },
     },
   };
+  withCommentWrites(document);
+  return document;
 }

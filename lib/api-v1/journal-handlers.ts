@@ -81,10 +81,10 @@ export function handleGetJournalEntry(req: Request, { params }: IdParams) {
   });
 }
 
-type Target = "bike" | "journal" | "ride" | "component";
+export type Target = "bike" | "journal" | "ride" | "component";
 const entryComments = entitySocial("journal");
 const rideComments = entitySocial("ride");
-const targetMissing = (target: Target) =>
+export const targetMissing = (target: Target) =>
   ({
     bike: "Велосипед не найден.",
     journal: "Запись не найдена.",
@@ -96,13 +96,13 @@ const targetMissing = (target: Target) =>
  * Comments follow their object. A ride's engine guard lets a called-off ride
  * through, API v1 does not: the same rule as the ride itself decides first.
  */
-async function rideReadable(id: string, target: Target) {
+export async function rideReadable(id: string, target: Target) {
   if (target === "ride" && !(await apiRideVisible(db, id)))
     throw notFound(targetMissing(target));
 }
 
 /** The comment engine of a target; the bike one is the base. */
-function engineOf(target: Target) {
+export function engineOf(target: Target) {
   return target === "journal"
     ? entryComments
     : target === "ride"
