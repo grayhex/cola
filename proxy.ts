@@ -26,6 +26,6 @@ export function proxy(request: NextRequest): NextResponse {
 }
 export const config = {
   matcher: [
-    "/((?!api(?:/|$)|_next(?:/|$)|fonts(?:/|$)|maplibre(?:/|$)|rive(?:/|$)|favicon\\.svg$|robots\\.txt$|sitemap\\.xml$|test-map-style\\.json$).*)",
+    "/((?!api(?:/|$)|_next(?:/|$)|fonts(?:/|$)|maplibre(?:/|$)|rive(?:/|$)|\\.well-known(?:/|$)|favicon\\.svg$|robots\\.txt$|sitemap\\.xml$|test-map-style\\.json$).*)",
   ],
 };

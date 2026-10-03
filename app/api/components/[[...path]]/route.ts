@@ -48,6 +48,7 @@ import {
   mediaResponse,
   mediaVariant,
 } from "../../../../lib/media-cache.ts";
+import { mediaVary, mediaViewer } from "../../../../lib/media-viewer.ts";
 import { audit } from "../../../../lib/site.ts";
 import { traced, logError } from "../../../../lib/observability.ts";
 import {
@@ -102,9 +103,13 @@ async function handler(
         const id = uuid.parse(p[1]),
           width = mediaWidth(url.searchParams.get("width"));
         if (width === undefined) return fail("Неверный размер изображения");
-        const filename = await componentPhotoFilename(db, id, user);
+        // Who may see a photo depends on who asks (moderators see hidden
+        // ones): by cookie or by Bearer (#324).
+        const who = await mediaViewer(req, user);
+        if ("denied" in who) return who.denied;
+        const filename = await componentPhotoFilename(db, id, who.viewer);
         const etag = mediaEtag(id, width),
-          headers = { Vary: "Cookie" };
+          headers = mediaVary;
         if (notModified(req, etag))
           return notModifiedResponse(etag, { headers });
         const original = () => readComponentPhotoFile(filename);

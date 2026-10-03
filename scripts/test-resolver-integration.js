@@ -54,7 +54,10 @@ const environment = {
   YANDEX_ID_CLIENT_ID: "fixture-yandex-client",
   YANDEX_ID_CLIENT_SECRET: "fixture-yandex-secret",
   COLA_YANDEX_FIXTURE: "1",
-  NATIVE_AUTH_RETURN_URL: "https://app.colabike.test/auth/callback",
+  NATIVE_AUTH_RETURN_URL: "https://colabike.ru/app/auth",
+  // A fixture, not a real certificate: the statement of the well-known file.
+  ANDROID_CERT_SHA256:
+    "11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00",
   MAP_STYLE_URL: process.argv.includes("--e2e")
     ? base + "/test-map-style.json"
     : "",
@@ -163,7 +166,7 @@ try {
   for (const test of e2e
     ? ["node_modules/@playwright/test/cli.js"]
     : chatTests
-      ? ["tests/chat-http.js"]
+      ? ["tests/chat-http.js", "tests/api-v1-chat-http.js"]
       : [
           // First: the tracker budget is still unused right after startup.
           "tests/observability-http.js",
@@ -195,6 +198,7 @@ try {
           "tests/api-v1-market-http.js",
           "tests/api-v1-personal-http.js",
           "tests/api-v1-comments-write-http.js",
+          "tests/api-v1-media-http.js",
           "tests/admin-http.js",
           "tests/resolver-http.js",
           "tests/layout-http.js",

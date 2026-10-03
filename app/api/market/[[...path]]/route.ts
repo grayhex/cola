@@ -53,8 +53,7 @@ import {
   notModifiedResponse,
 } from "../../../../lib/media-cache.ts";
 import { logError, traced } from "../../../../lib/observability.ts";
-import { ApiError, errorStatus } from "../../../../lib/api-v1/errors.ts";
-import { authenticate } from "../../../../lib/api-v1/viewer.ts";
+import { mediaVary, mediaViewer } from "../../../../lib/media-viewer.ts";
 export const runtime = "nodejs",
   dynamic = "force-dynamic";
 
@@ -175,20 +174,12 @@ async function handler(
         width = mediaWidth(url.searchParams.get("width"));
       if (width === undefined) return fail("Неверный размер фото");
       // Access is checked on every request, including revalidation. A native
-      // client reads its own draft's photos with its Bearer token (#319).
-      let reader = user?.id;
-      if (req.headers.has("authorization")) {
-        try {
-          reader = (await authenticate(req.headers)).viewer?.id;
-        } catch (error) {
-          if (error instanceof ApiError)
-            return fail(error.message, errorStatus[error.code]);
-          throw error;
-        }
-      }
-      const filename = await marketPhotoFilename(db, id, reader),
+      // client reads its own draft's photos with its Bearer token (#319, #324).
+      const who = await mediaViewer(req, user);
+      if ("denied" in who) return who.denied;
+      const filename = await marketPhotoFilename(db, id, who.viewer?.id),
         etag = mediaEtag(id, width),
-        headers = { Vary: "Cookie, Authorization" };
+        headers = mediaVary;
       if (notModified(req, etag)) return notModifiedResponse(etag, { headers });
       const original = () => readMarketPhotoFile(filename);
       return mediaResponse(

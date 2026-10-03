@@ -82,6 +82,7 @@ import {
 import { suggestUsername } from "../../../lib/usernames.ts";
 import { allocateUsername } from "../../../lib/username-allocation.ts";
 import { ownedBike, insertBike } from "../../../lib/repository.ts";
+import { mediaVary, mediaViewer } from "../../../lib/media-viewer.ts";
 import {
   addComponentRow,
   bikeHasRides,
@@ -316,14 +317,18 @@ async function handler(
       if (!uuid.safeParse(p[1]).success) return fail("Фото не найдено", 404);
       const width = mediaWidth(new URL(req.url).searchParams.get("width"));
       if (width === undefined) return fail("Неверный размер фотографии");
+      // A private bike's photo is its owner's: by cookie or by Bearer (#324).
+      const who = await mediaViewer(req, user);
+      if ("denied" in who) return who.denied;
       const { rows } = await db.query<{ filename: string }>(
         "SELECT p.filename FROM photos p JOIN bikes b ON b.id=p.bike_id JOIN users u ON u.id=b.owner_id WHERE p.id=$1 AND u.blocked=false AND (b.is_public=true OR b.owner_id=$2)",
-        [p[1], user?.id || null],
+        [p[1], who.viewer?.id || null],
       );
       if (!rows[0]) return fail("Фото не найдено", 404);
       // Access is checked above on every request, including revalidation.
       const etag = mediaEtag(p[1], width);
-      if (notModified(req, etag)) return notModifiedResponse(etag);
+      if (notModified(req, etag))
+        return notModifiedResponse(etag, { headers: mediaVary });
       try {
         const original = () =>
           readFile(
@@ -332,6 +337,7 @@ async function handler(
         return mediaResponse(
           width ? await mediaVariant(p[1], width, original) : await original(),
           etag,
+          { headers: mediaVary },
         );
       } catch (e) {
         if (errorCode(e) === "ENOENT") return fail("Фото не найдено", 404);

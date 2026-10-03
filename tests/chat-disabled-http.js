@@ -22,6 +22,13 @@ const token = await fetch(base + "/api/chat/token", {
 });
 assert.equal(token.status, 503);
 assert.equal((await token.json()).enabled, false);
+// The native bridge says the same in the envelope of API v1.
+const v1 = await fetch(base + "/api/v1/chat/token", {
+  method: "POST",
+  headers: { origin: base, cookie },
+});
+assert.equal(v1.status, 503);
+assert.equal((await v1.json()).error.code, "service_unavailable");
 const page = await fetch(base + "/messages", { headers: { cookie } });
 assert.equal(page.status, 200);
 assert.match(await page.text(), /Сообщения пока отключены/);
