@@ -1000,8 +1000,71 @@ export const marketSavedSchema = named(
   z.strictObject({ saved: z.boolean() }),
 );
 
+export type Notification = z.infer<typeof notificationSchema>;
+export type NotificationTarget = z.infer<typeof notificationTargetSchema>;
 export type MarketListing = z.infer<typeof marketListingSchema>;
 export type MarketListingDetail = z.infer<typeof marketListingDetailSchema>;
+export const notificationTargetSchema = named(
+  "NotificationTarget",
+  "О чём уведомление: объект, его название и путь на сайте (с якорем комментария, если уведомление о нём). Название и путь вычисляются при чтении, поэтому следуют переименованиям и продлению.",
+  z.strictObject({
+    type: z
+      .string()
+      .describe(
+        "bike, ride, journal, article, component, profile, market, account или bike-week; набор открыт.",
+      ),
+    id,
+    name: z.string(),
+    path: z.string().describe("Путь на сайте относительно его адреса."),
+    expiresAt: instant
+      .optional()
+      .describe("Только у `market_expiring`: конец срока объявления."),
+    state: z
+      .enum(["closed", "expired", "expiring", "extended"])
+      .optional()
+      .describe(
+        "Только у `market_expiring`: состояние объявления сейчас (закрыто, срок вышел, скоро выйдет, продлено).",
+      ),
+  }),
+);
+
+export const notificationSchema = named(
+  "Notification",
+  "Уведомление вошедшему. Показывается только то, что получатель вправе видеть сейчас: приватное, скрытое и заблокированное не просачивается, а отменённое действие (снятый лайк, удалённый комментарий) уведомления не оставляет.",
+  z.strictObject({
+    id,
+    type: z
+      .string()
+      .describe(
+        "follow, like, comment, reply, ride_like, ride_comment, ride_reply, journal_like, journal_comment, journal_reply, article_*, component_reply, market_expiring, session_reuse, bike_week и другие; набор открыт, неизвестный тип клиент показывает общим видом.",
+      ),
+    createdAt: instant,
+    readAt: instant.nullable(),
+    actor: authorSchema
+      .nullable()
+      .describe("Кто это сделал; null у уведомлений от самого сайта."),
+    target: notificationTargetSchema,
+  }),
+);
+
+export const notificationPageSchema = named(
+  "NotificationPage",
+  "Страница уведомлений, новые сверху.",
+  z.strictObject({
+    items: z.array(notificationSchema),
+    nextCursor: z
+      .string()
+      .nullable()
+      .describe("Курсор следующей страницы или null, если страниц больше нет."),
+  }),
+);
+
+export const notificationCountSchema = named(
+  "NotificationCount",
+  "Число непрочитанных: считается до 100; при `capped` их не меньше 100.",
+  z.strictObject({ unread: z.int(), capped: z.boolean() }),
+);
+
 export type Me = z.infer<typeof meSchema>;
 export type SessionGrant = z.infer<typeof sessionGrantSchema>;
 export type Profile = z.infer<typeof profileSchema>;
