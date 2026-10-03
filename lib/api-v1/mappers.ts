@@ -413,6 +413,9 @@ export function toMyUpcomingRide(
   const shown = !entry.cancelled && meetingVisible(view, viewer);
   return {
     ...toRideSummary({ ...view, status: "planned" }, viewer),
+    // The counts are those of the next live date; a called-off date shows the
+    // date the person answered, and the counts of another date would be wrong.
+    ...(entry.cancelled ? { participants: null } : {}),
     status: view.status === "cancelled" ? "cancelled" : "planned",
     role: entry.role,
     occurrenceCancelled: entry.occurrenceCancelled,

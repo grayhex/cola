@@ -573,6 +573,9 @@ test("upcoming plans: the role in each, the meeting point by the participants' r
   assert.equal(point(invited).meetingHidden, true);
   assert.equal(point(called).meetingPoint, null);
   assert.equal(point(called).status, "cancelled");
+  // A called-off date has no counts of its own (they would be another date's).
+  assert.equal(point(called).participants, null);
+  assert.ok(point(going).participants);
   // An edit of the conditions after the answer is shown.
   await db.query("UPDATE rides SET agreement_revision=2 WHERE id=$1", [going]);
   assert.equal(
