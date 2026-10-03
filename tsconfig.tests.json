@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "incremental": true,
+    "tsBuildInfoFile": "./node_modules/.cache/tsconfig.tests.tsbuildinfo",
+    "plugins": []
+  },
+  "include": ["next-env.d.ts", "tests/**/*.ts"],
+  "exclude": ["node_modules", "services"]
+}

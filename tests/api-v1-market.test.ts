@@ -1,10 +1,8 @@
 import test, { after } from "node:test";
 import assert from "node:assert/strict";
-import { PGlite } from "@electric-sql/pglite";
-import { readFile, readdir } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
+import type { MarketRow } from "../lib/database-rows.ts";
+import type { MarketCursor, MarketSort } from "../lib/market.ts";
 import {
   marketApiDetail,
   marketContact,
@@ -28,70 +26,78 @@ import {
   toMarketListing,
   toMarketListingDetail,
 } from "../lib/api-v1/mappers.ts";
+import { testDatabase } from "./support/database.ts";
+import { listingRow } from "./support/market.ts";
+import { present } from "./support/assertions.ts";
+import { userRow } from "./support/people.ts";
+import { one } from "./support/rows.ts";
 
 // API v1, the market (#319): the keyset list in three orders, the filters of
 // the site, who may read which listing, the contact asked for one by one and
 // the seller's other listings. The server end to end is
 // tests/api-v1-market-http.js.
 
-const root = fileURLToPath(new URL("../", import.meta.url));
-const db = new PGlite();
-for (const file of (await readdir(path.join(root, "db")))
-  .filter((name) => name.endsWith(".sql"))
-  .sort())
-  await db.exec(await readFile(path.join(root, "db", file), "utf8"));
+const db = await testDatabase();
 after(() => db.close());
 
 const run = randomUUID().slice(0, 6);
-const day = (n, micro = 100) =>
+const day = (n: number, micro = 100) =>
   `2026-09-${String(n).padStart(2, "0")}T10:00:00.${String(micro).padStart(6, "0")}Z`;
-async function addUser(label, blocked = false) {
+async function addUser(label: string, blocked = false) {
   const id = randomUUID();
-  await db.query(
-    "INSERT INTO users(id,email,name,password_hash,username,blocked) VALUES($1,$2,$3,'hash',$4,$5)",
-    [
+  return (
+    await userRow(db, {
       id,
-      id + "@test.invalid",
-      "Имя " + label,
-      (label + "-" + id.slice(0, 8)).toLowerCase(),
+      name: "Имя " + label,
+      username: (label + "-" + id.slice(0, 8)).toLowerCase(),
       blocked,
-    ],
-  );
-  return id;
+    })
+  ).id;
 }
-async function addListing(owner, options = {}) {
-  const id = randomUUID();
+interface ListingOptions {
+  status?: MarketRow["status"];
+  title?: string;
+  description?: string;
+  category?: MarketRow["category"];
+  condition?: MarketRow["condition"];
+  price?: number | null;
+  location?: string;
+  contact?: string;
+  type?: string;
+  at?: string;
+  expires?: string;
+}
+async function addListing(owner: string, options: ListingOptions = {}) {
   const status = options.status ?? "active";
-  await db.query(
-    `INSERT INTO market_listings(id,share_id,owner_id,title,description,category,condition,price,currency,location,contact,status,listing_type,published_at,expires_at)
-     VALUES($1,$2,$3,$4,$5,$6,$7,$8,'RUB',$9,$10,$11,$12,$13,$14)`,
-    [
-      id,
-      randomUUID(),
-      owner,
-      options.title ?? "Лот " + id.slice(0, 6),
-      options.description ?? "Описание",
-      options.category ?? "components",
-      options.condition ?? "used",
-      options.price === undefined ? 1000 : options.price,
-      options.location ?? "Москва",
-      options.contact ?? "tg: @seller_" + id.slice(0, 4),
+  return (
+    await listingRow(db, owner, {
+      title: options.title,
+      description: options.description,
+      category: options.category,
+      condition: options.condition,
+      price: options.price,
+      location: options.location,
+      contact: options.contact,
       status,
-      options.type ?? "sale",
-      status === "draft" ? null : (options.at ?? day(10)),
-      status === "active" ? (options.expires ?? "2099-01-01T00:00:00Z") : null,
-    ],
-  );
-  return id;
+      listing_type: options.type,
+      published_at: status === "draft" ? null : (options.at ?? day(10)),
+      expires_at:
+        status === "active"
+          ? (options.expires ?? "2099-01-01T00:00:00Z")
+          : null,
+    })
+  ).id;
 }
-const page = (viewer, extra = {}) =>
+type Keyset = Parameters<typeof marketKeysetPage>[2];
+const page = (viewer: string | null, extra: Partial<Keyset> = {}) =>
   marketKeysetPage(db, viewer, {
     sort: "new",
     limit: 50,
     after: null,
     ...extra,
   });
-const ids = (result) => result.items.map((item) => item.id);
+const ids = (result: { items: { id: string }[] }) =>
+  result.items.map((item) => item.id);
 
 const seller = await addUser("seller");
 const other = await addUser("other");
@@ -131,9 +137,13 @@ const draft = await addListing(seller, { status: "draft" });
 const hidden = await addListing(barred, { at: day(9) });
 const live = [a, b, c, d, free, noPrice1, noPrice2];
 
-async function walk(sort, limit, extra = {}) {
-  const seen = [];
-  let after = null;
+async function walk(
+  sort: MarketSort,
+  limit: number,
+  extra: Partial<Keyset> = {},
+) {
+  const seen: string[] = [];
+  let after: MarketCursor | null = null;
   for (let guard = 0; guard < 20; guard++) {
     const result = await page(reader, { sort, limit, after, ...extra });
     seen.push(...ids(result));
@@ -158,7 +168,7 @@ test("the list holds exactly what is on the market, newest first", async () => {
 });
 
 test("a keyset walk in every order is the site's order, with no repeats and no gaps", async () => {
-  for (const sort of ["new", "price_asc", "price_desc"]) {
+  for (const sort of ["new", "price_asc", "price_desc"] as const) {
     const expected = (await marketList(db, reader, { sort })).items.map(
       (item) => item.id,
     );
@@ -174,7 +184,8 @@ test("a keyset walk in every order is the site's order, with no repeats and no g
 });
 
 test("filters are the site's", async () => {
-  const only = async (extra) => (await walk("new", 3, extra)).sort();
+  const only = async (extra: Partial<Keyset>) =>
+    (await walk("new", 3, extra)).sort();
   assert.deepEqual(await only({ listingType: "wanted" }), [c]);
   assert.deepEqual(await only({ category: "bikes" }), [b]);
   assert.deepEqual(await only({ condition: "new" }), [d]);
@@ -186,9 +197,11 @@ test("filters are the site's", async () => {
     [b, c, d].sort(),
   );
   assert.deepEqual(await only({ priceMax: 0 }), [free]);
-  const username = (
-    await db.query("SELECT username FROM users WHERE id=$1", [other])
-  ).rows[0].username;
+  const { username } = await one<{ username: string }>(
+    db,
+    "SELECT username FROM users WHERE id=$1",
+    [other],
+  );
   assert.deepEqual(
     await only({ seller: username.toUpperCase() }),
     [c, d, free, noPrice2].sort(),
@@ -197,16 +210,16 @@ test("filters are the site's", async () => {
 
 test("a cursor belongs to its order, and its text is checked", async () => {
   const first = await page(reader, { limit: 1 });
-  const plain = encodeMarketCursor(first.next, "new");
-  const priced = encodeMarketCursor(
-    { ...first.next, price: "100.00" },
-    "price_asc",
-  );
+  const next = present(first.next);
+  const plain = encodeMarketCursor(next, "new");
+  const priced = encodeMarketCursor({ ...next, price: "100.00" }, "price_asc");
   assert.equal(
-    JSON.stringify(Object.keys(JSON.parse(Buffer.from(plain, "base64url")))),
+    JSON.stringify(
+      Object.keys(JSON.parse(Buffer.from(plain, "base64url").toString())),
+    ),
     '["t","i"]',
   );
-  for (const sort of ["price_asc", "price_desc"])
+  for (const sort of ["price_asc", "price_desc"] as const)
     assert.throws(() => decodeMarketCursor(plain, sort), {
       code: "invalid_request",
     });
@@ -218,10 +231,7 @@ test("a cursor belongs to its order, and its text is checked", async () => {
     code: "invalid_request",
   });
   assert.equal(decodeMarketCursor(priced, "price_asc").price, "100.00");
-  const nullPrice = encodeMarketCursor(
-    { ...first.next, price: null },
-    "price_desc",
-  );
+  const nullPrice = encodeMarketCursor({ ...next, price: null }, "price_desc");
   assert.equal(decodeMarketCursor(nullPrice, "price_desc").price, null);
   for (const bad of [
     "!!!",
@@ -237,7 +247,7 @@ test("a cursor belongs to its order, and its text is checked", async () => {
       "base64url",
     ),
     // The bike list's cursor is not a market cursor in a price order.
-    encodeCursor({ createdAt: first.next.publishedAt, id: first.next.id }),
+    encodeCursor({ createdAt: next.publishedAt, id: next.id }),
   ])
     assert.throws(() => decodeMarketCursor(bad, "price_asc"), {
       code: "invalid_request",
@@ -285,7 +295,7 @@ test("a card keeps the contact and the term to the owner", async () => {
   const own = toMarketListingDetail(await marketApiDetail(db, a, seller));
   marketListingDetailSchema.parse(own);
   assert.equal(own.isOwner, true);
-  assert.match(own.contact, /^tg: @seller_/);
+  assert.match(present(own.contact), /^tg: @seller_/);
   assert.ok(own.expiresAt);
   // The list carries the same cards.
   for (const item of (await page(reader)).items)
@@ -293,7 +303,7 @@ test("a card keeps the contact and the term to the owner", async () => {
 });
 
 test("who reads which listing", async () => {
-  const read = (id, viewer) =>
+  const read = (id: string, viewer: string | null) =>
     marketApiDetail(db, id, viewer).then(
       (card) => card.status + (card.expired ? "+expired" : ""),
       (error) => error.status,
@@ -310,7 +320,7 @@ test("who reads which listing", async () => {
 });
 
 test("the contact is asked for one listing at a time", async () => {
-  const contact = (id, viewer) =>
+  const contact = (id: string, viewer: string | null) =>
     marketContact(db, id, viewer, "id").catch((error) => error.status);
   assert.match(await contact(a, reader), /^tg: @seller_/);
   assert.equal(await contact(sold, reader), 404);
@@ -321,9 +331,11 @@ test("the contact is asked for one listing at a time", async () => {
   assert.match(await contact(sold, seller), /^tg: @seller_/);
   assert.match(await contact(draft, seller), /^tg: @seller_/);
   // By the id: the site's share id is not a key of the API.
-  const share = (
-    await db.query("SELECT share_id FROM market_listings WHERE id=$1", [a])
-  ).rows[0].share_id;
+  const { share_id: share } = await one<{ share_id: string }>(
+    db,
+    "SELECT share_id FROM market_listings WHERE id=$1",
+    [a],
+  );
   assert.equal(await contact(share, reader), 404);
 });
 
@@ -339,13 +351,14 @@ test("the seller's other listings are those on the market now", async () => {
   );
   assert.equal(others.total, 2);
   const manyBy = await addUser("many");
-  const group = [];
+  const group: string[] = [];
   for (let i = 0; i < 6; i++)
     group.push(await addListing(manyBy, { at: day(11 + i) }));
-  const six = await sellerApiListings(db, group[0], reader);
+  const first = present(group[0]);
+  const six = await sellerApiListings(db, first, reader);
   assert.equal(six.items.length, 4);
   assert.equal(six.total, 5);
-  assert.ok(!six.items.some((item) => item.id === group[0]));
+  assert.ok(!six.items.some((item) => item.id === first));
 });
 
 test("saving follows the visibility of the listing", async () => {

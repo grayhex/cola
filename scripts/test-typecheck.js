@@ -24,6 +24,7 @@ try {
     "app",
     "lib",
     "tsconfig.json",
+    "tsconfig.tests.json",
     "proxy.ts",
     "package.json",
     "eslint.config.js",
@@ -42,6 +43,12 @@ try {
     } catch (error) {
       if (error.code !== "ENOENT") throw error;
     }
+  // The shared test kit (builders, database, assertions) is checked as a whole.
+  await cp(
+    path.join(sourceRoot, "tests/support"),
+    path.join(root, "tests/support"),
+    { recursive: true },
+  );
   await cp(
     path.join(sourceRoot, "scripts/check-production-typescript.js"),
     path.join(root, "scripts/check-production-typescript.js"),
@@ -51,6 +58,15 @@ try {
   );
   config.compilerOptions.incremental = false;
   await writeFile(path.join(root, "tsconfig.json"), JSON.stringify(config));
+  const testsConfig = JSON.parse(
+    await readFile(path.join(root, "tsconfig.tests.json"), "utf8"),
+  );
+  testsConfig.compilerOptions.incremental = false;
+  delete testsConfig.compilerOptions.tsBuildInfoFile;
+  await writeFile(
+    path.join(root, "tsconfig.tests.json"),
+    JSON.stringify(testsConfig),
+  );
   const api = await mkdtemp(path.join(root, "app/api/typecheck-probe-"));
   dirs.push(api);
   await writeFile(
@@ -394,6 +410,67 @@ export const planner = <PlanComposer onClose={() => {}} onSaved={() => {}} draft
   );
   assert.match(resolverLint.stdout, /@typescript-eslint\/no-explicit-any/);
   assert.match(resolverLint.stdout, /@typescript-eslint\/ban-ts-comment/);
+  // Typed tests (#283): a test written against the builders compiles, and a
+  // production type that changes under it does not, before any test runs.
+  await writeFile(
+    path.join(root, "tests/typecheck-probe.ts"),
+    `
+import { bikeRow } from ${JSON.stringify("./support/bikes.ts")};
+import { testDatabase } from ${JSON.stringify("./support/database.ts")};
+import { listingDraft } from ${JSON.stringify("./support/market.ts")};
+import { userRow, viewer } from ${JSON.stringify("./support/people.ts")};
+import { intentDraft, planRow } from ${JSON.stringify("./support/rides.ts")};
+export async function probe() {
+  const db = await testDatabase();
+  const owner = await userRow(db, { name: "Owner", blocked: false });
+  const bike = await bikeRow(db, owner.id, { is_public: false, price: 100 });
+  await planRow(db, owner.id, bike.id, Date.now(), { title: "Plan" });
+  return [viewer({ role: "admin" }), listingDraft({ price: 5 }), intentDraft()];
+}
+`,
+  );
+  const testsValid = run("node_modules/@typescript/native/bin/tsc", [
+    "-p",
+    "tsconfig.tests.json",
+    "--pretty",
+    "false",
+  ]);
+  assert.equal(testsValid.status, 0, testsValid.stdout + testsValid.stderr);
+  await writeFile(
+    path.join(root, "tests/typecheck-probe.ts"),
+    `
+import type { Queryable } from ${JSON.stringify("../lib/db.ts")};
+import { bikeRow } from ${JSON.stringify("./support/bikes.ts")};
+import { listingDraft } from ${JSON.stringify("./support/market.ts")};
+import { userRow, viewer } from ${JSON.stringify("./support/people.ts")};
+import { intentDraft, planRow } from ${JSON.stringify("./support/rides.ts")};
+import { PGlite } from "@electric-sql/pglite";
+export async function probe(db: Queryable) {
+  // A column the row type does not have, a value of the wrong kind.
+  await userRow(db, { nickname: "x" });
+  await userRow(db, { role: "owner" });
+  await bikeRow(db, "owner", { is_public: "yes" });
+  await planRow(db, "owner", "bike", 0, { status: 1 });
+  // A draft the API would refuse, and a viewer the server never builds.
+  listingDraft({ condition: "broken" });
+  intentDraft({ readiness: "maybe" });
+  viewer({ role: "owner" });
+  // The raw engine is not what a service takes: it goes through testDatabase.
+  const engine: Queryable = new PGlite();
+  return engine;
+}
+`,
+  );
+  const testsResult = check("tsconfig.tests.json");
+  assert.equal(
+    (testsResult.match(/typecheck-probe\.ts.*TS2353/g) || []).length,
+    1,
+  );
+  assert.ok(
+    (testsResult.match(/typecheck-probe\.ts.*TS2322/g) || []).length >= 6,
+  );
+  assert.match(testsResult, /typecheck-probe\.ts.*Queryable/);
+  await rm(path.join(root, "tests/typecheck-probe.ts"), { force: true });
   // A successful negative suite must leave a valid tree, not just expected errors.
   const after = run("node_modules/@typescript/native/bin/tsc", [
     "-p",
@@ -402,6 +479,13 @@ export const planner = <PlanComposer onClose={() => {}} onSaved={() => {}} draft
     "false",
   ]);
   assert.equal(after.status, 0, after.stdout + after.stderr);
+  const testsAfter = run("node_modules/@typescript/native/bin/tsc", [
+    "-p",
+    "tsconfig.tests.json",
+    "--pretty",
+    "false",
+  ]);
+  assert.equal(testsAfter.status, 0, testsAfter.stdout + testsAfter.stderr);
   console.log(
     "Typecheck gates reject native API/DTO/null errors, strict TS/TSX errors, new JS, non-erasable shared TS and TS lint suppressions.",
   );

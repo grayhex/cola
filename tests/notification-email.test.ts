@@ -1,12 +1,17 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { PGlite } from "@electric-sql/pglite";
-import { readFile, readdir } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
+import type { Queryable } from "../lib/db.ts";
 import net from "node:net";
+import { processEnv } from "./support/env.ts";
+import { seedSiteDefaults, testDatabase } from "./support/database.ts";
+import { userRow } from "./support/people.ts";
+import { one } from "./support/rows.ts";
 import { notify, notificationPage } from "../lib/notifications.ts";
+import type { MailMessage } from "../lib/mail.ts";
+import type { NotificationRecord } from "../lib/database-rows.ts";
 import { insertBike } from "../lib/repository.ts";
-import { defaultSettings, defaultCatalog } from "../lib/site-defaults.ts";
+import { bikeInput } from "../lib/validation.ts";
 import {
   notificationEmailSettings,
   saveNotificationEmail,
@@ -19,47 +24,46 @@ import {
   pruneNotificationEmails,
   notificationMailFailure,
 } from "../lib/notification-email.ts";
-const env = {
+const env = processEnv({
   MAIL_CAPTURE_DIR: "/tmp/cola-email-test",
   APP_ORIGIN: "https://cola.example.test",
-};
+});
 const on = { enabled: true, discussions: true, rides: true, market: true };
 async function setup() {
-  const db = new PGlite();
-  for (const file of (await readdir(new URL("../db/", import.meta.url)))
-    .filter((f) => f.endsWith(".sql"))
-    .sort())
-    await db.exec(
-      await readFile(new URL("../db/" + file, import.meta.url), "utf8"),
-    );
-  await db.query("INSERT INTO site_settings(id,value) VALUES(1,$1)", [
-    JSON.stringify(defaultSettings),
-  ]);
-  await db.query("INSERT INTO site_catalog(id,value) VALUES(1,$1)", [
-    JSON.stringify(defaultCatalog),
-  ]);
-  const recipient = randomUUID(),
-    actor = randomUUID();
-  for (const [id, name] of [
-    [recipient, "receiver"],
-    [actor, "writer"],
-  ])
-    await db.query(
-      "INSERT INTO users(id,email,name,username,password_hash,email_verified_at) VALUES($1,$2,$3,$3,'hash',now())",
-      [id, name + "@example.test", name],
-    );
-  const bike = await insertBike(db, recipient, {
-    name: "Public <bike>",
-    brand: "Cube",
-    model: "Travel",
-    year: 2020,
-    category: "road",
-    description: "",
-    color: "",
-    size: "",
-    weight: 14,
-    is_public: true,
-  });
+  const db = await testDatabase();
+  await seedSiteDefaults(db);
+  const recipient = (
+      await userRow(db, {
+        name: "receiver",
+        username: "receiver",
+        email: "receiver@example.test",
+        email_verified_at: new Date(),
+      })
+    ).id,
+    actor = (
+      await userRow(db, {
+        name: "writer",
+        username: "writer",
+        email: "writer@example.test",
+        email_verified_at: new Date(),
+      })
+    ).id;
+  const bike = await insertBike(
+    db,
+    recipient,
+    bikeInput.parse({
+      name: "Public <bike>",
+      brand: "Cube",
+      model: "Travel",
+      year: 2020,
+      category: "road",
+      description: "",
+      color: "",
+      size: "",
+      weight: 14,
+      is_public: true,
+    }),
+  );
   await saveNotificationEmail(db, recipient, on, env);
   const add = async () => {
     const comment = randomUUID();
@@ -83,7 +87,7 @@ async function setup() {
   };
   return { db, recipient, actor, bike, add };
 }
-async function ready(db) {
+async function ready(db: Queryable) {
   await db.query(
     "UPDATE notification_email_outbox SET available_at=now(),lease_until=now()-interval '1 minute'",
   );
@@ -104,9 +108,11 @@ test("email events are atomic, deduplicated, opt-in, bounded and SMTP-independen
       ).rows[0].n,
       1,
     );
-    const n = (
-      await s.db.query("SELECT * FROM notifications WHERE id=$1", [id])
-    ).rows[0];
+    const n = await one<NotificationRecord>(
+      s.db,
+      "SELECT * FROM notifications WHERE id=$1",
+      [id],
+    );
     const old = process.env.MAIL_CAPTURE_DIR;
     process.env.MAIL_CAPTURE_DIR = env.MAIL_CAPTURE_DIR;
     try {
@@ -166,7 +172,7 @@ test("email events are atomic, deduplicated, opt-in, bounded and SMTP-independen
       (await notificationPage(s.db, s.recipient)).notifications.length >= 2,
     );
     assert.equal(
-      (await runNotificationEmailBatch(s.db, { env: {} })).disabled,
+      (await runNotificationEmailBatch(s.db, { env: processEnv() })).disabled,
       true,
     );
     // No body/address/token snapshot in the queue.
@@ -233,7 +239,7 @@ test("actual SMTP transient and permanent replies drive retry and failure", asyn
   const s = await setup();
   let code = 451,
     accepted = 0;
-  const sockets = new Set();
+  const sockets = new Set<net.Socket>();
   const server = net.createServer((socket) => {
     sockets.add(socket);
     socket.on("close", () => sockets.delete(socket));
@@ -266,12 +272,14 @@ test("actual SMTP transient and permanent replies drive retry and failure", asyn
       }
     });
   });
-  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
-  const smtp = {
-    APP_ORIGIN: env.APP_ORIGIN,
-    SMTP_URL: `smtp://127.0.0.1:${server.address().port}?tls=none`,
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const address = server.address();
+  assert.ok(address && typeof address === "object");
+  const smtp = processEnv({
+    APP_ORIGIN: String(env.APP_ORIGIN),
+    SMTP_URL: `smtp://127.0.0.1:${address.port}?tls=none`,
     MAIL_FROM: "ColaBike <noreply@example.test>",
-  };
+  });
   try {
     await s.add();
     assert.equal(
@@ -311,20 +319,20 @@ test("signed unsubscribe has no login dependency, expires, resists tampering and
     await s.db.query("UPDATE users SET email_verified_at=NULL WHERE id=$1", [
       s.actor,
     ]);
+    await assert.rejects(saveNotificationEmail(s.db, s.actor, on, env), {
+      status: 403,
+    });
     await assert.rejects(
-      saveNotificationEmail(s.db, s.actor, on, env),
-      (e) => e.status === 403,
-    );
-    await assert.rejects(
-      saveNotificationEmail(s.db, s.recipient, on, {}),
-      (e) => e.status === 503,
+      saveNotificationEmail(s.db, s.recipient, on, processEnv()),
+      { status: 503 },
     );
     const key = (
-      await s.db.query(
+      await one<{ unsubscribe_key: string }>(
+        s.db,
         "SELECT unsubscribe_key FROM notification_email_preferences WHERE user_id=$1",
         [s.recipient],
       )
-    ).rows[0].unsubscribe_key;
+    ).unsubscribe_key;
     const token = notificationUnsubscribeToken(s.recipient, key);
     assert.equal(
       await unsubscribeNotificationEmail(s.db, token.slice(0, -2) + "xx"),
@@ -364,11 +372,12 @@ test("revoked consent cannot revive pending or leased mail when enabled again", 
       assert.equal((await claimNotificationEmails(s.db)).length, 1);
       if (revoke === "unsubscribe") {
         const key = (
-          await s.db.query(
+          await one<{ unsubscribe_key: string }>(
+            s.db,
             "SELECT unsubscribe_key FROM notification_email_preferences WHERE user_id=$1",
             [s.recipient],
           )
-        ).rows[0].unsubscribe_key;
+        ).unsubscribe_key;
         assert.equal(
           await unsubscribeNotificationEmail(
             s.db,
@@ -438,7 +447,7 @@ test("delivery rechecks visibility, address, consent and blocking, and never sen
     await s.db.query("UPDATE users SET email='new@example.test' WHERE id=$1", [
       s.recipient,
     ]);
-    const sent = [];
+    const sent: MailMessage[] = [];
     let result = await runNotificationEmailBatch(s.db, {
       env,
       send: async (m) => sent.push(m),
