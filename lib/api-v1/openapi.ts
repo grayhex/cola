@@ -130,6 +130,13 @@ const parameters = {
     description: "Идентификатор комментария (UUID).",
     schema: { type: "string", format: "uuid" },
   },
+  rideId: {
+    name: "id",
+    in: "path",
+    required: true,
+    description: "Идентификатор покатушки (UUID).",
+    schema: { type: "string", format: "uuid" },
+  },
   focus: {
     name: "focus",
     in: "query",
@@ -156,7 +163,7 @@ const parameters = {
   },
 };
 
-const description = `API ColaBike: вход устройств, текущий пользователь, чтение велосипедов, людей, журнала и комментариев.
+const description = `API ColaBike: вход устройств, текущий пользователь, чтение велосипедов, людей, журнала, покатушек и комментариев.
 
 **Вход.** Два способа. Браузер — HttpOnly cookie \`${SESSION_COOKIE}\`, которую выдаёт вход на сайте. Нативный клиент — сессия устройства: \`POST /auth/sessions\` возвращает пару непрозрачных токенов, токен доступа (\`cola_at_…\`, 15 минут) передаётся как \`Authorization: Bearer\`, одноразовый refresh-токен (\`cola_rt_…\`) обновляется через \`POST /auth/sessions/refresh\`. Cookie и Bearer в одном запросе — 400 \`ambiguous_authentication\`; другие схемы Authorization — 401 \`unsupported_authentication\`. Просроченный токен доступа — 401 \`token_expired\`, любой другой негодный — 401 \`invalid_token\`. CORS не включён.
 
@@ -166,7 +173,7 @@ const description = `API ColaBike: вход устройств, текущий �
 
 **Видимость.** Публичный велосипед видят все, приватный — только владелец. Чужой приватный и несуществующий велосипед неотличимы: оба дают 404. Велосипеды заблокированных владельцев никому не видны.
 
-**Что не входит.** Журнал, поездки, поиск, рынок и операции записи, а также нативный вход через внешних провайдеров — отдельные срезы.`;
+**Что не входит.** Личные ответы владельца о покатушках, участие в них, поиск, рынок и операции записи, а также нативный вход через внешних провайдеров — отдельные срезы.`;
 
 export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
   const { schemas } = z.toJSONSchema(schemaRegistry, {
@@ -198,8 +205,14 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
         description: "Записи журнала велосипеда.",
       },
       {
+        name: "Rides",
+        description:
+          "Публичные покатушки: состоявшиеся, ближайшие планы, публичная геометрия и разбор трека.",
+      },
+      {
         name: "Comments",
-        description: "Комментарии к велосипедам и записям: один вид на всё.",
+        description:
+          "Комментарии к велосипедам, записям и покатушкам: один вид на всё.",
       },
       {
         name: "Users",
@@ -530,6 +543,180 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
           },
         },
       },
+      "/rides": {
+        get: {
+          operationId: "listRides",
+          tags: ["Rides"],
+          summary: "Состоявшиеся покатушки",
+          description:
+            "Публичные состоявшиеся покатушки публичных велосипедов, новые сверху, курсор по `(начало, id)`; трек без времени стоит по дате добавления. Карточки без геометрии и описания: это список. Покатушки заблокированных авторов, приватные и отменённые не показываются.",
+          security: [{}, { cookieSession: [] }, { bearerAuth: [] }],
+          parameters: [
+            { $ref: "#/components/parameters/Limit" },
+            { $ref: "#/components/parameters/Cursor" },
+          ],
+          responses: {
+            "200": success("Страница покатушек.", "RidePage"),
+            "400": failure(
+              "Неверный параметр, неверный курсор либо cookie вместе с Authorization.",
+            ),
+            "401": failure(
+              "Недействительный или истёкший токен либо неподдерживаемая схема Authorization.",
+            ),
+            "404": shared("NotFound"),
+            "500": shared("InternalError"),
+          },
+        },
+      },
+      "/rides/upcoming": {
+        get: {
+          operationId: "listUpcomingRides",
+          tags: ["Rides"],
+          summary: "Ближайшие планы",
+          description:
+            "Публичные планы, которые ещё впереди, ближайшие сверху, курсор по `(дата, id)`. Еженедельная серия стоит одной карточкой на ближайшей дате (`scheduledAt`); дата серии сдвигается вместе с часами, поэтому серия, дата которой прошла между страницами, может встретиться ещё раз уже на следующей неделе. Отменённые планы и отменённые даты серии пропускаются.",
+          security: [{}, { cookieSession: [] }, { bearerAuth: [] }],
+          parameters: [
+            { $ref: "#/components/parameters/Limit" },
+            { $ref: "#/components/parameters/Cursor" },
+          ],
+          responses: {
+            "200": success("Страница планов.", "RidePage"),
+            "400": failure(
+              "Неверный параметр, неверный курсор либо cookie вместе с Authorization.",
+            ),
+            "401": failure(
+              "Недействительный или истёкший токен либо неподдерживаемая схема Authorization.",
+            ),
+            "404": shared("NotFound"),
+            "500": shared("InternalError"),
+          },
+        },
+      },
+      "/rides/{id}": {
+        get: {
+          operationId: "getRide",
+          tags: ["Rides"],
+          summary: "Покатушка",
+          description:
+            "Карточка покатушки или плана: показатели, публичная геометрия (`MultiLineString`, участки у начала и конца внутри радиуса приватности обрезаны), рамка, паспорт плана, счётчики. Точка встречи «только участникам» приходит `null` с `meetingHidden: true`, пока зритель не организатор и не принявший участие. Имён ответивших и владельческих полей нет. Приватная, отменённая, заблокированного автора, на приватном велосипеде и несуществующая покатушка неотличимы: 404, и это верно и для самого владельца: его личные ответы — отдельная операция.",
+          security: [{}, { cookieSession: [] }, { bearerAuth: [] }],
+          parameters: [{ $ref: "#/components/parameters/RideId" }],
+          responses: {
+            "200": success("Покатушка.", "Ride"),
+            "400": failure(
+              "Одновременно cookie сессии и заголовок Authorization.",
+            ),
+            "401": failure(
+              "Недействительный или истёкший токен либо неподдерживаемая схема Authorization.",
+            ),
+            "404": shared("NotFound"),
+            "500": shared("InternalError"),
+          },
+        },
+      },
+      "/rides/{id}/analysis": {
+        get: {
+          operationId: "getRideAnalysis",
+          tags: ["Rides"],
+          summary: "Разбор трека",
+          description:
+            "Публичные серии для графиков высоты, скорости и уклона (пульс, каденс и мощность — только если автор открыл их показатели): участки в зонах приватности обрезаны, как у геометрии; абсолютного времени нет. Отдельный запрос, чтобы карточка и список оставались лёгкими. У покатушки без трека или без готового разбора — 404.",
+          security: [{}, { cookieSession: [] }, { bearerAuth: [] }],
+          parameters: [{ $ref: "#/components/parameters/RideId" }],
+          responses: {
+            "200": success("Публичные серии.", "RideAnalysis"),
+            "400": failure(
+              "Одновременно cookie сессии и заголовок Authorization.",
+            ),
+            "401": failure(
+              "Недействительный или истёкший токен либо неподдерживаемая схема Authorization.",
+            ),
+            "404": shared("NotFound"),
+            "500": shared("InternalError"),
+          },
+        },
+      },
+      "/bikes/{id}/rides": {
+        get: {
+          operationId: "listBikeRides",
+          tags: ["Rides"],
+          summary: "Покатушки велосипеда",
+          description:
+            "Состоявшиеся публичные покатушки одного велосипеда, как `/rides`. Приватный, чужой и несуществующий велосипед неотличимы: 404.",
+          security: [{}, { cookieSession: [] }, { bearerAuth: [] }],
+          parameters: [
+            { $ref: "#/components/parameters/BikeId" },
+            { $ref: "#/components/parameters/Limit" },
+            { $ref: "#/components/parameters/Cursor" },
+          ],
+          responses: {
+            "200": success("Страница покатушек.", "RidePage"),
+            "400": failure(
+              "Неверный параметр, неверный курсор либо cookie вместе с Authorization.",
+            ),
+            "401": failure(
+              "Недействительный или истёкший токен либо неподдерживаемая схема Authorization.",
+            ),
+            "404": shared("NotFound"),
+            "500": shared("InternalError"),
+          },
+        },
+      },
+      "/rides/{id}/comments": {
+        get: {
+          operationId: "listRideComments",
+          tags: ["Comments"],
+          summary: "Комментарии покатушки",
+          description:
+            "Корневые комментарии, старые сверху, курсор; у каждого превью из не более чем трёх первых ответов и `replyCount`. Правила те же, что у комментариев велосипеда и записи; у приватной, отменённой и недоступной покатушки — 404.",
+          security: [{}, { cookieSession: [] }, { bearerAuth: [] }],
+          parameters: [
+            { $ref: "#/components/parameters/RideId" },
+            { $ref: "#/components/parameters/Limit" },
+            { $ref: "#/components/parameters/Cursor" },
+            { $ref: "#/components/parameters/Focus" },
+          ],
+          responses: {
+            "200": success("Страница комментариев.", "CommentPage"),
+            "400": failure(
+              "Неверный параметр или курсор, `focus` вместе с `cursor` либо cookie вместе с Authorization.",
+            ),
+            "401": failure(
+              "Недействительный или истёкший токен либо неподдерживаемая схема Authorization.",
+            ),
+            "404": shared("NotFound"),
+            "500": shared("InternalError"),
+          },
+        },
+      },
+      "/rides/{id}/comments/{commentId}/replies": {
+        get: {
+          operationId: "listRideReplies",
+          tags: ["Comments"],
+          summary: "Ответы на комментарий покатушки",
+          description:
+            "Ответы на один комментарий, старые сверху, курсор. Те же правила видимости и «надгробия», что у списка комментариев.",
+          security: [{}, { cookieSession: [] }, { bearerAuth: [] }],
+          parameters: [
+            { $ref: "#/components/parameters/RideId" },
+            { $ref: "#/components/parameters/CommentId" },
+            { $ref: "#/components/parameters/Limit" },
+            { $ref: "#/components/parameters/Cursor" },
+          ],
+          responses: {
+            "200": success("Страница ответов.", "ReplyPage"),
+            "400": failure(
+              "Неверный параметр, неверный курсор либо cookie вместе с Authorization.",
+            ),
+            "401": failure(
+              "Недействительный или истёкший токен либо неподдерживаемая схема Authorization.",
+            ),
+            "404": shared("NotFound"),
+            "500": shared("InternalError"),
+          },
+        },
+      },
       "/users/{ref}": {
         get: {
           operationId: "getUser",
@@ -660,6 +847,7 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
         BikeId: parameters.bikeId,
         UserRef: parameters.userRef,
         JournalId: parameters.journalId,
+        RideId: parameters.rideId,
         CommentId: parameters.commentId,
         Focus: parameters.focus,
         SessionId: {
