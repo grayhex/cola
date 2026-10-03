@@ -24,6 +24,7 @@ import { notificationEmailEnqueueSql } from "./notification-catalog.ts";
 import { publicAuthor } from "./profile-dto.ts";
 import { limits, componentPhotoBytes } from "./limits.ts";
 import { participation } from "./participation.ts";
+import { publicPath } from "./public-urls.ts";
 import { getSite } from "./site.ts";
 import {
   marketLinkColumns,
@@ -101,8 +102,22 @@ export function marketCard(
     ...listingLinks(r, !!viewer && r.owner_id === viewer),
   };
 }
-export async function marketList(
-  q: Queryable,
+interface MarketFilters {
+  own?: boolean;
+  category?: string | null;
+  listingType?: string | null;
+  condition?: string | null;
+  priceMin?: number | null;
+  priceMax?: number | null;
+  city?: string;
+  search?: string;
+  ids?: string[] | null;
+  seller?: string;
+}
+// One filter for the page list of the site and the keyset list of the API, so
+// they can never disagree about what is on the market. `params` already holds
+// $1..$4 (viewer, category, search, ids); more are appended.
+function marketWhere(
   viewer: string | null | undefined,
   {
     own = false,
@@ -112,25 +127,10 @@ export async function marketList(
     priceMin = null,
     priceMax = null,
     city = "",
-    sort = "new",
-    page = 1,
     search = "",
     ids = null,
     seller = "",
-  }: {
-    own?: boolean;
-    category?: string | null;
-    listingType?: string | null;
-    condition?: string | null;
-    priceMin?: number | null;
-    priceMax?: number | null;
-    city?: string;
-    sort?: string;
-    page?: number;
-    search?: string;
-    ids?: string[] | null;
-    seller?: string;
-  } = {},
+  }: MarketFilters,
 ) {
   const params: unknown[] = [viewer || null, category, search, ids];
   let where = ` WHERE ${own ? "m.owner_id=$1 AND NOT u.blocked" : marketPublic} AND ($1::uuid IS NULL OR $1::uuid IS NOT NULL) AND ($2::text IS NULL OR m.category=$2) AND ($3='' OR strpos(lower(m.title||' '||m.description||' '||m.location),lower($3))>0) AND ($4::uuid[] IS NULL OR m.id=ANY($4))`;
@@ -160,9 +160,29 @@ export async function marketList(
     params.push(city);
     where += ` AND strpos(lower(m.location),lower($${params.length}))>0`;
   }
+  return { where, params };
+}
+// The card plus the address of its page, for the API (#319); the site's own
+// card stays as it was.
+export function marketApiCard(
+  r: MarketViewRow,
+  viewer: string | null | undefined,
+) {
+  return { ...marketCard(r, viewer), path: publicPath("market", r) };
+}
+export async function marketList(
+  q: Queryable,
+  viewer: string | null | undefined,
+  {
+    sort = "new",
+    page = 1,
+    ...filters
+  }: MarketFilters & { sort?: string; page?: number } = {},
+) {
+  const { where, params } = marketWhere(viewer, filters);
   // "new" follows the market_publication index; own drafts have no publication date.
   const order = {
-    new: own ? "m.created_at DESC,m.id" : "m.published_at DESC,m.id",
+    new: filters.own ? "m.created_at DESC,m.id" : "m.published_at DESC,m.id",
     price_asc: "m.price ASC NULLS LAST,m.published_at DESC,m.id",
     price_desc: "m.price DESC NULLS LAST,m.published_at DESC,m.id",
   }[sort];
@@ -186,27 +206,125 @@ export async function marketList(
     pageSize: 24,
   };
 }
+
+// ── API v1 (#319): the market by keyset ───────────────────────────────────
+
+/** Where the next page starts; `price` is the stored numeric as text. */
+export interface MarketCursor {
+  publishedAt: string;
+  id: string;
+  /** Only in the price orders; null for a listing without a price. */
+  price?: string | null;
+}
+export type MarketViewRowWithCursor = MarketViewRow & {
+  cursor_at: string;
+  cursor_price: string | null;
+};
+export type MarketSort = "new" | "price_asc" | "price_desc";
+
+/**
+ * A page of the market, `limit` listings after `after`. The same visibility and
+ * filters as the site (`marketWhere`); the order is the site's with the id as
+ * the last tie-break. Listings without a price come last in both price orders.
+ * Only listings on the market are listed: a sold, expired or hidden one is
+ * reachable by its id (marketDetail) but never in a list.
+ */
+export async function marketKeysetPage(
+  q: Queryable,
+  viewer: string | null | undefined,
+  {
+    sort,
+    limit,
+    after,
+    ...filters
+  }: Omit<MarketFilters, "own" | "ids"> & {
+    sort: MarketSort;
+    limit: number;
+    after: MarketCursor | null;
+  },
+) {
+  const { where, params } = marketWhere(viewer, filters);
+  const bind = (value: unknown) => {
+    params.push(value);
+    return "$" + params.length;
+  };
+  let tail = "";
+  if (after) {
+    const at = bind(after.publishedAt) + "::timestamptz",
+      id = bind(after.id) + "::uuid";
+    const rest = `(m.published_at<${at} OR (m.published_at=${at} AND m.id>${id}))`;
+    if (sort === "new") tail = ` AND ${rest}`;
+    else if (after.price == null)
+      // Past the priced ones: only the rest of those without a price.
+      tail = ` AND (m.price IS NULL AND ${rest})`;
+    else {
+      const price = bind(after.price) + "::numeric",
+        beyond = sort === "price_asc" ? ">" : "<";
+      tail = ` AND (m.price${beyond}${price} OR (m.price=${price} AND ${rest}) OR m.price IS NULL)`;
+    }
+  }
+  const order = {
+    new: "m.published_at DESC,m.id",
+    price_asc: "m.price ASC NULLS LAST,m.published_at DESC,m.id",
+    price_desc: "m.price DESC NULLS LAST,m.published_at DESC,m.id",
+  }[sort];
+  const fetched = (
+    await q.query<MarketViewRowWithCursor>(
+      `SELECT ${columns},to_char(m.published_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') cursor_at,m.price::text cursor_price${marketFrom}${where}${tail} ORDER BY ${order} LIMIT ${bind(limit + 1)}`,
+      params,
+    )
+  ).rows;
+  const rows = fetched.slice(0, limit),
+    last = rows[rows.length - 1];
+  return {
+    items: rows.map((r) => marketApiCard(r, viewer)),
+    next:
+      fetched.length > limit && last
+        ? ({
+            publishedAt: last.cursor_at,
+            id: last.id,
+            ...(sort === "new" ? {} : { price: last.cursor_price }),
+          } satisfies MarketCursor)
+        : null,
+  };
+}
+// The site addresses a listing by its share id, the API by its id.
+type ListingKey = "share_id" | "id";
+async function marketDetailRow(
+  q: Queryable,
+  share: unknown,
+  viewer: string | null | undefined,
+  key: ListingKey,
+) {
+  const r = (
+    await q.query<MarketViewRow>(
+      `SELECT ${columns},EXISTS(SELECT 1 FROM market_saves s WHERE s.listing_id=m.id AND s.user_id=$2) saved${marketFrom} WHERE m.${key}=$1 AND NOT u.blocked AND (m.status IN ('active','sold') OR m.owner_id=$2)`,
+      [share, viewer || null],
+    )
+  ).rows[0];
+  if (!r) throw new CommunityError("Объявление недоступно", 404);
+  return r;
+}
 export async function marketDetail(
   q: Queryable,
   share: unknown,
   viewer: string | null | undefined,
 ) {
-  const r = (
-    await q.query<MarketViewRow>(
-      `SELECT ${columns},EXISTS(SELECT 1 FROM market_saves s WHERE s.listing_id=m.id AND s.user_id=$2) saved${marketFrom} WHERE m.share_id=$1 AND NOT u.blocked AND (m.status IN ('active','sold') OR m.owner_id=$2)`,
-      [share, viewer || null],
-    )
-  ).rows[0];
-  if (!r) throw new CommunityError("Объявление недоступно", 404);
+  const r = await marketDetailRow(q, share, viewer, "share_id");
   return { ...marketCard(r, viewer), saved: r.saved };
+}
+/** The listing by its id, for the API. */
+export async function marketApiDetail(
+  q: Queryable,
+  id: unknown,
+  viewer: string | null | undefined,
+) {
+  const r = await marketDetailRow(q, id, viewer, "id");
+  return { ...marketApiCard(r, viewer), saved: Boolean(r.saved) };
 }
 // Up to four other listings of the same seller that are on the market now:
 // no drafts, sold, expired or hidden ones, whoever looks (#116).
-export async function sellerListings(
-  q: Queryable,
-  listing: unknown,
-  viewer: string | null | undefined,
-) {
+async function sellerRows(q: Queryable, listing: unknown) {
   const where = `${marketFrom} WHERE ${marketPublic} AND m.owner_id=(SELECT owner_id FROM market_listings WHERE id=$1) AND m.id<>$1`;
   const [rows, count] = await Promise.all([
     q.query<MarketViewRow>(
@@ -215,19 +333,34 @@ export async function sellerListings(
     ),
     q.query<{ total: number }>(`SELECT count(*)::int total${where}`, [listing]),
   ]);
-  return {
-    items: rows.rows.map((r) => marketCard(r, viewer)),
-    total: count.rows[0].total,
-  };
+  return { rows: rows.rows, total: count.rows[0].total };
+}
+export async function sellerListings(
+  q: Queryable,
+  listing: unknown,
+  viewer: string | null | undefined,
+) {
+  const { rows, total } = await sellerRows(q, listing);
+  return { items: rows.map((r) => marketCard(r, viewer)), total };
+}
+/** The same for the API: cards with the address of their page. */
+export async function sellerApiListings(
+  q: Queryable,
+  listing: unknown,
+  viewer: string | null | undefined,
+) {
+  const { rows, total } = await sellerRows(q, listing);
+  return { items: rows.map((r) => marketApiCard(r, viewer)), total };
 }
 export async function marketContact(
   q: Queryable,
   share: unknown,
   viewer: string | null | undefined,
+  key: ListingKey = "share_id",
 ) {
   const r = (
     await q.query<{ contact: string }>(
-      `SELECT m.contact${marketFrom} WHERE m.share_id=$1 AND NOT u.blocked AND (${marketLive} OR m.owner_id=$2)`,
+      `SELECT m.contact${marketFrom} WHERE m.${key}=$1 AND NOT u.blocked AND (${marketLive} OR m.owner_id=$2)`,
       [share, viewer],
     )
   ).rows[0];

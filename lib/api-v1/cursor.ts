@@ -1,3 +1,4 @@
+import type { MarketCursor } from "../market.ts";
 import type { BikeCursor } from "../showcase.ts";
 import { z } from "zod";
 import { ApiError } from "./errors.ts";
@@ -63,6 +64,50 @@ export function decodeRankCursor(raw: string): RankCursor {
       JSON.parse(Buffer.from(raw, "base64url").toString("utf8")),
     );
     return { rank: parsed.n, id: parsed.i };
+  } catch {
+    throw new ApiError("invalid_request", "Неверный курсор страницы.", {
+      details: [
+        {
+          path: "cursor",
+          message: "Курсор не распознан; начните список с первой страницы.",
+        },
+      ],
+    });
+  }
+}
+
+// The cursor of the market in a price order (#319): the price the last listing
+// had (as the text the database keeps, null for one without a price), when it
+// was published and its id. Its own shape, so the list in the order of
+// publication refuses it, and the other way round.
+const priceText = /^\d{1,10}(\.\d{1,2})?$/;
+const pricePosition = z.strictObject({
+  p: z.string().regex(priceText).nullable(),
+  t: z.string().regex(microsecondTimestamp),
+  i: z.uuid(),
+});
+
+export function encodeMarketCursor(cursor: MarketCursor): string {
+  return Buffer.from(
+    JSON.stringify(
+      cursor.price === undefined
+        ? { t: cursor.publishedAt, i: cursor.id }
+        : { p: cursor.price, t: cursor.publishedAt, i: cursor.id },
+    ),
+  ).toString("base64url");
+}
+
+/** The cursor of the listing order in use: with a price in the price orders. */
+export function decodeMarketCursor(raw: string, priced: boolean): MarketCursor {
+  if (!priced) {
+    const { createdAt, id } = decodeCursor(raw);
+    return { publishedAt: createdAt, id };
+  }
+  try {
+    const parsed = pricePosition.parse(
+      JSON.parse(Buffer.from(raw, "base64url").toString("utf8")),
+    );
+    return { price: parsed.p, publishedAt: parsed.t, id: parsed.i };
   } catch {
     throw new ApiError("invalid_request", "Неверный курсор страницы.", {
       details: [

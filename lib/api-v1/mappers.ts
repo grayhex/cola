@@ -11,6 +11,7 @@ import type {
   AnalysisChannel,
 } from "../ride-analysis-contract.ts";
 import { bounds } from "../ride-geometry.ts";
+import type { marketApiCard } from "../market.ts";
 import { meetingVisible, shownMetrics } from "../rides.ts";
 import { plannedEnd } from "../ride-plan.ts";
 import { richExcerpt } from "../rich-text.ts";
@@ -24,6 +25,8 @@ import type {
   ComponentPhoto,
   JournalEntry,
   JournalSummary,
+  MarketListing,
+  MarketListingDetail,
   Me,
   Profile,
   Relationship,
@@ -432,6 +435,65 @@ export function toRide(row: RideViewRow, viewer: string | null): Ride {
     bounds: segments.length ? bounds(segments) : null,
     extraMetrics: extra,
   };
+}
+
+/**
+ * A listing of the market. Fields are picked by name from the site's card: the
+ * contact and the end of the term exist there only for the owner, and the
+ * links to the owner's own records (`ownedBike`, ids for editing) never leave.
+ */
+export function toMarketListing(
+  card: ReturnType<typeof marketApiCard>,
+): MarketListing {
+  const bike = card.linkedBike;
+  return {
+    id: card.id,
+    title: card.title,
+    description: card.description,
+    category: card.category,
+    listingType: card.listingType as MarketListing["listingType"],
+    condition: card.condition,
+    price: card.price,
+    currency: card.currency,
+    location: card.location,
+    hasContact: card.hasContact,
+    ...(card.contact === undefined ? {} : { contact: card.contact }),
+    status: card.status,
+    expired: card.expired,
+    ...(card.expiresAt ? { expiresAt: instantOf(card.expiresAt) ?? "" } : {}),
+    createdAt: instantOf(card.createdAt) ?? "",
+    publishedAt: instantOf(card.publishedAt),
+    path: card.path,
+    photos: card.photos.map((photo) => ({
+      id: photo.id,
+      url: "/api/market/media/" + photo.id,
+    })),
+    author: toAuthor(card.author)!,
+    isOwner: card.isOwner,
+    componentModel: card.componentModel && {
+      id: card.componentModel.id,
+      name: card.componentModel.name,
+      path: card.componentModel.path,
+      archived: card.componentModel.archived,
+    },
+    bikeModel: card.bikeModel && {
+      id: card.bikeModel.id,
+      name: card.bikeModel.name,
+      path: card.bikeModel.path,
+      archived: card.bikeModel.archived,
+    },
+    linkedBike:
+      bike && bike.path && bike.isPublic
+        ? { id: bike.id, name: bike.name, path: bike.path, isPublic: true }
+        : null,
+  };
+}
+
+/** A listing with the viewer's "saved" mark. */
+export function toMarketListingDetail(
+  card: ReturnType<typeof marketApiCard> & { saved: boolean },
+): MarketListingDetail {
+  return { ...toMarketListing(card), saved: card.saved };
 }
 
 /** A catalog model by name: the page's own fields, nothing of the installations. */
