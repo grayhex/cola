@@ -2,6 +2,7 @@ import type { SiteSettings as SiteSettingsType } from "./contracts.ts";
 import type { Queryable } from "./db.ts";
 import { siteAssetUsage } from "./site-assets.ts";
 import { assetFormat } from "./hero-graphics.ts";
+import { mobileAssetIds } from "./mobile-config.ts";
 
 async function readUsage(q: Queryable) {
   const site = await q.query<{ value: Partial<SiteSettingsType> }>(
@@ -20,7 +21,14 @@ async function readUsage(q: Queryable) {
     game[rule.kind === "record" ? "recordImages" : "achievementImages"][
       rule.key
     ] = rule.image_id;
-  return siteAssetUsage(site.rows[0]?.value, game);
+  const mobile = await q.query<{ value: unknown }>(
+    "SELECT value FROM mobile_settings WHERE id=1",
+  );
+  return siteAssetUsage(
+    site.rows[0]?.value,
+    game,
+    mobileAssetIds(mobile.rows[0]?.value),
+  );
 }
 
 export async function listAssetLibrary(q: Queryable) {

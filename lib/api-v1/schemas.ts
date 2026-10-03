@@ -1279,6 +1279,135 @@ export const chatUnreadSchema = named(
   z.strictObject({ unread: z.int() }),
 );
 
+// Settings of the native apps (#338): content and switches of features the app
+// already has. No layout, styles, code or secrets. Fields only ever get added;
+// an app ignores what it does not know.
+const appImage = z
+  .string()
+  .nullable()
+  .describe(
+    "Путь к растровому изображению (WebP) относительно адреса сайта или null. Файл публичный и не меняется: новая картинка получает новый адрес. Принимает `?width=` из набора 160, 320, 640, 1280, 1920, 2400.",
+  );
+
+export const appLaunchSchema = named(
+  "AppLaunch",
+  "Экран запуска, который приложение показывает после системного splash. Системный SplashScreen и иконка остаются в APK и отсюда не меняются.",
+  z.strictObject({
+    enabled: z
+      .boolean()
+      .describe("Показывать ли экран; `true` только вместе с `imageUrl`."),
+    imageUrl: appImage,
+    contentMode: z
+      .enum(["fit", "crop"])
+      .describe(
+        "`fit` — вписать изображение целиком, `crop` — заполнить экран с обрезкой. Неизвестное значение трактуйте как `crop`.",
+      ),
+    title: z.string().nullable().describe("Короткая подпись или null."),
+  }),
+);
+
+export const appOnboardingItemSchema = named(
+  "AppOnboardingItem",
+  "Карточка знакомства с приложением. Обычный текст без разметки.",
+  z.strictObject({
+    title: z.string(),
+    body: z.string().nullable(),
+    imageUrl: appImage,
+  }),
+);
+
+export const appOnboardingSchema = named(
+  "AppOnboarding",
+  "Знакомство с приложением: карточки по порядку. Выключенное приходит с пустым `items`.",
+  z.strictObject({
+    enabled: z.boolean(),
+    revision: z
+      .int()
+      .describe(
+        "Редакция знакомства. Меняется, когда администратор публикует новую; сравнивайте на равенство с редакцией, которую человек уже прошёл на устройстве.",
+      ),
+    items: z.array(appOnboardingItemSchema),
+  }),
+);
+
+export const appNoticeActionSchema = named(
+  "AppNoticeAction",
+  "Кнопка сообщения: текст и абсолютный адрес — страница ColaBike или https-адрес разрешённого администратором сайта.",
+  z.strictObject({ label: z.string(), url: z.string() }),
+);
+
+export const appNoticeSchema = named(
+  "AppNotice",
+  "Сообщение приложения. `promo` — обычное, `service` — служебное, заметнее, `maintenance` — о технических работах, самое заметное; оно только сообщает и ничего не блокирует. Неизвестный тип показывайте как `promo`.",
+  z.strictObject({
+    revision: z
+      .int()
+      .describe(
+        "Редакция сообщения: меняется вместе с его содержанием. Закрытое человеком сообщение запоминайте по ней.",
+      ),
+    kind: z.enum(["promo", "service", "maintenance"]),
+    title: z.string(),
+    body: z.string().nullable(),
+    imageUrl: appImage,
+    action: appNoticeActionSchema.nullable(),
+  }),
+);
+
+export const appLinksSchema = named(
+  "AppLinks",
+  "Служебные ссылки, абсолютные адреса: страница ColaBike или https-адрес разрешённого сайта. Без настройки — страницы сайта по умолчанию; у поддержки умолчания нет.",
+  z.strictObject({
+    help: z.string(),
+    privacy: z.string(),
+    terms: z.string(),
+    about: z.string(),
+    support: z
+      .string()
+      .nullable()
+      .describe("null — действие поддержки не показывается."),
+  }),
+);
+
+export const appCompatibilitySchema = named(
+  "AppCompatibility",
+  "Совместимость версий по `versionCode` сборки. Ниже `minimumSupportedVersionCode` версия не поддерживается: при `updateMode: hard` приложение показывает экран обновления, при `soft` — настойчивое предложение без блокировки. Ниже `latestVersionCode` — ненавязчивое предложение обновиться. Не привязано к магазину приложений: адрес обновления даёт `updateUrl`.",
+  z.strictObject({
+    minimumSupportedVersionCode: z.int().nullable(),
+    latestVersionCode: z.int().nullable(),
+    updateMode: z
+      .enum(["soft", "hard"])
+      .describe(
+        "`hard` бывает только вместе с `minimumSupportedVersionCode` и `updateUrl`. Неизвестное значение трактуйте как `soft`.",
+      ),
+    updateUrl: z.string().nullable().describe("Абсолютный адрес обновления."),
+    updateMessage: z.string().nullable(),
+  }),
+);
+
+export const appConfigSchema = named(
+  "AppConfig",
+  "Настройки нативного приложения из админки ColaBike: экран запуска, знакомство, сообщение, служебные ссылки, доступность функций и политика версий. Одинаковы для всех, без входа.",
+  z.strictObject({
+    revision: z
+      .int()
+      .describe("Версия настроек: растёт при каждом сохранении в админке."),
+    updatedAt: instant,
+    launch: appLaunchSchema,
+    onboarding: appOnboardingSchema,
+    notice: appNoticeSchema
+      .nullable()
+      .describe("Текущее сообщение или null, если его нет."),
+    links: appLinksSchema,
+    features: z
+      .record(z.string(), z.boolean())
+      .describe(
+        "Доступность функций, которые уже есть в приложении: `chat`, `market`, `componentCatalog`, `rides`, `bikeEditor`, `journalEditor`, `nativeYandexSignIn`. Известные ключи приходят всегда. `false` скрывает функцию; `true` не создаёт того, чего в приложении нет, а неизвестные ключи пропускайте. `chat` и `nativeYandexSignIn` бывают `true`, только когда сервер для них настроен. Это не граница доступа: права проверяет API.",
+      ),
+    compatibility: appCompatibilitySchema,
+  }),
+);
+
+export type AppConfig = z.infer<typeof appConfigSchema>;
 export type CreateCommentRequest = z.infer<typeof createCommentRequestSchema>;
 export type Me = z.infer<typeof meSchema>;
 export type SessionGrant = z.infer<typeof sessionGrantSchema>;

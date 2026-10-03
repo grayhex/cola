@@ -74,7 +74,13 @@ test("content, draft and award references remain protected; retired icon assignm
   );
 });
 
-function fakeDatabase({ site = {}, game = {}, ids = [], afterLock } = {}) {
+function fakeDatabase({
+  site = {},
+  game = {},
+  mobile = {},
+  ids = [],
+  afterLock,
+} = {}) {
   const rows = new Map(
     ids.map((id) => [
       id,
@@ -107,6 +113,9 @@ function fakeDatabase({ site = {}, game = {}, ids = [], afterLock } = {}) {
             ),
           ],
         };
+      // The native app settings (#338) protect their images too.
+      if (sql.includes("FROM mobile_settings"))
+        return { rows: [{ value: mobile }] };
       if (sql.startsWith("DELETE")) {
         const deleted = args[0]
           .filter((id) => rows.has(id))
@@ -162,6 +171,32 @@ test("cleanup locks sorted explicit IDs then rechecks references before deletion
   );
   assert.deepEqual(result.skippedIds, ["award", "live", "missing", "part"]);
   assert.ok(q.rows.has("unrequested"));
+});
+
+test("images of the mobile app settings are used and survive cleanup (#338)", async () => {
+  const launch = "0f8fad5b-d9cb-469f-a165-70867728950e";
+  const card = "7c9e6679-7425-40de-944b-e07fc1f90ae7";
+  const q = fakeDatabase({
+    ids: [launch, card, "unused"],
+    // A disabled block still holds its images.
+    mobile: {
+      launch: { enabled: false, assetId: launch.toUpperCase() },
+      onboarding: { items: [{ title: "Привет", assetId: card }] },
+    },
+  });
+  const rows = await listAssetLibrary(q);
+  assert.deepEqual(rows.find((r) => r.id === launch).usage, [
+    "Мобильное приложение",
+  ]);
+  assert.deepEqual(rows.find((r) => r.id === card).usage, [
+    "Мобильное приложение",
+  ]);
+  const result = await deleteUnusedAssets(q, [launch, card, "unused"]);
+  assert.deepEqual(
+    result.deleted.map((r) => r.id),
+    ["unused"],
+  );
+  assert.deepEqual(result.skippedIds, [card, launch].sort());
 });
 
 test("an asset assigned after the list snapshot is skipped by cleanup", async () => {
