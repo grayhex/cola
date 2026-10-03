@@ -892,7 +892,11 @@ const marketBikeLinkSchema = named(
     id,
     name: z.string(),
     path: z.string().describe("Путь страницы велосипеда относительно сайта."),
-    isPublic: z.literal(true),
+    // A plain boolean, not a literal: a generated client turns a boolean
+    // constant into a one-value enum that does not compile (#325).
+    isPublic: z
+      .boolean()
+      .describe("Всегда `true`: приватный велосипед в ссылку не попадает."),
   }),
 );
 
