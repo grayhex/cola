@@ -229,6 +229,13 @@ try {
     capped: false,
   });
   assert.equal((await me.web("/community/notifications/count")).body.unread, 3);
+  for (const query of ["?limit=0", "?foo=bar"])
+    assertError(
+      await me.token("/me/notifications/count" + query),
+      400,
+      "invalid_request",
+      "count takes no parameters " + query,
+    );
   // Withdrawn like: no notice. A private bike: no notices about it.
   await actor.token(`/bikes/${bike}/like`, { method: "DELETE" });
   assert.deepEqual(

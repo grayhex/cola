@@ -1150,6 +1150,9 @@ export function parseQuery<T extends z.ZodType>(
   return result.data;
 }
 
+/** For an operation without parameters: any parameter at all is a 400. */
+export const parseNoQuery = (url: URL) => parseQuery(url, z.strictObject({}));
+
 /** Validated query of GET /api/v1/bikes. */
 export const parseListQuery = (url: URL): ListQuery =>
   parseQuery(url, listQuerySchema);

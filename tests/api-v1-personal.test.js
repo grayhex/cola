@@ -28,6 +28,7 @@ import {
   marketListingSchema,
   notificationCountSchema,
   notificationSchema,
+  parseNoQuery,
 } from "../lib/api-v1/schemas.ts";
 
 // API v1, personal reads (#321): notices and saved items of the person asking.
@@ -363,4 +364,15 @@ test("saved listings: newest save first, only what is on the market", async () =
   for (const limit of [1, 2, 3, 50])
     assert.deepEqual(await walk(limit), legacy, "limit " + limit);
   assert.deepEqual((await savedApiKeysetPage(db, actor, 50, null)).items, []);
+});
+
+test("an operation without parameters refuses every parameter", () => {
+  assert.deepEqual(
+    parseNoQuery(new URL("http://x/api/v1/me/notifications/count")),
+    {},
+  );
+  for (const query of ["?limit=0", "?foo=bar", "?a=1&a=2"])
+    assert.throws(() => parseNoQuery(new URL("http://x/m" + query)), {
+      code: "invalid_request",
+    });
 });

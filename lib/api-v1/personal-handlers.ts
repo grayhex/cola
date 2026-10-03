@@ -11,7 +11,7 @@ import {
   toNotification,
 } from "./mappers.ts";
 import { ok, safely } from "./respond.ts";
-import { parsePageQuery } from "./schemas.ts";
+import { parseNoQuery, parsePageQuery } from "./schemas.ts";
 import { authenticate } from "./viewer.ts";
 
 // Personal reads of /api/v1 (#321): only for the person asking, so a guest is
@@ -51,6 +51,8 @@ export function handleNotifications(req: Request) {
 export function handleNotificationCount(req: Request) {
   return safely(async () => {
     const viewer = await signedIn(req);
+    // No parameters: a typo is an error, not a silent default.
+    parseNoQuery(new URL(req.url));
     await noticeExpiringListings(db, viewer.id);
     return ok(await unreadCount(db, viewer.id));
   });
