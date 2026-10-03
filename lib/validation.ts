@@ -81,3 +81,4 @@ export const uuid = z.uuid();
 export { publicBike } from "./public-dto.ts";
 
 export type BikeInput = z.infer<typeof bikeInput>;
+export type ComponentInput = z.infer<typeof componentInput>;

@@ -1,4 +1,3 @@
-import type * as DatabaseRowsTypes from "../../../lib/database-rows.ts";
 import {
   errorCode,
   errorConstraint,
@@ -83,6 +82,20 @@ import {
 import { suggestUsername } from "../../../lib/usernames.ts";
 import { allocateUsername } from "../../../lib/username-allocation.ts";
 import { ownedBike, insertBike } from "../../../lib/repository.ts";
+import {
+  addComponentRow,
+  bikeHasRides,
+  bikePhotoFiles,
+  changePhoto,
+  componentRowOf,
+  deleteBikeRow,
+  deleteComponentRow,
+  ownBikeRows,
+  setBikeSharing,
+  setGroupOrder,
+  updateBikeRow,
+  updateComponentRow,
+} from "../../../lib/bike-service.ts";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -501,10 +514,7 @@ async function handler(
     }
     if (p.length === 1) {
       if (method === "GET") {
-        const { rows } = await db.query<DatabaseRowsTypes.BikeRow>(
-          "SELECT * FROM bikes WHERE owner_id=$1 ORDER BY created_at DESC",
-          [user.id],
-        );
+        const rows = await ownBikeRows(db, user.id);
         const site = await getSite();
         return json({
           bikes: await Promise.all(
@@ -590,57 +600,18 @@ async function handler(
         if (b.is_public) requireVerifiedEmail(user);
         await validatePurposes(db, b.purposes, bike.purposes);
         // Updating this row serializes with the FOR UPDATE guard in ride writes.
-        await db.query(
-          "UPDATE bikes SET name=$1,brand=$2,model=$3,year=$4,category=$5,description=$6,color=$7,size=$8,weight=$9,trim=$12,manufacturer_url=$13,price=$14,show_bike_price=$15,show_component_prices=$16,show_accessory_prices=$17,mileage=$18,is_public=$19,purposes=$20,classification=$21,is_former=$22,factory_spec=CASE WHEN brand=$2 AND model=$3 AND year=$4 AND trim=$12 THEN factory_spec ELSE NULL END,updated_at=now() WHERE id=$10 AND owner_id=$11",
-          [
-            b.name,
-            b.brand,
-            b.model,
-            b.year,
-            b.category,
-            b.description,
-            b.color,
-            b.size,
-            b.weight,
-            bike.id,
-            user.id,
-            b.trim,
-            b.manufacturer_url,
-            b.price,
-            b.show_bike_price,
-            b.show_component_prices,
-            b.show_accessory_prices,
-            b.mileage,
-            b.is_public,
-            b.purposes,
-            JSON.stringify(b.classification),
-            b.is_former,
-          ],
-        );
+        await updateBikeRow(db, bike.id, user.id, b);
         return json({ ok: true });
       }
       if (method === "DELETE") {
-        if (
-          (
-            await db.query<{ "?column?": number }>(
-              "SELECT 1 FROM rides WHERE bike_id=$1 LIMIT 1",
-              [bike.id],
-            )
-          ).rowCount
-        )
+        if (await bikeHasRides(db, bike.id))
           return fail(
             "У велосипеда есть покатушки. Сначала удалите их или перенесите на другой велосипед.",
             409,
           );
-        const { rows } = await db.query<{ id: string; filename: string }>(
-          "SELECT id,filename FROM photos WHERE bike_id=$1",
-          [bike.id],
-        );
+        const rows = await bikePhotoFiles(db, bike.id);
         try {
-          await db.query("DELETE FROM bikes WHERE id=$1 AND owner_id=$2", [
-            bike.id,
-            user.id,
-          ]);
+          await deleteBikeRow(db, bike.id, user.id);
         } catch (e) {
           if (errorCode(e) === "23503")
             return fail(
@@ -678,11 +649,7 @@ async function handler(
           !(await reorderComponents(q, bike.id, input.components))
         )
           return false;
-        if (input.groups)
-          await q.query("UPDATE bikes SET group_order=$1 WHERE id=$2", [
-            JSON.stringify(input.groups),
-            bike.id,
-          ]);
+        if (input.groups) await setGroupOrder(q, bike.id, input.groups);
         return true;
       });
       return ok
@@ -695,87 +662,29 @@ async function handler(
         return fail("Некорректная настройка");
       if (b.is_public) requireVerifiedEmail(user);
       // Revocation rotates the token so an old URL stays revoked after republishing.
-      await db.query(
-        "UPDATE bikes SET is_public=$1,share_id=CASE WHEN $1 THEN share_id ELSE $2 END WHERE id=$3",
-        [b.is_public, randomUUID(), bike.id],
-      );
+      await setBikeSharing(db, bike.id, b.is_public);
       return json({ ok: true });
     }
     if (p[2] === "components") {
       if (p.length === 3 && method === "POST") {
         const c = componentInput.parse(await body(req));
-        await transaction(async (q) => {
-          await q.query<{ id: string }>(
-            "SELECT id FROM bikes WHERE id=$1 FOR UPDATE",
-            [bike.id],
-          );
-          await q.query(
-            "INSERT INTO components(id,bike_id,section,category,name,notes,price,url,group_id,sort_order) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,(SELECT coalesce(max(sort_order),-1)+1 FROM components WHERE bike_id=$2))",
-            [
-              randomUUID(),
-              bike.id,
-              c.section,
-              c.category,
-              c.name,
-              c.notes,
-              c.price,
-              c.url,
-              c.group_id,
-            ],
-          );
-        });
+        await transaction((q) => addComponentRow(q, bike.id, c));
         return json({ ok: true }, 201);
       }
       if (p.length === 4 && uuid.safeParse(p[3]).success) {
         if (method === "DELETE") {
-          await db.query("DELETE FROM components WHERE id=$1 AND bike_id=$2", [
-            p[3],
-            bike.id,
-          ]);
+          await deleteComponentRow(db, bike.id, p[3]);
           return json({ ok: true });
         }
         if (method === "PATCH") {
-          const existing = await db.query<{
-            id: string;
-            bike_id: string;
-            section: string;
-            category: string;
-            name: string;
-            notes: string;
-            price: string;
-            created_at: Date;
-            url: string;
-            group_id: string;
-            sort_order: number;
-            model_id: string;
-            position: string;
-          }>("SELECT * FROM components WHERE id=$1 AND bike_id=$2", [
-            p[3],
-            bike.id,
-          ]);
-          if (!existing.rows[0]) return fail("Компонент не найден", 404);
+          const existing = await componentRowOf(db, bike.id, p[3]);
+          if (!existing) return fail("Компонент не найден", 404);
           const c = componentInput.parse({
-            ...existing.rows[0],
-            price:
-              existing.rows[0].price === null
-                ? null
-                : Number(existing.rows[0].price),
+            ...existing,
+            price: existing.price === null ? null : Number(existing.price),
             ...(await body(req)),
           });
-          await db.query(
-            "UPDATE components SET section=$1,category=$2,name=$3,notes=$4,price=$5,url=$8,group_id=$9 WHERE id=$6 AND bike_id=$7",
-            [
-              c.section,
-              c.category,
-              c.name,
-              c.notes,
-              c.price,
-              p[3],
-              bike.id,
-              c.url,
-              c.group_id,
-            ],
-          );
+          await updateComponentRow(db, bike.id, p[3], c);
           return json({ ok: true });
         }
       }
@@ -859,44 +768,12 @@ async function handler(
         uuid.safeParse(p[3]).success &&
         ["DELETE", "PATCH"].includes(method)
       ) {
-        let filename;
-        await transaction(async (client) => {
-          await client.query<{ id: string }>(
-            "SELECT id FROM bikes WHERE id=$1 FOR UPDATE",
-            [bike.id],
-          );
-          const { rows } = await client.query<{
-            id: string;
-            bike_id: string;
-            filename: string;
-            is_cover: boolean;
-            created_at: Date;
-            source_url: string;
-            source_page_url: string;
-            size_bytes: string;
-          }>("SELECT * FROM photos WHERE id=$1 AND bike_id=$2", [
-            p[3],
-            bike.id,
-          ]);
-          if (!rows[0]) return;
-          if (method === "PATCH") {
-            await client.query(
-              "UPDATE photos SET is_cover=false WHERE bike_id=$1",
-              [bike.id],
-            );
-            await client.query("UPDATE photos SET is_cover=true WHERE id=$1", [
-              p[3],
-            ]);
-          } else {
-            filename = rows[0].filename;
-            await client.query("DELETE FROM photos WHERE id=$1", [p[3]]);
-            if (rows[0].is_cover)
-              await client.query(
-                "UPDATE photos SET is_cover=true WHERE id=(SELECT id FROM photos WHERE bike_id=$1 ORDER BY created_at,id LIMIT 1)",
-                [bike.id],
-              );
-          }
-        });
+        const filename = await changePhoto(
+          transaction,
+          bike.id,
+          p[3],
+          method === "PATCH" ? "cover" : "remove",
+        );
         if (filename) {
           await unlink(
             /*turbopackIgnore: true*/ path.join(uploads(), filename),
