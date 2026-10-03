@@ -230,6 +230,13 @@ try {
       label,
     );
 
+  // A purpose the catalog does not know is the caller's mistake, not a failure.
+  for (const path of ["/experience/bikes", "/experience/journal"]) {
+    const r = await guest(path + "?purpose=nosuchpurpose");
+    assertError(r, 400, "invalid_request", "unknown purpose " + path);
+    assert.equal(r.body.error.details[0].path, "purpose");
+  }
+
   // ── Journal ───────────────────────────────────────────────────────────
   for (const ask of [guest, reader.v1, owner.v1]) {
     const list = await ask(

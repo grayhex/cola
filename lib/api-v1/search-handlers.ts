@@ -9,7 +9,7 @@ import {
 import type { SearchInput } from "../search.ts";
 import { visibleBikePage } from "../showcase.ts";
 import { decodeCursor, encodeCursor } from "./cursor.ts";
-import { notFound } from "./errors.ts";
+import { ApiError, notFound } from "./errors.ts";
 import { toBikeSummary, toJournalSummary, toUserSummary } from "./mappers.ts";
 import { ok, safely } from "./respond.ts";
 import {
@@ -38,13 +38,22 @@ function searchInput(
   return { ...facets, type, page: 1 };
 }
 
-/** The engines throw their own 404 (a "similar" bike that is not public). */
+/**
+ * The engines throw their own errors: a 404 for a "similar" bike that is not
+ * public, a 400 for a facet the catalog does not know (a purpose). Both are
+ * answered in the API's envelope. The deferred conditions of the bike page run
+ * inside it, so the whole call is wrapped.
+ */
 async function found<T>(run: () => Promise<T>) {
   try {
     return await run();
   } catch (error) {
     if (error instanceof CommunityError && error.status === 404)
       throw notFound("Велосипед не найден.");
+    if (error instanceof CommunityError && error.status === 400)
+      throw new ApiError("invalid_request", "Проверьте параметры запроса.", {
+        details: [{ path: "purpose", message: error.message }],
+      });
     throw error;
   }
 }
@@ -56,15 +65,16 @@ export function handleExperienceBikes(req: Request) {
     const query = parseExperienceQuery(new URL(req.url));
     const after = query.cursor ? decodeCursor(query.cursor) : null;
     const input = searchInput(query, "bikes");
-    const refine = await found(() => experienceBikeRefine(db, input));
-    const page = await visibleBikePage(db, viewer?.id ?? null, {
-      scope: "public",
-      categories: [],
-      search: "",
-      limit: query.limit,
-      after,
-      refine,
-    });
+    const page = await found(async () =>
+      visibleBikePage(db, viewer?.id ?? null, {
+        scope: "public",
+        categories: [],
+        search: "",
+        limit: query.limit,
+        after,
+        refine: await experienceBikeRefine(db, input),
+      }),
+    );
     return ok({
       items: page.bikes.map(toBikeSummary),
       nextCursor: page.next ? encodeCursor(page.next) : null,
