@@ -719,6 +719,30 @@ export const rideAnalysisSchema = named(
   }),
 );
 
+export const bikeLikeSchema = named(
+  "BikeLike",
+  "Итоговое состояние лайка велосипеда после `PUT` или `DELETE`: повтор запроса даёт тот же ответ.",
+  z.strictObject({
+    liked: z.boolean().describe("Лайк стоит."),
+    likes: z.int().describe("Лайки без заблокированных людей."),
+  }),
+);
+
+export const followResultSchema = named(
+  "FollowResult",
+  "Итоговое состояние подписки после `PUT` или `DELETE`: отношения и число подписчиков человека.",
+  z.strictObject({
+    relationship: relationshipSchema,
+    followers: z.int().describe("Подписчики без заблокированных людей."),
+  }),
+);
+
+export const saveResultSchema = named(
+  "SaveResult",
+  "Итоговое состояние «сохранить» после `PUT` или `DELETE`: повтор запроса даёт тот же ответ.",
+  z.strictObject({ saved: z.boolean() }),
+);
+
 export type Me = z.infer<typeof meSchema>;
 export type SessionGrant = z.infer<typeof sessionGrantSchema>;
 export type Profile = z.infer<typeof profileSchema>;

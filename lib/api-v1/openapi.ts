@@ -717,6 +717,172 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
           },
         },
       },
+      "/bikes/{id}/like": {
+        put: {
+          operationId: "likeBike",
+          tags: ["Bikes"],
+          summary: "Поставить лайк велосипеду",
+          description:
+            "Переключатель идемпотентен: `PUT` ставит состояние, `DELETE` снимает, повтор ничего не меняет, ответ — итоговое состояние. Свой, приватный, чужой приватный и несуществующий велосипед лайка не получают.",
+          security: [{ cookieSession: [] }, { bearerAuth: [] }],
+          parameters: [{ $ref: "#/components/parameters/BikeId" }],
+          responses: {
+            "200": success("Итоговое состояние лайка.", "BikeLike"),
+            "400": failure(
+              "Одновременно cookie сессии и заголовок Authorization.",
+            ),
+            "401": failure(
+              "Нет входа, сессия или токен недействительны, токен доступа истёк (`token_expired`) либо схема Authorization не поддерживается.",
+            ),
+            "403": failure(
+              "Cookie-запрос не с адреса сайта (нужен заголовок `Origin`) или действие запрещено, например лайк своему велосипеду.",
+            ),
+            "404": failure(
+              "Велосипед недоступен: приватный, чужой, заблокированного владельца или несуществующий.",
+            ),
+            "429": failure(
+              "Слишком много действий; секунды до конца окна — в `Retry-After`.",
+            ),
+            "500": shared("InternalError"),
+          },
+        },
+        delete: {
+          operationId: "unlikeBike",
+          tags: ["Bikes"],
+          summary: "Снять лайк с велосипеда",
+          description:
+            "Переключатель идемпотентен: `PUT` ставит состояние, `DELETE` снимает, повтор ничего не меняет, ответ — итоговое состояние.",
+          security: [{ cookieSession: [] }, { bearerAuth: [] }],
+          parameters: [{ $ref: "#/components/parameters/BikeId" }],
+          responses: {
+            "200": success("Итоговое состояние лайка.", "BikeLike"),
+            "400": failure(
+              "Одновременно cookie сессии и заголовок Authorization.",
+            ),
+            "401": failure(
+              "Нет входа, сессия или токен недействительны, токен доступа истёк (`token_expired`) либо схема Authorization не поддерживается.",
+            ),
+            "403": failure(
+              "Cookie-запрос не с адреса сайта (нужен заголовок `Origin`) или действие запрещено, например лайк своему велосипеду.",
+            ),
+            "404": failure("Велосипед недоступен."),
+            "429": failure(
+              "Слишком много действий; секунды до конца окна — в `Retry-After`.",
+            ),
+            "500": shared("InternalError"),
+          },
+        },
+      },
+      "/users/{ref}/follow": {
+        put: {
+          operationId: "followUser",
+          tags: ["Users"],
+          summary: "Подписаться на человека",
+          description:
+            "Переключатель идемпотентен: `PUT` ставит состояние, `DELETE` снимает, повтор ничего не меняет, ответ — итоговое состояние. На себя подписаться нельзя (400). Заблокированный и неизвестный человек — 404. Ответ — отношения и число подписчиков.",
+          security: [{ cookieSession: [] }, { bearerAuth: [] }],
+          parameters: [{ $ref: "#/components/parameters/UserRef" }],
+          responses: {
+            "200": success("Итоговое состояние подписки.", "FollowResult"),
+            "400": failure(
+              "Одновременно cookie сессии и заголовок Authorization.",
+            ),
+            "401": failure(
+              "Нет входа, сессия или токен недействительны, токен доступа истёк (`token_expired`) либо схема Authorization не поддерживается.",
+            ),
+            "403": failure(
+              "Cookie-запрос не с адреса сайта (нужен заголовок `Origin`) или действие запрещено, например лайк своему велосипеду.",
+            ),
+            "404": failure(
+              "Человек недоступен: заблокирован, неизвестный `{ref}` или прежний username.",
+            ),
+            "429": failure(
+              "Слишком много действий; секунды до конца окна — в `Retry-After`.",
+            ),
+            "500": shared("InternalError"),
+          },
+        },
+        delete: {
+          operationId: "unfollowUser",
+          tags: ["Users"],
+          summary: "Отписаться от человека",
+          description:
+            "Переключатель идемпотентен: `PUT` ставит состояние, `DELETE` снимает, повтор ничего не меняет, ответ — итоговое состояние.",
+          security: [{ cookieSession: [] }, { bearerAuth: [] }],
+          parameters: [{ $ref: "#/components/parameters/UserRef" }],
+          responses: {
+            "200": success("Итоговое состояние подписки.", "FollowResult"),
+            "400": failure(
+              "Одновременно cookie сессии и заголовок Authorization.",
+            ),
+            "401": failure(
+              "Нет входа, сессия или токен недействительны, токен доступа истёк (`token_expired`) либо схема Authorization не поддерживается.",
+            ),
+            "403": failure(
+              "Cookie-запрос не с адреса сайта (нужен заголовок `Origin`) или действие запрещено, например лайк своему велосипеду.",
+            ),
+            "404": failure("Человек недоступен."),
+            "429": failure(
+              "Слишком много действий; секунды до конца окна — в `Retry-After`.",
+            ),
+            "500": shared("InternalError"),
+          },
+        },
+      },
+      "/journal/{id}/save": {
+        put: {
+          operationId: "saveJournalEntry",
+          tags: ["Journal"],
+          summary: "Сохранить запись журнала",
+          description:
+            "Переключатель идемпотентен: `PUT` ставит состояние, `DELETE` снимает, повтор ничего не меняет, ответ — итоговое состояние. Сохранить можно только публичную опубликованную запись публичного велосипеда.",
+          security: [{ cookieSession: [] }, { bearerAuth: [] }],
+          parameters: [{ $ref: "#/components/parameters/JournalId" }],
+          responses: {
+            "200": success("Итоговое состояние «сохранить».", "SaveResult"),
+            "400": failure(
+              "Одновременно cookie сессии и заголовок Authorization.",
+            ),
+            "401": failure(
+              "Нет входа, сессия или токен недействительны, токен доступа истёк (`token_expired`) либо схема Authorization не поддерживается.",
+            ),
+            "403": failure(
+              "Cookie-запрос не с адреса сайта (нужен заголовок `Origin`) или действие запрещено, например лайк своему велосипеду.",
+            ),
+            "404": failure("Запись недоступна."),
+            "429": failure(
+              "Слишком много действий; секунды до конца окна — в `Retry-After`.",
+            ),
+            "500": shared("InternalError"),
+          },
+        },
+        delete: {
+          operationId: "unsaveJournalEntry",
+          tags: ["Journal"],
+          summary: "Убрать запись из сохранённых",
+          description:
+            "Переключатель идемпотентен: `PUT` ставит состояние, `DELETE` снимает, повтор ничего не меняет, ответ — итоговое состояние.",
+          security: [{ cookieSession: [] }, { bearerAuth: [] }],
+          parameters: [{ $ref: "#/components/parameters/JournalId" }],
+          responses: {
+            "200": success("Итоговое состояние «сохранить».", "SaveResult"),
+            "400": failure(
+              "Одновременно cookie сессии и заголовок Authorization.",
+            ),
+            "401": failure(
+              "Нет входа, сессия или токен недействительны, токен доступа истёк (`token_expired`) либо схема Authorization не поддерживается.",
+            ),
+            "403": failure(
+              "Cookie-запрос не с адреса сайта (нужен заголовок `Origin`) или действие запрещено, например лайк своему велосипеду.",
+            ),
+            "404": failure("Запись недоступна."),
+            "429": failure(
+              "Слишком много действий; секунды до конца окна — в `Retry-After`.",
+            ),
+            "500": shared("InternalError"),
+          },
+        },
+      },
       "/users/{ref}": {
         get: {
           operationId: "getUser",

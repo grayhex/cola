@@ -1,4 +1,3 @@
-import type { z } from "zod";
 import { allowAuth, trustedIp } from "../auth-limits.ts";
 import { listSessions, endSessionById } from "../account-data.ts";
 import { rateLimit } from "../auth.ts";
@@ -10,13 +9,12 @@ import {
   refreshDeviceSession,
   sessionOfRefreshToken,
 } from "../device-sessions.ts";
-import { readBytes, sameOrigin } from "../http.ts";
 import { limits } from "../limits.ts";
 import { logEvent } from "../observability.ts";
 import { digest, verifyPassword } from "../password.ts";
 import { credentials } from "../validation.ts";
 import { sessionHashOf, viewerById } from "../viewer-session.ts";
-import { ApiError, detailsOf } from "./errors.ts";
+import { ApiError } from "./errors.ts";
 import { toAccountSession, toSessionGrant } from "./mappers.ts";
 import { ok, safely } from "./respond.ts";
 import {
@@ -25,6 +23,8 @@ import {
   refreshRequestSchema,
 } from "./schemas.ts";
 import { authenticate } from "./viewer.ts";
+import { parseJsonBody } from "./request.ts";
+import { requireOriginForCookie } from "./write.ts";
 
 // Session endpoints of /api/v1 (#303, ADR in #156): signing a device in, the
 // refresh-token rotation, and ending or listing sessions. Everything about who
@@ -38,40 +38,6 @@ const tooMany = () =>
     "Слишком много попыток. Попробуйте через 15 минут.",
     { headers: { "Retry-After": "900" } },
   );
-
-/** A JSON body of at most `limit` bytes that matches `schema`, or invalid_request. */
-async function parseBody<T extends z.ZodType>(
-  req: Request,
-  schema: T,
-  limit = 8192,
-): Promise<z.infer<T>> {
-  if (!/^application\/json\b/i.test(req.headers.get("content-type") ?? ""))
-    throw new ApiError(
-      "invalid_request",
-      "Тело запроса должно быть application/json.",
-    );
-  let value: unknown;
-  try {
-    value = JSON.parse((await readBytes(req, limit)).toString("utf8"));
-  } catch {
-    throw new ApiError("invalid_request", "Тело запроса не разобрано.");
-  }
-  const result = schema.safeParse(value);
-  if (!result.success)
-    throw new ApiError("invalid_request", "Проверьте поля запроса.", {
-      details: detailsOf(result.error),
-    });
-  return result.data;
-}
-
-/** A cookie is an ambient credential: changing anything with it needs our Origin. */
-function requireOriginForCookie(
-  req: Request,
-  credential: { scheme: string } | null,
-) {
-  if (credential?.scheme === "cookie" && !sameOrigin(req))
-    throw new ApiError("forbidden", "Недопустимый источник запроса.");
-}
 
 const noContent = () =>
   new Response(null, {
@@ -88,7 +54,7 @@ const absentHash = "00000000000000000000000000000000:" + "00".repeat(64);
 /** POST /api/v1/auth/sessions */
 export function handleCreateSession(req: Request) {
   return safely(async () => {
-    const input = await parseBody(req, createSessionRequestSchema);
+    const input = await parseJsonBody(req, createSessionRequestSchema);
     const email = credentials.shape.email.safeParse(input.email);
     // The same budgets as the web sign-in: per address, per account and global.
     if (
@@ -154,7 +120,7 @@ async function grantBody(
 /** POST /api/v1/auth/sessions/refresh */
 export function handleRefreshSession(req: Request) {
   return safely(async () => {
-    const input = await parseBody(req, refreshRequestSchema);
+    const input = await parseJsonBody(req, refreshRequestSchema);
     // Separate budgets from sign-in: per address (when it can be trusted) and
     // per session, so one stuck client cannot spend the others' allowance.
     const ip = trustedIp(req);

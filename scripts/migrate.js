@@ -62,6 +62,7 @@ try {
     "048_comment_threads",
     "049_external_identities",
     "050_device_sessions",
+    "051_api_idempotency",
   ]) {
     const { rowCount } = await client.query(
       "SELECT 1 FROM schema_migrations WHERE version=$1",

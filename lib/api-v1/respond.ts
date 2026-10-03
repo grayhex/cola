@@ -1,3 +1,4 @@
+import { EmailPolicyError } from "../email-policy.ts";
 import { logError } from "../observability.ts";
 import { ApiError, errorStatus } from "./errors.ts";
 
@@ -41,6 +42,11 @@ export async function safely(run: () => Promise<Response>): Promise<Response> {
     return await run();
   } catch (error) {
     if (error instanceof ApiError) return errorResponse(error);
+    // The policy of #139 as the code a client can branch on.
+    if (error instanceof EmailPolicyError)
+      return errorResponse(
+        new ApiError("email_verification_required", error.message),
+      );
     logError("api_v1_error", error);
     return errorResponse(
       new ApiError(
