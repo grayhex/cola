@@ -114,13 +114,16 @@ async function setup() {
         [rider],
       )
     ).rows;
-  // Everything queued is due now and nothing waits for the interval between e-mails.
-  const due = async () => {
+  // Everything queued is due now (or at the given moment of the test's own clock)
+  // and nothing waits for the interval between e-mails.
+  const due = async (at = new Date()) => {
     await db.query(
-      "UPDATE notification_email_outbox SET available_at=now() WHERE status='pending'",
+      "UPDATE notification_email_outbox SET available_at=$1 WHERE status='pending'",
+      [at],
     );
     await db.query(
-      "UPDATE notification_email_preferences SET next_delivery_at=now()-interval '1 minute'",
+      "UPDATE notification_email_preferences SET next_delivery_at=$1::timestamptz-interval '1 minute'",
+      [at],
     );
   };
   return {
@@ -143,9 +146,19 @@ async function setup() {
   };
 }
 
-// Moscow is UTC+3 all year. 2026-10-04T20:00Z is 23:00 there: inside 22:00–07:00.
-const night = new Date("2026-10-04T20:00:00Z");
-const morning = new Date("2026-10-05T04:00:00Z");
+// Moscow is UTC+3 all year. 20:00Z is 23:00 there: inside 22:00–07:00, and 04:00Z
+// of the next day is 07:00, the end of the window. The evening is the first one
+// at least an hour ahead of the real clock, because everything the database stamps
+// with now() (when a message was queued) must be earlier than the test's "now".
+const day = 24 * hour;
+const night = new Date(
+  Math.floor(Date.now() / day) * day +
+    20 * hour +
+    (Math.floor(Date.now() / day) * day + 20 * hour > Date.now() + hour
+      ? 0
+      : day),
+);
+const morning = new Date(night.getTime() + 8 * hour);
 const quiet = {
   timeZone: "Europe/Moscow",
   quietHours: { enabled: true, from: "22:00", to: "07:00" },
@@ -156,7 +169,7 @@ test("in the quiet hours a message waits for their end, without using an attempt
   try {
     await s.settings(quiet);
     await s.plan(48);
-    await s.due();
+    await s.due(night);
     const first = await s.run(night);
     assert.equal(first.deferred, 1);
     assert.equal(first.sent, 0);
@@ -176,7 +189,7 @@ test("in the quiet hours a message waits for their end, without using an attempt
       1,
     );
     // Asking again before the end changes nothing.
-    assert.equal((await s.run(new Date("2026-10-05T03:00:00Z"))).claimed, 0);
+    assert.equal((await s.run(new Date(morning.getTime() - hour))).claimed, 0);
     // At the end of the quiet it goes.
     const second = await s.run(morning);
     assert.equal(second.sent, 1);
@@ -194,11 +207,11 @@ test("a message that expires before the morning is dropped, not sent in the morn
     await s.plan(48);
     await s.db.query(
       "UPDATE notification_email_outbox SET expires_at=$1,available_at=$2",
-      [new Date("2026-10-05T01:00:00Z"), new Date("2026-10-04T19:00:00Z")],
+      [new Date(night.getTime() + 5 * hour), new Date(night.getTime() - hour)],
     );
     await s.db.query(
       "UPDATE notification_email_preferences SET next_delivery_at=$1",
-      [new Date("2026-10-04T19:00:00Z")],
+      [new Date(night.getTime() - hour)],
     );
     const result = await s.run(night);
     assert.equal(result.skipped, 1);
