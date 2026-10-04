@@ -785,6 +785,24 @@ export function preferencesFile() {
         },
       },
       {
+        name: "pause_lifted",
+        description:
+          "Снять паузу можно двумя способами: `pausedUntil: null` или `resume: true`. Второй — для клиентов, чьи запросы никогда не несут null (сгенерированные клиенты опускают пустые поля). Вместе с непустым `pausedUntil` — 400.",
+        request: {
+          method: "PATCH",
+          path: "/me/notification-settings",
+          body: { resume: true },
+        },
+        response: {
+          status: 200,
+          headers: { ETag: '"example-etag-6b"' },
+          body: {
+            ...settingsAfterDefaults,
+            updatedAt: "2026-10-04T09:42:30.123Z",
+          },
+        },
+      },
+      {
         name: "circle_selected",
         description:
           "Кому доверено сообщать о своих новых планах и намерениях: `friends` (взаимные подписки, по умолчанию), `follows`, `selected` или `off`. Выбранных людей добавляют и убирают списками идентификаторов; повтор ничего не меняет. Подписка и выбор не расширяют доступ: если событие человеку недоступно, уведомления нет.",

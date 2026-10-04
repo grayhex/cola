@@ -150,6 +150,14 @@ test("a pause lies in the near future, can be lifted, and an old one reads as no
   assert.equal(later.pausedUntil, null);
   const lifted = await save(id, { pausedUntil: null }, { now });
   assert.equal(lifted.pausedUntil, null);
+  // A client whose requests never carry null lifts the pause with `resume`.
+  await save(id, { pausedUntil: "2026-10-10T18:00:00.000Z" }, { now });
+  const resumed = await save(id, { resume: true }, { now });
+  assert.equal(resumed.pausedUntil, null);
+  assert.throws(
+    () => patch({ resume: true, pausedUntil: "2026-10-10T18:00:00.000Z" }),
+    ZodError,
+  );
 });
 
 test("the circle: a mode, people picked by id, and nobody who cannot be named", async () => {

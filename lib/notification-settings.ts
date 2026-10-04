@@ -281,6 +281,8 @@ export const notificationSettingsPatch = z
       .nullable()
       .describe("null снимает паузу")
       .optional(),
+    /** The same as `pausedUntil: null`, for a client whose requests never carry null. */
+    resume: z.boolean().optional(),
     circle: z
       .strictObject({
         mode: z.enum(circleModes).optional(),
@@ -294,6 +296,12 @@ export const notificationSettingsPatch = z
       .optional(),
   })
   .superRefine((patch, context) => {
+    if (patch.resume && patch.pausedUntil)
+      context.addIssue({
+        code: "custom",
+        path: ["resume"],
+        message: "Нельзя одновременно поставить паузу и снять её",
+      });
     const seen = new Set<string>();
     patch.categories?.forEach((item, index) => {
       const category = notificationCategories[item.key];
@@ -381,8 +389,9 @@ function planPolicy(
     quietTo: parseClock(quiet.to ?? current.quietHours.to) ?? 0,
     quietCancel:
       quiet.allowCancellations ?? current.quietHours.allowCancellations,
-    pausedUntil:
-      change.pausedUntil !== undefined
+    pausedUntil: change.resume
+      ? null
+      : change.pausedUntil !== undefined
         ? change.pausedUntil
           ? new Date(change.pausedUntil)
           : null

@@ -690,6 +690,114 @@
       }
     },
     {
+      "name": "pause_lifted",
+      "description": "Снять паузу можно двумя способами: `pausedUntil: null` или `resume: true`. Второй — для клиентов, чьи запросы никогда не несут null (сгенерированные клиенты опускают пустые поля). Вместе с непустым `pausedUntil` — 400.",
+      "request": {
+        "method": "PATCH",
+        "path": "/me/notification-settings",
+        "body": {
+          "resume": true
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "ETag": "\"example-etag-6b\""
+        },
+        "body": {
+          "channels": {
+            "email": {
+              "available": true,
+              "verified": true,
+              "enabled": false
+            },
+            "push": {
+              "available": false,
+              "enabled": false
+            }
+          },
+          "categories": [
+            {
+              "key": "rides",
+              "label": "Покатушки и приглашения",
+              "email": {
+                "supported": true,
+                "enabled": false
+              },
+              "push": {
+                "supported": true,
+                "enabled": true
+              }
+            },
+            {
+              "key": "discussions",
+              "label": "Комментарии и ответы",
+              "email": {
+                "supported": true,
+                "enabled": false
+              },
+              "push": {
+                "supported": true,
+                "enabled": true
+              }
+            },
+            {
+              "key": "market",
+              "label": "Окончание срока объявлений",
+              "email": {
+                "supported": true,
+                "enabled": false
+              },
+              "push": {
+                "supported": false,
+                "enabled": false
+              }
+            },
+            {
+              "key": "plans",
+              "label": "Новые планы друзей",
+              "email": {
+                "supported": false,
+                "enabled": false
+              },
+              "push": {
+                "supported": true,
+                "enabled": true
+              }
+            },
+            {
+              "key": "intents",
+              "label": "Намерения друзей",
+              "email": {
+                "supported": false,
+                "enabled": false
+              },
+              "push": {
+                "supported": true,
+                "enabled": true
+              }
+            }
+          ],
+          "reminders": true,
+          "timeZone": null,
+          "quietHours": {
+            "enabled": false,
+            "from": "22:00",
+            "to": "07:00",
+            "allowCancellations": false
+          },
+          "pausedUntil": null,
+          "circle": {
+            "mode": "friends",
+            "members": []
+          },
+          "considering": false,
+          "mutes": [],
+          "updatedAt": "2026-10-04T09:42:30.123Z"
+        }
+      }
+    },
+    {
       "name": "circle_selected",
       "description": "Кому доверено сообщать о своих новых планах и намерениях: `friends` (взаимные подписки, по умолчанию), `follows`, `selected` или `off`. Выбранных людей добавляют и убирают списками идентификаторов; повтор ничего не меняет. Подписка и выбор не расширяют доступ: если событие человеку недоступно, уведомления нет.",
       "request": {
