@@ -62,6 +62,30 @@
                 "supported": false,
                 "enabled": false
               }
+            },
+            {
+              "key": "plans",
+              "label": "Новые планы друзей",
+              "email": {
+                "supported": false,
+                "enabled": false
+              },
+              "push": {
+                "supported": true,
+                "enabled": true
+              }
+            },
+            {
+              "key": "intents",
+              "label": "Намерения друзей",
+              "email": {
+                "supported": false,
+                "enabled": false
+              },
+              "push": {
+                "supported": true,
+                "enabled": true
+              }
             }
           ],
           "reminders": true,
@@ -159,6 +183,30 @@
                 "supported": false,
                 "enabled": false
               }
+            },
+            {
+              "key": "plans",
+              "label": "Новые планы друзей",
+              "email": {
+                "supported": false,
+                "enabled": false
+              },
+              "push": {
+                "supported": true,
+                "enabled": true
+              }
+            },
+            {
+              "key": "intents",
+              "label": "Намерения друзей",
+              "email": {
+                "supported": false,
+                "enabled": false
+              },
+              "push": {
+                "supported": true,
+                "enabled": true
+              }
             }
           ],
           "reminders": true,
@@ -242,6 +290,30 @@
               "push": {
                 "supported": false,
                 "enabled": false
+              }
+            },
+            {
+              "key": "plans",
+              "label": "Новые планы друзей",
+              "email": {
+                "supported": false,
+                "enabled": false
+              },
+              "push": {
+                "supported": true,
+                "enabled": true
+              }
+            },
+            {
+              "key": "intents",
+              "label": "Намерения друзей",
+              "email": {
+                "supported": false,
+                "enabled": false
+              },
+              "push": {
+                "supported": true,
+                "enabled": true
               }
             }
           ],
@@ -331,6 +403,30 @@
               "push": {
                 "supported": false,
                 "enabled": false
+              }
+            },
+            {
+              "key": "plans",
+              "label": "Новые планы друзей",
+              "email": {
+                "supported": false,
+                "enabled": false
+              },
+              "push": {
+                "supported": true,
+                "enabled": true
+              }
+            },
+            {
+              "key": "intents",
+              "label": "Намерения друзей",
+              "email": {
+                "supported": false,
+                "enabled": false
+              },
+              "push": {
+                "supported": true,
+                "enabled": true
               }
             }
           ],
@@ -440,6 +536,30 @@
                 "supported": false,
                 "enabled": false
               }
+            },
+            {
+              "key": "plans",
+              "label": "Новые планы друзей",
+              "email": {
+                "supported": false,
+                "enabled": false
+              },
+              "push": {
+                "supported": true,
+                "enabled": true
+              }
+            },
+            {
+              "key": "intents",
+              "label": "Намерения друзей",
+              "email": {
+                "supported": false,
+                "enabled": false
+              },
+              "push": {
+                "supported": true,
+                "enabled": true
+              }
             }
           ],
           "reminders": true,
@@ -523,6 +643,30 @@
               "push": {
                 "supported": false,
                 "enabled": false
+              }
+            },
+            {
+              "key": "plans",
+              "label": "Новые планы друзей",
+              "email": {
+                "supported": false,
+                "enabled": false
+              },
+              "push": {
+                "supported": true,
+                "enabled": true
+              }
+            },
+            {
+              "key": "intents",
+              "label": "Намерения друзей",
+              "email": {
+                "supported": false,
+                "enabled": false
+              },
+              "push": {
+                "supported": true,
+                "enabled": true
               }
             }
           ],
@@ -611,6 +755,30 @@
               "push": {
                 "supported": false,
                 "enabled": false
+              }
+            },
+            {
+              "key": "plans",
+              "label": "Новые планы друзей",
+              "email": {
+                "supported": false,
+                "enabled": false
+              },
+              "push": {
+                "supported": true,
+                "enabled": true
+              }
+            },
+            {
+              "key": "intents",
+              "label": "Намерения друзей",
+              "email": {
+                "supported": false,
+                "enabled": false
+              },
+              "push": {
+                "supported": true,
+                "enabled": true
               }
             }
           ],
@@ -714,6 +882,30 @@
                 "supported": false,
                 "enabled": false
               }
+            },
+            {
+              "key": "plans",
+              "label": "Новые планы друзей",
+              "email": {
+                "supported": false,
+                "enabled": false
+              },
+              "push": {
+                "supported": true,
+                "enabled": true
+              }
+            },
+            {
+              "key": "intents",
+              "label": "Намерения друзей",
+              "email": {
+                "supported": false,
+                "enabled": false
+              },
+              "push": {
+                "supported": true,
+                "enabled": true
+              }
             }
           ],
           "reminders": true,
@@ -799,6 +991,30 @@
               "push": {
                 "supported": false,
                 "enabled": false
+              }
+            },
+            {
+              "key": "plans",
+              "label": "Новые планы друзей",
+              "email": {
+                "supported": false,
+                "enabled": false
+              },
+              "push": {
+                "supported": true,
+                "enabled": true
+              }
+            },
+            {
+              "key": "intents",
+              "label": "Намерения друзей",
+              "email": {
+                "supported": false,
+                "enabled": false
+              },
+              "push": {
+                "supported": true,
+                "enabled": true
               }
             }
           ],

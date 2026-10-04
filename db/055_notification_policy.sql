@@ -67,3 +67,67 @@ CREATE TABLE notification_mutes (
 ALTER TABLE notification_email_outbox DROP CONSTRAINT notification_email_outbox_error_code_check;
 ALTER TABLE notification_email_outbox ADD CONSTRAINT notification_email_outbox_error_code_check
  CHECK (error_code IN ('expired','unavailable','preferences','rate_limit','smtp_temporary','smtp_permanent','attempts_exhausted','muted','paused','quiet'));
+
+-- New plans and intents of the people a person follows (#341). The notice is an
+-- inbox record like any other; `external` says whether it may also leave the
+-- site: the budget of discovery messages (a few a day, and not twice from one
+-- author in a row) is spent when the notice is made, so that a late or
+-- expired suggestion is never caught up in a flood.
+ALTER TABLE notifications ADD COLUMN intent_id uuid REFERENCES ride_intents(id) ON DELETE CASCADE;
+ALTER TABLE notifications ADD COLUMN external boolean NOT NULL DEFAULT true;
+CREATE INDEX notifications_discovery ON notifications(recipient_id,created_at DESC) WHERE type IN ('plan_published','intent_published');
+
+DO $$ DECLARE c record; BEGIN
+ FOR c IN SELECT conname,pg_get_constraintdef(oid) definition FROM pg_constraint WHERE conrelid='notifications'::regclass AND contype='c' AND pg_get_constraintdef(oid) LIKE '%type%' LOOP
+  EXECUTE format('ALTER TABLE notifications DROP CONSTRAINT %I',c.conname);
+  EXECUTE format('ALTER TABLE notifications ADD CONSTRAINT %I CHECK((%s) OR type IN (''plan_published'',''intent_published''))',c.conname,substring(c.definition FROM 8 FOR length(c.definition)-8));
+ END LOOP;
+END $$;
+-- A plan is about a ride and its date, an intent about an intent; both come from a person.
+ALTER TABLE notifications ADD CONSTRAINT notifications_discovery_shape CHECK(type NOT IN ('plan_published','intent_published') OR (
+ actor_id IS NOT NULL AND bike_id IS NULL AND comment_id IS NULL AND ride_comment_id IS NULL AND entry_id IS NULL AND entry_comment_id IS NULL
+ AND component_id IS NULL AND component_comment_id IS NULL AND listing_id IS NULL
+ AND ((type='plan_published' AND ride_id IS NOT NULL AND intent_id IS NULL AND event_occurs_at IS NOT NULL AND event_revision IS NOT NULL)
+   OR (type='intent_published' AND intent_id IS NOT NULL AND ride_id IS NULL))));
+ALTER TABLE notifications ADD CONSTRAINT notifications_intent_only CHECK(intent_id IS NULL OR type='intent_published');
+
+-- One announcement of a source per class of readiness: that row is the whole
+-- memory of "this was already said", so switching private/public, saving again
+-- or going back and forth between "considering" and "ready" says nothing twice.
+-- The fan-out walks the author's audience in bounded pages: `cursor` is the
+-- last recipient done, a worker that dies leaves the lease to run out and the
+-- next one continues from there.
+CREATE TABLE notification_fanouts (
+ id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+ kind text NOT NULL CHECK(kind IN ('plan_published','intent_published')),
+ source_id uuid NOT NULL,
+ author_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+ considering boolean NOT NULL DEFAULT false,
+ occurs_at timestamptz,
+ revision integer,
+ cursor uuid,
+ handled integer NOT NULL DEFAULT 0,
+ status text NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','done','cancelled')),
+ lease_token uuid,
+ lease_until timestamptz,
+ created_at timestamptz NOT NULL DEFAULT now(),
+ finished_at timestamptz,
+ UNIQUE(kind,source_id,considering),
+ CHECK(kind<>'plan_published' OR (occurs_at IS NOT NULL AND revision IS NOT NULL AND NOT considering))
+);
+CREATE INDEX notification_fanouts_due ON notification_fanouts(created_at,id) WHERE status='pending';
+CREATE INDEX notification_fanouts_author ON notification_fanouts(author_id,created_at DESC);
+
+-- The limits of discovery, one row, with the values the issue proposes. The
+-- admin of #341 edits them; without a row the defaults apply.
+CREATE TABLE notification_limits (
+ id smallint PRIMARY KEY CHECK(id=1),
+ discovery_per_day smallint NOT NULL DEFAULT 3 CHECK(discovery_per_day BETWEEN 0 AND 20),
+ author_cooldown_minutes integer NOT NULL DEFAULT 360 CHECK(author_cooldown_minutes BETWEEN 0 AND 10080),
+ announcements_per_author_day smallint NOT NULL DEFAULT 10 CHECK(announcements_per_author_day BETWEEN 1 AND 100),
+ audience_max integer NOT NULL DEFAULT 5000 CHECK(audience_max BETWEEN 1 AND 100000),
+ batch smallint NOT NULL DEFAULT 200 CHECK(batch BETWEEN 1 AND 1000),
+ discovery_enabled boolean NOT NULL DEFAULT true,
+ updated_at timestamptz NOT NULL DEFAULT now()
+);
+INSERT INTO notification_limits(id) VALUES(1);

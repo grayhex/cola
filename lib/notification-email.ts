@@ -18,6 +18,10 @@ import { noticeExpiringListings, expiryNoticeDays } from "./market.ts";
 import { accountLink } from "./account.ts";
 import { rideOccurrence } from "./ride-occurrence.ts";
 import { releaseRideReminders } from "./ride-notifications.ts";
+import {
+  pruneNotificationFanouts,
+  runNotificationFanout,
+} from "./notification-fanout.ts";
 import { interestInvitationAvailable } from "./ride-matching.ts";
 
 export interface EmailJob {
@@ -294,9 +298,16 @@ export async function runNotificationEmailBatch(
     failed: 0,
     skipped: 0,
     deferred: 0,
+    fanout: 0,
     disabled: !mailEnabled(env),
   };
   await releaseRideReminders(q, currentTime(), !counts.disabled);
+  // New plans and intents of the people a person follows reach the inboxes
+  // whether or not a mail server is configured; e-mail is not their channel.
+  counts.fanout = (
+    await runNotificationFanout(q, { now: currentTime() })
+  ).recipients;
+  await pruneNotificationFanouts(q, currentTime());
   if (counts.disabled) return counts;
   // An email about expiry must not depend on the owner opening notifications.
   const owners = await q.query<{ owner_id: string }>(

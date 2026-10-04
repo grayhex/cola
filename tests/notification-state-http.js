@@ -555,9 +555,18 @@ try {
   });
   assert.deepEqual(initial.settings.categories.map((c) => c.key).sort(), [
     "discussions",
+    "intents",
     "market",
+    "plans",
     "rides",
   ]);
+  // The choices of N1.2: nothing is quiet, paused, picked or muted until chosen.
+  assert.equal(initial.settings.timeZone, null);
+  assert.equal(initial.settings.quietHours.enabled, false);
+  assert.equal(initial.settings.pausedUntil, null);
+  assert.deepEqual(initial.settings.circle, { mode: "friends", members: [] });
+  assert.equal(initial.settings.considering, false);
+  assert.deepEqual(initial.settings.mutes, []);
   assert.equal(initial.settings.reminders, true);
   assert.equal(initial.settings.updatedAt, null);
   assert.ok(!initial.text.includes("@example.test"), "no address in settings");
@@ -631,7 +640,9 @@ try {
   assert.notEqual(etag(afterForm), before);
   assert.deepEqual(
     Object.fromEntries(
-      afterForm.settings.categories.map((c) => [c.key, c.email.enabled]),
+      afterForm.settings.categories
+        .filter((c) => c.email.supported)
+        .map((c) => [c.key, c.email.enabled]),
     ),
     { rides: true, discussions: false, market: true },
   );
@@ -672,6 +683,87 @@ try {
     (await patch({ channels: { push: { enabled: false } } })).status,
     200,
   );
+
+  // Quiet hours, pause, circle and mutes: one model for the site and the app.
+  // A person of their own: the budget of changes is per person.
+  const owner = actor;
+  const change = (body) => patch(body, {}, owner);
+  const beforePolicy = await settings(owner);
+  for (const [body, label] of [
+    [{ quietHours: { enabled: true } }, "quiet hours without a time zone"],
+    [{ timeZone: "+03:00" }, "an offset is not a zone"],
+    [{ timeZone: "Mars/Base" }, "a zone that is not there"],
+    [{ quietHours: { from: "25:00" } }, "a time that is not a time"],
+    [{ pausedUntil: "2020-01-01T00:00:00.000Z" }, "a pause in the past"],
+    [{ circle: { mode: "everyone" } }, "a circle that is not there"],
+    [{ circle: { add: [owner.id] } }, "oneself in one's circle"],
+    [{ circle: { add: [randomUUID()] } }, "someone who is not there"],
+    [{ mutes: { add: [{ kind: "author", id: owner.id }] } }, "muting oneself"],
+    [{ mutes: { add: [{ kind: "chat", id: randomUUID() }] } }, "a mute kind"],
+  ])
+    assertError(await change(body), 400, "invalid_request", label);
+  assert.equal(
+    etag(await settings(owner)),
+    etag(beforePolicy),
+    "nothing stuck",
+  );
+  const zoned = await change({
+    timeZone: "Europe/Moscow",
+    quietHours: { enabled: true, from: "23:00", to: "07:30" },
+    considering: true,
+    circle: { mode: "selected", add: [me.id] },
+    mutes: { add: [{ kind: "author", id: stranger.id }] },
+  });
+  assert.equal(zoned.status, 200, zoned.text);
+  assert.equal(zoned.body.timeZone, "Europe/Moscow");
+  assert.deepEqual(zoned.body.quietHours, {
+    enabled: true,
+    from: "23:00",
+    to: "07:30",
+    allowCancellations: false,
+  });
+  assert.equal(zoned.body.circle.mode, "selected");
+  assert.deepEqual(
+    zoned.body.circle.members.map((m) => m.id),
+    [me.id],
+  );
+  assert.deepEqual(Object.keys(zoned.body.circle.members[0]).sort(), [
+    "avatarUrl",
+    "id",
+    "name",
+    "username",
+  ]);
+  assert.equal(zoned.body.considering, true);
+  assert.deepEqual(zoned.body.mutes, [
+    { kind: "author", id: stranger.id, label: zoned.body.mutes[0].label },
+  ]);
+  assert.notEqual(etag(zoned), etag(beforePolicy));
+  // The same choices from the other door; a repeat changes nothing and keeps the version.
+  assert.equal((await settings(owner)).settings.timeZone, "Europe/Moscow");
+  const repeat = await change({
+    circle: { add: [me.id] },
+    considering: true,
+  });
+  assert.equal(repeat.status, 200, repeat.text);
+  assert.equal(etag(repeat), etag(zoned));
+  const paused = await change({
+    pausedUntil: new Date(Date.now() + 3 * 86400_000).toISOString(),
+    quietHours: { allowCancellations: true },
+  });
+  assert.equal(paused.status, 200, paused.text);
+  assert.ok(paused.body.pausedUntil);
+  assert.equal(paused.body.quietHours.allowCancellations, true);
+  const lifted = await change({
+    pausedUntil: null,
+    circle: { mode: "friends", remove: [me.id] },
+    mutes: { remove: [{ kind: "author", id: stranger.id }] },
+  });
+  assert.equal(lifted.status, 200, lifted.text);
+  assert.equal(lifted.body.pausedUntil, null);
+  assert.deepEqual(lifted.body.circle, { mode: "friends", members: [] });
+  assert.deepEqual(lifted.body.mutes, []);
+  // Another person's circle is theirs: a stranger does not see or change it.
+  assert.deepEqual((await settings(stranger)).settings.circle.members, []);
 
   // What is not a setting is refused whole.
   for (const [body, label] of [

@@ -144,7 +144,13 @@ try {
     Object.fromEntries(
       settings.categories.map((c) => [c.key, c.email.enabled]),
     ),
-    { rides: true, discussions: false, market: true },
+    {
+      rides: true,
+      discussions: false,
+      market: true,
+      plans: false,
+      intents: false,
+    },
   );
   assert.equal(
     settings.categories.find((c) => c.key === "rides").push.enabled,

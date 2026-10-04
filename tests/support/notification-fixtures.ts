@@ -34,6 +34,7 @@ export const ids = {
   boris: uid(3),
   bike: uid(10),
   ride: uid(11),
+  intent: uid(16),
   entry: uid(12),
   article: uid(13),
   component: uid(14),
@@ -73,6 +74,7 @@ const empty: NotificationRow = {
   ride_id: "",
   ride_share_id: "",
   ride_title: "",
+  intent_id: "",
   bike_id: "",
   share_id: "",
   bike_name: "",
@@ -313,6 +315,24 @@ export const targetCases: TargetCase[] = [
     description: "Велосипед недели. Служебное уведомление сайта.",
     row: { type: "bike_week", ...bike },
   },
+  {
+    name: "plan_published",
+    description:
+      "Друг (или тот, на кого вы подписаны, или выбранный вами человек — как вы настроили круг) запланировал публичную покатушку. Цель — покатушка; `occurrenceAt` — её дата, `agreementRevision` — версия договорённостей на момент публикации. Серия публикаций одного автора за четверть часа — одно непрочитанное уведомление, указывающее на последнюю. Это объявление, а не приглашение: участие человек подтверждает сам.",
+    row: {
+      type: "plan_published",
+      ...boris,
+      ...ride,
+      event_occurs_at: date,
+      event_revision: 1,
+    },
+  },
+  {
+    name: "intent_published",
+    description:
+      "Друг опубликовал намерение покататься (видимость «сообщество», с будущим окном). Цель — `intent` с идентификатором намерения; экрана намерения в приложении, возможно, ещё нет: тогда оно открывает список уведомлений.",
+    row: { type: "intent_published", ...boris, intent_id: ids.intent },
+  },
 ];
 
 /** The notice as the API sends it, for a stored row of the case. */
@@ -492,7 +512,7 @@ export const toleratedEnvelopes: {
     name: "unknown_target_type",
     description:
       "Цель, которой приложение не знает, открывает список уведомлений. Сервер не шлёт новый тип цели приложению без поддерживающего экрана; это страховка.",
-    envelope: { ...sample, target: { ...sample.target, type: "intent" } },
+    envelope: { ...sample, target: { ...sample.target, type: "voucher" } },
   },
 ];
 /** What an app must not show. */
@@ -576,6 +596,18 @@ const settingsAfterDefaults: NotificationSettingsBody = {
       label: "Окончание срока объявлений",
       email: { supported: true, enabled: false },
       push: { supported: false, enabled: false },
+    },
+    {
+      key: "plans",
+      label: "Новые планы друзей",
+      email: { supported: false, enabled: false },
+      push: { supported: true, enabled: true },
+    },
+    {
+      key: "intents",
+      label: "Намерения друзей",
+      email: { supported: false, enabled: false },
+      push: { supported: true, enabled: true },
     },
   ],
   reminders: true,

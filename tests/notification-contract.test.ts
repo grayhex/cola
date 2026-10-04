@@ -143,6 +143,7 @@ const noRow: NotificationRow = {
   ride_id: "",
   ride_share_id: "",
   ride_title: "",
+  intent_id: "",
   bike_id: "",
   share_id: "",
   bike_name: "",
@@ -262,6 +263,15 @@ const cases: Record<NotificationType, Expected> = {
       listing_due: true,
     },
     target: "market",
+  },
+  plan_published: {
+    row: { ...person, ...ride, ...dated },
+    target: "ride",
+    dated: true,
+  },
+  intent_published: {
+    row: { ...person, intent_id: randomUUID() },
+    target: "intent",
   },
   session_reuse: { row: {}, target: "account" },
   bike_week: { row: bike, target: "bike-week" },

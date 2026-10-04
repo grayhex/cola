@@ -1086,7 +1086,7 @@ export const notificationTargetSchema = named(
     type: z
       .string()
       .describe(
-        "bike, ride, journal, article, component, profile, market, account или bike-week; набор открыт.",
+        "bike, ride, journal, article, component, profile, market, account, bike-week или intent; набор открыт.",
       ),
     id,
     name: z.string(),
