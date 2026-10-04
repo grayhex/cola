@@ -17,13 +17,13 @@ import { rideNoticeVisible } from "./ride-notification-policy.ts";
 import { rideOccurrence } from "./ride-occurrence.ts";
 // Keep one lifetime follow/like event. The discussion events are told apart
 // (#341): the identity of an event is its comment, the group is what one author
-// does to one object in a quarter of an hour. A new event of a group whose
-// newest notice is still unread is folded into that notice, which then points
-// at the newest comment (its read state and time are never touched); once that
-// notice has been read the next event gets a notice of its own, so a direct
-// reply after the previous one was read is never lost. Repeating one event
-// (the same comment) changes nothing. Never reset created_at or read_at,
-// including unlike/like and refollow.
+// does to one object in a quarter of an hour. While the newest notice of a group
+// is unread, a further event of the group adds nothing: the person has one
+// notice, which opens the first comment they have not read, and the rest of the
+// thread is under it. Once that notice has been read the next event gets a
+// notice of its own, so a direct reply after the previous one was read is never
+// lost. Repeating one event (the same comment) changes nothing. Never reset
+// created_at or read_at, including unlike/like and refollow.
 const groupedTypes =
   "('comment','reply','ride_comment','ride_reply','journal_comment','journal_reply','component_reply')";
 
@@ -64,9 +64,6 @@ export async function notify(
  grp AS (SELECT n.id,n.read_at FROM notifications n,k
   WHERE $4 IN ${groupedTypes} AND n.recipient_id=$2 AND (n.group_key=k.group_key OR (n.group_key IS NULL AND n.dedup_key=k.group_key))
   ORDER BY n.created_at DESC,n.id LIMIT 1),
- folded AS (UPDATE notifications n SET comment_id=coalesce($6,n.comment_id),ride_comment_id=coalesce($9,n.ride_comment_id),
-  entry_comment_id=coalesce($11,n.entry_comment_id),component_comment_id=coalesce($13,n.component_comment_id)
-  FROM grp WHERE n.id=grp.id AND grp.read_at IS NULL RETURNING n.id),
  created AS (INSERT INTO notifications(id,recipient_id,actor_id,type,bike_id,comment_id,dedup_key,group_key,ride_id,ride_comment_id,entry_id,entry_comment_id,component_id,component_comment_id)
  SELECT $1,$2,$3,$4,$5,$6,CASE WHEN EXISTS(SELECT 1 FROM grp) THEN k.group_key || ':' || coalesce($15::text,$1::uuid::text) ELSE k.group_key END,
   CASE WHEN $4 IN ${groupedTypes} THEN k.group_key END,$8,$9,$10,$11,$12,$13

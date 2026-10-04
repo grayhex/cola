@@ -305,7 +305,7 @@ test("component media and shared discussion: upgrade, roles, quota, merges, mode
       nested.id,
     );
     await tx((q) => componentSocial.change(q, nested.id, other));
-    const another = await tx((q) =>
+    await tx((q) =>
       componentSocial.create(q, model, stranger, {
         parentId: root.id,
         body: "Ещё ответ",
@@ -314,8 +314,8 @@ test("component media and shared discussion: upgrade, roles, quota, merges, mode
     let notices = (await notificationPage(db, owner.id)).notifications;
     assert.equal(notices.length, 1);
     assert.equal(notices[0].type, "component_reply");
-    // Two replies in one quarter of an hour are one unread notice, and it points at the newest.
-    assert.match(notices[0].target.href, new RegExp(another.id));
+    // Two replies in one quarter of an hour are one unread notice, which opens the first.
+    assert.match(notices[0].target.href, new RegExp(reply.id));
     await denied(
       tx((q) => componentSocial.change(q, root.id, stranger, "Not mine")),
       403,
@@ -333,24 +333,6 @@ test("component media and shared discussion: upgrade, roles, quota, merges, mode
     );
     await tx((q) =>
       moderateReport(q, commentReport.id, admin, "delete_comment"),
-    );
-    // The notice points at the newest comment of its group: it stays while that one does.
-    assert.equal(
-      (await notificationPage(db, owner.id)).notifications.length,
-      1,
-    );
-    await tx((q) =>
-      createReport(q, owner, {
-        entityType: "component_comment",
-        targetId: another.id,
-        reason: "abuse",
-      }),
-    );
-    const anotherReport = present(
-      (await reportPage(db)).reports.find((r) => r.targetId === another.id),
-    );
-    await tx((q) =>
-      moderateReport(q, anotherReport.id, admin, "delete_comment"),
     );
     assert.equal(
       (await notificationPage(db, owner.id)).notifications.length,

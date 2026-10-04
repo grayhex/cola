@@ -8,8 +8,8 @@ import { bikeCommentRow } from "./support/notifications.ts";
 
 // One event is told from a group of events (#341). An event is identified by
 // its comment: repeating it changes nothing. A group is what one author does
-// to one object in a quarter of an hour. Events of a group fold into the notice
-// that is still unread (which then points at the newest comment) and, once
+// to one object in a quarter of an hour. Events of a group add nothing while the
+// notice of the group is unread (it opens the first unread comment) and, once
 // that notice has been read, the next event gets a notice of its own, so that a
 // direct reply after the previous one was read is not lost.
 
@@ -45,7 +45,7 @@ async function scene() {
   return { owner, author, bike, comment, notices, say };
 }
 
-test("events of one group fold into the unread notice, which points at the newest comment", async () => {
+test("events of one group add nothing to the unread notice, which opens the first comment", async () => {
   const s = await scene();
   const first = await s.comment();
   const second = await s.comment();
@@ -59,8 +59,8 @@ test("events of one group fold into the unread notice, which points at the newes
   assert.equal(rows.length, 1);
   assert.equal(
     rows[0].comment_id,
-    third,
-    "the notice opens the newest comment",
+    first,
+    "the notice opens the first unread comment; the rest is under it",
   );
   assert.equal(rows[0].read_at, null);
   assert.ok(
@@ -121,8 +121,8 @@ test("the new notice of a read group is itself folded into until it is read, and
   assert.equal(rows.length, 2);
   assert.equal(
     rows[1].comment_id,
-    third,
-    "the unread notice of the group points at the newest",
+    second,
+    "the unread notice of the group opens the first unread comment",
   );
 });
 
