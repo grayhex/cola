@@ -8,6 +8,7 @@ import {
   defaultMobileSettings,
   linkProblem,
   mobileAssetIds,
+  mobileFeatures,
   mobileLinkHref,
   mobileSettingsProblems,
   mobileSettingsSchema,
@@ -141,6 +142,18 @@ test("feature keys: camelCase, bounded, no prototype names; unknown ones are kep
     ]),
   );
   assert.equal(parse(many).success, false);
+  // The limit counts the built-in keys too, even when the input leaves them
+  // out: otherwise the stored value would fail its own schema when read back.
+  const custom = (count: number) =>
+    Object.fromEntries(
+      Array.from({ length: count }, (_, i) => ["future" + i, true]),
+    );
+  assert.equal(parse(custom(MOBILE_LIMITS.features)).success, false);
+  const room = MOBILE_LIMITS.features - mobileFeatures.length;
+  assert.equal(parse(custom(room + 1)).success, false);
+  const full = mobileSettingsSchema.parse({ features: custom(room) });
+  assert.equal(Object.keys(full.features).length, MOBILE_LIMITS.features);
+  assert.deepEqual(storedMobileSettings(full).features, full.features);
   const kept = mobileSettingsSchema.parse({
     features: { rideRecording: false },
   });

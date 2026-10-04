@@ -203,12 +203,14 @@ const featuresSchema = z
       .refine((key) => !(key in Object.prototype), "Недопустимый ключ"),
     z.boolean(),
   )
+  .prefault({})
+  .transform((value) => ({ ...defaultFeatures(), ...value }))
+  // Counted with the built-in keys the transform adds: a value that passes
+  // here is never rejected (and reset) when it is read back.
   .refine(
     (value) => Object.keys(value).length <= MOBILE_LIMITS.features,
-    `Не больше ${MOBILE_LIMITS.features} функций`,
-  )
-  .prefault({})
-  .transform((value) => ({ ...defaultFeatures(), ...value }));
+    `Не больше ${MOBILE_LIMITS.features} функций вместе со встроенными`,
+  );
 const compatibilitySchema = z
   .strictObject({
     minimumSupportedVersionCode: versionCode,
