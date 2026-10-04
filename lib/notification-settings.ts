@@ -17,8 +17,11 @@ import {
   notificationCategories,
   notificationCategoryKeys,
   notificationEmailCategorySql,
+  notificationTypesOf,
   type NotificationCategoryKey,
 } from "./notification-catalog.ts";
+import { pushAvailable } from "./push-config.ts";
+import { skipPushDeliveries } from "./push-devices.ts";
 
 // One account-level model of what a person wants to be told about (#341), read
 // and written by the site, the API and the e-mail unsubscribe link. E-mail
@@ -27,12 +30,10 @@ import {
 // this module is the only place that knows both. A phone's own permission and
 // registration are not here: the server cannot grant them.
 
-/**
- * Whether push can carry a message at all. The transport and the device
- * registry arrive with #342; until then no one can consent to push, exactly as
- * nobody can consent to e-mail while SMTP is not configured.
- */
-export const pushAvailable = (): boolean => false;
+// Whether push can carry a message at all is the server's configuration
+// (push-config.ts): until the owner has set the keys, no one can consent to push,
+// exactly as nobody can consent to e-mail while SMTP is not configured.
+export { pushAvailable };
 
 export interface SettingsFlag {
   /** The channel can carry this category at all. */
@@ -642,7 +643,8 @@ export async function saveNotificationSettings(
     if (item.push !== undefined) chosen[item.key] = item.push;
   await q.query(
     `UPDATE notification_settings SET reminders=$2,push_enabled=$3,push_categories=$4::jsonb,
-    time_zone=$5,quiet_enabled=$6,quiet_from=$7,quiet_to=$8,quiet_cancel=$9,paused_until=$10,circle=$11,considering=$12,updated_at=now() WHERE user_id=$1`,
+    time_zone=$5,quiet_enabled=$6,quiet_from=$7,quiet_to=$8,quiet_cancel=$9,paused_until=$10,circle=$11,considering=$12,updated_at=now(),
+    push_enabled_at=CASE WHEN NOT $3 THEN NULL WHEN push_enabled THEN push_enabled_at ELSE now() END WHERE user_id=$1`,
     [
       userId,
       next.reminders,
@@ -658,6 +660,22 @@ export async function saveNotificationSettings(
       next.policy.considering,
     ],
   );
+  // What was made for a channel the person has since said no to is not sent if
+  // they say yes again: it is dropped now, not caught up later.
+  if (next.pushChanged) {
+    const refused = (change.categories ?? [])
+      .filter((item) => item.push === false)
+      .map((item) => item.key);
+    if (!next.pushEnabled)
+      await skipPushDeliveries(q, { userId }, "preferences", now);
+    else if (refused.length)
+      await skipPushDeliveries(
+        q,
+        { userId, types: refused.flatMap((key) => notificationTypesOf(key)) },
+        "preferences",
+        now,
+      );
+  }
   if (next.circleRemove.length)
     await q.query(
       "DELETE FROM notification_circle_members WHERE user_id=$1 AND member_id=ANY($2::uuid[])",

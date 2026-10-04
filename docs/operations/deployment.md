@@ -179,7 +179,7 @@ BASH
 Автоматический prebuilt deploy загружает эти образы заранее и использует `up --no-build` с теми же зависимостями и healthchecks. Для перехода wrapper нужно обновить по инструкции выше.
 
 `migrate` единожды собирает локальный образ `${COMPOSE_PROJECT_NAME}-ops:local`.
-`chat-sync`, `activity-sync`, `notification-email` и `bike-week` используют этот же образ без собственного build/export
+`chat-sync`, `activity-sync`, `notification-email`, `notification-push` и `bike-week` используют этот же образ без собственного build/export
 и без pull из registry; имя изолировано именем Compose-проекта. Workers стартуют
 только после успешной миграции. На чистом хосте запускайте обычный полный `up --build` либо
 сначала `build migrate`: `up --no-build chat-sync` не создаст отсутствующий образ.

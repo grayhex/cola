@@ -58,6 +58,9 @@ const environment = {
   // A fixture, not a real certificate: the statement of the well-known file.
   ANDROID_CERT_SHA256:
     "11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00",
+  // The registry of push addresses works (#342); no provider token, so push stays unavailable.
+  PUSH_TOKEN_KEY: "Zml4dHVyZS1wdXNoLWtleS0zMi1ieXRlcy1sb25nISE=",
+  RUSTORE_PUSH_PROJECTS: "fixture-project",
   MAP_STYLE_URL: process.argv.includes("--e2e")
     ? base + "/test-map-style.json"
     : "",
@@ -231,12 +234,14 @@ try {
           "tests/account-security-http.js",
           "tests/notification-email-http.js",
           "tests/notification-state-http.js",
+          "tests/push-device-http.js",
           "tests/ride-notifications-http.js",
           ...(externalDatabase
             ? [
                 "tests/notification-email-concurrency.js",
                 "tests/notification-state-concurrency.js",
                 "tests/notification-fanout-concurrency.js",
+                "tests/push-delivery-concurrency.js",
                 "tests/ride-notifications-concurrency.js",
                 "tests/bike-week-concurrency.js",
               ]

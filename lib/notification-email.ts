@@ -6,24 +6,16 @@ import {
   notificationEmailEvents,
   notificationEmailPersonalSql,
 } from "./notification-catalog.ts";
-import {
-  deliveryPolicy,
-  externalVerdict,
-  noticeMutedSql,
-} from "./notification-policy.ts";
+import { externalNoticeCheck } from "./notification-external.ts";
 import { notificationUnsubscribeToken } from "./notification-preferences.ts";
 import { notificationMail } from "./mail-templates.ts";
-import { notificationPage } from "./notifications.ts";
 import { noticeExpiringListings, expiryNoticeDays } from "./market.ts";
 import { accountLink } from "./account.ts";
-import { rideOccurrence } from "./ride-occurrence.ts";
 import { releaseRideReminders } from "./ride-notifications.ts";
 import {
-  notificationLimits,
   pruneNotificationFanouts,
   runNotificationFanout,
 } from "./notification-fanout.ts";
-import { interestInvitationAvailable } from "./ride-matching.ts";
 
 export interface EmailJob {
   notification_id: string;
@@ -179,89 +171,22 @@ async function delivery(
   const event = notificationEmailEvents[row.type];
   if (!event || !row.enabled || !row[event.category])
     return { code: "preferences" as const };
-  const notice = (
-    await notificationPage(q, job.recipient_id, 1, job.notification_id, now)
-  ).notifications[0];
-  if (!notice || notice.readAt) return { code: "unavailable" as const };
-  if (
-    row.type === "market_expiring" &&
-    "state" in notice.target &&
-    !["expiring", "expired"].includes(notice.target.state)
-  )
-    return { code: "unavailable" as const };
-  if (row.type === "ride_invite") {
-    if (!row.ride_id) return { code: "unavailable" as const };
-    const invitation = (
-      await q.query<{ source: string }>(
-        "SELECT source FROM ride_invitations WHERE ride_id=$1 AND user_id=$2",
-        [row.ride_id, job.recipient_id],
-      )
-    ).rows[0];
-    if (
-      invitation?.source === "interest" &&
-      (!row.event_occurs_at ||
-        !(await interestInvitationAvailable(
-          q,
-          row.ride_id,
-          job.recipient_id,
-          row.event_occurs_at,
-          now,
-        )))
-    )
-      return { code: "unavailable" as const };
-    const ride = (
-      await q.query<{ occurs_at: Date }>(
-        `SELECT (${rideOccurrence}) occurs_at FROM rides r WHERE r.id=$1 AND r.status='planned'`,
-        [row.ride_id],
-      )
-    ).rows[0];
-    if (!ride?.occurs_at || new Date(ride.occurs_at) <= now)
-      return { code: "unavailable" as const };
-  }
-  // What the person has said about when and about whom: read now, not when the
-  // message was queued. The inbox keeps the notice whatever is decided here.
-  // The admin's switches: all external channels, or the category of this message.
-  const limits = await notificationLimits(q);
-  if (
-    !limits.externalEnabled ||
-    limits.disabledCategories.includes(event.category)
-  )
-    return { code: "disabled" as const };
-  const policy = await deliveryPolicy(q, job.recipient_id);
-  const muted = (
-    await q.query<{ muted: boolean }>(
-      `SELECT ${noticeMutedSql("n")} muted FROM notifications n WHERE n.id=$1`,
-      [job.notification_id],
-    )
-  ).rows[0]?.muted;
-  if (muted) return { code: "muted" as const };
-  // Only a cancellation of a ride the person confirmed may break the quiet.
-  const confirmed =
-    row.type === "ride_cancelled" && row.ride_id && row.event_occurs_at
-      ? !!(
-          await q.query(
-            "SELECT 1 FROM ride_rsvps WHERE ride_id=$1 AND user_id=$2 AND occurs_at=$3 AND response='accepted'",
-            [row.ride_id, job.recipient_id, row.event_occurs_at],
-          )
-        ).rowCount
-      : false;
-  const verdict = externalVerdict(policy, {
-    type: row.type,
+  const checked = await externalNoticeCheck(
+    q,
+    {
+      notificationId: job.notification_id,
+      recipientId: job.recipient_id,
+      type: row.type,
+      category: event.category,
+      rideId: row.ride_id,
+      eventOccursAt: row.event_occurs_at && new Date(row.event_occurs_at),
+      expiresAt: new Date(row.expires_at),
+    },
+    "email",
     now,
-    expiresAt: new Date(row.expires_at),
-    occursAt: row.event_occurs_at && new Date(row.event_occurs_at),
-    confirmed,
-  });
-  if (verdict.action === "drop")
-    return {
-      code:
-        verdict.reason === "paused"
-          ? ("paused" as const)
-          : verdict.reason === "quiet"
-            ? ("quiet" as const)
-            : ("expired" as const),
-    };
-  if (verdict.action === "defer") return { defer: verdict.until };
+  );
+  if ("code" in checked || "defer" in checked) return checked;
+  const notice = checked.notice;
   const token = notificationUnsubscribeToken(
     job.recipient_id,
     row.unsubscribe_key,

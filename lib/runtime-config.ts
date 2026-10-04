@@ -89,6 +89,29 @@ export function validateRuntime(env = process.env) {
       reject(
         "ANDROID_CERT_SHA256 must list SHA-256 fingerprints (AA:BB:… or 64 hex digits)",
       );
+  // Push (#342) is optional; a half-filled configuration is a deployment error,
+  // not a channel that silently sends nothing. Inline for the same reason as above.
+  if (
+    env.PUSH_TOKEN_KEY ||
+    env.PUSH_TOKEN_KEY_PREVIOUS ||
+    env.RUSTORE_PUSH_PROJECTS ||
+    env.RUSTORE_PUSH_SERVICE_TOKEN
+  ) {
+    for (const name of ["PUSH_TOKEN_KEY", "PUSH_TOKEN_KEY_PREVIOUS"] as const)
+      if (env[name] && Buffer.from(env[name].trim(), "base64").length !== 32)
+        reject(
+          `${name} must be 32 random bytes in base64 (openssl rand -base64 32)`,
+        );
+    if (
+      !env.PUSH_TOKEN_KEY ||
+      !(env.RUSTORE_PUSH_PROJECTS || "")
+        .split(",")
+        .some((project) => /^[A-Za-z0-9._-]{1,100}$/.test(project.trim()))
+    )
+      reject(
+        "PUSH_TOKEN_KEY and RUSTORE_PUSH_PROJECTS (project ids, comma-separated) are required together with any other push setting",
+      );
+  }
   // Mail is optional, but without it password recovery is unavailable: log it.
   return {
     mode: "production",

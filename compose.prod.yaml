@@ -50,6 +50,10 @@ services:
       MEDIA_CACHE_MAX_MB: ${MEDIA_CACHE_MAX_MB:-}
       SMTP_URL: ${SMTP_URL:-}
       MAIL_FROM: ${MAIL_FROM:-}
+      PUSH_TOKEN_KEY: ${PUSH_TOKEN_KEY:-}
+      PUSH_TOKEN_KEY_PREVIOUS: ${PUSH_TOKEN_KEY_PREVIOUS:-}
+      RUSTORE_PUSH_PROJECTS: ${RUSTORE_PUSH_PROJECTS:-}
+      RUSTORE_PUSH_SERVICE_TOKEN: ${RUSTORE_PUSH_SERVICE_TOKEN:-}
       STREAM_CHAT_ENABLED: ${STREAM_CHAT_ENABLED:-false}
       STREAM_CHAT_API_KEY: ${STREAM_CHAT_API_KEY:-}
       STREAM_CHAT_API_SECRET: ${STREAM_CHAT_API_SECRET:-}
@@ -142,6 +146,20 @@ services:
     image: ${COMPOSE_PROJECT_NAME:-cola}-ops:local
     pull_policy: never
     command: ["node", "scripts/notification-email.js"]
+    environment: *app-environment
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+  notification-push:
+    image: ${COMPOSE_PROJECT_NAME:-cola}-ops:local
+    pull_policy: never
+    command: ["node", "scripts/notification-push.js"]
     environment: *app-environment
     depends_on:
       migrate:
