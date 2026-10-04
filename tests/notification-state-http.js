@@ -367,9 +367,12 @@ try {
     unread: 0,
     capped: false,
   });
-  assert.equal(
-    (await all({ watermark: nowMark.watermark }, stranger)).body.marked,
-    0,
+  // The mark of one account is no mark at all for another.
+  assertError(
+    await all({ watermark: nowMark.watermark }, stranger),
+    400,
+    "invalid_request",
+    "the mark of another account",
   );
 
   // What is hidden now was not shown: it stays new and is there when it is back.
