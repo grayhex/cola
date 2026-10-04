@@ -296,13 +296,13 @@ const parameters = {
   },
 };
 
-const description = `API ColaBike: вход устройств, текущий пользователь, чтение велосипедов, людей, журнала, покатушек и комментариев.
+const description = `API ColaBike: вход устройств, текущий пользователь, чтение велосипедов, людей, журнала, покатушек и комментариев, настройки приложения.
 
 **Вход.** Два способа. Браузер — HttpOnly cookie \`${SESSION_COOKIE}\`, которую выдаёт вход на сайте. Нативный клиент — сессия устройства: \`POST /auth/sessions\` возвращает пару непрозрачных токенов, токен доступа (\`cola_at_…\`, 15 минут) передаётся как \`Authorization: Bearer\`, одноразовый refresh-токен (\`cola_rt_…\`) обновляется через \`POST /auth/sessions/refresh\`. Cookie и Bearer в одном запросе — 400 \`ambiguous_authentication\`; другие схемы Authorization — 401 \`unsupported_authentication\`. Просроченный токен доступа — 401 \`token_expired\`, любой другой негодный — 401 \`invalid_token\`. CORS не включён.
 
 **Ошибки.** Тело ошибки — \`{ "error": { "code", "message", "details?" } }\`; клиент ветвится по \`code\`. Неизвестный адрес под \`/api/v1\` отвечает 404, неподдерживаемый метод — 405 с заголовком \`Allow\`. Каждый ответ несёт \`X-Request-ID\` для обращения в поддержку.
 
-**Кэш.** Ответы зависят от того, кто спрашивает, и не кэшируются (\`Cache-Control: no-store\`), кроме самого документа.
+**Кэш.** Ответы зависят от того, кто спрашивает, и не кэшируются (\`Cache-Control: no-store\`). Исключения — сам документ и настройки приложения \`/app-config\`: они одинаковы для всех; настройки свежи минуту, затем проверяются по \`ETag\` (304 без тела).
 
 **Изображения.** Адреса фото (\`url\`, \`avatarUrl\`, \`coverUrl\`) — пути сайта относительно его адреса. Публичные открываются без входа; приватные (фото закрытого велосипеда, картинки черновика журнала) — владельцу, с тем же \`Authorization: Bearer\` (или cookie), что и API; чужому и гостю — 404, недействительному токену — 401. Ответы зависят от зрителя (\`Vary: Cookie, Authorization\`), поддерживают \`ETag\`/304 и \`?width=\`.
 
@@ -558,6 +558,11 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
       {
         name: "Users",
         description: "Публичные профили, их велосипеды и подписки.",
+      },
+      {
+        name: "App",
+        description:
+          "Настройки нативного приложения из админки: экран запуска, знакомство, сообщение, ссылки, доступность функций и политика версий. Без входа.",
       },
       { name: "Contract", description: "Описание самого API." },
     ],
@@ -1839,6 +1844,54 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
               "Недействительный или истёкший токен либо неподдерживаемая схема Authorization.",
             ),
             "404": shared("NotFound"),
+            "500": shared("InternalError"),
+          },
+        },
+      },
+      "/app-config": {
+        get: {
+          operationId: "getAppConfig",
+          tags: ["App"],
+          summary: "Настройки приложения",
+          description:
+            "Что приложение может менять без новой сборки: экран запуска после системного splash, знакомство, сообщение, служебные ссылки, доступность уже встроенных функций и политика версий. Без входа, одинаково для всех; заголовки входа не читаются. Только перечисленные поля, без разметки, стилей и кода; поля со временем только добавляются, неизвестные приложение пропускает. Ответ свеж минуту (`Cache-Control: public, max-age=60`), затем запрос с `If-None-Match` получает 304 без тела, если ничего не изменилось. `revision` растёт с каждым сохранением в админке; `ETag` меняется и при смене настроек сервера (например, готовности входа через Яндекс ID).",
+          security: [],
+          parameters: [
+            {
+              name: "If-None-Match",
+              in: "header",
+              required: false,
+              description: "`ETag` прошлого ответа: без изменений ответ — 304.",
+              schema: { type: "string" },
+            },
+          ],
+          responses: {
+            "200": {
+              description: "Настройки приложения.",
+              headers: {
+                ...requestIdHeader,
+                ETag: {
+                  description: "Валидатор этого ответа для `If-None-Match`.",
+                  schema: { type: "string" },
+                },
+                "Cache-Control": {
+                  description: "`public, max-age=60`.",
+                  schema: { type: "string" },
+                },
+              },
+              content: json("AppConfig"),
+            },
+            "304": {
+              description: "Настройки не изменились: тела нет, `ETag` тот же.",
+              headers: {
+                ...requestIdHeader,
+                ETag: {
+                  description: "Тот же валидатор.",
+                  schema: { type: "string" },
+                },
+              },
+            },
+            "405": failure("Другой метод: разрешены GET, HEAD и OPTIONS."),
             "500": shared("InternalError"),
           },
         },

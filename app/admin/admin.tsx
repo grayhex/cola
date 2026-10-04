@@ -65,10 +65,12 @@ import {
   LoaderCircle,
   Menu,
   LayoutGrid,
+  MonitorSmartphone,
 } from "../ui/icons.tsx";
 import "./design.module.css";
 import ArticleTopicSettings from "./article-topics.tsx";
 import LegalSettings from "./legal-settings.tsx";
+import MobileSettingsEditor from "./mobile-settings.tsx";
 import EmojiSettings from "./emoji-settings.tsx";
 // The design system reference (#127) stays inside the admin, next to its
 // menu (#131); loaded only when opened.
@@ -113,6 +115,7 @@ const sections: [string, string, LucideIcon][] = [
   ["uikit", "Дизайн-система", LayoutGrid],
   ["groups", "Группы деталей", BookOpen],
   ["catalog", "Справочники", BookOpen],
+  ["mobile", "Настройки приложения", MonitorSmartphone],
   ["users", "Пользователи", Users],
   ["reports", "Жалобы", ShieldCheck],
   ["audit", "Журнал действий", History],
@@ -139,6 +142,13 @@ const adminGroups = [
       "about",
       "uikit",
     ],
+  },
+  // The Android app (#338) is its own block, apart from the web appearance.
+  {
+    id: "mobile",
+    name: "Мобильное приложение",
+    icon: MonitorSmartphone,
+    sections: ["mobile"],
   },
   {
     id: "people",
@@ -215,6 +225,7 @@ export default function Admin() {
   const [editUser, setEditUser] = useState<ManagedUser | null>(null),
     [confirm, setConfirm] = useState<Confirmation | null>(null);
   const [confirmEmail, setConfirmEmail] = useState("");
+  const [mobileDirty, setMobileDirty] = useState(false);
   const dialog = useRef<HTMLDialogElement>(null);
   const dirtySettings = JSON.stringify(draft) !== JSON.stringify(settings);
   const dirtyCatalog = JSON.stringify(cat) !== JSON.stringify(catalog);
@@ -538,7 +549,8 @@ export default function Admin() {
                           <Icon size={16} />
                           {label}
                           {((settingsTabs.has(id) && dirtySettings) ||
-                            (catalogTabs.has(id) && dirtyCatalog)) && (
+                            (catalogTabs.has(id) && dirtyCatalog) ||
+                            (id === "mobile" && mobileDirty)) && (
                             <span
                               className="unsaved-dot"
                               aria-label="Есть несохранённые изменения"
@@ -579,6 +591,15 @@ export default function Admin() {
           )}
           <div hidden={tab !== "legal"}>
             <LegalSettings active={tab === "legal"} />
+          </div>
+          <div hidden={tab !== "mobile"}>
+            <MobileSettingsEditor
+              active={tab === "mobile"}
+              assets={assets}
+              onUpload={uploadAsset}
+              onSaved={refreshAssets}
+              onDirtyChange={setMobileDirty}
+            />
           </div>
           {tab === "emojis" && (
             <EmojiSettings

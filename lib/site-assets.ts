@@ -40,6 +40,7 @@ export function siteAssetUsage(
     recordImages?: Record<string, string | null>;
     achievementImages?: Record<string, string | null>;
   } = {},
+  mobileIds: string[] = [],
 ) {
   const usage = new Map<string, Set<string>>();
   function add(value: unknown, label: string) {
@@ -59,6 +60,8 @@ export function siteAssetUsage(
   for (const id of Object.values(game.recordImages || {})) add(id, "Рекорды");
   for (const id of Object.values(game.achievementImages || {}))
     add(id, "Достижения");
+  // The native app settings (#338), enabled blocks or not.
+  for (const id of mobileIds) add(id, "Мобильное приложение");
   return Object.fromEntries(
     [...usage].map(([id, labels]) => [id, [...labels]]),
   );

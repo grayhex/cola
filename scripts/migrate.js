@@ -64,6 +64,7 @@ try {
     "050_device_sessions",
     "051_api_idempotency",
     "052_native_auth",
+    "053_mobile_settings",
   ]) {
     const { rowCount } = await client.query(
       "SELECT 1 FROM schema_migrations WHERE version=$1",

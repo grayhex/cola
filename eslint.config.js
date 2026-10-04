@@ -70,6 +70,7 @@ export default [
       "app/about/about.tsx",
       "app/admin/asset-picker.tsx",
       "app/admin/media-library.tsx",
+      "app/admin/mobile-settings.tsx",
       "app/ui/achievement-art.tsx",
       "app/ui/articles.tsx",
       "app/ui/auth-window.tsx",

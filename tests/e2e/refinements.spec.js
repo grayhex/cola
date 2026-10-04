@@ -163,7 +163,8 @@ test("sequential bike sections, raster map, six-ride accordion, preferences and 
     await page.goto("/admin");
     const adminGroups = page.getByRole("tablist", { name: "Группы админки" });
     await expect(adminGroups).toHaveAttribute("aria-orientation", "vertical");
-    await expect(adminGroups.getByRole("tab")).toHaveCount(5);
+    // Система, Дизайн, Мобильное приложение (#338), Пользователи, Механики, Каталог.
+    await expect(adminGroups.getByRole("tab")).toHaveCount(6);
     await page.getByRole("button", { name: "Карта", exact: true }).click();
     await page.getByLabel("Подключать подложку").uncheck();
     await page.getByRole("button", { name: "Сохранить", exact: true }).click();

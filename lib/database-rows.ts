@@ -147,6 +147,28 @@ export interface GameRuleRow {
   updated_at: Date;
 }
 
+/** A file of the site media library; the browser reads it at /api/assets/<id>. */
+export interface SiteAssetRow {
+  id: string;
+  name: string;
+  filename: string;
+  created_at: Date;
+}
+
+/**
+ * The single row of the native app settings (#338). `value` is what the admin
+ * edits and is parsed on every read; each revision is the settings version
+ * that last changed its block.
+ */
+export interface MobileSettingsRow {
+  id: number;
+  value: unknown;
+  version: number;
+  onboarding_revision: number;
+  notice_revision: number;
+  updated_at: Date;
+}
+
 export interface JournalRow {
   id: string;
   share_id: string;
