@@ -299,7 +299,13 @@ export default function CommunityPage({
               onClick={async () => {
                 setBusy(true);
                 try {
-                  await socialApi("community/notifications/read-all", "PATCH");
+                  // The mark of the list on the screen: a notice that arrived
+                  // after it stays unread until it is shown (#341).
+                  await socialApi(
+                    "community/notifications/read-all",
+                    "PATCH",
+                    data.watermark ? { watermark: data.watermark } : {},
+                  );
                   await refresh();
                 } catch (e) {
                   setError(errorMessage(e));

@@ -230,10 +230,12 @@ try {
           "tests/account-http.js",
           "tests/account-security-http.js",
           "tests/notification-email-http.js",
+          "tests/notification-state-http.js",
           "tests/ride-notifications-http.js",
           ...(externalDatabase
             ? [
                 "tests/notification-email-concurrency.js",
+                "tests/notification-state-concurrency.js",
                 "tests/ride-notifications-concurrency.js",
                 "tests/bike-week-concurrency.js",
               ]

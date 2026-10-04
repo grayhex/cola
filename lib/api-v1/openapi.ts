@@ -11,6 +11,7 @@ import {
   componentSearchQuerySchema,
   experienceQuerySchema,
   feedQuerySchema,
+  notificationsQuerySchema,
   schemaRegistry,
   usersSearchQuerySchema,
 } from "./schemas.ts";
@@ -175,6 +176,11 @@ const marketNotes: Record<string, string> = {
   seller:
     "Username продавца: объявления одного человека. Неизвестный и заблокированный продавец — 404.",
   sort: "`new` — новые сверху (по умолчанию), `price_asc` — дешевле сверху, `price_desc` — дороже сверху; объявления без цены в конце. Курсор одного порядка в другом — 400.",
+};
+const notificationNotes: Record<string, string> = {
+  unread: "`1` — только непрочитанные.",
+  category:
+    "Одна категория: rides — покатушки и приглашения, discussions — комментарии и ответы, market — объявления, reactions — подписки и лайки, site — от ColaBike.",
 };
 const feedNotes: Record<string, string> = {
   type: "`all` — всё; `rides` — только покатушки; `journal` — только записи журнала.",
@@ -618,9 +624,13 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
           tags: ["Personal"],
           summary: "Мои уведомления",
           description:
-            "Новые сверху, курсор по `(время, id)`. Видимость вычисляется при чтении, как на сайте: уведомление о том, что получатель уже не вправе видеть (приватное, скрытое, заблокированное, отменённый лайк, удалённый комментарий), не показывается. Чтение уведомлений, как и на сайте, создаёт напоминание о конце срока объявления (раз за срок). Пометка «прочитано» — отдельная операция записи.",
+            "Новые сверху, курсор по `(время, id)`; `unread=1` и `category` сужают список, курсор работает и с ними. Видимость вычисляется при чтении, как на сайте: уведомление о том, что получатель уже не вправе видеть (приватное, скрытое, заблокированное, отменённый лайк, удалённый комментарий), не показывается. Чтение уведомлений, как и на сайте, создаёт напоминание о конце срока объявления (раз за срок). Сам список ничего не помечает прочитанным: это отдельные операции, а `watermark` ответа нужен для «Прочитать все».",
           security: [{ cookieSession: [] }, { bearerAuth: [] }],
-          parameters: refs("Limit", "Cursor"),
+          parameters: queryParameters(
+            notificationsQuerySchema,
+            ["limit", "cursor"],
+            notificationNotes,
+          ).concat(refs("Limit", "Cursor")),
           responses: {
             "200": success("Страница уведомлений.", "NotificationPage"),
             "400": failure(
@@ -639,7 +649,7 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
           tags: ["Personal"],
           summary: "Число непрочитанных",
           description:
-            "Считается до 100: при `capped` непрочитанных не меньше 100.",
+            "Считается до 100: при `capped` непрочитанных не меньше 100. `watermark` — отметка для «Прочитать все», если список не загружался.",
           security: [{ cookieSession: [] }, { bearerAuth: [] }],
           parameters: [],
           responses: {
@@ -651,6 +661,136 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
               "Нет входа, сессия или токен недействительны, токен доступа истёк (`token_expired`) либо схема Authorization не поддерживается.",
             ),
             "500": shared("InternalError"),
+          },
+        },
+      },
+      "/me/notifications/{id}/read": {
+        put: {
+          operationId: "markNotificationRead",
+          tags: ["Personal"],
+          summary: "Пометить уведомление прочитанным",
+          description:
+            "Идемпотентно: повтор тоже 200, `marked` в нём 0. Прочитанным делает только само приложение, когда человек открыл уведомление или нажал «прочитано»: показ в шторке, смахивание и загрузка списка ничего не помечают. Чужое, ещё не доставленное (напоминание, срок которого не пришёл) и несуществующее уведомление неотличимы: 404. Бюджет тот же, что у кнопок сайта.",
+          security: [{ cookieSession: [] }, { bearerAuth: [] }],
+          parameters: [{ $ref: "#/components/parameters/NotificationId" }],
+          responses: {
+            "200": success("Итог пометки.", "NotificationReadResult"),
+            "400": failure(
+              "Одновременно cookie сессии и заголовок Authorization.",
+            ),
+            "401": failure(
+              "Нет входа, сессия или токен недействительны, токен доступа истёк (`token_expired`) либо схема Authorization не поддерживается.",
+            ),
+            "403": failure(
+              "Cookie-запрос не с адреса сайта (нужен заголовок `Origin`).",
+            ),
+            "404": failure("Уведомление не найдено."),
+            "429": failure(
+              "Слишком много действий; секунды до конца окна — в `Retry-After`.",
+            ),
+            "500": shared("InternalError"),
+          },
+        },
+      },
+      "/me/notifications/read": {
+        post: {
+          operationId: "markNotificationsRead",
+          tags: ["Personal"],
+          summary: "Пометить несколько уведомлений прочитанными",
+          description:
+            "До 100 идентификаторов, как на экране. Идемпотентно. Чужие и ещё не доставленные не считаются и не вызывают ошибки: `marked` — сколько помечено сейчас.",
+          security: [{ cookieSession: [] }, { bearerAuth: [] }],
+          requestBody: requestBody("NotificationReadRequest"),
+          responses: {
+            "200": success("Итог пометки.", "NotificationReadResult"),
+            ...writeFailures(),
+          },
+        },
+      },
+      "/me/notifications/read-all": {
+        post: {
+          operationId: "markAllNotificationsRead",
+          tags: ["Personal"],
+          summary: "Прочитать все до отметки",
+          description:
+            "Помечает прочитанными всё видимое сейчас до `watermark` из списка или счётчика (с `category` — только эту категорию). Уведомление, пришедшее после того, как список был показан, лежит выше отметки и остаётся непрочитанным. Скрытое сейчас (например, о приватном объекте) не помечается: оно не было показано. За один запрос — до 10 000; если `unread` в ответе не нулевой, запрос повторяют. Идемпотентно. `watermark`, которого сервер не выдавал, — 400.",
+          security: [{ cookieSession: [] }, { bearerAuth: [] }],
+          requestBody: requestBody("NotificationReadAllRequest"),
+          responses: {
+            "200": success("Итог пометки.", "NotificationReadResult"),
+            ...writeFailures(),
+          },
+        },
+      },
+      "/me/notification-settings": {
+        get: {
+          operationId: "getNotificationSettings",
+          tags: ["Personal"],
+          summary: "Настройки уведомлений",
+          description:
+            "Что человек хочет получать: каналы (почта, push), категории по каналам, напоминание о покатушке. Те же настройки видит и меняет сайт. В списке категорий только те, которые сервер производит и которые канал может передать; `channels.*.available` говорит, работает ли канал на сервере (почта — настроена ли отправка, push — подключена ли доставка), и приложение не показывает переключатель недоступного канала. Версия объекта — заголовок `ETag`. Разрешение системы и регистрация телефона — не здесь.",
+          security: [{ cookieSession: [] }, { bearerAuth: [] }],
+          parameters: [],
+          responses: {
+            "200": {
+              description: "Настройки уведомлений.",
+              headers: {
+                ...requestIdHeader,
+                ETag: {
+                  description:
+                    "Версия настроек: для `If-Match` следующего изменения.",
+                  schema: { type: "string" },
+                },
+              },
+              content: json("NotificationSettings"),
+            },
+            "400": failure(
+              "Неверный параметр либо cookie вместе с Authorization.",
+            ),
+            "401": failure(
+              "Нет входа, сессия или токен недействительны, токен доступа истёк (`token_expired`) либо схема Authorization не поддерживается.",
+            ),
+            "500": shared("InternalError"),
+          },
+        },
+        patch: {
+          operationId: "updateNotificationSettings",
+          tags: ["Personal"],
+          summary: "Изменить настройки уведомлений",
+          description:
+            "Меняется только указанное, поэтому два устройства, меняющие разные переключатели, не затирают друг друга; повтор того же изменения ничего не меняет. `If-Match` необязателен: с ним изменение применяется только к версии, которую клиент видел (412, если версия уже другая). Включить канал можно, когда он работает: почту — с подтверждённым адресом (403 `email_verification_required`) и настроенной отправкой (503 `service_unavailable`), push — когда доставка подключена (503). Выключить можно всегда. Категория называет только каналы, которые могут её передавать. Согласие на push здесь не включает разрешение системы на конкретном телефоне. Бюджет тот же, что у формы на сайте.",
+          security: [{ cookieSession: [] }, { bearerAuth: [] }],
+          parameters: [
+            {
+              name: "If-Match",
+              in: "header",
+              required: false,
+              description:
+                "`ETag` настроек, которые клиент видел: при другой версии — 412.",
+              schema: { type: "string" },
+            },
+          ],
+          requestBody: requestBody("NotificationSettingsPatch"),
+          responses: {
+            "200": {
+              description: "Настройки после изменения.",
+              headers: {
+                ...requestIdHeader,
+                ETag: {
+                  description: "Новая версия настроек.",
+                  schema: { type: "string" },
+                },
+              },
+              content: json("NotificationSettings"),
+            },
+            ...writeFailures({
+              "412": failure(
+                "`If-Match` не совпал с текущей версией: прочитайте настройки снова.",
+              ),
+              "503": failure(
+                "Канал не работает на сервере (отправка почты не настроена, push не подключён).",
+              ),
+            }),
           },
         },
       },
@@ -1937,6 +2077,13 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
           in: "path",
           required: true,
           description: "Публичный идентификатор сессии из списка сессий.",
+          schema: { type: "string", format: "uuid" },
+        },
+        NotificationId: {
+          name: "id",
+          in: "path",
+          required: true,
+          description: "Идентификатор уведомления из списка.",
           schema: { type: "string", format: "uuid" },
         },
       },

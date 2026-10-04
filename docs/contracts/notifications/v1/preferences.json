@@ -1,0 +1,389 @@
+{
+  "version": 1,
+  "note": "Настройки аккаунта одни для сайта и приложения. `updatedAt` и `ETag` в примерах условные. Разрешение системы на этом телефоне и регистрация телефона здесь не хранятся: сервер не может их включить.",
+  "cases": [
+    {
+      "name": "defaults_push_not_connected",
+      "description": "Новый аккаунт: письма и push выключены, доставка push на сервере пока не подключена (`push.available: false`) — приложение не показывает переключатель недоступного канала. Категории — только те, которые сервер производит и канал может передать.",
+      "request": {
+        "method": "GET",
+        "path": "/me/notification-settings"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "ETag": "\"example-etag-1\""
+        },
+        "body": {
+          "channels": {
+            "email": {
+              "available": true,
+              "verified": true,
+              "enabled": false
+            },
+            "push": {
+              "available": false,
+              "enabled": false
+            }
+          },
+          "categories": [
+            {
+              "key": "rides",
+              "label": "Покатушки и приглашения",
+              "email": {
+                "supported": true,
+                "enabled": false
+              },
+              "push": {
+                "supported": true,
+                "enabled": true
+              }
+            },
+            {
+              "key": "discussions",
+              "label": "Комментарии и ответы",
+              "email": {
+                "supported": true,
+                "enabled": false
+              },
+              "push": {
+                "supported": true,
+                "enabled": true
+              }
+            },
+            {
+              "key": "market",
+              "label": "Окончание срока объявлений",
+              "email": {
+                "supported": true,
+                "enabled": false
+              },
+              "push": {
+                "supported": false,
+                "enabled": false
+              }
+            }
+          ],
+          "reminders": true,
+          "updatedAt": null
+        }
+      }
+    },
+    {
+      "name": "enable_email_for_rides",
+      "description": "Включить письма и категорию «Покатушки». Меняется только указанное; повтор того же запроса ничего не меняет.",
+      "request": {
+        "method": "PATCH",
+        "path": "/me/notification-settings",
+        "headers": {
+          "If-Match": "\"example-etag-1\""
+        },
+        "body": {
+          "channels": {
+            "email": {
+              "enabled": true
+            }
+          },
+          "categories": [
+            {
+              "key": "rides",
+              "email": true
+            }
+          ]
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "ETag": "\"example-etag-2\""
+        },
+        "body": {
+          "channels": {
+            "email": {
+              "available": true,
+              "verified": true,
+              "enabled": true
+            },
+            "push": {
+              "available": false,
+              "enabled": false
+            }
+          },
+          "categories": [
+            {
+              "key": "rides",
+              "label": "Покатушки и приглашения",
+              "email": {
+                "supported": true,
+                "enabled": true
+              },
+              "push": {
+                "supported": true,
+                "enabled": true
+              }
+            },
+            {
+              "key": "discussions",
+              "label": "Комментарии и ответы",
+              "email": {
+                "supported": true,
+                "enabled": false
+              },
+              "push": {
+                "supported": true,
+                "enabled": true
+              }
+            },
+            {
+              "key": "market",
+              "label": "Окончание срока объявлений",
+              "email": {
+                "supported": true,
+                "enabled": false
+              },
+              "push": {
+                "supported": false,
+                "enabled": false
+              }
+            }
+          ],
+          "reminders": true,
+          "updatedAt": "2026-10-04T09:30:00.123Z"
+        }
+      }
+    },
+    {
+      "name": "reminders_off",
+      "description": "Напоминание о покатушке — одно для всех каналов, письмо тут ни при чём: переключатель работает и без почты.",
+      "request": {
+        "method": "PATCH",
+        "path": "/me/notification-settings",
+        "body": {
+          "reminders": false
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "ETag": "\"example-etag-3\""
+        },
+        "body": {
+          "channels": {
+            "email": {
+              "available": true,
+              "verified": true,
+              "enabled": true
+            },
+            "push": {
+              "available": false,
+              "enabled": false
+            }
+          },
+          "categories": [
+            {
+              "key": "rides",
+              "label": "Покатушки и приглашения",
+              "email": {
+                "supported": true,
+                "enabled": true
+              },
+              "push": {
+                "supported": true,
+                "enabled": true
+              }
+            },
+            {
+              "key": "discussions",
+              "label": "Комментарии и ответы",
+              "email": {
+                "supported": true,
+                "enabled": false
+              },
+              "push": {
+                "supported": true,
+                "enabled": true
+              }
+            },
+            {
+              "key": "market",
+              "label": "Окончание срока объявлений",
+              "email": {
+                "supported": true,
+                "enabled": false
+              },
+              "push": {
+                "supported": false,
+                "enabled": false
+              }
+            }
+          ],
+          "reminders": false,
+          "updatedAt": "2026-10-04T09:30:00.123Z"
+        }
+      }
+    },
+    {
+      "name": "push_connected_after_consent",
+      "availableSince": "#342",
+      "description": "Состояние после подключения доставки (#342): сервер скажет `push.available: true`, согласие аккаунта — `push.enabled`. После согласия включены «Покатушки» и «Комментарии», остальное — отдельно. Сейчас сервер так не отвечает.",
+      "response": {
+        "status": 200,
+        "body": {
+          "channels": {
+            "email": {
+              "available": true,
+              "verified": true,
+              "enabled": false
+            },
+            "push": {
+              "available": true,
+              "enabled": true
+            }
+          },
+          "categories": [
+            {
+              "key": "rides",
+              "label": "Покатушки и приглашения",
+              "email": {
+                "supported": true,
+                "enabled": false
+              },
+              "push": {
+                "supported": true,
+                "enabled": true
+              }
+            },
+            {
+              "key": "discussions",
+              "label": "Комментарии и ответы",
+              "email": {
+                "supported": true,
+                "enabled": false
+              },
+              "push": {
+                "supported": true,
+                "enabled": true
+              }
+            },
+            {
+              "key": "market",
+              "label": "Окончание срока объявлений",
+              "email": {
+                "supported": true,
+                "enabled": false
+              },
+              "push": {
+                "supported": false,
+                "enabled": false
+              }
+            }
+          ],
+          "reminders": true,
+          "updatedAt": "2026-10-04T10:00:00.000Z"
+        }
+      }
+    },
+    {
+      "name": "push_not_connected",
+      "description": "Push нельзя включить, пока доставка не подключена: 503. Выключить можно всегда.",
+      "request": {
+        "method": "PATCH",
+        "path": "/me/notification-settings",
+        "body": {
+          "channels": {
+            "push": {
+              "enabled": true
+            }
+          }
+        }
+      },
+      "response": {
+        "status": 503,
+        "body": {
+          "error": {
+            "code": "service_unavailable",
+            "message": "Push-уведомления пока не подключены"
+          }
+        }
+      }
+    },
+    {
+      "name": "email_not_verified",
+      "description": "Письма включаются на подтверждённый адрес.",
+      "request": {
+        "method": "PATCH",
+        "path": "/me/notification-settings",
+        "body": {
+          "channels": {
+            "email": {
+              "enabled": true
+            }
+          }
+        }
+      },
+      "response": {
+        "status": 403,
+        "body": {
+          "error": {
+            "code": "email_verification_required",
+            "message": "Подтвердите почту, чтобы получать внешние уведомления"
+          }
+        }
+      }
+    },
+    {
+      "name": "stale_version",
+      "description": "Изменение с `If-Match` применяется только к версии, которую клиент видел; иначе 412, клиент читает настройки снова.",
+      "request": {
+        "method": "PATCH",
+        "path": "/me/notification-settings",
+        "headers": {
+          "If-Match": "\"example-etag-0\""
+        },
+        "body": {
+          "reminders": false
+        }
+      },
+      "response": {
+        "status": 412,
+        "body": {
+          "error": {
+            "code": "precondition_failed",
+            "message": "Объект изменился после того, как вы его прочитали. Прочитайте его снова."
+          }
+        }
+      }
+    },
+    {
+      "name": "channel_cannot_carry_category",
+      "description": "Категория называет только каналы, которые могут её передавать: push для объявлений не существует.",
+      "request": {
+        "method": "PATCH",
+        "path": "/me/notification-settings",
+        "body": {
+          "categories": [
+            {
+              "key": "market",
+              "push": true
+            }
+          ]
+        }
+      },
+      "response": {
+        "status": 400,
+        "body": {
+          "error": {
+            "code": "invalid_request",
+            "message": "Проверьте поля запроса.",
+            "details": [
+              {
+                "path": "categories.0.push",
+                "message": "Этот канал не передаёт такую категорию"
+              }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

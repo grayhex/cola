@@ -1,9 +1,16 @@
 import type { Queryable } from "./db.ts";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
-import { mailEnabled } from "./mail.ts";
-import { CommunityError } from "./community-validation.ts";
-import { notificationEmailCategorySql } from "./notification-catalog.ts";
+import {
+  notificationSettings,
+  saveNotificationSettings,
+  type NotificationSettings,
+} from "./notification-settings.ts";
+
+// The e-mail view of the account's notification settings, as the site's own
+// settings form and its route have always had it (#148). The model is
+// notification-settings.ts (#341); the signed unsubscribe link below is the
+// e-mail channel's alone.
 
 export const notificationEmailInput = z
   .object({
@@ -29,19 +36,26 @@ export const defaultNotificationEmail: NotificationEmailPreferences = {
   market: false,
   reminders: true,
 };
+function emailView(settings: NotificationSettings): NotificationEmailSettings {
+  const flag = (key: string) =>
+    settings.categories.find((category) => category.key === key)?.email
+      .enabled === true;
+  return {
+    enabled: settings.channels.email.enabled,
+    discussions: flag("discussions"),
+    rides: flag("rides"),
+    market: flag("market"),
+    reminders: settings.reminders,
+    available: settings.channels.email.available,
+    verified: settings.channels.email.verified,
+  };
+}
 export async function notificationEmailSettings(
   q: Queryable,
   userId: string,
   env = process.env,
 ): Promise<NotificationEmailSettings> {
-  const { rows } = await q.query<
-    NotificationEmailPreferences & { verified: boolean; reminders: boolean }
-  >(
-    `SELECT coalesce(p.enabled,false) enabled,coalesce(p.discussions,false) discussions,coalesce(p.rides,false) rides,coalesce(p.market,false) market,coalesce(p.ride_reminders,true) reminders,u.email_verified_at IS NOT NULL verified FROM users u LEFT JOIN notification_email_preferences p ON p.user_id=u.id WHERE u.id=$1 AND NOT u.blocked`,
-    [userId],
-  );
-  if (!rows[0]) throw new CommunityError("Пользователь недоступен", 404);
-  return { ...rows[0], available: mailEnabled(env) };
+  return emailView(await notificationSettings(q, userId, { env }));
 }
 export async function saveNotificationEmail(
   q: Queryable,
@@ -50,35 +64,24 @@ export async function saveNotificationEmail(
   env = process.env,
 ) {
   const value = notificationEmailInput.parse(input);
-  const current = await notificationEmailSettings(q, userId, env);
-  if (value.enabled && !current.verified)
-    throw new CommunityError(
-      "Подтвердите почту, чтобы получать внешние уведомления",
-      403,
-    );
-  if (value.enabled && !current.available)
-    throw new CommunityError(
-      "Отправка уведомлений по почте пока не настроена",
-      503,
-    );
-  await q.query(
-    `WITH saved AS (INSERT INTO notification_email_preferences(user_id,enabled,discussions,rides,market,ride_reminders) VALUES($1,$2,$3,$4,$5,$6)
-    ON CONFLICT(user_id) DO UPDATE SET enabled=excluded.enabled,discussions=excluded.discussions,rides=excluded.rides,market=excluded.market,ride_reminders=excluded.ride_reminders,
-      unsubscribe_key=CASE WHEN excluded.enabled AND NOT notification_email_preferences.enabled THEN gen_random_uuid()::text||gen_random_uuid()::text ELSE notification_email_preferences.unsubscribe_key END,updated_at=now()
-    RETURNING user_id,enabled,discussions,rides,market,ride_reminders)
-    UPDATE notification_email_outbox o SET status='skipped',error_code='preferences',finished_at=now(),lease_token=NULL,lease_until=NULL
-    FROM notifications n,saved p WHERE o.notification_id=n.id AND o.recipient_id=p.user_id AND o.status IN ('pending','sending')
-      AND (NOT p.enabled OR (n.type='ride_reminder' AND NOT p.ride_reminders) OR NOT coalesce(CASE ${notificationEmailCategorySql("n.type")} WHEN 'discussions' THEN p.discussions WHEN 'rides' THEN p.rides WHEN 'market' THEN p.market END,false))`,
-    [
+  return emailView(
+    await saveNotificationSettings(
+      q,
       userId,
-      value.enabled,
-      value.discussions,
-      value.rides,
-      value.market,
-      value.reminders ?? current.reminders,
-    ],
+      {
+        channels: { email: { enabled: value.enabled } },
+        categories: [
+          { key: "discussions", email: value.discussions },
+          { key: "rides", email: value.rides },
+          { key: "market", email: value.market },
+        ],
+        ...(value.reminders === undefined
+          ? {}
+          : { reminders: value.reminders }),
+      },
+      { env },
+    ),
   );
-  return notificationEmailSettings(q, userId, env);
 }
 export function notificationUnsubscribeToken(
   userId: string,

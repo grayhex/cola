@@ -227,10 +227,14 @@ try {
   assert.deepEqual(idsOf(await actor.token("/me/notifications")), []);
   // The count, as the site's.
   const count = await me.token("/me/notifications/count");
-  assert.deepEqual(notificationCountSchema.parse(count.body), {
-    unread: 3,
-    capped: false,
-  });
+  const counted = notificationCountSchema.parse(count.body);
+  assert.deepEqual(
+    { unread: counted.unread, capped: counted.capped },
+    { unread: 3, capped: false },
+  );
+  // The mark "read all" counts up to (#341) is the same one the list carries.
+  assert.equal(typeof counted.watermark, "string");
+  assert.equal(counted.watermark, notices.body.watermark);
   assert.equal((await me.web("/community/notifications/count")).body.unread, 3);
   for (const query of ["?limit=0", "?foo=bar"])
     assertError(

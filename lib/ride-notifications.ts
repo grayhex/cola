@@ -83,10 +83,10 @@ export async function scheduleRideReminders(
   // edits hold users/rides before notifications; the opposite order deadlocks.
   await q.query(
     `WITH eligible AS (SELECT v.ride_id,v.user_id,v.occurs_at,v.revision FROM ride_rsvps v JOIN rides r ON r.id=v.ride_id JOIN users u ON u.id=v.user_id JOIN users owner ON owner.id=r.owner_id JOIN bikes b ON b.id=r.bike_id
-      LEFT JOIN notification_email_preferences p ON p.user_id=v.user_id
+      LEFT JOIN notification_settings p ON p.user_id=v.user_id
       WHERE v.response='accepted' AND v.revision=r.agreement_revision AND r.status='planned' AND NOT u.blocked AND NOT owner.blocked
         AND ($2::uuid IS NULL OR v.ride_id=$2) AND ($3::uuid IS NULL OR v.user_id=$3)
-        AND coalesce(p.ride_reminders,true) AND v.occurs_at>$1::timestamptz+interval '5 minutes' AND v.occurs_at=(${occurrence})
+        AND coalesce(p.reminders,true) AND v.occurs_at>$1::timestamptz+interval '5 minutes' AND v.occurs_at=(${occurrence})
         AND ((r.is_public AND b.is_public) OR EXISTS(SELECT 1 FROM ride_invitations i WHERE i.ride_id=r.id AND i.user_id=v.user_id))
         AND NOT EXISTS(SELECT 1 FROM notifications n WHERE n.recipient_id=v.user_id AND n.dedup_key=${key("ride_reminder", "v.ride_id", "v.occurs_at", "v.revision")} AND (n.cancelled_at IS NULL OR n.released_at IS NOT NULL))
       ORDER BY v.occurs_at,v.ride_id,v.user_id LIMIT 100 FOR KEY SHARE OF u,r SKIP LOCKED)
@@ -126,8 +126,8 @@ export async function rideReminderStatus(
       email_enabled: boolean;
       released: boolean;
     }>(
-      `SELECT coalesce(p.ride_reminders,true) enabled,coalesce(p.enabled AND p.rides AND u.email_verified_at IS NOT NULL,false) email_enabled,n.deliver_after at,(n.released_at IS NOT NULL) released
-    FROM users u LEFT JOIN notification_email_preferences p ON p.user_id=u.id
+      `SELECT coalesce(s.reminders,true) enabled,coalesce(p.enabled AND p.rides AND u.email_verified_at IS NOT NULL,false) email_enabled,n.deliver_after at,(n.released_at IS NOT NULL) released
+    FROM users u LEFT JOIN notification_email_preferences p ON p.user_id=u.id LEFT JOIN notification_settings s ON s.user_id=u.id
     LEFT JOIN notifications n ON n.recipient_id=u.id AND n.ride_id=$2 AND n.type='ride_reminder' AND n.cancelled_at IS NULL AND n.event_occurs_at>$3 AND n.event_revision=(SELECT agreement_revision FROM rides WHERE id=$2)
     WHERE u.id=$1 AND NOT u.blocked ORDER BY n.event_occurs_at LIMIT 1`,
       [user, ride, now],

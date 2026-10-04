@@ -9,6 +9,7 @@ import {
   savedListings,
 } from "../lib/market.ts";
 import {
+  inboxState,
   notificationKeysetPage,
   notificationPage,
   unreadCount,
@@ -288,8 +289,9 @@ test("notices: the end of a listing's term and a security notice", async () => {
 
 test("the count is the site's", async () => {
   const count = await unreadCount(db, me);
-  notificationCountSchema.parse(count);
   assert.equal(count.unread, 6);
+  // What the API sends adds the mark to read up to (#341).
+  notificationCountSchema.parse(await inboxState(db, me));
   await db.query(
     "UPDATE notifications SET read_at=now() WHERE recipient_id=$1 AND type='follow'",
     [me],
