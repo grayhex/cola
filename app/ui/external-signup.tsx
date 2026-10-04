@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "./icons.tsx";
 import GlobalHeader from "./global-header.tsx";
-import { SocialFooter, socialApi } from "./social-primitives.tsx";
+import { SocialFooter, leavingPage, socialApi } from "./social-primitives.tsx";
 import AuthForm from "./auth-form.tsx";
 import AuthWindow from "./auth-window.tsx";
 import styles from "./auth.module.css";
@@ -65,6 +65,7 @@ export default function ExternalSignup() {
                   );
                   // A new session: reload the server viewer.
                   location.assign(result.returnPath);
+                  return leavingPage();
                 } catch (e) {
                   setError(errorMessage(e));
                   setBusy(false);

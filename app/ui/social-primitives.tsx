@@ -41,6 +41,13 @@ export async function socialApi<T = unknown>(
     );
   return result;
 }
+// Returned by a handler that has just started a full navigation: whoever awaits
+// the handler (the sign-in form rereading its documents) waits while the page is
+// replaced. A request started then is only cancelled, and WebKit dropped the
+// navigation together with it.
+export function leavingPage(): Promise<never> {
+  return new Promise<never>(() => {});
+}
 import { Avatar } from "./avatar.tsx";
 export { Avatar } from "./avatar.tsx";
 // Links to /@username are not prefetched: Next 16 guesses the route of a
