@@ -33,7 +33,15 @@ export default function BikeCarousel({
   }
   useEffect(() => stop, []);
   useEffect(() => {
-    if (reduced) stop();
+    // Reduced motion ends an animation that is running. A move still waiting
+    // for the motion code is not dropped: it finishes as a plain jump (it
+    // checks the setting again when the code arrives). Bumping the sequence
+    // here threw such a move away, so a key pressed just as the setting
+    // changed did nothing.
+    if (reduced) {
+      cancel.current?.();
+      cancel.current = null;
+    }
   }, [reduced]);
   async function move(target: number) {
     stop();

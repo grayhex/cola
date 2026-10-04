@@ -6,6 +6,10 @@ import { readFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import { defaultSettings } from "../../lib/site-defaults.ts";
 import { testConsents } from "../fixtures/legal.js";
+import {
+  documentClock,
+  expectSameDocument,
+} from "../fixtures/document-clock.js";
 const origin = process.env.TEST_ORIGIN || "http://localhost:3100";
 const bikes = Array.from({ length: 9 }, (_, i) => ({
   id: `bike-${i}`,
@@ -214,7 +218,7 @@ test("direct links, disclosure keyboard, return context and no document reload",
       .getByRole("navigation", { name: "Основная навигация" })
       .getByRole("link", { name: "Журнал", exact: true }),
   ).toHaveAttribute("href", "/journal");
-  const clock = await page.evaluate(() => performance.timeOrigin);
+  const clock = await documentClock(page);
   await page.locator(".bike-card").nth(6).scrollIntoViewIfNeeded();
   const scroll = await page.evaluate(() => scrollY);
   // The photo is a mouse shortcut to the title link (hidden from
@@ -225,7 +229,7 @@ test("direct links, disclosure keyboard, return context and no document reload",
   ).toBeVisible();
   await card.locator(".card-open-photo").click();
   await expect(page).toHaveURL(/\/b\/share-6/);
-  expect(await page.evaluate(() => performance.timeOrigin)).toBe(clock);
+  await expectSameDocument(page, clock);
   await page.goBack();
   await expect(
     page.getByRole("button", { name: "Порядок витрины" }),
@@ -234,7 +238,7 @@ test("direct links, disclosure keyboard, return context and no document reload",
     page.getByRole("button", { name: "Убрать фильтр Гравел" }),
   ).toBeVisible();
   await expect(page).toHaveURL(/q=Cube/);
-  expect(await page.evaluate(() => performance.timeOrigin)).toBe(clock);
+  await expectSameDocument(page, clock);
   await expect
     .poll(() => page.evaluate(() => scrollY))
     .toBeGreaterThan(scroll - 80);
