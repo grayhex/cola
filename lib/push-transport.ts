@@ -1,4 +1,5 @@
 import type { PushProvider } from "./push-config.ts";
+import { configuredRustoreTransport } from "./push-rustore.ts";
 
 // What the sender needs from a provider (#342), and nothing else. A provider is
 // one adapter of this interface; the queue knows no vendor, no endpoint and no
@@ -34,13 +35,11 @@ export interface PushTransport {
 }
 
 /**
- * The transport of the configured provider, or null while there is none. The
- * RuStore adapter is the next change; until it exists nothing is sent and
- * nothing queues up (see `runPushBatch`).
+ * The transport of the configured provider, or null while there is none: without
+ * one nothing is sent and nothing queues up (see `runPushBatch`).
  */
 export function pushTransport(
   env: NodeJS.ProcessEnv = process.env,
 ): PushTransport | null {
-  void env;
-  return null;
+  return configuredRustoreTransport(env);
 }
