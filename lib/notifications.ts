@@ -14,8 +14,17 @@ import {
   type NotificationCategoryKey,
 } from "./notification-catalog.ts";
 import { rideNoticeVisible } from "./ride-notification-policy.ts";
-// Keep one lifetime follow/like event; comments/replies coalesce per actor/bike/15m.
-// Never reset created_at or read_at on conflict, including unlike/like and refollow.
+// Keep one lifetime follow/like event. The discussion events are told apart
+// (#341): the identity of an event is its comment, the group is what one author
+// does to one object in a quarter of an hour. A new event of a group whose
+// newest notice is still unread is folded into that notice, which then points
+// at the newest comment (its read state and time are never touched); once that
+// notice has been read the next event gets a notice of its own, so a direct
+// reply after the previous one was read is never lost. Repeating one event
+// (the same comment) changes nothing. Never reset created_at or read_at,
+// including unlike/like and refollow.
+const groupedTypes =
+  "('comment','reply','ride_comment','ride_reply','journal_comment','journal_reply','component_reply')";
 
 export async function notify(
   q: QueryableType,
@@ -47,9 +56,21 @@ export async function notify(
 ) {
   if (!recipient || recipient === actor) return;
   const key = `${type}:${actor}:${component || entry || ride || bike || ""}`;
+  // The event itself: the comment the notice is about.
+  const event = comment || rideComment || entryComment || componentComment;
   await q.query(
-    `WITH created AS (INSERT INTO notifications(id,recipient_id,actor_id,type,bike_id,comment_id,dedup_key,ride_id,ride_comment_id,entry_id,entry_comment_id,component_id,component_comment_id)
- SELECT $1,$2,$3,$4,$5,$6,$7 || CASE WHEN $4 IN ('comment','reply','ride_comment','ride_reply','journal_comment','journal_reply','component_reply') THEN ':' || floor(extract(epoch from now())/900)::bigint::text ELSE '' END,$8,$9,$10,$11,$12,$13 WHERE EXISTS(SELECT 1 FROM users WHERE id=$2 AND NOT blocked) AND EXISTS(SELECT 1 FROM users WHERE id=$3 AND NOT blocked)
+    `WITH k AS (SELECT $7::text || CASE WHEN $4 IN ${groupedTypes} THEN ':' || floor(extract(epoch from now())/900)::bigint::text ELSE '' END AS group_key),
+ grp AS (SELECT n.id,n.read_at FROM notifications n,k
+  WHERE $4 IN ${groupedTypes} AND n.recipient_id=$2 AND (n.group_key=k.group_key OR (n.group_key IS NULL AND n.dedup_key=k.group_key))
+  ORDER BY n.created_at DESC,n.id LIMIT 1),
+ folded AS (UPDATE notifications n SET comment_id=coalesce($6,n.comment_id),ride_comment_id=coalesce($9,n.ride_comment_id),
+  entry_comment_id=coalesce($11,n.entry_comment_id),component_comment_id=coalesce($13,n.component_comment_id)
+  FROM grp WHERE n.id=grp.id AND grp.read_at IS NULL RETURNING n.id),
+ created AS (INSERT INTO notifications(id,recipient_id,actor_id,type,bike_id,comment_id,dedup_key,group_key,ride_id,ride_comment_id,entry_id,entry_comment_id,component_id,component_comment_id)
+ SELECT $1,$2,$3,$4,$5,$6,CASE WHEN EXISTS(SELECT 1 FROM grp) THEN k.group_key || ':' || coalesce($15::text,$1::uuid::text) ELSE k.group_key END,
+  CASE WHEN $4 IN ${groupedTypes} THEN k.group_key END,$8,$9,$10,$11,$12,$13
+ FROM k WHERE EXISTS(SELECT 1 FROM users WHERE id=$2 AND NOT blocked) AND EXISTS(SELECT 1 FROM users WHERE id=$3 AND NOT blocked)
+  AND NOT EXISTS(SELECT 1 FROM grp WHERE read_at IS NULL)
  ON CONFLICT(recipient_id,dedup_key) DO NOTHING RETURNING id,recipient_id,type)
  ${notificationEmailEnqueueSql("$14::boolean")}`,
     [
@@ -67,6 +88,7 @@ export async function notify(
       component,
       componentComment,
       mailEnabled(),
+      event,
     ],
   );
 }

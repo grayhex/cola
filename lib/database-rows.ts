@@ -397,6 +397,8 @@ export interface NotificationRecord {
   bike_id: string | null;
   comment_id: string | null;
   dedup_key: string;
+  /** The group of a discussion notice: one author, one object, a quarter of an hour. */
+  group_key: string | null;
   created_at: Date;
   read_at: Date | null;
   ride_id: string | null;

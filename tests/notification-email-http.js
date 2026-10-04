@@ -120,7 +120,7 @@ try {
     "renewed consent rotates old links",
   );
   await q.query(
-    "UPDATE notifications SET dedup_key=dedup_key||':old' WHERE recipient_id=$1",
+    "UPDATE notifications SET dedup_key=dedup_key||':old',group_key=NULL WHERE recipient_id=$1",
     [users[0].id],
   );
   await add();
