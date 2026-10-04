@@ -463,12 +463,33 @@ export async function exportAccount(
       reminders: boolean;
       push_enabled: boolean;
       push_categories: unknown;
+      time_zone: string | null;
+      quiet_enabled: boolean;
+      quiet_from: number;
+      quiet_to: number;
+      quiet_cancel: boolean;
+      paused_until: Date | null;
+      circle: string;
+      considering: boolean;
       updated_at: Date | null;
     }>(
-      "SELECT reminders,push_enabled,push_categories,updated_at FROM notification_settings WHERE user_id=$1",
+      `SELECT reminders,push_enabled,push_categories,time_zone,quiet_enabled,quiet_from,quiet_to,quiet_cancel,paused_until,circle,considering,updated_at
+      FROM notification_settings WHERE user_id=$1`,
       [userId],
     )
   ).rows[0];
+  const circleMembers = (
+    await q.query<{ username: string }>(
+      "SELECT u.username FROM notification_circle_members c JOIN users u ON u.id=c.member_id WHERE c.user_id=$1 ORDER BY c.created_at,u.id",
+      [userId],
+    )
+  ).rows.map((row) => row.username);
+  const notificationMutes = (
+    await q.query<{ kind: string; target_id: string }>(
+      "SELECT kind,target_id FROM notification_mutes WHERE user_id=$1 ORDER BY created_at,target_id",
+      [userId],
+    )
+  ).rows.map((row) => ({ kind: row.kind, id: row.target_id }));
   const notificationEmailPreferences = {
     ...((
       await q.query<{
@@ -497,6 +518,20 @@ export async function exportAccount(
       enabled: notificationSettingsRow?.push_enabled ?? false,
       categories: notificationSettingsRow?.push_categories ?? {},
     },
+    timeZone: notificationSettingsRow?.time_zone ?? null,
+    quietHours: {
+      enabled: notificationSettingsRow?.quiet_enabled ?? false,
+      from: notificationSettingsRow?.quiet_from ?? 1320,
+      to: notificationSettingsRow?.quiet_to ?? 420,
+      allowCancellations: notificationSettingsRow?.quiet_cancel ?? false,
+    },
+    pausedUntil: notificationSettingsRow?.paused_until ?? null,
+    circle: {
+      mode: notificationSettingsRow?.circle ?? "friends",
+      members: circleMembers,
+    },
+    considering: notificationSettingsRow?.considering ?? false,
+    mutes: notificationMutes,
     updatedAt: notificationSettingsRow?.updated_at ?? null,
   };
   return {

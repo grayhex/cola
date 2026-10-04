@@ -65,6 +65,20 @@
             }
           ],
           "reminders": true,
+          "timeZone": null,
+          "quietHours": {
+            "enabled": false,
+            "from": "22:00",
+            "to": "07:00",
+            "allowCancellations": false
+          },
+          "pausedUntil": null,
+          "circle": {
+            "mode": "friends",
+            "members": []
+          },
+          "considering": false,
+          "mutes": [],
           "updatedAt": null
         }
       }
@@ -148,6 +162,20 @@
             }
           ],
           "reminders": true,
+          "timeZone": null,
+          "quietHours": {
+            "enabled": false,
+            "from": "22:00",
+            "to": "07:00",
+            "allowCancellations": false
+          },
+          "pausedUntil": null,
+          "circle": {
+            "mode": "friends",
+            "members": []
+          },
+          "considering": false,
+          "mutes": [],
           "updatedAt": "2026-10-04T09:30:00.123Z"
         }
       }
@@ -218,7 +246,503 @@
             }
           ],
           "reminders": false,
+          "timeZone": null,
+          "quietHours": {
+            "enabled": false,
+            "from": "22:00",
+            "to": "07:00",
+            "allowCancellations": false
+          },
+          "pausedUntil": null,
+          "circle": {
+            "mode": "friends",
+            "members": []
+          },
+          "considering": false,
+          "mutes": [],
           "updatedAt": "2026-10-04T09:30:00.123Z"
+        }
+      }
+    },
+    {
+      "name": "quiet_hours",
+      "description": "Тихие часы читаются по часам человека, поэтому нужен часовой пояс (название IANA, не смещение). Пока окно открыто, письма и push ждут его конца; сообщение, срок которого выходит раньше, не отправляется утром вовсе. Окно, которое заканчивается раньше, чем начинается, переходит через полночь. Внутри приложения уведомления появляются всегда.",
+      "request": {
+        "method": "PATCH",
+        "path": "/me/notification-settings",
+        "body": {
+          "timeZone": "Europe/Moscow",
+          "quietHours": {
+            "enabled": true,
+            "from": "23:00",
+            "to": "07:30"
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "ETag": "\"example-etag-4\""
+        },
+        "body": {
+          "channels": {
+            "email": {
+              "available": true,
+              "verified": true,
+              "enabled": false
+            },
+            "push": {
+              "available": false,
+              "enabled": false
+            }
+          },
+          "categories": [
+            {
+              "key": "rides",
+              "label": "Покатушки и приглашения",
+              "email": {
+                "supported": true,
+                "enabled": false
+              },
+              "push": {
+                "supported": true,
+                "enabled": true
+              }
+            },
+            {
+              "key": "discussions",
+              "label": "Комментарии и ответы",
+              "email": {
+                "supported": true,
+                "enabled": false
+              },
+              "push": {
+                "supported": true,
+                "enabled": true
+              }
+            },
+            {
+              "key": "market",
+              "label": "Окончание срока объявлений",
+              "email": {
+                "supported": true,
+                "enabled": false
+              },
+              "push": {
+                "supported": false,
+                "enabled": false
+              }
+            }
+          ],
+          "reminders": true,
+          "timeZone": "Europe/Moscow",
+          "quietHours": {
+            "enabled": true,
+            "from": "23:00",
+            "to": "07:30",
+            "allowCancellations": false
+          },
+          "pausedUntil": null,
+          "circle": {
+            "mode": "friends",
+            "members": []
+          },
+          "considering": false,
+          "mutes": [],
+          "updatedAt": "2026-10-04T09:40:00.123Z"
+        }
+      }
+    },
+    {
+      "name": "quiet_hours_need_a_zone",
+      "description": "Без часового пояса окно не включить: сервер не знает, чьи это часы.",
+      "request": {
+        "method": "PATCH",
+        "path": "/me/notification-settings",
+        "body": {
+          "quietHours": {
+            "enabled": true
+          }
+        }
+      },
+      "response": {
+        "status": 400,
+        "body": {
+          "error": {
+            "code": "invalid_request",
+            "message": "Чтобы включить тихие часы, укажите часовой пояс"
+          }
+        }
+      }
+    },
+    {
+      "name": "close_cancellation_breaks_quiet",
+      "description": "Явный выбор человека: отмена подтверждённого выезда, до которого меньше 12 часов, не ждёт конца тихих часов. Пауза этим не обходится. По умолчанию выключено.",
+      "request": {
+        "method": "PATCH",
+        "path": "/me/notification-settings",
+        "body": {
+          "quietHours": {
+            "allowCancellations": true
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "ETag": "\"example-etag-5\""
+        },
+        "body": {
+          "channels": {
+            "email": {
+              "available": true,
+              "verified": true,
+              "enabled": false
+            },
+            "push": {
+              "available": false,
+              "enabled": false
+            }
+          },
+          "categories": [
+            {
+              "key": "rides",
+              "label": "Покатушки и приглашения",
+              "email": {
+                "supported": true,
+                "enabled": false
+              },
+              "push": {
+                "supported": true,
+                "enabled": true
+              }
+            },
+            {
+              "key": "discussions",
+              "label": "Комментарии и ответы",
+              "email": {
+                "supported": true,
+                "enabled": false
+              },
+              "push": {
+                "supported": true,
+                "enabled": true
+              }
+            },
+            {
+              "key": "market",
+              "label": "Окончание срока объявлений",
+              "email": {
+                "supported": true,
+                "enabled": false
+              },
+              "push": {
+                "supported": false,
+                "enabled": false
+              }
+            }
+          ],
+          "reminders": true,
+          "timeZone": null,
+          "quietHours": {
+            "enabled": false,
+            "from": "22:00",
+            "to": "07:00",
+            "allowCancellations": true
+          },
+          "pausedUntil": null,
+          "circle": {
+            "mode": "friends",
+            "members": []
+          },
+          "considering": false,
+          "mutes": [],
+          "updatedAt": "2026-10-04T09:41:00.123Z"
+        }
+      }
+    },
+    {
+      "name": "pause",
+      "description": "Пауза: до указанного времени внешние каналы молчат, сказанное за это время потом не досылается. `null` снимает паузу. Не дальше чем на год вперёд.",
+      "request": {
+        "method": "PATCH",
+        "path": "/me/notification-settings",
+        "body": {
+          "pausedUntil": "2026-10-10T18:00:00.000Z"
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "ETag": "\"example-etag-6\""
+        },
+        "body": {
+          "channels": {
+            "email": {
+              "available": true,
+              "verified": true,
+              "enabled": false
+            },
+            "push": {
+              "available": false,
+              "enabled": false
+            }
+          },
+          "categories": [
+            {
+              "key": "rides",
+              "label": "Покатушки и приглашения",
+              "email": {
+                "supported": true,
+                "enabled": false
+              },
+              "push": {
+                "supported": true,
+                "enabled": true
+              }
+            },
+            {
+              "key": "discussions",
+              "label": "Комментарии и ответы",
+              "email": {
+                "supported": true,
+                "enabled": false
+              },
+              "push": {
+                "supported": true,
+                "enabled": true
+              }
+            },
+            {
+              "key": "market",
+              "label": "Окончание срока объявлений",
+              "email": {
+                "supported": true,
+                "enabled": false
+              },
+              "push": {
+                "supported": false,
+                "enabled": false
+              }
+            }
+          ],
+          "reminders": true,
+          "timeZone": null,
+          "quietHours": {
+            "enabled": false,
+            "from": "22:00",
+            "to": "07:00",
+            "allowCancellations": false
+          },
+          "pausedUntil": "2026-10-10T18:00:00.000Z",
+          "circle": {
+            "mode": "friends",
+            "members": []
+          },
+          "considering": false,
+          "mutes": [],
+          "updatedAt": "2026-10-04T09:42:00.123Z"
+        }
+      }
+    },
+    {
+      "name": "circle_selected",
+      "description": "Кому доверено сообщать о своих новых планах и намерениях: `friends` (взаимные подписки, по умолчанию), `follows`, `selected` или `off`. Выбранных людей добавляют и убирают списками идентификаторов; повтор ничего не меняет. Подписка и выбор не расширяют доступ: если событие человеку недоступно, уведомления нет.",
+      "request": {
+        "method": "PATCH",
+        "path": "/me/notification-settings",
+        "body": {
+          "circle": {
+            "mode": "selected",
+            "add": ["00000000-0000-4000-8000-000000000003"]
+          },
+          "considering": true
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "ETag": "\"example-etag-7\""
+        },
+        "body": {
+          "channels": {
+            "email": {
+              "available": true,
+              "verified": true,
+              "enabled": false
+            },
+            "push": {
+              "available": false,
+              "enabled": false
+            }
+          },
+          "categories": [
+            {
+              "key": "rides",
+              "label": "Покатушки и приглашения",
+              "email": {
+                "supported": true,
+                "enabled": false
+              },
+              "push": {
+                "supported": true,
+                "enabled": true
+              }
+            },
+            {
+              "key": "discussions",
+              "label": "Комментарии и ответы",
+              "email": {
+                "supported": true,
+                "enabled": false
+              },
+              "push": {
+                "supported": true,
+                "enabled": true
+              }
+            },
+            {
+              "key": "market",
+              "label": "Окончание срока объявлений",
+              "email": {
+                "supported": true,
+                "enabled": false
+              },
+              "push": {
+                "supported": false,
+                "enabled": false
+              }
+            }
+          ],
+          "reminders": true,
+          "timeZone": null,
+          "quietHours": {
+            "enabled": false,
+            "from": "22:00",
+            "to": "07:00",
+            "allowCancellations": false
+          },
+          "pausedUntil": null,
+          "circle": {
+            "mode": "selected",
+            "members": [
+              {
+                "id": "00000000-0000-4000-8000-000000000003",
+                "username": "boris",
+                "name": "Борис",
+                "avatarUrl": null
+              }
+            ]
+          },
+          "considering": true,
+          "mutes": [],
+          "updatedAt": "2026-10-04T09:43:00.123Z"
+        }
+      }
+    },
+    {
+      "name": "mute_author_and_ride",
+      "description": "Заглушить автора (всё, что он делает), покатушку (всё о ней) или обсуждение (комментарии под объектом): внешние каналы молчат, в ящике сайта и приложения остаётся. `label` — название, если человек вправе его знать, иначе null. Сервер не говорит, существует ли объект.",
+      "request": {
+        "method": "PATCH",
+        "path": "/me/notification-settings",
+        "body": {
+          "mutes": {
+            "add": [
+              {
+                "kind": "author",
+                "id": "00000000-0000-4000-8000-000000000003"
+              },
+              {
+                "kind": "ride",
+                "id": "00000000-0000-4000-8000-00000000000b"
+              }
+            ]
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "ETag": "\"example-etag-8\""
+        },
+        "body": {
+          "channels": {
+            "email": {
+              "available": true,
+              "verified": true,
+              "enabled": false
+            },
+            "push": {
+              "available": false,
+              "enabled": false
+            }
+          },
+          "categories": [
+            {
+              "key": "rides",
+              "label": "Покатушки и приглашения",
+              "email": {
+                "supported": true,
+                "enabled": false
+              },
+              "push": {
+                "supported": true,
+                "enabled": true
+              }
+            },
+            {
+              "key": "discussions",
+              "label": "Комментарии и ответы",
+              "email": {
+                "supported": true,
+                "enabled": false
+              },
+              "push": {
+                "supported": true,
+                "enabled": true
+              }
+            },
+            {
+              "key": "market",
+              "label": "Окончание срока объявлений",
+              "email": {
+                "supported": true,
+                "enabled": false
+              },
+              "push": {
+                "supported": false,
+                "enabled": false
+              }
+            }
+          ],
+          "reminders": true,
+          "timeZone": null,
+          "quietHours": {
+            "enabled": false,
+            "from": "22:00",
+            "to": "07:00",
+            "allowCancellations": false
+          },
+          "pausedUntil": null,
+          "circle": {
+            "mode": "friends",
+            "members": []
+          },
+          "considering": false,
+          "mutes": [
+            {
+              "kind": "author",
+              "id": "00000000-0000-4000-8000-000000000003",
+              "label": "Борис"
+            },
+            {
+              "kind": "ride",
+              "id": "00000000-0000-4000-8000-00000000000b",
+              "label": "Вечерний круг"
+            }
+          ],
+          "updatedAt": "2026-10-04T09:44:00.123Z"
         }
       }
     },
@@ -279,6 +803,20 @@
             }
           ],
           "reminders": true,
+          "timeZone": null,
+          "quietHours": {
+            "enabled": false,
+            "from": "22:00",
+            "to": "07:00",
+            "allowCancellations": false
+          },
+          "pausedUntil": null,
+          "circle": {
+            "mode": "friends",
+            "members": []
+          },
+          "considering": false,
+          "mutes": [],
           "updatedAt": "2026-10-04T10:00:00.000Z"
         }
       }

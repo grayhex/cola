@@ -628,6 +628,15 @@ export function toNotificationSettings(
     channels: settings.channels,
     categories: settings.categories,
     reminders: settings.reminders,
+    timeZone: settings.timeZone,
+    quietHours: settings.quietHours,
+    pausedUntil: settings.pausedUntil,
+    circle: {
+      mode: settings.circle.mode,
+      members: settings.circle.members.map((member) => toAuthor(member)!),
+    },
+    considering: settings.considering,
+    mutes: settings.mutes,
     // PostgreSQL's microseconds become the milliseconds every other instant has.
     updatedAt: settings.updatedAt
       ? new Date(settings.updatedAt).toISOString()

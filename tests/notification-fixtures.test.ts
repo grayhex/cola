@@ -27,6 +27,7 @@ import { decodeWatermark } from "../lib/notifications.ts";
 import {
   droppedEnvelopes,
   fixtureDirectory,
+  ids,
   payloadFile,
   preferencesFile,
   readFile as readStateFile,
@@ -40,6 +41,8 @@ import {
 import { testDatabase } from "./support/database.ts";
 import { processEnv } from "./support/env.ts";
 import { userRow } from "./support/people.ts";
+import { bikeRow } from "./support/bikes.ts";
+import { rideRow } from "./support/rides.ts";
 
 // The published fixtures of the notification contract (#341): docs/contracts/
 // notifications/v1. They are made from tests/support/notification-fixtures.ts;
@@ -308,6 +311,68 @@ test("preferences: the examples are what the service answers", async () => {
       name,
     );
   }
+});
+
+test("preferences: the policy examples are what the service answers", async () => {
+  const mail = processEnv({ MAIL_CAPTURE_DIR: "/tmp/cola-fixtures-test" });
+  const cases = Object.fromEntries(
+    preferencesFile().cases.map((item) => [item.name, item]),
+  );
+  // The examples speak of fixed people and rides; the service of real ones.
+  const friend = await userRow(db, { name: "Борис", username: "boris" });
+  const owner = await userRow(db);
+  const bike = await bikeRow(db, owner.id);
+  const ride = await rideRow(db, owner.id, bike.id, { title: "Вечерний круг" });
+  const real = (value: unknown) =>
+    JSON.parse(
+      JSON.stringify(value)
+        .replaceAll(ids.boris, friend.id)
+        .replaceAll(ids.ride, ride.id),
+    );
+  const body = (name: string) => {
+    const item = cases[name];
+    assert.ok(item.request && "body" in item.request, name);
+    return notificationSettingsPatch.parse(real(item.request.body));
+  };
+  const view = (
+    settings: Awaited<ReturnType<typeof notificationSettings>>,
+  ) => ({ ...toNotificationSettings(settings), updatedAt: null });
+  const expected = (name: string) => ({
+    ...real((cases[name].response as { body: object }).body),
+    updatedAt: null,
+  });
+  const who = async () =>
+    (await userRow(db, { email_verified_at: new Date() })).id;
+
+  for (const name of [
+    "quiet_hours",
+    "close_cancellation_breaks_quiet",
+    "pause",
+    "circle_selected",
+    "mute_author_and_ride",
+  ]) {
+    const id = await who();
+    // The pause of the example lies in the future of the example's clock.
+    const now = new Date("2026-10-04T09:00:00Z");
+    assert.deepEqual(
+      view(
+        await saveNotificationSettings(db, id, body(name), { env: mail, now }),
+      ),
+      expected(name),
+      name,
+    );
+  }
+  const id = await who();
+  const refused = cases.quiet_hours_need_a_zone;
+  await assert.rejects(
+    saveNotificationSettings(db, id, body("quiet_hours_need_a_zone"), {
+      env: mail,
+    }),
+    (error: Error & { status?: number }) =>
+      error.status === 400 &&
+      error.message ===
+        (refused.response.body as { error: { message: string } }).error.message,
+  );
 });
 
 // ---- read-state ------------------------------------------------------------
