@@ -5,7 +5,7 @@
 Личный гараж и сообщество для тех, кто ездит, собирает и меняет свои велосипеды.
 Сохраните комплектацию, расскажите об опыте, найдите интересные сборки и запланируйте покатушку с компанией.
 
-[Открыть ColaBike](https://colabike.ru) · [О проекте](https://colabike.ru/about) · [Документация](docs/README.md) · [План развития](https://github.com/grayhex/cola/issues/136)
+[Открыть ColaBike](https://colabike.ru) · [Android](https://github.com/grayhex/colabike-android) · [О проекте](https://colabike.ru/about) · [Документация](docs/README.md) · [План развития](https://github.com/grayhex/cola/issues/136)
 
 [![CI](https://github.com/grayhex/cola/actions/workflows/check.yml/badge.svg)](https://github.com/grayhex/cola/actions/workflows/check.yml)
 
@@ -29,6 +29,30 @@
 Приватность проверяется сервером: скрытый велосипед, черновик или оригинал трека не становятся публичными из-за знания ссылки. Владелец управляет видимостью поездки, метрик и зон около старта и финиша.
 
 > **Границы текущей версии.** Stream Chat и Ride with GPS по умолчанию выключены и требуют ключей и настройки. Импорт Garmin CSV уже работает; автоматической синхронизации Garmin/Strava, OAuth-входа в ColaBike и GPX Replay пока нет. Следующие шаги ведём в [issues](https://github.com/grayhex/cola/issues).
+
+## Нативный Android-клиент
+
+Отдельный репозиторий **[grayhex/colabike-android](https://github.com/grayhex/colabike-android)** содержит нативное приложение ColaBike для Android 17 на Kotlin / Jetpack Compose.
+
+Android — не отдельный продуктовый backend: он использует этот репозиторий как **источник истины для доменной логики, прав доступа и API v1**.
+
+```text
+ColaBike Android
+      │
+      │ HTTPS / API v1 / Bearer
+      ▼
+grayhex/cola
+      │
+      ├─ PostgreSQL
+      ├─ media
+      ├─ notifications
+      ├─ Stream Chat bridge
+      └─ mobile app-config / admin
+```
+
+Контракт клиента публикуется через [API v1](docs/modules/api-v1.md), а Android хранит закреплённый OpenAPI snapshot и автоматически проверяет drift. Если мобильному сценарию не хватает endpoint, он сначала проектируется и реализуется здесь, затем подключается в Android.
+
+[Android README](https://github.com/grayhex/colabike-android#readme) · [Android roadmap](https://github.com/grayhex/colabike-android/issues/2) · [Mobile Admin / app-config #338](https://github.com/grayhex/cola/issues/338)
 
 ## Запустить локально
 
@@ -61,6 +85,7 @@ docker compose up --build -d --wait --wait-timeout 180
 | [`scripts/`](scripts/) · [`ops/`](ops/)              | Миграции, обслуживание, проверки и развёртывание |
 | [`tests/`](tests/)                                   | Unit, HTTP и браузерные проверки                 |
 | [`docs/`](docs/README.md)                            | Устройство проекта, разработка и эксплуатация    |
+| [Android client](https://github.com/grayhex/colabike-android) | Нативный Kotlin/Compose-клиент API v1             |
 
 Compose запускает приложение, БД, Resolver и фоновые сервисы `chat-sync` / `activity-sync`. Одноразовый `migrate` применяет схему до старта приложения и workers. Фотографии и оригиналы треков хранятся в отдельных volumes; переписка и вложения чата — в Stream.
 
