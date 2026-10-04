@@ -334,13 +334,18 @@ test("preferences: the policy examples are what the service answers", async () =
     assert.ok(item.request && "body" in item.request, name);
     return notificationSettingsPatch.parse(real(item.request.body));
   };
-  const view = (
-    settings: Awaited<ReturnType<typeof notificationSettings>>,
-  ) => ({ ...toNotificationSettings(settings), updatedAt: null });
-  const expected = (name: string) => ({
-    ...real((cases[name].response as { body: object }).body),
-    updatedAt: null,
+  // Mutes made in one request share a time; the example lists them by kind.
+  const byKind = <T extends { mutes: { kind: string }[] }>(body: T): T => ({
+    ...body,
+    mutes: [...body.mutes].sort((a, b) => a.kind.localeCompare(b.kind)),
   });
+  const view = (settings: Awaited<ReturnType<typeof notificationSettings>>) =>
+    byKind({ ...toNotificationSettings(settings), updatedAt: null });
+  const expected = (name: string) =>
+    byKind({
+      ...real((cases[name].response as { body: object }).body),
+      updatedAt: null,
+    });
   const who = async () =>
     (await userRow(db, { email_verified_at: new Date() })).id;
 

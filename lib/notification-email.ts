@@ -2,7 +2,15 @@ import type { Queryable } from "./db.ts";
 import type { MailMessage } from "./mail.ts";
 import { randomUUID } from "node:crypto";
 import { mailEnabled, sendMail } from "./mail.ts";
-import { notificationEmailEvents } from "./notification-catalog.ts";
+import {
+  notificationEmailEvents,
+  notificationEmailPersonalSql,
+} from "./notification-catalog.ts";
+import {
+  deliveryPolicy,
+  externalVerdict,
+  noticeMutedSql,
+} from "./notification-policy.ts";
 import { notificationUnsubscribeToken } from "./notification-preferences.ts";
 import { notificationMail } from "./mail-templates.ts";
 import { notificationPage } from "./notifications.ts";
@@ -26,17 +34,21 @@ export async function claimNotificationEmails(
   const token = randomUUID();
   const eligible = (alias: string) =>
     `${alias}.expires_at>$1 AND ${alias}.available_at<=$1 AND ${alias}.attempts<8 AND (${alias}.status='pending' OR (${alias}.status='sending' AND ${alias}.lease_until<=$1))`;
+  const personal = notificationEmailPersonalSql("n.type");
   const { rows } = await q.query<EmailJob>(
     `WITH candidates AS (
-    SELECT o.notification_id,o.recipient_id FROM notification_email_outbox o JOIN notification_email_preferences p ON p.user_id=o.recipient_id
-    WHERE ${eligible("o")} AND p.next_delivery_at<=$1
-      AND NOT EXISTS(SELECT 1 FROM notification_email_outbox earlier WHERE earlier.recipient_id=o.recipient_id AND ${eligible("earlier")} AND (earlier.created_at,earlier.notification_id)<(o.created_at,o.notification_id))
+    SELECT o.notification_id,o.recipient_id,NOT (${personal}) paced FROM notification_email_outbox o
+    JOIN notification_email_preferences p ON p.user_id=o.recipient_id JOIN notifications n ON n.id=o.notification_id
+    WHERE ${eligible("o")} AND (p.next_delivery_at<=$1 OR ${personal})
+      AND NOT EXISTS(SELECT 1 FROM notification_email_outbox earlier JOIN notifications en ON en.id=earlier.notification_id
+        WHERE earlier.recipient_id=o.recipient_id AND ${eligible("earlier")} AND (${notificationEmailPersonalSql("en.type")})=(${personal})
+          AND (earlier.created_at,earlier.notification_id)<(o.created_at,o.notification_id))
     ORDER BY o.recipient_id,o.created_at,o.notification_id LIMIT $2 FOR UPDATE OF o SKIP LOCKED
   ), reserved AS (
     UPDATE notification_email_preferences p SET next_delivery_at=$1::timestamptz+interval '20 minutes'
-    FROM candidates c WHERE p.user_id=c.recipient_id AND p.next_delivery_at<=$1 RETURNING p.user_id
+    FROM candidates c WHERE c.paced AND p.user_id=c.recipient_id AND p.next_delivery_at<=$1 RETURNING p.user_id
   ) UPDATE notification_email_outbox o SET status='sending',attempts=o.attempts+1,lease_token=$3,lease_until=$1::timestamptz+interval '3 minutes'
-    FROM candidates c JOIN reserved p ON p.user_id=c.recipient_id WHERE o.notification_id=c.notification_id
+    FROM candidates c LEFT JOIN reserved p ON p.user_id=c.recipient_id WHERE o.notification_id=c.notification_id AND (NOT c.paced OR p.user_id IS NOT NULL)
     RETURNING o.notification_id,o.recipient_id,o.lease_token,o.attempts`,
     [now, Math.max(1, Math.min(100, limit)), token],
   );
@@ -67,6 +79,9 @@ async function finish(
     | "expired"
     | "unavailable"
     | "preferences"
+    | "muted"
+    | "paused"
+    | "quiet"
     | "attempts_exhausted"
     | null,
 ) {
@@ -86,6 +101,24 @@ async function finish(
     );
   return !!result.rowCount;
 }
+/**
+ * Puts a message back to wait for the end of the person's quiet hours. Waiting
+ * is not an attempt, and it does not hold the next message to the interval
+ * between two e-mails.
+ */
+async function defer(q: Queryable, job: EmailJob, now: Date, until: Date) {
+  const result = await q.query(
+    `UPDATE notification_email_outbox SET status='pending',attempts=greatest(attempts-1,0),available_at=$3,lease_token=NULL,lease_until=NULL
+    WHERE notification_id=$1 AND lease_token=$2 AND status='sending'`,
+    [job.notification_id, job.lease_token, until],
+  );
+  if (result.rowCount)
+    await q.query(
+      "UPDATE notification_email_preferences SET next_delivery_at=least(next_delivery_at,$2::timestamptz) WHERE user_id=$1",
+      [job.recipient_id, now],
+    );
+  return !!result.rowCount;
+}
 export async function pruneNotificationEmails(q: Queryable, now = new Date()) {
   await q.query(
     `WITH old AS (SELECT notification_id FROM notification_email_outbox WHERE status IN ('pending','sending') AND (expires_at<=$1 OR attempts>=8) AND (status='pending' OR lease_until<=$1) ORDER BY recipient_id,notification_id LIMIT 500 FOR UPDATE SKIP LOCKED)
@@ -97,12 +130,24 @@ export async function pruneNotificationEmails(q: Queryable, now = new Date()) {
     [now],
   );
 }
+type Delivery =
+  | {
+      code:
+        | "expired"
+        | "unavailable"
+        | "preferences"
+        | "muted"
+        | "paused"
+        | "quiet";
+    }
+  | { defer: Date }
+  | { message: MailMessage };
 async function delivery(
   q: Queryable,
   job: EmailJob,
   now: Date,
   env: NodeJS.ProcessEnv,
-) {
+): Promise<Delivery> {
   const row = (
     await q.query<{
       email: string;
@@ -115,8 +160,9 @@ async function delivery(
       unsubscribe_key: string;
       ride_id: string | null;
       event_occurs_at: Date | null;
+      expires_at: Date;
     }>(
-      `SELECT u.email,u.name,n.type,n.ride_id,n.event_occurs_at,p.enabled,p.discussions,p.rides,p.market,p.unsubscribe_key FROM notification_email_outbox o
+      `SELECT u.email,u.name,n.type,n.ride_id,n.event_occurs_at,o.expires_at,p.enabled,p.discussions,p.rides,p.market,p.unsubscribe_key FROM notification_email_outbox o
     JOIN notifications n ON n.id=o.notification_id AND n.recipient_id=o.recipient_id JOIN users u ON u.id=o.recipient_id JOIN notification_email_preferences p ON p.user_id=u.id
     WHERE o.notification_id=$1 AND o.lease_token=$2 AND o.status='sending' AND o.lease_until>$3 AND o.expires_at>$3 AND NOT u.blocked AND u.email_verified_at IS NOT NULL`,
       [job.notification_id, job.lease_token, now],
@@ -165,6 +211,43 @@ async function delivery(
     if (!ride?.occurs_at || new Date(ride.occurs_at) <= now)
       return { code: "unavailable" as const };
   }
+  // What the person has said about when and about whom: read now, not when the
+  // message was queued. The inbox keeps the notice whatever is decided here.
+  const policy = await deliveryPolicy(q, job.recipient_id);
+  const muted = (
+    await q.query<{ muted: boolean }>(
+      `SELECT ${noticeMutedSql("n")} muted FROM notifications n WHERE n.id=$1`,
+      [job.notification_id],
+    )
+  ).rows[0]?.muted;
+  if (muted) return { code: "muted" as const };
+  // Only a cancellation of a ride the person confirmed may break the quiet.
+  const confirmed =
+    row.type === "ride_cancelled" && row.ride_id && row.event_occurs_at
+      ? !!(
+          await q.query(
+            "SELECT 1 FROM ride_rsvps WHERE ride_id=$1 AND user_id=$2 AND occurs_at=$3 AND response='accepted'",
+            [row.ride_id, job.recipient_id, row.event_occurs_at],
+          )
+        ).rowCount
+      : false;
+  const verdict = externalVerdict(policy, {
+    type: row.type,
+    now,
+    expiresAt: new Date(row.expires_at),
+    occursAt: row.event_occurs_at && new Date(row.event_occurs_at),
+    confirmed,
+  });
+  if (verdict.action === "drop")
+    return {
+      code:
+        verdict.reason === "paused"
+          ? ("paused" as const)
+          : verdict.reason === "quiet"
+            ? ("quiet" as const)
+            : ("expired" as const),
+    };
+  if (verdict.action === "defer") return { defer: verdict.until };
   const token = notificationUnsubscribeToken(
     job.recipient_id,
     row.unsubscribe_key,
@@ -210,6 +293,7 @@ export async function runNotificationEmailBatch(
     retry: 0,
     failed: 0,
     skipped: 0,
+    deferred: 0,
     disabled: !mailEnabled(env),
   };
   await releaseRideReminders(q, currentTime(), !counts.disabled);
@@ -230,7 +314,11 @@ export async function runNotificationEmailBatch(
     counts.claimed++;
     // Read the current address, consent and visibility immediately before every send.
     const result = await delivery(q, job, currentTime(), env);
-    if (!result.message) {
+    if ("defer" in result) {
+      if (await defer(q, job, currentTime(), result.defer)) counts.deferred++;
+      continue;
+    }
+    if (!("message" in result)) {
       if (await finish(q, job, currentTime(), "skipped", result.code))
         counts.skipped++;
       continue;

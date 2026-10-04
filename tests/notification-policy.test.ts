@@ -205,14 +205,14 @@ test("inside the quiet it waits for the end", () => {
 
 test("what expires before the morning is dropped, never sent in the morning", () => {
   const night = at("2026-10-04T20:00:00Z");
-  // Expires at 02:00Z, two hours before the quiet ends (04:00Z).
+  // Expires at 23:00Z, five hours before the quiet ends (04:00Z).
   assert.deepEqual(
     externalVerdict(policy("Europe/Moscow"), {
       type: "ride_reminder",
       now: night,
       expiresAt: at("2026-10-04T23:00:00Z"),
     }),
-    { action: "drop", reason: "expired" },
+    { action: "drop", reason: "quiet" },
   );
   // Expires exactly when the quiet ends: already worthless.
   assert.deepEqual(
@@ -221,7 +221,7 @@ test("what expires before the morning is dropped, never sent in the morning", ()
       now: night,
       expiresAt: at("2026-10-05T04:00:00Z"),
     }),
-    { action: "drop", reason: "expired" },
+    { action: "drop", reason: "quiet" },
   );
   // Already expired, quiet or not.
   assert.deepEqual(

@@ -187,7 +187,7 @@ export interface ExternalContext {
 export type ExternalVerdict =
   | { action: "deliver" }
   | { action: "defer"; until: Date }
-  | { action: "drop"; reason: "expired" | "paused" };
+  | { action: "drop"; reason: "expired" | "paused" | "quiet" };
 
 /**
  * What an interrupting channel does with a message right now. A pause drops
@@ -216,8 +216,7 @@ export function externalVerdict(
     occursAt.getTime() - now.getTime() <= nearCancellationMs
   )
     return { action: "deliver" };
-  if (expiresAt && expiresAt <= end)
-    return { action: "drop", reason: "expired" };
+  if (expiresAt && expiresAt <= end) return { action: "drop", reason: "quiet" };
   return { action: "defer", until: end };
 }
 

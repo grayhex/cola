@@ -23,14 +23,9 @@ test("thread migration and shared engine preserve immediate parents, tombstones,
       await db.exec(
         await readFile(new URL("../db/" + file, import.meta.url), "utf8"),
       );
-    // The notice code of today needs the group column (#341), which has nothing
-    // to do with the thread migration under test.
-    await db.exec(
-      await readFile(
-        new URL("../db/055_notification_policy.sql", import.meta.url),
-        "utf8",
-      ),
-    );
+    // The notice code of today needs the group column of #341 (migration 055),
+    // which has nothing to do with the thread migration under test.
+    await db.exec("ALTER TABLE notifications ADD COLUMN group_key text");
     await db.query("INSERT INTO site_settings(id,value) VALUES(1,$1)", [
       JSON.stringify(defaultSettings),
     ]);

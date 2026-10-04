@@ -233,6 +233,20 @@ export const notificationEmailEvents: Record<
   }),
 );
 
+/**
+ * The e-mails about a person's own agreements (an invitation, a change, a
+ * cancellation, a reminder, an answer to the organiser). They are not held to
+ * the interval between two e-mails that keeps comments from becoming a stream:
+ * "the ride moved" does not wait twenty minutes behind someone's reply.
+ */
+export const notificationEmailPersonalTypes = Object.entries(
+  notificationEmailEvents,
+)
+  .filter(([, event]) => event.category === "rides")
+  .map(([type]) => type);
+export const notificationEmailPersonalSql = (typeColumn = "type") =>
+  `${typeColumn} IN (${notificationEmailPersonalTypes.map((type) => `'${type}'`).join(",")})`;
+
 // A newly inserted event and its delivery are one database statement, even when
 // the caller uses an autocommit pool. No SMTP means no new external backlog.
 export function notificationEmailCategorySql(typeColumn = "type") {

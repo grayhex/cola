@@ -61,3 +61,9 @@ CREATE TABLE notification_mutes (
  created_at timestamptz NOT NULL DEFAULT now(),
  PRIMARY KEY(user_id,kind,target_id)
 );
+
+-- Why an e-mail was not sent, for the three new reasons: the person muted what
+-- it was about, paused the channel, or the quiet hours outlasted its life.
+ALTER TABLE notification_email_outbox DROP CONSTRAINT notification_email_outbox_error_code_check;
+ALTER TABLE notification_email_outbox ADD CONSTRAINT notification_email_outbox_error_code_check
+ CHECK (error_code IN ('expired','unavailable','preferences','rate_limit','smtp_temporary','smtp_permanent','attempts_exhausted','muted','paused','quiet'));
