@@ -1,5 +1,5 @@
 import { errorMessage } from "../../../../lib/errors.ts";
-import { ZodError } from "zod";
+import { z, ZodError } from "zod";
 import {
   requireVerifiedEmail,
   EmailPolicyError,
@@ -13,7 +13,13 @@ import {
 import { audit } from "../../../../lib/site.ts";
 import { db, transaction } from "../../../../lib/db.ts";
 import { currentUser, rateLimit } from "../../../../lib/auth.ts";
-import { json, fail, sameOrigin, readJson } from "../../../../lib/http.ts";
+import {
+  json,
+  fail,
+  sameOrigin,
+  readBytes,
+  readJson,
+} from "../../../../lib/http.ts";
 import { traced, logError } from "../../../../lib/observability.ts";
 import { uuid } from "../../../../lib/validation.ts";
 import { limits } from "../../../../lib/limits.ts";
@@ -32,10 +38,15 @@ import {
   changeComment,
 } from "../../../../lib/comments.ts";
 import {
+  inboxState,
+  inboxWatermark,
+  inboxWatermarkOf,
+  markNotificationsRead,
   notificationPage,
-  unreadCount,
   readNotifications,
+  unreadCount,
 } from "../../../../lib/notifications.ts";
+import { notificationCategoryKeys } from "../../../../lib/notification-catalog.ts";
 import { noticeExpiringListings } from "../../../../lib/market.ts";
 import {
   createReport,
@@ -44,6 +55,13 @@ import {
 } from "../../../../lib/reports.ts";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+// "Read all" of the site (#341): the mark of the list the page showed, and
+// optionally one category.
+const readAllInput = z.strictObject({
+  watermark: z.string().min(1).max(300).optional(),
+  category: z.enum(notificationCategoryKeys).optional(),
+});
 
 async function handler(
   req: Request,
@@ -150,11 +168,37 @@ async function handler(
       if (p.length === 1 && m === "GET")
         return json(await notificationPage(db, user.id, page()));
       if (p.length === 2 && p[1] === "count" && m === "GET")
-        return json(await unreadCount(db, user.id));
+        return json(await inboxState(db, user.id));
       if (p.length === 2 && p[1] === "read-all" && m === "PATCH") {
         await limited("notification-read", limits.notificationReads);
-        await readNotifications(db, user.id);
-        return json({ ok: true });
+        // The page sends the mark of the list it showed (#341): what arrived
+        // after it stays unread. Without a body (an older page) it is
+        // everything there is now.
+        let bytes = Buffer.alloc(0);
+        try {
+          bytes = await readBytes(req, 1024);
+        } catch (error) {
+          if (errorMessage(error) !== "Пустой запрос") throw error;
+        }
+        let parsed: unknown = {};
+        try {
+          if (bytes.length) parsed = JSON.parse(bytes.toString());
+        } catch {
+          return fail("Проверьте запрос", 400);
+        }
+        const body = readAllInput.safeParse(parsed);
+        if (!body.success) return fail("Проверьте запрос", 400);
+        const mark = body.data.watermark
+          ? await inboxWatermarkOf(db, user.id, body.data.watermark)
+          : await inboxWatermark(db, user.id);
+        if (body.data.watermark && !mark)
+          return fail("Отметка не распознана. Обновите список.", 400);
+        if (mark)
+          await markNotificationsRead(db, user.id, {
+            upTo: mark,
+            ...(body.data.category ? { category: body.data.category } : {}),
+          });
+        return json({ ok: true, ...(await unreadCount(db, user.id)) });
       }
       if (p.length === 3 && p[2] === "read" && m === "PATCH") {
         await limited("notification-read", limits.notificationReads);

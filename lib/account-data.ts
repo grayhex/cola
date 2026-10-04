@@ -458,24 +458,46 @@ export async function exportAccount(
     )
   ).rows[0]?.value || { passport: {} };
   const link = (href: string) => absolute(origin, href);
-  const notificationEmailPreferences = (
+  const notificationSettingsRow = (
     await q.query<{
-      enabled: boolean;
-      discussions: boolean;
-      rides: boolean;
-      market: boolean;
       reminders: boolean;
-      updated_at: Date;
+      push_enabled: boolean;
+      push_categories: unknown;
+      updated_at: Date | null;
     }>(
-      "SELECT enabled,discussions,rides,market,ride_reminders reminders,updated_at FROM notification_email_preferences WHERE user_id=$1",
+      "SELECT reminders,push_enabled,push_categories,updated_at FROM notification_settings WHERE user_id=$1",
       [userId],
     )
-  ).rows[0] || {
-    enabled: false,
-    discussions: false,
-    rides: false,
-    market: false,
-    reminders: true,
+  ).rows[0];
+  const notificationEmailPreferences = {
+    ...((
+      await q.query<{
+        enabled: boolean;
+        discussions: boolean;
+        rides: boolean;
+        market: boolean;
+        updated_at: Date;
+      }>(
+        "SELECT enabled,discussions,rides,market,updated_at FROM notification_email_preferences WHERE user_id=$1",
+        [userId],
+      )
+    ).rows[0] || {
+      enabled: false,
+      discussions: false,
+      rides: false,
+      market: false,
+    }),
+    reminders: notificationSettingsRow?.reminders ?? true,
+  };
+  // What the account chose for the channels other than e-mail (#341). The
+  // registration of a phone is a different record and is not exported here.
+  const notificationSettings = {
+    reminders: notificationSettingsRow?.reminders ?? true,
+    push: {
+      enabled: notificationSettingsRow?.push_enabled ?? false,
+      categories: notificationSettingsRow?.push_categories ?? {},
+    },
+    updatedAt: notificationSettingsRow?.updated_at ?? null,
   };
   return {
     format: "colabike-export",
@@ -520,6 +542,7 @@ export async function exportAccount(
     rideIntents,
     rideIntentPreferences,
     notificationEmailPreferences,
+    notificationSettings,
     componentPhotos: componentPhotos.map((p) => ({
       ...p,
       url: link("/api/components/media/" + p.id),

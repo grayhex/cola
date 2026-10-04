@@ -2,6 +2,8 @@ import { z } from "zod";
 import { categoryFilterLabels } from "../bike-classification.ts";
 import { classificationQueryShape } from "../classification-validation.ts";
 import { listingTypeKeys } from "../market-types.ts";
+import { notificationCategoryKeys } from "../notification-catalog.ts";
+import { notificationSettingsPatch } from "../notification-settings.ts";
 import { nativeCodePattern, verifierPattern } from "../native-auth.ts";
 import { ApiError, apiErrorCodes, detailsOf } from "./errors.ts";
 
@@ -1070,6 +1072,9 @@ export const marketSavedSchema = named(
 );
 
 export type Notification = z.infer<typeof notificationSchema>;
+export type NotificationSettingsBody = z.infer<
+  typeof notificationSettingsSchema
+>;
 export type NotificationTarget = z.infer<typeof notificationTargetSchema>;
 export type MarketListing = z.infer<typeof marketListingSchema>;
 export type MarketListingDetail = z.infer<typeof marketListingDetailSchema>;
@@ -1085,6 +1090,22 @@ export const notificationTargetSchema = named(
     id,
     name: z.string(),
     path: z.string().describe("Путь на сайте относительно его адреса."),
+    commentId: id
+      .nullable()
+      .describe(
+        "Комментарий или ответ, о котором уведомление, иначе null. Приложение берёт его отсюда, а не из `path`.",
+      ),
+    occurrenceAt: instant
+      .nullable()
+      .describe(
+        "Дата покатушки (occurrence), о которой уведомление: у приглашения, изменения, отмены, ответа участника и напоминания. У остальных и у старых приглашений, созданных до учёта дат, null: тогда ориентируйтесь на `type`, `id` и `path`.",
+      ),
+    agreementRevision: z
+      .int()
+      .nullable()
+      .describe(
+        "Версия договорённостей покатушки, к которой относится уведомление, иначе null.",
+      ),
     expiresAt: instant
       .optional()
       .describe("Только у `market_expiring`: конец срока объявления."),
@@ -1107,6 +1128,11 @@ export const notificationSchema = named(
       .describe(
         "follow, like, comment, reply, ride_like, ride_comment, ride_reply, journal_like, journal_comment, journal_reply, article_*, component_reply, market_expiring, session_reuse, bike_week и другие; набор открыт, неизвестный тип клиент показывает общим видом.",
       ),
+    category: z
+      .string()
+      .describe(
+        "Категория настроек и фильтра: rides, discussions, market, reactions, site; набор открыт, неизвестную клиент относит к «прочим».",
+      ),
     createdAt: instant,
     readAt: instant.nullable(),
     actor: authorSchema
@@ -1115,6 +1141,13 @@ export const notificationSchema = named(
     target: notificationTargetSchema,
   }),
 );
+
+const watermark = z
+  .string()
+  .nullable()
+  .describe(
+    "Отметка сервера для «Прочитать все»: самое новое уведомление, которое человек мог видеть на момент ответа. Непрозрачный текст: его не разбирают и не составляют. Отметка действует только для аккаунта, которому выдана. null, если видимых уведомлений нет.",
+  );
 
 export const notificationPageSchema = named(
   "NotificationPage",
@@ -1125,13 +1158,100 @@ export const notificationPageSchema = named(
       .string()
       .nullable()
       .describe("Курсор следующей страницы или null, если страниц больше нет."),
+    watermark,
   }),
 );
 
 export const notificationCountSchema = named(
   "NotificationCount",
-  "Число непрочитанных: считается до 100; при `capped` их не меньше 100.",
-  z.strictObject({ unread: z.int(), capped: z.boolean() }),
+  "Число непрочитанных: считается до 100; при `capped` их не меньше 100. `watermark` — отметка для «Прочитать все» без загрузки списка.",
+  z.strictObject({ unread: z.int(), capped: z.boolean(), watermark }),
+);
+
+export const notificationReadResultSchema = named(
+  "NotificationReadResult",
+  "Итог пометки «прочитано»: сколько уведомлений помечено сейчас (повтор даёт 0) и сколько непрочитанных осталось, считая как `NotificationCount`.",
+  z.strictObject({
+    marked: z.int(),
+    unread: z.int(),
+    capped: z.boolean(),
+  }),
+);
+
+export const notificationReadRequestSchema = named(
+  "NotificationReadRequest",
+  "Какие уведомления пометить прочитанными: их идентификаторы, не больше 100. Чужие и ещё не доставленные не считаются.",
+  z.strictObject({ ids: z.array(id).min(1).max(100) }),
+);
+
+export const notificationReadAllRequestSchema = named(
+  "NotificationReadAllRequest",
+  "«Прочитать все» до отметки `watermark` из списка или счётчика: уведомления, пришедшие позже, остаются непрочитанными. С `category` — только эта категория.",
+  z.strictObject({
+    watermark: z.string().min(1).max(300),
+    category: z.enum(notificationCategoryKeys).optional(),
+  }),
+);
+
+const settingsFlag = named(
+  "NotificationChannelFlag",
+  "Переключатель канала в категории: может ли канал её передавать и включён ли он.",
+  z.strictObject({ supported: z.boolean(), enabled: z.boolean() }),
+);
+export const notificationCategorySettingSchema = named(
+  "NotificationCategorySetting",
+  "Категория уведомлений и то, как она ходит по каналам. В списке только категории, которые сервер производит и которыми канал может поделиться; отсутствующую клиент не показывает.",
+  z.strictObject({
+    key: z
+      .string()
+      .describe(
+        "rides, discussions, market; набор открыт: неизвестную категорию клиент пропускает.",
+      ),
+    label: z.string(),
+    email: settingsFlag,
+    push: settingsFlag,
+  }),
+);
+const emailChannel = named(
+  "NotificationEmailChannel",
+  "Почта: настроена ли отправка на сервере, подтверждён ли адрес и дано ли согласие на письма.",
+  z.strictObject({
+    available: z.boolean(),
+    verified: z.boolean(),
+    enabled: z.boolean(),
+  }),
+);
+const pushChannel = named(
+  "NotificationPushChannel",
+  "Push: подключена ли доставка на сервере и дано ли согласие аккаунта. Разрешение системы и регистрация конкретного телефона — не здесь: включить их сервер не может.",
+  z.strictObject({ available: z.boolean(), enabled: z.boolean() }),
+);
+export const notificationSettingsSchema = named(
+  "NotificationSettings",
+  "Настройки уведомлений аккаунта: одни и те же для сайта и приложения. Версию объекта говорит заголовок `ETag`; `PATCH` принимает `If-Match`.",
+  z.strictObject({
+    channels: named(
+      "NotificationChannels",
+      "Каналы, кроме уведомлений внутри сайта: они есть всегда.",
+      z.strictObject({ email: emailChannel, push: pushChannel }),
+    ),
+    categories: z.array(notificationCategorySettingSchema),
+    reminders: z
+      .boolean()
+      .describe(
+        "Напоминание о принятой покатушке за сутки, для всех каналов; по умолчанию включено.",
+      ),
+    updatedAt: instant
+      .nullable()
+      .describe(
+        "Когда настройки менялись последний раз; null — ещё не менялись.",
+      ),
+  }),
+);
+export const notificationSettingsPatchSchema = named(
+  "NotificationSettingsPatch",
+  "Изменение настроек: меняется только указанное. Включение канала требует, чтобы он работал (почта — подтверждённый адрес и настроенную отправку; push — подключённую доставку); выключение возможно всегда.",
+  notificationSettingsPatch,
 );
 
 export const feedItemSchema = named(
@@ -1518,6 +1638,16 @@ export const feedQuerySchema = z.strictObject({
   cursor: pageQuerySchema.shape.cursor,
 });
 export const parseFeedQuery = (url: URL) => parseQuery(url, feedQuerySchema);
+
+/** The inbox: only the unread, only one category, with a cursor. */
+export const notificationsQuerySchema = z.strictObject({
+  unread: z.enum(["", "1"]).default(""),
+  category: z.enum(["", ...notificationCategoryKeys]).default(""),
+  limit: pageQuerySchema.shape.limit,
+  cursor: pageQuerySchema.shape.cursor,
+});
+export const parseNotificationsQuery = (url: URL) =>
+  parseQuery(url, notificationsQuerySchema);
 
 /** Comments add `focus`, a deep link to one comment; it replaces paging. */
 export const commentsQuerySchema = z

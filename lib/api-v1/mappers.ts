@@ -14,6 +14,7 @@ import { bounds } from "../ride-geometry.ts";
 import type { marketApiCard } from "../market.ts";
 import type { FeedEntry } from "../ride-feed.ts";
 import type { notificationCard } from "../notifications.ts";
+import type { NotificationSettings } from "../notification-settings.ts";
 import { meetingVisible, shownMetrics } from "../rides.ts";
 import type { myUpcomingEntries } from "../rides.ts";
 import { plannedEnd } from "../ride-plan.ts";
@@ -34,6 +35,7 @@ import type {
   Me,
   MyUpcomingRide,
   Notification,
+  NotificationSettingsBody,
   NotificationTarget,
   OwnRideSummary,
   Profile,
@@ -589,12 +591,16 @@ export function toNotification(
     id: string;
     name: string;
     href: string;
+    commentId: string | null;
+    occurrenceAt: Date | null;
+    agreementRevision: number | null;
     expiresAt?: Date;
     state?: NotificationTarget["state"];
   } = card.target;
   return {
     id: card.id,
     type: card.type,
+    category: card.category,
     createdAt: instantOf(card.createdAt) ?? "",
     readAt: instantOf(card.readAt),
     actor: toAuthor(card.actor),
@@ -603,11 +609,29 @@ export function toNotification(
       id: target.id,
       name: target.name,
       path: target.href,
+      commentId: target.commentId,
+      occurrenceAt: instantOf(target.occurrenceAt),
+      agreementRevision: target.agreementRevision,
       ...(target.expiresAt
         ? { expiresAt: instantOf(target.expiresAt) ?? "" }
         : {}),
       ...(target.state ? { state: target.state } : {}),
     },
+  };
+}
+
+/** The settings of an account as the API shows them: the version is the `ETag`, not a field. */
+export function toNotificationSettings(
+  settings: NotificationSettings,
+): NotificationSettingsBody {
+  return {
+    channels: settings.channels,
+    categories: settings.categories,
+    reminders: settings.reminders,
+    // PostgreSQL's microseconds become the milliseconds every other instant has.
+    updatedAt: settings.updatedAt
+      ? new Date(settings.updatedAt).toISOString()
+      : null,
   };
 }
 

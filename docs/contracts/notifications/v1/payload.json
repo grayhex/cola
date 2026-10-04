@@ -1,0 +1,362 @@
+{
+  "version": 1,
+  "note": "Данные, которые транспорт несёт на телефон одной строкой JSON в части data: готового уведомления в сообщении нет, показывает его одно приложение. Отправки пока нет (#342): файл фиксирует формат, а не работающую доставку.",
+  "limits": {
+    "envelopeBytes": 3072,
+    "transportBytes": 4096
+  },
+  "valid": [
+    {
+      "name": "reply_to_my_comment",
+      "description": "Ответ на комментарий к публичному велосипеду: название публичное, текст комментария в сообщение не входит. Срок — неделя, как у письма.",
+      "envelope": {
+        "v": 1,
+        "deliveryId": "00000000-0000-4000-8000-0000000000ca",
+        "eventId": "00000000-0000-4000-8000-000000000066",
+        "bindingGeneration": 4,
+        "createdAt": "2026-10-04T09:00:00.000Z",
+        "category": "discussions",
+        "type": "reply",
+        "expiresAt": "2026-10-11T09:00:00.000Z",
+        "neutral": false,
+        "title": "Ответ на ваш комментарий",
+        "body": "К велосипеду «Gravel Nuroad»",
+        "group": "bike:00000000-0000-4000-8000-00000000000a",
+        "target": {
+          "id": "00000000-0000-4000-8000-00000000000a",
+          "commentId": "00000000-0000-4000-8000-000000000014",
+          "occurrenceAt": null,
+          "agreementRevision": null,
+          "type": "bike"
+        }
+      }
+    },
+    {
+      "name": "invitation_to_a_closed_plan",
+      "description": "Приглашение в закрытый план: текст нейтральный (`neutral: true`), ни названия, ни места, ни даты в сообщении нет. Что за выезд — приложение читает у сервера, когда доступ проверен.",
+      "envelope": {
+        "v": 1,
+        "deliveryId": "00000000-0000-4000-8000-0000000000cf",
+        "eventId": "00000000-0000-4000-8000-00000000006b",
+        "bindingGeneration": 4,
+        "createdAt": "2026-10-04T09:00:00.000Z",
+        "category": "rides",
+        "type": "ride_invite",
+        "expiresAt": "2026-10-10T06:55:00.000Z",
+        "neutral": true,
+        "title": "Приглашение на покатушку",
+        "body": "Откройте ColaBike, чтобы посмотреть детали",
+        "group": "ride:00000000-0000-4000-8000-00000000000b",
+        "target": {
+          "id": "00000000-0000-4000-8000-00000000000b",
+          "commentId": null,
+          "occurrenceAt": "2026-10-10T07:00:00.000Z",
+          "agreementRevision": 1,
+          "type": "ride"
+        }
+      }
+    },
+    {
+      "name": "ride_changed_public",
+      "description": "Изменились договорённости публичной покатушки: нужно подтвердить заново. Версия `agreementRevision` — новая; уведомление о старой версии приложение не показывает, когда знает новую.",
+      "envelope": {
+        "v": 1,
+        "deliveryId": "00000000-0000-4000-8000-0000000000d1",
+        "eventId": "00000000-0000-4000-8000-00000000006d",
+        "bindingGeneration": 4,
+        "createdAt": "2026-10-04T09:00:00.000Z",
+        "category": "rides",
+        "type": "ride_changed",
+        "expiresAt": "2026-10-10T06:55:00.000Z",
+        "neutral": false,
+        "title": "Изменились договорённости покатушки",
+        "body": "«Субботний круг»: проверьте условия и подтвердите участие заново",
+        "group": "ride:00000000-0000-4000-8000-00000000000b",
+        "target": {
+          "id": "00000000-0000-4000-8000-00000000000b",
+          "commentId": null,
+          "occurrenceAt": "2026-10-10T07:00:00.000Z",
+          "agreementRevision": 3,
+          "type": "ride"
+        }
+      }
+    },
+    {
+      "name": "ride_cancelled",
+      "description": "Отмена даты: срок — сама дата, после неё уведомление бесполезно. Показывается в той же стопке, что и изменения этой покатушки, и заменяет их.",
+      "envelope": {
+        "v": 1,
+        "deliveryId": "00000000-0000-4000-8000-0000000000d2",
+        "eventId": "00000000-0000-4000-8000-00000000006e",
+        "bindingGeneration": 4,
+        "createdAt": "2026-10-04T09:00:00.000Z",
+        "category": "rides",
+        "type": "ride_cancelled",
+        "expiresAt": "2026-10-10T07:00:00.000Z",
+        "neutral": false,
+        "title": "Покатушка отменена",
+        "body": "«Субботний круг»",
+        "group": "ride:00000000-0000-4000-8000-00000000000b",
+        "target": {
+          "id": "00000000-0000-4000-8000-00000000000b",
+          "commentId": null,
+          "occurrenceAt": "2026-10-10T07:00:00.000Z",
+          "agreementRevision": 3,
+          "type": "ride"
+        }
+      }
+    },
+    {
+      "name": "ride_reminder",
+      "description": "Напоминание принявшему участие: приходит не раньше срока и истекает за пять минут до выезда.",
+      "envelope": {
+        "v": 1,
+        "deliveryId": "00000000-0000-4000-8000-0000000000d4",
+        "eventId": "00000000-0000-4000-8000-000000000070",
+        "bindingGeneration": 4,
+        "createdAt": "2026-10-04T09:00:00.000Z",
+        "category": "rides",
+        "type": "ride_reminder",
+        "expiresAt": "2026-10-10T06:55:00.000Z",
+        "neutral": false,
+        "title": "Напоминание о покатушке",
+        "body": "«Субботний круг»: до выезда меньше суток",
+        "group": "ride:00000000-0000-4000-8000-00000000000b",
+        "target": {
+          "id": "00000000-0000-4000-8000-00000000000b",
+          "commentId": null,
+          "occurrenceAt": "2026-10-10T07:00:00.000Z",
+          "agreementRevision": 3,
+          "type": "ride"
+        }
+      }
+    }
+  ],
+  "tolerated": [
+    {
+      "name": "unknown_field",
+      "description": "Поля со временем только добавляются: лишнее поле той же версии приложение пропускает и показывает уведомление.",
+      "envelope": {
+        "v": 1,
+        "deliveryId": "00000000-0000-4000-8000-0000000000ca",
+        "eventId": "00000000-0000-4000-8000-000000000066",
+        "bindingGeneration": 4,
+        "createdAt": "2026-10-04T09:00:00.000Z",
+        "category": "discussions",
+        "type": "reply",
+        "expiresAt": "2026-10-11T09:00:00.000Z",
+        "neutral": false,
+        "title": "Ответ на ваш комментарий",
+        "body": "К велосипеду «Gravel Nuroad»",
+        "group": "bike:00000000-0000-4000-8000-00000000000a",
+        "target": {
+          "id": "00000000-0000-4000-8000-00000000000a",
+          "commentId": "00000000-0000-4000-8000-000000000014",
+          "occurrenceAt": null,
+          "agreementRevision": null,
+          "type": "bike"
+        },
+        "futureField": {
+          "any": "value"
+        }
+      }
+    },
+    {
+      "name": "unknown_category",
+      "description": "Неизвестную категорию приложение показывает в общем канале, а не отбрасывает.",
+      "envelope": {
+        "v": 1,
+        "deliveryId": "00000000-0000-4000-8000-0000000000ca",
+        "eventId": "00000000-0000-4000-8000-000000000066",
+        "bindingGeneration": 4,
+        "createdAt": "2026-10-04T09:00:00.000Z",
+        "category": "vouchers",
+        "type": "reply",
+        "expiresAt": "2026-10-11T09:00:00.000Z",
+        "neutral": false,
+        "title": "Ответ на ваш комментарий",
+        "body": "К велосипеду «Gravel Nuroad»",
+        "group": "bike:00000000-0000-4000-8000-00000000000a",
+        "target": {
+          "id": "00000000-0000-4000-8000-00000000000a",
+          "commentId": "00000000-0000-4000-8000-000000000014",
+          "occurrenceAt": null,
+          "agreementRevision": null,
+          "type": "bike"
+        }
+      }
+    },
+    {
+      "name": "unknown_target_type",
+      "description": "Цель, которой приложение не знает, открывает список уведомлений. Сервер не шлёт новый тип цели приложению без поддерживающего экрана; это страховка.",
+      "envelope": {
+        "v": 1,
+        "deliveryId": "00000000-0000-4000-8000-0000000000ca",
+        "eventId": "00000000-0000-4000-8000-000000000066",
+        "bindingGeneration": 4,
+        "createdAt": "2026-10-04T09:00:00.000Z",
+        "category": "discussions",
+        "type": "reply",
+        "expiresAt": "2026-10-11T09:00:00.000Z",
+        "neutral": false,
+        "title": "Ответ на ваш комментарий",
+        "body": "К велосипеду «Gravel Nuroad»",
+        "group": "bike:00000000-0000-4000-8000-00000000000a",
+        "target": {
+          "id": "00000000-0000-4000-8000-00000000000a",
+          "commentId": "00000000-0000-4000-8000-000000000014",
+          "occurrenceAt": null,
+          "agreementRevision": null,
+          "type": "intent"
+        }
+      }
+    }
+  ],
+  "dropped": [
+    {
+      "name": "unsupported_version",
+      "reason": "Неизвестная версия формата: показывать нельзя, разбирать — тоже.",
+      "envelope": {
+        "v": 2,
+        "deliveryId": "00000000-0000-4000-8000-0000000000ca",
+        "eventId": "00000000-0000-4000-8000-000000000066",
+        "bindingGeneration": 4,
+        "createdAt": "2026-10-04T09:00:00.000Z",
+        "category": "discussions",
+        "type": "reply",
+        "expiresAt": "2026-10-11T09:00:00.000Z",
+        "neutral": false,
+        "title": "Ответ на ваш комментарий",
+        "body": "К велосипеду «Gravel Nuroad»",
+        "group": "bike:00000000-0000-4000-8000-00000000000a",
+        "target": {
+          "id": "00000000-0000-4000-8000-00000000000a",
+          "commentId": "00000000-0000-4000-8000-000000000014",
+          "occurrenceAt": null,
+          "agreementRevision": null,
+          "type": "bike"
+        }
+      }
+    },
+    {
+      "name": "expired",
+      "reason": "Срок вышел до показа: уведомление не выводится утром, когда оно уже ничего не значит.",
+      "now": "2026-10-12T09:00:00.000Z",
+      "envelope": {
+        "v": 1,
+        "deliveryId": "00000000-0000-4000-8000-0000000000ca",
+        "eventId": "00000000-0000-4000-8000-000000000066",
+        "bindingGeneration": 4,
+        "createdAt": "2026-10-04T09:00:00.000Z",
+        "category": "discussions",
+        "type": "reply",
+        "expiresAt": "2026-10-11T09:00:00.000Z",
+        "neutral": false,
+        "title": "Ответ на ваш комментарий",
+        "body": "К велосипеду «Gravel Nuroad»",
+        "group": "bike:00000000-0000-4000-8000-00000000000a",
+        "target": {
+          "id": "00000000-0000-4000-8000-00000000000a",
+          "commentId": "00000000-0000-4000-8000-000000000014",
+          "occurrenceAt": null,
+          "agreementRevision": null,
+          "type": "bike"
+        }
+      }
+    },
+    {
+      "name": "other_binding",
+      "reason": "Поколение привязки не текущее (выход из аккаунта, смена аккаунта, переустановка): ни показа, ни следов в шторке.",
+      "clientBindingGeneration": 5,
+      "envelope": {
+        "v": 1,
+        "deliveryId": "00000000-0000-4000-8000-0000000000ca",
+        "eventId": "00000000-0000-4000-8000-000000000066",
+        "bindingGeneration": 4,
+        "createdAt": "2026-10-04T09:00:00.000Z",
+        "category": "discussions",
+        "type": "reply",
+        "expiresAt": "2026-10-11T09:00:00.000Z",
+        "neutral": false,
+        "title": "Ответ на ваш комментарий",
+        "body": "К велосипеду «Gravel Nuroad»",
+        "group": "bike:00000000-0000-4000-8000-00000000000a",
+        "target": {
+          "id": "00000000-0000-4000-8000-00000000000a",
+          "commentId": "00000000-0000-4000-8000-000000000014",
+          "occurrenceAt": null,
+          "agreementRevision": null,
+          "type": "bike"
+        }
+      }
+    },
+    {
+      "name": "text_too_long",
+      "reason": "Текст длиннее предела схемы: сообщение не наше или повреждено.",
+      "envelope": {
+        "v": 1,
+        "deliveryId": "00000000-0000-4000-8000-0000000000ca",
+        "eventId": "00000000-0000-4000-8000-000000000066",
+        "bindingGeneration": 4,
+        "createdAt": "2026-10-04T09:00:00.000Z",
+        "category": "discussions",
+        "type": "reply",
+        "expiresAt": "2026-10-11T09:00:00.000Z",
+        "neutral": false,
+        "title": "Ответ на ваш комментарий",
+        "body": "яяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяя",
+        "group": "bike:00000000-0000-4000-8000-00000000000a",
+        "target": {
+          "id": "00000000-0000-4000-8000-00000000000a",
+          "commentId": "00000000-0000-4000-8000-000000000014",
+          "occurrenceAt": null,
+          "agreementRevision": null,
+          "type": "bike"
+        }
+      }
+    },
+    {
+      "name": "no_target",
+      "reason": "Без цели нечего открывать: сообщение не наше или повреждено.",
+      "envelope": {
+        "v": 1,
+        "deliveryId": "00000000-0000-4000-8000-0000000000ca",
+        "eventId": "00000000-0000-4000-8000-000000000066",
+        "bindingGeneration": 4,
+        "createdAt": "2026-10-04T09:00:00.000Z",
+        "category": "discussions",
+        "type": "reply",
+        "expiresAt": "2026-10-11T09:00:00.000Z",
+        "neutral": false,
+        "title": "Ответ на ваш комментарий",
+        "body": "К велосипеду «Gravel Nuroad»",
+        "group": "bike:00000000-0000-4000-8000-00000000000a"
+      }
+    },
+    {
+      "name": "not_a_uuid",
+      "reason": "Идентификатор доставки не UUID: дедуплицировать нечем.",
+      "envelope": {
+        "v": 1,
+        "deliveryId": "42",
+        "eventId": "00000000-0000-4000-8000-000000000066",
+        "bindingGeneration": 4,
+        "createdAt": "2026-10-04T09:00:00.000Z",
+        "category": "discussions",
+        "type": "reply",
+        "expiresAt": "2026-10-11T09:00:00.000Z",
+        "neutral": false,
+        "title": "Ответ на ваш комментарий",
+        "body": "К велосипеду «Gravel Nuroad»",
+        "group": "bike:00000000-0000-4000-8000-00000000000a",
+        "target": {
+          "id": "00000000-0000-4000-8000-00000000000a",
+          "commentId": "00000000-0000-4000-8000-000000000014",
+          "occurrenceAt": null,
+          "agreementRevision": null,
+          "type": "bike"
+        }
+      }
+    }
+  ]
+}

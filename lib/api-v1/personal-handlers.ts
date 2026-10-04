@@ -2,7 +2,12 @@ import { db } from "../db.ts";
 import { savedKeysetPage } from "../journal-discovery.ts";
 import { feedKeysetPage } from "../ride-feed.ts";
 import { savedApiKeysetPage } from "../market.ts";
-import { notificationKeysetPage, unreadCount } from "../notifications.ts";
+import {
+  encodeWatermark,
+  inboxState,
+  inboxWatermark,
+  notificationKeysetPage,
+} from "../notifications.ts";
 import { myUpcomingEntries, ownRideKeysetPage } from "../rides.ts";
 import { noticeExpiringListings } from "../market.ts";
 import { decodeCursor, encodeCursor } from "./cursor.ts";
@@ -16,7 +21,12 @@ import {
   toOwnRideSummary,
 } from "./mappers.ts";
 import { ok, safely } from "./respond.ts";
-import { parseFeedQuery, parseNoQuery, parsePageQuery } from "./schemas.ts";
+import {
+  parseFeedQuery,
+  parseNoQuery,
+  parseNotificationsQuery,
+  parsePageQuery,
+} from "./schemas.ts";
 import { authenticate } from "./viewer.ts";
 
 // Personal reads of /api/v1 (#321): only for the person asking, so a guest is
@@ -24,7 +34,7 @@ import { authenticate } from "./viewer.ts";
 // services are the site's, with a cursor in place of OFFSET: what a notice
 // says and which saved entries still show is decided at read time.
 
-async function signedIn(req: Request) {
+export async function signedIn(req: Request) {
   const { viewer } = await authenticate(req.headers);
   if (!viewer) throw new ApiError("unauthorized", "Войдите в аккаунт.");
   return viewer;
@@ -34,20 +44,27 @@ async function signedIn(req: Request) {
 export function handleNotifications(req: Request) {
   return safely(async () => {
     const viewer = await signedIn(req);
-    const query = parsePageQuery(new URL(req.url));
+    const query = parseNotificationsQuery(new URL(req.url));
     const after = query.cursor ? decodeCursor(query.cursor) : null;
     // As on the site, reading the notices is when the end of a listing's term
     // is noticed; once per term.
     await noticeExpiringListings(db, viewer.id);
+    const mark = await inboxWatermark(db, viewer.id);
     const page = await notificationKeysetPage(
       db,
       viewer.id,
       query.limit,
       after,
+      new Date(),
+      {
+        unread: query.unread === "1",
+        ...(query.category ? { category: query.category } : {}),
+      },
     );
     return ok({
       items: page.items.map(toNotification),
       nextCursor: page.next ? encodeCursor(page.next) : null,
+      watermark: mark ? encodeWatermark(mark) : null,
     });
   });
 }
@@ -59,7 +76,7 @@ export function handleNotificationCount(req: Request) {
     // No parameters: a typo is an error, not a silent default.
     parseNoQuery(new URL(req.url));
     await noticeExpiringListings(db, viewer.id);
-    return ok(await unreadCount(db, viewer.id));
+    return ok(await inboxState(db, viewer.id));
   });
 }
 

@@ -1,0 +1,529 @@
+{
+  "version": 1,
+  "note": "Каждый пример — элемент `items` ответа GET /api/v1/me/notifications, как его отдаёт сервер. Файл собирается из настоящих строк тестом tests/notification-fixtures.test.ts.",
+  "cases": [
+    {
+      "name": "bike_comment",
+      "description": "Новый комментарий к вашему велосипеду. Экран: велосипед, прокрутка к `commentId`.",
+      "notification": {
+        "id": "00000000-0000-4000-8000-000000000065",
+        "type": "comment",
+        "category": "discussions",
+        "createdAt": "2026-10-04T09:00:00.000Z",
+        "readAt": null,
+        "actor": {
+          "id": "00000000-0000-4000-8000-000000000002",
+          "username": "anna",
+          "name": "Анна",
+          "avatarUrl": null
+        },
+        "target": {
+          "type": "bike",
+          "id": "00000000-0000-4000-8000-00000000000a",
+          "name": "Gravel Nuroad",
+          "path": "/b/bk-gravel?comment=00000000-0000-4000-8000-000000000014#discussion",
+          "commentId": "00000000-0000-4000-8000-000000000014",
+          "occurrenceAt": null,
+          "agreementRevision": null
+        }
+      }
+    },
+    {
+      "name": "bike_reply",
+      "description": "Ответ на ваш комментарий к велосипеду.",
+      "notification": {
+        "id": "00000000-0000-4000-8000-000000000066",
+        "type": "reply",
+        "category": "discussions",
+        "createdAt": "2026-10-04T08:59:00.000Z",
+        "readAt": null,
+        "actor": {
+          "id": "00000000-0000-4000-8000-000000000003",
+          "username": "boris",
+          "name": "Борис",
+          "avatarUrl": null
+        },
+        "target": {
+          "type": "bike",
+          "id": "00000000-0000-4000-8000-00000000000a",
+          "name": "Gravel Nuroad",
+          "path": "/b/bk-gravel?comment=00000000-0000-4000-8000-000000000014#discussion",
+          "commentId": "00000000-0000-4000-8000-000000000014",
+          "occurrenceAt": null,
+          "agreementRevision": null
+        }
+      }
+    },
+    {
+      "name": "ride_comment",
+      "description": "Комментарий к вашей покатушке: покатушка и `commentId`.",
+      "notification": {
+        "id": "00000000-0000-4000-8000-000000000067",
+        "type": "ride_comment",
+        "category": "discussions",
+        "createdAt": "2026-10-04T08:58:00.000Z",
+        "readAt": null,
+        "actor": {
+          "id": "00000000-0000-4000-8000-000000000002",
+          "username": "anna",
+          "name": "Анна",
+          "avatarUrl": null
+        },
+        "target": {
+          "type": "ride",
+          "id": "00000000-0000-4000-8000-00000000000b",
+          "name": "Субботний круг",
+          "path": "/r/rd-saturday?comment=00000000-0000-4000-8000-000000000015#discussion",
+          "commentId": "00000000-0000-4000-8000-000000000015",
+          "occurrenceAt": null,
+          "agreementRevision": null
+        }
+      }
+    },
+    {
+      "name": "journal_comment",
+      "description": "Комментарий к записи журнала.",
+      "notification": {
+        "id": "00000000-0000-4000-8000-000000000068",
+        "type": "journal_comment",
+        "category": "discussions",
+        "createdAt": "2026-10-04T08:57:00.000Z",
+        "readAt": null,
+        "actor": {
+          "id": "00000000-0000-4000-8000-000000000002",
+          "username": "anna",
+          "name": "Анна",
+          "avatarUrl": null
+        },
+        "target": {
+          "type": "journal",
+          "id": "00000000-0000-4000-8000-00000000000c",
+          "name": "Замена цепи",
+          "path": "/j/en-chain?comment=00000000-0000-4000-8000-000000000016#discussion",
+          "commentId": "00000000-0000-4000-8000-000000000016",
+          "occurrenceAt": null,
+          "agreementRevision": null
+        }
+      }
+    },
+    {
+      "name": "article_comment",
+      "description": "Статья — запись журнала со своим типом `article_comment` и целью `article`; категория та же, что у записей.",
+      "notification": {
+        "id": "00000000-0000-4000-8000-000000000069",
+        "type": "article_comment",
+        "category": "discussions",
+        "createdAt": "2026-10-04T08:56:00.000Z",
+        "readAt": null,
+        "actor": {
+          "id": "00000000-0000-4000-8000-000000000002",
+          "username": "anna",
+          "name": "Анна",
+          "avatarUrl": null
+        },
+        "target": {
+          "type": "article",
+          "id": "00000000-0000-4000-8000-00000000000d",
+          "name": "Гид по трансмиссии",
+          "path": "/articles/ar-drivetrain?comment=00000000-0000-4000-8000-000000000017#discussion",
+          "commentId": "00000000-0000-4000-8000-000000000017",
+          "occurrenceAt": null,
+          "agreementRevision": null
+        }
+      }
+    },
+    {
+      "name": "component_reply",
+      "description": "Ответ в обсуждении модели компонента.",
+      "notification": {
+        "id": "00000000-0000-4000-8000-00000000006a",
+        "type": "component_reply",
+        "category": "discussions",
+        "createdAt": "2026-10-04T08:55:00.000Z",
+        "readAt": null,
+        "actor": {
+          "id": "00000000-0000-4000-8000-000000000003",
+          "username": "boris",
+          "name": "Борис",
+          "avatarUrl": null
+        },
+        "target": {
+          "type": "component",
+          "id": "00000000-0000-4000-8000-00000000000e",
+          "name": "Кассета CS-HG700",
+          "path": "/experience/parts/drivetrain/cs-hg700?comment=00000000-0000-4000-8000-000000000018#discussion",
+          "commentId": "00000000-0000-4000-8000-000000000018",
+          "occurrenceAt": null,
+          "agreementRevision": null
+        }
+      }
+    },
+    {
+      "name": "ride_invite",
+      "description": "Приглашение на конкретную дату: `occurrenceAt` — эта дата, `agreementRevision` — версия договорённостей. Приглашение не означает участие: ответ человек даёт сам.",
+      "notification": {
+        "id": "00000000-0000-4000-8000-00000000006b",
+        "type": "ride_invite",
+        "category": "rides",
+        "createdAt": "2026-10-04T08:54:00.000Z",
+        "readAt": null,
+        "actor": {
+          "id": "00000000-0000-4000-8000-000000000002",
+          "username": "anna",
+          "name": "Анна",
+          "avatarUrl": null
+        },
+        "target": {
+          "type": "ride",
+          "id": "00000000-0000-4000-8000-00000000000b",
+          "name": "Субботний круг",
+          "path": "/r/rd-saturday",
+          "commentId": null,
+          "occurrenceAt": "2026-10-10T07:00:00.000Z",
+          "agreementRevision": 1
+        }
+      }
+    },
+    {
+      "name": "ride_invite_historical",
+      "description": "Приглашение, созданное до учёта дат: `occurrenceAt` и `agreementRevision` — null. Приложение открывает покатушку по `id` и `path`.",
+      "notification": {
+        "id": "00000000-0000-4000-8000-00000000006c",
+        "type": "ride_invite",
+        "category": "rides",
+        "createdAt": "2026-10-04T08:53:00.000Z",
+        "readAt": null,
+        "actor": {
+          "id": "00000000-0000-4000-8000-000000000002",
+          "username": "anna",
+          "name": "Анна",
+          "avatarUrl": null
+        },
+        "target": {
+          "type": "ride",
+          "id": "00000000-0000-4000-8000-00000000000b",
+          "name": "Субботний круг",
+          "path": "/r/rd-saturday",
+          "commentId": null,
+          "occurrenceAt": null,
+          "agreementRevision": null
+        }
+      }
+    },
+    {
+      "name": "ride_changed",
+      "description": "Организатор изменил время, место или маршрут: прежние ответы на эту дату сброшены, нужно подтвердить заново. `agreementRevision` — новая версия.",
+      "notification": {
+        "id": "00000000-0000-4000-8000-00000000006d",
+        "type": "ride_changed",
+        "category": "rides",
+        "createdAt": "2026-10-04T08:52:00.000Z",
+        "readAt": null,
+        "actor": {
+          "id": "00000000-0000-4000-8000-000000000002",
+          "username": "anna",
+          "name": "Анна",
+          "avatarUrl": null
+        },
+        "target": {
+          "type": "ride",
+          "id": "00000000-0000-4000-8000-00000000000b",
+          "name": "Субботний круг",
+          "path": "/r/rd-saturday",
+          "commentId": null,
+          "occurrenceAt": "2026-10-10T07:00:00.000Z",
+          "agreementRevision": 3
+        }
+      }
+    },
+    {
+      "name": "ride_cancelled",
+      "description": "Отменена дата или вся серия: `occurrenceAt` — отменённая дата.",
+      "notification": {
+        "id": "00000000-0000-4000-8000-00000000006e",
+        "type": "ride_cancelled",
+        "category": "rides",
+        "createdAt": "2026-10-04T08:51:00.000Z",
+        "readAt": null,
+        "actor": {
+          "id": "00000000-0000-4000-8000-000000000002",
+          "username": "anna",
+          "name": "Анна",
+          "avatarUrl": null
+        },
+        "target": {
+          "type": "ride",
+          "id": "00000000-0000-4000-8000-00000000000b",
+          "name": "Субботний круг",
+          "path": "/r/rd-saturday",
+          "commentId": null,
+          "occurrenceAt": "2026-10-10T07:00:00.000Z",
+          "agreementRevision": 3
+        }
+      }
+    },
+    {
+      "name": "ride_response",
+      "description": "Организатору: участники обновили ответы на дату. Автора у такого уведомления нет, сводка читается на странице покатушки.",
+      "notification": {
+        "id": "00000000-0000-4000-8000-00000000006f",
+        "type": "ride_response",
+        "category": "rides",
+        "createdAt": "2026-10-04T08:50:00.000Z",
+        "readAt": null,
+        "actor": null,
+        "target": {
+          "type": "ride",
+          "id": "00000000-0000-4000-8000-00000000000b",
+          "name": "Субботний круг",
+          "path": "/r/rd-saturday",
+          "commentId": null,
+          "occurrenceAt": "2026-10-10T07:00:00.000Z",
+          "agreementRevision": 3
+        }
+      }
+    },
+    {
+      "name": "ride_reminder",
+      "description": "Напоминание принявшему участие за сутки: приходит в срок, не раньше.",
+      "notification": {
+        "id": "00000000-0000-4000-8000-000000000070",
+        "type": "ride_reminder",
+        "category": "rides",
+        "createdAt": "2026-10-04T08:49:00.000Z",
+        "readAt": null,
+        "actor": null,
+        "target": {
+          "type": "ride",
+          "id": "00000000-0000-4000-8000-00000000000b",
+          "name": "Субботний круг",
+          "path": "/r/rd-saturday",
+          "commentId": null,
+          "occurrenceAt": "2026-10-10T07:00:00.000Z",
+          "agreementRevision": 3
+        }
+      }
+    },
+    {
+      "name": "market_expiring",
+      "description": "Срок объявления подходит к концу; `state` читается при показе, потому что объявление могли продлить или закрыть.",
+      "notification": {
+        "id": "00000000-0000-4000-8000-000000000071",
+        "type": "market_expiring",
+        "category": "market",
+        "createdAt": "2026-10-04T08:48:00.000Z",
+        "readAt": null,
+        "actor": null,
+        "target": {
+          "type": "market",
+          "id": "00000000-0000-4000-8000-00000000000f",
+          "name": "Рама Canyon",
+          "path": "/market/ml-frame",
+          "commentId": null,
+          "occurrenceAt": null,
+          "agreementRevision": null,
+          "expiresAt": "2026-10-07T09:00:00.000Z",
+          "state": "expiring"
+        }
+      }
+    },
+    {
+      "name": "follow",
+      "description": "На вас подписались. Только на сайте и в приложении, во внешние каналы не уходит.",
+      "notification": {
+        "id": "00000000-0000-4000-8000-000000000072",
+        "type": "follow",
+        "category": "reactions",
+        "createdAt": "2026-10-04T08:47:00.000Z",
+        "readAt": null,
+        "actor": {
+          "id": "00000000-0000-4000-8000-000000000003",
+          "username": "boris",
+          "name": "Борис",
+          "avatarUrl": null
+        },
+        "target": {
+          "type": "profile",
+          "id": "00000000-0000-4000-8000-000000000003",
+          "name": "Борис",
+          "path": "/@boris",
+          "commentId": null,
+          "occurrenceAt": null,
+          "agreementRevision": null
+        }
+      }
+    },
+    {
+      "name": "like",
+      "description": "Лайк велосипеда. Только на сайте и в приложении.",
+      "notification": {
+        "id": "00000000-0000-4000-8000-000000000073",
+        "type": "like",
+        "category": "reactions",
+        "createdAt": "2026-10-04T08:46:00.000Z",
+        "readAt": null,
+        "actor": {
+          "id": "00000000-0000-4000-8000-000000000003",
+          "username": "boris",
+          "name": "Борис",
+          "avatarUrl": null
+        },
+        "target": {
+          "type": "bike",
+          "id": "00000000-0000-4000-8000-00000000000a",
+          "name": "Gravel Nuroad",
+          "path": "/b/bk-gravel",
+          "commentId": null,
+          "occurrenceAt": null,
+          "agreementRevision": null
+        }
+      }
+    },
+    {
+      "name": "session_reuse",
+      "description": "Служебное: токен сессии предъявлен повторно, сессия завершена. Автора нет, цель — безопасность аккаунта.",
+      "notification": {
+        "id": "00000000-0000-4000-8000-000000000074",
+        "type": "session_reuse",
+        "category": "site",
+        "createdAt": "2026-10-04T08:45:00.000Z",
+        "readAt": null,
+        "actor": null,
+        "target": {
+          "type": "account",
+          "id": "00000000-0000-4000-8000-000000000074",
+          "name": "Безопасность аккаунта",
+          "path": "/account?tab=account",
+          "commentId": null,
+          "occurrenceAt": null,
+          "agreementRevision": null
+        }
+      }
+    },
+    {
+      "name": "ride_reply",
+      "description": "Ответ на ваш комментарий к покатушке.",
+      "notification": {
+        "id": "00000000-0000-4000-8000-000000000075",
+        "type": "ride_reply",
+        "category": "discussions",
+        "createdAt": "2026-10-04T08:44:00.000Z",
+        "readAt": null,
+        "actor": {
+          "id": "00000000-0000-4000-8000-000000000003",
+          "username": "boris",
+          "name": "Борис",
+          "avatarUrl": null
+        },
+        "target": {
+          "type": "ride",
+          "id": "00000000-0000-4000-8000-00000000000b",
+          "name": "Субботний круг",
+          "path": "/r/rd-saturday?comment=00000000-0000-4000-8000-000000000015#discussion",
+          "commentId": "00000000-0000-4000-8000-000000000015",
+          "occurrenceAt": null,
+          "agreementRevision": null
+        }
+      }
+    },
+    {
+      "name": "journal_reply",
+      "description": "Ответ на ваш комментарий к записи журнала.",
+      "notification": {
+        "id": "00000000-0000-4000-8000-000000000076",
+        "type": "journal_reply",
+        "category": "discussions",
+        "createdAt": "2026-10-04T08:43:00.000Z",
+        "readAt": null,
+        "actor": {
+          "id": "00000000-0000-4000-8000-000000000003",
+          "username": "boris",
+          "name": "Борис",
+          "avatarUrl": null
+        },
+        "target": {
+          "type": "journal",
+          "id": "00000000-0000-4000-8000-00000000000c",
+          "name": "Замена цепи",
+          "path": "/j/en-chain?comment=00000000-0000-4000-8000-000000000016#discussion",
+          "commentId": "00000000-0000-4000-8000-000000000016",
+          "occurrenceAt": null,
+          "agreementRevision": null
+        }
+      }
+    },
+    {
+      "name": "ride_like",
+      "description": "Лайк покатушки. Только на сайте и в приложении.",
+      "notification": {
+        "id": "00000000-0000-4000-8000-000000000077",
+        "type": "ride_like",
+        "category": "reactions",
+        "createdAt": "2026-10-04T08:42:00.000Z",
+        "readAt": null,
+        "actor": {
+          "id": "00000000-0000-4000-8000-000000000003",
+          "username": "boris",
+          "name": "Борис",
+          "avatarUrl": null
+        },
+        "target": {
+          "type": "ride",
+          "id": "00000000-0000-4000-8000-00000000000b",
+          "name": "Субботний круг",
+          "path": "/r/rd-saturday",
+          "commentId": null,
+          "occurrenceAt": null,
+          "agreementRevision": null
+        }
+      }
+    },
+    {
+      "name": "journal_like",
+      "description": "Лайк записи журнала. Только на сайте и в приложении.",
+      "notification": {
+        "id": "00000000-0000-4000-8000-000000000078",
+        "type": "journal_like",
+        "category": "reactions",
+        "createdAt": "2026-10-04T08:41:00.000Z",
+        "readAt": null,
+        "actor": {
+          "id": "00000000-0000-4000-8000-000000000003",
+          "username": "boris",
+          "name": "Борис",
+          "avatarUrl": null
+        },
+        "target": {
+          "type": "journal",
+          "id": "00000000-0000-4000-8000-00000000000c",
+          "name": "Замена цепи",
+          "path": "/j/en-chain",
+          "commentId": null,
+          "occurrenceAt": null,
+          "agreementRevision": null
+        }
+      }
+    },
+    {
+      "name": "bike_week",
+      "description": "Велосипед недели. Служебное уведомление сайта.",
+      "notification": {
+        "id": "00000000-0000-4000-8000-000000000079",
+        "type": "bike_week",
+        "category": "site",
+        "createdAt": "2026-10-04T08:40:00.000Z",
+        "readAt": null,
+        "actor": null,
+        "target": {
+          "type": "bike-week",
+          "id": "00000000-0000-4000-8000-00000000000a",
+          "name": "Gravel Nuroad",
+          "path": "/account?tab=spotlight",
+          "commentId": null,
+          "occurrenceAt": null,
+          "agreementRevision": null
+        }
+      }
+    }
+  ]
+}
