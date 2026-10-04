@@ -3,6 +3,10 @@ import { test, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import pg from "pg";
 import { testConsents } from "../fixtures/legal.js";
+import {
+  documentClock,
+  expectSameDocument,
+} from "../fixtures/document-clock.js";
 import { pageOverflow, describeOverflow } from "../fixtures/overflow.js";
 const origin = process.env.TEST_ORIGIN || "http://localhost:3100";
 
@@ -129,7 +133,7 @@ test("market listing: save, other listings of the seller, expiry and extension",
     await expect(buyer.getByText("Сохранённых объявлений нет")).toBeVisible();
     // Follow the real empty-state link and search without tearing down an
     // active React view transition (a hard goto can fail inside WebKit).
-    const documentStart = await buyer.evaluate(() => performance.timeOrigin);
+    const documentStart = await documentClock(buyer);
     await buyer
       .getByRole("link", { name: "Открыть рынок", exact: true })
       .click();
@@ -145,9 +149,7 @@ test("market listing: save, other listings of the seller, expiry and extension",
       .poll(() => new URL(buyer.url()).searchParams.get("q"))
       .toBe("Колёса " + nonce);
     await expect(buyer.getByText("Пока нет объявлений")).toBeVisible();
-    expect(await buyer.evaluate(() => performance.timeOrigin)).toBe(
-      documentStart,
-    );
+    await expectSameDocument(buyer, documentStart);
 
     // The owner sees «Срок истёк» and extends the listing in one click.
     await page.goto("/market/" + main.shareId);

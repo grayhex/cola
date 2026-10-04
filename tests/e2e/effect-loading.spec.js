@@ -3,6 +3,10 @@ import { test, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import pg from "pg";
 import { testConsents } from "../fixtures/legal.js";
+import {
+  documentClock,
+  expectSameDocument,
+} from "../fixtures/document-clock.js";
 
 const origin = process.env.TEST_ORIGIN || "http://localhost:3100";
 
@@ -132,11 +136,11 @@ test("password recovery link keeps the same browser document", async ({
   page,
 }) => {
   await page.goto("/login");
-  const clock = await page.evaluate(() => performance.timeOrigin);
+  const clock = await documentClock(page);
   await page.locator('.auth-form a[href="/forgot-password"]').click();
   await expect(page).toHaveURL(/\/forgot-password$/);
   await expect(
     page.getByRole("textbox", { name: "Электронная почта", exact: true }),
   ).toBeVisible();
-  expect(await page.evaluate(() => performance.timeOrigin)).toBe(clock);
+  await expectSameDocument(page, clock);
 });
