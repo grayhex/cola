@@ -53,7 +53,13 @@ import BikeCard from "./bike-card.tsx";
 import { useSite } from "./site-provider.tsx";
 import { profilePath } from "../../lib/public-urls.ts";
 import { personName } from "../../lib/usernames.ts";
+import {
+  notificationCategories,
+  notificationCategoryKeys,
+} from "../../lib/notification-catalog.ts";
 const eventText: Record<string, string> = {
+  plan_published: "запланировал покатушку",
+  intent_published: "ищет компанию для покатушки —",
   component_reply: "ответил вам в обсуждении компонента",
   article_like: "понравилась ваша статья",
   article_comment: "прокомментировал статью",
@@ -190,6 +196,9 @@ export default function CommunityPage({
       ),
     [],
   );
+  // The filters of the list of notifications (#341): the unread, one category.
+  const [unreadOnly, setUnreadOnly] = useState(false),
+    [category, setCategory] = useState("");
   const [data, setData] = useState<CommunityData | null>(null),
     [page, setPage] = useState(1),
     [error, setError] = useState(""),
@@ -209,9 +218,12 @@ export default function CommunityPage({
             page +
             (kind === "journal"
               ? "&type=journal&mode=" + mode
-              : feedType === "rides"
-                ? "&type=rides"
-                : "");
+              : kind === "notifications"
+                ? (unreadOnly ? "&unread=1" : "") +
+                  (category ? "&category=" + category : "")
+                : feedType === "rides"
+                  ? "&type=rides"
+                  : "");
       let d: CommunityData;
       if (kind === "notifications")
         d = {
@@ -236,7 +248,7 @@ export default function CommunityPage({
       if (revision === requestRevision.current.revision)
         setError(errorMessage(e));
     }
-  }, [kind, savedType, page, mode, feedType]);
+  }, [kind, savedType, page, mode, feedType, unreadOnly, category]);
   useEffect(() => {
     const pending = requestRevision.current;
     if (
@@ -318,6 +330,52 @@ export default function CommunityPage({
             </button>
           )}
         </div>
+        {kind === "notifications" && user && (
+          <div className="notification-filters">
+            <div
+              className="ui-tabs"
+              role="group"
+              aria-label="Какие уведомления"
+            >
+              {(
+                [
+                  [false, "Все"],
+                  [true, "Непрочитанные"],
+                ] as const
+              ).map(([only, label]) => (
+                <button
+                  key={label}
+                  aria-pressed={unreadOnly === only}
+                  onClick={() => {
+                    if (unreadOnly === only) return;
+                    setUnreadOnly(only);
+                    setPage(1);
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <label className="field notification-category">
+              <span className="sr-only">Категория уведомлений</span>
+              <select
+                aria-label="Категория уведомлений"
+                value={category}
+                onChange={(e) => {
+                  setCategory(e.target.value);
+                  setPage(1);
+                }}
+              >
+                <option value="">Все категории</option>
+                {notificationCategoryKeys.map((key) => (
+                  <option key={key} value={key}>
+                    {notificationCategories[key].label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        )}
         {kind === "saved" && user && (
           <nav className="ui-tabs" aria-label="Что сохранено">
             {(
@@ -573,7 +631,9 @@ export default function CommunityPage({
                           >
                             {n.type === "reply"
                               ? "в обсуждении " + n.target.name
-                              : n.target.name}
+                              : n.type === "intent_published"
+                                ? "открыть «Хочу кататься»"
+                                : n.target.name}
                           </a>
                         )}
                       </p>
@@ -603,8 +663,9 @@ export default function CommunityPage({
             </ul>
             {!data.notifications.length && (
               <p className="help">
-                Здесь появятся реакции на ваши велосипеды, ответы и новые
-                подписчики.
+                {unreadOnly || category
+                  ? "По этому фильтру уведомлений нет."
+                  : "Здесь появятся реакции на ваши велосипеды, ответы, новые подписчики и планы друзей."}
               </p>
             )}
             <PageControls {...data} onPage={setPage} />

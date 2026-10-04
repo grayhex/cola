@@ -348,14 +348,24 @@ export async function notificationPage(
   page = 1,
   notificationId: string | null = null,
   now = new Date(),
+  // The same two filters as the API's list (#341): only the unread, one category.
+  { unread = false, category }: InboxFilter = {},
 ) {
   const r = await q.query<NotificationRow>(
     `SELECT ${notificationColumns()}` +
       inboxFrom +
       " WHERE " +
       inboxVisible("$4::timestamptz") +
-      " AND ($3::uuid IS NULL OR n.id=$3) ORDER BY n.created_at DESC,n.id LIMIT 21 OFFSET $2",
-    [id, (page - 1) * 20, notificationId, now],
+      " AND ($3::uuid IS NULL OR n.id=$3) AND ($5::boolean IS NOT TRUE OR n.read_at IS NULL) AND ($6::text[] IS NULL OR n.type=ANY($6::text[]))" +
+      " ORDER BY n.created_at DESC,n.id LIMIT 21 OFFSET $2",
+    [
+      id,
+      (page - 1) * 20,
+      notificationId,
+      now,
+      unread,
+      category ? notificationTypesOf(category) : null,
+    ],
   );
   return {
     notifications: r.rows.slice(0, 20).map(notificationCard),

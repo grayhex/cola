@@ -19,6 +19,7 @@ import { accountLink } from "./account.ts";
 import { rideOccurrence } from "./ride-occurrence.ts";
 import { releaseRideReminders } from "./ride-notifications.ts";
 import {
+  notificationLimits,
   pruneNotificationFanouts,
   runNotificationFanout,
 } from "./notification-fanout.ts";
@@ -86,6 +87,7 @@ async function finish(
     | "muted"
     | "paused"
     | "quiet"
+    | "disabled"
     | "attempts_exhausted"
     | null,
 ) {
@@ -142,7 +144,8 @@ type Delivery =
         | "preferences"
         | "muted"
         | "paused"
-        | "quiet";
+        | "quiet"
+        | "disabled";
     }
   | { defer: Date }
   | { message: MailMessage };
@@ -217,6 +220,13 @@ async function delivery(
   }
   // What the person has said about when and about whom: read now, not when the
   // message was queued. The inbox keeps the notice whatever is decided here.
+  // The admin's switches: all external channels, or the category of this message.
+  const limits = await notificationLimits(q);
+  if (
+    !limits.externalEnabled ||
+    limits.disabledCategories.includes(event.category)
+  )
+    return { code: "disabled" as const };
   const policy = await deliveryPolicy(q, job.recipient_id);
   const muted = (
     await q.query<{ muted: boolean }>(

@@ -682,6 +682,63 @@
   .notification-email-fields > button {
     justify-self: start;
   }
+  /* When, from whom and about what (#341): blocks of one settings object. */
+  .notification-policy {
+    display: grid;
+    gap: var(--space-4);
+    margin-top: var(--space-5);
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--line);
+  }
+  .notification-policy h4 {
+    font-size: var(--text-base);
+    font-weight: var(--weight-semibold);
+  }
+  .notification-policy-block {
+    display: grid;
+    gap: var(--space-3);
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+  .notification-policy-block > fieldset {
+    display: grid;
+    gap: var(--space-3);
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+  .notification-policy-block legend,
+  .notification-policy-block > fieldset > legend {
+    padding: 0;
+    font-weight: var(--weight-semibold);
+  }
+  .notification-policy-block button[type="submit"] {
+    justify-self: start;
+  }
+  .notification-policy-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: var(--space-3);
+  }
+  .notification-policy-list {
+    display: grid;
+    gap: var(--space-2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .notification-policy-list li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    min-height: var(--space-10);
+    overflow-wrap: anywhere;
+  }
   .account-settings > section > .help {
     max-width: 80ch;
     margin: var(--space-1) 0 var(--space-3);

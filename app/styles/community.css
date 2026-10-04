@@ -229,6 +229,21 @@
   .community-page > .help {
     margin-bottom: var(--space-4);
   }
+  /* The two filters of the list of notifications (#341). */
+  .notification-filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
+  }
+  .notification-filters > .ui-tabs {
+    margin: 0;
+  }
+  .notification-filters .notification-category {
+    margin: 0;
+    min-width: min(100%, 14rem);
+  }
   /* Nothing here yet: the page-wide empty state. */
   .social-empty {
     margin: var(--space-6) 0;

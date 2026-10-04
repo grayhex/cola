@@ -63,10 +63,11 @@ CREATE TABLE notification_mutes (
 );
 
 -- Why an e-mail was not sent, for the three new reasons: the person muted what
--- it was about, paused the channel, or the quiet hours outlasted its life.
+-- it was about, paused the channel, or the quiet hours outlasted its life; and
+-- 'disabled' for the switch of the admin.
 ALTER TABLE notification_email_outbox DROP CONSTRAINT notification_email_outbox_error_code_check;
 ALTER TABLE notification_email_outbox ADD CONSTRAINT notification_email_outbox_error_code_check
- CHECK (error_code IN ('expired','unavailable','preferences','rate_limit','smtp_temporary','smtp_permanent','attempts_exhausted','muted','paused','quiet'));
+ CHECK (error_code IN ('expired','unavailable','preferences','rate_limit','smtp_temporary','smtp_permanent','attempts_exhausted','muted','paused','quiet','disabled'));
 
 -- New plans and intents of the people a person follows (#341). The notice is an
 -- inbox record like any other; `external` says whether it may also leave the
@@ -118,8 +119,10 @@ CREATE TABLE notification_fanouts (
 CREATE INDEX notification_fanouts_due ON notification_fanouts(created_at,id) WHERE status='pending';
 CREATE INDEX notification_fanouts_author ON notification_fanouts(author_id,created_at DESC);
 
--- The limits of discovery, one row, with the values the issue proposes. The
--- admin of #341 edits them; without a row the defaults apply.
+-- The limits of discovery and the kill switches, one row, with the values the
+-- issue proposes. The admin edits them (version is the optimistic lock): a
+-- switch off for all e-mail and push, or for one category of them. The bell
+-- inside the site is not governed by it. Without a row the defaults apply.
 CREATE TABLE notification_limits (
  id smallint PRIMARY KEY CHECK(id=1),
  discovery_per_day smallint NOT NULL DEFAULT 3 CHECK(discovery_per_day BETWEEN 0 AND 20),
@@ -128,6 +131,9 @@ CREATE TABLE notification_limits (
  audience_max integer NOT NULL DEFAULT 5000 CHECK(audience_max BETWEEN 1 AND 100000),
  batch smallint NOT NULL DEFAULT 200 CHECK(batch BETWEEN 1 AND 1000),
  discovery_enabled boolean NOT NULL DEFAULT true,
+ external_enabled boolean NOT NULL DEFAULT true,
+ disabled_categories text[] NOT NULL DEFAULT '{}',
+ version integer NOT NULL DEFAULT 1 CHECK(version>=1),
  updated_at timestamptz NOT NULL DEFAULT now()
 );
 INSERT INTO notification_limits(id) VALUES(1);

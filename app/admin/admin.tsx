@@ -71,6 +71,7 @@ import "./design.module.css";
 import ArticleTopicSettings from "./article-topics.tsx";
 import LegalSettings from "./legal-settings.tsx";
 import MobileSettingsEditor from "./mobile-settings.tsx";
+import NotificationSettingsAdmin from "./notification-settings.tsx";
 import EmojiSettings from "./emoji-settings.tsx";
 // The design system reference (#127) stays inside the admin, next to its
 // menu (#131); loaded only when opened.
@@ -600,6 +601,7 @@ export default function Admin() {
               onSaved={refreshAssets}
               onDirtyChange={setMobileDirty}
             />
+            <NotificationSettingsAdmin active={tab === "mobile"} />
           </div>
           {tab === "emojis" && (
             <EmojiSettings

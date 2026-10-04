@@ -22,6 +22,10 @@ export interface NotificationLimits {
   batch: number;
   /** The kill switch of the discovery events. */
   enabled: boolean;
+  /** The kill switch of every interrupting channel (e-mail, push). */
+  externalEnabled: boolean;
+  /** Categories whose messages do not leave the site (and, for plans and intents, are not made). */
+  disabledCategories: string[];
 }
 export const defaultNotificationLimits: NotificationLimits = {
   discoveryPerDay: 3,
@@ -30,6 +34,8 @@ export const defaultNotificationLimits: NotificationLimits = {
   audienceMax: 5000,
   batch: 200,
   enabled: true,
+  externalEnabled: true,
+  disabledCategories: [],
 };
 export async function notificationLimits(
   q: Queryable,
@@ -42,8 +48,10 @@ export async function notificationLimits(
       audience_max: number;
       batch: number;
       discovery_enabled: boolean;
+      external_enabled: boolean;
+      disabled_categories: string[];
     }>(
-      "SELECT discovery_per_day,author_cooldown_minutes,announcements_per_author_day,audience_max,batch,discovery_enabled FROM notification_limits WHERE id=1",
+      "SELECT discovery_per_day,author_cooldown_minutes,announcements_per_author_day,audience_max,batch,discovery_enabled,external_enabled,disabled_categories FROM notification_limits WHERE id=1",
     )
   ).rows[0];
   return row
@@ -54,6 +62,8 @@ export async function notificationLimits(
         audienceMax: row.audience_max,
         batch: row.batch,
         enabled: row.discovery_enabled,
+        externalEnabled: row.external_enabled,
+        disabledCategories: row.disabled_categories,
       }
     : defaultNotificationLimits;
 }
@@ -73,7 +83,8 @@ export async function announcePlan(
   now = new Date(),
 ) {
   const limits = await notificationLimits(q);
-  if (!limits.enabled) return false;
+  if (!limits.enabled || limits.disabledCategories.includes("plans"))
+    return false;
   const occurrence = rideOccurrence.replaceAll("now()", "($2::timestamptz)");
   const result = await q.query(
     `INSERT INTO notification_fanouts(kind,source_id,author_id,occurs_at,revision,created_at)
@@ -98,7 +109,8 @@ export async function announceIntent(
   now = new Date(),
 ) {
   const limits = await notificationLimits(q);
-  if (!limits.enabled) return false;
+  if (!limits.enabled || limits.disabledCategories.includes("intents"))
+    return false;
   const result = await q.query(
     `INSERT INTO notification_fanouts(kind,source_id,author_id,considering,created_at)
     SELECT 'intent_published',i.id,i.owner_id,i.readiness='considering',$2
@@ -248,7 +260,12 @@ export async function runNotificationFanout(
     ).rows[0];
     if (!job) break;
     counts.claimed++;
-    if (!limits.enabled || !(await stillPublished(q, job, now))) {
+    const switchedOff =
+      !limits.enabled ||
+      limits.disabledCategories.includes(
+        job.kind === "plan_published" ? "plans" : "intents",
+      );
+    if (switchedOff || !(await stillPublished(q, job, now))) {
       // Nothing was said yet: forget it, so that the real publication, if it
       // comes later, is announced. Something was: it stays as said, once.
       await q.query(
