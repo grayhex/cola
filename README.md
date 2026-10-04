@@ -75,17 +75,17 @@ docker compose up --build -d --wait --wait-timeout 180
 
 Приложение на **Next.js 16 / React 19**, новый код — strict TypeScript/TSX. Существующий JavaScript с JSDoc сохраняет проверку типов и постепенно мигрирует по [#256](https://github.com/grayhex/cola/issues/256). **PostgreSQL 17** хранит данные и очереди фоновых задач. **Bike Resolver** — отдельный детерминированный сервис на TypeScript, Fastify, Cheerio и Zod. Точные версии закреплены в package/lock-файлах и Dockerfile.
 
-| Каталог                                              | Назначение                                       |
-| ---------------------------------------------------- | ------------------------------------------------ |
-| [`app/`](app/)                                       | Страницы, HTTP API, интерфейс и CSS              |
-| [`lib/`](lib/)                                       | Доменная логика, SQL, права доступа и интеграции |
-| [`db/`](db/)                                         | Миграции приложения                              |
-| [`services/bike-resolver/`](services/bike-resolver/) | Поиск и разбор заводских спецификаций            |
-| [`public/`](public/) · [`assets/`](assets/)          | Публичные ресурсы и исходники Rive               |
-| [`scripts/`](scripts/) · [`ops/`](ops/)              | Миграции, обслуживание, проверки и развёртывание |
-| [`tests/`](tests/)                                   | Unit, HTTP и браузерные проверки                 |
-| [`docs/`](docs/README.md)                            | Устройство проекта, разработка и эксплуатация    |
-| [Android client](https://github.com/grayhex/colabike-android) | Нативный Kotlin/Compose-клиент API v1             |
+| Каталог                                                       | Назначение                                       |
+| ------------------------------------------------------------- | ------------------------------------------------ |
+| [`app/`](app/)                                                | Страницы, HTTP API, интерфейс и CSS              |
+| [`lib/`](lib/)                                                | Доменная логика, SQL, права доступа и интеграции |
+| [`db/`](db/)                                                  | Миграции приложения                              |
+| [`services/bike-resolver/`](services/bike-resolver/)          | Поиск и разбор заводских спецификаций            |
+| [`public/`](public/) · [`assets/`](assets/)                   | Публичные ресурсы и исходники Rive               |
+| [`scripts/`](scripts/) · [`ops/`](ops/)                       | Миграции, обслуживание, проверки и развёртывание |
+| [`tests/`](tests/)                                            | Unit, HTTP и браузерные проверки                 |
+| [`docs/`](docs/README.md)                                     | Устройство проекта, разработка и эксплуатация    |
+| [Android client](https://github.com/grayhex/colabike-android) | Нативный Kotlin/Compose-клиент API v1            |
 
 Compose запускает приложение, БД, Resolver и фоновые сервисы `chat-sync` / `activity-sync`. Одноразовый `migrate` применяет схему до старта приложения и workers. Фотографии и оригиналы треков хранятся в отдельных volumes; переписка и вложения чата — в Stream.
 

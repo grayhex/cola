@@ -151,6 +151,8 @@ export default function AuthForm({
 }: {
   mode: "login" | "register" | "complete";
   busy: boolean;
+  // Resolving keeps the form: after a refused sign-up it rereads the documents.
+  // A handler that replaces the page returns leavingPage() instead.
   onSubmit: (
     data: Record<string, FormDataEntryValue | boolean | number | null>,
   ) => Promise<void>;

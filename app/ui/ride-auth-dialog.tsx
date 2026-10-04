@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import Modal from "./garage/modal.tsx";
 import AuthWindow from "./auth-window.tsx";
-import { socialApi } from "./social-primitives.tsx";
+import { leavingPage, socialApi } from "./social-primitives.tsx";
 
 // The form loads on demand; a failed chunk leaves a working way to sign in.
 const AuthForm = dynamic(
@@ -65,6 +65,7 @@ export default function RideAuthDialog({ onClose }: { onClose: () => void }) {
             try {
               await socialApi("auth/" + mode, "POST", data);
               location.reload();
+              return leavingPage();
             } catch (e) {
               setError(errorMessage(e));
               setBusy(false);

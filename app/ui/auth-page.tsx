@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "./icons.tsx";
 import GlobalHeader from "./global-header.tsx";
-import { SocialFooter, socialApi } from "./social-primitives.tsx";
+import { SocialFooter, leavingPage, socialApi } from "./social-primitives.tsx";
 import { useSite } from "./site-provider.tsx";
 import AuthForm from "./auth-form.tsx";
 import AuthWindow from "./auth-window.tsx";
@@ -16,6 +16,7 @@ export default function AuthPage({
   notice = "",
 }: {
   initialMode?: "login" | "register";
+  // Replaces the page after sign-in, as the default /account does.
   onAuthenticated?: () => void;
   // The outcome of a provider round trip, already mapped to text (#151).
   notice?: string;
@@ -67,6 +68,7 @@ export default function AuthPage({
                   // New session: reload the server viewer and discard private client state.
                   // eslint-disable-next-line @next/next/no-location-assign-relative-destination
                   else location.assign("/account");
+                  return leavingPage();
                 } catch (e) {
                   setError(errorMessage(e));
                   setBusy(false);

@@ -6,6 +6,26 @@ export const testConsents = Object.freeze({
   termsRevision: 1,
   privacyRevision: 1,
 });
+// The page is replaced after a successful sign-up, and the form must start
+// nothing more: a document refresh then was cancelled with the navigation, and
+// WebKit dropped the navigation together with it (CI runs 37155008807 and
+// 37181382571). Collects /api/legal requests sent after a 2xx answer.
+export function legalRequestsAfterSignup(page) {
+  let registered = false;
+  const late = [];
+  page.on("response", (response) => {
+    if (
+      new URL(response.url()).pathname === "/api/auth/register" &&
+      response.ok()
+    )
+      registered = true;
+  });
+  page.on("request", (request) => {
+    if (registered && new URL(request.url()).pathname === "/api/legal")
+      late.push(request.method() + " " + request.url());
+  });
+  return late;
+}
 export async function seedLegalDocuments(q) {
   for (const kind of ["terms", "privacy"]) {
     const body = `TEST ONLY · ${kind} · Synthetic document for automated checks.`;

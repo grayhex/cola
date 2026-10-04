@@ -2,7 +2,7 @@ import { registerVerified } from "../fixtures/verified-user.js";
 import { test, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import pg from "pg";
-import { testConsents } from "../fixtures/legal.js";
+import { legalRequestsAfterSignup, testConsents } from "../fixtures/legal.js";
 const origin = process.env.TEST_ORIGIN || "http://localhost:3100";
 const password = "legal-editor-browser-123";
 const termsLabel = "Принять пользовательское соглашение";
@@ -131,6 +131,7 @@ test("registration requires two explicit consents with versioned links between p
       new URL(response.url()).pathname === "/api/auth/register" &&
       response.request().method() === "POST",
   );
+  const lateLegal = legalRequestsAfterSignup(page);
   await terms.check();
   await privacy.check();
   await submit.click();
@@ -144,6 +145,7 @@ test("registration requires two explicit consents with versioned links between p
       { cause: error },
     );
   }
+  expect(lateLegal).toEqual([]);
   const db = new pg.Client({ connectionString: process.env.DATABASE_URL });
   await db.connect();
   try {

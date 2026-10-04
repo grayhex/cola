@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { randomUUID } from "node:crypto";
 import { registerVerified } from "../fixtures/verified-user.js";
-import { testConsents } from "../fixtures/legal.js";
+import { legalRequestsAfterSignup, testConsents } from "../fixtures/legal.js";
 import { chatBrowserFixture } from "../fixtures/chat-browser.js";
 import { publicPath } from "../../lib/public-urls.ts";
 
@@ -186,11 +186,13 @@ test("a guest reads the announcement, signs up on the ride and answers; organize
     .fill("agreements-browser-secret-123");
   await register.getByRole("checkbox").first().check();
   await register.getByRole("checkbox").nth(1).check();
+  const lateLegal = legalRequestsAfterSignup(page);
   await Promise.all([
     page.waitForEvent("load"),
     register.getByRole("button", { name: /Создать аккаунт/ }).click(),
   ]);
   await expect(page).toHaveURL(new RegExp(url + "$"));
+  expect(lateLegal).toEqual([]);
   const panel = page.getByRole("region", { name: "Участие", exact: true });
   await expect(panel).toContainText("Отметьте, поедете ли вы");
   // No bike needed; the answer opens the hidden place.
