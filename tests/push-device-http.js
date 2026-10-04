@@ -71,7 +71,7 @@ async function member(label) {
   assert.equal(grant.status, 201, grant.text);
   return {
     id: registered.body.user.id,
-    sessionId: grant.body.sessionId,
+    sessionId: grant.body.session.id,
     token: (path, options = {}) =>
       http("/api/v1" + path, {
         ...options,
