@@ -38,9 +38,9 @@ import {
   changeComment,
 } from "../../../../lib/comments.ts";
 import {
-  decodeWatermark,
   inboxState,
   inboxWatermark,
+  inboxWatermarkOf,
   markNotificationsRead,
   notificationPage,
   readNotifications,
@@ -189,7 +189,7 @@ async function handler(
         const body = readAllInput.safeParse(parsed);
         if (!body.success) return fail("Проверьте запрос", 400);
         const mark = body.data.watermark
-          ? decodeWatermark(body.data.watermark)
+          ? await inboxWatermarkOf(db, user.id, body.data.watermark)
           : await inboxWatermark(db, user.id);
         if (body.data.watermark && !mark)
           return fail("Отметка не распознана. Обновите список.", 400);

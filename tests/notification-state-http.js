@@ -425,6 +425,48 @@ try {
     "watermark",
   );
 
+  // A mark is only for the person it was given to: the mark of another account
+  // (an app that kept it after the account was switched) and a made-up one are
+  // refused, and nothing of the person's is read by them.
+  await comment(stranger, bikes.b);
+  assert.equal(
+    (await me.token(`/users/${actor.username}/follow`, { method: "PUT" }))
+      .status,
+    200,
+  );
+  const foreignMark = (await count(actor)).watermark;
+  assert.equal(typeof foreignMark, "string", "the other account has a mark");
+  const madeUp = Buffer.from(
+    JSON.stringify({
+      w: 1,
+      t: "2099-01-01T00:00:00.000000Z",
+      i: randomUUID(),
+    }),
+  ).toString("base64url");
+  assert.equal((await count()).unread, 1);
+  for (const [watermark, label] of [
+    [foreignMark, "another account's mark"],
+    [madeUp, "a made-up mark"],
+  ]) {
+    assertError(await all({ watermark }), 400, "invalid_request", label);
+    assert.equal(
+      (
+        await me.web("/community/notifications/read-all", "PATCH", {
+          watermark,
+        })
+      ).status,
+      400,
+      "the site refuses " + label,
+    );
+  }
+  assert.equal((await count()).unread, 1, "a refused mark reads nothing");
+  assert.equal((await count(actor)).unread, 1, "nor does it touch the other");
+  assert.deepEqual(
+    (await all({ watermark: (await count()).watermark })).body,
+    { marked: 1, unread: 0, capped: false },
+    "the person's own mark works",
+  );
+
   // ---- The site's own routes share the state ------------------------------
   await comment(actor, bikes.d);
   const siteCount = await me.web("/community/notifications/count");

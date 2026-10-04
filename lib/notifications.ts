@@ -438,6 +438,27 @@ export function decodeWatermark(raw: string): InboxWatermark | null {
   }
 }
 
+/**
+ * The mark of a text this person was given, or null. The shape alone proves
+ * nothing, so the text must also name a notice of this recipient at exactly that
+ * instant: a mark taken from another account, made up, or of a notice that is
+ * gone is not a boundary anyone may read up to (an app that kept the mark of
+ * the account it left must not read the new account's notices unseen).
+ */
+export async function inboxWatermarkOf(
+  q: Queryable,
+  userId: string,
+  raw: string,
+): Promise<InboxWatermark | null> {
+  const mark = decodeWatermark(raw);
+  if (!mark) return null;
+  const { rowCount } = await q.query(
+    "SELECT 1 FROM notifications WHERE recipient_id=$1 AND id=$2 AND created_at=$3::timestamptz",
+    [userId, mark.id, mark.createdAt],
+  );
+  return rowCount ? mark : null;
+}
+
 export type ReadScope =
   | { ids: string[] }
   | { upTo: InboxWatermark; category?: NotificationCategoryKey };

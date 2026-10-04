@@ -6,6 +6,7 @@ import {
   encodeWatermark,
   inboxState,
   inboxWatermark,
+  inboxWatermarkOf,
   markNotificationsRead,
   notificationKeysetPage,
   readNotifications,
@@ -250,6 +251,55 @@ test("the legacy read routes keep their answers: one id says whether it is the p
   void second;
   // Nothing to read is not an error.
   assert.equal(await readNotifications(db, await addUser("empty")), true);
+});
+
+test("a mark is a boundary only for the person it was given to: made up, foreign and gone ones are refused", async () => {
+  const owner = await addUser("mark-owner");
+  const other = await addUser("mark-other");
+  const actor = await addUser("mark-actor");
+  const bike = await addBike(owner);
+  const mine = await commentNotice(owner, actor, bike, at(4, 111111));
+  const theirs = await followNotice(other, actor, at(4, 222222));
+  await commentNotice(owner, actor, await addBike(owner), at(5, 333333));
+  const text = present((await inboxState(db, owner)).watermark);
+  const own = await inboxWatermarkOf(db, owner, text);
+  assert.ok(own, "the mark the server gave is accepted");
+  assert.equal(own?.createdAt, at(5, 333333));
+  // Another account's mark, kept by an app after the account was switched.
+  const foreign = present((await inboxState(db, other)).watermark);
+  assert.equal(await inboxWatermarkOf(db, owner, foreign), null);
+  // Made up: the right shape, a time that has not come, an id nobody has.
+  const madeUp = encodeWatermark({
+    createdAt: "2099-01-01T00:00:00.000000Z",
+    id: randomUUID(),
+  });
+  assert.equal(await inboxWatermarkOf(db, owner, madeUp), null);
+  // The person's own notice with a time it does not have is not that notice either.
+  assert.equal(
+    await inboxWatermarkOf(
+      db,
+      owner,
+      encodeWatermark({ createdAt: "2099-01-01T00:00:00.000000Z", id: mine }),
+    ),
+    null,
+  );
+  // A notice of somebody else, named with its own time, is not this person's.
+  assert.equal(
+    await inboxWatermarkOf(
+      db,
+      owner,
+      encodeWatermark({ createdAt: at(4, 222222), id: theirs }),
+    ),
+    null,
+  );
+  // And the shape still counts.
+  assert.equal(await inboxWatermarkOf(db, owner, "garbage"), null);
+  assert.equal(await inboxWatermarkOf(db, owner, encodeCursor(own)), null);
+  // A notice that is gone no longer names a boundary: the app asks again.
+  await db.query("DELETE FROM notifications WHERE id=$1", [mine]);
+  const gone = encodeWatermark({ createdAt: at(4, 111111), id: mine });
+  assert.equal(await inboxWatermarkOf(db, owner, gone), null);
+  assert.ok(await inboxWatermarkOf(db, owner, text), "the others still do");
 });
 
 test("the watermark is opaque, versioned and not a page cursor", () => {

@@ -2,7 +2,7 @@ import { db, transaction } from "../db.ts";
 import { CommunityError } from "../community-validation.ts";
 import { limits } from "../limits.ts";
 import {
-  decodeWatermark,
+  inboxWatermarkOf,
   markNotificationsRead,
   unreadCount,
 } from "../notifications.ts";
@@ -77,14 +77,14 @@ export function handleNotificationsReadAll(req: Request) {
       notificationReadAllRequestSchema,
       1024,
     );
-    const mark = decodeWatermark(body.watermark);
+    const mark = await inboxWatermarkOf(db, viewer.id, body.watermark);
     if (!mark)
       throw new ApiError("invalid_request", "Проверьте поля запроса.", {
         details: [
           {
             path: "watermark",
             message:
-              "Отметка не распознана: возьмите её из списка или счётчика уведомлений.",
+              "Отметка не распознана: возьмите её из списка или счётчика уведомлений этого аккаунта.",
           },
         ],
       });
