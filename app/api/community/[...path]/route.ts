@@ -180,9 +180,13 @@ async function handler(
         } catch (error) {
           if (errorMessage(error) !== "Пустой запрос") throw error;
         }
-        const body = readAllInput.safeParse(
-          bytes.length ? JSON.parse(bytes.toString()) : {},
-        );
+        let parsed: unknown = {};
+        try {
+          if (bytes.length) parsed = JSON.parse(bytes.toString());
+        } catch {
+          return fail("Проверьте запрос", 400);
+        }
+        const body = readAllInput.safeParse(parsed);
         if (!body.success) return fail("Проверьте запрос", 400);
         const mark = body.data.watermark
           ? decodeWatermark(body.data.watermark)

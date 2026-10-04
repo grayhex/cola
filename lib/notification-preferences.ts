@@ -3,6 +3,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 import {
   notificationSettings,
+  requireEmailChannel,
   saveNotificationSettings,
   type NotificationSettings,
 } from "./notification-settings.ts";
@@ -64,6 +65,10 @@ export async function saveNotificationEmail(
   env = process.env,
 ) {
   const value = notificationEmailInput.parse(input);
+  // The form has always been refused as a whole when it asks for e-mail on an
+  // address or through a sender that cannot carry it, whatever was saved before.
+  if (value.enabled)
+    requireEmailChannel(await notificationSettings(q, userId, { env }));
   return emailView(
     await saveNotificationSettings(
       q,

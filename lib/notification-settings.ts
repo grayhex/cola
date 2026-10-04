@@ -195,10 +195,28 @@ interface Plan {
   pushChanged: boolean;
 }
 /**
+ * What an account needs before e-mail can carry anything: an address that is
+ * verified and a sender that is configured.
+ */
+export function requireEmailChannel(settings: NotificationSettings) {
+  if (!settings.channels.email.verified)
+    throw new CommunityError(
+      "Подтвердите почту, чтобы получать внешние уведомления",
+      403,
+    );
+  if (!settings.channels.email.available)
+    throw new CommunityError(
+      "Отправка уведомлений по почте пока не настроена",
+      503,
+    );
+}
+
+/**
  * What the settings become, and whether that differs from what they are. A
  * channel is only switched on if it works (an address that is verified, a
- * sender that is configured, a push that is connected); switching off never
- * needs that.
+ * sender that is configured, a push that is connected); switching off, saying
+ * what already is and the reminder, which every channel shares, never need
+ * that.
  */
 function plan(
   current: NotificationSettings,
@@ -212,21 +230,19 @@ function plan(
   );
   let emailEnabled = current.channels.email.enabled;
   let pushEnabled = current.channels.push.enabled;
-  let emailTouched = change.reminders !== undefined;
   let pushTouched = false;
-  if (change.channels?.email?.enabled !== undefined) {
+  if (change.channels?.email?.enabled !== undefined)
     emailEnabled = change.channels.email.enabled;
-    emailTouched = true;
-  }
   if (change.channels?.push?.enabled !== undefined) {
     pushEnabled = change.channels.push.enabled;
     pushTouched = true;
   }
+  const enablingEmail: string[] = [];
   const enablingPush: string[] = [];
   for (const item of change.categories ?? []) {
     if (item.email !== undefined) {
+      if (item.email && !email[item.key]) enablingEmail.push(item.key);
       email[item.key] = item.email;
-      emailTouched = true;
     }
     if (item.push !== undefined) {
       if (item.push && !push[item.key]) enablingPush.push(item.key);
@@ -234,16 +250,13 @@ function plan(
       pushTouched = true;
     }
   }
-  if (emailTouched && emailEnabled && !current.channels.email.verified)
-    throw new CommunityError(
-      "Подтвердите почту, чтобы получать внешние уведомления",
-      403,
-    );
-  if (emailTouched && emailEnabled && !current.channels.email.available)
-    throw new CommunityError(
-      "Отправка уведомлений по почте пока не настроена",
-      503,
-    );
+  // Switching e-mail on, or a category of it while it is on. A category chosen
+  // while the channel stays off is only a preference: nothing is sent.
+  if (
+    emailEnabled &&
+    (!current.channels.email.enabled || enablingEmail.length > 0)
+  )
+    requireEmailChannel(current);
   if (
     pushTouched &&
     !current.channels.push.available &&

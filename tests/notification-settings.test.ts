@@ -157,6 +157,88 @@ test("e-mail keeps its rules: a verified address and a sender, and switching off
   );
 });
 
+test("only switching e-mail on needs a working channel: switching off, the reminder and what already is never do", async () => {
+  const id = await person();
+  await saveNotificationSettings(
+    db,
+    id,
+    {
+      channels: { email: { enabled: true } },
+      categories: [{ key: "rides", email: true }],
+    },
+    { env: mail },
+  );
+  // The sender is gone and the address is no longer verified: what is on stays
+  // as it is, may be turned off and does not stop the reminder from changing.
+  await db.query("UPDATE users SET email_verified_at=NULL WHERE id=$1", [id]);
+  const off = { env: noMail };
+  assert.equal(
+    (
+      await saveNotificationSettings(
+        db,
+        id,
+        { channels: { email: { enabled: true } } },
+        off,
+      )
+    ).channels.email.enabled,
+    true,
+    "saying what already is",
+  );
+  assert.equal(
+    (await saveNotificationSettings(db, id, { reminders: false }, off))
+      .reminders,
+    false,
+    "the reminder belongs to every channel",
+  );
+  assert.equal(
+    (
+      await saveNotificationSettings(
+        db,
+        id,
+        { categories: [{ key: "rides", email: false }] },
+        off,
+      )
+    ).categories[0].email.enabled,
+    false,
+    "switching a category off",
+  );
+  // A category cannot be switched on through a channel that cannot carry it.
+  await assert.rejects(
+    saveNotificationSettings(
+      db,
+      id,
+      { categories: [{ key: "market", email: true }] },
+      off,
+    ),
+    (error) => error instanceof CommunityError && error.status === 403,
+  );
+  assert.equal(
+    (
+      await saveNotificationSettings(
+        db,
+        id,
+        { channels: { email: { enabled: false } } },
+        off,
+      )
+    ).channels.email.enabled,
+    false,
+    "switching the channel off",
+  );
+  // A category chosen while the channel stays off is only a preference.
+  const quiet = await person();
+  const chosen = await saveNotificationSettings(
+    db,
+    quiet,
+    { categories: [{ key: "discussions", email: true }] },
+    off,
+  );
+  assert.equal(chosen.channels.email.enabled, false);
+  assert.equal(
+    chosen.categories.find((c) => c.key === "discussions")?.email.enabled,
+    true,
+  );
+});
+
 test("the e-mail form of the site is a view of the same settings", async () => {
   const id = await person();
   const saved = await saveNotificationEmail(
