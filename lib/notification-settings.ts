@@ -671,7 +671,11 @@ export async function saveNotificationSettings(
     else if (refused.length)
       await skipPushDeliveries(
         q,
-        { userId, types: refused.flatMap((key) => notificationTypesOf(key)) },
+        {
+          userId,
+          types: refused.flatMap((key) => notificationTypesOf(key)),
+          chat: refused.includes("chat"),
+        },
         "preferences",
         now,
       );

@@ -12,7 +12,19 @@ import { externalNoticeCheck } from "./notification-external.ts";
 import { notificationLimits } from "./notification-fanout.ts";
 import { pushConfig } from "./push-config.ts";
 import { openPushToken, revokePushDevice } from "./push-devices.ts";
-import { buildPushEnvelope, pushSubjectIsPublic } from "./push-message.ts";
+import {
+  buildChatPushEnvelope,
+  buildPushEnvelope,
+  pushSubjectIsPublic,
+} from "./push-message.ts";
+import {
+  streamChatPushAccess,
+  type ChatPushAccess,
+  type ChatPushVerdict,
+} from "./chat-push-access.ts";
+import { pruneChatWebhooks } from "./chat-push.ts";
+import { deliveryPolicy, externalVerdict } from "./notification-policy.ts";
+import type { PushEnvelope } from "./notification-envelope.ts";
 import {
   pushTransport,
   type PushMessage,
@@ -38,7 +50,10 @@ const LOOKBACK_DAYS = 3;
 
 export interface PushJob {
   id: string;
-  notification_id: string;
+  /** The event of the bell this is for, or null for a message of a conversation. */
+  notification_id: string | null;
+  chat_message_id: string | null;
+  chat_cid: string | null;
   recipient_id: string;
   device_session_id: string;
   generation: number;
@@ -84,13 +99,13 @@ export async function claimPushDeliveries(
   const token = randomUUID();
   const { rows } = await q.query<PushJob>(
     `WITH candidates AS (
-       SELECT d.id FROM push_deliveries d JOIN notifications n ON n.id=d.notification_id
+       SELECT d.id FROM push_deliveries d LEFT JOIN notifications n ON n.id=d.notification_id
        WHERE d.expires_at>$1::timestamptz AND d.available_at<=$1::timestamptz AND d.attempts<8
          AND (d.status='pending' OR (d.status='sending' AND d.lease_until<=$1::timestamptz))
-       ORDER BY (n.type=ANY($4::text[])),d.created_at,d.id LIMIT $2 FOR UPDATE OF d SKIP LOCKED
+       ORDER BY coalesce(n.type=ANY($4::text[]),false),d.created_at,d.id LIMIT $2 FOR UPDATE OF d SKIP LOCKED
      ) UPDATE push_deliveries d SET status='sending',attempts=d.attempts+1,lease_token=$3,lease_until=$1::timestamptz+make_interval(secs=>${LEASE_SECONDS})
      FROM candidates c WHERE d.id=c.id
-     RETURNING d.id,d.notification_id,d.recipient_id,d.device_session_id,d.generation,d.lease_token,d.attempts`,
+     RETURNING d.id,d.notification_id,d.recipient_id,d.device_session_id,d.generation,d.lease_token,d.attempts,d.chat_message_id,d.chat_cid`,
     [
       now,
       Math.max(1, Math.min(100, limit)),
@@ -102,6 +117,10 @@ export async function claimPushDeliveries(
 }
 
 type SkipCode =
+  | "gone"
+  | "read"
+  | "not_member"
+  | "superseded"
   | "expired"
   | "unavailable"
   | "preferences"
@@ -170,6 +189,8 @@ export async function prunePushDeliveries(q: Queryable, now = new Date()) {
 type Delivery =
   | { code: SkipCode }
   | { defer: Date }
+  /** Stream could not say whether the message may still be pushed. */
+  | { outage: true }
   | { message: PushMessage; expiresAt: Date };
 
 /** Everything the send depends on, read now. */
@@ -178,10 +199,11 @@ async function delivery(
   job: PushJob,
   now: Date,
   env: NodeJS.ProcessEnv,
+  chat: ChatPushAccess,
 ): Promise<Delivery> {
   const row = (
     await q.query<{
-      type: string;
+      type: string | null;
       ride_id: string | null;
       event_occurs_at: Date | null;
       created_at: Date;
@@ -194,16 +216,19 @@ async function delivery(
       push_enabled: boolean;
       push_enabled_at: Date | null;
       push_categories: unknown;
+      author_name: string | null;
     }>(
-      `SELECT n.type,n.ride_id,n.event_occurs_at,n.created_at,d.expires_at,dev.provider,dev.project_id,dev.token_ciphertext,
-         dev.generation device_generation,dev.revoked_at,ns.push_enabled,ns.push_enabled_at,ns.push_categories
+      `SELECT n.type,n.ride_id,n.event_occurs_at,coalesce(n.created_at,d.created_at) created_at,d.expires_at,dev.provider,dev.project_id,dev.token_ciphertext,
+         dev.generation device_generation,dev.revoked_at,ns.push_enabled,ns.push_enabled_at,ns.push_categories,au.name author_name
        FROM push_deliveries d
-       JOIN notifications n ON n.id=d.notification_id AND n.recipient_id=d.recipient_id
+       LEFT JOIN notifications n ON n.id=d.notification_id AND n.recipient_id=d.recipient_id
+       LEFT JOIN users au ON au.id=d.chat_author_id AND NOT au.blocked
        JOIN push_devices dev ON dev.session_id=d.device_session_id
        JOIN sessions s ON s.id=dev.session_id AND s.kind='device' AND s.expires_at>$3::timestamptz AND s.absolute_expires_at>$3::timestamptz
        JOIN users u ON u.id=d.recipient_id AND NOT u.blocked
        LEFT JOIN notification_settings ns ON ns.user_id=d.recipient_id
-       WHERE d.id=$1 AND d.lease_token=$2 AND d.status='sending' AND d.lease_until>$3::timestamptz AND d.expires_at>$3::timestamptz`,
+       WHERE d.id=$1 AND d.lease_token=$2 AND d.status='sending' AND d.lease_until>$3::timestamptz AND d.expires_at>$3::timestamptz
+         AND (d.notification_id IS NULL OR n.id IS NOT NULL) AND (d.chat_author_id IS NULL OR au.id IS NOT NULL)`,
       [job.id, job.lease_token, now],
     )
   ).rows[0];
@@ -211,7 +236,9 @@ async function delivery(
   // The binding: a message is for one generation of one live registration.
   if (row.revoked_at) return { code: "revoked" };
   if (row.device_generation !== job.generation) return { code: "rebound" };
-  const category: NotificationCategoryKey = notificationCategoryOf(row.type);
+  const category: NotificationCategoryKey = job.chat_message_id
+    ? "chat"
+    : notificationCategoryOf(row.type ?? "");
   const chosen =
     row.push_categories && typeof row.push_categories === "object"
       ? (row.push_categories as Record<string, unknown>)[category]
@@ -225,29 +252,81 @@ async function delivery(
       : notificationCategories[category].pushDefault)
   )
     return { code: "preferences" };
-  const checked = await externalNoticeCheck(
-    q,
-    {
-      notificationId: job.notification_id,
-      recipientId: job.recipient_id,
-      type: row.type,
-      category,
-      rideId: row.ride_id,
-      eventOccursAt: row.event_occurs_at && new Date(row.event_occurs_at),
-      expiresAt: new Date(row.expires_at),
-    },
-    "push",
-    now,
-  );
-  if ("code" in checked || "defer" in checked) return checked;
   const expiresAt = new Date(row.expires_at);
-  const envelope = buildPushEnvelope({
-    deliveryId: job.id,
-    generation: job.generation,
-    notice: checked.notice,
-    expiresAt,
-    neutral: !(await pushSubjectIsPublic(q, checked.notice.target)),
-  });
+  let envelope: PushEnvelope | null;
+  if (job.chat_message_id && job.chat_cid) {
+    // The admin's switches, then the person's pause and quiet hours.
+    const limits = await notificationLimits(q);
+    if (
+      !limits.externalEnabled ||
+      !limits.pushEnabled ||
+      limits.disabledCategories.includes("chat")
+    )
+      return { code: "disabled" };
+    const verdict = externalVerdict(await deliveryPolicy(q, job.recipient_id), {
+      type: "chat_message",
+      now,
+      expiresAt,
+      occursAt: null,
+      confirmed: false,
+    });
+    if (verdict.action === "defer") return { defer: verdict.until };
+    if (verdict.action === "drop")
+      return {
+        code:
+          verdict.reason === "paused"
+            ? "paused"
+            : verdict.reason === "quiet"
+              ? "quiet"
+              : "expired",
+      };
+    // Stream knows whether the message is still there, whether the person is
+    // still in the conversation, has muted it or has read it elsewhere. When
+    // Stream cannot say, nothing is sent: the queue asks again.
+    let access: ChatPushVerdict;
+    try {
+      access = await chat.check({
+        cid: job.chat_cid,
+        messageId: job.chat_message_id,
+        recipientId: job.recipient_id,
+      });
+    } catch {
+      return { outage: true };
+    }
+    if (access !== "ok") return { code: access };
+    envelope = buildChatPushEnvelope({
+      deliveryId: job.id,
+      generation: job.generation,
+      messageId: job.chat_message_id,
+      cid: job.chat_cid,
+      authorName: row.author_name ?? "",
+      createdAt: new Date(row.created_at),
+      expiresAt,
+    });
+  } else {
+    const checked = await externalNoticeCheck(
+      q,
+      {
+        notificationId: job.notification_id!,
+        recipientId: job.recipient_id,
+        type: row.type ?? "",
+        category,
+        rideId: row.ride_id,
+        eventOccursAt: row.event_occurs_at && new Date(row.event_occurs_at),
+        expiresAt,
+      },
+      "push",
+      now,
+    );
+    if ("code" in checked || "defer" in checked) return checked;
+    envelope = buildPushEnvelope({
+      deliveryId: job.id,
+      generation: job.generation,
+      notice: checked.notice,
+      expiresAt,
+      neutral: !(await pushSubjectIsPublic(q, checked.notice.target)),
+    });
+  }
   const token = openPushToken(row.token_ciphertext, job.device_session_id, env);
   if (!envelope || !token) return { code: "unavailable" };
   return {
@@ -290,15 +369,18 @@ export async function runPushBatch(
     now,
     transport = pushTransport(env),
     limit = 20,
+    chat = streamChatPushAccess(),
   }: {
     env?: NodeJS.ProcessEnv;
     now?: Date;
     transport?: PushTransport | null;
     limit?: number;
+    chat?: ChatPushAccess;
   } = {},
 ): Promise<PushBatchCounts> {
   const currentTime = () => now || new Date();
   await prunePushDeliveries(q, currentTime());
+  await pruneChatWebhooks(q, currentTime());
   const counts: PushBatchCounts = {
     materialized: 0,
     claimed: 0,
@@ -325,7 +407,29 @@ export async function runPushBatch(
     const job = (await claimPushDeliveries(q, currentTime(), 1))[0];
     if (!job) break;
     counts.claimed++;
-    const result = await delivery(q, job, currentTime(), env);
+    const result = await delivery(q, job, currentTime(), env, chat);
+    if ("outage" in result) {
+      // Stream is not answering: the same as a provider that is not, within the
+      // deadline of the message.
+      const at = currentTime();
+      if (job.attempts >= pushAttempts) {
+        if (await finish(q, job, at, "failed", "attempts_exhausted"))
+          counts.failed++;
+      } else {
+        const wait = Math.min(3600, 60 * 2 ** Math.min(job.attempts - 1, 9));
+        if (
+          await retry(
+            q,
+            job,
+            new Date(at.getTime() + wait * 1000),
+            "provider_temporary",
+            true,
+          )
+        )
+          counts.retry++;
+      }
+      continue;
+    }
     if ("defer" in result) {
       if (await retry(q, job, result.defer, null, false)) counts.deferred++;
       continue;

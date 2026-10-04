@@ -56,6 +56,12 @@ export const notificationCategories = {
     push: true,
     pushDefault: true,
   },
+  chat: {
+    label: "Сообщения",
+    email: false,
+    push: true,
+    pushDefault: true,
+  },
   reactions: {
     label: "Подписки и лайки",
     email: false,
@@ -80,7 +86,6 @@ export const notificationCategoryKeys = Object.keys(
  * advance; they appear in the settings API only when the events exist.
  */
 export const plannedNotificationCategories = {
-  chat: { label: "Сообщения", issue: "#342" },
   nearby: { label: "Рядом", issue: "#343" },
 } as const;
 
@@ -317,6 +322,7 @@ export const notificationPushTtlHours: Record<NotificationCategoryKey, number> =
     market: 0,
     plans: 24,
     intents: 12,
+    chat: 12,
     reactions: 0,
     site: 0,
   };

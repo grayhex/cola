@@ -12,6 +12,8 @@ import {
   runPushBatch,
 } from "../lib/push-delivery.ts";
 import { registerPushDevice } from "../lib/push-devices.ts";
+import { streamUserId } from "../lib/chat-config.ts";
+import { chatMessagePush, enqueueChatPush } from "../lib/chat-push.ts";
 
 const env = {
   NODE_ENV: "test",
@@ -181,6 +183,37 @@ try {
     [shared],
   );
   assert.equal(live2.rows[0].n, 1, "one live holder of an address");
+
+  // One message of a conversation, taken by ten calls at once - under one call
+  // id (Stream's retries) and under ten (a replay): one delivery per device.
+  const message = "msg-" + randomUUID();
+  const push = chatMessagePush({
+    type: "message.new",
+    cid: "colabike:dm_" + randomUUID().replaceAll("-", ""),
+    channel_type: "colabike",
+    message: {
+      id: message,
+      type: "regular",
+      user: { id: streamUserId(author) },
+    },
+    members: [author, person].map((id) => ({ user_id: streamUserId(id) })),
+  });
+  assert.ok(push);
+  const sameCall = "hook-" + randomUUID();
+  const taken = await Promise.all([
+    ...Array.from({ length: 5 }, () =>
+      transaction((q) => enqueueChatPush(q, sameCall, push)),
+    ),
+    ...Array.from({ length: 5 }, () =>
+      transaction((q) => enqueueChatPush(q, "hook-" + randomUUID(), push)),
+    ),
+  ]);
+  assert.equal(taken.filter((item) => item.first).length >= 1, true);
+  const chat = await pool.query(
+    "SELECT count(*)::int n FROM push_deliveries WHERE chat_message_id=$1",
+    [message],
+  );
+  assert.equal(chat.rows[0].n, 1, "one delivery per message and device");
 
   console.log(
     "Push delivery concurrency: one message per event, shared claims, expired leases recovered once, one holder of an address passed.",

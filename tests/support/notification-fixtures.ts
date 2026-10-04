@@ -469,6 +469,24 @@ export const validEnvelopes: {
     }),
   },
   {
+    name: "chat_message",
+    description:
+      "Новое сообщение в разговоре (Stream): текста сообщения здесь нет, только кто написал и в каком разговоре. `eventId` — идентификатор сообщения, а не уведомления: у чата нет строки в ящике и нет серверной пометки «прочитано» (непрочитанное хранит Stream). Цель — разговор по `ref` (cid). Стопка — разговор: новое сообщение заменяет прежнее.",
+    envelope: envelope(14, {
+      category: "chat",
+      type: "chat_message",
+      expiresAt: "2026-10-04T21:00:00.000Z",
+      neutral: false,
+      title: "Новое сообщение",
+      body: "От: Анна Райдер",
+      group: "chat:colabike:dm_3f1c0a9e7d5b4c2a8e6f1d0b9a7c5e3f2b4d6a8c",
+      target: target({
+        type: "chat",
+        ref: "colabike:dm_3f1c0a9e7d5b4c2a8e6f1d0b9a7c5e3f2b4d6a8c",
+      }),
+    }),
+  },
+  {
     name: "ride_reminder",
     description:
       "Напоминание принявшему участие: приходит не раньше срока и истекает за пять минут до выезда.",
@@ -564,7 +582,7 @@ export const droppedEnvelopes: {
 export function payloadFile() {
   return {
     version: 1,
-    note: "Данные, которые транспорт несёт на телефон одной строкой JSON в части data: готового уведомления в сообщении нет, показывает его одно приложение. Отправки пока нет (#342): файл фиксирует формат, а не работающую доставку.",
+    note: "Данные, которые транспорт несёт на телефон одной строкой JSON в части data: готового уведомления в сообщении нет, показывает его одно приложение. Файл фиксирует формат; живая доставка зависит от настройки владельца (#342).",
     limits: { envelopeBytes: ENVELOPE_MAX_BYTES, transportBytes: 4096 },
     valid: validEnvelopes,
     tolerated: toleratedEnvelopes,
@@ -606,6 +624,12 @@ const settingsAfterDefaults: NotificationSettingsBody = {
     {
       key: "intents",
       label: "Намерения друзей",
+      email: { supported: false, enabled: false },
+      push: { supported: true, enabled: true },
+    },
+    {
+      key: "chat",
+      label: "Сообщения",
       email: { supported: false, enabled: false },
       push: { supported: true, enabled: true },
     },

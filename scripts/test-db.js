@@ -285,6 +285,7 @@ await db.exec(
   await readFile(
     new URL("../db/055_notification_policy.sql", import.meta.url),
     new URL("../db/056_push_devices.sql", import.meta.url),
+    new URL("../db/057_chat_push.sql", import.meta.url),
     "utf8",
   ),
 );

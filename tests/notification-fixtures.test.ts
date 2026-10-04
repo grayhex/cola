@@ -120,7 +120,12 @@ test("payload: the envelopes the server may send are valid, small, and carry no 
       /@|token|email|password|lat|lng|longitude|latitude|\/api\//i,
       name,
     );
-    assert.equal(envelope.target.id !== null, true, name);
+    // A target is an object (id) or, for a conversation, its Stream cid (ref).
+    assert.equal(
+      envelope.target.id !== null || !!envelope.target.ref,
+      true,
+      name,
+    );
   }
   // The text of an event about something closed names nothing.
   const closed = validEnvelopes.find((e) => e.name.includes("closed"));
@@ -186,6 +191,8 @@ test("payload: an envelope says the same as the notice it is about", () => {
     targetsFile().cases.map((c) => [c.notification.id, c.notification]),
   );
   for (const { name, envelope } of validEnvelopes) {
+    // A message of a conversation has no row in the bell: Stream keeps what is unread.
+    if (envelope.type === "chat_message") continue;
     const notice = byId.get(envelope.eventId);
     assert.ok(notice, name + ": a notice of the targets file");
     assert.equal(notice.type, envelope.type, name);

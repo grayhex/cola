@@ -68,6 +68,7 @@ try {
     "054_notification_settings",
     "055_notification_policy",
     "056_push_devices",
+    "057_chat_push",
   ]) {
     const { rowCount } = await client.query(
       "SELECT 1 FROM schema_migrations WHERE version=$1",

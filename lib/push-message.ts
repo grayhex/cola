@@ -7,6 +7,7 @@ import {
 } from "./notification-envelope.ts";
 import type { ExternalNotice } from "./notification-external.ts";
 import { notificationCategoryOf } from "./notification-catalog.ts";
+import { eventIdOfMessage } from "./chat-push.ts";
 
 // What a phone is told (#342): the envelope of #341, made at the moment of the
 // send from the notice as it is then. It carries identifiers, the kind of event
@@ -136,6 +137,55 @@ export function buildPushEnvelope(
         ? new Date(target.occurrenceAt).toISOString()
         : null,
       agreementRevision: target.agreementRevision ?? null,
+    },
+  };
+  const checked = pushEnvelopeSchema.safeParse(envelope);
+  if (!checked.success || envelopeBytes(checked.data) > ENVELOPE_MAX_BYTES)
+    return null;
+  return checked.data;
+}
+
+export interface ChatPushEnvelopeInput {
+  deliveryId: string;
+  generation: number;
+  messageId: string;
+  cid: string;
+  authorName: string;
+  createdAt: Date;
+  expiresAt: Date;
+}
+
+/**
+ * The envelope of a new message of a conversation: who wrote and where, never
+ * what. The conversation is the stack (a newer message replaces the older one)
+ * and the target (`ref` is its cid); the event is the message, not a row of the
+ * bell, so the app does not mark anything read on the server (Stream keeps
+ * what is unread).
+ */
+export function buildChatPushEnvelope(
+  input: ChatPushEnvelopeInput,
+): PushEnvelope | null {
+  const author = input.authorName.trim();
+  const envelope: PushEnvelope = {
+    v: 1,
+    deliveryId: input.deliveryId,
+    eventId: eventIdOfMessage(input.messageId),
+    bindingGeneration: input.generation,
+    category: "chat",
+    type: "chat_message",
+    createdAt: input.createdAt.toISOString(),
+    expiresAt: input.expiresAt.toISOString(),
+    neutral: false,
+    title: "Новое сообщение",
+    body: author ? clip(`От: ${clip(author, 100)}`, 160) : null,
+    group: clip(`chat:${input.cid}`, 80),
+    target: {
+      type: "chat",
+      id: null,
+      commentId: null,
+      occurrenceAt: null,
+      agreementRevision: null,
+      ref: input.cid,
     },
   };
   const checked = pushEnvelopeSchema.safeParse(envelope);

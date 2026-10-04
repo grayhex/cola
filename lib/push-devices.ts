@@ -137,7 +137,13 @@ const view = (row: DeviceRow): PushDevice => ({
  */
 export async function skipPushDeliveries(
   q: Queryable,
-  where: { deviceSessionId?: string; userId?: string; types?: string[] },
+  where: {
+    deviceSessionId?: string;
+    userId?: string;
+    types?: string[];
+    /** Also the messages of conversations (the category `chat`). */
+    chat?: boolean;
+  },
   code: "rebound" | "revoked" | "preferences",
   now = new Date(),
 ) {
@@ -146,13 +152,15 @@ export async function skipPushDeliveries(
      WHERE d.status IN ('pending','sending')
        AND ($1::uuid IS NULL OR d.device_session_id=$1)
        AND ($2::uuid IS NULL OR d.recipient_id=$2)
-       AND ($3::text[] IS NULL OR d.notification_id IN (SELECT id FROM notifications WHERE type=ANY($3)))`,
+       AND ($3::text[] IS NULL OR d.notification_id IN (SELECT id FROM notifications WHERE type=ANY($3))
+         OR ($6::boolean AND d.chat_message_id IS NOT NULL))`,
     [
       where.deviceSessionId ?? null,
       where.userId ?? null,
       where.types ?? null,
       code,
       now,
+      where.chat === true,
     ],
   );
   return rowCount ?? 0;
