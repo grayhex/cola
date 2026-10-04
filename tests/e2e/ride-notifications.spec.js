@@ -130,7 +130,9 @@ test("ride reminders: default on-site, independent mail, keyboard, rollback and 
     await settings
       .getByRole("button", { name: "Сохранить уведомления" })
       .click();
-    await expect(settings.getByRole("status")).toContainText("сохранены");
+    await expect(settings.getByRole("status").first()).toContainText(
+      "сохранены",
+    );
     await visit(url);
     await expect(status).toContainText("Напоминание отключено");
     await visit("/account?tab=account");
@@ -158,7 +160,9 @@ test("ride reminders: default on-site, independent mail, keyboard, rollback and 
     await settings
       .getByRole("button", { name: "Сохранить уведомления" })
       .click();
-    await expect(settings.getByRole("status")).toContainText("сохранены");
+    await expect(settings.getByRole("status").first()).toContainText(
+      "сохранены",
+    );
     await api(organizer.request, "rides/" + ride.id, "PATCH", {
       ...fields,
       meetingPoint: "Главный вход в парк",
