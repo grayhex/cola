@@ -246,7 +246,8 @@ try {
   );
 
   // The budget is the person's own.
-  for (let i = 0; i < 30; i++)
+  // One has been spent above (the takeover): twenty-nine more fit the window.
+  for (let i = 0; i < 29; i++)
     assert.equal(
       (await put(other, registration({ token: address + "-b" + i }))).status,
       200,
