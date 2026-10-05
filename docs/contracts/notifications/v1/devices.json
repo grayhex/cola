@@ -1,0 +1,85 @@
+{
+  "version": 1,
+  "note": "Регистрация push-адреса телефона (cola#342): PUT/GET/DELETE /api/v1/me/push-device. Только для Bearer-токена приложения (у cookie браузера телефона нет). Адрес — секрет: он есть только в запросе, сервер хранит его зашифрованным и нигде не возвращает. Файл — примеры формата, не живая доставка.",
+  "rules": [
+    "Привязка принадлежит сессии приложения, а не токену доступа: истёк короткий токен — привязка жива; выход, отзыв сессии, блокировка, смена пароля и удаление аккаунта удаляют её вместе с сессией.",
+    "Повтор того же адреса с той же установки — то же поколение (generation), ничего не меняется.",
+    "Новый адрес, другой проект, новая установка и привязка после DELETE — следующее поколение. Приложение сравнивает поколение каждого push со своим и не показывает то, что сделано для другого.",
+    "expectedGeneration: если приложение назвало поколение, а сервер знает другое, привязка не меняется, ответ 409 conflict — прочитайте её через GET и решите заново. Запоздалый колбэк не возвращает прошлое.",
+    "Адрес, который уже у другой живой привязки (тот же телефон под другим аккаунтом), переходит к новой; прежняя отзывается и ничего не получает.",
+    "Согласие на push — в настройках аккаунта (/me/notification-settings), а не здесь: привязка не включает push. getToken не есть согласие. Сервер шлёт только тому, кто включил push, и только когда push.available."
+  ],
+  "register": {
+    "request": {
+      "installationId": "00000000-0000-4000-8000-0000000000a1",
+      "provider": "rustore",
+      "projectId": "project-a",
+      "token": "address-given-by-the-provider"
+    },
+    "response": {
+      "provider": "rustore",
+      "projectId": "project-a",
+      "generation": 1,
+      "registeredAt": "2026-10-04T09:00:00.000Z",
+      "updatedAt": "2026-10-04T09:00:00.000Z",
+      "lastSeenAt": "2026-10-04T09:00:00.000Z"
+    }
+  },
+  "rotate": {
+    "description": "Провайдер выдал новый адрес (onNewToken): приложение шлёт его с поколением, которое считает текущим. Ответ — следующее поколение, его приложение сохраняет и сверяет с конвертами.",
+    "request": {
+      "installationId": "00000000-0000-4000-8000-0000000000a1",
+      "provider": "rustore",
+      "projectId": "project-a",
+      "token": "new-address-given-by-the-provider",
+      "expectedGeneration": 1
+    },
+    "response": {
+      "provider": "rustore",
+      "projectId": "project-a",
+      "generation": 2,
+      "registeredAt": "2026-10-05T09:00:00.000Z",
+      "updatedAt": "2026-10-05T09:00:00.000Z",
+      "lastSeenAt": "2026-10-05T09:00:00.000Z"
+    }
+  },
+  "errors": [
+    {
+      "name": "not_signed_in",
+      "status": 401,
+      "code": "unauthorized"
+    },
+    {
+      "name": "browser_cookie",
+      "status": 403,
+      "code": "forbidden"
+    },
+    {
+      "name": "project_not_allowed",
+      "status": 400,
+      "code": "invalid_request",
+      "details": [{ "path": "projectId" }]
+    },
+    {
+      "name": "stale_generation",
+      "status": 409,
+      "code": "conflict"
+    },
+    {
+      "name": "too_many_phones",
+      "status": 409,
+      "code": "conflict"
+    },
+    {
+      "name": "push_not_connected",
+      "status": 503,
+      "code": "service_unavailable"
+    },
+    {
+      "name": "not_registered",
+      "description": "GET и после DELETE: привязки нет.",
+      "status": 404,
+      "code": "not_found"
+    }
+  ]
+}

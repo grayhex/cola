@@ -15,6 +15,7 @@ import type { marketApiCard } from "../market.ts";
 import type { FeedEntry } from "../ride-feed.ts";
 import type { notificationCard } from "../notifications.ts";
 import type { NotificationSettings } from "../notification-settings.ts";
+import type { PushDevice } from "../push-devices.ts";
 import { meetingVisible, shownMetrics } from "../rides.ts";
 import type { myUpcomingEntries } from "../rides.ts";
 import { plannedEnd } from "../ride-plan.ts";
@@ -39,6 +40,7 @@ import type {
   NotificationTarget,
   OwnRideSummary,
   Profile,
+  PushDeviceBody,
   Relationship,
   Ride,
   RideAnalysis,
@@ -799,5 +801,16 @@ export function toComment(row: CommentRow): Comment {
       !hidden && row.updated_at > row.created_at ? iso(row.updated_at) : null,
     deleted: hidden,
     replyCount: Number(row.reply_count || 0),
+  };
+}
+
+export function toPushDevice(device: PushDevice): PushDeviceBody {
+  return {
+    provider: device.provider,
+    projectId: device.projectId,
+    generation: device.generation,
+    registeredAt: device.registeredAt.toISOString(),
+    updatedAt: device.updatedAt.toISOString(),
+    lastSeenAt: device.lastSeenAt.toISOString(),
   };
 }

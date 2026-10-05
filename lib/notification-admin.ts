@@ -16,7 +16,8 @@ import {
   notificationLimits,
 } from "./notification-fanout.ts";
 import { deliveryPolicy, externalVerdict } from "./notification-policy.ts";
-import { pushAvailable } from "./notification-settings.ts";
+import { pushAvailable } from "./push-config.ts";
+import { pushStatus } from "./push-delivery.ts";
 import { rideReminderScheduleStatus } from "./ride-notifications.ts";
 
 // The admin side of the notifications (#341): the catalogue as the code has it,
@@ -50,6 +51,7 @@ export const adminNotificationLimitsInput = z.strictObject({
   batch: z.int().min(1).max(1000),
   discoveryEnabled: z.boolean(),
   externalEnabled: z.boolean(),
+  pushEnabled: z.boolean(),
   disabledCategories: z
     .array(z.enum(notificationCategoryKeys))
     .max(notificationCategoryKeys.length)
@@ -112,6 +114,7 @@ export async function adminNotifications(
     status: {
       email: await notificationEmailStatus(q),
       fanouts: await notificationFanoutStatus(q),
+      push: await pushStatus(q),
       reminders: await rideReminderScheduleStatus(q),
     },
   };
@@ -149,6 +152,7 @@ export async function saveAdminNotifications(
     batch: change.batch,
     enabled: change.discoveryEnabled,
     externalEnabled: change.externalEnabled,
+    pushEnabled: change.pushEnabled,
     disabledCategories: [...change.disabledCategories].sort(),
   };
   const changed = (Object.keys(next) as (keyof typeof next)[]).filter(
@@ -163,7 +167,7 @@ export async function saveAdminNotifications(
   if (!changed.length) return adminNotifications(q);
   await q.query(
     `UPDATE notification_limits SET discovery_per_day=$1,author_cooldown_minutes=$2,announcements_per_author_day=$3,audience_max=$4,batch=$5,
-    discovery_enabled=$6,external_enabled=$7,disabled_categories=$8::text[],version=version+1,updated_at=now() WHERE id=1`,
+    discovery_enabled=$6,external_enabled=$7,push_enabled=$9,disabled_categories=$8::text[],version=version+1,updated_at=now() WHERE id=1`,
     [
       next.discoveryPerDay,
       next.authorCooldownMinutes,
@@ -173,6 +177,7 @@ export async function saveAdminNotifications(
       next.enabled,
       next.externalEnabled,
       next.disabledCategories,
+      next.pushEnabled,
     ],
   );
   await audit(
@@ -337,8 +342,10 @@ export async function explainDiscovery(
     limits.externalEnabled && !limits.disabledCategories.includes("plans"),
     limits.externalEnabled && !limits.disabledCategories.includes("plans")
       ? pushAvailable()
-        ? "Внешние каналы включены"
-        : "Внешние каналы включены, но push пока не подключён"
+        ? limits.pushEnabled
+          ? "Внешние каналы включены"
+          : "Внешние каналы включены, push выключен администратором"
+        : "Внешние каналы включены, но push не подключён на сервере"
       : "Внешние каналы выключены администратором",
   );
   const external =

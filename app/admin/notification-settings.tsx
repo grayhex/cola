@@ -19,6 +19,7 @@ interface Limits {
   batch: number;
   enabled: boolean;
   externalEnabled: boolean;
+  pushEnabled: boolean;
   disabledCategories: string[];
 }
 interface Category {
@@ -41,6 +42,10 @@ interface State {
   status: {
     email: { status: string; count: number }[];
     fanouts: { status: string; count: number }[];
+    push: {
+      deliveries: { status: string; count: number }[];
+      devices: { provider: string; count: number }[];
+    };
   };
 }
 interface Reason {
@@ -211,6 +216,7 @@ export default function NotificationSettingsAdmin({
         batch: draft.batch,
         discoveryEnabled: draft.enabled,
         externalEnabled: draft.externalEnabled,
+        pushEnabled: draft.pushEnabled,
         disabledCategories: draft.disabledCategories,
       });
       setState(result);
@@ -355,6 +361,11 @@ export default function NotificationSettingsAdmin({
           label="Письма и push отправляются (выключатель всех внешних каналов)"
           checked={draft.externalEnabled}
           onChange={(value) => edit({ externalEnabled: value })}
+        />
+        <Toggle
+          label="Push отправляется (выключатель только push: письма идут)"
+          checked={draft.pushEnabled}
+          onChange={(value) => edit({ pushEnabled: value })}
         />
         <fieldset disabled={busy} className={styles.categories}>
           <legend>Не отправлять наружу по категориям</legend>
@@ -556,7 +567,17 @@ export default function NotificationSettingsAdmin({
               )
               .join(", ")
           : "нет объявлений"}
-        .
+        . Push:{" "}
+        {state.status.push.deliveries.length
+          ? state.status.push.deliveries
+              .map(
+                (row) => `${statusText[row.status] ?? row.status} ${row.count}`,
+              )
+              .join(", ")
+          : "очередь пуста"}
+        , телефонов с привязкой:{" "}
+        {state.status.push.devices.reduce((sum, row) => sum + row.count, 0)}
+        {state.channels.push.available ? "" : " (доставка не подключена)"}.
       </p>
     </section>
   );

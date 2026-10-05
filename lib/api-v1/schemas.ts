@@ -1310,6 +1310,59 @@ export const notificationSettingsPatchSchema = named(
   notificationSettingsPatch,
 );
 
+const pushProviderSchema = z
+  .enum(["rustore"])
+  .describe("Служба доставки; сейчас только RuStore Push.");
+export const pushDeviceRegistrationSchema = named(
+  "PushDeviceRegistration",
+  "Адрес push этого телефона. Сессия берётся из токена доступа, а не из тела: у сессии приложения один адрес. Повтор с тем же адресом ничего не меняет; новый адрес, проект или установка — следующее поколение привязки. Адрес — секрет: сервер хранит его зашифрованным и никому не показывает.",
+  z.strictObject({
+    installationId: id.describe(
+      "Случайный идентификатор установки, который приложение создаёт один раз: переустановка отличается от смены адреса.",
+    ),
+    provider: pushProviderSchema,
+    projectId: z
+      .string()
+      .regex(/^[A-Za-z0-9._-]{1,100}$/)
+      .describe(
+        "Проект RuStore Push. Принимается только тот, что сервер разрешил; адрес службы клиент не называет.",
+      ),
+    token: z
+      .string()
+      .min(1)
+      .max(4096)
+      .describe("Адрес устройства, который выдала служба доставки."),
+    expectedGeneration: z
+      .int()
+      .min(1)
+      .nullable()
+      .optional()
+      .describe(
+        "Поколение, которое приложение считает текущим. Если сервер знает другое, привязку это не меняет: 409 (`conflict`), прочитайте её заново. Запоздалый ответ не возвращает прошлое.",
+      ),
+  }),
+);
+export const pushDeviceSchema = named(
+  "PushDevice",
+  "Привязка этого телефона к аккаунту для push. Самого адреса здесь нет и не будет.",
+  z.strictObject({
+    provider: pushProviderSchema,
+    projectId: z.string(),
+    generation: z
+      .int()
+      .min(1)
+      .describe(
+        "Поколение привязки. Не секрет: приложение сверяет его с каждым push и не показывает то, что сделано для другого поколения.",
+      ),
+    registeredAt: instant.describe("Когда началось это поколение."),
+    updatedAt: instant,
+    lastSeenAt: instant.describe(
+      "Когда приложение в последний раз подтвердило адрес.",
+    ),
+  }),
+);
+export type PushDeviceBody = z.infer<typeof pushDeviceSchema>;
+
 export const feedItemSchema = named(
   "FeedItem",
   "Публикация в ленте: ровно одно из полей `bike`, `ride`, `journal`, `listing` заполнено, остальные null; какое — говорит `type`. Это те же карточки, что в списках (`BikeSummary`, `RideSummary`, `JournalSummary`, `MarketListing`).",

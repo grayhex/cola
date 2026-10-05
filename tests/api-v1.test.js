@@ -823,6 +823,8 @@ test("OpenAPI: documents exactly the implemented operations, every $ref resolves
       "OwnRideSummary",
       "Profile",
       "ProfileCounts",
+      "PushDevice",
+      "PushDeviceRegistration",
       "RefreshRequest",
       "Relationship",
       "ReplyPage",

@@ -18,6 +18,8 @@ export const limits = Object.freeze({
   commentEdits: 40,
   reports: 10,
   notificationReads: 120,
+  // Registering and revoking the push address of a phone (#342), per person.
+  pushDeviceWrites: 30,
   profileEdits: 30,
   avatarUploads: 15,
   avatarFileBytes: 2 * 1024 * 1024,

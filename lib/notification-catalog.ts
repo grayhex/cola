@@ -285,3 +285,55 @@ export function notificationEmailEnqueueSql(
       : "";
   return `SELECT cola_queue_notification_email(id,recipient_id,${notificationEmailCategorySql()}${timing}) FROM created WHERE ${enabledParameter}`;
 }
+
+// ---- Push -----------------------------------------------------------------
+// The push queue (#342) reads the same catalogue: which events a phone can be
+// told about, how long a message is worth sending, and which of them are
+// personal (an invitation, an answer, a change of a ride) and which are
+// discovery (a friend's new plan or intent). Discovery never goes ahead of the
+// personal ones.
+
+/** The events of the categories that push may carry. */
+export const notificationPushTypes = notificationTypes.filter(
+  (type) => notificationCategories[notificationEvents[type].category].push,
+);
+/** Categories that are about what others plan, not about the person's own affairs. */
+export const notificationPushDiscoveryCategories: readonly NotificationCategoryKey[] =
+  ["plans", "intents"];
+export const notificationPushDiscoveryTypes = notificationPushTypes.filter(
+  (type) =>
+    notificationPushDiscoveryCategories.includes(
+      notificationEvents[type].category,
+    ),
+);
+/**
+ * How long a message is worth sending after the event. The ride's own date
+ * shortens it further (nothing is sent for a ride that has begun).
+ */
+export const notificationPushTtlHours: Record<NotificationCategoryKey, number> =
+  {
+    rides: 168,
+    discussions: 24,
+    market: 0,
+    plans: 24,
+    intents: 12,
+    reactions: 0,
+    site: 0,
+  };
+export function notificationPushTtlSql(typeColumn = "type") {
+  const hours = [...new Set(Object.values(notificationPushTtlHours))].filter(
+    Boolean,
+  );
+  const arms = hours.map(
+    (value) =>
+      `WHEN ${typeColumn} IN (${notificationPushTypes
+        .filter(
+          (type) =>
+            notificationPushTtlHours[notificationEvents[type].category] ===
+            value,
+        )
+        .map((type) => `'${type}'`)
+        .join(",")}) THEN ${value}`,
+  );
+  return `CASE ${arms.join(" ")} ELSE 0 END`;
+}

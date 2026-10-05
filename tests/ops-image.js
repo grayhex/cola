@@ -41,6 +41,7 @@ const scripts = [
   "cleanup-rides.js",
   "migrate.js",
   "notification-email.js",
+  "notification-push.js",
   "rebuild-factory-components.js",
   "recalculate-photo-storage.js",
   "reset-password.js",
@@ -70,6 +71,7 @@ const { bootstrapAdmin } = await load("scripts/bootstrap-admin.js");
 await load("lib/rides.ts");
 await load("lib/activity-worker.ts");
 await load("lib/notification-email.ts");
+await load("lib/push-delivery.ts");
 execFileSync(process.execPath, ["scripts/activity-sync.js", "--once"], {
   env: { ...process.env, RWGPS_ENABLED: "false" },
 });
@@ -205,6 +207,21 @@ try {
     ),
   );
   assert.equal(mailWorker.disabled, true);
+  // Without a provider the push worker only reports that it is off.
+  const pushWorker = JSON.parse(
+    runScript(
+      "scripts/notification-push.js",
+      {
+        ...process.env,
+        PUSH_TOKEN_KEY: "",
+        RUSTORE_PUSH_PROJECTS: "",
+        RUSTORE_PUSH_SERVICE_TOKEN: "",
+      },
+      ["--once"],
+    ),
+  );
+  assert.equal(pushWorker.event, "notification_push_batch");
+  assert.equal(pushWorker.disabled, true);
 
   await isolatedDatabase(
     "empty database, repeat, bootstrap rollback",

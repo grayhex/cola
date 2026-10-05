@@ -64,6 +64,7 @@ const base = {
   batch: 200,
   discoveryEnabled: true,
   externalEnabled: true,
+  pushEnabled: true,
   disabledCategories: [] as string[],
 };
 async function save(actor: string, change: Partial<typeof base> = {}) {
