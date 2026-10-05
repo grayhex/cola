@@ -21,6 +21,9 @@ interface Limits {
   externalEnabled: boolean;
   pushEnabled: boolean;
   disabledCategories: string[];
+  nearbyEnabled: boolean;
+  nearbyMaxRadiusKm: number;
+  nearbyDeviceTtlHours: number;
 }
 interface Category {
   key: string;
@@ -217,6 +220,9 @@ export default function NotificationSettingsAdmin({
         discoveryEnabled: draft.enabled,
         externalEnabled: draft.externalEnabled,
         pushEnabled: draft.pushEnabled,
+        nearbyEnabled: draft.nearbyEnabled,
+        nearbyMaxRadiusKm: draft.nearbyMaxRadiusKm,
+        nearbyDeviceTtlHours: draft.nearbyDeviceTtlHours,
         disabledCategories: draft.disabledCategories,
       });
       setState(result);
@@ -367,6 +373,32 @@ export default function NotificationSettingsAdmin({
           checked={draft.pushEnabled}
           onChange={(value) => edit({ pushEnabled: value })}
         />
+        <Toggle
+          label="Район «поездки рядом» принимается (выключатель: пока выключен, районы не читаются и не сохраняются)"
+          checked={draft.nearbyEnabled}
+          onChange={(value) => edit({ nearbyEnabled: value })}
+        />
+        <fieldset disabled={busy} className={styles.fields}>
+          <legend>Район «поездки рядом»</legend>
+          <NumberField
+            label="Наибольший радиус района, км"
+            help="Предел радиуса, который можно сохранить. По умолчанию 50."
+            value={draft.nearbyMaxRadiusKm}
+            min={5}
+            max={100}
+            disabled={busy}
+            onChange={(value) => edit({ nearbyMaxRadiusKm: value })}
+          />
+          <NumberField
+            label="Срок района с телефона, часов"
+            help="Районы, подтверждённые телефоном, живут столько и ничем, кроме нового подтверждения, не продлеваются. По умолчанию 24."
+            value={draft.nearbyDeviceTtlHours}
+            min={1}
+            max={72}
+            disabled={busy}
+            onChange={(value) => edit({ nearbyDeviceTtlHours: value })}
+          />
+        </fieldset>
         <fieldset disabled={busy} className={styles.categories}>
           <legend>Не отправлять наружу по категориям</legend>
           <p className="help">

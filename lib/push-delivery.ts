@@ -10,6 +10,7 @@ import {
 } from "./notification-catalog.ts";
 import { externalNoticeCheck } from "./notification-external.ts";
 import { notificationLimits } from "./notification-fanout.ts";
+import { pruneNearbyAreas } from "./nearby.ts";
 import { pushConfig } from "./push-config.ts";
 import { openPushToken, revokePushDevice } from "./push-devices.ts";
 import {
@@ -381,6 +382,9 @@ export async function runPushBatch(
   const currentTime = () => now || new Date();
   await prunePushDeliveries(q, currentTime());
   await pruneChatWebhooks(q, currentTime());
+  // Not push's own, but this worker is the one that runs: a phone's area is kept
+  // for its term and not a minute longer.
+  await pruneNearbyAreas(q, currentTime());
   const counts: PushBatchCounts = {
     materialized: 0,
     claimed: 0,

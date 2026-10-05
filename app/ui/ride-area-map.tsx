@@ -133,10 +133,13 @@ export default function AreaPicker({
   value = {},
   onChange,
   disabled,
+  radii = areaRadii,
 }: {
   value?: Area;
   onChange: (value: Area) => void;
   disabled?: boolean;
+  /** The radii on offer, in kilometres: a narrower list for an area with a minimum. */
+  radii?: number[];
 }) {
   const config = useRasterConfig(),
     [open, setOpen] = useState(!!value.center),
@@ -298,7 +301,7 @@ export default function AreaPicker({
                 : place(view, Number(e.target.value))
             }
           >
-            {areaRadii.map((km) => (
+            {radii.map((km) => (
               <option key={km} value={km}>
                 {km} км
               </option>

@@ -534,6 +534,45 @@ export async function exportAccount(
     mutes: notificationMutes,
     updatedAt: notificationSettingsRow?.updated_at ?? null,
   };
+  // The private area of "rides near me" (#343): the account's own, as it is kept
+  // (a cell centre, not a place), with the term of a phone's area.
+  const nearbyRow = (
+    await q.query<{
+      enabled: boolean;
+      source: string | null;
+      label: string | null;
+      area_lng: string | null;
+      area_lat: string | null;
+      radius_m: number | null;
+      observed_at: Date | null;
+      expires_at: Date | null;
+      horizon_days: number;
+      filters: unknown;
+      updated_at: Date;
+    }>(
+      "SELECT enabled,source,label,area_lng,area_lat,radius_m,observed_at,expires_at,horizon_days,filters,updated_at FROM nearby_areas WHERE user_id=$1",
+      [userId],
+    )
+  ).rows[0];
+  const nearby = {
+    enabled: nearbyRow?.enabled ?? false,
+    source: nearbyRow?.source ?? null,
+    area:
+      nearbyRow?.area_lng != null &&
+      nearbyRow.area_lat != null &&
+      nearbyRow.radius_m != null
+        ? {
+            label: nearbyRow.label,
+            center: [Number(nearbyRow.area_lng), Number(nearbyRow.area_lat)],
+            radiusM: nearbyRow.radius_m,
+          }
+        : null,
+    observedAt: nearbyRow?.observed_at ?? null,
+    expiresAt: nearbyRow?.expires_at ?? null,
+    horizonDays: nearbyRow?.horizon_days ?? 14,
+    filters: nearbyRow?.filters ?? {},
+    updatedAt: nearbyRow?.updated_at ?? null,
+  };
   return {
     format: "colabike-export",
     version: 1,
@@ -578,6 +617,7 @@ export async function exportAccount(
     rideIntentPreferences,
     notificationEmailPreferences,
     notificationSettings,
+    nearby,
     componentPhotos: componentPhotos.map((p) => ({
       ...p,
       url: link("/api/components/media/" + p.id),

@@ -8,6 +8,7 @@ import { socialApi } from "./social-primitives.tsx";
 import { errorMessage } from "../../lib/errors.ts";
 import { useMotionFeedback } from "./motion.tsx";
 import AccountNotificationPolicy from "./account-notification-policy.tsx";
+import AccountNearby from "./account-nearby.tsx";
 const empty: NotificationEmailPreferences = {
   enabled: false,
   discussions: false,
@@ -173,6 +174,7 @@ export default function AccountNotifications() {
         </p>
       )}
       <AccountNotificationPolicy />
+      <AccountNearby />
     </section>
   );
 }

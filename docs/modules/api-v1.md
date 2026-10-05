@@ -302,7 +302,19 @@
 - `PUT /rides/{id}/participation` принимает `{ response, occurrenceAt, expectedAgreementRevision? }`. `occurrenceAt` обязателен всегда; `expectedAgreementRevision` обязателен для «иду» и «возможно» (согласие относится к условиям, которые человек видел), для «не иду» нет: выйти можно всегда. Если дата уже другая, условия другой редакции, набор закрыт или организатор отвечает на свой план, ответ **не принимается**: `409` и в теле `current` — состояние как оно есть сейчас (то же, что вернул бы `GET`), а не тихое подтверждение новых условий. Повтор того же ответа ничего не меняет. Велосипед и подтверждённая почта не нужны (как на сайте). Бюджет `ride-write` — 20 за окно, общий с сайтом.
 - Прежние клиенты сайта вызывают `respondRide` без редакции — поведение не изменилось; ошибка расхождения даты и редакции — `RideConflict` (подкласс `RideError` со статусом 409).
 
-Схемы `RideIntent`, `RideIntentPage`, `RideIntentRequest`, `RideIntentWindow`, `RideParticipation`, `RideParticipationRequest`, `RideParticipationConflict` входят в документ OpenAPI. Тесты: `tests/api-v1-planning.test.ts` (права чтения и состояния, дата и редакция, страницы и версии намерений, схемы) и `tests/api-v1-planning-http.js` (настоящий сервер: ключ и повтор, версии, отмена и удаление, списки, ответ на старую редакцию и на перенесённую дату, бюджет).
+Схемы `RideIntent`, `RideIntentPage`, `RideIntentRequest`, `RideIntentWindow`, `RideParticipation`, `RideParticipationRequest`, `RideParticipationConflict`, `Nearby`, `NearbyAreaRequest`, `NearbySettingsPatch` входят в документ OpenAPI. Тесты: `tests/api-v1-planning.test.ts` (права чтения и состояния, дата и редакция, страницы и версии намерений, схемы) и `tests/api-v1-planning-http.js` (настоящий сервер: ключ и повтор, версии, отмена и удаление, списки, ответ на старую редакцию и на перенесённую дату, бюджет).
+
+### Район «поездки рядом» (#343)
+
+| Запрос                          | Ответ                                                                                  |
+| ------------------------------- | -------------------------------------------------------------------------------------- |
+| `GET /api/v1/me/nearby`         | `Nearby` + `ETag` (версия есть и у пустого состояния)                                  |
+| `PATCH /api/v1/me/nearby`       | `Nearby`; `{ enabled?, horizonDays?, filters? }`, `If-Match` необязателен              |
+| `PUT /api/v1/me/nearby/area`    | `Nearby`; `{ source, center, radiusM, label?, replaceSource? }`, `If-Match` обязателен |
+| `DELETE /api/v1/me/nearby/area` | `Nearby` без района                                                                    |
+| `DELETE /api/v1/me/nearby`      | `204`: район, переключатель и предпочтения удалены                                     |
+
+Район хранится один и только как центр ячейки сетки; телефон приводит положение к ячейке **до** отправки (`limits.cell`), сервер более точное не округляет, а отклоняет. Район с телефона принимается только с токеном приложения, живёт `limits.deviceTtlHours` часов и ничем не продлевается. Подробно, вместе с жизненным циклом данных, — в главе [Уведомления](notifications.md#район-поездки-рядом-343).
 
 ## Нативный клиент: media по Bearer, чат, App Link (#324)
 
