@@ -104,6 +104,7 @@ export const inboxVisible = (
 ) => `n.recipient_id=$1 AND ((n.type='bike_week' AND b.owner_id=n.recipient_id AND b.is_public AND NOT o.blocked AND NOT b.leaderboard_excluded AND EXISTS(SELECT 1 FROM bike_weeks w WHERE w.bike_id=b.id AND w.owner_id=n.recipient_id AND w.status='selected' AND w.week_start=date_trunc('week',(${clock}) AT TIME ZONE 'Europe/Moscow')::date AND n.dedup_key='bike_week:'||w.week_start::text||':'||b.id::text)) OR (n.type='market_expiring' AND ml.owner_id=n.recipient_id) OR n.type='session_reuse' OR ${rideNoticeVisible(clock)} OR NOT a.blocked AND (
  (n.type='component_reply' AND cm.first_public_at IS NOT NULL AND cc.deleted_at IS NULL AND cc.author_id=n.actor_id) OR
  (n.type='plan_published' AND r.owner_id=n.actor_id AND r.status='planned' AND r.is_public AND rb.is_public AND NOT ro.blocked AND (${rideOccurrence.replaceAll("now()", `(${clock})`)})>(${clock})) OR
+ (n.type='plan_nearby' AND r.owner_id=n.actor_id AND r.status='planned' AND r.is_public AND rb.is_public AND NOT ro.blocked AND (${rideOccurrence.replaceAll("now()", `(${clock})`)})>(${clock}) AND EXISTS(SELECT 1 FROM nearby_areas na WHERE na.user_id=n.recipient_id AND na.enabled)) OR
  (n.type='intent_published' AND ri.owner_id=n.actor_id AND ri.visibility='community' AND ri.status='active' AND EXISTS(SELECT 1 FROM ride_intent_windows w WHERE w.intent_id=ri.id AND w.ends_at>(${clock}))) OR
  (n.type='follow' AND EXISTS(SELECT 1 FROM user_follows f WHERE f.follower_id=n.actor_id AND f.following_id=n.recipient_id)) OR
  (b.is_public AND NOT o.blocked AND (
@@ -195,6 +196,7 @@ export interface NotificationRow {
   avatar_id: string;
   event_occurs_at: Date | null;
   event_revision: number | null;
+  reasons: string[] | null;
 }
 // One notice as the site and the API show it: the text follows what the
 // notice is about now, and the address is a path on the site. The target also
@@ -214,7 +216,25 @@ export function notificationCard(n: NotificationRow) {
       agreementRevision: n.event_revision ?? null,
     }),
     category: notificationCategoryOf(n.type),
+    reasons: discoveryReasons(n),
   };
+}
+/**
+ * Why a discovery notice came: a friend's new plan, the area the person chose,
+ * the time of their own intention. Notices made before the reasons were kept
+ * came from the circle. Other notices have none, and none of them names a
+ * place or a distance.
+ */
+function discoveryReasons(n: Pick<NotificationRow, "type" | "reasons">) {
+  if (!["plan_published", "intent_published", "plan_nearby"].includes(n.type))
+    return [] as Array<"friend" | "nearby" | "intent">;
+  const known = (n.reasons ?? []).filter(
+    (reason): reason is "friend" | "nearby" | "intent" =>
+      reason === "friend" || reason === "nearby" || reason === "intent",
+  );
+  return known.length || n.type === "plan_nearby"
+    ? known
+    : (["friend"] as Array<"friend" | "nearby" | "intent">);
 }
 type TypedTarget = {
   commentId: string | null;
@@ -304,7 +324,9 @@ function plainCard(n: NotificationRow, typed: TypedTarget) {
                         href: "/ride-intents",
                         ...typed,
                       }
-                    : n.type.startsWith("ride_") || n.type === "plan_published"
+                    : n.type.startsWith("ride_") ||
+                        n.type === "plan_published" ||
+                        n.type === "plan_nearby"
                       ? {
                           type: "ride",
                           id: n.ride_id,
@@ -341,7 +363,7 @@ function plainCard(n: NotificationRow, typed: TypedTarget) {
 }
 // A function: the notice days come from market.ts, which imports this module.
 const notificationColumns = () =>
-  `n.id,n.type,n.created_at,n.read_at,n.event_occurs_at,n.event_revision,n.comment_id,n.ride_comment_id,n.entry_comment_id,n.component_comment_id,cm.id component_id,cm.name component_name,cm.category_slug,cm.slug,ml.id AS listing_id,ml.share_id AS listing_share,ml.title AS listing_title,ml.status AS listing_status,ml.expires_at AS listing_expires,(ml.expires_at<=now()) AS listing_expired,(ml.expires_at<=now()+make_interval(days=>${expiryNoticeDays})) AS listing_due,e.id AS entry_id,e.kind AS entry_kind,e.share_id AS entry_share,e.title AS entry_title,r.id AS ride_id,r.share_id AS ride_share_id,r.title AS ride_title,n.intent_id,b.id AS bike_id,b.share_id,b.name AS bike_name,a.id AS actor_id,a.username,a.name,a.avatar_id`;
+  `n.id,n.type,n.created_at,n.read_at,n.event_occurs_at,n.event_revision,n.reasons,n.comment_id,n.ride_comment_id,n.entry_comment_id,n.component_comment_id,cm.id component_id,cm.name component_name,cm.category_slug,cm.slug,ml.id AS listing_id,ml.share_id AS listing_share,ml.title AS listing_title,ml.status AS listing_status,ml.expires_at AS listing_expires,(ml.expires_at<=now()) AS listing_expired,(ml.expires_at<=now()+make_interval(days=>${expiryNoticeDays})) AS listing_due,e.id AS entry_id,e.kind AS entry_kind,e.share_id AS entry_share,e.title AS entry_title,r.id AS ride_id,r.share_id AS ride_share_id,r.title AS ride_title,n.intent_id,b.id AS bike_id,b.share_id,b.name AS bike_name,a.id AS actor_id,a.username,a.name,a.avatar_id`;
 export async function notificationPage(
   q: Queryable,
   id: string,

@@ -98,6 +98,18 @@
                 "supported": true,
                 "enabled": true
               }
+            },
+            {
+              "key": "nearby",
+              "label": "Рядом",
+              "email": {
+                "supported": false,
+                "enabled": false
+              },
+              "push": {
+                "supported": true,
+                "enabled": false
+              }
             }
           ],
           "reminders": true,
@@ -231,6 +243,18 @@
                 "supported": true,
                 "enabled": true
               }
+            },
+            {
+              "key": "nearby",
+              "label": "Рядом",
+              "email": {
+                "supported": false,
+                "enabled": false
+              },
+              "push": {
+                "supported": true,
+                "enabled": false
+              }
             }
           ],
           "reminders": true,
@@ -350,6 +374,18 @@
               "push": {
                 "supported": true,
                 "enabled": true
+              }
+            },
+            {
+              "key": "nearby",
+              "label": "Рядом",
+              "email": {
+                "supported": false,
+                "enabled": false
+              },
+              "push": {
+                "supported": true,
+                "enabled": false
               }
             }
           ],
@@ -475,6 +511,18 @@
               "push": {
                 "supported": true,
                 "enabled": true
+              }
+            },
+            {
+              "key": "nearby",
+              "label": "Рядом",
+              "email": {
+                "supported": false,
+                "enabled": false
+              },
+              "push": {
+                "supported": true,
+                "enabled": false
               }
             }
           ],
@@ -620,6 +668,18 @@
                 "supported": true,
                 "enabled": true
               }
+            },
+            {
+              "key": "nearby",
+              "label": "Рядом",
+              "email": {
+                "supported": false,
+                "enabled": false
+              },
+              "push": {
+                "supported": true,
+                "enabled": false
+              }
             }
           ],
           "reminders": true,
@@ -740,6 +800,18 @@
                 "supported": true,
                 "enabled": true
               }
+            },
+            {
+              "key": "nearby",
+              "label": "Рядом",
+              "email": {
+                "supported": false,
+                "enabled": false
+              },
+              "push": {
+                "supported": true,
+                "enabled": false
+              }
             }
           ],
           "reminders": true,
@@ -859,6 +931,18 @@
               "push": {
                 "supported": true,
                 "enabled": true
+              }
+            },
+            {
+              "key": "nearby",
+              "label": "Рядом",
+              "email": {
+                "supported": false,
+                "enabled": false
+              },
+              "push": {
+                "supported": true,
+                "enabled": false
               }
             }
           ],
@@ -983,6 +1067,18 @@
               "push": {
                 "supported": true,
                 "enabled": true
+              }
+            },
+            {
+              "key": "nearby",
+              "label": "Рядом",
+              "email": {
+                "supported": false,
+                "enabled": false
+              },
+              "push": {
+                "supported": true,
+                "enabled": false
               }
             }
           ],
@@ -1122,6 +1218,18 @@
                 "supported": true,
                 "enabled": true
               }
+            },
+            {
+              "key": "nearby",
+              "label": "Рядом",
+              "email": {
+                "supported": false,
+                "enabled": false
+              },
+              "push": {
+                "supported": true,
+                "enabled": false
+              }
             }
           ],
           "reminders": true,
@@ -1243,6 +1351,18 @@
               "push": {
                 "supported": true,
                 "enabled": true
+              }
+            },
+            {
+              "key": "nearby",
+              "label": "Рядом",
+              "email": {
+                "supported": false,
+                "enabled": false
+              },
+              "push": {
+                "supported": true,
+                "enabled": false
               }
             }
           ],

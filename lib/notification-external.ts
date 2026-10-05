@@ -5,6 +5,7 @@ import {
   externalVerdict,
   noticeMutedSql,
 } from "./notification-policy.ts";
+import { nearbyNoticeStands } from "./nearby.ts";
 import { notificationPage } from "./notifications.ts";
 import { interestInvitationAvailable } from "./ride-matching.ts";
 import { rideOccurrence } from "./ride-occurrence.ts";
@@ -59,6 +60,21 @@ export async function externalNoticeCheck(
     subject.type === "market_expiring" &&
     "state" in notice.target &&
     !["expiring", "expired"].includes(notice.target.state)
+  )
+    return { code: "unavailable" };
+  // A plan told because it lies in the area the person chose: still told only
+  // while it does, in an area that is still on and inside its term.
+  if (
+    subject.type === "plan_nearby" &&
+    !(await nearbyNoticeStands(
+      q,
+      {
+        recipientId: subject.recipientId,
+        rideId: subject.rideId,
+        occursAt: subject.eventOccursAt,
+      },
+      now,
+    ))
   )
     return { code: "unavailable" };
   if (subject.type === "ride_invite") {

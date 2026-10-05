@@ -1,8 +1,5 @@
 import { z } from "zod";
-import {
-  notificationCategoryKeys,
-  plannedNotificationCategories,
-} from "./notification-catalog.ts";
+import { notificationCategoryKeys } from "./notification-catalog.ts";
 
 // The envelope of an external notification (#341): what a transport carries to
 // a phone and what the app checks before it shows anything. It is the
@@ -22,12 +19,7 @@ export const ENVELOPE_MAX_BYTES = 3072;
 
 const instant = z.iso.datetime();
 /** Every key an app may meet; one it does not know goes to its general channel. */
-const categories = [
-  ...notificationCategoryKeys,
-  ...(Object.keys(plannedNotificationCategories) as Array<
-    keyof typeof plannedNotificationCategories
-  >),
-] as [string, ...string[]];
+const categories = [...notificationCategoryKeys] as [string, ...string[]];
 
 /**
  * Where a tap leads, in ids: the app asks the server for the name, the state

@@ -17,6 +17,7 @@
           "name": "Анна",
           "avatarUrl": null
         },
+        "reasons": [],
         "target": {
           "type": "bike",
           "id": "00000000-0000-4000-8000-00000000000a",
@@ -43,6 +44,7 @@
           "name": "Борис",
           "avatarUrl": null
         },
+        "reasons": [],
         "target": {
           "type": "bike",
           "id": "00000000-0000-4000-8000-00000000000a",
@@ -69,6 +71,7 @@
           "name": "Анна",
           "avatarUrl": null
         },
+        "reasons": [],
         "target": {
           "type": "ride",
           "id": "00000000-0000-4000-8000-00000000000b",
@@ -95,6 +98,7 @@
           "name": "Анна",
           "avatarUrl": null
         },
+        "reasons": [],
         "target": {
           "type": "journal",
           "id": "00000000-0000-4000-8000-00000000000c",
@@ -121,6 +125,7 @@
           "name": "Анна",
           "avatarUrl": null
         },
+        "reasons": [],
         "target": {
           "type": "article",
           "id": "00000000-0000-4000-8000-00000000000d",
@@ -147,6 +152,7 @@
           "name": "Борис",
           "avatarUrl": null
         },
+        "reasons": [],
         "target": {
           "type": "component",
           "id": "00000000-0000-4000-8000-00000000000e",
@@ -173,6 +179,7 @@
           "name": "Анна",
           "avatarUrl": null
         },
+        "reasons": [],
         "target": {
           "type": "ride",
           "id": "00000000-0000-4000-8000-00000000000b",
@@ -199,6 +206,7 @@
           "name": "Анна",
           "avatarUrl": null
         },
+        "reasons": [],
         "target": {
           "type": "ride",
           "id": "00000000-0000-4000-8000-00000000000b",
@@ -225,6 +233,7 @@
           "name": "Анна",
           "avatarUrl": null
         },
+        "reasons": [],
         "target": {
           "type": "ride",
           "id": "00000000-0000-4000-8000-00000000000b",
@@ -251,6 +260,7 @@
           "name": "Анна",
           "avatarUrl": null
         },
+        "reasons": [],
         "target": {
           "type": "ride",
           "id": "00000000-0000-4000-8000-00000000000b",
@@ -272,6 +282,7 @@
         "createdAt": "2026-10-04T08:50:00.000Z",
         "readAt": null,
         "actor": null,
+        "reasons": [],
         "target": {
           "type": "ride",
           "id": "00000000-0000-4000-8000-00000000000b",
@@ -293,6 +304,7 @@
         "createdAt": "2026-10-04T08:49:00.000Z",
         "readAt": null,
         "actor": null,
+        "reasons": [],
         "target": {
           "type": "ride",
           "id": "00000000-0000-4000-8000-00000000000b",
@@ -314,6 +326,7 @@
         "createdAt": "2026-10-04T08:48:00.000Z",
         "readAt": null,
         "actor": null,
+        "reasons": [],
         "target": {
           "type": "market",
           "id": "00000000-0000-4000-8000-00000000000f",
@@ -342,6 +355,7 @@
           "name": "Борис",
           "avatarUrl": null
         },
+        "reasons": [],
         "target": {
           "type": "profile",
           "id": "00000000-0000-4000-8000-000000000003",
@@ -368,6 +382,7 @@
           "name": "Борис",
           "avatarUrl": null
         },
+        "reasons": [],
         "target": {
           "type": "bike",
           "id": "00000000-0000-4000-8000-00000000000a",
@@ -389,6 +404,7 @@
         "createdAt": "2026-10-04T08:45:00.000Z",
         "readAt": null,
         "actor": null,
+        "reasons": [],
         "target": {
           "type": "account",
           "id": "00000000-0000-4000-8000-000000000074",
@@ -415,6 +431,7 @@
           "name": "Борис",
           "avatarUrl": null
         },
+        "reasons": [],
         "target": {
           "type": "ride",
           "id": "00000000-0000-4000-8000-00000000000b",
@@ -441,6 +458,7 @@
           "name": "Борис",
           "avatarUrl": null
         },
+        "reasons": [],
         "target": {
           "type": "journal",
           "id": "00000000-0000-4000-8000-00000000000c",
@@ -467,6 +485,7 @@
           "name": "Борис",
           "avatarUrl": null
         },
+        "reasons": [],
         "target": {
           "type": "ride",
           "id": "00000000-0000-4000-8000-00000000000b",
@@ -493,6 +512,7 @@
           "name": "Борис",
           "avatarUrl": null
         },
+        "reasons": [],
         "target": {
           "type": "journal",
           "id": "00000000-0000-4000-8000-00000000000c",
@@ -514,6 +534,7 @@
         "createdAt": "2026-10-04T08:40:00.000Z",
         "readAt": null,
         "actor": null,
+        "reasons": [],
         "target": {
           "type": "bike-week",
           "id": "00000000-0000-4000-8000-00000000000a",
@@ -540,6 +561,7 @@
           "name": "Борис",
           "avatarUrl": null
         },
+        "reasons": ["friend"],
         "target": {
           "type": "ride",
           "id": "00000000-0000-4000-8000-00000000000b",
@@ -566,6 +588,7 @@
           "name": "Борис",
           "avatarUrl": null
         },
+        "reasons": ["friend"],
         "target": {
           "type": "intent",
           "id": "00000000-0000-4000-8000-000000000010",
@@ -574,6 +597,33 @@
           "commentId": null,
           "occurrenceAt": null,
           "agreementRevision": null
+        }
+      }
+    },
+    {
+      "name": "plan_nearby",
+      "description": "Новая публичная покатушка в районе, который вы выбрали («поездки рядом» включены отдельным согласием). Цель — покатушка; `occurrenceAt` и `agreementRevision` — как у плана друга. `reasons` называет, почему пришло (`nearby`; `intent`, если дата попадает в окно вашего намерения); места и расстояния в уведомлении нет, а автор не узнаёт, кто его получил. Категория — `nearby`, её push включается отдельно.",
+      "notification": {
+        "id": "00000000-0000-4000-8000-00000000007c",
+        "type": "plan_nearby",
+        "category": "nearby",
+        "createdAt": "2026-10-04T08:37:00.000Z",
+        "readAt": null,
+        "actor": {
+          "id": "00000000-0000-4000-8000-000000000003",
+          "username": "boris",
+          "name": "Борис",
+          "avatarUrl": null
+        },
+        "reasons": ["nearby"],
+        "target": {
+          "type": "ride",
+          "id": "00000000-0000-4000-8000-00000000000b",
+          "name": "Субботний круг",
+          "path": "/r/rd-saturday",
+          "commentId": null,
+          "occurrenceAt": "2026-10-10T07:00:00.000Z",
+          "agreementRevision": 1
         }
       }
     }

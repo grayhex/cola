@@ -7,7 +7,11 @@ import { randomUUID } from "node:crypto";
 import pg from "pg";
 import { testConsents } from "./fixtures/legal.js";
 import { verifyCapturedEmail } from "./fixtures/verified-user.js";
-import { errorSchema, nearbySchema } from "../lib/api-v1/schemas.ts";
+import {
+  errorSchema,
+  nearbyOffersSchema,
+  nearbySchema,
+} from "../lib/api-v1/schemas.ts";
 import { snapToCell } from "../lib/nearby.ts";
 
 const base = process.env.TEST_ORIGIN || "http://localhost:3100";
@@ -394,6 +398,124 @@ try {
   assert.equal(lapsed.body.expired, true, "after the term it is not used");
 
   // The budget is the site's own window.
+  // ---- The current offers, on request -------------------------------------
+  const offersPath = "/me/nearby/offers";
+  assertError(await guest(offersPath), 401, "unauthorized", "guest offers");
+  const seeker = await member("seeker");
+  const host = await member("host");
+  const hostBike = (
+    await host.web("/bikes", "POST", {
+      name: "Публичный " + run,
+      brand: "Cube",
+      model: "Nuroad",
+      year: 2024,
+      category: "gravel",
+      description: "",
+      color: "",
+      size: "",
+      weight: null,
+      is_public: true,
+    })
+  ).body.id;
+  async function plan(area, hours) {
+    const id = randomUUID();
+    await db.query(
+      `INSERT INTO rides(id,share_id,owner_id,bike_id,title,description,status,source_kind,has_track,is_public,started_at,distance_m,point_count,public_point_count,public_geometry,privacy_enabled,privacy_radius_m,source_hash,recurrence,meeting_point,meeting_visibility,plan_passport,import_metrics)
+       VALUES($1,$1,$2,$3,$4,'Описание','planned','planned',false,true,date_trunc('minute',now())+make_interval(hours=>$5),0,0,0,'[]',true,500,$6,'none','Secret gate 7','participants',$7::jsonb,'{}')`,
+      [
+        id,
+        host.id,
+        hostBike,
+        "План рядом " + run + " " + hours,
+        hours,
+        "fixture-" + id,
+        JSON.stringify({ purpose: "social", area }),
+      ],
+    );
+    return id;
+  }
+  const sokolniki = {
+    label: "Сокольники",
+    center: [37.66, 55.79],
+    radiusM: 3000,
+  };
+  const tver = { label: "Тверь", center: [35.9, 56.86], radiusM: 3000 };
+  const inArea = await plan(sokolniki, 30);
+  await plan(tver, 20);
+
+  const off = await seeker.token(offersPath);
+  assert.equal(off.status, 200, off.text);
+  assert.equal(nearbyOffersSchema.parse(off.body).state, "off");
+  assert.deepEqual(off.body.items, []);
+  assert.equal(off.headers.get("cache-control"), "no-store");
+  for (const query of [
+    "?limit=0",
+    "?limit=21",
+    "?limit=many",
+    "?limit=1&limit=2",
+    "?area=1",
+  ])
+    assertError(
+      await seeker.token(offersPath + query),
+      400,
+      "invalid_request",
+      query,
+    );
+
+  const read = await seeker.token(phone);
+  const turnedOn = await seeker.token(phone + "/area", {
+    method: "PUT",
+    body: area(),
+    headers: { "If-Match": read.headers.get("etag") },
+  });
+  assert.equal(turnedOn.status, 200, turnedOn.text);
+  assert.equal(
+    nearbyOffersSchema.parse((await seeker.token(offersPath)).body).state,
+    "off",
+    "an area is not a consent",
+  );
+  assert.equal(
+    (await seeker.token(phone, { method: "PATCH", body: { enabled: true } }))
+      .status,
+    200,
+  );
+
+  const ready = await seeker.token(offersPath);
+  assert.equal(ready.status, 200, ready.text);
+  nearbyOffersSchema.parse(ready.body);
+  assert.equal(ready.body.state, "ready");
+  assert.deepEqual(
+    ready.body.items.map((item) => item.ride.id),
+    [inArea],
+    "the plan in the area, and not the one in another city",
+  );
+  assert.deepEqual(ready.body.items[0].reasons, ["nearby"]);
+  assert.ok(!ready.text.includes("Secret"), "no meeting place");
+  assert.ok(
+    !/"center"|"radiusM"|37\.66|55\.79|away|nearby_distance/.test(ready.text),
+    "no place and no distance to the person",
+  );
+  assert.equal(
+    (await seeker.token(offersPath + "?limit=1")).body.items.length,
+    1,
+  );
+  // A plan the person is invited to is not advertised to them.
+  await db.query(
+    "INSERT INTO ride_invitations(ride_id,user_id) VALUES($1,$2)",
+    [inArea, seeker.id],
+  );
+  assert.deepEqual(
+    (await seeker.token(offersPath)).body.items,
+    [],
+    "invited: not advertised",
+  );
+  // The phone's cookie session reads the same.
+  assert.equal((await seeker.cookie(offersPath)).status, 200);
+  assert.equal(
+    (await seeker.token(offersPath, { method: "POST", body: {} })).status,
+    405,
+  );
+
   let limited = null;
   for (let i = 0; i < 40 && !limited; i++) {
     const r = await other.token(phone, {

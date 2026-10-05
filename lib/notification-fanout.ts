@@ -88,7 +88,104 @@ export async function notificationLimits(
     : defaultNotificationLimits;
 }
 
-const discoveryTypes = "('plan_published','intent_published')";
+const discoveryTypes = "('plan_published','intent_published','plan_nearby')";
+
+/** Great-circle distance in metres between two points given as SQL expressions of degrees. */
+export const haversineSql = (
+  latA: string,
+  lngA: string,
+  latB: string,
+  lngB: string,
+) =>
+  `(2*6371000*asin(least(1,sqrt(power(sin(radians((${latB})::float8-(${latA})::float8)/2),2)+cos(radians((${latA})::float8))*cos(radians((${latB})::float8))*power(sin(radians((${lngB})::float8-(${lngA})::float8)/2),2)))))`;
+
+/** The public, coarse area and the kind of a plan: all that nearby matching reads of it. */
+export interface PlanGeometry {
+  lat: number;
+  lng: number;
+  radiusM: number;
+  purpose: string | null;
+  pace: string | null;
+  surface: string | null;
+}
+const text = (value: unknown) =>
+  typeof value === "string" && value.length <= 40 ? value : null;
+/**
+ * What a plan's passport says in public (the area it named, rounded to a grid
+ * of about a kilometre when it was saved) or null when it names none: with no
+ * open geography there is no nearby match. The place of the meeting is not in
+ * the passport and is not read.
+ */
+export function planGeometry(passport: unknown): PlanGeometry | null {
+  const p = passport as {
+    area?: { center?: unknown; radiusM?: unknown };
+    purpose?: unknown;
+    pace?: unknown;
+    surface?: unknown;
+  } | null;
+  const center = p?.area?.center;
+  const radiusM = p?.area?.radiusM;
+  if (
+    !Array.isArray(center) ||
+    center.length !== 2 ||
+    typeof center[0] !== "number" ||
+    typeof center[1] !== "number" ||
+    !Number.isFinite(center[0]) ||
+    !Number.isFinite(center[1]) ||
+    Math.abs(center[0]) > 180 ||
+    Math.abs(center[1]) > 90 ||
+    typeof radiusM !== "number" ||
+    !Number.isInteger(radiusM) ||
+    radiusM < 1000 ||
+    radiusM > 100_000
+  )
+    return null;
+  return {
+    lng: center[0],
+    lat: center[1],
+    radiusM,
+    purpose: text(p?.purpose),
+    pace: text(p?.pace),
+    surface: text(p?.surface),
+  };
+}
+/** The degrees a box around a plan must reach to hold every area that could overlap it. */
+export function nearbyBox(
+  plan: PlanGeometry,
+  limits: Pick<NotificationLimits, "nearbyMaxRadiusKm">,
+) {
+  const reach = limits.nearbyMaxRadiusKm * 1000 + plan.radiusM;
+  const cos = Math.max(Math.cos((plan.lat * Math.PI) / 180), 0.01);
+  // A little more than the arithmetic: the areas are the centres of grid cells.
+  return {
+    lat: (reach / 111_000) * 1.05 + 0.03,
+    lng: (reach / (111_320 * cos)) * 1.05 + 0.05,
+  };
+}
+/**
+ * Whether an area (the row `na` of `nearby_areas`) is one a plan can be offered
+ * to: on, kept, in term, the plan inside its horizon, the circles overlapping and
+ * the kind of ride wanted. Parameters are the caller's placeholders, in order:
+ * now, the plan's start, latitude, longitude, radius in metres, purpose, pace,
+ * surface. Nothing is read of the plan but what it says in public.
+ */
+export const nearbyMatchSql = (p: {
+  now: string;
+  occurs: string;
+  lat: string;
+  lng: string;
+  radius: string;
+  purpose: string;
+  pace: string;
+  surface: string;
+}) => `na.enabled AND na.area_lat IS NOT NULL
+  AND (na.expires_at IS NULL OR na.expires_at>${p.now}::timestamptz)
+  AND ${p.occurs}::timestamptz>${p.now}::timestamptz
+  AND ${p.occurs}::timestamptz<=${p.now}::timestamptz+na.horizon_days*interval '1 day'
+  AND ${haversineSql("na.area_lat", "na.area_lng", `${p.lat}::float8`, `${p.lng}::float8`)}<=na.radius_m+${p.radius}::integer
+  AND (coalesce(jsonb_array_length(na.filters->'purposes'),0)=0 OR (${p.purpose}::text IS NOT NULL AND jsonb_exists(na.filters->'purposes',${p.purpose}::text)))
+  AND (coalesce(jsonb_array_length(na.filters->'paces'),0)=0 OR (${p.pace}::text IS NOT NULL AND jsonb_exists(na.filters->'paces',${p.pace}::text)))
+  AND (coalesce(jsonb_array_length(na.filters->'surfaces'),0)=0 OR (${p.surface}::text IS NOT NULL AND jsonb_exists(na.filters->'surfaces',${p.surface}::text)))`;
 
 /**
  * Says that a ride was published, if it is now a public planned ride with a
@@ -154,6 +251,7 @@ interface Fanout {
   revision: number | null;
   cursor: string | null;
   handled: number;
+  created_at: Date;
 }
 
 /** Whether the source is still what was announced: still published, still to come. */
@@ -192,35 +290,66 @@ async function page(
   token: string,
   now: Date,
   limits: NotificationLimits,
+  nearby: PlanGeometry | null,
 ) {
   const plan = job.kind === "plan_published";
+  const box = nearby ? nearbyBox(nearby, limits) : null;
+  const near = nearbyMatchSql({
+    now: "$14",
+    occurs: "$10",
+    lat: "$19",
+    lng: "$20",
+    radius: "$21",
+    purpose: "$22",
+    pace: "$23",
+    surface: "$24",
+  });
   const result = await q.query<{ taken: number; last: string | null }>(
     `WITH job AS (SELECT * FROM notification_fanouts WHERE id=$1 AND lease_token=$2 AND status='pending'),
-    audience AS (
-      SELECT c.id FROM (
-        SELECT f.follower_id id FROM user_follows f WHERE f.following_id=$3
-        UNION SELECT m.user_id FROM notification_circle_members m WHERE m.member_id=$3) c
-      JOIN users r ON r.id=c.id AND NOT r.blocked
-      LEFT JOIN notification_settings s ON s.user_id=r.id
-      WHERE r.id<>$3 AND ($4::uuid IS NULL OR r.id>$4) AND EXISTS(SELECT 1 FROM job)
-        AND CASE coalesce(s.circle,'friends')
+    candidates AS (
+      SELECT f.follower_id id FROM user_follows f WHERE f.following_id=$3
+      UNION SELECT m.user_id FROM notification_circle_members m WHERE m.member_id=$3
+      UNION SELECT na.user_id FROM nearby_areas na
+        WHERE $18::boolean AND na.enabled AND na.area_lat IS NOT NULL
+          AND na.area_lat BETWEEN $19::float8-$25::float8 AND $19::float8+$25::float8
+          AND na.area_lng BETWEEN $20::float8-$26::float8 AND $20::float8+$26::float8
+          AND ($4::uuid IS NULL OR na.user_id>$4)),
+    reasoned AS (
+      SELECT r.id,
+        (CASE coalesce(s.circle,'friends')
           WHEN 'friends' THEN EXISTS(SELECT 1 FROM user_follows a WHERE a.follower_id=r.id AND a.following_id=$3) AND EXISTS(SELECT 1 FROM user_follows b WHERE b.follower_id=$3 AND b.following_id=r.id)
           WHEN 'follows' THEN EXISTS(SELECT 1 FROM user_follows a WHERE a.follower_id=r.id AND a.following_id=$3)
           WHEN 'selected' THEN EXISTS(SELECT 1 FROM notification_circle_members m WHERE m.user_id=r.id AND m.member_id=$3)
           ELSE false END
-        AND (NOT $5::boolean OR coalesce(s.considering,false))
+          AND (NOT $5::boolean OR coalesce(s.considering,false))) AS friend,
+        -- Only what was published after the person turned the area on or moved it: the
+        -- existing catalogue is shown on request (the offers), never sent as news.
+        ($18::boolean AND EXISTS(SELECT 1 FROM nearby_areas na WHERE na.user_id=r.id AND na.updated_at<=(SELECT created_at FROM job) AND ${near})) AS nearby,
+        (${plan ? "true" : "false"} AND EXISTS(SELECT 1 FROM ride_intents i JOIN ride_intent_windows w ON w.intent_id=i.id
+          WHERE i.owner_id=r.id AND i.status='active' AND w.starts_at<=$10::timestamptz AND w.ends_at>$10::timestamptz)) AS intent
+      FROM candidates c JOIN users r ON r.id=c.id AND NOT r.blocked
+      LEFT JOIN notification_settings s ON s.user_id=r.id
+      WHERE r.id<>$3 AND ($4::uuid IS NULL OR r.id>$4) AND EXISTS(SELECT 1 FROM job)
         AND NOT EXISTS(SELECT 1 FROM notification_mutes m WHERE m.user_id=r.id AND ((m.kind='author' AND m.target_id=$3) OR ($6::boolean AND m.kind='ride' AND m.target_id=$7)))
-      ORDER BY r.id LIMIT $8),
-    folds AS (SELECT DISTINCT ON (n.recipient_id) n.id,n.recipient_id,n.read_at FROM notifications n JOIN audience a ON a.id=n.recipient_id
-      WHERE n.group_key=$9 ORDER BY n.recipient_id,n.created_at DESC,n.id),
+        -- Already invited, or already answering: the ride is not advertised to them.
+        AND NOT ($6::boolean AND (EXISTS(SELECT 1 FROM ride_invitations v WHERE v.ride_id=$7 AND v.user_id=r.id) OR EXISTS(SELECT 1 FROM ride_rsvps v WHERE v.ride_id=$7 AND v.user_id=r.id)))),
+    audience AS (
+      SELECT a.id,
+        CASE WHEN a.friend THEN $12::text ELSE 'plan_nearby' END AS type,
+        CASE WHEN a.friend THEN $9::text ELSE $27::text END AS group_key,
+        ARRAY_REMOVE(ARRAY[CASE WHEN a.friend THEN 'friend' END,CASE WHEN a.nearby THEN 'nearby' END,CASE WHEN a.intent AND (a.friend OR a.nearby) THEN 'intent' END],NULL) AS reasons
+      FROM reasoned a WHERE a.friend OR a.nearby ORDER BY a.id LIMIT $8),
+    folds AS (SELECT DISTINCT ON (n.recipient_id) n.id,n.recipient_id,n.read_at,a.reasons FROM notifications n JOIN audience a ON a.id=n.recipient_id
+      WHERE n.group_key=a.group_key ORDER BY n.recipient_id,n.created_at DESC,n.id),
     folded AS (UPDATE notifications n SET ride_id=CASE WHEN $6 THEN $7::uuid ELSE n.ride_id END,intent_id=CASE WHEN $6 THEN n.intent_id ELSE $7::uuid END,
-        event_occurs_at=CASE WHEN $6 THEN $10::timestamptz ELSE n.event_occurs_at END,event_revision=CASE WHEN $6 THEN $11::integer ELSE n.event_revision END
+        event_occurs_at=CASE WHEN $6 THEN $10::timestamptz ELSE n.event_occurs_at END,event_revision=CASE WHEN $6 THEN $11::integer ELSE n.event_revision END,reasons=folds.reasons
       FROM folds WHERE n.id=folds.id AND folds.read_at IS NULL RETURNING n.id),
-    made AS (INSERT INTO notifications(id,recipient_id,actor_id,type,ride_id,intent_id,dedup_key,group_key,event_occurs_at,event_revision,created_at,external)
-      SELECT gen_random_uuid(),a.id,$3,$12,CASE WHEN $6 THEN $7::uuid END,CASE WHEN $6 THEN NULL ELSE $7::uuid END,
-        $12||':'||$7::uuid::text||':'||$13,$9,CASE WHEN $6 THEN $10::timestamptz END,CASE WHEN $6 THEN $11::integer END,$14::timestamptz,
+    made AS (INSERT INTO notifications(id,recipient_id,actor_id,type,ride_id,intent_id,dedup_key,group_key,event_occurs_at,event_revision,created_at,external,reasons)
+      SELECT gen_random_uuid(),a.id,$3,a.type,CASE WHEN $6 THEN $7::uuid END,CASE WHEN $6 THEN NULL ELSE $7::uuid END,
+        a.type||':'||$7::uuid::text||':'||$13,a.group_key,CASE WHEN $6 THEN $10::timestamptz END,CASE WHEN $6 THEN $11::integer END,$14::timestamptz,
         (SELECT count(*) FROM notifications d WHERE d.recipient_id=a.id AND d.type IN ${discoveryTypes} AND d.external AND d.created_at>$14::timestamptz-interval '24 hours')<$15
-          AND NOT EXISTS(SELECT 1 FROM notifications d WHERE d.recipient_id=a.id AND d.actor_id=$3 AND d.type IN ${discoveryTypes} AND d.external AND d.created_at>$14::timestamptz-make_interval(mins=>$16))
+          AND NOT EXISTS(SELECT 1 FROM notifications d WHERE d.recipient_id=a.id AND d.actor_id=$3 AND d.type IN ${discoveryTypes} AND d.external AND d.created_at>$14::timestamptz-make_interval(mins=>$16)),
+        a.reasons
       FROM audience a LEFT JOIN folds f ON f.recipient_id=a.id WHERE f.id IS NULL OR f.read_at IS NOT NULL
       ON CONFLICT(recipient_id,dedup_key) DO NOTHING RETURNING id),
     moved AS (UPDATE notification_fanouts j SET cursor=coalesce((SELECT id FROM audience ORDER BY id DESC LIMIT 1),j.cursor),handled=j.handled+(SELECT count(*) FROM audience),
@@ -248,6 +377,17 @@ async function page(
       limits.discoveryPerDay, // 15
       limits.authorCooldownMinutes, // 16
       limits.audienceMax, // 17
+      !!nearby, //                 18
+      nearby?.lat ?? null, //      19
+      nearby?.lng ?? null, //      20
+      nearby?.radiusM ?? null, //  21
+      nearby?.purpose ?? null, //  22
+      nearby?.pace ?? null, //     23
+      nearby?.surface ?? null, //  24
+      box?.lat ?? null, //         25
+      box?.lng ?? null, //         26
+      // The group of the nearby-only: kept apart from the friends' one.
+      `plan_nearby:${job.author_id}:${Math.floor(now.getTime() / 900_000)}`, // 27
     ],
   );
   return result.rows[0]?.taken ?? 0;
@@ -274,7 +414,7 @@ export async function runNotificationFanout(
       await q.query<Fanout>(
         `UPDATE notification_fanouts SET lease_token=$1,lease_until=$2::timestamptz+interval '2 minutes'
         WHERE id=(SELECT id FROM notification_fanouts WHERE status='pending' AND (lease_until IS NULL OR lease_until<=$2) ORDER BY created_at,id LIMIT 1 FOR UPDATE SKIP LOCKED)
-        RETURNING id,kind,source_id,author_id,considering,occurs_at,revision,cursor,handled`,
+        RETURNING id,kind,source_id,author_id,considering,occurs_at,revision,cursor,handled,created_at`,
         [token, now],
       )
     ).rows[0];
@@ -296,7 +436,21 @@ export async function runNotificationFanout(
       counts.cancelled++;
       continue;
     }
-    counts.recipients += await page(q, job, token, now, limits);
+    // The area a plan named in public, if nearby is on and the plan named one.
+    const geometry =
+      job.kind === "plan_published" &&
+      limits.nearbyEnabled &&
+      !limits.disabledCategories.includes("nearby")
+        ? planGeometry(
+            (
+              await q.query<{ plan_passport: unknown }>(
+                "SELECT plan_passport FROM rides WHERE id=$1",
+                [job.source_id],
+              )
+            ).rows[0]?.plan_passport,
+          )
+        : null;
+    counts.recipients += await page(q, job, token, now, limits, geometry);
     const after = (
       await q.query<{ status: string }>(
         "SELECT status FROM notification_fanouts WHERE id=$1",

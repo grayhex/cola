@@ -101,7 +101,7 @@ test("the catalogue is the code's: every category and every event, with what a c
     view.events.map((e) => e.type),
     [...notificationTypes],
   );
-  assert.deepEqual(view.planned.map((c) => c.key).sort(), ["nearby"]);
+  assert.deepEqual(view.planned, []);
   const state = await adminNotifications(db, mailEnv);
   assert.equal(state.channels.email.available, true);
   assert.equal(state.channels.push.available, false);

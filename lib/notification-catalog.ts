@@ -23,7 +23,8 @@ export interface NotificationCategory {
  * The categories that exist today. `reactions` and `site` are shown in the
  * inbox only: no channel carries them, so there is nothing to switch. `plans`
  * and `intents` are discovery: who they come from is the circle of the
- * settings, and how many leave the site is a limit, not a switch.
+ * settings, and how many leave the site is a limit, not a switch. `nearby` is
+ * discovery too, but from the area the person chose, and it is a switch.
  */
 export const notificationCategories = {
   rides: {
@@ -62,6 +63,14 @@ export const notificationCategories = {
     push: true,
     pushDefault: true,
   },
+  // Rides in the area the person chose (#343). Off until chosen: the person has
+  // already consented to the area itself and to push, and this is the third word.
+  nearby: {
+    label: "Рядом",
+    email: false,
+    push: true,
+    pushDefault: false,
+  },
   reactions: {
     label: "Подписки и лайки",
     email: false,
@@ -88,15 +97,6 @@ export const notificationCategoryKeys = Object.keys(
 export const notificationInboxCategoryKeys = notificationCategoryKeys.filter(
   (key) => key !== "chat",
 );
-
-/**
- * Categories the owner's plan names but no code produces yet. They are listed
- * so that the matrix, the fixtures and the clients agree on the keys in
- * advance; they appear in the settings API only when the events exist.
- */
-export const plannedNotificationCategories = {
-  nearby: { label: "Рядом", issue: "#343" },
-} as const;
 
 export interface NotificationEvent {
   category: NotificationCategoryKey;
@@ -206,6 +206,7 @@ export const notificationEvents = {
   },
   plan_published: { category: "plans" },
   intent_published: { category: "intents" },
+  plan_nearby: { category: "nearby" },
   session_reuse: { category: "site" },
   bike_week: { category: "site" },
 } as const satisfies Record<string, NotificationEvent>;
@@ -313,7 +314,7 @@ export const notificationPushTypes = notificationTypes.filter(
 );
 /** Categories that are about what others plan, not about the person's own affairs. */
 export const notificationPushDiscoveryCategories: readonly NotificationCategoryKey[] =
-  ["plans", "intents"];
+  ["plans", "intents", "nearby"];
 export const notificationPushDiscoveryTypes = notificationPushTypes.filter(
   (type) =>
     notificationPushDiscoveryCategories.includes(
@@ -332,6 +333,7 @@ export const notificationPushTtlHours: Record<NotificationCategoryKey, number> =
     plans: 24,
     intents: 12,
     chat: 12,
+    nearby: 24,
     reactions: 0,
     site: 0,
   };

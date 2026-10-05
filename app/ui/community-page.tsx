@@ -59,6 +59,7 @@ import {
 } from "../../lib/notification-catalog.ts";
 const eventText: Record<string, string> = {
   plan_published: "запланировал покатушку",
+  plan_nearby: "запланировал покатушку в выбранном вами районе —",
   intent_published: "ищет компанию для покатушки —",
   component_reply: "ответил вам в обсуждении компонента",
   article_like: "понравилась ваша статья",

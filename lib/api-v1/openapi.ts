@@ -896,6 +896,43 @@ function withNearby(document: Json) {
       },
     },
   };
+  paths["/me/nearby/offers"] = {
+    get: {
+      operationId: "listNearbyOffers",
+      tags: ["Planning"],
+      summary: "Что есть в выбранном районе сейчас",
+      description:
+        "Короткий список текущих предложений по запросу — для выдачи после первого включения поиска рядом или переезда. Это чтение: ничего не рассылается и не записывается, а уже опубликованное не приходит новостью. Берётся публичная приблизительная область плана и его вид, но не точка встречи; свои планы, планы, куда вы приглашены или уже ответили, и заглушённые авторы не показываются. Расстояния до вас в ответе нет. Если района нет, срок района с телефона вышел или поиск выключен, список пуст, а `state` говорит почему.",
+      security,
+      parameters: [
+        {
+          name: "limit",
+          in: "query",
+          required: false,
+          description: "Сколько показать, от 1 до 20; по умолчанию 10.",
+          schema: { type: "integer", minimum: 1, maximum: 20, default: 10 },
+        },
+      ],
+      responses: {
+        "200": {
+          description: "Предложения и состояние поиска.",
+          headers: {
+            "Cache-Control": {
+              description: "`no-store`: ответ зависит от района человека.",
+              schema: { type: "string" },
+            },
+          },
+          content: json("NearbyOffers"),
+        },
+        "400": failure(
+          "Параметры не подходят либо cookie вместе с Authorization.",
+        ),
+        "401": authFailures["401"],
+        "429": common["429"],
+        "500": shared("InternalError"),
+      },
+    },
+  };
 }
 
 export function buildOpenApiDocument(origin: string = publicOrigin()): Json {

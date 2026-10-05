@@ -804,6 +804,8 @@ test("OpenAPI: documents exactly the implemented operations, every $ref resolves
       "MyUpcomingRides",
       "Nearby",
       "NearbyAreaRequest",
+      "NearbyOffer",
+      "NearbyOffers",
       "NearbySettingsPatch",
       "Notification",
       "NotificationCategorySetting",

@@ -21,6 +21,8 @@ export const limits = Object.freeze({
   rideIntentWrites: 40,
   // Changes of the private area of "rides near me" (#343), per person.
   nearbyWrites: 30,
+  // The short list of current offers in that area, asked for by the person, per person.
+  nearbyOfferReads: 120,
   commentEdits: 40,
   reports: 10,
   notificationReads: 120,

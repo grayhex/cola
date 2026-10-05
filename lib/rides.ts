@@ -1,4 +1,4 @@
-import { announcePlan } from "./notification-fanout.ts";
+import { announcePlan, nearbyMatchSql } from "./notification-fanout.ts";
 import type * as RepositoryTypes from "./repository.ts";
 import type * as DatabaseRowsTypes from "./database-rows.ts";
 import type * as RideAnalysisContractTypes from "./ride-analysis-contract.ts";
@@ -778,6 +778,50 @@ export async function upcomingKeysetPage(
     ).rows,
     limit,
   );
+}
+/**
+ * The public plans that lie in the area the person chose (#343): the answer to
+ * "what is on near me now", asked for on purpose. Soonest first, a short list and
+ * no cursor. It reads the plan's public coarse area and its kind, never the
+ * place of the meeting; leaves out the person's own plans, the ones they are
+ * invited to or have answered, and the authors they muted; and needs the area on,
+ * in term and inside the operator's switch. The rows say which reasons apply
+ * ('intent': it falls in a window of the person's own active intention).
+ */
+export async function nearbyOfferRows(
+  q: Queryable,
+  viewer: string,
+  { limit, now = new Date() }: { limit: number; now?: Date },
+) {
+  const occurrence = `(${rideOccurrence})`;
+  const number = (path: string) =>
+    `(CASE WHEN jsonb_typeof(r.plan_passport #> '${path}')='number' THEN (r.plan_passport #>> '${path}')::float8 END)`;
+  const near = nearbyMatchSql({
+    now: "$2",
+    occurs: occurrence,
+    lat: number("{area,center,1}"),
+    lng: number("{area,center,0}"),
+    radius: `(${number("{area,radiusM}")})::integer`,
+    purpose: "(r.plan_passport->>'purpose')",
+    pace: "(r.plan_passport->>'pace')",
+    surface: "(r.plan_passport->>'surface')",
+  });
+  return (
+    await q.query<RideKeysetRow & { intent_match: boolean }>(
+      `SELECT ${columns},${cursorText(occurrence)} AS cursor_at,
+         EXISTS(SELECT 1 FROM ride_intents ii JOIN ride_intent_windows w ON w.intent_id=ii.id
+           WHERE ii.owner_id=$1 AND ii.status='active' AND w.starts_at<=${occurrence} AND w.ends_at>${occurrence}) AS intent_match
+       ${rideFrom}
+       JOIN nearby_areas na ON na.user_id=$1
+       WHERE r.status='planned' AND r.source_kind='planned' AND ${apiRide} AND r.owner_id<>$1
+         AND ${near}
+         AND NOT EXISTS(SELECT 1 FROM ride_invitations v WHERE v.ride_id=r.id AND v.user_id=$1)
+         AND NOT EXISTS(SELECT 1 FROM ride_rsvps v WHERE v.ride_id=r.id AND v.user_id=$1)
+         AND NOT EXISTS(SELECT 1 FROM notification_mutes m WHERE m.user_id=$1 AND ((m.kind='author' AND m.target_id=r.owner_id) OR (m.kind='ride' AND m.target_id=r.id)))
+       ORDER BY ${occurrence} ASC,r.id ASC LIMIT $3`,
+      [viewer, now, limit],
+    )
+  ).rows;
 }
 /**
  * The person's own rides, every state (finished, planned, called off, public or

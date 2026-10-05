@@ -84,6 +84,7 @@ const empty: NotificationRow = {
   avatar_id: "",
   event_occurs_at: null,
   event_revision: null,
+  reasons: null,
 };
 const anna = {
   actor_id: ids.anna,
@@ -332,6 +333,19 @@ export const targetCases: TargetCase[] = [
     description:
       "Друг опубликовал намерение покататься (видимость «сообщество», с будущим окном). Цель — `intent` с идентификатором намерения; экрана намерения в приложении, возможно, ещё нет: тогда оно открывает список уведомлений.",
     row: { type: "intent_published", ...boris, intent_id: ids.intent },
+  },
+  {
+    name: "plan_nearby",
+    description:
+      "Новая публичная покатушка в районе, который вы выбрали («поездки рядом» включены отдельным согласием). Цель — покатушка; `occurrenceAt` и `agreementRevision` — как у плана друга. `reasons` называет, почему пришло (`nearby`; `intent`, если дата попадает в окно вашего намерения); места и расстояния в уведомлении нет, а автор не узнаёт, кто его получил. Категория — `nearby`, её push включается отдельно.",
+    row: {
+      type: "plan_nearby",
+      ...boris,
+      ...ride,
+      event_occurs_at: date,
+      event_revision: 1,
+      reasons: ["nearby"],
+    },
   },
 ];
 
@@ -632,6 +646,12 @@ const settingsAfterDefaults: NotificationSettingsBody = {
       label: "Сообщения",
       email: { supported: false, enabled: false },
       push: { supported: true, enabled: true },
+    },
+    {
+      key: "nearby",
+      label: "Рядом",
+      email: { supported: false, enabled: false },
+      push: { supported: true, enabled: false },
     },
   ],
   reminders: true,
