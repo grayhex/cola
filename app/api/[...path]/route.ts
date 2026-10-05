@@ -85,13 +85,11 @@ import { ownedBike, insertBike } from "../../../lib/repository.ts";
 import { mediaVary, mediaViewer } from "../../../lib/media-viewer.ts";
 import {
   addComponentRow,
-  bikeHasRides,
-  bikePhotoFiles,
   changePhoto,
   componentRowOf,
-  deleteBikeRow,
   deleteComponentRow,
   ownBikeRows,
+  removeBike,
   setBikeSharing,
   setGroupOrder,
   updateBikeRow,
@@ -610,30 +608,11 @@ async function handler(
         return json({ ok: true });
       }
       if (method === "DELETE") {
-        if (await bikeHasRides(db, bike.id))
+        if (!(await removeBike(db, bike.id, user.id, uploads())))
           return fail(
             "У велосипеда есть покатушки. Сначала удалите их или перенесите на другой велосипед.",
             409,
           );
-        const rows = await bikePhotoFiles(db, bike.id);
-        try {
-          await deleteBikeRow(db, bike.id, user.id);
-        } catch (e) {
-          if (errorCode(e) === "23503")
-            return fail(
-              "У велосипеда есть покатушки. Сначала удалите их или перенесите на другой велосипед.",
-              409,
-            );
-          throw e;
-        }
-        await Promise.all(
-          rows.map((p) =>
-            unlink(
-              /*turbopackIgnore: true*/ path.join(uploads(), p.filename),
-            ).catch(() => {}),
-          ),
-        );
-        await purgeMediaVariants(rows.map((p) => p.id));
         return json({ ok: true });
       }
     }

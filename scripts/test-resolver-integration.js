@@ -195,6 +195,7 @@ try {
           "tests/api-v1-journal-http.js",
           "tests/api-v1-rides-http.js",
           "tests/api-v1-write-http.js",
+          "tests/api-v1-bikes-write-http.js",
           "tests/api-v1-native-auth-http.js",
           "tests/api-v1-search-http.js",
           "tests/api-v1-components-http.js",

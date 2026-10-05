@@ -1,6 +1,9 @@
 import { z } from "zod";
 import { categoryFilterLabels } from "../bike-classification.ts";
-import { classificationQueryShape } from "../classification-validation.ts";
+import {
+  classificationInput,
+  classificationQueryShape,
+} from "../classification-validation.ts";
 import { listingTypeKeys } from "../market-types.ts";
 import { notificationInboxCategoryKeys } from "../notification-catalog.ts";
 import { notificationSettingsPatch } from "../notification-settings.ts";
@@ -2312,3 +2315,176 @@ export const userRefSchema = z.union([
     .regex(/^[A-Za-z0-9._-]{3,30}$/)
     .transform((value) => ({ username: value })),
 ]);
+
+// Writing bikes (#347, W2b): the owner's own bicycle and its parts. The rules
+// are the site's (`bikeInput`, `componentInput`); these schemas say what crosses
+// the API, in camelCase, with nothing implied: the audience of a bicycle is
+// always named, never a default that could widen it.
+
+const bikeText = (max: number) => z.string().trim().max(max);
+const bikeLink = z
+  .string()
+  .max(2048)
+  .refine((value) => {
+    if (value === "") return true;
+    try {
+      const url = new URL(value);
+      return (
+        ["https:", "http:"].includes(url.protocol) &&
+        !url.username &&
+        !url.password
+      );
+    } catch {
+      return false;
+    }
+  }, "Нужна HTTP/HTTPS ссылка или пустая строка");
+
+export const bikeClassificationRequestSchema = named(
+  "BikeClassificationRequest",
+  "Признаки типа велосипеда при записи: те же поля, что в `BikeClassification`. Подтип должен относиться к категории; значения — ключи справочника.",
+  classificationInput,
+);
+
+const bikePriceVisibilityRequest = z.strictObject({
+  bike: z.boolean(),
+  components: z.boolean(),
+  accessories: z.boolean(),
+});
+
+const bikePurposes = z
+  .array(z.string().regex(/^[a-z][a-z0-9_-]{0,29}$/))
+  .max(12)
+  .refine(
+    (list) => new Set(list).size === list.length,
+    "Назначения повторяются",
+  )
+  .describe("Назначения из справочника сайта (ключи `purposes`).");
+
+const bikeWriteShape = {
+  name: bikeText(100).min(1),
+  brand: bikeText(60),
+  model: bikeText(100),
+  trim: bikeText(100).optional(),
+  year: z.int().min(1900).max(2100),
+  classification: bikeClassificationRequestSchema,
+  description: bikeText(2000).optional(),
+  color: bikeText(60).optional(),
+  size: bikeText(30).optional(),
+  weight: z
+    .number()
+    .positive()
+    .max(100)
+    .nullable()
+    .optional()
+    .describe("Вес в килограммах или null."),
+  mileage: z
+    .int()
+    .min(0)
+    .max(10_000_000)
+    .optional()
+    .describe("Пробег в километрах."),
+  purposes: bikePurposes.optional(),
+  manufacturerUrl: bikeLink.optional(),
+  price: z
+    .number()
+    .min(0)
+    .max(999_999_999)
+    .nullable()
+    .optional()
+    .describe("Цена в рублях или null."),
+  priceVisibility: bikePriceVisibilityRequest
+    .optional()
+    .describe("Какие цены показывать другим; без поля все цены скрыты."),
+  isFormer: z.boolean().optional(),
+};
+
+export const bikeRequestSchema = named(
+  "BikeRequest",
+  "Новый велосипед. `isPublic` обязателен и называет аудиторию явно: `true` публикует велосипед всем (нужна подтверждённая почта), `false` оставляет его приватным. Тип задаётся `classification`; прежнего поля `category` нет, оно вычисляется. Свойства, которых нет в запросе, получают пустые значения: текст — пустую строку, пробег — 0, цены скрыты.",
+  z.strictObject({ ...bikeWriteShape, isPublic: z.boolean() }),
+);
+
+export const bikePatchRequestSchema = named(
+  "BikePatchRequest",
+  "Правка велосипеда: меняется только названное в теле, остальное остаётся (`null` очищает вес и цену). `classification` заменяется целиком. Смена `isPublic` на `true` требует подтверждённой почты; снятие с публикации отзывает прежнюю публичную ссылку.",
+  z.strictObject({
+    name: bikeWriteShape.name.optional(),
+    brand: bikeWriteShape.brand.optional(),
+    model: bikeWriteShape.model.optional(),
+    trim: bikeWriteShape.trim,
+    year: bikeWriteShape.year.optional(),
+    classification: bikeClassificationRequestSchema.optional(),
+    description: bikeWriteShape.description,
+    color: bikeWriteShape.color,
+    size: bikeWriteShape.size,
+    weight: bikeWriteShape.weight,
+    mileage: bikeWriteShape.mileage,
+    purposes: bikeWriteShape.purposes,
+    manufacturerUrl: bikeWriteShape.manufacturerUrl,
+    price: bikeWriteShape.price,
+    priceVisibility: bikePriceVisibilityRequest.partial().optional(),
+    isFormer: bikeWriteShape.isFormer,
+    isPublic: z.boolean().optional(),
+  }),
+);
+
+const componentWriteShape = {
+  section: z.enum(["build", "accessories"]),
+  category: bikeText(60).min(1),
+  name: bikeText(150).min(1),
+  notes: bikeText(500).optional(),
+  price: z
+    .number()
+    .min(0)
+    .max(999_999_999)
+    .nullable()
+    .optional()
+    .describe("Цена в рублях или null."),
+  url: bikeLink.optional(),
+  groupId: z
+    .string()
+    .regex(/^[a-z0-9_-]{0,50}$/)
+    .optional()
+    .describe("Группа компонентов (ключ справочника) или пустая строка."),
+};
+
+export const bikeComponentRequestSchema = named(
+  "BikeComponentRequest",
+  "Новый компонент или аксессуар этой сборки. Это запись о том, что стоит на велосипеде, а не правка каталога моделей компонентов: привязку к модели каталога (`modelId`) сервер делает сам по категории и названию.",
+  z.strictObject(componentWriteShape),
+);
+
+export const bikeComponentPatchRequestSchema = named(
+  "BikeComponentPatchRequest",
+  "Правка компонента: меняется только названное в теле (`null` очищает цену). Место в списке не меняется.",
+  z.strictObject({
+    section: componentWriteShape.section.optional(),
+    category: componentWriteShape.category.optional(),
+    name: componentWriteShape.name.optional(),
+    notes: componentWriteShape.notes,
+    price: componentWriteShape.price,
+    url: componentWriteShape.url,
+    groupId: componentWriteShape.groupId,
+  }),
+);
+
+export const bikeGroupOrderRequestSchema = named(
+  "BikeGroupOrderRequest",
+  "Порядок групп компонентов, в котором владелец показывает сборку: полный список ключей групп, замена целиком.",
+  z.strictObject({
+    groups: z
+      .array(z.string().regex(/^[a-z0-9_-]{1,50}$/))
+      .max(31)
+      .refine(
+        (list) => new Set(list).size === list.length,
+        "Группы повторяются",
+      ),
+  }),
+);
+
+export type BikeRequest = z.infer<typeof bikeRequestSchema>;
+export type BikePatchRequest = z.infer<typeof bikePatchRequestSchema>;
+export type BikeComponentRequest = z.infer<typeof bikeComponentRequestSchema>;
+export type BikeComponentPatchRequest = z.infer<
+  typeof bikeComponentPatchRequestSchema
+>;

@@ -235,19 +235,37 @@ export function toBike(bike: BikeSource): Bike {
           accessories: bike.show_accessory_prices,
         }
       : null,
-    components: bike.components.map((part) => ({
-      id: part.id,
-      modelId: part.model_id,
-      section: part.section,
-      category: part.category,
-      name: part.name,
-      notes: part.notes,
-      url: part.url,
-      groupId: part.group_id,
-      sortOrder: part.sort_order,
-      price: amount(part.price),
-    })),
+    components: bike.components.map(toBikeComponent),
     photos: bike.photos.map(toPhoto),
+  };
+}
+
+interface ComponentSource {
+  id: string;
+  model_id: string | null;
+  section: "build" | "accessories";
+  category: string;
+  name: string;
+  notes: string;
+  url: string;
+  group_id: string;
+  sort_order: number;
+  price?: string | number | null;
+}
+
+/** A part of a bicycle as the API shows it (the price is already the viewer's). */
+export function toBikeComponent(part: ComponentSource) {
+  return {
+    id: part.id,
+    modelId: part.model_id,
+    section: part.section,
+    category: part.category,
+    name: part.name,
+    notes: part.notes,
+    url: part.url,
+    groupId: part.group_id,
+    sortOrder: part.sort_order,
+    price: amount(part.price),
   };
 }
 

@@ -441,8 +441,15 @@ try {
   assert.equal((await reader.api.v1("/bikes/" + secret)).status, 404);
 
   // ---- Methods and addresses.
-  for (const path of ["/me", "/bikes", "/bikes/" + first, "/openapi.json"])
-    for (const method of ["POST", "PUT", "PATCH", "DELETE"]) {
+  // The read-only paths refuse every write; a bicycle takes the owner's writes
+  // of #347 (`POST /bikes`, `PATCH`/`DELETE /bikes/{id}`), and only the rest is 405.
+  for (const [path, methods] of [
+    ["/me", ["POST", "PUT", "PATCH", "DELETE"]],
+    ["/bikes", ["PUT", "PATCH", "DELETE"]],
+    ["/bikes/" + first, ["POST", "PUT"]],
+    ["/openapi.json", ["POST", "PUT", "PATCH", "DELETE"]],
+  ])
+    for (const method of methods) {
       const response = await owner.api.v1(path, { method });
       assertError(response, 405, "method_not_allowed", `${method} ${path}`);
       assert.match(response.headers.get("allow"), /GET/);
