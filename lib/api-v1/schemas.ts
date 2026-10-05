@@ -2,7 +2,10 @@ import { z } from "zod";
 import { categoryFilterLabels } from "../bike-classification.ts";
 import { classificationQueryShape } from "../classification-validation.ts";
 import { listingTypeKeys } from "../market-types.ts";
-import { notificationCategoryKeys } from "../notification-catalog.ts";
+import {
+  notificationCategoryKeys,
+  notificationInboxCategoryKeys,
+} from "../notification-catalog.ts";
 import { notificationSettingsPatch } from "../notification-settings.ts";
 import { circleModes, muteKinds } from "../notification-policy.ts";
 import { ridePlanOptions } from "../ride-plan-options.ts";
@@ -2009,7 +2012,7 @@ export const parseFeedQuery = (url: URL) => parseQuery(url, feedQuerySchema);
 /** The inbox: only the unread, only one category, with a cursor. */
 export const notificationsQuerySchema = z.strictObject({
   unread: z.enum(["", "1"]).default(""),
-  category: z.enum(["", ...notificationCategoryKeys]).default(""),
+  category: z.enum(["", ...notificationInboxCategoryKeys]).default(""),
   limit: pageQuerySchema.shape.limit,
   cursor: pageQuerySchema.shape.cursor,
 });
