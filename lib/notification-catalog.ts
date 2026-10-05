@@ -56,6 +56,12 @@ export const notificationCategories = {
     push: true,
     pushDefault: true,
   },
+  chat: {
+    label: "Сообщения",
+    email: false,
+    push: true,
+    pushDefault: true,
+  },
   reactions: {
     label: "Подписки и лайки",
     email: false,
@@ -75,12 +81,20 @@ export const notificationCategoryKeys = Object.keys(
 ) as NotificationCategoryKey[];
 
 /**
+ * The categories whose events are rows of the bell, so the ones the inbox can
+ * be filtered by. A chat message is pushed and never recorded there (Stream
+ * keeps what is unread), so a filter by it is an error, not an empty list.
+ */
+export const notificationInboxCategoryKeys = notificationCategoryKeys.filter(
+  (key) => key !== "chat",
+);
+
+/**
  * Categories the owner's plan names but no code produces yet. They are listed
  * so that the matrix, the fixtures and the clients agree on the keys in
  * advance; they appear in the settings API only when the events exist.
  */
 export const plannedNotificationCategories = {
-  chat: { label: "Сообщения", issue: "#342" },
   nearby: { label: "Рядом", issue: "#343" },
 } as const;
 
@@ -317,6 +331,7 @@ export const notificationPushTtlHours: Record<NotificationCategoryKey, number> =
     market: 0,
     plans: 24,
     intents: 12,
+    chat: 12,
     reactions: 0,
     site: 0,
   };

@@ -46,6 +46,15 @@ export const pushTargetSchema = z.strictObject({
   commentId: z.uuid().nullable(),
   occurrenceAt: instant.nullable(),
   agreementRevision: z.int().min(1).nullable(),
+  ref: z
+    .string()
+    .min(1)
+    .max(120)
+    .nullable()
+    .optional()
+    .describe(
+      "Идентификатор цели, который не UUID: у разговора это его cid в Stream (`colabike:dm_…`). Остальные цели его не несут.",
+    ),
 });
 
 export const pushEnvelopeSchema = z.strictObject({

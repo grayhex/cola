@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { randomUUID } from "node:crypto";
+import { createHmac, randomUUID } from "node:crypto";
 import { verifiedFetch } from "./fixtures/verified-user.js";
 import { testConsents } from "./fixtures/legal.js";
 import pg from "pg";
@@ -44,6 +44,27 @@ assert.equal(
   400,
 );
 assert.equal((await a("chat/not-a-real-action", {})).status, 404);
+// The webhook of Stream for new messages (#342): only a signed call is taken.
+const hook = (raw, signature, id = "hook-" + randomUUID()) =>
+  fetch(origin + "/api/chat/webhook", {
+    method: "POST",
+    headers: {
+      "x-api-key": "test-key",
+      "x-webhook-id": id,
+      "x-signature": signature,
+      "content-type": "application/json",
+    },
+    body: raw,
+  });
+const signed = (raw) =>
+  createHmac("sha256", "test-secret").update(raw).digest("hex");
+assert.equal((await fetch(origin + "/api/chat/webhook")).status, 405);
+assert.equal((await hook("{}", "0".repeat(64))).status, 401);
+assert.equal((await hook("{}", "not-a-signature")).status, 401);
+const other = JSON.stringify({ type: "typing.start", cid: "colabike:dm_x" });
+const taken = await hook(other, signed(other));
+assert.equal(taken.status, 200);
+assert.deepEqual(await taken.json(), { ok: true, queued: 0 });
 const token = await a("chat/token", {});
 assert.equal(token.status, 200);
 assert.match(token.headers.get("cache-control"), /no-store/);

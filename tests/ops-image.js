@@ -72,6 +72,7 @@ await load("lib/rides.ts");
 await load("lib/activity-worker.ts");
 await load("lib/notification-email.ts");
 await load("lib/push-delivery.ts");
+await load("lib/chat-webhook.ts");
 execFileSync(process.execPath, ["scripts/activity-sync.js", "--once"], {
   env: { ...process.env, RWGPS_ENABLED: "false" },
 });
