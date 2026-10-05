@@ -1,6 +1,10 @@
 import { randomUUID } from "node:crypto";
+import { unlink } from "node:fs/promises";
+import path from "node:path";
 import type { BikeRow, ComponentRow, PhotoRow } from "./database-rows.ts";
 import type { Queryable } from "./db.ts";
+import { errorCode } from "./errors.ts";
+import { purgeMediaVariants } from "./media-cache.ts";
 import type { BikeInput, ComponentInput } from "./validation.ts";
 
 // What the owner does to a bicycle, its parts and its photos: the SQL that used
@@ -114,7 +118,10 @@ export async function setBikeSharing(
   );
 }
 
-/** Adds a part at the end of the list, under the lock of the bicycle row. */
+/**
+ * Adds a part at the end of the list, under the lock of the bicycle row, and
+ * returns its id.
+ */
 export async function addComponentRow(
   q: Queryable,
   bikeId: string,
@@ -123,10 +130,11 @@ export async function addComponentRow(
   await q.query<{ id: string }>("SELECT id FROM bikes WHERE id=$1 FOR UPDATE", [
     bikeId,
   ]);
+  const id = randomUUID();
   await q.query(
     "INSERT INTO components(id,bike_id,section,category,name,notes,price,url,group_id,sort_order) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,(SELECT coalesce(max(sort_order),-1)+1 FROM components WHERE bike_id=$2))",
     [
-      randomUUID(),
+      id,
       bikeId,
       c.section,
       c.category,
@@ -137,6 +145,7 @@ export async function addComponentRow(
       c.group_id,
     ],
   );
+  return id;
 }
 
 /** Removes a part of this bicycle (no error when it is already gone). */
@@ -228,4 +237,67 @@ export async function changePhoto(
     }
   });
   return filename;
+}
+
+/**
+ * The bicycle of the owner, locked for the change that follows, with the exact
+ * text of `updated_at` (microseconds): the version a client's `If-Match` names.
+ * Undefined when the bicycle is not the owner's.
+ */
+export async function lockOwnBike(q: Queryable, bikeId: string, owner: string) {
+  const { rows } = await q.query<BikeRow & { version: string }>(
+    "SELECT *,updated_at::text AS version FROM bikes WHERE id=$1 AND owner_id=$2 FOR UPDATE",
+    [bikeId, owner],
+  );
+  return rows[0];
+}
+
+/** The version of a bicycle as it is now: the text of `updated_at`. */
+export async function bikeVersionOf(q: Queryable, bikeId: string) {
+  const { rows } = await q.query<{ version: string }>(
+    "SELECT updated_at::text AS version FROM bikes WHERE id=$1",
+    [bikeId],
+  );
+  return rows[0]?.version;
+}
+
+/**
+ * Deletes the bicycle with its photo files and cached variants. False when a
+ * ride still belongs to it: the site does not delete a bicycle out from under
+ * its rides, and the database refuses too (23503) if one appears meanwhile.
+ */
+export async function removeBike(
+  q: Queryable,
+  bikeId: string,
+  owner: string,
+  directory: string,
+) {
+  if (await bikeHasRides(q, bikeId)) return false;
+  const rows = await bikePhotoFiles(q, bikeId);
+  try {
+    await deleteBikeRow(q, bikeId, owner);
+  } catch (e) {
+    if (errorCode(e) === "23503") return false;
+    throw e;
+  }
+  await Promise.all(
+    rows.map((photo) =>
+      unlink(path.join(directory, photo.filename)).catch(() => {}),
+    ),
+  );
+  await purgeMediaVariants(rows.map((photo) => photo.id));
+  return true;
+}
+
+/** The version of a bicycle for its owner; undefined for anyone else. */
+export async function ownBikeVersion(
+  q: Queryable,
+  bikeId: string,
+  owner: string,
+) {
+  const { rows } = await q.query<{ version: string }>(
+    "SELECT updated_at::text AS version FROM bikes WHERE id=$1 AND owner_id=$2",
+    [bikeId, owner],
+  );
+  return rows[0]?.version;
 }

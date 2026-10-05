@@ -764,6 +764,223 @@ const nearbyEtag = {
     schema: { type: "string" },
   },
 };
+// Writing bicycles (#347, W2b): the owner's own bicycle, its parts and the order of their groups.
+const bikeEtag = {
+  ...requestIdHeader,
+  ETag: {
+    description:
+      "Версия собственных полей велосипеда (не комплектации и не фото): для `If-Match` следующей правки.",
+    schema: { type: "string" },
+  },
+};
+const componentEtag = {
+  ...requestIdHeader,
+  ETag: {
+    description:
+      "Версия компонента: для `If-Match` следующей правки. Меняется вместе с его полями.",
+    schema: { type: "string" },
+  },
+};
+const bikeFailures = (extra: Json = {}) => ({
+  "400": failure(
+    "Тело, параметры или `Idempotency-Key` не подходят, либо cookie вместе с Authorization.",
+  ),
+  "401": failure(
+    "Нет входа, сессия или токен недействительны, токен доступа истёк (`token_expired`) либо схема Authorization не поддерживается.",
+  ),
+  "403": failure(
+    "Cookie-запрос не с адреса сайта (нужен заголовок `Origin`) либо публикация без подтверждённой почты (`email_verification_required`).",
+  ),
+  "404": shared("NotFound"),
+  ...extra,
+  "413": failure(
+    "Тело больше допустимого (16384 байта для велосипеда, 4096 для остального).",
+  ),
+  "415": failure("Тело не `application/json`."),
+  "429": failure(
+    "Слишком много действий; секунды до конца окна — в `Retry-After`.",
+  ),
+  "500": shared("InternalError"),
+});
+const ifMatchHeader = (required: boolean, what: string) => ({
+  name: "If-Match",
+  in: "header",
+  required,
+  description: `\`ETag\` ${what}, который клиент видел: при другой версии — 412.${required ? " Без заголовка — 428." : ""}`,
+  schema: { type: "string" },
+});
+const idempotencyHeader = {
+  name: "Idempotency-Key",
+  in: "header",
+  required: true,
+  description:
+    "UUID одной операции создания: повтор того же запроса в течение суток отдаёт тот же ответ (`Idempotency-Replayed: true`), а не второй объект; тот же ключ с другим телом — 409.",
+  schema: { type: "string", format: "uuid" },
+};
+function withBikeWrites(document: Json) {
+  const paths = document.paths as Record<string, Json>;
+  const security = [{ cookieSession: [] }, { bearerAuth: [] }];
+  const bikeId = { $ref: "#/components/parameters/BikeId" };
+  const componentId = { $ref: "#/components/parameters/BikeComponentId" };
+  paths["/bikes"] = {
+    ...paths["/bikes"],
+    post: {
+      operationId: "createBike",
+      tags: ["Bikes"],
+      summary: "Создать свой велосипед",
+      description:
+        "Заголовок `Idempotency-Key` (UUID) обязателен: повтор после потерянного ответа отдаёт тот же велосипед (`Idempotency-Replayed: true`), а не второй; тот же ключ с другим телом — 409. `isPublic` называет аудиторию явно; публикация требует подтверждённой почты (403 `email_verification_required`), приватный велосипед — нет. Не больше 20 велосипедов на человека (409). Бюджет создания (30 за окно) общий с сайтом. Фото загружаются отдельно.",
+      security,
+      parameters: [idempotencyHeader],
+      requestBody: requestBody("BikeRequest"),
+      responses: {
+        "201": {
+          description: "Велосипед создан: карточка владельца.",
+          headers: bikeEtag,
+          content: json("Bike"),
+        },
+        ...bikeFailures({
+          "409": failure(
+            "`Idempotency-Key` уже использован с другим телом либо велосипедов уже 20.",
+          ),
+        }),
+      },
+    },
+  };
+  const getBike = (paths["/bikes/{id}"] as { get: Json }).get;
+  paths["/bikes/{id}"] = {
+    get: {
+      ...getBike,
+      description: `${String(getBike.description)} Владельцу ответ приходит с \`ETag\`: его называет \`If-Match\` правки.`,
+      responses: {
+        ...(getBike.responses as Json),
+        "200": {
+          description: "Велосипед. Владельцу — с `ETag`.",
+          headers: bikeEtag,
+          content: json("Bike"),
+        },
+      },
+    },
+    patch: {
+      operationId: "updateBike",
+      tags: ["Bikes"],
+      summary: "Изменить свой велосипед",
+      description:
+        "Меняется только названное в теле. `If-Match` с `ETag` обязателен: правка применяется только к той версии, которую клиент видел (412, если другое устройство успело раньше; 428 без заголовка). Версия охватывает собственные поля велосипеда, но не комплектацию и фото. Смена типа заменяет `classification` целиком; смена идентичности (бренд, модель, год, комплектация) сбрасывает заводскую спецификацию, как на сайте. Публикация (`isPublic: true`) и любая правка уже публичного велосипеда требуют подтверждённой почты; снятие с публикации отзывает прежнюю публичную ссылку. Пустое тело не меняет ничего. Бюджет — 240 за окно на все правки велосипедов.",
+      security,
+      parameters: [bikeId, ifMatchHeader(true, "велосипеда")],
+      requestBody: requestBody("BikePatchRequest"),
+      responses: {
+        "200": {
+          description: "Велосипед после правки.",
+          headers: bikeEtag,
+          content: json("Bike"),
+        },
+        ...bikeFailures({
+          "412": failure(
+            "`If-Match` не совпал с текущей версией: прочитайте велосипед снова.",
+          ),
+          "428": failure("Нет заголовка `If-Match`."),
+        }),
+      },
+    },
+    delete: {
+      operationId: "deleteBike",
+      tags: ["Bikes"],
+      summary: "Удалить свой велосипед",
+      description:
+        "Удаляет велосипед с комплектацией, фото и их файлами. Пока к велосипеду привязана покатушка, он остаётся (409), как на сайте. Повторный запрос после удаления — 404: велосипеда больше нет.",
+      security,
+      parameters: [bikeId],
+      responses: {
+        "204": noContent("Велосипед удалён."),
+        ...bikeFailures({
+          "409": failure("У велосипеда есть покатушки."),
+        }),
+      },
+    },
+  };
+  paths["/bikes/{id}/components"] = {
+    post: {
+      operationId: "createBikeComponent",
+      tags: ["Bikes"],
+      summary: "Добавить компонент в сборку",
+      description:
+        "Новый компонент или аксессуар в конец списка этого велосипеда. Это запись о том, что стоит на велосипеде, а не правка каталога моделей. `Idempotency-Key` обязателен, повтор отдаёт тот же компонент. Для публичного велосипеда нужна подтверждённая почта. Бюджет общий с правками велосипеда.",
+      security,
+      parameters: [bikeId, idempotencyHeader],
+      requestBody: requestBody("BikeComponentRequest"),
+      responses: {
+        "201": {
+          description: "Компонент добавлен.",
+          headers: componentEtag,
+          content: json("BikeComponent"),
+        },
+        ...bikeFailures({
+          "409": failure("`Idempotency-Key` уже использован с другим телом."),
+        }),
+      },
+    },
+  };
+  paths["/bikes/{id}/components/{componentId}"] = {
+    patch: {
+      operationId: "updateBikeComponent",
+      tags: ["Bikes"],
+      summary: "Изменить компонент",
+      description:
+        "Меняется только названное в теле; место в списке не меняется. `If-Match` с `ETag` необязателен: с ним правка применяется только к версии, которую клиент видел (412). Версию возвращают ответы создания и правки компонента. Для публичного велосипеда нужна подтверждённая почта.",
+      security,
+      parameters: [bikeId, componentId, ifMatchHeader(false, "компонента")],
+      requestBody: requestBody("BikeComponentPatchRequest"),
+      responses: {
+        "200": {
+          description: "Компонент после правки.",
+          headers: componentEtag,
+          content: json("BikeComponent"),
+        },
+        ...bikeFailures({
+          "412": failure(
+            "`If-Match` не совпал с текущей версией: прочитайте велосипед снова.",
+          ),
+        }),
+      },
+    },
+    delete: {
+      operationId: "deleteBikeComponent",
+      tags: ["Bikes"],
+      summary: "Убрать компонент",
+      description:
+        "Убирает компонент из сборки. Повтор тоже 204: что уже убрано, остаётся убранным. Подтверждённая почта не нужна.",
+      security,
+      parameters: [bikeId, componentId],
+      responses: {
+        "204": noContent("Компонент убран."),
+        ...bikeFailures(),
+      },
+    },
+  };
+  paths["/bikes/{id}/group-order"] = {
+    put: {
+      operationId: "setBikeGroupOrder",
+      tags: ["Bikes"],
+      summary: "Порядок групп компонентов",
+      description:
+        "Заменяет порядок групп, в котором владелец показывает сборку. Идемпотентно, версия не нужна: последний порядок побеждает. Для публичного велосипеда нужна подтверждённая почта.",
+      security,
+      parameters: [bikeId],
+      requestBody: requestBody("BikeGroupOrderRequest"),
+      responses: {
+        "200": {
+          description: "Велосипед с новым порядком групп.",
+          headers: bikeEtag,
+          content: json("Bike"),
+        },
+        ...bikeFailures(),
+      },
+    },
+  };
+}
+
 function withNearby(document: Json) {
   const paths = document.paths as Record<string, Json>;
   const security = [{ cookieSession: [] }, { bearerAuth: [] }];
@@ -964,7 +1181,11 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
         description:
           "Личные ответы вошедшему: уведомления, сохранённое. Никому, кроме самого человека.",
       },
-      { name: "Bikes", description: "Чтение велосипедов." },
+      {
+        name: "Bikes",
+        description:
+          "Велосипеды: чтение и запись владельцем (велосипед, комплектация, порядок групп).",
+      },
       {
         name: "Journal",
         description: "Записи журнала велосипеда.",
@@ -2591,6 +2812,13 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
           description: "Идентификатор уведомления из списка.",
           schema: { type: "string", format: "uuid" },
         },
+        BikeComponentId: {
+          name: "componentId",
+          in: "path",
+          required: true,
+          description: "Идентификатор компонента велосипеда (UUID).",
+          schema: { type: "string", format: "uuid" },
+        },
         RideIntentId: {
           name: "id",
           in: "path",
@@ -2632,6 +2860,7 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
   withCommentWrites(document);
   withChat(document);
   withPlanning(document);
+  withBikeWrites(document);
   withNearby(document);
   return document;
 }

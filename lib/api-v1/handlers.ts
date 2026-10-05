@@ -1,3 +1,4 @@
+import { ownBikeVersion } from "../bike-service.ts";
 import { db } from "../db.ts";
 import { followKeysetPage } from "../follows.ts";
 import { profileCounts, profileRow, profileRowById } from "../profiles.ts";
@@ -5,6 +6,7 @@ import { getSite } from "../site.ts";
 import { visibleBikeById, visibleBikePage } from "../showcase.ts";
 import { viewerOf } from "./viewer.ts";
 import { decodeCursor, encodeCursor } from "./cursor.ts";
+import { etagOfBike } from "./bike-write-handlers.ts";
 import { ApiError, notFound } from "./errors.ts";
 import {
   toBike,
@@ -71,6 +73,12 @@ export function handleGetBike(
     // A value that is not a UUID cannot name a bike.
     if (!bikeIdSchema.safeParse(id).success)
       throw notFound("Велосипед не найден.");
+    // The owner's copy carries the version an edit names (`If-Match`). It is
+    // read before the bike, so that a change in between can only make the
+    // version older than the copy, and the next edit then fails with 412.
+    const version = viewer
+      ? await ownBikeVersion(db, id, viewer.id)
+      : undefined;
     // A private bike, a blocked owner's bike and a missing one look the same.
     const bike = await visibleBikeById(
       db,
@@ -79,7 +87,11 @@ export function handleGetBike(
       await getSite(db),
     );
     if (!bike) throw notFound("Велосипед не найден.");
-    return ok(toBike(bike));
+    return ok(
+      toBike(bike),
+      200,
+      version === undefined ? {} : { ETag: etagOfBike(id, version) },
+    );
   });
 }
 
