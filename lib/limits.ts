@@ -19,6 +19,8 @@ export const limits = Object.freeze({
   // person for the site and for API v1.
   rideWrites: 20,
   rideIntentWrites: 40,
+  // Changes of the private area of "rides near me" (#343), per person.
+  nearbyWrites: 30,
   commentEdits: 40,
   reports: 10,
   notificationReads: 120,

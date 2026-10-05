@@ -65,6 +65,9 @@ const base = {
   discoveryEnabled: true,
   externalEnabled: true,
   pushEnabled: true,
+  nearbyEnabled: true,
+  nearbyMaxRadiusKm: 50,
+  nearbyDeviceTtlHours: 24,
   disabledCategories: [] as string[],
 };
 async function save(actor: string, change: Partial<typeof base> = {}) {
@@ -78,7 +81,7 @@ async function save(actor: string, change: Partial<typeof base> = {}) {
 }
 const reset = () =>
   db.query(
-    "UPDATE notification_limits SET discovery_per_day=3,author_cooldown_minutes=360,announcements_per_author_day=10,audience_max=5000,batch=200,discovery_enabled=true,external_enabled=true,disabled_categories='{}'",
+    "UPDATE notification_limits SET discovery_per_day=3,author_cooldown_minutes=360,announcements_per_author_day=10,audience_max=5000,batch=200,discovery_enabled=true,external_enabled=true,push_enabled=true,nearby_enabled=true,nearby_max_radius_km=50,nearby_device_ttl_hours=24,disabled_categories='{}'",
   );
 const auditOf = async (action: string) =>
   (
@@ -452,4 +455,30 @@ test("a test message goes to the administrator's own verified address, and only 
   assert.equal(sent[0].to, email);
   assert.match(sent[0].subject, /Проверка уведомлений/);
   assert.deepEqual(await auditOf("notifications.test"), ["email:self"]);
+});
+
+test("the area of rides near me has an operator's switch and bounds, audited", async () => {
+  await reset();
+  const boss = await admin();
+  const saved = await save(boss, {
+    nearbyEnabled: false,
+    nearbyMaxRadiusKm: 20,
+    nearbyDeviceTtlHours: 6,
+  });
+  assert.equal(saved.limits.nearbyEnabled, false);
+  assert.equal(saved.limits.nearbyMaxRadiusKm, 20);
+  assert.equal(saved.limits.nearbyDeviceTtlHours, 6);
+  assert.equal(
+    (await auditOf("notifications.limits")).at(-1),
+    `${saved.version}: nearbyEnabled,nearbyMaxRadiusKm,nearbyDeviceTtlHours`,
+  );
+  for (const change of [
+    { nearbyMaxRadiusKm: 4 },
+    { nearbyMaxRadiusKm: 101 },
+    { nearbyDeviceTtlHours: 0 },
+    { nearbyDeviceTtlHours: 73 },
+  ])
+    await assert.rejects(() => save(boss, change), `${JSON.stringify(change)}`);
+  await reset();
+  assert.equal((await adminNotifications(db)).limits.nearbyEnabled, true);
 });

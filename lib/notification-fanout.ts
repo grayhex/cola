@@ -28,6 +28,12 @@ export interface NotificationLimits {
   pushEnabled: boolean;
   /** Categories whose messages do not leave the site (and, for plans and intents, are not made). */
   disabledCategories: string[];
+  /** The kill switch of the private area of "rides near me" (#343): nothing is read or kept while off. */
+  nearbyEnabled: boolean;
+  /** The biggest radius of the area, in kilometres. */
+  nearbyMaxRadiusKm: number;
+  /** How long an area confirmed by a phone lives, in hours. */
+  nearbyDeviceTtlHours: number;
 }
 export const defaultNotificationLimits: NotificationLimits = {
   discoveryPerDay: 3,
@@ -39,6 +45,9 @@ export const defaultNotificationLimits: NotificationLimits = {
   externalEnabled: true,
   pushEnabled: true,
   disabledCategories: [],
+  nearbyEnabled: true,
+  nearbyMaxRadiusKm: 50,
+  nearbyDeviceTtlHours: 24,
 };
 export async function notificationLimits(
   q: Queryable,
@@ -54,8 +63,11 @@ export async function notificationLimits(
       external_enabled: boolean;
       push_enabled: boolean;
       disabled_categories: string[];
+      nearby_enabled: boolean;
+      nearby_max_radius_km: number;
+      nearby_device_ttl_hours: number;
     }>(
-      "SELECT discovery_per_day,author_cooldown_minutes,announcements_per_author_day,audience_max,batch,discovery_enabled,external_enabled,push_enabled,disabled_categories FROM notification_limits WHERE id=1",
+      "SELECT discovery_per_day,author_cooldown_minutes,announcements_per_author_day,audience_max,batch,discovery_enabled,external_enabled,push_enabled,disabled_categories,nearby_enabled,nearby_max_radius_km,nearby_device_ttl_hours FROM notification_limits WHERE id=1",
     )
   ).rows[0];
   return row
@@ -69,6 +81,9 @@ export async function notificationLimits(
         externalEnabled: row.external_enabled,
         pushEnabled: row.push_enabled,
         disabledCategories: row.disabled_categories,
+        nearbyEnabled: row.nearby_enabled,
+        nearbyMaxRadiusKm: row.nearby_max_radius_km,
+        nearbyDeviceTtlHours: row.nearby_device_ttl_hours,
       }
     : defaultNotificationLimits;
 }

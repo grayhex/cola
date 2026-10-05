@@ -22,6 +22,7 @@ import type {
   RideParticipation as ParticipationState,
 } from "../rides.ts";
 import type { intentDetail } from "../ride-intents.ts";
+import type { NearbyState } from "../nearby.ts";
 import { plannedEnd } from "../ride-plan.ts";
 import { richExcerpt } from "../rich-text.ts";
 import type { TokenGrant } from "../device-sessions.ts";
@@ -39,6 +40,7 @@ import type {
   MarketListingDetail,
   Me,
   MyUpcomingRide,
+  Nearby,
   Notification,
   NotificationSettingsBody,
   NotificationTarget,
@@ -910,6 +912,36 @@ export function toRideParticipation(
         state.participation === "reconfirm" && row.rsvp ? row.rsvp : null,
       changedAfterAnswer: state.participation === "reconfirm",
       allowedResponses: state.allowedResponses,
+    },
+  };
+}
+
+/** The area and settings of "rides near me": the cell and the terms, nothing else. */
+export function toNearby(state: NearbyState): Nearby {
+  return {
+    available: state.available,
+    enabled: state.enabled,
+    source: state.source,
+    area: state.area && {
+      label: state.area.label,
+      center: [...state.area.center],
+      radiusM: state.area.radiusM,
+    },
+    observedAt: instantOf(state.observedAt),
+    expiresAt: instantOf(state.expiresAt),
+    expired: state.expired,
+    horizonDays: state.horizonDays,
+    filters: {
+      purposes: [...state.filters.purposes],
+      paces: [...state.filters.paces],
+      surfaces: [...state.filters.surfaces],
+    },
+    limits: {
+      minRadiusM: state.limits.minRadiusM,
+      maxRadiusM: state.limits.maxRadiusM,
+      radiusStepM: state.limits.radiusStepM,
+      deviceTtlHours: state.limits.deviceTtlHours,
+      cell: { ...state.limits.cell },
     },
   };
 }

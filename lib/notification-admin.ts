@@ -52,6 +52,9 @@ export const adminNotificationLimitsInput = z.strictObject({
   discoveryEnabled: z.boolean(),
   externalEnabled: z.boolean(),
   pushEnabled: z.boolean(),
+  nearbyEnabled: z.boolean(),
+  nearbyMaxRadiusKm: z.int().min(5).max(100),
+  nearbyDeviceTtlHours: z.int().min(1).max(72),
   disabledCategories: z
     .array(z.enum(notificationCategoryKeys))
     .max(notificationCategoryKeys.length)
@@ -154,6 +157,9 @@ export async function saveAdminNotifications(
     externalEnabled: change.externalEnabled,
     pushEnabled: change.pushEnabled,
     disabledCategories: [...change.disabledCategories].sort(),
+    nearbyEnabled: change.nearbyEnabled,
+    nearbyMaxRadiusKm: change.nearbyMaxRadiusKm,
+    nearbyDeviceTtlHours: change.nearbyDeviceTtlHours,
   };
   const changed = (Object.keys(next) as (keyof typeof next)[]).filter(
     (key) =>
@@ -167,7 +173,8 @@ export async function saveAdminNotifications(
   if (!changed.length) return adminNotifications(q);
   await q.query(
     `UPDATE notification_limits SET discovery_per_day=$1,author_cooldown_minutes=$2,announcements_per_author_day=$3,audience_max=$4,batch=$5,
-    discovery_enabled=$6,external_enabled=$7,push_enabled=$9,disabled_categories=$8::text[],version=version+1,updated_at=now() WHERE id=1`,
+    discovery_enabled=$6,external_enabled=$7,push_enabled=$9,disabled_categories=$8::text[],
+    nearby_enabled=$10,nearby_max_radius_km=$11,nearby_device_ttl_hours=$12,version=version+1,updated_at=now() WHERE id=1`,
     [
       next.discoveryPerDay,
       next.authorCooldownMinutes,
@@ -178,6 +185,9 @@ export async function saveAdminNotifications(
       next.externalEnabled,
       next.disabledCategories,
       next.pushEnabled,
+      next.nearbyEnabled,
+      next.nearbyMaxRadiusKm,
+      next.nearbyDeviceTtlHours,
     ],
   );
   await audit(

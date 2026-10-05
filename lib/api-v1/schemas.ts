@@ -1642,6 +1642,111 @@ export const participationQuerySchema = z.strictObject({
   occurrenceAt: z.iso.datetime({ offset: true }).optional(),
 });
 
+// The private area of "rides near me" (#343): a separate consent, one coarse
+// area, a term for the one a phone confirms. Nothing here is a place the person
+// stood in: the server keeps the centre of a grid cell.
+
+const nearbyChoices = (what: string) =>
+  z.array(z.string()).describe(what + " Пустой список — любые.");
+const nearbyFiltersShape = {
+  purposes: nearbyChoices("Назначения поездок (`purpose` плана)."),
+  paces: nearbyChoices("Темп (`pace`)."),
+  surfaces: nearbyChoices("Покрытие (`surface`)."),
+};
+
+export const nearbySchema = named(
+  "Nearby",
+  "Район «поездки рядом» и его настройки. Это отдельное согласие: пока `enabled` не включён, район не используется, а сохранённый район его не включает. Район хранится один, последний, и только как центр ячейки сетки (`limits.cell`); истории мест нет. Район с телефона живёт `limits.deviceTtlHours` часов от подтверждения и ничем, кроме нового подтверждения, не продлевается; вручную выбранный живёт до удаления.",
+  z.strictObject({
+    available: z
+      .boolean()
+      .describe(
+        "false — оператор выключил возможность: ничего не читается и не сохраняется, выключить можно по-прежнему.",
+      ),
+    enabled: z.boolean(),
+    source: z
+      .enum(["manual", "device"])
+      .nullable()
+      .describe(
+        "Откуда действующий район: `manual` — выбран вручную, `device` — подтверждён телефоном; null, если района нет.",
+      ),
+    area: z
+      .strictObject({
+        label: z
+          .string()
+          .nullable()
+          .describe(
+            "Название района, которое дал человек; у районов с телефона null.",
+          ),
+        center: z
+          .array(z.number())
+          .length(2)
+          .describe(
+            "[долгота, широта] центра ячейки сетки, не точка, где был человек.",
+          ),
+        radiusM: z.int(),
+      })
+      .nullable(),
+    observedAt: instant
+      .nullable()
+      .describe("Когда район подтверждён или выбран."),
+    expiresAt: instant
+      .nullable()
+      .describe("Конец срока района с телефона; у выбранного вручную null."),
+    expired: z
+      .boolean()
+      .describe(
+        "Срок района с телефона вышел: он не используется и скоро будет удалён.",
+      ),
+    horizonDays: z.int().describe("На сколько дней вперёд искать поездки."),
+    filters: z.strictObject(nearbyFiltersShape),
+    limits: z.strictObject({
+      minRadiusM: z.int(),
+      maxRadiusM: z.int().describe("Предел оператора."),
+      radiusStepM: z.int(),
+      deviceTtlHours: z.int(),
+      cell: z
+        .strictObject({ latStep: z.number(), lngStep: z.number() })
+        .describe(
+          "Размер ячейки в градусах. Телефон приводит положение к центру ячейки до отправки: центр = (⌊значение / шаг⌋ + 0.5) × шаг, с точностью до 5 знаков. Точную точку не отправляйте: сервер её не округляет, а отказывает (400).",
+        ),
+    }),
+  }),
+);
+
+export const nearbyAreaRequestSchema = named(
+  "NearbyAreaRequest",
+  "Сохранить район. `source: device` — только с токена приложения и только центром ячейки сетки; `manual` — любая точка района (сервер приведёт её к ячейке). Если действует район другого источника, замена требует `replaceSource: true` (иначе 409): два устройства не затирают район молча. Заголовок `If-Match` с `ETag` из чтения обязателен (428, 412 при устаревшей версии). Сохранение района не включает возможность.",
+  z.strictObject({
+    source: z.enum(["manual", "device"]),
+    center: z.array(z.number()).length(2).describe("[долгота, широта]."),
+    radiusM: z
+      .int()
+      .min(5000)
+      .describe(
+        "От 5 км до предела оператора (`limits.maxRadiusM`), кратно километру.",
+      ),
+    label: z.string().trim().min(1).max(100).nullable().optional(),
+    replaceSource: z.boolean().optional(),
+  }),
+);
+
+export const nearbySettingsPatchSchema = named(
+  "NearbySettingsPatch",
+  "Меняется только указанное. `enabled: true` — согласие на поиск поездок рядом; оно не включает push и публикацию намерений (это отдельные согласия). Выключить можно всегда. `If-Match` необязателен.",
+  z.strictObject({
+    enabled: z.boolean().optional(),
+    horizonDays: z.int().min(1).max(30).optional(),
+    filters: z
+      .strictObject({
+        purposes: nearbyFiltersShape.purposes.optional(),
+        paces: nearbyFiltersShape.paces.optional(),
+        surfaces: nearbyFiltersShape.surfaces.optional(),
+      })
+      .optional(),
+  }),
+);
+
 export const createCommentRequestSchema = named(
   "CreateCommentRequest",
   "Новый комментарий. `parentId` — комментарий того же объекта, на который отвечают; чужой или недоступный комментарий — 404.",
@@ -1890,6 +1995,7 @@ export const appConfigSchema = named(
 
 export type AppConfig = z.infer<typeof appConfigSchema>;
 export type CreateCommentRequest = z.infer<typeof createCommentRequestSchema>;
+export type Nearby = z.infer<typeof nearbySchema>;
 export type RideIntent = z.infer<typeof rideIntentSchema>;
 export type RideIntentPage = z.infer<typeof rideIntentPageSchema>;
 export type RideParticipation = z.infer<typeof rideParticipationSchema>;

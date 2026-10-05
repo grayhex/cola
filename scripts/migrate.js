@@ -70,6 +70,7 @@ try {
     "056_push_devices",
     "057_chat_push",
     "058_ride_intent_listing",
+    "059_nearby",
   ]) {
     const { rowCount } = await client.query(
       "SELECT 1 FROM schema_migrations WHERE version=$1",

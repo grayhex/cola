@@ -755,6 +755,149 @@ function withPlanning(document: Json) {
   };
 }
 
+// The private area of "rides near me" (#343).
+const nearbyEtag = {
+  ...requestIdHeader,
+  ETag: {
+    description:
+      "Версия района и настроек: для `If-Match` следующего изменения.",
+    schema: { type: "string" },
+  },
+};
+function withNearby(document: Json) {
+  const paths = document.paths as Record<string, Json>;
+  const security = [{ cookieSession: [] }, { bearerAuth: [] }];
+  const ifMatch = (required: boolean) => ({
+    name: "If-Match",
+    in: "header",
+    required,
+    description: required
+      ? "`ETag` района, который клиент видел, обязателен: без него 428, при другой версии 412. До первого сохранения версия есть и у пустого состояния."
+      : "`ETag`, который клиент видел: при другой версии — 412.",
+    schema: { type: "string" },
+  });
+  const authFailures = {
+    "401": failure(
+      "Нет входа, сессия или токен недействительны, токен доступа истёк (`token_expired`) либо схема Authorization не поддерживается.",
+    ),
+    "403": failure(
+      "Cookie-запрос не с адреса сайта (нужен заголовок `Origin`) либо район с телефона прислан не с токена приложения.",
+    ),
+  };
+  const common = {
+    ...authFailures,
+    "429": failure(
+      "Слишком много действий; секунды до конца окна — в `Retry-After`.",
+    ),
+    "500": shared("InternalError"),
+  };
+  paths["/me/nearby"] = {
+    get: {
+      operationId: "getNearby",
+      tags: ["Planning"],
+      summary: "Район «поездки рядом» и настройки",
+      description:
+        "Свой район и настройки: включено ли, откуда район, его срок, на сколько дней вперёд искать, предпочтения и пределы. Не включено по умолчанию. Версия — в `ETag` и у пустого состояния. Район хранится один, последний, как центр ячейки сетки; истории мест нет.",
+      security,
+      parameters: [],
+      responses: {
+        "200": {
+          description: "Район и настройки.",
+          headers: nearbyEtag,
+          content: json("Nearby"),
+        },
+        "400": failure(
+          "Параметры не подходят либо cookie вместе с Authorization.",
+        ),
+        "401": authFailures["401"],
+        "500": shared("InternalError"),
+      },
+    },
+    patch: {
+      operationId: "updateNearbySettings",
+      tags: ["Planning"],
+      summary: "Включить поиск рядом, горизонт и предпочтения",
+      description:
+        "Меняется только указанное. Включение — отдельное согласие: оно не включает push и публикацию намерений, а сохранённый район его не включает. Выключить можно всегда, и когда оператор выключил возможность (`available: false`) включить нельзя (503). `If-Match` необязателен.",
+      security,
+      parameters: [ifMatch(false)],
+      requestBody: requestBody("NearbySettingsPatch"),
+      responses: {
+        "200": {
+          description: "Состояние после изменения.",
+          headers: nearbyEtag,
+          content: json("Nearby"),
+        },
+        "400": failure("Тело не подходит либо cookie вместе с Authorization."),
+        ...common,
+        "412": failure("`If-Match` не совпал: прочитайте состояние снова."),
+        "413": failure("Тело больше 2048 байт."),
+        "415": failure("Тело не `application/json`."),
+        "503": failure("Оператор выключил возможность."),
+      },
+    },
+    delete: {
+      operationId: "forgetNearby",
+      tags: ["Planning"],
+      summary: "Отказаться от поиска рядом и забыть всё",
+      description:
+        "Удаляет район, переключатель и предпочтения целиком; запланированная доставка, основанная на районе, отменяется. Повтор тоже 204.",
+      security,
+      parameters: [],
+      responses: { "204": noContent("Всё удалено."), ...common },
+    },
+  };
+  paths["/me/nearby/area"] = {
+    put: {
+      operationId: "saveNearbyArea",
+      tags: ["Planning"],
+      summary: "Сохранить район",
+      description:
+        "Один район на аккаунт, последний. Телефон присылает центр ячейки сетки (`limits.cell`), а не точку: более точное сервер не округляет, а отклоняет (400), потому что округление на сервере не заменяет минимизацию до отправки. Район с телефона живёт `limits.deviceTtlHours` часов от подтверждения и ничем, кроме нового подтверждения, не продлевается; срок не продлевает и приход push. Выбранный вручную район сервер приводит к ячейке сам и хранит до удаления. Район другого источника заменяется только с `replaceSource: true` (иначе 409), поэтому два устройства не затирают район молча. Заголовок `If-Match` обязателен. Сохранение не включает возможность.",
+      security,
+      parameters: [ifMatch(true)],
+      requestBody: requestBody("NearbyAreaRequest"),
+      responses: {
+        "200": {
+          description: "Состояние после сохранения.",
+          headers: nearbyEtag,
+          content: json("Nearby"),
+        },
+        "400": failure(
+          "Тело не подходит: радиус вне 5 км…предела оператора или не кратен километру, положение с телефона не центр ячейки, название у района с телефона.",
+        ),
+        ...common,
+        "409": failure(
+          "Действует район другого источника, а `replaceSource` не указан.",
+        ),
+        "412": failure("`If-Match` не совпал: прочитайте состояние снова."),
+        "413": failure("Тело больше 2048 байт."),
+        "415": failure("Тело не `application/json`."),
+        "428": failure("Нет заголовка `If-Match`."),
+        "503": failure("Оператор выключил возможность."),
+      },
+    },
+    delete: {
+      operationId: "removeNearbyArea",
+      tags: ["Planning"],
+      summary: "Удалить район",
+      description:
+        "Убирает район; переключатель и предпочтения остаются. Предложения, основанные на районе, перестают подбираться. Повтор тоже 200. `If-Match` необязателен.",
+      security,
+      parameters: [ifMatch(false)],
+      responses: {
+        "200": {
+          description: "Состояние без района.",
+          headers: nearbyEtag,
+          content: json("Nearby"),
+        },
+        ...common,
+        "412": failure("`If-Match` не совпал: прочитайте состояние снова."),
+      },
+    },
+  };
+}
+
 export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
   const { schemas } = z.toJSONSchema(schemaRegistry, {
     target: "draft-2020-12",
@@ -2452,5 +2595,6 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
   withCommentWrites(document);
   withChat(document);
   withPlanning(document);
+  withNearby(document);
   return document;
 }
