@@ -767,5 +767,12 @@ try {
 
   console.log("API v1 planning HTTP checks passed");
 } finally {
+  // The database is shared with the tests that follow: this test's plans and
+  // intentions would be counted in their matches, so its people go with them.
+  await db
+    .query("DELETE FROM users WHERE email LIKE $1", [
+      `planning-%-${run}@example.test`,
+    ])
+    .catch(() => {});
   await db.end();
 }
