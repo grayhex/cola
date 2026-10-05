@@ -19,6 +19,8 @@ interface IntentViewRow {
   avatar_id: string | null;
   created_at: Date;
   updated_at: Date;
+  /** PostgreSQL's own text of `updated_at` (microseconds): the version of an edit. */
+  version: string;
 }
 import { createHash } from "node:crypto";
 import { publicAuthor } from "./profile-dto.ts";
@@ -39,11 +41,14 @@ export const activeCommunityIntent = (clock = "now()") =>
   `NOT u.blocked AND i.visibility='community' AND i.status='active' AND EXISTS (SELECT 1 FROM ride_intent_windows w WHERE w.intent_id=i.id AND w.ends_at>${clock})`;
 const visible = `NOT u.blocked AND i.status<>'deleted' AND EXISTS (SELECT 1 FROM users v WHERE v.id=$1 AND NOT v.blocked)
   AND (i.owner_id=$1 OR (i.visibility='community' AND i.status='active' AND ${activeWindow}))`;
-const select = `SELECT i.*,u.name,u.username,u.avatar_id,
+const selectWith = (
+  extra = "",
+) => `SELECT i.*,${extra}u.name,u.username,u.avatar_id,i.updated_at::text AS version,
   (i.status='active' AND NOT ${activeWindow}) AS expired,
   (SELECT coalesce(jsonb_agg(jsonb_build_object('startsAt',w.starts_at,'endsAt',w.ends_at) ORDER BY w.starts_at),'[]')
    FROM ride_intent_windows w WHERE w.intent_id=i.id AND (i.owner_id=$1 OR w.ends_at>now())) AS windows
   FROM ride_intents i JOIN users u ON u.id=i.owner_id`;
+const select = selectWith();
 function dto(row: IntentViewRow, viewerId: string) {
   const own = row.owner_id === viewerId;
   return {
@@ -79,13 +84,65 @@ async function lockOwner(q: Queryable, ownerId: string) {
   );
   if (!r.rows.length) throw new IntentError("Войдите в аккаунт", 401);
 }
-export async function intentDetail(q: Queryable, viewerId: string, id: string) {
+async function intentRow(q: Queryable, viewerId: string, id: string) {
   const r = await q.query<IntentViewRow>(
     `${select} WHERE i.id=$2 AND ${visible}`,
     [viewerId, id],
   );
   if (!r.rows[0]) throw new IntentError("Намерение недоступно", 404);
-  return dto(r.rows[0], viewerId);
+  return r.rows[0];
+}
+export async function intentDetail(q: Queryable, viewerId: string, id: string) {
+  return dto(await intentRow(q, viewerId, id), viewerId);
+}
+/** The intent and the version it was read at, for an ETag (API v1). */
+export async function intentVersioned(
+  q: Queryable,
+  viewerId: string,
+  id: string,
+) {
+  const row = await intentRow(q, viewerId, id);
+  return { intent: dto(row, viewerId), version: row.version };
+}
+export interface IntentCursor {
+  createdAt: string;
+  id: string;
+}
+/**
+ * One page of the viewer's own intentions (every state but deleted) or of the
+ * community's active ones, newest first by `(created_at, id)` with a cursor
+ * (API v1). The community list is the same visibility as `listIntents`: a
+ * signed-in, unblocked viewer, an unblocked author, an active intent with a
+ * window that has not ended. The partial index `ride_intents_community` serves it.
+ */
+export async function intentKeysetPage(
+  q: Queryable,
+  viewerId: string,
+  {
+    own,
+    limit,
+    after,
+  }: { own: boolean; limit: number; after: IntentCursor | null },
+) {
+  const where = own
+    ? `${visible} AND i.owner_id=$1`
+    : `${activeCommunityIntent()} AND EXISTS(SELECT 1 FROM users v WHERE v.id=$1 AND NOT v.blocked)`;
+  const r = await q.query<IntentViewRow & { cursor_at: string }>(
+    `${selectWith(`to_char(i.created_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS cursor_at,`)}
+     WHERE ${where}
+       AND ($2::timestamptz IS NULL OR i.created_at<$2::timestamptz OR (i.created_at=$2::timestamptz AND i.id>$3::uuid))
+     ORDER BY i.created_at DESC,i.id LIMIT $4`,
+    [viewerId, after?.createdAt ?? null, after?.id ?? null, limit + 1],
+  );
+  const page = r.rows.slice(0, limit);
+  const last = page[page.length - 1];
+  return {
+    items: page.map((row) => dto(row, viewerId)),
+    next:
+      r.rows.length > limit && last
+        ? { createdAt: last.cursor_at, id: last.id }
+        : null,
+  };
 }
 export async function listIntents(
   q: Queryable,
@@ -192,10 +249,15 @@ export async function updateIntent(
   ownerId: string,
   id: string,
   input: unknown,
+  // Called under the owner's lock with the version being replaced, so an
+  // `If-Match` is checked against what this edit overwrites, not an earlier read.
+  checkVersion?: (version: string) => void,
 ) {
   await lockOwner(q, ownerId);
-  const old = await intentDetail(q, ownerId, id);
+  const current = await intentRow(q, ownerId, id);
+  const old = dto(current, ownerId);
   if (!old.own) throw new IntentError("Намерение недоступно", 404);
+  checkVersion?.(current.version);
   if (old.status === "cancelled")
     throw new IntentError(
       "Отменённое намерение можно повторить с новыми датами",

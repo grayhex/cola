@@ -15,6 +15,10 @@ export const limits = Object.freeze({
   photoUploads: positive("PHOTO_UPLOADS_PER_15_MIN", 60),
   follows: 60,
   comments: 20,
+  // Answers to planned rides and edits of intentions to ride: one window of the
+  // person for the site and for API v1.
+  rideWrites: 20,
+  rideIntentWrites: 40,
   commentEdits: 40,
   reports: 10,
   notificationReads: 120,

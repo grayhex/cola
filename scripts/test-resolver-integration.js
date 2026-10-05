@@ -201,6 +201,7 @@ try {
           "tests/api-v1-market-http.js",
           "tests/api-v1-personal-http.js",
           "tests/api-v1-comments-write-http.js",
+          "tests/api-v1-planning-http.js",
           "tests/api-v1-media-http.js",
           "tests/admin-http.js",
           "tests/app-config-http.js",

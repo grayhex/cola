@@ -1,6 +1,7 @@
 import { errorMessage } from "../../../../lib/errors.ts";
 import { z } from "zod";
 import { currentUser, rateLimit } from "../../../../lib/auth.ts";
+import { limits } from "../../../../lib/limits.ts";
 import { db, transaction } from "../../../../lib/db.ts";
 import { json, fail, readJson, sameOrigin } from "../../../../lib/http.ts";
 import {
@@ -43,7 +44,10 @@ async function handler(
       return json(await ridePulsePeople(db, user.id));
     if (
       method !== "GET" &&
-      !(await rateLimit("ride-intent-write:" + user.id, 40))
+      !(await rateLimit(
+        "ride-intent-write:" + user.id,
+        limits.rideIntentWrites,
+      ))
     )
       return fail("Слишком много действий. Попробуйте позже.", 429);
     if (p.length === 1 && p[0] === "preferences") {

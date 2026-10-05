@@ -17,6 +17,18 @@ export class RideError extends Error {
     this.status = status;
   }
 }
+/**
+ * A 409 about the state a client acted on: the date it answered is no longer the
+ * current one (`occurrence`), or the conditions it agreed to are an older edition
+ * (`revision`). API v1 answers it with the state as it is now.
+ */
+export class RideConflict extends RideError {
+  declare reason: "occurrence" | "revision";
+  constructor(message: string, reason: "occurrence" | "revision") {
+    super(message, 409);
+    this.reason = reason;
+  }
+}
 export type XmlValue =
   string | number | null | undefined | XmlNode | XmlValue[];
 export interface XmlNode {
