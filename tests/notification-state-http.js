@@ -558,6 +558,7 @@ try {
     "discussions",
     "intents",
     "market",
+    "nearby",
     "plans",
     "rides",
   ]);
