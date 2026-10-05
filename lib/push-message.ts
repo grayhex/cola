@@ -36,6 +36,7 @@ const titles: Record<string, string> = {
   ride_reminder: "Напоминание о покатушке",
   plan_published: "Новая покатушка друга",
   intent_published: "Друг хочет покататься",
+  plan_nearby: "Новая покатушка рядом",
 };
 const subjects: Record<string, string> = {
   comment: "К велосипеду",

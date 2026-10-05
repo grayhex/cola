@@ -8,7 +8,6 @@ import {
   notificationCategoryKeys,
   notificationEvents,
   notificationTypes,
-  plannedNotificationCategories,
 } from "./notification-catalog.ts";
 import { notificationEmailStatus } from "./notification-email.ts";
 import {
@@ -76,9 +75,8 @@ export function notificationCatalogView() {
       push: notificationCategories[key].push,
       pushDefault: notificationCategories[key].pushDefault,
     })),
-    planned: Object.entries(plannedNotificationCategories).map(
-      ([key, value]) => ({ key, label: value.label, issue: value.issue }),
-    ),
+    // Categories the plan names but no code produces yet: none left (`nearby` is real).
+    planned: [] as Array<{ key: string; label: string; issue: string }>,
     events: notificationTypes.map((type) => ({
       type,
       category: notificationEvents[type].category,

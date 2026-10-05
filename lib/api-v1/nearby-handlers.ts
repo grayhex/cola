@@ -6,6 +6,7 @@ import {
   forgetNearby,
   nearbyAreaInput,
   nearbySettingsPatch,
+  nearbyOffers,
   nearbyState,
   removeNearbyArea,
   saveNearbyArea,
@@ -13,11 +14,15 @@ import {
   type NearbyState,
 } from "../nearby.ts";
 import { ApiError } from "./errors.ts";
-import { toNearby } from "./mappers.ts";
+import { toNearby, toNearbyOffers } from "./mappers.ts";
 import { signedIn } from "./personal-handlers.ts";
 import { checkIfMatch, etagOf, parseJsonBody } from "./request.ts";
 import { ok, safely } from "./respond.ts";
-import { parseNoQuery } from "./schemas.ts";
+import {
+  nearbyOffersQuerySchema,
+  parseNoQuery,
+  parseQuery,
+} from "./schemas.ts";
 import { requireOriginForCookie, limited } from "./write.ts";
 import { authenticate } from "./viewer.ts";
 
@@ -131,6 +136,23 @@ export function handleNearbyForget(req: Request) {
         "Cache-Control": "no-store",
         "X-Content-Type-Options": "nosniff",
       },
+    });
+  });
+}
+
+/**
+ * GET /api/v1/me/nearby/offers: the plans on now in the person's own area, asked
+ * for on purpose (the feed after turning it on or moving). A read: it sends
+ * nothing and keeps no record of what was shown or of where the person is.
+ */
+export function handleNearbyOffers(req: Request) {
+  return safely(async () => {
+    const viewer = await signedIn(req);
+    const { limit } = parseQuery(new URL(req.url), nearbyOffersQuerySchema);
+    await limited("nearby-offers:" + viewer.id, limits.nearbyOfferReads);
+    const offers = await nearbyOffers(db, viewer.id, { limit });
+    return ok(toNearbyOffers(offers.state, offers.rows, viewer.id), 200, {
+      "Cache-Control": "no-store",
     });
   });
 }

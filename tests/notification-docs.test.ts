@@ -8,7 +8,6 @@ import {
   notificationCategoryKeys,
   notificationEvents,
   notificationTypes,
-  plannedNotificationCategories,
 } from "../lib/notification-catalog.ts";
 import { fixtureDirectory } from "./support/notification-fixtures.ts";
 
@@ -96,23 +95,6 @@ test("the table of categories lists every category with the channels it can use"
     assert.equal(email, word(category.email), `${key(name)}: письмо`);
     assert.equal(push, word(category.push), `${key(name)}: push`);
   }
-  // The categories nothing produces yet are named, so a client may know them.
-  const planned = section("## Категории и каналы");
-  for (const category of Object.keys(plannedNotificationCategories))
-    assert.ok(planned.includes(`\`${category}\``), category);
-});
-
-test("the events nothing creates yet are the planned categories, and none is in the matrix", () => {
-  const table = rows(section("### Ещё не созданные события"));
-  const named = table.map(([, category]) => key(category)).sort();
-  assert.deepEqual(named, Object.keys(plannedNotificationCategories).sort());
-  const matrix = section("## Матрица событий").split("### ")[0];
-  for (const category of Object.keys(plannedNotificationCategories))
-    assert.equal(
-      rows(matrix).some((row) => key(row[1]) === category),
-      false,
-      category,
-    );
 });
 
 test("the published fixtures and the endpoints the chapter names exist", async () => {

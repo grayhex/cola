@@ -1,6 +1,11 @@
 import { z } from "zod";
 import type { Queryable } from "./db.ts";
-import { notificationLimits } from "./notification-fanout.ts";
+import {
+  nearbyMatchSql,
+  notificationLimits,
+  planGeometry,
+} from "./notification-fanout.ts";
+import { nearbyOfferRows } from "./rides.ts";
 import { ridePlanOptions } from "./ride-plan-options.ts";
 
 // The private area of "rides near me" (#343). It is the answer to "which part of
@@ -281,6 +286,8 @@ export async function saveNearbyArea(
       expires,
     ],
   );
+  // What was queued for the place the person left is not sent from the new one.
+  if (existing?.area_lng != null) await skipNearbyDeliveries(q, userId, now);
   return nearbyState(q, userId, now);
 }
 
@@ -317,6 +324,9 @@ export async function saveNearbySettings(
       JSON.stringify(filters),
     ],
   );
+  // Turning it off, or narrowing what is wanted, stops what was queued under the old rule.
+  if (patch.enabled === false || patch.horizonDays || patch.filters)
+    await skipNearbyDeliveries(q, userId, now);
   return nearbyState(q, userId, now);
 }
 
@@ -330,17 +340,20 @@ export async function removeNearbyArea(
   }: { now?: Date; precondition?: (version: string) => void } = {},
 ) {
   const existing = await lockRow(q, userId, precondition);
-  if (existing?.area_lng != null)
+  if (existing?.area_lng != null) {
     await q.query(
       `UPDATE nearby_areas SET source=NULL,label=NULL,area_lng=NULL,area_lat=NULL,radius_m=NULL,observed_at=NULL,expires_at=NULL,updated_at=now() WHERE user_id=$1`,
       [userId],
     );
+    await skipNearbyDeliveries(q, userId, now);
+  }
   return nearbyState(q, userId, now);
 }
 
 /** Opt-out: the area, the switch and the preferences, all of it. Repeating it is fine. */
 export async function forgetNearby(q: Queryable, userId: string) {
   await lockRow(q, userId);
+  await skipNearbyDeliveries(q, userId);
   await q.query("DELETE FROM nearby_areas WHERE user_id=$1", [userId]);
 }
 
@@ -350,10 +363,130 @@ export async function forgetNearby(q: Queryable, userId: string) {
  * The row stays (the switch and the preferences are the person's), the place goes.
  */
 export async function pruneNearbyAreas(q: Queryable, now = new Date()) {
-  const { rowCount } = await q.query(
+  const expired = await q.query<{ user_id: string }>(
     `UPDATE nearby_areas SET source=NULL,label=NULL,area_lng=NULL,area_lat=NULL,radius_m=NULL,observed_at=NULL,expires_at=NULL,updated_at=now()
-     WHERE expires_at IS NOT NULL AND expires_at<=$1::timestamptz`,
+     WHERE expires_at IS NOT NULL AND expires_at<=$1::timestamptz RETURNING user_id`,
     [now],
   );
+  // Nothing queued under a place that is gone is sent.
+  for (const row of expired.rows)
+    await skipNearbyDeliveries(q, row.user_id, now);
+  return expired.rowCount ?? 0;
+}
+
+/**
+ * Stops the pushes of nearby plans that are still waiting for this person: the
+ * area or the switch they were made under is gone or changed. Only a delivery
+ * not yet taken by a sender is touched; one in flight checks the area itself at
+ * the moment of sending (`nearbyNoticeStands`), so it stops there. The notices stay
+ * in the bell for as long as the switch is on.
+ */
+export async function skipNearbyDeliveries(
+  q: Queryable,
+  userId: string,
+  now = new Date(),
+) {
+  const { rowCount } = await q.query(
+    `UPDATE push_deliveries d SET status='skipped',error_code='unavailable',finished_at=$2::timestamptz,lease_token=NULL,lease_until=NULL
+     FROM notifications n
+     WHERE d.notification_id=n.id AND d.recipient_id=$1 AND n.type='plan_nearby' AND d.status='pending'`,
+    [userId, now],
+  );
   return rowCount ?? 0;
+}
+
+/**
+ * Whether a nearby plan may still be told to the person at the moment of
+ * sending: the operator's switch and the category are on, the person's area is
+ * on and in term, the plan is still a public planned ride that lies in it within
+ * their horizon and kind, and they have not been invited to it or answered it
+ * since. Read now, not when the notice was made.
+ */
+export async function nearbyNoticeStands(
+  q: Queryable,
+  subject: {
+    recipientId: string;
+    rideId: string | null;
+    occursAt: Date | null;
+  },
+  now: Date,
+) {
+  if (!subject.rideId || !subject.occursAt) return false;
+  const limits = await notificationLimits(q);
+  if (!limits.nearbyEnabled || limits.disabledCategories.includes("nearby"))
+    return false;
+  const ride = (
+    await q.query<{ plan_passport: unknown }>(
+      "SELECT plan_passport FROM rides WHERE id=$1 AND status='planned' AND is_public",
+      [subject.rideId],
+    )
+  ).rows[0];
+  const plan = planGeometry(ride?.plan_passport);
+  if (!plan) return false;
+  const near = nearbyMatchSql({
+    now: "$2",
+    occurs: "$3",
+    lat: "$4",
+    lng: "$5",
+    radius: "$6",
+    purpose: "$7",
+    pace: "$8",
+    surface: "$9",
+  });
+  return !!(
+    await q.query(
+      `SELECT 1 FROM nearby_areas na WHERE na.user_id=$1 AND ${near}
+         AND NOT EXISTS(SELECT 1 FROM ride_invitations v WHERE v.ride_id=$10 AND v.user_id=$1)
+         AND NOT EXISTS(SELECT 1 FROM ride_rsvps v WHERE v.ride_id=$10 AND v.user_id=$1)`,
+      [
+        subject.recipientId,
+        now,
+        subject.occursAt,
+        plan.lat,
+        plan.lng,
+        plan.radiusM,
+        plan.purpose,
+        plan.pace,
+        plan.surface,
+        subject.rideId,
+      ],
+    )
+  ).rowCount;
+}
+
+/** Why the offers are what they are: nothing is asked of the server about places the person did not give. */
+export type NearbyOffersState =
+  "ready" | "off" | "unavailable" | "no_area" | "expired";
+/**
+ * The plans on now in the person's chosen area, asked for on purpose (the feed
+ * after the first opt-in or a move). It is a read, not news: nothing is sent and
+ * nothing is recorded, and the existing catalogue is never sent as new
+ * publications. When there is no usable area it says why instead of guessing.
+ */
+export async function nearbyOffers(
+  q: Queryable,
+  userId: string,
+  { now = new Date(), limit = 20 }: { now?: Date; limit?: number } = {},
+) {
+  const state = await nearbyState(q, userId, now);
+  const why: NearbyOffersState = !state.available
+    ? "unavailable"
+    : !state.enabled
+      ? "off"
+      : !state.area
+        ? "no_area"
+        : state.expired
+          ? "expired"
+          : "ready";
+  if (why !== "ready") return { state: why, rows: [] };
+  const limits = await notificationLimits(q);
+  if (limits.disabledCategories.includes("nearby"))
+    return { state: "unavailable" as const, rows: [] };
+  return {
+    state: why,
+    rows: await nearbyOfferRows(q, userId, {
+      limit: Math.min(Math.max(1, limit), 20),
+      now,
+    }),
+  };
 }

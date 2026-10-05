@@ -22,7 +22,7 @@ import type {
   RideParticipation as ParticipationState,
 } from "../rides.ts";
 import type { intentDetail } from "../ride-intents.ts";
-import type { NearbyState } from "../nearby.ts";
+import type { NearbyOffersState, NearbyState } from "../nearby.ts";
 import { plannedEnd } from "../ride-plan.ts";
 import { richExcerpt } from "../rich-text.ts";
 import type { TokenGrant } from "../device-sessions.ts";
@@ -41,6 +41,7 @@ import type {
   Me,
   MyUpcomingRide,
   Nearby,
+  NearbyOffers,
   Notification,
   NotificationSettingsBody,
   NotificationTarget,
@@ -614,6 +615,7 @@ export function toNotification(
     createdAt: instantOf(card.createdAt) ?? "",
     readAt: instantOf(card.readAt),
     actor: toAuthor(card.actor),
+    reasons: card.reasons,
     target: {
       type: target.type,
       id: target.id,
@@ -917,6 +919,23 @@ export function toRideParticipation(
 }
 
 /** The area and settings of "rides near me": the cell and the terms, nothing else. */
+/** The current offers: the public list card of each plan and why it is offered. */
+export function toNearbyOffers(
+  state: NearbyOffersState,
+  rows: Array<RideViewRow & { intent_match?: boolean }>,
+  viewer: string,
+): NearbyOffers {
+  return {
+    state,
+    items: rows.map((row) => ({
+      ride: toRideSummary(row, viewer),
+      reasons: row.intent_match
+        ? (["nearby", "intent"] as Array<"nearby" | "intent">)
+        : (["nearby"] as Array<"nearby" | "intent">),
+    })),
+  };
+}
+
 export function toNearby(state: NearbyState): Nearby {
   return {
     available: state.available,

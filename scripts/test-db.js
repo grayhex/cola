@@ -288,6 +288,7 @@ await db.exec(
     new URL("../db/057_chat_push.sql", import.meta.url),
     new URL("../db/058_ride_intent_listing.sql", import.meta.url),
     new URL("../db/059_nearby.sql", import.meta.url),
+    new URL("../db/060_nearby_delivery.sql", import.meta.url),
     "utf8",
   ),
 );

@@ -1141,6 +1141,11 @@ export const notificationSchema = named(
       .nullable()
       .describe("Кто это сделал; null у уведомлений от самого сайта."),
     target: notificationTargetSchema,
+    reasons: z
+      .array(z.enum(["friend", "nearby", "intent"]))
+      .describe(
+        "Почему пришло новое предложение (`plan_published`, `intent_published`, `plan_nearby`): `friend` — новый план или намерение человека из вашего круга, `nearby` — покатушка в выбранном вами районе, `intent` — совпадает со временем вашего намерения. Названия места и расстояния нет: ни автор, ни другие не узнают, где вы. У остальных уведомлений пусто.",
+      ),
   }),
 );
 
@@ -1714,6 +1719,31 @@ export const nearbySchema = named(
   }),
 );
 
+export const nearbyOfferSchema = named(
+  "NearbyOffer",
+  "Одна покатушка в выбранном вами районе. Покатушка — та же карточка списка, что и везде (публичная): ни места встречи, ни расстояния до вас здесь нет, а автор не узнаёт, кто смотрит.",
+  z.strictObject({
+    ride: rideSummarySchema,
+    reasons: z
+      .array(z.enum(["nearby", "intent"]))
+      .describe(
+        "Почему предложено: `nearby` — в выбранном вами районе, `intent` — совпадает со временем вашего намерения.",
+      ),
+  }),
+);
+export const nearbyOffersSchema = named(
+  "NearbyOffers",
+  "Текущие предложения в выбранном районе — короткий список по запросу, ближайшие даты первыми, без курсора. Это чтение, а не рассылка: всё, что уже есть в каталоге, показывается здесь, а не приходит новостью.",
+  z.strictObject({
+    state: z
+      .enum(["ready", "off", "unavailable", "no_area", "expired"])
+      .describe(
+        "`ready` — список подобран; `off` — поиск рядом выключен; `no_area` — района нет; `expired` — срок района с телефона вышел (обновите его с телефона или выберите вручную); `unavailable` — оператор выключил возможность. Кроме `ready` список пуст.",
+      ),
+    items: z.array(nearbyOfferSchema),
+  }),
+);
+
 export const nearbyAreaRequestSchema = named(
   "NearbyAreaRequest",
   "Сохранить район. `source: device` — только с токена приложения и только центром ячейки сетки; `manual` — любая точка района (сервер приведёт её к ячейке). Если действует район другого источника, замена требует `replaceSource: true` (иначе 409): два устройства не затирают район молча. Заголовок `If-Match` с `ETag` из чтения обязателен (428, 412 при устаревшей версии). Сохранение района не включает возможность.",
@@ -1996,6 +2026,7 @@ export const appConfigSchema = named(
 export type AppConfig = z.infer<typeof appConfigSchema>;
 export type CreateCommentRequest = z.infer<typeof createCommentRequestSchema>;
 export type Nearby = z.infer<typeof nearbySchema>;
+export type NearbyOffers = z.infer<typeof nearbyOffersSchema>;
 export type RideIntent = z.infer<typeof rideIntentSchema>;
 export type RideIntentPage = z.infer<typeof rideIntentPageSchema>;
 export type RideParticipation = z.infer<typeof rideParticipationSchema>;
@@ -2089,6 +2120,16 @@ export function parseQuery<T extends z.ZodType>(
     });
   return result.data;
 }
+
+/** The short list of current offers: only its length can be asked for. */
+export const nearbyOffersQuerySchema = z.strictObject({
+  limit: z
+    .string()
+    .regex(/^\d{1,2}$/, "Ожидается целое число")
+    .transform(Number)
+    .pipe(z.int().min(1).max(20))
+    .default(10),
+});
 
 /** For an operation without parameters: any parameter at all is a 400. */
 export const parseNoQuery = (url: URL) => parseQuery(url, z.strictObject({}));

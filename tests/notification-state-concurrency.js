@@ -151,6 +151,7 @@ try {
       plans: false,
       intents: false,
       chat: false,
+      nearby: false,
     },
   );
   assert.equal(

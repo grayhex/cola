@@ -12,7 +12,6 @@ import {
   notificationEvents,
   notificationTypes,
   notificationTypesOf,
-  plannedNotificationCategories,
   type NotificationType,
 } from "../lib/notification-catalog.ts";
 import {
@@ -31,9 +30,10 @@ after(() => db.close());
 
 test("the catalogue knows exactly the types the table accepts", async () => {
   const { rows } = await db.query<{ def: string }>(
-    "SELECT pg_get_constraintdef(oid) def FROM pg_constraint WHERE conrelid='notifications'::regclass AND contype='c'",
+    "SELECT pg_get_constraintdef(oid) def FROM pg_constraint WHERE conrelid='notifications'::regclass AND contype='c' AND pg_get_constraintdef(oid) NOT LIKE '%reasons%'",
   );
-  // Every quoted word of those constraints is an event type.
+  // Every quoted word of those constraints is an event type (the constraints on
+  // `reasons` name reasons, not types).
   const accepted = new Set(
     rows.flatMap(({ def }) =>
       [...def.matchAll(/'([a-z_]+)'::text/g)].map((match) => match[1]),
@@ -42,7 +42,7 @@ test("the catalogue knows exactly the types the table accepts", async () => {
   assert.deepEqual([...accepted].sort(), [...notificationTypes].sort());
 });
 
-test("categories: every event has one, the lists agree, planned ones do not shadow live ones", () => {
+test("categories: every event has one and the lists agree", () => {
   for (const type of notificationTypes)
     assert.ok(
       Object.hasOwn(notificationCategories, notificationEvents[type].category),
@@ -56,12 +56,6 @@ test("categories: every event has one, the lists agree, planned ones do not shad
     "each type belongs to exactly one category",
   );
   assert.equal(notificationCategoryOf("not_a_type"), "site");
-  for (const planned of Object.keys(plannedNotificationCategories))
-    assert.equal(
-      Object.hasOwn(notificationCategories, planned),
-      false,
-      planned,
-    );
   // A category without a channel is only a filter of the inbox.
   for (const key of notificationCategoryKeys) {
     const category = notificationCategories[key];
@@ -153,6 +147,7 @@ const noRow: NotificationRow = {
   avatar_id: "",
   event_occurs_at: null,
   event_revision: null,
+  reasons: null,
 };
 const comment = randomUUID();
 const person = {
@@ -272,6 +267,11 @@ const cases: Record<NotificationType, Expected> = {
   intent_published: {
     row: { ...person, intent_id: randomUUID() },
     target: "intent",
+  },
+  plan_nearby: {
+    row: { ...person, ...ride, ...dated },
+    target: "ride",
+    dated: true,
   },
   session_reuse: { row: {}, target: "account" },
   bike_week: { row: bike, target: "bike-week" },

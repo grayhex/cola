@@ -96,6 +96,12 @@ test("defaults: nothing is on outside the site, push is not connected, reminders
         { supported: false, enabled: false },
         { supported: true, enabled: true },
       ],
+      // Off until chosen: the area and push were agreed to, this is the third word.
+      [
+        "nearby",
+        { supported: false, enabled: false },
+        { supported: true, enabled: false },
+      ],
     ],
     "the categories a channel can carry, and the push defaults after consent",
   );
@@ -150,7 +156,7 @@ test("e-mail keeps its rules: a verified address and a sender, and switching off
   assert.equal(on.channels.email.enabled, true);
   assert.deepEqual(
     on.categories.map((c) => c.email.enabled),
-    [false, true, false, false, false, false],
+    [false, true, false, false, false, false, false],
     "only what was named changed",
   );
   // The sender goes away; the person can still turn it all off.
@@ -394,7 +400,7 @@ test("once push is connected: consent is the account's, categories follow the ca
   assert.equal(on.channels.push.enabled, true);
   assert.deepEqual(
     on.categories.map((c) => c.push.enabled),
-    [true, true, false, true, true, true],
+    [true, true, false, true, true, true, false],
     "after consent: rides, comments, messages and the plans and intents of the circle; the site's own notices need no push",
   );
   assert.deepEqual(
@@ -410,7 +416,7 @@ test("once push is connected: consent is the account's, categories follow the ca
   );
   assert.deepEqual(
     some.categories.map((c) => c.push.enabled),
-    [false, true, false, true, true, true],
+    [false, true, false, true, true, true, false],
   );
   assert.deepEqual(
     (await stored(id)).push_categories,
@@ -453,6 +459,11 @@ test("a change names categories once and only channels that can carry them", () 
     bad({ categories: [{ key: "market", email: true }] }).success,
     true,
   );
+  // The nearby category is a push switch of its own.
+  assert.equal(
+    bad({ categories: [{ key: "nearby", push: true }] }).success,
+    true,
+  );
   for (const value of [
     { categories: [{ key: "market", push: true }] },
     { categories: [{ key: "reactions", email: true }] },
@@ -463,7 +474,8 @@ test("a change names categories once and only channels that can carry them", () 
         { key: "rides", push: true },
       ],
     },
-    { categories: [{ key: "nearby", push: true }] },
+    { categories: [{ key: "galaxy", push: true }] },
+    { categories: [{ key: "nearby", email: true }] },
     { categories: [{ key: "rides", sms: true }] },
     { channels: { sms: { enabled: true } } },
     { channels: { push: { enabled: "yes" } } },
@@ -477,7 +489,7 @@ test("a change names categories once and only channels that can carry them", () 
   assert.throws(
     () =>
       invalid<never>(
-        notificationSettingsPatch.parse({ categories: [{ key: "nearby" }] }),
+        notificationSettingsPatch.parse({ categories: [{ key: "galaxy" }] }),
       ),
     ZodError,
   );
