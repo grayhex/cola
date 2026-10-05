@@ -554,6 +554,7 @@ try {
     push: { available: false, enabled: false },
   });
   assert.deepEqual(initial.settings.categories.map((c) => c.key).sort(), [
+    "chat",
     "discussions",
     "intents",
     "market",
