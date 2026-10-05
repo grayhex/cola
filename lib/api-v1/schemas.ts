@@ -476,6 +476,17 @@ export const journalEntrySchema = named(
   z.strictObject({
     ...entrySummaryShape,
     body: z.string(),
+    installationResult: z
+      .enum(["direct", "modified", "failed"])
+      .nullable()
+      .describe(
+        "Как прошла установка (только у записи вида `build`): `direct` — без доработок, `modified` — с доработкой, `failed` — не вышло; иначе null.",
+      ),
+    rideId: id
+      .nullable()
+      .describe(
+        "Покатушка, к которой привязана запись. Приходит только владельцу, остальным null.",
+      ),
     components: z.array(journalComponentSchema),
     photos: z.array(entryPhotoSchema),
   }),
@@ -2488,3 +2499,77 @@ export type BikeComponentRequest = z.infer<typeof bikeComponentRequestSchema>;
 export type BikeComponentPatchRequest = z.infer<
   typeof bikeComponentPatchRequestSchema
 >;
+
+// Writing the journal (#347, W3): an entry of one's own bicycle and its photos.
+// The rules are the site's (`journalInput`, `saveJournal`); the status and the
+// audience are named in every creation and never implied.
+
+const journalText = (max: number) =>
+  z
+    .string()
+    .trim()
+    .max(max)
+    .refine((value) => !value.includes("\0"), "Недопустимый символ");
+const journalWriteShape = {
+  kind: journalKind,
+  title: journalText(160),
+  body: journalText(20000).describe(
+    "Текст в Markdown, до 20000 знаков. Для публикации нужны заголовок и текст.",
+  ),
+  status: entryStatus.describe(
+    "`draft` — черновик, виден только владельцу; `published` — опубликована (читают её по `isPublic`).",
+  ),
+  isPublic: z
+    .boolean()
+    .describe(
+      "Показывать опубликованную запись всем. Публичная публикация требует подтверждённой почты и публичного велосипеда.",
+    ),
+  eventDate: z.iso.date().nullable().optional(),
+  mileage: z.int().min(0).max(10_000_000).nullable().optional(),
+  rideId: id
+    .nullable()
+    .optional()
+    .describe("Своя покатушка на этом же велосипеде."),
+  installationResult: z
+    .enum(["direct", "modified", "failed"])
+    .nullable()
+    .optional()
+    .describe("Только для вида `build`; для других видов сбрасывается."),
+  componentIds: z
+    .array(id)
+    .max(50)
+    .refine(
+      (list) => new Set(list).size === list.length,
+      "Компоненты повторяются",
+    )
+    .optional()
+    .describe(
+      "Компоненты этого велосипеда, снимок которых остаётся в записи. Уже сохранённые остаются со снимком на момент записи.",
+    ),
+};
+
+export const journalRequestSchema = named(
+  "JournalRequest",
+  "Новая запись журнала своего велосипеда. `status` и `isPublic` обязательны и называют аудиторию явно. Черновик можно вести без подтверждённой почты; публикация для всех (`status: published` и `isPublic: true`) требует её.",
+  z.strictObject({ bikeId: id, ...journalWriteShape }),
+);
+
+export const journalPatchRequestSchema = named(
+  "JournalPatchRequest",
+  "Правка записи: меняется только названное в теле (`null` очищает дату, пробег, покатушку и результат установки), велосипед сменить нельзя. `componentIds` заменяет список целиком.",
+  z.strictObject({
+    kind: journalWriteShape.kind.optional(),
+    title: journalWriteShape.title.optional(),
+    body: journalWriteShape.body.optional(),
+    status: journalWriteShape.status.optional(),
+    isPublic: z.boolean().optional(),
+    eventDate: journalWriteShape.eventDate,
+    mileage: journalWriteShape.mileage,
+    rideId: journalWriteShape.rideId,
+    installationResult: journalWriteShape.installationResult,
+    componentIds: journalWriteShape.componentIds,
+  }),
+);
+
+export type JournalRequest = z.infer<typeof journalRequestSchema>;
+export type JournalPatchRequest = z.infer<typeof journalPatchRequestSchema>;

@@ -33,7 +33,7 @@ type BikeParams = { params: Promise<{ id: string }> };
 type PhotoParams = { params: Promise<{ id: string; photoId: string }> };
 
 /** What an upload may declare; the bytes decide what the file really is. */
-const IMAGE_TYPES = [
+export const IMAGE_TYPES = [
   "image/jpeg",
   "image/png",
   "image/webp",
@@ -46,13 +46,13 @@ const uploadsDirectory = () =>
   path.resolve(/*turbopackIgnore: true*/ process.env.UPLOAD_DIR || "uploads");
 
 /** A transaction that is already open: the engines run inside it, not beside it. */
-const within =
+export const within =
   (q: Queryable) =>
   <T>(run: (inner: Queryable) => Promise<T>) =>
     run(q);
 
 /** The engine's refusal of a file, in the API's envelope. */
-function unreadable(error: unknown): never {
+export function unreadable(error: unknown): never {
   const message = error instanceof Error ? error.message : "";
   if (message === "UNSUPPORTED_IMAGE")
     throw new ApiError(
@@ -69,6 +69,19 @@ function unreadable(error: unknown): never {
   throw new ApiError("invalid_request", "Не удалось прочитать изображение.");
 }
 
+/** An upload declares an image type (the bytes decide what it is), or 415. */
+export function requireImageType(req: Request) {
+  const declared = (req.headers.get("content-type") ?? "")
+    .split(";")[0]
+    .trim()
+    .toLowerCase();
+  if (!IMAGE_TYPES.includes(declared))
+    throw new ApiError(
+      "unsupported_media_type",
+      "Тело запроса — файл JPEG, PNG или WebP.",
+    );
+}
+
 /** POST /api/v1/bikes/{id}/photos */
 export function handleUploadBikePhoto(req: Request, { params }: BikeParams) {
   return safely(async () => {
@@ -77,15 +90,7 @@ export function handleUploadBikePhoto(req: Request, { params }: BikeParams) {
     parseNoQuery(new URL(req.url));
     // Everything that can be refused without the body is refused before it is read.
     const key = requiredKey(req.headers);
-    const declared = (req.headers.get("content-type") ?? "")
-      .split(";")[0]
-      .trim()
-      .toLowerCase();
-    if (!IMAGE_TYPES.includes(declared))
-      throw new ApiError(
-        "unsupported_media_type",
-        "Тело запроса — файл JPEG, PNG или WebP.",
-      );
+    requireImageType(req);
     const bike = await ownedBike(db, id, viewer.id);
     if (!bike) throw missingBike();
     // A photo on a public bicycle is a public write, as on the site.

@@ -13,6 +13,8 @@ export const limits = Object.freeze({
   photosPerBike: 12,
   bikeCreates: positive("BIKE_CREATES_PER_15_MIN", 30),
   photoUploads: positive("PHOTO_UPLOADS_PER_15_MIN", 60),
+  // Entries of the journal, one budget for the site and for API v1 (#347), per person.
+  journalWrites: 20,
   // Edits of a bicycle and its parts through API v1 (#347), per person.
   bikeWrites: positive("BIKE_WRITES_PER_15_MIN", 240),
   follows: 60,

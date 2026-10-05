@@ -1059,6 +1059,144 @@ function withBikePhotos(document: Json) {
   };
 }
 
+// Writing the journal (#347, W3): an entry of one's own bicycle and its photos.
+const entryEtag = {
+  ...requestIdHeader,
+  ETag: {
+    description:
+      "Версия записи (текста и полей, не фотографий): для `If-Match` следующей правки.",
+    schema: { type: "string" },
+  },
+};
+function withJournalWrites(document: Json) {
+  const paths = document.paths as Record<string, Json>;
+  const security = [{ cookieSession: [] }, { bearerAuth: [] }];
+  const journalId = { $ref: "#/components/parameters/JournalId" };
+  const photoId = { $ref: "#/components/parameters/JournalPhotoId" };
+  paths["/journal"] = {
+    post: {
+      operationId: "createJournalEntry",
+      tags: ["Journal"],
+      summary: "Создать запись журнала",
+      description:
+        "Запись своего велосипеда: черновик или публикация. `status` и `isPublic` обязательны и называют аудиторию явно; публикация для всех (`published` и `isPublic: true`) требует подтверждённой почты (403 `email_verification_required`) и публичного велосипеда, иначе запись видна только владельцу. `Idempotency-Key` (UUID) обязателен: повтор после потерянного ответа отдаёт ту же запись (`Idempotency-Replayed: true`), а не вторую; другое тело при том же ключе — 409. Снимок выбранных компонентов (`componentIds`) фиксируется на момент сохранения. Не больше 1000 записей на человека (409). Бюджет — 20 за окно, общий с сайтом. Фото добавляются отдельно.",
+      security,
+      parameters: [idempotencyHeader],
+      requestBody: requestBody("JournalRequest"),
+      responses: {
+        "201": {
+          description: "Запись создана: вид владельца.",
+          headers: entryEtag,
+          content: json("JournalEntry"),
+        },
+        ...bikeFailures({
+          "409": failure(
+            "`Idempotency-Key` уже использован с другим телом либо записей уже 1000.",
+          ),
+        }),
+        "413": failure("Тело больше 100000 байт."),
+      },
+    },
+  };
+  const getEntry = (paths["/journal/{id}"] as { get: Json }).get;
+  paths["/journal/{id}"] = {
+    get: {
+      ...getEntry,
+      description: `${String(getEntry.description)} Владельцу ответ приходит с \`ETag\`: его называет \`If-Match\` правки.`,
+      responses: {
+        ...(getEntry.responses as Json),
+        "200": {
+          description: "Запись. Владельцу — с `ETag`.",
+          headers: entryEtag,
+          content: json("JournalEntry"),
+        },
+      },
+    },
+    patch: {
+      operationId: "updateJournalEntry",
+      tags: ["Journal"],
+      summary: "Изменить запись журнала",
+      description:
+        "Меняется только названное в теле; велосипед сменить нельзя. `If-Match` с `ETag` обязателен: правка применяется только к версии, которую клиент видел (412, если другое устройство успело раньше; 428 без заголовка), поэтому чужая свежая правка не затирается молча. Публикация для всех и любая правка опубликованной публичной записи требуют подтверждённой почты. Компоненты, которые уже были в записи, остаются со снимком на момент записи. Пустое тело ничего не меняет. Статьи сайта здесь не правятся (404). Бюджет общий с созданием.",
+      security,
+      parameters: [journalId, ifMatchHeader(true, "записи")],
+      requestBody: requestBody("JournalPatchRequest"),
+      responses: {
+        "200": {
+          description: "Запись после правки.",
+          headers: entryEtag,
+          content: json("JournalEntry"),
+        },
+        ...bikeFailures({
+          "412": failure(
+            "`If-Match` не совпал с текущей версией: прочитайте запись снова.",
+          ),
+          "428": failure("Нет заголовка `If-Match`."),
+        }),
+        "413": failure("Тело больше 100000 байт."),
+      },
+    },
+    delete: {
+      operationId: "deleteJournalEntry",
+      tags: ["Journal"],
+      summary: "Удалить запись журнала",
+      description:
+        "Удаляет свою запись с комментариями, лайками и фотографиями; файлы убираются после фиксации. Повтор после удаления — 404: записи больше нет.",
+      security,
+      parameters: [journalId],
+      responses: {
+        "204": noContent("Запись удалена."),
+        ...bikeFailures(),
+      },
+    },
+  };
+  paths["/journal/{id}/photos"] = {
+    post: {
+      operationId: "uploadJournalPhoto",
+      tags: ["Journal"],
+      summary: "Загрузить фото записи",
+      description:
+        "Один файл за запрос, тело — сам файл, как у фото велосипеда (JPEG, PNG или WebP до 10 МБ; формат определяют байты, а не заголовок; сервер поворачивает по EXIF и сохраняет WebP). Минимального размера в пикселях нет. `Idempotency-Key` обязателен и стоит за хэш файла: те же байты — то же фото (`Idempotency-Replayed: true`), другой файл при том же ключе — 409. Не больше 8 фото в записи и 240 на человека, общий объём фото ограничен (409); 60 загрузок за окно, общих с фото велосипедов (429). Для опубликованной публичной записи нужна подтверждённая почта. Фото черновика видно только владельцу.",
+      security,
+      parameters: [journalId, idempotencyHeader],
+      requestBody: {
+        ...photoBody,
+        description:
+          "Сам файл, без multipart: JPEG, PNG или WebP до 10 МБ. `Content-Type` — `image/jpeg`, `image/png`, `image/webp` либо `application/octet-stream`: тип определяется по байтам, а не по заголовку.",
+      },
+      responses: {
+        "201": success("Фото загружено.", "EntryPhoto"),
+        ...bikeFailures({
+          "409": failure(
+            "`Idempotency-Key` уже использован с другим файлом либо исчерпана квота фото.",
+          ),
+        }),
+        "413": failure(
+          "Файл больше 10 МБ либо слишком велик в пикселях (больше 40 млн).",
+        ),
+        "415": failure(
+          "Не `image/jpeg`, `image/png`, `image/webp` и не `application/octet-stream`, либо по байтам это другой формат.",
+        ),
+      },
+    },
+  };
+  paths["/journal/{id}/photos/{photoId}"] = {
+    delete: {
+      operationId: "deleteJournalPhoto",
+      tags: ["Journal"],
+      summary: "Удалить фото записи",
+      description:
+        "Убирает фото записи; файл удаляется после фиксации. Повтор тоже 204. Чужая и несуществующая запись — 404.",
+      security,
+      parameters: [journalId, photoId],
+      responses: {
+        "204": noContent("Фото удалено."),
+        ...bikeFailures(),
+      },
+    },
+  };
+}
+
 function withNearby(document: Json) {
   const paths = document.paths as Record<string, Json>;
   const security = [{ cookieSession: [] }, { bearerAuth: [] }];
@@ -1266,7 +1404,7 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
       },
       {
         name: "Journal",
-        description: "Записи журнала велосипеда.",
+        description: "Записи журнала велосипеда: чтение и запись владельцем.",
       },
       {
         name: "Rides",
@@ -2890,6 +3028,13 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
           description: "Идентификатор уведомления из списка.",
           schema: { type: "string", format: "uuid" },
         },
+        JournalPhotoId: {
+          name: "photoId",
+          in: "path",
+          required: true,
+          description: "Идентификатор фото записи журнала (UUID).",
+          schema: { type: "string", format: "uuid" },
+        },
         BikePhotoId: {
           name: "photoId",
           in: "path",
@@ -2947,6 +3092,7 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
   withPlanning(document);
   withBikeWrites(document);
   withBikePhotos(document);
+  withJournalWrites(document);
   withNearby(document);
   return document;
 }

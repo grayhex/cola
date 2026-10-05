@@ -570,10 +570,13 @@ try {
     `/bikes/${publicBike}/comments`,
     `/bikes/${publicBike}/comments/${bikeRoot}/replies`,
   ])
-    // A comment collection takes POST since W1 (#330): its own tests.
+    // A comment collection takes POST since W1 (#330), an entry takes PATCH
+    // and DELETE since W3 (#347): their own tests.
     for (const method of /\/comments$/.test(path)
       ? ["PUT", "PATCH", "DELETE"]
-      : ["POST", "PUT", "PATCH", "DELETE"]) {
+      : path === `/journal/${target}`
+        ? ["POST", "PUT"]
+        : ["POST", "PUT", "PATCH", "DELETE"]) {
       const r = await guest(path, { method, origin: base });
       assertError(r, 405, "method_not_allowed", method + " " + path);
       assert.match(r.headers.get("allow"), /GET/);

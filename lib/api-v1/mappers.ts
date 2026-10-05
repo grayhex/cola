@@ -781,6 +781,10 @@ export function toJournalEntry(
   return {
     ...toEntrySummary(row, viewer),
     body: row.body,
+    installationResult: (row.installation_result ??
+      null) as JournalEntry["installationResult"],
+    // A ride may be private: its link is the owner's alone.
+    rideId: owner ? row.ride_id : null,
     components: row.components.map((part) => ({
       id: part.id,
       modelId: part.model_id ?? null,
