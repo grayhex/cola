@@ -98,3 +98,40 @@ export function checkIfMatch(
     "Объект изменился после того, как вы его прочитали. Прочитайте его снова.",
   );
 }
+
+/**
+ * The raw body of a request of at most `limit` bytes (an upload): 413 as soon
+ * as the declared length or the bytes read pass the limit, 400 for an empty
+ * body. The body is never read past the limit.
+ */
+export async function readBoundedBody(
+  req: Request,
+  limit: number,
+): Promise<Buffer> {
+  const declared = Number(req.headers.get("content-length"));
+  if (Number.isFinite(declared) && declared > limit)
+    throw new ApiError(
+      "payload_too_large",
+      `Тело запроса больше ${limit} байт.`,
+    );
+  const reader = req.body?.getReader();
+  if (!reader) throw new ApiError("invalid_request", "Тело запроса пусто.");
+  const chunks: Uint8Array[] = [];
+  let length = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    length += value.length;
+    if (length > limit) {
+      await reader.cancel();
+      throw new ApiError(
+        "payload_too_large",
+        `Тело запроса больше ${limit} байт.`,
+      );
+    }
+    chunks.push(value);
+  }
+  if (length === 0)
+    throw new ApiError("invalid_request", "Тело запроса пусто.");
+  return Buffer.concat(chunks);
+}

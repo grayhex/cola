@@ -50,6 +50,25 @@ export function idempotencyKey(headers: Headers): string | null {
 }
 
 /**
+ * The key of a request that cannot be made without one: the same 400 that
+ * `idempotent` gives, asked before the body is read.
+ */
+export function requiredKey(headers: Headers): string {
+  const key = idempotencyKey(headers);
+  if (key === null)
+    throw new ApiError(
+      "invalid_request",
+      "Для этого запроса нужен заголовок Idempotency-Key (UUID).",
+      {
+        details: [
+          { path: "Idempotency-Key", message: "Заголовок обязателен." },
+        ],
+      },
+    );
+  return key;
+}
+
+/**
  * Runs `run` once per `(person, request, key)` within a day.
  *
  * - no key: `run` just runs (or 400 when `required`);

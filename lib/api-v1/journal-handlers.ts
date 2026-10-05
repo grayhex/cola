@@ -8,6 +8,7 @@ import { apiRideVisible } from "../rides.ts";
 import { readableBikeSql } from "../bike-visibility.ts";
 import { decodeCursor, encodeCursor } from "./cursor.ts";
 import { notFound } from "./errors.ts";
+import { etagOfEntry, ownEntryVersion } from "./journal-version.ts";
 import { toComment, toJournalEntry, toJournalSummary } from "./mappers.ts";
 import { ok, safely } from "./respond.ts";
 import { bikeIdSchema, parseCommentsQuery, parsePageQuery } from "./schemas.ts";
@@ -73,10 +74,18 @@ export function handleGetJournalEntry(req: Request, { params }: IdParams) {
   return safely(async () => {
     const viewer = await viewerOf(req.headers);
     const id = idOf((await params).id, "Запись не найдена.");
+    // The owner's copy carries the version an edit names (`If-Match`). It is
+    // read before the entry, so that a change in between can only make the
+    // version older than the copy, and the next edit then fails with 412.
+    const version = viewer
+      ? await ownEntryVersion(db, id, viewer.id)
+      : undefined;
     const row = await journalRow(db, id, viewer?.id ?? null, "id");
     if (!row) throw notFound("Запись не найдена.");
     return ok(
       toJournalEntry(row, await journalPhotos(db, row.id), viewer?.id ?? null),
+      200,
+      version === undefined ? {} : { ETag: etagOfEntry(id, version) },
     );
   });
 }
