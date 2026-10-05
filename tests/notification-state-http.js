@@ -771,8 +771,12 @@ try {
     [{ channels: { sms: { enabled: true } } }, "a channel that is not there"],
     [{ channels: { email: { enabled: "yes" } } }, "a string for a switch"],
     [
+      { categories: [{ key: "nope", email: true }] },
+      "a category that does not exist",
+    ],
+    [
       { categories: [{ key: "chat", email: true }] },
-      "a category without events",
+      "a channel the category cannot use (messages are pushed, not e-mailed)",
     ],
     [
       { categories: [{ key: "market", push: true }] },
