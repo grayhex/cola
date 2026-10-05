@@ -1,3 +1,4 @@
+import { announceIntent } from "./notification-fanout.ts";
 import type { Queryable } from "./db.ts";
 import type { IntentWindow } from "./ride-intent-time.ts";
 import type { z } from "zod";
@@ -183,6 +184,7 @@ export async function createIntent(
     ],
   );
   await writeWindows(q, requestId, value.windows);
+  await announceIntent(q, requestId);
   return { intent: await intentDetail(q, ownerId, requestId), created: true };
 }
 export async function updateIntent(
@@ -215,6 +217,9 @@ export async function updateIntent(
     ],
   );
   await writeWindows(q, id, value.windows);
+  // Made public by this edit, or a new window after the old ones passed: said
+  // once per readiness, never again for the same intent.
+  await announceIntent(q, id);
   return intentDetail(q, ownerId, id);
 }
 export async function closeIntent(

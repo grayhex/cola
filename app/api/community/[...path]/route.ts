@@ -165,8 +165,19 @@ async function handler(
       // Reading notifications is when the site notices a listing's term
       // ending (#116); the header asks for the count on every page.
       if (m === "GET") await noticeExpiringListings(db, user.id);
-      if (p.length === 1 && m === "GET")
-        return json(await notificationPage(db, user.id, page()));
+      if (p.length === 1 && m === "GET") {
+        // The two filters of the list, as in the API (#341).
+        const query = new URL(req.url).searchParams;
+        const category = z
+          .enum(notificationCategoryKeys)
+          .safeParse(query.get("category") ?? undefined);
+        return json(
+          await notificationPage(db, user.id, page(), null, new Date(), {
+            unread: query.get("unread") === "1",
+            ...(category.success ? { category: category.data } : {}),
+          }),
+        );
+      }
       if (p.length === 2 && p[1] === "count" && m === "GET")
         return json(await inboxState(db, user.id));
       if (p.length === 2 && p[1] === "read-all" && m === "PATCH") {

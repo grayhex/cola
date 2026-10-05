@@ -147,12 +147,11 @@ test("the published fixtures and the endpoints the chapter names exist", async (
 
 test("what the chapter says is not there yet is not claimed as done", () => {
   const missing = section("## Чего ещё нет");
-  for (const word of ["N1.2", "N1.3", "#342", "#343"])
-    assert.ok(missing.includes(word), word);
+  for (const word of ["#342", "#343"]) assert.ok(missing.includes(word), word);
   // The scope line counts what is done and what is next, so a reader cannot
   // take a planned switch for a working one.
   const scope = section("## Назначение и границы");
   assert.match(scope, /\*\*Сделано \(N1\.1\)/);
-  assert.match(scope, /\*\*Дальше \(N1\.2\)/);
-  assert.match(scope, /\*\*Затем \(N1\.3\)/);
+  assert.match(scope, /\*\*Сделано \(N1\.2\)/);
+  assert.match(scope, /\*\*Сделано \(N1\.3\)/);
 });

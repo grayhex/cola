@@ -314,6 +314,7 @@ test("component media and shared discussion: upgrade, roles, quota, merges, mode
     let notices = (await notificationPage(db, owner.id)).notifications;
     assert.equal(notices.length, 1);
     assert.equal(notices[0].type, "component_reply");
+    // Two replies in one quarter of an hour are one unread notice, which opens the first.
     assert.match(notices[0].target.href, new RegExp(reply.id));
     await denied(
       tx((q) => componentSocial.change(q, root.id, stranger, "Not mine")),

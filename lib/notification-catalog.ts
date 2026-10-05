@@ -21,7 +21,9 @@ export interface NotificationCategory {
 
 /**
  * The categories that exist today. `reactions` and `site` are shown in the
- * inbox only: no channel carries them, so there is nothing to switch.
+ * inbox only: no channel carries them, so there is nothing to switch. `plans`
+ * and `intents` are discovery: who they come from is the circle of the
+ * settings, and how many leave the site is a limit, not a switch.
  */
 export const notificationCategories = {
   rides: {
@@ -41,6 +43,18 @@ export const notificationCategories = {
     email: true,
     push: false,
     pushDefault: false,
+  },
+  plans: {
+    label: "Новые планы друзей",
+    email: false,
+    push: true,
+    pushDefault: true,
+  },
+  intents: {
+    label: "Намерения друзей",
+    email: false,
+    push: true,
+    pushDefault: true,
   },
   reactions: {
     label: "Подписки и лайки",
@@ -67,8 +81,6 @@ export const notificationCategoryKeys = Object.keys(
  */
 export const plannedNotificationCategories = {
   chat: { label: "Сообщения", issue: "#342" },
-  plans: { label: "Новые планы друзей", issue: "#341 (события)" },
-  intents: { label: "Намерения друзей", issue: "#341 (события)" },
   nearby: { label: "Рядом", issue: "#343" },
 } as const;
 
@@ -178,6 +190,8 @@ export const notificationEvents = {
       line: "Срок вашего объявления подходит к концу или уже истёк. Проверьте его актуальность.",
     },
   },
+  plan_published: { category: "plans" },
+  intent_published: { category: "intents" },
   session_reuse: { category: "site" },
   bike_week: { category: "site" },
 } as const satisfies Record<string, NotificationEvent>;
@@ -232,6 +246,20 @@ export const notificationEmailEvents: Record<
       : [];
   }),
 );
+
+/**
+ * The e-mails about a person's own agreements (an invitation, a change, a
+ * cancellation, a reminder, an answer to the organiser). They are not held to
+ * the interval between two e-mails that keeps comments from becoming a stream:
+ * "the ride moved" does not wait twenty minutes behind someone's reply.
+ */
+export const notificationEmailPersonalTypes = Object.entries(
+  notificationEmailEvents,
+)
+  .filter(([, event]) => event.category === "rides")
+  .map(([type]) => type);
+export const notificationEmailPersonalSql = (typeColumn = "type") =>
+  `${typeColumn} IN (${notificationEmailPersonalTypes.map((type) => `'${type}'`).join(",")})`;
 
 // A newly inserted event and its delivery are one database statement, even when
 // the caller uses an autocommit pool. No SMTP means no new external backlog.

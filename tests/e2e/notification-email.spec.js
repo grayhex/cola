@@ -44,7 +44,8 @@ test("notification email settings: opt-in, keyboard, themes, rollback and unsign
     await settings
       .getByRole("button", { name: "Сохранить уведомления" })
       .click();
-    await expect(settings.getByRole("status")).toContainText(
+    // The first live region is the mail block's; the policy group below has its own.
+    await expect(settings.getByRole("status").first()).toContainText(
       "Настройки уведомлений сохранены",
     );
     for (const color of ["light", "dark"]) {

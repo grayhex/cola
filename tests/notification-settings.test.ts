@@ -81,6 +81,16 @@ test("defaults: nothing is on outside the site, push is not connected, reminders
         { supported: true, enabled: false },
         { supported: false, enabled: false },
       ],
+      [
+        "plans",
+        { supported: false, enabled: false },
+        { supported: true, enabled: true },
+      ],
+      [
+        "intents",
+        { supported: false, enabled: false },
+        { supported: true, enabled: true },
+      ],
     ],
     "the categories a channel can carry, and the push defaults after consent",
   );
@@ -135,7 +145,7 @@ test("e-mail keeps its rules: a verified address and a sender, and switching off
   assert.equal(on.channels.email.enabled, true);
   assert.deepEqual(
     on.categories.map((c) => c.email.enabled),
-    [false, true, false],
+    [false, true, false, false, false],
     "only what was named changed",
   );
   // The sender goes away; the person can still turn it all off.
@@ -379,8 +389,8 @@ test("once push is connected: consent is the account's, categories follow the ca
   assert.equal(on.channels.push.enabled, true);
   assert.deepEqual(
     on.categories.map((c) => c.push.enabled),
-    [true, true, false],
-    "after consent: rides and comments; the site's own notices need no push",
+    [true, true, false, true, true],
+    "after consent: rides, comments and the plans and intents of the circle; the site's own notices need no push",
   );
   assert.deepEqual(
     (await stored(id)).push_categories,
@@ -395,7 +405,7 @@ test("once push is connected: consent is the account's, categories follow the ca
   );
   assert.deepEqual(
     some.categories.map((c) => c.push.enabled),
-    [false, true, false],
+    [false, true, false, true, true],
   );
   assert.deepEqual(
     (await stored(id)).push_categories,

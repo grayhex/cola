@@ -158,7 +158,9 @@ test("email events are atomic, deduplicated, opt-in, bounded and SMTP-independen
       1,
     );
     await s.db.query("UPDATE notification_email_preferences SET enabled=false");
-    await s.db.query("UPDATE notifications SET dedup_key=dedup_key||':old'");
+    await s.db.query(
+      "UPDATE notifications SET dedup_key=dedup_key||':old',group_key=NULL",
+    );
     await s.add();
     assert.equal(
       (
@@ -294,7 +296,9 @@ test("actual SMTP transient and permanent replies drive retry and failure", asyn
       1,
     );
     assert.equal(accepted, 1);
-    await s.db.query("UPDATE notifications SET dedup_key=dedup_key||':old'");
+    await s.db.query(
+      "UPDATE notifications SET dedup_key=dedup_key||':old',group_key=NULL",
+    );
     await s.add();
     await ready(s.db);
     code = 550;
@@ -367,7 +371,9 @@ test("revoked consent cannot revive pending or leased mail when enabled again", 
     const s = await setup();
     try {
       await s.add();
-      await s.db.query("UPDATE notifications SET dedup_key=dedup_key||':old'");
+      await s.db.query(
+        "UPDATE notifications SET dedup_key=dedup_key||':old',group_key=NULL",
+      );
       await s.add();
       assert.equal((await claimNotificationEmails(s.db)).length, 1);
       if (revoke === "unsubscribe") {
@@ -426,7 +432,7 @@ test("revoked consent cannot revive pending or leased mail when enabled again", 
         2,
       );
       await s.db.query(
-        "UPDATE notifications SET dedup_key=dedup_key||':older'",
+        "UPDATE notifications SET dedup_key=dedup_key||':older',group_key=NULL",
       );
       await s.add();
       assert.equal(
@@ -476,7 +482,9 @@ test("delivery rechecks visibility, address, consent and blocking, and never sen
         "UPDATE users SET blocked=false,email_verified_at=now()",
       );
       await saveNotificationEmail(s.db, s.recipient, on, env);
-      await s.db.query("UPDATE notifications SET dedup_key=dedup_key||':old'");
+      await s.db.query(
+        "UPDATE notifications SET dedup_key=dedup_key||':old',group_key=NULL",
+      );
       await s.add();
       await ready(s.db);
       await s.db.query(update);
@@ -541,7 +549,9 @@ test("retry, permanent failure, attempts exhaustion, lease recovery and retentio
       ).rows[0].queued_count,
       0,
     );
-    await s.db.query("UPDATE notifications SET dedup_key=dedup_key||':old'");
+    await s.db.query(
+      "UPDATE notifications SET dedup_key=dedup_key||':old',group_key=NULL",
+    );
     await s.add();
     await ready(s.db);
     await s.db.query(

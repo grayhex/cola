@@ -14,8 +14,18 @@ import {
   type NotificationCategoryKey,
 } from "./notification-catalog.ts";
 import { rideNoticeVisible } from "./ride-notification-policy.ts";
-// Keep one lifetime follow/like event; comments/replies coalesce per actor/bike/15m.
-// Never reset created_at or read_at on conflict, including unlike/like and refollow.
+import { rideOccurrence } from "./ride-occurrence.ts";
+// Keep one lifetime follow/like event. The discussion events are told apart
+// (#341): the identity of an event is its comment, the group is what one author
+// does to one object in a quarter of an hour. While the newest notice of a group
+// is unread, a further event of the group adds nothing: the person has one
+// notice, which opens the first comment they have not read, and the rest of the
+// thread is under it. Once that notice has been read the next event gets a
+// notice of its own, so a direct reply after the previous one was read is never
+// lost. Repeating one event (the same comment) changes nothing. Never reset
+// created_at or read_at, including unlike/like and refollow.
+const groupedTypes =
+  "('comment','reply','ride_comment','ride_reply','journal_comment','journal_reply','component_reply')";
 
 export async function notify(
   q: QueryableType,
@@ -47,9 +57,18 @@ export async function notify(
 ) {
   if (!recipient || recipient === actor) return;
   const key = `${type}:${actor}:${component || entry || ride || bike || ""}`;
+  // The event itself: the comment the notice is about.
+  const event = comment || rideComment || entryComment || componentComment;
   await q.query(
-    `WITH created AS (INSERT INTO notifications(id,recipient_id,actor_id,type,bike_id,comment_id,dedup_key,ride_id,ride_comment_id,entry_id,entry_comment_id,component_id,component_comment_id)
- SELECT $1,$2,$3,$4,$5,$6,$7 || CASE WHEN $4 IN ('comment','reply','ride_comment','ride_reply','journal_comment','journal_reply','component_reply') THEN ':' || floor(extract(epoch from now())/900)::bigint::text ELSE '' END,$8,$9,$10,$11,$12,$13 WHERE EXISTS(SELECT 1 FROM users WHERE id=$2 AND NOT blocked) AND EXISTS(SELECT 1 FROM users WHERE id=$3 AND NOT blocked)
+    `WITH k AS (SELECT $7::text || CASE WHEN $4 IN ${groupedTypes} THEN ':' || floor(extract(epoch from now())/900)::bigint::text ELSE '' END AS group_key),
+ grp AS (SELECT n.id,n.read_at FROM notifications n,k
+  WHERE $4 IN ${groupedTypes} AND n.recipient_id=$2 AND (n.group_key=k.group_key OR (n.group_key IS NULL AND n.dedup_key=k.group_key))
+  ORDER BY n.created_at DESC,n.id LIMIT 1),
+ created AS (INSERT INTO notifications(id,recipient_id,actor_id,type,bike_id,comment_id,dedup_key,group_key,ride_id,ride_comment_id,entry_id,entry_comment_id,component_id,component_comment_id)
+ SELECT $1,$2,$3,$4,$5,$6,CASE WHEN EXISTS(SELECT 1 FROM grp) THEN k.group_key || ':' || coalesce($15::text,$1::uuid::text) ELSE k.group_key END,
+  CASE WHEN $4 IN ${groupedTypes} THEN k.group_key END,$8,$9,$10,$11,$12,$13
+ FROM k WHERE EXISTS(SELECT 1 FROM users WHERE id=$2 AND NOT blocked) AND EXISTS(SELECT 1 FROM users WHERE id=$3 AND NOT blocked)
+  AND NOT EXISTS(SELECT 1 FROM grp WHERE read_at IS NULL)
  ON CONFLICT(recipient_id,dedup_key) DO NOTHING RETURNING id,recipient_id,type)
  ${notificationEmailEnqueueSql("$14::boolean")}`,
     [
@@ -67,6 +86,7 @@ export async function notify(
       component,
       componentComment,
       mailEnabled(),
+      event,
     ],
   );
 }
@@ -78,11 +98,13 @@ export const inboxFrom = ` FROM notifications n LEFT JOIN users a ON a.id=n.acto
  LEFT JOIN bike_comments c ON c.id=n.comment_id LEFT JOIN rides r ON r.id=n.ride_id LEFT JOIN bikes rb ON rb.id=r.bike_id LEFT JOIN users ro ON ro.id=r.owner_id LEFT JOIN ride_comments rc ON rc.id=n.ride_comment_id
  LEFT JOIN journal_entries e ON e.id=n.entry_id LEFT JOIN bikes eb ON eb.id=e.bike_id LEFT JOIN users eo ON eo.id=e.owner_id LEFT JOIN journal_comments ec ON ec.id=n.entry_comment_id
  LEFT JOIN component_models cs ON cs.id=n.component_id LEFT JOIN component_models cm ON cm.id=coalesce(cs.merged_into,cs.id)
- LEFT JOIN component_comments cc ON cc.id=n.component_comment_id`;
+ LEFT JOIN component_comments cc ON cc.id=n.component_comment_id LEFT JOIN ride_intents ri ON ri.id=n.intent_id`;
 export const inboxVisible = (
   clock = "now()",
 ) => `n.recipient_id=$1 AND ((n.type='bike_week' AND b.owner_id=n.recipient_id AND b.is_public AND NOT o.blocked AND NOT b.leaderboard_excluded AND EXISTS(SELECT 1 FROM bike_weeks w WHERE w.bike_id=b.id AND w.owner_id=n.recipient_id AND w.status='selected' AND w.week_start=date_trunc('week',(${clock}) AT TIME ZONE 'Europe/Moscow')::date AND n.dedup_key='bike_week:'||w.week_start::text||':'||b.id::text)) OR (n.type='market_expiring' AND ml.owner_id=n.recipient_id) OR n.type='session_reuse' OR ${rideNoticeVisible(clock)} OR NOT a.blocked AND (
  (n.type='component_reply' AND cm.first_public_at IS NOT NULL AND cc.deleted_at IS NULL AND cc.author_id=n.actor_id) OR
+ (n.type='plan_published' AND r.owner_id=n.actor_id AND r.status='planned' AND r.is_public AND rb.is_public AND NOT ro.blocked AND (${rideOccurrence.replaceAll("now()", `(${clock})`)})>(${clock})) OR
+ (n.type='intent_published' AND ri.owner_id=n.actor_id AND ri.visibility='community' AND ri.status='active' AND EXISTS(SELECT 1 FROM ride_intent_windows w WHERE w.intent_id=ri.id AND w.ends_at>(${clock}))) OR
  (n.type='follow' AND EXISTS(SELECT 1 FROM user_follows f WHERE f.follower_id=n.actor_id AND f.following_id=n.recipient_id)) OR
  (b.is_public AND NOT o.blocked AND (
   (n.type='like' AND EXISTS(SELECT 1 FROM bike_likes l WHERE l.bike_id=b.id AND l.user_id=n.actor_id)) OR
@@ -163,6 +185,7 @@ export interface NotificationRow {
   ride_id: string;
   ride_share_id: string;
   ride_title: string;
+  intent_id: string;
   bike_id: string;
   share_id: string;
   bike_name: string;
@@ -273,58 +296,76 @@ function plainCard(n: NotificationRow, typed: TypedTarget) {
                           : ""),
                       ...typed,
                     }
-                  : n.type.startsWith("ride_")
+                  : n.type === "intent_published"
                     ? {
-                        type: "ride",
-                        id: n.ride_id,
-                        name: n.ride_title,
-                        href:
-                          "/r/" +
-                          n.ride_share_id +
-                          (n.ride_comment_id
-                            ? "?comment=" + n.ride_comment_id + "#discussion"
-                            : ""),
+                        type: "intent",
+                        id: n.intent_id,
+                        name: "Намерение покататься",
+                        href: "/ride-intents",
                         ...typed,
                       }
-                    : n.type === "follow"
+                    : n.type.startsWith("ride_") || n.type === "plan_published"
                       ? {
-                          type: "profile",
-                          id: n.actor_id,
-                          name: n.name,
-                          href: profilePath(n.username),
-                          ...typed,
-                        }
-                      : {
-                          type: "bike",
-                          id: n.bike_id,
-                          name: n.bike_name,
+                          type: "ride",
+                          id: n.ride_id,
+                          name: n.ride_title,
                           href:
-                            "/b/" +
-                            n.share_id +
-                            (n.comment_id
-                              ? "?comment=" + n.comment_id + "#discussion"
+                            "/r/" +
+                            n.ride_share_id +
+                            (n.ride_comment_id
+                              ? "?comment=" + n.ride_comment_id + "#discussion"
                               : ""),
                           ...typed,
-                        },
+                        }
+                      : n.type === "follow"
+                        ? {
+                            type: "profile",
+                            id: n.actor_id,
+                            name: n.name,
+                            href: profilePath(n.username),
+                            ...typed,
+                          }
+                        : {
+                            type: "bike",
+                            id: n.bike_id,
+                            name: n.bike_name,
+                            href:
+                              "/b/" +
+                              n.share_id +
+                              (n.comment_id
+                                ? "?comment=" + n.comment_id + "#discussion"
+                                : ""),
+                            ...typed,
+                          },
           };
 }
 // A function: the notice days come from market.ts, which imports this module.
 const notificationColumns = () =>
-  `n.id,n.type,n.created_at,n.read_at,n.event_occurs_at,n.event_revision,n.comment_id,n.ride_comment_id,n.entry_comment_id,n.component_comment_id,cm.id component_id,cm.name component_name,cm.category_slug,cm.slug,ml.id AS listing_id,ml.share_id AS listing_share,ml.title AS listing_title,ml.status AS listing_status,ml.expires_at AS listing_expires,(ml.expires_at<=now()) AS listing_expired,(ml.expires_at<=now()+make_interval(days=>${expiryNoticeDays})) AS listing_due,e.id AS entry_id,e.kind AS entry_kind,e.share_id AS entry_share,e.title AS entry_title,r.id AS ride_id,r.share_id AS ride_share_id,r.title AS ride_title,b.id AS bike_id,b.share_id,b.name AS bike_name,a.id AS actor_id,a.username,a.name,a.avatar_id`;
+  `n.id,n.type,n.created_at,n.read_at,n.event_occurs_at,n.event_revision,n.comment_id,n.ride_comment_id,n.entry_comment_id,n.component_comment_id,cm.id component_id,cm.name component_name,cm.category_slug,cm.slug,ml.id AS listing_id,ml.share_id AS listing_share,ml.title AS listing_title,ml.status AS listing_status,ml.expires_at AS listing_expires,(ml.expires_at<=now()) AS listing_expired,(ml.expires_at<=now()+make_interval(days=>${expiryNoticeDays})) AS listing_due,e.id AS entry_id,e.kind AS entry_kind,e.share_id AS entry_share,e.title AS entry_title,r.id AS ride_id,r.share_id AS ride_share_id,r.title AS ride_title,n.intent_id,b.id AS bike_id,b.share_id,b.name AS bike_name,a.id AS actor_id,a.username,a.name,a.avatar_id`;
 export async function notificationPage(
   q: Queryable,
   id: string,
   page = 1,
   notificationId: string | null = null,
   now = new Date(),
+  // The same two filters as the API's list (#341): only the unread, one category.
+  { unread = false, category }: InboxFilter = {},
 ) {
   const r = await q.query<NotificationRow>(
     `SELECT ${notificationColumns()}` +
       inboxFrom +
       " WHERE " +
       inboxVisible("$4::timestamptz") +
-      " AND ($3::uuid IS NULL OR n.id=$3) ORDER BY n.created_at DESC,n.id LIMIT 21 OFFSET $2",
-    [id, (page - 1) * 20, notificationId, now],
+      " AND ($3::uuid IS NULL OR n.id=$3) AND ($5::boolean IS NOT TRUE OR n.read_at IS NULL) AND ($6::text[] IS NULL OR n.type=ANY($6::text[]))" +
+      " ORDER BY n.created_at DESC,n.id LIMIT 21 OFFSET $2",
+    [
+      id,
+      (page - 1) * 20,
+      notificationId,
+      now,
+      unread,
+      category ? notificationTypesOf(category) : null,
+    ],
   );
   return {
     notifications: r.rows.slice(0, 20).map(notificationCard),

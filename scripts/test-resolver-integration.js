@@ -236,6 +236,7 @@ try {
             ? [
                 "tests/notification-email-concurrency.js",
                 "tests/notification-state-concurrency.js",
+                "tests/notification-fanout-concurrency.js",
                 "tests/ride-notifications-concurrency.js",
                 "tests/bike-week-concurrency.js",
               ]

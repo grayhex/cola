@@ -130,7 +130,9 @@ test("ride reminders: default on-site, independent mail, keyboard, rollback and 
     await settings
       .getByRole("button", { name: "Сохранить уведомления" })
       .click();
-    await expect(settings.getByRole("status")).toContainText("сохранены");
+    await expect(settings.getByRole("status").first()).toContainText(
+      "сохранены",
+    );
     await visit(url);
     await expect(status).toContainText("Напоминание отключено");
     await visit("/account?tab=account");
@@ -158,7 +160,9 @@ test("ride reminders: default on-site, independent mail, keyboard, rollback and 
     await settings
       .getByRole("button", { name: "Сохранить уведомления" })
       .click();
-    await expect(settings.getByRole("status")).toContainText("сохранены");
+    await expect(settings.getByRole("status").first()).toContainText(
+      "сохранены",
+    );
     await api(organizer.request, "rides/" + ride.id, "PATCH", {
       ...fields,
       meetingPoint: "Главный вход в парк",
@@ -189,7 +193,9 @@ test("ride reminders: default on-site, independent mail, keyboard, rollback and 
     await page.keyboard.press("Enter");
     await expect(going).toHaveAttribute("aria-pressed", "true");
     await expect(status).toContainText("Напоминание на сайте:");
-    // A temporary SMTP refusal does not become an RSVP error.
+    // A temporary SMTP refusal does not become an RSVP error. The change of the
+    // ride and the new reminder are both about the person's own agreement, so
+    // neither waits behind the other: the batch takes (and retries) both.
     expect(
       (
         await runNotificationEmailBatch(q, {
@@ -198,7 +204,7 @@ test("ride reminders: default on-site, independent mail, keyboard, rollback and 
           },
         })
       ).retry,
-    ).toBe(1);
+    ).toBe(2);
     await reload();
     await expect(going).toHaveAttribute("aria-pressed", "true");
     await expect(page.locator(".ride-rsvp [role=alert]")).toHaveCount(0);

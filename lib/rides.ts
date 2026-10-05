@@ -1,3 +1,4 @@
+import { announcePlan } from "./notification-fanout.ts";
 import type * as RepositoryTypes from "./repository.ts";
 import type * as DatabaseRowsTypes from "./database-rows.ts";
 import type * as RideAnalysisContractTypes from "./ride-analysis-contract.ts";
@@ -1063,6 +1064,8 @@ export async function saveRide(
           input.visibleMetrics ? JSON.stringify(input.visibleMetrics) : null,
         ],
       );
+      // A plan made public by an edit is announced once, like a new public plan.
+      if (existing.status === "planned") await announcePlan(q, id);
       return { id, shareId: existing.share_id };
     }
     bytes = await getOriginal(existing.track_file_id || id);
@@ -1166,6 +1169,7 @@ export async function saveRide(
       input.privacyEnabled,
       input.privacyRadiusM,
     );
+  if (existing?.status === "planned") await announcePlan(q, rideId);
   return { id: rideId, shareId };
 }
 export async function refreshRideAnalysis(
@@ -1530,6 +1534,7 @@ export async function planRide(
     ],
   );
   await inviteRiders(q, { id: result.id }, owner, input.invitations || []);
+  await announcePlan(q, result.id);
   return result;
 }
 export async function attachRideTrack(

@@ -4,6 +4,7 @@ import { classificationQueryShape } from "../classification-validation.ts";
 import { listingTypeKeys } from "../market-types.ts";
 import { notificationCategoryKeys } from "../notification-catalog.ts";
 import { notificationSettingsPatch } from "../notification-settings.ts";
+import { circleModes, muteKinds } from "../notification-policy.ts";
 import { nativeCodePattern, verifierPattern } from "../native-auth.ts";
 import { ApiError, apiErrorCodes, detailsOf } from "./errors.ts";
 
@@ -1085,7 +1086,7 @@ export const notificationTargetSchema = named(
     type: z
       .string()
       .describe(
-        "bike, ride, journal, article, component, profile, market, account или bike-week; набор открыт.",
+        "bike, ride, journal, article, component, profile, market, account, bike-week или intent; набор открыт.",
       ),
     id,
     name: z.string(),
@@ -1241,6 +1242,61 @@ export const notificationSettingsSchema = named(
       .describe(
         "Напоминание о принятой покатушке за сутки, для всех каналов; по умолчанию включено.",
       ),
+    timeZone: z
+      .string()
+      .nullable()
+      .describe(
+        "Часовой пояс человека (название из базы IANA, например Europe/Moscow), в котором читаются тихие часы; null, пока не указан.",
+      ),
+    quietHours: named(
+      "NotificationQuietHours",
+      "Тихие часы: пока окно открыто, внешние каналы ждут его конца. Сообщение, срок которого выходит раньше, не отправляется утром вовсе. Внутри приложения и сайта уведомления появляются всегда.",
+      z.strictObject({
+        enabled: z.boolean(),
+        from: z.string().describe("Начало, ЧЧ:ММ по часам человека."),
+        to: z
+          .string()
+          .describe(
+            "Конец, ЧЧ:ММ; если раньше начала, окно переходит через полночь.",
+          ),
+        allowCancellations: z
+          .boolean()
+          .describe(
+            "Явный выбор человека: отмена подтверждённого выезда, до которого меньше 12 часов, не ждёт конца тихих часов. По умолчанию выключено. Пауза этим не обходится.",
+          ),
+      }),
+    ),
+    pausedUntil: instant
+      .nullable()
+      .describe(
+        "Пока пауза идёт, внешние каналы молчат; сказанное за это время потом не досылается. null — паузы нет.",
+      ),
+    circle: named(
+      "NotificationCircle",
+      "От кого человек узнаёт о новых планах и намерениях: `friends` — взаимные подписки (по умолчанию), `follows` — все, на кого подписан, `selected` — выбранные люди (`members`), `off` — ни от кого. Подписка и выбор не расширяют доступ: уведомление есть, только если человек и так вправе увидеть событие.",
+      z.strictObject({
+        mode: z.enum(circleModes),
+        members: z.array(authorSchema),
+      }),
+    ),
+    considering: z
+      .boolean()
+      .describe(
+        "Сообщать и о намерениях, которые автор пока отметил «думаю»; по умолчанию нет.",
+      ),
+    mutes: z
+      .array(
+        named(
+          "NotificationMute",
+          "Заглушённое: автор (всё, что он делает), покатушка (всё о ней) или обсуждение (комментарии под объектом). Метка — название, если человек вправе его знать, иначе null.",
+          z.strictObject({
+            kind: z.enum(muteKinds),
+            id: z.string(),
+            label: z.string().nullable(),
+          }),
+        ),
+      )
+      .describe("Сначала самые давние."),
     updatedAt: instant
       .nullable()
       .describe(
