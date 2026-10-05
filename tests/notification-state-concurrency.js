@@ -150,6 +150,7 @@ try {
       market: true,
       plans: false,
       intents: false,
+      chat: false,
     },
   );
   assert.equal(
