@@ -981,6 +981,84 @@ function withBikeWrites(document: Json) {
   };
 }
 
+// Photos of a bicycle (#347, W6a): a raw upload, the cover and deletion.
+const photoBody = {
+  required: true,
+  description:
+    "Сам файл, без multipart: JPEG, PNG или WebP до 10 МБ, от 600 × 400 пикселей. `Content-Type` — `image/jpeg`, `image/png`, `image/webp` либо `application/octet-stream`: тип определяется по байтам, а не по заголовку.",
+  content: Object.fromEntries(
+    ["application/octet-stream", "image/jpeg", "image/png", "image/webp"].map(
+      (type) => [type, { schema: { type: "string", format: "binary" } }],
+    ),
+  ),
+};
+function withBikePhotos(document: Json) {
+  const paths = document.paths as Record<string, Json>;
+  const security = [{ cookieSession: [] }, { bearerAuth: [] }];
+  const bikeId = { $ref: "#/components/parameters/BikeId" };
+  const photoId = { $ref: "#/components/parameters/BikePhotoId" };
+  paths["/bikes/{id}/photos"] = {
+    post: {
+      operationId: "uploadBikePhoto",
+      tags: ["Bikes"],
+      summary: "Загрузить фото велосипеда",
+      description:
+        "Один файл за запрос. Сервер сам проверяет байты (не доверяет `Content-Type` и EXIF), поворачивает по EXIF и сохраняет WebP до 2400 пикселей. Первое фото велосипеда становится обложкой. `Idempotency-Key` обязателен и стоит за хэш файла: повтор тех же байтов после потерянного ответа отдаёт то же фото (`Idempotency-Replayed: true`), а не второе; другой файл при том же ключе — 409. Не больше 12 фото на велосипед и общего объёма на человека (409), 60 загрузок за окно (429), общие с сайтом. Для публичного велосипеда нужна подтверждённая почта.",
+      security,
+      parameters: [bikeId, idempotencyHeader],
+      requestBody: photoBody,
+      responses: {
+        "201": success("Фото загружено.", "BikePhoto"),
+        ...bikeFailures({
+          "409": failure(
+            "`Idempotency-Key` уже использован с другим файлом либо исчерпана квота фото (12 на велосипед или общий объём).",
+          ),
+        }),
+        "413": failure(
+          "Файл больше 10 МБ либо слишком велик в пикселях (больше 40 млн).",
+        ),
+        "415": failure(
+          "Не `image/jpeg`, `image/png`, `image/webp` и не `application/octet-stream`, либо по байтам это другой формат.",
+        ),
+      },
+    },
+  };
+  paths["/bikes/{id}/photos/{photoId}"] = {
+    delete: {
+      operationId: "deleteBikePhoto",
+      tags: ["Bikes"],
+      summary: "Удалить фото велосипеда",
+      description:
+        "Удаляет фото и его файлы. Если оно было обложкой, обложкой становится самое раннее из оставшихся. Повтор тоже 204. Подтверждённая почта не нужна.",
+      security,
+      parameters: [bikeId, photoId],
+      responses: {
+        "204": noContent("Фото удалено."),
+        ...bikeFailures(),
+      },
+    },
+  };
+  paths["/bikes/{id}/photos/{photoId}/cover"] = {
+    put: {
+      operationId: "setBikeCover",
+      tags: ["Bikes"],
+      summary: "Назначить обложку",
+      description:
+        "Делает фото обложкой, остальные перестают ею быть. Идемпотентно, тела нет. Возвращает велосипед с согласованными `photos`. Фото другого велосипеда и несуществующее — 404. Для публичного велосипеда нужна подтверждённая почта.",
+      security,
+      parameters: [bikeId, photoId],
+      responses: {
+        "200": {
+          description: "Велосипед с новой обложкой.",
+          headers: bikeEtag,
+          content: json("Bike"),
+        },
+        ...bikeFailures(),
+      },
+    },
+  };
+}
+
 function withNearby(document: Json) {
   const paths = document.paths as Record<string, Json>;
   const security = [{ cookieSession: [] }, { bearerAuth: [] }];
@@ -1184,7 +1262,7 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
       {
         name: "Bikes",
         description:
-          "Велосипеды: чтение и запись владельцем (велосипед, комплектация, порядок групп).",
+          "Велосипеды: чтение и запись владельцем (велосипед, комплектация, порядок групп, фото).",
       },
       {
         name: "Journal",
@@ -2812,6 +2890,13 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
           description: "Идентификатор уведомления из списка.",
           schema: { type: "string", format: "uuid" },
         },
+        BikePhotoId: {
+          name: "photoId",
+          in: "path",
+          required: true,
+          description: "Идентификатор фото велосипеда (UUID).",
+          schema: { type: "string", format: "uuid" },
+        },
         BikeComponentId: {
           name: "componentId",
           in: "path",
@@ -2861,6 +2946,7 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
   withChat(document);
   withPlanning(document);
   withBikeWrites(document);
+  withBikePhotos(document);
   withNearby(document);
   return document;
 }

@@ -127,7 +127,7 @@ interface PhotoSource {
   is_cover: boolean;
   source_page_url: string | null;
 }
-const toPhoto = (photo: PhotoSource) => ({
+export const toPhoto = (photo: PhotoSource) => ({
   id: photo.id,
   isCover: photo.is_cover,
   url: "/api/photos/" + photo.id,
