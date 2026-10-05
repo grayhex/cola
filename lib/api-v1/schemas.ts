@@ -5,6 +5,7 @@ import { listingTypeKeys } from "../market-types.ts";
 import { notificationCategoryKeys } from "../notification-catalog.ts";
 import { notificationSettingsPatch } from "../notification-settings.ts";
 import { circleModes, muteKinds } from "../notification-policy.ts";
+import { ridePlanOptions } from "../ride-plan-options.ts";
 import { nativeCodePattern, verifierPattern } from "../native-auth.ts";
 import { ApiError, apiErrorCodes, detailsOf } from "./errors.ts";
 
@@ -1390,6 +1391,257 @@ export const feedPageSchema = named(
   }),
 );
 
+// Planning together (#343): intentions to ride, and a person's own part in a
+// planned ride. The rules (windows, zones, quota, who may see what) are the
+// site's; these schemas say what crosses the API.
+
+const intentWindowSchema = named(
+  "RideIntentWindow",
+  "Окно доступности: промежуток, в который человек может поехать. Для чужого намерения приходят только окна, что ещё не закончились.",
+  z.strictObject({ startsAt: instant, endsAt: instant }),
+);
+const intentStatusSchema = z
+  .enum(["active", "cancelled", "expired"])
+  .describe(
+    "`active` — действует; `cancelled` — отменено автором; `expired` — все окна прошли. Удалённое намерение не возвращается никогда.",
+  );
+const intentVisibilitySchema = z
+  .enum(["private", "community"])
+  .describe(
+    "`private` — только автору; `community` — вошедшим в аккаунт (нужна подтверждённая почта автора, чтобы публиковать).",
+  );
+const intentChoice = (key: keyof typeof ridePlanOptions) =>
+  z.enum(Object.keys(ridePlanOptions[key]) as [string, ...string[]]);
+const intentRange = (max: number, integer = false) =>
+  z.strictObject({
+    min: integer ? z.int().min(1).max(max) : z.number().positive().max(max),
+    max: integer ? z.int().min(1).max(max) : z.number().positive().max(max),
+  });
+const intentLocalTime = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/)
+  .describe(
+    "Местное время в `timeZone`, `ГГГГ-ММ-ДДTЧЧ:ММ`, без смещения. Время, которого нет при переводе часов, — 400; повторяющееся требует `startFold`/`endFold`.",
+  );
+const intentFold = z
+  .enum(["earlier", "later"])
+  .describe(
+    "Какое из двух повторяющихся при переводе часов времён имеется в виду: первое или второе.",
+  );
+
+export const rideIntentRequestSchema = named(
+  "RideIntentRequest",
+  "Намерение покататься целиком: создание и полная замена (`PUT`). Окна задаются местным временем в `timeZone`; до 4 окон по 24 часа, не пересекаются, в пределах 90 дней. Район обязателен, центр на карте — с точностью до сотой градуса (точку сервер не хранит), радиус от 1 до 100 км. Гараж и велосипед не нужны.",
+  z.strictObject({
+    readiness: z
+      .enum(["ready", "considering"])
+      .describe("`ready` — готов ехать; `considering` — думаю."),
+    timeZone: z
+      .string()
+      .min(1)
+      .max(100)
+      .describe(
+        "Часовой пояс IANA, например `Europe/Moscow`, или `UTC`. Окна читаются только в нём, не в поясе сервера.",
+      ),
+    windows: z
+      .array(
+        z.strictObject({
+          startLocal: intentLocalTime,
+          endLocal: intentLocalTime,
+          startFold: intentFold.optional(),
+          endFold: intentFold.optional(),
+        }),
+      )
+      .min(1)
+      .max(4),
+    passport: z.strictObject({
+      area: z.strictObject({
+        label: z.string().trim().min(1).max(100),
+        center: z
+          .array(z.number())
+          .length(2)
+          .optional()
+          .describe("[долгота, широта]; нужен вместе с `radiusM`."),
+        radiusM: z.int().min(1000).max(100000).optional(),
+      }),
+      purpose: intentChoice("purpose"),
+      pace: intentChoice("pace").optional(),
+      surface: intentChoice("surface").optional(),
+      difficulty: intentChoice("difficulty").optional(),
+      regroupPolicy: intentChoice("regroupPolicy").optional(),
+      distanceKm: intentRange(1000).optional(),
+      durationMinutes: intentRange(10080, true).optional(),
+      groupSize: intentRange(100, true).optional(),
+      speedKmh: intentRange(60).optional(),
+      beginnerFriendly: z.boolean().optional(),
+    }),
+    meetNewPeople: z.boolean().optional(),
+    visibility: intentVisibilitySchema,
+    allowSuggestions: z
+      .boolean()
+      .describe(
+        "Разрешить сайту подбирать этому намерению подходящие поездки. Сам по себе подбор никому не раскрывает, где человек.",
+      ),
+  }),
+);
+
+export const rideIntentSchema = named(
+  "RideIntent",
+  "Намерение покататься. Чужое видно, только пока оно опубликовано для сообщества и не закончилось; приватное — только автору. Намерение не мероприятие: ответить «Иду» на него нельзя, можно открыть автора и договориться.",
+  z.strictObject({
+    id,
+    own: z.boolean(),
+    readiness: z.enum(["ready", "considering"]),
+    timeZone: z.string(),
+    passport: ridePassportSchema,
+    windows: z.array(intentWindowSchema),
+    meetNewPeople: z.boolean().optional(),
+    visibility: intentVisibilitySchema,
+    status: intentStatusSchema,
+    allowSuggestions: z
+      .boolean()
+      .optional()
+      .describe("Только в своём намерении."),
+    author: authorSchema,
+    createdAt: instant,
+    updatedAt: instant,
+  }),
+);
+
+export const rideIntentPageSchema = named(
+  "RideIntentPage",
+  "Страница намерений, новые сверху.",
+  z.strictObject({
+    items: z.array(rideIntentSchema),
+    nextCursor: z
+      .string()
+      .nullable()
+      .describe("Курсор следующей страницы или null, если страниц больше нет."),
+  }),
+);
+
+const participationResponseSchema = z
+  .enum(["accepted", "maybe", "declined"])
+  .describe("`accepted` — иду; `maybe` — возможно; `declined` — не иду.");
+
+export const rideParticipationRequestSchema = named(
+  "RideParticipationRequest",
+  "Ответ на покатушку на конкретную дату. `occurrenceAt` — дата, которую человек видел (`scheduledAt` из чтения): если дата изменилась, ответ не принимается (409). `expectedAgreementRevision` — редакция условий, которую человек видел (`agreement.revision`); обязательна для `accepted` и `maybe`, чтобы нельзя было согласиться со старыми условиями. «Не иду» условиями не проверяется: выйти можно всегда.",
+  z.strictObject({
+    response: participationResponseSchema,
+    occurrenceAt: instant,
+    expectedAgreementRevision: z.int().min(1).optional(),
+  }),
+);
+
+export const rideParticipationSchema = named(
+  "RideParticipation",
+  "Как человек связан с планом покатушки и её датой: то, что открывает уведомление о приглашении, изменении или отмене. Читать может организатор, приглашённый и тот, кому доступен публичный план; ответивший на дату отменённого плана видит только то, что он отменён. Чужих имён здесь нет, только счётчики. Закрытый план остаётся недоступным всем остальным (404); публичную карточку покатушки (`GET /rides/{id}`) это не открывает.",
+  z.strictObject({
+    rideId: id,
+    title: z.string(),
+    status: z.enum(["planned", "cancelled", "completed"]),
+    description: z.string().nullable(),
+    features: z.array(z.string()),
+    author: authorSchema,
+    timeZone: z.string().describe("Часовой пояс плана (IANA)."),
+    recurrence: z.enum(["none", "weekly"]),
+    scheduledAt: instant
+      .nullable()
+      .describe(
+        "Ближайшая дата, на которую можно ответить; null, если план отменён, состоялся или дата прошла. Именно её клиент отправляет как `occurrenceAt`.",
+      ),
+    expectedEndAt: instant.nullable(),
+    requested: z
+      .strictObject({
+        at: instant,
+        status: z
+          .enum(["current", "moved", "cancelled", "past"])
+          .describe(
+            "`current` — это ближайшая дата; `moved` — дата другая, смотрите `scheduledAt`; `cancelled` — эта дата или весь план отменены; `past` — дата прошла.",
+          ),
+      })
+      .nullable()
+      .describe(
+        "Дата, о которой спросили (`occurrenceAt`); null, если не спрашивали.",
+      ),
+    agreement: z.strictObject({
+      revision: z
+        .int()
+        .min(1)
+        .describe(
+          "Редакция условий. Растёт, когда меняется старт, место или маршрут.",
+        ),
+      changes: z
+        .array(z.enum(["start", "place", "route"]))
+        .describe(
+          "Что изменилось в последней редакции. Прежних значений сервер не хранит.",
+        ),
+      changedAt: instant.nullable(),
+    }),
+    recruitmentClosed: z
+      .boolean()
+      .describe("Организатор закрыл набор на ближайшую дату."),
+    meetingPoint: z.string().nullable(),
+    meetingHidden: z
+      .boolean()
+      .describe(
+        "Точка встречи есть, но показывается только организатору и принявшим участие.",
+      ),
+    passport: ridePassportSchema.nullable(),
+    participants: z
+      .strictObject({ going: z.int(), maybe: z.int() })
+      .describe("Количество ответивших на ближайшую дату, без имён."),
+    viewer: z.strictObject({
+      role: z.enum(["organizer", "invitee", "visitor"]),
+      participation: z
+        .enum([
+          "organizer",
+          "accepted",
+          "maybe",
+          "declined",
+          "reconfirm",
+          "invited",
+          "none",
+        ])
+        .describe(
+          "Единое состояние: `reconfirm` — человек отвечал «иду»/«возможно» на прежние условия и должен подтвердить новые; `invited` — приглашён и не отвечал.",
+        ),
+      response: participationResponseSchema
+        .nullable()
+        .describe(
+          "Ответ на текущие условия; null, если не отвечал или ответ относится к прежней редакции.",
+        ),
+      previousResponse: participationResponseSchema
+        .nullable()
+        .describe("Прежний ответ при `reconfirm`, иначе null."),
+      changedAfterAnswer: z
+        .boolean()
+        .describe("Условия изменились после ответа «иду» или «возможно»."),
+      allowedResponses: z
+        .array(participationResponseSchema)
+        .describe(
+          "Что сервер сейчас примет. Пусто: отвечать нечем (организатор, дата прошла, план отменён, набор закрыт для постороннего).",
+        ),
+    }),
+  }),
+);
+
+export const rideParticipationConflictSchema = named(
+  "RideParticipationConflict",
+  "Ответ 409 на ответ об участии: дата или условия изменились. Ответ НЕ принят; `current` — состояние как оно есть сейчас, его и показывают человеку, чтобы он решил заново.",
+  z.strictObject({
+    error: errorBodySchema,
+    current: rideParticipationSchema
+      .nullable()
+      .describe("null, если план уже недоступен человеку."),
+  }),
+);
+
+export const participationQuerySchema = z.strictObject({
+  occurrenceAt: z.iso.datetime({ offset: true }).optional(),
+});
+
 export const createCommentRequestSchema = named(
   "CreateCommentRequest",
   "Новый комментарий. `parentId` — комментарий того же объекта, на который отвечают; чужой или недоступный комментарий — 404.",
@@ -1638,6 +1890,12 @@ export const appConfigSchema = named(
 
 export type AppConfig = z.infer<typeof appConfigSchema>;
 export type CreateCommentRequest = z.infer<typeof createCommentRequestSchema>;
+export type RideIntent = z.infer<typeof rideIntentSchema>;
+export type RideIntentPage = z.infer<typeof rideIntentPageSchema>;
+export type RideParticipation = z.infer<typeof rideParticipationSchema>;
+export type RideParticipationConflict = z.infer<
+  typeof rideParticipationConflictSchema
+>;
 export type Me = z.infer<typeof meSchema>;
 export type SessionGrant = z.infer<typeof sessionGrantSchema>;
 export type Profile = z.infer<typeof profileSchema>;
@@ -1786,6 +2044,8 @@ export const ridesQuerySchema = z.strictObject({
   q: searchText.default(""),
 });
 export const parseRidesQuery = (url: URL) => parseQuery(url, ridesQuerySchema);
+export const parseParticipationQuery = (url: URL) =>
+  parseQuery(url, participationQuerySchema);
 
 const facetText = searchText.default("");
 /**

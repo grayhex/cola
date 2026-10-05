@@ -1,7 +1,8 @@
-import { createHash, createHmac, timingSafeEqual } from "node:crypto";
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 import type { Queryable } from "./db.ts";
 import { CHAT_TYPE, streamUserId } from "./chat-config.ts";
+import { stableUuid } from "./stable-uuid.ts";
 
 // New messages of Stream conversations as pushes (#342). Stream calls a webhook
 // for `message.new`; here the call is checked (HMAC of the raw body, our app),
@@ -33,11 +34,7 @@ export function userIdOfStream(id: unknown): string | null {
 
 /** A UUID made of a Stream message id: stable, so a message is one event everywhere. */
 export function eventIdOfMessage(messageId: string) {
-  const hex = createHash("sha256")
-    .update("chat-message:" + messageId)
-    .digest("hex");
-  const variant = "89ab"[parseInt(hex[16], 16) % 4];
-  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-${variant}${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
+  return stableUuid("chat-message:" + messageId);
 }
 
 /** Stream signs the raw body with the API secret: HMAC-SHA256 in hex. */

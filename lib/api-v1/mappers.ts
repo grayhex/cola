@@ -17,7 +17,11 @@ import type { notificationCard } from "../notifications.ts";
 import type { NotificationSettings } from "../notification-settings.ts";
 import type { PushDevice } from "../push-devices.ts";
 import { meetingVisible, shownMetrics } from "../rides.ts";
-import type { myUpcomingEntries } from "../rides.ts";
+import type {
+  myUpcomingEntries,
+  RideParticipation as ParticipationState,
+} from "../rides.ts";
+import type { intentDetail } from "../ride-intents.ts";
 import { plannedEnd } from "../ride-plan.ts";
 import { richExcerpt } from "../rich-text.ts";
 import type { TokenGrant } from "../device-sessions.ts";
@@ -44,6 +48,8 @@ import type {
   Relationship,
   Ride,
   RideAnalysis,
+  RideIntent,
+  RideParticipation,
   RideSummary,
   SessionGrant,
   UserSummary,
@@ -812,5 +818,98 @@ export function toPushDevice(device: PushDevice): PushDeviceBody {
     registeredAt: device.registeredAt.toISOString(),
     updatedAt: device.updatedAt.toISOString(),
     lastSeenAt: device.lastSeenAt.toISOString(),
+  };
+}
+
+/** An intention to ride as the site's service shows it to this viewer. */
+export function toRideIntent(
+  intent: Awaited<ReturnType<typeof intentDetail>>,
+): RideIntent {
+  return {
+    id: intent.id,
+    own: intent.own,
+    readiness: intent.readiness,
+    timeZone: intent.timeZone,
+    passport: toPassport(intent.passport as RideViewRow["plan_passport"]) ?? {},
+    windows: intent.windows.map((window) => ({
+      startsAt: window.startsAt,
+      endsAt: window.endsAt,
+    })),
+    ...(intent.meetNewPeople === undefined
+      ? {}
+      : { meetNewPeople: intent.meetNewPeople }),
+    visibility: intent.visibility,
+    status: intent.status as RideIntent["status"],
+    ...("allowSuggestions" in intent
+      ? { allowSuggestions: intent.allowSuggestions }
+      : {}),
+    author: toAuthor(intent.author)!,
+    createdAt: iso(intent.createdAt),
+    updatedAt: iso(intent.updatedAt),
+  };
+}
+
+/**
+ * The person's part in a planned ride. Fields are picked by name; no other
+ * person is named. The description, the place and the passport are read only
+ * while the plan is a live one the person may read in full: for a plan that was
+ * called off and is known only through an earlier answer, only the fact is.
+ */
+export function toRideParticipation(
+  state: ParticipationState,
+  viewer: string,
+): RideParticipation {
+  const row = state.row;
+  const detailed = row.status === "planned" && state.access !== "answered";
+  const place = detailed && meetingVisible(row, viewer);
+  const counts = row.rsvp_counts ?? {};
+  const answered = ["accepted", "maybe", "declined"].includes(
+    state.participation,
+  )
+    ? (state.participation as "accepted" | "maybe" | "declined")
+    : null;
+  return {
+    rideId: row.id,
+    title: row.title,
+    status: row.status as RideParticipation["status"],
+    description: detailed ? row.description : null,
+    features: detailed ? (row.features ?? []) : [],
+    author: author(row),
+    timeZone: row.recurrence_timezone || "Europe/Moscow",
+    recurrence: row.recurrence === "weekly" ? "weekly" : "none",
+    scheduledAt: instantOf(state.scheduledAt),
+    expectedEndAt:
+      detailed && state.scheduledAt ? instantOf(plannedEnd(row)) : null,
+    requested: state.requested && {
+      at: iso(state.requested.at),
+      status: state.requested.status,
+    },
+    agreement: {
+      revision: row.agreement_revision || 1,
+      changes: (row.agreement_changes ?? []).filter(
+        (change): change is "start" | "place" | "route" =>
+          change === "start" || change === "place" || change === "route",
+      ),
+      changedAt: instantOf(row.agreement_changed_at),
+    },
+    recruitmentClosed: detailed && !!row.recruitment_closed,
+    meetingPoint: place && row.meeting_point ? row.meeting_point : null,
+    meetingHidden: detailed && !place && !!row.meeting_point,
+    passport: detailed ? toPassport(row.plan_passport) : null,
+    participants: { going: counts.accepted ?? 0, maybe: counts.maybe ?? 0 },
+    viewer: {
+      role:
+        state.access === "organizer"
+          ? "organizer"
+          : row.invited
+            ? "invitee"
+            : "visitor",
+      participation: state.participation,
+      response: answered,
+      previousResponse:
+        state.participation === "reconfirm" && row.rsvp ? row.rsvp : null,
+      changedAfterAnswer: state.participation === "reconfirm",
+      allowedResponses: state.allowedResponses,
+    },
   };
 }

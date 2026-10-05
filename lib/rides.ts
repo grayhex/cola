@@ -28,7 +28,7 @@ import {
 } from "./ride-notifications.ts";
 import { z } from "zod";
 import { uuid } from "./validation.ts";
-import { RideError } from "./ride-gpx.ts";
+import { RideConflict, RideError } from "./ride-gpx.ts";
 import { parseTrack } from "./ride-track.ts";
 import {
   storeRideAnalysis,
@@ -594,6 +594,98 @@ export async function apiRideRow(
       [viewer, id],
     )
   ).rows[0];
+}
+/**
+ * How a person stands to one plan and one date of it (API v1, #343): what the
+ * notification about an invitation, a change or a cancellation opens. The right
+ * to read is the person's own, not the plan's publicity: the organizer, an
+ * invitee and a public viewer (the rule of the public card) read it; someone who
+ * answered a date of a plan that was then called off reads only that it was.
+ * A private plan is a 404 to everyone else, and so is any blocked party. What is
+ * read is the same as the site reads for the same person: the meeting point
+ * follows `meetingVisible`, names of other people are never part of it.
+ */
+export interface RideParticipation {
+  row: RideViewRow;
+  access: "organizer" | "invited" | "public" | "answered";
+  /** The current date of the plan while it can still be answered, else null. */
+  scheduledAt: Date | null;
+  requested: {
+    at: Date;
+    status: "current" | "moved" | "cancelled" | "past";
+  } | null;
+  participation: RideAgreementTypes.Participation;
+  allowedResponses: ("accepted" | "maybe" | "declined")[];
+}
+export async function rideParticipation(
+  q: Queryable,
+  id: string,
+  viewer: string,
+  requestedAt: Date | null = null,
+  now = new Date(),
+): Promise<RideParticipation | null> {
+  const row = (
+    await q.query<RideViewRow & { access: RideParticipation["access"] }>(
+      `SELECT ${columns},
+         CASE WHEN r.owner_id=$1 THEN 'organizer'
+              WHEN EXISTS(SELECT 1 FROM ride_invitations i WHERE i.ride_id=r.id AND i.user_id=$1) THEN 'invited'
+              WHEN ${apiRide} THEN 'public'
+              ELSE 'answered' END AS access${rideFrom}
+       WHERE r.id=$2 AND r.source_kind='planned' AND NOT u.blocked
+         AND EXISTS(SELECT 1 FROM users x WHERE x.id=$1 AND NOT x.blocked)
+         AND (r.owner_id=$1
+           OR EXISTS(SELECT 1 FROM ride_invitations i WHERE i.ride_id=r.id AND i.user_id=$1)
+           OR (${apiRide})
+           OR (r.status='cancelled' AND EXISTS(SELECT 1 FROM ride_rsvps v WHERE v.ride_id=r.id AND v.user_id=$1)))`,
+      [viewer, id],
+    )
+  ).rows[0];
+  if (!row) return null;
+  const scheduledAt =
+    row.status === "planned" && row.occurs_at && new Date(row.occurs_at) > now
+      ? new Date(row.occurs_at)
+      : null;
+  let requested: RideParticipation["requested"] = null;
+  if (requestedAt) {
+    let status: NonNullable<RideParticipation["requested"]>["status"];
+    if (row.status === "cancelled") status = "cancelled";
+    else if (
+      (
+        await q.query(
+          "SELECT 1 FROM ride_cancelled_occurrences WHERE ride_id=$1 AND occurs_at=$2",
+          [id, requestedAt],
+        )
+      ).rows.length
+    )
+      status = "cancelled";
+    else if (scheduledAt && +scheduledAt === +requestedAt) status = "current";
+    else if (+requestedAt <= +now || row.status === "completed")
+      status = "past";
+    else status = "moved";
+    requested = { at: requestedAt, status };
+  }
+  const participation = participationState({
+    owner: row.owner_id === viewer,
+    invited: !!row.invited,
+    response: row.rsvp,
+    revision: row.rsvp_revision,
+    agreementRevision: row.agreement_revision || 1,
+  });
+  const answerable =
+    scheduledAt !== null &&
+    participation !== "organizer" &&
+    mayJoin(participation, {
+      invited: !!row.invited,
+      recruitmentClosed: !!row.recruitment_closed,
+    });
+  return {
+    row,
+    access: row.access,
+    scheduledAt,
+    requested,
+    participation,
+    allowedResponses: answerable ? ["accepted", "maybe", "declined"] : [],
+  };
 }
 /** Public rides by id, in no particular order, for API v1 lists that were chosen elsewhere (the feed). */
 export async function apiRideRowsById(
@@ -1635,6 +1727,7 @@ export async function respondRide(
   response: "accepted" | "maybe" | "declined",
   occurrenceAt: string | null = null,
   invitationOnly = false,
+  expectedRevision: number | null = null,
 ) {
   // Match owner mutation lock order, and re-check visibility after locking.
   const initial = (
@@ -1682,7 +1775,21 @@ export async function respondRide(
   )
     throw new RideError("Покатушка недоступна или уже прошла", 404);
   if (occurrenceAt && +new Date(occurrenceAt) !== +new Date(row.occurs_at))
-    throw new RideError("Дата покатушки изменилась. Обновите страницу.", 409);
+    throw new RideConflict(
+      "Дата покатушки изменилась. Обновите страницу.",
+      "occurrence",
+    );
+  // "Going" or "maybe" is an agreement to the conditions the person has seen:
+  // when they are another edition now, the answer is not taken (leaving always is).
+  if (
+    expectedRevision !== null &&
+    response !== "declined" &&
+    expectedRevision !== row.agreement_revision
+  )
+    throw new RideConflict(
+      "Условия покатушки изменились. Посмотрите их и подтвердите участие заново.",
+      "revision",
+    );
   if (row.owner_id === user)
     throw new RideError("Организатор уже участвует в своей покатушке", 409);
   const previous = (

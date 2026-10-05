@@ -498,6 +498,263 @@ function withCommentWrites(document: Json) {
   }
 }
 
+// Planning together (#343): intentions to ride and one's own part in a planned ride.
+const intentEtag = {
+  ...requestIdHeader,
+  ETag: {
+    description: "Версия намерения: для `If-Match` следующей замены.",
+    schema: { type: "string" },
+  },
+};
+const intentFailures = (extra: Json = {}) => ({
+  "400": failure(
+    "Тело, параметры или `Idempotency-Key` не подходят, окна нарушают правила (пересекаются, дальше 90 дней, дольше 24 часов, время не существует при переводе часов) либо cookie вместе с Authorization.",
+  ),
+  "401": failure(
+    "Нет входа, сессия или токен недействительны, токен доступа истёк (`token_expired`) либо схема Authorization не поддерживается.",
+  ),
+  "403": failure(
+    "Cookie-запрос не с адреса сайта (нужен заголовок `Origin`) либо публикация сообществу без подтверждённой почты (`email_verification_required`).",
+  ),
+  "404": shared("NotFound"),
+  ...extra,
+  "413": failure("Тело больше 8192 байт."),
+  "415": failure("Тело не `application/json`."),
+  "429": failure(
+    "Слишком много действий; секунды до конца окна — в `Retry-After`.",
+  ),
+  "500": shared("InternalError"),
+});
+function withPlanning(document: Json) {
+  const paths = document.paths as Record<string, Json>;
+  const security = [{ cookieSession: [] }, { bearerAuth: [] }];
+  const intentId = { $ref: "#/components/parameters/RideIntentId" };
+  const readFailures = {
+    "400": failure("Параметры не подходят либо cookie вместе с Authorization."),
+    "401": failure(
+      "Нет входа, сессия или токен недействительны, токен доступа истёк (`token_expired`) либо схема Authorization не поддерживается.",
+    ),
+    "500": shared("InternalError"),
+  };
+  paths["/me/ride-intents"] = {
+    get: {
+      operationId: "listOwnRideIntents",
+      tags: ["Planning"],
+      summary: "Мои намерения покататься",
+      description:
+        "Свои намерения в любом состоянии, кроме удалённых: действующие, отменённые и те, у которых окна прошли (`status`). Новые сверху, курсор по `(время создания, id)`.",
+      security,
+      parameters: refs("Limit", "Cursor"),
+      responses: {
+        "200": success("Страница своих намерений.", "RideIntentPage"),
+        ...readFailures,
+      },
+    },
+  };
+  paths["/ride-intents"] = {
+    get: {
+      operationId: "listCommunityRideIntents",
+      tags: ["Planning"],
+      summary: "Намерения сообщества",
+      description:
+        "Действующие намерения, которые авторы опубликовали для сообщества и окна которых ещё не закончились. Только для вошедших; заблокированные авторы не видны. Включает и свои опубликованные (`own: true`). Новые сверху, курсор по `(время создания, id)`. Намерение — не мероприятие: ответить «Иду» на него нельзя, можно открыть автора и договориться.",
+      security,
+      parameters: refs("Limit", "Cursor"),
+      responses: {
+        "200": success("Страница намерений сообщества.", "RideIntentPage"),
+        ...readFailures,
+      },
+    },
+    post: {
+      operationId: "createRideIntent",
+      tags: ["Planning"],
+      summary: "Создать намерение покататься",
+      description:
+        "Заголовок `Idempotency-Key` (UUID) обязателен и есть личность намерения: повтор того же запроса отдаёт то же намерение (`Idempotency-Replayed: true`), а не второе; тот же ключ с другим телом — 409 `conflict`. Не больше 5 действующих намерений (409). Для `visibility: community` нужна подтверждённая почта. Гараж не нужен. Публикация, готовность и истечение окон вызывают те же уведомления друзьям, что и на сайте; отдельной отправки здесь нет. Бюджет — 40 за окно, общий с сайтом.",
+      security,
+      parameters: [],
+      requestBody: requestBody("RideIntentRequest"),
+      responses: {
+        "201": {
+          description: "Намерение создано.",
+          headers: intentEtag,
+          content: json("RideIntent"),
+        },
+        "200": {
+          description:
+            "Повтор после того, как ключ уже забыт, но намерение есть: то же намерение.",
+          headers: intentEtag,
+          content: json("RideIntent"),
+        },
+        ...intentFailures({
+          "409": failure(
+            "`Idempotency-Key` уже использован с другим телом либо активных намерений уже 5.",
+          ),
+        }),
+      },
+    },
+  };
+  paths["/ride-intents/{id}"] = {
+    get: {
+      operationId: "getRideIntent",
+      tags: ["Planning"],
+      summary: "Намерение покататься",
+      description:
+        "Своё — в любом состоянии, кроме удалённого. Чужое — только опубликованное для сообщества, действующее и с не закончившимися окнами. Недоступное, удалённое, заблокированного автора и несуществующее одинаково 404.",
+      security,
+      parameters: [intentId],
+      responses: {
+        "200": {
+          description: "Намерение.",
+          headers: intentEtag,
+          content: json("RideIntent"),
+        },
+        ...readFailures,
+        "404": shared("NotFound"),
+      },
+    },
+    put: {
+      operationId: "replaceRideIntent",
+      tags: ["Planning"],
+      summary: "Заменить своё намерение",
+      description:
+        "Полная замена: окна, район, готовность, видимость. `If-Match` с `ETag` необязателен: с ним замена применяется только к версии, которую клиент видел (412, если другое устройство успело раньше). Отменённое намерение не правится (409): создайте новое. Публикация сообществу — с подтверждённой почтой. Бюджет общий с созданием.",
+      security,
+      parameters: [
+        intentId,
+        {
+          name: "If-Match",
+          in: "header",
+          required: false,
+          description:
+            "`ETag` намерения, которое клиент видел: при другой версии — 412.",
+          schema: { type: "string" },
+        },
+      ],
+      requestBody: requestBody("RideIntentRequest"),
+      responses: {
+        "200": {
+          description: "Намерение после замены.",
+          headers: intentEtag,
+          content: json("RideIntent"),
+        },
+        ...intentFailures({
+          "409": failure(
+            "Намерение отменено, либо замена оставила бы больше 5 действующих.",
+          ),
+          "412": failure(
+            "`If-Match` не совпал с текущей версией: прочитайте намерение снова.",
+          ),
+        }),
+      },
+    },
+    delete: {
+      operationId: "deleteRideIntent",
+      tags: ["Planning"],
+      summary: "Удалить своё намерение",
+      description:
+        "Убирает намерение и его окна; остаётся только отметка, по которой запоздалый повтор создания не воскресит его. Повтор тоже 204. Чужое и несуществующее — 404.",
+      security,
+      parameters: [intentId],
+      responses: {
+        "204": noContent("Намерение удалено."),
+        "401": failure(
+          "Нет входа, сессия или токен недействительны, токен доступа истёк (`token_expired`) либо схема Authorization не поддерживается.",
+        ),
+        "403": failure(
+          "Cookie-запрос не с адреса сайта (нужен заголовок `Origin`).",
+        ),
+        "404": shared("NotFound"),
+        "429": failure(
+          "Слишком много действий; секунды до конца окна — в `Retry-After`.",
+        ),
+        "500": shared("InternalError"),
+      },
+    },
+  };
+  paths["/ride-intents/{id}/cancel"] = {
+    post: {
+      operationId: "cancelRideIntent",
+      tags: ["Planning"],
+      summary: "Отменить своё намерение",
+      description:
+        "Снимает намерение с публикации и закрывает его: оно остаётся в своём списке со статусом `cancelled`, ожидающие уведомления о нём не уходят. Повтор тоже 200. Тела нет.",
+      security,
+      parameters: [intentId],
+      responses: {
+        "200": {
+          description: "Отменённое намерение.",
+          headers: intentEtag,
+          content: json("RideIntent"),
+        },
+        ...intentFailures(),
+      },
+    },
+  };
+  const rideId = { $ref: "#/components/parameters/RideId" };
+  paths["/rides/{id}/participation"] = {
+    get: {
+      operationId: "getRideParticipation",
+      tags: ["Planning"],
+      summary: "Моё участие в покатушке",
+      description:
+        "Как человек связан с планом и его датой: ближайшая дата и часовой пояс, редакция условий (`agreement.revision`) и что в ней изменилось, набор, мой ответ, приглашение, `changedAfterAnswer`, разрешённая точка встречи, что сервер сейчас примет (`allowedResponses`). `occurrenceAt` — дата из уведомления: ответ говорит, текущая она, перенесена, отменена или прошла. Это то, что открывает уведомление о закрытом приглашении, изменении или отмене: читать может организатор, приглашённый и тот, кому доступен публичный план; ответивший на отменённый план видит лишь, что он отменён. Публичную карточку `GET /rides/{id}` это не расширяет, имён участников здесь нет. Недоступный, чужой закрытый и несуществующий план одинаково 404.",
+      security,
+      parameters: [
+        rideId,
+        {
+          name: "occurrenceAt",
+          in: "query",
+          required: false,
+          description:
+            "Дата выезда (`scheduledAt`, `target.occurrenceAt` уведомления), любой допустимый вид даты со смещением.",
+          schema: { type: "string", format: "date-time" },
+        },
+      ],
+      responses: {
+        "200": success("Участие человека.", "RideParticipation"),
+        ...readFailures,
+        "404": shared("NotFound"),
+      },
+    },
+    put: {
+      operationId: "respondToRide",
+      tags: ["Planning"],
+      summary: "Ответить на покатушку",
+      description:
+        "«Иду», «возможно» или «не иду» на одну дату — тем условиям, которые человек видел: `occurrenceAt` из `scheduledAt` и, для «иду» и «возможно», `expectedAgreementRevision` из `agreement.revision`. Если дата или условия уже другие, организатор закрыл набор или организатор отвечает на свой план, ответ не принимается: 409 с `current` — состоянием как оно есть сейчас, чтобы человек решил заново; молча подтвердить новые условия сервер не может. Выйти («не иду») можно всегда. Повтор того же ответа ничего не меняет. Велосипед не нужен; подтверждённая почта — как на сайте, не нужна. Бюджет — 20 за окно, общий с сайтом.",
+      security,
+      parameters: [rideId],
+      requestBody: requestBody("RideParticipationRequest"),
+      responses: {
+        "200": success("Участие после ответа.", "RideParticipation"),
+        "400": failure(
+          "Тело не подходит (для «иду» и «возможно» нужен `expectedAgreementRevision`) либо cookie вместе с Authorization.",
+        ),
+        "401": failure(
+          "Нет входа, сессия или токен недействительны, токен доступа истёк (`token_expired`) либо схема Authorization не поддерживается.",
+        ),
+        "403": failure(
+          "Cookie-запрос не с адреса сайта (нужен заголовок `Origin`).",
+        ),
+        "404": shared("NotFound"),
+        "409": {
+          description:
+            "Ответ не принят: дата или условия изменились, набор закрыт либо организатор отвечает на свой план. `current` — состояние сейчас (null, если план стал недоступен).",
+          headers: requestIdHeader,
+          content: json("RideParticipationConflict"),
+        },
+        "413": failure("Тело больше 2048 байт."),
+        "415": failure("Тело не `application/json`."),
+        "429": failure(
+          "Слишком много действий; секунды до конца окна — в `Retry-After`.",
+        ),
+        "500": shared("InternalError"),
+      },
+    },
+  };
+}
+
 export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
   const { schemas } = z.toJSONSchema(schemaRegistry, {
     target: "draft-2020-12",
@@ -536,6 +793,11 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
         name: "Rides",
         description:
           "Публичные покатушки: состоявшиеся, ближайшие планы, публичная геометрия и разбор трека.",
+      },
+      {
+        name: "Planning",
+        description:
+          "Договориться о поездке: намерения покататься и ответ на покатушку на конкретную дату. Права и правила те же, что на сайте.",
       },
       {
         name: "Comments",
@@ -2149,6 +2411,13 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
           description: "Идентификатор уведомления из списка.",
           schema: { type: "string", format: "uuid" },
         },
+        RideIntentId: {
+          name: "id",
+          in: "path",
+          required: true,
+          description: "Идентификатор намерения покататься (UUID).",
+          schema: { type: "string", format: "uuid" },
+        },
       },
       responses: {
         InternalError: failure("Внутренняя ошибка, код `internal_error`."),
@@ -2182,5 +2451,6 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
   };
   withCommentWrites(document);
   withChat(document);
+  withPlanning(document);
   return document;
 }
