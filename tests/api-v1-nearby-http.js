@@ -407,5 +407,12 @@ try {
 
   console.log("API v1 nearby HTTP checks passed");
 } finally {
+  // The database is shared with the tests that follow: the areas this test set
+  // would count in their audiences, so its people go with them.
+  await db
+    .query("DELETE FROM users WHERE email LIKE $1", [
+      `nearby-%-${run}@example.test`,
+    ])
+    .catch(() => {});
   await db.end();
 }
