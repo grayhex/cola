@@ -1197,6 +1197,66 @@ function withJournalWrites(document: Json) {
   };
 }
 
+// The person's own account (#354): how its deletion is confirmed, and the deletion.
+function withAccount(document: Json) {
+  const paths = document.paths as Record<string, Json>;
+  const security = [{ cookieSession: [] }, { bearerAuth: [] }];
+  paths["/account/deletion"] = {
+    get: {
+      operationId: "getAccountDeletion",
+      tags: ["Account"],
+      summary: "Чем подтверждается удаление аккаунта",
+      description:
+        "Говорит, как этот аккаунт подтверждает удаление: `password` — текущим паролем, `yandex` — повторным входом через Яндекс ID (у аккаунта нет пароля), и можно ли удалять вообще (`allowed`). Администратор (`admin`) сначала передаёт права; аккаунт без пароля и без Яндекса (`no_method`) задаёт пароль через «Забыли пароль?» на сайте. Ничего не меняет.",
+      security,
+      parameters: [],
+      responses: {
+        "200": success("Способ подтверждения.", "AccountDeletion"),
+        "400": failure(
+          "Параметры не нужны либо cookie вместе с Authorization.",
+        ),
+        "401": failure(
+          "Нет входа, сессия или токен недействительны, токен доступа истёк (`token_expired`) либо схема Authorization не поддерживается.",
+        ),
+        "500": shared("InternalError"),
+      },
+    },
+  };
+  paths["/account/delete"] = {
+    post: {
+      operationId: "deleteAccount",
+      tags: ["Account"],
+      summary: "Удалить свой аккаунт",
+      description:
+        "Необратимо удаляет аккаунт и всё, что ему принадлежит, тем же кодом, что и сайт: велосипеды с фото, журнал, покатушки и намерения, объявления, подписки, область «поездок рядом», уведомления, адреса push и все сессии (браузеров и устройств); комментарии остаются как «недоступные», профиль в Stream Chat удаляется отдельной надёжной задачей. Тело — явное подтверждение: `confirm` = `УДАЛИТЬ` и **ровно один** способ подтвердить личность: `password` (аккаунт с паролем) либо `reauth` (аккаунт без пароля: одноразовый код ColaBike и `codeVerifier` нового нативного входа через Яндекс ID, `GET /api/auth/native/start`). Одного токена доступа недостаточно. Код тратится любой попыткой, верной или нет; код другого аккаунта отвергается. Бюджет попыток — 5 за окно, общий с сайтом (429). Администратору нельзя (409), пока он не передал права. Успех — 204 без тела; после него все токены этого аккаунта недействительны (401), повтор тоже 401. Файлы с диска убираются сразу, остальные медиа — по существующим очередям.",
+      security,
+      parameters: [],
+      requestBody: requestBody("DeleteAccountRequest"),
+      responses: {
+        "204": noContent("Аккаунт удалён."),
+        "400": failure(
+          "Нет слова подтверждения, нет способа подтверждения, подан не тот способ или оба, либо cookie вместе с Authorization.",
+        ),
+        "401": failure(
+          "Нет входа или токен недействителен; либо пароль не подходит, либо повторный вход не подошёл (`invalid_credentials`).",
+        ),
+        "403": failure(
+          "Cookie-запрос не с адреса сайта (нужен заголовок `Origin`).",
+        ),
+        "409": failure(
+          "Администратор не может удалить аккаунт, пока не передал права; либо у аккаунта нет ни пароля, ни входа через Яндекс.",
+        ),
+        "413": failure("Тело больше 4096 байт."),
+        "415": failure("Тело не `application/json`."),
+        "429": failure(
+          "Слишком много попыток; секунды до конца окна — в `Retry-After`.",
+        ),
+        "500": shared("InternalError"),
+      },
+    },
+  };
+}
+
 function withNearby(document: Json) {
   const paths = document.paths as Record<string, Json>;
   const security = [{ cookieSession: [] }, { bearerAuth: [] }];
@@ -1387,7 +1447,10 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
     },
     servers: [{ url: `${origin}/api/v1` }],
     tags: [
-      { name: "Account", description: "Текущий пользователь." },
+      {
+        name: "Account",
+        description: "Текущий пользователь и удаление его аккаунта.",
+      },
       {
         name: "Sessions",
         description: "Вход устройства, обновление токенов и список сессий.",
@@ -3093,6 +3156,7 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
   withBikeWrites(document);
   withBikePhotos(document);
   withJournalWrites(document);
+  withAccount(document);
   withNearby(document);
   return document;
 }

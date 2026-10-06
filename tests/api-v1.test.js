@@ -739,6 +739,7 @@ test("OpenAPI: documents exactly the implemented operations, every $ref resolves
   assert.deepEqual(
     Object.keys(document.components.schemas).sort(),
     [
+      "AccountDeletion",
       "AccountSession",
       "AppCompatibility",
       "AppConfig",
@@ -783,6 +784,7 @@ test("OpenAPI: documents exactly the implemented operations, every $ref resolves
       "CreateChatChannelRequest",
       "CreateCommentRequest",
       "CreateSessionRequest",
+      "DeleteAccountRequest",
       "DeviceInput",
       "EditCommentRequest",
       "EntryPhoto",
