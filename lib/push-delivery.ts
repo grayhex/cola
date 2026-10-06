@@ -85,6 +85,7 @@ export async function materializePushDeliveries(
        JOIN notification_settings ns ON ns.user_id=n.recipient_id AND ns.push_enabled AND ns.push_enabled_at<=n.created_at
        WHERE n.type=ANY($2::text[]) AND n.read_at IS NULL AND n.external AND n.created_at>$1::timestamptz-make_interval(days=>${LOOKBACK_DAYS})
          AND NOT EXISTS(SELECT 1 FROM push_deliveries p WHERE p.notification_id=n.id AND p.device_session_id=d.session_id)
+         AND NOT EXISTS(SELECT 1 FROM user_blocks ub WHERE (ub.blocker_id=n.recipient_id AND ub.blocked_id=n.actor_id) OR (ub.blocker_id=n.actor_id AND ub.blocked_id=n.recipient_id))
      ) c WHERE c.expires_at>$1::timestamptz ORDER BY c.created_at,c.id,c.session_id LIMIT $3
      ON CONFLICT(notification_id,device_session_id) DO NOTHING`,
     [now, notificationPushTypes, Math.max(1, Math.min(1000, limit))],
@@ -229,7 +230,9 @@ async function delivery(
        JOIN users u ON u.id=d.recipient_id AND NOT u.blocked
        LEFT JOIN notification_settings ns ON ns.user_id=d.recipient_id
        WHERE d.id=$1 AND d.lease_token=$2 AND d.status='sending' AND d.lease_until>$3::timestamptz AND d.expires_at>$3::timestamptz
-         AND (d.notification_id IS NULL OR n.id IS NOT NULL) AND (d.chat_author_id IS NULL OR au.id IS NOT NULL)`,
+         AND (d.notification_id IS NULL OR n.id IS NOT NULL) AND (d.chat_author_id IS NULL OR au.id IS NOT NULL)
+         -- A block (#354) made after the message was queued takes it back too.
+         AND NOT EXISTS(SELECT 1 FROM user_blocks ub WHERE (ub.blocker_id=d.recipient_id AND ub.blocked_id=coalesce(d.chat_author_id,n.actor_id)) OR (ub.blocker_id=coalesce(d.chat_author_id,n.actor_id) AND ub.blocked_id=d.recipient_id))`,
       [job.id, job.lease_token, now],
     )
   ).rows[0];

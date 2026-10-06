@@ -26,6 +26,13 @@ test("thread migration and shared engine preserve immediate parents, tombstones,
     // The notice code of today needs the group column of #341 (migration 055),
     // which has nothing to do with the thread migration under test.
     await db.exec("ALTER TABLE notifications ADD COLUMN group_key text");
+    // Notices are not made between people who blocked each other (#354).
+    await db.exec(
+      await readFile(
+        new URL("../db/061_user_blocks.sql", import.meta.url),
+        "utf8",
+      ),
+    );
     await db.query("INSERT INTO site_settings(id,value) VALUES(1,$1)", [
       JSON.stringify(defaultSettings),
     ]);

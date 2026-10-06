@@ -68,6 +68,7 @@ export async function notify(
  SELECT $1,$2,$3,$4,$5,$6,CASE WHEN EXISTS(SELECT 1 FROM grp) THEN k.group_key || ':' || coalesce($15::text,$1::uuid::text) ELSE k.group_key END,
   CASE WHEN $4 IN ${groupedTypes} THEN k.group_key END,$8,$9,$10,$11,$12,$13
  FROM k WHERE EXISTS(SELECT 1 FROM users WHERE id=$2 AND NOT blocked) AND EXISTS(SELECT 1 FROM users WHERE id=$3 AND NOT blocked)
+  AND NOT EXISTS(SELECT 1 FROM user_blocks WHERE (blocker_id=$2 AND blocked_id=$3) OR (blocker_id=$3 AND blocked_id=$2))
   AND NOT EXISTS(SELECT 1 FROM grp WHERE read_at IS NULL)
  ON CONFLICT(recipient_id,dedup_key) DO NOTHING RETURNING id,recipient_id,type)
  ${notificationEmailEnqueueSql("$14::boolean")}`,
@@ -101,7 +102,7 @@ export const inboxFrom = ` FROM notifications n LEFT JOIN users a ON a.id=n.acto
  LEFT JOIN component_comments cc ON cc.id=n.component_comment_id LEFT JOIN ride_intents ri ON ri.id=n.intent_id`;
 export const inboxVisible = (
   clock = "now()",
-) => `n.recipient_id=$1 AND ((n.type='bike_week' AND b.owner_id=n.recipient_id AND b.is_public AND NOT o.blocked AND NOT b.leaderboard_excluded AND EXISTS(SELECT 1 FROM bike_weeks w WHERE w.bike_id=b.id AND w.owner_id=n.recipient_id AND w.status='selected' AND w.week_start=date_trunc('week',(${clock}) AT TIME ZONE 'Europe/Moscow')::date AND n.dedup_key='bike_week:'||w.week_start::text||':'||b.id::text)) OR (n.type='market_expiring' AND ml.owner_id=n.recipient_id) OR n.type='session_reuse' OR ${rideNoticeVisible(clock)} OR NOT a.blocked AND (
+) => `n.recipient_id=$1 AND ((n.type='bike_week' AND b.owner_id=n.recipient_id AND b.is_public AND NOT o.blocked AND NOT b.leaderboard_excluded AND EXISTS(SELECT 1 FROM bike_weeks w WHERE w.bike_id=b.id AND w.owner_id=n.recipient_id AND w.status='selected' AND w.week_start=date_trunc('week',(${clock}) AT TIME ZONE 'Europe/Moscow')::date AND n.dedup_key='bike_week:'||w.week_start::text||':'||b.id::text)) OR (n.type='market_expiring' AND ml.owner_id=n.recipient_id) OR n.type='session_reuse' OR ${rideNoticeVisible(clock)} OR NOT a.blocked AND NOT EXISTS(SELECT 1 FROM user_blocks ub WHERE (ub.blocker_id=n.recipient_id AND ub.blocked_id=n.actor_id) OR (ub.blocker_id=n.actor_id AND ub.blocked_id=n.recipient_id)) AND (
  (n.type='component_reply' AND cm.first_public_at IS NOT NULL AND cc.deleted_at IS NULL AND cc.author_id=n.actor_id) OR
  (n.type='plan_published' AND r.owner_id=n.actor_id AND r.status='planned' AND r.is_public AND rb.is_public AND NOT ro.blocked AND (${rideOccurrence.replaceAll("now()", `(${clock})`)})>(${clock})) OR
  (n.type='plan_nearby' AND r.owner_id=n.actor_id AND r.status='planned' AND r.is_public AND rb.is_public AND NOT ro.blocked AND (${rideOccurrence.replaceAll("now()", `(${clock})`)})>(${clock}) AND EXISTS(SELECT 1 FROM nearby_areas na WHERE na.user_id=n.recipient_id AND na.enabled)) OR

@@ -3,6 +3,7 @@ import { notify } from "./notifications.ts";
 import { participation } from "./participation.ts";
 import { authorColumns, relationshipColumns, profileRow } from "./profiles.ts";
 import { publicAuthor, relationship } from "./profile-dto.ts";
+import { blockedBetween } from "./user-blocks.ts";
 export async function followPage(
   q: Queryable,
   username: string,
@@ -32,6 +33,7 @@ export async function followPage(
     is_self: boolean;
     is_following: boolean;
     followed_by: boolean;
+    blocked_by_me: boolean;
   }>(
     `SELECT ${authorColumns},${relationshipColumns}` +
       from +
@@ -77,6 +79,7 @@ export async function followKeysetPage(
     is_self: boolean;
     is_following: boolean;
     followed_by: boolean;
+    blocked_by_me: boolean;
     cursor_at: string;
   }>(
     `SELECT ${authorColumns},${relationshipColumns},to_char(f.created_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS cursor_at
@@ -118,6 +121,10 @@ export async function setFollow(
     )
   ).rows;
   if (users.length !== 2 || users.some((u) => u.blocked))
+    return { error: "Профиль недоступен", status: 404 };
+  // A block either way (#354) is told as an unavailable profile: the person
+  // who was blocked learns nothing from the refusal. Unfollowing stays open.
+  if (enabled && (await blockedBetween(q, viewerId, target.id)))
     return { error: "Профиль недоступен", status: 404 };
   if (enabled) {
     const inserted = await q.query(

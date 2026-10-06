@@ -356,6 +356,11 @@ export const relationshipSchema = named(
     following: z.boolean().describe("Зритель подписан на человека."),
     followedBy: z.boolean().describe("Человек подписан на зрителя."),
     friends: z.boolean().describe("Подписки взаимны."),
+    blockedByMe: z
+      .boolean()
+      .describe(
+        "Зритель заблокировал человека (PUT /users/{ref}/block). Кто заблокировал зрителя, он не узнаёт.",
+      ),
   }),
 );
 
@@ -2604,5 +2609,57 @@ export const deleteAccountRequestSchema = named(
   }),
 );
 
+// Safety (#354): blocking a person and reporting an object.
+
+export const blockResultSchema = named(
+  "BlockResult",
+  "Итоговое состояние блокировки человека зрителем.",
+  z.strictObject({
+    blocked: z
+      .boolean()
+      .describe(
+        "Человек заблокирован зрителем. Блокировка обрывает подписки в обе стороны и закрывает личные сообщения.",
+      ),
+  }),
+);
+
+export const reportEntityTypes = [
+  "profile",
+  "bike",
+  "comment",
+  "ride",
+  "ride_comment",
+  "journal",
+  "journal_comment",
+  "component_comment",
+  "component_photo",
+] as const;
+export const reportReasons = [
+  "spam",
+  "abuse",
+  "inappropriate",
+  "copyright",
+  "other",
+] as const;
+
+export const createReportRequestSchema = named(
+  "CreateReportRequest",
+  "Жалоба на объект. `entityType` и `targetId` — то, на что жалуются: профиль (`profile`, id человека), велосипед, комментарий велосипеда (`comment`), покатушка, комментарий покатушки, запись журнала, её комментарий, комментарий или фото компонента.",
+  z.strictObject({
+    entityType: z.enum(reportEntityTypes),
+    targetId: z.uuid(),
+    reason: z.enum(reportReasons),
+  }),
+);
+
+export const reportReceiptSchema = named(
+  "ReportReceipt",
+  "Жалоба принята. Повторная жалоба того же человека на тот же объект — тоже успех: `created: false`, модератор получает её один раз.",
+  z.strictObject({ created: z.boolean() }),
+);
+
+export type BlockResult = z.infer<typeof blockResultSchema>;
+export type CreateReportRequest = z.infer<typeof createReportRequestSchema>;
+export type ReportReceipt = z.infer<typeof reportReceiptSchema>;
 export type AccountDeletion = z.infer<typeof accountDeletionSchema>;
 export type DeleteAccountRequest = z.infer<typeof deleteAccountRequestSchema>;

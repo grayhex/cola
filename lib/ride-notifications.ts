@@ -33,6 +33,7 @@ export async function rideNotice(
       FROM plan p JOIN users u ON NOT u.blocked
       WHERE p.occurs_at IS NOT NULL AND (CASE WHEN $4::uuid[] IS NOT NULL THEN u.id=ANY($4::uuid[]) ELSE u.id IN (SELECT user_id FROM recipients) END)
         AND ($2='ride_response' OR u.id<>p.owner_id)
+        AND ($2='ride_response' OR NOT EXISTS(SELECT 1 FROM user_blocks ub WHERE (ub.blocker_id=u.id AND ub.blocked_id=p.owner_id) OR (ub.blocker_id=p.owner_id AND ub.blocked_id=u.id)))
       ON CONFLICT(recipient_id,dedup_key) DO NOTHING RETURNING id,recipient_id,type)
     ${notificationEmailEnqueueSql("$5::boolean", { available: type === "ride_response" ? "now()+interval '5 minutes'" : "now()" })}`,
     [ride, type, occursAt || null, recipients || null, mailEnabled()],

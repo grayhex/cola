@@ -598,6 +598,14 @@ export async function exportAccount(
       [userId],
     )
   ).rows[0];
+  // The person's own list of blocked people (#354): who they chose not to see.
+  const blockedUsers = (
+    await q.query<{ id: string; username: string; blocked_at: Date }>(
+      `SELECT u.id,u.username,b.created_at AS blocked_at FROM user_blocks b JOIN users u ON u.id=b.blocked_id
+       WHERE b.blocker_id=$1 ORDER BY b.created_at DESC,u.id`,
+      [userId],
+    )
+  ).rows;
   const nearby = {
     enabled: nearbyRow?.enabled ?? false,
     source: nearbyRow?.source ?? null,
@@ -661,6 +669,11 @@ export async function exportAccount(
     rideIntentPreferences,
     notificationEmailPreferences,
     notificationSettings,
+    blockedUsers: blockedUsers.map((u) => ({
+      id: u.id,
+      username: u.username,
+      blockedAt: u.blocked_at,
+    })),
     nearby,
     componentPhotos: componentPhotos.map((p) => ({
       ...p,

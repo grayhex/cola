@@ -1257,6 +1257,97 @@ function withAccount(document: Json) {
   };
 }
 
+// Safety (#354): blocking a person and reporting an object.
+function withSafety(document: Json) {
+  const paths = document.paths as Record<string, Json>;
+  const security = [{ cookieSession: [] }, { bearerAuth: [] }];
+  const signIn =
+    "Нет входа, сессия или токен недействительны, токен доступа истёк (`token_expired`) либо схема Authorization не поддерживается.";
+  const originRule =
+    "Cookie-запрос не с адреса сайта (нужен заголовок `Origin`).";
+  const budget =
+    "Слишком много действий; секунды до конца окна — в `Retry-After`.";
+  const blockResponses = {
+    "200": success("Итоговое состояние блокировки.", "BlockResult"),
+    "400": failure(
+      "Нельзя заблокировать себя, параметры не нужны либо cookie вместе с Authorization.",
+    ),
+    "401": failure(signIn),
+    "403": failure(originRule),
+    "404": failure(
+      "Человек недоступен: неизвестный `{ref}` или заблокирован сайтом.",
+    ),
+    "429": failure(budget),
+    "500": shared("InternalError"),
+  };
+  paths["/users/{ref}/block"] = {
+    put: {
+      operationId: "blockUser",
+      tags: ["Safety"],
+      summary: "Заблокировать человека",
+      description:
+        "Идемпотентный переключатель: `PUT` ставит блокировку, `DELETE` снимает, повтор ничего не меняет, ответ — итоговое состояние. Блокировка обрывает подписки **в обе стороны** (подписки не возвращаются после разблокировки), закрывает подписку и личные сообщения между двумя людьми, убирает человека из поиска и из выдачи людей для диалога, прекращает уведомления и push между ними и ставит блокировку в Stream Chat отдельной надёжной задачей (сбой Stream не отменяет блокировку). Заблокированный человек ни о чём не узнаёт: его попытки подписаться или написать отвечают так же, как для недоступного профиля. Свой список — `GET /me/blocked`; в `Relationship` человек помечен `blockedByMe`.",
+      security,
+      parameters: [{ $ref: "#/components/parameters/UserRef" }],
+      responses: blockResponses,
+    },
+    delete: {
+      operationId: "unblockUser",
+      tags: ["Safety"],
+      summary: "Снять блокировку с человека",
+      description:
+        "Парная операция к `PUT`: идемпотентна, ответ — итоговое состояние. Подписки, оборванные блокировкой, не возвращаются.",
+      security,
+      parameters: [{ $ref: "#/components/parameters/UserRef" }],
+      responses: blockResponses,
+    },
+  };
+  paths["/me/blocked"] = {
+    get: {
+      operationId: "listBlockedUsers",
+      tags: ["Safety"],
+      summary: "Заблокированные мной",
+      description:
+        "Люди, которых заблокировал зритель: новые блокировки сверху (время блокировки, затем id), курсор, без общего количества. Люди, заблокированные сайтом, в списке не появляются. Каждый человек — `UserSummary`, `relationship.blockedByMe` у них `true`.",
+      security,
+      parameters: refs("Limit", "Cursor"),
+      responses: {
+        "200": success("Страница заблокированных.", "UserPage"),
+        "400": failure(
+          "Неверный параметр, неверный курсор либо cookie вместе с Authorization.",
+        ),
+        "401": failure(signIn),
+        "500": shared("InternalError"),
+      },
+    },
+  };
+  paths["/reports"] = {
+    post: {
+      operationId: "createReport",
+      tags: ["Safety"],
+      summary: "Пожаловаться на объект",
+      description:
+        "Жалоба идёт в ту же очередь модерации, что и кнопки «Пожаловаться» на сайте. Объект задан `entityType` и `targetId`; недоступный или удалённый объект — 404, жалоба на собственный контент — 400. Повторная жалоба того же человека на тот же объект — успех с `created: false`: модератор получает её один раз. Жалобы на сообщения мессенджера идут не сюда, а через жалобу Stream Chat (`flag`) в самом чате. Бюджет — 10 жалоб за окно, общий с сайтом.",
+      security,
+      parameters: [],
+      requestBody: requestBody("CreateReportRequest"),
+      responses: {
+        "200": success("Жалоба принята.", "ReportReceipt"),
+        "400": failure(
+          "Неверное тело или причина, жалоба на собственный контент либо cookie вместе с Authorization.",
+        ),
+        "401": failure(signIn),
+        "403": failure(originRule),
+        "404": failure("Объект недоступен или удалён."),
+        "413": failure("Тело больше 2048 байт."),
+        "415": failure("Тело не `application/json`."),
+        "429": failure(budget),
+        "500": shared("InternalError"),
+      },
+    },
+  };
+}
+
 function withNearby(document: Json) {
   const paths = document.paths as Record<string, Json>;
   const security = [{ cookieSession: [] }, { bearerAuth: [] }];
@@ -1450,6 +1541,11 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
       {
         name: "Account",
         description: "Текущий пользователь и удаление его аккаунта.",
+      },
+      {
+        name: "Safety",
+        description:
+          "Блокировка людей и жалобы на объекты: то, что требуют магазины приложений от сервисов с пользовательским контентом.",
       },
       {
         name: "Sessions",
@@ -3157,6 +3253,7 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
   withBikePhotos(document);
   withJournalWrites(document);
   withAccount(document);
+  withSafety(document);
   withNearby(document);
   return document;
 }

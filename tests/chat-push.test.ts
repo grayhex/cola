@@ -345,6 +345,37 @@ test("nothing is queued for push that is off, a revoked device, a blocked person
   );
   await blocked.db.close();
 
+  // A block either way (#354) queues nothing, and one made after the message
+  // was queued takes it back at the send.
+  for (const [label, blocker, other] of [
+    ["the recipient blocked the author", "recipient", "author"],
+    ["the author blocked the recipient", "author", "recipient"],
+  ] as const) {
+    const pair = await setup();
+    await pair.db.query(
+      "INSERT INTO user_blocks(blocker_id,blocked_id) VALUES($1,$2)",
+      [pair[blocker], pair[other]],
+    );
+    await pair.webhook(event(pair.author, [pair.recipient]));
+    assert.equal((await pair.deliveries()).length, 0, label);
+    await pair.db.close();
+  }
+  const late = await setup();
+  await late.webhook(event(late.author, [late.recipient]));
+  await late.db.query(
+    "INSERT INTO user_blocks(blocker_id,blocked_id) VALUES($1,$2)",
+    [late.recipient, late.author],
+  );
+  const lateSend = transportOf();
+  await runPushBatch(late.db, {
+    env,
+    transport: lateSend.transport,
+    chat: accessOf().access,
+  });
+  assert.equal(lateSend.sent.length, 0, "a block after the message was queued");
+  assert.equal((await late.deliveries())[0].error_code, "unavailable");
+  await late.db.close();
+
   const early = await setup();
   await early.webhook(event(early.author, [early.recipient]), {
     now: new Date(Date.now() - hour),

@@ -284,13 +284,35 @@ await db.exec(
 await db.exec(
   await readFile(
     new URL("../db/055_notification_policy.sql", import.meta.url),
+    "utf8",
+  ),
+);
+await db.exec(
+  await readFile(
     new URL("../db/056_push_devices.sql", import.meta.url),
-    new URL("../db/057_chat_push.sql", import.meta.url),
+    "utf8",
+  ),
+);
+await db.exec(
+  await readFile(new URL("../db/057_chat_push.sql", import.meta.url), "utf8"),
+);
+await db.exec(
+  await readFile(
     new URL("../db/058_ride_intent_listing.sql", import.meta.url),
-    new URL("../db/059_nearby.sql", import.meta.url),
+    "utf8",
+  ),
+);
+await db.exec(
+  await readFile(new URL("../db/059_nearby.sql", import.meta.url), "utf8"),
+);
+await db.exec(
+  await readFile(
     new URL("../db/060_nearby_delivery.sql", import.meta.url),
     "utf8",
   ),
+);
+await db.exec(
+  await readFile(new URL("../db/061_user_blocks.sql", import.meta.url), "utf8"),
 );
 await seedLegalDocuments(db);
 const server = new PGLiteSocketServer({

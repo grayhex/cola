@@ -4,7 +4,9 @@
 // rules (verified e-mail, blocked people, shared budgets), the application
 // secret never leaves the server and the provider's own errors are not repeated.
 import assert from "node:assert/strict";
+import { execFile } from "node:child_process";
 import { randomUUID } from "node:crypto";
+import { promisify } from "node:util";
 import pg from "pg";
 import { testConsents } from "./fixtures/legal.js";
 import { verifyCapturedEmail } from "./fixtures/verified-user.js";
@@ -328,6 +330,71 @@ try {
   await db.query("UPDATE users SET email_verified_at=now() WHERE id=$1", [
     bob.id,
   ]);
+
+  // Blocking people (#354): no dialog or group between a pair in which one
+  // blocked the other, nobody finds them for a dialog, and the block is made in
+  // Stream by the worker, which then has nothing left to do.
+  const blocker = await member("blocker", { name: "Блокирующий " + run });
+  const blockee = await member("blockee", { name: "Заблокированный " + run });
+  const bystander = await member("bystander");
+  const talk = (who, other) =>
+    who.token("/chat/channels", {
+      method: "POST",
+      body: { kind: "dm", members: [other.id] },
+    });
+  const jobOf = async () =>
+    (
+      await db.query(
+        "SELECT op FROM chat_block_jobs WHERE blocker_id=$1 AND blocked_id=$2",
+        [blocker.id, blockee.id],
+      )
+    ).rows[0]?.op ?? null;
+  const sync = () =>
+    promisify(execFile)(
+      process.execPath,
+      [
+        "--import",
+        "./tests/fixtures/chat-provider.js",
+        "scripts/chat-sync.js",
+        "--once",
+      ],
+      { env: process.env },
+    );
+  assert.equal((await talk(blocker, blockee)).status, 201, "a dialog before");
+  const blockPath = `/users/${blockee.id}/block`;
+  assert.equal((await blocker.token(blockPath, { method: "PUT" })).status, 200);
+  assert.equal(await jobOf(), "block", "both were in chat: Stream is told");
+  assert.equal((await talk(blocker, blockee)).status, 404, "the blocker");
+  assert.equal((await talk(blockee, blocker)).status, 404, "the blocked");
+  const groupOfBoth = await bystander.token("/chat/channels", {
+    method: "POST",
+    body: { kind: "group", name: "Группа", members: [blocker.id, blockee.id] },
+  });
+  assert.equal(groupOfBoth.status, 404, "a group with both of them");
+  assert.doesNotMatch(
+    groupOfBoth.text,
+    /заблок/i,
+    "nobody is told who blocked",
+  );
+  const findable = async (who, name) =>
+    (
+      await who.token("/chat/people?q=" + encodeURIComponent(name))
+    ).body.people.map((p) => p.id);
+  assert.deepEqual(await findable(blocker, "Заблокированный " + run), []);
+  assert.deepEqual(await findable(blockee, "Блокирующий " + run), []);
+  assert.deepEqual(await findable(bystander, "Заблокированный " + run), [
+    blockee.id,
+  ]);
+  assert.doesNotMatch((await sync()).stderr, /chat_block_sync_retry/);
+  assert.equal(await jobOf(), null, "the worker made the block");
+  assert.equal(
+    (await blocker.token(blockPath, { method: "DELETE" })).status,
+    200,
+  );
+  assert.equal(await jobOf(), "unblock");
+  assert.doesNotMatch((await sync()).stderr, /chat_block_sync_retry/);
+  assert.equal(await jobOf(), null, "and took it back");
+  assert.equal((await talk(blocker, blockee)).status, 201, "a dialog again");
 
   // A budget: ten channel requests a window, shared with the site; then 429.
   const eager = await member("eager");

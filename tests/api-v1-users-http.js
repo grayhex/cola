@@ -192,16 +192,24 @@ try {
     following: true,
     followedBy: true,
     friends: true,
+    blockedByMe: false,
   });
   assert.deepEqual((await owner.v1("/users/" + owner.id)).body.relationship, {
     isSelf: true,
     following: false,
     followedBy: false,
     friends: false,
+    blockedByMe: false,
   });
   assert.deepEqual(
     (await fans[1].v1("/users/" + owner.username)).body.relationship,
-    { isSelf: false, following: true, followedBy: false, friends: false },
+    {
+      isSelf: false,
+      following: true,
+      followedBy: false,
+      friends: false,
+      blockedByMe: false,
+    },
   );
   assertClean("profile (reader)", asReader.body);
 
@@ -352,10 +360,17 @@ try {
     following: false,
     followedBy: false,
     friends: false,
+    blockedByMe: false,
   });
   assert.deepEqual(
     mine.body.items.find((u) => u.id === fans[0].id).relationship,
-    { isSelf: false, following: false, followedBy: false, friends: false },
+    {
+      isSelf: false,
+      following: false,
+      followedBy: false,
+      friends: false,
+      blockedByMe: false,
+    },
   );
   // Newest first: the reader followed last.
   assert.equal(followerIds[0], reader.id);

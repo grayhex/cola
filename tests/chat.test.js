@@ -88,6 +88,8 @@ test("chat identity, authorization, lifecycle and deletion survive actual databa
     "022_auth_tokens",
     "025_account_sessions",
     "031_chat_lifecycle",
+    // The people of a chat leave out those who blocked each other (#354).
+    "061_user_blocks",
   ])
     await db.exec(
       await readFile(

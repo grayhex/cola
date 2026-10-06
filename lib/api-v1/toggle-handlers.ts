@@ -70,7 +70,8 @@ export function handleFollow(
     );
     if (result.error !== undefined) throw refused(result.error, result.status);
     return ok({
-      relationship: result.relationship,
+      // A follow is refused while a block stands, so there is none of mine.
+      relationship: { ...result.relationship, blockedByMe: false },
       followers: Number((await profileCounts(db, target.id)).followers),
     });
   });

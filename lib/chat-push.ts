@@ -144,6 +144,7 @@ export async function enqueueChatPush(
      JOIN users a ON a.id=$4 AND NOT a.blocked
      JOIN notification_settings ns ON ns.user_id=d.user_id AND ns.push_enabled AND ns.push_enabled_at<=$1::timestamptz
      WHERE d.user_id=ANY($5::uuid[]) AND d.user_id<>$4 AND d.revoked_at IS NULL AND d.registered_at<=$1::timestamptz
+       AND NOT EXISTS(SELECT 1 FROM user_blocks ub WHERE (ub.blocker_id=d.user_id AND ub.blocked_id=$4) OR (ub.blocker_id=$4 AND ub.blocked_id=d.user_id))
      ON CONFLICT DO NOTHING`,
     [now, push.messageId, push.cid, push.authorId, push.recipients],
   );

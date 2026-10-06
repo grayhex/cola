@@ -162,6 +162,37 @@ test("the circle is the person's own: everyone they follow, the people they pick
   assert.equal((await notices(off)).length, 0);
 });
 
+test("a person who blocked the author, or whom the author blocked, is not told of their plan (#354)", async () => {
+  const a = await author();
+  const [friend, blockedByThem, blockedByAuthor] = await Promise.all([
+    person(),
+    person(),
+    person(),
+  ]);
+  for (const other of [friend, blockedByThem, blockedByAuthor])
+    await friends(a.id, other);
+  // The rows alone, as the block of a person leaves them: the follows are
+  // cut by `setBlock`, and the fan-out must hold even where they were not.
+  await db.query(
+    "INSERT INTO user_blocks(blocker_id,blocked_id) VALUES($1,$2),($3,$4)",
+    [blockedByThem, a.id, a.id, blockedByAuthor],
+  );
+  const ride = await a.plan();
+  assert.equal(await announcePlan(db, ride.id), true);
+  await drain();
+  assert.equal((await notices(friend)).length, 1);
+  assert.equal(
+    (await notices(blockedByThem)).length,
+    0,
+    "who blocked the author",
+  );
+  assert.equal(
+    (await notices(blockedByAuthor)).length,
+    0,
+    "whom the author blocked",
+  );
+});
+
 test("a ride that is private, past, a completed one or the author's blocked is not announced", async () => {
   const a = await author();
   const friend = await person();
