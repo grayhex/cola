@@ -2573,3 +2573,36 @@ export const journalPatchRequestSchema = named(
 
 export type JournalRequest = z.infer<typeof journalRequestSchema>;
 export type JournalPatchRequest = z.infer<typeof journalPatchRequestSchema>;
+
+// Deleting one's own account (#354): what confirms it, and the request.
+
+export const accountDeletionSchema = named(
+  "AccountDeletion",
+  "Как этот аккаунт подтверждает своё удаление. `password` — текущим паролем; `yandex` — у аккаунта нет пароля (он создан через провайдера), подтверждение — новый вход через Яндекс ID тем же нативным потоком, что и вход (код ColaBike + PKCE). `allowed: false`, если удалить нельзя: `admin` — администратор сначала передаёт права, `no_method` — нет ни пароля, ни Яндекса (задайте пароль через «Забыли пароль?» на сайте).",
+  z.strictObject({
+    method: z.enum(["password", "yandex"]).nullable(),
+    allowed: z.boolean(),
+    reason: z.enum(["admin", "no_method"]).nullable(),
+  }),
+);
+
+export const deleteAccountRequestSchema = named(
+  "DeleteAccountRequest",
+  "Явное подтверждение необратимого удаления. `confirm` — слово `УДАЛИТЬ`. Нужен ровно один способ подтвердить личность: `password` у аккаунта с паролем либо `reauth` (одноразовый код ColaBike и `codeVerifier` нового нативного входа через Яндекс ID) у аккаунта без пароля. Токена доступа одного недостаточно.",
+  z.strictObject({
+    confirm: z.string().max(40),
+    password: z.string().min(1).max(128).optional(),
+    reauth: z
+      .strictObject({
+        code: z.string().regex(nativeCodePattern),
+        codeVerifier: z.string().regex(verifierPattern),
+      })
+      .optional()
+      .describe(
+        "Код тратится любой попыткой, верной или нет; чужой код отвергается.",
+      ),
+  }),
+);
+
+export type AccountDeletion = z.infer<typeof accountDeletionSchema>;
+export type DeleteAccountRequest = z.infer<typeof deleteAccountRequestSchema>;

@@ -260,15 +260,59 @@ export async function deleteAccount(
     return { error: noPasswordMessage, status: 409 };
   if (!(await checkPassword(user, password)))
     return { error: "Пароль не подходит", status: 403 };
+  return removeAccount(q, userId);
+}
+
+/** The password of an account that has one, checked under the lock of its row. */
+export async function confirmedPassword(
+  q: Queryable,
+  userId: string,
+  password: string,
+) {
+  return checkPassword(await lockedUser(q, userId), password);
+}
+
+export const adminDeletionMessage =
+  "Администратор не может удалить свой аккаунт. Сначала передайте права другому администратору.";
+
+/**
+ * The account of someone already confirmed by the caller (a password, or the
+ * provider through the native flow of #304): the one place that deletes it. An
+ * administrator keeps the account until the rights are handed on.
+ */
+export async function removeAccount(q: Queryable, userId: string) {
+  const user = await lockedUser(q, userId);
+  if (!user) return { error: "Аккаунт недоступен", status: 404 };
   if (user.role === "admin")
-    return {
-      error:
-        "Администратор не может удалить свой аккаунт. Сначала передайте права другому администратору.",
-      status: 409,
-    };
+    return { error: adminDeletionMessage, status: 409 };
   const files = await accountFiles(q, userId);
   await q.query("DELETE FROM users WHERE id=$1", [userId]);
   return { ok: true, files };
+}
+
+/**
+ * How this account can confirm its own deletion: with its password, or, when it
+ * has none (it was made through a provider), by signing in with that provider
+ * again. `null` when neither is possible.
+ */
+export async function deletionMethod(q: Queryable, userId: string) {
+  const user = (
+    await q.query<{ role: string; has_password: boolean; yandex: boolean }>(
+      `SELECT role,password_hash IS NOT NULL AS has_password,
+         EXISTS(SELECT 1 FROM user_identities i WHERE i.user_id=users.id AND i.provider='yandex') AS yandex
+       FROM users WHERE id=$1 AND NOT blocked`,
+      [userId],
+    )
+  ).rows[0];
+  if (!user) return null;
+  return {
+    admin: user.role === "admin",
+    method: user.has_password
+      ? ("password" as const)
+      : user.yandex
+        ? ("yandex" as const)
+        : null,
+  };
 }
 
 // ── Export ───────────────────────────────────────────────────────────────
