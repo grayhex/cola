@@ -248,6 +248,50 @@ test("ride event + email is atomic, revision-bound and coalesces organizer respo
     await s.close();
   }
 });
+test("a block between the organizer and the invited ends the notices of the ride, whoever blocked (#354)", async () => {
+  for (const [label, blocker, blocked] of [
+    ["the invited blocked the organizer", "rider", "owner"],
+    ["the organizer blocked the invited", "owner", "rider"],
+  ] as const) {
+    const s = await setup();
+    try {
+      const ride = await s.plan({ invitations: ["rider"] });
+      const kinds = async () =>
+        (await notificationPage(s.db, s.rider)).notifications.map(
+          (n) => n.type,
+        );
+      assert.ok((await kinds()).includes("ride_invite"), label + ": before");
+
+      await s.db.query(
+        "INSERT INTO user_blocks(blocker_id,blocked_id) VALUES($1,$2)",
+        [s[blocker], s[blocked]],
+      );
+
+      // What was sent stays in the table, and is not shown or mailed any more.
+      assert.deepEqual(
+        (await kinds()).filter((t) => t.startsWith("ride_")),
+        [],
+        label + ": hidden",
+      );
+      // A new event for the pair is not made at all.
+      const before = (
+        await s.db.query("SELECT count(*)::int n FROM notifications")
+      ).rows[0].n;
+      await s.tx((q) =>
+        rideNotice(q, ride.id, "ride_changed", { recipients: [s.rider] }),
+      );
+      assert.equal(
+        (await s.db.query("SELECT count(*)::int n FROM notifications")).rows[0]
+          .n,
+        before,
+        label + ": nothing new",
+      );
+    } finally {
+      await s.close();
+    }
+  }
+});
+
 test("one default reminder, fake clock, late join, downtime and SMTP-disabled in-app", async () => {
   const s = await setup();
   try {
