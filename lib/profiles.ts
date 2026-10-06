@@ -5,7 +5,8 @@ import { publicProfile } from "./profile-dto.ts";
 export const authorColumns = "u.id,u.username,u.name,u.avatar_id";
 export const relationshipColumns = `u.id=$2 AS is_self,
  EXISTS(SELECT 1 FROM user_follows WHERE follower_id=$2 AND following_id=u.id) AS is_following,
- EXISTS(SELECT 1 FROM user_follows WHERE follower_id=u.id AND following_id=$2) AS followed_by`;
+ EXISTS(SELECT 1 FROM user_follows WHERE follower_id=u.id AND following_id=$2) AS followed_by,
+ EXISTS(SELECT 1 FROM user_blocks WHERE blocker_id=$2 AND blocked_id=u.id) AS blocked_by_me`;
 export async function profileRow(
   q: Queryable,
   username: string,
@@ -24,6 +25,7 @@ export async function profileRow(
         is_self: boolean;
         is_following: boolean;
         followed_by: boolean;
+        blocked_by_me: boolean;
       }>(
         `SELECT ${authorColumns},u.bio,u.location,u.created_at,${relationshipColumns}
     FROM users u WHERE lower(u.username)=lower($1) AND u.blocked=false`,
@@ -51,6 +53,7 @@ export async function profileRowById(
         is_self: boolean;
         is_following: boolean;
         followed_by: boolean;
+        blocked_by_me: boolean;
       }>(
         `SELECT ${authorColumns},u.bio,u.location,u.created_at,${relationshipColumns}
     FROM users u WHERE u.id=$1::uuid AND u.blocked=false`,

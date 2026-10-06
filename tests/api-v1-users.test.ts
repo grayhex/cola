@@ -128,6 +128,7 @@ test("the relationship belongs to the viewer: guest none, other, self, mutual", 
     following: false,
     followedBy: false,
     friends: false,
+    blockedByMe: false,
   });
   await follow(b, a);
   const asB = toProfile(
@@ -140,6 +141,7 @@ test("the relationship belongs to the viewer: guest none, other, self, mutual", 
     following: true,
     followedBy: false,
     friends: false,
+    blockedByMe: false,
   });
   await follow(a, b);
   const mutual = toProfile(
@@ -152,6 +154,7 @@ test("the relationship belongs to the viewer: guest none, other, self, mutual", 
     following: true,
     followedBy: true,
     friends: true,
+    blockedByMe: false,
   });
 });
 
@@ -201,7 +204,7 @@ test("DTOs are strict and carry no private field", async () => {
     const text = JSON.stringify(dto);
     assert.doesNotMatch(
       text,
-      /x@y\.z|password|preferences|"role"|blocked|admin/,
+      /x@y\.z|password|preferences|"role"|"blocked"|admin/,
     );
     const keys: string[] = [];
     JSON.stringify(dto, (key, value) => (keys.push(key), value));
@@ -397,6 +400,7 @@ test("lists hide blocked people and show relationships to the viewer", async () 
     following: true,
     followedBy: true,
     friends: true,
+    blockedByMe: false,
   });
   const page = {
     items: asViewer.rows.map((r) => toUserSummary(r, true)),

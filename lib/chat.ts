@@ -137,6 +137,15 @@ export async function createChatChannel(
   await ensureChatPolicy(provider);
   const users = await lockChatUsers(q, ids);
   await requireSession(q, viewer, sessionHash);
+  // A block between any two of them (#354), either way, ends the invitation as
+  // an unavailable person: the answer does not say who blocked whom. The
+  // users are locked, so a block cannot slip in between this and the channel.
+  const blocks = await q.query(
+    "SELECT 1 FROM user_blocks WHERE blocker_id=ANY($1::uuid[]) AND blocked_id=ANY($1::uuid[]) LIMIT 1",
+    [ids],
+  );
+  if (blocks.rowCount)
+    throw new ChatError("Пользователь недоступен для сообщений", 404);
   await registerChatUsers(q, users, provider);
   const id =
     input.kind === "dm"

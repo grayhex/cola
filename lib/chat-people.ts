@@ -1,4 +1,5 @@
 import type { Queryable as QueryableType } from "./repository.ts";
+import { blockedEitherWay } from "./user-blocks.ts";
 
 /** Empty search suggests only people the viewer follows, never a global user dump.
 Return the same public fields for suggestions and search; eligibility is checked
@@ -23,6 +24,7 @@ export async function chatPeople(
   }>(
     `SELECT u.id,u.name,u.username,u.avatar_id FROM users u
      WHERE u.id<>$1 AND NOT u.blocked AND u.email_verified_at IS NOT NULL
+       AND NOT ${blockedEitherWay("$1", "u.id")}
        AND ${
          mode === "following"
            ? "EXISTS(SELECT 1 FROM user_follows f WHERE f.follower_id=$1 AND f.following_id=u.id)"

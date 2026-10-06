@@ -99,3 +99,38 @@ export async function syncChatJob(
   await q.query("DELETE FROM chat_jobs WHERE user_id=$1", [job.user_id]);
   return true;
 }
+
+/**
+ * One person's block of another, as Stream keeps it (#354): the blocker stops
+ * receiving the blocked person's messages in direct channels. Called inside a
+ * transaction that holds the job row. When either of the two has no Stream
+ * user (never was in chat, or already deleted) there is nothing to apply, and
+ * the job is done: a direct message between them cannot be created while the
+ * block stands, so no channel can appear later.
+ */
+export async function syncChatBlockJob(
+  q: Queryable,
+  job: { blocker_id: string; blocked_id: string; op: "block" | "unblock" },
+  provider = chatProvider(),
+) {
+  const blocker = streamUserId(job.blocker_id),
+    blocked = streamUserId(job.blocked_id);
+  const present = await Promise.all(
+    [blocker, blocked].map(async (id) => {
+      const found = await provider.queryUsers(
+        { id },
+        {},
+        { include_deactivated_users: true },
+      );
+      return found.users.length > 0;
+    }),
+  );
+  if (present.every(Boolean)) {
+    if (job.op === "block") await provider.blockUser(blocked, blocker);
+    else await provider.unBlockUser(blocked, blocker);
+  }
+  await q.query(
+    "DELETE FROM chat_block_jobs WHERE blocker_id=$1 AND blocked_id=$2",
+    [job.blocker_id, job.blocked_id],
+  );
+}

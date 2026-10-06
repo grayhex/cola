@@ -81,6 +81,14 @@ export function fixtureMethods() {
       users.delete(id);
       return {};
     },
+    async blockUser(blockedId, byId) {
+      calls.push(["block", blockedId, byId]);
+      return {};
+    },
+    async unBlockUser(blockedId, byId) {
+      calls.push(["unblock", blockedId, byId]);
+      return {};
+    },
     async getTask() {
       return { status: "completed" };
     },

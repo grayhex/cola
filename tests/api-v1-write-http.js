@@ -309,6 +309,7 @@ try {
       following: true,
       followedBy: true,
       friends: true,
+      blockedByMe: false,
     },
     followers: 1,
   });
@@ -326,6 +327,7 @@ try {
       following: false,
       followedBy: true,
       friends: false,
+      blockedByMe: false,
     },
     followers: 0,
   });

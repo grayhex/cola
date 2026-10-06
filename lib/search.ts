@@ -12,6 +12,7 @@ import type { JournalViewRow } from "./journal.ts";
 import { authorColumns, relationshipColumns } from "./profiles.ts";
 import { publicAuthor } from "./profile-dto.ts";
 import { CommunityError } from "./community-validation.ts";
+import { blockedEitherWay } from "./user-blocks.ts";
 const term = z
   .string()
   .trim()
@@ -424,7 +425,8 @@ export async function experienceJournalKeyset(
  * People whose name or username contains the text, newest accounts first:
  * `(created_at, id) DESC`. The legacy list is by name; a name is no stable
  * key for a cursor, and a cursor made of the registration time is the one the
- * other lists already use. Blocked people never appear. The text is required
+ * other lists already use. Blocked accounts never appear, nor do people the
+ * viewer has blocked or who blocked the viewer (#354). The text is required
  * by the caller: this is a search, not a directory.
  */
 export async function experienceUserKeyset(
@@ -449,11 +451,12 @@ export async function experienceUserKeyset(
     is_self: boolean;
     is_following: boolean;
     followed_by: boolean;
+    blocked_by_me: boolean;
     cursor_at: string;
   }>(
     `SELECT ${authorColumns},${relationshipColumns},${microseconds("u.created_at")} AS cursor_at
      FROM users u
-     WHERE NOT u.blocked AND strpos(experience_normalize(u.name||' '||u.username),experience_normalize($1::text))>0${keyset}
+     WHERE NOT u.blocked AND NOT ${blockedEitherWay("$2", "u.id")} AND strpos(experience_normalize(u.name||' '||u.username),experience_normalize($1::text))>0${keyset}
      ORDER BY u.created_at DESC,u.id DESC LIMIT $${params.length}`,
     params,
   );

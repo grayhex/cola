@@ -279,16 +279,21 @@ interface PersonRow {
   is_self: boolean;
   is_following: boolean;
   followed_by: boolean;
+  blocked_by_me: boolean;
 }
 
 export function toRelationship(
-  row: Pick<PersonRow, "is_self" | "is_following" | "followed_by">,
+  row: Pick<
+    PersonRow,
+    "is_self" | "is_following" | "followed_by" | "blocked_by_me"
+  >,
 ): Relationship {
   return {
     isSelf: row.is_self,
     following: row.is_following,
     followedBy: row.followed_by,
     friends: row.is_following && row.followed_by,
+    blockedByMe: row.blocked_by_me,
   };
 }
 

@@ -330,6 +330,8 @@ async function page(
       FROM candidates c JOIN users r ON r.id=c.id AND NOT r.blocked
       LEFT JOIN notification_settings s ON s.user_id=r.id
       WHERE r.id<>$3 AND ($4::uuid IS NULL OR r.id>$4) AND EXISTS(SELECT 1 FROM job)
+        -- A block either way (#354): the author's discovery never reaches who blocked them or whom they blocked.
+        AND NOT EXISTS(SELECT 1 FROM user_blocks ub WHERE (ub.blocker_id=r.id AND ub.blocked_id=$3) OR (ub.blocker_id=$3 AND ub.blocked_id=r.id))
         AND NOT EXISTS(SELECT 1 FROM notification_mutes m WHERE m.user_id=r.id AND ((m.kind='author' AND m.target_id=$3) OR ($6::boolean AND m.kind='ride' AND m.target_id=$7)))
         -- Already invited, or already answering: the ride is not advertised to them.
         AND NOT ($6::boolean AND (EXISTS(SELECT 1 FROM ride_invitations v WHERE v.ride_id=$7 AND v.user_id=r.id) OR EXISTS(SELECT 1 FROM ride_rsvps v WHERE v.ride_id=$7 AND v.user_id=r.id)))),
