@@ -68,7 +68,7 @@ const uploadsDirectory = () =>
   path.resolve(/*turbopackIgnore: true*/ process.env.UPLOAD_DIR || "uploads");
 
 /** The engines' failures, in the API's envelope. */
-async function throughBikes<T>(run: () => Promise<T>): Promise<T> {
+export async function throughBikes<T>(run: () => Promise<T>): Promise<T> {
   try {
     return await run();
   } catch (error) {
@@ -111,7 +111,7 @@ export const etagOfComponent = (row: ComponentRow) =>
   );
 
 /** The bicycle as its owner reads it, and its version, read in `q`. */
-async function bikeResponse(q: Queryable, owner: string, id: string) {
+export async function bikeResponse(q: Queryable, owner: string, id: string) {
   // The version first: a change in between makes the next edit 412, never a
   // silent overwrite of something the client did not see.
   const version = await bikeVersionOf(q, id);
@@ -121,7 +121,7 @@ async function bikeResponse(q: Queryable, owner: string, id: string) {
 }
 
 /** What the request holds, as the site's `bikeInput` wants it. */
-function bikeInputOf(request: BikeRequest): BikeInput {
+export function bikeInputOf(request: BikeRequest): BikeInput {
   return bikeInput.parse({
     name: request.name,
     brand: request.brand,
@@ -184,7 +184,9 @@ function patchedBike(row: BikeRow, patch: BikePatchRequest): BikeInput {
   });
 }
 
-function componentInputOf(request: BikeComponentRequest): ComponentInput {
+export function componentInputOf(
+  request: BikeComponentRequest,
+): ComponentInput {
   return componentInput.parse({
     section: request.section,
     category: request.category,
