@@ -55,6 +55,7 @@ import ResolverTimeline from "./resolver-timeline.tsx";
 import {
   ResolverCandidateCard,
   ResolverSearchReport,
+  officialSource,
   sourceLabel,
 } from "./resolver-candidates.tsx";
 const steps = ["Поиск комплектации", "Компоненты", "Детали и фото"];
@@ -1279,9 +1280,7 @@ export default function BikeWizard({
                 )}
               {result?.status === "resolved" &&
                 (result.suggestedMetadata?.manufacturerUrl ||
-                  (result.source &&
-                    result.source.adapter !== "manual-url" &&
-                    result.source.adapter !== "retailer-search")) && (
+                  (result.source && officialSource(result.source))) && (
                   <button
                     type="button"
                     className="quiet"

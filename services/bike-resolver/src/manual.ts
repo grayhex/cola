@@ -235,6 +235,9 @@ export class ManualSources {
       const adapter = this.adapters.find((a) =>
         a.allowedDomains.includes(host),
       );
+      // A page the person chose from an official result keeps the adapter that
+      // found it; a pasted address stays a pasted address.
+      const official = origin === "manufacturer" ? adapter : undefined;
       const parsed = store
         ? store.parse(doc, query)
         : host === "info.cube.eu"
@@ -284,11 +287,19 @@ export class ManualSources {
         })),
         rawSpecification: parsed.rawSpecification,
         source: {
-          manufacturer: store ? store.name : host,
+          manufacturer: store ? store.name : official ? official.brand : host,
           url: doc.url,
           fetchedAt: doc.fetchedAt,
-          adapter: store ? "store:" + store.id : "manual-url",
-          adapterVersion: store ? store.storeVersion : 1,
+          adapter: store
+            ? "store:" + store.id
+            : official
+              ? official.id
+              : "manual-url",
+          adapterVersion: store
+            ? store.storeVersion
+            : official
+              ? official.adapterVersion
+              : 1,
           extractorVersion: EXTRACTOR_VERSION,
           kind: store ? "store" : origin,
           ...(store ? { storeId: store.id } : {}),

@@ -335,16 +335,16 @@ export class SourceSearch {
     store?: RetailStore,
   ) {
     const verified: Verified[] = [];
-    let failure: Reason | undefined,
-      rejected = false;
+    let failure: Reason | undefined;
     for (const url of urls) {
       checkAbort();
       const result = await this.page(query, url, kind, store);
       if (result.verified) verified.push(result.verified);
       else if (network.has(result.failure)) failure ??= result.failure;
-      else rejected = true;
     }
-    return { verified, failure, rejected };
+    // A failure stays visible even when other pages were merely irrelevant:
+    // the page that never answered might have been the one.
+    return { verified, failure };
   }
 
   private async primary(query: BikeQuery): Promise<Outcome[]> {
@@ -407,7 +407,7 @@ export class SourceSearch {
             return make(
               r.verified.length
                 ? "ok"
-                : r.failure && !r.rejected
+                : r.failure
                   ? statusOf(r.failure)
                   : "empty",
               { verified: r.verified, pages: urls.length, reason: r.failure },
@@ -442,7 +442,7 @@ export class SourceSearch {
                 started,
                 r.verified.length
                   ? "ok"
-                  : r.failure && !r.rejected
+                  : r.failure
                     ? statusOf(r.failure)
                     : "empty",
                 { verified: r.verified, pages: urls.length, reason: r.failure },
@@ -540,14 +540,10 @@ export class SourceSearch {
         count: r.verified.length,
         total: checked.length,
       });
-      if (!r.verified.length && r.failure && !r.rejected)
+      if (!r.verified.length && r.failure)
         trace("source_failed", { host, reason: r.failure });
       return make(
-        r.verified.length
-          ? "ok"
-          : r.failure && !r.rejected
-            ? statusOf(r.failure)
-            : "empty",
+        r.verified.length ? "ok" : r.failure ? statusOf(r.failure) : "empty",
         {
           verified: r.verified,
           pages: checked.length,
@@ -585,11 +581,7 @@ export class SourceSearch {
       ).slice(0, this.limits.webPages);
       const r = await this.verify(query, urls, "web");
       return make(
-        r.verified.length
-          ? "ok"
-          : r.failure && !r.rejected
-            ? statusOf(r.failure)
-            : "empty",
+        r.verified.length ? "ok" : r.failure ? statusOf(r.failure) : "empty",
         { verified: r.verified, pages: urls.length, reason: r.failure },
       );
     } catch (e) {

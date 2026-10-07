@@ -51,11 +51,20 @@ const hang = () =>
 const refuse = (reason: "http_403" | "access_challenge") => async () => {
   throw new ResolverError("upstream_unavailable", "Refused", false, reason);
 };
+// A recorded page the site refused to serve.
+const REFUSED = "\u0000refused";
 function fakeHttp(pages: Record<string, string>) {
   const calls: string[] = [];
   const http = {
     get: vi.fn(async (url: string) => {
       calls.push(url);
+      if (pages[url] === REFUSED)
+        throw new ResolverError(
+          "upstream_unavailable",
+          "Refused",
+          false,
+          "http_403",
+        );
       // A search engine that answers with no results: web discovery is not under test.
       if (url.includes("bing.com/search") && !(url in pages))
         return {
@@ -202,6 +211,27 @@ describe("independent sources", () => {
     );
     const result = await run(() => search.stores(query));
     expect(result.status).toBe("not_found");
+  });
+
+  it("never calls a source empty when one of its pages did not answer", async () => {
+    const refused = "https://www.alpha.test/p/50",
+      foreign = "https://www.alpha.test/p/51";
+    const { search } = setup(
+      [fakeStore("alpha", { discover: async () => [refused, foreign] })],
+      {
+        [refused]: REFUSED,
+        [foreign]: "<h1>Zed Gravel 2024</h1><p>No specification published</p>",
+      },
+    );
+    const result = await run(() => search.stores(query));
+    // The other page was merely unreadable; the refused one might have been it.
+    expect(result.status).toBe("upstream_unavailable");
+    if (result.status === "ambiguous" || result.status === "resolved") return;
+    expect(result.retryable).toBe(true);
+    expect(result.search?.sources.find((s) => s.id === "alpha")).toMatchObject({
+      status: "blocked",
+      reason: "http_403",
+    });
   });
 
   it("lists a store without search or with its flag off, and never asks it for anything", async () => {
@@ -618,6 +648,128 @@ describe("through the HTTP API", () => {
         retryable: true,
       });
       expect(discover).not.toHaveBeenCalled();
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("an id the registry forgot never turns into the adapter's fresh list", async () => {
+    const official = adapterStub({
+      discover: async () => [
+        {
+          brand: "Giant",
+          canonicalName: "Revolt A",
+          url: "https://www.giant-bicycles.com/a",
+          year: 2024,
+        },
+        {
+          brand: "Giant",
+          canonicalName: "Revolt B",
+          url: "https://www.giant-bicycles.com/b",
+          year: 2024,
+        },
+      ],
+    });
+    const { app } = api([fakeStore("alpha")], {}, [official]);
+    try {
+      // After a restart a store candidate's id is nobody's; the manufacturer
+      // adapter does not know it and must not answer with another list.
+      const result = (
+        await post(app, {
+          brand: "Giant",
+          model: "Revolt",
+          trim: null,
+          year: 2024,
+          candidateId: candidateIdOf("https://www.alpha.test/p/gone"),
+        })
+      ).json();
+      expect(result).toMatchObject({
+        status: "not_found",
+        reason: "candidate_expired",
+        retryable: true,
+      });
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("an official page the adapter still offers is found again by its id", async () => {
+    const url = "https://www.giant-bicycles.com/revolt-2024";
+    const official = adapterStub({
+      discover: async () => [
+        {
+          brand: "Giant",
+          canonicalName: "Revolt 2024",
+          url,
+          year: 2024,
+        },
+      ],
+      fetch: async (c) => ({
+        url: c.url,
+        body: page("Giant Revolt 2024"),
+        hash: "h",
+        fetchedAt: "2026-10-07T00:00:00Z",
+      }),
+      parse: async (doc) => parseDocument(doc),
+    });
+    const { app } = api([fakeStore("alpha")], {}, [official]);
+    try {
+      const result = (
+        await post(app, {
+          brand: "Giant",
+          model: "Revolt",
+          trim: null,
+          year: 2024,
+          candidateId: candidateIdOf(url),
+        })
+      ).json();
+      expect(result.status).toBe("resolved");
+      expect(result.source).toMatchObject({ adapter: "giant" });
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("a chosen official page keeps the adapter that found it; a pasted one stays pasted", async () => {
+    const url = "https://www.giant-bicycles.com/revolt-2024";
+    const official = adapterStub({
+      adapterVersion: 7,
+      discover: async () => [
+        { brand: "Giant", canonicalName: "Revolt", url, year: 2024 },
+      ],
+      parse: async (doc) => parseDocument(doc),
+    });
+    const { app } = api([fakeStore("alpha")], { [url]: page("Revolt 2024") }, [
+      official,
+    ]);
+    const request = { brand: "Giant", model: "Revolt", trim: null, year: 2024 };
+    try {
+      const offered = (
+        await post(app, { ...request, chooseCandidates: true })
+      ).json();
+      expect(offered.status).toBe("ambiguous");
+      expect(offered.candidates[0]).toMatchObject({ kind: "manufacturer" });
+      const chosen = (
+        await post(app, {
+          ...request,
+          candidateId: offered.candidates[0].candidateId,
+        })
+      ).json();
+      expect(chosen.status).toBe("resolved");
+      // The label and the stored provenance say "official", not "pasted page".
+      expect(chosen.source).toMatchObject({
+        kind: "manufacturer",
+        adapter: "giant",
+        adapterVersion: 7,
+        manufacturer: "Giant",
+      });
+      const pasted = (
+        await post(app, { ...request, sourceUrl: url }, "/v1/resolve-url")
+      ).json();
+      expect(pasted.source).toMatchObject({
+        kind: "manual",
+        adapter: "manual-url",
+      });
     } finally {
       await app.close();
     }

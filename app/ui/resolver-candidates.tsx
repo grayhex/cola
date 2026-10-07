@@ -7,6 +7,15 @@ export type ResolverCandidate = Choices["candidates"][number];
 export type ResolverSearchSummary = NonNullable<Choices["search"]>;
 type Source = Extract<ResolveResult, { status: "resolved" }>["source"];
 
+// A page of the manufacturer itself (never a store, a search hit or a pasted
+// address). Old previews have no `kind`; their adapter id tells the same.
+export function officialSource(source: Source) {
+  return source.kind
+    ? source.kind === "manufacturer"
+    : source.adapter !== "manual-url" &&
+        source.adapter !== "retailer-search" &&
+        !source.adapter.startsWith("store:");
+}
 // Where a page comes from, in words a rider understands. Old previews have no
 // `kind`; their adapter id still tells official pages from pasted ones.
 export function sourceLabel(source: Source) {

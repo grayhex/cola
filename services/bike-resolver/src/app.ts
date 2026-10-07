@@ -125,7 +125,17 @@ export function buildApp(
           providers.push({
             id: adapter.id,
             kind: "manufacturer",
-            resolve: () => resolver.resolve(request, id),
+            resolve: async () => {
+              const result = await resolver.resolve(request, id);
+              // The adapter can re-find an official page by its id. A page it
+              // no longer offers is gone: the person is not handed a new list
+              // in place of the one they chose from.
+              return candidateId &&
+                result.status === "ambiguous" &&
+                !result.candidates.some((c) => c.candidateId === candidateId)
+                ? expired(query)
+                : result;
+            },
           });
         // A supplied fallback is tried after official discovery; explicit URL actions skip discovery.
         if (sourceUrl)
