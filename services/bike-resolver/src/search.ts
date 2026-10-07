@@ -22,7 +22,7 @@ import {
 import type { ManufacturerHttpClient } from "./http.js";
 import { identityConflict } from "./identity.js";
 import type { ManualSources } from "./manual.js";
-import { partialScore } from "./matcher.js";
+import { partialScore, requestInName } from "./matcher.js";
 import { normalize } from "./normalize.js";
 import { webLinks } from "./retailer-search.js";
 import type { SettingsStore, StoreId } from "./settings.js";
@@ -174,15 +174,11 @@ function candidateOf(
 }
 // Official page whose identity is the request: nothing weaker needs consulting.
 function exact(query: BikeQuery, c: BikeCandidate) {
-  const words = new Set(
-    normalize(
-      (official(c.kind) ? query.brand + " " : "") + c.canonicalName,
-    ).split(" "),
-  );
   return (
-    normalize([query.brand, query.model, query.trim].filter(Boolean).join(" "))
-      .split(" ")
-      .every((w) => words.has(w)) &&
+    requestInName(
+      query,
+      (official(c.kind) ? query.brand + " " : "") + c.canonicalName,
+    ) &&
     (query.year === null || c.year === query.year)
   );
 }

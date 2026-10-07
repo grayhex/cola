@@ -14,7 +14,9 @@ import { RoseAdapter } from "../src/adapters/rose.js";
 import { SavaAdapter, savaName } from "../src/adapters/sava.js";
 import { ShulzAdapter } from "../src/adapters/shulz.js";
 import { TwitterAdapter, twitterName } from "../src/adapters/twitter.js";
-import { scoreCandidate } from "../src/matcher.js";
+import { partialScore, scoreCandidate } from "../src/matcher.js";
+import { identityConflict } from "../src/identity.js";
+import { createStores } from "../src/stores/index.js";
 import { absentComponent } from "../src/component-identity.js";
 import { parseDocument } from "../src/extract.js";
 import {
@@ -613,6 +615,78 @@ describe("TWITTER: the official US shop, one choice per build", () => {
   });
 });
 
+describe("the direct resolver keeps the kind of source an adapter has", () => {
+  const twitter = () => {
+    const { http } = fixtureRoutes((u) => {
+      if (u.pathname === "/search/suggest.json") {
+        const id = "twitter-suggest-" + slugOf(u.searchParams.get("q"));
+        return manifest.some((e) => e.id === id)
+          ? { entry: entry(id) }
+          : undefined;
+      }
+      const page = manifest.find(
+        (e) =>
+          e.adapter === "twitter" &&
+          e.kind === "bike" &&
+          new URL(e.url).pathname === u.pathname,
+      );
+      return page ? { entry: page } : undefined;
+    });
+    return new Resolver(
+      [new TwitterAdapter(http)],
+      new MemoryCache(),
+      pino({ level: "silent" }),
+    );
+  };
+  it("labels the choices and the chosen page of a distributor, without a search", async () => {
+    const resolver = twitter();
+    const query = ask("TWITTER", "Cyclone 3rd", null);
+    const offered = await resolver.resolve(query);
+    if (offered.status !== "ambiguous") throw Error("expected choices");
+    expect(offered.candidates.length).toBeGreaterThan(3);
+    expect(offered.candidates.every((c) => c.kind === "distributor")).toBe(
+      true,
+    );
+    const wanted = offered.candidates.find((c) =>
+      /\(ET\)/.test(c.canonicalName),
+    );
+    const chosen = await resolver.resolve({
+      ...query,
+      candidateId: wanted!.candidateId,
+    });
+    if (chosen.status !== "resolved") throw Error("expected a result");
+    expect(chosen.source).toMatchObject({
+      adapter: "twitter",
+      kind: "distributor",
+    });
+  });
+  it("an adapter without a declared kind is the manufacturer's own site", async () => {
+    const roseHttp = fixtureRoutes((u) => {
+      const p = decodeURI(u.pathname);
+      const id =
+        p === "/sitemap.xml"
+          ? "rose-sitemap"
+          : p === "/bikes/gravel/adventure/backroad"
+            ? "rose-family-backroad"
+            : manifest.find((e) => e.adapter === "rose" && e.url.endsWith(p))
+                ?.id;
+      return id ? { entry: entry(id) } : undefined;
+    }).http;
+    const resolver = new Resolver(
+      [new RoseAdapter(roseHttp)],
+      new MemoryCache(),
+      pino({ level: "silent" }),
+    );
+    const query = ask("ROSE", "Backroad Unsupported", null);
+    const offered = await resolver.resolve(query);
+    if (offered.status !== "ambiguous")
+      throw Error("expected choices: " + JSON.stringify(offered).slice(0, 300));
+    expect(offered.candidates.every((c) => c.kind === "manufacturer")).toBe(
+      true,
+    );
+  });
+});
+
 describe("the registry", () => {
   const stub = {
     get: async () => {
@@ -757,6 +831,122 @@ describe("the matcher knows one model by its spellings", () => {
     ).toBeGreaterThan(0);
     expect(score("Backroad", "Backroad AL", "Unsupported")).toBe(0);
   });
+});
+
+describe("the same spellings pass every filter of the search, not only discovery", () => {
+  const brandName = (brand: string, name: string) => brand + " " + name;
+  it("scores a run-together or spaced model as the page's own name", () => {
+    const q = (brand: string, model: string) => ({
+      brand,
+      model,
+      trim: null,
+      year: null,
+    });
+    // One joined word has no word in common with the spaced name; it is still
+    // the same model, and both directions agree.
+    expect(
+      partialScore(
+        q("ROSE", "BlackLava"),
+        brandName("ROSE", "Black Lava 2"),
+        null,
+      ),
+    ).toBeGreaterThan(0);
+    expect(
+      partialScore(
+        q("SHULZ", "BoysDontCry"),
+        brandName("SHULZ", "Boys Don’t Cry"),
+        null,
+      ),
+    ).toBeGreaterThan(0);
+    expect(
+      partialScore(
+        q("ROSE", "Black Lava 2"),
+        brandName("ROSE", "BlackLava 2"),
+        null,
+      ),
+    ).toBeGreaterThan(0);
+    // The joined word is not a licence for anything else.
+    expect(
+      partialScore(
+        q("SHULZ", "BoysDontCry"),
+        brandName("SHULZ", "Wanderer"),
+        null,
+      ),
+    ).toBe(0);
+    expect(
+      partialScore(
+        q("ROSE", "BlackLava"),
+        brandName("ROSE", "Backroad AL"),
+        null,
+      ),
+    ).toBe(0);
+  });
+  it("does not call the same bike another one when judging a chosen page", () => {
+    const q = (model: string) => ({
+      brand: "SHULZ",
+      model,
+      trim: null,
+      year: null,
+    });
+    for (const model of ["BoysDontCry", "Boys Don't Cry", "boys dont cry"])
+      expect(identityConflict(q(model), "SHULZ Boys Don’t Cry", null)).toBe(
+        false,
+      );
+    expect(identityConflict(q("BoysDontCry"), "SHULZ Wanderer", null)).toBe(
+      true,
+    );
+    // A stated different year stays a conflict whatever the spelling.
+    expect(
+      identityConflict(
+        { ...q("BoysDontCry"), year: 2024 },
+        "SHULZ Boys Don’t Cry",
+        2025,
+      ),
+    ).toBe(true);
+  });
+  for (const model of ["Boys Don't Cry", "BoysDontCry"])
+    it(`${model}: an official page is offered as sure, no store is asked, and the chosen page is not flagged`, async () => {
+      const { http } = fixtureRoutes((u) => {
+        if (u.pathname === "/catalog/all/bikes")
+          return { entry: entry("shulz-catalog-all-bikes") };
+        const page = manifest.find(
+          (e) =>
+            e.adapter === "shulz" &&
+            e.kind === "bike" &&
+            e.url.endsWith(u.pathname),
+        );
+        return page ? { entry: page } : undefined;
+      });
+      const settings = new SettingsStore();
+      const a = new ShulzAdapter(http);
+      const stores = createStores();
+      const search = new SourceSearch({
+        adapters: [a],
+        http,
+        manual: new ManualSources(http, [a], settings, stores),
+        settings,
+        stores,
+        registry: new CandidateRegistry(),
+      });
+      const query = ask("SHULZ", model, null);
+      const run = <T>(work: () => Promise<T>) =>
+        withResolution(new AbortController().signal, undefined, work);
+      const offered = await run(() => search.all(query));
+      if (offered.status !== "ambiguous")
+        throw Error("expected a choice: " + JSON.stringify(offered));
+      expect(offered.candidates.map((c) => c.canonicalName)).toEqual([
+        "Boys Don’t Cry",
+      ]);
+      // The official page carries the request: nothing weaker needs asking.
+      expect(offered.search?.sources.some((s) => s.kind === "store")).toBe(
+        false,
+      );
+      const chosen = await run(() =>
+        search.select(query, offered.candidates[0].candidateId!),
+      );
+      if (chosen?.status !== "resolved") throw Error("expected a result");
+      expect(chosen.warnings ?? []).not.toContain("identity_mismatch");
+    });
 });
 
 describe("a request for an unknown model never claims an exact answer", () => {

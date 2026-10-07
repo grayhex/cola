@@ -22,6 +22,22 @@ export function modelWordsMatch(model: string, actual: string) {
     model.split(" ").every((t) => words.has(t)) || joinedRun(model, actual)
   );
 }
+// The words of a request (brand and trim one by one, the model in any of its
+// spellings) are all in a name. Every filter of a search asks the same thing,
+// so a request typed "BoysDontCry" is not a different bike for any of them.
+export function requestInName(query: BikeQuery, name: string) {
+  const text = normalize(name),
+    words = new Set(text.split(" ")),
+    wanted = (value: string | null) =>
+      normalize(value ?? "")
+        .split(" ")
+        .filter(Boolean);
+  return (
+    wanted(query.brand).every((w) => words.has(w)) &&
+    modelWordsMatch(normalize(query.model), text) &&
+    wanted(query.trim).every((w) => words.has(w))
+  );
+}
 export const MATCH_THRESHOLD = 0.95;
 export const MATCH_MARGIN = 0.06;
 export const EXPLICIT_MATCH_THRESHOLD = 0.88;
@@ -99,7 +115,10 @@ export function partialScore(
   )
     return 0;
   const model = normalize(query.model).split(" ").filter(Boolean);
-  const matches = model.filter((w) => words.has(w)).length;
+  // A model written run together or spaced is the whole model, not a fragment.
+  const matches = modelWordsMatch(normalize(query.model), text)
+    ? model.length
+    : model.filter((w) => words.has(w)).length;
   if (!matches || matches / model.length < 0.5) return 0;
   const trim = normalize(query.trim || "")
     .split(" ")
