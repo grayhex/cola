@@ -2505,6 +2505,294 @@ export type BikeComponentPatchRequest = z.infer<
   typeof bikeComponentPatchRequestSchema
 >;
 
+// The dictionaries of the site and the wizard of a new bicycle (#57 of the
+// Android client): what the site's catalog says, the search of a build by the
+// Resolver, and the creation of a bicycle with the build the person has
+// checked. The engines are the site's (`getSite`, `bikeResolverClient`,
+// `createWizardBike`); the names are the API's, in camelCase, and what the
+// Resolver returns is shaped here once, so a client carries no parser of it.
+
+const dictionaryOption = z.strictObject({
+  key: z.string().describe("Ключ значения: его принимают запись и фильтры."),
+  name: z.string().describe("Название для людей."),
+});
+
+export const siteCatalogSchema = named(
+  "SiteCatalog",
+  "Справочники сайта, по которым заполняются велосипед и его комплектация. `version` растёт с каждым сохранением справочников в админке; тип велосипеда (`classification`) описан кодом сайта и меняется вместе с API. Значения не закрывают ввод: сайт принимает и свои названия марок, моделей и компонентов, а старые значения остаются в записях как есть.",
+  z.strictObject({
+    version: z
+      .int()
+      .describe(
+        "Версия справочников; с ней клиент решает, обновлять ли копию.",
+      ),
+    classification: z.strictObject({
+      categories: z.array(
+        z.strictObject({
+          key: z.string(),
+          name: z.string(),
+          subtypes: z
+            .array(dictionaryOption)
+            .describe("Подтипы этой категории; других подтипов она не имеет."),
+        }),
+      ),
+      suspensions: z.array(dictionaryOption),
+      constructions: z.array(dictionaryOption),
+      uses: z.array(dictionaryOption),
+      maxUses: z.int().describe("Сколько назначений можно выбрать."),
+    }),
+    purposes: z
+      .array(z.strictObject({ id: z.string(), name: z.string() }))
+      .describe("Включённые назначения сайта (ключи поля `purposes`)."),
+    brands: z
+      .array(
+        z.strictObject({
+          name: z.string(),
+          models: z
+            .array(z.string())
+            .describe("Модели марки по всем типам справочника, без повторов."),
+        }),
+      )
+      .describe(
+        "Марки и модели велосипедов сайта. Это не список марок, которые умеет распознавать Resolver.",
+      ),
+    manufacturers: z.array(z.string()).describe("Производители компонентов."),
+    sizes: z.array(z.string()).describe("Размеры рам."),
+    components: z.strictObject({
+      groups: z
+        .array(
+          z.strictObject({
+            id: z.string(),
+            name: z.string(),
+            categories: z.array(z.string()),
+          }),
+        )
+        .describe("Группы компонентов в порядке сайта и их категории."),
+      buildCategories: z.array(z.string()),
+      accessoryCategories: z.array(z.string()),
+      names: z
+        .array(
+          z.strictObject({
+            category: z.string(),
+            names: z.array(z.string()),
+          }),
+        )
+        .describe("Названия компонентов по категориям."),
+    }),
+  }),
+);
+
+export const bikeResolutionRequestSchema = named(
+  "BikeResolutionRequest",
+  "Что искать: марка и модель, год и комплектация по желанию. Без `sourceUrl` и `candidateId` сервер ищет комплектацию сам; `chooseCandidates: true` просит при нескольких вариантах вернуть их список (`ambiguous`), а не выбирать за человека. `candidateId` — выбор одного из вариантов, выданных сервером ранее, `sourceUrl` — страница магазина или производителя. Не больше одного из `sourceUrl`, `candidateId`; `chooseCandidates` с ними не сочетается.",
+  z
+    .strictObject({
+      brand: z.string().trim().min(1).max(60),
+      model: z.string().trim().min(1).max(100),
+      trim: z.string().trim().max(100).nullable().optional(),
+      year: z.int().min(1900).max(2100).nullable().optional(),
+      sourceUrl: z
+        .url({ protocol: /^https?$/ })
+        .max(2048)
+        .optional(),
+      candidateId: z
+        .string()
+        .regex(/^[a-f0-9]{64}$/)
+        .optional(),
+      chooseCandidates: z.boolean().optional(),
+    })
+    .refine(
+      (value) =>
+        [value.sourceUrl, value.candidateId].filter(Boolean).length +
+          (value.chooseCandidates ? 1 : 0) <=
+        1,
+      "Нужно что-то одно из: sourceUrl, candidateId, chooseCandidates",
+    ),
+);
+
+const resolutionQuery = z.strictObject({
+  brand: z.string(),
+  model: z.string(),
+  trim: z.string().nullable(),
+  year: z.int().nullable(),
+});
+
+const resolutionQuality = z.strictObject({
+  level: z
+    .enum(["complete", "partial"])
+    .describe("`complete` — спецификация прочитана полностью."),
+  recognizedComponents: z.int().describe("Сколько компонентов распознано."),
+  coverage: z
+    .number()
+    .describe("Доля характеристик страницы, которые распознаны (0–1)."),
+});
+
+const resolutionSourceKind = z.enum([
+  "manufacturer",
+  "distributor",
+  "archive",
+  "store",
+  "web",
+  "manual",
+]);
+
+export const bikeResolutionCandidateSchema = named(
+  "BikeResolutionCandidate",
+  "Один предложенный вариант комплектации: конкретная страница одного источника. Выбор относится к нему: `candidateId` называется в следующем запросе, детали разных вариантов не смешиваются.",
+  z.strictObject({
+    candidateId: z
+      .string()
+      .nullable()
+      .describe(
+        "Идентификатор варианта для выбора. Нет — вариант выбирают по `url` (`sourceUrl`).",
+      ),
+    name: z.string().describe("Название модели по странице."),
+    brand: z.string(),
+    year: z
+      .int()
+      .nullable()
+      .describe("Год по странице; null — страница года не называет."),
+    url: z.string(),
+    sourceHost: z.string().nullable(),
+    sourceKind: resolutionSourceKind.nullable(),
+    sourceName: z
+      .string()
+      .nullable()
+      .describe("Название магазина, если источник — магазин."),
+    drivetrain: z
+      .string()
+      .nullable()
+      .describe("Кратко: навеска, чтобы отличить варианты одной модели."),
+    quality: resolutionQuality.nullable(),
+    warnings: z
+      .array(z.string())
+      .describe(
+        "Предупреждения: `identity_mismatch`, `conflicting_sources`, `multiple_builds`.",
+      ),
+    selectable: z
+      .boolean()
+      .describe("Вариант можно выбрать без расхождения с запросом."),
+    otherHosts: z
+      .array(z.string())
+      .describe("Та же модель на других страницах (не другая версия)."),
+  }),
+);
+
+export const bikeResolutionComponentSchema = named(
+  "BikeResolutionComponent",
+  "Черновик компонента, который сервер получил из спецификации источника, в том виде, в каком его принимает запись комплектации.",
+  z.strictObject({
+    section: z.enum(["build", "accessories"]),
+    category: z.string(),
+    name: z.string(),
+    notes: z.string(),
+    groupId: z
+      .string()
+      .describe("Группа справочника или пустая строка, если группы нет."),
+  }),
+);
+
+export const bikeResolutionBuildSchema = named(
+  "BikeResolutionBuild",
+  "Найденная комплектация: что прочитано со страницы источника, чтобы человек проверил это до сохранения.",
+  z.strictObject({
+    name: z.string().describe("Название модели по странице."),
+    brand: z.string(),
+    model: z.string(),
+    trim: z.string().nullable(),
+    year: z.int().nullable(),
+    sourceYear: z
+      .int()
+      .nullable()
+      .describe("Год, названный страницей источника."),
+    sourceUrl: z.string(),
+    sourceHost: z.string().nullable(),
+    sourceKind: resolutionSourceKind.nullable(),
+    sourceName: z.string().nullable(),
+    manualSelection: z
+      .boolean()
+      .describe("Страницу выбрал человек (ссылкой); совпадение не проверено."),
+    identityMismatch: z
+      .boolean()
+      .describe("Источник описывает другую модель, чем запрос."),
+    yearMismatch: z
+      .boolean()
+      .describe("Год источника отличается от года в запросе."),
+    warnings: z.array(z.string()),
+    quality: resolutionQuality.nullable(),
+    components: z.array(bikeResolutionComponentSchema),
+    unrecognized: z
+      .array(z.strictObject({ label: z.string(), value: z.string() }))
+      .describe("Характеристики страницы, которые не удалось разобрать."),
+    suggested: z.strictObject({
+      weightKg: z.number().nullable(),
+      color: z.string().nullable(),
+      sizes: z.string().nullable(),
+      wheelSize: z.string().nullable(),
+      manufacturerUrl: z.string().nullable(),
+    }),
+  }),
+);
+
+export const bikeResolutionSchema = named(
+  "BikeResolution",
+  "Итог поиска комплектации. `resolved` — найдена одна комплектация (`build`), `previewId` нужен при создании велосипеда, чтобы сохранить источник и заводскую спецификацию; `ambiguous` — варианты (`candidates`), человек выбирает сам; остальное — исход без комплектации (HTTP 200, не ошибка запроса): `not_found`, `unsupported_brand`, `upstream_unavailable`, `parse_error`; тогда `reason` и `retryable` говорят, что делать. Во всех случаях можно продолжить вручную.",
+  z.strictObject({
+    status: z.enum([
+      "resolved",
+      "ambiguous",
+      "not_found",
+      "unsupported_brand",
+      "upstream_unavailable",
+      "parse_error",
+    ]),
+    query: resolutionQuery,
+    cached: z.boolean().describe("Ответ взят из кэша Resolver."),
+    retryable: z
+      .boolean()
+      .describe("Имеет смысл повторить тот же запрос позже."),
+    reason: z
+      .string()
+      .nullable()
+      .describe(
+        "Причина исхода: `timeout`, `http_403`, `access_challenge`, `candidate_expired`, `not_complete_bike`, `connection_failed` и т. п.",
+      ),
+    previewId: id
+      .nullable()
+      .describe(
+        "Предпросмотр найденной комплектации (только `resolved`); живёт два часа.",
+      ),
+    previewExpiresAt: instant.nullable(),
+    candidates: z.array(bikeResolutionCandidateSchema),
+    build: bikeResolutionBuildSchema.nullable(),
+    sourcesChecked: z
+      .strictObject({
+        answered: z.int(),
+        asked: z.int(),
+        complete: z
+          .boolean()
+          .describe("Поиск был полным; иначе выдача ограничена."),
+      })
+      .nullable()
+      .describe("Сколько источников проверено (для вариантов и отказов)."),
+  }),
+);
+
+export const bikeWizardRequestSchema = named(
+  "BikeWizardRequest",
+  "Создание велосипеда с проверенной комплектацией. `bike` — как в `BikeRequest`, но `name` можно не называть: тогда это марка, модель, версия и год. `components` — комплектация целиком, как человек её проверил: сервер ничего не добавляет к ней. `previewId` из `BikeResolution` сохраняет источник и заводскую спецификацию; без него велосипед создаётся без привязки к источнику. `identityConfirmed: true` нужен, если модель или год источника отличаются от велосипеда. Заголовок `Idempotency-Key` обязателен.",
+  z.strictObject({
+    previewId: id.nullable().optional(),
+    identityConfirmed: z.boolean().optional(),
+    bike: z.strictObject({
+      ...bikeWriteShape,
+      name: bikeText(100).optional(),
+      isPublic: z.boolean(),
+    }),
+    components: z.array(bikeComponentRequestSchema).max(200),
+  }),
+);
+
 // Writing the journal (#347, W3): an entry of one's own bicycle and its photos.
 // The rules are the site's (`journalInput`, `saveJournal`); the status and the
 // audience are named in every creation and never implied.

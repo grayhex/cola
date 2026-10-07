@@ -992,6 +992,114 @@ const photoBody = {
     ),
   ),
 };
+/**
+ * The wizard of a new bicycle (#57 of the Android client): the dictionaries of
+ * the site, the search of a build and the creation with the build the person
+ * has checked.
+ */
+function withWizard(document: Json) {
+  const paths = document.paths as Record<string, Json>;
+  const security = [{ cookieSession: [] }, { bearerAuth: [] }];
+  paths["/catalog"] = {
+    get: {
+      operationId: "getSiteCatalog",
+      tags: ["Bikes"],
+      summary: "Справочники сайта",
+      description:
+        "Справочники, по которым заполняются велосипед и его комплектация: типы и подтипы, признаки, марки и модели, производители, размеры рам, группы, категории и названия компонентов, назначения. Без входа, одинаково для всех; заголовки входа не читаются. Значения подсказывают, а не запирают ввод: сайт принимает и свои названия, старые значения в записях остаются. `version` растёт с каждым сохранением справочников в админке. Ответ свеж минуту (`Cache-Control: public, max-age=60`), затем запрос с `If-None-Match` получает 304 без тела, если ничего не изменилось. Марки Resolver в справочник не входят: что он умеет распознавать, говорит исход поиска.",
+      security: [],
+      parameters: [
+        {
+          name: "If-None-Match",
+          in: "header",
+          required: false,
+          description: "`ETag` прошлого ответа: без изменений ответ — 304.",
+          schema: { type: "string" },
+        },
+      ],
+      responses: {
+        "200": {
+          description: "Справочники сайта.",
+          headers: {
+            ...requestIdHeader,
+            ETag: {
+              description: "Валидатор этого ответа для `If-None-Match`.",
+              schema: { type: "string" },
+            },
+            "Cache-Control": {
+              description: "`public, max-age=60`.",
+              schema: { type: "string" },
+            },
+          },
+          content: json("SiteCatalog"),
+        },
+        "304": {
+          description: "Справочники не изменились: тела нет, `ETag` тот же.",
+          headers: {
+            ...requestIdHeader,
+            ETag: {
+              description: "Тот же валидатор.",
+              schema: { type: "string" },
+            },
+          },
+        },
+        "500": shared("InternalError"),
+      },
+    },
+  };
+  paths["/bike-resolutions"] = {
+    post: {
+      operationId: "resolveBike",
+      tags: ["Bikes"],
+      summary: "Найти комплектацию велосипеда",
+      description:
+        "Тот же поиск и разбор, что в мастере сайта: производитель, затем подходящие магазины. Запрос может идти до полутора минут; клиент показывает ожидание и даёт его прервать (разрыв соединения останавливает поиск). Исходы поиска — ответ 200 со `status`: `resolved` (комплектация в `build`, `previewId` для создания), `ambiguous` (варианты в `candidates`: человек выбирает сам, следующий запрос называет `candidateId`, а не запускает новый поиск), `not_found`, `unsupported_brand`, `upstream_unavailable`, `parse_error`. Ссылка `sourceUrl` распознаётся тем же разбором и ограничена настройками Resolver. Бюджет — 30 поисков за окно, общий с сайтом (429 с `Retry-After`).",
+      security,
+      requestBody: requestBody("BikeResolutionRequest"),
+      responses: {
+        "200": success("Итог поиска.", "BikeResolution"),
+        "400": failure("Тело не подходит, либо cookie вместе с Authorization."),
+        "401": failure(
+          "Нет входа, сессия или токен недействительны, токен доступа истёк (`token_expired`) либо схема Authorization не поддерживается.",
+        ),
+        "403": failure(
+          "Cookie-запрос не с адреса сайта (нужен заголовок `Origin`).",
+        ),
+        "413": failure("Тело больше 4096 байт."),
+        "415": failure("Тело не `application/json`."),
+        "429": failure(
+          "Слишком много поисков; секунды до конца окна — в `Retry-After`.",
+        ),
+        "500": shared("InternalError"),
+      },
+    },
+  };
+  paths["/bike-wizard/bikes"] = {
+    post: {
+      operationId: "createBikeWithBuild",
+      tags: ["Bikes"],
+      summary: "Создать велосипед с проверенной комплектацией",
+      description:
+        "Создаёт велосипед и его комплектацию одной операцией, как мастер сайта: `components` — то, что человек проверил и исправил, сервер ничего не добавляет. `previewId` из `BikeResolution` сохраняет источник и заводскую спецификацию; он действует два часа и принадлежит тому, кто искал (иначе 409, `details.path` = `previewId`). Если модель или год источника отличаются от велосипеда, нужно `identityConfirmed: true` (иначе 409, `details.path` = `identityConfirmed`). Заголовок `Idempotency-Key` (UUID) обязателен: повтор после потерянного ответа отдаёт тот же велосипед (`Idempotency-Replayed: true`), а не второй; тот же ключ с другим телом — 409. Публикация требует подтверждённой почты (403 `email_verification_required`), приватный велосипед — нет. Не больше 20 велосипедов на человека (409). Бюджет создания общий с `POST /bikes`. Тело — до 262144 байт (до 200 компонентов). Фото загружаются отдельно.",
+      security,
+      parameters: [idempotencyHeader],
+      requestBody: requestBody("BikeWizardRequest"),
+      responses: {
+        "201": {
+          description: "Велосипед создан: карточка владельца.",
+          headers: bikeEtag,
+          content: json("Bike"),
+        },
+        ...bikeFailures({
+          "409": failure(
+            "Предпросмотр устарел (`previewId`), нужно подтверждение отличий (`identityConfirmed`), `Idempotency-Key` уже использован с другим телом либо велосипедов уже 20.",
+          ),
+        }),
+      },
+    },
+  };
+}
+
 function withBikePhotos(document: Json) {
   const paths = document.paths as Record<string, Json>;
   const security = [{ cookieSession: [] }, { bearerAuth: [] }];
@@ -3250,6 +3358,7 @@ export function buildOpenApiDocument(origin: string = publicOrigin()): Json {
   withChat(document);
   withPlanning(document);
   withBikeWrites(document);
+  withWizard(document);
   withBikePhotos(document);
   withJournalWrites(document);
   withAccount(document);

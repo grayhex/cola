@@ -16,6 +16,22 @@ export const wizardInput = z.object({
   components: z.array(componentInput).max(200),
 });
 
+/**
+ * The source describes another model or another year than the bicycle being
+ * saved: the person must say that this build is still the one they want.
+ */
+export function needsIdentityConfirmation(
+  factory: Pick<ResolvedType, "warnings" | "query" | "sourceYear"> | null,
+  year: number,
+) {
+  return (
+    !!factory &&
+    (!!factory.warnings?.includes("identity_mismatch") ||
+      (factory.query?.year != null && factory.query.year !== year) ||
+      (factory.sourceYear != null && factory.sourceYear !== year))
+  );
+}
+
 export async function createWizardBike(
   q: Queryable,
   owner: string,
@@ -59,11 +75,7 @@ export async function createWizardBike(
     factory = resolved;
   }
   if (
-    (factory?.warnings?.includes("identity_mismatch") ||
-      (factory?.query?.year != null &&
-        factory.query.year !== input.bike.year) ||
-      (factory?.sourceYear != null &&
-        factory.sourceYear !== input.bike.year)) &&
+    needsIdentityConfirmation(factory, input.bike.year) &&
     !input.identityConfirmed
   )
     throw new Error("IDENTITY_CONFIRMATION_REQUIRED");
