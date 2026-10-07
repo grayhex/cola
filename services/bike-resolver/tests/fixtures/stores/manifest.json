@@ -244,7 +244,10 @@
     "reducedSha256": "5dcff2cd8f1a70d72c5aea57cfafa961e94b0bffb115c2949af9a902827db667",
     "reducedBytes": 402,
     "reduction": {
-      "xmlKeep": "_productos_\\d+_eng_bikeinn\\.xml$",
+      "xmlKeep": [
+        "_productos_1_eng_bikeinn.xml",
+        "_productos_2_eng_bikeinn.xml"
+      ],
       "unrelatedEntries": 0
     },
     "origin": {
@@ -263,7 +266,7 @@
     "reducedSha256": "d751f1b10059b1c12898a8dfc8cd86c727902425e08fa09505406c3dd941bb5b",
     "reducedBytes": 48204,
     "reduction": {
-      "xmlKeep": "-(bike|frame)/\\d+/p$",
+      "xmlKeep": ["-bike/", "-frame/"],
       "unrelatedEntries": 8
     },
     "origin": {
@@ -282,7 +285,7 @@
     "reducedSha256": "bf0e7494cb5177f7b64f6726394d95be182ffb655a07959cb19c0773ab1994ff",
     "reducedBytes": 14294,
     "reduction": {
-      "xmlKeep": "-(bike|frame)/\\d+/p$",
+      "xmlKeep": ["-bike/", "-frame/"],
       "unrelatedEntries": 8
     },
     "origin": {

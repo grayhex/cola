@@ -57,8 +57,12 @@ const rawSha256 = sha256(body);
 let reduced: string;
 const rule: Record<string, unknown> = {};
 if (args.has("xml-keep")) {
-  // Sitemaps: keep the entries a test is about plus a few unrelated ones.
-  const keep = new RegExp(args.get("xml-keep")!),
+  // Sitemaps: keep the entries whose address contains one of the literal
+  // fragments (never a pattern built from an argument) plus a few unrelated ones.
+  const fragments = args
+      .get("xml-keep")!
+      .split("|")
+      .filter((fragment) => fragment),
     extra = Number(args.get("xml-extra") ?? 8);
   const index = /<sitemapindex/.test(body),
     tag = index ? "sitemap" : "url";
@@ -68,7 +72,7 @@ if (args.has("xml-keep")) {
   let others = 0;
   const kept = entries.filter((e) => {
     const loc = e.match(/<loc>\s*([^<\s]+)\s*<\/loc>/)?.[1] ?? "";
-    if (keep.test(loc)) return true;
+    if (fragments.some((fragment) => loc.includes(fragment))) return true;
     return others++ < extra;
   });
   const root = index ? "sitemapindex" : "urlset";
@@ -77,7 +81,7 @@ if (args.has("xml-keep")) {
     kept.join("\n") +
     `\n</${root}>\n`;
   Object.assign(rule, {
-    xmlKeep: args.get("xml-keep"),
+    xmlKeep: fragments,
     unrelatedEntries: extra,
   });
 } else if (args.has("keep")) {
