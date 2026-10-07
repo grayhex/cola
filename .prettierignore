@@ -24,3 +24,5 @@ public/test-map-style.json
 # Handwritten fixture servers, source metadata and test helpers are checked.
 services/bike-resolver/tests/fixtures/**/*.html
 services/bike-resolver/tests/fixtures/cube/archive-specification.json
+# Recorded search answers of storefronts (reduced upstream JSON, hashed in the manifest).
+services/bike-resolver/tests/fixtures/manufacturers/*-suggest-*.json
