@@ -14,6 +14,7 @@
 | `js_shell`, `spec_fields_not_found`, `labels_unrecognized`  | Получен ли содержательный документ, layout/labels/charset              |
 | `ambiguous`, `identity_mismatch`                            | Источник модели, trim и года; пользовательское подтверждение           |
 | `not_complete_bike`                                         | Страница — рама, деталь или аксессуар; другой вариант или ручной ввод  |
+| `multiple_builds`                                           | На странице несколько сборок, взята первая; выберите сборку из списка  |
 | `candidate_expired`                                         | Рестарт или срок реестра кандидатов; повторить поиск и выбрать заново  |
 | Магазин `blocked`, `timeout`, `unavailable` в отчёте поиска | Сеть именно Resolver; защиту сайта не обходить (см. ниже)              |
 | `resolved` + partial/unknown                                | Качество извлечения; полезные поля можно предложить на review          |
