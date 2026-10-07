@@ -7,6 +7,7 @@ import type {
 import { checkAbort, trace, type Reason } from "./context.js";
 const priority: Record<SourceKind, number> = {
   manufacturer: 0,
+  distributor: 0,
   archive: 1,
   manual: 2,
   store: 3,

@@ -117,8 +117,12 @@ export class Resolver {
   ): Promise<ResolveResult> {
     trace("discovery_started", { host: a.allowedDomains[0] });
     checkAbort();
+    // The adapter's own kind of source: an official shop of the importer is
+    // not the manufacturer's site, and the person is told which it is.
+    const kind = a.sourceKind ?? "manufacturer";
     const candidates = (await a.discover(q)).map((c) => ({
         ...c,
+        kind,
         candidateId: createHash("sha256")
           .update(sourceIdentity(c.url))
           .digest("hex"),
@@ -233,6 +237,7 @@ export class Resolver {
         adapter: a.id,
         adapterVersion: a.adapterVersion,
         extractorVersion: EXTRACTOR_VERSION,
+        kind,
       },
       cached: false,
     };

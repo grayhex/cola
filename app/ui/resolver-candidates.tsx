@@ -11,7 +11,7 @@ type Source = Extract<ResolveResult, { status: "resolved" }>["source"];
 // address). Old previews have no `kind`; their adapter id tells the same.
 export function officialSource(source: Source) {
   return source.kind
-    ? source.kind === "manufacturer"
+    ? source.kind === "manufacturer" || source.kind === "distributor"
     : source.adapter !== "manual-url" &&
         source.adapter !== "retailer-search" &&
         !source.adapter.startsWith("store:");
@@ -20,6 +20,7 @@ export function officialSource(source: Source) {
 // `kind`; their adapter id still tells official pages from pasted ones.
 export function sourceLabel(source: Source) {
   if (source.kind === "store") return "магазин " + source.manufacturer;
+  if (source.kind === "distributor") return "официальный дистрибьютор";
   if (source.kind === "web") return "найденная страница";
   if (source.kind === "archive") return "архив моделей";
   if (source.kind === "manual" || source.adapter === "manual-url")
@@ -29,6 +30,8 @@ export function sourceLabel(source: Source) {
 }
 function candidateSource(c: ResolverCandidate) {
   if (c.kind === "store") return "магазин " + (c.storeName || c.sourceHost);
+  if (c.kind === "distributor")
+    return "официальный дистрибьютор · " + c.sourceHost;
   if (c.kind === "web") return "найденная страница · " + c.sourceHost;
   if (c.kind === "archive") return "архив моделей";
   return "официальный сайт";
@@ -36,6 +39,7 @@ function candidateSource(c: ResolverCandidate) {
 const warningText: Record<string, string> = {
   identity_mismatch: "Название или год отличаются от запроса",
   conflicting_sources: "В данных страницы есть расхождения",
+  multiple_builds: "На странице несколько комплектаций, выбрана одна",
 };
 const statusText: Record<string, string> = {
   empty: "подходящих страниц нет",

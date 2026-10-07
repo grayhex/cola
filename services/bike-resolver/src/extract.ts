@@ -27,7 +27,7 @@ const sectionName =
 const excluded =
   /^(geometry|shipping|delivery|warranty|reviews|description|sizing guide|доставка|гарантия|отзывы|геометрия)$/i;
 const metadataName =
-  /^(weight|net weight|вес|poids|weight size|available sizes|sizes|размеры|wheel size|диаметр кол[её]с|color|colour|colou?rs|bike color|цвет|couleurs?|coloris|product id|model year|year|сезон|год|год выпуска)$/i;
+  /^(weight|net weight|вес|вес велосипеда(?: без упаковки)?|вес с упаковкой|poids|weight size|available sizes|sizes|размеры?|подходит на рост|подходит для веса|размер упаковки|wheel size|диаметр кол[её]с|допустимый размер (?:покрышек|кол[её]с)(?:, (?:max|min))?|рекомендованное давление|количество скоростей|тип проводки рубашек тросов|передняя звезда, макс\.|модель \(по-русски\)|color|colour|colou?rs|bike color|цвет|couleurs?|coloris|product id|model year|year|сезон|год|год выпуска)$/i;
 type Rows = { row: string; label: string; value: string };
 type DomNode = ReturnType<CheerioAPI>[number];
 export function jsonObjects($: CheerioAPI): Record<string, unknown>[] {
@@ -344,8 +344,12 @@ function pipeline(doc: SourceDocument, rows?: Rows) {
       $(selector).each((_, el) => {
         const html = $(el).html() || "";
         if (html.length > 100000) return;
+        // A line ends at <br> and at the end of a block: "<strong>DRIVETRAIN</strong></p>
+        // <p><strong>Rear Derailleur</strong>:…" is a heading and a line, not one.
         const text = load(
-          "<div>" + html.replace(/<br\s*\/?>/gi, "\n") + "</div>",
+          "<div>" +
+            html.replace(/<br\s*\/?>|<\/(?:p|div|li|tr|h[1-6])>/gi, "\n") +
+            "</div>",
         )("div").text();
         const pairs = text.split("\n").flatMap((line) => {
           const m = clean(line).match(/^([^:：]{2,40})[:：]\s*(.+)$/);
@@ -536,14 +540,23 @@ export function parseDocument(
   const suggestedMetadata: SuggestedMetadata = {};
   for (const f of result.chosen.filter((f) => metadataName.test(f.label))) {
     const key = normalize(f.label);
-    if (/^(weight|net weight|вес|poids)$/.test(key)) {
+    if (
+      /^(weight|net weight|вес|вес велосипеда(?: без упаковки)?|poids)$/.test(
+        key,
+      )
+    ) {
       suggestedMetadata.weightText = f.value;
-      const weights = [
-        ...f.value.matchAll(/(\d+(?:[.,]\d+)?)\s*(?:kg|кг)\b/gi),
-      ].map((m) => Number(m[1].replace(",", ".")));
+      // "9.7 - 9.9 kg" is a range, not a weight.
+      const weights = /\d\s*[-–—]\s*\d/.test(f.value)
+        ? []
+        : [
+            ...f.value.matchAll(
+              /(\d+(?:[.,]\d+)?)\s*(?:kg|кг)(?![\p{L}\p{N}])/giu,
+            ),
+          ].map((m) => Number(m[1].replace(",", ".")));
       if (weights.length === 1 && weights[0] >= 1 && weights[0] <= 100)
         suggestedMetadata.weight = weights[0];
-    } else if (/^(sizes|available sizes|размеры)$/.test(key))
+    } else if (/^(sizes|available sizes|размеры?)$/.test(key))
       suggestedMetadata.sizes = f.value;
     else if (/^(wheel size|диаметр кол[её]с)$/.test(key))
       suggestedMetadata.wheelSize = f.value;

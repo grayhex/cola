@@ -1,0 +1,827 @@
+[
+  {
+    "id": "rose-backroad-unsupported-2725748",
+    "adapter": "rose",
+    "kind": "bike",
+    "requestedUrl": "https://www.rosebikes.com/p/rose-backroad-unsupported-2725748",
+    "url": "https://www.rosebikes.com/p/rose-backroad-unsupported-2725748",
+    "retrievedAt": "2026-10-07T08:01:54.200Z",
+    "rawSha256": "3f985732b8662833da03ca8bb5cd61651c76970aba0d683c8635034634a980bf",
+    "rawBytes": 685956,
+    "reducedSha256": "85af27fbed61c6b11e74cd4e77699aadab5e7326a06ecb0216c2c3516dc41c8b",
+    "reducedBytes": 23557,
+    "reduction": {
+      "keep": ["[data-test=bike-name-with-hint]", "dl"],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "live"
+    },
+    "expected": {
+      "name": "Backroad Unsupported",
+      "year": null,
+      "minComponents": 15,
+      "types": [
+        "frame",
+        "fork",
+        "crankset",
+        "cassette",
+        "chain",
+        "saddle",
+        "seatpost"
+      ],
+      "absentTypes": ["pedals"],
+      "note": "Pedals are not part of the delivery: the row stays raw evidence, not a component"
+    }
+  },
+  {
+    "id": "rose-black-lava-2-160438",
+    "adapter": "rose",
+    "kind": "bike",
+    "requestedUrl": "https://www.rosebikes.com/p/rose-black-lava-2-160438",
+    "url": "https://www.rosebikes.com/p/rose-black-lava-2-160438",
+    "retrievedAt": "2026-10-07T08:01:56.085Z",
+    "rawSha256": "b40eb442f769cb3d33f0c136162576a52ddff8f34904f06f449c8e1051a60221",
+    "rawBytes": 532864,
+    "reducedSha256": "1b1d87cea5036d938699b570f4866a825a98e6bcc5cc225165c4f3367e0ab0d2",
+    "reducedBytes": 12981,
+    "reduction": {
+      "keep": ["[data-test=bike-name-with-hint]", "dl"],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "live"
+    },
+    "expected": {
+      "name": "Black Lava 2",
+      "year": null,
+      "minComponents": 17,
+      "types": ["frame", "fork", "belt", "shifter", "saddle", "rack"]
+    }
+  },
+  {
+    "id": "rose-black-lava-2-2706827",
+    "adapter": "rose",
+    "kind": "bike",
+    "requestedUrl": "https://www.rosebikes.com/p/rose-black-lava-2-2706827",
+    "url": "https://www.rosebikes.com/p/rose-black-lava-2-2706827",
+    "retrievedAt": "2026-10-07T08:01:57.803Z",
+    "rawSha256": "6e0a0d79c5a5cd488358de1e3a1d053e60705c8dc2d05e897bca2cd79e5db819",
+    "rawBytes": 514702,
+    "reducedSha256": "937a53ec0dfea601baf47db128b83a1958fd592eb53d138dc88425b1973312c1",
+    "reducedBytes": 15522,
+    "reduction": {
+      "keep": ["[data-test=bike-name-with-hint]", "dl"],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "live"
+    },
+    "expected": {
+      "name": "Black Lava 2",
+      "year": null,
+      "minComponents": 19,
+      "types": ["frame", "fork", "belt", "shifter", "grips", "saddle"]
+    }
+  },
+  {
+    "id": "rose-black-lava-2-2723490",
+    "adapter": "rose",
+    "kind": "bike",
+    "requestedUrl": "https://www.rosebikes.com/p/rose-black-lava-2-2723490",
+    "url": "https://www.rosebikes.com/p/rose-black-lava-2-2723490",
+    "retrievedAt": "2026-10-07T08:01:59.408Z",
+    "rawSha256": "1a2956253f041465a0dfa2f4b42fac729102de60a4fcd6139178cf735a814f08",
+    "rawBytes": 534377,
+    "reducedSha256": "4033e3c641dc2a5287aae7c73cdf2d37d1d4c48e0e87b396ca7a1b0c6b12bafe",
+    "reducedBytes": 13245,
+    "reduction": {
+      "keep": ["[data-test=bike-name-with-hint]", "dl"],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "live"
+    },
+    "expected": {
+      "name": "Black Lava 2",
+      "year": null,
+      "minComponents": 17,
+      "types": ["frame", "fork", "belt", "shifter", "saddle"]
+    }
+  },
+  {
+    "id": "rose-belt-drive-insert-black-lava-2694308",
+    "adapter": "rose",
+    "kind": "accessory",
+    "requestedUrl": "https://www.rosebikes.com/p/rose-belt-drive-insert-black-lava-2694308",
+    "url": "https://www.rosebikes.com/p/rose-belt-drive-insert-black-lava-2694308",
+    "retrievedAt": "2026-10-07T08:02:00.970Z",
+    "rawSha256": "3b98d51f13fdc94a79d67ff4906b11b9bb9bf65d63c5180ebbf09701eed0eae0",
+    "rawBytes": 310007,
+    "reducedSha256": "8f36d5449305f1ac59c8726b27297ac30a647a173c36e281a0b3644f50b57bb7",
+    "reducedBytes": 3558,
+    "reduction": {
+      "keep": ["h1", "dl"],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "live"
+    },
+    "expected": {
+      "reason": "not_complete_bike"
+    }
+  },
+  {
+    "id": "rose-family-backroad",
+    "adapter": "rose",
+    "kind": "family",
+    "requestedUrl": "https://www.rosebikes.com/bikes/gravel/adventure/backroad",
+    "url": "https://www.rosebikes.com/bikes/gravel/adventure/backroad",
+    "retrievedAt": "2026-10-07T08:02:02.847Z",
+    "rawSha256": "8662b04e1818193392acdeaf9818c1d3d45eb2c9293381445670d359bd09f119",
+    "rawBytes": 1374945,
+    "reducedSha256": "252d1fd652ef749dc5908ff01b544148f369038a857975269941c519678510c6",
+    "reducedBytes": 3119,
+    "reduction": {
+      "keep": ["a[href^=\"/p/\"]"],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "live"
+    }
+  },
+  {
+    "id": "rose-family-black-lava",
+    "adapter": "rose",
+    "kind": "family",
+    "requestedUrl": "https://www.rosebikes.com/bikes/urban-&-hybrid/hybrid/black-lava",
+    "url": "https://www.rosebikes.com/bikes/urban-and-hybrid/hybrid/black-lava",
+    "retrievedAt": "2026-10-07T08:02:05.011Z",
+    "rawSha256": "569388dc9b095190d8f5f0ca4bdf3e65da115b5cfdaa59188e71c7d20c888eb4",
+    "rawBytes": 551604,
+    "reducedSha256": "be421e1efbfaf540aa56ece9f315ce1123193d966ce6df2dc9e57d6850be524b",
+    "reducedBytes": 2838,
+    "reduction": {
+      "keep": ["a[href^=\"/p/\"]"],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "live"
+    }
+  },
+  {
+    "id": "rose-sitemap",
+    "adapter": "rose",
+    "kind": "sitemap",
+    "requestedUrl": "https://www.rosebikes.com/sitemap.xml",
+    "url": "https://www.rosebikes.com/sitemap.xml",
+    "retrievedAt": "2026-10-07T08:02:06.276Z",
+    "rawSha256": "049bd78aaa82a830a8df7e1e3ee2087363c2f7d89c2f7c711fefbc515f5e4aa6",
+    "rawBytes": 2462371,
+    "reducedSha256": "3efcb1f6ea989c051d67d5c51310d902c699d35cf46160bef328ee288f84fa6a",
+    "reducedBytes": 7160,
+    "reduction": {
+      "xmlKeep": [
+        "/p/rose-black-lava-2-",
+        "/p/rose-black-lava-3-",
+        "/p/rose-backroad-unsupported-",
+        "/p/rose-backroad-grx-820",
+        "rose-belt-drive-insert-black-lava",
+        "rose-pu-sheath",
+        "rose-black-lava-2020-seat",
+        "/bikes/gravel/adventure/backroad",
+        "/bikes/sale/gravel/backroad",
+        "/bikes/urban-&amp;-hybrid/hybrid/black-lava"
+      ],
+      "unrelatedEntries": 6
+    },
+    "origin": {
+      "source": "live"
+    }
+  },
+  {
+    "id": "rose-black-lava-2-2702485-capture-2023-10",
+    "adapter": "rose",
+    "kind": "bike-archived",
+    "requestedUrl": "https://www.rosebikes.com/rose-black-lava-2-2702485",
+    "url": "https://www.rosebikes.com/rose-black-lava-2-2702485",
+    "retrievedAt": "2023-10-04T20:35:36Z",
+    "rawSha256": "8d76268024dce5d8ddc3326a3fe4d839bcf1fcdc9350afca0aad5f9c70bf44ee",
+    "rawBytes": 332132,
+    "reducedSha256": "672f6da67b2705878348ec176a8e701b044eccec8a0ef11d7ce870b84a23d1ff",
+    "reducedBytes": 10135,
+    "reduction": {
+      "keep": ["h1", ".product-detail-feature-list"],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "Common Crawl",
+      "crawl": "CC-MAIN-2023-40",
+      "captureTimestamp": "2023-10-04T20:35:36Z",
+      "warcFile": "crawl-data/CC-MAIN-2023-40/segments/1695233511406.34/warc/CC-MAIN-20231004184208-20231004214208-00152.warc.gz",
+      "warcOffset": 1060587044,
+      "warcLength": 33964,
+      "cdxDigestSha1": "PP2IWROHS5FUFTAR5WVZJRC2JRYIR5JC",
+      "rawBodySha256": "8d76268024dce5d8ddc3326a3fe4d839bcf1fcdc9350afca0aad5f9c70bf44ee",
+      "note": "Page of the earlier ROSE shop as captured on 2023-10-04. The live address no longer serves it (404 under /p/). The page states no model year."
+    },
+    "expected": {
+      "name": "BLACK LAVA 2",
+      "year": null,
+      "minComponents": 19,
+      "types": ["frame", "fork", "chain", "shifter", "saddle"],
+      "note": "Captured 2023-10-04; the page states no model year"
+    }
+  },
+  {
+    "id": "sava-blade-r7-105-di2",
+    "adapter": "sava",
+    "kind": "bike",
+    "requestedUrl": "https://savadeck-bike.com/products/sava-blade-r7-105-di2-full-carbon-road-bike-24s",
+    "url": "https://savadeck-bike.com/products/sava-blade-r7-105-di2-full-carbon-road-bike-24s",
+    "retrievedAt": "2026-10-07T08:02:45.625Z",
+    "rawSha256": "0ef17aeb81db3647c607e7acf466e2bb8fc2df22ad9c4df3b1e19cd0f9e2cf18",
+    "rawBytes": 902086,
+    "reducedSha256": "ef3a924760b375258aaa7e5c200c2060a6fbbf763852800e5036e42192f282be",
+    "reducedBytes": 34311,
+    "reduction": {
+      "keep": [
+        "table[class*=ai-specs-accordion__table]",
+        ".collapsible-content__inner.rte:first"
+      ],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "live"
+    },
+    "expected": {
+      "name": "Blade R7-105 Di2",
+      "year": 2026,
+      "minComponents": 15,
+      "types": [
+        "frame",
+        "fork",
+        "rear_derailleur",
+        "front_derailleur",
+        "crankset",
+        "cassette",
+        "shifter",
+        "brake",
+        "chain",
+        "wheel",
+        "saddle"
+      ],
+      "weight": 7.4,
+      "conflicts": true
+    }
+  },
+  {
+    "id": "sava-a7l-pro-105-r7120",
+    "adapter": "sava",
+    "kind": "bike",
+    "requestedUrl": "https://savadeck-bike.com/products/2026-sava-a7l-pro-105-r7120-full-carbon-road-bike-24sp",
+    "url": "https://savadeck-bike.com/products/2026-sava-a7l-pro-105-r7120-full-carbon-road-bike-24sp",
+    "retrievedAt": "2026-10-07T08:02:47.396Z",
+    "rawSha256": "458a27ca30a54790dd36070826d8a7ee6824f95d1d4960f878332453ab09aa27",
+    "rawBytes": 742096,
+    "reducedSha256": "e62ae41f2ac0bd59fe5723f11b767f35f01af165497c32a2abbe1351affbbfe4",
+    "reducedBytes": 22671,
+    "reduction": {
+      "keep": [
+        "table[class*=ai-specs-accordion__table]",
+        ".collapsible-content__inner.rte:first"
+      ],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "live"
+    },
+    "expected": {
+      "name": "A7L PRO-105 R7120",
+      "year": 2026,
+      "minComponents": 16,
+      "types": [
+        "frame",
+        "fork",
+        "rear_derailleur",
+        "crankset",
+        "cassette",
+        "shifter",
+        "brake",
+        "chain",
+        "wheel",
+        "saddle"
+      ],
+      "weight": 8.8,
+      "conflicts": true
+    }
+  },
+  {
+    "id": "sava-gelaro-s6-grx610",
+    "adapter": "sava",
+    "kind": "bike",
+    "requestedUrl": "https://savadeck-bike.com/products/sava-gelaro-s6-grx600-carbon-gravel-bike",
+    "url": "https://savadeck-bike.com/products/sava-gelaro-s6-grx600-carbon-gravel-bike",
+    "retrievedAt": "2026-10-07T08:02:49.332Z",
+    "rawSha256": "5c326c96cd2db30fc71a50c30a1c717e4be4eaae33408a49aca2e1b5be1a5ce8",
+    "rawBytes": 809061,
+    "reducedSha256": "0492e8380156f27ac0f7342eac7e1345ae12e45c6d2e23ee380e914229e8f790",
+    "reducedBytes": 17476,
+    "reduction": {
+      "keep": [
+        "table[class*=ai-specs-accordion__table]",
+        ".collapsible-content__inner.rte:first"
+      ],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "live"
+    },
+    "expected": {
+      "name": "Gelaro S6-GRX610",
+      "year": null,
+      "minComponents": 15,
+      "types": [
+        "frame",
+        "fork",
+        "rear_derailleur",
+        "crankset",
+        "cassette",
+        "brake",
+        "chain",
+        "saddle"
+      ],
+      "crankMentions": "RX610",
+      "note": "Address and tags say grx600, title and parts say GRX610: the parts decide"
+    }
+  },
+  {
+    "id": "sava-gelaro-s8-grx820",
+    "adapter": "sava",
+    "kind": "bike",
+    "requestedUrl": "https://savadeck-bike.com/products/sava-gelaro-s8-grx820-carbon-gravel-bike-12s",
+    "url": "https://savadeck-bike.com/products/sava-gelaro-s8-grx820-carbon-gravel-bike-12s",
+    "retrievedAt": "2026-10-07T08:02:51.067Z",
+    "rawSha256": "42d465205b1130e0e3141c9372b96e4f986a227e8791a687fc092a47ebd70f76",
+    "rawBytes": 637460,
+    "reducedSha256": "02854a8ca0dcebffa9462d75a39ebd38b8a6271ae3afa79b667936aba0c15bfd",
+    "reducedBytes": 21332,
+    "reduction": {
+      "keep": [
+        "table[class*=ai-specs-accordion__table]",
+        ".collapsible-content__inner.rte:first"
+      ],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "live"
+    },
+    "expected": {
+      "name": "Gelaro S8-GRX820",
+      "year": 2026,
+      "minComponents": 14,
+      "types": [
+        "frame",
+        "fork",
+        "rear_derailleur",
+        "crankset",
+        "cassette",
+        "shifter",
+        "brake",
+        "chain",
+        "wheel",
+        "saddle"
+      ],
+      "weight": 10.2,
+      "conflicts": true,
+      "note": "Year from the specification block (Model row); title has none; Model code says RX810, parts say RX820"
+    }
+  },
+  {
+    "id": "sava-suggest-blade-r7",
+    "adapter": "sava",
+    "kind": "search",
+    "requestedUrl": "https://savadeck-bike.com/search/suggest.json?q=blade%20r7&resources%5Btype%5D=product&resources%5Blimit%5D=10",
+    "url": "https://savadeck-bike.com/search/suggest.json?q=blade+r7&resources%5Blimit%5D=10&resources%5Btype%5D=product",
+    "retrievedAt": "2026-10-07T08:02:52.844Z",
+    "rawSha256": "e1da08f1450e96f322868092fd8b5b09923c102aedd93d91fdc88481d8e55e4d",
+    "rawBytes": 26804,
+    "reducedSha256": "cacdf2a8addfae6329a8135c589712c6ded8264da78e10c00071130af5b63486",
+    "reducedBytes": 2135,
+    "reduction": {
+      "jsonProducts": ["id", "title", "handle", "type"]
+    },
+    "origin": {
+      "source": "live"
+    }
+  },
+  {
+    "id": "sava-suggest-gelaro-s6",
+    "adapter": "sava",
+    "kind": "search",
+    "requestedUrl": "https://savadeck-bike.com/search/suggest.json?q=gelaro%20s6&resources%5Btype%5D=product&resources%5Blimit%5D=10",
+    "url": "https://savadeck-bike.com/search/suggest.json?q=gelaro+s6&resources%5Blimit%5D=10&resources%5Btype%5D=product",
+    "retrievedAt": "2026-10-07T08:02:54.291Z",
+    "rawSha256": "c7682a381f9a1a225195e5f615c7554048a386e0fd1d6f117f4a717bdcf8f2d1",
+    "rawBytes": 29154,
+    "reducedSha256": "af7b1bfe8f9670492c3c917ea24265f8e3a429af5bd02b0cc66ca8c479bb2d90",
+    "reducedBytes": 1442,
+    "reduction": {
+      "jsonProducts": ["id", "title", "handle", "type"]
+    },
+    "origin": {
+      "source": "live"
+    }
+  },
+  {
+    "id": "sava-suggest-frameset",
+    "adapter": "sava",
+    "kind": "search",
+    "requestedUrl": "https://savadeck-bike.com/search/suggest.json?q=frameset&resources%5Btype%5D=product&resources%5Blimit%5D=10",
+    "url": "https://savadeck-bike.com/search/suggest.json?q=frameset&resources%5Blimit%5D=10&resources%5Btype%5D=product",
+    "retrievedAt": "2026-10-07T08:02:56.710Z",
+    "rawSha256": "34c3b895074b213f2df0c6ff7d95e546804cd09060160c375778c475a1b922d2",
+    "rawBytes": 74220,
+    "reducedSha256": "32d4e3b2e2cf15c2fbf77256bd174b93bf2e2685cbc53e439a1b3301014e9fd1",
+    "reducedBytes": 2096,
+    "reduction": {
+      "jsonProducts": ["id", "title", "handle", "type"]
+    },
+    "origin": {
+      "source": "live"
+    }
+  },
+  {
+    "id": "shulz-catalog-all-bikes",
+    "adapter": "shulz",
+    "kind": "listing",
+    "requestedUrl": "https://shulz.ru/catalog/all/bikes",
+    "url": "https://shulz.ru/catalog/all/bikes",
+    "retrievedAt": "2026-10-07T08:03:01.783Z",
+    "rawSha256": "d5a1fe59368760cfe6947c940e162c3eac7a84d4c9de9aa752db3de471720b20",
+    "rawBytes": 336098,
+    "reducedSha256": "2195bfbd0970340312c7a5d749ea4a0416557f019964ec7943d500ed1038cfcb",
+    "reducedBytes": 12660,
+    "reduction": {
+      "keep": [
+        ".product_card:has(a[href*=\"shulz-wanderer\"])",
+        ".product_card:has(a[href*=\"shulz-boys-dont-cry\"])",
+        ".product_card:has(a[href*=\"shulz-lone-ranger\"])",
+        ".product_card:has(a[href*=\"strida-52\"])"
+      ],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "live"
+    }
+  },
+  {
+    "id": "shulz-wanderer-1698",
+    "adapter": "shulz",
+    "kind": "bike",
+    "requestedUrl": "https://shulz.ru/catalog/bikes/gravel-touring/shulz-wanderer/1698",
+    "url": "https://shulz.ru/catalog/bikes/gravel-touring/shulz-wanderer/1698",
+    "retrievedAt": "2026-10-07T08:03:04.323Z",
+    "rawSha256": "6d09ab7b3bc0a42a36a578f758078da5dd95f30a98418d1839855b20d3aada05",
+    "rawBytes": 204275,
+    "reducedSha256": "8a90aac0105831a879e9fa3ca02b04e96f2e76085b0c1ad0d7ec568c701f7350",
+    "reducedBytes": 11727,
+    "reduction": {
+      "keep": ["h1", ".spec"],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "live"
+    },
+    "expected": {
+      "name": "Wanderer",
+      "year": null,
+      "minComponents": 22,
+      "types": [
+        "frame",
+        "fork",
+        "rim",
+        "front_hub",
+        "rear_hub",
+        "tire",
+        "rear_derailleur",
+        "front_derailleur",
+        "shifter",
+        "crankset",
+        "chain",
+        "bottom_bracket",
+        "pedals",
+        "front_brake",
+        "rear_brake",
+        "brake_lever",
+        "stem",
+        "handlebar",
+        "grips",
+        "saddle",
+        "seatpost",
+        "cassette",
+        "headset"
+      ],
+      "weight": 13.1
+    }
+  },
+  {
+    "id": "shulz-boys-dont-cry-1726",
+    "adapter": "shulz",
+    "kind": "bike",
+    "requestedUrl": "https://shulz.ru/catalog/bikes/mtb/shulz-boys-dont-cry/1726",
+    "url": "https://shulz.ru/catalog/bikes/mtb/shulz-boys-dont-cry/1726",
+    "retrievedAt": "2026-10-07T08:03:06.447Z",
+    "rawSha256": "3655605b7b057f65579423c032d63d960f4bc09179f9cb43fe8cae77984c261a",
+    "rawBytes": 199799,
+    "reducedSha256": "7593712e975320540d4dc58228183372fa8c45cfe725a3038299502207deaa4e",
+    "reducedBytes": 11187,
+    "reduction": {
+      "keep": ["h1", ".spec"],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "live"
+    },
+    "expected": {
+      "name": "Boys Don’t Cry",
+      "year": null,
+      "minComponents": 21,
+      "types": [
+        "frame",
+        "fork",
+        "rim",
+        "front_hub",
+        "rear_hub",
+        "tire",
+        "rear_derailleur",
+        "shifter",
+        "crankset",
+        "chain",
+        "bottom_bracket",
+        "pedals",
+        "front_brake",
+        "rear_brake",
+        "brake_lever",
+        "stem",
+        "handlebar",
+        "grips",
+        "saddle",
+        "seatpost",
+        "cassette",
+        "headset"
+      ],
+      "weight": 13.8
+    }
+  },
+  {
+    "id": "shulz-frameset-boys-dont-cry-1680",
+    "adapter": "shulz",
+    "kind": "frameset",
+    "requestedUrl": "https://shulz.ru/catalog/framesets/mtb-framesets/freimset-shulz-boys-dont-cry/1680",
+    "url": "https://shulz.ru/catalog/framesets/mtb-framesets/freimset-shulz-boys-dont-cry/1680",
+    "retrievedAt": "2026-10-07T08:03:08.387Z",
+    "rawSha256": "f9780fae06318f0fc13bb59ab369003b3e4a770d885019841bae8343f30cd181",
+    "rawBytes": 144830,
+    "reducedSha256": "0230bcbc1a0948a69e61d9fd2bdfa76bfc3c2d86cdd37894864402b05884faf6",
+    "reducedBytes": 4600,
+    "reduction": {
+      "keep": ["h1", ".spec"],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "live"
+    },
+    "expected": {
+      "reason": "not_complete_bike"
+    }
+  },
+  {
+    "id": "twitter-suggest-cyclone-3rd",
+    "adapter": "twitter",
+    "kind": "search",
+    "requestedUrl": "https://twitterbikeusa.com/search/suggest.json?q=cyclone%203rd&resources%5Btype%5D=product&resources%5Blimit%5D=10",
+    "url": "https://twitterbikeusa.com/search/suggest.json?q=cyclone+3rd&resources%5Blimit%5D=10&resources%5Btype%5D=product",
+    "retrievedAt": "2026-10-07T08:03:09.683Z",
+    "rawSha256": "64993798cc6619d46dff8adbc895cbd882c457ec0d2042552f2398c673199251",
+    "rawBytes": 188824,
+    "reducedSha256": "e2888eef555bee0a6b8b9140b5dfc7fed9f195922b48c76b46c26eb5f80caf86",
+    "reducedBytes": 85789,
+    "reduction": {
+      "jsonProducts": ["id", "title", "handle", "type"],
+      "jsonBody": "table"
+    },
+    "origin": {
+      "source": "live"
+    }
+  },
+  {
+    "id": "twitter-suggest-gravel-v3",
+    "adapter": "twitter",
+    "kind": "search",
+    "requestedUrl": "https://twitterbikeusa.com/search/suggest.json?q=gravel%20v3&resources%5Btype%5D=product&resources%5Blimit%5D=10",
+    "url": "https://twitterbikeusa.com/search/suggest.json?q=gravel+v3&resources%5Blimit%5D=10&resources%5Btype%5D=product",
+    "retrievedAt": "2026-10-07T08:03:10.831Z",
+    "rawSha256": "9ad9c295d49739178ba3e9b19615859501b4bf2c31e3f03aef5131ddbb2cc5c9",
+    "rawBytes": 204764,
+    "reducedSha256": "6f5a9cc67574e99758f92795985520e8a87bd9a850cb1e063c2b49951c025687",
+    "reducedBytes": 82569,
+    "reduction": {
+      "jsonProducts": ["id", "title", "handle", "type"],
+      "jsonBody": "table"
+    },
+    "origin": {
+      "source": "live"
+    }
+  },
+  {
+    "id": "twitter-cyclone-3rd-advanced-uci-twitter-carbon-road-bike",
+    "adapter": "twitter",
+    "kind": "bike",
+    "requestedUrl": "https://twitterbikeusa.com/products/cyclone-3rd-advanced-uci-twitter-carbon-road-bike",
+    "url": "https://twitterbikeusa.com/products/cyclone-3rd-advanced-uci-twitter-carbon-road-bike",
+    "retrievedAt": "2026-10-07T08:03:11.920Z",
+    "rawSha256": "38ef8f6ea4740bd8dd1472b8527dac3cd454061ee14d0ff310ef624d9d57f528",
+    "rawBytes": 1354494,
+    "reducedSha256": "d32de39ddc355c6830dc5b05abe67b30f88c13dbff0d938feb51088425fd9b89",
+    "reducedBytes": 55094,
+    "reduction": {
+      "keep": ["table"],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "live"
+    },
+    "expected": {
+      "name": "Cyclone 3rd Advanced (UCI)",
+      "year": null,
+      "minComponents": 18,
+      "build": "ES7000 1×13",
+      "parseUrl": "?build=es7000-1-13",
+      "types": [
+        "frame",
+        "fork",
+        "shifter",
+        "rear_derailleur",
+        "crankset",
+        "cassette",
+        "chain",
+        "brake",
+        "wheel",
+        "saddle"
+      ],
+      "absentTypes": ["front_derailleur"],
+      "weight": 8.6
+    }
+  },
+  {
+    "id": "twitter-cyclone-pro-3rd",
+    "adapter": "twitter",
+    "kind": "bike",
+    "requestedUrl": "https://twitterbikeusa.com/products/cyclone-pro-3rd",
+    "url": "https://twitterbikeusa.com/products/cyclone-pro-3rd",
+    "retrievedAt": "2026-10-07T08:03:13.348Z",
+    "rawSha256": "11f1647558ee13f4ceb0aeb37e161088ba665d28debfa01e26edf0fd9ac96580",
+    "rawBytes": 1581660,
+    "reducedSha256": "bc4eb20d179ed79b2788fa373c8eb025f51fd8956e52f206f87ddaae16e7d169",
+    "reducedBytes": 66588,
+    "reduction": {
+      "keep": ["table"],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "live"
+    },
+    "expected": {
+      "name": "Cyclone Pro 3rd",
+      "year": null,
+      "minComponents": 16,
+      "build": "105 Di2 2×12",
+      "parseUrl": "?build=105-di2-2-12",
+      "types": [
+        "frame",
+        "fork",
+        "shifter",
+        "front_derailleur",
+        "rear_derailleur",
+        "crankset",
+        "cassette",
+        "chain",
+        "brake",
+        "saddle"
+      ],
+      "weight": 8.3
+    }
+  },
+  {
+    "id": "twitter-gravel-v3-twitter-carbon-gravel-bike",
+    "adapter": "twitter",
+    "kind": "bike",
+    "requestedUrl": "https://twitterbikeusa.com/products/gravel-v3-twitter-carbon-gravel-bike",
+    "url": "https://twitterbikeusa.com/products/gravel-v3-twitter-carbon-gravel-bike",
+    "retrievedAt": "2026-10-07T08:03:15.003Z",
+    "rawSha256": "8719eecdb46a2d840358b57fbb90798831ecf016b4d9c81b05862b0cb635a937",
+    "rawBytes": 1755376,
+    "reducedSha256": "3ad4f5212da56a9d23251ab27ce7b9edb8bf38b705d3abb50c3d188a7abba93f",
+    "reducedBytes": 79025,
+    "reduction": {
+      "keep": ["table"],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "live"
+    },
+    "expected": {
+      "name": "Gravel V3",
+      "year": null,
+      "minComponents": 13,
+      "build": "SENSAH 1×13",
+      "parseUrl": "?build=sensah-1-13",
+      "types": [
+        "frame",
+        "fork",
+        "shifter",
+        "rear_derailleur",
+        "crankset",
+        "cassette",
+        "chain",
+        "brake",
+        "saddle"
+      ]
+    }
+  },
+  {
+    "id": "twitter-cyclone-3rd-et",
+    "adapter": "twitter",
+    "kind": "bike",
+    "requestedUrl": "https://twitterbikeusa.com/products/cyclone-3rd-et",
+    "url": "https://twitterbikeusa.com/products/cyclone-3rd-et",
+    "retrievedAt": "2026-10-07T08:03:17.111Z",
+    "rawSha256": "89b04d4ca9893e47fce0896a693c26c2daf801f2040e97ff8d94b9c903bff07a",
+    "rawBytes": 1254767,
+    "reducedSha256": "9570224141a86a1a0401cddd26279f5d798f8b59d54910b37f824e68b8c03e7d",
+    "reducedBytes": 33048,
+    "reduction": {
+      "keep": ["table"],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "live"
+    },
+    "expected": {
+      "name": "Cyclone 3rd (ET)",
+      "year": null,
+      "minComponents": 16,
+      "types": [
+        "frame",
+        "fork",
+        "shifter",
+        "front_derailleur",
+        "rear_derailleur",
+        "crankset",
+        "cassette",
+        "chain",
+        "brake",
+        "saddle"
+      ],
+      "weight": 9.2
+    }
+  },
+  {
+    "id": "sava-suggest-gelaro-s6-grx610",
+    "adapter": "sava",
+    "kind": "search",
+    "requestedUrl": "https://savadeck-bike.com/search/suggest.json?q=gelaro%20s6%20grx610&resources%5Btype%5D=product&resources%5Blimit%5D=10",
+    "url": "https://savadeck-bike.com/search/suggest.json?q=gelaro+s6+grx610&resources%5Blimit%5D=10&resources%5Btype%5D=product",
+    "retrievedAt": "2026-10-07T08:07:35.212Z",
+    "rawSha256": "70f787854a8d2798bf6cff5e3c5e18a299d18c2591ac7769601fdd4eb6e104c5",
+    "rawBytes": 6826,
+    "reducedSha256": "181288f23b0a2cf3e4a789a0b8baf9d2eb02e2dc12ebe476bbeceac6f4a27c1a",
+    "reducedBytes": 450,
+    "reduction": {
+      "jsonProducts": ["id", "title", "handle", "type"]
+    },
+    "origin": {
+      "source": "live"
+    }
+  },
+  {
+    "id": "twitter-suggest-cyclone-3rd-evo",
+    "adapter": "twitter",
+    "kind": "search",
+    "requestedUrl": "https://twitterbikeusa.com/search/suggest.json?q=cyclone%203rd%20evo&resources%5Btype%5D=product&resources%5Blimit%5D=10",
+    "url": "https://twitterbikeusa.com/search/suggest.json?q=cyclone+3rd+evo&resources%5Blimit%5D=10&resources%5Btype%5D=product",
+    "retrievedAt": "2026-10-07T08:07:36.431Z",
+    "rawSha256": "afa349318d16764cd260305c6ca86b662319aae2b0b8409452260e93c1361b5c",
+    "rawBytes": 189653,
+    "reducedSha256": "6d7ca8421a272ceb72518e9f8033467d750e102507cc220d391d19a0de915f41",
+    "reducedBytes": 85789,
+    "reduction": {
+      "jsonProducts": ["id", "title", "handle", "type"],
+      "jsonBody": "table"
+    },
+    "origin": {
+      "source": "live"
+    }
+  }
+]

@@ -199,7 +199,17 @@ try {
 
   // The brands endpoint tells direct adapters from stores, with honest limits.
   const brands = (await person.api("bikes/resolver-brands")).data;
-  assert(brands.brands.every((b) => b.kind === "direct"));
+  // The official sites are "direct"; TWITTER is read from the shop of its importer.
+  assert.deepEqual(
+    Object.fromEntries(
+      brands.brands
+        .filter((b) => b.kind !== "direct")
+        .map((b) => [b.id, b.kind]),
+    ),
+    { twitter: "distributor" },
+  );
+  for (const id of ["rose", "sava", "shulz", "twitter"])
+    assert(brands.brands.find((b) => b.id === id)?.enabled, id);
   assert.deepEqual(
     brands.stores.map((s) => [s.id, s.search]),
     [

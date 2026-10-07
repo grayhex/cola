@@ -38,7 +38,16 @@ it("settings persist, reject stale saves and disable adapters before network acc
         .json()
         .brands.filter((b: any) => b.enabled)
         .map((b: any) => b.id),
-    ).toEqual(["specialized", "canyon", "giant", "gt"]);
+    ).toEqual([
+      "specialized",
+      "canyon",
+      "giant",
+      "gt",
+      "rose",
+      "sava",
+      "shulz",
+      "twitter",
+    ]);
     expect(
       (
         await app.inject({

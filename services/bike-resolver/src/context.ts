@@ -23,7 +23,8 @@ export type Reason =
   | "aborted"
   | "connection_failed"
   | "not_complete_bike"
-  | "candidate_expired";
+  | "candidate_expired"
+  | "multiple_builds";
 export type EventName =
   | "retailer_search_started"
   | "resolve_started"

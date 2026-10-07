@@ -6,7 +6,7 @@
 // origin in the manifest.
 //
 //   node --import tsx scripts/capture-fixture.ts --manifest M --dir D --id ID \
-//     --store S --kind bike --url URL --keep "h1,title,#desc" [--expect JSON]
+//     --store S|--adapter A --kind bike --url URL --keep "h1|#desc" [--expect JSON]
 //   node --import tsx scripts/capture-fixture.ts ... --raw FILE --origin FILE.json
 import { createHash } from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
@@ -56,7 +56,37 @@ const rawSha256 = sha256(body);
 
 let reduced: string;
 const rule: Record<string, unknown> = {};
-if (args.has("xml-keep")) {
+if (args.has("json-products")) {
+  // The predictive search of a Shopify storefront: keep the listed fields of
+  // every product and, from its description, only the selected elements.
+  const fields = args
+      .get("json-products")!
+      .split(",")
+      .map((field) => field.trim()),
+    bodySelector = args.get("json-body");
+  const data = JSON.parse(body) as {
+    resources: { results: { products: Record<string, unknown>[] } };
+  };
+  const products = data.resources.results.products.map((product) => {
+    const kept: Record<string, unknown> = Object.fromEntries(
+      fields.map((field) => [field, product[field]]),
+    );
+    if (bodySelector) {
+      const $ = load(String(product.body ?? ""));
+      kept.body = $(bodySelector)
+        .toArray()
+        .map((element) => $.html(element))
+        .join("\n");
+    }
+    return kept;
+  });
+  reduced =
+    JSON.stringify({ resources: { results: { products } } }, null, 1) + "\n";
+  Object.assign(rule, {
+    jsonProducts: fields,
+    ...(bodySelector ? { jsonBody: bodySelector } : {}),
+  });
+} else if (args.has("xml-keep")) {
   // Sitemaps: keep the entries whose address contains one of the literal
   // fragments (never a pattern built from an argument) plus a few unrelated ones.
   const fragments = args
@@ -91,7 +121,7 @@ if (args.has("xml-keep")) {
       .split("|")
       .map((s) => s.trim());
   const head = [
-    "title",
+    "head > title",
     'link[rel="canonical"]',
     'meta[property^="og:"]',
     'script[type="application/ld+json"]',
@@ -118,12 +148,15 @@ if (args.has("xml-keep")) {
 } else reduced = body;
 
 await writeFile(
-  `${dir}/${id}.${args.has("xml-keep") ? "xml" : "html"}`,
+  `${dir}/${id}.${args.has("json-products") ? "json" : args.has("xml-keep") ? "xml" : "html"}`,
   reduced,
 );
 const entry = {
   id,
-  store: need("store"),
+  // A retailer ("store") or a manufacturer adapter ("adapter") owns the page.
+  ...(args.has("adapter")
+    ? { adapter: need("adapter") }
+    : { store: need("store") }),
   kind: need("kind"),
   requestedUrl: url,
   url: finalUrl,

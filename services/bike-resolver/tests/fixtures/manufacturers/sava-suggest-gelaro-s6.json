@@ -1,0 +1,50 @@
+{
+ "resources": {
+  "results": {
+   "products": [
+    {
+     "id": 7126856204427,
+     "title": "SAVA Gelaro S6-GRX610 Carbon Gravel Bike 12SP",
+     "handle": "sava-gelaro-s6-grx600-carbon-gravel-bike",
+     "type": "Carbon gravel bike"
+    },
+    {
+     "id": 8320051544203,
+     "title": "SAVA Gelaro SF6 CUES Carbon Gravel Bike US",
+     "handle": "sava-gelaro-sf6-cues-carbon-gravel-bike-us",
+     "type": "Gravel road bike"
+    },
+    {
+     "id": 7664832807051,
+     "title": "SAVA Gelaro S4-GRX400 Carbon Gravel Bike",
+     "handle": "sava-gelaro-s4-grx400-carbon-gravel-bike",
+     "type": "Carbon gravel bike"
+    },
+    {
+     "id": 7119473737867,
+     "title": "SAVA Gelaro S8-GRX820 Carbon Gravel Bike 12S",
+     "handle": "sava-gelaro-s8-grx820-carbon-gravel-bike-12s",
+     "type": "Carbon gravel bike"
+    },
+    {
+     "id": 7943284654219,
+     "title": "SAVA Gelaro S4-GRX400 Carbon Gravel Bike US",
+     "handle": "sava-gelaro-s4-grx400-carbon-gravel-bike-us",
+     "type": "Carbon gravel bike"
+    },
+    {
+     "id": 7179404476555,
+     "title": "SAVA Gelaro S4-GRX400 Second-hand Carbon Gravel Bike 20SP",
+     "handle": "sava-gelaro-s4-grx400-second-hand-carbon-gravel-bike-20sp",
+     "type": "Second hand bike"
+    },
+    {
+     "id": 7011111239819,
+     "title": "SAVA Gelaro SF6-CUES Carbon Gravel Bike",
+     "handle": "sava-gelaro-sf6-cues-carbon-gravel-bike",
+     "type": "Gravel road bike"
+    }
+   ]
+  }
+ }
+}

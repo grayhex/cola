@@ -274,9 +274,10 @@ export interface BikePhotoCandidate {
 export interface ResolverBrand {
   id: string;
   name: string;
-  // "direct": an adapter reads the official site. Any other brand is searched
-  // through the stores only.
-  kind?: "direct";
+  // "direct": an adapter reads the official site; "distributor": the official
+  // shop of the brand's importer. Any other brand is searched through the
+  // stores only.
+  kind?: "direct" | "distributor";
   enabled: boolean;
   adapterVersion: number;
   limitation: string | null;

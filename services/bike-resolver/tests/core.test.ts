@@ -249,7 +249,7 @@ it("explicit candidate selection cannot select an arbitrary URL or wrong-year bi
     ).toBe("ambiguous");
   }
 });
-it("API health, readiness, exact ten brands and invalid input", async () => {
+it("API health, readiness, the registered brands and invalid input", async () => {
   const cache = new MemoryCache(),
     r = new Resolver(
       createAdapters(new ManufacturerHttpClient(logger)),
@@ -262,7 +262,26 @@ it("API health, readiness, exact ten brands and invalid input", async () => {
   try {
     expect((await app.inject("/health")).statusCode).toBe(200);
     expect((await app.inject("/ready")).statusCode).toBe(200);
-    expect((await app.inject("/v1/brands")).json().brands).toHaveLength(11);
+    // Eleven official sites, the importer's shop of TWITTER and ROSE, SAVA, SHULZ.
+    expect(
+      (await app.inject("/v1/brands")).json().brands.map((b: any) => b.id),
+    ).toEqual([
+      "cube",
+      "specialized",
+      "canyon",
+      "trek",
+      "giant",
+      "cannondale",
+      "scott",
+      "orbea",
+      "merida",
+      "bmc",
+      "gt",
+      "rose",
+      "sava",
+      "shulz",
+      "twitter",
+    ]);
     expect(
       (
         await app.inject({

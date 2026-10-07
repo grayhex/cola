@@ -22,7 +22,7 @@ import {
 import type { ManufacturerHttpClient } from "./http.js";
 import { identityConflict } from "./identity.js";
 import type { ManualSources } from "./manual.js";
-import { partialScore } from "./matcher.js";
+import { partialScore, requestInName } from "./matcher.js";
 import { normalize } from "./normalize.js";
 import { webLinks } from "./retailer-search.js";
 import type { SettingsStore, StoreId } from "./settings.js";
@@ -115,6 +115,9 @@ const drivetrain = (r: Resolved) => {
     pick("rear_derailleur") || pick("shifter") || pick("crankset") || "";
   return text ? text.replace(/\s+/g, " ").slice(0, 70) : undefined;
 };
+// An official page names the model without the brand.
+const official = (kind: SourceKind | undefined) =>
+  kind === "manufacturer" || kind === "distributor";
 function candidateOf(
   query: BikeQuery,
   resolved: Resolved,
@@ -126,7 +129,7 @@ function candidateOf(
     year = resolved.sourceYear ?? null;
   const score = partialScore(
     query,
-    (kind === "manufacturer" ? query.brand + " " : "") + name,
+    (official(kind) ? query.brand + " " : "") + name,
     year,
   );
   if (!score) return undefined;
@@ -171,15 +174,11 @@ function candidateOf(
 }
 // Official page whose identity is the request: nothing weaker needs consulting.
 function exact(query: BikeQuery, c: BikeCandidate) {
-  const words = new Set(
-    normalize(
-      (c.kind === "manufacturer" ? query.brand + " " : "") + c.canonicalName,
-    ).split(" "),
-  );
   return (
-    normalize([query.brand, query.model, query.trim].filter(Boolean).join(" "))
-      .split(" ")
-      .every((w) => words.has(w)) &&
+    requestInName(
+      query,
+      (official(c.kind) ? query.brand + " " : "") + c.canonicalName,
+    ) &&
     (query.year === null || c.year === query.year)
   );
 }
@@ -189,7 +188,7 @@ function judged(query: BikeQuery, resolved: Resolved): Resolved {
   const conflict = identityConflict(
     query,
     [
-      resolved.source.kind === "manufacturer" ? query.brand : undefined,
+      official(resolved.source.kind) ? query.brand : undefined,
       resolved.bike.canonicalName,
     ]
       .filter(Boolean)
@@ -209,6 +208,7 @@ function judged(query: BikeQuery, resolved: Resolved): Resolved {
 }
 const kindRank: Record<SourceKind, number> = {
   manufacturer: 0,
+  distributor: 0,
   archive: 1,
   store: 2,
   web: 3,
@@ -354,7 +354,9 @@ export class SourceSearch {
     if (adapter)
       jobs.push(
         (async () => {
-          const started = Date.now();
+          const started = Date.now(),
+            kind: SourceKind = adapter.sourceKind ?? "manufacturer";
+          let found = 0;
           const make = (
             status: SourceStatus,
             extra: Parameters<SourceSearch["report"]>[5] = {},
@@ -362,21 +364,21 @@ export class SourceSearch {
             report: this.report(
               adapter.id,
               adapter.brand,
-              "manufacturer",
+              kind,
               started,
               status,
               extra,
             ),
             verified: extra.verified ?? [],
-            truncated: false,
+            // More pages were found than are read: the list is a cut.
+            truncated: found > (extra.pages ?? 0),
           });
           if (!settings.value.adapters[adapter.id]) return make("disabled");
           try {
             const urls = await withinBudget(
               this.limits.officialMs,
               async () => {
-                const found = await adapter.discover(query);
-                return found
+                const relevant = (await adapter.discover(query))
                   .filter(
                     (c) =>
                       partialScore(
@@ -397,13 +399,15 @@ export class SourceSearch {
                         query.brand + " " + a.canonicalName,
                         a.year,
                       ),
-                  )
+                  );
+                found = relevant.length;
+                return relevant
                   .slice(0, this.limits.officialPages)
                   .map((c) => c.url);
               },
             );
             trace("candidate_found", { count: urls.length });
-            const r = await this.verify(query, urls, "manufacturer");
+            const r = await this.verify(query, urls, kind);
             return make(
               r.verified.length
                 ? "ok"

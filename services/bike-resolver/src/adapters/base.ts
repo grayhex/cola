@@ -2,6 +2,7 @@ import { checkAbort } from "../context.js";
 import { sourceIdentity } from "../source-url.js";
 import { load } from "cheerio";
 import { normalize } from "../normalize.js";
+import { modelWordsMatch } from "../matcher.js";
 import { extractMetadata, parseDocument } from "../extract.js";
 import {
   ResolverError,
@@ -56,11 +57,7 @@ export abstract class CatalogueAdapter implements BikeManufacturerAdapter {
     return parseDocument(doc, this.rows);
   }
   protected matchesModel(value: string, q: BikeQuery) {
-    const words = new Set(normalize(value).split(" "));
-    return normalize(q.model)
-      .split(" ")
-      .filter(Boolean)
-      .every((w) => words.has(w));
+    return modelWordsMatch(normalize(q.model), normalize(value));
   }
   async discover(q: BikeQuery): Promise<BikeCandidate[]> {
     const deadline = Date.now() + 60000;
