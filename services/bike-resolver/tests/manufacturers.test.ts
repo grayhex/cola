@@ -615,6 +615,87 @@ describe("TWITTER: the official US shop, one choice per build", () => {
   });
 });
 
+describe("builds of one product are one download", () => {
+  const twitterHttp = () =>
+    fixtureRoutes((u) => {
+      if (u.pathname === "/search/suggest.json") {
+        const id = "twitter-suggest-" + slugOf(u.searchParams.get("q"));
+        return manifest.some((e) => e.id === id)
+          ? { entry: entry(id) }
+          : undefined;
+      }
+      const page = manifest.find(
+        (e) =>
+          e.adapter === "twitter" &&
+          e.kind === "bike" &&
+          new URL(e.url).pathname === u.pathname,
+      );
+      return page ? { entry: page } : undefined;
+    });
+  it("asks the shop for the product page, not for each build's own address", async () => {
+    const { http, requested } = twitterHttp();
+    const a = new TwitterAdapter(http);
+    const settings = new SettingsStore();
+    settings.value.retailerSearch = false;
+    const search = new SourceSearch({
+      adapters: [a],
+      http,
+      manual: new ManualSources(http, [a], settings, []),
+      settings,
+      stores: [],
+      registry: new CandidateRegistry(),
+    });
+    const query = ask("TWITTER", "Gravel V3", null);
+    const offered = await withResolution(
+      new AbortController().signal,
+      undefined,
+      () => search.all(query),
+    );
+    if (offered.status !== "ambiguous") throw Error("expected choices");
+    const builds = offered.candidates.filter((c) => c.url.includes("?build="));
+    expect(builds.length).toBeGreaterThanOrEqual(3);
+    // The choices stay one per build, each with its own address...
+    expect(new Set(builds.map((c) => c.url)).size).toBe(builds.length);
+    // ...while the shop is only ever asked for the page they share.
+    const pages = requested.filter((u) => u.includes("/products/"));
+    expect(pages.length).toBeGreaterThan(0);
+    expect(pages.some((u) => u.includes("build="))).toBe(false);
+    // And each build still reads its own parts.
+    const names = new Set(builds.map((c) => c.canonicalName));
+    expect(names.size).toBe(builds.length);
+  });
+  it("a chosen build keeps its address and its own parts", async () => {
+    const { http, requested } = twitterHttp();
+    const a = new TwitterAdapter(http);
+    const settings = new SettingsStore();
+    settings.value.retailerSearch = false;
+    const search = new SourceSearch({
+      adapters: [a],
+      http,
+      manual: new ManualSources(http, [a], settings, []),
+      settings,
+      stores: [],
+      registry: new CandidateRegistry(),
+    });
+    const query = ask("TWITTER", "Gravel V3", null);
+    const chosen = await withResolution(
+      new AbortController().signal,
+      undefined,
+      async () => {
+        const offered = await search.all(query);
+        if (offered.status !== "ambiguous") throw Error("expected choices");
+        const wanted = offered.candidates.find((c) =>
+          /1×13|1x13/.test(c.canonicalName),
+        );
+        return search.select(query, wanted!.candidateId!);
+      },
+    );
+    if (chosen?.status !== "resolved") throw Error("expected a result");
+    expect(chosen.source.url).toMatch(/\?build=sensah-1-13$|\?build=.*1-13/);
+    expect(requested.some((u) => u.includes("build="))).toBe(false);
+  });
+});
+
 describe("the direct resolver keeps the kind of source an adapter has", () => {
   const twitter = () => {
     const { http } = fixtureRoutes((u) => {

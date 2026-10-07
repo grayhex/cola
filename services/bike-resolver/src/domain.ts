@@ -241,7 +241,15 @@ export interface BikeManufacturerAdapter {
   readonly aliases: string[];
   readonly allowedDomains: string[];
   readonly adapterVersion: number;
-  discover(query: BikeQuery): Promise<BikeCandidate[]>;
+  // `pages` is how many catalogue pages the caller will use: reading more
+  // costs time for nothing, and the list says when it was cut.
+  discover(
+    query: BikeQuery,
+    options?: { pages?: number },
+  ): Promise<BikeCandidate[]>;
+  // The address a candidate's page is read from, when the candidate's own
+  // carries words the shop does not know (one of several builds on a page).
+  fetchUrl?(url: string): string;
   fetch(candidate: BikeCandidate): Promise<SourceDocument>;
   parse(document: SourceDocument, query: BikeQuery): Promise<ParsedBike>;
 }

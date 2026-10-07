@@ -81,9 +81,23 @@ export class ManufacturerHttpClient {
     checkAbort();
     url = sourceIdentity(validateUrl(url, domains).href);
     const ctx = resolutionContext.getStore(),
-      key = JSON.stringify([url, domains, headers]);
+      key = JSON.stringify([url, domains, headers]),
+      shared = JSON.stringify([url, headers]);
     const existing = ctx?.documents.get(key);
     if (existing) return existing;
+    // A page that another step of this request already read under its own host
+    // policy (a catalogue adapter, then the page check) is not downloaded
+    // again, as long as this caller's policy allows where the page ended up.
+    const read = ctx?.documents.get(shared);
+    if (read) {
+      const doc = await read;
+      try {
+        validateUrl(doc.url, domains);
+        return doc;
+      } catch {
+        // Another policy refuses that address: read it under this policy.
+      }
+    }
     const task = (async () => {
       trace("document_fetch_started", { host: new URL(url).hostname });
       const d = await this.getBytes(url, domains, headers);
@@ -102,6 +116,11 @@ export class ManufacturerHttpClient {
       };
     })();
     ctx?.documents.set(key, task);
+    // Only a page that was read is shared; a failure belongs to its policy.
+    void task.then(
+      (doc) => ctx?.documents.set(shared, Promise.resolve(doc)),
+      () => {},
+    );
     return task;
   }
   async getBytes(

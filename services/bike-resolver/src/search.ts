@@ -1,10 +1,13 @@
 import { archiveLinks } from "./archive-search.js";
 import { candidateIdOf, type CandidateRegistry } from "./candidate-registry.js";
 import {
+  budgetLeft,
   checkAbort,
+  noteCut,
   quiet,
   trace,
   withinBudget,
+  type Notes,
   type Reason,
 } from "./context.js";
 import {
@@ -26,7 +29,7 @@ import { partialScore, requestInName } from "./matcher.js";
 import { normalize } from "./normalize.js";
 import { webLinks } from "./retailer-search.js";
 import type { SettingsStore, StoreId } from "./settings.js";
-import { sourceIdentity } from "./source-url.js";
+import { brandSite, sourceIdentity } from "./source-url.js";
 import type { RetailStore } from "./stores/types.js";
 
 // One search is bounded in time, pages and fan-out; none of it is hidden. The
@@ -115,9 +118,12 @@ const drivetrain = (r: Resolved) => {
     pick("rear_derailleur") || pick("shifter") || pick("crankset") || "";
   return text ? text.replace(/\s+/g, " ").slice(0, 70) : undefined;
 };
-// An official page names the model without the brand.
+// An official page names the model without the brand, and so does a page of
+// the brand's own site that a web search found.
 const official = (kind: SourceKind | undefined) =>
   kind === "manufacturer" || kind === "distributor";
+const unbranded = (kind: SourceKind | undefined, url: string, brand: string) =>
+  official(kind) || (kind === "web" && brandSite(url, brand));
 function candidateOf(
   query: BikeQuery,
   resolved: Resolved,
@@ -127,12 +133,21 @@ function candidateOf(
   const kind = resolved.source.kind ?? fallback,
     name = resolved.bike.canonicalName,
     year = resolved.sourceYear ?? null;
-  const score = partialScore(
-    query,
-    (official(kind) ? query.brand + " " : "") + name,
-    year,
-  );
+  const named =
+    (unbranded(kind, resolved.source.url, query.brand)
+      ? query.brand + " "
+      : "") + name;
+  const score = partialScore(query, named, year);
   if (!score) return undefined;
+  // What the page is called against what was asked, as when it is chosen.
+  const warnings: Reason[] = (resolved.warnings ?? []).filter(
+    (w) => w !== "identity_mismatch",
+  );
+  if (
+    identityConflict(query, named, year) ||
+    resolved.warnings?.includes("identity_mismatch")
+  )
+    warnings.push("identity_mismatch");
   const owner = store ?? undefined;
   return {
     resolved,
@@ -165,7 +180,7 @@ function candidateOf(
           }
         : {}),
       ...(drivetrain(resolved) ? { drivetrain: drivetrain(resolved) } : {}),
-      ...(resolved.warnings?.length ? { warnings: resolved.warnings } : {}),
+      ...(warnings.length ? { warnings } : {}),
       ...(resolved.bike.manufacturerProductId
         ? { manufacturerProductId: resolved.bike.manufacturerProductId }
         : {}),
@@ -177,7 +192,8 @@ function exact(query: BikeQuery, c: BikeCandidate) {
   return (
     requestInName(
       query,
-      (official(c.kind) ? query.brand + " " : "") + c.canonicalName,
+      (unbranded(c.kind, c.url, query.brand) ? query.brand + " " : "") +
+        c.canonicalName,
     ) &&
     (query.year === null || c.year === query.year)
   );
@@ -188,7 +204,9 @@ function judged(query: BikeQuery, resolved: Resolved): Resolved {
   const conflict = identityConflict(
     query,
     [
-      official(resolved.source.kind) ? query.brand : undefined,
+      unbranded(resolved.source.kind, resolved.source.url, query.brand)
+        ? query.brand
+        : undefined,
       resolved.bike.canonicalName,
     ]
       .filter(Boolean)
@@ -338,7 +356,24 @@ export class SourceSearch {
     let failure: Reason | undefined;
     for (const url of urls) {
       checkAbort();
-      const result = await this.page(query, url, kind, store);
+      // Pages already verified are worth more than the next one: with little
+      // time left the phase ends with them, and the list says it is a cut.
+      if (verified.length && budgetLeft() < 1500) {
+        noteCut();
+        break;
+      }
+      let result: Awaited<ReturnType<SourceSearch["page"]>>;
+      try {
+        result = await this.page(query, url, kind, store);
+      } catch (e) {
+        // The phase's own time ran out (not the person cancelling): keep what
+        // was verified.
+        if (verified.length && budgetLeft() === 0) {
+          noteCut();
+          break;
+        }
+        throw e;
+      }
       if (result.verified) verified.push(result.verified);
       else if (network.has(result.failure)) failure ??= result.failure;
     }
@@ -355,7 +390,8 @@ export class SourceSearch {
       jobs.push(
         (async () => {
           const started = Date.now(),
-            kind: SourceKind = adapter.sourceKind ?? "manufacturer";
+            kind: SourceKind = adapter.sourceKind ?? "manufacturer",
+            notes: Notes = { cut: false };
           let found = 0;
           const make = (
             status: SourceStatus,
@@ -370,15 +406,22 @@ export class SourceSearch {
               extra,
             ),
             verified: extra.verified ?? [],
-            // More pages were found than are read: the list is a cut.
-            truncated: found > (extra.pages ?? 0),
+            // More pages were found than are read, or the phase ran short of
+            // time: the list is a cut.
+            truncated: found > (extra.pages ?? 0) || notes.cut,
           });
           if (!settings.value.adapters[adapter.id]) return make("disabled");
           try {
-            const urls = await withinBudget(
+            // Discovery and verification share one budget: a source that is
+            // slow in either still keeps the pages it has verified.
+            const { urls, r } = await withinBudget(
               this.limits.officialMs,
               async () => {
-                const relevant = (await adapter.discover(query))
+                const relevant = (
+                  await adapter.discover(query, {
+                    pages: this.limits.officialPages,
+                  })
+                )
                   .filter(
                     (c) =>
                       partialScore(
@@ -401,13 +444,14 @@ export class SourceSearch {
                       ),
                   );
                 found = relevant.length;
-                return relevant
+                const urls = relevant
                   .slice(0, this.limits.officialPages)
                   .map((c) => c.url);
+                trace("candidate_found", { count: urls.length });
+                return { urls, r: await this.verify(query, urls, kind) };
               },
+              notes,
             );
-            trace("candidate_found", { count: urls.length });
-            const r = await this.verify(query, urls, kind);
             return make(
               r.verified.length
                 ? "ok"

@@ -1,5 +1,5 @@
-import { checkAbort } from "../context.js";
-import { sourceIdentity } from "../source-url.js";
+import { budgetLeft, checkAbort, noteCut } from "../context.js";
+import { sourceIdentity, withAddressWords } from "../source-url.js";
 import { load } from "cheerio";
 import { normalize } from "../normalize.js";
 import { modelWordsMatch } from "../matcher.js";
@@ -12,6 +12,27 @@ import {
   type SourceDocument,
 } from "../domain.js";
 import { ManufacturerHttpClient, validateUrl } from "../http.js";
+// Pages of one catalogue cost seconds each. When this little is left of the
+// phase's budget and some pages are read, the rest are left unread.
+const LAST_PAGE_MS = 3500;
+// How many words of the request's trim an address carries. The model words are
+// what made it a candidate at all; the trim tells the bikes of a model apart.
+function trimHits(href: string, q: BikeQuery) {
+  const wanted = normalize(q.trim ?? "")
+    .split(" ")
+    .filter(Boolean);
+  let words = new Set<string>();
+  try {
+    words = new Set(
+      normalize(
+        decodeURIComponent(new URL(href).pathname).replace(/[/._-]+/g, " "),
+      )
+        .split(" ")
+        .filter(Boolean),
+    );
+  } catch {}
+  return { hits: wanted.filter((w) => words.has(w)).length, of: wanted.length };
+}
 export abstract class CatalogueAdapter implements BikeManufacturerAdapter {
   abstract readonly id: string;
   abstract readonly brand: string;
@@ -50,8 +71,12 @@ export abstract class CatalogueAdapter implements BikeManufacturerAdapter {
     this.documents.set(url, { expires: Date.now() + 86400000, doc });
     return doc;
   }
+  fetchUrl(url: string) {
+    return url;
+  }
   async fetch(c: BikeCandidate) {
-    return this.document(c.url);
+    const read = this.fetchUrl(c.url);
+    return withAddressWords(await this.document(read), c.url, read);
   }
   async parse(doc: SourceDocument, _q: BikeQuery) {
     return parseDocument(doc, this.rows);
@@ -59,7 +84,10 @@ export abstract class CatalogueAdapter implements BikeManufacturerAdapter {
   protected matchesModel(value: string, q: BikeQuery) {
     return modelWordsMatch(normalize(q.model), normalize(value));
   }
-  async discover(q: BikeQuery): Promise<BikeCandidate[]> {
+  async discover(
+    q: BikeQuery,
+    options: { pages?: number } = {},
+  ): Promise<BikeCandidate[]> {
     const deadline = Date.now() + 60000;
     const budget = () => {
       checkAbort();
@@ -151,9 +179,25 @@ export abstract class CatalogueAdapter implements BikeManufacturerAdapter {
         failure = e;
       }
     }
+    // Best first; the catalogue's own order decides between equals. When some
+    // address carries every word of the trim, the others are other bikes of the
+    // model and are not read: each page is seconds of the budget.
+    const ranked = [...urls]
+      .map((href, order) => ({ href, order, ...trimHits(href, q) }))
+      .sort((a, b) => b.hits - a.hits || a.order - b.order);
+    const complete = ranked.filter((r) => r.of > 0 && r.hits === r.of);
+    const pages = (complete.length ? complete : ranked).map((r) => r.href);
+    // Never more than the caller will use, and never more than 12.
+    const limit = Math.min(options.pages ?? 12, 12);
+    if (pages.length > limit) noteCut();
     const candidates: BikeCandidate[] = [];
-    for (const url of [...urls].slice(0, 12)) {
+    for (const url of pages.slice(0, limit)) {
       budget();
+      // What was read is kept: the phase ends with its pages, not with none.
+      if (candidates.length && budgetLeft() < LAST_PAGE_MS) {
+        noteCut();
+        break;
+      }
       try {
         const doc = await this.document(url);
         const meta = extractMetadata(doc);

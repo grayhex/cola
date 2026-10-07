@@ -62,9 +62,17 @@ export interface TraceEvent {
   total?: number;
   reason?: Reason;
 }
+// What a phase did not cover: whoever cuts a list short (a page limit or the
+// phase's own time) says so here, and the search report is not "complete".
+export interface Notes {
+  cut: boolean;
+}
 interface Context {
   signal: AbortSignal;
   start: number;
+  // The tightest budget this work runs under, as a time; none without one.
+  deadline?: number;
+  notes: Notes;
   emit?: (event: TraceEvent) => void;
   documents: Map<string, Promise<SourceDocument>>;
   // Shared by every derived context: the stream is bounded as a whole.
@@ -97,6 +105,7 @@ export function withResolution<T>(
       signal,
       emit,
       start: Date.now(),
+      notes: { cut: false },
       documents: new Map(),
       events: { count: 0 },
     },
@@ -117,20 +126,34 @@ export async function abortable<T>(
       .finally(() => signal.removeEventListener("abort", stop));
   });
 }
-// Independent work shares the request's cancellation and deadline, plus its own cap.
+// Independent work shares the request's cancellation and deadline, plus its own
+// cap. `notes` collects what the work cut short, apart from other phases.
 export function withinBudget<T>(
   ms: number,
   task: () => Promise<T>,
+  notes?: Notes,
 ): Promise<T> {
   const context = resolutionContext.getStore();
   if (!context) return task();
   return resolutionContext.run(
     {
       ...context,
+      deadline: Math.min(context.deadline ?? Infinity, Date.now() + ms),
+      notes: notes ?? context.notes,
       signal: AbortSignal.any([context.signal, AbortSignal.timeout(ms)]),
     },
     task,
   );
+}
+// Time left of the tightest budget around the caller: a loop that has results
+// stops asking for more when little is left, instead of losing them all.
+export function budgetLeft() {
+  const deadline = resolutionContext.getStore()?.deadline;
+  return deadline === undefined ? Infinity : Math.max(0, deadline - Date.now());
+}
+export function noteCut() {
+  const context = resolutionContext.getStore();
+  if (context) context.notes.cut = true;
 }
 // Verification of many pages must not flood the progress stream.
 export function quiet<T>(task: () => Promise<T>): Promise<T> {

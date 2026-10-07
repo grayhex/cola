@@ -98,6 +98,13 @@ export class TwitterAdapter extends ShopifyAdapter {
   protected yearOf(hit: ShopifyHit) {
     return Number(YEAR.exec(hit.title)?.[1]) || null;
   }
+  // Every build is one page of the shop: the shop is asked for that page, the
+  // build stays a word of the candidate's own address.
+  fetchUrl(url: string) {
+    const page = new URL(url);
+    page.searchParams.delete("build");
+    return page.href;
+  }
   protected candidatesOf(hit: ShopifyHit): BikeCandidate[] {
     const builds = buildLabels(hit.body);
     if (builds.length < 2) return super.candidatesOf(hit);

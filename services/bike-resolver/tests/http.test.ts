@@ -78,6 +78,73 @@ it("request-scoped cache fetches a tracking-equivalent document once", async () 
   });
   expect(fetch).toHaveBeenCalledTimes(1);
 });
+it("request-scoped cache serves one page to steps with different host policies", async () => {
+  vi.mocked(fetch).mockResolvedValue(new Response("<h1>Bike</h1>") as any);
+  const http = client();
+  await withResolution(new AbortController().signal, undefined, async () => {
+    // A catalogue adapter reads under its own domains, the page check under
+    // every registered one: still one download.
+    await http.get("https://cube.eu/bike", ["cube.eu"]);
+    await http.get("https://cube.eu/bike", ["cube.eu", "www.canyon.com"]);
+  });
+  expect(fetch).toHaveBeenCalledTimes(1);
+});
+it("a page read under one host policy is not served to a policy that refuses where it ended up", async () => {
+  vi.mocked(fetch)
+    .mockResolvedValueOnce(
+      new Response("", {
+        status: 302,
+        headers: { location: "https://cdn.cube.eu/bike" },
+      }) as any,
+    )
+    .mockResolvedValueOnce(new Response("<h1>Bike</h1>") as any)
+    .mockResolvedValueOnce(
+      new Response("", {
+        status: 302,
+        headers: { location: "https://cdn.cube.eu/bike" },
+      }) as any,
+    );
+  const http = client();
+  await withResolution(new AbortController().signal, undefined, async () => {
+    const first = await http.get("https://cube.eu/bike", [
+      "cube.eu",
+      "cdn.cube.eu",
+    ]);
+    expect(first.url).toBe("https://cdn.cube.eu/bike");
+    // The narrower policy has to follow the redirect itself, and refuses it.
+    await expect(
+      http.get("https://cube.eu/bike", ["cube.eu"]),
+    ).rejects.toBeDefined();
+  });
+  expect(fetch).toHaveBeenCalledTimes(3);
+});
+it("a failed read is not shared between policies", async () => {
+  vi.mocked(fetch)
+    .mockResolvedValueOnce(
+      new Response("", {
+        status: 302,
+        headers: { location: "https://cdn.cube.eu/bike" },
+      }) as any,
+    )
+    .mockResolvedValueOnce(
+      new Response("", {
+        status: 302,
+        headers: { location: "https://cdn.cube.eu/bike" },
+      }) as any,
+    )
+    .mockResolvedValueOnce(new Response("<h1>Bike</h1>") as any);
+  const http = client();
+  await withResolution(new AbortController().signal, undefined, async () => {
+    await expect(
+      http.get("https://cube.eu/bike", ["cube.eu"]),
+    ).rejects.toBeDefined();
+    const doc = await http.get("https://cube.eu/bike", [
+      "cube.eu",
+      "cdn.cube.eu",
+    ]);
+    expect(doc.body).toContain("Bike");
+  });
+});
 it("propagates cancellation to the active fetch without retrying", async () => {
   const controller = new AbortController();
   vi.mocked(fetch).mockImplementation(
