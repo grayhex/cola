@@ -274,18 +274,34 @@ export interface BikePhotoCandidate {
 export interface ResolverBrand {
   id: string;
   name: string;
+  // "direct": an adapter reads the official site. Any other brand is searched
+  // through the stores only.
+  kind?: "direct";
   enabled: boolean;
   adapterVersion: number;
   limitation: string | null;
 }
+export interface ResolverStore {
+  id: string;
+  name: string;
+  enabled: boolean;
+  storeVersion: number;
+  // Whether the store's own catalogue is searched; otherwise only its pages are read.
+  search: boolean;
+  domains: string[];
+  limitation: string | null;
+}
 export interface ResolverBrandsDto {
   brands: ResolverBrand[];
+  stores?: ResolverStore[];
   autoResolve: boolean;
+  storeSearch?: boolean;
 }
 export interface ResolverSettingsDto {
   value: ResolverSettings;
   version: number;
   brands: ResolverBrand[];
+  stores?: ResolverStore[];
 }
 export interface ResolverDiagnosticsDto {
   extractorVersion: number;

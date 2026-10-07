@@ -214,6 +214,39 @@ export default function ResolverSettings() {
               </button>
             </div>
           ))}
+          <h3>Магазины</h3>
+          <p className="help">
+            Зарегистрированные магазины ищутся, когда официальный сайт не дал
+            точного совпадения или для марки нет адаптера. Результат магазина
+            всегда предлагается на выбор и не заменяет заводскую комплектацию.
+            Если сайт магазина не открывается из сети сервера, это видно в
+            диагностике; защиту сайта Resolver не обходит.
+          </p>
+          {(data!.stores || []).map((s) => (
+            <div className="resolver-adapter" key={s.id}>
+              <label className="setting-row">
+                <span>
+                  {s.name} <small>v{s.storeVersion}</small>
+                  <small>
+                    {" "}
+                    · {s.search ? "поиск по каталогу" : "только ссылка"} ·{" "}
+                    {s.domains[0]}
+                  </small>
+                </span>
+                <input
+                  type="checkbox"
+                  checked={!!draft.stores?.[s.id as keyof typeof draft.stores]}
+                  onChange={(e) =>
+                    set("stores", {
+                      ...draft.stores,
+                      [s.id]: e.target.checked,
+                    })
+                  }
+                />
+              </label>
+              {s.limitation && <p className="help">{s.limitation}</p>}
+            </div>
+          ))}
           <div className="form-actions">
             <button className="button" disabled={busy || !dirty}>
               Сохранить настройки

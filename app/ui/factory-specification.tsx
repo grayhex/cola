@@ -4,16 +4,28 @@ import type { ResolverBrandsDto } from "../../lib/contracts.ts";
 import type { ResolveResult } from "../../lib/bike-resolver-client.ts";
 
 import { useConfirmation } from "./confirmation.tsx";
+import {
+  ResolverCandidateCard,
+  ResolverSearchReport,
+  sourceLabel,
+} from "./resolver-candidates.tsx";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { LoaderCircle, Check, RefreshCw } from "./icons.tsx";
 import { factoryCategory } from "../../lib/factory-components.ts";
 import { componentText } from "../../services/bike-resolver/src/component-identity.ts";
 const messages: Record<string, string> = {
-  not_found: "Комплектация не найдена. Продолжите вручную.",
-  unsupported_brand: "Автозаполнение для этого производителя пока недоступно.",
+  not_found:
+    "Комплектация не найдена в проверенных источниках. Уточните модель, вставьте ссылку на страницу или продолжите вручную.",
+  unsupported_brand: "Автозаполнение для этой марки сейчас недоступно.",
   upstream_unavailable:
-    "Сервис или сайт производителя недоступен. Можно заполнить вручную.",
+    "Часть источников недоступна. Повторите позже, вставьте ссылку или заполните вручную.",
   parse_error: "Не удалось прочитать комплектацию. Можно заполнить вручную.",
+};
+const reasons: Record<string, string> = {
+  candidate_expired:
+    "Результаты поиска устарели. Нажмите «Найти» и выберите вариант заново.",
+  not_complete_bike:
+    "Эта страница описывает не готовый велосипед (рама, деталь или аксессуар).",
 };
 export default function FactorySpecification({
   bike,
@@ -217,34 +229,45 @@ export default function FactorySpecification({
             </p>
           )}
           {result && messages[result.status] && (
-            <p className="help">{messages[result.status]}</p>
+            <p className="help">
+              {(result.status !== "resolved" &&
+                result.status !== "ambiguous" &&
+                "reason" in result &&
+                result.reason &&
+                reasons[result.reason]) ||
+                messages[result.status]}
+            </p>
           )}
           {result?.status === "ambiguous" && (
             <>
               <p className="help">
-                Уточните модель или выберите вариант с подтверждённым годом:
+                Выберите свою комплектацию. Один выбор — один источник; год и
+                название сверьте с вашим велосипедом:
               </p>
-              <ul className="resolver-candidates">
-                {result.candidates.map((c) => (
-                  <li key={c.url}>
-                    <a href={c.url} target="_blank" rel="noreferrer">
-                      {c.canonicalName}
-                    </a>
-                    <small>{c.year || "Год не подтверждён"}</small>
-                    {c.year === Number(bike.year) && (
-                      <button
-                        type="button"
-                        className="quiet"
-                        onClick={() => find(c.candidateId)}
-                      >
-                        Выбрать
-                      </button>
-                    )}
-                  </li>
-                ))}
-              </ul>
+              {result.candidates.map((c) => (
+                <ResolverCandidateCard
+                  key={c.candidateId || c.url}
+                  candidate={c}
+                  requestedYear={Number(bike.year)}
+                  // A listed official variant of another confirmed year is refused by
+                  // the service; offering it would only return the same list.
+                  disabled={
+                    !c.candidateId ||
+                    (!c.selectable &&
+                      c.year !== null &&
+                      c.year !== Number(bike.year))
+                  }
+                  onChoose={(choice) => find(choice.candidateId)}
+                />
+              ))}
             </>
           )}
+          {result &&
+            result.status !== "resolved" &&
+            result.status !== "upstream_unavailable" &&
+            "search" in result && (
+              <ResolverSearchReport search={result.search} />
+            )}
           {result?.status === "resolved" && result.manualSelection && (
             <p className="help">
               Сверьте модель, год и компоненты перед импортом. Совпадение по
@@ -278,7 +301,8 @@ export default function FactorySpecification({
                 Источник:{" "}
                 <a href={current.source.url} target="_blank" rel="noreferrer">
                   {current.source.manufacturer}
-                </a>
+                </a>{" "}
+                · {sourceLabel(current.source)}
               </p>
             </>
           )}

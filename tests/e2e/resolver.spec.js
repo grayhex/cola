@@ -127,6 +127,79 @@ test("wizard live trace, stop, partial import and mobile review", async ({
     dialog.getByRole("button", { name: "Далее", exact: true }),
   ).toBeEnabled();
 });
+test("wizard offers store variants for a brand without an adapter and imports only the chosen one", async ({
+  page,
+}, info) => {
+  const suffix = randomUUID();
+  await registerVerified(page.request, {
+    headers: { origin },
+    data: {
+      ...testConsents,
+      name: "Stores " + suffix,
+      email: suffix + "@example.test",
+      password: "resolver-browser-secret-123",
+    },
+  });
+  await page.goto("/account?tab=bikes");
+  await page
+    .getByRole("button", { name: "Добавить велосипед", exact: true })
+    .click();
+  const dialog = page.getByRole("dialog");
+  // The fixture service: Bikeinn answers from a recorded page, VeloSklad
+  // refuses automated requests, the search engine is down.
+  await dialog
+    .getByLabel("Модель, год и комплектация", { exact: true })
+    .fill("Focus Atlas 6.7 Cues");
+  await dialog
+    .getByRole("button", { name: "Найти комплектацию", exact: true })
+    .click();
+  const cards = dialog.locator(".wizard-candidate");
+  await expect(cards).toHaveCount(1);
+  const card = cards.first();
+  await expect(card).toContainText("Focus Atlas 6.7 Cues gravel bike");
+  await expect(card).toContainText("Год не указан на странице");
+  await expect(card).toContainText("магазин Bikeinn");
+  await expect(card).toContainText("Навеска");
+  await expect(card).toContainText("Спецификация полная");
+  await expect(card).toContainText(
+    "Комплектация магазина может отличаться от заводской",
+  );
+  // What was asked and what answered; a limited search never says it is complete.
+  const report = dialog.locator(".resolver-sources");
+  await expect(report.locator("summary")).toContainText("выдача ограничена");
+  await report.locator("summary").click();
+  await expect(report).toContainText("Bikeinn");
+  await expect(report).toContainText("ВелоСклад");
+  await expect(report).toContainText("доступ ограничен");
+  await expect(report).toContainText("Это не полный поиск");
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth + 1,
+    ),
+  ).toBe(true);
+  await page.screenshot({
+    path: info.outputPath("resolver-store-choices.png"),
+    fullPage: true,
+    animations: "disabled",
+  });
+  // The choice is a keyboard action too; nothing is imported before it.
+  await card.focus();
+  await page.keyboard.press("Enter");
+  await expect(dialog.locator(".wizard-found")).toContainText(
+    "Focus Atlas 6.7 Cues gravel bike",
+  );
+  await expect(dialog.locator(".wizard-found")).toContainText(
+    "магазин Bikeinn",
+  );
+  await expect(
+    dialog.getByRole("link", { name: "Источник комплектации" }),
+  ).toHaveAttribute("href", /tradeinn\.com\/bikeinn/);
+  await expect(dialog).toContainText("Сверьте год и версию модели");
+  await dialog.getByRole("button", { name: "Далее", exact: true }).click();
+  expect(await dialog.locator(".wizard-part").count()).toBeGreaterThanOrEqual(
+    15,
+  );
+});
 test("wizard quick setup, identity confirmation, image size and successful save", async ({
   page,
 }, info) => {
