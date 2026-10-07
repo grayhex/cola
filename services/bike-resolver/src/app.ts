@@ -37,7 +37,10 @@ export function buildApp(
   stores: RetailStore[] = createStores(),
 ) {
   const app = Fastify({
-    logger: { redact: ["req.headers.authorization"] },
+    logger: {
+      level: process.env.LOG_LEVEL || "info",
+      redact: ["req.headers.authorization"],
+    },
     bodyLimit: 8192,
     requestTimeout: 120000,
   });

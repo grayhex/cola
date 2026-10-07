@@ -1,10 +1,13 @@
 import { archiveLinks } from "./archive-search.js";
 import { candidateIdOf, type CandidateRegistry } from "./candidate-registry.js";
 import {
+  budgetLeft,
   checkAbort,
+  noteCut,
   quiet,
   trace,
   withinBudget,
+  type Notes,
   type Reason,
 } from "./context.js";
 import {
@@ -19,20 +22,23 @@ import {
   type SourceReport,
   type SourceStatus,
 } from "./domain.js";
-import type { ManufacturerHttpClient } from "./http.js";
+import { readInRequest, type ManufacturerHttpClient } from "./http.js";
 import { identityConflict } from "./identity.js";
 import type { ManualSources } from "./manual.js";
 import { partialScore, requestInName } from "./matcher.js";
 import { normalize } from "./normalize.js";
 import { webLinks } from "./retailer-search.js";
 import type { SettingsStore, StoreId } from "./settings.js";
-import { sourceIdentity } from "./source-url.js";
+import { brandSite, sourceIdentity } from "./source-url.js";
 import type { RetailStore } from "./stores/types.js";
 
 // One search is bounded in time, pages and fan-out; none of it is hidden. The
 // numbers are documented in docs/resolver/architecture.md.
 export const LIMITS = {
   officialMs: 20000,
+  // Reading more catalogue pages than are verified, to find the year asked for,
+  // must leave this much of officialMs unspent.
+  officialSpareMs: 10000,
   archiveMs: 12000,
   storeMs: 14000,
   webMs: 12000,
@@ -115,9 +121,12 @@ const drivetrain = (r: Resolved) => {
     pick("rear_derailleur") || pick("shifter") || pick("crankset") || "";
   return text ? text.replace(/\s+/g, " ").slice(0, 70) : undefined;
 };
-// An official page names the model without the brand.
+// An official page names the model without the brand, and so does a page of
+// the brand's own site that a web search found.
 const official = (kind: SourceKind | undefined) =>
   kind === "manufacturer" || kind === "distributor";
+const unbranded = (kind: SourceKind | undefined, url: string, brand: string) =>
+  official(kind) || (kind === "web" && brandSite(url, brand));
 function candidateOf(
   query: BikeQuery,
   resolved: Resolved,
@@ -127,12 +136,21 @@ function candidateOf(
   const kind = resolved.source.kind ?? fallback,
     name = resolved.bike.canonicalName,
     year = resolved.sourceYear ?? null;
-  const score = partialScore(
-    query,
-    (official(kind) ? query.brand + " " : "") + name,
-    year,
-  );
+  const named =
+    (unbranded(kind, resolved.source.url, query.brand)
+      ? query.brand + " "
+      : "") + name;
+  const score = partialScore(query, named, year);
   if (!score) return undefined;
+  // What the page is called against what was asked, as when it is chosen.
+  const warnings: Reason[] = (resolved.warnings ?? []).filter(
+    (w) => w !== "identity_mismatch",
+  );
+  if (
+    identityConflict(query, named, year) ||
+    resolved.warnings?.includes("identity_mismatch")
+  )
+    warnings.push("identity_mismatch");
   const owner = store ?? undefined;
   return {
     resolved,
@@ -165,7 +183,7 @@ function candidateOf(
           }
         : {}),
       ...(drivetrain(resolved) ? { drivetrain: drivetrain(resolved) } : {}),
-      ...(resolved.warnings?.length ? { warnings: resolved.warnings } : {}),
+      ...(warnings.length ? { warnings } : {}),
       ...(resolved.bike.manufacturerProductId
         ? { manufacturerProductId: resolved.bike.manufacturerProductId }
         : {}),
@@ -177,7 +195,8 @@ function exact(query: BikeQuery, c: BikeCandidate) {
   return (
     requestInName(
       query,
-      (official(c.kind) ? query.brand + " " : "") + c.canonicalName,
+      (unbranded(c.kind, c.url, query.brand) ? query.brand + " " : "") +
+        c.canonicalName,
     ) &&
     (query.year === null || c.year === query.year)
   );
@@ -188,7 +207,9 @@ function judged(query: BikeQuery, resolved: Resolved): Resolved {
   const conflict = identityConflict(
     query,
     [
-      official(resolved.source.kind) ? query.brand : undefined,
+      unbranded(resolved.source.kind, resolved.source.url, query.brand)
+        ? query.brand
+        : undefined,
       resolved.bike.canonicalName,
     ]
       .filter(Boolean)
@@ -336,15 +357,37 @@ export class SourceSearch {
   ) {
     const verified: Verified[] = [];
     let failure: Reason | undefined;
+    // Pages whose check ended, accepted or rejected. A cut leaves the rest of
+    // `urls` unchecked, and a report must not count them.
+    let checked = 0;
     for (const url of urls) {
       checkAbort();
-      const result = await this.page(query, url, kind, store);
+      // Pages already verified are worth more than the next one: with little
+      // time left the phase ends with them, and the list says it is a cut. A
+      // page this request has already read takes no time to check.
+      if (verified.length && budgetLeft() < 1500 && !readInRequest(url)) {
+        noteCut();
+        break;
+      }
+      let result: Awaited<ReturnType<SourceSearch["page"]>>;
+      try {
+        result = await this.page(query, url, kind, store);
+      } catch (e) {
+        // The phase's own time ran out (not the person cancelling): keep what
+        // was verified.
+        if (verified.length && budgetLeft() === 0) {
+          noteCut();
+          break;
+        }
+        throw e;
+      }
+      checked++;
       if (result.verified) verified.push(result.verified);
       else if (network.has(result.failure)) failure ??= result.failure;
     }
     // A failure stays visible even when other pages were merely irrelevant:
     // the page that never answered might have been the one.
-    return { verified, failure };
+    return { verified, failure, checked };
   }
 
   private async primary(query: BikeQuery): Promise<Outcome[]> {
@@ -355,7 +398,8 @@ export class SourceSearch {
       jobs.push(
         (async () => {
           const started = Date.now(),
-            kind: SourceKind = adapter.sourceKind ?? "manufacturer";
+            kind: SourceKind = adapter.sourceKind ?? "manufacturer",
+            notes: Notes = { cut: false };
           let found = 0;
           const make = (
             status: SourceStatus,
@@ -370,15 +414,23 @@ export class SourceSearch {
               extra,
             ),
             verified: extra.verified ?? [],
-            // More pages were found than are read: the list is a cut.
-            truncated: found > (extra.pages ?? 0),
+            // More pages were found than are read, or the phase ran short of
+            // time: the list is a cut.
+            truncated: found > (extra.pages ?? 0) || notes.cut,
           });
           if (!settings.value.adapters[adapter.id]) return make("disabled");
           try {
-            const urls = await withinBudget(
+            // Discovery and verification share one budget: a source that is
+            // slow in either still keeps the pages it has verified.
+            const r = await withinBudget(
               this.limits.officialMs,
               async () => {
-                const relevant = (await adapter.discover(query))
+                const relevant = (
+                  await adapter.discover(query, {
+                    pages: this.limits.officialPages,
+                    spare: this.limits.officialSpareMs,
+                  })
+                )
                   .filter(
                     (c) =>
                       partialScore(
@@ -401,20 +453,21 @@ export class SourceSearch {
                       ),
                   );
                 found = relevant.length;
-                return relevant
+                const urls = relevant
                   .slice(0, this.limits.officialPages)
                   .map((c) => c.url);
+                trace("candidate_found", { count: urls.length });
+                return this.verify(query, urls, kind);
               },
+              notes,
             );
-            trace("candidate_found", { count: urls.length });
-            const r = await this.verify(query, urls, kind);
             return make(
               r.verified.length
                 ? "ok"
                 : r.failure
                   ? statusOf(r.failure)
                   : "empty",
-              { verified: r.verified, pages: urls.length, reason: r.failure },
+              { verified: r.verified, pages: r.checked, reason: r.failure },
             );
           } catch (e) {
             checkAbort();
@@ -449,10 +502,10 @@ export class SourceSearch {
                   : r.failure
                     ? statusOf(r.failure)
                     : "empty",
-                { verified: r.verified, pages: urls.length, reason: r.failure },
+                { verified: r.verified, pages: r.checked, reason: r.failure },
               ),
               verified: r.verified,
-              truncated: false,
+              truncated: r.checked < urls.length,
             };
           } catch (e) {
             checkAbort();
@@ -537,12 +590,11 @@ export class SourceSearch {
       return make(statusOf(reason), { reason });
     }
     try {
-      const checked = urls.slice(0, pages);
-      const r = await this.verify(query, checked, "store", store);
+      const r = await this.verify(query, urls.slice(0, pages), "store", store);
       trace("store_checked", {
         host,
         count: r.verified.length,
-        total: checked.length,
+        total: r.checked,
       });
       if (!r.verified.length && r.failure)
         trace("source_failed", { host, reason: r.failure });
@@ -550,9 +602,9 @@ export class SourceSearch {
         r.verified.length ? "ok" : r.failure ? statusOf(r.failure) : "empty",
         {
           verified: r.verified,
-          pages: checked.length,
+          pages: r.checked,
           reason: r.verified.length ? undefined : r.failure,
-          truncated: urls.length > checked.length || !!store.partial,
+          truncated: urls.length > r.checked || !!store.partial,
         },
       );
     } catch (e) {
@@ -586,7 +638,7 @@ export class SourceSearch {
       const r = await this.verify(query, urls, "web");
       return make(
         r.verified.length ? "ok" : r.failure ? statusOf(r.failure) : "empty",
-        { verified: r.verified, pages: urls.length, reason: r.failure },
+        { verified: r.verified, pages: r.checked, reason: r.failure },
       );
     } catch (e) {
       checkAbort();

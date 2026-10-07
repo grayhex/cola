@@ -7,7 +7,7 @@ vi.mock("undici", async () => {
 });
 import { lookup } from "node:dns/promises";
 import { fetch } from "undici";
-import { ManufacturerHttpClient } from "../src/http.js";
+import { ManufacturerHttpClient, readInRequest } from "../src/http.js";
 import { withResolution } from "../src/context.js";
 const client = () =>
   new ManufacturerHttpClient(pino({ level: "silent" }), 0, 1000);
@@ -77,6 +77,97 @@ it("request-scoped cache fetches a tracking-equivalent document once", async () 
     await http.get("https://cube.eu/?a=1", ["cube.eu"]);
   });
   expect(fetch).toHaveBeenCalledTimes(1);
+});
+it("request-scoped cache serves one page to steps with different host policies", async () => {
+  vi.mocked(fetch).mockResolvedValue(new Response("<h1>Bike</h1>") as any);
+  const http = client();
+  await withResolution(new AbortController().signal, undefined, async () => {
+    // A catalogue adapter reads under its own domains, the page check under
+    // every registered one: still one download.
+    await http.get("https://cube.eu/bike", ["cube.eu"]);
+    await http.get("https://cube.eu/bike", ["cube.eu", "www.canyon.com"]);
+  });
+  expect(fetch).toHaveBeenCalledTimes(1);
+});
+it("a page read under one host policy is not served to a policy that refuses where it ended up", async () => {
+  vi.mocked(fetch)
+    .mockResolvedValueOnce(
+      new Response("", {
+        status: 302,
+        headers: { location: "https://cdn.cube.eu/bike" },
+      }) as any,
+    )
+    .mockResolvedValueOnce(new Response("<h1>Bike</h1>") as any)
+    .mockResolvedValueOnce(
+      new Response("", {
+        status: 302,
+        headers: { location: "https://cdn.cube.eu/bike" },
+      }) as any,
+    );
+  const http = client();
+  await withResolution(new AbortController().signal, undefined, async () => {
+    const first = await http.get("https://cube.eu/bike", [
+      "cube.eu",
+      "cdn.cube.eu",
+    ]);
+    expect(first.url).toBe("https://cdn.cube.eu/bike");
+    // The narrower policy has to follow the redirect itself, and refuses it.
+    await expect(
+      http.get("https://cube.eu/bike", ["cube.eu"]),
+    ).rejects.toBeDefined();
+  });
+  expect(fetch).toHaveBeenCalledTimes(3);
+});
+it("a failed read is not shared between policies", async () => {
+  vi.mocked(fetch)
+    .mockResolvedValueOnce(
+      new Response("", {
+        status: 302,
+        headers: { location: "https://cdn.cube.eu/bike" },
+      }) as any,
+    )
+    .mockResolvedValueOnce(
+      new Response("", {
+        status: 302,
+        headers: { location: "https://cdn.cube.eu/bike" },
+      }) as any,
+    )
+    .mockResolvedValueOnce(new Response("<h1>Bike</h1>") as any);
+  const http = client();
+  await withResolution(new AbortController().signal, undefined, async () => {
+    await expect(
+      http.get("https://cube.eu/bike", ["cube.eu"]),
+    ).rejects.toBeDefined();
+    const doc = await http.get("https://cube.eu/bike", [
+      "cube.eu",
+      "cdn.cube.eu",
+    ]);
+    expect(doc.body).toContain("Bike");
+  });
+});
+it("knows which pages this request has already read, and only those", async () => {
+  vi.mocked(fetch)
+    .mockResolvedValueOnce(new Response("<h1>Bike</h1>") as any)
+    .mockResolvedValueOnce(
+      new Response("", { status: 404, statusText: "Not Found" }) as any,
+    );
+  const http = client();
+  // Outside a request nothing is remembered.
+  expect(readInRequest("https://cube.eu/bike")).toBe(false);
+  await withResolution(new AbortController().signal, undefined, async () => {
+    expect(readInRequest("https://cube.eu/bike")).toBe(false);
+    await http.get("https://cube.eu/bike?utm_source=x", ["cube.eu"]);
+    // The same page, however it is written; another page is not it.
+    expect(readInRequest("https://cube.eu/bike")).toBe(true);
+    expect(readInRequest("https://CUBE.eu/bike?utm_source=y#top")).toBe(true);
+    expect(readInRequest("https://cube.eu/other")).toBe(false);
+    // A page that failed was not read.
+    await expect(
+      http.get("https://cube.eu/missing", ["cube.eu"]),
+    ).rejects.toBeDefined();
+    expect(readInRequest("https://cube.eu/missing")).toBe(false);
+    expect(readInRequest("not a url")).toBe(false);
+  });
 });
 it("propagates cancellation to the active fetch without retrying", async () => {
   const controller = new AbortController();

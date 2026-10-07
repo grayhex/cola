@@ -7,6 +7,7 @@
 //
 //   node --import tsx scripts/capture-fixture.ts --manifest M --dir D --id ID \
 //     --store S|--adapter A --kind bike --url URL --keep "h1|#desc" [--expect JSON]
+//   [--ext xml] keeps the page whole under that extension
 //   node --import tsx scripts/capture-fixture.ts ... --raw FILE --origin FILE.json
 import { createHash } from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
@@ -38,6 +39,7 @@ if (args.has("raw")) {
   body = await readFile(args.get("raw")!, "utf8");
   origin = JSON.parse(await readFile(need("origin"), "utf8"));
   fetchedAt = String(origin.captureTimestamp ?? fetchedAt);
+  finalUrl = String(origin.finalUrl ?? url);
 } else {
   const host = new URL(url).hostname;
   const client = new ManufacturerHttpClient(
@@ -120,14 +122,18 @@ if (args.has("json-products")) {
       .get("keep")!
       .split("|")
       .map((s) => s.trim());
+  // The page's own <title> (a vector graphic carries titles of its own, and a
+  // title is not always a child of <head> once the markup is parsed).
   const head = [
-    "head > title",
+    "title",
     'link[rel="canonical"]',
     'meta[property^="og:"]',
     'script[type="application/ld+json"]',
   ].flatMap((s) =>
     $(s)
       .toArray()
+      .filter((e) => s !== "title" || !$(e).closest("svg").length)
+      .slice(0, s === "title" ? 1 : undefined)
       .map((e) => $.html(e)),
   );
   const parts = selectors.flatMap((s) =>
@@ -147,10 +153,11 @@ if (args.has("json-products")) {
   });
 } else reduced = body;
 
-await writeFile(
-  `${dir}/${id}.${args.has("json-products") ? "json" : args.has("xml-keep") ? "xml" : "html"}`,
-  reduced,
-);
+// A page kept whole (a feed, a site map index) says so with --ext.
+const extension =
+  args.get("ext") ||
+  (args.has("json-products") ? "json" : args.has("xml-keep") ? "xml" : "html");
+await writeFile(`${dir}/${id}.${extension}`, reduced);
 const entry = {
   id,
   // A retailer ("store") or a manufacturer adapter ("adapter") owns the page.

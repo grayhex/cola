@@ -55,6 +55,45 @@ it("bounds and deduplicates public search links", () => {
     ),
   ).toEqual(["https://shop.test/a?a=1&b=2"]);
 });
+it("prefers the page that carries the trim over pages that only mention the model", () => {
+  const item = (title: string, link: string) =>
+    `<item><title>${title}</title><description></description><link>${link}</link></item>`;
+  const feed = `<rss><channel>${[
+    item("Lauf Seigla gravel bike review", "https://reviews.test/seigla"),
+    item("Lauf collection - Seigla", "https://shop.test/collections/lauf"),
+    item("Seigla", "https://brand.test/product/seigla"),
+    item(
+      "Lauf Seigla Core Transmission Gravel Bike 2024",
+      "https://shop.test/products/lauf-seigla-core-transmission-2024",
+    ),
+    item("Wells Fargo Bank", "https://bank.test/"),
+  ].join("")}</channel></rss>`;
+  const links = searchLinks(
+    feed,
+    { brand: "Lauf", model: "Seigla", trim: "Core Transmission", year: null },
+    3,
+  );
+  expect(links[0]).toBe(
+    "https://shop.test/products/lauf-seigla-core-transmission-2024",
+  );
+  // The order of the engine decides between equals; unrelated pages stay out.
+  expect(links.slice(1)).toEqual([
+    "https://reviews.test/seigla",
+    "https://shop.test/collections/lauf",
+  ]);
+  expect(links).not.toContain("https://bank.test/");
+  // Without a trim the brand still counts, then the engine's order stands.
+  expect(
+    searchLinks(
+      feed,
+      { brand: "Lauf", model: "Seigla", trim: null, year: null },
+      2,
+    ),
+  ).toEqual([
+    "https://reviews.test/seigla",
+    "https://shop.test/collections/lauf",
+  ]);
+});
 it("extracts VeloPort separate specification tables and retains conflicting brake evidence", () => {
   const parsed = parseDocument({
     url: "https://www.velo-port.ru/catalog/gorodskie/velosiped_giant_tourer_gts/",

@@ -22,6 +22,25 @@ const storeManifest: {
   retrievedAt: string;
 }[] = JSON.parse(readFileSync(new URL("manifest.json", storeDir), "utf8"));
 const productId = (u: string) => u.match(/\/(\d{5,12})\/p$/)?.[1];
+// Recorded pages of the Reddit 10 benchmark (fixtures/reddit10/pages.json): the
+// official sites of Canyon and Giant answer from them, so the app can be tested
+// on the real pages of those flows. Stores refusing and the search engine being
+// down stay as they are below.
+const redditDir = new URL("./fixtures/reddit10/", import.meta.url);
+const redditPages: {
+  id: string;
+  adapter: string;
+  requestedUrl: string;
+  url: string;
+  rawSha256: string;
+  retrievedAt: string;
+}[] = JSON.parse(readFileSync(new URL("pages.json", redditDir), "utf8"));
+const sameUrl = (a: string, b: string) => {
+  const [x, y] = [new URL(a), new URL(b)];
+  x.searchParams.sort();
+  y.searchParams.sort();
+  return x.href === y.href;
+};
 const source = JSON.parse(
   readFileSync(
     new URL("./fixtures/giant/source.json", import.meta.url),
@@ -117,6 +136,24 @@ const transport = {
         hash: "manual",
         fetchedAt: source.retrievedAt,
         body: `<h1>Giant Tourer GTS</h1><meta property="og:image" content="https://images.example.test/bike.png"><table><tr><td>Рама</td><td>Giant AluxX</td></tr><tr><td>Вилка</td><td>SR Suntour</td></tr><tr><td>Тормоза</td><td>Shimano BR-MT400</td></tr></table>`,
+      };
+    const redditPage = ["canyon", "giant"].includes(
+      redditPages.find((p) => sameUrl(p.requestedUrl, url))?.adapter ?? "",
+    )
+      ? redditPages.find((p) => sameUrl(p.requestedUrl, url))
+      : undefined;
+    if (redditPage)
+      return {
+        url: redditPage.url,
+        hash: redditPage.rawSha256,
+        fetchedAt: redditPage.retrievedAt,
+        body: readFileSync(
+          new URL(
+            redditPage.id + (/sitemap/.test(redditPage.id) ? ".xml" : ".html"),
+            redditDir,
+          ),
+          "utf8",
+        ),
       };
     if (url !== source.url)
       throw new ResolverError("upstream_unavailable", "Fixture only");

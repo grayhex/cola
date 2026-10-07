@@ -915,3 +915,57 @@ describe("through the HTTP API", () => {
     }
   });
 });
+
+describe("pages found on the web", () => {
+  const bing = (words: string) =>
+    "https://www.bing.com/search?format=rss&q=" +
+    words.replaceAll(" ", "+") +
+    "+bicycle+specifications";
+  const feed = (...links: [string, string][]) =>
+    `<rss><channel>${links
+      .map(
+        ([title, url]) =>
+          `<item><title>${title}</title><link>${url}</link></item>`,
+      )
+      .join("")}</channel></rss>`;
+  const lauf = {
+    brand: "Lauf",
+    model: "Seigla",
+    trim: "Core Transmission",
+    year: null,
+  };
+
+  it("offers the brand's own site, whose page names the model without the brand, and says the trim is missing", async () => {
+    const url = "https://www.laufcycles.com/product/lauf-seigla";
+    const { search } = setup([], {
+      [bing("Lauf Seigla Core Transmission")]: feed(["Lauf Seigla", url]),
+      [url]: page("Seigla"),
+    });
+    const offered = await run(() => search.all(lauf));
+    if (offered.status !== "ambiguous")
+      throw Error("expected choices: " + JSON.stringify(offered).slice(0, 300));
+    expect(offered.candidates).toHaveLength(1);
+    expect(offered.candidates[0]).toMatchObject({
+      kind: "web",
+      canonicalName: "Seigla",
+      sourceHost: "www.laufcycles.com",
+    });
+    // The page does not carry the trim that was asked for: the choice says so.
+    expect(offered.candidates[0].warnings).toContain("identity_mismatch");
+    const chosen = await run(() =>
+      search.select(lauf, offered.candidates[0].candidateId!),
+    );
+    if (chosen?.status !== "resolved") throw Error("expected a result");
+    expect(chosen.warnings).toContain("identity_mismatch");
+  });
+
+  it("does not take the page of a shop that is not the brand's when it names no brand", async () => {
+    const url = "https://www.somebikeshop.test/p/seigla";
+    const { search } = setup([], {
+      [bing("Lauf Seigla Core Transmission")]: feed(["Seigla", url]),
+      [url]: page("Seigla"),
+    });
+    const result = await run(() => search.all(lauf));
+    expect(result.status).toBe("not_found");
+  });
+});

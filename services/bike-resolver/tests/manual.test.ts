@@ -20,6 +20,65 @@ const client = {
     contentType: "image/svg+xml",
   }),
 } as unknown as ManufacturerHttpClient;
+describe("a pasted page of the brand's own site", () => {
+  const table =
+    "<table><tr><td>Frame</td><td>Carbon</td></tr><tr><td>Fork</td><td>Carbon</td></tr><tr><td>Brakes</td><td>Shimano GRX</td></tr></table>";
+  const resolve = (
+    pageUrl: string,
+    heading: string,
+    q: { brand: string; model: string; trim: string | null },
+  ) =>
+    new ManualSources(
+      {
+        get: async () => ({
+          url: pageUrl,
+          body: `<h1>${heading}</h1>${table}`,
+          hash: "fixture",
+          fetchedAt: "2026-10-07T00:00:00Z",
+        }),
+      } as unknown as ManufacturerHttpClient,
+      [],
+      new SettingsStore(),
+    ).resolve({ ...q, year: null }, pageUrl);
+  const warnings = async (...args: Parameters<typeof resolve>) => {
+    const result = await resolve(...args);
+    if (result.status !== "resolved") throw Error("expected a result");
+    return result.warnings;
+  };
+  const propain = {
+    brand: "Propain",
+    model: "Terrel CF",
+    trim: null,
+  };
+  it("names the bike without the brand, as an official page does", async () => {
+    expect(
+      await warnings(
+        "https://www.propain-bikes.com/us/product/bikes/gravel/terrel-cf/",
+        "TERREL CF",
+        propain,
+      ),
+    ).not.toContain("identity_mismatch");
+  });
+  it("still says when the page is another bike or lacks the requested trim", async () => {
+    const page = "https://www.propain-bikes.com/us/product/bikes/gravel/x/";
+    expect(await warnings(page, "TYEE CF", propain)).toContain(
+      "identity_mismatch",
+    );
+    expect(
+      await warnings(page, "TERREL CF", { ...propain, trim: "Adventure" }),
+    ).toContain("identity_mismatch");
+  });
+  it("is not a licence for a shop's page that names no brand", async () => {
+    expect(
+      await warnings(
+        "https://www.somebikeshop.test/p/terrel-cf",
+        "TERREL CF",
+        propain,
+      ),
+    ).toContain("identity_mismatch");
+  });
+});
+
 describe("manual sources", () => {
   it("extracts Russian components and keeps manual identity unverified", async () => {
     const result = await new ManualSources(

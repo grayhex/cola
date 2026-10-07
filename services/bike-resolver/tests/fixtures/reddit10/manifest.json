@@ -1,0 +1,840 @@
+{
+  "benchmark": "Reddit 10 (r/gravelcycling)",
+  "issue": "grayhex/cola#361",
+  "requests": "Ten requests from the table of the issue (threads checked there on 2026-10-07); incomplete names and unknown years are kept as the issue asks.",
+  "normalization": "A request typed as one line is split into the wizard's fields: the maker is the brand, the first word(s) of the family the model, what follows (build, groupset) the trim, a year at the end the year the person asks for. The split is fixed before the pages are read and is never fitted to a page.",
+  "outcomes": {
+    "identified": "discovery offered the bike, the person's choice was read, and the page names what was asked: the only outcome that counts as a confirmed build",
+    "parsed_unconfirmed": "a page was chosen and read, but its name or trim differs from the request (identity_mismatch): not counted as identified",
+    "alternatives_only": "variants were offered and none is the bike asked for: nothing is read, nothing is imported",
+    "not_found": "no registered, enabled source offered a page"
+  },
+  "bikes": [
+    {
+      "n": 1,
+      "id": "propain-terrel-cf",
+      "query": "Propain Terrel CF",
+      "reddit": {
+        "url": "https://www.reddit.com/r/gravelcycling/comments/1wlcwu6/deep_in_the_woods_with_the_new_propain_terrel_cf/",
+        "postedAt": null,
+        "dateStatus": "not retrieved: www.reddit.com answers the resolver's safe HTTP client with 403 and the fetch tool refuses the host (2026-10-07), so the post's own metadata date was not read. The date of the issue (2026-10-07) is not a posting date and is not used as one.",
+        "usedFor": "the person's request only; never a reference for a factory build"
+      },
+      "normalized": {
+        "brand": "Propain",
+        "model": "Terrel CF",
+        "trim": null,
+        "year": null
+      },
+      "chosen": null,
+      "manualUrl": {
+        "url": "https://www.propain-bikes.com/us/bikes/gravel/terrel-cf/"
+      },
+      "confirmation": {
+        "year": {
+          "value": null,
+          "evidence": "No model year on the page (title, structured data and body of the recorded fixture checked)."
+        },
+        "trim": {
+          "requested": null,
+          "evidence": "A bike family: the configurator page lists several specification tables (builds); one is read and the page does not say which."
+        }
+      },
+      "expect": {
+        "outcome": "not_found",
+        "discovery": {
+          "status": "not_found",
+          "complete": false,
+          "sources": {
+            "velosklad": "empty",
+            "bikeinn": "empty",
+            "alltricks": "disabled",
+            "bike24": "disabled",
+            "web": "empty"
+          },
+          "candidates": []
+        },
+        "manual": {
+          "status": "resolved",
+          "minComponents": 10,
+          "warnings": []
+        }
+      },
+      "pages": [
+        "velosklad-search-1",
+        "bikeinn-sitemap-index",
+        "bing-1",
+        "bikeinn-sitemap-products-1",
+        "bikeinn-sitemap-products-2",
+        "propain-bikes-terrel-cf"
+      ],
+      "notes": "No registered source finds Propain; Bing answered this query with unrelated bank pages. The manufacturer's configurator page reads as a partial specification when pasted."
+    },
+    {
+      "n": 2,
+      "id": "van-rysel-grvl-af",
+      "query": "Van Rysel GRVL AF Shimano GRX 2x12",
+      "reddit": {
+        "url": "https://www.reddit.com/r/gravelcycling/comments/1wlbh6q/passage_du_velo_de_route_au_gravel/",
+        "postedAt": null,
+        "dateStatus": "not retrieved: www.reddit.com answers the resolver's safe HTTP client with 403 and the fetch tool refuses the host (2026-10-07), so the post's own metadata date was not read. The date of the issue (2026-10-07) is not a posting date and is not used as one.",
+        "usedFor": "the person's request only; never a reference for a factory build"
+      },
+      "normalized": {
+        "brand": "Van Rysel",
+        "model": "GRVL AF",
+        "trim": "Shimano GRX 2x12",
+        "year": null
+      },
+      "chosen": null,
+      "manualUrl": {
+        "url": "https://www.decathlon.ca/en/p/8766972/gravel-bike-shimano-grx-2x12v-grvl-af"
+      },
+      "confirmation": {
+        "year": {
+          "value": null,
+          "evidence": "The pages of the retailer are rendered by script; no specification, so no year is read."
+        },
+        "trim": {
+          "requested": "Shimano GRX 2x12",
+          "evidence": "Trim «Shimano GRX 2x12» is the groupset of the requested build; no page with a specification was found."
+        }
+      },
+      "expect": {
+        "outcome": "not_found",
+        "discovery": {
+          "status": "not_found",
+          "complete": false,
+          "sources": {
+            "velosklad": "empty",
+            "bikeinn": "empty",
+            "alltricks": "disabled",
+            "bike24": "disabled",
+            "web": "empty"
+          },
+          "candidates": []
+        },
+        "manual": {
+          "status": "parse_error",
+          "reason": "spec_fields_not_found"
+        }
+      },
+      "pages": [
+        "velosklad-search-2",
+        "bikeinn-sitemap-index",
+        "bing-2",
+        "bikeinn-sitemap-products-1",
+        "bikeinn-sitemap-products-2",
+        "web-chevrolet-vans",
+        "decathlon-gravel-bike-shimano-grx-2x12v-grvl-af"
+      ],
+      "notes": "Decathlon pages are rendered by script: pasted, they hold no specification. No registered store lists Van Rysel."
+    },
+    {
+      "n": 3,
+      "id": "focus-atlas-6-ltd",
+      "query": "Focus Atlas 6 LTD",
+      "reddit": {
+        "url": "https://www.reddit.com/r/gravelcycling/comments/1wkruug/new_bike_day_focus_atlas_6_ltd/",
+        "postedAt": null,
+        "dateStatus": "not retrieved: www.reddit.com answers the resolver's safe HTTP client with 403 and the fetch tool refuses the host (2026-10-07), so the post's own metadata date was not read. The date of the issue (2026-10-07) is not a posting date and is not used as one.",
+        "usedFor": "the person's request only; never a reference for a factory build"
+      },
+      "normalized": {
+        "brand": "Focus",
+        "model": "Atlas",
+        "trim": "6 LTD",
+        "year": null
+      },
+      "chosen": null,
+      "manualUrl": null,
+      "confirmation": {
+        "year": {
+          "value": null,
+          "evidence": "No model year on the two shop pages offered."
+        },
+        "trim": {
+          "requested": "6 LTD",
+          "evidence": "«6 LTD» is not on any page offered: the two Bikeinn pages are Atlas 6.7 CUES and Atlas 8.7 GRX 820, flagged identity_mismatch."
+        }
+      },
+      "expect": {
+        "outcome": "alternatives_only",
+        "discovery": {
+          "status": "ambiguous",
+          "complete": false,
+          "sources": {
+            "velosklad": "empty",
+            "bikeinn": "ok",
+            "alltricks": "disabled",
+            "bike24": "disabled",
+            "web": "empty"
+          },
+          "candidates": [
+            {
+              "url": "https://www.tradeinn.com/bikeinn/en/focus-atlas-6.7-cues-gravel-bike/142824990/p",
+              "name": "Focus Atlas 6.7 Cues gravel bike",
+              "year": null,
+              "kind": "store",
+              "storeId": "bikeinn",
+              "warnings": ["identity_mismatch"]
+            },
+            {
+              "url": "https://www.tradeinn.com/bikeinn/en/focus-atlas-8.7-grx-820-gravel-bike/142824995/p",
+              "name": "Focus Atlas 8.7 GRX 820 gravel bike",
+              "year": null,
+              "kind": "store",
+              "storeId": "bikeinn",
+              "warnings": ["identity_mismatch"]
+            }
+          ]
+        }
+      },
+      "pages": [
+        "velosklad-search-3",
+        "bikeinn-sitemap-index",
+        "bing-3",
+        "bikeinn-sitemap-products-1",
+        "bikeinn-sitemap-products-2",
+        "bikeinn-focus-atlas-6-7-cues-gravel-bike",
+        "bikeinn-focus-atlas-8-7-grx-820-gravel-bike"
+      ],
+      "notes": "A retailer's own limited build is not a standard Atlas: the alternatives are offered as variants and flagged, never as the LTD."
+    },
+    {
+      "n": 4,
+      "id": "canyon-grail-slx-axs",
+      "query": "Canyon Grail SLX AXS",
+      "reddit": {
+        "url": "https://www.reddit.com/r/gravelcycling/comments/1wkq70l/nbd_grail_slx_axs/",
+        "postedAt": null,
+        "dateStatus": "not retrieved: www.reddit.com answers the resolver's safe HTTP client with 403 and the fetch tool refuses the host (2026-10-07), so the post's own metadata date was not read. The date of the issue (2026-10-07) is not a posting date and is not used as one.",
+        "usedFor": "the person's request only; never a reference for a factory build"
+      },
+      "normalized": {
+        "brand": "Canyon",
+        "model": "Grail",
+        "trim": "SLX AXS",
+        "year": null
+      },
+      "chosen": {
+        "url": "https://www.canyon.com/en-nl/gravel-bikes/race/grail/cf-slx/grail-cf-slx-8-axs/4505.html"
+      },
+      "manualUrl": null,
+      "confirmation": {
+        "year": {
+          "value": 2027,
+          "evidence": "Each page states its own year: JSON-LD additionalProperty Year = 2027 on the current page, 2024 on the outlet page."
+        },
+        "trim": {
+          "requested": "SLX AXS",
+          "evidence": "«SLX AXS» is in both page names (Grail CF SLX 8 AXS); the person chooses between the current page and the outlet one."
+        }
+      },
+      "expect": {
+        "outcome": "identified",
+        "discovery": {
+          "status": "ambiguous",
+          "complete": true,
+          "sources": {
+            "canyon": "ok"
+          },
+          "candidates": [
+            {
+              "url": "https://www.canyon.com/en-nl/gravel-bikes/race/grail/cf-slx/grail-cf-slx-8-axs/4505.html",
+              "name": "Grail CF SLX 8 AXS",
+              "year": 2027,
+              "kind": "manufacturer",
+              "warnings": ["conflicting_sources"]
+            },
+            {
+              "url": "https://www.canyon.com/en-nl/outlet-bikes/gravel-bikes/grail-cf-slx-8-axs/50041448.html",
+              "name": "Grail CF SLX 8 AXS",
+              "year": 2024,
+              "kind": "manufacturer",
+              "warnings": ["conflicting_sources"]
+            }
+          ]
+        },
+        "chosen": {
+          "year": 2027,
+          "minComponents": 15,
+          "sourceKind": "manufacturer",
+          "warnings": ["conflicting_sources"],
+          "components": [
+            {
+              "type": "frame",
+              "contains": "Canyon Grail CF SLX"
+            },
+            {
+              "type": "fork",
+              "contains": "FK0166"
+            },
+            {
+              "type": "rear_derailleur",
+              "contains": "SRAM Force XPLR Etap AXS"
+            },
+            {
+              "type": "crankset",
+              "contains": "SRAM FORCE"
+            },
+            {
+              "type": "cassette",
+              "contains": "XG-1371"
+            },
+            {
+              "type": "brake_lever",
+              "contains": "SRAM Force AXS HRD"
+            },
+            {
+              "type": "front_wheel",
+              "contains": "DT Swiss GRC 1400"
+            },
+            {
+              "type": "tire",
+              "contains": "Schwalbe G-One R Performance"
+            },
+            {
+              "type": "saddle",
+              "contains": "Fizik Vento Argo X3"
+            }
+          ]
+        }
+      },
+      "pages": [
+        "canyon-sitemap",
+        "canyon-grail-cf-slx-8-axs-4505",
+        "canyon-outlet-grail-cf-slx-8-axs-50041448"
+      ],
+      "notes": "The official site offers the current page and an outlet listing of the same model; both are variants the person chooses between."
+    },
+    {
+      "n": 5,
+      "id": "lauf-seigla-core-transmission",
+      "query": "Lauf Seigla Core Transmission",
+      "reddit": {
+        "url": "https://www.reddit.com/r/gravelcycling/comments/1wknxhk/xlab_gt8_or_lauf_seigla_core_transmission/",
+        "postedAt": null,
+        "dateStatus": "not retrieved: www.reddit.com answers the resolver's safe HTTP client with 403 and the fetch tool refuses the host (2026-10-07), so the post's own metadata date was not read. The date of the issue (2026-10-07) is not a posting date and is not used as one.",
+        "usedFor": "the person's request only; never a reference for a factory build"
+      },
+      "normalized": {
+        "brand": "Lauf",
+        "model": "Seigla",
+        "trim": "Core Transmission",
+        "year": null
+      },
+      "chosen": {
+        "url": "https://www.laufcycles.com/product/lauf-seigla"
+      },
+      "manualUrl": {
+        "url": "https://www.laufcycles.com/product/lauf-seigla"
+      },
+      "confirmation": {
+        "year": {
+          "value": null,
+          "evidence": "No model year on the page."
+        },
+        "trim": {
+          "requested": "Core Transmission",
+          "evidence": "«Core Transmission» is the first of eight builds on a comparison table; the page's own name is «Seigla», so the build is not confirmed."
+        }
+      },
+      "expect": {
+        "outcome": "parsed_unconfirmed",
+        "discovery": {
+          "status": "ambiguous",
+          "complete": false,
+          "sources": {
+            "velosklad": "empty",
+            "bikeinn": "empty",
+            "alltricks": "disabled",
+            "bike24": "disabled",
+            "web": "ok"
+          },
+          "candidates": [
+            {
+              "url": "https://www.laufcycles.com/product/lauf-seigla",
+              "name": "Seigla",
+              "year": null,
+              "kind": "web",
+              "warnings": ["conflicting_sources", "identity_mismatch"]
+            }
+          ]
+        },
+        "chosen": {
+          "year": null,
+          "minComponents": 14,
+          "sourceKind": "web",
+          "warnings": ["conflicting_sources", "identity_mismatch"],
+          "components": [
+            {
+              "type": "frame",
+              "contains": "Lauf IRM"
+            },
+            {
+              "type": "fork",
+              "contains": "Lauf Grit"
+            },
+            {
+              "type": "rear_derailleur",
+              "contains": "SRAM S1000 Eagle Transmission"
+            },
+            {
+              "type": "shifter",
+              "contains": "SRAM Apex AXS"
+            },
+            {
+              "type": "crankset",
+              "contains": "SRAM Apex 1 Wide DUB 40t"
+            },
+            {
+              "type": "cassette",
+              "contains": "XS-1270 T-Type"
+            },
+            {
+              "type": "tire",
+              "contains": "Goodyear Connector"
+            }
+          ]
+        },
+        "manual": {
+          "status": "resolved",
+          "minComponents": 14,
+          "warnings": ["conflicting_sources", "identity_mismatch"]
+        }
+      },
+      "pages": [
+        "velosklad-search-5",
+        "bikeinn-sitemap-index",
+        "bing-5",
+        "bikeinn-sitemap-products-1",
+        "bikeinn-sitemap-products-2",
+        "laufcycles-lauf-seigla",
+        "web-theproscloset-lauf",
+        "web-cyclingnews-lauf-siegla-ultimate-gravel-bike-review-"
+      ],
+      "notes": "Found through a search engine (brand-owned site); the page lists eight builds in one table and the first column is read, so the result is parsed but unconfirmed."
+    },
+    {
+      "n": 6,
+      "id": "giant-revolt-2",
+      "query": "Giant Revolt 2",
+      "reddit": {
+        "url": "https://www.reddit.com/r/gravelcycling/comments/1wk5xyb/giant_revolt_2_river_elbe_czech_republic/",
+        "postedAt": null,
+        "dateStatus": "not retrieved: www.reddit.com answers the resolver's safe HTTP client with 403 and the fetch tool refuses the host (2026-10-07), so the post's own metadata date was not read. The date of the issue (2026-10-07) is not a posting date and is not used as one.",
+        "usedFor": "the person's request only; never a reference for a factory build"
+      },
+      "normalized": {
+        "brand": "Giant",
+        "model": "Revolt",
+        "trim": "2",
+        "year": null
+      },
+      "chosen": {
+        "url": "https://www.giant-bicycles.com/gb/revolt-2"
+      },
+      "manualUrl": null,
+      "confirmation": {
+        "year": {
+          "value": 2026,
+          "evidence": "Page title «Revolt 2 (2026)» and the og:title state 2026."
+        },
+        "trim": {
+          "requested": "2",
+          "evidence": "«2» is the model name itself; the page carries it."
+        }
+      },
+      "expect": {
+        "outcome": "identified",
+        "discovery": {
+          "status": "ambiguous",
+          "complete": true,
+          "sources": {
+            "giant": "ok"
+          },
+          "candidates": [
+            {
+              "url": "https://www.giant-bicycles.com/gb/revolt-2",
+              "name": "Revolt 2",
+              "year": 2026,
+              "kind": "manufacturer",
+              "warnings": []
+            }
+          ]
+        },
+        "chosen": {
+          "year": 2026,
+          "minComponents": 18,
+          "sourceKind": "manufacturer",
+          "warnings": [],
+          "components": [
+            {
+              "type": "frame",
+              "contains": "ALUXX"
+            },
+            {
+              "type": "fork",
+              "contains": "Advanced-grade composite"
+            },
+            {
+              "type": "shifter",
+              "contains": "Shimano CUES U3030"
+            },
+            {
+              "type": "rear_derailleur",
+              "contains": "Shimano CUES U4020"
+            },
+            {
+              "type": "crankset",
+              "contains": "Shimano FC-U6030"
+            },
+            {
+              "type": "cassette",
+              "contains": "CS-LG300"
+            },
+            {
+              "type": "brake",
+              "contains": "BR-RS305"
+            },
+            {
+              "type": "tire",
+              "contains": "CrossCut GRIP 1"
+            }
+          ]
+        }
+      },
+      "pages": ["giant-revolt-2"],
+      "notes": "One official page: a single choice still needs the person's confirmation before an import."
+    },
+    {
+      "n": 7,
+      "id": "canyon-grizl-cf-slx-8",
+      "query": "Canyon Grizl CF SLX 8",
+      "reddit": {
+        "url": "https://www.reddit.com/r/gravelcycling/comments/1wkdklr/new_gravel_race_bike/",
+        "postedAt": null,
+        "dateStatus": "not retrieved: www.reddit.com answers the resolver's safe HTTP client with 403 and the fetch tool refuses the host (2026-10-07), so the post's own metadata date was not read. The date of the issue (2026-10-07) is not a posting date and is not used as one.",
+        "usedFor": "the person's request only; never a reference for a factory build"
+      },
+      "normalized": {
+        "brand": "Canyon",
+        "model": "Grizl",
+        "trim": "CF SLX 8",
+        "year": null
+      },
+      "chosen": {
+        "url": "https://www.canyon.com/en-nl/outlet-bikes/gravel-bikes/grizl-cf-slx-8-axs-trail/50039723.html"
+      },
+      "manualUrl": null,
+      "confirmation": {
+        "year": {
+          "value": 2024,
+          "evidence": "Outlet page: JSON-LD additionalProperty Year = 2024. The request states no year."
+        },
+        "trim": {
+          "requested": "CF SLX 8",
+          "evidence": "«CF SLX 8» is in the page name «Grizl CF SLX 8 AXS Trail»; the current Grizl range has no «SLX» bikes, so no current page is offered."
+        }
+      },
+      "expect": {
+        "outcome": "identified",
+        "discovery": {
+          "status": "ambiguous",
+          "complete": true,
+          "sources": {
+            "canyon": "ok"
+          },
+          "candidates": [
+            {
+              "url": "https://www.canyon.com/en-nl/outlet-bikes/gravel-bikes/grizl-cf-slx-8-axs-trail/50039723.html",
+              "name": "Grizl CF SLX 8 AXS Trail",
+              "year": 2024,
+              "kind": "manufacturer",
+              "warnings": ["conflicting_sources"]
+            }
+          ]
+        },
+        "chosen": {
+          "year": 2024,
+          "minComponents": 15,
+          "sourceKind": "manufacturer",
+          "warnings": ["conflicting_sources"],
+          "components": [
+            {
+              "type": "frame",
+              "contains": "Canyon Grizl CF SLX"
+            },
+            {
+              "type": "fork",
+              "contains": "Rudy Ultimate XPLR"
+            },
+            {
+              "type": "rear_derailleur",
+              "contains": "SRAM Force XPLR AXS"
+            },
+            {
+              "type": "cassette",
+              "contains": "XG-1271"
+            },
+            {
+              "type": "crankset",
+              "contains": "SRAM Force Wide"
+            },
+            {
+              "type": "front_wheel",
+              "contains": "Zipp 101 XPLR"
+            },
+            {
+              "type": "tire",
+              "contains": "Schwalbe G-One RX PRO"
+            },
+            {
+              "type": "saddle",
+              "contains": "Fizik Argo Terra X3"
+            }
+          ]
+        }
+      },
+      "pages": [
+        "canyon-sitemap",
+        "canyon-outlet-grizl-cf-slx-8-axs-trail-50039723"
+      ],
+      "notes": "The Grizl CF SLX 8 of the post is not on the current range; an outlet listing of an earlier build is the only page, offered as a choice."
+    },
+    {
+      "n": 8,
+      "id": "canyon-grizl-cf-sl-6-2023",
+      "query": "Canyon Grizl CF SL 6 2023",
+      "reddit": {
+        "url": "https://www.reddit.com/r/gravelcycling/comments/1wk2ona/roadie_seeking_gravel_bike_with_large_tire/",
+        "postedAt": null,
+        "dateStatus": "not retrieved: www.reddit.com answers the resolver's safe HTTP client with 403 and the fetch tool refuses the host (2026-10-07), so the post's own metadata date was not read. The date of the issue (2026-10-07) is not a posting date and is not used as one.",
+        "usedFor": "the person's request only; never a reference for a factory build"
+      },
+      "normalized": {
+        "brand": "Canyon",
+        "model": "Grizl",
+        "trim": "CF SL 6",
+        "year": 2023
+      },
+      "chosen": null,
+      "manualUrl": null,
+      "confirmation": {
+        "year": {
+          "value": null,
+          "evidence": "The request asks for 2023; none of the offered pages states 2023 (they state 2026 and 2027) and the archive has no 2023 for Canyon."
+        },
+        "trim": {
+          "requested": "CF SL 6",
+          "evidence": "«CF SL 6» is on no page: every alternative is flagged identity_mismatch and none is offered as the 2023 build."
+        }
+      },
+      "expect": {
+        "outcome": "alternatives_only",
+        "discovery": {
+          "status": "ambiguous",
+          "complete": false,
+          "sources": {
+            "canyon": "ok",
+            "archive": "empty",
+            "velosklad": "empty",
+            "bikeinn": "empty",
+            "alltricks": "disabled",
+            "bike24": "disabled",
+            "web": "empty"
+          },
+          "candidates": [
+            {
+              "url": "https://www.canyon.com/en-nl/gravel-bikes/adventure/grizl/cf/grizl-cf-6/4552.html",
+              "name": "Grizl CF 6",
+              "year": 2027,
+              "kind": "manufacturer",
+              "warnings": ["conflicting_sources", "identity_mismatch"]
+            },
+            {
+              "url": "https://www.canyon.com/en-nl/electric-bikes/electric-gravel-bikes/grizl-on/grizl-onfly-cf-8/4280.html",
+              "name": "Grizl:ONfly CF 8",
+              "year": 2026,
+              "kind": "manufacturer",
+              "warnings": ["conflicting_sources", "identity_mismatch"]
+            },
+            {
+              "url": "https://www.canyon.com/en-nl/electric-bikes/electric-gravel-bikes/grizl-on/grizl-onfly-cf-9/4281.html",
+              "name": "Grizl:ONfly CF 9",
+              "year": 2026,
+              "kind": "manufacturer",
+              "warnings": ["conflicting_sources", "identity_mismatch"]
+            },
+            {
+              "url": "https://www.canyon.com/en-nl/gravel-bikes/adventure/grizl/cf/grizl-cf-8-di2/4556.html",
+              "name": "Grizl CF 8 Di2",
+              "year": 2027,
+              "kind": "manufacturer",
+              "warnings": ["conflicting_sources", "identity_mismatch"]
+            },
+            {
+              "url": "https://www.canyon.com/en-nl/gravel-bikes/adventure/grizl/al/grizl-6/4444.html",
+              "name": "Grizl 6",
+              "year": 2027,
+              "kind": "manufacturer",
+              "warnings": ["conflicting_sources", "identity_mismatch"]
+            },
+            {
+              "url": "https://www.canyon.com/en-nl/gravel-bikes/adventure/grizl/cf/grizl-cf-7/4553.html",
+              "name": "Grizl CF 7",
+              "year": 2027,
+              "kind": "manufacturer",
+              "warnings": ["conflicting_sources", "identity_mismatch"]
+            }
+          ]
+        }
+      },
+      "pages": [
+        "canyon-sitemap",
+        "bikepedia-canyon-2023",
+        "canyon-grizl-cf-6-4552",
+        "canyon-grizl-cf-8-di2-4556",
+        "canyon-grizl-onfly-cf-8-4280",
+        "canyon-grizl-cf-7-4553",
+        "canyon-grizl-onfly-cf-9-4281",
+        "canyon-grizl-6-4444",
+        "canyon-grizl-cf-9-w-eclips-4559",
+        "canyon-grizl-cf-8-w-rift-4558",
+        "canyon-grizl-cf-8-di2-4143",
+        "canyon-grizl-cf-7-esc-4142",
+        "canyon-grizl-cf-8-esc-w-eclips-4557",
+        "canyon-grizl-cf-7-axs-4554",
+        "velosklad-search-8",
+        "bikeinn-sitemap-index",
+        "bing-8",
+        "bikeinn-sitemap-products-1",
+        "bikeinn-sitemap-products-2"
+      ],
+      "notes": "Historical year: no source of this service has a 2023 Canyon page; current Grizl pages are offered as flagged alternatives only. With a year asked for, the catalogue reads past the six pages it verifies while no page states that year and half of the source's budget is left: on the instant replay all twelve recorded Grizl pages are read, the live run of 2026-10-07 read seven."
+    },
+    {
+      "n": 9,
+      "id": "3t-ultra-apex-eagle",
+      "query": "3T Ultra Apex/Eagle 1x12 700c 2025",
+      "reddit": {
+        "url": "https://www.reddit.com/r/gravelcycling/comments/1wk2ona/roadie_seeking_gravel_bike_with_large_tire/",
+        "postedAt": null,
+        "dateStatus": "not retrieved: www.reddit.com answers the resolver's safe HTTP client with 403 and the fetch tool refuses the host (2026-10-07), so the post's own metadata date was not read. The date of the issue (2026-10-07) is not a posting date and is not used as one.",
+        "usedFor": "the person's request only; never a reference for a factory build"
+      },
+      "normalized": {
+        "brand": "3T",
+        "model": "Ultra",
+        "trim": "Apex/Eagle 1x12 700c",
+        "year": 2025
+      },
+      "chosen": null,
+      "manualUrl": {
+        "url": "https://racycles.com/collections/3t-bikes/products/3t-ultra-apex-eagle-bike"
+      },
+      "confirmation": {
+        "year": {
+          "value": null,
+          "evidence": "The request asks for 2025; no source with a page was found, nothing states a year."
+        },
+        "trim": {
+          "requested": "Apex/Eagle 1x12 700c",
+          "evidence": "«Apex/Eagle 1x12 700c» names a groupset and a wheel size of an earlier build; the shop's current Ultra pages do not carry it."
+        }
+      },
+      "expect": {
+        "outcome": "not_found",
+        "discovery": {
+          "status": "not_found",
+          "complete": false,
+          "sources": {
+            "archive": "empty",
+            "velosklad": "empty",
+            "bikeinn": "empty",
+            "alltricks": "disabled",
+            "bike24": "disabled",
+            "web": "empty"
+          },
+          "candidates": []
+        },
+        "manual": {
+          "status": "parse_error",
+          "reason": "spec_fields_not_found"
+        }
+      },
+      "pages": [
+        "bikepedia-3t-2025",
+        "velosklad-search-9",
+        "bikeinn-sitemap-index",
+        "bing-9",
+        "bikeinn-sitemap-products-1",
+        "bikeinn-sitemap-products-2",
+        "web-3timaging-home",
+        "racycles-3t-ultra-apex-eagle-bike"
+      ],
+      "notes": "Not in the public Bikeinn site map and not on the manufacturer's current pages; the shops that list it publish no readable specification."
+    },
+    {
+      "n": 10,
+      "id": "ari-shafer-cues",
+      "query": "Ari Shafer CUES 1x11 2026",
+      "reddit": {
+        "url": "https://www.reddit.com/r/gravelcycling/comments/1wk2ona/roadie_seeking_gravel_bike_with_large_tire/",
+        "postedAt": null,
+        "dateStatus": "not retrieved: www.reddit.com answers the resolver's safe HTTP client with 403 and the fetch tool refuses the host (2026-10-07), so the post's own metadata date was not read. The date of the issue (2026-10-07) is not a posting date and is not used as one.",
+        "usedFor": "the person's request only; never a reference for a factory build"
+      },
+      "normalized": {
+        "brand": "Ari",
+        "model": "Shafer",
+        "trim": "CUES 1x11",
+        "year": 2026
+      },
+      "chosen": null,
+      "manualUrl": {
+        "url": "https://aribikes.com/products/shafer"
+      },
+      "confirmation": {
+        "year": {
+          "value": null,
+          "evidence": "No model year on the page; the request's 2026 is not borrowed for it."
+        },
+        "trim": {
+          "requested": "CUES 1x11",
+          "evidence": "«CUES 1x11» is the first of six builds (Sport, Comp, Elite, Pro, Team, Frameset) on the page; its name is «Shafer», so the build is not confirmed."
+        }
+      },
+      "expect": {
+        "outcome": "not_found",
+        "discovery": {
+          "status": "not_found",
+          "complete": false,
+          "sources": {
+            "velosklad": "empty",
+            "bikeinn": "empty",
+            "alltricks": "disabled",
+            "bike24": "disabled",
+            "web": "empty"
+          },
+          "candidates": []
+        },
+        "manual": {
+          "status": "resolved",
+          "minComponents": 18,
+          "warnings": ["conflicting_sources", "identity_mismatch"]
+        }
+      },
+      "pages": [
+        "velosklad-search-10",
+        "bikeinn-sitemap-index",
+        "bing-10",
+        "bikeinn-sitemap-products-1",
+        "bikeinn-sitemap-products-2",
+        "aribikes-shafer"
+      ],
+      "notes": "The manufacturer page is not found by the engine's answer for this query; pasted, its first build is read with the page's conflicts reported."
+    }
+  ]
+}

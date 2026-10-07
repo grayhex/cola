@@ -43,6 +43,22 @@ export const publicAddress = (s: string) => {
     return false;
   }
 };
+// A page is shared inside one request by its address and the headers it was
+// asked with, whatever policy of hosts asked for it.
+const sharedKey = (url: string, headers: Record<string, string>) =>
+  JSON.stringify([url, headers]);
+// Whether this request has already read the page (not failed on it): asking
+// for it again costs no time, so nothing is gained by leaving it out for lack of
+// time.
+export function readInRequest(url: string) {
+  try {
+    return !!resolutionContext
+      .getStore()
+      ?.documents.has(sharedKey(sourceIdentity(new URL(url).href), {}));
+  } catch {
+    return false;
+  }
+}
 const pause = (ms: number) => {
   const signal = resolutionContext.getStore()?.signal;
   signal?.throwIfAborted();
@@ -81,9 +97,23 @@ export class ManufacturerHttpClient {
     checkAbort();
     url = sourceIdentity(validateUrl(url, domains).href);
     const ctx = resolutionContext.getStore(),
-      key = JSON.stringify([url, domains, headers]);
+      key = JSON.stringify([url, domains, headers]),
+      shared = sharedKey(url, headers);
     const existing = ctx?.documents.get(key);
     if (existing) return existing;
+    // A page that another step of this request already read under its own host
+    // policy (a catalogue adapter, then the page check) is not downloaded
+    // again, as long as this caller's policy allows where the page ended up.
+    const read = ctx?.documents.get(shared);
+    if (read) {
+      const doc = await read;
+      try {
+        validateUrl(doc.url, domains);
+        return doc;
+      } catch {
+        // Another policy refuses that address: read it under this policy.
+      }
+    }
     const task = (async () => {
       trace("document_fetch_started", { host: new URL(url).hostname });
       const d = await this.getBytes(url, domains, headers);
@@ -102,6 +132,11 @@ export class ManufacturerHttpClient {
       };
     })();
     ctx?.documents.set(key, task);
+    // Only a page that was read is shared; a failure belongs to its policy.
+    void task.then(
+      (doc) => ctx?.documents.set(shared, Promise.resolve(doc)),
+      () => {},
+    );
     return task;
   }
   async getBytes(

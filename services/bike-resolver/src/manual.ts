@@ -1,5 +1,5 @@
 import { EXTRACTOR_VERSION, trace, checkAbort } from "./context.js";
-import { sourceIdentity } from "./source-url.js";
+import { brandSite, sourceIdentity, withAddressWords } from "./source-url.js";
 import { identityConflict } from "./identity.js";
 import { load } from "cheerio";
 import { randomUUID } from "node:crypto";
@@ -228,9 +228,16 @@ export class ManualSources {
     try {
       checkAbort();
       const store = this.storeFor(url);
+      const asked = sourceIdentity(url),
+        // An adapter may read a plainer address than the candidate's own.
+        read = this.adapters
+          .find((a) => a.allowedDomains.includes(new URL(asked).hostname))
+          ?.fetchUrl?.(asked);
       const doc = store
         ? await this.storeDocument(store, url)
-        : await this.document(sourceIdentity(url));
+        : read
+          ? withAddressWords(await this.document(read), asked, read)
+          : await this.document(asked);
       const host = new URL(doc.url).hostname;
       const adapter = this.adapters.find((a) =>
         a.allowedDomains.includes(host),
@@ -262,7 +269,14 @@ export class ManualSources {
           ...(parsed.warnings || []),
           ...(identityConflict(
             query,
-            [adapter?.brand, parsed.canonicalName].filter(Boolean).join(" "),
+            [
+              // A page of the brand's own site names its bike without the brand.
+              adapter?.brand ??
+                (brandSite(doc.url, query.brand) ? query.brand : undefined),
+              parsed.canonicalName,
+            ]
+              .filter(Boolean)
+              .join(" "),
             parsed.year,
           )
             ? ["identity_mismatch" as const]
