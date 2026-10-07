@@ -12,7 +12,26 @@ export const adapterSupport = {
   merida: "",
   gt: "",
   bmc: "Модельный год не подтверждён источником",
+  rose: "",
+  sava: "",
+  shulz: "",
+  twitter: "",
 };
+// What a result of an adapter that is switched on still does not say. Shown to
+// the operator and in /v1/brands; a note never switches an adapter off.
+export const adapterNotes: Partial<
+  Record<keyof typeof adapterSupport, string>
+> = {
+  rose: "ROSE не публикует модельный год: страницы текущего каталога и более старые страницы показываются как варианты, год указывает владелец",
+  sava: "На странице два описания комплектации; при расхождении берётся структурированный блок, различие отмечается",
+  shulz:
+    "Год на странице не указан; цвета и размеры одной модели — одна комплектация, рамы без велосипеда не предлагаются",
+  twitter:
+    "Официальный дистрибьютор в США (twitterbikeusa.com): сайт производителя публикует пустые таблицы. Одна страница — несколько сборок, каждая отдельным вариантом",
+};
+// Adapters added after the first release: settings saved without their flag
+// still load and take the default.
+const laterAdapters = new Set(["gt", "rose", "sava", "shulz", "twitter"]);
 // Registered retailers. `enabled` is the default for installations that never
 // saved the flag; the text is shown to the operator and in /v1/brands.
 export const storeSupport = {
@@ -55,7 +74,11 @@ export const settingsSchema = z
         Object.fromEntries(
           Object.keys(adapterSupport).map((k) => [
             k,
-            k === "gt" ? z.boolean().default(true) : z.boolean(),
+            laterAdapters.has(k)
+              ? z
+                  .boolean()
+                  .default(!adapterSupport[k as keyof typeof adapterSupport])
+              : z.boolean(),
           ]),
         ),
       )

@@ -56,7 +56,7 @@ export function absentComponent(value: unknown) {
   const s = componentText(value).replace(/^[\s:;|.,-]+|[\s:;|.,-]+$/g, "");
   return (
     !s ||
-    /^(?:n\/?a|n\.?d\.?|none(?: included)?|(?:pedals? )?not (?:available|included|specified|applicable|supplied)|unspecified|no (?:pedals|component)|without pedals|нет|отсутствует|не (?:указан[аоы]?|предусмотрен[аоы]?|входит в комплект)|без педалей)$/i.test(
+    /^(?:n\/?a|n\.?d\.?|none(?: included)?(?: \([^)]*\))?|(?:[a-z]+ ){0,3}(?:(?:is|are) )?not (?:available|included|specified|applicable|supplied)(?: in (?:the )?(?:scope of )?(?:delivery|supply))?|unspecified|no (?:pedals|component)|without pedals|нет|отсутствует|не (?:указан[аоы]?|предусмотрен[аоы]?|входит в комплект)|без педалей)$/i.test(
       s,
     )
   );

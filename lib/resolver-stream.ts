@@ -53,7 +53,7 @@ export function safeTrace(input: unknown) {
   )
     out.strategy = value.strategy;
   const reasons = new Set(
-    "dns_failed timeout http_403 http_404 http_429 http_error access_challenge unsupported_charset body_too_large js_shell spec_section_not_found spec_fields_not_found labels_unrecognized identity_mismatch conflicting_sources selector_profile_failed blocked_source aborted connection_failed not_complete_bike candidate_expired".split(
+    "dns_failed timeout http_403 http_404 http_429 http_error access_challenge unsupported_charset body_too_large js_shell spec_section_not_found spec_fields_not_found labels_unrecognized identity_mismatch conflicting_sources selector_profile_failed blocked_source aborted connection_failed not_complete_bike candidate_expired multiple_builds".split(
       " ",
     ),
   );

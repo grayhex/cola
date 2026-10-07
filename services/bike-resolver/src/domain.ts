@@ -98,7 +98,7 @@ export interface BikeComponent {
 // Where a specification page comes from. "store" is a registered retailer,
 // "web" an unregistered page found by a search engine, "manual" a user URL.
 export type SourceKind =
-  "manufacturer" | "archive" | "store" | "web" | "manual";
+  "manufacturer" | "distributor" | "archive" | "store" | "web" | "manual";
 export interface CandidateQuality {
   level: "complete" | "partial";
   recognizedComponents: number;
@@ -235,6 +235,9 @@ export type ResolveResult =
 export interface BikeManufacturerAdapter {
   readonly id: string;
   readonly brand: string;
+  // "distributor": the brand's official shop run by its importer, used when the
+  // manufacturer's own site publishes no specification.
+  readonly sourceKind?: "manufacturer" | "distributor";
   readonly aliases: string[];
   readonly allowedDomains: string[];
   readonly adapterVersion: number;

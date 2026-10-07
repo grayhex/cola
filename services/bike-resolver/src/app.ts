@@ -20,6 +20,7 @@ import type { Cache } from "./cache.js";
 import {
   SettingsStore,
   adapterSupport,
+  adapterNotes,
   settingsSchema,
   storeSupport,
   type StoreId,
@@ -124,7 +125,7 @@ export function buildApp(
         )
           providers.push({
             id: adapter.id,
-            kind: "manufacturer",
+            kind: adapter.sourceKind ?? "manufacturer",
             resolve: async () => {
               const result = await resolver.resolve(request, id);
               // The adapter can re-find an official page by its id. A page it
@@ -298,16 +299,21 @@ export function buildApp(
       }
     },
   );
-  // "direct" brands have an adapter for the official site; any other brand is
-  // searched through the stores only.
+  // "direct" brands have an adapter for the official site, "distributor" ones
+  // for the brand's official shop of its importer; any other brand is searched
+  // through the stores only.
   const brands = () =>
     resolver.adapters.map((a) => ({
       id: a.id,
       name: a.brand,
-      kind: "direct" as const,
+      kind:
+        a.sourceKind === "distributor" ? "distributor" : ("direct" as const),
       enabled: store.value.enabled && !!store.value.adapters[a.id],
       adapterVersion: a.adapterVersion,
-      limitation: adapterSupport[a.id as keyof typeof adapterSupport] || null,
+      limitation:
+        adapterSupport[a.id as keyof typeof adapterSupport] ||
+        adapterNotes[a.id as keyof typeof adapterSupport] ||
+        null,
     }));
   const storeList = () =>
     stores.map((s) => ({

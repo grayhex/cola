@@ -1,5 +1,27 @@
 import { normalize } from "./normalize.js";
 import type { BikeCandidate, BikeQuery } from "./domain.js";
+const squash = (s: string) => s.replace(/\s+/g, "");
+// The model, written without spaces, equals a run of the name's own words.
+export function joinedRun(model: string, actual: string) {
+  const target = squash(model),
+    words = actual.split(" ").filter(Boolean);
+  for (let i = 0; i < words.length; i++) {
+    let joined = "";
+    for (let j = i; j < words.length && joined.length < target.length; j++) {
+      joined += words[j];
+      if (joined === target) return true;
+    }
+  }
+  return false;
+}
+// Normalized model words are all among the name's words, or are the same
+// words run together ("BlackLava" for "Black Lava", "Dont" for "Don't").
+export function modelWordsMatch(model: string, actual: string) {
+  const words = new Set(actual.split(" "));
+  return (
+    model.split(" ").every((t) => words.has(t)) || joinedRun(model, actual)
+  );
+}
 export const MATCH_THRESHOLD = 0.95;
 export const MATCH_MARGIN = 0.06;
 export const EXPLICIT_MATCH_THRESHOLD = 0.88;
@@ -26,16 +48,22 @@ export function scoreCandidate(q: BikeQuery, c: BikeCandidate): number {
     wanted = normalize([q.model, q.trim].filter(Boolean).join(" "));
   const words = new Set(actual.split(" ")),
     wantedWords = wanted.split(" ");
-  if (!model.split(" ").every((t) => words.has(t))) return 0;
-  if (
+  // "BlackLava 2" and "Black Lava 2" are one model: when the words differ only
+  // by spaces, the whole name (not a fragment of it) decides.
+  const spaced = squash(wanted) === squash(actual);
+  if (!spaced && !model.split(" ").every((t) => words.has(t))) {
+    if (q.trim || !joinedRun(model, actual)) return 0;
+  } else if (
+    !spaced &&
     q.trim &&
     (!wantedWords.every((t) => words.has(t)) ||
       [...words].some((t) => !wantedWords.includes(t)))
   )
     return 0;
   const exact =
-    words.size === new Set(wantedWords).size &&
-    wantedWords.every((t) => words.has(t));
+    spaced ||
+    (words.size === new Set(wantedWords).size &&
+      wantedWords.every((t) => words.has(t)));
   return (
     Math.round(
       ((q.year === null ? 0.6 : c.year === q.year ? 0.7 : 0.35) +

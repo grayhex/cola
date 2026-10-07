@@ -237,7 +237,10 @@ export class ManualSources {
       );
       // A page the person chose from an official result keeps the adapter that
       // found it; a pasted address stays a pasted address.
-      const official = origin === "manufacturer" ? adapter : undefined;
+      const official =
+        origin === "manufacturer" || origin === "distributor"
+          ? adapter
+          : undefined;
       const parsed = store
         ? store.parse(doc, query)
         : host === "info.cube.eu"

@@ -33,6 +33,15 @@ export function profileFor(url: string, body: string): ExtractionProfile {
         '[data-testid="tech-specs-accordion-children"]',
       ],
     };
+  // savadeck-bike.com keeps the merchant's own "Technical Specifications" tab
+  // as <br>-separated "Label:value" lines; the structured block is read by
+  // the adapter's own rows.
+  if (host === "savadeck-bike.com" || host === "www.savadeck-bike.com")
+    return {
+      id: "sava",
+      framework: "shopify",
+      lines: [".collapsible-content__inner.rte"],
+    };
   if (/cdn\.shopify\.com|shopify-section|shopify-block/.test(body))
     return {
       id: "shopify",

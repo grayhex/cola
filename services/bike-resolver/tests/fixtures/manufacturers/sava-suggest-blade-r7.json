@@ -1,0 +1,68 @@
+{
+ "resources": {
+  "results": {
+   "products": [
+    {
+     "id": 8249433849995,
+     "title": "2026 SAVA Blade R7-105 Di2 Full Carbon Road Bike 24S",
+     "handle": "sava-blade-r7-105-di2-full-carbon-road-bike-24s",
+     "type": "Full carbon road bike"
+    },
+    {
+     "id": 4876327387275,
+     "title": "SAVA A7L 2026 Full Carbon Road Bike 24 Speed",
+     "handle": "sava-a7l-2026-full-carbon-road-bike-24-speed",
+     "type": "Full carbon road bike"
+    },
+    {
+     "id": 7114283483275,
+     "title": "2026 SAVA Blade R9-Dura Ace Di2 Full Carbon Road Bike 24SP",
+     "handle": "sava-blade-slr9-dura-ace-di2-full-carbon-road-bike-24sp",
+     "type": "Full carbon road bike"
+    },
+    {
+     "id": 8347962015883,
+     "title": "Aurora R7 105 Di2 Carbon Road Bike 24 SP US",
+     "handle": "aurora-r7-105-di2-carbon-road-bike-24-speed-full-carbon-frameset-us",
+     "type": "Carbon road bike"
+    },
+    {
+     "id": 7450774765707,
+     "title": "Aurora R7 105 Di2 Carbon Road Bike 24S",
+     "handle": "aurora-r7-105-di2",
+     "type": "Full carbon road bike"
+    },
+    {
+     "id": 7310401503371,
+     "title": "2026 SAVA A7L PRO-105 R7120 Full Carbon Road Bike 24SP",
+     "handle": "2026-sava-a7l-pro-105-r7120-full-carbon-road-bike-24sp",
+     "type": "Carbon road bike"
+    },
+    {
+     "id": 7604937949323,
+     "title": "SAVA Blade R9 Di2 Full Carbon Road Bike 24 Speed",
+     "handle": "crn-9-0-di2-full-carbon-road-bike-24-speed",
+     "type": "Carbon road bike"
+    },
+    {
+     "id": 7267556851851,
+     "title": "SAVA EX7-S-105 R7100 Disc Brake Road Bike 24SP",
+     "handle": "sava-ex7-s-105-r71000-disc-brake-road-bike-24sp",
+     "type": "Aluminum road bike"
+    },
+    {
+     "id": 8320887619723,
+     "title": "2026 AeroX R7-105 R7170 Di2 Full Carbon Road Bike 24SP",
+     "handle": "2026-aerox-r7-105-r7170-di2-full-carbon-road-bike",
+     "type": "Carbon road bike"
+    },
+    {
+     "id": 7120111632523,
+     "title": "SAVA Blade R8-Ultegra Di2 Full Carbon Road Bike 24SP",
+     "handle": "sava-blade-slr8-ultegra-di2-full-carbon-road-bike-24sp",
+     "type": "Full carbon road bike"
+    }
+   ]
+  }
+ }
+}

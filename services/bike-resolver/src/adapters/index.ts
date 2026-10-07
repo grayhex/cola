@@ -9,6 +9,10 @@ import { ScottAdapter } from "./scott.js";
 import { OrbeaAdapter } from "./orbea.js";
 import { MeridaAdapter } from "./merida.js";
 import { BmcAdapter } from "./bmc.js";
+import { RoseAdapter } from "./rose.js";
+import { SavaAdapter } from "./sava.js";
+import { ShulzAdapter } from "./shulz.js";
+import { TwitterAdapter } from "./twitter.js";
 import type { ManufacturerHttpClient } from "../http.js";
 export const createAdapters = (http: ManufacturerHttpClient) =>
   [
@@ -23,4 +27,8 @@ export const createAdapters = (http: ManufacturerHttpClient) =>
     MeridaAdapter,
     BmcAdapter,
     GtAdapter,
+    RoseAdapter,
+    SavaAdapter,
+    ShulzAdapter,
+    TwitterAdapter,
   ].map((Adapter) => new Adapter(http));
