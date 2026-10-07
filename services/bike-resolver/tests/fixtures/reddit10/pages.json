@@ -1,0 +1,976 @@
+[
+  {
+    "id": "bing-1",
+    "adapter": "bing",
+    "kind": "feed",
+    "requestedUrl": "https://www.bing.com/search?format=rss&q=Propain+Terrel+CF+bicycle+specifications",
+    "url": "https://www.bing.com/search?format=rss&q=Propain+Terrel+CF+bicycle+specifications",
+    "retrievedAt": "2026-10-07T11:23:22.738Z",
+    "rawSha256": "fd69ddb32847def95bb445c40ac17e106b55b74267d3925b14c9747bfdc9ed91",
+    "rawBytes": 4130,
+    "reducedSha256": "fd69ddb32847def95bb445c40ac17e106b55b74267d3925b14c9747bfdc9ed91",
+    "reducedBytes": 4130,
+    "reduction": {},
+    "origin": {
+      "source": "live",
+      "recorder": "scripts/benchmark-reddit10.ts --record",
+      "httpClient": "ManufacturerHttpClient (safe)",
+      "captureTimestamp": "2026-10-07T11:23:22.738Z",
+      "finalUrl": "https://www.bing.com/search?format=rss&q=Propain+Terrel+CF+bicycle+specifications",
+      "contentType": "text/xml; charset=utf-8"
+    }
+  },
+  {
+    "id": "bikeinn-sitemap-index",
+    "adapter": "bikeinn",
+    "kind": "sitemap",
+    "requestedUrl": "https://www.tradeinn.com/bikeinn/sitemaps/sitemap-bikeinn.xml",
+    "url": "https://www.tradeinn.com/bikeinn/sitemaps/sitemap-bikeinn.xml",
+    "retrievedAt": "2026-10-07T11:23:22.758Z",
+    "rawSha256": "3bf6e00686702d159ce780362f73981e808a970514ded9ed43e45632ecd5e399",
+    "rawBytes": 6649,
+    "reducedSha256": "3bf6e00686702d159ce780362f73981e808a970514ded9ed43e45632ecd5e399",
+    "reducedBytes": 6649,
+    "reduction": {},
+    "origin": {
+      "source": "live",
+      "recorder": "scripts/benchmark-reddit10.ts --record",
+      "httpClient": "ManufacturerHttpClient (safe)",
+      "captureTimestamp": "2026-10-07T11:23:22.758Z",
+      "finalUrl": "https://www.tradeinn.com/bikeinn/sitemaps/sitemap-bikeinn.xml",
+      "contentType": "application/xml"
+    }
+  },
+  {
+    "id": "velosklad-search-1",
+    "adapter": "velosklad",
+    "kind": "search",
+    "requestedUrl": "https://www.velosklad.ru/velosipedy/poiskall/?text=Propain+Terrel+CF",
+    "url": "https://www.velosklad.ru/velosipedy/poiskall/?text=Propain+Terrel+CF",
+    "retrievedAt": "2026-10-07T11:23:24.039Z",
+    "rawSha256": "20aac92bfa79611c83028e99ef7fa81db2470336169edf486b0f30069cbae1d2",
+    "rawBytes": 280416,
+    "reducedSha256": "ff23def1198eaece2f8f64139957fae3ba23cbde12d2d59e786640175c36a543",
+    "reducedBytes": 883,
+    "reduction": {
+      "keep": ["h1"],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "live",
+      "recorder": "scripts/benchmark-reddit10.ts --record",
+      "httpClient": "ManufacturerHttpClient (safe)",
+      "captureTimestamp": "2026-10-07T11:23:24.039Z",
+      "finalUrl": "https://www.velosklad.ru/velosipedy/poiskall/?text=Propain+Terrel+CF",
+      "contentType": "text/html; charset=utf-8"
+    }
+  },
+  {
+    "id": "bikeinn-sitemap-products-1",
+    "adapter": "bikeinn",
+    "kind": "sitemap",
+    "requestedUrl": "https://www.tradeinn.com/bikeinn/sitemaps/sitemap_productos_1_eng_bikeinn.xml",
+    "url": "https://www.tradeinn.com/bikeinn/sitemaps/sitemap_productos_1_eng_bikeinn.xml",
+    "retrievedAt": "2026-10-07T11:23:24.218Z",
+    "rawSha256": "af5eb64b7af838429973bd90c046a07b43886228f035deeac218d35ed34f846f",
+    "rawBytes": 2403668,
+    "reducedSha256": "7448830b42273ca201b9097fb0200917d096f10c10472817a2592153a8f921bd",
+    "reducedBytes": 2045,
+    "reduction": {
+      "xmlKeep": [
+        "focus-atlas",
+        "/3t-",
+        "lauf",
+        "propain",
+        "van-rysel",
+        "/ari-"
+      ],
+      "unrelatedEntries": 8
+    },
+    "origin": {
+      "source": "live",
+      "recorder": "scripts/benchmark-reddit10.ts --record",
+      "httpClient": "ManufacturerHttpClient (safe)",
+      "captureTimestamp": "2026-10-07T11:23:24.218Z",
+      "finalUrl": "https://www.tradeinn.com/bikeinn/sitemaps/sitemap_productos_1_eng_bikeinn.xml",
+      "contentType": "application/xml"
+    }
+  },
+  {
+    "id": "bikeinn-sitemap-products-2",
+    "adapter": "bikeinn",
+    "kind": "sitemap",
+    "requestedUrl": "https://www.tradeinn.com/bikeinn/sitemaps/sitemap_productos_2_eng_bikeinn.xml",
+    "url": "https://www.tradeinn.com/bikeinn/sitemaps/sitemap_productos_2_eng_bikeinn.xml",
+    "retrievedAt": "2026-10-07T11:23:25.580Z",
+    "rawSha256": "d19fc5ea2019bfeabd6b3e617fa10c0ad77eefce33a3fa9fc18f7f115c7b8cb0",
+    "rawBytes": 760066,
+    "reducedSha256": "4b4f0368626bbbb0a3d64bad081ad8b54cc37f9baccec734970a0dacc2a41e6d",
+    "reducedBytes": 1660,
+    "reduction": {
+      "xmlKeep": [
+        "focus-atlas",
+        "/3t-",
+        "lauf",
+        "propain",
+        "van-rysel",
+        "/ari-"
+      ],
+      "unrelatedEntries": 8
+    },
+    "origin": {
+      "source": "live",
+      "recorder": "scripts/benchmark-reddit10.ts --record",
+      "httpClient": "ManufacturerHttpClient (safe)",
+      "captureTimestamp": "2026-10-07T11:23:25.580Z",
+      "finalUrl": "https://www.tradeinn.com/bikeinn/sitemaps/sitemap_productos_2_eng_bikeinn.xml",
+      "contentType": "application/xml"
+    }
+  },
+  {
+    "id": "propain-bikes-terrel-cf",
+    "adapter": "propain-bikes.com",
+    "kind": "bike",
+    "requestedUrl": "https://www.propain-bikes.com/us/bikes/gravel/terrel-cf/",
+    "url": "https://www.propain-bikes.com/us/product/bikes/gravel/terrel-cf/",
+    "retrievedAt": "2026-10-07T11:23:27.052Z",
+    "rawSha256": "fcd1421a76eed5bb0c2fd217c7b01459d8f18f6bb75786d0c4e73e73fdb73bd4",
+    "rawBytes": 482562,
+    "reducedSha256": "17c7897af8cdaf063208dd8bb1efbed61e6c6df8eede978e688b98bf81357873",
+    "reducedBytes": 33185,
+    "reduction": {
+      "keep": ["h1", "table"],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "live",
+      "recorder": "scripts/benchmark-reddit10.ts --record",
+      "httpClient": "ManufacturerHttpClient (safe)",
+      "captureTimestamp": "2026-10-07T11:23:27.052Z",
+      "finalUrl": "https://www.propain-bikes.com/us/product/bikes/gravel/terrel-cf/",
+      "contentType": "text/html; charset=utf-8"
+    }
+  },
+  {
+    "id": "bing-2",
+    "adapter": "bing",
+    "kind": "feed",
+    "requestedUrl": "https://www.bing.com/search?format=rss&q=Van+Rysel+GRVL+AF+Shimano+GRX+2x12+bicycle+specifications",
+    "url": "https://www.bing.com/search?format=rss&q=Van+Rysel+GRVL+AF+Shimano+GRX+2x12+bicycle+specifications",
+    "retrievedAt": "2026-10-07T11:23:27.622Z",
+    "rawSha256": "f4ca51df806a6fc294bac33224c5a26240c66b1d2b3a615392118555cbafb6bf",
+    "rawBytes": 4957,
+    "reducedSha256": "f4ca51df806a6fc294bac33224c5a26240c66b1d2b3a615392118555cbafb6bf",
+    "reducedBytes": 4957,
+    "reduction": {},
+    "origin": {
+      "source": "live",
+      "recorder": "scripts/benchmark-reddit10.ts --record",
+      "httpClient": "ManufacturerHttpClient (safe)",
+      "captureTimestamp": "2026-10-07T11:23:27.622Z",
+      "finalUrl": "https://www.bing.com/search?format=rss&q=Van+Rysel+GRVL+AF+Shimano+GRX+2x12+bicycle+specifications",
+      "contentType": "text/xml; charset=utf-8"
+    }
+  },
+  {
+    "id": "web-chevrolet-vans",
+    "adapter": "chevrolet.com",
+    "kind": "other",
+    "requestedUrl": "https://www.chevrolet.com/commercial/express/vans",
+    "url": "https://www.chevrolet.com/commercial/express/vans",
+    "retrievedAt": "2026-10-07T11:23:28.236Z",
+    "rawSha256": "4638144e53ce273147aec0d2615bb6a03da9121a945818e5675626e4550e819a",
+    "rawBytes": 715404,
+    "reducedSha256": "8cc05a333d2266d9661ee3298e565a51a29c157c89890201d1b943e674d5c363",
+    "reducedBytes": 548,
+    "reduction": {
+      "keep": ["h1"],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "live",
+      "recorder": "scripts/benchmark-reddit10.ts --record",
+      "httpClient": "ManufacturerHttpClient (safe)",
+      "captureTimestamp": "2026-10-07T11:23:28.236Z",
+      "finalUrl": "https://www.chevrolet.com/commercial/express/vans",
+      "contentType": "text/html;charset=utf-8"
+    }
+  },
+  {
+    "id": "velosklad-search-2",
+    "adapter": "velosklad",
+    "kind": "search",
+    "requestedUrl": "https://www.velosklad.ru/velosipedy/poiskall/?text=Van+Rysel+GRVL+AF+Shimano+GRX+2x12",
+    "url": "https://www.velosklad.ru/velosipedy/poiskall/?text=Van+Rysel+GRVL+AF+Shimano+GRX+2x12",
+    "retrievedAt": "2026-10-07T11:23:28.781Z",
+    "rawSha256": "eecdf6e82e4fa892ee28dad6f39b65dbdd998773bfa67f4dc1c88196423fafb7",
+    "rawBytes": 280073,
+    "reducedSha256": "ff23def1198eaece2f8f64139957fae3ba23cbde12d2d59e786640175c36a543",
+    "reducedBytes": 883,
+    "reduction": {
+      "keep": ["h1"],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "live",
+      "recorder": "scripts/benchmark-reddit10.ts --record",
+      "httpClient": "ManufacturerHttpClient (safe)",
+      "captureTimestamp": "2026-10-07T11:23:28.781Z",
+      "finalUrl": "https://www.velosklad.ru/velosipedy/poiskall/?text=Van+Rysel+GRVL+AF+Shimano+GRX+2x12",
+      "contentType": "text/html; charset=utf-8"
+    }
+  },
+  {
+    "id": "decathlon-gravel-bike-shimano-grx-2x12v-grvl-af",
+    "adapter": "decathlon.ca",
+    "kind": "bike",
+    "requestedUrl": "https://www.decathlon.ca/en/p/8766972/gravel-bike-shimano-grx-2x12v-grvl-af",
+    "url": "https://www.decathlon.ca/en/p/gravel-bike-shimano-grx-2x12v-grvl-af/343001/c381m8766972",
+    "retrievedAt": "2026-10-07T11:23:29.737Z",
+    "rawSha256": "8f11ca7230f50cbefdc25a59d71af4da58815f7161cca25bf5ff67138ec2ac61",
+    "rawBytes": 752144,
+    "reducedSha256": "8559b1f443c13dfdb5a9729607b458749d7f2e7ac817a4fe2a63ec2725d7f26b",
+    "reducedBytes": 9957,
+    "reduction": {
+      "keep": ["h1", "table", "p"],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "live",
+      "recorder": "scripts/benchmark-reddit10.ts --record",
+      "httpClient": "ManufacturerHttpClient (safe)",
+      "captureTimestamp": "2026-10-07T11:23:29.737Z",
+      "finalUrl": "https://www.decathlon.ca/en/p/gravel-bike-shimano-grx-2x12v-grvl-af/343001/c381m8766972",
+      "contentType": "text/html; charset=utf-8"
+    }
+  },
+  {
+    "id": "bing-3",
+    "adapter": "bing",
+    "kind": "feed",
+    "requestedUrl": "https://www.bing.com/search?format=rss&q=Focus+Atlas+6+LTD+bicycle+specifications",
+    "url": "https://www.bing.com/search?format=rss&q=Focus+Atlas+6+LTD+bicycle+specifications",
+    "retrievedAt": "2026-10-07T11:23:30.243Z",
+    "rawSha256": "43bf0046ba3a89a39dfd953e8608e884576c0847fcccb3ff9c5bf6935de5117f",
+    "rawBytes": 3632,
+    "reducedSha256": "43bf0046ba3a89a39dfd953e8608e884576c0847fcccb3ff9c5bf6935de5117f",
+    "reducedBytes": 3632,
+    "reduction": {},
+    "origin": {
+      "source": "live",
+      "recorder": "scripts/benchmark-reddit10.ts --record",
+      "httpClient": "ManufacturerHttpClient (safe)",
+      "captureTimestamp": "2026-10-07T11:23:30.243Z",
+      "finalUrl": "https://www.bing.com/search?format=rss&q=Focus+Atlas+6+LTD+bicycle+specifications",
+      "contentType": "text/xml; charset=utf-8"
+    }
+  },
+  {
+    "id": "bikeinn-focus-atlas-6-7-cues-gravel-bike",
+    "adapter": "bikeinn",
+    "kind": "bike",
+    "requestedUrl": "https://www.tradeinn.com/bikeinn/en/focus-atlas-6.7-cues-gravel-bike/142824990/p",
+    "url": "https://www.tradeinn.com/bikeinn/en/focus-atlas-6.7-cues-gravel-bike/142824990/p",
+    "retrievedAt": "2026-10-07T11:23:30.447Z",
+    "rawSha256": "ba2eeffcd0f75fe8c9e45ef5938d3f8c31edd3ee05950167b217b214598fe548",
+    "rawBytes": 367539,
+    "reducedSha256": "87c677850a0815e932eb3942a26bfbf8a2c41da095d1bbfb0232fe4648fc4ea5",
+    "reducedBytes": 26720,
+    "reduction": {
+      "keep": ["h1", "#desc", "#js-fichaTecnica-cta-info"],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "live",
+      "recorder": "scripts/benchmark-reddit10.ts --record",
+      "httpClient": "ManufacturerHttpClient (safe)",
+      "captureTimestamp": "2026-10-07T11:23:30.447Z",
+      "finalUrl": "https://www.tradeinn.com/bikeinn/en/focus-atlas-6.7-cues-gravel-bike/142824990/p",
+      "contentType": "text/html; charset=UTF-8"
+    }
+  },
+  {
+    "id": "velosklad-search-3",
+    "adapter": "velosklad",
+    "kind": "search",
+    "requestedUrl": "https://www.velosklad.ru/velosipedy/poiskall/?text=Focus+Atlas+6+LTD",
+    "url": "https://www.velosklad.ru/velosipedy/poiskall/?text=Focus+Atlas+6+LTD",
+    "retrievedAt": "2026-10-07T11:23:31.185Z",
+    "rawSha256": "9d82fb725ff0328996cb08aaeac02fd169589cb4cbd650fdbd963c5f4af2dba1",
+    "rawBytes": 280050,
+    "reducedSha256": "ff23def1198eaece2f8f64139957fae3ba23cbde12d2d59e786640175c36a543",
+    "reducedBytes": 883,
+    "reduction": {
+      "keep": ["h1"],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "live",
+      "recorder": "scripts/benchmark-reddit10.ts --record",
+      "httpClient": "ManufacturerHttpClient (safe)",
+      "captureTimestamp": "2026-10-07T11:23:31.185Z",
+      "finalUrl": "https://www.velosklad.ru/velosipedy/poiskall/?text=Focus+Atlas+6+LTD",
+      "contentType": "text/html; charset=utf-8"
+    }
+  },
+  {
+    "id": "bikeinn-focus-atlas-8-7-grx-820-gravel-bike",
+    "adapter": "bikeinn",
+    "kind": "bike",
+    "requestedUrl": "https://www.tradeinn.com/bikeinn/en/focus-atlas-8.7-grx-820-gravel-bike/142824995/p",
+    "url": "https://www.tradeinn.com/bikeinn/en/focus-atlas-8.7-grx-820-gravel-bike/142824995/p",
+    "retrievedAt": "2026-10-07T11:23:32.062Z",
+    "rawSha256": "afba4091a1f298d8081b04bf693f2385e0592996ff90f82dec2d5b4243eda2cb",
+    "rawBytes": 381794,
+    "reducedSha256": "21ef5b37e3ebcfea313bd9495d940d528f0d720c08e38b10440d928cc65391bd",
+    "reducedBytes": 26589,
+    "reduction": {
+      "keep": ["h1", "#desc", "#js-fichaTecnica-cta-info"],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "live",
+      "recorder": "scripts/benchmark-reddit10.ts --record",
+      "httpClient": "ManufacturerHttpClient (safe)",
+      "captureTimestamp": "2026-10-07T11:23:32.062Z",
+      "finalUrl": "https://www.tradeinn.com/bikeinn/en/focus-atlas-8.7-grx-820-gravel-bike/142824995/p",
+      "contentType": "text/html; charset=UTF-8"
+    }
+  },
+  {
+    "id": "canyon-sitemap",
+    "adapter": "canyon",
+    "kind": "sitemap",
+    "requestedUrl": "https://www.canyon.com/sitemap-en_NL.xml",
+    "url": "https://www.canyon.com/sitemap-en_NL.xml",
+    "retrievedAt": "2026-10-07T11:23:32.810Z",
+    "rawSha256": "882c98b2d72f08e8dcacdc19b7c5dbf2105e217d66d62ad8abf300e39fefb055",
+    "rawBytes": 541417,
+    "reducedSha256": "0e6e2230831d3f78069f0b2642e740388378504fcfc49f1fc0c33dca05e823ce",
+    "reducedBytes": 10618,
+    "reduction": {
+      "xmlKeep": ["grail", "grizl"],
+      "unrelatedEntries": 8
+    },
+    "origin": {
+      "source": "live",
+      "recorder": "scripts/benchmark-reddit10.ts --record",
+      "httpClient": "ManufacturerHttpClient (safe)",
+      "captureTimestamp": "2026-10-07T11:23:32.810Z",
+      "finalUrl": "https://www.canyon.com/sitemap-en_NL.xml",
+      "contentType": "text/html;charset=UTF-8"
+    }
+  },
+  {
+    "id": "canyon-grail-cf-slx-8-axs-4505",
+    "adapter": "canyon",
+    "kind": "bike",
+    "requestedUrl": "https://www.canyon.com/en-nl/gravel-bikes/race/grail/cf-slx/grail-cf-slx-8-axs/4505.html",
+    "url": "https://www.canyon.com/en-nl/gravel-bikes/race/grail/cf-slx/grail-cf-slx-8-axs/4505.html",
+    "retrievedAt": "2026-10-07T11:23:34.295Z",
+    "rawSha256": "7fa50cb4d8bbef774425bf46c1484e178fe18d03a0f81f7a244af6f04049c395",
+    "rawBytes": 690738,
+    "reducedSha256": "a4139670c08a410bb16f50d9e22cce956df97ea373adc5578e02ae421ba882a8",
+    "reducedBytes": 134151,
+    "reduction": {
+      "keep": ["h1", ".allComponents__sectionSpecListItemInner"],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "live",
+      "recorder": "scripts/benchmark-reddit10.ts --record",
+      "httpClient": "ManufacturerHttpClient (safe)",
+      "captureTimestamp": "2026-10-07T11:23:34.295Z",
+      "finalUrl": "https://www.canyon.com/en-nl/gravel-bikes/race/grail/cf-slx/grail-cf-slx-8-axs/4505.html",
+      "contentType": "text/html;charset=UTF-8"
+    }
+  },
+  {
+    "id": "canyon-outlet-grail-cf-slx-8-axs-50041448",
+    "adapter": "canyon",
+    "kind": "bike",
+    "requestedUrl": "https://www.canyon.com/en-nl/outlet-bikes/gravel-bikes/grail-cf-slx-8-axs/50041448.html",
+    "url": "https://www.canyon.com/en-nl/outlet-bikes/gravel-bikes/grail-cf-slx-8-axs/50041448.html",
+    "retrievedAt": "2026-10-07T11:23:35.299Z",
+    "rawSha256": "efa0e7b6e456e9ca5e1470f4342d716cc853441b34d9201d686a1f0c5a825710",
+    "rawBytes": 496080,
+    "reducedSha256": "43d999f048067dd13fad0932ba1f886293552e2fec0fc87663276f232147f562",
+    "reducedBytes": 78396,
+    "reduction": {
+      "keep": ["h1", ".allComponents__sectionSpecListItemInner"],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "live",
+      "recorder": "scripts/benchmark-reddit10.ts --record",
+      "httpClient": "ManufacturerHttpClient (safe)",
+      "captureTimestamp": "2026-10-07T11:23:35.299Z",
+      "finalUrl": "https://www.canyon.com/en-nl/outlet-bikes/gravel-bikes/grail-cf-slx-8-axs/50041448.html",
+      "contentType": "text/html;charset=UTF-8"
+    }
+  },
+  {
+    "id": "bing-5",
+    "adapter": "bing",
+    "kind": "feed",
+    "requestedUrl": "https://www.bing.com/search?format=rss&q=Lauf+Seigla+Core+Transmission+bicycle+specifications",
+    "url": "https://www.bing.com/search?format=rss&q=Lauf+Seigla+Core+Transmission+bicycle+specifications",
+    "retrievedAt": "2026-10-07T11:23:36.313Z",
+    "rawSha256": "c354d250182da9e499097cc59d6f4cf99f7a5a6c745057bcbe9cf0ca62fa10a5",
+    "rawBytes": 4490,
+    "reducedSha256": "c354d250182da9e499097cc59d6f4cf99f7a5a6c745057bcbe9cf0ca62fa10a5",
+    "reducedBytes": 4490,
+    "reduction": {},
+    "origin": {
+      "source": "live",
+      "recorder": "scripts/benchmark-reddit10.ts --record",
+      "httpClient": "ManufacturerHttpClient (safe)",
+      "captureTimestamp": "2026-10-07T11:23:36.313Z",
+      "finalUrl": "https://www.bing.com/search?format=rss&q=Lauf+Seigla+Core+Transmission+bicycle+specifications",
+      "contentType": "text/xml; charset=utf-8"
+    }
+  },
+  {
+    "id": "laufcycles-lauf-seigla",
+    "adapter": "laufcycles.com",
+    "kind": "bike",
+    "requestedUrl": "https://www.laufcycles.com/product/lauf-seigla",
+    "url": "https://www.laufcycles.com/product/lauf-seigla",
+    "retrievedAt": "2026-10-07T11:23:36.563Z",
+    "rawSha256": "dfe557fbc4a4ec6f48ef2ddd5b1101337b7f60e33e7bd80e41409b573186d225",
+    "rawBytes": 528143,
+    "reducedSha256": "2fbfad8030bf3ad89a8705f1f97aef9f0971b4823181c862977fa97af921e0f7",
+    "reducedBytes": 282999,
+    "reduction": {
+      "keep": ["h1", "script#__NEXT_DATA__"],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "live",
+      "recorder": "scripts/benchmark-reddit10.ts --record",
+      "httpClient": "ManufacturerHttpClient (safe)",
+      "captureTimestamp": "2026-10-07T11:23:36.563Z",
+      "finalUrl": "https://www.laufcycles.com/product/lauf-seigla",
+      "contentType": "text/html; charset=utf-8"
+    }
+  },
+  {
+    "id": "velosklad-search-5",
+    "adapter": "velosklad",
+    "kind": "search",
+    "requestedUrl": "https://www.velosklad.ru/velosipedy/poiskall/?text=Lauf+Seigla+Core+Transmission",
+    "url": "https://www.velosklad.ru/velosipedy/poiskall/?text=Lauf+Seigla+Core+Transmission",
+    "retrievedAt": "2026-10-07T11:23:37.281Z",
+    "rawSha256": "f028a6d1f2c4e87eff5b991eaa659bb6fff58d85b8924d48c98ca4c1c12e37b9",
+    "rawBytes": 280071,
+    "reducedSha256": "ff23def1198eaece2f8f64139957fae3ba23cbde12d2d59e786640175c36a543",
+    "reducedBytes": 883,
+    "reduction": {
+      "keep": ["h1"],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "live",
+      "recorder": "scripts/benchmark-reddit10.ts --record",
+      "httpClient": "ManufacturerHttpClient (safe)",
+      "captureTimestamp": "2026-10-07T11:23:37.281Z",
+      "finalUrl": "https://www.velosklad.ru/velosipedy/poiskall/?text=Lauf+Seigla+Core+Transmission",
+      "contentType": "text/html; charset=utf-8"
+    }
+  },
+  {
+    "id": "web-theproscloset-lauf",
+    "adapter": "theproscloset.com",
+    "kind": "other",
+    "requestedUrl": "https://www.theproscloset.com/collections/lauf",
+    "url": "https://www.theproscloset.com/collections/lauf",
+    "retrievedAt": "2026-10-07T11:23:37.469Z",
+    "rawSha256": "2779c7bff18fe7c5881efba8fc82505009d2e4cffd103581808a0a22453b7d24",
+    "rawBytes": 481059,
+    "reducedSha256": "c1ad3d92365329533090cc2209221243174938d218d3f95200e3f5c7d8bbfb14",
+    "reducedBytes": 3559,
+    "reduction": {
+      "keep": ["h1"],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "live",
+      "recorder": "scripts/benchmark-reddit10.ts --record",
+      "httpClient": "ManufacturerHttpClient (safe)",
+      "captureTimestamp": "2026-10-07T11:23:37.469Z",
+      "finalUrl": "https://www.theproscloset.com/collections/lauf",
+      "contentType": "text/html; charset=utf-8"
+    }
+  },
+  {
+    "id": "web-cyclingnews-lauf-siegla-ultimate-gravel-bike-review-",
+    "adapter": "cyclingnews.com",
+    "kind": "other",
+    "requestedUrl": "https://www.cyclingnews.com/reviews/lauf-siegla-ultimate-gravel-bike-review-does-laufs-grit-fork-render-other-gravel-suspension-forks-redundant/",
+    "url": "https://www.cyclingnews.com/reviews/lauf-siegla-ultimate-gravel-bike-review-does-laufs-grit-fork-render-other-gravel-suspension-forks-redundant/",
+    "retrievedAt": "2026-10-07T11:23:37.800Z",
+    "rawSha256": "fece1ddd7bc3298b1d10f0c4dd7f91c0ebaa460ef662e5d55f186e4fced10b6e",
+    "rawBytes": 2001688,
+    "reducedSha256": "67d3671be100bc5d1076d2904ba9152fd593c7ba281e2b9df5144b7b5fc85e60",
+    "reducedBytes": 15390,
+    "reduction": {
+      "keep": ["h1"],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "live",
+      "recorder": "scripts/benchmark-reddit10.ts --record",
+      "httpClient": "ManufacturerHttpClient (safe)",
+      "captureTimestamp": "2026-10-07T11:23:37.800Z",
+      "finalUrl": "https://www.cyclingnews.com/reviews/lauf-siegla-ultimate-gravel-bike-review-does-laufs-grit-fork-render-other-gravel-suspension-forks-redundant/",
+      "contentType": "text/html; charset=utf-8"
+    }
+  },
+  {
+    "id": "giant-revolt-2",
+    "adapter": "giant",
+    "kind": "bike",
+    "requestedUrl": "https://www.giant-bicycles.com/gb/revolt-2",
+    "url": "https://www.giant-bicycles.com/gb/revolt-2",
+    "retrievedAt": "2026-10-07T11:23:39.220Z",
+    "rawSha256": "87aaa4ce1d7bdecb350a742018ef7a351cc3b0b0029b1aab900e9aef765d0d7d",
+    "rawBytes": 193792,
+    "reducedSha256": "4187752d04d7d7cfcba87568dc8295bec0f3af6ab78fee01d3b4bc6ad40f4bc4",
+    "reducedBytes": 7398,
+    "reduction": {
+      "keep": ["h1", "li.datarow"],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "live",
+      "recorder": "scripts/benchmark-reddit10.ts --record",
+      "httpClient": "ManufacturerHttpClient (safe)",
+      "captureTimestamp": "2026-10-07T11:23:39.220Z",
+      "finalUrl": "https://www.giant-bicycles.com/gb/revolt-2",
+      "contentType": "text/html; charset=utf-8"
+    }
+  },
+  {
+    "id": "canyon-outlet-grizl-cf-slx-8-axs-trail-50039723",
+    "adapter": "canyon",
+    "kind": "bike",
+    "requestedUrl": "https://www.canyon.com/en-nl/outlet-bikes/gravel-bikes/grizl-cf-slx-8-axs-trail/50039723.html",
+    "url": "https://www.canyon.com/en-nl/outlet-bikes/gravel-bikes/grizl-cf-slx-8-axs-trail/50039723.html",
+    "retrievedAt": "2026-10-07T11:23:40.258Z",
+    "rawSha256": "93f43fcdfccd111a74dd6d6f0a61e79ddab3152b84676f52a766c64bf4d1a630",
+    "rawBytes": 480596,
+    "reducedSha256": "b9f3e7d72073efc7e46ae6a1705b60313327ff9b65be8fd83932168eab9676e9",
+    "reducedBytes": 81072,
+    "reduction": {
+      "keep": ["h1", ".allComponents__sectionSpecListItemInner"],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "live",
+      "recorder": "scripts/benchmark-reddit10.ts --record",
+      "httpClient": "ManufacturerHttpClient (safe)",
+      "captureTimestamp": "2026-10-07T11:23:40.258Z",
+      "finalUrl": "https://www.canyon.com/en-nl/outlet-bikes/gravel-bikes/grizl-cf-slx-8-axs-trail/50039723.html",
+      "contentType": "text/html;charset=UTF-8"
+    }
+  },
+  {
+    "id": "canyon-grizl-cf-6-4552",
+    "adapter": "canyon",
+    "kind": "bike",
+    "requestedUrl": "https://www.canyon.com/en-nl/gravel-bikes/adventure/grizl/cf/grizl-cf-6/4552.html",
+    "url": "https://www.canyon.com/en-nl/gravel-bikes/adventure/grizl/cf/grizl-cf-6/4552.html",
+    "retrievedAt": "2026-10-07T11:23:41.593Z",
+    "rawSha256": "158975c807de60eefcdd2fdcf23769d66fe82cab140c8b08dc7fd4c8937dfd06",
+    "rawBytes": 570093,
+    "reducedSha256": "9aa4d44da79ea58b19a13fbd6d25c8adfbeaa7d3f7d4a991059d2a9132b62b5a",
+    "reducedBytes": 145219,
+    "reduction": {
+      "keep": ["h1", ".allComponents__sectionSpecListItemInner"],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "live",
+      "recorder": "scripts/benchmark-reddit10.ts --record",
+      "httpClient": "ManufacturerHttpClient (safe)",
+      "captureTimestamp": "2026-10-07T11:23:41.593Z",
+      "finalUrl": "https://www.canyon.com/en-nl/gravel-bikes/adventure/grizl/cf/grizl-cf-6/4552.html",
+      "contentType": "text/html;charset=UTF-8"
+    }
+  },
+  {
+    "id": "bikepedia-canyon-2023",
+    "adapter": "bikepedia",
+    "kind": "search",
+    "requestedUrl": "https://bikepedia.azurewebsites.net/QuickBike/Bikes.aspx?brand=Canyon&year=2023",
+    "url": "https://bikepedia.azurewebsites.net/QuickBike/Bikes.aspx?brand=Canyon&year=2023",
+    "retrievedAt": "2026-10-07T11:23:42.841Z",
+    "rawSha256": "026c772b2d2548894d150b784a7a201fa5786649457ca89c9424836758373a2f",
+    "rawBytes": 229508,
+    "reducedSha256": "51f3bab7fcd4b47bcba653f018cc5256c2d2f34531fd88c54f1a6f5e6a35adef",
+    "reducedBytes": 109,
+    "reduction": {
+      "keep": ["h1", "h6"],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "live",
+      "recorder": "scripts/benchmark-reddit10.ts --record",
+      "httpClient": "ManufacturerHttpClient (safe)",
+      "captureTimestamp": "2026-10-07T11:23:42.841Z",
+      "finalUrl": "https://bikepedia.azurewebsites.net/QuickBike/Bikes.aspx?brand=Canyon&year=2023",
+      "contentType": "text/html; charset=utf-8"
+    }
+  },
+  {
+    "id": "canyon-grizl-cf-8-di2-4556",
+    "adapter": "canyon",
+    "kind": "bike",
+    "requestedUrl": "https://www.canyon.com/en-nl/gravel-bikes/adventure/grizl/cf/grizl-cf-8-di2/4556.html",
+    "url": "https://www.canyon.com/en-nl/gravel-bikes/adventure/grizl/cf/grizl-cf-8-di2/4556.html",
+    "retrievedAt": "2026-10-07T11:23:42.917Z",
+    "rawSha256": "975a5c9119c99eb80a816e064d4c6de970917ecd0fcd2e047f3cae923377c01e",
+    "rawBytes": 805179,
+    "reducedSha256": "aeac10e50a8a06a0a6db1a8685b088ce510dec4be94aaf6701613235b8f5ef6b",
+    "reducedBytes": 146219,
+    "reduction": {
+      "keep": ["h1", ".allComponents__sectionSpecListItemInner"],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "live",
+      "recorder": "scripts/benchmark-reddit10.ts --record",
+      "httpClient": "ManufacturerHttpClient (safe)",
+      "captureTimestamp": "2026-10-07T11:23:42.917Z",
+      "finalUrl": "https://www.canyon.com/en-nl/gravel-bikes/adventure/grizl/cf/grizl-cf-8-di2/4556.html",
+      "contentType": "text/html;charset=UTF-8"
+    }
+  },
+  {
+    "id": "canyon-grizl-onfly-cf-8-4280",
+    "adapter": "canyon",
+    "kind": "bike",
+    "requestedUrl": "https://www.canyon.com/en-nl/electric-bikes/electric-gravel-bikes/grizl-on/grizl-onfly-cf-8/4280.html",
+    "url": "https://www.canyon.com/en-nl/electric-bikes/electric-gravel-bikes/grizl-on/grizl-onfly-cf-8/4280.html",
+    "retrievedAt": "2026-10-07T11:23:44.263Z",
+    "rawSha256": "8e28979306632f326887c8fd5c731492eefdb1f92ff1aaa4f0de79e3a0cc0e7e",
+    "rawBytes": 710426,
+    "reducedSha256": "020a2fa6112761ff5c2da02b287fbb4cc9e12afbf7540f3094818fc6e4919d95",
+    "reducedBytes": 113486,
+    "reduction": {
+      "keep": ["h1", ".allComponents__sectionSpecListItemInner"],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "live",
+      "recorder": "scripts/benchmark-reddit10.ts --record",
+      "httpClient": "ManufacturerHttpClient (safe)",
+      "captureTimestamp": "2026-10-07T11:23:44.263Z",
+      "finalUrl": "https://www.canyon.com/en-nl/electric-bikes/electric-gravel-bikes/grizl-on/grizl-onfly-cf-8/4280.html",
+      "contentType": "text/html;charset=UTF-8"
+    }
+  },
+  {
+    "id": "canyon-grizl-cf-7-4553",
+    "adapter": "canyon",
+    "kind": "bike",
+    "requestedUrl": "https://www.canyon.com/en-nl/gravel-bikes/adventure/grizl/cf/grizl-cf-7/4553.html",
+    "url": "https://www.canyon.com/en-nl/gravel-bikes/adventure/grizl/cf/grizl-cf-7/4553.html",
+    "retrievedAt": "2026-10-07T11:23:45.696Z",
+    "rawSha256": "f9c60f23a1b0070bc0fd9a12a1aac9b86347375f609e9d264e530d8231fb4862",
+    "rawBytes": 575474,
+    "reducedSha256": "fb13f6a112b06705eee4ffb916319b4dcea1f09cbe838c09093239aa13c9ecc7",
+    "reducedBytes": 143640,
+    "reduction": {
+      "keep": ["h1", ".allComponents__sectionSpecListItemInner"],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "live",
+      "recorder": "scripts/benchmark-reddit10.ts --record",
+      "httpClient": "ManufacturerHttpClient (safe)",
+      "captureTimestamp": "2026-10-07T11:23:45.696Z",
+      "finalUrl": "https://www.canyon.com/en-nl/gravel-bikes/adventure/grizl/cf/grizl-cf-7/4553.html",
+      "contentType": "text/html;charset=UTF-8"
+    }
+  },
+  {
+    "id": "canyon-grizl-onfly-cf-9-4281",
+    "adapter": "canyon",
+    "kind": "bike",
+    "requestedUrl": "https://www.canyon.com/en-nl/electric-bikes/electric-gravel-bikes/grizl-on/grizl-onfly-cf-9/4281.html",
+    "url": "https://www.canyon.com/en-nl/electric-bikes/electric-gravel-bikes/grizl-on/grizl-onfly-cf-9/4281.html",
+    "retrievedAt": "2026-10-07T11:23:47.059Z",
+    "rawSha256": "19fd91f7f35cc5e5c64e3e0ddc0d529216bdc2f1e35ddc5cb804b2a4c60eb92b",
+    "rawBytes": 709404,
+    "reducedSha256": "331605ea657521af9a50e5504d78412396fc462ccc103d010360f54cca8aaf78",
+    "reducedBytes": 112625,
+    "reduction": {
+      "keep": ["h1", ".allComponents__sectionSpecListItemInner"],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "live",
+      "recorder": "scripts/benchmark-reddit10.ts --record",
+      "httpClient": "ManufacturerHttpClient (safe)",
+      "captureTimestamp": "2026-10-07T11:23:47.059Z",
+      "finalUrl": "https://www.canyon.com/en-nl/electric-bikes/electric-gravel-bikes/grizl-on/grizl-onfly-cf-9/4281.html",
+      "contentType": "text/html;charset=UTF-8"
+    }
+  },
+  {
+    "id": "canyon-grizl-6-4444",
+    "adapter": "canyon",
+    "kind": "bike",
+    "requestedUrl": "https://www.canyon.com/en-nl/gravel-bikes/adventure/grizl/al/grizl-6/4444.html",
+    "url": "https://www.canyon.com/en-nl/gravel-bikes/adventure/grizl/al/grizl-6/4444.html",
+    "retrievedAt": "2026-10-07T11:23:48.314Z",
+    "rawSha256": "9b4e862235b6aa554ef5a95189caebec6d9435561049126665f284d4d8d5e8aa",
+    "rawBytes": 562910,
+    "reducedSha256": "815917b54581c8e68611b095da9dd7ed293ecb476a8b3c27c366c8689329333e",
+    "reducedBytes": 136469,
+    "reduction": {
+      "keep": ["h1", ".allComponents__sectionSpecListItemInner"],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "live",
+      "recorder": "scripts/benchmark-reddit10.ts --record",
+      "httpClient": "ManufacturerHttpClient (safe)",
+      "captureTimestamp": "2026-10-07T11:23:48.314Z",
+      "finalUrl": "https://www.canyon.com/en-nl/gravel-bikes/adventure/grizl/al/grizl-6/4444.html",
+      "contentType": "text/html;charset=UTF-8"
+    }
+  },
+  {
+    "id": "bing-8",
+    "adapter": "bing",
+    "kind": "feed",
+    "requestedUrl": "https://www.bing.com/search?format=rss&q=Canyon+Grizl+CF+SL+6+2023+bicycle+specifications",
+    "url": "https://www.bing.com/search?format=rss&q=Canyon+Grizl+CF+SL+6+2023+bicycle+specifications",
+    "retrievedAt": "2026-10-07T11:23:50.345Z",
+    "rawSha256": "908b12a86dfd0c8c1338d5764b8814bd69933794c612488f97286789aae0e0c1",
+    "rawBytes": 4905,
+    "reducedSha256": "908b12a86dfd0c8c1338d5764b8814bd69933794c612488f97286789aae0e0c1",
+    "reducedBytes": 4905,
+    "reduction": {},
+    "origin": {
+      "source": "live",
+      "recorder": "scripts/benchmark-reddit10.ts --record",
+      "httpClient": "ManufacturerHttpClient (safe)",
+      "captureTimestamp": "2026-10-07T11:23:50.345Z",
+      "finalUrl": "https://www.bing.com/search?format=rss&q=Canyon+Grizl+CF+SL+6+2023+bicycle+specifications",
+      "contentType": "text/xml; charset=utf-8"
+    }
+  },
+  {
+    "id": "velosklad-search-8",
+    "adapter": "velosklad",
+    "kind": "search",
+    "requestedUrl": "https://www.velosklad.ru/velosipedy/poiskall/?text=Canyon+Grizl+CF+SL+6+2023",
+    "url": "https://www.velosklad.ru/velosipedy/poiskall/?text=Canyon+Grizl+CF+SL+6+2023",
+    "retrievedAt": "2026-10-07T11:23:51.337Z",
+    "rawSha256": "b1e592ef04766bff308756b6e15cdc7a6cde2872f0588700e49eec1cde8f1189",
+    "rawBytes": 280091,
+    "reducedSha256": "ff23def1198eaece2f8f64139957fae3ba23cbde12d2d59e786640175c36a543",
+    "reducedBytes": 883,
+    "reduction": {
+      "keep": ["h1"],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "live",
+      "recorder": "scripts/benchmark-reddit10.ts --record",
+      "httpClient": "ManufacturerHttpClient (safe)",
+      "captureTimestamp": "2026-10-07T11:23:51.337Z",
+      "finalUrl": "https://www.velosklad.ru/velosipedy/poiskall/?text=Canyon+Grizl+CF+SL+6+2023",
+      "contentType": "text/html; charset=utf-8"
+    }
+  },
+  {
+    "id": "bikepedia-3t-2025",
+    "adapter": "bikepedia",
+    "kind": "search",
+    "requestedUrl": "https://bikepedia.azurewebsites.net/QuickBike/Bikes.aspx?brand=3T&year=2025",
+    "url": "https://bikepedia.azurewebsites.net/QuickBike/Bikes.aspx?brand=3T&year=2025",
+    "retrievedAt": "2026-10-07T11:23:52.754Z",
+    "rawSha256": "737c6c78b0170e78f745ffb5407733cec534c12459b4fad8aa896fc3cc532a87",
+    "rawBytes": 229536,
+    "reducedSha256": "51f3bab7fcd4b47bcba653f018cc5256c2d2f34531fd88c54f1a6f5e6a35adef",
+    "reducedBytes": 109,
+    "reduction": {
+      "keep": ["h1", "h6"],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "live",
+      "recorder": "scripts/benchmark-reddit10.ts --record",
+      "httpClient": "ManufacturerHttpClient (safe)",
+      "captureTimestamp": "2026-10-07T11:23:52.754Z",
+      "finalUrl": "https://bikepedia.azurewebsites.net/QuickBike/Bikes.aspx?brand=3T&year=2025",
+      "contentType": "text/html; charset=utf-8"
+    }
+  },
+  {
+    "id": "bing-9",
+    "adapter": "bing",
+    "kind": "feed",
+    "requestedUrl": "https://www.bing.com/search?format=rss&q=3T+Ultra+Apex%2FEagle+1x12+700c+2025+bicycle+specifications",
+    "url": "https://www.bing.com/search?format=rss&q=3T+Ultra+Apex%2FEagle+1x12+700c+2025+bicycle+specifications",
+    "retrievedAt": "2026-10-07T11:23:53.197Z",
+    "rawSha256": "d2157a814d2d067cb8f12e7550e20a435b4a3cdddcff5c920d73b7f0a41d7427",
+    "rawBytes": 4704,
+    "reducedSha256": "d2157a814d2d067cb8f12e7550e20a435b4a3cdddcff5c920d73b7f0a41d7427",
+    "reducedBytes": 4704,
+    "reduction": {},
+    "origin": {
+      "source": "live",
+      "recorder": "scripts/benchmark-reddit10.ts --record",
+      "httpClient": "ManufacturerHttpClient (safe)",
+      "captureTimestamp": "2026-10-07T11:23:53.197Z",
+      "finalUrl": "https://www.bing.com/search?format=rss&q=3T+Ultra+Apex%2FEagle+1x12+700c+2025+bicycle+specifications",
+      "contentType": "text/xml; charset=utf-8"
+    }
+  },
+  {
+    "id": "velosklad-search-9",
+    "adapter": "velosklad",
+    "kind": "search",
+    "requestedUrl": "https://www.velosklad.ru/velosipedy/poiskall/?text=3T+Ultra+Apex%2FEagle+1x12+700c+2025",
+    "url": "https://www.velosklad.ru/velosipedy/poiskall/?text=3T+Ultra+Apex%2FEagle+1x12+700c+2025",
+    "retrievedAt": "2026-10-07T11:23:54.414Z",
+    "rawSha256": "c9912a9ef970aec0f82b28ea94c6d22d2110deb9919e7bcac8ec8a71f9ac5efd",
+    "rawBytes": 280069,
+    "reducedSha256": "ff23def1198eaece2f8f64139957fae3ba23cbde12d2d59e786640175c36a543",
+    "reducedBytes": 883,
+    "reduction": {
+      "keep": ["h1"],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "live",
+      "recorder": "scripts/benchmark-reddit10.ts --record",
+      "httpClient": "ManufacturerHttpClient (safe)",
+      "captureTimestamp": "2026-10-07T11:23:54.414Z",
+      "finalUrl": "https://www.velosklad.ru/velosipedy/poiskall/?text=3T+Ultra+Apex%2FEagle+1x12+700c+2025",
+      "contentType": "text/html; charset=utf-8"
+    }
+  },
+  {
+    "id": "web-3timaging-home",
+    "adapter": "3timaging.com",
+    "kind": "other",
+    "requestedUrl": "https://3timaging.com/",
+    "url": "https://3timaging.com/",
+    "retrievedAt": "2026-10-07T11:23:57.323Z",
+    "rawSha256": "5883fb3cb5ecf9c5cc3c66a6873177f32ad9230f3eaf3d8607c8fd488a001c8f",
+    "rawBytes": 86592,
+    "reducedSha256": "1a486c90d6fd49a7f84a810ee74013752b984425bc612ece0dd5a67de264d560",
+    "reducedBytes": 705,
+    "reduction": {
+      "keep": ["h1"],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "live",
+      "recorder": "scripts/benchmark-reddit10.ts --record",
+      "httpClient": "ManufacturerHttpClient (safe)",
+      "captureTimestamp": "2026-10-07T11:23:57.323Z",
+      "finalUrl": "https://3timaging.com/",
+      "contentType": "text/html; charset=UTF-8"
+    }
+  },
+  {
+    "id": "racycles-3t-ultra-apex-eagle-bike",
+    "adapter": "racycles.com",
+    "kind": "bike",
+    "requestedUrl": "https://racycles.com/collections/3t-bikes/products/3t-ultra-apex-eagle-bike",
+    "url": "https://racycles.com/collections/3t-bikes/products/3t-ultra-apex-eagle-bike",
+    "retrievedAt": "2026-10-07T11:23:57.890Z",
+    "rawSha256": "3931dda515326dd01999fc51ead83489242e4033aef82045aaf461d10ee2fcb5",
+    "rawBytes": 546808,
+    "reducedSha256": "fb3bf116977d4da9afb31bcb40ad4c3b69f90c12fb25bbbf87a512d9fb228b48",
+    "reducedBytes": 55633,
+    "reduction": {
+      "keep": ["h1", "table", "p"],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "live",
+      "recorder": "scripts/benchmark-reddit10.ts --record",
+      "httpClient": "ManufacturerHttpClient (safe)",
+      "captureTimestamp": "2026-10-07T11:23:57.890Z",
+      "finalUrl": "https://racycles.com/collections/3t-bikes/products/3t-ultra-apex-eagle-bike",
+      "contentType": "text/html; charset=utf-8"
+    }
+  },
+  {
+    "id": "bing-10",
+    "adapter": "bing",
+    "kind": "feed",
+    "requestedUrl": "https://www.bing.com/search?format=rss&q=Ari+Shafer+CUES+1x11+2026+bicycle+specifications",
+    "url": "https://www.bing.com/search?format=rss&q=Ari+Shafer+CUES+1x11+2026+bicycle+specifications",
+    "retrievedAt": "2026-10-07T11:23:58.267Z",
+    "rawSha256": "f69ee2cf29d8e9aa8cacde9ff8f248d142f8372b94bee7f0a114e79496087770",
+    "rawBytes": 4696,
+    "reducedSha256": "f69ee2cf29d8e9aa8cacde9ff8f248d142f8372b94bee7f0a114e79496087770",
+    "reducedBytes": 4696,
+    "reduction": {},
+    "origin": {
+      "source": "live",
+      "recorder": "scripts/benchmark-reddit10.ts --record",
+      "httpClient": "ManufacturerHttpClient (safe)",
+      "captureTimestamp": "2026-10-07T11:23:58.267Z",
+      "finalUrl": "https://www.bing.com/search?format=rss&q=Ari+Shafer+CUES+1x11+2026+bicycle+specifications",
+      "contentType": "text/xml; charset=utf-8"
+    }
+  },
+  {
+    "id": "velosklad-search-10",
+    "adapter": "velosklad",
+    "kind": "search",
+    "requestedUrl": "https://www.velosklad.ru/velosipedy/poiskall/?text=Ari+Shafer+CUES+1x11+2026",
+    "url": "https://www.velosklad.ru/velosipedy/poiskall/?text=Ari+Shafer+CUES+1x11+2026",
+    "retrievedAt": "2026-10-07T11:23:59.428Z",
+    "rawSha256": "61504f62b56becdb2de565719f4b5ee635d9abc7dd8eb27bf32aaff1a297aea5",
+    "rawBytes": 280059,
+    "reducedSha256": "ff23def1198eaece2f8f64139957fae3ba23cbde12d2d59e786640175c36a543",
+    "reducedBytes": 883,
+    "reduction": {
+      "keep": ["h1"],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "live",
+      "recorder": "scripts/benchmark-reddit10.ts --record",
+      "httpClient": "ManufacturerHttpClient (safe)",
+      "captureTimestamp": "2026-10-07T11:23:59.428Z",
+      "finalUrl": "https://www.velosklad.ru/velosipedy/poiskall/?text=Ari+Shafer+CUES+1x11+2026",
+      "contentType": "text/html; charset=utf-8"
+    }
+  },
+  {
+    "id": "aribikes-shafer",
+    "adapter": "aribikes.com",
+    "kind": "bike",
+    "requestedUrl": "https://aribikes.com/products/shafer",
+    "url": "https://aribikes.com/products/shafer",
+    "retrievedAt": "2026-10-07T11:24:00.046Z",
+    "rawSha256": "2cc36139c411b30a3ef9396857e994ee8391d020daf922a4870cd9b87873be30",
+    "rawBytes": 607986,
+    "reducedSha256": "bcc6a4f6839b521bb5c44204ae36b968ec485df5e0aa419bbef791e78d8880e1",
+    "reducedBytes": 43742,
+    "reduction": {
+      "keep": ["h1", ".build-specs-table"],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "live",
+      "recorder": "scripts/benchmark-reddit10.ts --record",
+      "httpClient": "ManufacturerHttpClient (safe)",
+      "captureTimestamp": "2026-10-07T11:24:00.046Z",
+      "finalUrl": "https://aribikes.com/products/shafer",
+      "contentType": "text/html; charset=utf-8"
+    }
+  }
+]
