@@ -972,5 +972,149 @@
       "finalUrl": "https://aribikes.com/products/shafer",
       "contentType": "text/html; charset=utf-8"
     }
+  },
+  {
+    "id": "canyon-grizl-cf-9-w-eclips-4559",
+    "adapter": "canyon",
+    "kind": "bike",
+    "requestedUrl": "https://www.canyon.com/en-nl/gravel-bikes/adventure/grizl/cf/grizl-cf-9-w%2F-eclips/4559.html",
+    "url": "https://www.canyon.com/en-nl/gravel-bikes/adventure/grizl/cf/grizl-cf-9-w%2F-eclips/4559.html",
+    "retrievedAt": "2026-10-07T12:18:47.460Z",
+    "rawSha256": "c0d452c7ec6f8cca7ffc1b32b1966f9c48dd2a2d75b4457a1dd8305a54047cdd",
+    "rawBytes": 588489,
+    "reducedSha256": "6c59f90044e87c7fe549c2708579b0c04c0fd1a7c292b8345faf4316605cd07b",
+    "reducedBytes": 146387,
+    "reduction": {
+      "keep": ["h1", ".allComponents__sectionSpecListItemInner"],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "live",
+      "recorder": "scripts/benchmark-reddit10.ts --record",
+      "httpClient": "ManufacturerHttpClient (safe)",
+      "captureTimestamp": "2026-10-07T12:18:47.460Z",
+      "finalUrl": "https://www.canyon.com/en-nl/gravel-bikes/adventure/grizl/cf/grizl-cf-9-w%2F-eclips/4559.html",
+      "contentType": "text/html;charset=UTF-8"
+    }
+  },
+  {
+    "id": "canyon-grizl-cf-8-w-rift-4558",
+    "adapter": "canyon",
+    "kind": "bike",
+    "requestedUrl": "https://www.canyon.com/en-nl/gravel-bikes/adventure/grizl/cf/grizl-cf-8-w%2F-rift/4558.html",
+    "url": "https://www.canyon.com/en-nl/gravel-bikes/adventure/grizl/cf/grizl-cf-8-w%2F-rift/4558.html",
+    "retrievedAt": "2026-10-07T12:18:54.672Z",
+    "rawSha256": "065086d96dd73ed5e6b60e6dcfa0720fead490fe0bfcce704d91fa07215e0dfb",
+    "rawBytes": 574758,
+    "reducedSha256": "8690aa340ff9426047eaf20b96a98d0066ad018856a894961511bb622015398e",
+    "reducedBytes": 146426,
+    "reduction": {
+      "keep": ["h1", ".allComponents__sectionSpecListItemInner"],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "live",
+      "recorder": "scripts/benchmark-reddit10.ts --record",
+      "httpClient": "ManufacturerHttpClient (safe)",
+      "captureTimestamp": "2026-10-07T12:18:54.672Z",
+      "finalUrl": "https://www.canyon.com/en-nl/gravel-bikes/adventure/grizl/cf/grizl-cf-8-w%2F-rift/4558.html",
+      "contentType": "text/html;charset=UTF-8"
+    }
+  },
+  {
+    "id": "canyon-grizl-cf-8-di2-4143",
+    "adapter": "canyon",
+    "kind": "bike",
+    "requestedUrl": "https://www.canyon.com/en-nl/gravel-bikes/adventure/grizl/cf/grizl-cf-8-di2/4143.html",
+    "url": "https://www.canyon.com/en-nl/gravel-bikes/adventure/grizl/cf/grizl-cf-8-di2/4143.html",
+    "retrievedAt": "2026-10-07T12:18:55.855Z",
+    "rawSha256": "b56c3def902289593e40eef24a21130bd423c9335adc6b541a46810cd391685f",
+    "rawBytes": 648168,
+    "reducedSha256": "40ad105fa89130ed1ded810d73bffe3b94a11d8f47225db94ffd0256ade6556c",
+    "reducedBytes": 129606,
+    "reduction": {
+      "keep": ["h1", ".allComponents__sectionSpecListItemInner"],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "live",
+      "recorder": "scripts/benchmark-reddit10.ts --record",
+      "httpClient": "ManufacturerHttpClient (safe)",
+      "captureTimestamp": "2026-10-07T12:18:55.855Z",
+      "finalUrl": "https://www.canyon.com/en-nl/gravel-bikes/adventure/grizl/cf/grizl-cf-8-di2/4143.html",
+      "contentType": "text/html;charset=UTF-8"
+    }
+  },
+  {
+    "id": "canyon-grizl-cf-7-esc-4142",
+    "adapter": "canyon",
+    "kind": "bike",
+    "requestedUrl": "https://www.canyon.com/en-nl/gravel-bikes/adventure/grizl/cf/grizl-cf-7-esc/4142.html",
+    "url": "https://www.canyon.com/en-nl/gravel-bikes/adventure/grizl/cf/grizl-cf-7-esc/4142.html",
+    "retrievedAt": "2026-10-07T12:18:57.572Z",
+    "rawSha256": "b10980e0c292978444acf2a9db4b1c2580f41d63d7abdbb24f078b738d631bff",
+    "rawBytes": 619096,
+    "reducedSha256": "cb24de7fd851ac1b33123de47d5552a620398d7301ccb88e2194b5d376b7da3d",
+    "reducedBytes": 124183,
+    "reduction": {
+      "keep": ["h1", ".allComponents__sectionSpecListItemInner"],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "live",
+      "recorder": "scripts/benchmark-reddit10.ts --record",
+      "httpClient": "ManufacturerHttpClient (safe)",
+      "captureTimestamp": "2026-10-07T12:18:57.572Z",
+      "finalUrl": "https://www.canyon.com/en-nl/gravel-bikes/adventure/grizl/cf/grizl-cf-7-esc/4142.html",
+      "contentType": "text/html;charset=UTF-8"
+    }
+  },
+  {
+    "id": "canyon-grizl-cf-8-esc-w-eclips-4557",
+    "adapter": "canyon",
+    "kind": "bike",
+    "requestedUrl": "https://www.canyon.com/en-nl/gravel-bikes/adventure/grizl/cf/grizl-cf-8-esc-w%2F-eclips/4557.html",
+    "url": "https://www.canyon.com/en-nl/gravel-bikes/adventure/grizl/cf/grizl-cf-8-esc-w%2F-eclips/4557.html",
+    "retrievedAt": "2026-10-07T12:18:58.962Z",
+    "rawSha256": "a7aca2fc25334c93f55c36fb7175ad794ccc3476f2158b9eb1e72946b0226b57",
+    "rawBytes": 625592,
+    "reducedSha256": "f9012f85e8d0f12c10ae2e71999f1e0ea14c4137809244cb24a069833db05283",
+    "reducedBytes": 144047,
+    "reduction": {
+      "keep": ["h1", ".allComponents__sectionSpecListItemInner"],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "live",
+      "recorder": "scripts/benchmark-reddit10.ts --record",
+      "httpClient": "ManufacturerHttpClient (safe)",
+      "captureTimestamp": "2026-10-07T12:18:58.962Z",
+      "finalUrl": "https://www.canyon.com/en-nl/gravel-bikes/adventure/grizl/cf/grizl-cf-8-esc-w%2F-eclips/4557.html",
+      "contentType": "text/html;charset=UTF-8"
+    }
+  },
+  {
+    "id": "canyon-grizl-cf-7-axs-4554",
+    "adapter": "canyon",
+    "kind": "bike",
+    "requestedUrl": "https://www.canyon.com/en-nl/gravel-bikes/adventure/grizl/cf/grizl-cf-7-axs/4554.html",
+    "url": "https://www.canyon.com/en-nl/gravel-bikes/adventure/grizl/cf/grizl-cf-7-axs/4554.html",
+    "retrievedAt": "2026-10-07T12:19:00.331Z",
+    "rawSha256": "a13eb501381383ede0ce86e4a4b6f1ca6d0814ed363732f7233044b7fd60eb1f",
+    "rawBytes": 580130,
+    "reducedSha256": "5c00495e1be3ed211cdbe82d30b06b6a7da4d550e3520c2e46eb97a38fd87ee9",
+    "reducedBytes": 144626,
+    "reduction": {
+      "keep": ["h1", ".allComponents__sectionSpecListItemInner"],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "live",
+      "recorder": "scripts/benchmark-reddit10.ts --record",
+      "httpClient": "ManufacturerHttpClient (safe)",
+      "captureTimestamp": "2026-10-07T12:19:00.331Z",
+      "finalUrl": "https://www.canyon.com/en-nl/gravel-bikes/adventure/grizl/cf/grizl-cf-7-axs/4554.html",
+      "contentType": "text/html;charset=UTF-8"
+    }
   }
 ]

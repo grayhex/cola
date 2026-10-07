@@ -24,6 +24,34 @@ describe("brandSite", () => {
     ] as const)
       expect(brandSite(url, brand), url).toBe(false);
   });
+  it("takes the name under the public suffix, so a subdomain of the brand's own site is the brand's", () => {
+    for (const [url, brand] of [
+      ["https://shop.laufcycles.com/p/seigla", "Lauf"],
+      ["https://uk.propain-bikes.com/terrel-cf", "Propain"],
+      ["https://www.rosebikes.co.uk/p/x", "ROSE"],
+      ["https://laufcycles.co.uk/", "Lauf"],
+      ["https://www.laufcycles.com./p/seigla", "Lauf"],
+    ] as const)
+      expect(brandSite(url, brand), url).toBe(true);
+  });
+  it("does not take somebody else's site for the brand's because one label of its host looks like the name", () => {
+    for (const [url, brand] of [
+      // a subdomain on a site the brand does not own
+      ["https://laufcycles.example.com/seigla", "Lauf"],
+      ["https://giant-bikes.example.co.uk/revolt", "Giant"],
+      // hosting of many people's pages
+      ["https://lauf.github.io/seigla", "Lauf"],
+      ["https://propain.blogspot.com/terrel", "Propain"],
+      ["https://propain-bikes.myshopify.com/terrel", "Propain"],
+      // the name in the wrong place
+      ["https://laufcycles.com.example.test/", "Lauf"],
+      ["https://example.test/laufcycles.com/", "Lauf"],
+      // an address has no name; a bare suffix is nobody's
+      ["https://203.0.113.7/", "113"],
+      ["https://co.uk/", "Co"],
+    ] as const)
+      expect(brandSite(url, brand), url).toBe(false);
+  });
 });
 
 describe("sourceIdentity", () => {

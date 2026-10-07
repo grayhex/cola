@@ -22,7 +22,7 @@ import {
   type SourceReport,
   type SourceStatus,
 } from "./domain.js";
-import type { ManufacturerHttpClient } from "./http.js";
+import { readInRequest, type ManufacturerHttpClient } from "./http.js";
 import { identityConflict } from "./identity.js";
 import type { ManualSources } from "./manual.js";
 import { partialScore, requestInName } from "./matcher.js";
@@ -36,6 +36,9 @@ import type { RetailStore } from "./stores/types.js";
 // numbers are documented in docs/resolver/architecture.md.
 export const LIMITS = {
   officialMs: 20000,
+  // Reading more catalogue pages than are verified, to find the year asked for,
+  // must leave this much of officialMs unspent.
+  officialSpareMs: 10000,
   archiveMs: 12000,
   storeMs: 14000,
   webMs: 12000,
@@ -354,11 +357,15 @@ export class SourceSearch {
   ) {
     const verified: Verified[] = [];
     let failure: Reason | undefined;
+    // Pages whose check ended, accepted or rejected. A cut leaves the rest of
+    // `urls` unchecked, and a report must not count them.
+    let checked = 0;
     for (const url of urls) {
       checkAbort();
       // Pages already verified are worth more than the next one: with little
-      // time left the phase ends with them, and the list says it is a cut.
-      if (verified.length && budgetLeft() < 1500) {
+      // time left the phase ends with them, and the list says it is a cut. A
+      // page this request has already read takes no time to check.
+      if (verified.length && budgetLeft() < 1500 && !readInRequest(url)) {
         noteCut();
         break;
       }
@@ -374,12 +381,13 @@ export class SourceSearch {
         }
         throw e;
       }
+      checked++;
       if (result.verified) verified.push(result.verified);
       else if (network.has(result.failure)) failure ??= result.failure;
     }
     // A failure stays visible even when other pages were merely irrelevant:
     // the page that never answered might have been the one.
-    return { verified, failure };
+    return { verified, failure, checked };
   }
 
   private async primary(query: BikeQuery): Promise<Outcome[]> {
@@ -414,12 +422,13 @@ export class SourceSearch {
           try {
             // Discovery and verification share one budget: a source that is
             // slow in either still keeps the pages it has verified.
-            const { urls, r } = await withinBudget(
+            const r = await withinBudget(
               this.limits.officialMs,
               async () => {
                 const relevant = (
                   await adapter.discover(query, {
                     pages: this.limits.officialPages,
+                    spare: this.limits.officialSpareMs,
                   })
                 )
                   .filter(
@@ -448,7 +457,7 @@ export class SourceSearch {
                   .slice(0, this.limits.officialPages)
                   .map((c) => c.url);
                 trace("candidate_found", { count: urls.length });
-                return { urls, r: await this.verify(query, urls, kind) };
+                return this.verify(query, urls, kind);
               },
               notes,
             );
@@ -458,7 +467,7 @@ export class SourceSearch {
                 : r.failure
                   ? statusOf(r.failure)
                   : "empty",
-              { verified: r.verified, pages: urls.length, reason: r.failure },
+              { verified: r.verified, pages: r.checked, reason: r.failure },
             );
           } catch (e) {
             checkAbort();
@@ -493,10 +502,10 @@ export class SourceSearch {
                   : r.failure
                     ? statusOf(r.failure)
                     : "empty",
-                { verified: r.verified, pages: urls.length, reason: r.failure },
+                { verified: r.verified, pages: r.checked, reason: r.failure },
               ),
               verified: r.verified,
-              truncated: false,
+              truncated: r.checked < urls.length,
             };
           } catch (e) {
             checkAbort();
@@ -581,12 +590,11 @@ export class SourceSearch {
       return make(statusOf(reason), { reason });
     }
     try {
-      const checked = urls.slice(0, pages);
-      const r = await this.verify(query, checked, "store", store);
+      const r = await this.verify(query, urls.slice(0, pages), "store", store);
       trace("store_checked", {
         host,
         count: r.verified.length,
-        total: checked.length,
+        total: r.checked,
       });
       if (!r.verified.length && r.failure)
         trace("source_failed", { host, reason: r.failure });
@@ -594,9 +602,9 @@ export class SourceSearch {
         r.verified.length ? "ok" : r.failure ? statusOf(r.failure) : "empty",
         {
           verified: r.verified,
-          pages: checked.length,
+          pages: r.checked,
           reason: r.verified.length ? undefined : r.failure,
-          truncated: urls.length > checked.length || !!store.partial,
+          truncated: urls.length > r.checked || !!store.partial,
         },
       );
     } catch (e) {
@@ -630,7 +638,7 @@ export class SourceSearch {
       const r = await this.verify(query, urls, "web");
       return make(
         r.verified.length ? "ok" : r.failure ? statusOf(r.failure) : "empty",
-        { verified: r.verified, pages: urls.length, reason: r.failure },
+        { verified: r.verified, pages: r.checked, reason: r.failure },
       );
     } catch (e) {
       checkAbort();

@@ -7,7 +7,7 @@ vi.mock("undici", async () => {
 });
 import { lookup } from "node:dns/promises";
 import { fetch } from "undici";
-import { ManufacturerHttpClient } from "../src/http.js";
+import { ManufacturerHttpClient, readInRequest } from "../src/http.js";
 import { withResolution } from "../src/context.js";
 const client = () =>
   new ManufacturerHttpClient(pino({ level: "silent" }), 0, 1000);
@@ -143,6 +143,30 @@ it("a failed read is not shared between policies", async () => {
       "cdn.cube.eu",
     ]);
     expect(doc.body).toContain("Bike");
+  });
+});
+it("knows which pages this request has already read, and only those", async () => {
+  vi.mocked(fetch)
+    .mockResolvedValueOnce(new Response("<h1>Bike</h1>") as any)
+    .mockResolvedValueOnce(
+      new Response("", { status: 404, statusText: "Not Found" }) as any,
+    );
+  const http = client();
+  // Outside a request nothing is remembered.
+  expect(readInRequest("https://cube.eu/bike")).toBe(false);
+  await withResolution(new AbortController().signal, undefined, async () => {
+    expect(readInRequest("https://cube.eu/bike")).toBe(false);
+    await http.get("https://cube.eu/bike?utm_source=x", ["cube.eu"]);
+    // The same page, however it is written; another page is not it.
+    expect(readInRequest("https://cube.eu/bike")).toBe(true);
+    expect(readInRequest("https://CUBE.eu/bike?utm_source=y#top")).toBe(true);
+    expect(readInRequest("https://cube.eu/other")).toBe(false);
+    // A page that failed was not read.
+    await expect(
+      http.get("https://cube.eu/missing", ["cube.eu"]),
+    ).rejects.toBeDefined();
+    expect(readInRequest("https://cube.eu/missing")).toBe(false);
+    expect(readInRequest("not a url")).toBe(false);
   });
 });
 it("propagates cancellation to the active fetch without retrying", async () => {

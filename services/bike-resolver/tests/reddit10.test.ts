@@ -428,8 +428,9 @@ describe("Reddit 10 as a stream, and abandoned", () => {
   });
 
   it("a request abandoned in the middle of its fan-out stops asking", async () => {
-    // Every page takes 60 ms; the whole search (a manufacturer, an archive,
-    // two stores, a search engine) would read thirteen of them.
+    // Every page takes 60 ms; the whole search (a manufacturer with a year in
+    // the request, an archive, two stores, a search engine) would read nineteen
+    // of them.
     const { app, requested } = service(60);
     const address = await app.listen({ host: "127.0.0.1", port: 0 });
     const controller = new AbortController();

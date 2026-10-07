@@ -242,10 +242,12 @@ export interface BikeManufacturerAdapter {
   readonly allowedDomains: string[];
   readonly adapterVersion: number;
   // `pages` is how many catalogue pages the caller will use: reading more
-  // costs time for nothing, and the list says when it was cut.
+  // costs time for nothing, and the list says when it was cut. Only a year in
+  // the query reads further (the year is on the page), until a page of it is
+  // read, and only while `spare` ms of the caller's budget stay unspent.
   discover(
     query: BikeQuery,
-    options?: { pages?: number },
+    options?: { pages?: number; spare?: number },
   ): Promise<BikeCandidate[]>;
   // The address a candidate's page is read from, when the candidate's own
   // carries words the shop does not know (one of several builds on a page).

@@ -15,6 +15,8 @@ import { ManufacturerHttpClient, validateUrl } from "../http.js";
 // Pages of one catalogue cost seconds each. When this little is left of the
 // phase's budget and some pages are read, the rest are left unread.
 const LAST_PAGE_MS = 3500;
+// Never more than this many pages of a catalogue are read for one request.
+const MAX_PAGES = 12;
 // How many words of the request's trim an address carries. The model words are
 // what made it a candidate at all; the trim tells the bikes of a model apart.
 function trimHits(href: string, q: BikeQuery) {
@@ -86,7 +88,7 @@ export abstract class CatalogueAdapter implements BikeManufacturerAdapter {
   }
   async discover(
     q: BikeQuery,
-    options: { pages?: number } = {},
+    options: { pages?: number; spare?: number } = {},
   ): Promise<BikeCandidate[]> {
     const deadline = Date.now() + 60000;
     const budget = () => {
@@ -187,17 +189,30 @@ export abstract class CatalogueAdapter implements BikeManufacturerAdapter {
       .sort((a, b) => b.hits - a.hits || a.order - b.order);
     const complete = ranked.filter((r) => r.of > 0 && r.hits === r.of);
     const pages = (complete.length ? complete : ranked).map((r) => r.href);
-    // Never more than the caller will use, and never more than 12.
-    const limit = Math.min(options.pages ?? 12, 12);
-    if (pages.length > limit) noteCut();
+    // No more than the caller will use, except for a year it asks for: a year
+    // is on the page, not in the address, so the page of that year may lie
+    // behind the pages the caller verifies. Reading goes on, up to MAX_PAGES,
+    // while the pages read state years and none of them is that one; the caller
+    // ranks by year before it cuts. Pages cost seconds each, so this is paid
+    // from the spare part of the budget only: it never takes the time that
+    // checking the pages needs.
+    const keep = Math.min(options.pages ?? MAX_PAGES, MAX_PAGES);
     const candidates: BikeCandidate[] = [];
-    for (const url of pages.slice(0, limit)) {
+    const lookingForYear = () =>
+      q.year !== null &&
+      budgetLeft() > (options.spare ?? 0) &&
+      candidates.some((c) => c.year !== null) &&
+      !candidates.some((c) => c.year === q.year);
+    let read = 0;
+    for (const url of pages.slice(0, MAX_PAGES)) {
+      if (read >= keep && !lookingForYear()) break;
       budget();
       // What was read is kept: the phase ends with its pages, not with none.
       if (candidates.length && budgetLeft() < LAST_PAGE_MS) {
         noteCut();
         break;
       }
+      read++;
       try {
         const doc = await this.document(url);
         const meta = extractMetadata(doc);
@@ -209,8 +224,12 @@ export abstract class CatalogueAdapter implements BikeManufacturerAdapter {
         failure = e;
       }
     }
+    if (pages.length > read) noteCut();
     // An incomplete catalogue must not become a negatively cached assertion of absence.
-    if (!candidates.length && (failure || queue.length || urls.size > 12))
+    if (
+      !candidates.length &&
+      (failure || queue.length || urls.size > MAX_PAGES)
+    )
       throw (
         failure ||
         new ResolverError(
