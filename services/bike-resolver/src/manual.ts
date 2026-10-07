@@ -1,5 +1,5 @@
 import { EXTRACTOR_VERSION, trace, checkAbort } from "./context.js";
-import { sourceIdentity, withAddressWords } from "./source-url.js";
+import { brandSite, sourceIdentity, withAddressWords } from "./source-url.js";
 import { identityConflict } from "./identity.js";
 import { load } from "cheerio";
 import { randomUUID } from "node:crypto";
@@ -269,7 +269,14 @@ export class ManualSources {
           ...(parsed.warnings || []),
           ...(identityConflict(
             query,
-            [adapter?.brand, parsed.canonicalName].filter(Boolean).join(" "),
+            [
+              // A page of the brand's own site names its bike without the brand.
+              adapter?.brand ??
+                (brandSite(doc.url, query.brand) ? query.brand : undefined),
+              parsed.canonicalName,
+            ]
+              .filter(Boolean)
+              .join(" "),
             parsed.year,
           )
             ? ["identity_mismatch" as const]
