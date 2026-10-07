@@ -19,6 +19,8 @@ it("settings persist, reject stale saves and disable adapters before network acc
     );
   const settings = new SettingsStore(db as any);
   await settings.load();
+  // Without stores to fall back to, a disabled adapter is all that is said.
+  settings.value.retailerSearch = false;
   const logger = pino({ level: "silent" }),
     cache = new MemoryCache();
   const app = buildApp(
@@ -244,5 +246,53 @@ it("enables verified catalogues on fresh/untouched settings and preserves operat
     expect(store.value.adapters.cannondale).toBe(false);
   } finally {
     await db.close();
+  }
+});
+it("keeps the stores an operator chose when an older form saves without them", async () => {
+  const cache = new MemoryCache(),
+    logger = pino({ level: "silent" }),
+    settings = new SettingsStore();
+  const app = buildApp(new Resolver([], cache, logger), cache, settings);
+  try {
+    const { stores: _omitted, ...legacy } = defaultSettings;
+    const save = (value: object, version: number) =>
+      app.inject({
+        method: "PUT",
+        url: "/internal/settings",
+        payload: { version, value },
+      });
+    expect(
+      (
+        await save(
+          {
+            ...defaultSettings,
+            stores: { ...defaultSettings.stores, bikeinn: false },
+          },
+          1,
+        )
+      ).statusCode,
+    ).toBe(200);
+    const kept = await save({ ...legacy, timeoutMs: 12000 }, 2);
+    expect(kept.statusCode).toBe(200);
+    expect(kept.json().value.stores).toMatchObject({
+      bikeinn: false,
+      velosklad: true,
+    });
+    expect(kept.json().value.timeoutMs).toBe(12000);
+    // An unknown store key is still refused, not silently accepted.
+    const bad = await save(
+      { ...defaultSettings, stores: { ...defaultSettings.stores, nope: true } },
+      3,
+    );
+    expect(bad.statusCode).toBe(400);
+    const listed = (await app.inject("/internal/settings")).json();
+    expect(listed.stores.map((s: { id: string }) => s.id)).toEqual([
+      "velosklad",
+      "bikeinn",
+      "alltricks",
+      "bike24",
+    ]);
+  } finally {
+    await app.close();
   }
 });

@@ -21,7 +21,9 @@ export type Reason =
   | "selector_profile_failed"
   | "blocked_source"
   | "aborted"
-  | "connection_failed";
+  | "connection_failed"
+  | "not_complete_bike"
+  | "candidate_expired";
 export type EventName =
   | "retailer_search_started"
   | "resolve_started"
@@ -33,6 +35,7 @@ export type EventName =
   | "discovery_started"
   | "candidate_found"
   | "candidate_selected"
+  | "store_checked"
   | "document_fetch_started"
   | "document_fetched"
   | "structured_data_found"
@@ -63,7 +66,8 @@ interface Context {
   start: number;
   emit?: (event: TraceEvent) => void;
   documents: Map<string, Promise<SourceDocument>>;
-  events: number;
+  // Shared by every derived context: the stream is bounded as a whole.
+  events: { count: number };
 }
 export const resolutionContext = new AsyncLocalStorage<Context>();
 export function trace(
@@ -71,7 +75,7 @@ export function trace(
   data: Omit<Partial<TraceEvent>, "type" | "event" | "elapsedMs"> = {},
 ) {
   const ctx = resolutionContext.getStore();
-  if (!ctx || ctx.signal.aborted || ctx.events++ >= 240) return;
+  if (!ctx || ctx.signal.aborted || ctx.events.count++ >= 240) return;
   // Deliberate fields only; never exception text, headers, query URLs or HTML.
   ctx.emit?.({
     type: "event",
@@ -88,7 +92,13 @@ export function withResolution<T>(
   work: () => Promise<T>,
 ): Promise<T> {
   return resolutionContext.run(
-    { signal, emit, start: Date.now(), documents: new Map(), events: 0 },
+    {
+      signal,
+      emit,
+      start: Date.now(),
+      documents: new Map(),
+      events: { count: 0 },
+    },
     work,
   );
 }
@@ -105,4 +115,25 @@ export async function abortable<T>(
       .then(resolve, reject)
       .finally(() => signal.removeEventListener("abort", stop));
   });
+}
+// Independent work shares the request's cancellation and deadline, plus its own cap.
+export function withinBudget<T>(
+  ms: number,
+  task: () => Promise<T>,
+): Promise<T> {
+  const context = resolutionContext.getStore();
+  if (!context) return task();
+  return resolutionContext.run(
+    {
+      ...context,
+      signal: AbortSignal.any([context.signal, AbortSignal.timeout(ms)]),
+    },
+    task,
+  );
+}
+// Verification of many pages must not flood the progress stream.
+export function quiet<T>(task: () => Promise<T>): Promise<T> {
+  const context = resolutionContext.getStore();
+  if (!context) return task();
+  return resolutionContext.run({ ...context, emit: undefined }, task);
 }

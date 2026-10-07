@@ -10,6 +10,18 @@ import { ResolverError } from "../src/domain.js";
 import { abortable, resolutionContext, trace } from "../src/context.js";
 import type { ManufacturerHttpClient } from "../src/http.js";
 import { commonsFixture } from "./fixtures/component-photos.js";
+// Recorded store pages and sitemaps (see fixtures/stores/manifest.json).
+const storeDir = new URL("./fixtures/stores/", import.meta.url);
+const storeManifest: {
+  id: string;
+  store: string;
+  kind: string;
+  url: string;
+  requestedUrl: string;
+  rawSha256: string;
+  retrievedAt: string;
+}[] = JSON.parse(readFileSync(new URL("manifest.json", storeDir), "utf8"));
+const productId = (u: string) => u.match(/\/(\d{5,12})\/p$/)?.[1];
 const source = JSON.parse(
   readFileSync(
     new URL("./fixtures/giant/source.json", import.meta.url),
@@ -41,6 +53,51 @@ const transport = {
         body: JSON.stringify(data),
       };
     }
+    const host = new URL(url).hostname;
+    if (host === "www.tradeinn.com") {
+      const recorded = storeManifest.find((e) =>
+        e.kind === "sitemap"
+          ? e.requestedUrl === url
+          : e.store === "bikeinn" &&
+            !!productId(url) &&
+            productId(e.url) === productId(url),
+      );
+      if (!recorded)
+        throw new ResolverError(
+          "upstream_unavailable",
+          "Unrecorded store page",
+          false,
+          "http_404",
+        );
+      return {
+        url: recorded.url,
+        hash: recorded.rawSha256,
+        fetchedAt: recorded.retrievedAt,
+        body: readFileSync(
+          new URL(
+            recorded.id + (recorded.kind === "sitemap" ? ".xml" : ".html"),
+            storeDir,
+          ),
+          "utf8",
+        ),
+      };
+    }
+    // One store refuses automated requests and the search engine is down: the
+    // integration tests check that the recorded store still answers.
+    if (host === "www.velosklad.ru")
+      throw new ResolverError(
+        "upstream_unavailable",
+        "Fixture store refuses automated requests",
+        false,
+        "http_403",
+      );
+    if (host === "www.bing.com")
+      throw new ResolverError(
+        "upstream_unavailable",
+        "Fixture search outage",
+        true,
+        "timeout",
+      );
     if (url === "https://www.velo-port.ru/slow-bike") {
       trace("document_fetch_started", { host: "www.velo-port.ru" });
       await abortable(

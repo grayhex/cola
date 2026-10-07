@@ -95,6 +95,15 @@ export interface BikeComponent {
   attributes: Record<string, string | number | boolean>;
   raw: { label: string; value: string };
 }
+// Where a specification page comes from. "store" is a registered retailer,
+// "web" an unregistered page found by a search engine, "manual" a user URL.
+export type SourceKind =
+  "manufacturer" | "archive" | "store" | "web" | "manual";
+export interface CandidateQuality {
+  level: "complete" | "partial";
+  recognizedComponents: number;
+  coverage: number;
+}
 export interface BikeCandidate {
   thumbnailId?: string;
   sourceHost?: string;
@@ -106,6 +115,15 @@ export interface BikeCandidate {
   year: number | null;
   manufacturerProductId?: string;
   score?: number;
+  kind?: SourceKind;
+  storeId?: string;
+  storeName?: string;
+  quality?: CandidateQuality;
+  // Short summary of the transmission, to tell variants of one model apart.
+  drivetrain?: string;
+  warnings?: Reason[];
+  // Other localized pages of the same product; never a different variant.
+  alternatives?: { url: string; sourceHost: string }[];
 }
 export interface SourceDocument {
   contentType?: string;
@@ -144,6 +162,31 @@ export interface Source {
   fetchedAt: string;
   adapter: string;
   adapterVersion: number;
+  kind?: SourceKind;
+  storeId?: string;
+}
+export type SourceStatus =
+  | "ok"
+  | "empty"
+  | "blocked"
+  | "timeout"
+  | "unavailable"
+  | "skipped"
+  | "disabled";
+// What happened to one source of a search. A limited search is never "complete".
+export interface SourceReport {
+  id: string;
+  name: string;
+  kind: SourceKind;
+  status: SourceStatus;
+  reason?: Reason;
+  pages: number;
+  candidates: number;
+  durationMs: number;
+}
+export interface SearchReport {
+  complete: boolean;
+  sources: SourceReport[];
 }
 export interface Resolved {
   thumbnailId?: string;
@@ -173,6 +216,7 @@ export type ResolveResult =
       query: BikeQuery;
       candidates: BikeCandidate[];
       cached: boolean;
+      search?: SearchReport;
     }
   | {
       status:
@@ -186,6 +230,7 @@ export type ResolveResult =
       cached: boolean;
       message?: string;
       reason?: Reason;
+      search?: SearchReport;
     };
 export interface BikeManufacturerAdapter {
   readonly id: string;

@@ -98,7 +98,58 @@ const russian: Partial<Record<ComponentType, string[]>> = {
   front_light: ["передний фонарь"],
   rear_light: ["задний фонарь"],
 };
+// French labels as published by Alltricks. A bare "Dérailleur" is deliberately
+// absent: it does not say whether the front or the rear one is meant.
+const french: Partial<Record<ComponentType, string[]>> = {
+  frame: ["cadre"],
+  fork: ["fourche"],
+  rear_shock: ["amortisseur"],
+  front_derailleur: ["dérailleur avant"],
+  rear_derailleur: ["dérailleur arrière"],
+  shifter: [
+    "manette de dérailleur",
+    "manettes de dérailleur",
+    "manettes",
+    "manette",
+  ],
+  crankset: ["pédalier"],
+  bottom_bracket: ["boîtier de pédalier", "support de pédalier"],
+  chain: ["chaîne"],
+  brake: ["freins"],
+  front_brake: ["frein avant"],
+  rear_brake: ["frein arrière"],
+  brake_lever: ["leviers de frein"],
+  hub: ["moyeux"],
+  front_hub: ["moyeu avant"],
+  rear_hub: ["moyeu arrière"],
+  rim: ["jantes"],
+  wheel: ["roues"],
+  front_tire: ["pneu avant"],
+  rear_tire: ["pneu arrière"],
+  tire: ["pneus"],
+  handlebar: ["guidon", "cintre"],
+  stem: ["potence"],
+  grips: ["poignées"],
+  bar_tape: ["bande de guidon", "ruban de guidon", "ruban de cintre"],
+  headset: ["jeu de direction"],
+  seatpost: ["tige de selle"],
+  saddle: ["selle"],
+  seat_clamp: ["collier de selle"],
+  pedals: ["pédales"],
+  front_light: ["éclairage avant"],
+  rear_light: ["éclairage arrière"],
+  mudguards: ["garde-boue"],
+  rack: ["porte-bagages"],
+  kickstand: ["béquille"],
+  motor: ["moteur"],
+  battery: ["batterie"],
+};
 for (const [type, values] of Object.entries(russian))
+  aliases[type as ComponentType] = [
+    ...(aliases[type as ComponentType] || []),
+    ...values,
+  ];
+for (const [type, values] of Object.entries(french))
   aliases[type as ComponentType] = [
     ...(aliases[type as ComponentType] || []),
     ...values,

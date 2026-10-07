@@ -11,8 +11,10 @@ import {
   type BikeQuery,
   type BikeManufacturerAdapter,
   type SourceDocument,
+  type SourceKind,
 } from "./domain.js";
 import type { SettingsStore } from "./settings.js";
+import type { RetailStore } from "./stores/types.js";
 import { jsonRecord, jsonRecords } from "./json-values.js";
 import { z } from "zod";
 
@@ -131,7 +133,18 @@ export class ManualSources {
     private http: ManufacturerHttpClient,
     private adapters: BikeManufacturerAdapter[],
     private settings: SettingsStore,
+    private stores: RetailStore[] = [],
   ) {}
+  // The registered store a page belongs to, whatever the store's flag says:
+  // the flag decides about searching, a pasted URL is always read.
+  storeFor(url: string) {
+    try {
+      const u = new URL(url);
+      return this.stores.find((store) => store.owns(u));
+    } catch {
+      return undefined;
+    }
+  }
   domains() {
     return { blockedDomains: this.settings.value.blockedDomains };
   }
@@ -139,6 +152,15 @@ export class ManualSources {
     if (!this.settings.value.enabled)
       throw new ResolverError("upstream_unavailable", "Resolver disabled");
     return this.http.get(validateUrl(url, this.domains()).href, this.domains());
+  }
+  private storeDocument(store: RetailStore, url: string) {
+    if (!this.settings.value.enabled)
+      throw new ResolverError("upstream_unavailable", "Resolver disabled");
+    const target = validateUrl(
+      store.fetchUrl(sourceIdentity(url)),
+      store.allowedDomains,
+    );
+    return this.http.get(target.href, store.allowedDomains);
   }
   async cube(doc: SourceDocument) {
     const id = new URL(doc.url).searchParams.get("a");
@@ -200,16 +222,24 @@ export class ManualSources {
     this.photos.set(id, { url, page, expires: Date.now() + 15 * 60 * 1000 });
     return id;
   }
-  async resolve(query: BikeQuery, url: string) {
+  // `origin` says how the person got to the page: typed in ("manual"), chosen
+  // from an official, store or web result.
+  async resolve(query: BikeQuery, url: string, origin: SourceKind = "manual") {
     try {
       checkAbort();
-      const doc = await this.document(sourceIdentity(url));
-      const parsed =
-        new URL(doc.url).hostname === "info.cube.eu"
+      const store = this.storeFor(url);
+      const doc = store
+        ? await this.storeDocument(store, url)
+        : await this.document(sourceIdentity(url));
+      const host = new URL(doc.url).hostname;
+      const adapter = this.adapters.find((a) =>
+        a.allowedDomains.includes(host),
+      );
+      const parsed = store
+        ? store.parse(doc, query)
+        : host === "info.cube.eu"
           ? (await this.cube(doc)).parsed
-          : await (this.adapters
-              .find((a) => a.allowedDomains.includes(new URL(doc.url).hostname))
-              ?.parse(doc, query) ?? parseDocument(doc));
+          : await (adapter?.parse(doc, query) ?? parseDocument(doc));
       // A URL is an explicit user-selected source, never a verified identity match.
       return {
         status: "resolved",
@@ -219,25 +249,14 @@ export class ManualSources {
         quality: parsed.quality,
         suggestedMetadata: {
           ...parsed.suggestedMetadata,
-          ...(this.adapters.some((a) =>
-            a.allowedDomains.includes(new URL(doc.url).hostname),
-          )
-            ? { manufacturerUrl: doc.url }
-            : {}),
+          ...(adapter ? { manufacturerUrl: doc.url } : {}),
         },
         unknownFields: parsed.unknownFields,
         warnings: [
           ...(parsed.warnings || []),
           ...(identityConflict(
             query,
-            [
-              this.adapters.find((a) =>
-                a.allowedDomains.includes(new URL(doc.url).hostname),
-              )?.brand,
-              parsed.canonicalName,
-            ]
-              .filter(Boolean)
-              .join(" "),
+            [adapter?.brand, parsed.canonicalName].filter(Boolean).join(" "),
             parsed.year,
           )
             ? ["identity_mismatch" as const]
@@ -265,12 +284,14 @@ export class ManualSources {
         })),
         rawSpecification: parsed.rawSpecification,
         source: {
-          manufacturer: new URL(doc.url).hostname,
+          manufacturer: store ? store.name : host,
           url: doc.url,
           fetchedAt: doc.fetchedAt,
-          adapter: "manual-url",
-          adapterVersion: 1,
+          adapter: store ? "store:" + store.id : "manual-url",
+          adapterVersion: store ? store.storeVersion : 1,
           extractorVersion: EXTRACTOR_VERSION,
+          kind: store ? "store" : origin,
+          ...(store ? { storeId: store.id } : {}),
         },
         cached: false,
       };

@@ -13,6 +13,27 @@ export const adapterSupport = {
   gt: "",
   bmc: "Модельный год не подтверждён источником",
 };
+// Registered retailers. `enabled` is the default for installations that never
+// saved the flag; the text is shown to the operator and in /v1/brands.
+export const storeSupport = {
+  velosklad: { enabled: true, limitation: "" },
+  bikeinn: {
+    enabled: true,
+    limitation:
+      "Поиск идёт по публичной карте сайта, в ней не все товары; страница по ссылке читается всегда",
+  },
+  alltricks: {
+    enabled: false,
+    limitation:
+      "Поиска нет: сайт отвечает серверным запросам проверкой Cloudflare. Страница по ссылке читается, если сеть сервера её получает",
+  },
+  bike24: {
+    enabled: false,
+    limitation:
+      "Сайт отклоняет автоматические запросы; поиск и разбор не проверены на реальных страницах",
+  },
+} as const;
+export type StoreId = keyof typeof storeSupport;
 export const settingsSchema = z
   .object({
     enabled: z.boolean(),
@@ -39,6 +60,19 @@ export const settingsSchema = z
         ),
       )
       .strict(),
+    // A missing key takes its default: settings saved before a store existed
+    // load unchanged and never lose an operator's choice for the others.
+    stores: z
+      .object(
+        Object.fromEntries(
+          Object.entries(storeSupport).map(([k, v]) => [
+            k,
+            z.boolean().default(v.enabled),
+          ]),
+        ) as Record<StoreId, z.ZodDefault<z.ZodBoolean>>,
+      )
+      .strict()
+      .prefault({}),
   })
   .strict();
 export type Settings = z.infer<typeof settingsSchema>;
@@ -55,6 +89,9 @@ export const defaultSettings: Settings = {
   adapters: Object.fromEntries(
     Object.entries(adapterSupport).map(([id, reason]) => [id, !reason]),
   ),
+  stores: Object.fromEntries(
+    Object.entries(storeSupport).map(([id, v]) => [id, v.enabled]),
+  ) as Record<StoreId, boolean>,
 };
 export class SettingsStore {
   value: Settings = structuredClone(defaultSettings);

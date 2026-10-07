@@ -1,6 +1,8 @@
 export interface ExtractionProfile {
   id: string;
   sections?: string[];
+  // Containers whose <br>-separated "Label: value" lines are the specification.
+  lines?: string[];
   framework?: "react" | "shopify";
   aliases?: Record<string, string>;
 }
@@ -15,6 +17,13 @@ export function profileFor(url: string, body: string): ExtractionProfile {
     return { id: "veloport", sections: ["#tabs-2"] };
   if (host === "velostrana.ru" || host.endsWith(".velostrana.ru"))
     return { id: "velostrana", sections: [".productfull-specification"] };
+  // Bikeinn keeps one spec block either in a structured list or, for some
+  // products, as plain "Label: value" lines of the product description.
+  if (
+    host === "www.tradeinn.com" &&
+    new URL(url).pathname.startsWith("/bikeinn/")
+  )
+    return { id: "bikeinn", lines: ["#desc"] };
   if (host === "specialized.com" || host.endsWith(".specialized.com"))
     return {
       id: "specialized",

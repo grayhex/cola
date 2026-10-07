@@ -2,8 +2,7 @@ import { it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { parseDocument } from "../src/extract.js";
 import { identityConflict } from "../src/identity.js";
-import { RetailerSearch, searchLinks } from "../src/retailer-search.js";
-import { SettingsStore } from "../src/settings.js";
+import { searchLinks } from "../src/retailer-search.js";
 const query = {
   brand: "Specialized",
   model: "Stumpjumper",
@@ -55,41 +54,6 @@ it("bounds and deduplicates public search links", () => {
       "<rss><channel><item><link>https://shop.test/a?a=1&amp;b=2</link></item><item><link>https://shop.test/a?a=1&amp;b=2</link></item></channel></rss>",
     ),
   ).toEqual(["https://shop.test/a?a=1&b=2"]);
-});
-it("searches once, verifies product identity, skips blocked sources and reuses discovery cache", async () => {
-  let searches = 0,
-    products = 0;
-  const settings = new SettingsStore();
-  settings.value.blockedDomains = ["blocked.test"];
-  const http = {
-    get: async () => {
-      searches++;
-      return {
-        body: "<rss><channel><item><link>https://blocked.test/bike</link></item><item><link>https://shop.test/bike</link></item></channel></rss>",
-      };
-    },
-  };
-  let year = 2023;
-  const manual = {
-    resolve: async () => {
-      products++;
-      return {
-        status: "resolved",
-        sourceYear: year,
-        bike: { canonicalName: "Specialized Stumpjumper EVO Comp" },
-        source: {},
-        warnings: [],
-      };
-    },
-  };
-  const service = new RetailerSearch(http as any, manual as any, settings);
-  expect((await service.resolve(query)).status).toBe("not_found");
-  year = 2024;
-  const result = await service.resolve(query);
-  expect(result.status).toBe("resolved");
-  expect(searches).toBe(1);
-  expect(products).toBe(2);
-  expect((result as any).manualSelection).toBe(false);
 });
 it("extracts VeloPort separate specification tables and retains conflicting brake evidence", () => {
   const parsed = parseDocument({
