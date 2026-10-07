@@ -1,0 +1,536 @@
+[
+  {
+    "id": "bikeinn-wrc-eolian",
+    "store": "bikeinn",
+    "kind": "bike",
+    "requestedUrl": "https://www.tradeinn.com/bikeinn/en/wrc-eolian-carbon-grx810-krdrx812-gravel-bike/139992578/p",
+    "url": "https://www.tradeinn.com/bikeinn/en/wrc-eolian-carbon-grx810-krdrx812-gravel-bike/139992578/p",
+    "retrievedAt": "2026-10-07T05:56:42.598Z",
+    "rawSha256": "679f6b10d7ae8169960fd30e97459f28a17f3fdced12822dc9b31e993a08ace8",
+    "rawBytes": 353061,
+    "reducedSha256": "ea90f3016e20918db87e26e0f4f7cb037bc480da1f8cbab57e7708ac384dbfcf",
+    "reducedBytes": 6921,
+    "reduction": {
+      "keep": ["h1", "#desc"],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "live"
+    },
+    "expected": {
+      "name": "WRC Eolian Carbon GRX810 KRDRX812 gravel bike",
+      "year": null,
+      "productId": "139992578",
+      "minComponents": 15,
+      "types": [
+        "frame",
+        "fork",
+        "rear_derailleur",
+        "shifter",
+        "crankset",
+        "cassette",
+        "chain",
+        "handlebar",
+        "stem",
+        "saddle",
+        "seatpost"
+      ],
+      "strategy": "description-lines"
+    }
+  },
+  {
+    "id": "bikeinn-3t-exploro",
+    "store": "bikeinn",
+    "kind": "bike",
+    "requestedUrl": "https://www.tradeinn.com/bikeinn/en/3t-exploro-racemax-italia-rival-axs-2x12s-gravel-bike/141797752/p",
+    "url": "https://www.tradeinn.com/bikeinn/en/3t-exploro-racemax-italia-rival-axs-2x12s-gravel-bike/141797752/p",
+    "retrievedAt": "2026-10-07T05:59:19.847Z",
+    "rawSha256": "b129c50fdc38d9207d4c23bae036f1ab38a9a97aec24cfd8366b2e84d644d536",
+    "rawBytes": 348624,
+    "reducedSha256": "2fd949b6fcc3ccfe83631740d9f10e4d7b26bc6fff65219ff53ae98c6776889f",
+    "reducedBytes": 6993,
+    "reduction": {
+      "keep": ["h1", "#desc", "#js-fichaTecnica-cta-info"],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "live"
+    },
+    "expected": {
+      "name": "3t Exploro Racemax Italia Rival AXS 2x12s gravel bike",
+      "year": null,
+      "productId": "141797752",
+      "minComponents": 11,
+      "types": [
+        "frame",
+        "fork",
+        "rear_derailleur",
+        "shifter",
+        "crankset",
+        "cassette",
+        "front_brake",
+        "rear_brake"
+      ],
+      "strategy": "description-lines"
+    }
+  },
+  {
+    "id": "bikeinn-giant-revolt-2",
+    "store": "bikeinn",
+    "kind": "bike",
+    "requestedUrl": "https://www.tradeinn.com/bikeinn/en/giant-revolt-2-cues-u4020-2026-gravel-bike/142587127/p",
+    "url": "https://www.tradeinn.com/bikeinn/en/giant-revolt-2-cues-u4020-2026-gravel-bike/142587127/p",
+    "retrievedAt": "2026-10-07T05:59:21.401Z",
+    "rawSha256": "c1ac3d74054f67be27ac0ec1964413ff6d890905dff89eb6828674522e028f46",
+    "rawBytes": 400758,
+    "reducedSha256": "254542a6aff1d84bb2472b89e454bb6438e7142d1054a1b50ce7086eb7bcea76",
+    "reducedBytes": 27953,
+    "reduction": {
+      "keep": ["h1", "#desc", "#js-fichaTecnica-cta-info"],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "live"
+    },
+    "expected": {
+      "name": "Giant Revolt 2 Cues U4020 2026 gravel bike",
+      "year": 2026,
+      "productId": "142587127",
+      "minComponents": 16,
+      "types": [
+        "frame",
+        "fork",
+        "rear_derailleur",
+        "shifter",
+        "crankset",
+        "cassette",
+        "saddle",
+        "chain",
+        "handlebar",
+        "stem"
+      ],
+      "strategy": "repeated-block"
+    }
+  },
+  {
+    "id": "bikeinn-scott-addict-rc-20",
+    "store": "bikeinn",
+    "kind": "bike",
+    "requestedUrl": "https://www.tradeinn.com/bikeinn/en/scott-addict-rc-20-ultegra-di2-rd-r8150-2025-road-bike/141886307/p",
+    "url": "https://www.tradeinn.com/bikeinn/en/scott-addict-rc-20-ultegra-di2-rd-r8150-2025-road-bike/141886307/p",
+    "retrievedAt": "2026-10-07T05:59:22.996Z",
+    "rawSha256": "e4a888952a9fe5249ade269f2829df304faed1c88ce2630ea4c037b0d193a5d1",
+    "rawBytes": 456273,
+    "reducedSha256": "94841a034d95b70144cb15682ac30c3442b7b549af0a3e6c48468d7fe6b1cb97",
+    "reducedBytes": 31799,
+    "reduction": {
+      "keep": ["h1", "#desc", "#js-fichaTecnica-cta-info"],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "live"
+    },
+    "expected": {
+      "name": "Scott Addict RC 20 Ultegra Di2 RD-R8150 2025 road bike",
+      "year": 2025,
+      "productId": "141886307",
+      "minComponents": 16,
+      "types": [
+        "frame",
+        "fork",
+        "rear_derailleur",
+        "shifter",
+        "crankset",
+        "cassette",
+        "saddle",
+        "chain",
+        "handlebar",
+        "stem"
+      ],
+      "strategy": "repeated-block"
+    }
+  },
+  {
+    "id": "bikeinn-focus-atlas-6-7",
+    "store": "bikeinn",
+    "kind": "bike",
+    "requestedUrl": "https://www.tradeinn.com/bikeinn/en/focus-atlas-6.7-cues-gravel-bike/142824990/p",
+    "url": "https://www.tradeinn.com/bikeinn/en/focus-atlas-6.7-cues-gravel-bike/142824990/p",
+    "retrievedAt": "2026-10-07T05:59:24.438Z",
+    "rawSha256": "b9f0619d47725049ec23bf221ac6648dddb96b6d4115b5815eeb623735c980d3",
+    "rawBytes": 367523,
+    "reducedSha256": "87c677850a0815e932eb3942a26bfbf8a2c41da095d1bbfb0232fe4648fc4ea5",
+    "reducedBytes": 26720,
+    "reduction": {
+      "keep": ["h1", "#desc", "#js-fichaTecnica-cta-info"],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "live"
+    },
+    "expected": {
+      "name": "Focus Atlas 6.7 Cues gravel bike",
+      "year": null,
+      "productId": "142824990",
+      "minComponents": 15,
+      "types": [
+        "frame",
+        "fork",
+        "rear_derailleur",
+        "shifter",
+        "crankset",
+        "cassette",
+        "saddle",
+        "chain",
+        "handlebar",
+        "stem"
+      ],
+      "strategy": "repeated-block"
+    }
+  },
+  {
+    "id": "bikeinn-ritchey-montebello-frame",
+    "store": "bikeinn",
+    "kind": "frameset",
+    "requestedUrl": "https://www.tradeinn.com/bikeinn/en/ritchey-montebello-gravel-frame/143226130/p",
+    "url": "https://www.tradeinn.com/bikeinn/en/ritchey-montebello-gravel-frame/143226130/p",
+    "retrievedAt": "2026-10-07T05:59:25.483Z",
+    "rawSha256": "b657909c131dd3003626405396da64c2442b572338aa0b2a33a37a59219858a6",
+    "rawBytes": 367698,
+    "reducedSha256": "0195393ce8f77d1889bb7fbd707198ed6bba4bd2a9e3a7a1f60d6c53cdd1f9ea",
+    "reducedBytes": 18061,
+    "reduction": {
+      "keep": ["h1", "#desc", "#js-fichaTecnica-cta-info"],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "live"
+    },
+    "expected": {
+      "reason": "not_complete_bike"
+    }
+  },
+  {
+    "id": "bikeinn-raceface-atlas-stem",
+    "store": "bikeinn",
+    "kind": "accessory",
+    "requestedUrl": "https://www.tradeinn.com/bikeinn/en/race-face-atlas-35-mm-stem/136924924/p",
+    "url": "https://www.tradeinn.com/bikeinn/en/race-face-atlas-35-mm-stem/136924924/p",
+    "retrievedAt": "2026-10-07T05:59:26.616Z",
+    "rawSha256": "975b321b4ad434033a469282dce44a285d821867713968dc8fe5c64e5a615615",
+    "rawBytes": 389178,
+    "reducedSha256": "cf11d39873c9526889cb2502e74ea56a8f2e535c162d7990ff04b124efe95f1b",
+    "reducedBytes": 19333,
+    "reduction": {
+      "keep": ["h1", "#desc", "#js-fichaTecnica-cta-info"],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "live"
+    },
+    "expected": {
+      "reason": "not_complete_bike"
+    }
+  },
+  {
+    "id": "bikeinn-sitemap-index",
+    "store": "bikeinn",
+    "kind": "sitemap",
+    "requestedUrl": "https://www.tradeinn.com/bikeinn/sitemaps/sitemap-bikeinn.xml",
+    "url": "https://www.tradeinn.com/bikeinn/sitemaps/sitemap-bikeinn.xml",
+    "retrievedAt": "2026-10-07T05:59:27.693Z",
+    "rawSha256": "575639921baf9d5e782aabaa8563505b20a1afdd389e0926e2065d61f82b9307",
+    "rawBytes": 6649,
+    "reducedSha256": "5dcff2cd8f1a70d72c5aea57cfafa961e94b0bffb115c2949af9a902827db667",
+    "reducedBytes": 402,
+    "reduction": {
+      "xmlKeep": [
+        "_productos_1_eng_bikeinn.xml",
+        "_productos_2_eng_bikeinn.xml"
+      ],
+      "unrelatedEntries": 0
+    },
+    "origin": {
+      "source": "live"
+    }
+  },
+  {
+    "id": "bikeinn-sitemap-products-1",
+    "store": "bikeinn",
+    "kind": "sitemap",
+    "requestedUrl": "https://www.tradeinn.com/bikeinn/sitemaps/sitemap_productos_1_eng_bikeinn.xml",
+    "url": "https://www.tradeinn.com/bikeinn/sitemaps/sitemap_productos_1_eng_bikeinn.xml",
+    "retrievedAt": "2026-10-07T05:59:28.954Z",
+    "rawSha256": "d2f2df9eba5a43051186f14b5f136c024fd4b300ad373590069776f8faa3cd51",
+    "rawBytes": 2404007,
+    "reducedSha256": "d751f1b10059b1c12898a8dfc8cd86c727902425e08fa09505406c3dd941bb5b",
+    "reducedBytes": 48204,
+    "reduction": {
+      "xmlKeep": ["-bike/", "-frame/"],
+      "unrelatedEntries": 8
+    },
+    "origin": {
+      "source": "live"
+    }
+  },
+  {
+    "id": "bikeinn-sitemap-products-2",
+    "store": "bikeinn",
+    "kind": "sitemap",
+    "requestedUrl": "https://www.tradeinn.com/bikeinn/sitemaps/sitemap_productos_2_eng_bikeinn.xml",
+    "url": "https://www.tradeinn.com/bikeinn/sitemaps/sitemap_productos_2_eng_bikeinn.xml",
+    "retrievedAt": "2026-10-07T05:59:29.837Z",
+    "rawSha256": "6370807461222d94ad857cef47ce8f1d6e3121947269314f71ab37eb95d89496",
+    "rawBytes": 748826,
+    "reducedSha256": "bf0e7494cb5177f7b64f6726394d95be182ffb655a07959cb19c0773ab1994ff",
+    "reducedBytes": 14294,
+    "reduction": {
+      "xmlKeep": ["-bike/", "-frame/"],
+      "unrelatedEntries": 8
+    },
+    "origin": {
+      "source": "live"
+    }
+  },
+  {
+    "id": "alltricks-lapierre-xelius",
+    "store": "alltricks",
+    "kind": "bike",
+    "requestedUrl": "https://www.alltricks.fr/F-41505-velos-route-_-cyclocross-_-triathlon/P-3115297-velo_de_route_lapierre_xelius_drs_6_0_shimano_105_di2_12v_700_mm_gris_2025",
+    "url": "https://www.alltricks.fr/F-41505-velos-route-_-cyclocross-_-triathlon/P-3115297-velo_de_route_lapierre_xelius_drs_6_0_shimano_105_di2_12v_700_mm_gris_2025",
+    "retrievedAt": "2025-09-16T11:03:44Z",
+    "rawSha256": "e4c8bf0bcd004ab7d6ff09f5309c758564dff61b71a50618def1e639c58c384e",
+    "rawBytes": 542319,
+    "reducedSha256": "cd557d5ba88148aba6b4efa1e9174d0068d6759dee33aaf21d335b669071b4d8",
+    "reducedBytes": 10355,
+    "reduction": {
+      "keep": ["h1", ".prodsheet_specs1"],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "Common Crawl",
+      "crawl": "CC-MAIN-2025-38",
+      "requestedUrl": "https://www.alltricks.fr/F-41505-velos-route-_-cyclocross-_-triathlon/P-3115297-velo_de_route_lapierre_xelius_drs_6_0_shimano_105_di2_12v_700_mm_gris_2025",
+      "captureTimestamp": "2025-09-16T11:03:44Z",
+      "warcFile": "crawl-data/CC-MAIN-2025-38/segments/1757047820142.86/warc/CC-MAIN-20250916092918-20250916122918-00935.warc.gz",
+      "warcOffset": 558689088,
+      "warcLength": 56557,
+      "cdxDigestSha1": "LOUZFPE7BKOFLV2ZYVWBSNLQZNVGMNOV",
+      "rawBodySha256": "e4c8bf0bcd004ab7d6ff09f5309c758564dff61b71a50618def1e639c58c384e",
+      "bodyBytes": 542319,
+      "httpStatusLine": "HTTP/1.1 200 ",
+      "warcRecordId": "<urn:uuid:33ee920d-2349-46f2-82eb-c02e68356921>",
+      "warcDate": "2025-09-16T11:03:44Z",
+      "warcPayloadDigest": "sha1:LOUZFPE7BKOFLV2ZYVWBSNLQZNVGMNOV",
+      "warcIpAddress": "104.18.12.89"
+    },
+    "expected": {
+      "name": "Vélo de Route Lapierre Xelius DRS 6.0 Shimano 105 Di2 12V 700 mm Gris 2025",
+      "year": 2025,
+      "productId": "2936908",
+      "minComponents": 16,
+      "types": [
+        "frame",
+        "fork",
+        "shifter",
+        "front_derailleur",
+        "rear_derailleur",
+        "cassette",
+        "chain",
+        "crankset",
+        "brake",
+        "wheel",
+        "tire",
+        "handlebar",
+        "stem",
+        "saddle",
+        "seatpost"
+      ],
+      "strategy": "table"
+    }
+  },
+  {
+    "id": "alltricks-trek-madone",
+    "store": "alltricks",
+    "kind": "bike",
+    "requestedUrl": "https://www.alltricks.fr/F-41505-velos-route-_-cyclocross-_-triathlon/P-2836207-velo_de_route_trek_madone_sl_6_shimano_105_di2_12v_700_mm_noir_gen__8",
+    "url": "https://www.alltricks.fr/F-41505-velos-route-_-cyclocross-_-triathlon/P-2836207-velo_de_route_trek_madone_sl_6_shimano_105_di2_12v_700_mm_noir_gen__8",
+    "retrievedAt": "2025-09-08T11:35:55Z",
+    "rawSha256": "f62207ec4565517d02f13a684a3fa1373158c17588b6267d394ad03e852ca6cc",
+    "rawBytes": 635939,
+    "reducedSha256": "1bd86e4ec8354df19f7fdee35838cd2ece33c37114a051f09195dd1ccd3274e5",
+    "reducedBytes": 13944,
+    "reduction": {
+      "keep": ["h1", ".prodsheet_specs1"],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "Common Crawl",
+      "crawl": "CC-MAIN-2025-38",
+      "requestedUrl": "https://www.alltricks.fr/F-41505-velos-route-_-cyclocross-_-triathlon/P-2836207-velo_de_route_trek_madone_sl_6_shimano_105_di2_12v_700_mm_noir_gen__8",
+      "captureTimestamp": "2025-09-08T11:35:55Z",
+      "warcFile": "crawl-data/CC-MAIN-2025-38/segments/1757047532982.74/warc/CC-MAIN-20250908112111-20250908142111-00524.warc.gz",
+      "warcOffset": 563603947,
+      "warcLength": 63507,
+      "cdxDigestSha1": "VZAUPH6X7ZQPPJBVEQQXUTRP2DXFYKOB",
+      "rawBodySha256": "f62207ec4565517d02f13a684a3fa1373158c17588b6267d394ad03e852ca6cc",
+      "bodyBytes": 635939,
+      "httpStatusLine": "HTTP/1.1 200 ",
+      "warcRecordId": "<urn:uuid:c0b7faac-62b5-490e-8ad3-bbcf5a097cda>",
+      "warcDate": "2025-09-08T11:35:55Z",
+      "warcPayloadDigest": "sha1:VZAUPH6X7ZQPPJBVEQQXUTRP2DXFYKOB",
+      "warcIpAddress": "104.18.13.89"
+    },
+    "expected": {
+      "name": "Vélo de Route Trek Madone SL 6 Shimano 105 Di2 12V 700 mm Noir Gén. 8",
+      "year": null,
+      "productId": "2713515",
+      "minComponents": 16,
+      "types": [
+        "frame",
+        "fork",
+        "shifter",
+        "rear_derailleur",
+        "cassette",
+        "crankset",
+        "brake",
+        "saddle"
+      ],
+      "strategy": "table"
+    }
+  },
+  {
+    "id": "alltricks-orbea-avant",
+    "store": "alltricks",
+    "kind": "bike",
+    "requestedUrl": "https://www.alltricks.fr/F-41505-velos-route-_-cyclocross-_-triathlon/P-3071521-velo_de_route_orbea_avant_h30_shimano_105_12v_700_mm_gris_magnetic_bronze_2025",
+    "url": "https://www.alltricks.fr/F-41505-velos-route-_-cyclocross-_-triathlon/P-3071521-velo_de_route_orbea_avant_h30_shimano_105_12v_700_mm_gris_magnetic_bronze_2025",
+    "retrievedAt": "2025-09-13T20:37:30Z",
+    "rawSha256": "01411815c21d9278a420892935638ab72a2523a0a2bb2c98d5365cad3f166424",
+    "rawBytes": 535277,
+    "reducedSha256": "a02291fecd0b0a6d56d40ce98747a5a0491676ece924568df4d00aa819edfaba",
+    "reducedBytes": 13077,
+    "reduction": {
+      "keep": ["h1", ".prodsheet_specs1"],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "Common Crawl",
+      "crawl": "CC-MAIN-2025-38",
+      "requestedUrl": "https://www.alltricks.fr/F-41505-velos-route-_-cyclocross-_-triathlon/P-3071521-velo_de_route_orbea_avant_h30_shimano_105_12v_700_mm_gris_magnetic_bronze_2025",
+      "captureTimestamp": "2025-09-13T20:37:30Z",
+      "warcFile": "crawl-data/CC-MAIN-2025-38/segments/1757047533648.53/warc/CC-MAIN-20250913191219-20250913221219-00576.warc.gz",
+      "warcOffset": 566508509,
+      "warcLength": 56274,
+      "cdxDigestSha1": "XHD544OZ3FBRXEOLLTCDPFG7YLKYWQE4",
+      "rawBodySha256": "01411815c21d9278a420892935638ab72a2523a0a2bb2c98d5365cad3f166424",
+      "bodyBytes": 535277,
+      "httpStatusLine": "HTTP/1.1 200 ",
+      "warcRecordId": "<urn:uuid:34988870-6424-43b6-815e-d8373914d976>",
+      "warcDate": "2025-09-13T20:37:30Z",
+      "warcPayloadDigest": "sha1:XHD544OZ3FBRXEOLLTCDPFG7YLKYWQE4",
+      "warcIpAddress": "104.18.12.89"
+    },
+    "expected": {
+      "name": "Vélo de Route Orbea Avant H30 Shimano 105 12V 700 mm Gris Magnetic Bronze 2025",
+      "year": 2025,
+      "productId": "2910583",
+      "minComponents": 18,
+      "types": [
+        "frame",
+        "fork",
+        "shifter",
+        "rear_derailleur",
+        "bar_tape",
+        "headset",
+        "saddle"
+      ],
+      "strategy": "table"
+    }
+  },
+  {
+    "id": "alltricks-kona-rove",
+    "store": "alltricks",
+    "kind": "bike",
+    "requestedUrl": "https://www.alltricks.fr/F-41505-velos-route-_-cyclocross-_-triathlon/P-2471211-gravel_bike_kona_rove_shimano_sora_9v_650b_rouge_2023",
+    "url": "https://www.alltricks.fr/F-41505-velos-route-_-cyclocross-_-triathlon/P-2471211-gravel_bike_kona_rove_shimano_sora_9v_650b_rouge_2023",
+    "retrievedAt": "2025-09-14T23:35:20Z",
+    "rawSha256": "ee3406d899b8197e4f2092a9f3d3aad37aff3a7947cfb73c51873524b0926078",
+    "rawBytes": 555105,
+    "reducedSha256": "ccecd655da9565ca2ab26bf8d00c1147d67d5da668e4d8dd4f71f1dd470e7489",
+    "reducedBytes": 7292,
+    "reduction": {
+      "keep": ["h1", ".prodsheet_specs1"],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "Common Crawl",
+      "crawl": "CC-MAIN-2025-38",
+      "requestedUrl": "https://www.alltricks.fr/F-41505-velos-route-_-cyclocross-_-triathlon/P-2471211-gravel_bike_kona_rove_shimano_sora_9v_650b_rouge_2023",
+      "captureTimestamp": "2025-09-14T23:35:20Z",
+      "warcFile": "crawl-data/CC-MAIN-2025-38/segments/1757047533962.79/warc/CC-MAIN-20250914231514-20250915021514-00392.warc.gz",
+      "warcOffset": 547592295,
+      "warcLength": 54739,
+      "cdxDigestSha1": "OWKL3AU6JCSJ6Z26KQJHZ3A5V2GCPL42",
+      "rawBodySha256": "ee3406d899b8197e4f2092a9f3d3aad37aff3a7947cfb73c51873524b0926078",
+      "bodyBytes": 555105,
+      "httpStatusLine": "HTTP/1.1 200 ",
+      "warcRecordId": "<urn:uuid:35be7daf-24de-42e0-aa38-896bad7c6555>",
+      "warcDate": "2025-09-14T23:35:20Z",
+      "warcPayloadDigest": "sha1:OWKL3AU6JCSJ6Z26KQJHZ3A5V2GCPL42",
+      "warcIpAddress": "104.18.12.89"
+    },
+    "expected": {
+      "name": "Gravel Bike Kona Rove Shimano Sora 9V 650b Rouge 2023",
+      "year": 2023,
+      "productId": "2432062",
+      "minComponents": 17,
+      "types": [
+        "frame",
+        "fork",
+        "rear_derailleur",
+        "hub",
+        "bar_tape",
+        "headset",
+        "saddle"
+      ],
+      "strategy": "table"
+    }
+  },
+  {
+    "id": "alltricks-bmx-frame",
+    "store": "alltricks",
+    "kind": "frameset",
+    "requestedUrl": "https://www.alltricks.fr/F-41484-cadres-rigides/P-2768313-cadre_bmx_race_meybo_hsx_carbon_noir_gris_2024",
+    "url": "https://www.alltricks.fr/F-41484-cadres-rigides/P-2768313-cadre_bmx_race_meybo_hsx_carbon_noir_gris_2024",
+    "retrievedAt": "2025-09-10T18:34:21Z",
+    "rawSha256": "16682b5d6eeb0d53caeb135f6edb1c3ed188fd27abf408f9a882036f5499c82e",
+    "rawBytes": 287301,
+    "reducedSha256": "41df63c6e046aaf70b1c8891eeb4ad686daefbdbd45bf891d63a629113b37189",
+    "reducedBytes": 7817,
+    "reduction": {
+      "keep": ["h1", ".prodsheet_specs1"],
+      "alwaysKeptInHead": "title, canonical, og:*, application/ld+json"
+    },
+    "origin": {
+      "source": "Common Crawl",
+      "crawl": "CC-MAIN-2025-38",
+      "requestedUrl": "https://www.alltricks.fr/F-41484-cadres-rigides/P-2768313-cadre_bmx_race_meybo_hsx_carbon_noir_gris_2024",
+      "captureTimestamp": "2025-09-10T18:34:21Z",
+      "warcFile": "crawl-data/CC-MAIN-2025-38/segments/1757047533102.63/warc/CC-MAIN-20250910162431-20250910192431-00611.warc.gz",
+      "warcOffset": 585348876,
+      "warcLength": 37900,
+      "cdxDigestSha1": "5BDZSTF46X57K2C6I23HMY5YFMYUFA5Y",
+      "rawBodySha256": "16682b5d6eeb0d53caeb135f6edb1c3ed188fd27abf408f9a882036f5499c82e",
+      "bodyBytes": 287301,
+      "httpStatusLine": "HTTP/1.1 200 ",
+      "warcRecordId": "<urn:uuid:96332303-cde1-4038-bf3d-1cc4d9746cbf>",
+      "warcDate": "2025-09-10T18:34:21Z",
+      "warcPayloadDigest": "sha1:5BDZSTF46X57K2C6I23HMY5YFMYUFA5Y",
+      "warcIpAddress": "104.18.13.89"
+    },
+    "expected": {
+      "reason": "not_complete_bike"
+    }
+  }
+]

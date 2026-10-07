@@ -212,6 +212,7 @@ try {
           "tests/admin-http.js",
           "tests/app-config-http.js",
           "tests/resolver-http.js",
+          "tests/resolver-stores-http.js",
           "tests/layout-http.js",
           "tests/wizard-http.js",
           "tests/showcase-http.js",

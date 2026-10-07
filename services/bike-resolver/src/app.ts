@@ -1,4 +1,3 @@
-import { findCandidates } from "./candidates.js";
 import { PassThrough } from "node:stream";
 import { SourcePlanner, Diagnostics, type SourceProvider } from "./planner.js";
 import { withResolution, trace, EXTRACTOR_VERSION } from "./context.js";
@@ -7,7 +6,9 @@ import { timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 import pino from "pino";
 import { ManualSources } from "./manual.js";
-import { RetailerSearch } from "./retailer-search.js";
+import { CandidateRegistry } from "./candidate-registry.js";
+import { SourceSearch, adapterFor } from "./search.js";
+import { createStores, type RetailStore } from "./stores/index.js";
 import { ManufacturerHttpClient } from "./http.js";
 import { querySchema } from "./domain.js";
 import { buildVersion } from "./version.js";
@@ -16,8 +17,13 @@ import rateLimit from "@fastify/rate-limit";
 import { requestSchema } from "./domain.js";
 import type { Resolver } from "./resolver.js";
 import type { Cache } from "./cache.js";
-import { SettingsStore, adapterSupport, settingsSchema } from "./settings.js";
-import { normalize } from "./normalize.js";
+import {
+  SettingsStore,
+  adapterSupport,
+  settingsSchema,
+  storeSupport,
+  type StoreId,
+} from "./settings.js";
 import {
   ComponentPhotoSearch,
   componentPhotoQuery,
@@ -27,6 +33,7 @@ export function buildApp(
   cache: Cache,
   settings?: SettingsStore,
   sourceClient?: ManufacturerHttpClient,
+  stores: RetailStore[] = createStores(),
 ) {
   const app = Fastify({
     logger: { redact: ["req.headers.authorization"] },
@@ -48,14 +55,38 @@ export function buildApp(
   const http =
     sourceClient ??
     new ManufacturerHttpClient(pino(), 700, 10000, () => store.value);
-  const manual = new ManualSources(http, resolver.adapters, store);
+  const manual = new ManualSources(http, resolver.adapters, store, stores);
   const componentPhotos = new ComponentPhotoSearch(store, sourceClient);
-  const retailers = new RetailerSearch(http, manual, store);
+  const registry = new CandidateRegistry();
+  const search = new SourceSearch({
+    adapters: resolver.adapters,
+    http,
+    manual,
+    settings: store,
+    stores,
+    registry,
+  });
   const planner = new SourcePlanner(),
     diagnostics = new Diagnostics();
+  // Per-source lines of a search (stores, archive, web) for the diagnostics page.
+  const noted = (result: ResolveResult) => {
+    if ("search" in result && result.search)
+      for (const source of result.search.sources)
+        diagnostics.recordSource(source);
+    return result;
+  };
   const combined = requestSchema.extend({
     chooseCandidates: z.boolean().optional(),
     sourceUrl: z.string().url().max(2048).optional(),
+  });
+  // An id nobody remembers must not turn into a fresh automatic pick.
+  const expired = (query: z.infer<typeof querySchema>): ResolveResult => ({
+    status: "not_found",
+    query,
+    brand: query.brand,
+    retryable: true,
+    cached: false,
+    reason: "candidate_expired",
   });
   async function execute(
     input: z.infer<typeof combined>,
@@ -67,48 +98,62 @@ export function buildApp(
     const { candidateId, ...identity } = request;
     const query = querySchema.parse(identity);
     if (chooseCandidates && !sourceUrl && !candidateId && store.value.enabled) {
-      const result = await findCandidates(
-        query,
-        resolver.adapters,
-        http,
-        manual,
-        store,
-      );
+      const result = noted(await search.all(query));
       trace("completed");
       return result;
     }
-    const adapter = resolver.adapters.find((a) =>
-      [a.brand, ...a.aliases].some(
-        (b) => normalize(b) === normalize(query.brand),
-      ),
-    );
+    const adapter = adapterFor(resolver.adapters, query.brand);
     const providers: SourceProvider[] = [];
     if (store.value.enabled) {
-      if (
-        !(manualOnly && sourceUrl) &&
-        (!adapter || store.value.adapters[adapter.id])
-      )
+      // A chosen candidate is exactly the page of an earlier result: it never
+      // goes through discovery, and a manufacturer adapter never claims it.
+      const known =
+        candidateId && !sourceUrl ? registry.get(candidateId) : undefined;
+      if (known)
         providers.push({
-          id: adapter?.id || "generic",
-          kind: "manufacturer",
-          resolve: () => resolver.resolve(request, id),
+          id: "candidate",
+          kind: known.kind,
+          resolve: async () =>
+            (await search.select(query, candidateId!)) ?? expired(query),
         });
-      // A supplied fallback is tried after official discovery; explicit URL actions skip discovery.
-      if (sourceUrl)
-        providers.push({
-          id: "manual-url",
-          kind: "manual",
-          resolve: () =>
-            manual.resolve(query, sourceUrl) as Promise<ResolveResult>,
-        });
-      if (!sourceUrl && !candidateId && store.value.retailerSearch)
-        providers.push({
-          id: "retailer-search",
-          kind: "retailer",
-          resolve: () => retailers.resolve(query),
-        });
+      else {
+        if (
+          !(manualOnly && sourceUrl) &&
+          adapter &&
+          store.value.adapters[adapter.id]
+        )
+          providers.push({
+            id: adapter.id,
+            kind: "manufacturer",
+            resolve: async () => {
+              const result = await resolver.resolve(request, id);
+              // The adapter can re-find an official page by its id. A page it
+              // no longer offers is gone: the person is not handed a new list
+              // in place of the one they chose from.
+              return candidateId &&
+                result.status === "ambiguous" &&
+                !result.candidates.some((c) => c.candidateId === candidateId)
+                ? expired(query)
+                : result;
+            },
+          });
+        // A supplied fallback is tried after official discovery; explicit URL actions skip discovery.
+        if (sourceUrl)
+          providers.push({
+            id: "manual-url",
+            kind: "manual",
+            resolve: () =>
+              manual.resolve(query, sourceUrl) as Promise<ResolveResult>,
+          });
+        if (!sourceUrl && !candidateId && store.value.retailerSearch)
+          providers.push({
+            id: "stores",
+            kind: "store",
+            resolve: async () => noted(await search.stores(query)),
+          });
+      }
     }
-    const result = await planner.resolve(
+    const planned = await planner.resolve(
       query,
       providers.map((provider) => ({
         ...provider,
@@ -120,6 +165,10 @@ export function buildApp(
         },
       })),
     );
+    const result: ResolveResult =
+      candidateId && !sourceUrl && planned.status === "unsupported_brand"
+        ? expired(query)
+        : planned;
     trace(
       result.status === "resolved"
         ? result.quality?.level === "partial"
@@ -249,13 +298,26 @@ export function buildApp(
       }
     },
   );
+  // "direct" brands have an adapter for the official site; any other brand is
+  // searched through the stores only.
   const brands = () =>
     resolver.adapters.map((a) => ({
       id: a.id,
       name: a.brand,
+      kind: "direct" as const,
       enabled: store.value.enabled && !!store.value.adapters[a.id],
       adapterVersion: a.adapterVersion,
       limitation: adapterSupport[a.id as keyof typeof adapterSupport] || null,
+    }));
+  const storeList = () =>
+    stores.map((s) => ({
+      id: s.id,
+      name: s.name,
+      enabled: store.value.enabled && !!store.value.stores[s.id as StoreId],
+      storeVersion: s.storeVersion,
+      search: s.search,
+      domains: s.allowedDomains,
+      limitation: storeSupport[s.id as StoreId]?.limitation || null,
     }));
   app.get("/health", async () => ({ ok: true }));
   app.get("/ready", async (_req, reply) => {
@@ -268,7 +330,9 @@ export function buildApp(
   });
   app.get("/v1/brands", async () => ({
     brands: brands(),
+    stores: storeList(),
     autoResolve: store.value.enabled && store.value.autoResolve,
+    storeSearch: store.value.enabled && store.value.retailerSearch,
   }));
   // Internal management API: never publish this container's port; app gateway authenticates administrators.
   app.register(rateLimit, { global: false });
@@ -292,20 +356,38 @@ export function buildApp(
       },
       async () => {
         await store.load();
-        return { value: store.value, version: store.version, brands: brands() };
+        return {
+          value: store.value,
+          version: store.version,
+          brands: brands(),
+          stores: storeList(),
+        };
       },
     );
   });
   app.put("/internal/settings", async (req, reply) => {
     const input = req.body as { value?: unknown; version?: number };
-    const parsed = settingsSchema.safeParse(input?.value);
+    // A form from before stores existed omits them; that must not silently
+    // restore their defaults over what an operator chose.
+    const incoming =
+      input?.value &&
+      typeof input.value === "object" &&
+      !("stores" in input.value)
+        ? { ...input.value, stores: store.value.stores }
+        : input?.value;
+    const parsed = settingsSchema.safeParse(incoming);
     if (!parsed.success || !Number.isInteger(input?.version))
       return reply.code(400).send({ error: "Invalid settings" });
     if (!(await store.save(parsed.data, input.version!)))
       return reply
         .code(409)
         .send({ error: "Settings changed; reload before saving" });
-    return { value: store.value, version: store.version, brands: brands() };
+    return {
+      value: store.value,
+      version: store.version,
+      brands: brands(),
+      stores: storeList(),
+    };
   });
   app.delete("/internal/cache", async (req, reply) => {
     const { adapter } = req.query as { adapter?: string };
@@ -320,15 +402,7 @@ export function buildApp(
       return reply
         .code(400)
         .send({ error: "invalid_input", issues: input.error.issues });
-    const a = resolver.adapters.find((a) =>
-      [a.brand, ...a.aliases].some(
-        (b) => normalize(b) === normalize(input.data.brand),
-      ),
-    );
-    if (
-      !store.value.enabled ||
-      (a && !store.value.adapters[a.id] && !input.data.sourceUrl)
-    )
+    if (!store.value.enabled)
       return {
         status: "unsupported_brand",
         query: input.data,
@@ -336,6 +410,8 @@ export function buildApp(
         cached: false,
         retryable: false,
       };
+    // A brand without an adapter, or with its adapter off, still reaches the
+    // stores; "unsupported" is only what is left when no source can serve it.
     return withResolution(AbortSignal.timeout(90000), undefined, () =>
       execute(input.data, req.id),
     );

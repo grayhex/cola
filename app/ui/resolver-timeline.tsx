@@ -12,6 +12,7 @@ const labels: Record<string, string> = {
   discovery_started: "Ищем модель в каталоге",
   candidate_found: "Найдены варианты",
   candidate_selected: "Модель выбрана",
+  store_checked: "Магазин проверен",
   document_fetch_started: "Загружаем страницу",
   document_fetched: "Страница загружена",
   structured_data_found: "Найдены данные страницы",
@@ -27,6 +28,15 @@ const labels: Record<string, string> = {
   partial: "Часть комплектации готова",
   failed: "Поиск завершён без комплектации",
   completed: "Поиск завершён",
+};
+const failureReasons: Record<string, string> = {
+  http_403: "сайт отклонил запрос",
+  access_challenge: "сайт требует проверку посетителя",
+  http_429: "слишком много запросов",
+  timeout: "не ответил вовремя",
+  dns_failed: "адрес не найден",
+  blocked_source: "адрес заблокирован настройками",
+  connection_failed: "нет соединения",
 };
 export default function ResolverTimeline({
   events,
@@ -59,6 +69,9 @@ export default function ResolverTimeline({
               {labels[e.event]}
               {e.host && <small>{e.host}</small>}
               {e.strategy && <small>{e.strategy}</small>}
+              {e.event === "source_failed" && e.reason && (
+                <small>{failureReasons[e.reason] || e.reason}</small>
+              )}
             </span>
             {e.count !== undefined && (
               <b>

@@ -84,6 +84,7 @@ export default [
       "app/ui/journal-page.tsx",
       "app/ui/market.tsx",
       "app/ui/photo-search.tsx",
+      "app/ui/resolver-candidates.tsx",
       "app/ui/small-image.tsx",
       "app/ui/social-primitives.tsx",
       "app/ui/zoomable-photo.tsx",

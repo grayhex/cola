@@ -27,7 +27,7 @@ const sectionName =
 const excluded =
   /^(geometry|shipping|delivery|warranty|reviews|description|sizing guide|доставка|гарантия|отзывы|геометрия)$/i;
 const metadataName =
-  /^(weight|net weight|вес|weight size|available sizes|sizes|размеры|wheel size|диаметр кол[её]с|color|colour|bike color|цвет|product id|model year|year|сезон|год|год выпуска)$/i;
+  /^(weight|net weight|вес|poids|weight size|available sizes|sizes|размеры|wheel size|диаметр кол[её]с|color|colour|colou?rs|bike color|цвет|couleurs?|coloris|product id|model year|year|сезон|год|год выпуска)$/i;
 type Rows = { row: string; label: string; value: string };
 type DomNode = ReturnType<CheerioAPI>[number];
 export function jsonObjects($: CheerioAPI): Record<string, unknown>[] {
@@ -336,6 +336,27 @@ function pipeline(doc: SourceDocument, rows?: Rows) {
         );
     });
   });
+  // Some stores publish the specification as "Label: value" lines separated by
+  // <br> inside the description. Only a block with several recognized component
+  // labels counts; prose with a stray colon never becomes a component.
+  run("description-lines", () => {
+    for (const selector of profile.lines || [])
+      $(selector).each((_, el) => {
+        const html = $(el).html() || "";
+        if (html.length > 100000) return;
+        const text = load(
+          "<div>" + html.replace(/<br\s*\/?>/gi, "\n") + "</div>",
+        )("div").text();
+        const pairs = text.split("\n").flatMap((line) => {
+          const m = clean(line).match(/^([^:：]{2,40})[:：]\s*(.+)$/);
+          return m ? [{ label: m[1], value: m[2] }] : [];
+        });
+        if (pairs.filter((p) => componentType(p.label) !== "other").length < 3)
+          return;
+        for (const p of pairs)
+          add(p.label, p.value, "description-lines", 0.85, true);
+      });
+  });
   run("heading-value", () => {
     $("h3,h4,h5,strong,b,p").each((_, el) => {
       const label = clean($(el).text());
@@ -515,7 +536,7 @@ export function parseDocument(
   const suggestedMetadata: SuggestedMetadata = {};
   for (const f of result.chosen.filter((f) => metadataName.test(f.label))) {
     const key = normalize(f.label);
-    if (/^(weight|net weight|вес)$/.test(key)) {
+    if (/^(weight|net weight|вес|poids)$/.test(key)) {
       suggestedMetadata.weightText = f.value;
       const weights = [
         ...f.value.matchAll(/(\d+(?:[.,]\d+)?)\s*(?:kg|кг)\b/gi),
@@ -526,7 +547,7 @@ export function parseDocument(
       suggestedMetadata.sizes = f.value;
     else if (/^(wheel size|диаметр кол[её]с)$/.test(key))
       suggestedMetadata.wheelSize = f.value;
-    else if (/^(color|colour|bike color|цвет)$/.test(key))
+    else if (/^(color|colour|bike color|цвет|couleurs?|coloris)$/.test(key))
       suggestedMetadata.color = f.value;
     else if (key === "product id")
       suggestedMetadata.manufacturerProductId = f.value;

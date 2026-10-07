@@ -28,9 +28,10 @@ export function resolverProxy(
               await db.query(
                 "DELETE FROM photo_search_candidates WHERE expires_at<now()",
               );
+              // As many thumbnails as the list shows (the service returns at most 12).
               for (const candidate of (item.result.candidates || []).slice(
                 0,
-                6,
+                12,
               )) {
                 if (uuid.safeParse(candidate.thumbnailId).success)
                   await db.query(

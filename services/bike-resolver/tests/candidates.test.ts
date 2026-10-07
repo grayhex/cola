@@ -5,6 +5,8 @@ import { SettingsStore } from "../src/settings.js";
 import type { ManufacturerHttpClient } from "../src/http.js";
 import type { BikeManufacturerAdapter } from "../src/domain.js";
 const query = { brand: "Giant", model: "Contend AR", trim: "1", year: 2024 };
+// The official page is for 2024: a 2025 request has no exact official match.
+const otherYear = { ...query, year: 2025 };
 describe("explicit candidate choice", () => {
   it("ranks partial models without treating a different brand or unrelated model as a match", () => {
     expect(partialScore(query, "Giant Contend AR 2", 2023)).toBeGreaterThan(0);
@@ -81,7 +83,13 @@ describe("explicit candidate choice", () => {
       }),
     } as unknown as BikeManufacturerAdapter;
     const manual = new ManualSources(http, [adapter], store);
-    const result = await findCandidates(query, [adapter], http, manual, store);
+    const result = await findCandidates(
+      otherYear,
+      [adapter],
+      http,
+      manual,
+      store,
+    );
     expect(result.status).toBe("ambiguous");
     if (result.status !== "ambiguous") throw Error("No candidates");
     expect(result.candidates).toHaveLength(2);

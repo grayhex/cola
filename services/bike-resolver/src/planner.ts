@@ -1,29 +1,43 @@
-import type { BikeQuery, ResolveResult } from "./domain.js";
+import type {
+  BikeQuery,
+  ResolveResult,
+  SourceKind,
+  SourceReport,
+} from "./domain.js";
 import { checkAbort, trace, type Reason } from "./context.js";
-export type SourceKind =
-  "manufacturer" | "archive" | "manual" | "retailer" | "generic";
 const priority: Record<SourceKind, number> = {
   manufacturer: 0,
   archive: 1,
   manual: 2,
-  retailer: 3,
-  generic: 4,
+  store: 3,
+  web: 4,
+};
+// What a failed phase tells the person: a reachable-but-unreadable source says
+// more than a plain miss, a miss more than "nobody serves this brand".
+const informative: Record<ResolveResult["status"], number> = {
+  resolved: 6,
+  ambiguous: 5,
+  upstream_unavailable: 4,
+  parse_error: 3,
+  not_found: 2,
+  unsupported_brand: 1,
 };
 export interface SourceProvider {
   id: string;
   kind: SourceKind;
   resolve: () => Promise<ResolveResult>;
 }
-export const MAX_SOURCES = 3;
+// Providers are phases (official, user URL, stores...), tried in priority order;
+// a phase may fan out over many sources itself, so there is no cutoff here.
 // Providers own discovery/matching. Planner never merges unrelated model specs.
 export class SourcePlanner {
   async resolve(
     query: BikeQuery,
     providers: SourceProvider[],
   ): Promise<ResolveResult> {
-    const sources = [...providers]
-      .sort((a, b) => priority[a.kind] - priority[b.kind])
-      .slice(0, MAX_SOURCES);
+    const sources = [...providers].sort(
+      (a, b) => priority[a.kind] - priority[b.kind],
+    );
     trace("source_planned", { count: sources.length });
     let last: ResolveResult = {
       status: "unsupported_brand",
@@ -36,18 +50,20 @@ export class SourcePlanner {
       checkAbort();
       if (index) trace("fallback_started");
       trace("source_started");
-      last = await source.resolve();
+      const current = await source.resolve();
       checkAbort();
-      if (last.status === "resolved") return last;
+      if (informative[current.status] >= informative[last.status])
+        last = current;
+      if (current.status === "resolved") return current;
       // Ambiguity needs user input, not a guess from a lower-quality source.
       if (
-        last.status === "ambiguous" &&
+        current.status === "ambiguous" &&
         !sources.slice(index + 1).some((p) => p.kind === "manual")
       )
-        return last;
+        return current;
       trace("source_failed", {
         reason:
-          ("reason" in last ? last.reason : undefined) ||
+          ("reason" in current ? current.reason : undefined) ||
           "spec_fields_not_found",
       });
     }
@@ -77,6 +93,25 @@ export class Diagnostics {
               ("reason" in result ? result.reason : undefined) ||
               "spec_fields_not_found",
           }),
+    });
+  }
+  // One line per source of a search: what worked, what was refused and why.
+  recordSource(report: SourceReport) {
+    const prior = this.sources.get(report.id) || { durationMs: 0 };
+    const failed = ["blocked", "timeout", "unavailable"].includes(
+      report.status,
+    );
+    this.sources.set(report.id, {
+      ...prior,
+      durationMs: report.durationMs,
+      ...(report.status === "ok"
+        ? { lastSuccess: new Date().toISOString() }
+        : failed
+          ? {
+              lastFailure: new Date().toISOString(),
+              reason: report.reason || "connection_failed",
+            }
+          : {}),
     });
   }
   snapshot() {

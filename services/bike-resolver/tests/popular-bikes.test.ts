@@ -7,8 +7,10 @@ import { Resolver } from "../src/resolver.js";
 import { MemoryCache } from "../src/cache.js";
 import { SettingsStore } from "../src/settings.js";
 import { ManualSources } from "../src/manual.js";
-import { RetailerSearch } from "../src/retailer-search.js";
 import { SourcePlanner } from "../src/planner.js";
+import { SourceSearch } from "../src/search.js";
+import { CandidateRegistry } from "../src/candidate-registry.js";
+import { createStores } from "../src/stores/index.js";
 import { ResolverError, type BikeQuery } from "../src/domain.js";
 import type { ManufacturerHttpClient } from "../src/http.js";
 const root = new URL("./fixtures/popular-bikes/", import.meta.url);
@@ -88,25 +90,39 @@ describe("Popular Bikes 15 — recorded discovery → matching → acquisition �
         );
       let result;
       if (bike.retailer) {
+        // Official source first; a store page is offered as a choice and
+        // becomes a specification only after that choice.
         const settings = new SettingsStore();
-        const retailer = new RetailerSearch(
+        const stores = createStores(),
+          registry = new CandidateRegistry();
+        const search = new SourceSearch({
+          adapters,
           http,
-          new ManualSources(http, adapters, settings),
+          manual: new ManualSources(http, adapters, settings, stores),
           settings,
-        );
+          stores,
+          registry,
+        });
         const query = { ...bike.query, year: bike.sourceYear };
-        result = await new SourcePlanner().resolve(query, [
+        const offered = await new SourcePlanner().resolve(query, [
           {
             id: "official",
             kind: "manufacturer",
             resolve: () => resolver.resolve(query),
           },
           {
-            id: "retailer",
-            kind: "retailer",
-            resolve: () => retailer.resolve(query),
+            id: "stores",
+            kind: "store",
+            resolve: () => search.stores(query),
           },
         ]);
+        expect(offered.status, JSON.stringify(offered)).toBe("ambiguous");
+        if (offered.status !== "ambiguous") return;
+        const store = offered.candidates.find((c) => c.url === bike.url);
+        expect(store, JSON.stringify(offered)).toBeDefined();
+        expect(store!.kind).toBe("store");
+        expect(store!.storeId).toBe("velosklad");
+        result = await search.select(query, store!.candidateId!);
         expect(calls.some((u) => u.includes("velosipedy/poiskall/"))).toBe(
           true,
         );

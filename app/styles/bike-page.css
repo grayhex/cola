@@ -1604,6 +1604,40 @@
     color: var(--text-muted);
     font-size: var(--text-xs);
   }
+  .wizard-candidate .resolver-warning {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    color: var(--warning);
+  }
+  .wizard-candidate .resolver-warning svg {
+    flex: none;
+  }
+  .resolver-sources {
+    margin: var(--space-3) 0;
+    font-size: var(--text-sm);
+  }
+  .resolver-sources > summary {
+    color: var(--text-secondary);
+    cursor: pointer;
+  }
+  .resolver-sources ul {
+    margin: var(--space-2) 0;
+    padding: 0;
+    list-style: none;
+  }
+  .resolver-sources li {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: var(--space-1) var(--space-3);
+    padding: var(--space-1-5) 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .resolver-sources li span {
+    color: var(--text-muted);
+    text-align: right;
+  }
   .wizard-manual {
     margin: var(--space-3) 0;
     padding: var(--space-3) var(--space-4);

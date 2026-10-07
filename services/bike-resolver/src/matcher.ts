@@ -57,3 +57,30 @@ export function match(q: BikeQuery, candidates: BikeCandidate[]) {
     (q.trim === null && ranked.length > 1);
   return { ranked, chosen: ambiguous ? null : top };
 }
+export function partialScore(
+  query: BikeQuery,
+  name: string,
+  year: number | null,
+): number {
+  const text = normalize(name),
+    words = new Set(text.split(" "));
+  if (
+    !normalize(query.brand)
+      .split(" ")
+      .every((w) => words.has(w))
+  )
+    return 0;
+  const model = normalize(query.model).split(" ").filter(Boolean);
+  const matches = model.filter((w) => words.has(w)).length;
+  if (!matches || matches / model.length < 0.5) return 0;
+  const trim = normalize(query.trim || "")
+    .split(" ")
+    .filter(Boolean);
+  return (
+    (matches / model.length) * 0.65 +
+    (year === query.year ? 0.2 : 0) +
+    (trim.length
+      ? (trim.filter((w) => words.has(w)).length / trim.length) * 0.15
+      : 0.1)
+  );
+}

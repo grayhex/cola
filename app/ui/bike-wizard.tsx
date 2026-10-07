@@ -42,15 +42,7 @@ import {
 } from "../../lib/bike-classification.ts";
 import { parseBikeSearch } from "../../lib/bike-search-input.ts";
 import { useCallback, useMemo, useEffect, useRef, useState } from "react";
-import {
-  Bike,
-  LoaderCircle,
-  Check,
-  Plus,
-  Trash2,
-  Link,
-  Pencil,
-} from "./icons.tsx";
+import { LoaderCircle, Check, Plus, Trash2, Link, Pencil } from "./icons.tsx";
 import { useSite } from "./site-provider.tsx";
 import CompactCombo from "./compact-combo.tsx";
 import PartIcon from "./part-icon.tsx";
@@ -60,11 +52,20 @@ import { bicycleName, draftId } from "../../lib/wizard-options.ts";
 import { bikeInput, componentInput } from "../../lib/validation.ts";
 import { resolveWithTrace } from "../../lib/resolver-stream.ts";
 import ResolverTimeline from "./resolver-timeline.tsx";
+import {
+  ResolverCandidateCard,
+  ResolverSearchReport,
+  officialSource,
+  sourceLabel,
+} from "./resolver-candidates.tsx";
 const steps = ["Поиск комплектации", "Компоненты", "Детали и фото"];
 const failures: Record<string, string> = {
-  unsupported_brand: "Этот производитель пока не поддерживается.",
-  not_found: "Комплектация не найдена.",
-  upstream_unavailable: "Сервис или сайт производителя недоступен.",
+  unsupported_brand:
+    "Автоподбор сейчас недоступен для этой марки. Вставьте ссылку на страницу магазина или заполните комплектацию вручную.",
+  not_found:
+    "Комплектация не найдена в проверенных источниках. Уточните название или вставьте ссылку на страницу магазина.",
+  upstream_unavailable:
+    "Часть источников недоступна. Повторите поиск позже или вставьте ссылку на страницу.",
   parse_error: "Не удалось прочитать комплектацию страницы.",
 };
 async function api<T = unknown>(
@@ -307,6 +308,10 @@ export default function BikeWizard({
                   "Сайт требует проверку посетителя. Попробуйте другой источник.",
                 timeout:
                   "Сайт не ответил вовремя. Повторите поиск или выберите другой источник.",
+                candidate_expired:
+                  "Результаты поиска устарели. Повторите поиск и выберите вариант заново.",
+                not_complete_bike:
+                  "Эта страница описывает не готовый велосипед (рама, деталь или аксессуар).",
               } as Record<string, string>
             )[("reason" in d ? d.reason : undefined) || ""] ||
               failures[d.status] ||
@@ -700,11 +705,7 @@ export default function BikeWizard({
                           rel="noreferrer"
                         >
                           {result.source.manufacturer} ·{" "}
-                          {result.source.adapter === "manual-url"
-                            ? "страница по ссылке"
-                            : result.source.adapter === "retailer-search"
-                              ? "найденный магазин"
-                              : "официальный источник"}
+                          {sourceLabel(result.source)}
                         </a>
                       </small>
                     </span>
@@ -719,16 +720,17 @@ export default function BikeWizard({
                 {result?.status === "ambiguous" && (
                   <p className="help">
                     Нашли варианты модели. Выберите свою комплектацию: название,
-                    год и источник помогут их различить. Если год не
-                    подтверждён, сверьте его перед импортом.
+                    год, навеска и источник помогут их различить. Если год не
+                    указан на странице, сверьте его перед импортом. Один выбор —
+                    один источник: детали разных страниц не смешиваются.
                   </p>
                 )}
                 {result?.status === "ambiguous" &&
                   result.candidates.map((c) => (
-                    <button
-                      type="button"
-                      className="wizard-candidate"
-                      key={c.candidateId}
+                    <ResolverCandidateCard
+                      key={c.candidateId || c.url}
+                      candidate={c}
+                      requestedYear={query.year}
                       disabled={
                         resolving ||
                         (!c.selectable &&
@@ -736,34 +738,17 @@ export default function BikeWizard({
                           query.year != null &&
                           c.year !== query.year)
                       }
-                      onClick={() =>
-                        c.selectable
-                          ? resolve(c.url)
-                          : resolve("", c.candidateId)
+                      onChoose={(choice) =>
+                        // Always by id: the service remembers which page it offered.
+                        choice.candidateId
+                          ? resolve("", choice.candidateId)
+                          : resolve(choice.url)
                       }
-                    >
-                      {c.thumbnailId ? (
-                        <img
-                          src={"/api/bikes/photo-candidates/" + c.thumbnailId}
-                          alt=""
-                          loading="lazy"
-                          onError={(e) => {
-                            e.currentTarget.style.display = "none";
-                          }}
-                        />
-                      ) : (
-                        <Bike size={28} />
-                      )}
-                      <span>
-                        <strong>{c.canonicalName}</strong>
-                        <small>
-                          {c.year || "Год не подтверждён"} ·{" "}
-                          {c.sourceHost || new URL(c.url).hostname}
-                        </small>
-                        <small>Выбрать комплектацию →</small>
-                      </span>
-                    </button>
+                    />
                   ))}
+                {result && result.status !== "resolved" && (
+                  <ResolverSearchReport search={result.search} />
+                )}
                 <div className="wizard-choice-actions">
                   <button
                     type="button"
@@ -1295,9 +1280,7 @@ export default function BikeWizard({
                 )}
               {result?.status === "resolved" &&
                 (result.suggestedMetadata?.manufacturerUrl ||
-                  (result.source &&
-                    result.source.adapter !== "manual-url" &&
-                    result.source.adapter !== "retailer-search")) && (
+                  (result.source && officialSource(result.source))) && (
                   <button
                     type="button"
                     className="quiet"

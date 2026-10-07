@@ -13,7 +13,7 @@ export interface TraceEvent {
 }
 // Shared bounded NDJSON decoder. No framework dependencies: used on server and browser.
 export const resolverEvents = new Set(
-  "retailer_search_started resolve_started cache_checked cache_hit source_planned source_started source_connected discovery_started candidate_found candidate_selected document_fetch_started document_fetched structured_data_found spec_section_found extractor_started fields_extracted normalization_started components_recognized source_failed fallback_started conflict_found resolved partial failed completed".split(
+  "retailer_search_started resolve_started cache_checked cache_hit source_planned source_started source_connected discovery_started candidate_found candidate_selected store_checked document_fetch_started document_fetched structured_data_found spec_section_found extractor_started fields_extracted normalization_started components_recognized source_failed fallback_started conflict_found resolved partial failed completed".split(
     " ",
   ),
 );
@@ -53,7 +53,7 @@ export function safeTrace(input: unknown) {
   )
     out.strategy = value.strategy;
   const reasons = new Set(
-    "dns_failed timeout http_403 http_404 http_429 http_error access_challenge unsupported_charset body_too_large js_shell spec_section_not_found spec_fields_not_found labels_unrecognized identity_mismatch conflicting_sources selector_profile_failed blocked_source aborted connection_failed".split(
+    "dns_failed timeout http_403 http_404 http_429 http_error access_challenge unsupported_charset body_too_large js_shell spec_section_not_found spec_fields_not_found labels_unrecognized identity_mismatch conflicting_sources selector_profile_failed blocked_source aborted connection_failed not_complete_bike candidate_expired".split(
       " ",
     ),
   );
