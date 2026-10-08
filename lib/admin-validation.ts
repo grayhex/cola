@@ -316,6 +316,8 @@ export const settingsInput = z
     faviconId: asset,
     demoImageId: asset,
     wizardLinkLabel: name.default("Распознать по странице магазина"),
+    // No longer shown (#366: the wizard has no «fill by hand» button); kept so
+    // that stored and exported settings still validate.
     wizardManualLabel: name.default("Заполнить вручную"),
     detailBlocks: z
       .array(

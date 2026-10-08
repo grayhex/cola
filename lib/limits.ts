@@ -1,4 +1,5 @@
 import type { Queryable } from "./db.ts";
+import { photoFileBytes, photosPerBike } from "./photo-upload.ts";
 const positive = (key: string, fallback: number) => {
   const n = Number(process.env[key] || fallback);
   if (!Number.isSafeInteger(n) || n <= 0)
@@ -9,8 +10,8 @@ export const limits = Object.freeze({
   bikes: positive("MAX_BIKES_PER_USER", 20),
   photos: positive("MAX_PHOTOS_PER_USER", 240),
   storageBytes: positive("MAX_PHOTO_BYTES_PER_USER", 500 * 1024 * 1024),
-  fileBytes: 10 * 1024 * 1024,
-  photosPerBike: 12,
+  fileBytes: photoFileBytes,
+  photosPerBike,
   bikeCreates: positive("BIKE_CREATES_PER_15_MIN", 30),
   photoUploads: positive("PHOTO_UPLOADS_PER_15_MIN", 60),
   // Entries of the journal, one budget for the site and for API v1 (#347), per person.

@@ -28,8 +28,30 @@ type WizardPart = Omit<ComponentInput, "price"> & {
   price: number | string | null;
 };
 type UploadFile = { id: string; file: File; preview: string };
+// A search of step 1 that was run to its end, for the request typed then (the
+// parsed query and the pasted link). Step 2 opens only on the strength of such
+// an attempt: found, or tried and failed. An edit of the query or the link, a
+// cancelled or a running search leave no attempt that counts.
+type Attempt = {
+  identity: string;
+  url: string;
+  // «choice»: variants were offered and none is chosen yet: not an end.
+  // «none»: nothing found, the search failed or timed out: fill in by hand.
+  outcome: "resolved" | "choice" | "none";
+};
 
 import { errorMessage } from "../../lib/errors.ts";
+import {
+  checkPhotoFile,
+  photoLimitText,
+  photoTooSmall,
+  photoUnreadable,
+  photosPerBike,
+  sendBikePhoto,
+  tooManyPhotos,
+  type PhotoProblem,
+} from "../../lib/photo-upload.ts";
+import PhotoProblems from "./photo-problems.tsx";
 import EmailPolicyAction from "./email-policy-action.tsx";
 import { useConfirmation } from "./confirmation.tsx";
 import ClassificationFields from "./bike-classification.tsx";
@@ -42,7 +64,7 @@ import {
 } from "../../lib/bike-classification.ts";
 import { parseBikeSearch } from "../../lib/bike-search-input.ts";
 import { useCallback, useMemo, useEffect, useRef, useState } from "react";
-import { LoaderCircle, Check, Plus, Trash2, Link, Pencil } from "./icons.tsx";
+import { LoaderCircle, Check, Plus, Trash2, Link } from "./icons.tsx";
 import { useSite } from "./site-provider.tsx";
 import CompactCombo from "./compact-combo.tsx";
 import PartIcon from "./part-icon.tsx";
@@ -79,8 +101,22 @@ async function api<T = unknown>(
     body: body ? JSON.stringify(body) : undefined,
     signal,
   });
-  const d: T & Partial<ApiError> = await r.json();
-  if (!r.ok) throw new Error(d.error || "Не удалось выполнить запрос");
+  // A proxy in front of the server may answer in HTML, or not at all.
+  const text = await r.text();
+  let d: (T & Partial<ApiError>) | null;
+  try {
+    d = JSON.parse(text);
+  } catch {
+    d = null;
+  }
+  if (!r.ok)
+    throw new Error(
+      d?.error ||
+        (r.status === 413
+          ? "Запрос слишком большой для сервера."
+          : "Не удалось выполнить запрос"),
+    );
+  if (!d) throw new Error("Сервер ответил не так, как ожидалось. Повторите.");
   return d;
 }
 function Progress({ text }: { text: string }) {
@@ -146,6 +182,8 @@ export default function BikeWizard({
     [files, setFiles] = useState<UploadFile[]>([]),
     [photoBusy, setPhotoBusy] = useState(false),
     [photoError, setPhotoError] = useState(""),
+    [photoProblems, setPhotoProblems] = useState<PhotoProblem[]>([]),
+    [attempt, setAttempt] = useState<Attempt | null>(null),
     [saving, setSaving] = useState(false),
     [savedId, setSavedId] = useState<string | null>(null),
     [openGroup, setOpenGroup] = useState<string | null | undefined>(null);
@@ -182,6 +220,14 @@ export default function BikeWizard({
   useEffect(() => {
     fileRefs.current = files;
   }, [files]);
+  // The reasons a photo was refused are shown where the files are chosen, which
+  // may be out of sight when a save has just run.
+  useEffect(() => {
+    if (photoProblems.length)
+      document
+        .getElementById("wizard-photo-problems")
+        ?.scrollIntoView({ block: "nearest" });
+  }, [photoProblems]);
   useEffect(() => {
     onBusy?.(saving);
     return () => onBusy?.(false);
@@ -232,23 +278,78 @@ export default function BikeWizard({
   }, [dirty]);
   const update = <K extends keyof WizardBike>(k: K, v: WizardBike[K]) =>
     setBike((b) => ({ ...b, [k]: v }));
+  // The one rule that lets step 1 be left (the «Далее» button, Enter in the
+  // form and, by being disabled, the step numbers ahead): a search has run to
+  // its end for exactly the query and the link that stand in the fields now.
+  // Empty when the way is open, otherwise what is missing.
+  const typedUrl = url.trim();
+  // A link that stands in the field keeps its form open: it takes part in the
+  // rule whether it is seen or not.
+  const urlOpen = manualMode || !!typedUrl;
+  const typedIdentity = parseBikeSearch(searchText, catalog.models);
+  const gate = (() => {
+    if (resolving)
+      return "Идёт поиск: дождитесь результата или остановите его.";
+    if (!searchText.trim())
+      return "Введите марку и модель и нажмите «Найти комплектацию».";
+    if (!typedIdentity)
+      return "Не удалось разобрать запрос. Введите марку и модель; год и комплектацию можно добавить.";
+    if (typedUrl && !/^https?:\/\//i.test(typedUrl))
+      return "Ссылка на страницу должна начинаться с http:// или https://.";
+    const again = typedUrl ? "«Распознать страницу»" : "«Найти комплектацию»";
+    if (!attempt)
+      return `Чтобы продолжить, нажмите ${again} и дождитесь результата.`;
+    if (
+      attempt.identity !== JSON.stringify(typedIdentity) ||
+      attempt.url !== typedUrl
+    )
+      return `Запрос или ссылка изменились. Нажмите ${again}, чтобы продолжить.`;
+    if (attempt.outcome === "choice")
+      return "Выберите свою комплектацию среди найденных вариантов.";
+    return "";
+  })();
+  // What stands under the step: why it is shut, or what to do after a search
+  // that found nothing. The button points at it only while it is there.
+  const hint =
+    resolving || step !== 0
+      ? ""
+      : gate ||
+        (attempt?.outcome === "none"
+          ? "Автоматически комплектацию найти не удалось. Нажмите «Далее» и заполните её вручную."
+          : "");
   async function resolve(
     sourceUrl = "",
     candidateId?: string,
     identity = query,
+    variant = !!candidateId,
   ) {
     if (
       parts.length &&
       !(await ask("Повторный поиск заменит черновик комплектации. Продолжить?"))
     )
       return;
+    // A search by the query replaces a link pasted before it; choosing one of
+    // its variants does not.
+    if (!sourceUrl && !variant) setUrl("");
+    // The attempt a variant is chosen from stays the attempt of its request.
+    const before = attempt;
+    const identityKey = JSON.stringify(identity);
+    const ofRequest: Pick<Attempt, "identity" | "url"> =
+      variant && before
+        ? { identity: before.identity, url: before.url }
+        : { identity: identityKey, url: sourceUrl };
+    const otherBike =
+      !!acceptedIdentity.current && acceptedIdentity.current !== identityKey;
+    // Set only by a search that ran to its end, never by a cancelled one.
+    let outcome: Attempt["outcome"] | null = null;
+    setAttempt(null);
     setBike((previous) => ({
       ...previous,
       ...identity,
       trim: identity.trim || "",
       year: identity.year == null ? "" : String(identity.year),
     }));
-    acceptedIdentity.current = JSON.stringify(identity);
+    acceptedIdentity.current = identityKey;
     resolveAbort.current?.abort();
     const controller = new AbortController();
     resolveAbort.current = controller;
@@ -286,13 +387,24 @@ export default function BikeWizard({
         );
         if (!accepted) {
           setMessage(
-            "Импорт отменён. Выберите другую страницу или заполните вручную.",
+            variant
+              ? "Импорт отменён. Выберите другой вариант или измените запрос."
+              : "Импорт отменён. Попробуйте другую страницу магазина.",
           );
+          // Refusing a page is an answer to the search; refusing one of the
+          // variants leaves the variants as they were.
+          outcome = variant && before ? before.outcome : "none";
           return;
         }
         setIdentityConfirmed(true);
       } else setIdentityConfirmed(false);
       setResult(d);
+      outcome =
+        d.status === "resolved"
+          ? "resolved"
+          : d.status === "ambiguous"
+            ? "choice"
+            : "none";
       setMessage(
         d.status === "resolved"
           ? d.warnings?.includes("multiple_builds")
@@ -339,29 +451,41 @@ export default function BikeWizard({
         setPhotos(null);
         setChosen([]);
         setOpenGroup(null);
-      } else if (sourceUrl)
-        setMessage(
-          ((
-            {
-              dns_failed: "Не удалось определить адрес сайта (DNS).",
-              http_403: "Сайт отклонил автоматический запрос (HTTP 403).",
-              access_challenge: "Сайт требует проверку посетителя.",
-            } as Record<string, string>
-          )[("reason" in d ? d.reason : undefined) || ""] ||
-            failures[d.status] ||
-            "Не удалось распознать страницу.") +
-            " Попробуйте другую страницу магазина или заполните компоненты вручную.",
-        );
+      } else {
+        // What was found for another bike is not a draft of this one.
+        if (otherBike) {
+          setParts([]);
+          setChosen([]);
+          setPhotos(null);
+          photoAbort.current?.abort();
+          setPhotoBusy(false);
+        }
+        if (sourceUrl)
+          setMessage(
+            ((
+              {
+                dns_failed: "Не удалось определить адрес сайта (DNS).",
+                http_403: "Сайт отклонил автоматический запрос (HTTP 403).",
+                access_challenge: "Сайт требует проверку посетителя.",
+              } as Record<string, string>
+            )[("reason" in d ? d.reason : undefined) || ""] ||
+              failures[d.status] ||
+              "Не удалось распознать страницу.") +
+              " Попробуйте другую страницу магазина или заполните компоненты вручную.",
+          );
+      }
     } catch (e) {
-      if (!controller.signal.aborted) {
+      if (!controller.signal.aborted && alive.current) {
         setMessage(
           "Не удалось выполнить поиск. Попробуйте ссылку на другую страницу магазина или продолжите вручную.",
         );
         setResult(null);
+        outcome = "none";
       }
     } finally {
       if (resolveAbort.current === controller) {
         setResolving(false);
+        if (outcome && alive.current) setAttempt({ ...ofRequest, outcome });
       }
     }
   }
@@ -450,43 +574,11 @@ export default function BikeWizard({
   ) {
     setParts((p) => p.map((c) => (c.id === id ? { ...c, [k]: v } : c)));
   }
-  async function next() {
+  function next() {
     setError("");
-    if (step === 0) {
-      const identity = parseBikeSearch(searchText, catalog.models);
-      if (searchText.trim() && !identity) {
-        setError(
-          "Введите марку и модель или очистите поиск для ручного заполнения.",
-        );
-        return;
-      }
-      if (identity) {
-        const nextKey = JSON.stringify(identity);
-        if (acceptedIdentity.current && acceptedIdentity.current !== nextKey) {
-          if (
-            parts.length &&
-            !(await ask(
-              "Идентификация изменилась. Сбросить предыдущую комплектацию и найденные фото?",
-            ))
-          )
-            return;
-          setParts([]);
-          setResult(null);
-          setChosen([]);
-          setPhotos(null);
-          photoAbort.current?.abort();
-          setPhotoBusy(false);
-          setIdentityConfirmed(false);
-        }
-        if (!acceptedIdentity.current || acceptedIdentity.current !== nextKey)
-          setBike((previous) => ({
-            ...previous,
-            ...identity,
-            trim: identity.trim || "",
-            year: identity.year == null ? "" : String(identity.year),
-          }));
-        acceptedIdentity.current = nextKey;
-      }
+    if (step === 0 && gate) {
+      setError(gate);
+      return;
     }
     if (step === 1) {
       const invalid = parts.find((p) => !componentInput.safeParse(p).success);
@@ -503,6 +595,55 @@ export default function BikeWizard({
       }
     }
     setStep((s) => Math.min(2, s + 1));
+  }
+  // Each chosen file is looked at on its own: the ones that pass are kept, the
+  // others are named with the reason, beside the input.
+  async function addPhotos(input: HTMLInputElement) {
+    const added = Array.from(input.files || []);
+    // The same file can be chosen again straight away (#366).
+    input.value = "";
+    if (!added.length) return;
+    const problems: PhotoProblem[] = [],
+      accepted: File[] = [];
+    let room = photosPerBike - files.length - chosen.length;
+    for (const file of added) {
+      const refused = checkPhotoFile(file);
+      if (refused) {
+        problems.push(refused);
+        continue;
+      }
+      if (room <= 0) {
+        problems.push(tooManyPhotos(file.name));
+        continue;
+      }
+      try {
+        const bitmap = await createImageBitmap(file);
+        const valid =
+          Math.min(bitmap.width, bitmap.height) >= 400 &&
+          Math.max(bitmap.width, bitmap.height) >= 600;
+        bitmap.close();
+        if (!valid) {
+          problems.push(photoTooSmall(file.name));
+          continue;
+        }
+      } catch {
+        problems.push(photoUnreadable(file.name));
+        continue;
+      }
+      room -= 1;
+      accepted.push(file);
+    }
+    if (!alive.current) return;
+    setPhotoProblems(problems);
+    if (accepted.length)
+      setFiles((a) => [
+        ...a,
+        ...accepted.map((file) => ({
+          id: draftId(),
+          file,
+          preview: URL.createObjectURL(file),
+        })),
+      ]);
   }
   async function save() {
     const fields = {
@@ -569,18 +710,29 @@ export default function BikeWizard({
         await api(id + "/photos/import", { ids: chosen });
         setChosen([]);
       }
+      // The bike exists from here on: a photo that fails stays in the queue,
+      // beside its reason, and the next attempt sends only what is left.
+      const refused: PhotoProblem[] = [];
       for (const item of files) {
-        const r = await fetch("/api/bikes/" + id + "/photos", {
-          method: "POST",
-          headers: { "Content-Type": item.file.type },
-          body: item.file,
-        });
-        if (!r.ok) {
-          const d: Partial<ApiError> = await r.json();
-          throw new Error(d.error || "Не удалось загрузить фото");
+        const sent = await sendBikePhoto(id, item.file);
+        if (sent.ok) {
+          URL.revokeObjectURL(item.preview);
+          setFiles((f) => f.filter((x) => x.id !== item.id));
+        } else {
+          refused.push(sent.problem);
+          // A file the server will never take is not worth another try.
+          if (!sent.retryable) {
+            URL.revokeObjectURL(item.preview);
+            setFiles((f) => f.filter((x) => x.id !== item.id));
+          }
         }
-        URL.revokeObjectURL(item.preview);
-        setFiles((f) => f.filter((x) => x.id !== item.id));
+      }
+      if (refused.length) {
+        setPhotoProblems(refused);
+        setError(
+          "Велосипед сохранён, но не все фото загружены. Причины — рядом с выбором файлов; уберите лишние или повторите загрузку.",
+        );
+        return;
       }
       completed.current = true;
       await onCreated(id!);
@@ -635,7 +787,7 @@ export default function BikeWizard({
           <>
             <p className="help">
               Введите марку и модель одной строкой. Год и комплектация уточняют
-              поиск, но не обязательны. Или продолжите вручную.
+              поиск, но не обязательны.
             </p>
             <label className="field">
               <span>
@@ -656,14 +808,6 @@ export default function BikeWizard({
                 }}
               />
             </label>
-            <label className="field">
-              <span>Название в гараже · необязательно</span>
-              <input
-                value={bike.name}
-                maxLength={100}
-                onChange={(e) => update("name", e.target.value)}
-              />
-            </label>
             <p className="wizard-identity">
               {[query.brand, query.model, query.trim, query.year]
                 .filter(Boolean)
@@ -679,7 +823,9 @@ export default function BikeWizard({
                   onClick={() => {
                     resolveAbort.current?.abort();
                     setResolving(false);
-                    setMessage("Поиск остановлен. Можно заполнить вручную.");
+                    setMessage(
+                      "Поиск остановлен. Запустите его снова, чтобы продолжить.",
+                    );
                   }}
                 >
                   Остановить поиск
@@ -741,10 +887,11 @@ export default function BikeWizard({
                           c.year !== query.year)
                       }
                       onChoose={(choice) =>
-                        // Always by id: the service remembers which page it offered.
+                        // By id when there is one: the service remembers which
+                        // page it offered.
                         choice.candidateId
                           ? resolve("", choice.candidateId)
-                          : resolve(choice.url)
+                          : resolve(choice.url, undefined, query, true)
                       }
                     />
                   ))}
@@ -766,23 +913,18 @@ export default function BikeWizard({
                   <button
                     type="button"
                     className="button secondary"
+                    aria-expanded={urlOpen}
+                    aria-controls="wizard-url-search"
                     onClick={() => setManualMode((v) => !v)}
                   >
                     <Link size={18} />
                     {settings.wizardLinkLabel ||
                       "Распознать по странице магазина"}
                   </button>
-                  <button
-                    type="button"
-                    className="button secondary"
-                    onClick={next}
-                  >
-                    <Pencil size={18} />
-                    {settings.wizardManualLabel || "Заполнить вручную"}
-                  </button>
                 </div>
-                {manualMode && (
+                {urlOpen && (
                   <section
+                    id="wizard-url-search"
                     className="wizard-manual"
                     aria-label="Распознавание по ссылке"
                   >
@@ -800,18 +942,32 @@ export default function BikeWizard({
                         value={url}
                         maxLength={2048}
                         onChange={(e) => setUrl(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            if (/^https?:\/\//i.test(typedUrl))
+                              search(typedUrl);
+                          }
+                        }}
                         placeholder="https://…"
                       />
                     </label>
                     <button
                       className="button secondary"
                       type="button"
-                      disabled={!/^https?:\/\//i.test(url)}
-                      onClick={() => search(url)}
+                      disabled={
+                        !/^https?:\/\//i.test(typedUrl) || !searchText.trim()
+                      }
+                      onClick={() => search(typedUrl)}
                     >
                       Распознать страницу
                     </button>
                   </section>
+                )}
+                {hint && (
+                  <p id="wizard-gate" className="help wizard-gate">
+                    {hint}
+                  </p>
                 )}
               </>
             )}
@@ -887,8 +1043,9 @@ export default function BikeWizard({
                 </details>
               )}
             <p className="help">
-              Проверьте найденные компоненты или добавьте свои по группам. Можно
-              оставить комплектацию пустой и дополнить позже.
+              {parts.length || attempt?.outcome !== "none"
+                ? "Проверьте найденные компоненты или добавьте свои по группам. Можно оставить комплектацию пустой и дополнить позже."
+                : "Автоматически комплектацию найти не удалось. Добавьте компоненты по группам или оставьте комплектацию пустой и дополните её позже."}
             </p>
             <details className="wizard-add-picker" open={!parts.length}>
               <summary>Добавить компонент</summary>
@@ -1033,35 +1190,7 @@ export default function BikeWizard({
         )}
         {step === 2 && (
           <>
-            <FormerBikeField
-              value={bike.is_former}
-              onChange={(value) => update("is_former", value)}
-            />
-            <ClassificationFields
-              value={bike.classification}
-              onChange={(classification) =>
-                setBike((v) => ({
-                  ...v,
-                  classification,
-                  category: compatibilityCategory(classification),
-                }))
-              }
-            />
-            <div className="form-grid">
-              <label className="field">
-                <span>
-                  <SiteIcon name="date" /> Год
-                </span>
-                <input
-                  aria-label="Год"
-                  type="number"
-                  min="1900"
-                  max="2100"
-                  required
-                  value={bike.year}
-                  onChange={(e) => update("year", e.target.value)}
-                />
-              </label>
+            <div className="form-grid wizard-pair">
               <label className="field">
                 <span>
                   <SiteIcon name="bike" /> Марка
@@ -1087,6 +1216,22 @@ export default function BikeWizard({
                   }}
                 />
               </label>
+            </div>
+            <div className="form-grid wizard-pair">
+              <label className="field">
+                <span>
+                  <SiteIcon name="date" /> Год
+                </span>
+                <input
+                  aria-label="Год"
+                  type="number"
+                  min="1900"
+                  max="2100"
+                  required
+                  value={bike.year}
+                  onChange={(e) => update("year", e.target.value)}
+                />
+              </label>
               <label className="field">
                 <span>Комплектация / версия</span>
                 <input
@@ -1099,6 +1244,24 @@ export default function BikeWizard({
                 />
               </label>
             </div>
+            <label className="field">
+              <span>Название в гараже · необязательно</span>
+              <input
+                value={bike.name}
+                maxLength={100}
+                onChange={(e) => update("name", e.target.value)}
+              />
+            </label>
+            <ClassificationFields
+              value={bike.classification}
+              onChange={(classification) =>
+                setBike((v) => ({
+                  ...v,
+                  classification,
+                  category: compatibilityCategory(classification),
+                }))
+              }
+            />
             <section>
               <h4>Фотографии</h4>
               {!files.length && !chosen.length && (
@@ -1190,64 +1353,25 @@ export default function BikeWizard({
               </button>
               <label className="field">
                 <span>
-                  Или загрузите свои · JPEG, PNG, WebP · до 10 МБ · от 600 × 400
+                  Или загрузите свои · JPEG, PNG, WebP · до {photoLimitText} ·
+                  от 600 × 400
                 </span>
                 <input
                   type="file"
                   multiple
                   accept="image/jpeg,image/png,image/webp"
-                  onChange={async (e) => {
-                    const input = e.target;
-                    const added = Array.from(input.files || []);
-                    if (
-                      added.some(
-                        (f) =>
-                          f.size > 10 * 1024 * 1024 ||
-                          !["image/jpeg", "image/png", "image/webp"].includes(
-                            f.type,
-                          ),
-                      ) ||
-                      files.length + chosen.length + added.length > 12
-                    ) {
-                      setError(
-                        "Допустимо до 12 фото JPEG/PNG/WebP, каждое до 10 МБ.",
-                      );
-                      input.value = "";
-                      return;
-                    }
-                    try {
-                      for (const file of added) {
-                        const bitmap = await createImageBitmap(file);
-                        const valid =
-                          Math.min(bitmap.width, bitmap.height) >= 400 &&
-                          Math.max(bitmap.width, bitmap.height) >= 600;
-                        bitmap.close();
-                        if (!valid)
-                          throw new Error(
-                            "Фото слишком маленькое: минимум 600 × 400 пикселей",
-                          );
-                      }
-                    } catch (err) {
-                      setError(
-                        errorMessage(err) || "Не удалось прочитать фото",
-                      );
-                      input.value = "";
-                      return;
-                    }
-                    if (!alive.current) return;
-                    setError("");
-                    setFiles((a) => [
-                      ...a,
-                      ...added.map((file) => ({
-                        id: draftId(),
-                        file,
-                        preview: URL.createObjectURL(file),
-                      })),
-                    ]);
-                    input.value = "";
-                  }}
+                  aria-invalid={photoProblems.length ? true : undefined}
+                  aria-describedby={
+                    photoProblems.length ? "wizard-photo-problems" : undefined
+                  }
+                  onChange={(e) => addPhotos(e.target)}
                 />
               </label>
+              <PhotoProblems
+                id="wizard-photo-problems"
+                problems={photoProblems}
+                onDismiss={() => setPhotoProblems([])}
+              />
               <div className="wizard-local-photos">
                 {files.map((f) => (
                   <div key={f.id}>
@@ -1361,6 +1485,10 @@ export default function BikeWizard({
                 onChange={(e) => update("manufacturer_url", e.target.value)}
               />
             </label>
+            <FormerBikeField
+              value={bike.is_former}
+              onChange={(value) => update("is_former", value)}
+            />
             <div className="wizard-privacy">
               <label className="setting-row">
                 Приватный велосипед
@@ -1421,10 +1549,16 @@ export default function BikeWizard({
         >
           Назад
         </button>
-        <button className="button" disabled={resolving || saving}>
+        <button
+          className="button"
+          disabled={resolving || saving || (step === 0 && !!gate)}
+          aria-describedby={hint ? "wizard-gate" : undefined}
+        >
           {step === 2
             ? savedId
-              ? "Повторить загрузку фото"
+              ? files.length || chosen.length
+                ? "Повторить загрузку фото"
+                : "Открыть велосипед"
               : "Сохранить велосипед"
             : "Далее"}
         </button>

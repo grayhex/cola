@@ -1495,6 +1495,19 @@
   .wizard-content .field {
     margin-bottom: var(--space-3);
   }
+  /* Step 3: the identity fields come in pairs that keep two columns on a phone. */
+  .wizard-content .wizard-pair {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 var(--space-3);
+  }
+  .wizard-content .wizard-pair .field {
+    min-width: 0;
+    margin-bottom: var(--space-2);
+  }
+  /* Why «Далее» is not yet available, or what to do after a failed search. */
+  .wizard-gate {
+    margin: var(--space-2) 0 0;
+  }
   .wizard-content h4 {
     margin: var(--space-4) 0 var(--space-2);
     font-size: var(--text-sm);

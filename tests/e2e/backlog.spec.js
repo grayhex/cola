@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import pg from "pg";
 import sharp from "sharp";
 import { testConsents } from "../fixtures/legal.js";
+import { searchWizard } from "../fixtures/wizard-search.js";
 const origin = process.env.TEST_ORIGIN || "http://localhost:3100";
 const password = "backlog-browser-secret-123";
 async function register(page) {
@@ -137,9 +138,6 @@ test("account SPA opens the three-step wizard repeatedly; only explicit X can di
   await wizard
     .getByLabel("Модель, год и комплектация", { exact: true })
     .fill("Cube Travel SL 2021");
-  await wizard
-    .getByLabel("Название в гараже · необязательно")
-    .fill("My folding commuter");
   // Click the actual modal backdrop, not a child or an internal whitespace area.
   await page.mouse.click(2, 2);
   await expect(wizard).toBeVisible();
@@ -158,11 +156,13 @@ test("account SPA opens the three-step wizard repeatedly; only explicit X can di
   await expect(
     wizard.getByLabel("Модель, год и комплектация", { exact: true }),
   ).toHaveValue("Cube Travel SL 2021");
-  await wizard
-    .getByRole("button", { name: "Заполнить вручную", exact: true })
-    .click();
+  await searchWizard(wizard);
+  await wizard.getByRole("button", { name: "Далее", exact: true }).click();
   await wizard.getByRole("button", { name: "Далее", exact: true }).click();
   await expect(wizard.getByLabel("Год", { exact: true })).toHaveValue("2021");
+  await wizard
+    .getByLabel("Название в гараже · необязательно")
+    .fill("My folding commuter");
   await wizard
     .getByLabel("Категория велосипеда", { exact: true })
     .selectOption("urban_touring");
