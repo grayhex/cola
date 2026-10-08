@@ -174,3 +174,75 @@ test("bike page: an oversize photo is named beside the button; the limit itself 
   await page.unroute("**/api/bikes/*/photos");
   await expect(addPhoto).toBeEnabled();
 });
+
+test("account garage: a refusal belongs to the bike it was made on", async ({
+  page,
+}) => {
+  const nonce = randomUUID().slice(0, 8);
+  const register = await registerVerified(page.request, {
+    headers: { origin },
+    data: {
+      ...testConsents,
+      name: "Гараж " + nonce,
+      email: `garage-${nonce}@example.test`,
+      password: "photo-limits-secret-123",
+    },
+  });
+  expect(register.status()).toBe(201);
+  for (const name of ["Первый " + nonce, "Второй " + nonce])
+    expect(
+      (
+        await page.request.post("/api/bikes", {
+          headers: { origin },
+          data: {
+            name,
+            brand: "Cube",
+            model: "Nuroad",
+            year: 2024,
+            category: "gravel",
+            description: "",
+            color: "",
+            size: "",
+            weight: null,
+            is_public: true,
+          },
+        })
+      ).status(),
+    ).toBe(201);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/account?tab=bikes");
+  await page
+    .locator(".bike-card")
+    .filter({ hasText: "Первый " + nonce })
+    .getByRole("button")
+    .first()
+    .click();
+  const problems = page.locator(".photo-problems");
+  const chooser = page.waitForEvent("filechooser");
+  await page
+    .getByRole("button", { name: "Добавить фото", exact: true })
+    .first()
+    .click();
+  await (
+    await chooser
+  ).setFiles({
+    name: "huge.png",
+    mimeType: "image/png",
+    buffer: Buffer.alloc(limit + 1),
+  });
+  await expect(problems).toContainText("«huge.png»");
+  // Back to the garage and into the other bike: no alert about a file that
+  // was meant for the first one.
+  await page.getByRole("button", { name: "Мои велосипеды" }).click();
+  await page
+    .locator(".bike-card")
+    .filter({ hasText: "Второй " + nonce })
+    .getByRole("button")
+    .first()
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Второй " + nonce, level: 1 }),
+  ).toBeVisible();
+  await expect(problems).toHaveCount(0);
+  await expect(page.getByText("huge.png")).toHaveCount(0);
+});

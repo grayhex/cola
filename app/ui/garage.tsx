@@ -77,7 +77,12 @@ export default function Garage({
     [localFilters, setLocalFilters] = useState<string[]>([]),
     [localQuery, setLocalQuery] = useState(""),
     [photo, setPhoto] = useState<PublicPhoto | null>(null),
-    [photoProblems, setPhotoProblems] = useState<PhotoProblem[]>([]);
+    // The refusals belong to the bike they were made on: the page shows them
+    // only there, however the selection moves.
+    [refused, setRefused] = useState<{
+      bikeId: string;
+      problems: PhotoProblem[];
+    } | null>(null);
   const [localPage, setLocalPage] = useState(1),
     [total, setTotal] = useState(0);
   const router = useRouter(),
@@ -381,8 +386,8 @@ export default function Garage({
           busy={busy}
           photo={photo}
           setPhoto={setPhoto}
-          photoProblems={photoProblems}
-          dismissPhotoProblems={() => setPhotoProblems([])}
+          photoProblems={refused?.bikeId === bike.id ? refused.problems : []}
+          dismissPhotoProblems={() => setRefused(null)}
           setSelected={setSelected}
           setModal={setModal}
           file={file}
@@ -431,13 +436,13 @@ export default function Garage({
           const image = e.target.files?.[0];
           e.target.value = "";
           if (!image) return;
-          setPhotoProblems([]);
+          setRefused(null);
           run(async () => {
             // A refused file is told about beside the button, not in the
             // page's general error line far above it (#366).
             const sent = await sendBikePhoto(bike!.id, image);
             if (!sent.ok) {
-              setPhotoProblems([sent.problem]);
+              setRefused({ bikeId: bike!.id, problems: [sent.problem] });
               return;
             }
             await refresh();
