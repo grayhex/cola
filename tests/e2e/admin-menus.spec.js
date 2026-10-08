@@ -201,8 +201,12 @@ test("account menu without «Уведомления» and «Достижения
         name: isMobile ? "Открыть меню" : "Аккаунт — " + name,
       })
       .click();
+    // The phone's drawer holds the site's sections as well, with links of its
+    // own named alike («Подписки»): the account part is its own region.
     const account = isMobile
-      ? page.getByRole("dialog", { name: "Меню ColaBike" })
+      ? page
+          .getByRole("dialog", { name: "Меню ColaBike" })
+          .getByRole("region", { name: "Аккаунт" })
       : page.locator(".account-disclosure .nav-popover");
     await expect(
       account.getByRole("link", { name: "Мой профиль" }),
