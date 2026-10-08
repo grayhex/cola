@@ -270,18 +270,19 @@ test("planners: «Дополнительно» starts folded in both windows and
   const intent = page.getByRole("dialog", { name: "Новое намерение" });
   const extra = intent.locator("details.intent-advanced");
   await expect(extra).not.toHaveAttribute("open", "");
-  await expect(extra.locator("summary")).toHaveText(
-    "Дополнительно · только мне",
-  );
+  // #370: the title says nothing but «Дополнительно»; who sees the intent is
+  // chosen in plain view, and a new intent is for the community.
+  await expect(extra.locator("summary")).toHaveText("Дополнительно");
+  const community = intent.getByLabel("Сообществу ColaBike", { exact: true });
+  await expect(community).toBeVisible();
+  await expect(community).toBeChecked();
   await expect(intent.getByLabel("Готовность знакомиться")).toBeHidden();
   await extra.locator("summary").click();
   await intent.getByLabel("Готовность знакомиться").selectOption("true");
-  await intent.getByLabel("Сообществу ColaBike", { exact: true }).check();
+  await intent.getByLabel("Только мне — для подбора", { exact: true }).check();
   await extra.locator("summary").click();
   await expect(intent.getByLabel("Готовность знакомиться")).toBeHidden();
-  await expect(extra.locator("summary")).toHaveText(
-    "Дополнительно · сообществу",
-  );
+  await expect(extra.locator("summary")).toHaveText("Дополнительно");
   await extra.locator("summary").click();
   await expect(intent.getByLabel("Готовность знакомиться")).toHaveValue("true");
   await intent.screenshot({ path: info.outputPath("intent-advanced.png") });

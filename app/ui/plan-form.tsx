@@ -44,6 +44,7 @@ import {
 } from "../../lib/bike-status.ts";
 import { userTimeZone } from "../../lib/user-time-zone.ts";
 import { areaChanged, placeChanged } from "../../lib/ride-agreement.ts";
+import { areaProblems } from "../../lib/ride-area.ts";
 import { localDateTime, validTimeZone } from "../../lib/ride-intent-time.ts";
 import {
   foldChoices,
@@ -300,6 +301,10 @@ export default function PlanForm({
     setError("");
     setWhenError("");
     setBikeError("");
+    // The area is optional, but one that is begun is whole: a name, and a
+    // centre with a radius or neither (#370).
+    const half = areaProblems(form.passport.area);
+    if (half.length) return setError(half[0]);
     if (!selectedBike) return requireBike("Выберите велосипед организатора.");
     if (bikeStateError) return requireBike(bikeStateError);
     if (cannotPublish) return;

@@ -8,10 +8,11 @@ import { useState } from "react";
 import { ridePlanOptions } from "../../lib/ride-plan-options.ts";
 import { useMotionFeedback } from "./motion.tsx";
 import RidePassport from "./ride-passport.tsx";
-import AreaPicker from "./ride-area-map.tsx";
+import { AreaField } from "./ride-area-field.tsx";
 import PassportTiles from "./passport-tiles.tsx";
 import styles from "./ride-passport.module.css";
 
+export { AreaField };
 // The ride passport's inputs as parts (#253): the planners place the area,
 // the option tiles and the rare conditions in their own sections; the UI
 // Kit and older screens use the whole set below.
@@ -23,58 +24,6 @@ const setter =
     else next[key] = v;
     onChange(next);
   };
-
-/** The approximate area — a label and an optional circle on the map. */
-export function AreaField({
-  value = {},
-  onChange,
-  disabled = false,
-  intent = false,
-  label = "Область поездки",
-}: {
-  value?: PassportDraft;
-  onChange: (value: PassportDraft) => void;
-  disabled?: boolean;
-  intent?: boolean;
-  label?: string;
-}) {
-  const set = setter(value, onChange);
-  const area = value.area || {};
-  return (
-    <>
-      <label className="field">
-        <span>{label}</span>
-        <input
-          required={intent || !!area.center}
-          disabled={disabled}
-          maxLength={100}
-          placeholder="Например, Измайловский парк"
-          value={area.label || ""}
-          onChange={(e) =>
-            set(
-              "area",
-              e.target.value || area.center
-                ? { ...area, label: e.target.value }
-                : undefined,
-            )
-          }
-        />
-        <small>
-          {intent
-            ? "Приблизительный район или парк, без домашнего адреса."
-            : "Приблизительный район, без домашнего адреса."}
-        </small>
-      </label>
-      <AreaPicker
-        value={area}
-        disabled={disabled}
-        onChange={(next) =>
-          set("area", next.label || next.center ? next : undefined)
-        }
-      />
-    </>
-  );
-}
 
 /** Rare conditions: speed, difficulty, regrouping and beginners; plans also
  * edit the numeric ranges here when they are not shown as tiles. */

@@ -4,7 +4,9 @@ import type { Area } from "../../lib/ride-match-core.ts";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Minus, Plus, MapPin, X } from "lucide-react";
 import { MapAttribution } from "./ride-basemap.tsx";
+import { areaRadiiKm } from "../../lib/ride-area.ts";
 import { useSite } from "./site-provider.tsx";
+import EngineAreaPicker from "./area-engine-picker.tsx";
 import {
   mapDefaults,
   isRasterProvider,
@@ -17,7 +19,7 @@ import styles from "./ride-passport.module.css";
 // Coarse area on the admin's raster basemap (#241): a circle, never a precise
 // point. No geolocation, geocoder or WebGL; tiles load only when the picker is
 // open (or the read-only preview is on screen). Other providers keep the label.
-export const areaRadii = [1, 2, 3, 5, 10, 20, 50, 100];
+export const areaRadii = areaRadiiKm;
 // Without an earlier choice the picker opens on Moscow; the user moves it.
 const initialCenter = [37.62, 55.75];
 const width = 640,
@@ -129,17 +131,20 @@ function zoomFor(radiusM: number, lat: number) {
   return 3;
 }
 /** Editable centre + radius. `value` is the whole area object ({label, …}). */
-export default function AreaPicker({
+function RasterAreaPicker({
   value = {},
   onChange,
   disabled,
   radii = areaRadii,
+  showRadius = true,
 }: {
   value?: Area;
   onChange: (value: Area) => void;
   disabled?: boolean;
   /** The radii on offer, in kilometres: a narrower list for an area with a minimum. */
   radii?: number[];
+  /** The radius list is the picker's own, unless the form shows one beside the name. */
+  showRadius?: boolean;
 }) {
   const config = useRasterConfig(),
     [open, setOpen] = useState(!!value.center),
@@ -186,6 +191,8 @@ export default function AreaPicker({
     onChange(rest);
   };
   function pick(e: MouseEvent<SVGSVGElement>) {
+    // A disabled fieldset does not stop an SVG: a busy form takes no clicks.
+    if (disabled) return;
     const box = e.currentTarget.getBoundingClientRect();
     place(
       viewport.coordAt(
@@ -195,6 +202,7 @@ export default function AreaPicker({
     );
   }
   function key(e: KeyboardEvent<SVGSVGElement>) {
+    if (disabled) return;
     const step = 48,
       moves: Record<string, number[]> = {
         ArrowLeft: [-step, 0],
@@ -291,23 +299,25 @@ export default function AreaPicker({
         >
           <Minus size={14} />
         </button>
-        <label className="field">
-          <span>Радиус</span>
-          <select
-            value={radiusKm}
-            onChange={(e) =>
-              area
-                ? place(area.center || view, Number(e.target.value))
-                : place(view, Number(e.target.value))
-            }
-          >
-            {radii.map((km) => (
-              <option key={km} value={km}>
-                {km} км
-              </option>
-            ))}
-          </select>
-        </label>
+        {showRadius && (
+          <label className="field">
+            <span>Радиус</span>
+            <select
+              value={radiusKm}
+              onChange={(e) =>
+                area
+                  ? place(area.center || view, Number(e.target.value))
+                  : place(view, Number(e.target.value))
+              }
+            >
+              {radii.map((km) => (
+                <option key={km} value={km}>
+                  {km} км
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         {area ? (
           <button type="button" className="quiet" onClick={clear}>
             <X size={14} aria-hidden="true" /> Убрать с карты
@@ -322,11 +332,53 @@ export default function AreaPicker({
           </button>
         )}
       </div>
-      <p className="help" role="status">
-        {area
-          ? `Выбрана область радиусом ${radiusKm} км. Подпись района остаётся обязательной.`
-          : "Центр не выбран — подбор будет опираться только на подпись."}
-      </p>
+      {/* The area field of a ride shows the same in its own card. */}
+      {showRadius && (
+        <p className="help" role="status">
+          {area
+            ? `Выбрана область радиусом ${radiusKm} км. Подпись района остаётся обязательной.`
+            : "Центр не выбран — подбор будет опираться только на подпись."}
+        </p>
+      )}
     </fieldset>
   );
+}
+
+/**
+ * Chooses the centre of an area on the site's map. The raster maps (OSM, an
+ * XYZ endpoint) use the light SVG picker above; with `engines` the MapLibre
+ * style and Yandex maps get a picker of their own (#370) instead of being
+ * reported «unavailable». Other forms (the nearby settings) keep the raster
+ * picker alone.
+ */
+export default function AreaPicker({
+  engines = false,
+  ...props
+}: {
+  value?: Area;
+  onChange: (value: Area) => void;
+  disabled?: boolean;
+  radii?: number[];
+  showRadius?: boolean;
+  engines?: boolean;
+}) {
+  const { personalSettings: settings } = useSite();
+  const config = settings.map || mapDefaults;
+  if (engines && config.enabled && !isRasterProvider(config))
+    return (
+      <EngineAreaPicker
+        value={props.value}
+        onChange={props.onChange}
+        disabled={props.disabled}
+        config={config}
+      />
+    );
+  if (engines && !config.enabled)
+    return (
+      <p className="help">
+        Карты на сайте отключены. Найдите место по названию или назовите область
+        — этого достаточно.
+      </p>
+    );
+  return <RasterAreaPicker {...props} />;
 }

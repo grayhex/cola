@@ -388,6 +388,129 @@ try {
     "foreign origin on replacement",
   );
 
+  // The area (#370): a label, a centre and a radius are one object. The client
+  // may send a precise point; the site keeps and returns the coarse one. A label
+  // alone stays valid (older records, no map), a centre without a radius or a
+  // radius without a centre is refused, and an edit replaces the whole area.
+  const mapper = await member("mapper");
+  const areaOf = (area, extra = {}) =>
+    draft({
+      passport: { area, purpose: "social" },
+      visibility: "private",
+      ...extra,
+    });
+  const precise = await mapper.token(collection, {
+    method: "POST",
+    body: areaOf({
+      label: "Измайловский парк",
+      center: [37.75123, 55.79456],
+      radiusM: 2000,
+    }),
+    headers: key(),
+  });
+  assert.equal(precise.status, 201, precise.text);
+  assert.deepEqual(
+    precise.body.passport.area,
+    { label: "Измайловский парк", center: [37.75, 55.79], radiusM: 2000 },
+    "the site keeps a coarse centre, never the typed point",
+  );
+  const stored = await db.query(
+    "SELECT passport->'area' AS area, visibility FROM ride_intents WHERE id=$1",
+    [precise.body.id],
+  );
+  assert.deepEqual(stored.rows[0].area.center, [37.75, 55.79]);
+  assert.equal(stored.rows[0].visibility, "private");
+  assert.ok(
+    !JSON.stringify(stored.rows[0].area).includes("37.7512"),
+    "the precise coordinates are not stored",
+  );
+  const noMap = await mapper.token(collection, {
+    method: "POST",
+    body: areaOf({ label: "Сокольники" }),
+    headers: key(),
+  });
+  assert.equal(noMap.status, 201, noMap.text);
+  assert.deepEqual(
+    noMap.body.passport.area,
+    { label: "Сокольники" },
+    "a label alone is an area without a map",
+  );
+  for (const [label, area] of [
+    ["a centre without a radius", { label: "Парк", center: [37.1, 55.7] }],
+    ["a radius without a centre", { label: "Парк", radiusM: 3000 }],
+    [
+      "a radius under 1 km",
+      { label: "Парк", center: [37.1, 55.7], radiusM: 500 },
+    ],
+    [
+      "a radius over 100 km",
+      { label: "Парк", center: [37.1, 55.7], radiusM: 200000 },
+    ],
+    [
+      "a centre off the globe",
+      { label: "Парк", center: [237, 55.7], radiusM: 3000 },
+    ],
+    ["no label", { center: [37.1, 55.7], radiusM: 3000 }],
+    ["an empty label", { label: "  ", center: [37.1, 55.7], radiusM: 3000 }],
+    [
+      "an unknown field",
+      { label: "Парк", center: [37.1, 55.7], radiusM: 3000, address: "дом 1" },
+    ],
+  ]) {
+    assertError(
+      await mapper.token(collection, {
+        method: "POST",
+        body: areaOf(area),
+        headers: key(),
+      }),
+      400,
+      "invalid_request",
+      label,
+    );
+  }
+  const replacedArea = await mapper.token(`${collection}/${precise.body.id}`, {
+    method: "PUT",
+    body: areaOf({
+      label: "Парк Горького",
+      center: [37.6, 55.73],
+      radiusM: 1000,
+    }),
+  });
+  assert.equal(replacedArea.status, 200, replacedArea.text);
+  assert.deepEqual(
+    replacedArea.body.passport.area,
+    { label: "Парк Горького", center: [37.6, 55.73], radiusM: 1000 },
+    "label, centre and radius change together",
+  );
+  const labelOnly = await mapper.token(`${collection}/${precise.body.id}`, {
+    method: "PUT",
+    body: areaOf({ label: "Коломенское" }),
+  });
+  assert.equal(labelOnly.status, 200, labelOnly.text);
+  assert.deepEqual(
+    labelOnly.body.passport.area,
+    { label: "Коломенское" },
+    "an old circle does not stay under a new name",
+  );
+  const reread = await mapper.token(`${collection}/${precise.body.id}`);
+  assert.deepEqual(reread.body.passport.area, { label: "Коломенское" });
+  // An omitted visibility is the engine's private default, never a publication.
+  const unsaid = areaOf({ label: "Крылатские холмы" });
+  delete unsaid.visibility;
+  const quiet = await mapper.token(collection, {
+    method: "POST",
+    body: unsaid,
+    headers: key(),
+  });
+  assert.equal(quiet.status, 201, quiet.text);
+  assert.equal(quiet.body.visibility, "private");
+  assertError(
+    await reader.token(`${collection}/${quiet.body.id}`),
+    404,
+    "not_found",
+    "an intention without a visibility is not shown to others",
+  );
+
   // Cancel, delete.
   assertError(
     await reader.token(`${collection}/${intent}/cancel`, { method: "POST" }),

@@ -25,6 +25,7 @@ import {
   Trash2,
 } from "lucide-react";
 import PassportTiles from "./passport-tiles.tsx";
+import EmailPolicyAction from "./email-policy-action.tsx";
 import { useSite } from "./site-provider.tsx";
 import {
   SocialHeader,
@@ -49,6 +50,7 @@ import {
   formatIntentWindow,
 } from "../../lib/ride-intent-time.ts";
 import { userTimeZone } from "../../lib/user-time-zone.ts";
+import { areaProblems } from "../../lib/ride-area.ts";
 import styles from "./ride-intents.module.css";
 const blankWindow = (): IntentWindowDraft => ({ startLocal: "", endLocal: "" });
 const readinessLabels: Record<string, string> = {
@@ -140,6 +142,7 @@ export function IntentComposer({
   onClose: () => void;
   onPreferences: (value: PreferencesDraft) => void;
 }) {
+  const { viewer } = useSite();
   const [draft, setDraft] = useState(initial),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
@@ -170,6 +173,14 @@ export function IntentComposer({
   async function save(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (busy) return;
+    // The area is one object: a name, and a centre with a radius or neither.
+    // An intent needs it (the matching reads it), and a half-made one is shown
+    // at the field, with the form kept as it is.
+    const area = areaProblems(draft.passport.area);
+    if (!draft.passport.area || area.length) {
+      setError(area[0] || "Укажите район или парк: найдите место по названию");
+      return;
+    }
     if (!draft.passport.purpose) {
       setError("Выберите цель поездки");
       return;
@@ -334,6 +345,7 @@ export function IntentComposer({
               <AreaField
                 value={draft.passport}
                 onChange={(v) => set("passport", v)}
+                disabled={busy || uncertain}
                 intent
               />
             </fieldset>
@@ -375,6 +387,11 @@ export function IntentComposer({
                   type="button"
                   className="quiet"
                   onClick={async () => {
+                    const half = areaProblems(draft.passport.area);
+                    if (half.length) {
+                      setError(half[0]);
+                      return;
+                    }
                     setBusy(true);
                     setError("");
                     try {
@@ -422,60 +439,72 @@ export function IntentComposer({
               )}
               <p>{draft.passport.area?.label || "Укажите район или парк"}</p>
             </section>
-            {/* Who sees it, suggestions, company and extra conditions: folded
-              by default (#264); the fields stay mounted, so nothing typed is
-              lost when the section closes. */}
+            {/* Who sees it is a choice in plain view (#370): a new intent is for
+              the community unless the person says otherwise, and an edit keeps
+              what it had. The rest — suggestions, company and extra
+              conditions — is folded (#264); its fields stay mounted, so
+              nothing typed is lost when the section closes. */}
+            <fieldset
+              className="planning-section half"
+              disabled={busy || uncertain}
+            >
+              <legend>
+                <span className="step" aria-hidden="true">
+                  4
+                </span>
+                Кому видно
+              </legend>
+              <div className="option-tiles">
+                {(
+                  [
+                    [
+                      "private",
+                      "Только мне — для подбора",
+                      "Видите только вы. Используется для вашего подбора.",
+                      LockKeyhole,
+                    ],
+                    [
+                      "community",
+                      "Сообществу ColaBike",
+                      "Видны имя, район и расписание, без точного адреса. Нужна подтверждённая почта.",
+                      Users,
+                    ],
+                  ] as const
+                ).map(([key, label, hint, Icon]) => (
+                  <label className="option-tile" key={key}>
+                    <input
+                      type="radio"
+                      name="intent-visibility"
+                      aria-label={label}
+                      aria-describedby={"visibility-" + key}
+                      checked={draft.visibility === key}
+                      onChange={() => set("visibility", key)}
+                    />
+                    <Icon size={16} aria-hidden="true" />
+                    <span>
+                      <strong>{label}</strong>
+                      <small id={"visibility-" + key}>{hint}</small>
+                    </span>
+                  </label>
+                ))}
+              </div>
+              {draft.visibility === "community" &&
+                viewer &&
+                !viewer.email_verified_at && (
+                  <p className="help" role="status">
+                    Чтобы показать намерение сообществу, нужна подтверждённая
+                    почта: подтвердите её или выберите «Только мне».
+                  </p>
+                )}
+            </fieldset>
             <details className="planning-advanced intent-advanced">
-              <summary>
-                Дополнительно ·{" "}
-                {draft.visibility === "private" ? "только мне" : "сообществу"}
-                {draft.allowSuggestions ? ", предложения включены" : ""}
-              </summary>
+              <summary>Дополнительно</summary>
               <div className="planning-body">
                 <fieldset
                   className="planning-section half"
                   disabled={busy || uncertain}
                 >
-                  <legend>
-                    <span className="step" aria-hidden="true">
-                      4
-                    </span>
-                    Кому видно
-                  </legend>
-                  <div className="option-tiles">
-                    {(
-                      [
-                        [
-                          "private",
-                          "Только мне — для подбора",
-                          "Видите только вы. Используется для вашего подбора.",
-                          LockKeyhole,
-                        ],
-                        [
-                          "community",
-                          "Сообществу ColaBike",
-                          "Видны имя, район и расписание, без точного адреса. Нужна подтверждённая почта.",
-                          Users,
-                        ],
-                      ] as const
-                    ).map(([key, label, hint, Icon]) => (
-                      <label className="option-tile" key={key}>
-                        <input
-                          type="radio"
-                          name="intent-visibility"
-                          aria-label={label}
-                          aria-describedby={"visibility-" + key}
-                          checked={draft.visibility === key}
-                          onChange={() => set("visibility", key)}
-                        />
-                        <Icon size={16} aria-hidden="true" />
-                        <span>
-                          <strong>{label}</strong>
-                          <small id={"visibility-" + key}>{hint}</small>
-                        </span>
-                      </label>
-                    ))}
-                  </div>
+                  <legend>Предложения</legend>
                   <label className="check">
                     <input
                       type="checkbox"
@@ -543,6 +572,7 @@ export function IntentComposer({
             {error && (
               <p className="error" role="alert">
                 {error}
+                <EmailPolicyAction message={error} />
               </p>
             )}
             {uncertain && (
@@ -601,7 +631,11 @@ export function intentDraft(
     ...(item?.meetNewPeople === undefined
       ? {}
       : { meetNewPeople: item.meetNewPeople }),
-    visibility: edit && item ? item.visibility : "private",
+    // A new intent is for the community (#370); an edit keeps what it had,
+    // and so does a repeat of an existing one — a private intent is never
+    // published by being copied. The server's own default for a missing field
+    // stays «private»: an old client never publishes by leaving it out.
+    visibility: item ? item.visibility : "community",
     allowSuggestions: edit && item ? item.allowSuggestions : false,
   };
 }
@@ -917,7 +951,8 @@ export default function RideIntents() {
               <h2 id="when-heading">Новое намерение</h2>
               <p className="help">
                 Конкретный раз: когда и где хочется покататься. До 5 активных
-                намерений на ближайшие 90 дней, по умолчанию только для вас.
+                намерений на ближайшие 90 дней; кому видно, выбираете в форме —
+                по умолчанию сообществу.
               </p>
             </div>
           </div>

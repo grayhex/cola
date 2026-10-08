@@ -50,6 +50,8 @@ const environment = {
   ACTIVITY_TOKEN_KEY: "12".repeat(32),
   COLA_RWGPS_FIXTURE: "1",
   RWGPS_FIXTURE_FILE: path.join(dir, "rwgps.json"),
+  // The place search answers from a built-in list: no third party in tests.
+  COLA_GEOCODER_FIXTURE: "1",
   YANDEX_ID_ENABLED: "true",
   YANDEX_ID_CLIENT_ID: "fixture-yandex-client",
   YANDEX_ID_CLIENT_SECRET: "fixture-yandex-secret",
@@ -230,6 +232,7 @@ try {
           "tests/ride-agreements-http.js",
           ...(externalDatabase ? ["tests/ride-agreements-concurrency.js"] : []),
           "tests/ride-intents-http.js",
+          "tests/geocode-http.js",
           "tests/ride-matches-http.js",
           "tests/activity-sync-http.js",
           ...(externalDatabase ? ["tests/activity-sync-concurrency.js"] : []),
