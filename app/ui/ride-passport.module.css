@@ -131,3 +131,106 @@
 .pickerControls .field {
   min-width: 7rem;
 }
+
+/* The area field (#370): a search for a place, the chosen area and the ways
+   to choose it. */
+.areaField {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.areaField :global(.field) {
+  margin: 0;
+}
+.placeHint {
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+}
+.placeStatus {
+  min-height: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+.placeStatus:empty {
+  display: none;
+}
+.places {
+  display: grid;
+  margin: 0;
+  padding: var(--space-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  list-style: none;
+}
+.places button {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  min-height: 44px;
+  padding: var(--space-1-5) var(--space-2);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.places button:hover,
+.places button:focus-visible {
+  background: var(--surface-hover);
+}
+.places small {
+  color: var(--text-secondary);
+}
+.areaActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.areaCard {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface-subtle);
+}
+.areaCard :global(.help) {
+  margin: 0;
+}
+
+/* The map of a MapLibre-style or Yandex picker (#370): the engine draws into
+   a frame of its own size; the centre dot is an element only in the SDK. */
+.engineFrame {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--bg-subtle);
+}
+.engineCanvas {
+  height: clamp(220px, 45vw, 320px);
+  width: 100%;
+  cursor: crosshair;
+}
+.engineCanvas:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+.engineDot {
+  display: block;
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
+  border: 2px solid var(--text);
+  border-radius: 50%;
+  background: var(--surface);
+  pointer-events: none;
+}

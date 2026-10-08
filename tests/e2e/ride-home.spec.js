@@ -3,6 +3,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { randomUUID } from "node:crypto";
 import { registerVerified } from "../fixtures/verified-user.js";
 import { testConsents } from "../fixtures/legal.js";
+import { chosenArea, nameArea } from "../fixtures/ride-area.js";
 
 // #245 «Покататься вместе» on the home page, #241 coarse area picking and
 // #233 public filters, on real APIs.
@@ -175,7 +176,7 @@ test("signed-in home: one «Покататься вместе» block, both comp
     exact: true,
   });
   await dialog.getByRole("button", { name: "В выходные", exact: true }).click();
-  await dialog.getByLabel("Область поездки").fill("Воробьёвы горы");
+  await nameArea(dialog, "Воробьёвы горы");
   await dialog.getByRole("button", { name: /^Цель:/ }).click();
   await page
     .getByRole("dialog", { name: "Цель поездки" })
@@ -188,9 +189,9 @@ test("signed-in home: one «Покататься вместе» block, both comp
   await map.focus();
   await page.keyboard.press("Enter");
   await page.keyboard.press("ArrowRight");
-  await dialog.getByLabel("Радиус").selectOption("3");
+  await chosenArea(dialog).getByLabel("Радиус").selectOption("3");
   await expect(
-    dialog.getByText("Выбрана область радиусом 3 км.", { exact: false }),
+    dialog.getByText("Воробьёвы горы · радиус 3 км", { exact: false }),
   ).toBeVisible();
   await dialog.screenshot({
     path: info.outputPath("area-picker.png"),
