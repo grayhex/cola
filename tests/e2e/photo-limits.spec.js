@@ -233,7 +233,10 @@ test("account garage: a refusal belongs to the bike it was made on", async ({
   await expect(problems).toContainText("«huge.png»");
   // Back to the garage and into the other bike: no alert about a file that
   // was meant for the first one.
-  await page.getByRole("button", { name: "Мои велосипеды" }).click();
+  // The phone's section switcher is named alike («Раздел: Мои велосипеды»).
+  await page
+    .getByRole("button", { name: "Мои велосипеды", exact: true })
+    .click();
   await page
     .locator(".bike-card")
     .filter({ hasText: "Второй " + nonce })
