@@ -24,7 +24,9 @@ function Choice({
   required = false,
   empty = "Не указано",
   disabled = false,
+  id,
 }: {
+  id?: string;
   label: string;
   value?: string | null;
   choices: Record<string, string>;
@@ -37,6 +39,7 @@ function Choice({
     <label className="field">
       <span>{label}</span>
       <select
+        id={id}
         aria-label={label}
         value={value || ""}
         required={required}
@@ -57,10 +60,13 @@ export default function ClassificationFields({
   value,
   onChange,
   disabled = false,
+  categoryId,
 }: {
   value: Classification;
   onChange: (value: Classification) => void;
   disabled?: boolean;
+  // Lets a form that finds the category missing bring it into focus.
+  categoryId?: string;
 }) {
   const c = { ...emptyClassification, ...value };
   const set = <K extends keyof Classification>(key: K, v: Classification[K]) =>
@@ -73,6 +79,7 @@ export default function ClassificationFields({
     >
       <div className={styles.grid}>
         <Choice
+          id={categoryId}
           label="Категория велосипеда"
           value={c.category}
           choices={bikeCategories}

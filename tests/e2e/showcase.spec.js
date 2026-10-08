@@ -2,7 +2,7 @@ import { verifyCapturedEmail } from "../fixtures/verified-user.js";
 import { test, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import sharp from "sharp";
-import { searchWizard } from "../fixtures/wizard-search.js";
+import { leaveSearch, searchWizard } from "../fixtures/wizard-search.js";
 async function register(page, name) {
   await page.goto("/bikes");
   await expect(page.locator(".global-header")).toBeVisible();
@@ -64,9 +64,9 @@ test("registration, touch autocomplete, bike/photo, public feed, like and revoke
   const dialog = page.getByRole("dialog");
   await expect(dialog.getByLabel("Год", { exact: true })).toHaveCount(0);
   await searchWizard(dialog, "Cube Aim 2020");
-  await dialog.getByRole("button", { name: "Далее", exact: true }).click();
-  await dialog.getByRole("button", { name: "Далее", exact: true }).click();
-  await dialog.getByLabel("Название в гараже · необязательно").fill(bikeName);
+  await leaveSearch(dialog);
+  await dialog.locator("summary", { hasText: "Своё название" }).click();
+  await dialog.getByLabel("Название в гараже").fill(bikeName);
   await dialog
     .getByLabel("Категория велосипеда", { exact: true })
     .selectOption("mtb");
@@ -123,11 +123,10 @@ test("registration, touch autocomplete, bike/photo, public feed, like and revoke
     .setInputFiles({ name: "bike.png", mimeType: "image/png", buffer: bytes });
   // Explicit privacy retains this test's publish/revoke lifecycle.
   await expect(
-    dialog.getByRole("checkbox", { name: "Приватный велосипед", exact: true }),
-  ).not.toBeChecked();
-  await dialog
-    .getByRole("checkbox", { name: "Приватный велосипед", exact: true })
-    .check();
+    dialog.getByRole("radio", { name: "Публичный", exact: true }),
+  ).toBeChecked();
+  await dialog.getByRole("radio", { name: "Только я", exact: true }).check();
+  await dialog.getByRole("button", { name: "Далее", exact: true }).click();
   await dialog
     .getByRole("button", { name: "Сохранить велосипед", exact: true })
     .click();

@@ -1,9 +1,11 @@
 import { expect } from "@playwright/test";
 
-// Step 1 of the new-bike wizard lets go only of a search that has run to its
-// end for what stands in the fields (#366). For a model nothing is known about
-// that is a search that finds nothing: it ends, and «Далее» opens, so the
-// bike is filled in by hand. `text` is typed first when given.
+// The search of the new-bike wizard is optional (#370). `searchWizard` types
+// `text` when given, runs the search and waits until it has ended — the button
+// then offers to repeat it — and stays on the first step; `leaveSearch` takes
+// the step's one forward button, «Далее» after a found bike and «Продолжить
+// вручную» in every other case. For a model nothing is known about the search
+// ends without a result, so the bike is filled in by hand.
 export async function searchWizard(dialog, text) {
   const field = dialog.getByLabel("Модель, год и комплектация", {
     exact: true,
@@ -15,6 +17,11 @@ export async function searchWizard(dialog, text) {
     })
     .click();
   await expect(
-    dialog.getByRole("button", { name: "Далее", exact: true }),
-  ).toBeEnabled({ timeout: 60_000 });
+    dialog.getByRole("button", { name: /^Повторить автоматический поиск/ }),
+  ).toBeVisible({ timeout: 60_000 });
+}
+export function leaveSearch(dialog) {
+  return dialog
+    .getByRole("button", { name: /^(Далее|Продолжить вручную)$/ })
+    .click();
 }

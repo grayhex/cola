@@ -69,6 +69,11 @@ test("wizard live trace, stop, partial import and mobile review", async ({
   await confirm(page, "Модель или год отличаются");
   await expect(dialog).toContainText("Найдена часть комплектации");
   await expect(dialog.locator(".wizard-found")).toContainText("3 из 3");
+  // Details and photos come before the parts (#370).
+  await dialog.getByRole("button", { name: "Далее", exact: true }).click();
+  await dialog
+    .getByLabel("Категория велосипеда", { exact: true })
+    .selectOption("road_gravel");
   await dialog.getByRole("button", { name: "Далее", exact: true }).click();
   await expect(dialog.locator(".wizard-part")).toHaveCount(3);
   await expect(dialog.locator('input[value="Giant AluxX"]')).toBeVisible();
@@ -93,6 +98,7 @@ test("wizard live trace, stop, partial import and mobile review", async ({
     fullPage: true,
     animations: "disabled",
   });
+  await dialog.getByRole("button", { name: "Назад", exact: true }).click();
   await dialog.getByRole("button", { name: "Назад", exact: true }).click();
   await dialog
     .getByRole("button", {
@@ -123,13 +129,10 @@ test("wizard live trace, stop, partial import and mobile review", async ({
     .click();
   await settled;
   await expect(dialog).toContainText("Поиск остановлен");
-  // A stopped search has not ended: step 1 stays shut until it is run again.
+  // A stopped search found nothing: the way on is by hand (#370).
   await expect(
-    dialog.getByRole("button", { name: "Далее", exact: true }),
-  ).toBeDisabled();
-  await expect(dialog.locator("#wizard-gate")).toContainText(
-    "нажмите «Распознать страницу»",
-  );
+    dialog.getByRole("button", { name: "Продолжить вручную", exact: true }),
+  ).toBeEnabled();
 });
 test("wizard offers store variants for a brand without an adapter and imports only the chosen one", async ({
   page,
@@ -200,6 +203,12 @@ test("wizard offers store variants for a brand without an adapter and imports on
   ).toHaveAttribute("href", /tradeinn\.com\/bikeinn/);
   await expect(dialog).toContainText("Сверьте год и версию модели");
   await dialog.getByRole("button", { name: "Далее", exact: true }).click();
+  // The year is not in the page or the query: it is asked for on this step.
+  await dialog.getByLabel("Год", { exact: true }).fill("2024");
+  await dialog
+    .getByLabel("Категория велосипеда", { exact: true })
+    .selectOption("road_gravel");
+  await dialog.getByRole("button", { name: "Далее", exact: true }).click();
   expect(await dialog.locator(".wizard-part").count()).toBeGreaterThanOrEqual(
     15,
   );
@@ -257,9 +266,6 @@ test("wizard quick setup, identity confirmation, image size and successful save"
   await confirm(page, "Модель или год отличаются");
   await expect(dialog).toContainText("Найдена часть комплектации");
   expect(prompts).toEqual([]);
-  await dialog.getByRole("button", { name: "Далее", exact: true }).click();
-  await dialog.locator(".wizard-add-picker summary").click();
-  await expect(dialog.locator(".wizard-group-add button")).toHaveCount(7);
   await dialog.getByRole("button", { name: "Далее", exact: true }).click();
   await dialog
     .getByLabel("Категория велосипеда", { exact: true })
@@ -325,6 +331,10 @@ test("wizard quick setup, identity confirmation, image size and successful save"
     fullPage: true,
     animations: "disabled",
   });
+  // The parts come last, and the bike is saved from there.
+  await dialog.getByRole("button", { name: "Далее", exact: true }).click();
+  await dialog.locator(".wizard-add-picker summary").click();
+  await expect(dialog.locator(".wizard-group-add button")).toHaveCount(7);
   const beforeSave = prompts.length;
   await dialog
     .getByRole("button", { name: "Сохранить велосипед", exact: true })
