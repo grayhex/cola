@@ -452,7 +452,8 @@ test("OSM thumbnails with Yandex setting, bounded design headings, SVG themes an
     page.on("request", (r) => {
       if (r.url().includes("api-maps.yandex.ru")) sdk++;
     });
-    await page.goto("/rides");
+    // The catalogue opens on upcoming rides (#370); this one is recorded.
+    await page.goto("/rides?status=all");
     const osmCard = page
       .locator(".ride-card")
       .filter({ hasText: "OSM preview" });

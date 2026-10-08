@@ -3,9 +3,11 @@ import AxeBuilder from "@axe-core/playwright";
 import { randomUUID } from "node:crypto";
 import { registerVerified } from "../fixtures/verified-user.js";
 import { testConsents } from "../fixtures/legal.js";
-// #234: «Собрать компанию» — real, consenting interest as counts, a prefilled
-// planner that saves nothing by itself, then explicit invitations that the
-// server re-checks. Several riders, each in their own session.
+// #234, #370: «Подобрать время по интересам» in the planner (it was «Собрать
+// компанию») — real, consenting interest as counts, a form that takes the
+// chosen time and format but saves nothing by itself, then explicit
+// invitations that the server re-checks. Several riders, each in their own
+// session.
 const origin = process.env.TEST_ORIGIN || "http://localhost:3100";
 const date = (offset) =>
   new Date(Date.now() + offset * 86400000).toISOString().slice(0, 10);
@@ -52,10 +54,9 @@ async function intent(request, o = {}) {
   return (await r.json()).intent;
 }
 
-test("organizer sees consenting interest, proposes a ride and invites explicitly", async ({
+test("planner shows consenting interest, takes a time from it and invites explicitly", async ({
   page,
   browser,
-  isMobile,
 }, info) => {
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
@@ -95,31 +96,46 @@ test("organizer sees consenting interest, proposes a ride and invites explicitly
     expect(bike.status()).toBe(201);
     // The organizer's own intent is not their own audience.
     await intent(page.request);
+    // One planning action: the finder is a step of the planner.
     await page.goto("/rides");
     await page
-      .getByRole("button", { name: "Собрать компанию", exact: true })
+      .getByRole("link", { name: "Запланировать покатушку", exact: true })
       .click();
-    await expect(page).toHaveURL(/mode=organize/);
-    const filters = page.getByRole("region", {
+    const planner = page.getByRole("dialog", {
+      name: "Организовать покатушку",
+    });
+    await expect(planner.getByLabel("Дата", { exact: true })).toBeVisible();
+    // Folded by default: no request for interest until it is opened.
+    await expect(planner.getByLabel("Группы интереса")).toHaveCount(0);
+    await planner.getByText("Подобрать время по интересам людей").click();
+    const filters = planner.getByRole("region", {
       name: "Условия поиска компании",
     });
     await filters.getByLabel("Район или парк").fill(park);
-    const groups = page.getByLabel("Группы интереса");
+    const groups = planner.getByLabel("Группы интереса");
     const row = groups.getByRole("article").first();
     await expect(row).toContainText("2 человека");
     await expect(row).toContainText("Готовы: 1");
     await expect(row).toContainText("Прикидывают: 1");
     // Counts only: no names, notes or windows of the people in a group.
     for (const r of riders)
-      await expect(page.getByText(r.user.name)).toHaveCount(0);
+      await expect(planner.getByText(r.user.name)).toHaveCount(0);
     // A format filter narrows the interest; a conflicting one leaves nothing.
     await filters.getByLabel("Цель").selectOption("training");
     await expect(
-      page.getByText("Под эти условия пока нет общего времени"),
+      planner.getByText("Под эти условия пока нет общего времени"),
     ).toBeVisible();
     await filters.getByLabel("Цель").selectOption("social");
     await expect(row).toContainText("2 человека");
-    await expect(page).toHaveURL(/purpose=social/);
+    // Folding the section keeps the choices: the next opening finds them as
+    // they were left, not reset to the defaults.
+    const toggle = planner.getByText("Подобрать время по интересам людей");
+    await toggle.click();
+    await expect(planner.getByLabel("Группы интереса")).toHaveCount(0);
+    await toggle.click();
+    await expect(filters.getByLabel("Район или парк")).toHaveValue(park);
+    await expect(filters.getByLabel("Цель")).toHaveValue("social");
+    await expect(row).toContainText("2 человека");
     for (const [theme, system] of [
       ["light", "light"],
       ["dark", "light"],
@@ -134,7 +150,8 @@ test("organizer sees consenting interest, proposes a ride and invites explicitly
         document.getAnimations().every((a) => a.playState !== "running"),
       );
       expect(
-        (await new AxeBuilder({ page }).include("main").analyze()).violations,
+        (await new AxeBuilder({ page }).include("dialog.planning").analyze())
+          .violations,
       ).toEqual([]);
       expect(
         await page.evaluate(
@@ -147,9 +164,11 @@ test("organizer sees consenting interest, proposes a ride and invites explicitly
         animations: "disabled",
       });
     }
-    // «Предложить покатушку»: the planner opens prefilled, nothing is saved yet.
-    await row.getByRole("button", { name: /^Предложить покатушку/ }).click();
-    const planner = page.getByRole("dialog", { name: "Предложить покатушку" });
+    // «Выбрать это время»: the finder folds, the form takes the group's time
+    // and format, nothing is saved yet.
+    await row.getByRole("button", { name: /^Выбрать время/ }).click();
+    await expect(planner.getByLabel("Группы интереса")).toHaveCount(0);
+    await expect(planner.getByText("Время и формат взяты")).toBeVisible();
     await expect(planner.getByLabel("Дата", { exact: true })).toHaveValue(day);
     await expect(planner.getByLabel("Старт", { exact: true })).toHaveValue(
       "10:00",
@@ -228,7 +247,7 @@ test("organizer sees consenting interest, proposes a ride and invites explicitly
     await invite.getByRole("button", { name: "Готово", exact: true }).click();
     await expect(invite).toHaveCount(0);
     await expect(
-      page.getByRole("status").filter({ hasText: "Покатушка создана" }),
+      page.getByRole("status").filter({ hasText: "Покатушка запланирована" }),
     ).toBeVisible();
     // Anna is invited and notified; no RSVP was made for her.
     const own = await detail();
@@ -243,18 +262,19 @@ test("organizer sees consenting interest, proposes a ride and invites explicitly
       await anna.context.request.get("/api/ride-matches/upcoming")
     ).json();
     expect(upcoming.rides.find((r) => r.id === own.id)?.role).toBe("invited");
-    if (!isMobile) {
-      // Keyboard: the tabs and the proposal button are reachable.
-      await page.goto("/rides?mode=organize&duration=short&purpose=social");
-      await expect(
-        page.getByRole("button", { name: "Собрать компанию", exact: true }),
-      ).toHaveAttribute("aria-pressed", "true");
-      await expect(
-        page
-          .getByRole("region", { name: "Условия поиска компании" })
-          .getByLabel("Цель"),
-      ).toHaveValue("social");
-    }
+    // An old «Собрать компанию» link opens the planner with the same choices.
+    await page.goto("/rides?mode=organize&duration=short&purpose=social");
+    await expect(page).toHaveURL(/\/account\?tab=rides&action=plan&interest=1/);
+    const old = page.getByRole("dialog", { name: "Организовать покатушку" });
+    await expect(
+      old
+        .getByRole("region", { name: "Условия поиска компании" })
+        .getByLabel("Цель"),
+    ).toHaveValue("social");
+    // Closing the planner leaves a clean address.
+    await old.getByRole("button", { name: "Закрыть", exact: true }).click();
+    await expect(old).toHaveCount(0);
+    expect(new URL(page.url()).search).toBe("?tab=rides");
     expect(errors).toEqual([]);
   } finally {
     for (const r of riders) await r.context.close();
@@ -263,6 +283,23 @@ test("organizer sees consenting interest, proposes a ride and invites explicitly
 
 test("empty demand, an unavailable API and guests", async ({ page }) => {
   await member(page.request, "Одинокий организатор");
+  // The finder is a step of the planner, which needs a bike to plan with.
+  const bike = await page.request.post("/api/bikes", {
+    headers: { origin },
+    data: {
+      name: "Lonely bike",
+      brand: "Trek",
+      model: "Checkpoint",
+      year: 2024,
+      category: "gravel",
+      description: "",
+      color: "",
+      size: "",
+      weight: null,
+      is_public: true,
+    },
+  });
+  expect(bike.status()).toBe(201);
   let failed = 0;
   await page.route("**/api/ride-matches/groups?**", (r) => {
     failed++;
@@ -273,7 +310,8 @@ test("empty demand, an unavailable API and guests", async ({ page }) => {
   });
   // No one wants an adventure in this run: an honest empty state.
   await page.goto("/rides?mode=organize&purpose=adventure");
-  await expect(page.locator("main").getByRole("alert")).toContainText(
+  const planner = page.getByRole("dialog", { name: "Организовать покатушку" });
+  await expect(planner.getByRole("alert")).toContainText(
     "Сервис подбора недоступен",
   );
   // One request per choice: the filter pause must not send the same one
@@ -282,25 +320,26 @@ test("empty demand, an unavailable API and guests", async ({ page }) => {
   await page.waitForTimeout(600);
   expect(failed).toBe(1);
   await page.unroute("**/api/ride-matches/groups?**");
-  await page.getByRole("button", { name: "Повторить", exact: true }).click();
+  await planner.getByRole("button", { name: "Повторить", exact: true }).click();
   await expect(
-    page.getByText("Под эти условия пока нет общего времени"),
+    planner.getByText("Под эти условия пока нет общего времени"),
   ).toBeVisible();
   await expect(
-    page.getByRole("link", { name: "Отметить, когда хочется кататься" }),
+    planner.getByRole("link", { name: "Отметить, когда хочется кататься" }),
   ).toHaveAttribute("href", "/ride-intents");
-  // Guests: no tab, and a direct link asks to sign in without any request.
+  // With no interest the form is still there to be filled by hand.
+  await expect(planner.getByLabel("Дата", { exact: true })).toBeVisible();
+  // Guests: an old link asks to sign in without any request for interest.
   await page.request.post("/api/auth/logout", { headers: { origin } });
   const calls = [];
   page.on("request", (r) => {
     if (r.url().includes("/api/ride-matches")) calls.push(r.url());
   });
   await page.goto("/rides?mode=organize");
-  await expect(
-    page.getByRole("button", { name: "Собрать компанию", exact: true }),
-  ).toHaveCount(0);
-  await expect(
-    page.getByRole("link", { name: "войдите в аккаунт" }),
-  ).toBeVisible();
+  // The account page asks to sign in in place and keeps the planner request,
+  // so signing in lands in the same planner.
+  await expect(page).toHaveURL(/\/account\?tab=rides&action=plan&interest=1/);
+  await expect(page.getByLabel("Пароль").first()).toBeVisible();
+  await expect(page.getByText("Собрать компанию")).toHaveCount(0);
   expect(calls).toEqual([]);
 });

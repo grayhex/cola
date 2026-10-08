@@ -72,25 +72,21 @@ function initialPlan(
   ride: RideDto | null,
   currentBikes: AccountBikeDto[],
   zone: string,
-  draft: PlanDraft | null,
 ): PlanFormDraft {
   if (!ride) {
-    // A proposal from a group of interest (#234) brings a start and the
-    // group's format; the organizer still fixes everything before saving.
-    const [date, time] = splitLocal(draft?.startAt, zone);
     return {
       bikeId: currentBikes.length === 1 ? currentBikes[0].id : "",
       title: "",
       description: "",
       isPublic: true,
-      date,
-      time,
+      date: "",
+      time: "",
       endTime: "",
-      startFold: foldOf(draft?.startAt, zone),
+      startFold: undefined,
       endFold: undefined,
       meetingPoint: "",
       meetingVisibility: "participants",
-      passport: draft?.passport || {},
+      passport: {},
       invitations: "",
       recurrence: "none",
       features: "",
@@ -197,7 +193,7 @@ function FoldChoice({
 
 export default function PlanForm({
   ride = null,
-  draft = null,
+  suggestion = null,
   bikes,
   config,
   onSaved,
@@ -205,7 +201,10 @@ export default function PlanForm({
   onDirty,
 }: {
   ride?: RideDto | null;
-  draft?: PlanDraft | null;
+  // A group chosen in «Подобрать время по интересам» (#370): its start and
+  // format replace the form's, the rest of what was typed stays. `id` tells a
+  // second choice of the same group from the first.
+  suggestion?: { id: number; draft: PlanDraft } | null;
   bikes: AccountBikeDto[];
   config: RideConfig;
   onSaved: RideSaveHandler;
@@ -220,9 +219,7 @@ export default function PlanForm({
       : userTimeZone(personalSettings);
   const currentBikes = useMemo(() => selectableRideBikes(bikes), [bikes]);
   const rideBikes = selectableRideBikes(bikes, ride?.bike?.id);
-  const [form, setForm] = useState(() =>
-      initialPlan(ride, currentBikes, zone, draft),
-    ),
+  const [form, setForm] = useState(() => initialPlan(ride, currentBikes, zone)),
     [initial] = useState(form),
     [preview, setPreview] = useState<RidePreview | null>(null),
     [busy, setBusy] = useState(false),
@@ -230,11 +227,32 @@ export default function PlanForm({
     [whenError, setWhenError] = useState(""),
     [bikeError, setBikeError] = useState(""),
     // Rare fields stay folded (#264); a missing bike opens them on submit.
-    [advanced, setAdvanced] = useState(false);
+    [advanced, setAdvanced] = useState(false),
+    [suggested, setSuggested] = useState(false);
   const bikeSelect = useRef<HTMLSelectElement | null>(null);
   const reveal = useMotionFeedback(advanced, { reveal: true });
   const dirty = !!preview || JSON.stringify(form) !== JSON.stringify(initial);
   useEffect(() => onDirty?.(dirty), [dirty, onDirty]);
+  const taken = useRef(0);
+  useEffect(() => {
+    if (ride || !suggestion || taken.current === suggestion.id) return;
+    taken.current = suggestion.id;
+    const startAt = suggestion.draft.startAt;
+    const [date, time] = splitLocal(startAt, zone);
+    // The group's area replaces the whole object: a centre left from an
+    // earlier choice would describe another place under the new label.
+    setForm((f) => ({
+      ...f,
+      date,
+      time,
+      endTime: "",
+      startFold: foldOf(startAt, zone),
+      endFold: undefined,
+      passport: { ...f.passport, ...suggestion.draft.passport },
+    }));
+    setSuggested(true);
+  }, [suggestion, ride, zone]);
+  const fromInterest = !ride && suggested;
   const set = <K extends keyof PlanFormDraft>(
     key: K,
     value: PlanFormDraft[K],
@@ -324,7 +342,7 @@ export default function PlanForm({
           .map((s) => s.replace(/^@/, ""))
           .filter(Boolean),
         ...(!ride && preview ? { previewId: preview.previewId } : {}),
-        ...(!ride && draft?.fromInterest ? { fromInterest: true } : {}),
+        ...(fromInterest ? { fromInterest: true } : {}),
       };
       const saved = await socialApi<RideSaved>(
         ride ? "rides/" + ride.id : "rides/plan",
@@ -337,6 +355,7 @@ export default function PlanForm({
           id: saved.id,
           shareId: saved.shareId,
           occurrenceAt: times.scheduledAt,
+          ...(fromInterest ? { fromInterest: true } : {}),
         });
     } catch (err) {
       setError(errorMessage(err));
@@ -369,6 +388,12 @@ export default function PlanForm({
   return (
     <form className="plan-form" onSubmit={submit}>
       <div className="planning-body">
+        {fromInterest && (
+          <p className="planning-lead" role="status">
+            Время и формат взяты из интереса людей. После публикации вы сами
+            выберете, кого пригласить.
+          </p>
+        )}
         <fieldset className="planning-section half" disabled={busy}>
           <legend>
             <span className="step" aria-hidden="true">

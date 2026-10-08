@@ -1302,6 +1302,24 @@
   .planning-advanced > .planning-body {
     padding: var(--space-4) 0 0;
   }
+  /* «Подобрать время по интересам» above the plan form (#370): folded by
+     default, the form below stays the one place that saves. */
+  .planning-interest {
+    margin: 0;
+    padding: 0 var(--space-6);
+    border-bottom: 1px solid var(--line);
+  }
+  .planning-interest > summary {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+    cursor: pointer;
+  }
+  .planning-interest[open] {
+    padding-bottom: var(--space-4);
+  }
   .planning-actions {
     position: sticky;
     bottom: 0;
@@ -1349,6 +1367,9 @@
     dialog.planning > .modal-head,
     .planning-body,
     .planning-actions {
+      padding-inline: var(--space-4);
+    }
+    .planning-interest {
       padding-inline: var(--space-4);
     }
     .planning-actions > .button {

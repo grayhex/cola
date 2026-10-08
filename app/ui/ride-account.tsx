@@ -12,6 +12,10 @@ import RideForm from "./ride-form.tsx";
 import PlanComposer from "./plan-composer.tsx";
 import { socialApi, Pagination } from "./social-primitives.tsx";
 import RideCard from "./ride-card.tsx";
+import { readOrganize } from "../../lib/organize-filters.ts";
+
+// The finder's own choices in the address (old «Собрать компанию» links).
+const finderKeys = ["when", "duration", "purpose", "pace", "surface", "area"];
 
 // «Мои покатушки» (#245): the rider's own planned and completed rides and
 // their management. Track files, Garmin CSV and Ride with GPS live under
@@ -23,6 +27,9 @@ export default function RideAccount({ bikes }: { bikes: AccountBikeDto[] }) {
     [status, setStatus] = useState(""),
     [editing, setEditing] = useState<RideDto | null>(null),
     [planning, setPlanning] = useState(false),
+    // Filters of the finder «Подобрать время по интересам» when the planner
+    // opens from an old «Собрать компанию» link (#370).
+    [interest, setInterest] = useState<Record<string, string> | null>(null),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
@@ -81,13 +88,16 @@ export default function RideAccount({ bikes }: { bikes: AccountBikeDto[] }) {
   useEffect(() => {
     if (action !== "plan" || handled.current === action) return;
     handled.current = action;
+    if (params.get("interest") === "1") setInterest(readOrganize(params));
     setPlanning(true);
-  }, [action]);
+  }, [action, params]);
   function closePlanner() {
     setPlanning(false);
+    setInterest(null);
     handled.current = null;
     const url = new URL(location.href);
-    url.searchParams.delete("action");
+    for (const key of ["action", "interest", ...finderKeys])
+      url.searchParams.delete(key);
     window.history.replaceState(null, "", url);
   }
   const opened = useRef<string | null>(null);
@@ -268,6 +278,7 @@ export default function RideAccount({ bikes }: { bikes: AccountBikeDto[] }) {
       )}
       {planning && (
         <PlanComposer
+          interest={interest}
           onClose={closePlanner}
           onSaved={async () => {
             closePlanner();

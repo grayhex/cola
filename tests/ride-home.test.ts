@@ -11,6 +11,10 @@ import {
   durationBuckets,
   presetRange,
   readFilters,
+  readRideStatus,
+  rideStatusQuery,
+  rideStatuses,
+  defaultRideStatus,
   apiFilters,
   filterLabels,
 } from "../lib/ride-filters.ts";
@@ -101,6 +105,33 @@ type PlanFilter = NonNullable<
 const H = 3600000;
 const base = Date.now() + 48 * H;
 const soon = (hours: number) => new Date(base + hours * H).toISOString();
+
+test("catalogue status (#370): upcoming by default, «Все» and «Прошедшие» are values of their own", () => {
+  const read = (query: string) => readRideStatus(new URLSearchParams(query));
+  // A clean address and the old "no status" form open the default tab.
+  assert.equal(defaultRideStatus, "planned");
+  assert.equal(read(""), "planned");
+  assert.equal(read("bikeId=1"), "planned");
+  // Deliberate choices are read back as they were written.
+  assert.equal(read("status=planned"), "planned");
+  assert.equal(read("status=completed"), "completed");
+  assert.equal(read("status=all"), "all");
+  // Anything else is not a tab: empty, unknown, other case, inherited names.
+  for (const odd of [
+    "",
+    "everything",
+    "ALL",
+    "Planned",
+    "constructor",
+    "toString",
+  ])
+    assert.equal(read("status=" + odd), "planned", odd);
+  assert.deepEqual(Object.keys(rideStatuses), ["planned", "completed", "all"]);
+  // «Все» sends no `status` to the API; the others send themselves.
+  assert.equal(rideStatusQuery("all"), null);
+  assert.equal(rideStatusQuery("planned"), "planned");
+  assert.equal(rideStatusQuery("completed"), "completed");
+});
 
 test("upcoming rides: organizer, accepted, maybe, pending invitation, cancellations and access", async () => {
   const db = await migrated();

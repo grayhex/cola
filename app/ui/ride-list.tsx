@@ -48,6 +48,7 @@ export default function RideList({
   filters = null,
   restoreKey = "",
   onReset,
+  onShowAll,
   preview = false,
   compact = false,
   onTotal,
@@ -59,6 +60,9 @@ export default function RideList({
   filters?: Record<string, string> | null;
   restoreKey?: string;
   onReset?: () => void;
+  // The catalogue opens on upcoming rides (#370): when none are left, a way
+  // to the whole list.
+  onShowAll?: () => void;
   preview?: boolean;
   // The bike page's row of small cards under a panel heading (#291).
   compact?: boolean;
@@ -260,6 +264,15 @@ export default function RideList({
                 {onReset && (
                   <button className="button secondary small" onClick={onReset}>
                     Сбросить фильтры
+                  </button>
+                )}
+                {onShowAll && !onReset && (
+                  <button
+                    type="button"
+                    className="button secondary small"
+                    onClick={onShowAll}
+                  >
+                    Показать все покатушки
                   </button>
                 )}
                 <Link className="button secondary small" href="/ride-intents">
