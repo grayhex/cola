@@ -36,16 +36,18 @@ import {
   X,
 } from "../ui/icons.tsx";
 import AssetPicker from "./asset-picker.tsx";
-import { SectionTabs, Select } from "./design-controls.tsx";
+import { Select } from "./design-controls.tsx";
 import styles from "./mobile-settings.module.css";
 
 // The «Мобильное приложение» section (#338): what the Android app may change
 // without a new build. Saving publishes at once; GET /api/v1/app-config is
 // the public answer. Kept mounted, so a draft survives switching sections.
 
-type Tab =
+// The sections are items of the admin menu itself (#366); the editor shows the
+// one it is given.
+export type MobileSection =
   "launch" | "onboarding" | "notice" | "links" | "features" | "versions";
-const tabs = [
+export const mobileSections = [
   ["launch", "Экран запуска"],
   ["onboarding", "Знакомство"],
   ["notice", "Сообщение"],
@@ -53,6 +55,7 @@ const tabs = [
   ["features", "Функции"],
   ["versions", "Версии"],
 ] as const;
+type Tab = MobileSection;
 const tabOf = (path: string): Tab =>
   path.startsWith("launch")
     ? "launch"
@@ -65,6 +68,13 @@ const tabOf = (path: string): Tab =>
           : path.startsWith("compatibility")
             ? "versions"
             : "links";
+// The section that holds a block of the settings.
+const sectionOfBlock = (block: string): Tab =>
+  block === "externalHosts"
+    ? "links"
+    : block === "compatibility"
+      ? "versions"
+      : (block as Tab);
 const blockNames: Record<string, string> = {
   launch: "экран запуска",
   onboarding: "знакомство",
@@ -358,22 +368,26 @@ function Preview({
 
 export default function MobileSettingsEditor({
   active,
+  section: tab,
+  onSection,
   assets,
   onUpload,
   onSaved,
   onDirtyChange,
 }: {
   active: boolean;
+  section: MobileSection;
+  // Asked to show another section: a mistake lives there.
+  onSection: (section: MobileSection) => void;
   assets: AssetLibraryDto;
   onUpload: AssetUpload;
   onSaved?: () => Promise<unknown>;
-  onDirtyChange?: (dirty: boolean) => void;
+  onDirtyChange?: (sections: MobileSection[]) => void;
 }) {
   const [ask, confirmation] = useConfirmation();
   const [data, setData] = useState<AdminMobileDto | null>(null),
     [draft, setDraft] = useState<MobileSettings | null>(null);
-  const [tab, setTab] = useState<Tab>("launch"),
-    [card, setCard] = useState(0);
+  const [card, setCard] = useState(0);
   const [keys, setKeys] = useState<string[]>([]);
   const [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
@@ -414,9 +428,11 @@ export default function MobileSettingsEditor({
       alive.current = false;
     };
   }, []);
+  // The sections that hold unsaved changes, for the dots of the menu.
+  const dirtySections = [...new Set(changed.map(sectionOfBlock))].join();
   useEffect(() => {
-    onDirtyChange?.(dirty);
-  }, [dirty, onDirtyChange]);
+    onDirtyChange?.(dirtySections ? (dirtySections.split(",") as Tab[]) : []);
+  }, [dirtySections, onDirtyChange]);
   useEffect(() => {
     const warn = (event: BeforeUnloadEvent) => {
       if (dirty) {
@@ -577,7 +593,7 @@ export default function MobileSettingsEditor({
       setError(
         "Исправьте поля: " + [...new Set(result.problems.values())].join("; "),
       );
-      setTab(tabOf([...result.problems.keys()][0]));
+      onSection(tabOf([...result.problems.keys()][0]));
       return;
     }
     const confirm: Partial<Record<MobileConfirmation, boolean>> = {};
@@ -622,6 +638,7 @@ export default function MobileSettingsEditor({
           setServerProblems(
             new Map((saved.problems ?? []).map((p) => [p.path, p.message])),
           );
+          if (saved.problems?.length) onSection(tabOf(saved.problems[0].path));
           throw new Error(
             saved.error || "Не удалось сохранить настройки приложения.",
           );
@@ -647,6 +664,7 @@ export default function MobileSettingsEditor({
 
   const { published } = settings;
   const updated = new Date(settings.updatedAt).toLocaleString("ru-RU");
+  const current = tab;
   const showPreview = ["launch", "onboarding", "notice"].includes(tab);
   const customFeatures = Object.keys(value.features).filter(
     (key) => !knownFeatures.has(key),
@@ -692,668 +710,640 @@ export default function MobileSettingsEditor({
           {notice}
         </p>
       )}
-      <SectionTabs
-        label="Настройки приложения"
-        items={tabs}
-        value={tab}
-        onChange={setTab}
-      >
-        {(current) => (
-          <div className={styles.layout} data-preview={showPreview}>
-            <div className={styles.form}>
-              {current === "launch" && (
-                <>
-                  <p className="notice" data-tone="info">
-                    Это не системный Android SplashScreen: его и иконку задаёт
-                    APK. Здесь — короткий экран ColaBike после него, пока
-                    приложение готовится. Без сохранённой картинки приложение
-                    сразу открывает главный экран.
-                  </p>
-                  <Published>
-                    {published.launch.enabled && published.launch.imageUrl ? (
-                      <>
-                        <img
-                          src={published.launch.imageUrl + "?width=160"}
-                          alt=""
-                        />
-                        показывается
-                        {!value.launch.assetId
-                          ? " · в черновике изображение снято"
-                          : published.launch.imageUrl !==
-                              "/api/assets/" + value.launch.assetId
-                            ? " · в черновике другое изображение"
-                            : ""}
-                      </>
-                    ) : (
-                      "выключен"
-                    )}
-                  </Published>
-                  <Switch
-                    label="Показывать экран запуска"
-                    checked={value.launch.enabled}
-                    onChange={(enabled) => setLaunch({ enabled })}
-                  />
-                  <AssetPicker
-                    label="Изображение экрана запуска"
-                    help="PNG, JPEG или WebP, вертикальное, от 1080×1920 px. Файл публичный."
-                    value={value.launch.assetId}
-                    assets={choices}
-                    emptyLabel="Не выбрано"
-                    busy={busy}
-                    recommendedSize={{ width: 1080, height: 1920 }}
-                    onChange={(assetId) => setLaunch({ assetId })}
-                    onUpload={(file) =>
-                      upload(file, (assetId) => setLaunch({ assetId }))
-                    }
-                  />
-                  {problem("launch.assetId") && (
-                    <p className="field-error" role="alert">
-                      {problem("launch.assetId")}
-                    </p>
-                  )}
-                  <Select
-                    label="Как показывать изображение"
-                    value={value.launch.contentMode}
-                    options={[
-                      ["crop", "Заполнить экран, обрезав края"],
-                      ["fit", "Вписать целиком"],
-                    ]}
-                    onChange={(contentMode) => setLaunch({ contentMode })}
-                  />
-                  <TextField
-                    label="Подпись"
-                    help="Необязательно, до 80 символов."
-                    error={problem("launch.title")}
-                    value={value.launch.title ?? ""}
-                    maxLength={80}
-                    onChange={(title) => setLaunch({ title: title || null })}
-                  />
-                  <TextField
-                    label="Название для админки"
-                    help="Видно только здесь, например «Осенняя кампания»."
-                    error={problem("launch.name")}
-                    value={value.launch.name ?? ""}
-                    maxLength={150}
-                    onChange={(name) => setLaunch({ name: name || null })}
-                  />
-                </>
+      <div className={styles.layout} data-preview={showPreview}>
+        <div className={styles.form}>
+          {current === "launch" && (
+            <>
+              <p className="notice" data-tone="info">
+                Это не системный Android SplashScreen: его и иконку задаёт APK.
+                Здесь — короткий экран ColaBike после него, пока приложение
+                готовится. Без сохранённой картинки приложение сразу открывает
+                главный экран.
+              </p>
+              <Published>
+                {published.launch.enabled && published.launch.imageUrl ? (
+                  <>
+                    <img
+                      src={published.launch.imageUrl + "?width=160"}
+                      alt=""
+                    />
+                    показывается
+                    {!value.launch.assetId
+                      ? " · в черновике изображение снято"
+                      : published.launch.imageUrl !==
+                          "/api/assets/" + value.launch.assetId
+                        ? " · в черновике другое изображение"
+                        : ""}
+                  </>
+                ) : (
+                  "выключен"
+                )}
+              </Published>
+              <Switch
+                label="Показывать экран запуска"
+                checked={value.launch.enabled}
+                onChange={(enabled) => setLaunch({ enabled })}
+              />
+              <AssetPicker
+                label="Изображение экрана запуска"
+                help="PNG, JPEG или WebP, вертикальное, от 1080×1920 px. Файл публичный."
+                value={value.launch.assetId}
+                assets={choices}
+                emptyLabel="Не выбрано"
+                busy={busy}
+                recommendedSize={{ width: 1080, height: 1920 }}
+                onChange={(assetId) => setLaunch({ assetId })}
+                onUpload={(file) =>
+                  upload(file, (assetId) => setLaunch({ assetId }))
+                }
+              />
+              {problem("launch.assetId") && (
+                <p className="field-error" role="alert">
+                  {problem("launch.assetId")}
+                </p>
               )}
-              {current === "onboarding" && (
-                <>
-                  <Published>
-                    {published.onboarding.enabled
-                      ? `${cards(published.onboarding.items.length)} · редакция ${published.onboarding.revision}`
-                      : "выключено"}
-                  </Published>
-                  <Switch
-                    label="Показывать знакомство"
-                    help="Приложение показывает каждую редакцию один раз, до входа в аккаунт тоже."
-                    checked={value.onboarding.enabled}
-                    onChange={(enabled) =>
-                      edit((d) => ({
-                        ...d,
-                        onboarding: { ...d.onboarding, enabled },
-                      }))
-                    }
-                  />
-                  {problem("onboarding.items") && (
-                    <p className="field-error" role="alert">
-                      {problem("onboarding.items")}
-                    </p>
-                  )}
-                  <ol className={styles.cards}>
-                    {items.map((item, index) => (
-                      <li
-                        key={keys[index] ?? index}
-                        className={styles.card}
-                        data-active={index === card}
-                        onFocusCapture={() => setCard(index)}
-                      >
-                        <div className={styles.cardHead}>
-                          <h3>Карточка {index + 1}</h3>
-                          <div className={styles.cardActions}>
-                            <button
-                              type="button"
-                              className="icon"
-                              id={`${editorId}-${keys[index]}-up`}
-                              disabled={busy || index === 0}
-                              aria-label={`Карточка ${index + 1}: выше`}
-                              onClick={() => moveItem(index, -1)}
-                            >
-                              <ArrowUp size={16} />
-                            </button>
-                            <button
-                              type="button"
-                              className="icon"
-                              id={`${editorId}-${keys[index]}-down`}
-                              disabled={busy || index === items.length - 1}
-                              aria-label={`Карточка ${index + 1}: ниже`}
-                              onClick={() => moveItem(index, 1)}
-                            >
-                              <ArrowDown size={16} />
-                            </button>
-                            <button
-                              type="button"
-                              className="icon danger"
-                              disabled={busy}
-                              aria-label={`Удалить карточку ${index + 1}`}
-                              onClick={() => {
-                                setItems(
-                                  items.filter((_, i) => i !== index),
-                                  keys.filter((_, i) => i !== index),
-                                );
-                                setCard(Math.max(0, index - 1));
-                              }}
-                            >
-                              <Trash2 size={16} />
-                            </button>
-                          </div>
-                        </div>
-                        <TextField
-                          label="Заголовок"
-                          error={problem(`onboarding.items.${index}.title`)}
-                          value={item.title}
-                          maxLength={80}
-                          onChange={(title) =>
-                            setItems(
-                              items.map((it, i) =>
-                                i === index ? { ...it, title } : it,
-                              ),
-                              keys,
-                            )
-                          }
-                        />
-                        <TextField
-                          label="Текст"
-                          help="Обычный текст без разметки, до 400 символов."
-                          error={problem(`onboarding.items.${index}.body`)}
-                          value={item.body ?? ""}
-                          maxLength={400}
-                          multiline
-                          onChange={(body) =>
-                            setItems(
-                              items.map((it, i) =>
-                                i === index
-                                  ? { ...it, body: body || null }
-                                  : it,
-                              ),
-                              keys,
-                            )
-                          }
-                        />
-                        <AssetPicker
-                          label={`Изображение карточки ${index + 1}`}
-                          help="Необязательно. PNG, JPEG или WebP."
-                          value={item.assetId}
-                          assets={choices}
-                          emptyLabel="Без изображения"
-                          busy={busy}
-                          compact
-                          onChange={(assetId) =>
-                            setItems(
-                              items.map((it, i) =>
-                                i === index ? { ...it, assetId } : it,
-                              ),
-                              keys,
-                            )
-                          }
-                          onUpload={(file) =>
-                            upload(file, (assetId) =>
-                              edit((d) => ({
-                                ...d,
-                                onboarding: {
-                                  ...d.onboarding,
-                                  items: d.onboarding.items.map((it, i) =>
-                                    i === index ? { ...it, assetId } : it,
-                                  ),
-                                },
-                              })),
-                            )
-                          }
-                        />
-                      </li>
-                    ))}
-                  </ol>
-                  <button
-                    type="button"
-                    className="button secondary"
-                    disabled={
-                      busy || items.length >= MOBILE_LIMITS.onboardingItems
-                    }
-                    onClick={() => {
-                      setItems(
-                        [...items, { title: "", body: null, assetId: null }],
-                        [...keys, "card-" + ++counter.current],
-                      );
-                      setCard(items.length);
-                    }}
+              <Select
+                label="Как показывать изображение"
+                value={value.launch.contentMode}
+                options={[
+                  ["crop", "Заполнить экран, обрезав края"],
+                  ["fit", "Вписать целиком"],
+                ]}
+                onChange={(contentMode) => setLaunch({ contentMode })}
+              />
+              <TextField
+                label="Подпись"
+                help="Необязательно, до 80 символов."
+                error={problem("launch.title")}
+                value={value.launch.title ?? ""}
+                maxLength={80}
+                onChange={(title) => setLaunch({ title: title || null })}
+              />
+              <TextField
+                label="Название для админки"
+                help="Видно только здесь, например «Осенняя кампания»."
+                error={problem("launch.name")}
+                value={value.launch.name ?? ""}
+                maxLength={150}
+                onChange={(name) => setLaunch({ name: name || null })}
+              />
+            </>
+          )}
+          {current === "onboarding" && (
+            <>
+              <Published>
+                {published.onboarding.enabled
+                  ? `${cards(published.onboarding.items.length)} · редакция ${published.onboarding.revision}`
+                  : "выключено"}
+              </Published>
+              <Switch
+                label="Показывать знакомство"
+                help="Приложение показывает каждую редакцию один раз, до входа в аккаунт тоже."
+                checked={value.onboarding.enabled}
+                onChange={(enabled) =>
+                  edit((d) => ({
+                    ...d,
+                    onboarding: { ...d.onboarding, enabled },
+                  }))
+                }
+              />
+              {problem("onboarding.items") && (
+                <p className="field-error" role="alert">
+                  {problem("onboarding.items")}
+                </p>
+              )}
+              <ol className={styles.cards}>
+                {items.map((item, index) => (
+                  <li
+                    key={keys[index] ?? index}
+                    className={styles.card}
+                    data-active={index === card}
+                    onFocusCapture={() => setCard(index)}
                   >
-                    <Plus size={16} />
-                    Добавить карточку
-                  </button>
-                  <p className="help">
-                    До {MOBILE_LIMITS.onboardingItems} карточек. Порядок здесь —
-                    порядок в приложении.
-                  </p>
-                  {blocks.onboarding && (
-                    <Switch
-                      label="Показать снова тем, кто уже прошёл знакомство"
-                      help="Выключите для мелкой правки: редакция останется прежней."
-                      checked={reshow.onboarding}
-                      onChange={(on) =>
-                        setReshow((r) => ({ ...r, onboarding: on }))
-                      }
-                    />
-                  )}
-                </>
-              )}
-              {current === "notice" && (
-                <>
-                  <Published>
-                    {published.notice
-                      ? `«${published.notice.title}» · ${kindLabels[published.notice.kind]} · редакция ${published.notice.revision}`
-                      : "нет сообщения"}
-                  </Published>
-                  <Switch
-                    label="Показывать сообщение"
-                    checked={value.notice.enabled}
-                    onChange={(enabled) => setNoticeBlock({ enabled })}
-                  />
-                  <Select
-                    label="Тип"
-                    value={value.notice.kind}
-                    options={[
-                      ["promo", "Обычное: новости и акции"],
-                      ["service", "Служебное: заметнее обычного"],
-                      ["maintenance", "Технические работы: самое заметное"],
-                    ]}
-                    onChange={(kind) => setNoticeBlock({ kind })}
-                  />
-                  {value.notice.kind === "maintenance" && (
-                    <p className="notice" data-tone="warning">
-                      Сообщение о работах только информирует и ничего не
-                      блокирует. Перед публикацией попросим подтвердить.
-                    </p>
-                  )}
-                  <TextField
-                    label="Заголовок"
-                    error={problem("notice.title")}
-                    value={value.notice.title}
-                    maxLength={80}
-                    onChange={(title) => setNoticeBlock({ title })}
-                  />
-                  <TextField
-                    label="Текст"
-                    help="Обычный текст, до 500 символов."
-                    error={problem("notice.body")}
-                    value={value.notice.body ?? ""}
-                    maxLength={500}
-                    multiline
-                    onChange={(body) => setNoticeBlock({ body: body || null })}
-                  />
-                  <AssetPicker
-                    label="Изображение сообщения"
-                    help="Необязательно. PNG, JPEG или WebP."
-                    value={value.notice.assetId}
-                    assets={choices}
-                    emptyLabel="Без изображения"
-                    busy={busy}
-                    compact
-                    onChange={(assetId) => setNoticeBlock({ assetId })}
-                    onUpload={(file) =>
-                      upload(file, (assetId) => setNoticeBlock({ assetId }))
-                    }
-                  />
-                  <div className={styles.pair}>
+                    <div className={styles.cardHead}>
+                      <h3>Карточка {index + 1}</h3>
+                      <div className={styles.cardActions}>
+                        <button
+                          type="button"
+                          className="icon"
+                          id={`${editorId}-${keys[index]}-up`}
+                          disabled={busy || index === 0}
+                          aria-label={`Карточка ${index + 1}: выше`}
+                          onClick={() => moveItem(index, -1)}
+                        >
+                          <ArrowUp size={16} />
+                        </button>
+                        <button
+                          type="button"
+                          className="icon"
+                          id={`${editorId}-${keys[index]}-down`}
+                          disabled={busy || index === items.length - 1}
+                          aria-label={`Карточка ${index + 1}: ниже`}
+                          onClick={() => moveItem(index, 1)}
+                        >
+                          <ArrowDown size={16} />
+                        </button>
+                        <button
+                          type="button"
+                          className="icon danger"
+                          disabled={busy}
+                          aria-label={`Удалить карточку ${index + 1}`}
+                          onClick={() => {
+                            setItems(
+                              items.filter((_, i) => i !== index),
+                              keys.filter((_, i) => i !== index),
+                            );
+                            setCard(Math.max(0, index - 1));
+                          }}
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </div>
                     <TextField
-                      label="Текст кнопки"
-                      help="Необязательно, до 40 символов."
-                      error={problem("notice.actionLabel")}
-                      value={value.notice.actionLabel ?? ""}
-                      maxLength={40}
-                      onChange={(label) =>
-                        setNoticeBlock({ actionLabel: label || null })
+                      label="Заголовок"
+                      error={problem(`onboarding.items.${index}.title`)}
+                      value={item.title}
+                      maxLength={80}
+                      onChange={(title) =>
+                        setItems(
+                          items.map((it, i) =>
+                            i === index ? { ...it, title } : it,
+                          ),
+                          keys,
+                        )
                       }
                     />
                     <TextField
-                      label="Ссылка кнопки"
-                      help="Страница сайта (/market) или https-адрес разрешённого домена."
-                      error={problem("notice.actionUrl")}
-                      value={value.notice.actionUrl ?? ""}
-                      maxLength={500}
-                      inputMode="url"
-                      placeholder="/rides"
-                      onChange={(url) =>
-                        setNoticeBlock({ actionUrl: url || null })
+                      label="Текст"
+                      help="Обычный текст без разметки, до 400 символов."
+                      error={problem(`onboarding.items.${index}.body`)}
+                      value={item.body ?? ""}
+                      maxLength={400}
+                      multiline
+                      onChange={(body) =>
+                        setItems(
+                          items.map((it, i) =>
+                            i === index ? { ...it, body: body || null } : it,
+                          ),
+                          keys,
+                        )
                       }
                     />
-                  </div>
-                  {blocks.notice && (
-                    <Switch
-                      label="Показать снова тем, кто уже закрыл сообщение"
-                      help="Выключите для мелкой правки: редакция останется прежней."
-                      checked={reshow.notice}
-                      onChange={(on) =>
-                        setReshow((r) => ({ ...r, notice: on }))
+                    <AssetPicker
+                      label={`Изображение карточки ${index + 1}`}
+                      help="Необязательно. PNG, JPEG или WebP."
+                      value={item.assetId}
+                      assets={choices}
+                      emptyLabel="Без изображения"
+                      busy={busy}
+                      compact
+                      onChange={(assetId) =>
+                        setItems(
+                          items.map((it, i) =>
+                            i === index ? { ...it, assetId } : it,
+                          ),
+                          keys,
+                        )
                       }
-                    />
-                  )}
-                </>
-              )}
-              {current === "links" && (
-                <>
-                  <p className="help">
-                    Пустое поле — страница сайта по умолчанию. Можно указать
-                    страницу сайта (/about) или https-адрес домена из списка
-                    ниже. Другие схемы (javascript:, intent:, адреса приложений)
-                    не принимаются.
-                  </p>
-                  {linkKeys.map((key) => (
-                    <TextField
-                      key={key}
-                      label={linkLabels[key]}
-                      help={
-                        "В приложении: " +
-                        (published.links[key] ?? "не показывается") +
-                        (defaultLinks[key]
-                          ? ` · по умолчанию ${defaultLinks[key]}`
-                          : " · без умолчания")
-                      }
-                      error={problem("links." + key)}
-                      value={value.links[key] ?? ""}
-                      maxLength={500}
-                      inputMode="url"
-                      placeholder={defaultLinks[key] ?? "Не показывать"}
-                      onChange={(link) =>
-                        edit((d) => ({
-                          ...d,
-                          links: { ...d.links, [key]: link || null },
-                        }))
-                      }
-                    />
-                  ))}
-                  <h3 className={styles.subheading}>
-                    Разрешённые внешние домены
-                  </h3>
-                  <p className="help">
-                    Ссылки на другие сайты (кнопка сообщения, служебные ссылки,
-                    адрес обновления) открываются, только если домен есть в
-                    списке. Совпадение точное: www.rustore.ru и rustore.ru —
-                    разные домены.
-                  </p>
-                  {value.externalHosts.length > 0 && (
-                    <ul className={styles.chips}>
-                      {value.externalHosts.map((host, index) => (
-                        <li key={host + index} className={styles.chip}>
-                          {host}
-                          <button
-                            type="button"
-                            className="icon"
-                            disabled={busy}
-                            aria-label={"Убрать домен " + host}
-                            onClick={() =>
-                              edit((d) => ({
-                                ...d,
-                                externalHosts: d.externalHosts.filter(
-                                  (_, i) => i !== index,
-                                ),
-                              }))
-                            }
-                          >
-                            <X size={14} />
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                  {problem("externalHosts") && (
-                    <p className="field-error" role="alert">
-                      {problem("externalHosts")}
-                    </p>
-                  )}
-                  <form
-                    className={styles.addRow}
-                    onSubmit={(event) => {
-                      event.preventDefault();
-                      const host = normalizeHost(newHost);
-                      if (!host) return;
-                      edit((d) => ({
-                        ...d,
-                        externalHosts: d.externalHosts.includes(host)
-                          ? d.externalHosts
-                          : [...d.externalHosts, host],
-                      }));
-                      setNewHost("");
-                    }}
-                  >
-                    <TextField
-                      label="Домен"
-                      error={hostProblem || undefined}
-                      value={newHost}
-                      maxLength={253}
-                      placeholder="rustore.ru"
-                      onChange={setNewHost}
-                    />
-                    <button
-                      type="submit"
-                      className="button secondary"
-                      disabled={
-                        busy ||
-                        !normalizeHost(newHost) ||
-                        value.externalHosts.length >= MOBILE_LIMITS.hosts
-                      }
-                    >
-                      <Plus size={16} />
-                      Добавить домен
-                    </button>
-                  </form>
-                </>
-              )}
-              {current === "features" && (
-                <>
-                  <p className="help">
-                    Выключенная функция пропадает из приложения. Включение не
-                    добавит того, чего в установленной версии нет, и не заменяет
-                    проверку прав на сервере.
-                  </p>
-                  {mobileFeatures.map(({ key, label, gate }) => (
-                    <Switch
-                      key={key}
-                      label={
-                        <>
-                          {label} <code className={styles.key}>{key}</code>
-                        </>
-                      }
-                      help={
-                        gate && !settings.readiness[gate]
-                          ? "Сервер для неё не настроен: приложение получит «выключено» при любом положении переключателя."
-                          : published.features[key] === false
-                            ? "Сейчас в приложении выключена."
-                            : undefined
-                      }
-                      checked={value.features[key] ?? true}
-                      onChange={(on) =>
-                        edit((d) => ({
-                          ...d,
-                          features: { ...d.features, [key]: on },
-                        }))
-                      }
-                    />
-                  ))}
-                  <h3 className={styles.subheading}>Ключи будущих версий</h3>
-                  <p className="help">
-                    Для функций новых версий приложения, о которых сайт пока не
-                    знает. Старые версии такие ключи пропускают.
-                  </p>
-                  {customFeatures.map((key) => (
-                    <div key={key} className={styles.customFeature}>
-                      <Switch
-                        label={<code className={styles.key}>{key}</code>}
-                        checked={value.features[key]}
-                        onChange={(on) =>
+                      onUpload={(file) =>
+                        upload(file, (assetId) =>
                           edit((d) => ({
                             ...d,
-                            features: { ...d.features, [key]: on },
-                          }))
-                        }
-                      />
+                            onboarding: {
+                              ...d.onboarding,
+                              items: d.onboarding.items.map((it, i) =>
+                                i === index ? { ...it, assetId } : it,
+                              ),
+                            },
+                          })),
+                        )
+                      }
+                    />
+                  </li>
+                ))}
+              </ol>
+              <button
+                type="button"
+                className="button secondary"
+                disabled={busy || items.length >= MOBILE_LIMITS.onboardingItems}
+                onClick={() => {
+                  setItems(
+                    [...items, { title: "", body: null, assetId: null }],
+                    [...keys, "card-" + ++counter.current],
+                  );
+                  setCard(items.length);
+                }}
+              >
+                <Plus size={16} />
+                Добавить карточку
+              </button>
+              <p className="help">
+                До {MOBILE_LIMITS.onboardingItems} карточек. Порядок здесь —
+                порядок в приложении.
+              </p>
+              {blocks.onboarding && (
+                <Switch
+                  label="Показать снова тем, кто уже прошёл знакомство"
+                  help="Выключите для мелкой правки: редакция останется прежней."
+                  checked={reshow.onboarding}
+                  onChange={(on) =>
+                    setReshow((r) => ({ ...r, onboarding: on }))
+                  }
+                />
+              )}
+            </>
+          )}
+          {current === "notice" && (
+            <>
+              <Published>
+                {published.notice
+                  ? `«${published.notice.title}» · ${kindLabels[published.notice.kind]} · редакция ${published.notice.revision}`
+                  : "нет сообщения"}
+              </Published>
+              <Switch
+                label="Показывать сообщение"
+                checked={value.notice.enabled}
+                onChange={(enabled) => setNoticeBlock({ enabled })}
+              />
+              <Select
+                label="Тип"
+                value={value.notice.kind}
+                options={[
+                  ["promo", "Обычное: новости и акции"],
+                  ["service", "Служебное: заметнее обычного"],
+                  ["maintenance", "Технические работы: самое заметное"],
+                ]}
+                onChange={(kind) => setNoticeBlock({ kind })}
+              />
+              {value.notice.kind === "maintenance" && (
+                <p className="notice" data-tone="warning">
+                  Сообщение о работах только информирует и ничего не блокирует.
+                  Перед публикацией попросим подтвердить.
+                </p>
+              )}
+              <TextField
+                label="Заголовок"
+                error={problem("notice.title")}
+                value={value.notice.title}
+                maxLength={80}
+                onChange={(title) => setNoticeBlock({ title })}
+              />
+              <TextField
+                label="Текст"
+                help="Обычный текст, до 500 символов."
+                error={problem("notice.body")}
+                value={value.notice.body ?? ""}
+                maxLength={500}
+                multiline
+                onChange={(body) => setNoticeBlock({ body: body || null })}
+              />
+              <AssetPicker
+                label="Изображение сообщения"
+                help="Необязательно. PNG, JPEG или WebP."
+                value={value.notice.assetId}
+                assets={choices}
+                emptyLabel="Без изображения"
+                busy={busy}
+                compact
+                onChange={(assetId) => setNoticeBlock({ assetId })}
+                onUpload={(file) =>
+                  upload(file, (assetId) => setNoticeBlock({ assetId }))
+                }
+              />
+              <div className={styles.pair}>
+                <TextField
+                  label="Текст кнопки"
+                  help="Необязательно, до 40 символов."
+                  error={problem("notice.actionLabel")}
+                  value={value.notice.actionLabel ?? ""}
+                  maxLength={40}
+                  onChange={(label) =>
+                    setNoticeBlock({ actionLabel: label || null })
+                  }
+                />
+                <TextField
+                  label="Ссылка кнопки"
+                  help="Страница сайта (/market) или https-адрес разрешённого домена."
+                  error={problem("notice.actionUrl")}
+                  value={value.notice.actionUrl ?? ""}
+                  maxLength={500}
+                  inputMode="url"
+                  placeholder="/rides"
+                  onChange={(url) => setNoticeBlock({ actionUrl: url || null })}
+                />
+              </div>
+              {blocks.notice && (
+                <Switch
+                  label="Показать снова тем, кто уже закрыл сообщение"
+                  help="Выключите для мелкой правки: редакция останется прежней."
+                  checked={reshow.notice}
+                  onChange={(on) => setReshow((r) => ({ ...r, notice: on }))}
+                />
+              )}
+            </>
+          )}
+          {current === "links" && (
+            <>
+              <p className="help">
+                Пустое поле — страница сайта по умолчанию. Можно указать
+                страницу сайта (/about) или https-адрес домена из списка ниже.
+                Другие схемы (javascript:, intent:, адреса приложений) не
+                принимаются.
+              </p>
+              {linkKeys.map((key) => (
+                <TextField
+                  key={key}
+                  label={linkLabels[key]}
+                  help={
+                    "В приложении: " +
+                    (published.links[key] ?? "не показывается") +
+                    (defaultLinks[key]
+                      ? ` · по умолчанию ${defaultLinks[key]}`
+                      : " · без умолчания")
+                  }
+                  error={problem("links." + key)}
+                  value={value.links[key] ?? ""}
+                  maxLength={500}
+                  inputMode="url"
+                  placeholder={defaultLinks[key] ?? "Не показывать"}
+                  onChange={(link) =>
+                    edit((d) => ({
+                      ...d,
+                      links: { ...d.links, [key]: link || null },
+                    }))
+                  }
+                />
+              ))}
+              <h3 className={styles.subheading}>Разрешённые внешние домены</h3>
+              <p className="help">
+                Ссылки на другие сайты (кнопка сообщения, служебные ссылки,
+                адрес обновления) открываются, только если домен есть в списке.
+                Совпадение точное: www.rustore.ru и rustore.ru — разные домены.
+              </p>
+              {value.externalHosts.length > 0 && (
+                <ul className={styles.chips}>
+                  {value.externalHosts.map((host, index) => (
+                    <li key={host + index} className={styles.chip}>
+                      {host}
                       <button
                         type="button"
-                        className="icon danger"
+                        className="icon"
                         disabled={busy}
-                        aria-label={"Удалить ключ " + key}
+                        aria-label={"Убрать домен " + host}
                         onClick={() =>
                           edit((d) => ({
                             ...d,
-                            features: Object.fromEntries(
-                              Object.entries(d.features).filter(
-                                ([name]) => name !== key,
-                              ),
+                            externalHosts: d.externalHosts.filter(
+                              (_, i) => i !== index,
                             ),
                           }))
                         }
                       >
-                        <Trash2 size={16} />
+                        <X size={14} />
                       </button>
-                    </div>
+                    </li>
                   ))}
-                  {problem("features") && (
-                    <p className="field-error" role="alert">
-                      {problem("features")}
-                    </p>
-                  )}
-                  <form
-                    className={styles.addRow}
-                    onSubmit={(event) => {
-                      event.preventDefault();
-                      if (!newFeature || featureProblem) return;
+                </ul>
+              )}
+              {problem("externalHosts") && (
+                <p className="field-error" role="alert">
+                  {problem("externalHosts")}
+                </p>
+              )}
+              <form
+                className={styles.addRow}
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  const host = normalizeHost(newHost);
+                  if (!host) return;
+                  edit((d) => ({
+                    ...d,
+                    externalHosts: d.externalHosts.includes(host)
+                      ? d.externalHosts
+                      : [...d.externalHosts, host],
+                  }));
+                  setNewHost("");
+                }}
+              >
+                <TextField
+                  label="Домен"
+                  error={hostProblem || undefined}
+                  value={newHost}
+                  maxLength={253}
+                  placeholder="rustore.ru"
+                  onChange={setNewHost}
+                />
+                <button
+                  type="submit"
+                  className="button secondary"
+                  disabled={
+                    busy ||
+                    !normalizeHost(newHost) ||
+                    value.externalHosts.length >= MOBILE_LIMITS.hosts
+                  }
+                >
+                  <Plus size={16} />
+                  Добавить домен
+                </button>
+              </form>
+            </>
+          )}
+          {current === "features" && (
+            <>
+              <p className="help">
+                Выключенная функция пропадает из приложения. Включение не
+                добавит того, чего в установленной версии нет, и не заменяет
+                проверку прав на сервере.
+              </p>
+              {mobileFeatures.map(({ key, label, gate }) => (
+                <Switch
+                  key={key}
+                  label={
+                    <>
+                      {label} <code className={styles.key}>{key}</code>
+                    </>
+                  }
+                  help={
+                    gate && !settings.readiness[gate]
+                      ? "Сервер для неё не настроен: приложение получит «выключено» при любом положении переключателя."
+                      : published.features[key] === false
+                        ? "Сейчас в приложении выключена."
+                        : undefined
+                  }
+                  checked={value.features[key] ?? true}
+                  onChange={(on) =>
+                    edit((d) => ({
+                      ...d,
+                      features: { ...d.features, [key]: on },
+                    }))
+                  }
+                />
+              ))}
+              <h3 className={styles.subheading}>Ключи будущих версий</h3>
+              <p className="help">
+                Для функций новых версий приложения, о которых сайт пока не
+                знает. Старые версии такие ключи пропускают.
+              </p>
+              {customFeatures.map((key) => (
+                <div key={key} className={styles.customFeature}>
+                  <Switch
+                    label={<code className={styles.key}>{key}</code>}
+                    checked={value.features[key]}
+                    onChange={(on) =>
                       edit((d) => ({
                         ...d,
-                        features: { ...d.features, [newFeature]: true },
-                      }));
-                      setNewFeature("");
-                    }}
+                        features: { ...d.features, [key]: on },
+                      }))
+                    }
+                  />
+                  <button
+                    type="button"
+                    className="icon danger"
+                    disabled={busy}
+                    aria-label={"Удалить ключ " + key}
+                    onClick={() =>
+                      edit((d) => ({
+                        ...d,
+                        features: Object.fromEntries(
+                          Object.entries(d.features).filter(
+                            ([name]) => name !== key,
+                          ),
+                        ),
+                      }))
+                    }
                   >
-                    <TextField
-                      label="Ключ функции"
-                      error={featureProblem || undefined}
-                      value={newFeature}
-                      maxLength={40}
-                      placeholder="rideRecording"
-                      onChange={(key) => setNewFeature(key.trim())}
-                    />
-                    <button
-                      type="submit"
-                      className="button secondary"
-                      disabled={
-                        busy ||
-                        !newFeature ||
-                        !!featureProblem ||
-                        Object.keys(value.features).length >=
-                          MOBILE_LIMITS.features
-                      }
-                    >
-                      <Plus size={16} />
-                      Добавить ключ
-                    </button>
-                  </form>
-                </>
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              ))}
+              {problem("features") && (
+                <p className="field-error" role="alert">
+                  {problem("features")}
+                </p>
               )}
-              {current === "versions" && (
-                <>
-                  <Published>
-                    {`минимальная ${published.compatibility.minimumSupportedVersionCode ?? "—"} · последняя ${published.compatibility.latestVersionCode ?? "—"} · ${published.compatibility.updateMode === "hard" ? "обязательное обновление" : "мягкое предложение"}`}
-                  </Published>
-                  <p className="help">
-                    Сравнивается versionCode сборки — целое число, которое
-                    растёт с каждым выпуском. Ниже минимальной версия не
-                    поддерживается; ниже последней приложение предложит
-                    обновиться. К магазину приложений не привязано: адрес
-                    обновления задаётся ниже.
-                  </p>
-                  <div className={styles.pair}>
-                    <TextField
-                      label="Минимальная поддерживаемая версия"
-                      help="Только для действительно несовместимых сборок."
-                      error={problem(
-                        "compatibility.minimumSupportedVersionCode",
-                      )}
-                      type="number"
-                      inputMode="numeric"
-                      min={1}
-                      max={MOBILE_LIMITS.versionCode}
-                      value={String(
-                        value.compatibility.minimumSupportedVersionCode ?? "",
-                      )}
-                      onChange={(code) =>
-                        setCompatibility({
-                          minimumSupportedVersionCode:
-                            code === "" ? null : Number(code),
-                        })
-                      }
-                    />
-                    <TextField
-                      label="Последняя версия"
-                      error={problem("compatibility.latestVersionCode")}
-                      type="number"
-                      inputMode="numeric"
-                      min={1}
-                      max={MOBILE_LIMITS.versionCode}
-                      value={String(
-                        value.compatibility.latestVersionCode ?? "",
-                      )}
-                      onChange={(code) =>
-                        setCompatibility({
-                          latestVersionCode: code === "" ? null : Number(code),
-                        })
-                      }
-                    />
-                  </div>
-                  <Select
-                    label="Если версия ниже минимальной"
-                    value={value.compatibility.updateMode}
-                    options={[
-                      ["soft", "Предлагать обновиться, не блокируя"],
-                      ["hard", "Обязательное обновление: экран обновления"],
-                    ]}
-                    onChange={(updateMode) => setCompatibility({ updateMode })}
-                  />
-                  {value.compatibility.updateMode === "hard" && (
-                    <p className="notice" data-tone="warning">
-                      Обязательный режим закрывает старые версии экраном
-                      обновления. Нужны минимальная версия и ссылка; перед
-                      сохранением попросим подтвердить.
-                    </p>
+              <form
+                className={styles.addRow}
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  if (!newFeature || featureProblem) return;
+                  edit((d) => ({
+                    ...d,
+                    features: { ...d.features, [newFeature]: true },
+                  }));
+                  setNewFeature("");
+                }}
+              >
+                <TextField
+                  label="Ключ функции"
+                  error={featureProblem || undefined}
+                  value={newFeature}
+                  maxLength={40}
+                  placeholder="rideRecording"
+                  onChange={(key) => setNewFeature(key.trim())}
+                />
+                <button
+                  type="submit"
+                  className="button secondary"
+                  disabled={
+                    busy ||
+                    !newFeature ||
+                    !!featureProblem ||
+                    Object.keys(value.features).length >= MOBILE_LIMITS.features
+                  }
+                >
+                  <Plus size={16} />
+                  Добавить ключ
+                </button>
+              </form>
+            </>
+          )}
+          {current === "versions" && (
+            <>
+              <Published>
+                {`минимальная ${published.compatibility.minimumSupportedVersionCode ?? "—"} · последняя ${published.compatibility.latestVersionCode ?? "—"} · ${published.compatibility.updateMode === "hard" ? "обязательное обновление" : "мягкое предложение"}`}
+              </Published>
+              <p className="help">
+                Сравнивается versionCode сборки — целое число, которое растёт с
+                каждым выпуском. Ниже минимальной версия не поддерживается; ниже
+                последней приложение предложит обновиться. К магазину приложений
+                не привязано: адрес обновления задаётся ниже.
+              </p>
+              <div className={styles.pair}>
+                <TextField
+                  label="Минимальная поддерживаемая версия"
+                  help="Только для действительно несовместимых сборок."
+                  error={problem("compatibility.minimumSupportedVersionCode")}
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={MOBILE_LIMITS.versionCode}
+                  value={String(
+                    value.compatibility.minimumSupportedVersionCode ?? "",
                   )}
-                  <TextField
-                    label="Ссылка на обновление"
-                    help="Страница сайта или https-адрес разрешённого домена, например страница RuStore."
-                    error={problem("compatibility.updateUrl")}
-                    value={value.compatibility.updateUrl ?? ""}
-                    maxLength={500}
-                    inputMode="url"
-                    onChange={(url) =>
-                      setCompatibility({ updateUrl: url || null })
-                    }
-                  />
-                  <TextField
-                    label="Текст об обновлении"
-                    help="Необязательно, до 300 символов."
-                    error={problem("compatibility.updateMessage")}
-                    value={value.compatibility.updateMessage ?? ""}
-                    maxLength={300}
-                    multiline
-                    onChange={(message) =>
-                      setCompatibility({ updateMessage: message || null })
-                    }
-                  />
-                </>
+                  onChange={(code) =>
+                    setCompatibility({
+                      minimumSupportedVersionCode:
+                        code === "" ? null : Number(code),
+                    })
+                  }
+                />
+                <TextField
+                  label="Последняя версия"
+                  error={problem("compatibility.latestVersionCode")}
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={MOBILE_LIMITS.versionCode}
+                  value={String(value.compatibility.latestVersionCode ?? "")}
+                  onChange={(code) =>
+                    setCompatibility({
+                      latestVersionCode: code === "" ? null : Number(code),
+                    })
+                  }
+                />
+              </div>
+              <Select
+                label="Если версия ниже минимальной"
+                value={value.compatibility.updateMode}
+                options={[
+                  ["soft", "Предлагать обновиться, не блокируя"],
+                  ["hard", "Обязательное обновление: экран обновления"],
+                ]}
+                onChange={(updateMode) => setCompatibility({ updateMode })}
+              />
+              {value.compatibility.updateMode === "hard" && (
+                <p className="notice" data-tone="warning">
+                  Обязательный режим закрывает старые версии экраном обновления.
+                  Нужны минимальная версия и ссылка; перед сохранением попросим
+                  подтвердить.
+                </p>
               )}
-            </div>
-            {showPreview && <Preview tab={current} draft={value} card={card} />}
-          </div>
-        )}
-      </SectionTabs>
+              <TextField
+                label="Ссылка на обновление"
+                help="Страница сайта или https-адрес разрешённого домена, например страница RuStore."
+                error={problem("compatibility.updateUrl")}
+                value={value.compatibility.updateUrl ?? ""}
+                maxLength={500}
+                inputMode="url"
+                onChange={(url) => setCompatibility({ updateUrl: url || null })}
+              />
+              <TextField
+                label="Текст об обновлении"
+                help="Необязательно, до 300 символов."
+                error={problem("compatibility.updateMessage")}
+                value={value.compatibility.updateMessage ?? ""}
+                maxLength={300}
+                multiline
+                onChange={(message) =>
+                  setCompatibility({ updateMessage: message || null })
+                }
+              />
+            </>
+          )}
+        </div>
+        {showPreview && <Preview tab={current} draft={value} card={card} />}
+      </div>
       <details className={styles.payload}>
         <summary>
           Что получает приложение сейчас: GET /api/v1/app-config

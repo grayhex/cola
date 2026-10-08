@@ -90,7 +90,6 @@ function logoLinkName(href: string) {
 // app and parser versions. Section links live in the header only.
 export function SocialFooter() {
   const { settings, t } = useSite();
-  const creditsHref = footerLinkHref(settings.graphicsCreditsUrl);
   const logos = footerSlots
     .map((slot) => ({
       id: settings[slot.key],
@@ -143,32 +142,6 @@ export function SocialFooter() {
         </p>
         <div className={footerStyles.versions}>
           <Versions link={false} />
-          {creditsHref && (
-            <a href={creditsHref}>{settings.graphicsCreditsLabel}</a>
-          )}
-          <details className={footerStyles.credits}>
-            <summary>
-              {creditsHref ? "Лицензии графики" : settings.graphicsCreditsLabel}
-            </summary>
-            <p>
-              <a href="https://rive.app/marketplace/2008-3976-riding-bike/">
-                Riding Bike — rahiqueo
-              </a>
-              ;{" "}
-              <a href="https://rive.app/marketplace/9084-17312-transparent-bike-animation/">
-                Transparent Bike Animation — lorins
-              </a>
-              , на основе{" "}
-              <a href="https://rive.app/marketplace/3256-6872-bike-icon/">
-                Bike Icon — JcToon
-              </a>
-              .{" "}
-              <a href="https://creativecommons.org/licenses/by/4.0/">
-                CC BY 4.0
-              </a>
-              . Палитра адаптирована для ColaBike, фон второй анимации убран.
-            </p>
-          </details>
         </div>
       </div>
     </footer>

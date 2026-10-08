@@ -104,25 +104,19 @@ test("admin publishes static hero, brand/favicon and icon highlight", async ({
       fullPage: true,
     });
     await nav.getByRole("button", { name: "Тексты", exact: true }).click();
-    await page
-      .getByLabel("Подпись ссылки авторов графики")
-      .fill("Художники сообщества");
-    await page.getByLabel("Ссылка авторов графики").fill("/about");
-    await expect(page.getByLabel("Отмена", { exact: true })).toHaveCount(0);
-    await page.getByRole("button", { name: "Сохранить", exact: true }).click();
-    await expect(page.getByRole("status")).toContainText(
-      "Настройки опубликованы",
+    // The footer no longer carries the graphics credits (#366): no fields.
+    await expect(page.getByLabel("Подпись ссылки авторов графики")).toHaveCount(
+      0,
     );
+    await expect(page.getByLabel("Ссылка авторов графики")).toHaveCount(0);
+    await expect(page.getByLabel("Отмена", { exact: true })).toHaveCount(0);
     await page.goto("/");
     await expect(page.locator(".brand > img")).toHaveAttribute(
       "src",
       "/api/assets/" + assets[1],
     );
-    await expect(
-      page
-        .locator("footer")
-        .getByRole("link", { name: "Художники сообщества" }),
-    ).toHaveAttribute("href", "/about");
+    await expect(page.locator("footer")).not.toContainText("Авторы графики");
+    await expect(page.locator("footer")).not.toContainText("Лицензии графики");
     await expect(page.locator(".brand-mark img")).toHaveAttribute(
       "src",
       "/api/assets/" + assets[1],

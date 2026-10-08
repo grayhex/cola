@@ -574,6 +574,50 @@ export default function About({
             </div>
           </div>
         </section>
+        {/* What the site really uses (#366): the footer no longer carries it. */}
+        <section className="frame" aria-labelledby="licenses-title">
+          <div className="frame-inner">
+            <div className={styles.documents}>
+              <h2 id="licenses-title">Лицензии</h2>
+              <ul>
+                <li>
+                  Шрифт Source Sans 3 —{" "}
+                  <a className="text-link" href="/fonts/sourcesans3-OFL.txt">
+                    SIL OFL 1.1
+                  </a>
+                </li>
+                <li>
+                  Шрифт IBM Plex Mono —{" "}
+                  <a className="text-link" href="/fonts/ibmplexmono-OFL.txt">
+                    SIL OFL 1.1
+                  </a>
+                </li>
+                <li>
+                  Значки Lucide —{" "}
+                  <a
+                    className="text-link"
+                    href="https://lucide.dev/license"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    ISC
+                  </a>
+                </li>
+                <li>
+                  Карты MapLibre GL JS —{" "}
+                  <a
+                    className="text-link"
+                    href="https://github.com/maplibre/maplibre-gl-js/blob/main/LICENSE.txt"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    BSD-3-Clause
+                  </a>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </section>
       </main>
       <SocialFooter />
     </>

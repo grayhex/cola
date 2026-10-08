@@ -41,10 +41,29 @@ test("mobile app settings: publish launch, onboarding, notice and switches; assi
     );
     await page.emulateMedia({ colorScheme: "light", reducedMotion: "reduce" });
     await page.goto("/admin");
-    // Its own block, not a part of the web «Дизайн».
+    // Its own block, not a part of the web «Дизайн»; its sections are items
+    // of the left menu itself (#366).
     await page
       .getByRole("tab", { name: "Мобильное приложение", exact: true })
       .click();
+    const menu = page.getByRole("navigation", { name: "Разделы админки" });
+    const open = (name) =>
+      menu.getByRole("button", { name, exact: true }).click();
+    await expect(menu.getByRole("button")).toHaveText([
+      "Экран запуска",
+      "Знакомство",
+      "Сообщение",
+      "Ссылки",
+      "Функции",
+      "Версии",
+      "Уведомления",
+    ]);
+    await expect(
+      menu.getByRole("button", { name: "Экран запуска", exact: true }),
+    ).toHaveAttribute("aria-current", "page");
+    await expect(
+      page.getByRole("heading", { name: "Экран запуска", level: 1 }),
+    ).toBeVisible();
     const editor = page.getByRole("region", { name: "Мобильное приложение" });
     await expect(
       editor.getByRole("heading", { name: "Настройки Android-приложения" }),
@@ -64,11 +83,16 @@ test("mobile app settings: publish launch, onboarding, notice and switches; assi
     await expect(editor.locator(".admin-save")).toContainText(
       "Не опубликовано: экран запуска",
     );
+    // The dot is on the section that holds the change, and only there.
     await expect(
-      page
-        .getByRole("button", { name: "Настройки приложения" })
+      menu
+        // The dot is part of the button's name.
+        .getByRole("button", { name: /^Экран запуска Есть несохранённые/ })
         .getByLabel("Есть несохранённые изменения"),
     ).toBeVisible();
+    await expect(menu.getByLabel("Есть несохранённые изменения")).toHaveCount(
+      1,
+    );
     await save.click();
     await expect(editor.getByRole("alert").first()).toContainText(
       "Выберите изображение экрана запуска",
@@ -125,12 +149,17 @@ test("mobile app settings: publish launch, onboarding, notice and switches; assi
     await expect(phone).toContainText("Привет, райдер");
 
     // Onboarding: two cards, the second moved up with the keyboard.
-    const tabs = editor.getByRole("tablist", { name: "Настройки приложения" });
-    await tabs.getByRole("tab", { name: "Экран запуска" }).focus();
-    await page.keyboard.press("ArrowRight");
-    await expect(tabs.getByRole("tab", { name: "Знакомство" })).toHaveAttribute(
-      "aria-selected",
-      "true",
+    await menu.getByRole("button", { name: "Знакомство", exact: true }).focus();
+    await page.keyboard.press("Enter");
+    await expect(
+      menu.getByRole("button", { name: "Знакомство", exact: true }),
+    ).toHaveAttribute("aria-current", "page");
+    await expect(
+      page.getByRole("heading", { name: "Знакомство", level: 1 }),
+    ).toBeVisible();
+    // The notifications are not under every section, only under their own.
+    await expect(page.getByRole("region", { name: "Уведомления" })).toHaveCount(
+      0,
     );
     await editor.getByRole("switch", { name: /Показывать знакомство/ }).check();
     for (const title of ["Первая", "Вторая"]) {
@@ -152,12 +181,12 @@ test("mobile app settings: publish launch, onboarding, notice and switches; assi
     ).toBeVisible();
 
     // A feature switch and a notice with an allowed link.
-    await tabs.getByRole("tab", { name: "Функции" }).click();
+    await open("Функции");
     await editor.getByRole("switch", { name: /Барахолка/ }).uncheck();
     await expect(
       editor.getByRole("switch", { name: /Барахолка/ }),
     ).not.toBeChecked();
-    await tabs.getByRole("tab", { name: "Сообщение" }).click();
+    await open("Сообщение");
     await editor.getByRole("switch", { name: "Показывать сообщение" }).check();
     await editor.getByRole("combobox", { name: "Тип" }).selectOption("service");
     await editor
@@ -206,7 +235,7 @@ test("mobile app settings: publish launch, onboarding, notice and switches; assi
     );
 
     // Hard update asks first; cancelling keeps everything as published.
-    await tabs.getByRole("tab", { name: "Версии" }).click();
+    await open("Версии");
     await editor
       .getByLabel("Минимальная поддерживаемая версия", { exact: true })
       .fill("5");
@@ -242,13 +271,13 @@ test("mobile app settings: publish launch, onboarding, notice and switches; assi
     for (const mode of ["light", "dark"]) {
       await page.emulateMedia({ colorScheme: mode });
       for (const name of ["Экран запуска", "Знакомство", "Версии"]) {
-        await tabs.getByRole("tab", { name }).click();
+        await open(name);
         expect(
           (await new AxeBuilder({ page }).include(".admin-content").analyze())
             .violations,
         ).toEqual([]);
       }
-      await tabs.getByRole("tab", { name: "Экран запуска" }).click();
+      await open("Экран запуска");
       await page.screenshot({
         path: info.outputPath(`mobile-settings-${mode}.png`),
         fullPage: true,
