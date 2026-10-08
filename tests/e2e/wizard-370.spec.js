@@ -219,6 +219,119 @@ test("step 1: a manual continue during a search stops it and its late answer cha
   await expect(heading(wizard)).toContainText("Сведения и фото");
 });
 
+test("a repeat of a found search leaves only the manual way on, and its late answer changes nothing", async ({
+  page,
+}) => {
+  await member(page, "Repeat");
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const wizard = await openWizard(page);
+  const field = searchBox(wizard);
+  await field.fill("Giant Contend AR 1 2024");
+  await wizard.getByRole("button", { name: /^Найти комплектацию/ }).click();
+  await wizard.locator(".wizard-candidate").first().click();
+  await expect(wizard.locator(".wizard-found")).toBeVisible();
+  await expect(forward(wizard)).toHaveText(/Далее/);
+  // Go and see the parts, and come back to search again.
+  await forward(wizard).click();
+  await wizard
+    .getByLabel("Категория велосипеда", { exact: true })
+    .selectOption("road_gravel");
+  await forward(wizard).click();
+  const parts = await wizard.locator(".wizard-part").count();
+  expect(parts).toBeGreaterThan(0);
+  await back(wizard).click();
+  await back(wizard).click();
+
+  // The same request again, held: while it runs the way on is by hand.
+  let release;
+  const held = new Promise((resolve) => (release = resolve));
+  await page.route("**/api/bikes/resolve-stream", async (route) => {
+    await held;
+    await route.continue().catch(() => {});
+  });
+  await wizard
+    .getByRole("button", { name: /^Повторить автоматический поиск/ })
+    .click();
+  // A search over a draft of parts asks first.
+  await page
+    .getByRole("alertdialog")
+    .getByRole("button", { name: "Продолжить", exact: true })
+    .click();
+  await expect(
+    wizard.getByRole("button", { name: "Остановить поиск", exact: true }),
+  ).toBeVisible();
+  await expect(forward(wizard)).toHaveText(/Продолжить вручную/);
+  await forward(wizard).click();
+  await expect(heading(wizard)).toContainText("Сведения и фото");
+  await wizard.getByLabel("Цвет").fill("Мой цвет");
+  release();
+  await page.waitForTimeout(800);
+  // Nothing came from the late answer: the draft is as it was, on this step.
+  await expect(heading(wizard)).toContainText("Сведения и фото");
+  await expect(wizard.getByLabel("Цвет")).toHaveValue("Мой цвет");
+  await expect(wizard.getByRole("alertdialog")).toHaveCount(0);
+  await forward(wizard).click();
+  await expect(wizard.locator(".wizard-part")).toHaveCount(parts);
+});
+
+test("photo candidates are for the bike they were looked up for: an edit of the identity stops the lookup and lets them go", async ({
+  page,
+}) => {
+  await member(page, "Candidates");
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const dot = Buffer.from(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
+    "base64",
+  );
+  await page.route("**/api/bikes/photo-candidates/**", (route) =>
+    route.fulfill({ contentType: "image/png", body: dot }),
+  );
+  const asked = [];
+  let release;
+  const held = new Promise((resolve) => (release = resolve));
+  let hold = true;
+  await page.route("**/api/bikes/photo-search", async (route) => {
+    const body = route.request().postDataJSON();
+    asked.push(body.model);
+    if (hold && asked.length === 1) await held;
+    await route
+      .fulfill({
+        json: {
+          photos: [
+            {
+              id: randomUUID(),
+              sourceUrl: "https://shop.example/" + body.model,
+            },
+          ],
+        },
+      })
+      .catch(() => {});
+  });
+  const wizard = await openWizard(page);
+  await searchBox(wizard).fill("Trek Domane 2023");
+  await forward(wizard).click();
+  // The lookup for the first bike is on its way; the model is edited.
+  await expect.poll(() => asked.length).toBe(1);
+  expect(asked[0]).toBe("Domane");
+  await wizard.getByLabel("Модель", { exact: true }).fill("Madone");
+  release();
+  await page.waitForTimeout(600);
+  // Its answer is not shown for the other model, and typing asked for nothing.
+  await expect(wizard.locator(".photo-candidates label")).toHaveCount(0);
+  expect(asked).toHaveLength(1);
+  // On request it looks again, for what stands in the fields now.
+  hold = false;
+  await wizard.getByRole("button", { name: "Повторить поиск фото" }).click();
+  await expect(wizard.locator(".photo-candidates label")).toHaveCount(1);
+  expect(asked).toEqual(["Domane", "Madone"]);
+  await wizard.locator(".photo-candidates input").check();
+  // Candidates already shown go when the identity is edited, with the reason.
+  await wizard.getByLabel("Модель", { exact: true }).fill("Emonda");
+  await expect(wizard.locator(".photo-candidates label")).toHaveCount(0);
+  await expect(wizard).toContainText("Марка или модель изменились");
+  expect(asked).toHaveLength(2);
+});
+
 test("a bike is created with no search, a name of its own and no parts", async ({
   page,
 }) => {

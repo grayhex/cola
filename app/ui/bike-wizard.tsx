@@ -333,7 +333,11 @@ export default function BikeWizard({
     trim: query.trim || "",
     year: query.year ?? "",
   });
-  const found = result?.status === "resolved" && resultKey === typedKey;
+  const answers = result?.status === "resolved" && resultKey === typedKey;
+  // While a repeat of that very request runs, its answer is not in yet: the
+  // one way on is by hand, which stops it — «Далее» would leave it running to
+  // overwrite the draft later.
+  const found = answers && !resolving;
   // What stands under the step after a search that found nothing.
   const hint =
     resolving || step !== 0 || !searchText.trim() || found
@@ -638,6 +642,20 @@ export default function BikeWizard({
   // «Продолжить вручную»: leaves the search from any state. A search that is
   // still running is stopped, and an answer that comes late is dropped by the
   // checks in resolve(): what is typed by hand is not overwritten.
+  // Photo candidates belong to the identity they were looked up for: when it
+  // is edited, the lookup in flight is stopped and what came back is let go
+  // (a late answer for the old bike must not be chosen for the new one). A new
+  // lookup starts only when asked for, so typing does not search on every key.
+  function dropPhotoCandidates() {
+    if (photos?.length || photoBusy)
+      setPhotoError(
+        "Марка или модель изменились: повторите поиск фото для них.",
+      );
+    photoAbort.current?.abort();
+    setPhotoBusy(false);
+    setPhotos(null);
+    setChosen([]);
+  }
   function continueManually() {
     resolveAbort.current?.abort();
     setResolving(false);
@@ -657,10 +675,18 @@ export default function BikeWizard({
     // A found bike of another request would be sent with a bike it does not
     // describe (its preview), so it is let go; the variants that were offered
     // and the parts stay, for going back and for the person to edit.
-    if (result?.status === "resolved" && !found) {
+    if (result?.status === "resolved" && !answers) {
       setResult(null);
       setIdentityConfirmed(false);
     }
+    // Photo candidates found for another bike are not offered for this one.
+    if (
+      identity &&
+      (identity.brand !== query.brand ||
+        identity.model !== query.model ||
+        (identity.trim ?? null) !== query.trim)
+    )
+      dropPhotoCandidates();
     setStep(1);
   }
   function next() {
@@ -1075,6 +1101,7 @@ export default function BikeWizard({
                     onChange={(e) => {
                       update("brand", e.target.value);
                       setResult(null);
+                      dropPhotoCandidates();
                     }}
                   />
                 </label>
@@ -1087,6 +1114,7 @@ export default function BikeWizard({
                     onChange={(e) => {
                       update("model", e.target.value);
                       setResult(null);
+                      dropPhotoCandidates();
                     }}
                   />
                 </label>
@@ -1116,6 +1144,7 @@ export default function BikeWizard({
                     onChange={(e) => {
                       update("trim", e.target.value);
                       setResult(null);
+                      dropPhotoCandidates();
                     }}
                   />
                 </label>
