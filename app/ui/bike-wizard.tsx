@@ -28,9 +28,6 @@ type WizardPart = Omit<ComponentInput, "price"> & {
   price: number | string | null;
 };
 type UploadFile = { id: string; file: File; preview: string };
-// Only addresses the wizard made itself go into an <img>: a blob URL of a file
-// the person chose, or the site's own API.
-const draftImage = (src: string) => (/^(?:blob:|\/api\/)/.test(src) ? src : "");
 import { errorMessage } from "../../lib/errors.ts";
 import {
   checkPhotoFile,
@@ -247,19 +244,21 @@ export default function BikeWizard({
       key: "found:" + id,
       kind: "found" as const,
       src: "/api/bikes/photo-candidates/" + id,
-      label: "Найденное фото",
     })),
     ...files.map((f) => ({
       key: "local:" + f.id,
       kind: "local" as const,
       src: f.preview,
-      label: f.file.name,
     })),
   ];
   const selectedDraft =
     draftPhotos.find((p) => p.key === selectedPhoto) || draftPhotos[0] || null;
   const coverDraft =
     draftPhotos.find((p) => p.key === coverPhoto) || draftPhotos[0] || null;
+  // The name a photo of the draft goes by: the file's own, or «found». Read
+  // from the file where it is shown, not carried in the list of pictures.
+  const draftLabel = (key: string) =>
+    files.find((f) => "local:" + f.id === key)?.file.name ?? "Найденное фото";
   const acceptedIdentity = useRef(""),
     requestId = useRef<string | null>(null),
     resolveAbort = useRef<AbortController | null>(null),
@@ -1448,13 +1447,13 @@ export default function BikeWizard({
                           "thumb" +
                           (p.key === selectedDraft?.key ? " active" : "")
                         }
-                        aria-label={`Фото ${i + 1}: ${p.label}${p.key === coverDraft?.key ? ", обложка" : ""}`}
+                        aria-label={`Фото ${i + 1}: ${draftLabel(p.key)}${p.key === coverDraft?.key ? ", обложка" : ""}`}
                         aria-current={
                           p.key === selectedDraft?.key ? "true" : undefined
                         }
                         onClick={() => setSelectedPhoto(p.key)}
                       >
-                        <img src={draftImage(p.src)} alt="" />
+                        <img src={p.src} alt="" />
                         {p.key === coverDraft?.key && (
                           <span className="photo-cover-mark">Обложка</span>
                         )}
