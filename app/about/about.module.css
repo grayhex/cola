@@ -227,6 +227,10 @@
   padding: 0;
   list-style: none;
 }
+.documents li {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
 .documents :global(.text-link) {
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);

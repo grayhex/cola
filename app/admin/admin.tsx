@@ -66,11 +66,20 @@ import {
   Menu,
   LayoutGrid,
   MonitorSmartphone,
+  Bell,
+  Link2,
+  MessageCircle,
+  SlidersHorizontal,
+  Sparkles,
+  Tag,
 } from "../ui/icons.tsx";
 import "./design.module.css";
 import ArticleTopicSettings from "./article-topics.tsx";
 import LegalSettings from "./legal-settings.tsx";
-import MobileSettingsEditor from "./mobile-settings.tsx";
+import MobileSettingsEditor, {
+  mobileSections,
+  type MobileSection,
+} from "./mobile-settings.tsx";
 import NotificationSettingsAdmin from "./notification-settings.tsx";
 import EmojiSettings from "./emoji-settings.tsx";
 // The design system reference (#127) stays inside the admin, next to its
@@ -116,7 +125,14 @@ const sections: [string, string, LucideIcon][] = [
   ["uikit", "Дизайн-система", LayoutGrid],
   ["groups", "Группы деталей", BookOpen],
   ["catalog", "Справочники", BookOpen],
-  ["mobile", "Настройки приложения", MonitorSmartphone],
+  // The Android app (#338, #366): every subsection is its own item of the menu.
+  ["mobile-launch", "Экран запуска", MonitorSmartphone],
+  ["mobile-onboarding", "Знакомство", Sparkles],
+  ["mobile-notice", "Сообщение", MessageCircle],
+  ["mobile-links", "Ссылки", Link2],
+  ["mobile-features", "Функции", SlidersHorizontal],
+  ["mobile-versions", "Версии", Tag],
+  ["mobile-notifications", "Уведомления", Bell],
   ["users", "Пользователи", Users],
   ["reports", "Жалобы", ShieldCheck],
   ["audit", "Журнал действий", History],
@@ -149,7 +165,15 @@ const adminGroups = [
     id: "mobile",
     name: "Мобильное приложение",
     icon: MonitorSmartphone,
-    sections: ["mobile"],
+    sections: [
+      "mobile-launch",
+      "mobile-onboarding",
+      "mobile-notice",
+      "mobile-links",
+      "mobile-features",
+      "mobile-versions",
+      "mobile-notifications",
+    ],
   },
   {
     id: "people",
@@ -226,7 +250,11 @@ export default function Admin() {
   const [editUser, setEditUser] = useState<ManagedUser | null>(null),
     [confirm, setConfirm] = useState<Confirmation | null>(null);
   const [confirmEmail, setConfirmEmail] = useState("");
-  const [mobileDirty, setMobileDirty] = useState(false);
+  // The Android app's settings (#366): its sections stay mounted, so a draft
+  // survives moving around the menu; each reports what it holds unsaved.
+  const [mobileDirty, setMobileDirty] = useState<MobileSection[]>([]),
+    [notificationsDirty, setNotificationsDirty] = useState(false),
+    [lastMobile, setLastMobile] = useState<MobileSection>("launch");
   const dialog = useRef<HTMLDialogElement>(null);
   const dirtySettings = JSON.stringify(draft) !== JSON.stringify(settings);
   const dirtyCatalog = JSON.stringify(cat) !== JSON.stringify(catalog);
@@ -234,6 +262,9 @@ export default function Admin() {
   const locked = busy;
   const group = adminGroups.find((g) => g.sections.includes(tab))!;
   const isCatalog = catalogTabs.has(tab);
+  const mobileForm = mobileSections.find(
+    ([key]) => "mobile-" + key === tab,
+  )?.[0];
   const canSave = isCatalog || settingsTabs.has(tab);
   const currentDirty = isCatalog ? dirtyCatalog : dirtySettings;
 
@@ -325,9 +356,24 @@ export default function Admin() {
   function navigate(next: string) {
     if (locked) return;
     setTab(next);
+    const form = mobileSections.find(([key]) => "mobile-" + key === next);
+    if (form) setLastMobile(form[0]);
     setError("");
     setNotice("");
   }
+  // A mistake found by the editor opens the section that holds it.
+  function openMobile(section: MobileSection) {
+    setTab("mobile-" + section);
+    setLastMobile(section);
+  }
+  const sectionDirty = (id: string) =>
+    (settingsTabs.has(id) && dirtySettings) ||
+    (catalogTabs.has(id) && dirtyCatalog) ||
+    (id === "mobile-notifications"
+      ? notificationsDirty
+      : mobileSections.some(
+          ([key]) => "mobile-" + key === id && mobileDirty.includes(key),
+        ));
   async function saveSettings() {
     await run(async () => {
       const result = await request<{ version: number }>(
@@ -549,9 +595,7 @@ export default function Admin() {
                         >
                           <Icon size={16} />
                           {label}
-                          {((settingsTabs.has(id) && dirtySettings) ||
-                            (catalogTabs.has(id) && dirtyCatalog) ||
-                            (id === "mobile" && mobileDirty)) && (
+                          {sectionDirty(id) && (
                             <span
                               className="unsaved-dot"
                               aria-label="Есть несохранённые изменения"
@@ -593,15 +637,22 @@ export default function Admin() {
           <div hidden={tab !== "legal"}>
             <LegalSettings active={tab === "legal"} />
           </div>
-          <div hidden={tab !== "mobile"}>
+          <div hidden={!mobileForm}>
             <MobileSettingsEditor
-              active={tab === "mobile"}
+              active={!!mobileForm}
+              section={mobileForm ?? lastMobile}
+              onSection={openMobile}
               assets={assets}
               onUpload={uploadAsset}
               onSaved={refreshAssets}
               onDirtyChange={setMobileDirty}
             />
-            <NotificationSettingsAdmin active={tab === "mobile"} />
+          </div>
+          <div hidden={tab !== "mobile-notifications"}>
+            <NotificationSettingsAdmin
+              active={tab === "mobile-notifications"}
+              onDirtyChange={setNotificationsDirty}
+            />
           </div>
           {tab === "emojis" && (
             <EmojiSettings
@@ -806,27 +857,6 @@ export default function Admin() {
                 Заголовки и пояснения сайта. Системные действия и сообщения не
                 настраиваются. Пользовательские названия велосипедов и деталей
                 здесь не меняются.
-              </p>
-              <Field label="Подпись ссылки авторов графики">
-                <input
-                  maxLength={80}
-                  value={draft.graphicsCreditsLabel}
-                  onChange={(e) =>
-                    update("graphicsCreditsLabel", e.target.value)
-                  }
-                />
-              </Field>
-              <Field label="Ссылка авторов графики">
-                <input
-                  placeholder="https://… или /страница"
-                  value={draft.graphicsCreditsUrl}
-                  onChange={(e) => update("graphicsCreditsUrl", e.target.value)}
-                />
-              </Field>
-              <p className="help">
-                Без ссылки подпись раскрывает встроенные сведения об авторах.
-                Лицензии используемой графики остаются доступны рядом с
-                версиями.
               </p>
               <WizardCopy settings={draft} onChange={update} />
               <label className="search admin-search">

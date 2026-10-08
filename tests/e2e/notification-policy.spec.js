@@ -286,6 +286,14 @@ test("admin: the notifications group shows the catalogue, saves limits, explains
     await page
       .getByRole("tab", { name: "Мобильное приложение", exact: true })
       .click();
+    // Its own item of the menu (#366), not a block under every section.
+    await expect(page.getByRole("region", { name: "Уведомления" })).toHaveCount(
+      0,
+    );
+    await page
+      .getByRole("navigation", { name: "Разделы админки" })
+      .getByRole("button", { name: "Уведомления", exact: true })
+      .click();
     const group = page.getByRole("region", { name: "Уведомления" });
     await expect(
       group.getByRole("heading", { name: "Уведомления", level: 2 }),
@@ -317,6 +325,10 @@ test("admin: the notifications group shows the catalogue, saves limits, explains
     await page.reload();
     await page
       .getByRole("tab", { name: "Мобильное приложение", exact: true })
+      .click();
+    await page
+      .getByRole("navigation", { name: "Разделы админки" })
+      .getByRole("button", { name: "Уведомления", exact: true })
       .click();
     await expect(
       page

@@ -23,6 +23,7 @@ export const defaultSettings: SiteSettings = {
   autoScrollSpeed: 24,
   brandLogoId: null,
   componentIllustrations: { groups: {}, categories: {} },
+  // Kept for stored settings; the footer no longer shows credits (#366).
   graphicsCreditsLabel: "Авторы графики",
   graphicsCreditsUrl: "",
   articleTopics: defaultArticleTopics,

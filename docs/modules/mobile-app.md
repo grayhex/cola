@@ -10,14 +10,14 @@
 
 ## Точки входа
 
-| Что                      | Где                                                                                                                                       |
-| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| Редактор                 | `/admin` → «Мобильное приложение» → «Настройки приложения»; [mobile-settings.tsx](../../app/admin/mobile-settings.tsx)                    |
-| API админки              | `GET`/`PUT /api/admin/mobile` — [route](../../app/api/admin/mobile/route.ts); только администратор, запись с Origin сайта                 |
-| Публичный ответ          | `GET /api/v1/app-config` — [route](../../app/api/v1/app-config/route.ts), [handler](../../lib/api-v1/app-config-handlers.ts), без входа   |
-| Схема и правила          | [mobile-config.ts](../../lib/mobile-config.ts): строгая Zod-схема, лимиты, allowlist ссылок, подтверждения; общая для сервера и редактора |
-| Хранение и публичный DTO | [mobile-settings.ts](../../lib/mobile-settings.ts): чтение, сохранение, `appConfigOf`, ETag                                               |
-| Таблица                  | [053_mobile_settings.sql](../../db/053_mobile_settings.sql): одна строка `mobile_settings`                                                |
+| Что                      | Где                                                                                                                                                                                                                     |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Редактор                 | `/admin` → «Мобильное приложение» → «Экран запуска» / «Знакомство» / «Сообщение» / «Ссылки» / «Функции» / «Версии» (общий черновик, одна кнопка сохранения); [mobile-settings.tsx](../../app/admin/mobile-settings.tsx) |
+| API админки              | `GET`/`PUT /api/admin/mobile` — [route](../../app/api/admin/mobile/route.ts); только администратор, запись с Origin сайта                                                                                               |
+| Публичный ответ          | `GET /api/v1/app-config` — [route](../../app/api/v1/app-config/route.ts), [handler](../../lib/api-v1/app-config-handlers.ts), без входа                                                                                 |
+| Схема и правила          | [mobile-config.ts](../../lib/mobile-config.ts): строгая Zod-схема, лимиты, allowlist ссылок, подтверждения; общая для сервера и редактора                                                                               |
+| Хранение и публичный DTO | [mobile-settings.ts](../../lib/mobile-settings.ts): чтение, сохранение, `appConfigOf`, ETag                                                                                                                             |
+| Таблица                  | [053_mobile_settings.sql](../../db/053_mobile_settings.sql): одна строка `mobile_settings`                                                                                                                              |
 
 ## Данные
 

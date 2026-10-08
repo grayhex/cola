@@ -256,18 +256,8 @@ export default function GlobalHeader({
           { href: "/account?tab=bikes", label: "Мои велосипеды", icon: "bike" },
           { href: "/account?tab=rides", label: "Мои покатушки", icon: "rides" },
           { href: "/articles?own=1", label: "Мои статьи", icon: "articles" },
-          {
-            href: "/account?tab=achievements",
-            label: "Достижения",
-            icon: "records",
-          },
           { href: "/feed", label: "Подписки", icon: "subscriptions" },
           { href: "/saved", label: "Сохранённое", icon: "saved" },
-          {
-            href: "/notifications",
-            label: "Уведомления",
-            icon: "notifications",
-          },
           ...(user?.role === "admin"
             ? [{ href: "/admin", label: "Админка", icon: "admin" }]
             : []),

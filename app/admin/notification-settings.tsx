@@ -128,8 +128,11 @@ function NumberField({
 
 export default function NotificationSettingsAdmin({
   active,
+  onDirtyChange,
 }: {
   active: boolean;
+  // For the dot of its item in the admin menu (#366).
+  onDirtyChange?: (dirty: boolean) => void;
 }) {
   const [state, setState] = useState<State | null>(null),
     [draft, setDraft] = useState<Limits | null>(null),
@@ -171,6 +174,13 @@ export default function NotificationSettingsAdmin({
   useEffect(() => {
     if (active && !state && !loading.current) load();
   }, [active, state, load]);
+  const dirty =
+    !!state &&
+    !!draft &&
+    JSON.stringify(draft) !== JSON.stringify(state.limits);
+  useEffect(() => {
+    onDirtyChange?.(dirty);
+  }, [dirty, onDirtyChange]);
 
   if (!state || !draft)
     return (
@@ -192,7 +202,6 @@ export default function NotificationSettingsAdmin({
         </button>
       </section>
     );
-  const dirty = JSON.stringify(draft) !== JSON.stringify(state.limits);
   const edit = (change: Partial<Limits>) => {
     setDraft({ ...draft, ...change });
     setMessage("");

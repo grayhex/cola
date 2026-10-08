@@ -60,6 +60,8 @@ bash scripts/test-backup-drill.sh
 
 Для #338: `mobile-settings.test.ts` проверяет схему, allowlist ссылок, подтверждения, публичный DTO и версионированное сохранение на PGlite. `app-config-http.js` входит в общий HTTP-набор: гость, `ETag`/304, права админки, конфликт, защита изображения. `e2e/mobile-settings.spec.js` проходит редактор в браузере.
 
+Для #366: `tests/e2e/admin-menus.spec.js` проверяет семь пунктов группы «Мобильное приложение» в левом меню админки (черновики и индикаторы при переключении, ошибка открывает свой пункт, «Уведомления» только в своём пункте и сохраняются отдельным `PUT /api/admin/notifications`), меню пользователя без «Уведомлений» и «Достижений» (колокольчик остаётся), подвал без авторов графики и блок «Лицензии» на «О проекте»; `mobile-settings.spec.js`, `notification-policy.spec.js` и `site-experience.spec.js` проходят через те же пункты меню.
+
 Для #293: `comment-threads.test.js` проверяет upgrade с существующих одноуровневых веток для всех сущностей, 12 уровней, immediate parent/notification, скрытых родителей, immutable/cross-entity FK, пагинацию и SQL-бюджет. `comment-threads-concurrency.js` входит в PostgreSQL HTTP harness и удерживает пересекающиеся встречные ответы до проверки блокировки. `community-http` и `component-community-http` проверяют вложенные ответы через настоящий API, прежние права и квоты. `comment-threads.spec.js`, `planning-graphics.spec.js` и `bike-week.spec.js` покрывают глубокий фокус, дерево/пагинацию, клавиатуру, обе темы/System, axe, reduced motion, независимые uploads и защиту assets; запускаются в Chromium и WebKit. Снимки сохраняются в browser-review artifact.
 
 ## Что означает каждый уровень
