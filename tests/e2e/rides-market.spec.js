@@ -452,8 +452,10 @@ test("OSM thumbnails with Yandex setting, bounded design headings, SVG themes an
     page.on("request", (r) => {
       if (r.url().includes("api-maps.yandex.ru")) sdk++;
     });
-    // The catalogue opens on upcoming rides (#370); this one is recorded.
-    await page.goto("/rides?status=all");
+    // The catalogue opens on upcoming rides (#370); this one is recorded. «Все»
+    // lists planned rides first, 24 to a page, and the other specs of one run
+    // leave more than that behind: the list is narrowed to this ride's bike.
+    await page.goto("/rides?status=all&bikeId=" + bikeId);
     const osmCard = page
       .locator(".ride-card")
       .filter({ hasText: "OSM preview" });
