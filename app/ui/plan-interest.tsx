@@ -191,24 +191,28 @@ function GroupRow({
   );
 }
 
+// The choices live in the planner, not here: folding the section or choosing
+// a group unmounts the finder, and the next opening must find them as they
+// were left.
 export default function InterestFinder({
-  initial,
+  filters,
+  onFiltersChange,
   onPropose,
 }: {
-  initial: Record<string, string>;
+  filters: Record<string, string>;
+  onFiltersChange: Dispatch<SetStateAction<Record<string, string>>>;
   onPropose: (draft: PlanDraft) => void;
 }) {
   const { personalSettings } = useSite();
   const format = useZoneFormat(userTimeZone(personalSettings));
-  const [filters, setFilters] = useState(initial),
-    [state, setState] = useState<GroupsState>({ status: "loading" }),
+  const [state, setState] = useState<GroupsState>({ status: "loading" }),
     [revision, setRevision] = useState(0);
   // A typed district waits for a pause; choices apply at once.
-  const [query, setQuery] = useState(() => organizeQuery(initial).toString());
+  const [query, setQuery] = useState(() => organizeQuery(filters).toString());
   // The period is stamped with the current time, so a rebuilt query always
   // differs from the last one: rebuild it only for new choices. Rebuilding
   // after the first render sent the same request twice.
-  const queried = useRef(initial);
+  const queried = useRef(filters);
   useEffect(() => {
     if (filters === queried.current) return;
     const timer = setTimeout(() => {
@@ -247,7 +251,7 @@ export default function InterestFinder({
         Выбранное время попадёт в форму ниже, сохранится оно только вместе с
         покатушкой.
       </p>
-      <Filters value={filters} onChange={setFilters} />
+      <Filters value={filters} onChange={onFiltersChange} />
       {state.status === "loading" && (
         <div className={styles.groups} aria-hidden="true">
           {Array.from({ length: 3 }, (_, i) => (

@@ -58,6 +58,10 @@ export default function PlanComposer({
   const [state, setState] = useState<PlannerState>({ status: "loading" }),
     [revision, setRevision] = useState(0),
     [finder, setFinder] = useState(!!interest),
+    // The finder's own choices, kept while it is folded (it is unmounted).
+    [finderFilters, setFinderFilters] = useState<Record<string, string>>(
+      () => interest ?? { ...organizeDefaults },
+    ),
     [suggestion, setSuggestion] = useState<{
       id: number;
       draft: PlanDraft;
@@ -176,7 +180,8 @@ export default function PlanComposer({
             <summary ref={summary}>Подобрать время по интересам людей</summary>
             {finder && (
               <InterestFinder
-                initial={interest ?? { ...organizeDefaults }}
+                filters={finderFilters}
+                onFiltersChange={setFinderFilters}
                 onPropose={(draft) => {
                   setSuggestion({ id: ++choices.current, draft });
                   setFinder(false);

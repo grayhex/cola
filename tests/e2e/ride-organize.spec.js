@@ -127,6 +127,15 @@ test("planner shows consenting interest, takes a time from it and invites explic
     ).toBeVisible();
     await filters.getByLabel("Цель").selectOption("social");
     await expect(row).toContainText("2 человека");
+    // Folding the section keeps the choices: the next opening finds them as
+    // they were left, not reset to the defaults.
+    const toggle = planner.getByText("Подобрать время по интересам людей");
+    await toggle.click();
+    await expect(planner.getByLabel("Группы интереса")).toHaveCount(0);
+    await toggle.click();
+    await expect(filters.getByLabel("Район или парк")).toHaveValue(park);
+    await expect(filters.getByLabel("Цель")).toHaveValue("social");
+    await expect(row).toContainText("2 человека");
     for (const [theme, system] of [
       ["light", "light"],
       ["dark", "light"],
