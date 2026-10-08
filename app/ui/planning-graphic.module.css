@@ -28,7 +28,7 @@
 .graphic.wide {
   width: min(100%, 480px);
   height: clamp(96px, 22vw, 180px);
-  margin-inline: auto;
+  margin: 0 auto var(--space-4);
 }
 @media (max-width: 600px) {
   .graphic {
