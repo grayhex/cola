@@ -2,8 +2,6 @@
 import type * as React from "react";
 import type { BikeDto, SiteCatalog } from "../../../lib/contracts.ts";
 import BikeActions from "../bike-actions.tsx";
-import PhotoProblems from "../photo-problems.tsx";
-import type { PhotoProblem } from "../../../lib/photo-upload.ts";
 import { Avatar } from "../avatar.tsx";
 import {
   Heart,
@@ -38,8 +36,6 @@ export default function BikeIdentity({
   specifications,
   rideTotal,
   likes,
-  photoProblems = [],
-  onDismissPhotoProblems,
   onSection,
   onRegister,
   t,
@@ -53,8 +49,6 @@ export default function BikeIdentity({
   specifications: boolean;
   rideTotal: number | null;
   likes: number;
-  photoProblems?: PhotoProblem[];
-  onDismissPhotoProblems?: () => void;
   // Opens the tab of the bike page that a counter or a link points at.
   onSection?: (id: string) => void;
   onRegister?: () => void;
@@ -131,12 +125,6 @@ export default function BikeIdentity({
           )}
           <BikeActions {...actions} section="owner" />
         </div>
-      )}
-      {actions.editable && onDismissPhotoProblems && (
-        <PhotoProblems
-          problems={photoProblems}
-          onDismiss={onDismissPhotoProblems}
-        />
       )}
       <div className="bike-heading">
         <div className="bike-detail-title-row">

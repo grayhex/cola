@@ -551,7 +551,9 @@ test("going back and forward keeps the details, the photos and the parts; axe on
   await wizard
     .locator('input[type="file"]')
     .setInputFiles({ name: "fine.png", mimeType: "image/png", buffer: good });
-  await expect(wizard.locator(".wizard-local-photos img")).toHaveCount(1);
+  await expect(
+    wizard.locator('.wizard-draft-photos li[data-kind="local"] img'),
+  ).toHaveCount(1);
   await forward(wizard).click();
   await expect(heading(wizard)).toContainText("Комплектация");
   await wizard
@@ -580,7 +582,9 @@ test("going back and forward keeps the details, the photos and the parts; axe on
   await expect(wizard.getByLabel("Название в гараже")).toHaveValue("Мой Cube");
   await expect(wizard.getByLabel("Вес, кг")).toHaveValue("12.4");
   await expect(wizard.getByRole("radio", { name: "Только я" })).toBeChecked();
-  await expect(wizard.locator(".wizard-local-photos img")).toHaveCount(1);
+  await expect(
+    wizard.locator('.wizard-draft-photos li[data-kind="local"] img'),
+  ).toHaveCount(1);
   await back(wizard).click();
   await expect(searchBox(wizard)).toHaveValue("Cube Aim 2020");
   await forward(wizard).click();
@@ -643,7 +647,9 @@ test("photos: refused one by one beside the input, a failed upload leads back to
   // One selection: the accepted file stays, each refused one says why. The
   // size is not mixed up with the format or the pixel size.
   await input.setInputFiles([files.big, files.ok, files.vector, files.tiny]);
-  await expect(wizard.locator(".wizard-local-photos img")).toHaveCount(1);
+  await expect(
+    wizard.locator('.wizard-draft-photos li[data-kind="local"] img'),
+  ).toHaveCount(1);
   await expect(problems).toBeVisible();
   await expect(problems.locator("li")).toHaveCount(3);
   await expect(problems.locator('li[data-kind="size"]')).toHaveText(
@@ -704,7 +710,9 @@ test("photos: refused one by one beside the input, a failed upload leads back to
     "Велосипед сохранён, но не все фото загружены",
   );
   await expect(problems).toContainText("«fine.png» не отправлено");
-  await expect(wizard.locator(".wizard-local-photos img")).toHaveCount(1);
+  await expect(
+    wizard.locator('.wizard-draft-photos li[data-kind="local"] img'),
+  ).toHaveCount(1);
   await expect(wizard.getByLabel("Марка", { exact: true })).toBeDisabled();
   await expect(input).toBeEnabled();
   const retry = wizard.getByRole("button", {

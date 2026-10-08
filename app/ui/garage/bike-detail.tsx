@@ -127,8 +127,6 @@ export default function BikeDetail({
     title: bike.name || modelName,
     editable,
     reaction: detailReaction,
-    busy,
-    onAddPhoto: () => file.current?.click(),
     onFindPhoto: () => setModal({ type: "photoSearch" }),
     onAccess: () => setModal({ type: "share" }),
     onEdit: () => setModal({ type: "bike", bike }),
@@ -195,11 +193,12 @@ export default function BikeDetail({
         )}
       </nav>
       <div className="bike-hero">
-        {layout.photos && (
+        {(layout.photos || editable) && (
           <BikeGallery
             bike={bike}
             photo={activePhoto}
             thumbnails={layout.thumbnails}
+            showPicture={layout.photos}
             editable={editable}
             busy={busy}
             t={t}
@@ -216,6 +215,9 @@ export default function BikeDetail({
               })
             }
             onDelete={(p) => setModal({ type: "deletePhoto", photo: p })}
+            onAdd={() => file.current?.click()}
+            problems={photoProblems}
+            onDismissProblems={dismissPhotoProblems}
             demoCredit={bike.id === "demo" && !settings.demoImageId}
           />
         )}
@@ -230,8 +232,6 @@ export default function BikeDetail({
           specifications={specifications}
           rideTotal={rideTotal}
           likes={detailReaction.likes ?? bike.likes}
-          photoProblems={photoProblems}
-          onDismissPhotoProblems={dismissPhotoProblems}
           onSection={(id) => select(id, true)}
           onRegister={!editable && !share ? () => auth("register") : undefined}
           t={t}

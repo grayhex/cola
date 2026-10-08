@@ -18,8 +18,6 @@ export default function BikeActions({
   title,
   editable,
   reaction,
-  busy,
-  onAddPhoto,
   onFindPhoto,
   onAccess,
   onEdit,
@@ -32,8 +30,6 @@ export default function BikeActions({
   title: string;
   editable: boolean;
   reaction: ReturnType<typeof useBikeReaction>;
-  busy: boolean;
-  onAddPhoto: () => void;
   onFindPhoto: () => void;
   onAccess: () => void;
   onEdit: () => void;
@@ -83,16 +79,6 @@ export default function BikeActions({
           >
             <SiteIcon name="edit" size={15} />
             <span>{t("Редактировать")}</span>
-          </button>
-          <button
-            type="button"
-            className={styles.action}
-            title={t("Добавить фото")}
-            disabled={busy}
-            onClick={onAddPhoto}
-          >
-            <SiteIcon name="addPhoto" size={15} />
-            <span>{t("Добавить фото")}</span>
           </button>
           <button
             type="button"

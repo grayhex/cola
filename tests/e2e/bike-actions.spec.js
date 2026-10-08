@@ -135,10 +135,19 @@ test("bike actions: separate owner/social rows, labelled controls and overflow",
   await page.goto(path);
   const bar = page.locator('[data-bike-actions="owner"]');
   const tools = bar.getByRole("group", { name: "Управление велосипедом" });
-  for (const name of ["Добавить фото", "Приватность", "Редактировать"])
+  for (const name of ["Приватность", "Редактировать"])
     await expect(
       tools.getByRole("button", { name, exact: true }),
     ).toBeVisible();
+  // Adding a photo is in the photo control under the gallery, not in the bar
+  // (#370): one place, no twin.
+  await expect(
+    tools.getByRole("button", { name: "Добавить фото", exact: true }),
+  ).toHaveCount(0);
+  const photos = page.getByRole("group", { name: "Фотографии велосипеда" });
+  await expect(
+    photos.getByRole("button", { name: "Добавить фото", exact: true }),
+  ).toBeVisible();
   const access = tools.getByRole("button", {
     name: "Приватность",
     exact: true,
@@ -176,7 +185,7 @@ test("bike actions: separate owner/social rows, labelled controls and overflow",
 
   // Each tool still does its job.
   const chooser = page.waitForEvent("filechooser");
-  await tools
+  await photos
     .getByRole("button", { name: "Добавить фото", exact: true })
     .click();
   await chooser;

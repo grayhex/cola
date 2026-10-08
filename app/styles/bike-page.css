@@ -625,44 +625,20 @@
     height: 100%;
     object-fit: cover;
   }
-  /* The owner's tools for the picture in the frame: cover and delete. */
-  .photo-tools {
+  /* The passive mark of the cover (#370): a state of the picture in the frame,
+     not a button; the owner's actions are in the photo control under it. */
+  .photo-cover-mark {
     position: absolute;
     top: var(--space-2);
     right: var(--space-2);
     z-index: 1;
-    display: flex;
-    gap: var(--space-1);
-  }
-  .photo-tools button {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-1);
-    min-height: var(--control-sm);
-    padding: 0 var(--space-2);
+    padding: 2px var(--space-2);
     border: 1px solid var(--control-line);
     border-radius: var(--radius-md);
     background: color-mix(in srgb, var(--surface) 92%, transparent);
-    color: var(--control-text);
-    font: var(--weight-medium) var(--text-xs) / 1 var(--font-sans);
-    cursor: pointer;
-  }
-  .photo-tools button:hover:not(:disabled) {
-    background: var(--surface-hover);
-  }
-  .photo-tools button:disabled {
-    opacity: 0.6;
-    cursor: default;
-  }
-  .photo-tools .danger {
-    color: var(--danger);
-  }
-  @media (max-width: 700px) {
-    .photo-tools button {
-      min-height: var(--control-md);
-      min-width: var(--control-md);
-      justify-content: center;
-    }
+    color: var(--text);
+    font: var(--weight-medium) var(--text-xs) / 1.4 var(--font-sans);
+    pointer-events: none;
   }
 
   /* Folded blocks: the factory specification, price settings. */
