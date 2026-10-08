@@ -17,6 +17,8 @@ const env = {
   APP_ORIGIN: "http://localhost:3100",
   TEST_ORIGIN: "http://localhost:3100",
   NEXT_TELEMETRY_DISABLED: "1",
+  // The place search answers from a built-in list: no third party in tests.
+  COLA_GEOCODER_FIXTURE: "1",
   ...(process.env.UI_TEST_ACTIVITY === "1"
     ? {
         RWGPS_ENABLED: "true",
