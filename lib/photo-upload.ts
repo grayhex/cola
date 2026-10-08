@@ -62,7 +62,8 @@ export const photoUnreadable = (name: string) =>
   problemOf("failed", `Фото «${name}» не удалось прочитать как изображение.`);
 
 export type PhotoSent =
-  | { ok: true }
+  // `id`: the photo the server made of the file, when it said so.
+  | { ok: true; id: string | null }
   // `retryable`: the same file may go through later (the network, a busy
   // server); otherwise it never will and is better dropped from the queue.
   | { ok: false; retryable: boolean; problem: PhotoProblem };
@@ -102,7 +103,17 @@ export async function sendBikePhoto(
       ),
     };
   }
-  if (response.ok) return { ok: true };
+  if (response.ok) {
+    let id: string | null = null;
+    try {
+      const body: unknown = JSON.parse(await response.text());
+      const made = (body as { id?: unknown } | null)?.id;
+      if (typeof made === "string") id = made;
+    } catch {
+      /* The photo is in; only its id is not known. */
+    }
+    return { ok: true, id };
+  }
   if (response.status === 413)
     return {
       ok: false,

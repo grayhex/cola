@@ -296,14 +296,18 @@ test("wizard quick setup, identity confirmation, image size and successful save"
   await expect(dialog.getByRole("alert").last()).toContainText(
     "Фото «payload.svg» не добавлено: поддерживаются только JPEG, PNG и WebP",
   );
-  await expect(dialog.locator(".wizard-local-photos img")).toHaveCount(0);
+  await expect(
+    dialog.locator('.wizard-draft-photos li[data-kind="local"] img'),
+  ).toHaveCount(0);
   await dialog.locator('input[type="file"]').setInputFiles({
     name: "payload.png",
     mimeType: "image/png",
     buffer: Buffer.from('<img src=x onerror="alert(141)">'),
   });
   await expect(dialog.locator('input[type="file"]')).toHaveValue("");
-  await expect(dialog.locator(".wizard-local-photos img")).toHaveCount(0);
+  await expect(
+    dialog.locator('.wizard-draft-photos li[data-kind="local"] img'),
+  ).toHaveCount(0);
   const good = await sharp({
     create: { width: 600, height: 400, channels: 3, background: "white" },
   })
@@ -314,17 +318,28 @@ test("wizard quick setup, identity confirmation, image size and successful save"
     mimeType: "image/png",
     buffer: good,
   });
-  await expect(dialog.locator(".wizard-local-photos img")).toHaveCount(1);
-  const preview = dialog.locator(".wizard-local-photos img");
-  await expect(preview).toHaveAttribute("src", /^blob:/);
-  await expect(preview).toHaveAttribute(
-    "alt",
-    '<img src=x onerror="alert(141)">.png',
+  await expect(
+    dialog.locator('.wizard-draft-photos li[data-kind="local"] img'),
+  ).toHaveCount(1);
+  const preview = dialog.locator(
+    '.wizard-draft-photos li[data-kind="local"] img',
   );
+  await expect(preview).toHaveAttribute("src", /^data:image\//);
+  // The file name is text of the thumbnail's name, never markup (#370).
+  await expect(
+    dialog.locator('.wizard-draft-photos li[data-kind="local"] button.thumb'),
+  ).toHaveAttribute(
+    "aria-label",
+    'Фото 1: <img src=x onerror="alert(141)">.png, обложка',
+  );
+  await expect(dialog.locator("img[onerror]")).toHaveCount(0);
   await expect(preview).not.toHaveAttribute("onerror");
+  // The picture of the draft is a small thumbnail of the file, in its proportions.
   await expect
-    .poll(() => preview.evaluate((img) => img.naturalWidth))
-    .toBe(600);
+    .poll(() =>
+      preview.evaluate((img) => [img.naturalWidth, img.naturalHeight]),
+    )
+    .toEqual([320, 213]);
   expect(prompts).toEqual([]);
   await page.screenshot({
     path: info.outputPath("wizard-details.png"),

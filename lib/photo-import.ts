@@ -41,7 +41,8 @@ export async function importPhotos(
       });
     }
     await savePhotos(transaction, ownerId, bikeId, prepared, directory);
-    return { count: prepared.length };
+    // The ids are in the order of the request: the caller knows which is which.
+    return { count: prepared.length, ids: prepared.map((p) => p.id) };
   } catch (e) {
     if (errorCode(e) === "23505")
       throw new Error("Эта фотография уже добавлена", { cause: e });

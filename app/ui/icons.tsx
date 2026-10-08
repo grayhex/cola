@@ -2,6 +2,7 @@ export {
   ArrowDown,
   ArrowRight,
   Download,
+  Eraser,
   MonitorSmartphone,
   ArrowLeft,
   ArrowUp,

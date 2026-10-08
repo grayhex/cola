@@ -129,13 +129,19 @@ test("bike page: edit, add photo and privacy use the icon slots, colours, emoji 
     await page.goto("/b/" + bike.share_id);
     const tools = page.getByRole("group", { name: "Управление велосипедом" });
     const button = (name) => tools.getByRole("button", { name, exact: true });
+    // «Add photo» is in the photo control under the gallery (#370).
+    const photos = page.getByRole("group", { name: "Фотографии велосипеда" });
+    const addPhoto = photos.getByRole("button", {
+      name: "Добавить фото",
+      exact: true,
+    });
     for (const theme of ["light", "dark"]) {
       await page.evaluate(
         (t) => (document.documentElement.dataset.theme = t),
         theme,
       );
       await reacts(page, button("Редактировать"), "edit");
-      await reacts(page, button("Добавить фото"), "addPhoto");
+      await reacts(page, addPhoto, "addPhoto");
       await reacts(page, button("Приватность"), "public");
       await page.mouse.move(0, 0);
       await page.screenshot({
@@ -147,15 +153,20 @@ test("bike page: edit, add photo and privacy use the icon slots, colours, emoji 
         (
           await new AxeBuilder({ page })
             .include("[data-bike-actions=owner]")
+            .include("[data-photo-control]")
             .analyze()
         ).violations,
       ).toEqual([]);
     }
     // No direct icon of the library is left in the three buttons: each holds
     // exactly one SiteIcon.
-    for (const name of ["Редактировать", "Добавить фото", "Приватность"]) {
-      await expect(button(name).locator("svg")).toHaveCount(1);
-      await expect(button(name).locator(".site-icon")).toHaveCount(1);
+    for (const locator of [
+      button("Редактировать"),
+      addPhoto,
+      button("Приватность"),
+    ]) {
+      await expect(locator.locator("svg")).toHaveCount(1);
+      await expect(locator.locator(".site-icon")).toHaveCount(1);
     }
 
     // The label, the busy state and the access name stay as they were.
@@ -176,17 +187,17 @@ test("bike page: edit, add photo and privacy use the icon slots, colours, emoji 
     // An emoji chosen for the slot takes the icon's place and its highlight.
     await put({ emojis: { ...original.emojis, addPhoto: "📸", edit: "🖋️" } });
     await page.reload();
-    const photo = slotOf(button("Добавить фото"), "addPhoto");
+    const photo = slotOf(addPhoto, "addPhoto");
     await expect(photo).toHaveClass(/custom/);
     await expect(photo).toHaveText("📸");
     await expect(photo).toHaveAttribute("aria-hidden", "true");
-    await expect(button("Добавить фото")).toBeVisible();
+    await expect(addPhoto).toBeVisible();
     await expect(slotOf(button("Редактировать"), "edit")).toHaveText("🖋️");
-    await button("Добавить фото").hover();
+    await addPhoto.hover();
     await expect
       .poll(() => photo.evaluate((el) => getComputedStyle(el).boxShadow))
       .not.toBe("none");
-    await expect(button("Добавить фото")).toBeEnabled();
+    await expect(addPhoto).toBeEnabled();
   } finally {
     await put({ iconColors: original.iconColors, emojis: original.emojis });
   }
@@ -272,7 +283,7 @@ test("the four forms: the wizard, an ad, an article and a ride carry the slots o
     await reacts(page, next, "next");
     await next.click();
     await expect(
-      slotOf(wizard.locator("label.field"), "addPhoto"),
+      slotOf(wizard.locator("[data-photo-control]"), "addPhoto"),
     ).toBeVisible();
     await wizard
       .getByLabel("Категория велосипеда", { exact: true })

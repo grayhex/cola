@@ -40,6 +40,8 @@ import {
   type PhotoProblem,
 } from "../../lib/photo-upload.ts";
 import PhotoProblems from "./photo-problems.tsx";
+import PhotoControl from "./photo-control.tsx";
+import { thumbnailOf } from "./photo-thumbnail.ts";
 import EmailPolicyAction from "./email-policy-action.tsx";
 import { useConfirmation } from "./confirmation.tsx";
 import ClassificationFields from "./bike-classification.tsx";
@@ -55,7 +57,14 @@ import {
   compatibilityCategory,
 } from "../../lib/bike-classification.ts";
 import { parseBikeSearch } from "../../lib/bike-search-input.ts";
-import { useCallback, useMemo, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useMemo,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { LoaderCircle, Check, Plus, Trash2 } from "./icons.tsx";
 import { useSite } from "./site-provider.tsx";
 import CompactCombo from "./compact-combo.tsx";
@@ -213,6 +222,15 @@ export default function BikeWizard({
     [photoBusy, setPhotoBusy] = useState(false),
     [photoError, setPhotoError] = useState(""),
     [photoProblems, setPhotoProblems] = useState<PhotoProblem[]>([]),
+    // The photo the control acts on, and the one chosen as the cover: keys of
+    // the draft («found:…», «local:…»), so a choice does not depend on the order
+    // the photos are sent in (#370). Without a choice the first one leads.
+    [selectedPhoto, setSelectedPhoto] = useState<string | null>(null),
+    [coverPhoto, setCoverPhoto] = useState<string | null>(null),
+    // Once the bike is being saved the cover is fixed (the key of the draft
+    // photo that was chosen, or «» for none): a retry sends what is left, and
+    // what is left is not the cover then.
+    [fixedCover, setFixedCover] = useState<string | undefined>(undefined),
     // The request the shown result answers (the typed identity and the link):
     // it counts as «found» only while the fields still say the same.
     [resultKey, setResultKey] = useState(""),
@@ -231,12 +249,63 @@ export default function BikeWizard({
     }),
     [bike.brand, bike.model, bike.trim, bike.year],
   );
+  // Everything that will go to the bike as a photo: the found ones chosen above,
+  // then the files added by hand.
+  const draftPhotos = [
+    ...chosen.map((id) => ({
+      key: "found:" + id,
+      kind: "found" as const,
+    })),
+    ...files.map((f) => ({
+      key: "local:" + f.id,
+      kind: "local" as const,
+    })),
+  ];
+  const selectedDraft =
+    draftPhotos.find((p) => p.key === selectedPhoto) || draftPhotos[0] || null;
+  const coverDraft =
+    fixedCover !== undefined
+      ? (draftPhotos.find((p) => p.key === fixedCover) ?? null)
+      : draftPhotos.find((p) => p.key === coverPhoto) || draftPhotos[0] || null;
+  // The name a photo of the draft goes by: the file's own, or «found». Read
+  // from the file where it is shown, not carried in the list of pictures.
+  const draftLabel = (key: string) =>
+    files.find((f) => "local:" + f.id === key)?.file.name ?? "Найденное фото";
+  // One thumbnail of the draft; the picture is given by the caller, which knows
+  // where it comes from (a found photo's address, or a chosen file).
+  const draftThumb = (
+    key: string,
+    kind: "found" | "local",
+    i: number,
+    picture: ReactNode,
+  ) => (
+    <li key={key} data-kind={kind}>
+      <button
+        type="button"
+        className={"thumb" + (key === selectedDraft?.key ? " active" : "")}
+        aria-label={`Фото ${i + 1}: ${draftLabel(key)}${key === coverDraft?.key ? ", обложка" : ""}`}
+        aria-current={key === selectedDraft?.key ? "true" : undefined}
+        onClick={() => setSelectedPhoto(key)}
+      >
+        {picture}
+        {key === coverDraft?.key && (
+          <span className="photo-cover-mark">Обложка</span>
+        )}
+      </button>
+    </li>
+  );
   const acceptedIdentity = useRef(""),
     requestId = useRef<string | null>(null),
     resolveAbort = useRef<AbortController | null>(null),
     photoAbort = useRef<AbortController | null>(null),
     heading = useRef<HTMLHeadingElement | null>(null),
-    fileRefs = useRef<UploadFile[]>([]),
+    fileInput = useRef<HTMLInputElement | null>(null),
+    // What the saved bike holds of the draft: draft key → photo id, in the
+    // order the server took them; the cover is set from here once they are in.
+    savedPhotos = useRef(new Map<string, string>()),
+    firstSaved = useRef<string | null>(null),
+    wantedCover = useRef<string | null>(null),
+    coverSet = useRef<string | null>(null),
     alive = useRef(true),
     completed = useRef(false);
   useEffect(() => {
@@ -246,15 +315,11 @@ export default function BikeWizard({
       alive.current = false;
       resolveAbort.current?.abort();
       photoAbort.current?.abort();
-      fileRefs.current.forEach((f) => URL.revokeObjectURL(f.preview));
     };
   }, []);
   useEffect(() => {
     heading.current?.focus();
   }, [step]);
-  useEffect(() => {
-    fileRefs.current = files;
-  }, [files]);
   // The reasons a photo was refused are shown where the files are chosen, which
   // may be out of sight when a save has just run.
   useEffect(() => {
@@ -727,7 +792,7 @@ export default function BikeWizard({
     input.value = "";
     if (!added.length) return;
     const problems: PhotoProblem[] = [],
-      accepted: File[] = [];
+      accepted: { file: File; preview: string }[] = [];
     let room = photosPerBike - files.length - chosen.length;
     for (const file of added) {
       const refused = checkPhotoFile(file);
@@ -739,11 +804,13 @@ export default function BikeWizard({
         problems.push(tooManyPhotos(file.name));
         continue;
       }
+      let preview = "";
       try {
         const bitmap = await createImageBitmap(file);
         const valid =
           Math.min(bitmap.width, bitmap.height) >= 400 &&
           Math.max(bitmap.width, bitmap.height) >= 600;
+        if (valid) preview = thumbnailOf(bitmap);
         bitmap.close();
         if (!valid) {
           problems.push(photoTooSmall(file.name));
@@ -754,19 +821,30 @@ export default function BikeWizard({
         continue;
       }
       room -= 1;
-      accepted.push(file);
+      accepted.push({ file, preview });
     }
     if (!alive.current) return;
     setPhotoProblems(problems);
     if (accepted.length)
       setFiles((a) => [
         ...a,
-        ...accepted.map((file) => ({
+        ...accepted.map(({ file, preview }) => ({
           id: draftId(),
           file,
-          preview: URL.createObjectURL(file),
+          preview,
         })),
       ]);
+  }
+  // The control's delete: a found photo goes back to the offers, a file is
+  // let go. The draft only: nothing was sent yet.
+  function removeDraftPhoto(key: string) {
+    if (key.startsWith("found:"))
+      setChosen((a) => a.filter((id) => "found:" + id !== key));
+    else {
+      setFiles((a) => a.filter((f) => "local:" + f.id !== key));
+    }
+    if (coverPhoto === key) setCoverPhoto(null);
+    if (selectedPhoto === key) setSelectedPhoto(null);
   }
   async function save() {
     const fields = bikeFields();
@@ -811,8 +889,20 @@ export default function BikeWizard({
         id = data.id;
         setSavedId(id);
       }
+      // The cover is the photo the person chose, or the first of the draft:
+      // fixed once, so a retry does not move it.
+      wantedCover.current ??= coverDraft?.key ?? "";
+      setFixedCover(wantedCover.current);
       if (chosen.length) {
-        await api(id + "/photos/import", { ids: chosen });
+        const imported = await api<{ ids?: string[] }>(id + "/photos/import", {
+          ids: chosen,
+        });
+        chosen.forEach((candidate, i) => {
+          const photo = imported.ids?.[i];
+          if (!photo) return;
+          savedPhotos.current.set("found:" + candidate, photo);
+          firstSaved.current ??= photo;
+        });
         setChosen([]);
       }
       // The bike exists from here on: a photo that fails stays in the queue,
@@ -821,13 +911,15 @@ export default function BikeWizard({
       for (const item of files) {
         const sent = await sendBikePhoto(id, item.file);
         if (sent.ok) {
-          URL.revokeObjectURL(item.preview);
+          if (sent.id) {
+            savedPhotos.current.set("local:" + item.id, sent.id);
+            firstSaved.current ??= sent.id;
+          }
           setFiles((f) => f.filter((x) => x.id !== item.id));
         } else {
           refused.push(sent.problem);
           // A file the server will never take is not worth another try.
           if (!sent.retryable) {
-            URL.revokeObjectURL(item.preview);
             setFiles((f) => f.filter((x) => x.id !== item.id));
           }
         }
@@ -841,6 +933,22 @@ export default function BikeWizard({
           "Велосипед сохранён, но не все фото загружены. Причины — рядом с выбором файлов; уберите лишние или повторите загрузку.",
         );
         return;
+      }
+      // The first photo the server took is the cover by itself; another one
+      // chosen in the draft is made the cover now that it is in.
+      const cover = savedPhotos.current.get(wantedCover.current || "");
+      if (cover && cover !== firstSaved.current && coverSet.current !== cover) {
+        const response = await fetch(`/api/bikes/${id}/photos/${cover}`, {
+          method: "PATCH",
+        });
+        if (!response.ok) {
+          setStep(1);
+          setError(
+            "Велосипед сохранён, но обложку выбрать не удалось. Нажмите «Повторить загрузку фото» или назначьте обложку на странице велосипеда.",
+          );
+          return;
+        }
+        coverSet.current = cover;
       }
       completed.current = true;
       await onCreated(id!);
@@ -1303,7 +1411,7 @@ export default function BikeWizard({
                 </div>
               )}
               <p className="help">
-                Выберите до 3 фото вашей модели или загрузите свои.
+                Выберите до 3 фото вашей модели или добавьте свои.
               </p>
               {photoBusy && <Progress text="Ищем фотографии…" />}
               {photoError && <p role="status">{photoError}</p>}
@@ -1355,45 +1463,74 @@ export default function BikeWizard({
                 <SiteIcon name="reset" />
                 Повторить поиск фото
               </button>
-              <label className="field">
-                <span>
-                  <SiteIcon name="addPhoto" /> Или загрузите свои · JPEG, PNG,
-                  WebP · до {photoLimitText} · от 600 × 400
-                </span>
-                <input
-                  type="file"
-                  multiple
-                  accept="image/jpeg,image/png,image/webp"
-                  aria-invalid={photoProblems.length ? true : undefined}
-                  aria-describedby={
-                    photoProblems.length ? "wizard-photo-problems" : undefined
-                  }
-                  onChange={(e) => addPhotos(e.target)}
-                />
-              </label>
+              {draftPhotos.length > 0 && (
+                <ul
+                  className="wizard-draft-photos"
+                  aria-label="Фотографии нового велосипеда"
+                >
+                  {chosen.map((id, i) =>
+                    draftThumb(
+                      "found:" + id,
+                      "found",
+                      i,
+                      <img src={"/api/bikes/photo-candidates/" + id} alt="" />,
+                    ),
+                  )}
+                  {files.map((f, i) =>
+                    draftThumb(
+                      "local:" + f.id,
+                      "local",
+                      chosen.length + i,
+                      <img src={f.preview} alt="" />,
+                    ),
+                  )}
+                </ul>
+              )}
+              <PhotoControl
+                selected={
+                  selectedDraft
+                    ? {
+                        position:
+                          draftPhotos.findIndex(
+                            (p) => p.key === selectedDraft.key,
+                          ) + 1,
+                        total: draftPhotos.length,
+                        isCover: selectedDraft.key === coverDraft?.key,
+                      }
+                    : null
+                }
+                busy={photoBusy || saving}
+                coverLocked={fixedCover !== undefined}
+                onAdd={() => fileInput.current?.click()}
+                onCover={() =>
+                  selectedDraft && setCoverPhoto(selectedDraft.key)
+                }
+                onDelete={() =>
+                  selectedDraft && removeDraftPhoto(selectedDraft.key)
+                }
+              />
+              <input
+                ref={fileInput}
+                type="file"
+                multiple
+                className="visually-hidden"
+                tabIndex={-1}
+                aria-label="Файлы фотографий"
+                accept="image/jpeg,image/png,image/webp"
+                aria-invalid={photoProblems.length ? true : undefined}
+                aria-describedby={
+                  photoProblems.length ? "wizard-photo-problems" : undefined
+                }
+                onChange={(e) => addPhotos(e.target)}
+              />
+              <small className="help">
+                JPEG, PNG, WebP · до {photoLimitText} · от 600 × 400
+              </small>
               <PhotoProblems
                 id="wizard-photo-problems"
                 problems={photoProblems}
                 onDismiss={() => setPhotoProblems([])}
               />
-              <div className="wizard-local-photos">
-                {files.map((f) => (
-                  <div key={f.id}>
-                    <img src={f.preview} alt={f.file.name} />
-                    <button
-                      type="button"
-                      className="quiet"
-                      aria-label={"Убрать " + f.file.name}
-                      onClick={() => {
-                        URL.revokeObjectURL(f.preview);
-                        setFiles((a) => a.filter((x) => x.id !== f.id));
-                      }}
-                    >
-                      Убрать
-                    </button>
-                  </div>
-                ))}
-              </div>
             </section>
             <fieldset className="wizard-card wizard-settings" disabled={locked}>
               <legend>Приватность и показ</legend>

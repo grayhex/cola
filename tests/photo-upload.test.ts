@@ -162,11 +162,21 @@ test("no connection is a retryable failure with words; success is ok", async () 
   await answering(
     Response.json({ id: "x" }, { status: 201 }),
     async (calls) => {
-      assert.deepEqual(await sendBikePhoto("b1", picture()), { ok: true });
+      assert.deepEqual(await sendBikePhoto("b1", picture()), {
+        ok: true,
+        id: "x",
+      });
       assert.equal(
         (calls[0].headers as Record<string, string>)["Content-Type"],
         "image/png",
       );
     },
   );
+  // The photo is in whatever the answer says; only its id may be unknown.
+  await answering(new Response("created", { status: 201 }), async () => {
+    assert.deepEqual(await sendBikePhoto("b1", picture()), {
+      ok: true,
+      id: null,
+    });
+  });
 });
