@@ -265,7 +265,10 @@ test("SVG map preview opens the ride, preserves attribution links and works with
       return getContext.call(this, type, ...args);
     };
   });
-  await page.goto(`/rides?bikeId=${bike.id}`, { waitUntil: "networkidle" });
+  // The catalogue opens on upcoming rides (#370); this one is recorded.
+  await page.goto(`/rides?bikeId=${bike.id}&status=all`, {
+    waitUntil: "networkidle",
+  });
   const card = page.locator(".ride-card").filter({ hasText: ride.title });
   await card.scrollIntoViewIfNeeded();
   await expect(card.locator("h3")).toBeInViewport();

@@ -103,8 +103,8 @@ export function sectionLinks(
     ];
   if (id === "rides")
     return [
-      { href: "/rides", label: "Лента покатушек", icon: "rides" },
-      { href: "/rides?status=planned", label: "Предстоящие", icon: "rides" },
+      { href: "/rides", label: "Предстоящие", icon: "rides" },
+      { href: "/rides?status=all", label: "Все покатушки", icon: "rides" },
       {
         href: "/account?tab=rides&action=plan",
         label: "Запланировать",

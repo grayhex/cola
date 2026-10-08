@@ -1,8 +1,8 @@
 "use client";
 import type { SetStateAction } from "react";
 import Link from "next/link";
-import dynamic from "next/dynamic";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { X } from "lucide-react";
 import { useSite } from "../ui/site-provider.tsx";
 import RideCreationActions from "../ui/ride-creation-actions.tsx";
@@ -16,28 +16,25 @@ import {
   durationBuckets,
   filterLabels,
   readFilters,
+  readRideStatus,
+  rideStatusQuery,
+  rideStatuses,
+  type RideStatus,
 } from "../../lib/ride-filters.ts";
 import { readOrganize } from "../../lib/organize-filters.ts";
 
-// «Собрать компанию» (#234) loads only when a signed-in organizer opens it.
-const OrganizeWorkspace = dynamic(
-  () => import("../ui/organize-workspace.tsx"),
-  {
-    ssr: false,
-    loading: () => <p role="status">Открываем…</p>,
-  },
-);
-
 // Only shared public filters reach the URL (#233): shareable, restorable on
-// back/forward, never a personal schedule, identity or coordinates.
+// back/forward, never a personal schedule, identity or coordinates. Upcoming
+// rides are what a clean address shows (#370), so only the other two tabs
+// write a `status`: «Все» is a choice of its own, not a missing value.
 function writeUrl(
-  status: string | null,
+  status: RideStatus,
   filters: Record<string, string>,
   bikeId: string,
 ) {
   // Rebuilt from allowed keys only: nothing else survives from a pasted URL.
   const url = new URL(location.pathname, location.origin);
-  if (status) url.searchParams.set("status", status);
+  if (status !== "planned") url.searchParams.set("status", status);
   if (status === "planned")
     for (const [key, value] of Object.entries(filters))
       url.searchParams.set(key, value);
@@ -126,19 +123,11 @@ function FilterFields({
     </>
   );
 }
-// The organizer's shared choices only — never a schedule or a person.
-function writeOrganizeUrl(filters: Record<string, string>) {
-  const url = new URL(location.pathname, location.origin);
-  url.searchParams.set("mode", "organize");
-  for (const [key, value] of Object.entries(filters))
-    if (value) url.searchParams.set(key, value);
-  window.history.replaceState(null, "", url);
-}
 export default function Rides() {
   const { viewer: user } = useSite();
+  const router = useRouter();
   const [bikeId, setBikeId] = useState<string | null>(null),
-    [organize, setOrganize] = useState<Record<string, string> | null>(null),
-    [status, setStatus] = useState<string | null>(null),
+    [status, setStatus] = useState<RideStatus>("planned"),
     [filters, setFilters] = useState<Record<string, string>>({}),
     [area, setArea] = useState(""),
     [sheet, setSheet] = useState(false),
@@ -147,24 +136,33 @@ export default function Rides() {
   const latest = useRef<Record<string, string>>({});
   useEffect(() => {
     const params = new URLSearchParams(location.search);
+    // «Собрать компанию» became a step of planning (#370): its old links open
+    // the planner with the same choices (a guest signs in on the way).
+    if (params.get("mode") === "organize") {
+      router.replace(
+        "/account?" +
+          new URLSearchParams({
+            tab: "rides",
+            action: "plan",
+            interest: "1",
+            ...readOrganize(params),
+          }),
+      );
+      return;
+    }
     const initial = readFilters(params);
-    if (params.get("mode") === "organize") setOrganize(readOrganize(params));
     setBikeId(params.get("bikeId") || "");
-    setStatus(
-      ["planned", "completed"].includes(params.get("status") || "")
-        ? params.get("status")
-        : null,
-    );
+    setStatus(readRideStatus(params));
     latest.current = initial;
     setFilters(initial);
     setArea(initial.area || "");
-  }, []);
+  }, [router]);
   // Choices apply at once; a typed district waits for a pause. The applied
   // set is derived, so no timer can leave it behind the visible controls.
   // The URL is written in the same event: a late remount after back/forward
   // re-reads it and cannot drop a choice that has not reached it yet.
   const url = (
-    nextStatus: string | null,
+    nextStatus: RideStatus,
     nextFilters: Record<string, string>,
     typed: string,
   ) => {
@@ -203,15 +201,10 @@ export default function Rides() {
     setFilters(next);
     url(status, next, next.area === undefined ? "" : typed);
   }
-  function chooseStatus(value: string | null) {
-    setOrganize(null);
+  function chooseStatus(value: RideStatus) {
     setStatus(value);
     url(value, filters, area);
   }
-  const organizeChanged = useCallback(
-    (next: Record<string, string>) => writeOrganizeUrl(next),
-    [],
-  );
   const chips = filterLabels(applied);
   const upcoming = status === "planned";
   return (
@@ -231,34 +224,18 @@ export default function Rides() {
           </div>
         </div>
         <div className="ride-filter-bar">
-          <div className="ui-tabs" aria-label="Фильтр покатушек">
-            {[
-              [null, "Все"],
-              ["completed", "Прошедшие"],
-              ["planned", "Предстоящие"],
-            ].map(([value, label]) => (
+          <div className="ui-tabs" role="group" aria-label="Фильтр покатушек">
+            {(Object.keys(rideStatuses) as RideStatus[]).map((value) => (
               <button
-                key={label}
-                aria-pressed={!organize && status === value}
+                key={value}
+                aria-pressed={status === value}
                 onClick={() => chooseStatus(value)}
               >
-                {label}
+                {rideStatuses[value]}
               </button>
             ))}
-            {user && (
-              <button
-                aria-pressed={!!organize}
-                onClick={() => {
-                  const next = readOrganize(new URLSearchParams());
-                  setOrganize(next);
-                  writeOrganizeUrl(next);
-                }}
-              >
-                Собрать компанию
-              </button>
-            )}
           </div>
-          {upcoming && !organize && (
+          {upcoming && (
             <button
               type="button"
               className="button secondary ride-filter-open"
@@ -277,22 +254,7 @@ export default function Rides() {
             </button>
           )}
         </div>
-        {organize &&
-          (user ? (
-            <OrganizeWorkspace
-              initial={organize}
-              onFiltersChange={organizeChanged}
-            />
-          ) : (
-            <p className="empty-state">
-              Чтобы собрать компанию,{" "}
-              <Link href="/login?next=%2Frides%3Fmode%3Dorganize">
-                войдите в аккаунт
-              </Link>
-              .
-            </p>
-          ))}
-        {upcoming && !organize && (
+        {upcoming && (
           <section
             className="ride-filters"
             aria-label="Фильтры предстоящих покатушек"
@@ -300,7 +262,7 @@ export default function Rides() {
             <FilterFields value={filters} onChange={change} idPrefix="inline" />
           </section>
         )}
-        {upcoming && !organize && chips.length > 0 && (
+        {upcoming && chips.length > 0 && (
           <div className="filter-chips" aria-label="Активные фильтры">
             {chips.map(([key, label]) => (
               <button
@@ -330,16 +292,15 @@ export default function Rides() {
             </button>
           </div>
         )}
-        {bikeId !== null && !organize && (
+        {bikeId !== null && (
           <RideList
             bikeId={bikeId}
-            status={status}
+            status={rideStatusQuery(status)}
             filters={upcoming ? applied : null}
             restoreKey={
-              "rides:" +
-              (status || "all") +
-              JSON.stringify(upcoming ? applied : {})
+              "rides:" + status + JSON.stringify(upcoming ? applied : {})
             }
+            onShowAll={() => chooseStatus("all")}
             onReset={
               chips.length
                 ? () => {

@@ -20,6 +20,27 @@ export const durationBuckets: Readonly<
   medium: ["2–4 ч", { durationMin: 121, durationMax: 240 }],
   long: ["Дольше 4 ч", { durationMin: 241 }],
 });
+/** The catalogue tabs of /rides (#370). A clean address shows upcoming rides;
+ * «Все» has its own value, otherwise a deliberate choice could not be told
+ * from a first visit and a copied link would change its meaning. */
+export const rideStatuses = Object.freeze({
+  planned: "Предстоящие",
+  completed: "Прошедшие",
+  all: "Все",
+});
+export type RideStatus = keyof typeof rideStatuses;
+export const defaultRideStatus: RideStatus = "planned";
+/** A known value only; anything else (a hand-edited address, the previous
+ * «no status» form of «Все») opens the default tab. */
+export function readRideStatus(params: URLSearchParams): RideStatus {
+  const value = params.get("status");
+  return value !== null && Object.hasOwn(rideStatuses, value)
+    ? (value as RideStatus)
+    : defaultRideStatus;
+}
+/** The `status` of /api/rides for a tab: «Все» sends none. */
+export const rideStatusQuery = (status: RideStatus) =>
+  status === "all" ? null : status;
 const choiceKeys = ["pace", "purpose", "surface"] as const;
 export const filterKeys = ["when", ...choiceKeys, "duration", "area"];
 

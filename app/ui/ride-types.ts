@@ -65,7 +65,11 @@ export type RideAnalysisSeries = NonNullable<
   ReturnType<typeof permittedAnalysis>
 >;
 
-export type CreatedPlan = PlanSaved & { occurrenceAt: string };
+export type CreatedPlan = PlanSaved & {
+  occurrenceAt: string;
+  // The plan came from a group of interest: invitations are offered next.
+  fromInterest?: boolean;
+};
 export type PlanDraft = {
   startAt?: string;
   passport?: PassportDraft;
