@@ -52,7 +52,7 @@
 | `DELETE /api/bikes/previews/:id`                                | отпустить предпросмотр                                                                                                          |
 | `POST /api/bikes/:id/photos/import` `{ ids, cutouts? }`         | импорт; `cutouts: { фото → предпросмотр }` ввозит вырезанную версию с источником                                                |
 
-Отказы названы: тело ответа — `{ error, reason }`, где `reason` — `already_transparent`, `not_uniform`, `nothing_removed`, `everything_removed`, `too_large` (413), `timeout` (504), `aborted` (408), `busy` (429 с `Retry-After`), `stale`/`gone` (409/404), `unreadable`, `format`, `already_removed`, `no_original`. Обработка — 422 для того, что не лечится повтором.
+Отказы названы: тело ответа — `{ error, reason }`, где `reason` — `already_transparent`, `not_uniform`, `nothing_removed`, `everything_removed`, `too_large` (413), `timeout` (504), `aborted` (408), `busy` (429 с `Retry-After`), `stale`/`gone` (409/404), `unreadable`, `too_small` (422: найденное фото меньше 600 × 400 — правило фото действует и для вырезанной версии), `format`, `already_removed`, `no_original`. Обработка — 422 для того, что не лечится повтором.
 
 ## Время, параллельность, лимиты
 

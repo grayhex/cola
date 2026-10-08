@@ -36,6 +36,7 @@ export type PhotoBackgroundReason =
   | "stale"
   | "gone"
   | "unreadable"
+  | "too_small"
   | "format"
   | "unavailable"
   | "already_removed"

@@ -28,6 +28,8 @@ import {
   type Cutout,
 } from "../lib/photo-background.ts";
 import { encodeWithAlpha } from "../lib/images.ts";
+import { bikeResolverClient } from "../lib/bike-resolver-client.ts";
+import { importPhotos } from "../lib/photo-import.ts";
 import { present } from "./support/assertions.ts";
 import { bikeRow, photoRow } from "./support/bikes.ts";
 import { testDatabase, type TestDatabase } from "./support/database.ts";
@@ -668,6 +670,108 @@ test("a found photo's preview rides the import: only its owner's, for that photo
       [],
     );
   } finally {
+    await w.close();
+  }
+});
+
+test("a found photo keeps the rules of a photo with its backdrop off: a too small one is refused, cut out or not", async () => {
+  const w = await world();
+  const original = bikeResolverClient.request;
+  try {
+    // A red disc on white, 500 × 300: under the 600 × 400 a bike photo needs.
+    const small = await sharp(
+      Buffer.from(
+        `<svg xmlns="http://www.w3.org/2000/svg" width="500" height="300"><rect width="500" height="300" fill="#fff"/><circle cx="250" cy="150" r="90" fill="#be1e1e"/></svg>`,
+      ),
+    )
+      .png()
+      .toBuffer();
+    const candidate = randomUUID();
+    await w.db.query(
+      "INSERT INTO photo_search_candidates(id,owner_id) VALUES($1,$2)",
+      [candidate, w.owner],
+    );
+    bikeResolverClient.request = async () => ({
+      data: small.toString("base64"),
+      sourceUrl: "https://example.test/small.png",
+      sourcePageUrl: "https://example.test/bike",
+    });
+    // The backdrop is clearable, so its preview is made...
+    const result = await cutOut(small, w.owner);
+    const preview = await storePreview(
+      w.db,
+      w.owner,
+      { kind: "candidate", candidateId: candidate },
+      result,
+    );
+    // ...but importing it is no way round the size: refused as the photo
+    // itself is, with nothing saved and the preview still the owner's.
+    await assert.rejects(
+      importPhotos(
+        w.db,
+        w.db.transaction,
+        w.bike,
+        w.owner,
+        [candidate],
+        w.uploads,
+        {
+          [candidate]: preview.id,
+        },
+      ),
+      /600 × 400/,
+    );
+    await assert.rejects(
+      importPhotos(
+        w.db,
+        w.db.transaction,
+        w.bike,
+        w.owner,
+        [candidate],
+        w.uploads,
+      ),
+      /600 × 400/,
+    );
+    assert.equal(
+      (await w.db.query("SELECT 1 FROM photos WHERE bike_id=$1", [w.bike])).rows
+        .length,
+      0,
+    );
+    assert.deepEqual(await readdir(w.uploads), []);
+    assert.equal(
+      (await previewOfCandidate(w.db, w.owner, preview.id, candidate)).length >
+        0,
+      true,
+    );
+    // A photo of enough size goes in with its cut-out, as before.
+    const big = await studioPhoto();
+    bikeResolverClient.request = async () => ({
+      data: big.toString("base64"),
+      sourceUrl: "https://example.test/big.webp",
+      sourcePageUrl: "https://example.test/bike",
+    });
+    const wide = randomUUID();
+    await w.db.query(
+      "INSERT INTO photo_search_candidates(id,owner_id) VALUES($1,$2)",
+      [wide, w.owner],
+    );
+    const bigPreview = await storePreview(
+      w.db,
+      w.owner,
+      { kind: "candidate", candidateId: wide },
+      await cutOut(big, w.owner),
+    );
+    const done = await importPhotos(
+      w.db,
+      w.db.transaction,
+      w.bike,
+      w.owner,
+      [wide],
+      w.uploads,
+      { [wide]: bigPreview.id },
+    );
+    assert.equal(done.count, 1);
+  } finally {
+    bikeResolverClient.request = original;
     await w.close();
   }
 });

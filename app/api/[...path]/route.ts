@@ -64,7 +64,12 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
 import { readFile, unlink } from "node:fs/promises";
 import path from "node:path";
-import { preparePhoto, prepareThumbnail } from "../../../lib/images.ts";
+import {
+  isTooSmall,
+  preparePhoto,
+  prepareThumbnail,
+  tooSmallMessage,
+} from "../../../lib/images.ts";
 import {
   mediaEtag,
   mediaResponse,
@@ -600,6 +605,10 @@ async function handler(
           errorMessage(e).startsWith("Поиск устарел") ? "gone" : "unavailable",
         );
       }
+      // The import would refuse this photo with or without its backdrop: say
+      // so before the person spends a try (and a preview) on it.
+      if (await isTooSmall(found.bytes))
+        throw new PhotoBackgroundError(422, tooSmallMessage, "too_small");
       const result = await cutOut(found.bytes, user.id, {
         signal: req.signal,
       });

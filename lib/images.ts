@@ -17,16 +17,36 @@ export function sniffImage(bytes: Buffer) {
   return null;
 }
 
+// What a bike photo must measure as it came: 600 × 400 either way round.
+const photoTooSmall = (size: { width?: number; height?: number }) =>
+  Math.min(size.width || 0, size.height || 0) < 400 ||
+  Math.max(size.width || 0, size.height || 0) < 600;
+export const tooSmallMessage =
+  "Фото слишком маленькое: минимум 600 × 400 пикселей";
+/**
+ * Whether the picture is under the size of a bike photo, by its own measure.
+ * For a way into the gallery that does not run `preparePhoto` on the original
+ * (the cut-out of a found photo, #370): it must not be a way round the rule.
+ * What cannot be read is not «too small»: reading it says what is wrong.
+ */
+export async function isTooSmall(bytes: Buffer) {
+  try {
+    return photoTooSmall(
+      await sharp(bytes, {
+        limitInputPixels: 40000000,
+        animated: false,
+      }).metadata(),
+    );
+  } catch {
+    return false;
+  }
+}
+
 export async function preparePhoto(bytes: Buffer, { bikePhoto = true } = {}) {
   if (!sniffImage(bytes)) throw new Error("UNSUPPORTED_IMAGE");
   const source = sharp(bytes, { limitInputPixels: 40000000, animated: false });
   const metadata = await source.metadata();
-  if (
-    bikePhoto &&
-    (Math.min(metadata.width || 0, metadata.height || 0) < 400 ||
-      Math.max(metadata.width || 0, metadata.height || 0) < 600)
-  )
-    throw new Error("Фото слишком маленькое: минимум 600 × 400 пикселей");
+  if (bikePhoto && photoTooSmall(metadata)) throw new Error(tooSmallMessage);
   return source
     .rotate()
     .resize({

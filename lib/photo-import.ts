@@ -5,7 +5,7 @@ import { randomUUID } from "node:crypto";
 import { savePhotos } from "./photo-storage.ts";
 import type { PreparedPhoto } from "./photo-storage.ts";
 
-import { preparePhoto } from "./images.ts";
+import { isTooSmall, preparePhoto, tooSmallMessage } from "./images.ts";
 import { bikeResolverClient } from "./bike-resolver-client.ts";
 import { previewOfCandidate, settlePreviews } from "./photo-background.ts";
 
@@ -53,7 +53,11 @@ export async function importPhotos(
       const id = randomUUID(),
         filename = id + ".webp";
       const accepted = cutouts[candidate];
-      // The cut-out is already a stored-photo WebP with transparency.
+      // The cut-out is already a stored-photo WebP with transparency, but it
+      // is no way round the rules of a photo: what the original may not be
+      // (under 600 × 400), its cut-out may not be.
+      if (accepted && (await isTooSmall(photo.bytes)))
+        throw new Error(tooSmallMessage);
       const image = accepted
         ? await previewOfCandidate(db, ownerId, accepted, candidate)
         : await preparePhoto(photo.bytes);
