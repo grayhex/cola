@@ -56,7 +56,14 @@ import {
   compatibilityCategory,
 } from "../../lib/bike-classification.ts";
 import { parseBikeSearch } from "../../lib/bike-search-input.ts";
-import { useCallback, useMemo, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useMemo,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { LoaderCircle, Check, Plus, Trash2 } from "./icons.tsx";
 import { useSite } from "./site-provider.tsx";
 import CompactCombo from "./compact-combo.tsx";
@@ -243,12 +250,10 @@ export default function BikeWizard({
     ...chosen.map((id) => ({
       key: "found:" + id,
       kind: "found" as const,
-      src: "/api/bikes/photo-candidates/" + id,
     })),
     ...files.map((f) => ({
       key: "local:" + f.id,
       kind: "local" as const,
-      src: f.preview,
     })),
   ];
   const selectedDraft =
@@ -259,6 +264,29 @@ export default function BikeWizard({
   // from the file where it is shown, not carried in the list of pictures.
   const draftLabel = (key: string) =>
     files.find((f) => "local:" + f.id === key)?.file.name ?? "Найденное фото";
+  // One thumbnail of the draft; the picture is given by the caller, which knows
+  // where it comes from (a found photo's address, or a chosen file).
+  const draftThumb = (
+    key: string,
+    kind: "found" | "local",
+    i: number,
+    picture: ReactNode,
+  ) => (
+    <li key={key} data-kind={kind}>
+      <button
+        type="button"
+        className={"thumb" + (key === selectedDraft?.key ? " active" : "")}
+        aria-label={`Фото ${i + 1}: ${draftLabel(key)}${key === coverDraft?.key ? ", обложка" : ""}`}
+        aria-current={key === selectedDraft?.key ? "true" : undefined}
+        onClick={() => setSelectedPhoto(key)}
+      >
+        {picture}
+        {key === coverDraft?.key && (
+          <span className="photo-cover-mark">Обложка</span>
+        )}
+      </button>
+    </li>
+  );
   const acceptedIdentity = useRef(""),
     requestId = useRef<string | null>(null),
     resolveAbort = useRef<AbortController | null>(null),
@@ -1439,27 +1467,22 @@ export default function BikeWizard({
                   className="wizard-draft-photos"
                   aria-label="Фотографии нового велосипеда"
                 >
-                  {draftPhotos.map((p, i) => (
-                    <li key={p.key} data-kind={p.kind}>
-                      <button
-                        type="button"
-                        className={
-                          "thumb" +
-                          (p.key === selectedDraft?.key ? " active" : "")
-                        }
-                        aria-label={`Фото ${i + 1}: ${draftLabel(p.key)}${p.key === coverDraft?.key ? ", обложка" : ""}`}
-                        aria-current={
-                          p.key === selectedDraft?.key ? "true" : undefined
-                        }
-                        onClick={() => setSelectedPhoto(p.key)}
-                      >
-                        <img src={p.src} alt="" />
-                        {p.key === coverDraft?.key && (
-                          <span className="photo-cover-mark">Обложка</span>
-                        )}
-                      </button>
-                    </li>
-                  ))}
+                  {chosen.map((id, i) =>
+                    draftThumb(
+                      "found:" + id,
+                      "found",
+                      i,
+                      <img src={"/api/bikes/photo-candidates/" + id} alt="" />,
+                    ),
+                  )}
+                  {files.map((f, i) =>
+                    draftThumb(
+                      "local:" + f.id,
+                      "local",
+                      chosen.length + i,
+                      <img src={f.preview} alt="" />,
+                    ),
+                  )}
                 </ul>
               )}
               <PhotoControl
