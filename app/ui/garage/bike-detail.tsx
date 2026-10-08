@@ -17,6 +17,7 @@ import type {
   MainElement,
 } from "./types.ts";
 import type { useBikeReaction } from "../use-bike-reaction.ts";
+import type { PhotoProblem } from "../../../lib/photo-upload.ts";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { detailLayout } from "../../../lib/garage-layout.ts";
@@ -58,6 +59,8 @@ export default function BikeDetail({
   busy,
   photo,
   setPhoto,
+  photoProblems,
+  dismissPhotoProblems,
   setSelected,
   setModal,
   file,
@@ -78,6 +81,9 @@ export default function BikeDetail({
   busy: boolean;
   photo: PublicPhoto | null;
   setPhoto: PhotoSetter;
+  // Photos the owner tried to add and the site refused, shown at the button.
+  photoProblems: PhotoProblem[];
+  dismissPhotoProblems: () => void;
   setSelected: BikeSetter;
   setModal: ModalSetter;
   file: React.RefObject<HTMLInputElement | null>;
@@ -214,6 +220,8 @@ export default function BikeDetail({
           specifications={specifications}
           rideTotal={rideTotal}
           likes={detailReaction.likes ?? bike.likes}
+          photoProblems={photoProblems}
+          onDismissPhotoProblems={dismissPhotoProblems}
           onRegister={!editable && !share ? () => auth("register") : undefined}
           t={t}
         />

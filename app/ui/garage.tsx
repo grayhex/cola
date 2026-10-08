@@ -1,6 +1,7 @@
 "use client";
 import type * as React from "react";
-import type { ApiError, BikeDto, PublicPhoto } from "../../lib/contracts.ts";
+import type { BikeDto, PublicPhoto } from "../../lib/contracts.ts";
+import { sendBikePhoto, type PhotoProblem } from "../../lib/photo-upload.ts";
 import type { GarageModalState } from "./garage/types.ts";
 import { errorMessage, errorStatus } from "../../lib/errors.ts";
 import {
@@ -75,7 +76,8 @@ export default function Garage({
     [localSort, setLocalSort] = useState("new"),
     [localFilters, setLocalFilters] = useState<string[]>([]),
     [localQuery, setLocalQuery] = useState(""),
-    [photo, setPhoto] = useState<PublicPhoto | null>(null);
+    [photo, setPhoto] = useState<PublicPhoto | null>(null),
+    [photoProblems, setPhotoProblems] = useState<PhotoProblem[]>([]);
   const [localPage, setLocalPage] = useState(1),
     [total, setTotal] = useState(0);
   const router = useRouter(),
@@ -379,6 +381,8 @@ export default function Garage({
           busy={busy}
           photo={photo}
           setPhoto={setPhoto}
+          photoProblems={photoProblems}
+          dismissPhotoProblems={() => setPhotoProblems([])}
           setSelected={setSelected}
           setModal={setModal}
           file={file}
@@ -427,17 +431,14 @@ export default function Garage({
           const image = e.target.files?.[0];
           e.target.value = "";
           if (!image) return;
+          setPhotoProblems([]);
           run(async () => {
-            if (image.size > 10 * 1024 * 1024)
-              throw new Error(t("Фото должно быть меньше 10 МБ"));
-            const r = await fetch(`/api/bikes/${bike!.id}/photos`, {
-              method: "POST",
-              headers: { "Content-Type": image.type },
-              body: image,
-            });
-            if (!r.ok) {
-              const result: Partial<ApiError> = await r.json();
-              throw new Error(result.error);
+            // A refused file is told about beside the button, not in the
+            // page's general error line far above it (#366).
+            const sent = await sendBikePhoto(bike!.id, image);
+            if (!sent.ok) {
+              setPhotoProblems([sent.problem]);
+              return;
             }
             await refresh();
             setNotice(t("Фотография добавлена"));

@@ -2,6 +2,7 @@ import { verifyCapturedEmail } from "../fixtures/verified-user.js";
 import { test, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import sharp from "sharp";
+import { searchWizard } from "../fixtures/wizard-search.js";
 async function register(page, name) {
   await page.goto("/bikes");
   await expect(page.locator(".global-header")).toBeVisible();
@@ -62,14 +63,10 @@ test("registration, touch autocomplete, bike/photo, public feed, like and revoke
     .click();
   const dialog = page.getByRole("dialog");
   await expect(dialog.getByLabel("Год", { exact: true })).toHaveCount(0);
-  await dialog
-    .getByLabel("Модель, год и комплектация", { exact: true })
-    .fill("Cube Aim 2020");
-  await dialog.getByLabel("Название в гараже · необязательно").fill(bikeName);
-  await dialog
-    .getByRole("button", { name: "Заполнить вручную", exact: true })
-    .click();
+  await searchWizard(dialog, "Cube Aim 2020");
   await dialog.getByRole("button", { name: "Далее", exact: true }).click();
+  await dialog.getByRole("button", { name: "Далее", exact: true }).click();
+  await dialog.getByLabel("Название в гараже · необязательно").fill(bikeName);
   await dialog
     .getByLabel("Категория велосипеда", { exact: true })
     .selectOption("mtb");

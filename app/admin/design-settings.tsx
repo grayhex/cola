@@ -204,20 +204,17 @@ export function HomepageSettings({
 export function WizardCopy({ settings, onChange }: SettingsProps) {
   return (
     <div className="admin-form-grid">
-      {(
-        [
-          ["wizardLinkLabel", "Мастер: распознать по ссылке"],
-          ["wizardManualLabel", "Мастер: заполнить вручную"],
-        ] as const
-      ).map(([key, label]) => (
-        <Field key={key} label={label}>
-          <input
-            value={settings[key] || ""}
-            maxLength={150}
-            onChange={(e) => onChange(key, e.target.value)}
-          />
-        </Field>
-      ))}
+      {([["wizardLinkLabel", "Мастер: распознать по ссылке"]] as const).map(
+        ([key, label]) => (
+          <Field key={key} label={label}>
+            <input
+              value={settings[key] || ""}
+              maxLength={150}
+              onChange={(e) => onChange(key, e.target.value)}
+            />
+          </Field>
+        ),
+      )}
     </div>
   );
 }

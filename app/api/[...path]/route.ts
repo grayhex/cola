@@ -80,6 +80,7 @@ import {
   uuid,
 } from "../../../lib/validation.ts";
 import { suggestUsername } from "../../../lib/usernames.ts";
+import { photoTooLargeMessage } from "../../../lib/photo-upload.ts";
 import { allocateUsername } from "../../../lib/username-allocation.ts";
 import { ownedBike, insertBike } from "../../../lib/repository.ts";
 import { mediaVary, mediaViewer } from "../../../lib/media-viewer.ts";
@@ -723,7 +724,7 @@ async function handler(
           size += value.length;
           if (size > limits.fileBytes) {
             await reader.cancel();
-            return fail("Фото должно быть меньше 10 МБ", 413);
+            return fail(photoTooLargeMessage(), 413);
           }
           chunks.push(value);
         }

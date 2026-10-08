@@ -123,9 +123,13 @@ test("wizard live trace, stop, partial import and mobile review", async ({
     .click();
   await settled;
   await expect(dialog).toContainText("Поиск остановлен");
+  // A stopped search has not ended: step 1 stays shut until it is run again.
   await expect(
     dialog.getByRole("button", { name: "Далее", exact: true }),
-  ).toBeEnabled();
+  ).toBeDisabled();
+  await expect(dialog.locator("#wizard-gate")).toContainText(
+    "нажмите «Распознать страницу»",
+  );
 });
 test("wizard offers store variants for a brand without an adapter and imports only the chosen one", async ({
   page,
@@ -271,7 +275,9 @@ test("wizard quick setup, identity confirmation, image size and successful save"
   await dialog
     .locator('input[type="file"]')
     .setInputFiles({ name: "small.png", mimeType: "image/png", buffer: small });
-  await expect(dialog).toContainText("Фото слишком маленькое");
+  await expect(dialog.getByRole("alert").last()).toContainText(
+    "Фото «small.png» слишком маленькое",
+  );
   // CodeQL #4: file input is untrusted, but only a decoded image gets
   // a browser-created blob URL. Neither its bytes nor its name become HTML.
   const payload =
@@ -281,7 +287,9 @@ test("wizard quick setup, identity confirmation, image size and successful save"
     mimeType: "image/svg+xml",
     buffer: Buffer.from(payload),
   });
-  await expect(dialog).toContainText("Допустимо до 12 фото JPEG/PNG/WebP");
+  await expect(dialog.getByRole("alert").last()).toContainText(
+    "Фото «payload.svg» не добавлено: поддерживаются только JPEG, PNG и WebP",
+  );
   await expect(dialog.locator(".wizard-local-photos img")).toHaveCount(0);
   await dialog.locator('input[type="file"]').setInputFiles({
     name: "payload.png",
