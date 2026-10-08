@@ -33,7 +33,7 @@
   /* A panel: a hairline, a small radius, a calm surface. Panels hold the
      overview, the build, rides, entries, awards and comments. */
   .bike-detail .bike-panel,
-  .bike-detail > .bike-game {
+  .bike-detail .bike-game {
     min-width: 0;
     padding: var(--space-5);
     border: 1px solid var(--line);
@@ -300,35 +300,39 @@
     text-underline-offset: 3px;
   }
 
-  /* ── Menu of anchors, like tabs but one page ────────────────────────── */
-  .bike-section-nav {
-    display: flex;
+  /* ── Tabs (#366): one panel at a time under the header ──────────────── */
+  .bike-detail .ui-tabs.bike-tabs {
     gap: var(--space-2);
-    overflow-x: auto;
-    border-bottom: 1px solid var(--line);
+    margin: 0;
+    scroll-margin-top: calc(var(--header-height) + var(--space-4));
     scrollbar-width: thin;
   }
-  .bike-section-nav a {
-    display: inline-flex;
-    flex: none;
-    align-items: center;
+  .bike-detail .ui-tabs.bike-tabs > button {
     min-width: 44px;
     min-height: 48px;
-    margin-bottom: -1px;
     padding: 0 var(--space-5);
-    border-bottom: 2px solid transparent;
     color: var(--text-secondary);
     font: var(--weight-medium) var(--text-base) / 1 var(--font-sans);
-    text-decoration: none;
-    transition: color var(--duration-fast) var(--ease-out);
   }
-  .bike-section-nav a:hover {
+  .bike-detail .ui-tabs.bike-tabs > button:hover {
     background: var(--surface-hover);
     color: var(--text);
   }
-  .bike-section-nav a[aria-current="location"] {
+  .bike-detail .ui-tabs.bike-tabs > button[aria-selected="true"] {
     border-bottom-color: var(--text-strong);
     color: var(--text-strong);
+    font-weight: var(--weight-medium);
+  }
+  /* A panel keeps its own rhythm; hidden, it takes no room (the attribute
+     must win over the flex display). */
+  .bike-tabpanel {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+    min-width: 0;
+  }
+  .bike-tabpanel[hidden] {
+    display: none;
   }
 
   /* ── Overview: the owner's words and the passport ───────────────────── */
@@ -440,11 +444,12 @@
     }
   }
   @media (max-width: 700px) {
-    .bike-detail {
+    .bike-detail,
+    .bike-tabpanel {
       gap: var(--space-5);
     }
     .bike-detail .bike-panel,
-    .bike-detail > .bike-game {
+    .bike-detail .bike-game {
       padding: var(--space-4);
     }
     .bike-detail .component-groups,
@@ -453,10 +458,10 @@
     .bike-detail .game-shelves {
       grid-template-columns: minmax(0, 1fr);
     }
-    .bike-section-nav {
+    .bike-detail .ui-tabs.bike-tabs {
       gap: 0;
     }
-    .bike-section-nav a {
+    .bike-detail .ui-tabs.bike-tabs > button {
       padding: 0 var(--space-3);
     }
     .bike-passport dl > div {

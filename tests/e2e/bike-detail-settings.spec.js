@@ -89,10 +89,11 @@ test("bike detail settings, passport, anchors, guest rights and owner without ph
     await expect(reader.locator("#specifications")).toHaveCount(0);
     await expect(
       reader
-        .getByRole("navigation", { name: "Разделы велосипеда" })
-        .getByRole("link", { name: "Комплектация", exact: true }),
+        .getByRole("tablist", { name: "Разделы велосипеда" })
+        .getByRole("tab", { name: "Комплектация", exact: true }),
     ).toHaveCount(0);
     await page.goto(path);
+    await page.getByRole("tab", { name: "Комплектация", exact: true }).click();
     await expect(page.locator("#specifications")).toBeVisible();
     expect(
       (
@@ -124,22 +125,23 @@ test("bike detail settings, passport, anchors, guest rights and owner without ph
       await expect(tab.locator(".bike-excerpt")).not.toHaveText(
         input.description,
       );
-      const sections = tab.getByRole("navigation", {
+      const sections = tab.getByRole("tablist", {
         name: "Разделы велосипеда",
       });
-      // The menu marks where the reader is: the top of the page is the overview.
+      // The page opens on the overview; a tab shows its panel and the address.
       await expect(
-        sections.getByRole("link", { name: "Обзор", exact: true }),
-      ).toHaveAttribute("aria-current", "location");
+        sections.getByRole("tab", { name: "Обзор", exact: true }),
+      ).toHaveAttribute("aria-selected", "true");
+      await expect(tab.locator("#specifications")).toBeHidden();
       await sections
-        .getByRole("link", { name: "Комплектация", exact: true })
+        .getByRole("tab", { name: "Комплектация", exact: true })
         .click();
       await expect(tab).toHaveURL(/#specifications$/);
-      expect(
-        await tab
-          .locator("#specifications")
-          .evaluate((el) => el.getBoundingClientRect().top),
-      ).toBeGreaterThanOrEqual(60);
+      await expect(tab.locator("#specifications")).toBeVisible();
+      await expect(tab.locator(".bike-about")).toBeHidden();
+      // The overview is back for the scan below, with its passport.
+      await sections.getByRole("tab", { name: "Обзор", exact: true }).click();
+      await expect(tab.locator(".bike-passport")).toBeVisible();
       // A live theme switch is scanned after it has settled: with reduced
       // motion the new colours apply at once, not halfway through a colour
       // transition (WebKit measured tiles and menu links in the middle of it).
@@ -190,7 +192,8 @@ test("bike detail settings, passport, anchors, guest rights and owner without ph
       page.getByRole("button", { name: "Приватность", exact: true }),
     ).toBeFocused();
     // The settings own what the overview may say: nothing public, nothing
-    // drawn, and the menu does not point at it.
+    // drawn. The overview stays for the awards of a public bike, without the
+    // hidden fields.
     await put({
       summaryFields: {
         description: false,
@@ -203,10 +206,11 @@ test("bike detail settings, passport, anchors, guest rights and owner without ph
     await expect(page.locator(".bike-about")).toHaveCount(0);
     await expect(page.locator(".bike-passport")).toHaveCount(0);
     await expect(page.locator(".bike-excerpt")).toHaveCount(0);
-    const menu = page.getByRole("navigation", { name: "Разделы велосипеда" });
+    const menu = page.getByRole("tablist", { name: "Разделы велосипеда" });
     await expect(
-      menu.getByRole("link", { name: "Обзор", exact: true }),
-    ).toHaveCount(0);
+      menu.getByRole("tab", { name: "Обзор", exact: true }),
+    ).toHaveAttribute("aria-selected", "true");
+    await expect(page.locator(".bike-game")).toBeVisible();
     // Blocks saved by an older default (summary off, everything folded) do
     // not hide the overview; every block that is off hides its own part.
     await put({
@@ -226,7 +230,7 @@ test("bike detail settings, passport, anchors, guest rights and owner without ph
     await expect(page.locator(".bike-about")).toBeVisible();
     await expect(page.locator(".bike-passport")).toBeVisible();
     await expect(
-      menu.getByRole("link", { name: "Обзор", exact: true }),
+      menu.getByRole("tab", { name: "Обзор", exact: true }),
     ).toBeVisible();
     await expect(page.locator(".photo-stage")).toHaveCount(0);
     await expect(page.locator(".gallery")).toHaveCount(0);
@@ -234,7 +238,7 @@ test("bike detail settings, passport, anchors, guest rights and owner without ph
     await expect(page.locator(".bike-quote")).toHaveCount(0);
     await expect(page.locator("#specifications")).toHaveCount(0);
     await expect(
-      menu.getByRole("link", { name: "Комплектация", exact: true }),
+      menu.getByRole("tab", { name: "Комплектация", exact: true }),
     ).toHaveCount(0);
     // Owner tools do not depend on the picture or any other block.
     for (const name of ["Редактировать", "Добавить фото", "Приватность", "Ещё"])

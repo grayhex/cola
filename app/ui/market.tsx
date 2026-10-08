@@ -16,7 +16,6 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import {
   ShoppingBag,
-  Plus,
   MapPin,
   ArrowLeft,
   Search,
@@ -53,6 +52,7 @@ import { profilePath, publicPath } from "../../lib/public-urls.ts";
 import { personName, usernameLabel } from "../../lib/usernames.ts";
 import ShareButton from "./share-button.tsx";
 import { useHydrated } from "./use-hydrated.ts";
+import SiteIcon from "./site-icon.tsx";
 import LocalDate from "./local-date.tsx";
 // The link keeps the original; previews use the cached size variants.
 const marketVariants = (id: string, widths = [320, 640, 1280]) =>
@@ -462,7 +462,9 @@ function ListingEditor({
           ))}
         </div>
         <label className="field">
-          <span>Добавить фото</span>
+          <span>
+            <SiteIcon name="addPhoto" /> Добавить фото
+          </span>
           <input
             type="file"
             multiple
@@ -520,6 +522,7 @@ function ListingEditor({
       {busy && <p role="status">Сохраняем…</p>}
       <div className="form-actions">
         <button className="button" disabled={!hydrated || busy}>
+          <SiteIcon name={form.status === "sold" ? "save" : "publish"} />
           {form.status === "sold" ? "Сохранить" : "Опубликовать"}
         </button>
         <button
@@ -538,6 +541,7 @@ function ListingEditor({
             }
           }}
         >
+          <SiteIcon name="save" />
           Сохранить черновик
         </button>
         <button
@@ -546,6 +550,7 @@ function ListingEditor({
           disabled={!hydrated || busy}
           onClick={() => onCancel(identity)}
         >
+          <SiteIcon name="no" />
           Отмена
         </button>
       </div>
@@ -1096,7 +1101,7 @@ export default function Market({
                 )}
               </div>
               <Link className="button" href="/market/new">
-                <Plus size={16} aria-hidden="true" />
+                <SiteIcon name="addListing" />
                 Добавить объявление
               </Link>
             </div>

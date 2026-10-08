@@ -80,6 +80,11 @@
   flex: none;
   color: var(--icon-color, var(--text-muted));
 }
+/* A SiteIcon keeps the administrator's colour for hover, focus and selection
+   (components.css); at rest it is as neutral as the other icons of the row. */
+.bar .action :global(.site-icon) {
+  color: var(--text-muted);
+}
 .bar .share :global(.share-button) > span {
   display: inline;
   font-size: inherit;

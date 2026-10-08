@@ -40,6 +40,7 @@ export default function BikeIdentity({
   likes,
   photoProblems = [],
   onDismissPhotoProblems,
+  onSection,
   onRegister,
   t,
 }: {
@@ -54,6 +55,8 @@ export default function BikeIdentity({
   likes: number;
   photoProblems?: PhotoProblem[];
   onDismissPhotoProblems?: () => void;
+  // Opens the tab of the bike page that a counter or a link points at.
+  onSection?: (id: string) => void;
   onRegister?: () => void;
   t: (text: string) => string;
 }) {
@@ -61,6 +64,24 @@ export default function BikeIdentity({
   const subtitle = bikeSubtitle(bike, catalog);
   const excerpt = quote ? bikeExcerpt(bike.description) : null;
   const author = bike.author;
+  // A counter or a link to a tab opens that tab; the plain anchor is what a
+  // new window or a middle click still gets.
+  const open = (event: React.MouseEvent<HTMLAnchorElement>) => {
+    const id = event.currentTarget.hash.slice(1);
+    if (
+      !onSection ||
+      !id ||
+      event.defaultPrevented ||
+      event.button !== 0 ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey
+    )
+      return;
+    event.preventDefault();
+    onSection(id);
+  };
   const figures: Figure[] = [];
   if (bike.is_public) {
     figures.push(
@@ -161,7 +182,13 @@ export default function BikeIdentity({
             );
             return (
               <li key={item.key}>
-                {item.href ? <a href={item.href}>{body}</a> : <div>{body}</div>}
+                {item.href ? (
+                  <a href={item.href} onClick={open}>
+                    {body}
+                  </a>
+                ) : (
+                  <div>{body}</div>
+                )}
               </li>
             );
           })}
@@ -175,7 +202,9 @@ export default function BikeIdentity({
             <p className="bike-excerpt">{excerpt}</p>
           </blockquote>
           {author && <figcaption>— {personName(author)}</figcaption>}
-          <a href="#overview">{t("Читать полностью")}</a>
+          <a href="#overview" onClick={open}>
+            {t("Читать полностью")}
+          </a>
         </figure>
       )}
     </div>

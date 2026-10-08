@@ -522,7 +522,7 @@ test("component groups follow the screen width until a personal preference is sa
       })
     ).status(),
   ).toBe(201);
-  await page.goto("/account?tab=bikes&bike=" + id);
+  await page.goto("/account?tab=bikes&bike=" + id + "#specifications");
   const toggle = page
     .locator(".component-group")
     .filter({ hasText: "Test saddle" })

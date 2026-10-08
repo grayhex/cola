@@ -5,7 +5,7 @@ import pg from "pg";
 import sharp from "sharp";
 import { randomUUID } from "node:crypto";
 const origin = process.env.TEST_ORIGIN || "http://localhost:3100";
-test("sequential bike sections, raster map, six-ride accordion, preferences and grouped admin", async ({
+test("bike rides tab, raster map, six-ride accordion, preferences and grouped admin", async ({
   page,
 }, info) => {
   const db = new pg.Client({ connectionString: process.env.DATABASE_URL });
@@ -101,7 +101,7 @@ test("sequential bike sections, raster map, six-ride accordion, preferences and 
           "fixture-" + nonce + "-" + i,
         ],
       );
-    await page.goto("/b/" + share);
+    await page.goto("/b/" + share + "#bike-rides");
     await expect(page.locator(".bike-rides .ride-list-item")).toHaveCount(3);
     await page.getByRole("button", { name: "Все покатушки · 6" }).click();
     await expect(page.locator(".bike-rides .ride-list-item")).toHaveCount(6);
@@ -119,20 +119,23 @@ test("sequential bike sections, raster map, six-ride accordion, preferences and 
         .locator(".bike-rides .ride-list-item[open] .ride-route image")
         .first(),
     ).toBeVisible();
-    const boxes = await Promise.all(
-      [".showcase", ".specifications", ".bike-rides"].map((c) =>
-        page.locator(".bike-detail " + c).boundingBox(),
-      ),
+    // One tab at a time (#366): the rides are open under the header, the
+    // other panels take no room.
+    await expect(page.getByRole("tab", { name: "Покатушки" })).toHaveAttribute(
+      "aria-selected",
+      "true",
     );
-    expect(boxes[0].y + boxes[0].height).toBeLessThanOrEqual(boxes[1].y);
-    expect(boxes[1].y + boxes[1].height).toBeLessThanOrEqual(boxes[2].y);
+    await expect(page.locator(".bike-detail .specifications")).toBeHidden();
+    const rides = await page.locator(".bike-detail .bike-rides").boundingBox();
+    const header = await page.locator(".bike-hero").boundingBox();
+    expect(header.y + header.height).toBeLessThanOrEqual(rides.y);
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth + 1,
       ),
     ).toBe(true);
     await page.screenshot({
-      path: info.outputPath("bike-sequential-sections.png"),
+      path: info.outputPath("bike-rides-tab.png"),
       fullPage: true,
       animations: "disabled",
     });
@@ -150,7 +153,7 @@ test("sequential bike sections, raster map, six-ride accordion, preferences and 
       .getByRole("button", { name: "Сохранить оформление", exact: true })
       .click();
     await expect(page.getByRole("status")).toHaveText("Оформление сохранено");
-    await page.goto("/b/" + share);
+    await page.goto("/b/" + share + "#bike-rides");
     // The row of small cards of the bike page (#291).
     await expect(
       page.locator(".bike-rides .ride-compact-grid > .ride-compact"),

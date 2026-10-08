@@ -176,11 +176,28 @@ test("bike detail full-page review and request budget", async ({
       ["owner", page],
     ]) {
       await tab.goto(path);
-      await expect(
-        tab.locator(".ride-list .ride-compact, .ride-list .ride-card").first(),
-      ).toBeVisible();
-      await expect(tab.locator(".journal-list-entry").first()).toBeVisible();
-      await expect(tab.locator("#discussion")).toBeVisible();
+      // The overview is open, and the other panels are mounted but hidden:
+      // their data (the rides, the entries) is loaded, they take no room.
+      await expect(tab.getByRole("tab", { name: "Обзор" })).toHaveAttribute(
+        "aria-selected",
+        "true",
+      );
+      await expect(tab.locator(".bike-about")).toBeVisible();
+      for (const [name, content] of [
+        ["Покатушки", ".ride-list .ride-compact, .ride-list .ride-card"],
+        ["Записи", ".journal-list-entry"],
+        ["Комментарии", "#discussion"],
+      ]) {
+        await expect(tab.locator(content).first()).toBeHidden();
+        await tab.getByRole("tab", { name }).click();
+        await expect(tab.locator(content).first()).toBeVisible();
+        await expect(tab.locator(".bike-about")).toBeHidden();
+        // One panel at a time, whatever the width.
+        expect(await tab.locator(".bike-tabpanel:not([hidden])").count()).toBe(
+          1,
+        );
+      }
+      await tab.getByRole("tab", { name: "Обзор" }).click();
       for (const width of [1440, 1920, 390]) {
         await tab.setViewportSize({ width, height: 1000 });
         // The composition of #291: the picture and its thumbnails side by
@@ -241,30 +258,21 @@ test("bike detail full-page review and request budget", async ({
       await expect(reader.locator(".bike-about p")).toHaveCount(2);
       await expect(reader.locator(".gallery .thumb")).toHaveCount(3);
       await expect(reader.locator(".journal-list-entry")).toHaveCount(3);
+      await reader.getByRole("tab", { name: "Записи" }).click();
       await reader
         .getByRole("button", { name: "Все записи", exact: true })
         .click();
       await expect(reader.locator(".journal-list-entry")).toHaveCount(4);
-      // The menu follows the reader: the section under the header is current.
-      const menu = reader.getByRole("navigation", {
-        name: "Разделы велосипеда",
-      });
-      const current = (name) =>
-        expect(menu.getByRole("link", { name, exact: true })).toHaveAttribute(
-          "aria-current",
-          "location",
-        );
-      await reader.evaluate(() => {
-        const top = document.getElementById("specifications");
-        window.scrollTo(0, top.getBoundingClientRect().top + scrollY - 100);
-      });
-      await current("Комплектация");
-      await reader.evaluate(() =>
-        window.scrollTo(0, document.body.scrollHeight),
-      );
-      await current("Комментарии");
-      await reader.evaluate(() => window.scrollTo(0, 0));
-      await current("Обзор");
+      // Each tab shows its own panel, and the address follows.
+      const tabs = reader.getByRole("tablist", { name: "Разделы велосипеда" });
+      await tabs.getByRole("tab", { name: "Комплектация" }).click();
+      await expect(reader).toHaveURL(/#specifications$/);
+      await expect(
+        tabs.getByRole("tab", { name: "Комплектация" }),
+      ).toHaveAttribute("aria-selected", "true");
+      await tabs.getByRole("tab", { name: "Комментарии" }).click();
+      await expect(reader.locator("#discussion")).toBeVisible();
+      await tabs.getByRole("tab", { name: "Комплектация" }).click();
       // One list holds every part: the build and the accessories.
       await expect(reader.locator(".specifications .compact-part")).toHaveCount(
         9,

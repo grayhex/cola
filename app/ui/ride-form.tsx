@@ -6,6 +6,7 @@ import type { RideDto } from "./content-types.ts";
 import type { RideConfig, RidePreview, RideSaveHandler } from "./ride-types.ts";
 import { useEffect, useMemo, useState } from "react";
 import EmailPolicyAction from "./email-policy-action.tsx";
+import SiteIcon from "./site-icon.tsx";
 import {
   selectableRideBikes,
   rideBikeStateError,
@@ -384,6 +385,7 @@ export default function RideForm({
               (!editing && mode === "add" && !preview)
             }
           >
+            <SiteIcon name="save" />
             Сохранить покатушку
           </button>
           {editing && (
@@ -415,6 +417,7 @@ export default function RideForm({
         disabled={busy}
         onClick={onCancel}
       >
+        <SiteIcon name="no" />
         Отмена
       </button>
     </form>

@@ -34,6 +34,7 @@ import {
 } from "./social-primitives.tsx";
 import AuthPage from "./auth-page.tsx";
 import { useConfirmation } from "./confirmation.tsx";
+import SiteIcon from "./site-icon.tsx";
 import Modal from "./garage/modal.tsx";
 import { MotionList, SharedView, useMotionFeedback } from "./motion.tsx";
 import { AreaField, ExtraConditions } from "./ride-plan-fields.tsx";
@@ -556,9 +557,11 @@ export function IntentComposer({
               disabled={busy}
               onClick={close}
             >
+              <SiteIcon name="no" />
               Отмена
             </button>
             <button className="button" disabled={busy} aria-busy={busy}>
+              <SiteIcon name={draft.id ? "save" : "plan"} />
               {busy
                 ? "Сохраняем…"
                 : uncertain

@@ -51,10 +51,12 @@ test("component change offers an explicit draft, never automatic publication", a
       })
     ).status(),
   ).toBe(201);
-  await page.goto("/account?tab=bikes&bike=" + bike.id);
+  await page.goto("/account?tab=bikes&bike=" + bike.id + "#journal");
   await expect(
     page.getByRole("heading", { name: "Записи владельца", exact: true }),
   ).toBeVisible();
+  // The build is another tab of the same page.
+  await page.getByRole("tab", { name: "Комплектация", exact: true }).click();
   const group = page
     .locator(".component-group")
     .filter({ hasText: "Original saddle" });
