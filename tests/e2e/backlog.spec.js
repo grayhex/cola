@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import pg from "pg";
 import sharp from "sharp";
 import { testConsents } from "../fixtures/legal.js";
-import { searchWizard } from "../fixtures/wizard-search.js";
+import { leaveSearch, searchWizard } from "../fixtures/wizard-search.js";
 const origin = process.env.TEST_ORIGIN || "http://localhost:3100";
 const password = "backlog-browser-secret-123";
 async function register(page) {
@@ -157,12 +157,10 @@ test("account SPA opens the three-step wizard repeatedly; only explicit X can di
     wizard.getByLabel("Модель, год и комплектация", { exact: true }),
   ).toHaveValue("Cube Travel SL 2021");
   await searchWizard(wizard);
-  await wizard.getByRole("button", { name: "Далее", exact: true }).click();
-  await wizard.getByRole("button", { name: "Далее", exact: true }).click();
+  await leaveSearch(wizard);
   await expect(wizard.getByLabel("Год", { exact: true })).toHaveValue("2021");
-  await wizard
-    .getByLabel("Название в гараже · необязательно")
-    .fill("My folding commuter");
+  await wizard.locator("summary", { hasText: "Своё название" }).click();
+  await wizard.getByLabel("Название в гараже").fill("My folding commuter");
   await wizard
     .getByLabel("Категория велосипеда", { exact: true })
     .selectOption("urban_touring");
@@ -190,6 +188,7 @@ test("account SPA opens the three-step wizard repeatedly; only explicit X can di
     fullPage: true,
     animations: "disabled",
   });
+  await wizard.getByRole("button", { name: "Далее", exact: true }).click();
   await wizard
     .getByRole("button", { name: "Сохранить велосипед", exact: true })
     .click();

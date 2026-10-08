@@ -28,18 +28,6 @@ type WizardPart = Omit<ComponentInput, "price"> & {
   price: number | string | null;
 };
 type UploadFile = { id: string; file: File; preview: string };
-// A search of step 1 that was run to its end, for the request typed then (the
-// parsed query and the pasted link). Step 2 opens only on the strength of such
-// an attempt: found, or tried and failed. An edit of the query or the link, a
-// cancelled or a running search leave no attempt that counts.
-type Attempt = {
-  identity: string;
-  url: string;
-  // «choice»: variants were offered and none is chosen yet: not an end.
-  // «none»: nothing found, the search failed or timed out: fill in by hand.
-  outcome: "resolved" | "choice" | "none";
-};
-
 import { errorMessage } from "../../lib/errors.ts";
 import {
   checkPhotoFile,
@@ -55,7 +43,11 @@ import PhotoProblems from "./photo-problems.tsx";
 import EmailPolicyAction from "./email-policy-action.tsx";
 import { useConfirmation } from "./confirmation.tsx";
 import ClassificationFields from "./bike-classification.tsx";
-import { FormerBikeField } from "./bike-fields.tsx";
+import {
+  FormerBikeField,
+  PriceVisibilityField,
+  PrivacyField,
+} from "./bike-fields.tsx";
 import fieldStyles from "./bike-fields.module.css";
 import SiteIcon from "./site-icon.tsx";
 import {
@@ -80,7 +72,45 @@ import {
   officialSource,
   sourceLabel,
 } from "./resolver-candidates.tsx";
-const steps = ["Поиск комплектации", "Компоненты", "Детали и фото"];
+// #370: search first, then what the bike is (with photos), then its parts —
+// the bike is created after the last step. Search is optional: «Продолжить
+// вручную» leaves the first step from any state of it.
+const steps = ["Поиск", "Сведения и фото", "Комплектация"];
+const stepWords = ["Поиск", "Сведения", "Сборка"];
+// Fields of the bike that the second step checks, by the key of the input.
+const detailLabels: Record<string, string> = {
+  brand: "Марка",
+  model: "Модель",
+  year: "Год",
+  trim: "Комплектация / версия",
+  name: "Своё название",
+  description: "Описание",
+  color: "Цвет",
+  size: "Ростовка",
+  weight: "Вес",
+  mileage: "Текущий пробег",
+  price: "Стоимость",
+  manufacturer_url: "Сайт производителя",
+};
+const detailHints: Record<string, string> = {
+  weight: "вес должен быть больше нуля",
+  mileage: "пробег — целое неотрицательное число",
+  price: "стоимость — неотрицательное число",
+  manufacturer_url: "ссылка должна начинаться с http:// или https://",
+};
+// The id of the control to bring into view when its key is the first wrong one.
+const detailIds: Record<string, string> = {
+  brand: "wizard-brand",
+  model: "wizard-model",
+  year: "wizard-year",
+  trim: "wizard-trim",
+  name: "wizard-name",
+  description: "wizard-description",
+  weight: "wizard-weight",
+  mileage: "wizard-mileage",
+  price: "wizard-price",
+  manufacturer_url: "wizard-manufacturer",
+};
 const failures: Record<string, string> = {
   unsupported_brand:
     "Автоподбор сейчас недоступен для этой марки. Вставьте ссылку на страницу магазина или заполните комплектацию вручную.",
@@ -183,7 +213,12 @@ export default function BikeWizard({
     [photoBusy, setPhotoBusy] = useState(false),
     [photoError, setPhotoError] = useState(""),
     [photoProblems, setPhotoProblems] = useState<PhotoProblem[]>([]),
-    [attempt, setAttempt] = useState<Attempt | null>(null),
+    // The request the shown result answers (the typed identity and the link):
+    // it counts as «found» only while the fields still say the same.
+    [resultKey, setResultKey] = useState(""),
+    // Optional fields that hold an input stay open when it is the one to fix.
+    [openName, setOpenName] = useState(false),
+    [openDescription, setOpenDescription] = useState(false),
     [saving, setSaving] = useState(false),
     [savedId, setSavedId] = useState<string | null>(null),
     [openGroup, setOpenGroup] = useState<string | null | undefined>(null);
@@ -278,45 +313,36 @@ export default function BikeWizard({
   }, [dirty]);
   const update = <K extends keyof WizardBike>(k: K, v: WizardBike[K]) =>
     setBike((b) => ({ ...b, [k]: v }));
-  // The one rule that lets step 1 be left (the «Далее» button, Enter in the
-  // form and, by being disabled, the step numbers ahead): a search has run to
-  // its end for exactly the query and the link that stand in the fields now.
-  // Empty when the way is open, otherwise what is missing.
+  // Search is optional (#370): the first step is left by «Далее» when what
+  // was typed has been found, and by «Продолжить вручную» in every other
+  // state — nothing typed, a failed or a cancelled search, variants none of
+  // which fits. The link in the field takes part in «what was typed».
   const typedUrl = url.trim();
-  // A link that stands in the field keeps its form open: it takes part in the
-  // rule whether it is seen or not.
+  // A link that stands in the field keeps its form open.
   const urlOpen = manualMode || !!typedUrl;
   const typedIdentity = parseBikeSearch(searchText, catalog.models);
-  const gate = (() => {
-    if (resolving)
-      return "Идёт поиск: дождитесь результата или остановите его.";
-    if (!searchText.trim())
-      return "Введите марку и модель и нажмите «Найти комплектацию».";
-    if (!typedIdentity)
-      return "Не удалось разобрать запрос. Введите марку и модель; год и комплектацию можно добавить.";
-    if (typedUrl && !/^https?:\/\//i.test(typedUrl))
-      return "Ссылка на страницу должна начинаться с http:// или https://.";
-    const again = typedUrl ? "«Распознать страницу»" : "«Найти комплектацию»";
-    if (!attempt)
-      return `Чтобы продолжить, нажмите ${again} и дождитесь результата.`;
-    if (
-      attempt.identity !== JSON.stringify(typedIdentity) ||
-      attempt.url !== typedUrl
-    )
-      return `Запрос или ссылка изменились. Нажмите ${again}, чтобы продолжить.`;
-    if (attempt.outcome === "choice")
-      return "Выберите свою комплектацию среди найденных вариантов.";
-    return "";
-  })();
-  // What stands under the step: why it is shut, or what to do after a search
-  // that found nothing. The button points at it only while it is there.
+  const typedKey = JSON.stringify(typedIdentity) + "|" + typedUrl;
+  // After the bike is saved its fields are no longer edited here: what is left
+  // is a retry of the photos that did not go.
+  const locked = saving || !!savedId;
+  // The name a bike gets without one of its own.
+  const autoName = bicycleName({
+    name: "",
+    brand: query.brand,
+    model: query.model,
+    trim: query.trim || "",
+    year: query.year ?? "",
+  });
+  const found = result?.status === "resolved" && resultKey === typedKey;
+  // What stands under the step after a search that found nothing.
   const hint =
-    resolving || step !== 0
+    resolving || step !== 0 || !searchText.trim() || found
       ? ""
-      : gate ||
-        (attempt?.outcome === "none"
-          ? "Автоматически комплектацию найти не удалось. Нажмите «Далее» и заполните её вручную."
-          : "");
+      : result?.status === "ambiguous"
+        ? "Ни один вариант не подходит? Нажмите «Продолжить вручную» и заполните сведения сами."
+        : result
+          ? "Автоматически комплектацию найти не удалось. Нажмите «Продолжить вручную» и заполните сведения сами."
+          : "";
   async function resolve(
     sourceUrl = "",
     candidateId?: string,
@@ -331,18 +357,11 @@ export default function BikeWizard({
     // A search by the query replaces a link pasted before it; choosing one of
     // its variants does not.
     if (!sourceUrl && !variant) setUrl("");
-    // The attempt a variant is chosen from stays the attempt of its request.
-    const before = attempt;
     const identityKey = JSON.stringify(identity);
-    const ofRequest: Pick<Attempt, "identity" | "url"> =
-      variant && before
-        ? { identity: before.identity, url: before.url }
-        : { identity: identityKey, url: sourceUrl };
     const otherBike =
       !!acceptedIdentity.current && acceptedIdentity.current !== identityKey;
-    // Set only by a search that ran to its end, never by a cancelled one.
-    let outcome: Attempt["outcome"] | null = null;
-    setAttempt(null);
+    // Choosing a variant stays a part of the request that offered it.
+    const key = variant ? resultKey : identityKey + "|" + sourceUrl;
     setBike((previous) => ({
       ...previous,
       ...identity,
@@ -385,33 +404,30 @@ export default function BikeWizard({
         const accepted = await ask(
           `Источник описывает «${d.bike.canonicalName}»${d.sourceYear ? ` (${d.sourceYear})` : ""}. Вы указали «${identity.brand} ${identity.model} ${identity.trim || ""} ${identity.year || ""}». Модель или год отличаются. Использовать эту комплектацию?`,
         );
+        // A manual continue while the question was open drops the answer: it
+        // must not overwrite what is typed by hand.
+        if (controller.signal.aborted || !alive.current) return;
         if (!accepted) {
           setMessage(
             variant
               ? "Импорт отменён. Выберите другой вариант или измените запрос."
               : "Импорт отменён. Попробуйте другую страницу магазина.",
           );
-          // Refusing a page is an answer to the search; refusing one of the
-          // variants leaves the variants as they were.
-          outcome = variant && before ? before.outcome : "none";
+          // Refusing a page is an answer to the search: nothing is found.
+          if (!variant) setResult(null);
           return;
         }
         setIdentityConfirmed(true);
       } else setIdentityConfirmed(false);
       setResult(d);
-      outcome =
-        d.status === "resolved"
-          ? "resolved"
-          : d.status === "ambiguous"
-            ? "choice"
-            : "none";
+      setResultKey(key);
       setMessage(
         d.status === "resolved"
           ? d.warnings?.includes("multiple_builds")
-            ? `Страница предлагает несколько комплектаций; взята «${d.bike.canonicalName}». Проверьте компоненты на следующем шаге или выберите другой вариант.`
+            ? `Страница предлагает несколько комплектаций; взята «${d.bike.canonicalName}». Проверьте компоненты на третьем шаге или выберите другой вариант.`
             : d.quality?.level === "partial"
-              ? "Найдена часть комплектации. Проверьте и дополните её на следующем шаге."
-              : "Комплектация найдена. На следующем шаге её можно изменить."
+              ? "Найдена часть комплектации. Проверьте и дополните её на третьем шаге."
+              : "Комплектация найдена: сведения попадут на второй шаг, компоненты — на третий."
           : (
               {
                 dns_failed:
@@ -480,13 +496,9 @@ export default function BikeWizard({
           "Не удалось выполнить поиск. Попробуйте ссылку на другую страницу магазина или продолжите вручную.",
         );
         setResult(null);
-        outcome = "none";
       }
     } finally {
-      if (resolveAbort.current === controller) {
-        setResolving(false);
-        if (outcome && alive.current) setAttempt({ ...ofRequest, outcome });
-      }
+      if (resolveAbort.current === controller) setResolving(false);
     }
   }
   async function search(sourceUrl = "") {
@@ -533,16 +545,14 @@ export default function BikeWizard({
       if (photoAbort.current === controller) setPhotoBusy(false);
     }
   }, [query, result, url]);
+  // Photos are looked up once, on the way into «Сведения и фото», for what
+  // the search step left in the fields. Typing a brand or a model there does
+  // not start a lookup on every key: «Повторить поиск фото» does it on demand.
   useEffect(() => {
-    if (
-      step === 2 &&
-      photos === null &&
-      !photoBusy &&
-      query.brand &&
-      query.model
-    )
-      searchPhotos();
-  }, [step, photos, photoBusy, query.brand, query.model, searchPhotos]);
+    if (step === 1 && photos === null && !photoBusy)
+      if (query.brand && query.model) void searchPhotos();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- on entering the step only
+  }, [step]);
   const groups = groupedComponents(parts, catalog.componentGroups);
   function addPart(
     group: SiteCatalog["componentGroups"][number],
@@ -574,27 +584,114 @@ export default function BikeWizard({
   ) {
     setParts((p) => p.map((c) => (c.id === id ? { ...c, [k]: v } : c)));
   }
+  // What the bike's own fields must satisfy to save: the identity the server
+  // builds a name from, the category and the year, then the shared schema.
+  // The first wrong field, with the optional blocks that hold it opened.
+  function bikeFields() {
+    return {
+      ...bike,
+      name: bicycleName(bike),
+      brand: query.brand,
+      model: query.model,
+      trim: query.trim || "",
+      year: query.year,
+      price: bike.price === "" ? null : Number(bike.price),
+      weight: bike.weight === "" ? null : Number(bike.weight),
+      mileage: Number(bike.mileage),
+    };
+  }
+  function detailsProblem(): { message: string; key?: string } | null {
+    const fields = bikeFields();
+    if (!fields.brand || !fields.model)
+      return {
+        message: "Укажите марку и модель.",
+        key: fields.brand ? "model" : "brand",
+      };
+    if (!Number.isInteger(fields.year))
+      return { message: "Укажите год выпуска.", key: "year" };
+    if (!fields.classification.category)
+      return { message: "Выберите категорию велосипеда.", key: "category" };
+    const parsed = bikeInput.safeParse(fields);
+    if (parsed.success) return null;
+    const key = String(parsed.error.issues[0]?.path[0] ?? "");
+    const label = detailLabels[key];
+    return {
+      key,
+      message: label
+        ? `Проверьте поле «${label}»${detailHints[key] ? ": " + detailHints[key] : ""}.`
+        : "Проверьте сведения о велосипеде: вес должен быть больше нуля, пробег — целым неотрицательным числом, стоимость — неотрицательной, ссылка — HTTP/HTTPS.",
+    };
+  }
+  // The problem is shown at the step it belongs to: the optional blocks that
+  // hold the field are opened and the field itself takes the focus.
+  function showDetailsProblem(problem: { message: string; key?: string }) {
+    setStep(1);
+    setError(problem.message);
+    if (problem.key === "name") setOpenName(true);
+    if (problem.key === "description") setOpenDescription(true);
+    const id =
+      problem.key === "category"
+        ? "wizard-category"
+        : problem.key && detailIds[problem.key];
+    if (id) requestAnimationFrame(() => document.getElementById(id)?.focus());
+  }
+  // «Продолжить вручную»: leaves the search from any state. A search that is
+  // still running is stopped, and an answer that comes late is dropped by the
+  // checks in resolve(): what is typed by hand is not overwritten.
+  function continueManually() {
+    resolveAbort.current?.abort();
+    setResolving(false);
+    setTrace([]);
+    setMessage("");
+    setError("");
+    // What was typed fills the identity when it can be read; an empty or an
+    // unreadable line leaves the fields as they are.
+    const identity = parseBikeSearch(searchText, catalog.models);
+    if (identity)
+      setBike((previous) => ({
+        ...previous,
+        ...identity,
+        trim: identity.trim || "",
+        year: identity.year == null ? "" : String(identity.year),
+      }));
+    // A found bike of another request would be sent with a bike it does not
+    // describe (its preview), so it is let go; the variants that were offered
+    // and the parts stay, for going back and for the person to edit.
+    if (result?.status === "resolved" && !found) {
+      setResult(null);
+      setIdentityConfirmed(false);
+    }
+    setStep(1);
+  }
   function next() {
     setError("");
-    if (step === 0 && gate) {
-      setError(gate);
+    if (step === 0) {
+      if (found) setStep(1);
+      else continueManually();
       return;
     }
     if (step === 1) {
-      const invalid = parts.find((p) => !componentInput.safeParse(p).success);
-      if (invalid) {
-        setOpenGroup(
-          groups.find((g) => g.components.some((p) => p.id === invalid.id))?.id,
-        );
-        setError(
-          "Проверьте название, категорию, стоимость и ссылку компонента: " +
-            (invalid.name || invalid.category) +
-            ". Пустую строку можно удалить.",
-        );
+      const problem = detailsProblem();
+      if (problem) {
+        showDetailsProblem(problem);
         return;
       }
+      setStep(2);
+      return;
     }
-    setStep((s) => Math.min(2, s + 1));
+    const invalid = parts.find((p) => !componentInput.safeParse(p).success);
+    if (invalid) {
+      setOpenGroup(
+        groups.find((g) => g.components.some((p) => p.id === invalid.id))?.id,
+      );
+      setError(
+        "Проверьте название, категорию, стоимость и ссылку компонента: " +
+          (invalid.name || invalid.category) +
+          ". Пустую строку можно удалить.",
+      );
+      return;
+    }
+    void save();
   }
   // Each chosen file is looked at on its own: the ones that pass are kept, the
   // others are named with the reason, beside the input.
@@ -646,30 +743,12 @@ export default function BikeWizard({
       ]);
   }
   async function save() {
-    const fields = {
-      ...bike,
-      name: bicycleName(bike),
-      brand: query.brand,
-      model: query.model,
-      trim: query.trim || "",
-      year: query.year,
-      price: bike.price === "" ? null : Number(bike.price),
-      weight: bike.weight === "" ? null : Number(bike.weight),
-      mileage: Number(bike.mileage),
-    };
-    if (
-      !savedId &&
-      (!fields.classification.category || !Number.isInteger(fields.year))
-    ) {
-      setError(
-        "Выберите категорию велосипеда и укажите год на последнем шаге.",
-      );
-      return;
-    }
-    if (!savedId && !bikeInput.safeParse(fields).success) {
-      setError(
-        "Проверьте дополнительные поля: вес должен быть больше нуля, пробег — целым неотрицательным числом, стоимость — неотрицательной, ссылка — HTTP/HTTPS.",
-      );
+    const fields = bikeFields();
+    // The second step checks these before the third opens; a change that got
+    // past it is shown where the field is.
+    const problem = savedId ? null : detailsProblem();
+    if (problem) {
+      showDetailsProblem(problem);
       return;
     }
     let confirmed = identityConfirmed;
@@ -729,6 +808,9 @@ export default function BikeWizard({
       }
       if (refused.length) {
         setPhotoProblems(refused);
+        // The photos are on the second step: the person lands on them, with
+        // the bike already saved, and a retry sends what is left to it.
+        setStep(1);
         setError(
           "Велосипед сохранён, но не все фото загружены. Причины — рядом с выбором файлов; уберите лишние или повторите загрузку.",
         );
@@ -748,8 +830,8 @@ export default function BikeWizard({
       className="bike-wizard"
       onSubmit={(e) => {
         e.preventDefault();
-        if (step < 2) next();
-        else save();
+        if (savedId) void save();
+        else next();
       }}
     >
       <nav aria-label="Шаги добавления" className="wizard-steps">
@@ -763,7 +845,7 @@ export default function BikeWizard({
             onClick={() => setStep(i)}
           >
             <span>{i < step ? <Check size={14} /> : i + 1}</span>
-            <small>{["Поиск", "Сборка", "Детали"][i]}</small>
+            <small>{stepWords[i]}</small>
           </button>
         ))}
       </nav>
@@ -782,12 +864,13 @@ export default function BikeWizard({
           <EmailPolicyAction message={error} />
         </p>
       )}
-      <fieldset disabled={saving || !!savedId} className="wizard-content">
+      <fieldset disabled={saving} className="wizard-content">
         {step === 0 && (
-          <>
+          <div className="wizard-search">
             <p className="help">
               Введите марку и модель одной строкой. Год и комплектация уточняют
-              поиск, но не обязательны.
+              поиск, но не обязательны. Поиск необязателен: можно сразу
+              продолжить вручную.
             </p>
             <label className="field">
               <span>
@@ -973,301 +1056,188 @@ export default function BikeWizard({
                 )}
               </>
             )}
-          </>
+          </div>
         )}
         {step === 1 && (
-          <>
-            {result?.status === "resolved" &&
-              !!result.unknownFields?.length && (
-                <details className="resolver-review">
-                  <summary>
-                    Проверить характеристики · {result.unknownFields.length}
-                  </summary>
-                  <dl>
-                    {result.unknownFields.map((f, i) => (
-                      <div key={i}>
-                        <dt>{f.label}</dt>
-                        <dd>{f.value}</dd>
-                      </div>
-                    ))}
-                  </dl>
-                  <p className="help">
-                    Эти строки сохранены в источнике. При необходимости добавьте
-                    компонент в подходящую группу.
-                  </p>
-                </details>
-              )}
-            {result?.status === "resolved" &&
-              !!result.suggestedMetadata &&
-              Object.keys(result.suggestedMetadata).length > 0 && (
-                <details className="resolver-review">
-                  <summary>Данные велосипеда из источника</summary>
-                  <dl>
-                    {Object.entries(result.suggestedMetadata).map(
-                      ([key, value]) => (
-                        <div key={key}>
-                          <dt>
-                            {{
-                              weight: "Вес, кг",
-                              weightText: "Вес в источнике",
-                              sizes: "Размеры",
-                              wheelSize: "Колёса",
-                              color: "Цвет",
-                              manufacturerProductId: "Артикул",
-                            }[key] || key}
-                          </dt>
-                          <dd>{value}</dd>
-                        </div>
-                      ),
-                    )}
-                  </dl>
-                  <button
-                    type="button"
-                    className="quiet"
-                    onClick={() =>
-                      setBike((b) => ({
-                        ...b,
-                        ...(result.suggestedMetadata!.weight && !b.weight
-                          ? { weight: result.suggestedMetadata!.weight }
-                          : {}),
-                        ...(result.suggestedMetadata!.color && !b.color
-                          ? {
-                              color: String(
-                                result.suggestedMetadata!.color,
-                              ).slice(0, 50),
-                            }
-                          : {}),
-                      }))
+          <div className="wizard-details">
+            <fieldset className="wizard-card" disabled={locked}>
+              <legend>Велосипед</legend>
+              <div className="wizard-pair">
+                <label className="field">
+                  <span>
+                    <SiteIcon name="bike" /> Марка
+                  </span>
+                  <input
+                    id="wizard-brand"
+                    aria-label="Марка"
+                    maxLength={60}
+                    value={bike.brand}
+                    onChange={(e) => {
+                      update("brand", e.target.value);
+                      setResult(null);
+                    }}
+                  />
+                </label>
+                <label className="field">
+                  <span>Модель</span>
+                  <input
+                    id="wizard-model"
+                    maxLength={100}
+                    value={bike.model}
+                    onChange={(e) => {
+                      update("model", e.target.value);
+                      setResult(null);
+                    }}
+                  />
+                </label>
+              </div>
+              <div className="wizard-pair">
+                <label className="field">
+                  <span>
+                    <SiteIcon name="date" /> Год
+                  </span>
+                  <input
+                    id="wizard-year"
+                    aria-label="Год"
+                    type="number"
+                    min="1900"
+                    max="2100"
+                    required
+                    value={bike.year}
+                    onChange={(e) => update("year", e.target.value)}
+                  />
+                </label>
+                <label className="field">
+                  <span>Комплектация / версия</span>
+                  <input
+                    id="wizard-trim"
+                    maxLength={100}
+                    value={bike.trim}
+                    onChange={(e) => {
+                      update("trim", e.target.value);
+                      setResult(null);
+                    }}
+                  />
+                </label>
+              </div>
+              <ClassificationFields
+                categoryId="wizard-category"
+                value={bike.classification}
+                onChange={(classification) =>
+                  setBike((v) => ({
+                    ...v,
+                    classification,
+                    category: compatibilityCategory(classification),
+                  }))
+                }
+              />
+            </fieldset>
+            <fieldset className="wizard-card" disabled={locked}>
+              <legend>Характеристики</legend>
+              <div className="wizard-pair">
+                {(
+                  [
+                    ["color", "Цвет"],
+                    ["size", "Ростовка"],
+                  ] as const
+                ).map(([k, label]) => (
+                  <CompactCombo
+                    key={k}
+                    label={label}
+                    value={bike[k]}
+                    onChange={(v) => update(k, v)}
+                    maxLength={k === "size" ? 30 : 50}
+                    options={
+                      k === "size"
+                        ? catalog.sizes || ["XS", "S", "M", "L", "XL"]
+                        : result?.status === "resolved" &&
+                            result.suggestedMetadata?.color
+                          ? [result.suggestedMetadata.color]
+                          : []
                     }
-                  >
-                    Использовать вес и цвет в пустых полях
-                  </button>
-                </details>
-              )}
-            <p className="help">
-              {parts.length || attempt?.outcome !== "none"
-                ? "Проверьте найденные компоненты или добавьте свои по группам. Можно оставить комплектацию пустой и дополнить позже."
-                : "Автоматически комплектацию найти не удалось. Добавьте компоненты по группам или оставьте комплектацию пустой и дополните её позже."}
-            </p>
-            <details className="wizard-add-picker" open={!parts.length}>
-              <summary>
-                <SiteIcon name="addPart" /> Добавить компонент
-              </summary>
-              <div className="wizard-group-add">
-                {[
-                  "Групсет",
-                  "Тормоза",
-                  "Покрышки",
-                  "Вилка",
-                  "Седло",
-                  "Руль",
-                  "Педали",
-                ].map((category) => {
-                  const g = catalog.componentGroups.find((g) =>
-                    g.categories.includes(category),
-                  ) || {
-                    id: "other",
-                    icon: "wrench",
-                    name: category,
-                    categories: [category],
-                  };
-                  return (
+                  />
+                ))}
+              </div>
+              <div className="wizard-pair">
+                {(
+                  [
+                    ["weight", "Вес, кг", 100],
+                    ["mileage", "Текущий пробег, км", 10000000],
+                  ] as const
+                ).map(([k, label, max]) => (
+                  <label className="field" key={k}>
+                    <span>{label}</span>
+                    <input
+                      id={"wizard-" + k}
+                      type="number"
+                      min={k === "weight" ? 0.01 : 0}
+                      max={max}
+                      step={k === "mileage" ? 1 : 0.01}
+                      value={bike[k]}
+                      onChange={(e) => update(k, e.target.value)}
+                    />
+                  </label>
+                ))}
+              </div>
+              <label className="field">
+                <span>Стоимость, ₽</span>
+                <input
+                  id="wizard-price"
+                  type="number"
+                  min={0}
+                  max={999999999}
+                  step={0.01}
+                  value={bike.price}
+                  onChange={(e) => update("price", e.target.value)}
+                />
+              </label>
+              <label className="field">
+                <span>Сайт производителя</span>
+                <input
+                  id="wizard-manufacturer"
+                  type="url"
+                  maxLength={2048}
+                  value={bike.manufacturer_url}
+                  onChange={(e) => update("manufacturer_url", e.target.value)}
+                />
+              </label>
+              <div className="wizard-suggestions">
+                {result?.status === "resolved" &&
+                  result.suggestedMetadata?.weight && (
                     <button
                       type="button"
                       className="quiet"
-                      key={category}
-                      onClick={() => addPart(g, category)}
-                    >
-                      <PartIcon name={g.icon} size={16} />
-                      <Plus size={12} />
-                      {category === "Групсет" ? "Трансмиссия" : category}
-                    </button>
-                  );
-                })}
-              </div>
-            </details>
-            {groups.map((g) => (
-              <details
-                key={g.id}
-                open={
-                  openGroup === g.id || (!openGroup && groups[0]?.id === g.id)
-                }
-                onToggle={(e) => {
-                  if (e.currentTarget.open) setOpenGroup(g.id);
-                }}
-                className="wizard-part-group"
-              >
-                <summary>
-                  <PartIcon name={g.icon} size={18} />
-                  {g.name}
-                  <small>{g.components.length}</small>
-                </summary>
-                {g.components.map((p) => (
-                  <div key={p.id} className="wizard-part">
-                    <CompactCombo
-                      label="Категория"
-                      value={p.category}
-                      onChange={(v) => edit(p.id, "category", v)}
-                      options={[
-                        ...catalog.partCategories.build,
-                        ...catalog.partCategories.accessories,
-                      ]}
-                      required
-                      maxLength={60}
-                    />
-                    <CompactCombo
-                      label="Компонент"
-                      value={p.name}
-                      onChange={(v) => edit(p.id, "name", v)}
-                      options={catalog.parts[p.category] || []}
-                      required
-                    />
-                    <button
-                      type="button"
-                      className="icon danger"
-                      aria-label={"Удалить " + (p.name || p.category)}
                       onClick={() =>
-                        setParts((a) => a.filter((x) => x.id !== p.id))
+                        update("weight", result.suggestedMetadata!.weight!)
                       }
                     >
-                      <Trash2 size={15} />
+                      Вес из источника: {result.suggestedMetadata.weight} кг
                     </button>
-                    <details className="wizard-part-extra">
-                      <summary>Ещё: заметка, стоимость, ссылка</summary>
-                      <label className="field">
-                        <span>Примечание</span>
-                        <input
-                          maxLength={500}
-                          value={p.notes}
-                          onChange={(e) => edit(p.id, "notes", e.target.value)}
-                        />
-                      </label>
-                      <label className="field">
-                        <span>Стоимость, ₽</span>
-                        <input
-                          type="number"
-                          min={0}
-                          max={999999999}
-                          step="0.01"
-                          value={p.price ?? ""}
-                          onChange={(e) =>
-                            edit(
-                              p.id,
-                              "price",
-                              e.target.value === ""
-                                ? null
-                                : Number(e.target.value),
-                            )
-                          }
-                        />
-                      </label>
-                      <label className="field">
-                        <span>Ссылка</span>
-                        <input
-                          type="url"
-                          value={p.url}
-                          onChange={(e) => edit(p.id, "url", e.target.value)}
-                        />
-                      </label>
-                      <label className="field">
-                        <span>Раздел</span>
-                        <select
-                          value={p.section}
-                          onChange={(e) =>
-                            edit(
-                              p.id,
-                              "section",
-                              e.target.value as WizardPart["section"],
-                            )
-                          }
-                        >
-                          <option value="build">Комплектация</option>
-                          <option value="accessories">Аксессуары</option>
-                        </select>
-                      </label>
-                    </details>
-                  </div>
-                ))}
-              </details>
-            ))}
-          </>
-        )}
-        {step === 2 && (
-          <>
-            <div className="form-grid wizard-pair">
-              <label className="field">
-                <span>
-                  <SiteIcon name="bike" /> Марка
-                </span>
-                <input
-                  aria-label="Марка"
-                  maxLength={60}
-                  value={bike.brand}
-                  onChange={(e) => {
-                    update("brand", e.target.value);
-                    setResult(null);
-                  }}
-                />
-              </label>
-              <label className="field">
-                <span>Модель</span>
-                <input
-                  maxLength={100}
-                  value={bike.model}
-                  onChange={(e) => {
-                    update("model", e.target.value);
-                    setResult(null);
-                  }}
-                />
-              </label>
-            </div>
-            <div className="form-grid wizard-pair">
-              <label className="field">
-                <span>
-                  <SiteIcon name="date" /> Год
-                </span>
-                <input
-                  aria-label="Год"
-                  type="number"
-                  min="1900"
-                  max="2100"
-                  required
-                  value={bike.year}
-                  onChange={(e) => update("year", e.target.value)}
-                />
-              </label>
-              <label className="field">
-                <span>Комплектация / версия</span>
-                <input
-                  maxLength={100}
-                  value={bike.trim}
-                  onChange={(e) => {
-                    update("trim", e.target.value);
-                    setResult(null);
-                  }}
-                />
-              </label>
-            </div>
-            <label className="field">
-              <span>Название в гараже · необязательно</span>
-              <input
-                value={bike.name}
-                maxLength={100}
-                onChange={(e) => update("name", e.target.value)}
-              />
-            </label>
-            <ClassificationFields
-              value={bike.classification}
-              onChange={(classification) =>
-                setBike((v) => ({
-                  ...v,
-                  classification,
-                  category: compatibilityCategory(classification),
-                }))
-              }
-            />
-            <section>
-              <h4>Фотографии</h4>
+                  )}
+                {result?.status === "resolved" &&
+                  (result.suggestedMetadata?.manufacturerUrl ||
+                    (result.source && officialSource(result.source))) && (
+                    <button
+                      type="button"
+                      className="quiet"
+                      onClick={() =>
+                        update(
+                          "manufacturer_url",
+                          result.suggestedMetadata?.manufacturerUrl ||
+                            result.source.url,
+                        )
+                      }
+                    >
+                      Использовать страницу производителя
+                    </button>
+                  )}
+              </div>
+            </fieldset>
+            <section
+              className="wizard-card wizard-photos"
+              aria-labelledby="wizard-photos-title"
+            >
+              <h4 id="wizard-photos-title">Фотографии</h4>
               {!files.length && !chosen.length && (
                 <div className="wizard-stock-preview">
                   {settings[
@@ -1396,134 +1366,283 @@ export default function BikeWizard({
                 ))}
               </div>
             </section>
-            <div className="wizard-suggestions">
-              {result?.status === "resolved" &&
-                result.suggestedMetadata?.weight && (
-                  <button
-                    type="button"
-                    className="quiet"
-                    onClick={() =>
-                      update("weight", result.suggestedMetadata!.weight!)
-                    }
-                  >
-                    Вес из источника: {result.suggestedMetadata.weight} кг
-                  </button>
-                )}
-              {result?.status === "resolved" &&
-                (result.suggestedMetadata?.manufacturerUrl ||
-                  (result.source && officialSource(result.source))) && (
-                  <button
-                    type="button"
-                    className="quiet"
-                    onClick={() =>
-                      update(
-                        "manufacturer_url",
-                        result.suggestedMetadata?.manufacturerUrl ||
-                          result.source.url,
-                      )
-                    }
-                  >
-                    Использовать страницу производителя
-                  </button>
-                )}
-            </div>
-            <div className="form-grid">
-              {(
-                [
-                  ["color", "Цвет"],
-                  ["size", "Ростовка"],
-                ] as const
-              ).map(([k, label]) => (
-                <CompactCombo
-                  key={k}
-                  label={label}
-                  value={bike[k]}
-                  onChange={(v) => update(k, v)}
-                  maxLength={k === "size" ? 30 : 50}
-                  options={
-                    k === "size"
-                      ? catalog.sizes || ["XS", "S", "M", "L", "XL"]
-                      : result?.status === "resolved" &&
-                          result.suggestedMetadata?.color
-                        ? [result.suggestedMetadata.color]
-                        : []
-                  }
-                />
-              ))}
-              {(
-                [
-                  ["price", "Стоимость, ₽", 999999999],
-                  ["mileage", "Текущий пробег, км", 10000000],
-                  ["weight", "Вес, кг", 100],
-                ] as const
-              ).map(([k, label, max]) => (
-                <label className="field" key={k}>
-                  <span>{label}</span>
-                  <input
-                    type="number"
-                    min={k === "weight" ? 0.01 : 0}
-                    max={max}
-                    step={k === "mileage" ? 1 : 0.01}
-                    value={bike[k]}
-                    onChange={(e) => update(k, e.target.value)}
-                  />
-                </label>
-              ))}
-            </div>
-            <details className="wizard-optional">
-              <summary>Описание · необязательно</summary>
-              <label className="field">
-                <span>О велосипеде</span>
-                <textarea
-                  maxLength={2000}
-                  value={bike.description}
-                  onChange={(e) => update("description", e.target.value)}
-                />
-              </label>
-            </details>
-            <label className="field">
-              <span>Сайт производителя</span>
-              <input
-                type="url"
-                maxLength={2048}
-                value={bike.manufacturer_url}
-                onChange={(e) => update("manufacturer_url", e.target.value)}
+            <fieldset className="wizard-card wizard-settings" disabled={locked}>
+              <legend>Приватность и показ</legend>
+              <PrivacyField
+                isPublic={bike.is_public}
+                onChange={(value) => update("is_public", value)}
               />
-            </label>
-            <FormerBikeField
-              value={bike.is_former}
-              onChange={(value) => update("is_former", value)}
-            />
-            <div className="wizard-privacy">
-              <label className="setting-row">
-                Приватный велосипед
-                <input
-                  type="checkbox"
-                  checked={!bike.is_public}
-                  onChange={(e) => update("is_public", !e.target.checked)}
-                />
-              </label>
-              {(
-                [
-                  ["show_bike_price", "Показывать стоимость велосипеда"],
-                  ["show_component_prices", "Показывать стоимость компонентов"],
-                  ["show_accessory_prices", "Показывать стоимость аксессуаров"],
-                ] as const
-              ).map(([k, label]) => (
-                <label className="setting-row" key={k}>
-                  {label}
+              <PriceVisibilityField
+                value={bike}
+                onChange={(value) => setBike((b) => ({ ...b, ...value }))}
+              />
+              <FormerBikeField
+                compact
+                value={bike.is_former}
+                onChange={(value) => update("is_former", value)}
+              />
+              <p className="help">
+                Публичный велосипед виден на общей витрине, «Только я» оставляет
+                его только для вас. Цены публикуются лишь с вашего разрешения;
+                показ можно менять, не удаляя цены.
+              </p>
+              <details
+                className="wizard-optional"
+                open={openName}
+                onToggle={(e) => setOpenName(e.currentTarget.open)}
+              >
+                <summary>Своё название</summary>
+                <label className="field">
+                  <span>Название в гараже · необязательно</span>
                   <input
-                    type="checkbox"
-                    checked={bike[k]}
-                    onChange={(e) => update(k, e.target.checked)}
+                    id="wizard-name"
+                    value={bike.name}
+                    maxLength={100}
+                    onChange={(e) => update("name", e.target.value)}
                   />
                 </label>
+                <p className="help">
+                  Без своего названия велосипед называется «
+                  {autoName || "марка, модель, версия, год"}».
+                </p>
+              </details>
+              <details
+                className="wizard-optional"
+                open={openDescription}
+                onToggle={(e) => setOpenDescription(e.currentTarget.open)}
+              >
+                <summary>Описание · необязательно</summary>
+                <label className="field">
+                  <span>О велосипеде</span>
+                  <textarea
+                    id="wizard-description"
+                    maxLength={2000}
+                    value={bike.description}
+                    onChange={(e) => update("description", e.target.value)}
+                  />
+                </label>
+              </details>
+            </fieldset>
+          </div>
+        )}
+        {step === 2 && (
+          <>
+            {result?.status === "resolved" &&
+              !!result.unknownFields?.length && (
+                <details className="resolver-review">
+                  <summary>
+                    Проверить характеристики · {result.unknownFields.length}
+                  </summary>
+                  <dl>
+                    {result.unknownFields.map((f, i) => (
+                      <div key={i}>
+                        <dt>{f.label}</dt>
+                        <dd>{f.value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                  <p className="help">
+                    Эти строки сохранены в источнике. При необходимости добавьте
+                    компонент в подходящую группу.
+                  </p>
+                </details>
+              )}
+            {result?.status === "resolved" &&
+              !!result.suggestedMetadata &&
+              Object.keys(result.suggestedMetadata).length > 0 && (
+                <details className="resolver-review">
+                  <summary>Данные велосипеда из источника</summary>
+                  <dl>
+                    {Object.entries(result.suggestedMetadata).map(
+                      ([key, value]) => (
+                        <div key={key}>
+                          <dt>
+                            {{
+                              weight: "Вес, кг",
+                              weightText: "Вес в источнике",
+                              sizes: "Размеры",
+                              wheelSize: "Колёса",
+                              color: "Цвет",
+                              manufacturerProductId: "Артикул",
+                            }[key] || key}
+                          </dt>
+                          <dd>{value}</dd>
+                        </div>
+                      ),
+                    )}
+                  </dl>
+                  <button
+                    type="button"
+                    className="quiet"
+                    onClick={() =>
+                      setBike((b) => ({
+                        ...b,
+                        ...(result.suggestedMetadata!.weight && !b.weight
+                          ? { weight: result.suggestedMetadata!.weight }
+                          : {}),
+                        ...(result.suggestedMetadata!.color && !b.color
+                          ? {
+                              color: String(
+                                result.suggestedMetadata!.color,
+                              ).slice(0, 50),
+                            }
+                          : {}),
+                      }))
+                    }
+                  >
+                    Использовать вес и цвет в пустых полях
+                  </button>
+                </details>
+              )}
+            <p className="help">
+              {parts.length
+                ? "Проверьте найденные компоненты или добавьте свои по группам. Можно оставить комплектацию пустой и дополнить позже."
+                : "Добавьте компоненты по группам или оставьте комплектацию пустой и дополните её позже. Велосипед сохранится и так."}
+            </p>
+            <details className="wizard-add-picker" open={!parts.length}>
+              <summary>
+                <SiteIcon name="addPart" /> Добавить компонент
+              </summary>
+              <div className="wizard-group-add">
+                {[
+                  "Групсет",
+                  "Тормоза",
+                  "Покрышки",
+                  "Вилка",
+                  "Седло",
+                  "Руль",
+                  "Педали",
+                ].map((category) => {
+                  const g = catalog.componentGroups.find((g) =>
+                    g.categories.includes(category),
+                  ) || {
+                    id: "other",
+                    icon: "wrench",
+                    name: category,
+                    categories: [category],
+                  };
+                  return (
+                    <button
+                      type="button"
+                      className="quiet"
+                      key={category}
+                      onClick={() => addPart(g, category)}
+                    >
+                      <PartIcon name={g.icon} size={16} />
+                      <Plus size={12} />
+                      {category === "Групсет" ? "Трансмиссия" : category}
+                    </button>
+                  );
+                })}
+              </div>
+            </details>
+            <div className="wizard-groups">
+              {groups.map((g) => (
+                <details
+                  key={g.id}
+                  open={
+                    openGroup === g.id || (!openGroup && groups[0]?.id === g.id)
+                  }
+                  onToggle={(e) => {
+                    if (e.currentTarget.open) setOpenGroup(g.id);
+                  }}
+                  className="wizard-part-group"
+                >
+                  <summary>
+                    <PartIcon name={g.icon} size={18} />
+                    {g.name}
+                    <small>{g.components.length}</small>
+                  </summary>
+                  {g.components.map((p) => (
+                    <div key={p.id} className="wizard-part">
+                      <CompactCombo
+                        label="Категория"
+                        value={p.category}
+                        onChange={(v) => edit(p.id, "category", v)}
+                        options={[
+                          ...catalog.partCategories.build,
+                          ...catalog.partCategories.accessories,
+                        ]}
+                        required
+                        maxLength={60}
+                      />
+                      <CompactCombo
+                        label="Компонент"
+                        value={p.name}
+                        onChange={(v) => edit(p.id, "name", v)}
+                        options={catalog.parts[p.category] || []}
+                        required
+                      />
+                      <button
+                        type="button"
+                        className="icon danger"
+                        aria-label={"Удалить " + (p.name || p.category)}
+                        onClick={() =>
+                          setParts((a) => a.filter((x) => x.id !== p.id))
+                        }
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                      <details className="wizard-part-extra">
+                        <summary>Ещё: заметка, стоимость, ссылка</summary>
+                        <label className="field">
+                          <span>Примечание</span>
+                          <input
+                            maxLength={500}
+                            value={p.notes}
+                            onChange={(e) =>
+                              edit(p.id, "notes", e.target.value)
+                            }
+                          />
+                        </label>
+                        <label className="field">
+                          <span>Стоимость, ₽</span>
+                          <input
+                            type="number"
+                            min={0}
+                            max={999999999}
+                            step="0.01"
+                            value={p.price ?? ""}
+                            onChange={(e) =>
+                              edit(
+                                p.id,
+                                "price",
+                                e.target.value === ""
+                                  ? null
+                                  : Number(e.target.value),
+                              )
+                            }
+                          />
+                        </label>
+                        <label className="field">
+                          <span>Ссылка</span>
+                          <input
+                            type="url"
+                            value={p.url}
+                            onChange={(e) => edit(p.id, "url", e.target.value)}
+                          />
+                        </label>
+                        <label className="field">
+                          <span>Раздел</span>
+                          <select
+                            value={p.section}
+                            onChange={(e) =>
+                              edit(
+                                p.id,
+                                "section",
+                                e.target.value as WizardPart["section"],
+                              )
+                            }
+                          >
+                            <option value="build">Комплектация</option>
+                            <option value="accessories">Аксессуары</option>
+                          </select>
+                        </label>
+                      </details>
+                    </div>
+                  ))}
+                </details>
               ))}
-              <p className="help">
-                Новый велосипед виден на общей витрине. Включите приватность,
-                чтобы оставить его только для себя. Цены публикуются лишь с
-                вашего разрешения.
-              </p>
             </div>
           </>
         )}
@@ -1558,10 +1677,10 @@ export default function BikeWizard({
         </button>
         <button
           className="button"
-          disabled={resolving || saving || (step === 0 && !!gate)}
+          disabled={saving || (resolving && step !== 0)}
           aria-describedby={hint ? "wizard-gate" : undefined}
         >
-          {step === 2 ? (
+          {step === 2 || savedId ? (
             <>
               <SiteIcon
                 name={
@@ -1577,6 +1696,11 @@ export default function BikeWizard({
                   ? "Повторить загрузку фото"
                   : "Открыть велосипед"
                 : "Сохранить велосипед"}
+            </>
+          ) : step === 0 && !found ? (
+            <>
+              <SiteIcon name="next" />
+              Продолжить вручную
             </>
           ) : (
             <>

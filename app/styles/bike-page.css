@@ -1386,8 +1386,10 @@
   dialog[open]:has(.bike-wizard) {
     display: flex;
     flex-direction: column;
-    max-width: 720px;
-    height: min(780px, calc(100dvh - 2 * var(--space-4)));
+    /* #370: wider than before, up to the planner's 1120 px, so related fields
+       sit side by side; only this dialog changes, not the other windows. */
+    max-width: min(1120px, calc(100vw - 2 * var(--gutter)));
+    height: min(860px, calc(100dvh - 2 * var(--space-4)));
     overflow: hidden;
   }
   dialog:has(.bike-wizard) > .modal-head {
@@ -1500,10 +1502,67 @@
   .wizard-content .field {
     margin-bottom: var(--space-3);
   }
-  /* Step 3: the identity fields come in pairs that keep two columns on a phone. */
+  /* Fields come in pairs that keep two columns on a phone. */
   .wizard-content .wizard-pair {
+    display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0 var(--space-3);
+    /* A label that wraps in one of the two does not push its input down. */
+    align-items: end;
+  }
+  /* Step 1: a reading width, the window itself is wide. */
+  .wizard-search {
+    max-width: 760px;
+  }
+  /* Step 2 (#370): related fields in cards — the bike, its characteristics,
+     photos — in as many columns as the width allows, then the settings. */
+  .wizard-details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+    gap: var(--space-4);
+    align-items: start;
+  }
+  .wizard-card {
+    min-width: 0;
+    margin: 0;
+    padding: var(--space-2) var(--space-4) var(--space-3);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+  }
+  .wizard-card > legend,
+  .wizard-card > h4 {
+    margin: 0 0 var(--space-2);
+    padding: 0;
+    color: var(--text);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+  }
+  .wizard-card > legend {
+    padding-inline: var(--space-1);
+  }
+  .wizard-settings {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+    gap: 0 var(--space-5);
+    align-items: start;
+  }
+  .wizard-settings > legend {
+    grid-column: 1 / -1;
+  }
+  .wizard-settings > .help,
+  .wizard-settings > .wizard-optional {
+    grid-column: 1 / -1;
+  }
+  .wizard-settings .field {
+    margin-bottom: var(--space-2);
+  }
+  /* Step 3: parts groups side by side on a wide window. */
+  .wizard-groups {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
+    gap: 0 var(--space-4);
+    align-items: start;
   }
   .wizard-content .wizard-pair .field {
     min-width: 0;
@@ -2054,27 +2113,12 @@
     font-weight: var(--weight-semibold);
     cursor: pointer;
   }
-  .wizard-privacy {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0 var(--space-4);
-    margin-top: var(--space-3);
-    padding-top: var(--space-2);
-    border-top: 1px solid var(--line);
-  }
-  .wizard-privacy .help {
-    grid-column: 1 / -1;
-    margin-top: var(--space-2);
-  }
   @media (max-width: 640px) {
     dialog[open]:has(.bike-wizard) {
       height: calc(100dvh - 2 * var(--space-2));
     }
     .wizard-part {
       grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) auto;
-    }
-    .wizard-privacy {
-      grid-template-columns: minmax(0, 1fr);
     }
     .photo-candidates {
       grid-template-columns: repeat(2, minmax(0, 1fr));

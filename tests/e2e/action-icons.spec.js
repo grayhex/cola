@@ -256,7 +256,11 @@ test("the four forms: the wizard, an ad, an article and a ride carry the slots o
       ),
     ).toBeVisible();
     await find.click();
-    const next = wizard.getByRole("button", { name: "Далее", exact: true });
+    // The forward button is «Далее» after a found bike and «Продолжить
+    // вручную» otherwise (#370): the same button, the same icon slot.
+    const next = wizard.getByRole("button", {
+      name: /^(Далее|Продолжить вручную)$/,
+    });
     await expect(next).toBeEnabled();
     await expect(slotOf(next, "next")).toBeVisible();
     await expect(
@@ -267,11 +271,14 @@ test("the four forms: the wizard, an ad, an article and a ride carry the slots o
     ).toBeVisible();
     await reacts(page, next, "next");
     await next.click();
-    await expect(slotOf(wizard.locator("summary"), "addPart")).toBeVisible();
-    await next.click();
     await expect(
       slotOf(wizard.locator("label.field"), "addPhoto"),
     ).toBeVisible();
+    await wizard
+      .getByLabel("Категория велосипеда", { exact: true })
+      .selectOption("mtb");
+    await next.click();
+    await expect(slotOf(wizard.locator("summary"), "addPart")).toBeVisible();
     const save = wizard.getByRole("button", {
       name: "Сохранить велосипед",
       exact: true,

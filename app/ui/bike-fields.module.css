@@ -16,6 +16,48 @@
 .ownership p {
   margin: 4px 0 0;
 }
+/* In a group of settings (#370): no outer margin, a short explanation. */
+.ownershipCompact {
+  margin: 0;
+}
+.ownershipCompact .check {
+  min-height: 40px;
+}
+.ownershipCompact p {
+  margin: 0;
+  font-size: var(--text-xs);
+}
+.privacy {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.privacy legend {
+  padding: 0;
+  margin-bottom: var(--space-1);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+}
+.radios {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-5);
+}
+.radio {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+.radio input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+}
 .modelInput.modelInput {
   min-width: 0;
   max-width: 100%;
