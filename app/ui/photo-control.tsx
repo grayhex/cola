@@ -1,7 +1,7 @@
 "use client";
 import NavPopover from "./nav-popover.tsx";
 import SiteIcon from "./site-icon.tsx";
-import { ChevronDown, Eraser, Star, Trash2 } from "./icons.tsx";
+import { ChevronDown, Eraser, Star, Trash2, Undo2 } from "./icons.tsx";
 import styles from "./photo-control.module.css";
 
 // The one place for the photos of a bike (#370): the bike page and the wizard
@@ -14,6 +14,8 @@ export type PhotoControlTarget = {
   total: number;
   /** The selected photo is the cover now. */
   isCover: boolean;
+  /** Its backdrop was taken off and the version before is kept (#370). */
+  hasOriginal?: boolean;
 };
 export default function PhotoControl({
   selected,
@@ -23,6 +25,7 @@ export default function PhotoControl({
   onCover,
   onDelete,
   onRemoveBackground,
+  onRestoreOriginal,
   t = (text) => text,
 }: {
   /** The selected photo; null when there is none, and then only adding works. */
@@ -35,6 +38,8 @@ export default function PhotoControl({
   onDelete: () => void;
   /** Present only where a photo can be cleared of its background. */
   onRemoveBackground?: () => void;
+  /** Present where the version before the removal is kept: it brings it back. */
+  onRestoreOriginal?: () => void;
   t?: (text: string) => string;
 }) {
   const where = selected
@@ -85,16 +90,28 @@ export default function PhotoControl({
                   : t("Сделать обложкой")}
             </span>
           </button>
-          {onRemoveBackground && (
+          {selected.hasOriginal && onRestoreOriginal ? (
             <button
               type="button"
               className="nav-menu-link"
               disabled={busy}
-              onClick={onRemoveBackground}
+              onClick={onRestoreOriginal}
             >
-              <Eraser size={15} aria-hidden="true" />
-              <span>{t("Удалить фон")}</span>
+              <Undo2 size={15} aria-hidden="true" />
+              <span>{t("Вернуть исходное фото")}</span>
             </button>
+          ) : (
+            onRemoveBackground && (
+              <button
+                type="button"
+                className="nav-menu-link"
+                disabled={busy}
+                onClick={onRemoveBackground}
+              >
+                <Eraser size={15} aria-hidden="true" />
+                <span>{t("Удалить фон")}</span>
+              </button>
+            )
           )}
           <button
             type="button"

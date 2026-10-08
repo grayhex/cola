@@ -27,7 +27,25 @@ type WizardPart = Omit<ComponentInput, "price"> & {
   id: string;
   price: number | string | null;
 };
-type UploadFile = { id: string; file: File; preview: string };
+// `original`: the file as it was chosen, kept while its backdrop is off (#370),
+// so that the draft can go back to it; nothing was sent to the server yet.
+type UploadFile = {
+  id: string;
+  file: File;
+  preview: string;
+  original?: { file: File; preview: string };
+};
+// The window of the backdrop removal is read only when a photo is chosen for it.
+const BackgroundRemovalDialog = dynamic(
+  () => import("./background-removal-dialog.tsx"),
+  { ssr: false },
+);
+// A photo of the draft without its backdrop, for a found photo: the server
+// keeps the preview for the import, which brings it onto the bike with the
+// source of the photo.
+type Cutout = { previewId: string; url: string };
+const forgetPreview = (id: string) =>
+  void fetch(`/api/bikes/previews/${id}`, { method: "DELETE" }).catch(() => {});
 import { errorMessage } from "../../lib/errors.ts";
 import {
   checkPhotoFile,
@@ -42,6 +60,8 @@ import {
 import PhotoProblems from "./photo-problems.tsx";
 import PhotoControl from "./photo-control.tsx";
 import { thumbnailOf } from "./photo-thumbnail.ts";
+import dynamic from "next/dynamic";
+import type { BackgroundSource } from "./background-removal-dialog.tsx";
 import EmailPolicyAction from "./email-policy-action.tsx";
 import { useConfirmation } from "./confirmation.tsx";
 import ClassificationFields from "./bike-classification.tsx";
@@ -219,6 +239,10 @@ export default function BikeWizard({
     [photos, setPhotos] = useState<BikePhotoCandidate[] | null>(null),
     [chosen, setChosen] = useState<string[]>([]),
     [files, setFiles] = useState<UploadFile[]>([]),
+    // Found photos whose backdrop is off, by the id of the offer; and the photo
+    // of the draft the window of the removal is open for.
+    [cutouts, setCutouts] = useState<Record<string, Cutout>>({}),
+    [cutting, setCutting] = useState<string | null>(null),
     [photoBusy, setPhotoBusy] = useState(false),
     [photoError, setPhotoError] = useState(""),
     [photoProblems, setPhotoProblems] = useState<PhotoProblem[]>([]),
@@ -255,10 +279,12 @@ export default function BikeWizard({
     ...chosen.map((id) => ({
       key: "found:" + id,
       kind: "found" as const,
+      hasOriginal: !!cutouts[id],
     })),
     ...files.map((f) => ({
       key: "local:" + f.id,
       kind: "local" as const,
+      hasOriginal: !!f.original,
     })),
   ];
   const selectedDraft =
@@ -294,6 +320,27 @@ export default function BikeWizard({
       </button>
     </li>
   );
+  // What the window of the backdrop removal works on: the found photo by the
+  // id of its offer, or the file the person chose.
+  const cuttingDraft = draftPhotos.find((p) => p.key === cutting) ?? null;
+  const cuttingFile =
+    cuttingDraft?.kind === "local"
+      ? files.find((f) => "local:" + f.id === cuttingDraft.key)
+      : undefined;
+  const cuttingSource: BackgroundSource | null = !cuttingDraft
+    ? null
+    : cuttingDraft.kind === "found"
+      ? {
+          kind: "candidate",
+          candidateId: cuttingDraft.key.slice("found:".length),
+        }
+      : cuttingFile
+        ? {
+            kind: "upload",
+            file: cuttingFile.file,
+            beforeUrl: cuttingFile.preview,
+          }
+        : null;
   const acceptedIdentity = useRef(""),
     requestId = useRef<string | null>(null),
     resolveAbort = useRef<AbortController | null>(null),
@@ -320,6 +367,17 @@ export default function BikeWizard({
   useEffect(() => {
     heading.current?.focus();
   }, [step]);
+  // A found photo that is no longer in the draft takes its preview with it.
+  useEffect(() => {
+    const gone = Object.keys(cutouts).filter((id) => !chosen.includes(id));
+    if (!gone.length) return;
+    gone.forEach((id) => forgetPreview(cutouts[id].previewId));
+    setCutouts((c) =>
+      Object.fromEntries(
+        Object.entries(c).filter(([id]) => chosen.includes(id)),
+      ),
+    );
+  }, [chosen, cutouts]);
   // The reasons a photo was refused are shown where the files are chosen, which
   // may be out of sight when a save has just run.
   useEffect(() => {
@@ -846,6 +904,65 @@ export default function BikeWizard({
     if (coverPhoto === key) setCoverPhoto(null);
     if (selectedPhoto === key) setSelectedPhoto(null);
   }
+  // «Вернуть исходное фото»: the draft goes back to what was chosen or found.
+  function restoreDraftPhoto(key: string) {
+    if (key.startsWith("found:")) {
+      const id = key.slice("found:".length);
+      if (cutouts[id]) forgetPreview(cutouts[id].previewId);
+      setCutouts((c) =>
+        Object.fromEntries(Object.entries(c).filter(([k]) => k !== id)),
+      );
+      return;
+    }
+    const item = files.find((f) => "local:" + f.id === key);
+    const original = item?.original;
+    if (!item || !original) return;
+    setFiles((a) =>
+      a.map((f) => (f.id === item.id ? { id: f.id, ...original } : f)),
+    );
+  }
+  // The person took the picture without its backdrop: the draft's photo is
+  // that version now. Nothing goes to the server before the bike is saved.
+  async function takeCutout(key: string, preview: { id: string; url: string }) {
+    if (key.startsWith("found:")) {
+      setCutouts((c) => ({
+        ...c,
+        [key.slice("found:".length)]: {
+          previewId: preview.id,
+          url: preview.url,
+        },
+      }));
+      return;
+    }
+    const item = files.find((f) => "local:" + f.id === key);
+    if (!item) return;
+    const response = await fetch(preview.url);
+    if (!response.ok)
+      throw new Error("Результат устарел. Удалите фон ещё раз.");
+    const blob = await response.blob();
+    forgetPreview(preview.id);
+    const file = new File(
+      [blob],
+      item.file.name.replace(/\.[^.]+$/, "") + ".webp",
+      { type: "image/webp" },
+    );
+    const bitmap = await createImageBitmap(file);
+    const small = thumbnailOf(bitmap);
+    bitmap.close();
+    if (!alive.current) return;
+    setFiles((a) =>
+      a.map((f) =>
+        f.id === item.id
+          ? {
+              id: f.id,
+              file,
+              preview: small,
+              original: f.original ?? { file: f.file, preview: f.preview },
+            }
+          : f,
+      ),
+    );
+  }
   async function save() {
     const fields = bikeFields();
     // The second step checks these before the third opens; a change that got
@@ -894,8 +1011,16 @@ export default function BikeWizard({
       wantedCover.current ??= coverDraft?.key ?? "";
       setFixedCover(wantedCover.current);
       if (chosen.length) {
+        const accepted = Object.fromEntries(
+          chosen.flatMap((candidate) =>
+            cutouts[candidate]
+              ? [[candidate, cutouts[candidate].previewId]]
+              : [],
+          ),
+        );
         const imported = await api<{ ids?: string[] }>(id + "/photos/import", {
           ids: chosen,
+          ...(Object.keys(accepted).length ? { cutouts: accepted } : {}),
         });
         chosen.forEach((candidate, i) => {
           const photo = imported.ids?.[i];
@@ -1473,7 +1598,13 @@ export default function BikeWizard({
                       "found:" + id,
                       "found",
                       i,
-                      <img src={"/api/bikes/photo-candidates/" + id} alt="" />,
+                      <img
+                        src={
+                          cutouts[id]?.url ??
+                          "/api/bikes/photo-candidates/" + id
+                        }
+                        alt=""
+                      />,
                     ),
                   )}
                   {files.map((f, i) =>
@@ -1496,6 +1627,7 @@ export default function BikeWizard({
                           ) + 1,
                         total: draftPhotos.length,
                         isCover: selectedDraft.key === coverDraft?.key,
+                        hasOriginal: selectedDraft.hasOriginal,
                       }
                     : null
                 }
@@ -1507,6 +1639,12 @@ export default function BikeWizard({
                 }
                 onDelete={() =>
                   selectedDraft && removeDraftPhoto(selectedDraft.key)
+                }
+                onRemoveBackground={() =>
+                  selectedDraft && setCutting(selectedDraft.key)
+                }
+                onRestoreOriginal={() =>
+                  selectedDraft && restoreDraftPhoto(selectedDraft.key)
                 }
               />
               <input
@@ -1876,6 +2014,14 @@ export default function BikeWizard({
           )}
         </button>
       </div>
+      {cutting && cuttingSource && (
+        <BackgroundRemovalDialog
+          key={cutting}
+          source={cuttingSource}
+          apply={({ preview }) => takeCutout(cutting, preview)}
+          onClose={() => setCutting(null)}
+        />
+      )}
     </form>
   );
 }

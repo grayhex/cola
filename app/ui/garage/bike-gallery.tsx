@@ -24,6 +24,8 @@ export default function BikeGallery({
   onCover,
   onDelete,
   onAdd,
+  onRemoveBackground,
+  onRestoreOriginal,
   problems = [],
   onDismissProblems,
   showPicture = true,
@@ -40,6 +42,10 @@ export default function BikeGallery({
   onCover: (photo: PublicPhoto) => void;
   onDelete: (photo: PublicPhoto) => void;
   onAdd: () => void;
+  /** Takes the backdrop off the photo (#370); the owner sees the result first. */
+  onRemoveBackground: (photo: PublicPhoto) => void;
+  /** Brings back the photo as it was before its backdrop was taken off. */
+  onRestoreOriginal: (photo: PublicPhoto) => void;
   /** Files the site refused, told about beside the control that took them. */
   problems?: PhotoProblem[];
   onDismissProblems?: () => void;
@@ -128,6 +134,7 @@ export default function BikeGallery({
                     position,
                     total: bike.photos.length,
                     isCover: photo.is_cover,
+                    hasOriginal: photo.has_original === true,
                   }
                 : null
             }
@@ -135,6 +142,8 @@ export default function BikeGallery({
             onAdd={onAdd}
             onCover={() => photo && onCover(photo)}
             onDelete={() => photo && onDelete(photo)}
+            onRemoveBackground={() => photo && onRemoveBackground(photo)}
+            onRestoreOriginal={() => photo && onRestoreOriginal(photo)}
             t={t}
           />
           {onDismissProblems && (

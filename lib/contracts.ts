@@ -140,6 +140,22 @@ export interface PublicPhoto {
    */
   has_original?: boolean;
 }
+/**
+ * A try at taking the backdrop off a photo (#370). Only its owner may fetch the
+ * picture, for an hour; nothing of the server's files is named.
+ */
+export interface PhotoPreview {
+  id: EntityId;
+  /** The picture without its backdrop (WebP with transparency). */
+  url: string;
+  /** The picture as it was, for a found photo, which the page holds only as a thumbnail. */
+  beforeUrl: string | null;
+  width: number;
+  height: number;
+  /** The share of the picture that became see-through (0…1). */
+  removed: number;
+  bytes: number;
+}
 // PostgreSQL numeric columns remain strings at the existing DTO boundary.
 export interface PublicComponent {
   id: EntityId;

@@ -66,17 +66,22 @@ async function plainImage(bytes: SharpInput | SharpInput[] | null | undefined) {
   }
   return sharp(fallback).jpeg({ quality: 88 }).toBuffer();
 }
-// Avatars stay a circle; other photos fill the card.
-async function photoData(
+// Avatars stay a circle; other photos fill the card. A card is a JPEG, which
+// has no transparency, so a photo without its backdrop (#370) is laid on a
+// light one, as a studio photograph is: on the card's dark ground a dark frame
+// would disappear. The stored photo keeps its transparency.
+export async function photoData(
   bytes: SharpInput | SharpInput[] | undefined,
   kind: string,
 ) {
   const [width, height] =
     kind === "profile" ? [300, 300] : [cardWidth, cardHeight];
+  const clear = !(await sharp(bytes, { limitInputPixels: 40000000 }).stats())
+    .isOpaque;
   const jpeg = await sharp(bytes, { limitInputPixels: 40000000 })
     .rotate()
     .resize(width, height, { fit: "cover", position: sharp.strategy.attention })
-    .flatten({ background: "#111315" })
+    .flatten({ background: clear ? "#f6f7f8" : "#111315" })
     .jpeg({ quality: 86 })
     .toBuffer();
   return "data:image/jpeg;base64," + jpeg.toString("base64");

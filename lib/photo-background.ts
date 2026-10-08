@@ -7,6 +7,7 @@ import {
   removeBackground,
   type RemovalFailure,
 } from "./background-removal.ts";
+import type { PhotoPreview } from "./contracts.ts";
 import { commitUncertain } from "./db.ts";
 import type { Queryable, transaction as transactionType } from "./db.ts";
 import { errorCode } from "./errors.ts";
@@ -214,17 +215,6 @@ interface PreviewRow {
   applied_photo_id: string | null;
   expired: boolean;
 }
-export interface PreviewDto {
-  id: string;
-  /** The picture without its backdrop; only its owner may fetch it. */
-  url: string;
-  /** For a found photo, which the page does not hold: the picture as it was. */
-  beforeUrl: string | null;
-  width: number;
-  height: number;
-  removed: number;
-  bytes: number;
-}
 
 // A preview is looked at within minutes and used within the hour; a person has
 // a handful at a time (one per photo they are comparing, not an archive).
@@ -254,7 +244,7 @@ export async function storePreview(
   source: PreviewSource,
   result: Cutout,
   before: Buffer | null = null,
-): Promise<PreviewDto> {
+): Promise<PhotoPreview> {
   await dropStalePreviews(db, owner);
   const id = randomUUID();
   try {
