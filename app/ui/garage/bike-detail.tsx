@@ -32,6 +32,7 @@ import { useBikeTab } from "./use-bike-tab.ts";
 import { BikeGame } from "../achievements.tsx";
 import RideList from "../ride-list.tsx";
 import JournalList from "../journal-list.tsx";
+import JournalBuildPrompt from "../journal-build-prompt.tsx";
 import { ArrowLeft, ChevronRight } from "../icons.tsx";
 import api from "./api.ts";
 
@@ -243,6 +244,8 @@ export default function BikeDetail({
         label={t("Разделы велосипеда")}
         listRef={list}
       />
+      {/* The offer to tell about a changed build is seen in any tab. */}
+      <JournalBuildPrompt bike={bike} editable={editable} />
       {tabs.some((tab) => tab.id === "overview") && (
         <BikeTabPanel id="overview" active={active === "overview"}>
           {(panels.about || panels.passport) && (
@@ -314,7 +317,6 @@ export default function BikeDetail({
             key={"journal:" + bike.id}
             bike={bike}
             owner={bike.is_owner}
-            editable={editable}
             preview
           />
         </BikeTabPanel>

@@ -41,7 +41,7 @@ test("component window stays open while its fields are in use", async ({
   });
   expect(created.ok()).toBe(true);
   const { id } = await created.json();
-  await page.goto("/account?tab=bikes&bike=" + id);
+  await page.goto("/account?tab=bikes&bike=" + id + "#specifications");
 
   const add = page.getByRole("button", {
     name: "Добавить компонент",

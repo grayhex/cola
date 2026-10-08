@@ -88,7 +88,7 @@ test("product catalog separates installation text, paired products and public na
     expect(catalog.items.filter((m) => m.category === "Тормоза")).toHaveLength(
       2,
     );
-    await page.goto(publicPath("bike", bike));
+    await page.goto(publicPath("bike", bike) + "#specifications");
     // Groups open by width once the page is hydrated; a click before that
     // does nothing and one at that moment closes the group again, so retry
     // until every group is open.

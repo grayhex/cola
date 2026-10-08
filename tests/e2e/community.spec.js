@@ -69,6 +69,9 @@ test("two riders discuss a bike, receive notifications, reply and discover new p
     ).toHaveAttribute("aria-pressed", "true");
     const text = 'Как едет эта сборка? <img src=x onerror="window.xss=1">';
     await visitor
+      .getByRole("tab", { name: "Комментарии", exact: true })
+      .click();
+    await visitor
       .getByRole("textbox", { name: "Ваш комментарий", exact: true })
       .fill(text);
     await visitor
