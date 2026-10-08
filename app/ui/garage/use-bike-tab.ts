@@ -21,7 +21,11 @@ function read(): Request {
     : null;
   return {
     hash,
-    inside: panel?.dataset.tabPanel ?? null,
+    // The comments are drawn by a lazily loaded part, so a comment's anchor
+    // may not exist yet: its name already says where it lives.
+    inside:
+      panel?.dataset.tabPanel ??
+      (hash.startsWith("comment-") ? "discussion" : null),
     comment: new URLSearchParams(window.location.search).has("comment"),
   };
 }

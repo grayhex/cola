@@ -153,6 +153,16 @@ test("bike tabs: semantics, one panel at a time, direct links, reload, Back and 
         "true",
       );
 
+      // A link to a comment of the discussion (the parent link of a reply)
+      // opens the comments on a fresh load too, before the lazy discussion
+      // has drawn the comment the address names.
+      await view.goto(bike.path + "#comment-" + randomUUID());
+      await expect(tab(view, "Комментарии")).toHaveAttribute(
+        "aria-selected",
+        "true",
+      );
+      await expect(view).toHaveURL(/#comment-/);
+
       // A tab click is a step in the history: Back and Forward follow it,
       // and nothing else adds an entry.
       await view.goto(bike.path);
