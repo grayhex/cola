@@ -17,7 +17,7 @@ export type BackgroundSource =
   // A photo the search offered, which the wizard has not imported yet.
   | { kind: "candidate"; candidateId: string }
   // A file chosen in the wizard, which the server has not seen yet.
-  | { kind: "upload"; file: File; beforeUrl: string };
+  | { kind: "upload"; file: File };
 /** What the owner is shown, and takes: the preview and the picture as it was. */
 export interface BackgroundResult {
   preview: PhotoPreview;
@@ -164,10 +164,12 @@ export default function BackgroundRemovalDialog({
         name: "result",
         result: {
           preview,
+          // A saved photo is its own «before»; a found photo and a chosen file
+          // are shown as the server read them.
           beforeUrl:
-            source.kind === "candidate"
-              ? (preview.beforeUrl ?? "")
-              : source.beforeUrl,
+            source.kind === "photo"
+              ? source.beforeUrl
+              : (preview.beforeUrl ?? ""),
         },
       });
     } catch {

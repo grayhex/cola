@@ -542,12 +542,19 @@ async function handler(
     // refusal belong to the person who asked: nobody else may read a preview.
     if (p[1] === "previews" && p.length === 2 && method === "POST") {
       await backgroundBudget(user.id);
-      const result = await cutOut(await readPictureBody(req), user.id, {
-        signal: req.signal,
-      });
+      const source = await readPictureBody(req);
+      const result = await cutOut(source, user.id, { signal: req.signal });
+      // The page holds only a thumbnail of the file: «before» is this picture.
+      const before = await prepareThumbnail(source, 1280);
       return json(
         {
-          preview: await storePreview(db, user.id, { kind: "upload" }, result),
+          preview: await storePreview(
+            db,
+            user.id,
+            { kind: "upload" },
+            result,
+            before,
+          ),
         },
         201,
       );

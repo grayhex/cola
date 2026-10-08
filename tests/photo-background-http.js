@@ -443,7 +443,19 @@ assert.equal(missing.status, 404);
 // ── A file chosen in the wizard: a preview of bytes, before any bike ─────
 const draft = await owner("bikes/previews", "POST", studioPng, "image/png");
 assert.equal(draft.status, 201, draft.bytes.toString());
-assert.equal(draft.body.preview.beforeUrl, null);
+assert.equal(
+  draft.body.preview.beforeUrl,
+  draft.body.preview.url + "?side=before",
+  "the page holds only a thumbnail of the file: the server shows it as it read it",
+);
+const draftBefore = await owner.raw(draft.body.preview.beforeUrl);
+assert.equal(draftBefore.status, 200);
+assert.equal(
+  await withAlpha(draftBefore.bytes),
+  false,
+  "the picture as it was",
+);
+assert.equal((await stranger.raw(draft.body.preview.beforeUrl)).status, 404);
 const draftShown = await owner.raw(draft.body.preview.url);
 assert.equal(await alphaAt(draftShown.bytes, 5, 5), 0);
 assert.equal((await stranger.raw(draft.body.preview.url)).status, 404);

@@ -41,16 +41,16 @@
 
 Все — сессия владельца, проверка происхождения запроса, как у остальных `POST/PUT/DELETE` сайта; ответы без кеша.
 
-| Запрос                                                          | Что делает                                                                             |
-| --------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| `POST /api/bikes/:id/photos/:photoId/background`                | попытка для сохранённого фото → `201 { preview }`                                      |
-| `PUT /api/bikes/:id/photos/:photoId/background` `{ previewId }` | применить: новая версия → `{ id, previousId, repeated }`                               |
-| `DELETE /api/bikes/:id/photos/:photoId/background`              | вернуть исходное фото → `{ id, previousId }`                                           |
-| `POST /api/bikes/photo-candidates/:id/background`               | попытка для найденного фото мастера (его полное изображение из Resolver, не миниатюра) |
-| `POST /api/bikes/previews` (тело — файл)                        | попытка для файла, выбранного в мастере, пока велосипеда нет                           |
-| `GET /api/bikes/previews/:id[?side=before]`                     | картинка предпросмотра (`before` — только у найденного фото)                           |
-| `DELETE /api/bikes/previews/:id`                                | отпустить предпросмотр                                                                 |
-| `POST /api/bikes/:id/photos/import` `{ ids, cutouts? }`         | импорт; `cutouts: { фото → предпросмотр }` ввозит вырезанную версию с источником       |
+| Запрос                                                          | Что делает                                                                                                                      |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `POST /api/bikes/:id/photos/:photoId/background`                | попытка для сохранённого фото → `201 { preview }`                                                                               |
+| `PUT /api/bikes/:id/photos/:photoId/background` `{ previewId }` | применить: новая версия → `{ id, previousId, repeated }`                                                                        |
+| `DELETE /api/bikes/:id/photos/:photoId/background`              | вернуть исходное фото → `{ id, previousId }`                                                                                    |
+| `POST /api/bikes/photo-candidates/:id/background`               | попытка для найденного фото мастера (его полное изображение из Resolver, не миниатюра)                                          |
+| `POST /api/bikes/previews` (тело — файл)                        | попытка для файла, выбранного в мастере, пока велосипеда нет                                                                    |
+| `GET /api/bikes/previews/:id[?side=before]`                     | картинка предпросмотра (`before` — исходная картинка найденного фото или выбранного файла: страница держит только их миниатюры) |
+| `DELETE /api/bikes/previews/:id`                                | отпустить предпросмотр                                                                                                          |
+| `POST /api/bikes/:id/photos/import` `{ ids, cutouts? }`         | импорт; `cutouts: { фото → предпросмотр }` ввозит вырезанную версию с источником                                                |
 
 Отказы названы: тело ответа — `{ error, reason }`, где `reason` — `already_transparent`, `not_uniform`, `nothing_removed`, `everything_removed`, `too_large` (413), `timeout` (504), `aborted` (408), `busy` (429 с `Retry-After`), `stale`/`gone` (409/404), `unreadable`, `format`, `already_removed`, `no_original`. Обработка — 422 для того, что не лечится повтором.
 

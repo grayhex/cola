@@ -335,11 +335,7 @@ export default function BikeWizard({
           candidateId: cuttingDraft.key.slice("found:".length),
         }
       : cuttingFile
-        ? {
-            kind: "upload",
-            file: cuttingFile.file,
-            beforeUrl: cuttingFile.preview,
-          }
+        ? { kind: "upload", file: cuttingFile.file }
         : null;
   const acceptedIdentity = useRef(""),
     requestId = useRef<string | null>(null),

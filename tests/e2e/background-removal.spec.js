@@ -510,6 +510,16 @@ test("wizard: a chosen file and a found photo are cleared in the draft, go back 
   await expect(
     own.getByRole("button", { name: "Применить", exact: true }),
   ).toBeVisible();
+  // The page holds only a thumbnail of the file: «before» is the picture as the
+  // server read it, at a size to compare.
+  const ownBefore = own.getByRole("img", { name: "Фото до обработки" });
+  await expect(ownBefore).toHaveAttribute(
+    "src",
+    /\/api\/bikes\/previews\/[0-9a-f-]{36}\?side=before$/,
+  );
+  await expect
+    .poll(() => ownBefore.evaluate((img) => img.naturalWidth))
+    .toBeGreaterThan(320);
   // The window lies inside the wizard's form: Enter on its radio submits nothing.
   const submitted = [];
   page.on("request", (request) => {
