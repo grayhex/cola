@@ -324,7 +324,7 @@ test("wizard quick setup, identity confirmation, image size and successful save"
   const preview = dialog.locator(
     '.wizard-draft-photos li[data-kind="local"] img',
   );
-  await expect(preview).toHaveAttribute("src", /^blob:/);
+  await expect(preview).toHaveAttribute("src", /^data:image\//);
   // The file name is text of the thumbnail's name, never markup (#370).
   await expect(
     dialog.locator('.wizard-draft-photos li[data-kind="local"] button.thumb'),
@@ -334,9 +334,12 @@ test("wizard quick setup, identity confirmation, image size and successful save"
   );
   await expect(dialog.locator("img[onerror]")).toHaveCount(0);
   await expect(preview).not.toHaveAttribute("onerror");
+  // The picture of the draft is a small thumbnail of the file, in its proportions.
   await expect
-    .poll(() => preview.evaluate((img) => img.naturalWidth))
-    .toBe(600);
+    .poll(() =>
+      preview.evaluate((img) => [img.naturalWidth, img.naturalHeight]),
+    )
+    .toEqual([320, 213]);
   expect(prompts).toEqual([]);
   await page.screenshot({
     path: info.outputPath("wizard-details.png"),

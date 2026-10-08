@@ -28,9 +28,6 @@ type WizardPart = Omit<ComponentInput, "price"> & {
   price: number | string | null;
 };
 type UploadFile = { id: string; file: File; preview: string };
-// A chosen file is shown by its blob URL. The scheme is spelled out here, so
-// that only a blob URL can ever be the address of a picture of the draft.
-const blobSource = (url: string) => "blob:" + url.replace(/^blob:/, "");
 import { errorMessage } from "../../lib/errors.ts";
 import {
   checkPhotoFile,
@@ -44,6 +41,7 @@ import {
 } from "../../lib/photo-upload.ts";
 import PhotoProblems from "./photo-problems.tsx";
 import PhotoControl from "./photo-control.tsx";
+import { thumbnailOf } from "./photo-thumbnail.ts";
 import EmailPolicyAction from "./email-policy-action.tsx";
 import { useConfirmation } from "./confirmation.tsx";
 import ClassificationFields from "./bike-classification.tsx";
@@ -295,7 +293,6 @@ export default function BikeWizard({
     resolveAbort = useRef<AbortController | null>(null),
     photoAbort = useRef<AbortController | null>(null),
     heading = useRef<HTMLHeadingElement | null>(null),
-    fileRefs = useRef<UploadFile[]>([]),
     fileInput = useRef<HTMLInputElement | null>(null),
     // What the saved bike holds of the draft: draft key → photo id, in the
     // order the server took them; the cover is set from here once they are in.
@@ -312,15 +309,11 @@ export default function BikeWizard({
       alive.current = false;
       resolveAbort.current?.abort();
       photoAbort.current?.abort();
-      fileRefs.current.forEach((f) => URL.revokeObjectURL(f.preview));
     };
   }, []);
   useEffect(() => {
     heading.current?.focus();
   }, [step]);
-  useEffect(() => {
-    fileRefs.current = files;
-  }, [files]);
   // The reasons a photo was refused are shown where the files are chosen, which
   // may be out of sight when a save has just run.
   useEffect(() => {
@@ -793,7 +786,7 @@ export default function BikeWizard({
     input.value = "";
     if (!added.length) return;
     const problems: PhotoProblem[] = [],
-      accepted: File[] = [];
+      accepted: { file: File; preview: string }[] = [];
     let room = photosPerBike - files.length - chosen.length;
     for (const file of added) {
       const refused = checkPhotoFile(file);
@@ -805,11 +798,13 @@ export default function BikeWizard({
         problems.push(tooManyPhotos(file.name));
         continue;
       }
+      let preview = "";
       try {
         const bitmap = await createImageBitmap(file);
         const valid =
           Math.min(bitmap.width, bitmap.height) >= 400 &&
           Math.max(bitmap.width, bitmap.height) >= 600;
+        if (valid) preview = thumbnailOf(bitmap);
         bitmap.close();
         if (!valid) {
           problems.push(photoTooSmall(file.name));
@@ -820,17 +815,17 @@ export default function BikeWizard({
         continue;
       }
       room -= 1;
-      accepted.push(file);
+      accepted.push({ file, preview });
     }
     if (!alive.current) return;
     setPhotoProblems(problems);
     if (accepted.length)
       setFiles((a) => [
         ...a,
-        ...accepted.map((file) => ({
+        ...accepted.map(({ file, preview }) => ({
           id: draftId(),
           file,
-          preview: URL.createObjectURL(file),
+          preview,
         })),
       ]);
   }
@@ -840,8 +835,6 @@ export default function BikeWizard({
     if (key.startsWith("found:"))
       setChosen((a) => a.filter((id) => "found:" + id !== key));
     else {
-      const gone = files.find((f) => "local:" + f.id === key);
-      if (gone) URL.revokeObjectURL(gone.preview);
       setFiles((a) => a.filter((f) => "local:" + f.id !== key));
     }
     if (coverPhoto === key) setCoverPhoto(null);
@@ -915,13 +908,11 @@ export default function BikeWizard({
             savedPhotos.current.set("local:" + item.id, sent.id);
             firstSaved.current ??= sent.id;
           }
-          URL.revokeObjectURL(item.preview);
           setFiles((f) => f.filter((x) => x.id !== item.id));
         } else {
           refused.push(sent.problem);
           // A file the server will never take is not worth another try.
           if (!sent.retryable) {
-            URL.revokeObjectURL(item.preview);
             setFiles((f) => f.filter((x) => x.id !== item.id));
           }
         }
@@ -1483,7 +1474,7 @@ export default function BikeWizard({
                       "local:" + f.id,
                       "local",
                       chosen.length + i,
-                      <img src={blobSource(f.preview)} alt="" />,
+                      <img src={f.preview} alt="" />,
                     ),
                   )}
                 </ul>
