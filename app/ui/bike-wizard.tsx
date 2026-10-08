@@ -227,6 +227,10 @@ export default function BikeWizard({
     // the photos are sent in (#370). Without a choice the first one leads.
     [selectedPhoto, setSelectedPhoto] = useState<string | null>(null),
     [coverPhoto, setCoverPhoto] = useState<string | null>(null),
+    // Once the bike is being saved the cover is fixed (the key of the draft
+    // photo that was chosen, or «» for none): a retry sends what is left, and
+    // what is left is not the cover then.
+    [fixedCover, setFixedCover] = useState<string | undefined>(undefined),
     // The request the shown result answers (the typed identity and the link):
     // it counts as «found» only while the fields still say the same.
     [resultKey, setResultKey] = useState(""),
@@ -260,7 +264,9 @@ export default function BikeWizard({
   const selectedDraft =
     draftPhotos.find((p) => p.key === selectedPhoto) || draftPhotos[0] || null;
   const coverDraft =
-    draftPhotos.find((p) => p.key === coverPhoto) || draftPhotos[0] || null;
+    fixedCover !== undefined
+      ? (draftPhotos.find((p) => p.key === fixedCover) ?? null)
+      : draftPhotos.find((p) => p.key === coverPhoto) || draftPhotos[0] || null;
   // The name a photo of the draft goes by: the file's own, or «found». Read
   // from the file where it is shown, not carried in the list of pictures.
   const draftLabel = (key: string) =>
@@ -886,6 +892,7 @@ export default function BikeWizard({
       // The cover is the photo the person chose, or the first of the draft:
       // fixed once, so a retry does not move it.
       wantedCover.current ??= coverDraft?.key ?? "";
+      setFixedCover(wantedCover.current);
       if (chosen.length) {
         const imported = await api<{ ids?: string[] }>(id + "/photos/import", {
           ids: chosen,
@@ -1493,6 +1500,7 @@ export default function BikeWizard({
                     : null
                 }
                 busy={photoBusy || saving}
+                coverLocked={fixedCover !== undefined}
                 onAdd={() => fileInput.current?.click()}
                 onCover={() =>
                   selectedDraft && setCoverPhoto(selectedDraft.key)

@@ -734,3 +734,88 @@ test("photos: refused one by one beside the input, a failed upload leads back to
   ).json();
   expect(gallery.bike.photos).toHaveLength(1);
 });
+
+test("photos: after a partly failed save the cover stays what was chosen; nothing left behind is promoted to it, and the retry keeps it", async ({
+  page,
+}) => {
+  await member(page, "Cover");
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const wizard = await openWizard(page);
+  await forward(wizard).click();
+  await details(wizard, {
+    brand: "Cube",
+    model: "Aim",
+    year: 2020,
+    category: "mtb",
+  });
+  const picture = (width) =>
+    sharp({
+      create: { width, height: 700, channels: 3, background: "#6f7768" },
+    })
+      .png()
+      .toBuffer();
+  await wizard.locator('input[type="file"]').setInputFiles([
+    { name: "first.png", mimeType: "image/png", buffer: await picture(1000) },
+    { name: "second.png", mimeType: "image/png", buffer: await picture(1100) },
+  ]);
+  const thumbs = wizard.locator(".wizard-draft-photos button.thumb");
+  await expect(thumbs).toHaveCount(2);
+
+  // The thumbnails are one row of small pictures, the mark of the cover inside
+  // the first of them.
+  const boxes = [
+    await thumbs.nth(0).boundingBox(),
+    await thumbs.nth(1).boundingBox(),
+  ];
+  expect(Math.abs(boxes[0].width - 104)).toBeLessThan(2);
+  expect(boxes[1].y).toBe(boxes[0].y);
+  expect(boxes[1].x).toBeGreaterThan(boxes[0].x + boxes[0].width - 1);
+  const mark = await thumbs.nth(0).locator(".photo-cover-mark").boundingBox();
+  expect(mark.x).toBeGreaterThanOrEqual(boxes[0].x);
+  expect(mark.x + mark.width).toBeLessThanOrEqual(
+    boxes[0].x + boxes[0].width + 1,
+  );
+
+  await forward(wizard).click();
+  // The first upload goes through; the second is lost on the way.
+  let uploads = 0;
+  await page.route("**/api/bikes/*/photos", (route) =>
+    route.request().method() === "POST" && ++uploads > 1
+      ? route.abort()
+      : route.fallback(),
+  );
+  await wizard
+    .getByRole("button", { name: "Сохранить велосипед", exact: true })
+    .click();
+  await expect(heading(wizard)).toContainText("Сведения и фото");
+  await expect(thumbs).toHaveCount(1);
+  // The first photo is on the bike as its cover. The one left is not the cover
+  // and the control says the cover is decided.
+  await expect(thumbs.first()).toHaveAccessibleName(/second\.png$/);
+  await expect(wizard.locator(".photo-cover-mark")).toHaveCount(0);
+  const menu = wizard
+    .getByRole("group", { name: "Фотографии велосипеда" })
+    .getByRole("button", { name: /: действия/ });
+  await expect(menu).toHaveAccessibleName("Фото 1 из 1: действия");
+  await menu.click();
+  await expect(
+    wizard.getByRole("button", { name: "Обложка выбрана при сохранении" }),
+  ).toBeDisabled();
+  await page.keyboard.press("Escape");
+
+  await page.unroute("**/api/bikes/*/photos");
+  await wizard
+    .getByRole("button", { name: "Повторить загрузку фото", exact: true })
+    .click();
+  await expect(wizard).not.toBeVisible();
+  const [bike] = (await (await page.request.get("/api/bikes")).json()).bikes;
+  const { bike: saved } = await (
+    await page.request.get("/api/bikes/" + bike.id)
+  ).json();
+  expect(saved.photos).toHaveLength(2);
+  const cover = saved.photos.find((photo) => photo.is_cover);
+  const bytes = await (
+    await page.request.get("/api/photos/" + cover.id)
+  ).body();
+  expect((await sharp(bytes).metadata()).width).toBe(1000);
+});

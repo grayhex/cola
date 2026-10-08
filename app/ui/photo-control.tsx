@@ -18,6 +18,7 @@ export type PhotoControlTarget = {
 export default function PhotoControl({
   selected,
   busy = false,
+  coverLocked = false,
   onAdd,
   onCover,
   onDelete,
@@ -27,6 +28,8 @@ export default function PhotoControl({
   /** The selected photo; null when there is none, and then only adding works. */
   selected: PhotoControlTarget | null;
   busy?: boolean;
+  /** The cover was already decided (the wizard is saving): it cannot move here. */
+  coverLocked?: boolean;
   onAdd: () => void;
   onCover: () => void;
   onDelete: () => void;
@@ -70,12 +73,16 @@ export default function PhotoControl({
           <button
             type="button"
             className="nav-menu-link"
-            disabled={busy || selected.isCover}
+            disabled={busy || selected.isCover || coverLocked}
             onClick={onCover}
           >
             <Star size={15} aria-hidden="true" />
             <span>
-              {selected.isCover ? t("Это обложка") : t("Сделать обложкой")}
+              {selected.isCover
+                ? t("Это обложка")
+                : coverLocked
+                  ? t("Обложка выбрана при сохранении")
+                  : t("Сделать обложкой")}
             </span>
           </button>
           {onRemoveBackground && (

@@ -2052,21 +2052,22 @@
   .photo-search .field {
     margin: var(--space-3) 0;
   }
-  .wizard-local-photos {
+  /* The photos of the draft (#370): one row of thumbnails, found and own
+     together; the cover carries the passive mark. */
+  .wizard-draft-photos {
     display: flex;
     flex-wrap: wrap;
     gap: var(--space-2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
   }
-  .wizard-local-photos > div {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
+  .wizard-draft-photos > li {
+    flex: none;
+    width: 104px;
   }
-  .wizard-local-photos img {
-    width: 84px;
-    height: 64px;
-    border-radius: var(--radius-md);
-    object-fit: cover;
+  .wizard-draft-photos .thumb {
+    position: relative;
   }
   .wizard-suggestions {
     display: flex;
