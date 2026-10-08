@@ -28,6 +28,9 @@ type WizardPart = Omit<ComponentInput, "price"> & {
   price: number | string | null;
 };
 type UploadFile = { id: string; file: File; preview: string };
+// A chosen file is shown by its blob URL. The scheme is spelled out here, so
+// that only a blob URL can ever be the address of a picture of the draft.
+const blobSource = (url: string) => "blob:" + url.replace(/^blob:/, "");
 import { errorMessage } from "../../lib/errors.ts";
 import {
   checkPhotoFile,
@@ -1480,7 +1483,7 @@ export default function BikeWizard({
                       "local:" + f.id,
                       "local",
                       chosen.length + i,
-                      <img src={f.preview} alt="" />,
+                      <img src={blobSource(f.preview)} alt="" />,
                     ),
                   )}
                 </ul>
