@@ -220,6 +220,12 @@ export default function BackgroundRemovalDialog({
       className={styles.dialog}
       aria-labelledby={id + "-title"}
       aria-busy={phase.name === "working" || applying}
+      // In the wizard the window sits inside its form: Enter on a radio would
+      // submit the form behind it.
+      onKeyDown={(event) => {
+        if (event.key === "Enter" && event.target instanceof HTMLInputElement)
+          event.preventDefault();
+      }}
       onCancel={(event) => {
         event.preventDefault();
         if (!applying) close();

@@ -507,6 +507,19 @@ test("wizard: a chosen file and a found photo are cleared in the draft, go back 
   await thumbs.nth(1).click();
   const own = await openRemoval(page, wizard);
   await startOf(own).click();
+  await expect(
+    own.getByRole("button", { name: "Применить", exact: true }),
+  ).toBeVisible();
+  // The window lies inside the wizard's form: Enter on its radio submits nothing.
+  const submitted = [];
+  page.on("request", (request) => {
+    if (request.url().endsWith("/api/bikes/wizard")) submitted.push(request);
+  });
+  await own.getByRole("radio", { name: "Тёмная" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(own.getByRole("radio", { name: "Тёмная" })).toBeFocused();
+  expect(submitted).toHaveLength(0);
+  await expect(wizard).toBeVisible();
   await own.getByRole("button", { name: "Применить", exact: true }).click();
   await expect(own).toHaveCount(0);
   await expect(thumbs).toHaveCount(2);
