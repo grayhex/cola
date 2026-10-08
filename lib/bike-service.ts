@@ -5,6 +5,7 @@ import type { BikeRow, ComponentRow, PhotoRow } from "./database-rows.ts";
 import type { Queryable } from "./db.ts";
 import { errorCode } from "./errors.ts";
 import { purgeMediaVariants } from "./media-cache.ts";
+import { photoFileNames } from "./photo-storage.ts";
 import type { BikeInput, ComponentInput } from "./validation.ts";
 
 // What the owner does to a bicycle, its parts and its photos: the SQL that used
@@ -72,10 +73,13 @@ export async function bikeHasRides(q: Queryable, bikeId: string) {
 
 /** The photo files of a bicycle: read before it is deleted, removed after. */
 export async function bikePhotoFiles(q: Queryable, bikeId: string) {
-  const { rows } = await q.query<{ id: string; filename: string }>(
-    "SELECT id,filename FROM photos WHERE bike_id=$1",
-    [bikeId],
-  );
+  const { rows } = await q.query<{
+    id: string;
+    filename: string;
+    original_filename: string | null;
+  }>("SELECT id,filename,original_filename FROM photos WHERE bike_id=$1", [
+    bikeId,
+  ]);
   return rows;
 }
 
@@ -201,8 +205,9 @@ type Transaction = <T>(fn: (q: Queryable) => Promise<T>) => Promise<T>;
 /**
  * Makes a photo the cover (`cover`) or removes it (`remove`), under the lock of
  * the bicycle row. Removing the cover hands it to the oldest remaining photo.
- * Returns the removed file name, or undefined when nothing was removed (no such
- * photo here, or a cover change).
+ * Returns the removed file names (the picture, and the original it was made of
+ * when its backdrop had been taken off, #370); none when nothing was removed
+ * (no such photo here, or a cover change).
  */
 export async function changePhoto(
   transaction: Transaction,
@@ -210,7 +215,7 @@ export async function changePhoto(
   photoId: string,
   action: "cover" | "remove",
 ) {
-  let filename: string | undefined;
+  let filenames: string[] = [];
   await transaction(async (q) => {
     await q.query<{ id: string }>(
       "SELECT id FROM bikes WHERE id=$1 FOR UPDATE",
@@ -227,7 +232,7 @@ export async function changePhoto(
       ]);
       await q.query("UPDATE photos SET is_cover=true WHERE id=$1", [photoId]);
     } else {
-      filename = rows[0].filename;
+      filenames = photoFileNames(rows[0]);
       await q.query("DELETE FROM photos WHERE id=$1", [photoId]);
       if (rows[0].is_cover)
         await q.query(
@@ -236,7 +241,7 @@ export async function changePhoto(
         );
     }
   });
-  return filename;
+  return filenames;
 }
 
 /**
@@ -281,9 +286,11 @@ export async function removeBike(
     throw e;
   }
   await Promise.all(
-    rows.map((photo) =>
-      unlink(path.join(directory, photo.filename)).catch(() => {}),
-    ),
+    rows
+      .flatMap(photoFileNames)
+      .map((filename) =>
+        unlink(path.join(directory, filename)).catch(() => {}),
+      ),
   );
   await purgeMediaVariants(rows.map((photo) => photo.id));
   return true;

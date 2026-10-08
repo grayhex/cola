@@ -59,3 +59,12 @@ export async function savePhotos(
     throw e;
   }
 }
+
+/** Every file a stored photo holds: the picture, and the original behind it (#370). */
+export const photoFileNames = (photo: {
+  filename: string;
+  original_filename?: string | null;
+}) => [
+  photo.filename,
+  ...(photo.original_filename ? [photo.original_filename] : []),
+];

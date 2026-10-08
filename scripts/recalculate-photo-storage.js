@@ -15,22 +15,31 @@ try {
     try {
       await db.query("SELECT id FROM users WHERE id=$1 FOR UPDATE", [owner_id]);
       const rows = await db.query(
-        "SELECT p.id,p.filename FROM photos p JOIN bikes b ON b.id=p.bike_id WHERE b.owner_id=$1 FOR UPDATE OF p",
+        "SELECT p.id,p.filename,p.original_filename FROM photos p JOIN bikes b ON b.id=p.bike_id WHERE b.owner_id=$1 FOR UPDATE OF p",
         [owner_id],
       );
-      for (const p of rows.rows) {
-        if (path.basename(p.filename) !== p.filename)
+      const sizeOf = async (filename) => {
+        if (path.basename(filename) !== filename)
           throw new Error("Invalid stored filename");
         const stat = await lstat(
-          path.join(process.env.UPLOAD_DIR || "uploads", p.filename),
+          path.join(process.env.UPLOAD_DIR || "uploads", filename),
         );
         if (!stat.isFile() || stat.isSymbolicLink())
           throw new Error("Invalid photo file");
+        return stat.size;
+      };
+      for (const p of rows.rows) {
+        // A photo without its backdrop (#370) keeps the file it was made of:
+        // its size is both files, the original's alone is kept apart.
+        const size = await sizeOf(p.filename);
+        const original = p.original_filename
+          ? await sizeOf(p.original_filename)
+          : null;
         if (apply)
-          await db.query("UPDATE photos SET size_bytes=$1 WHERE id=$2", [
-            stat.size,
-            p.id,
-          ]);
+          await db.query(
+            "UPDATE photos SET size_bytes=$1,original_size_bytes=$2 WHERE id=$3",
+            [size + (original ?? 0), original, p.id],
+          );
         updated++;
       }
       await db.query(apply ? "COMMIT" : "ROLLBACK");

@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import sharp from "sharp";
 import { cardContent, cardText } from "../lib/social-card.ts";
-import { renderSocialImage } from "../lib/social-preview-image.ts";
+import { photoData, renderSocialImage } from "../lib/social-preview-image.ts";
 
 test("card text keeps only what the bundled font draws", () => {
   const rider = String.fromCodePoint(0x1f6b5, 0x200d, 0x2640, 0xfe0f);
@@ -139,4 +139,23 @@ test("cards are 1200x630 JPEGs cached by content, with a plain fallback", async 
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
+});
+
+test("a photo without its backdrop (#370) is laid on a light ground on a card, not on the dark one", async () => {
+  const disc = Buffer.from(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400"><circle cx="300" cy="200" r="120" fill="#1b1d1f"/></svg>`,
+  );
+  const clear = await sharp(disc).webp({ alphaQuality: 100 }).toBuffer();
+  assert.equal((await sharp(clear).metadata()).hasAlpha, true);
+  const url = await photoData(clear, "bike");
+  assert.match(url, /^data:image\/jpeg;base64,/);
+  const { data, info } = await sharp(Buffer.from(url.split(",")[1], "base64"))
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  const at = (x, y) => data[(y * info.width + x) * info.channels];
+  assert.ok(at(8, 8) > 230, "the see-through part is light: " + at(8, 8));
+  assert.ok(
+    at(info.width >> 1, info.height >> 1) < 60,
+    "the bike keeps its own colour",
+  );
 });

@@ -38,6 +38,11 @@ import api from "./api.ts";
 
 // Keep the reader's page independent of the comment editor bundle.
 const Discussion = dynamic(() => import("../discussion.tsx"), { ssr: false });
+// The window of the backdrop removal is read only when the owner opens it.
+const BackgroundRemovalDialog = dynamic(
+  () => import("../background-removal-dialog.tsx"),
+  { ssr: false },
+);
 const rub = (v: string | number) =>
   new Intl.NumberFormat("ru-RU", {
     style: "currency",
@@ -111,6 +116,8 @@ export default function BikeDetail({
           model: bike.model || "",
         });
   const [rideTotal, setRideTotal] = useState<number | null>(null);
+  // The photo whose backdrop is being taken off (#370).
+  const [cutting, setCutting] = useState<PublicPhoto | null>(null);
   // Never retain a selected photo which was removed by a refreshed DTO.
   const activePhoto =
     bike.photos.find((p) => p.id === photo?.id) || bike.photos[0] || null;
@@ -156,182 +163,223 @@ export default function BikeDetail({
     .map(([, id, label]) => ({ id, label }));
   const { active, select, list } = useBikeTab(tabs.map((tab) => tab.id));
   return (
-    <Main className="detail bike-detail">
-      <nav className="breadcrumbs" aria-label={t("Путь к велосипеду")}>
-        {!share ? (
-          <button
-            className="quiet"
-            onClick={() => {
-              setSelected(null);
-              setPhoto(null);
-            }}
-          >
-            <ArrowLeft size={16} aria-hidden="true" />
-            {t("Мои велосипеды")}
-          </button>
-        ) : (
-          <Link href="/bikes">{t("Велосипеды")}</Link>
-        )}
-        {bike.brand && (
-          <>
-            <ChevronRight size={14} aria-hidden="true" />
-            <a
-              href={experienceHref({ brand: bike.brand })}
-              title="Опыт владельцев этой марки"
+    <>
+      <Main className="detail bike-detail">
+        <nav className="breadcrumbs" aria-label={t("Путь к велосипеду")}>
+          {!share ? (
+            <button
+              className="quiet"
+              onClick={() => {
+                setSelected(null);
+                setPhoto(null);
+              }}
             >
-              {bike.brand}
-            </a>
-          </>
-        )}
-        {bike.model && (
-          <>
-            <ChevronRight size={14} aria-hidden="true" />
-            <a href={modelHref} title="Опыт владельцев этой модели">
-              {[bike.model, bike.trim].filter(Boolean).join(" ")}
-            </a>
-          </>
-        )}
-      </nav>
-      <div className="bike-hero">
-        {(layout.photos || editable) && (
-          <BikeGallery
-            bike={bike}
-            photo={activePhoto}
-            thumbnails={layout.thumbnails}
-            showPicture={layout.photos}
-            editable={editable}
-            busy={busy}
-            t={t}
-            onSelect={setPhoto}
-            onOpen={() => {
-              setPhoto(activePhoto);
-              setModal({ type: "photoView" });
-            }}
-            onCover={(p) =>
-              run(async () => {
-                await api(`bikes/${bike.id}/photos/${p.id}`, "PATCH");
-                await refresh();
-                setNotice(t("Обложка обновлена"));
-              })
-            }
-            onDelete={(p) => setModal({ type: "deletePhoto", photo: p })}
-            onAdd={() => file.current?.click()}
-            problems={photoProblems}
-            onDismissProblems={dismissPhotoProblems}
-            demoCredit={bike.id === "demo" && !settings.demoImageId}
-          />
-        )}
-        <BikeIdentity
-          bike={bike}
-          catalog={catalog}
-          actions={actions}
-          metrics={layout.metrics}
-          // The quote is the description: it follows the setting that
-          // makes the description public.
-          quote={layout.metrics && panels.about}
-          specifications={specifications}
-          rideTotal={rideTotal}
-          likes={detailReaction.likes ?? bike.likes}
-          onSection={(id) => select(id, true)}
-          onRegister={!editable && !share ? () => auth("register") : undefined}
-          t={t}
-        />
-      </div>
-      <BikeTabList
-        tabs={tabs}
-        active={active}
-        onSelect={(id) => select(id)}
-        label={t("Разделы велосипеда")}
-        listRef={list}
-      />
-      {/* The offer to tell about a changed build is seen in any tab. */}
-      <JournalBuildPrompt bike={bike} editable={editable} />
-      {tabs.some((tab) => tab.id === "overview") && (
-        <BikeTabPanel id="overview" active={active === "overview"}>
-          {(panels.about || panels.passport) && (
-            <BikeOverview
+              <ArrowLeft size={16} aria-hidden="true" />
+              {t("Мои велосипеды")}
+            </button>
+          ) : (
+            <Link href="/bikes">{t("Велосипеды")}</Link>
+          )}
+          {bike.brand && (
+            <>
+              <ChevronRight size={14} aria-hidden="true" />
+              <a
+                href={experienceHref({ brand: bike.brand })}
+                title="Опыт владельцев этой марки"
+              >
+                {bike.brand}
+              </a>
+            </>
+          )}
+          {bike.model && (
+            <>
+              <ChevronRight size={14} aria-hidden="true" />
+              <a href={modelHref} title="Опыт владельцев этой модели">
+                {[bike.model, bike.trim].filter(Boolean).join(" ")}
+              </a>
+            </>
+          )}
+        </nav>
+        <div className="bike-hero">
+          {(layout.photos || editable) && (
+            <BikeGallery
               bike={bike}
-              panels={panels}
+              photo={activePhoto}
+              thumbnails={layout.thumbnails}
+              showPicture={layout.photos}
               editable={editable}
-              onEdit={actions.onEdit}
+              busy={busy}
               t={t}
+              onSelect={setPhoto}
+              onOpen={() => {
+                setPhoto(activePhoto);
+                setModal({ type: "photoView" });
+              }}
+              onCover={(p) =>
+                run(async () => {
+                  await api(`bikes/${bike.id}/photos/${p.id}`, "PATCH");
+                  await refresh();
+                  setNotice(t("Обложка обновлена"));
+                })
+              }
+              onDelete={(p) => setModal({ type: "deletePhoto", photo: p })}
+              onAdd={() => file.current?.click()}
+              onRemoveBackground={setCutting}
+              onRestoreOriginal={(p) =>
+                run(async () => {
+                  const back = await api<{ id: string }>(
+                    `bikes/${bike.id}/photos/${p.id}/background`,
+                    "DELETE",
+                  );
+                  await refresh();
+                  // The photo has a new ID: the one the person looks at stays.
+                  setPhoto({ ...p, id: back.id, has_original: false });
+                  setNotice(t("Исходное фото возвращено"));
+                })
+              }
+              problems={photoProblems}
+              onDismissProblems={dismissPhotoProblems}
+              demoCredit={bike.id === "demo" && !settings.demoImageId}
             />
           )}
-          {bike.is_public && (
-            <BikeGame
-              key={JSON.stringify([
-                bike.id,
-                bike.likes,
-                bike.weight,
-                bike.category,
-                bike.show_bike_price,
-                bike.price,
-                bike.scores,
-                bike.photos.length,
-              ])}
-              bike={bike}
-              user={user}
-            />
-          )}
-        </BikeTabPanel>
-      )}
-      {specifications && (
-        <BikeTabPanel id="specifications" active={active === "specifications"}>
-          <BikeSpecifications
+          <BikeIdentity
             bike={bike}
             catalog={catalog}
-            editable={editable}
-            rub={rub}
+            actions={actions}
+            metrics={layout.metrics}
+            // The quote is the description: it follows the setting that
+            // makes the description public.
+            quote={layout.metrics && panels.about}
+            specifications={specifications}
+            rideTotal={rideTotal}
+            likes={detailReaction.likes ?? bike.likes}
+            onSection={(id) => select(id, true)}
+            onRegister={
+              !editable && !share ? () => auth("register") : undefined
+            }
             t={t}
-            onAdd={(section) => setModal({ type: "part", section })}
-            onEdit={(c) =>
-              setModal({ type: "part", part: c, section: c.section })
-            }
-            onDelete={(c) => setModal({ type: "deletePart", part: c })}
-            onOrder={(order) =>
-              run(async () => {
-                await api("bikes/" + bike.id + "/order", "PUT", order);
-                await refresh();
-              })
-            }
           />
-        </BikeTabPanel>
-      )}
-      {bike.is_public && (
-        <BikeTabPanel id="bike-rides" active={active === "bike-rides"}>
-          <RideList
-            key={"rides:" + bike.id}
-            bikeId={bike.id}
-            latest
-            preview
-            compact
-            onTotal={setRideTotal}
-          />
-        </BikeTabPanel>
-      )}
-      {/* Sibling keys must differ: with two equal keys React loses one
+        </div>
+        <BikeTabList
+          tabs={tabs}
+          active={active}
+          onSelect={(id) => select(id)}
+          label={t("Разделы велосипеда")}
+          listRef={list}
+        />
+        {/* The offer to tell about a changed build is seen in any tab. */}
+        <JournalBuildPrompt bike={bike} editable={editable} />
+        {tabs.some((tab) => tab.id === "overview") && (
+          <BikeTabPanel id="overview" active={active === "overview"}>
+            {(panels.about || panels.passport) && (
+              <BikeOverview
+                bike={bike}
+                panels={panels}
+                editable={editable}
+                onEdit={actions.onEdit}
+                t={t}
+              />
+            )}
+            {bike.is_public && (
+              <BikeGame
+                key={JSON.stringify([
+                  bike.id,
+                  bike.likes,
+                  bike.weight,
+                  bike.category,
+                  bike.show_bike_price,
+                  bike.price,
+                  bike.scores,
+                  bike.photos.length,
+                ])}
+                bike={bike}
+                user={user}
+              />
+            )}
+          </BikeTabPanel>
+        )}
+        {specifications && (
+          <BikeTabPanel
+            id="specifications"
+            active={active === "specifications"}
+          >
+            <BikeSpecifications
+              bike={bike}
+              catalog={catalog}
+              editable={editable}
+              rub={rub}
+              t={t}
+              onAdd={(section) => setModal({ type: "part", section })}
+              onEdit={(c) =>
+                setModal({ type: "part", part: c, section: c.section })
+              }
+              onDelete={(c) => setModal({ type: "deletePart", part: c })}
+              onOrder={(order) =>
+                run(async () => {
+                  await api("bikes/" + bike.id + "/order", "PUT", order);
+                  await refresh();
+                })
+              }
+            />
+          </BikeTabPanel>
+        )}
+        {bike.is_public && (
+          <BikeTabPanel id="bike-rides" active={active === "bike-rides"}>
+            <RideList
+              key={"rides:" + bike.id}
+              bikeId={bike.id}
+              latest
+              preview
+              compact
+              onTotal={setRideTotal}
+            />
+          </BikeTabPanel>
+        )}
+        {/* Sibling keys must differ: with two equal keys React loses one
           fiber on update and leaves a stale copy of its DOM behind. */}
-      {bike.id !== "demo" && (
-        <BikeTabPanel id="journal" active={active === "journal"}>
-          <JournalList
-            key={"journal:" + bike.id}
-            bike={bike}
-            owner={bike.is_owner}
-            preview
-          />
-        </BikeTabPanel>
+        {bike.id !== "demo" && (
+          <BikeTabPanel id="journal" active={active === "journal"}>
+            <JournalList
+              key={"journal:" + bike.id}
+              bike={bike}
+              owner={bike.is_owner}
+              preview
+            />
+          </BikeTabPanel>
+        )}
+        {bike.is_public && (
+          <BikeTabPanel id="discussion" active={active === "discussion"}>
+            <Discussion
+              key={"discussion:" + bike.id}
+              bike={bike}
+              user={user}
+              variant="panel"
+              count={bike.comments}
+            />
+          </BikeTabPanel>
+        )}
+      </Main>
+      {cutting && (
+        <BackgroundRemovalDialog
+          source={{
+            kind: "photo",
+            bikeId: bike.id,
+            photoId: cutting.id,
+            beforeUrl: `/api/photos/${cutting.id}?width=1280`,
+          }}
+          apply={async ({ preview }) => {
+            const done = await api<{ id: string }>(
+              `bikes/${bike.id}/photos/${cutting.id}/background`,
+              "PUT",
+              { previewId: preview.id },
+            );
+            await refresh();
+            setPhoto({ ...cutting, id: done.id, has_original: true });
+            setNotice(t("Фон удалён. Исходное фото сохранено."));
+          }}
+          onClose={() => setCutting(null)}
+        />
       )}
-      {bike.is_public && (
-        <BikeTabPanel id="discussion" active={active === "discussion"}>
-          <Discussion
-            key={"discussion:" + bike.id}
-            bike={bike}
-            user={user}
-            variant="panel"
-            count={bike.comments}
-          />
-        </BikeTabPanel>
-      )}
-    </Main>
+    </>
   );
 }

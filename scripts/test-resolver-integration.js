@@ -34,6 +34,8 @@ const environment = {
   COOKIE_SECURE: "false",
   MAX_PHOTOS_PER_USER: "20",
   UPLOAD_DIR: path.join(dir, "uploads"),
+  // Previews of a backdrop removal (#370) live here; the test reads it too.
+  MEDIA_CACHE_DIR: path.join(dir, "media-cache"),
   RIDES_DIR: path.join(dir, "rides"),
   // Emails become JSON files that account tests read (never in production).
   MAIL_CAPTURE_DIR: path.join(dir, "mail"),
@@ -183,6 +185,7 @@ try {
           "tests/device-sessions-http.js",
           "tests/http-smoke.js",
           "tests/media-http.js",
+          "tests/photo-background-http.js",
           "tests/market-http.js",
           "tests/public-urls-http.js",
           "tests/indexing-http.js",

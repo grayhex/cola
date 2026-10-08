@@ -188,7 +188,7 @@ export function handleDeleteBikePhoto(req: Request, { params }: PhotoParams) {
     const photoId = idOf(rawPhoto, "Фото не найдено.");
     parseNoQuery(new URL(req.url));
     await limited("bike-write:" + viewer.id, limits.bikeWrites);
-    const filename = await transaction(async (q) => {
+    const filenames = await transaction(async (q) => {
       if (!(await lockOwnBike(q, id, viewer.id))) throw missingBike();
       // The next oldest photo takes the cover, as on the site; gone already is
       // as good as removed now.
@@ -200,8 +200,12 @@ export function handleDeleteBikePhoto(req: Request, { params }: PhotoParams) {
       );
     });
     // The files go after the commit: a failed commit must not lose a photo.
-    if (filename) {
-      await unlink(path.join(uploadsDirectory(), filename)).catch(() => {});
+    if (filenames.length) {
+      await Promise.all(
+        filenames.map((filename) =>
+          unlink(path.join(uploadsDirectory(), filename)).catch(() => {}),
+        ),
+      );
       await purgeMediaVariants([photoId]);
     }
     return new Response(null, {

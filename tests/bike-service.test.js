@@ -138,7 +138,7 @@ test("delete: rides keep the bike, photos are listed first, the database refuses
     [photo, id, photo + ".webp"],
   );
   assert.deepEqual(await bikePhotoFiles(db, id), [
-    { id: photo, filename: photo + ".webp" },
+    { id: photo, filename: photo + ".webp", original_filename: null },
   ]);
   const ride = randomUUID();
   await db.query(
@@ -245,32 +245,29 @@ test("photos: the cover moves on request and to the oldest after its removal", a
         bike,
       ])
     ).rows.map((r) => r.id);
-  assert.equal(await changePhoto(transaction, id, ids[2], "cover"), undefined);
+  assert.deepEqual(await changePhoto(transaction, id, ids[2], "cover"), []);
   assert.deepEqual(await cover(id), [ids[2]]);
-  // Removing the cover: its file is returned, the oldest takes over.
-  assert.equal(
-    await changePhoto(transaction, id, ids[2], "remove"),
+  // Removing the cover: its files are returned, the oldest takes over.
+  assert.deepEqual(await changePhoto(transaction, id, ids[2], "remove"), [
     ids[2] + ".webp",
-  );
+  ]);
   assert.deepEqual(await cover(id), [ids[0]]);
   // Removing a photo that is not the cover leaves the cover alone.
-  assert.equal(
-    await changePhoto(transaction, id, ids[1], "remove"),
+  assert.deepEqual(await changePhoto(transaction, id, ids[1], "remove"), [
     ids[1] + ".webp",
-  );
+  ]);
   assert.deepEqual(await cover(id), [ids[0]]);
   // A photo of another bike is not reachable through this one.
-  assert.equal(await changePhoto(transaction, id, far, "remove"), undefined);
-  assert.equal(await changePhoto(transaction, id, far, "cover"), undefined);
+  assert.deepEqual(await changePhoto(transaction, id, far, "remove"), []);
+  assert.deepEqual(await changePhoto(transaction, id, far, "cover"), []);
   assert.deepEqual(await cover(elsewhere), [far]);
   assert.equal(
     (await db.query("SELECT 1 FROM photos WHERE id=$1", [far])).rowCount,
     1,
   );
   // The last one can go; nothing is left to promote.
-  assert.equal(
-    await changePhoto(transaction, id, ids[0], "remove"),
+  assert.deepEqual(await changePhoto(transaction, id, ids[0], "remove"), [
     ids[0] + ".webp",
-  );
+  ]);
   assert.deepEqual(await cover(id), []);
 });

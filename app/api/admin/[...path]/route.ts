@@ -40,6 +40,7 @@ import {
 } from "../../../../lib/admin-validation.ts";
 import { preparePhoto } from "../../../../lib/images.ts";
 import { uuid } from "../../../../lib/validation.ts";
+import { photoFileNames } from "../../../../lib/photo-storage.ts";
 import { participationSummary } from "../../../../lib/participation.ts";
 import { CommunityError } from "../../../../lib/community-validation.ts";
 import {
@@ -394,11 +395,16 @@ async function handler(
               status: 400,
             };
           files = (
-            await q.query<{ filename: string }>(
-              "SELECT p.filename FROM photos p JOIN bikes b ON b.id=p.bike_id WHERE b.owner_id=$1",
+            await q.query<{
+              filename: string;
+              original_filename: string | null;
+            }>(
+              "SELECT p.filename,p.original_filename FROM photos p JOIN bikes b ON b.id=p.bike_id WHERE b.owner_id=$1",
               [p[1]],
             )
-          ).rows;
+          ).rows.flatMap((row) =>
+            photoFileNames(row).map((filename) => ({ filename })),
+          );
           if (rows[0].avatar_id)
             files.push({ filename: "avatar-" + rows[0].avatar_id + ".webp" });
           await q.query("DELETE FROM users WHERE id=$1", [p[1]]);

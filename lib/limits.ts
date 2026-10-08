@@ -6,14 +6,18 @@ const positive = (key: string, fallback: number) => {
     throw new Error(`Invalid limit: ${key}`);
   return n;
 };
+// A number, not the literal 12: a test passes a tighter limit as `config`.
+const perBike: number = photosPerBike;
 export const limits = Object.freeze({
   bikes: positive("MAX_BIKES_PER_USER", 20),
   photos: positive("MAX_PHOTOS_PER_USER", 240),
   storageBytes: positive("MAX_PHOTO_BYTES_PER_USER", 500 * 1024 * 1024),
   fileBytes: photoFileBytes,
-  photosPerBike,
+  photosPerBike: perBike,
   bikeCreates: positive("BIKE_CREATES_PER_15_MIN", 30),
   photoUploads: positive("PHOTO_UPLOADS_PER_15_MIN", 60),
+  // Tries to take the backdrop off a photo (#370): each one is a pass over the pixels.
+  photoBackgrounds: positive("PHOTO_BACKGROUNDS_PER_15_MIN", 30),
   // Entries of the journal, one budget for the site and for API v1 (#347), per person.
   journalWrites: 20,
   // Edits of a bicycle and its parts through API v1 (#347), per person.
@@ -91,6 +95,9 @@ export async function checkPhotoQuota(
   bike: unknown,
   sizes: number[],
   config = limits,
+  // A new version of a photo that is already kept (#370) takes room, but is
+  // not one more photo.
+  { replacing = false } = {},
 ) {
   await lockOwner(q, owner);
   const owned = await q.query<{ id: string }>(
@@ -111,11 +118,12 @@ export async function checkPhotoQuota(
       )
     ).rows[0].bytes,
   );
-  if (usage.bike_count + sizes.length > config.photosPerBike)
+  const added = replacing ? 0 : sizes.length;
+  if (usage.bike_count + added > config.photosPerBike)
     throw new QuotaError(
       `Максимум ${config.photosPerBike} фотографий велосипеда`,
     );
-  if (usage.n + sizes.length > config.photos)
+  if (usage.n + added > config.photos)
     throw new QuotaError(
       `Максимум ${config.photos} фотографий на пользователя`,
     );

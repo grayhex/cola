@@ -69,7 +69,7 @@ export async function hydrate(
       [bike.id],
     ),
     db.query<PublicPhoto>(
-      "SELECT id,is_cover,source_page_url FROM photos WHERE bike_id=$1 ORDER BY is_cover DESC,created_at,id",
+      "SELECT id,is_cover,source_page_url,original_filename IS NOT NULL AS has_original FROM photos WHERE bike_id=$1 ORDER BY is_cover DESC,created_at,id",
       [bike.id],
     ),
   ]);
