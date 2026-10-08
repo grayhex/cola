@@ -28,6 +28,9 @@ type WizardPart = Omit<ComponentInput, "price"> & {
   price: number | string | null;
 };
 type UploadFile = { id: string; file: File; preview: string };
+// Only addresses the wizard made itself go into an <img>: a blob URL of a file
+// the person chose, or the site's own API.
+const draftImage = (src: string) => (/^(?:blob:|\/api\/)/.test(src) ? src : "");
 import { errorMessage } from "../../lib/errors.ts";
 import {
   checkPhotoFile,
@@ -1451,7 +1454,7 @@ export default function BikeWizard({
                         }
                         onClick={() => setSelectedPhoto(p.key)}
                       >
-                        <img src={p.src} alt="" />
+                        <img src={draftImage(p.src)} alt="" />
                         {p.key === coverDraft?.key && (
                           <span className="photo-cover-mark">Обложка</span>
                         )}
