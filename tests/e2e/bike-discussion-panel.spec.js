@@ -74,6 +74,13 @@ test("bike comments: a short panel opens on demand, by a link and after posting"
     const reader = await guest.newPage();
     await reader.goto("/b/" + bike.share_id);
     const panel = reader.locator("#discussion");
+    // The comments are a tab: the tile in the header counts them before the
+    // tab is opened (the panel is mounted, hidden).
+    await expect(
+      reader.locator(".bike-metrics").getByText(String(total), { exact: true }),
+    ).toBeVisible();
+    await expect(panel).toBeHidden();
+    await reader.getByRole("tab", { name: "Комментарии" }).click();
     await expect(
       panel.getByRole("heading", {
         name: `Комментарии (${total})`,
@@ -109,6 +116,7 @@ test("bike comments: a short panel opens on demand, by a link and after posting"
 
     // The owner's own comment is not hidden behind the button.
     await page.goto("/b/" + bike.share_id);
+    await page.getByRole("tab", { name: "Комментарии" }).click();
     await expect(page.locator("#discussion .comment")).toHaveCount(3);
     await page
       .getByRole("textbox", { name: "Ваш комментарий", exact: true })

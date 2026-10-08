@@ -27,7 +27,8 @@ import BikeGallery from "./bike-gallery.tsx";
 import BikeIdentity from "./bike-identity.tsx";
 import BikeOverview from "./bike-overview.tsx";
 import BikeSpecifications from "./bike-specifications.tsx";
-import { useActiveSection } from "./use-active-section.ts";
+import { BikeTabList, BikeTabPanel } from "./bike-tabs.tsx";
+import { useBikeTab } from "./use-bike-tab.ts";
 import { BikeGame } from "../achievements.tsx";
 import RideList from "../ride-list.tsx";
 import JournalList from "../journal-list.tsx";
@@ -44,8 +45,9 @@ const rub = (v: string | number) =>
   }).format(Number(v));
 
 // The page of one bike, public and in the account (#291): the picture and the
-// identity side by side, a menu of anchors, then the overview with the
-// passport, the build, rides, the owner's entries, the awards and comments.
+// identity side by side as the header, then tabs (#366): the overview with the
+// passport and the awards, the build, rides, the owner's entries and comments,
+// one at a time.
 export default function BikeDetail({
   Main,
   bike,
@@ -136,17 +138,24 @@ export default function BikeDetail({
   // «add» actions there.
   const specifications =
     layout.specifications && (editable || bike.components.length > 0);
-  // Only sections that are on the page are in the menu.
-  const sections = (
+  // Only the tabs the viewer may read are there. The awards belong to the
+  // overview: it stays for them when the description and the passport are off.
+  const tabs = (
     [
-      [panels.about || panels.passport, "overview", t("Обзор")],
+      [
+        panels.about || panels.passport || bike.is_public,
+        "overview",
+        t("Обзор"),
+      ],
       [specifications, "specifications", t("Комплектация")],
       [bike.is_public, "bike-rides", t("Покатушки")],
       [bike.id !== "demo", "journal", t("Записи")],
       [bike.is_public, "discussion", t("Комментарии")],
     ] as const
-  ).filter(([visible]) => visible);
-  const active = useActiveSection(sections.map(([, id]) => id));
+  )
+    .filter(([visible]) => visible)
+    .map(([, id, label]) => ({ id, label }));
+  const { active, select, list } = useBikeTab(tabs.map((tab) => tab.id));
   return (
     <Main className="detail bike-detail">
       <nav className="breadcrumbs" aria-label={t("Путь к велосипеду")}>
@@ -222,95 +231,104 @@ export default function BikeDetail({
           likes={detailReaction.likes ?? bike.likes}
           photoProblems={photoProblems}
           onDismissPhotoProblems={dismissPhotoProblems}
+          onSection={(id) => select(id, true)}
           onRegister={!editable && !share ? () => auth("register") : undefined}
           t={t}
         />
       </div>
-      <nav className="bike-section-nav" aria-label="Разделы велосипеда">
-        {sections.map(([, id, label]) => (
-          <a
-            key={id}
-            href={"#" + id}
-            aria-current={active === id ? "location" : undefined}
-          >
-            {label}
-          </a>
-        ))}
-      </nav>
-      {(panels.about || panels.passport) && (
-        <BikeOverview
-          bike={bike}
-          panels={panels}
-          editable={editable}
-          onEdit={actions.onEdit}
-          t={t}
-        />
+      <BikeTabList
+        tabs={tabs}
+        active={active}
+        onSelect={(id) => select(id)}
+        label={t("Разделы велосипеда")}
+        listRef={list}
+      />
+      {tabs.some((tab) => tab.id === "overview") && (
+        <BikeTabPanel id="overview" active={active === "overview"}>
+          {(panels.about || panels.passport) && (
+            <BikeOverview
+              bike={bike}
+              panels={panels}
+              editable={editable}
+              onEdit={actions.onEdit}
+              t={t}
+            />
+          )}
+          {bike.is_public && (
+            <BikeGame
+              key={JSON.stringify([
+                bike.id,
+                bike.likes,
+                bike.weight,
+                bike.category,
+                bike.show_bike_price,
+                bike.price,
+                bike.scores,
+                bike.photos.length,
+              ])}
+              bike={bike}
+              user={user}
+            />
+          )}
+        </BikeTabPanel>
       )}
       {specifications && (
-        <BikeSpecifications
-          bike={bike}
-          catalog={catalog}
-          editable={editable}
-          rub={rub}
-          t={t}
-          onAdd={(section) => setModal({ type: "part", section })}
-          onEdit={(c) =>
-            setModal({ type: "part", part: c, section: c.section })
-          }
-          onDelete={(c) => setModal({ type: "deletePart", part: c })}
-          onOrder={(order) =>
-            run(async () => {
-              await api("bikes/" + bike.id + "/order", "PUT", order);
-              await refresh();
-            })
-          }
-        />
+        <BikeTabPanel id="specifications" active={active === "specifications"}>
+          <BikeSpecifications
+            bike={bike}
+            catalog={catalog}
+            editable={editable}
+            rub={rub}
+            t={t}
+            onAdd={(section) => setModal({ type: "part", section })}
+            onEdit={(c) =>
+              setModal({ type: "part", part: c, section: c.section })
+            }
+            onDelete={(c) => setModal({ type: "deletePart", part: c })}
+            onOrder={(order) =>
+              run(async () => {
+                await api("bikes/" + bike.id + "/order", "PUT", order);
+                await refresh();
+              })
+            }
+          />
+        </BikeTabPanel>
       )}
       {bike.is_public && (
-        <RideList
-          key={"rides:" + bike.id}
-          bikeId={bike.id}
-          latest
-          preview
-          compact
-          onTotal={setRideTotal}
-        />
+        <BikeTabPanel id="bike-rides" active={active === "bike-rides"}>
+          <RideList
+            key={"rides:" + bike.id}
+            bikeId={bike.id}
+            latest
+            preview
+            compact
+            onTotal={setRideTotal}
+          />
+        </BikeTabPanel>
       )}
       {/* Sibling keys must differ: with two equal keys React loses one
           fiber on update and leaves a stale copy of its DOM behind. */}
       {bike.id !== "demo" && (
-        <JournalList
-          key={"journal:" + bike.id}
-          bike={bike}
-          owner={bike.is_owner}
-          editable={editable}
-          preview
-        />
+        <BikeTabPanel id="journal" active={active === "journal"}>
+          <JournalList
+            key={"journal:" + bike.id}
+            bike={bike}
+            owner={bike.is_owner}
+            editable={editable}
+            preview
+          />
+        </BikeTabPanel>
       )}
       {bike.is_public && (
-        <BikeGame
-          key={JSON.stringify([
-            bike.id,
-            bike.likes,
-            bike.weight,
-            bike.category,
-            bike.show_bike_price,
-            bike.price,
-            bike.scores,
-            bike.photos.length,
-          ])}
-          bike={bike}
-          user={user}
-        />
-      )}
-      {bike.is_public && (
-        <Discussion
-          key={"discussion:" + bike.id}
-          bike={bike}
-          user={user}
-          variant="panel"
-          count={bike.comments}
-        />
+        <BikeTabPanel id="discussion" active={active === "discussion"}>
+          <Discussion
+            key={"discussion:" + bike.id}
+            bike={bike}
+            user={user}
+            variant="panel"
+            count={bike.comments}
+          />
+        </BikeTabPanel>
       )}
     </Main>
   );

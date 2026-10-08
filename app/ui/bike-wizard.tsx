@@ -64,7 +64,7 @@ import {
 } from "../../lib/bike-classification.ts";
 import { parseBikeSearch } from "../../lib/bike-search-input.ts";
 import { useCallback, useMemo, useEffect, useRef, useState } from "react";
-import { LoaderCircle, Check, Plus, Trash2, Link } from "./icons.tsx";
+import { LoaderCircle, Check, Plus, Trash2 } from "./icons.tsx";
 import { useSite } from "./site-provider.tsx";
 import CompactCombo from "./compact-combo.tsx";
 import PartIcon from "./part-icon.tsx";
@@ -828,6 +828,7 @@ export default function BikeWizard({
                     );
                   }}
                 >
+                  <SiteIcon name="no" />
                   Остановить поиск
                 </button>
               </>
@@ -917,7 +918,7 @@ export default function BikeWizard({
                     aria-controls="wizard-url-search"
                     onClick={() => setManualMode((v) => !v)}
                   >
-                    <Link size={18} />
+                    <SiteIcon name="link" size={18} />
                     {settings.wizardLinkLabel ||
                       "Распознать по странице магазина"}
                   </button>
@@ -960,6 +961,7 @@ export default function BikeWizard({
                       }
                       onClick={() => search(typedUrl)}
                     >
+                      <SiteIcon name="search" />
                       Распознать страницу
                     </button>
                   </section>
@@ -1048,7 +1050,9 @@ export default function BikeWizard({
                 : "Автоматически комплектацию найти не удалось. Добавьте компоненты по группам или оставьте комплектацию пустой и дополните её позже."}
             </p>
             <details className="wizard-add-picker" open={!parts.length}>
-              <summary>Добавить компонент</summary>
+              <summary>
+                <SiteIcon name="addPart" /> Добавить компонент
+              </summary>
               <div className="wizard-group-add">
                 {[
                   "Групсет",
@@ -1349,12 +1353,13 @@ export default function BikeWizard({
                 disabled={photoBusy}
                 onClick={searchPhotos}
               >
+                <SiteIcon name="reset" />
                 Повторить поиск фото
               </button>
               <label className="field">
                 <span>
-                  Или загрузите свои · JPEG, PNG, WebP · до {photoLimitText} ·
-                  от 600 × 400
+                  <SiteIcon name="addPhoto" /> Или загрузите свои · JPEG, PNG,
+                  WebP · до {photoLimitText} · от 600 × 400
                 </span>
                 <input
                   type="file"
@@ -1533,6 +1538,7 @@ export default function BikeWizard({
             onCreated(savedId);
           }}
         >
+          <SiteIcon name="bike" />
           Открыть сохранённый велосипед без оставшихся фото
         </button>
       )}
@@ -1547,6 +1553,7 @@ export default function BikeWizard({
             setStep((s) => s - 1);
           }}
         >
+          <SiteIcon name="back" />
           Назад
         </button>
         <button
@@ -1554,13 +1561,29 @@ export default function BikeWizard({
           disabled={resolving || saving || (step === 0 && !!gate)}
           aria-describedby={hint ? "wizard-gate" : undefined}
         >
-          {step === 2
-            ? savedId
-              ? files.length || chosen.length
-                ? "Повторить загрузку фото"
-                : "Открыть велосипед"
-              : "Сохранить велосипед"
-            : "Далее"}
+          {step === 2 ? (
+            <>
+              <SiteIcon
+                name={
+                  savedId
+                    ? files.length || chosen.length
+                      ? "reset"
+                      : "bike"
+                    : "save"
+                }
+              />
+              {savedId
+                ? files.length || chosen.length
+                  ? "Повторить загрузку фото"
+                  : "Открыть велосипед"
+                : "Сохранить велосипед"}
+            </>
+          ) : (
+            <>
+              Далее
+              <SiteIcon name="next" />
+            </>
+          )}
         </button>
       </div>
     </form>

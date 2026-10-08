@@ -733,9 +733,11 @@ export default function PlanForm({
           disabled={busy}
           onClick={onCancel}
         >
+          <SiteIcon name="no" />
           Отмена
         </button>
         <button className="button" disabled={busy} aria-busy={busy}>
+          <SiteIcon name={ride ? "save" : "plan"} />
           {ride ? "Сохранить изменения" : "Создать покатушку"}
         </button>
       </div>

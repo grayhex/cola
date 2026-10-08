@@ -6,15 +6,8 @@ import NavPopover from "./nav-popover.tsx";
 import { BikeLike } from "./bike-labels.tsx";
 import BikeFollow from "./bike-follow.tsx";
 import ShareButton from "./share-button.tsx";
-import {
-  ImagePlus,
-  Search,
-  Globe,
-  Lock,
-  Pencil,
-  Trash2,
-  Ellipsis,
-} from "./icons.tsx";
+import { Search, Trash2, Ellipsis } from "./icons.tsx";
+import SiteIcon from "./site-icon.tsx";
 import { publicPath } from "../../lib/public-urls.ts";
 import styles from "./bike-actions.module.css";
 
@@ -88,7 +81,7 @@ export default function BikeActions({
             title={t("Редактировать")}
             onClick={onEdit}
           >
-            <Pencil size={15} aria-hidden="true" />
+            <SiteIcon name="edit" size={15} />
             <span>{t("Редактировать")}</span>
           </button>
           <button
@@ -98,7 +91,7 @@ export default function BikeActions({
             disabled={busy}
             onClick={onAddPhoto}
           >
-            <ImagePlus size={15} aria-hidden="true" />
+            <SiteIcon name="addPhoto" size={15} />
             <span>{t("Добавить фото")}</span>
           </button>
           <button
@@ -108,11 +101,7 @@ export default function BikeActions({
             title={t("Кто видит велосипед")}
             onClick={onAccess}
           >
-            {bike.is_public ? (
-              <Globe size={15} aria-hidden="true" />
-            ) : (
-              <Lock size={15} aria-hidden="true" />
-            )}
+            <SiteIcon name={bike.is_public ? "public" : "private"} size={15} />
             <span>{t("Приватность")}</span>
             <strong className={styles.count} id={accessId} aria-hidden="true">
               {bike.is_public ? t("Все") : t("Только вы")}

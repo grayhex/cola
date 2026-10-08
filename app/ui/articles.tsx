@@ -455,7 +455,7 @@ function ArticleEditor({
         />
         <div className="article-toolbar">
           <label className="button secondary">
-            <SiteIcon name="add" />
+            <SiteIcon name="addPhoto" />
             Иллюстрация
             <input
               aria-label="Иллюстрация"
@@ -555,7 +555,7 @@ function ArticleEditor({
       )}
       <div className="article-toolbar">
         <button className="button secondary" disabled={busy} value="draft">
-          <SiteIcon name="saved" />
+          <SiteIcon name="save" />
           Сохранить черновик
         </button>
         <button
@@ -563,7 +563,9 @@ function ArticleEditor({
           disabled={busy || !form.title.trim() || !form.body.trim()}
           value="published"
         >
-          <SiteIcon name="write" />
+          <SiteIcon
+            name={initial?.status === "published" ? "save" : "publish"}
+          />
           {initial?.status === "published" ? "Обновить статью" : "Опубликовать"}
         </button>
         {onCancel && (
@@ -575,6 +577,7 @@ function ArticleEditor({
               if (!dirty || confirm("Не сохранять изменения?")) onCancel();
             }}
           >
+            <SiteIcon name="no" />
             Отмена
           </button>
         )}
