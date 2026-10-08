@@ -314,6 +314,12 @@ await db.exec(
 await db.exec(
   await readFile(new URL("../db/061_user_blocks.sql", import.meta.url), "utf8"),
 );
+await db.exec(
+  await readFile(
+    new URL("../db/062_photo_background.sql", import.meta.url),
+    "utf8",
+  ),
+);
 await seedLegalDocuments(db);
 const server = new PGLiteSocketServer({
   db,

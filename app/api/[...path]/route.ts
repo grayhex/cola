@@ -36,7 +36,17 @@ import {
   profileInput,
   registrationInput,
 } from "../../../lib/social-validation.ts";
-import { importPhotos } from "../../../lib/photo-import.ts";
+import { candidateBytes, importPhotos } from "../../../lib/photo-import.ts";
+import {
+  PhotoBackgroundError,
+  applyPreview,
+  cutOut,
+  discardPreview,
+  readPictureBody,
+  readPreview,
+  restoreOriginal,
+  storePreview,
+} from "../../../lib/photo-background.ts";
 import { appVersion } from "../../../lib/version.js";
 import { mailEnabled } from "../../../lib/mail.ts";
 import { emailVerificationMail } from "../../../lib/mail-templates.ts";
@@ -105,6 +115,17 @@ const json = (data: unknown, status = 200) =>
   NextResponse.json(data, { status, headers: { "Cache-Control": "no-store" } });
 const fail = (message: string, status = 400) =>
   json({ error: message }, status);
+
+// One try to take a backdrop off costs a pass over the pixels: a budget per person.
+async function backgroundBudget(userId: string) {
+  if (!(await rateLimit("photo-background:" + userId, limits.photoBackgrounds)))
+    throw new PhotoBackgroundError(
+      429,
+      "Слишком много попыток удалить фон. Попробуйте позже.",
+      "busy",
+      60,
+    );
+}
 
 async function body(req: Request) {
   const reader = req.body?.getReader();
@@ -517,6 +538,79 @@ async function handler(
         },
       });
     }
+    // Taking the backdrop off a photo (#370). The try, its picture and its
+    // refusal belong to the person who asked: nobody else may read a preview.
+    if (p[1] === "previews" && p.length === 2 && method === "POST") {
+      await backgroundBudget(user.id);
+      const result = await cutOut(await readPictureBody(req), user.id, {
+        signal: req.signal,
+      });
+      return json(
+        {
+          preview: await storePreview(db, user.id, { kind: "upload" }, result),
+        },
+        201,
+      );
+    }
+    if (p[1] === "previews" && p.length === 3 && uuid.safeParse(p[2]).success) {
+      if (method === "GET") {
+        const side =
+          new URL(req.url).searchParams.get("side") === "before"
+            ? "before"
+            : "after";
+        const bytes = await readPreview(db, user.id, p[2], side);
+        if (!bytes) return fail("Предпросмотр не найден или устарел", 404);
+        return new NextResponse(bytes, {
+          headers: {
+            "Content-Type": "image/webp",
+            "Cache-Control": "private, no-store",
+            "X-Content-Type-Options": "nosniff",
+          },
+        });
+      }
+      if (method === "DELETE") {
+        await discardPreview(db, user.id, p[2]);
+        return json({ ok: true });
+      }
+    }
+    if (
+      p[1] === "photo-candidates" &&
+      p.length === 4 &&
+      p[3] === "background" &&
+      method === "POST"
+    ) {
+      await backgroundBudget(user.id);
+      const id = uuid.parse(p[2]);
+      let found;
+      try {
+        found = await candidateBytes(db, user.id, id);
+      } catch (e) {
+        throw new PhotoBackgroundError(
+          errorMessage(e).startsWith("Поиск устарел") ? 404 : 502,
+          errorMessage(e).startsWith("Поиск устарел")
+            ? errorMessage(e)
+            : "Не удалось получить фотографию. Повторите поиск.",
+          errorMessage(e).startsWith("Поиск устарел") ? "gone" : "unavailable",
+        );
+      }
+      const result = await cutOut(found.bytes, user.id, {
+        signal: req.signal,
+      });
+      // The page holds only a thumbnail of a found photo: «before» is this one.
+      const before = await prepareThumbnail(found.bytes, 1280);
+      return json(
+        {
+          preview: await storePreview(
+            db,
+            user.id,
+            { kind: "candidate", candidateId: id },
+            result,
+            before,
+          ),
+        },
+        201,
+      );
+    }
     if (p.length === 1) {
       if (method === "GET") {
         const rows = await ownBikeRows(db, user.id);
@@ -683,22 +777,36 @@ async function handler(
     ) {
       if (!(await rateLimit("photo-upload:" + user.id, limits.photoUploads)))
         return fail("Слишком много запросов", 429);
-      const { ids } = z
+      const { ids, cutouts } = z
         .object({
           ids: z
             .array(uuid)
             .min(1)
             .max(3)
             .refine((a) => new Set(a).size === a.length),
+          // Found photo → the preview of it without its backdrop (#370).
+          cutouts: z.record(uuid, uuid).optional(),
         })
+        .refine((v) =>
+          Object.keys(v.cutouts || {}).every((k) => v.ids.includes(k)),
+        )
         .parse(await body(req));
       try {
         return json(
-          await importPhotos(db, transaction, bike.id, user.id, ids, uploads()),
+          await importPhotos(
+            db,
+            transaction,
+            bike.id,
+            user.id,
+            ids,
+            uploads(),
+            cutouts,
+          ),
           201,
         );
       } catch (e) {
-        if (e instanceof QuotaError) throw e;
+        if (e instanceof QuotaError || e instanceof PhotoBackgroundError)
+          throw e;
         logError("photo_import_failed", e);
         return fail("Не удалось импортировать фотографию. Повторите поиск.");
       }
@@ -750,20 +858,91 @@ async function handler(
         return json({ id }, 201);
       }
       if (
+        p.length === 5 &&
+        p[4] === "background" &&
+        uuid.safeParse(p[3]).success
+      ) {
+        if (method === "POST") {
+          await backgroundBudget(user.id);
+          const { rows } = await db.query<{
+            filename: string;
+            original_filename: string | null;
+          }>(
+            "SELECT filename,original_filename FROM photos WHERE id=$1 AND bike_id=$2",
+            [p[3], bike.id],
+          );
+          if (!rows[0]) return fail("Фото не найдено", 404);
+          if (rows[0].original_filename)
+            throw new PhotoBackgroundError(
+              409,
+              "Фон уже удалён. Верните исходное фото, чтобы обработать его заново.",
+              "already_removed",
+            );
+          let source: Buffer;
+          try {
+            source = await readFile(
+              /*turbopackIgnore: true*/ path.join(uploads(), rows[0].filename),
+            );
+          } catch (e) {
+            if (errorCode(e) === "ENOENT") return fail("Фото не найдено", 404);
+            throw e;
+          }
+          const result = await cutOut(source, user.id, { signal: req.signal });
+          return json(
+            {
+              preview: await storePreview(
+                db,
+                user.id,
+                { kind: "photo", photoId: p[3] },
+                result,
+              ),
+            },
+            201,
+          );
+        }
+        if (method === "PUT") {
+          const { previewId } = z
+            .object({ previewId: uuid })
+            .parse(await body(req));
+          return json(
+            await applyPreview(transaction, {
+              owner: user.id,
+              bikeId: bike.id,
+              photoId: p[3],
+              previewId,
+              directory: uploads(),
+            }),
+          );
+        }
+        if (method === "DELETE")
+          return json(
+            await restoreOriginal(transaction, {
+              owner: user.id,
+              bikeId: bike.id,
+              photoId: p[3],
+              directory: uploads(),
+            }),
+          );
+      }
+      if (
         p.length === 4 &&
         uuid.safeParse(p[3]).success &&
         ["DELETE", "PATCH"].includes(method)
       ) {
-        const filename = await changePhoto(
+        const filenames = await changePhoto(
           transaction,
           bike.id,
           p[3],
           method === "PATCH" ? "cover" : "remove",
         );
-        if (filename) {
-          await unlink(
-            /*turbopackIgnore: true*/ path.join(uploads(), filename),
-          ).catch(() => {});
+        if (filenames.length) {
+          await Promise.all(
+            filenames.map((filename) =>
+              unlink(
+                /*turbopackIgnore: true*/ path.join(uploads(), filename),
+              ).catch(() => {}),
+            ),
+          );
           await purgeMediaVariants([p[3]]);
         }
         return json({ ok: true });
@@ -777,6 +956,17 @@ async function handler(
       return json({ error: e.message, code: e.code }, e.status);
     if (e instanceof CommunityError) return fail(e.message, e.status);
     if (e instanceof QuotaError) return fail(e.message, e.status);
+    if (e instanceof PhotoBackgroundError)
+      return NextResponse.json(
+        { error: e.message, reason: e.reason },
+        {
+          status: e.status,
+          headers: {
+            "Cache-Control": "no-store",
+            ...(e.retryAfter ? { "Retry-After": String(e.retryAfter) } : {}),
+          },
+        },
+      );
     if (e instanceof ZodError)
       return fail(
         "Проверьте заполнение полей: " +

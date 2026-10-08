@@ -249,6 +249,9 @@ export interface PhotoRow {
   source_url: string | null;
   source_page_url: string | null;
   size_bytes: string | null;
+  /** The file a photo without its backdrop was made of (#370). */
+  original_filename: string | null;
+  original_size_bytes: string | null;
 }
 
 export interface SessionRow {

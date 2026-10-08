@@ -6,7 +6,7 @@ const db = new pg.Client({ connectionString: process.env.DATABASE_URL }),
 try {
   await db.connect();
   const rows = await db.query(
-    "SELECT filename FROM photos UNION SELECT filename FROM site_assets UNION SELECT 'avatar-' || avatar_id::text || '.webp' AS filename FROM users WHERE avatar_id IS NOT NULL",
+    "SELECT filename FROM photos UNION SELECT original_filename FROM photos WHERE original_filename IS NOT NULL UNION SELECT filename FROM site_assets UNION SELECT 'avatar-' || avatar_id::text || '.webp' AS filename FROM users WHERE avatar_id IS NOT NULL",
   );
   const known = new Set(rows.rows.map((r) => r.filename));
   const files = await readdir(directory);

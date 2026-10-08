@@ -134,6 +134,11 @@ export interface PublicPhoto {
   id: EntityId;
   is_cover: boolean;
   source_page_url: string | null;
+  /**
+   * Owner only (#370): the photo was cleared of its backdrop and the file it
+   * was made of is kept. The public view never carries it.
+   */
+  has_original?: boolean;
 }
 // PostgreSQL numeric columns remain strings at the existing DTO boundary.
 export interface PublicComponent {

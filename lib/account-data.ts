@@ -5,6 +5,7 @@ import { hashPassword, verifyPassword } from "./password.ts";
 import { consumeToken, issueToken } from "./account.ts";
 import { avatarFilename } from "./avatars.ts";
 import { purgeMediaVariants } from "./media-cache.ts";
+import { photoFileNames } from "./photo-storage.ts";
 
 // The account's own security and data (#70): devices, password, address,
 // deletion and export. Every function takes the transaction client first;
@@ -206,8 +207,12 @@ export async function confirmEmailChange(q: Queryable, token: string) {
  */
 export async function accountFiles(q: Queryable, userId: string) {
   const photos = (
-    await q.query<{ id: string; filename: string }>(
-      "SELECT p.id,p.filename FROM photos p JOIN bikes b ON b.id=p.bike_id WHERE b.owner_id=$1",
+    await q.query<{
+      id: string;
+      filename: string;
+      original_filename: string | null;
+    }>(
+      "SELECT p.id,p.filename,p.original_filename FROM photos p JOIN bikes b ON b.id=p.bike_id WHERE b.owner_id=$1",
       [userId],
     )
   ).rows;
@@ -219,7 +224,7 @@ export async function accountFiles(q: Queryable, userId: string) {
   ).rows[0]?.avatar_id;
   return {
     filenames: [
-      ...photos.map((p) => p.filename),
+      ...photos.flatMap(photoFileNames),
       ...(avatar ? [avatarFilename(avatar)] : []),
     ],
     media: [

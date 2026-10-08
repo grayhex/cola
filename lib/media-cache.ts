@@ -142,6 +142,41 @@ export async function cachedDerivative(
   return bytes;
 }
 
+// Working files that are not derived from a stored original (the previews of a
+// backdrop removal, #370) live here too: the sweep and a restart clear them, and
+// whoever asks must cope with a missing file. `name` is server-built.
+export async function storeCacheFile(
+  name: string,
+  bytes: Buffer,
+  env = process.env,
+) {
+  const file = path.join(cacheDirectory(env), name);
+  await mkdir(path.dirname(file), { recursive: true, mode: 0o700 });
+  const temp = `${file}.${randomUUID()}.tmp`;
+  try {
+    await writeFile(temp, bytes, { mode: 0o600 });
+    await rename(temp, file);
+  } catch (e) {
+    await rm(temp, { force: true }).catch(() => {});
+    throw e;
+  }
+  scheduleSweep(env);
+}
+export async function readCacheFile(name: string, env = process.env) {
+  try {
+    return await readFile(path.join(cacheDirectory(env), name));
+  } catch {
+    return null;
+  }
+}
+export async function removeCacheFiles(names: string[], env = process.env) {
+  await Promise.all(
+    names.map((name) =>
+      rm(path.join(cacheDirectory(env), name), { force: true }).catch(() => {}),
+    ),
+  );
+}
+
 // Best-effort removal when a photo is deleted; a restart clears the rest.
 export async function purgeMediaVariants(ids: string[], env = process.env) {
   await Promise.all(
