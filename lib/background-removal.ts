@@ -355,6 +355,54 @@ export async function removeBackground(
     }
   }
 
+  // A shadow comes out of the backdrop gradually, so its tones are spread over
+  // a range. A flat pale part of the object (a light tube, a silver fork) that
+  // the walk got into through the soft edge of a compressed picture is one
+  // plateau of a single tone instead. A group of pixels that is mostly one
+  // tone is that, not a shadow: it stays the object.
+  {
+    label.fill(0);
+    for (let p = 0; p < total; p++) {
+      if (state[p] !== 3 || label[p]) continue;
+      let top = 0,
+        size = 0;
+      const tones = new Uint32Array(256);
+      stack[top++] = p;
+      label[p] = 1;
+      while (top) {
+        const c = stack[--top];
+        gapQueue[size++] = c;
+        tones[distance[c]]++;
+        const x = c % width,
+          y = (c - x) / width;
+        const neighbours = [
+          x > 0 ? c - 1 : -1,
+          x < width - 1 ? c + 1 : -1,
+          y > 0 ? c - width : -1,
+          y < height - 1 ? c + width : -1,
+        ];
+        for (const q of neighbours)
+          if (q >= 0 && state[q] === 3 && !label[q]) {
+            label[q] = 1;
+            stack[top++] = q;
+          }
+      }
+      // The most pixels within a band of nine tones.
+      let band = 0,
+        window = 0;
+      for (let d = 0; d < 256; d++) {
+        window += tones[d] - (d >= 9 ? tones[d - 9] : 0);
+        band = Math.max(band, window);
+      }
+      if (size >= 60 && band > size * 0.6)
+        for (let i = 0; i < size; i++) {
+          state[gapQueue[i]] = 0;
+          shadowAlpha[gapQueue[i]] = 0;
+        }
+      if ((p & 0x1ffff) === 0) await pause();
+    }
+  }
+
   // 4. The edge of the object: un-mix it from the backdrop. Ring one touches
   // the removed region, ring two touches ring one.
   const out = new Uint8Array(total * 4);
@@ -387,26 +435,38 @@ export async function removeBackground(
   }
   for (const p of ringTwo) ring[p] = 2;
   // The colour of the object near a pixel: the solid part of its 7×7 window.
+  // An object that is nowhere far from the backdrop (a pale frame) has no
+  // pixel beyond `high`: then what is beyond `low` is its colour.
   const solid = (p: number): [number, number, number] | null => {
     const x = p % width,
       y = (p - x) / width;
     let r = 0,
       g = 0,
       b = 0,
-      n = 0;
+      n = 0,
+      pr = 0,
+      pg = 0,
+      pb = 0,
+      pale = 0;
     for (let dy = -3; dy <= 3; dy++)
       for (let dx = -3; dx <= 3; dx++) {
         const nx = x + dx,
           ny = y + dy;
         if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
         const q = ny * width + nx;
-        if (state[q] !== 0 || ring[q] || distance[q] <= high) continue;
+        if (state[q] !== 0 || ring[q] || distance[q] <= low) continue;
+        pr += data[q * 4];
+        pg += data[q * 4 + 1];
+        pb += data[q * 4 + 2];
+        pale++;
+        if (distance[q] <= high) continue;
         r += data[q * 4];
         g += data[q * 4 + 1];
         b += data[q * 4 + 2];
         n++;
       }
-    return n >= 3 ? [r / n, g / n, b / n] : null;
+    if (n >= 3) return [r / n, g / n, b / n];
+    return pale >= 3 ? [pr / pale, pg / pale, pb / pale] : null;
   };
   const back = [bgR, bgG, bgB];
   let step = 0;

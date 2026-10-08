@@ -295,3 +295,59 @@ test("a spoked wheel: the gaps between the spokes are background, the spokes and
   assert.ok(kept >= 13, `${kept} of 15 points of a spoke were kept`);
   assert.equal(alphaAt(result, cx, cy - 73), 255, "the rim");
 });
+
+test("a pale frame, well short of white, is the object: it is not mistaken for a shadow and keeps its edge", async () => {
+  const pale: Color = [224, 224, 224];
+  // A tube across the picture, 9 px wide, drawn at an angle so its edge is anti-aliased.
+  const tube: Paint = (x, y) => {
+    const along = (x - 70) * 0.8 + (y - 190) * -0.6;
+    const across = Math.abs((x - 70) * 0.6 + (y - 190) * 0.8);
+    return across <= 4.5 && along >= 0 && along <= 190 ? pale : null;
+  };
+  const image = render(300, 240, white, [
+    tube,
+    ring(220, 150, 60, 52, [40, 40, 44]),
+  ]);
+  const result = await removeBackground(image);
+  let opaque = 0,
+    total = 0;
+  // Up to where the ring is drawn over the tube.
+  for (let t = 10; t <= 120; t += 3) {
+    const x = Math.round(70 + t * 0.8),
+      y = Math.round(190 + t * -0.6);
+    total++;
+    if (alphaAt(result, x, y) >= 250 && apart(colorAt(result, x, y), pale) < 12)
+      opaque++;
+  }
+  assert.ok(opaque >= total - 2, `${opaque} of ${total} points are the tube`);
+  assert.equal(alphaAt(result, 4, 4), 0);
+  assert.equal(alphaAt(result, 220, 150 - 56), 255, "the dark ring is kept");
+});
+
+test("a shadow under a pale object is still a shadow: see-through black", async () => {
+  const pale: Color = [226, 226, 226];
+  const shadow: Paint = (x, y) => {
+    const d = ((x - 130) / 80) ** 2 + ((y - 190) / 14) ** 2;
+    if (d >= 1) return null;
+    const v = Math.round(255 - 140 * (1 - d) ** 2);
+    return [v, v, v];
+  };
+  const image = render(260, 220, white, [
+    shadow,
+    disk(130, 110, 50, pale),
+    ring(130, 110, 62, 52, [40, 40, 44]),
+  ]);
+  const result = await removeBackground(image);
+  let tinted = 0;
+  for (let x = 80; x < 180; x++)
+    for (let y = 184; y < 198; y++) {
+      const a = alphaAt(result, x, y);
+      if (a > 25) {
+        tinted++;
+        assert.ok(apart(colorAt(result, x, y), [0, 0, 0]) < 8);
+        assert.ok(a < 235, "the shadow stays see-through");
+      }
+    }
+  assert.ok(tinted > 100, "the shadow is kept");
+  assert.equal(alphaAt(result, 130, 110), 255, "the pale body");
+});
