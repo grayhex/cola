@@ -283,6 +283,7 @@ async function handler(
             "heroStageDarkAnimation",
             "intentDialogGraphic",
             "planDialogGraphic",
+            "wizardSearchGraphic",
           ] as const) {
             const selected = settings[key];
             if (!selected || !("assetId" in selected) || !selected.assetId)

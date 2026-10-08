@@ -272,6 +272,11 @@ export const settingsInput = z
       .strict()
       .nullable()
       .default(null),
+    wizardSearchGraphic: z
+      .object({ kind: z.enum(["image", "svg", "rive"]), assetId: z.uuid() })
+      .strict()
+      .nullable()
+      .default(null),
     heroBackgroundMode: z.enum(["accent", "custom"]).default("accent"),
     heroBackgroundLight: z
       .string()

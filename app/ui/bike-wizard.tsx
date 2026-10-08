@@ -94,7 +94,12 @@ import { groupedComponents } from "../../lib/garage-layout.ts";
 import { bicycleName, draftId } from "../../lib/wizard-options.ts";
 import { bikeInput, componentInput } from "../../lib/validation.ts";
 import { resolveWithTrace } from "../../lib/resolver-stream.ts";
-import ResolverTimeline from "./resolver-timeline.tsx";
+import PlanningGraphic from "./planning-graphic.tsx";
+import ResolverProgress from "./resolver-progress.tsx";
+import {
+  outcomeOf,
+  type ProgressOutcome,
+} from "../../lib/resolver-progress.ts";
 import {
   ResolverCandidateCard,
   ResolverSearchReport,
@@ -229,6 +234,11 @@ export default function BikeWizard({
     [manualMode, setManualMode] = useState(false),
     [identityConfirmed, setIdentityConfirmed] = useState(false),
     [trace, setTrace] = useState<TraceEvent[]>([]),
+    // How the last search ended when it is not its answer (stopped, refused,
+    // broken), and the request it was for: the status of a search belongs to
+    // the request typed now, not to an earlier one (#374).
+    [runEnd, setRunEnd] = useState<"cancelled" | "failed" | null>(null),
+    [runKey, setRunKey] = useState(""),
     [result, setResult] = useState<
       (ResolveResult & { previewId?: string }) | null
     >(null),
@@ -457,6 +467,25 @@ export default function BikeWizard({
   // one way on is by hand, which stops it — «Далее» would leave it running to
   // overwrite the draft later.
   const found = answers && !resolving;
+  // The status of a search (#374): while it runs, and after it for the request
+  // typed now. The groups with a mark are those of the one variant found: the
+  // normalized result of that page, never a count turned into categories.
+  const showProgress =
+    resolving || ((trace.length > 0 || !!runEnd) && runKey === typedKey);
+  const progressOutcome: ProgressOutcome | null = resolving
+    ? null
+    : (runEnd ?? (result ? outcomeOf(result) : null));
+  const progressGroups = useMemo(() => {
+    if (!answers || result?.status !== "resolved") return null;
+    const categories = new Set(
+      factoryEntries(result).map(({ value }) => value.category),
+    );
+    return catalog.componentGroups.map((group) => ({
+      id: group.id,
+      name: group.name,
+      found: group.categories.some((category) => categories.has(category)),
+    }));
+  }, [answers, result, catalog.componentGroups]);
   // What stands under the step after a search that found nothing.
   const hint =
     resolving || step !== 0 || !searchText.trim() || found
@@ -497,6 +526,8 @@ export default function BikeWizard({
     resolveAbort.current = controller;
     setResolving(true);
     setTrace([]);
+    setRunEnd(null);
+    setRunKey(key);
     setError("");
     setMessage(
       sourceUrl
@@ -531,6 +562,7 @@ export default function BikeWizard({
         // must not overwrite what is typed by hand.
         if (controller.signal.aborted || !alive.current) return;
         if (!accepted) {
+          setRunEnd("cancelled");
           setMessage(
             variant
               ? "Импорт отменён. Выберите другой вариант или измените запрос."
@@ -615,6 +647,7 @@ export default function BikeWizard({
       }
     } catch (e) {
       if (!controller.signal.aborted && alive.current) {
+        setRunEnd("failed");
         setMessage(
           "Не удалось выполнить поиск. Попробуйте ссылку на другую страницу магазина или продолжите вручную.",
         );
@@ -779,6 +812,7 @@ export default function BikeWizard({
     resolveAbort.current?.abort();
     setResolving(false);
     setTrace([]);
+    setRunEnd(null);
     setMessage("");
     setError("");
     // What was typed fills the identity when it can be read; an empty or an
@@ -1122,6 +1156,7 @@ export default function BikeWizard({
       <fieldset disabled={saving} className="wizard-content">
         {step === 0 && (
           <div className="wizard-search">
+            <PlanningGraphic slot="wizardSearchGraphic" size="wide" />
             <p className="help">
               Введите марку и модель одной строкой. Год и комплектация уточняют
               поиск, но не обязательны. Поиск необязателен: можно сразу
@@ -1151,8 +1186,19 @@ export default function BikeWizard({
                 .filter(Boolean)
                 .join(" ")}
             </p>
-            <p role="status">{message}</p>
-            <ResolverTimeline events={trace} running={resolving} />
+            {/* While it runs the status below says it; the words stay for the
+                reader of the screen, whose live region was here before. */}
+            <p role="status" className={resolving ? "sr-only" : undefined}>
+              {message}
+            </p>
+            {showProgress && (
+              <ResolverProgress
+                events={trace}
+                running={resolving}
+                outcome={progressOutcome}
+                categories={progressGroups}
+              />
+            )}
             {resolving ? (
               <>
                 <button
@@ -1161,6 +1207,7 @@ export default function BikeWizard({
                   onClick={() => {
                     resolveAbort.current?.abort();
                     setResolving(false);
+                    setRunEnd("cancelled");
                     setMessage(
                       "Поиск остановлен. Запустите его снова, чтобы продолжить.",
                     );

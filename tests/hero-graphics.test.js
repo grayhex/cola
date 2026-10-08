@@ -144,20 +144,30 @@ test("site read upgrades old fields but an explicit new assignment wins", async 
 
 test("planning graphics are independent local typed references and protect published assets", () => {
   const image = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
-    rive = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+    rive = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+    wizard = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
   const settings = settingsInput.parse({
     ...defaultSettings,
     intentDialogGraphic: { kind: "image", assetId: image },
     planDialogGraphic: { kind: "rive", assetId: rive },
+    wizardSearchGraphic: { kind: "svg", assetId: wizard },
   });
-  assert.deepEqual(siteAssetIds(settings), [image, rive]);
+  assert.deepEqual(siteAssetIds(settings), [image, rive, wizard]);
   assert.deepEqual(siteAssetUsage(settings)[image], [
     "Новое намерение · графика",
   ]);
   assert.deepEqual(siteAssetUsage(settings)[rive], [
     "Организовать покатушку · графика",
   ]);
-  for (const key of ["intentDialogGraphic", "planDialogGraphic"]) {
+  assert.deepEqual(siteAssetUsage(settings)[wizard], [
+    "Мастер велосипеда, шаг «Поиск» · картинка или анимация",
+  ]);
+  assert.equal(defaultSettings.wizardSearchGraphic, null);
+  for (const key of [
+    "intentDialogGraphic",
+    "planDialogGraphic",
+    "wizardSearchGraphic",
+  ]) {
     assert(
       settingsInput.safeParse({
         ...settings,
