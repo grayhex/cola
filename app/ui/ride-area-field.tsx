@@ -292,6 +292,7 @@ export function AreaField({
         <AreaPicker
           key={generation}
           engines
+          disabled={disabled}
           value={position || area || {}}
           showRadius={false}
           onChange={(next) => (position ? setPosition(next) : set(next))}

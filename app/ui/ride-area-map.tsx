@@ -191,6 +191,8 @@ function RasterAreaPicker({
     onChange(rest);
   };
   function pick(e: MouseEvent<SVGSVGElement>) {
+    // A disabled fieldset does not stop an SVG: a busy form takes no clicks.
+    if (disabled) return;
     const box = e.currentTarget.getBoundingClientRect();
     place(
       viewport.coordAt(
@@ -200,6 +202,7 @@ function RasterAreaPicker({
     );
   }
   function key(e: KeyboardEvent<SVGSVGElement>) {
+    if (disabled) return;
     const step = 48,
       moves: Record<string, number[]> = {
         ArrowLeft: [-step, 0],

@@ -305,6 +305,44 @@ test("the Yandex map: the circle is drawn by the SDK, clicks and the middle of t
   expect(intent.passport.area.center).toHaveLength(2);
 });
 
+test("while the intent is being saved the map takes no clicks: the area that was sent stays the one shown", async ({
+  page,
+}) => {
+  await useMap(maps.yandex);
+  await page.route("https://api-maps.yandex.ru/v3/**", (route) =>
+    route.fulfill({ contentType: "text/javascript", body: yandexSdk }),
+  );
+  let release;
+  await page.route("**/api/ride-intents", async (route) => {
+    if (route.request().method() !== "POST") return route.fallback();
+    await new Promise((resolve) => {
+      release = resolve;
+    });
+    return route.fallback();
+  });
+  const dialog = await open(page);
+  await windowAndPurpose(page, dialog);
+  await pickPlace(dialog, "сокол", "Сокольники");
+  await expect(canvas(dialog)).toHaveAttribute("data-ready", "true");
+  await expect(canvas(dialog)).toHaveAttribute(
+    "data-area-center",
+    "37.67,55.79",
+  );
+  await save(dialog);
+  // The request is in flight: the form is busy, and so is the map.
+  await expect(areaName(dialog)).toBeDisabled();
+  await canvas(dialog).click({ position: { x: 12, y: 12 } });
+  await page.waitForTimeout(300);
+  await expect(canvas(dialog)).toHaveAttribute(
+    "data-area-center",
+    "37.67,55.79",
+  );
+  release();
+  await expect(dialog).toHaveCount(0);
+  const [intent] = await intents(page);
+  expect(intent.passport.area.center).toEqual([37.67, 55.79]);
+});
+
 for (const [name, setup, message] of [
   [
     "the Yandex SDK does not load",

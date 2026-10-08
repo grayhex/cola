@@ -345,6 +345,7 @@ export function IntentComposer({
               <AreaField
                 value={draft.passport}
                 onChange={(v) => set("passport", v)}
+                disabled={busy || uncertain}
                 intent
               />
             </fieldset>

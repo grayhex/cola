@@ -99,10 +99,12 @@ test("the configuration: Nominatim by default, Yandex only with its key, off whe
   assert.equal(geocoderConfig({}).provider, "nominatim");
   assert.equal(geocoderConfig({}).url, "https://nominatim.openstreetmap.org");
   assert.equal(geocoderConfig(env).url, "https://geo.example");
+  // The release number, not the object the version module exports (#370).
   assert.match(
     geocoderConfig(env).userAgent,
-    /^ColaBike\/.+ \(\+https:\/\/cola\.example\)$/,
+    /^ColaBike\/(?:\d[\w.+-]*|dev) \(\+https:\/\/cola\.example\)$/,
   );
+  assert.doesNotMatch(geocoderConfig(env).userAgent, /object/i);
   assert.equal(geocoderConfig({ GEOCODER: "yandex" }).provider, "off");
   assert.equal(
     geocoderConfig({ GEOCODER: "yandex", YANDEX_GEOCODER_KEY: "k" }).provider,

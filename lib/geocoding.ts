@@ -44,7 +44,7 @@ export function geocoderConfig(
   env: Record<string, string | undefined> = process.env,
 ): GeocoderConfig {
   const origin = env.PUBLIC_SITE_URL || env.APP_ORIGIN || "http://localhost";
-  const userAgent = `ColaBike/${appVersion || "dev"} (+${origin})`;
+  const userAgent = `ColaBike/${appVersion?.version || "dev"} (+${origin})`;
   if (env.COLA_GEOCODER_FIXTURE === "1")
     return { provider: "fixture", url: "", key: "", userAgent };
   const wanted = (env.GEOCODER || "nominatim").toLowerCase();
