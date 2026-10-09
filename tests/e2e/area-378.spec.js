@@ -328,7 +328,9 @@ test("a picker opens in the middle of the window over its form, closes alone, re
   const centered = async (picker) => {
     // The opening movement of the sheet is over before it is measured.
     await page.evaluate(() =>
-      Promise.all(document.getAnimations().map((a) => a.finished)),
+      Promise.all(
+        document.getAnimations().map((a) => a.finished.catch(() => null)),
+      ),
     );
     const parent = await box(dialog);
     const child = await box(picker);
@@ -360,7 +362,9 @@ test("a picker opens in the middle of the window over its form, closes alone, re
     if (isMobile) {
       // A bottom sheet within the screen (its opening movement is over first).
       await page.evaluate(() =>
-        Promise.all(document.getAnimations().map((a) => a.finished)),
+        Promise.all(
+          document.getAnimations().map((a) => a.finished.catch(() => null)),
+        ),
       );
       const child = await box(picker);
       const frame = page.viewportSize();
@@ -433,4 +437,64 @@ test("the other sheets of the site stay where they were: the filters open under 
   expect(found.y).toBeLessThan(120);
   expect(found.x + found.width).toBeGreaterThan(1440 - 60);
   expect(found.x).toBeGreaterThan(1440 / 2);
+});
+
+test("a position that the device has not answered yet is not skipped: saving waits for it and does not take the old area in its place", async ({
+  page,
+  context,
+}) => {
+  await context.grantPermissions(["geolocation"], { origin });
+  await context.setGeolocation({ longitude: 37.61734, latitude: 55.75581 });
+  const dialog = await open(page);
+  await windowAndPurpose(page, dialog);
+  await pickPlace(dialog, "сокол", "Сокольники");
+  // The device answers late: the request is held until the test lets it go.
+  await page.evaluate(() => {
+    const original = navigator.geolocation.getCurrentPosition.bind(
+      navigator.geolocation,
+    );
+    navigator.geolocation.getCurrentPosition = (done, fail, options) => {
+      window.__answer = () => original(done, fail, options);
+    };
+  });
+  let sent = 0;
+  page.on("request", (request) => {
+    if (
+      request.method() === "POST" &&
+      request.url().includes("/api/ride-intents")
+    )
+      sent++;
+  });
+  await (await showSearch(dialog)).waitFor();
+  const locate = dialog.getByRole("button", {
+    name: "Использовать моё местоположение",
+  });
+  await locate.click();
+  await expect(locate).toHaveAttribute("aria-busy", "true");
+
+  // Saving while it is out: the form says what it waits for, and keeps the
+  // window; the old area is not saved in silence.
+  await dialog.getByRole("button", { name: "Сохранить намерение" }).click();
+  await expect(dialog.getByRole("alert")).toContainText(
+    "Определяем местоположение",
+  );
+  await expect(dialog).toBeVisible();
+  expect(sent).toBe(0);
+
+  // The device answers: it is a proposal like any other, named and confirmed.
+  await page.evaluate(() => window.__answer());
+  const pending = dialog.getByRole("group", {
+    name: "Область по вашему положению",
+  });
+  await expect(pending).toBeVisible();
+  await pending.getByLabel("Название области").fill("Рядом с домом");
+  await pending
+    .getByRole("button", { name: "Использовать эту область" })
+    .click();
+  await dialog.getByRole("button", { name: "Сохранить намерение" }).click();
+  await expect(dialog).toHaveCount(0);
+  expect(sent).toBe(1);
+  const [intent] = (await (await page.request.get("/api/ride-intents")).json())
+    .items;
+  expect(intent.passport.area.label).toBe("Рядом с домом");
 });

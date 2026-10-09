@@ -38,7 +38,12 @@ import { useConfirmation } from "./confirmation.tsx";
 import SiteIcon from "./site-icon.tsx";
 import Modal from "./garage/modal.tsx";
 import { MotionList, SharedView, useMotionFeedback } from "./motion.tsx";
-import { AreaField, ExtraConditions } from "./ride-plan-fields.tsx";
+import {
+  AreaField,
+  ExtraConditions,
+  pendingAreaMessage,
+  type AreaPending,
+} from "./ride-plan-fields.tsx";
 import RidePassport from "./ride-passport.tsx";
 import {
   intentLimits,
@@ -152,8 +157,9 @@ export function IntentComposer({
     [areaCheck, setAreaCheck] = useState(0);
   const pending = useRef<Omit<IntentDraft, "id"> | null>(null),
     closing = useRef(false),
-    // An area around the position that is not confirmed is not the draft's.
-    areaPending = useRef(false);
+    // An area around the position that is on its way or not confirmed is not
+    // the draft's.
+    areaPending = useRef<AreaPending>(null);
   const [ask, confirmation] = useConfirmation();
   const feedback = useMotionFeedback(draft.readiness);
   const set = <K extends keyof IntentDraft>(key: K, value: IntentDraft[K]) =>
@@ -182,9 +188,7 @@ export function IntentComposer({
     // at the field, with the form kept as it is.
     if (areaPending.current) {
       setAreaCheck((n) => n + 1);
-      setError(
-        "Подтвердите область по вашему положению: назовите её и нажмите «Использовать эту область».",
-      );
+      setError(pendingAreaMessage[areaPending.current]);
       return;
     }
     const area = areaProblems(draft.passport.area);

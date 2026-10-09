@@ -121,6 +121,15 @@ function NameField({
   );
 }
 
+/** What of a position's area the form has to wait for. */
+export type AreaPending = "locating" | "proposal" | null;
+/** What a form says when it is asked to save while one is out. */
+export const pendingAreaMessage = {
+  locating:
+    "Определяем местоположение: дождитесь ответа устройства или выберите место иначе.",
+  proposal:
+    "Подтвердите область по вашему положению: назовите её и нажмите «Использовать эту область».",
+} as const;
 export function AreaField({
   value = {},
   onChange,
@@ -141,11 +150,12 @@ export function AreaField({
    */
   check?: number;
   /**
-   * Tells the form whether an area around the device's position is waiting for
-   * a name and a confirmation: such an area is not the form's area yet, and
-   * the form must not save the old one in its place.
+   * Tells the form that an area around the device's position is on its way
+   * (the device has not answered yet) or waits for a name and a confirmation:
+   * such an area is not the form's area yet, and the form must not save the
+   * old one in its place.
    */
-  onPending?: (pending: boolean) => void;
+  onPending?: (pending: AreaPending) => void;
 }) {
   const id = useId(),
     [query, setQuery] = useState(""),
@@ -236,10 +246,12 @@ export function AreaField({
       searchInput.current?.focus();
     }
   });
+  const tell = useRef(onPending);
+  tell.current = onPending;
   useEffect(() => {
-    onPending?.(!!position);
-    return () => onPending?.(false);
-  }, [position, onPending]);
+    tell.current?.(position ? "proposal" : locating ? "locating" : null);
+    return () => tell.current?.(null);
+  }, [position, locating]);
   // The form refused to save for the area: the missing thing is said at its
   // place and has the focus (a name, or a place to look for).
   useEffect(() => {
