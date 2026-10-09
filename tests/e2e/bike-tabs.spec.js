@@ -312,11 +312,16 @@ test("bike tabs: what is typed in a panel is kept, and the page does not grow wi
   const bike = await publicBike(post, page);
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto(bike.path);
-  await tab(page, "Комментарии").click();
   const draft = page.getByRole("textbox", {
     name: "Ваш комментарий",
     exact: true,
   });
+  // A click made before the page has hydrated does nothing (the tabs are
+  // buttons of the page's code): it is made again until the panel is open.
+  await expect(async () => {
+    await tab(page, "Комментарии").click();
+    await expect(draft).toBeVisible({ timeout: 2000 });
+  }).toPass({ timeout: 30000 });
   await draft.fill("Черновик комментария, который нельзя потерять");
   await tab(page, "Записи").click();
   await expect(page.locator("#journal")).toBeVisible();
