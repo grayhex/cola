@@ -106,6 +106,11 @@ test("journal lifecycle: snapshots, linked ride, reused social features, visibil
       (e) => e.status === 404,
     );
     assert.equal((await journalList(q, bike)).entries.length, 0);
+    // The count of the tab (#378) is the whole number a reader may see: none
+    // for a reader of the draft, the draft itself for its owner.
+    assert.equal((await journalList(q, bike)).total, 0);
+    assert.equal((await journalList(q, bike, other.id)).total, 0);
+    assert.equal((await journalList(q, bike, owner.id)).total, 1);
     assert.equal(
       (await journalDetail(q, saved.shareId, owner.id)).status,
       "draft",
@@ -259,6 +264,7 @@ test("journal lifecycle: snapshots, linked ride, reused social features, visibil
         (e) => e.status === 404,
       );
       assert.equal((await journalList(q, bike, viewer)).entries.length, 0);
+      assert.equal((await journalList(q, bike, viewer)).total, 0);
     }
     await assert.rejects(
       journalSocial.page(q, saved.id, other),

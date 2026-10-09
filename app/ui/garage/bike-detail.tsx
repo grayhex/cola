@@ -1,6 +1,6 @@
 "use client";
 import type * as React from "react";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import type {
   BikeDto,
   ViewerDto,
@@ -116,6 +116,38 @@ export default function BikeDetail({
           model: bike.model || "",
         });
   const [rideTotal, setRideTotal] = useState<number | null>(null);
+  // The counts in the titles of the tabs (#378): what each list says it holds
+  // for this reader, known once it has been asked, not when its tab is opened.
+  // They belong to the bike they were counted for: another bike opened in the
+  // same frame does not inherit them.
+  const [counted, setCounted] = useState<{
+    bike: string;
+    journal: number | null;
+    comments: number | null;
+  }>({ bike: bike.id, journal: null, comments: null });
+  const totals =
+    counted.bike === bike.id
+      ? counted
+      : { bike: bike.id, journal: null, comments: null };
+  const setJournalTotal = useCallback(
+    (journal: number) =>
+      setCounted((c) => ({
+        ...(c.bike === bike.id ? c : { bike: bike.id, comments: null }),
+        bike: bike.id,
+        journal,
+      })),
+    [bike.id],
+  );
+  const setCommentTotal = useCallback(
+    (comments: number) =>
+      setCounted((c) => ({
+        ...(c.bike === bike.id ? c : { bike: bike.id, journal: null }),
+        bike: bike.id,
+        comments,
+      })),
+    [bike.id],
+  );
+  const comments = totals.comments ?? bike.comments;
   // The photo whose backdrop is being taken off (#370).
   const [cutting, setCutting] = useState<PublicPhoto | null>(null);
   // Never retain a selected photo which was removed by a refreshed DTO.
@@ -152,15 +184,23 @@ export default function BikeDetail({
         panels.about || panels.passport || bike.is_public,
         "overview",
         t("Обзор"),
+        undefined,
       ],
-      [specifications, "specifications", t("Комплектация")],
-      [bike.is_public, "bike-rides", t("Покатушки")],
-      [bike.id !== "demo", "journal", t("Записи")],
-      [bike.is_public, "discussion", t("Комментарии")],
+      // The parts the tab shows: the build and the accessories, not the
+      // groups and not the factory specification beside them.
+      [
+        specifications,
+        "specifications",
+        t("Комплектация"),
+        bike.components.length,
+      ],
+      [bike.is_public, "bike-rides", t("Покатушки"), rideTotal],
+      [bike.id !== "demo", "journal", t("Записи"), totals.journal],
+      [bike.is_public, "discussion", t("Комментарии"), comments],
     ] as const
   )
     .filter(([visible]) => visible)
-    .map(([, id, label]) => ({ id, label }));
+    .map(([, id, label, count]) => ({ id, label, count }));
   const { active, select, list } = useBikeTab(tabs.map((tab) => tab.id));
   return (
     <>
@@ -252,6 +292,7 @@ export default function BikeDetail({
             quote={layout.metrics && panels.about}
             specifications={specifications}
             rideTotal={rideTotal}
+            comments={comments}
             likes={detailReaction.likes ?? bike.likes}
             onSection={(id) => select(id, true)}
             onRegister={
@@ -344,6 +385,7 @@ export default function BikeDetail({
               bike={bike}
               owner={bike.is_owner}
               preview
+              onTotal={setJournalTotal}
             />
           </BikeTabPanel>
         )}
@@ -354,7 +396,8 @@ export default function BikeDetail({
               bike={bike}
               user={user}
               variant="panel"
-              count={bike.comments}
+              count={comments}
+              onTotal={setCommentTotal}
             />
           </BikeTabPanel>
         )}

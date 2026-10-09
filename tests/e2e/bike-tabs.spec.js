@@ -89,7 +89,9 @@ async function publicBike(post, page, patch = {}) {
 }
 const tabs = (page) =>
   page.getByRole("tablist", { name: "Разделы велосипеда" });
-const tab = (page, name) => tabs(page).getByRole("tab", { name, exact: true });
+// The title of a tab may carry the count of what it holds (#378): «Записи (3)».
+const titled = (name) => new RegExp("^" + name + "( \\(\\d+\\))?$");
+const tab = (page, name) => tabs(page).getByRole("tab", { name: titled(name) });
 const visiblePanels = (page) => page.locator(".bike-tabpanel:not([hidden])");
 
 test("bike tabs: semantics, one panel at a time, direct links, reload, Back and Forward", async ({
@@ -109,7 +111,7 @@ test("bike tabs: semantics, one panel at a time, direct links, reload, Back and 
       await view.goto(bike.path);
       // Five tabs in the tablist; the overview is open, and only it.
       await expect(tabs(view).getByRole("tab")).toHaveText(
-        tabNames.map(([, name]) => name),
+        tabNames.map(([, name]) => titled(name)),
       );
       await expect(tab(view, "Обзор")).toHaveAttribute("aria-selected", "true");
       await expect(visiblePanels(view)).toHaveCount(1);
@@ -344,8 +346,8 @@ test("bike tabs: a private bike has no rides or comments, a missing tab falls ba
   await page.goto(bike.path + "#discussion");
   await expect(tabs(page).getByRole("tab")).toHaveText([
     "Обзор",
-    "Комплектация",
-    "Записи",
+    "Комплектация (2)",
+    "Записи (1)",
   ]);
   await expect(tab(page, "Обзор")).toHaveAttribute("aria-selected", "true");
   await expect(page).toHaveURL(/#discussion$/);
@@ -403,5 +405,122 @@ test("bike tabs on a phone: the row scrolls inside itself, the page does not, in
       (await new AxeBuilder({ page }).include(".bike-tabs").analyze())
         .violations,
     ).toEqual([]);
+  }
+});
+
+// #378: the title of a tab says how much it holds, as soon as the page knows —
+// the parts shown (not the groups), the whole number of rides and entries (not
+// the length of a preview), the comments with their replies. A number that is
+// not known yet is not written as a zero.
+test("bike tabs: the counts in the titles are true, never a false zero, and follow the changes", async ({
+  page,
+  browser,
+}, info) => {
+  const post = await owner(page, "Counts");
+  const bike = await publicBike(post, page);
+  // Two more entries, so that the count of the entries differs from the rides.
+  for (const title of ["Смазал цепь", "Накачал колёса"])
+    await post("journal", {
+      bikeId: bike.id,
+      kind: "service",
+      title,
+      body: "Короткая запись для счётчика вкладки.",
+      status: "published",
+      isPublic: true,
+    });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const names = (view) => tabs(view).getByRole("tab");
+  const guest = await browser.newContext(info.project.use);
+  const reader = await guest.newPage();
+  try {
+    for (const view of [page, reader]) {
+      await view.goto(bike.path);
+      await expect(names(view)).toHaveText([
+        "Обзор",
+        "Комплектация (2)",
+        "Покатушки (1)",
+        "Записи (3)",
+        "Комментарии (0)",
+      ]);
+    }
+    // The overview has no count; a draft is not counted for a reader.
+    await post("journal", {
+      bikeId: bike.id,
+      kind: "service",
+      title: "Черновик",
+      body: "Ещё не опубликовано.",
+      status: "draft",
+      isPublic: false,
+    });
+    await reader.reload();
+    await expect(tab(reader, "Записи")).toHaveText("Записи (3)");
+    // The owner sees the draft among the entries.
+    await page.reload();
+    await expect(tab(page, "Записи")).toHaveText("Записи (4)");
+
+    // The number is not written until it is known: while the list is out the
+    // title has none, and a list that failed leaves none.
+    let release = () => {};
+    const gate = new Promise((resolve) => (release = resolve));
+    await reader.route("**/api/journal?bikeId=*", async (route) => {
+      await gate;
+      await route.continue();
+    });
+    await reader.reload();
+    await expect(tab(reader, "Комплектация")).toHaveText("Комплектация (2)");
+    await expect(tab(reader, "Записи")).toHaveText("Записи");
+    release();
+    await expect(tab(reader, "Записи")).toHaveText("Записи (3)");
+    await reader.unroute("**/api/journal?bikeId=*");
+    await reader.route("**/api/journal?bikeId=*", (route) =>
+      route.fulfill({
+        status: 500,
+        contentType: "application/json",
+        body: JSON.stringify({ error: "Нет связи" }),
+      }),
+    );
+    await reader.reload();
+    await expect(tab(reader, "Комплектация")).toHaveText("Комплектация (2)");
+    await expect(tab(reader, "Записи")).toHaveText("Записи");
+    await expect(tab(reader, "Записи")).not.toContainText("0");
+    await reader.unroute("**/api/journal?bikeId=*");
+
+    // The comments: a comment and its reply are two, and the title, the number
+    // in the header and the discussion say the same.
+    await page.goto(bike.path + "#discussion");
+    const discussion = page.locator("#discussion");
+    await discussion
+      .getByRole("textbox", { name: "Ваш комментарий", exact: true })
+      .fill("Первый комментарий для счётчика");
+    await discussion
+      .getByRole("button", { name: "Отправить комментарий", exact: true })
+      .click();
+    await expect(tab(page, "Комментарии")).toHaveText("Комментарии (1)");
+    await discussion
+      .getByRole("button", { name: "Ответить", exact: true })
+      .click();
+    await discussion
+      .getByRole("textbox", { name: "Ваш ответ", exact: true })
+      .fill("Ответ на первый комментарий");
+    await discussion
+      .getByRole("button", { name: "Отправить ответ", exact: true })
+      .click();
+    await expect(tab(page, "Комментарии")).toHaveText("Комментарии (2)");
+    const metrics = page.locator(".bike-metrics");
+    await expect(
+      metrics.locator("li", { hasText: "Комментарии" }).locator("strong"),
+    ).toHaveText("2");
+    await page.reload();
+    await expect(tab(page, "Комментарии")).toHaveText("Комментарии (2)");
+    await reader.reload();
+    await expect(tab(reader, "Комментарии")).toHaveText("Комментарии (2)");
+
+    // The tab row still fits a phone: nothing of the page scrolls sideways.
+    await page.setViewportSize({ width: 360, height: 740 });
+    expect(await pageOverflow(page)).toBe(null);
+    for (const [, name] of tabNames.slice(1))
+      await expect(tab(page, name)).toBeVisible();
+  } finally {
+    await guest.close();
   }
 });

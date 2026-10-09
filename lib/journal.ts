@@ -181,6 +181,14 @@ export async function journalList(
       [bike, user, (page - 1) * 20],
     )
   ).rows;
+  // All the entries this reader may see, not the length of the page: the title
+  // of the bike's tab counts them (#378).
+  const total = (
+    await q.query<{ n: number }>(
+      `SELECT count(*)::int AS n${journalFrom} WHERE e.bike_id=$1 AND NOT u.blocked AND (e.owner_id=$2 OR (${journalPublic}))`,
+      [bike, user],
+    )
+  ).rows[0].n;
   return {
     entries: rows.slice(0, 20).map((e) => {
       const d = journalDto(e, user);
@@ -188,6 +196,7 @@ export async function journalList(
     }),
     page,
     hasMore: rows.length > 20,
+    total,
   };
 }
 /**

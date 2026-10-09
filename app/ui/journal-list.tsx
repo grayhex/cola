@@ -29,10 +29,13 @@ export default function JournalList({
   bike,
   owner = false,
   preview = false,
+  onTotal,
 }: {
   bike: BikeDto;
   owner?: boolean;
   preview?: boolean;
+  // All the entries this reader may see, for the title of the bike's tab (#378).
+  onTotal?: (total: number) => void;
 }) {
   const [data, setData] = useState<JournalListDto | null>(null),
     [page, setPage] = useState(1),
@@ -53,6 +56,9 @@ export default function JournalList({
       active = false;
     };
   }, [bike.id, page]);
+  useEffect(() => {
+    if (typeof data?.total === "number") onTotal?.(data.total);
+  }, [data, onTotal]);
   const entries =
     preview && !expanded ? data?.entries.slice(0, 3) : data?.entries;
   const hasMore = Boolean(

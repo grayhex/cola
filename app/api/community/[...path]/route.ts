@@ -33,6 +33,7 @@ import {
 } from "../../../../lib/community-validation.ts";
 import {
   commentPage,
+  bikeCommentTotal,
   replyPage,
   createComment,
   changeComment,
@@ -85,18 +86,19 @@ async function handler(
     }
     if (p[0] === "bikes" && p[2] === "comments") {
       const bike = uuid.parse(p[1]);
-      if (p.length === 3 && m === "GET")
-        return json(
-          await commentPage(
-            db,
-            bike,
-            user,
-            page(),
-            url.searchParams.has("focus")
-              ? uuid.parse(url.searchParams.get("focus"))
-              : null,
-          ),
+      if (p.length === 3 && m === "GET") {
+        const thread = await commentPage(
+          db,
+          bike,
+          user,
+          page(),
+          url.searchParams.has("focus")
+            ? uuid.parse(url.searchParams.get("focus"))
+            : null,
         );
+        // The number of the tab (#378), once the bike is known to be readable.
+        return json({ ...thread, total: await bikeCommentTotal(db, bike) });
+      }
       if (p.length === 5 && p[4] === "replies" && m === "GET")
         return json(await replyPage(db, bike, uuid.parse(p[3]), user, page()));
       if (p.length === 3 && m === "POST") {

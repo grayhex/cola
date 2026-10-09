@@ -314,6 +314,11 @@
     color: var(--text-secondary);
     font: var(--weight-medium) var(--text-base) / 1 var(--font-sans);
   }
+  /* «Записи (3)»: the number is part of the title, a little quieter. */
+  .bike-detail .ui-tabs.bike-tabs .bike-tab-count {
+    font-variant-numeric: tabular-nums;
+    opacity: 0.8;
+  }
   .bike-detail .ui-tabs.bike-tabs > button:hover {
     background: var(--surface-hover);
     color: var(--text);

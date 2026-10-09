@@ -24,14 +24,16 @@ import RideCard from "./ride-card.tsx";
 import JournalCard from "./journal-card.tsx";
 import { MotionList } from "./motion.tsx";
 import {
-  Check,
   MessagesSquare,
+  MonitorSmartphone,
+  Trophy,
   Users,
   NotebookPen,
   ShoppingBag,
   RefreshCw,
 } from "./icons.tsx";
 import LocalDate from "./local-date.tsx";
+import NotificationItem, { type ReadControl } from "./notification-item.tsx";
 import { daysLabel } from "../../lib/market-types.ts";
 import BikeGrid from "./bike-grid.tsx";
 import {
@@ -81,13 +83,6 @@ const eventText: Record<string, string> = {
   comment: "прокомментировал",
   reply: "ответил вам",
 };
-const noticeTime = (value: string) =>
-  new Date(value).toLocaleString("ru-RU", {
-    day: "numeric",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 // The site's notice about a listing's term (#116). The text follows the
 // listing as it is now: extended, sold or still ending.
 function MarketNotice({
@@ -95,16 +90,16 @@ function MarketNotice({
   days,
   busy,
   onExtend,
-  onRead,
+  read,
 }: {
   notice: MarketNoticeDto;
   days: number;
   busy: boolean;
   onExtend: () => void;
-  onRead: () => void;
+  read: ReadControl;
 }) {
   const listing = (
-    <a href={n.target.href} onClick={() => !n.readAt && onRead()}>
+    <a href={n.target.href} onClick={() => !n.readAt && read.onRead()}>
       {n.target.name}
     </a>
   );
@@ -115,28 +110,16 @@ function MarketNotice({
     />
   );
   return (
-    <li className={n.readAt ? "" : "unread"}>
-      <span className="notification-icon" aria-hidden="true">
-        <ShoppingBag size={18} />
-      </span>
-      <div>
-        <p>
-          {n.target.state === "expiring" ? (
-            <>
-              Объявление {listing} снимется с публикации {until}. Продлите его,
-              если оно ещё актуально.
-            </>
-          ) : n.target.state === "expired" ? (
-            <>Срок объявления {listing} истёк: его нет в поиске и ленте.</>
-          ) : n.target.state === "extended" ? (
-            <>
-              Объявление {listing} продлено до {until}.
-            </>
-          ) : (
-            <>Объявление {listing} снято с публикации.</>
-          )}
-        </p>
-        {["expiring", "expired"].includes(n.target.state) && (
+    <NotificationItem
+      notice={n}
+      read={read}
+      lead={
+        <span className="notification-icon" aria-hidden="true">
+          <ShoppingBag size={18} />
+        </span>
+      }
+      action={
+        ["expiring", "expired"].includes(n.target.state) && (
           <button
             type="button"
             className="button small"
@@ -146,19 +129,24 @@ function MarketNotice({
             <RefreshCw size={14} aria-hidden="true" />
             Продлить на {daysLabel(days)}
           </button>
-        )}
-        <time dateTime={n.createdAt}>{noticeTime(n.createdAt)}</time>
-      </div>
-      {!n.readAt && (
-        <button
-          className="quiet"
-          aria-label="Отметить прочитанным"
-          onClick={onRead}
-        >
-          <Check size={14} />
-        </button>
+        )
+      }
+    >
+      {n.target.state === "expiring" ? (
+        <>
+          Объявление {listing} снимется с публикации {until}. Продлите его, если
+          оно ещё актуально.
+        </>
+      ) : n.target.state === "expired" ? (
+        <>Срок объявления {listing} истёк: его нет в поиске и ленте.</>
+      ) : n.target.state === "extended" ? (
+        <>
+          Объявление {listing} продлено до {until}.
+        </>
+      ) : (
+        <>Объявление {listing} снято с публикации.</>
       )}
-    </li>
+    </NotificationItem>
   );
 }
 export default function CommunityPage({
@@ -270,10 +258,37 @@ export default function CommunityPage({
     }, 30000);
     return () => clearInterval(timer);
   }, [userId, kind, refresh]);
-  async function read(id: string) {
-    await socialApi("community/notifications/" + id + "/read", "PATCH");
-    await refresh();
-  }
+  // «Отметить прочитанным» of one notice (#378): the same request for every
+  // kind, its own state and error per notice, never twice at once. The list is
+  // asked again with the filters of the moment, so a notice that came while the
+  // request was out is not lost and the page and the filter stay.
+  const [reading, setReading] = useState<string[]>([]),
+    [readFailed, setReadFailed] = useState<Record<string, string>>({});
+  const readingNow = useRef(new Set<string>());
+  const refreshNow = useRef(refresh);
+  refreshNow.current = refresh;
+  const read = useCallback(async (id: string) => {
+    if (readingNow.current.has(id)) return;
+    readingNow.current.add(id);
+    setReading([...readingNow.current]);
+    setReadFailed((failed) =>
+      Object.fromEntries(Object.entries(failed).filter(([key]) => key !== id)),
+    );
+    try {
+      await socialApi("community/notifications/" + id + "/read", "PATCH");
+      await refreshNow.current();
+    } catch (e) {
+      setReadFailed((failed) => ({ ...failed, [id]: errorMessage(e) }));
+    } finally {
+      readingNow.current.delete(id);
+      setReading([...readingNow.current]);
+    }
+  }, []);
+  const readOf = (id: string): ReadControl => ({
+    pending: reading.includes(id),
+    error: readFailed[id] || "",
+    onRead: () => void read(id),
+  });
   // «Продлить» right in the notice: one click, a new full term (#116).
   async function extend(n: MarketNoticeDto) {
     setBusy(true);
@@ -561,104 +576,88 @@ export default function CommunityPage({
                     days={settings?.marketListingDays || 60}
                     busy={busy}
                     onExtend={() => extend(n)}
-                    onRead={() => read(n.id).catch((e) => setError(e.message))}
+                    read={readOf(n.id)}
                   />
                 ) : n.type === "session_reuse" ? (
-                  <li key={n.id} className={n.readAt ? "" : "unread"}>
-                    <div>
-                      <p>
-                        Токен устройства использовали повторно, сессия
-                        завершена. Если это были не вы, смените пароль.
-                      </p>
+                  <NotificationItem
+                    key={n.id}
+                    notice={n}
+                    read={readOf(n.id)}
+                    lead={
+                      <span className="notification-icon" aria-hidden="true">
+                        <MonitorSmartphone size={18} />
+                      </span>
+                    }
+                    action={
                       <Link
                         href={n.target.href}
-                        onClick={() => {
-                          read(n.id).catch(() => {});
-                        }}
+                        onClick={() => void read(n.id)}
                       >
                         Проверить устройства
                       </Link>
-                      <time dateTime={n.createdAt}>
-                        {noticeTime(n.createdAt)}
-                      </time>
-                    </div>
-                  </li>
+                    }
+                  >
+                    Токен устройства использовали повторно, сессия завершена.
+                    Если это были не вы, смените пароль.
+                  </NotificationItem>
                 ) : n.type === "bike_week" ? (
-                  <li key={n.id} className={n.readAt ? "" : "unread"}>
-                    <div>
-                      <p>Ваш велосипед — велосипед недели: {n.target.name}</p>
+                  <NotificationItem
+                    key={n.id}
+                    notice={n}
+                    read={readOf(n.id)}
+                    lead={
+                      <span className="notification-icon" aria-hidden="true">
+                        <Trophy size={18} />
+                      </span>
+                    }
+                    action={
                       <Link
                         href={n.target.href}
-                        onClick={() => {
-                          read(n.id).catch(() => {});
-                        }}
+                        onClick={() => void read(n.id)}
                       >
                         Подготовить материал для главной
                       </Link>
-                      <time dateTime={n.createdAt}>
-                        {noticeTime(n.createdAt)}
-                      </time>
-                    </div>
-                  </li>
+                    }
+                  >
+                    Ваш велосипед — велосипед недели: {n.target.name}
+                  </NotificationItem>
                 ) : (
-                  <li key={n.id} className={n.readAt ? "" : "unread"}>
-                    {n.actor && (
+                  <NotificationItem
+                    key={n.id}
+                    notice={n}
+                    read={readOf(n.id)}
+                    lead={
+                      n.actor && (
+                        <a
+                          href={profilePath(n.actor.username)}
+                          aria-label={"Профиль: " + personName(n.actor)}
+                        >
+                          <Avatar person={n.actor} />
+                        </a>
+                      )
+                    }
+                  >
+                    {n.actor ? (
                       <a
+                        className="notification-actor"
                         href={profilePath(n.actor.username)}
-                        aria-label={"Профиль: " + personName(n.actor)}
                       >
-                        <Avatar person={n.actor} />
+                        {personName(n.actor)}
+                      </a>
+                    ) : (
+                      <span className="notification-actor">ColaBike ·</span>
+                    )}
+                    {" " + eventText[n.type] + " "}
+                    {n.type !== "follow" && (
+                      <a href={n.target.href} onClick={() => void read(n.id)}>
+                        {n.type === "reply"
+                          ? "в обсуждении " + n.target.name
+                          : n.type === "intent_published"
+                            ? "открыть «Хочу кататься»"
+                            : n.target.name}
                       </a>
                     )}
-                    <div>
-                      <p>
-                        {n.actor ? (
-                          <a
-                            className="notification-actor"
-                            href={profilePath(n.actor.username)}
-                          >
-                            {personName(n.actor)}
-                          </a>
-                        ) : (
-                          <span className="notification-actor">ColaBike ·</span>
-                        )}
-                        {" " + eventText[n.type] + " "}
-                        {n.type !== "follow" && (
-                          <a
-                            href={n.target.href}
-                            onClick={() => {
-                              read(n.id).catch(() => {});
-                            }}
-                          >
-                            {n.type === "reply"
-                              ? "в обсуждении " + n.target.name
-                              : n.type === "intent_published"
-                                ? "открыть «Хочу кататься»"
-                                : n.target.name}
-                          </a>
-                        )}
-                      </p>
-                      <time dateTime={n.createdAt}>
-                        {new Date(n.createdAt).toLocaleString("ru-RU", {
-                          day: "numeric",
-                          month: "short",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </time>
-                    </div>
-                    {!n.readAt && (
-                      <button
-                        className="quiet"
-                        aria-label="Отметить прочитанным"
-                        onClick={() =>
-                          read(n.id).catch((e) => setError(e.message))
-                        }
-                      >
-                        <Check size={14} />
-                      </button>
-                    )}
-                  </li>
+                  </NotificationItem>
                 ),
               )}
             </ul>
