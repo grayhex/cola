@@ -19,6 +19,7 @@ const cardDelay = (
 });
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import styles from "./records.module.css";
 import { socialApi, SocialHeader, SocialFooter } from "./social-primitives.tsx";
 import { useSite } from "./site-provider.tsx";
@@ -233,12 +234,16 @@ const tabs = [
 ] as const;
 export default function Records() {
   const { viewer: user } = useSite();
+  // The tab is the address: «Рекорды» and «Награды» of the menu (#382) lead
+  // here with and without `?tab=awards`, and the page already open follows
+  // them, and «Назад» / «Вперёд», without loading anew.
+  const addressed =
+    useSearchParams()?.get("tab") === "awards" ? "awards" : "records";
   const [data, setData] = useState<RecordsDto | null>(null),
     [error, setError] = useState(""),
-    [tab, setTab] = useState("records");
+    [tab, setTab] = useState(addressed);
+  useEffect(() => setTab(addressed), [addressed]);
   useEffect(() => {
-    if (new URLSearchParams(location.search).get("tab") === "awards")
-      setTab("awards");
     let active = true;
     socialApi<RecordsDto>("game/records")
       .then((d) => {

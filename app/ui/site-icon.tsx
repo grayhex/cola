@@ -2,6 +2,7 @@
 import type { SiteSettings } from "../../lib/contracts.ts";
 import type { LucideIcon } from "lucide-react";
 import {
+  Award,
   ArrowLeft,
   ArrowRight,
   Bell,
@@ -25,6 +26,7 @@ import {
   Lock,
   LogOut,
   Menu,
+  Medal,
   MessageCircle,
   Milestone,
   Monitor,
@@ -65,6 +67,7 @@ export const slotIcons: Record<string, LucideIcon> = {
   journal: NotebookPen,
   articles: BookOpen,
   rides: Route,
+  achievements: Award,
   market: ShoppingBag,
   about: Info,
   profile: UserRound,
@@ -73,6 +76,7 @@ export const slotIcons: Record<string, LucideIcon> = {
   subscriptions: UsersRound,
   saved: Bookmark,
   records: Trophy,
+  awards: Medal,
   admin: Settings,
   logout: LogOut,
   search: Search,

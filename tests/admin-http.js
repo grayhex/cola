@@ -270,6 +270,8 @@ try {
     { faviconId: riveAsset.toUpperCase() },
     { heroImageId: riveAsset },
     { heroBackgroundImageId: riveAsset },
+    { heroBackgroundLightImageId: riveAsset },
+    { heroBackgroundLightImageId: "not-a-uuid" },
     {
       componentIllustrations: {
         groups: { cockpit: riveAsset.toUpperCase() },
@@ -292,6 +294,9 @@ try {
   const value = {
     ...latest.settings,
     heroAnimationsEnabled: true,
+    // The hero has a picture of its own for each theme (#382).
+    heroBackgroundLightImageId: asset,
+    heroBackgroundImageId: null,
     heroTitleAnimation: { kind: "rive", assetId: riveAsset },
     iconColors: { bike: "#aa44cc" },
     componentIllustrations: {
@@ -310,6 +315,8 @@ try {
   );
   const publicSettings = (await guest("site")).data.settings;
   assert.equal(publicSettings.heroAnimationsEnabled, true);
+  assert.equal(publicSettings.heroBackgroundLightImageId, asset);
+  assert.equal(publicSettings.heroBackgroundImageId, null);
   assert.deepEqual(
     publicSettings.componentIllustrations,
     value.componentIllustrations,

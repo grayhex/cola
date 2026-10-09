@@ -107,9 +107,14 @@ test("navigation: real destinations, account, keyboard, configurable About and a
         page.getByRole("link", { name: "Все велосипеды", exact: true }),
       ).toBeFocused();
       await page.keyboard.press("End");
+      // «Рекорды» moved to «Достижения» (#382): a guest's last item is now
+      // «Популярные», and the section has no records.
+      await expect(
+        page.getByRole("link", { name: "Популярные", exact: true }),
+      ).toBeFocused();
       await expect(
         page.getByRole("link", { name: "Рекорды", exact: true }),
-      ).toBeFocused();
+      ).toHaveCount(0);
       await page.keyboard.press("Home");
       await expect(
         page.getByRole("link", { name: "Все велосипеды", exact: true }),

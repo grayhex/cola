@@ -368,6 +368,7 @@ export default function GlobalHeader({
                       journal: "/journal",
                       articles: "/articles",
                       rides: "/rides",
+                      achievements: "/records",
                       market: "/market",
                     }[section.id]
                   }
@@ -502,6 +503,7 @@ export default function GlobalHeader({
                             journal: "/journal",
                             articles: "/articles",
                             rides: "/rides",
+                            achievements: "/records",
                             market: "/market",
                           }[section.id]
                         }

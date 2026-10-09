@@ -168,7 +168,9 @@
 .header :global(.search-trigger) kbd {
   display: none;
 }
-@media (min-width: 1280px) {
+/* The search pill (#382): with eight sections the menu leaves room for it only
+   from 1500 px; below, a round icon, as on a narrower screen. */
+@media (min-width: 1500px) {
   .header :global(.search-trigger) {
     justify-content: flex-start;
     gap: var(--space-2);
@@ -469,7 +471,9 @@ dialog.drawer {
     transform: translateY(-2px);
   }
 }
-@media (max-width: 1100px) {
+/* The sections fold into the panel where the eight of them no longer fit
+   between the brand and the utilities (#382). */
+@media (max-width: 1275px) {
   .header :global(.brand) {
     margin-right: auto;
   }
@@ -540,11 +544,6 @@ dialog.drawer {
   object-fit: contain;
 }
 
-@media (min-width: 1280px) and (max-width: 1350px) {
-  .header :global(.search-trigger) {
-    width: 140px;
-  }
-}
 /* The avatar is a link to the account; its menu opens from the chevron. */
 .header :global(.account-disclosure) > :global(.nav-chevron) {
   min-width: 24px;

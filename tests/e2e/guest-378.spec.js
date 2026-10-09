@@ -60,12 +60,34 @@ test("a guest sees «нужна регистрация» under the buttons, in t
   await page.goto("/");
   const box = together(page);
   await expect(box.getByRole("link", { name: "Хочу кататься" })).toBeVisible();
-  const note = box.locator("[data-registration-note]");
+  // The footnote is in the block, below the buttons (#382), not inside them.
+  const note = page.locator("[data-registration-note]");
   await expect(note).toHaveText("нужна регистрация");
   // Under the buttons, not beside them.
   const buttons = await box.locator(".together-buttons").boundingBox();
   const line = await note.boundingBox();
   expect(line.y).toBeGreaterThanOrEqual(buttons.y + buttons.height - 1);
+  // #382: the title carries a small «*» (not part of its name), the footnote is
+  // one small line at the bottom left of the block, and it explains the links.
+  await expect(
+    page.getByRole("heading", { name: "Покататься вместе" }),
+  ).toHaveText(/^Покататься вместе\*$/);
+  await expect(
+    page.getByRole("heading", { name: "Покататься вместе", exact: true }),
+  ).toBeVisible();
+  await expect(page.locator("#together-heading sup")).toHaveCount(1);
+  await expect(page.locator("[data-registration-note]")).toHaveCount(1);
+  const copy = await page.locator("[class*='togetherCopy']").boundingBox();
+  const mark = await note.locator("xpath=..").boundingBox();
+  expect(mark.x - copy.x).toBeLessThanOrEqual(48);
+  expect(copy.y + copy.height - (mark.y + mark.height)).toBeLessThanOrEqual(40);
+  expect(
+    await note.evaluate((e) => parseFloat(getComputedStyle(e).fontSize)),
+  ).toBeLessThanOrEqual(12);
+  for (const name of ["Хочу кататься", "Организовать покатушку"])
+    await expect(box.getByRole("link", { name })).toHaveAccessibleDescription(
+      "нужна регистрация",
+    );
   expect(
     (await new AxeBuilder({ page }).include(".together-actions").analyze())
       .violations,
@@ -99,9 +121,9 @@ test("a guest sees «нужна регистрация» under the buttons, in t
       }),
       async () => {
         await page.goto("/");
-        await expect(
-          together(page).locator("[data-registration-note]"),
-        ).toHaveText("Нужен аккаунт ColaBike");
+        await expect(page.locator("[data-registration-note]")).toHaveText(
+          "Нужен аккаунт ColaBike",
+        );
         await page.goto("/rides");
         await expect(
           page.locator(".page-actions-stack [data-registration-note]"),
@@ -115,6 +137,8 @@ test("a guest sees «нужна регистрация» under the buttons, in t
         await page.goto("/");
         await expect(together(page).getByRole("link").first()).toBeVisible();
         await expect(page.locator("[data-registration-note]")).toHaveCount(0);
+        // No sign without words to explain it.
+        await expect(page.locator("#together-heading sup")).toHaveCount(0);
       },
     );
   } finally {
@@ -143,6 +167,10 @@ test("a guest sees «нужна регистрация» under the buttons, in t
       together(mine).getByRole("button", { name: "Хочу кататься" }),
     ).toBeVisible();
     await expect(mine.locator("[data-registration-note]")).toHaveCount(0);
+    await expect(mine.locator("#together-heading sup")).toHaveCount(0);
+    await expect(
+      mine.getByRole("heading", { name: "Покататься вместе" }),
+    ).toHaveText("Покататься вместе");
   } finally {
     await member.close();
   }

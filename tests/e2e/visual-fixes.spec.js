@@ -198,7 +198,7 @@ test("admin: the design system opens next to the admin menu; on a phone the save
   // Static hero settings still use the shared dirty/save bar.
   await page.getByRole("button", { name: "Главная", exact: true }).click();
   await expect(
-    page.getByLabel("Фоновое изображение hero", { exact: true }),
+    page.getByLabel("Hero — тёмная тема", { exact: true }),
   ).toBeVisible();
   const headline = page.getByRole("textbox", { name: /^Заголовок hero/ });
   await expect(page.getByLabel("Фон блока · светлая тема")).toHaveCount(0);

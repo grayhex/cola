@@ -21,10 +21,16 @@ export default function TogetherActions({
   signedIn,
   className = "",
   onSaved,
+  note = true,
+  describedBy,
 }: {
   signedIn: boolean;
   className?: string;
   onSaved?: (kind: ActionKind) => void;
+  /** `false`: the page puts the note of a guest where it wants it (#382). */
+  note?: boolean;
+  /** The element that explains a guest's links («* нужна регистрация»). */
+  describedBy?: string;
 }) {
   const [open, setOpen] = useState<ActionKind | null>(null),
     [loading, setLoading] = useState<ActionKind | null>(null),
@@ -92,18 +98,26 @@ export default function TogetherActions({
                 opens the form of registering; after signing up or in it is
                 the same «Новое намерение» window a member gets here (#264),
                 or the planner, and nothing is created by it. */}
-            <Link className="button" href={guestRidingHref.intent}>
+            <Link
+              className="button"
+              href={guestRidingHref.intent}
+              aria-describedby={describedBy}
+            >
               <CalendarDays size={16} aria-hidden="true" />
               Хочу кататься
             </Link>
-            <Link className="button secondary" href={guestRidingHref.plan}>
+            <Link
+              className="button secondary"
+              href={guestRidingHref.plan}
+              aria-describedby={describedBy}
+            >
               <SiteIcon name="plan" />
               Организовать покатушку
             </Link>
           </>
         )}
       </div>
-      {!signedIn && <RegistrationNote />}
+      {!signedIn && note && <RegistrationNote />}
       {error && (
         <p role="alert" className="error">
           {error}

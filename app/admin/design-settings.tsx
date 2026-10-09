@@ -133,9 +133,25 @@ export function HomepageSettings({
         Скорость ленты событий. Наведение и фокус временно останавливают её;
         кнопка рядом с Live ставит на паузу. Рекорды прокручиваются вручную.
       </p>
+      {/* Two independent pictures (#382): the light theme has its own, never
+          the dark one filtered; without it the dark one stands in both. */}
       <AssetPicker
-        label="Фоновое изображение hero"
-        help="Рекомендуем: минимум 2400×1030 px, широкий формат около 21:9. Слева ~45% спокойного фона под текст, основной сюжет справа. PNG, JPEG или WebP автоматически оптимизируются."
+        label="Hero — светлая тема"
+        help="Отдельная картинка для светлой темы, не инверсия тёмной. Пока она не выбрана, в светлой теме показывается картинка тёмной. Рекомендуем: минимум 2400×1030 px, широкий формат около 21:9, слева ~45% спокойного фона под текст."
+        recommendedSize={{ width: 2400, height: 1030 }}
+        value={s.heroBackgroundLightImageId}
+        assets={assets.filter((asset) => asset.format === "image")}
+        busy={busy}
+        emptyLabel="Как в тёмной теме"
+        onChange={(id) => onChange("heroBackgroundLightImageId", id)}
+        onUpload={async (file) => {
+          const asset = await onUpload(file);
+          if (asset) onChange("heroBackgroundLightImageId", asset.id);
+        }}
+      />
+      <AssetPicker
+        label="Hero — тёмная тема"
+        help="Картинка тёмной темы; она же запасная для светлой, пока у той нет своей. Рекомендуем: минимум 2400×1030 px, широкий формат около 21:9. Слева ~45% спокойного фона под текст, основной сюжет справа. PNG, JPEG или WebP автоматически оптимизируются."
         recommendedSize={{ width: 2400, height: 1030 }}
         value={s.heroBackgroundImageId}
         assets={assets.filter((asset) => asset.format === "image")}

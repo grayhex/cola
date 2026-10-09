@@ -26,6 +26,24 @@
   object-fit: cover;
   object-position: 75% center;
 }
+/* The picture of the other theme is not shown, and being lazy and hidden it is
+   not fetched (#382). `data-theme` of the page is the theme in force (the
+   script in the head sets it before the first paint); «system» without the
+   script follows the screen. */
+:global(html[data-theme="dark"]) .heroImage[data-hero-theme="light"],
+:global(html[data-theme="light"]) .heroImage[data-hero-theme="dark"] {
+  display: none;
+}
+@media (prefers-color-scheme: dark) {
+  :global(html[data-theme="system"]) .heroImage[data-hero-theme="light"] {
+    display: none;
+  }
+}
+@media (prefers-color-scheme: light) {
+  :global(html[data-theme="system"]) .heroImage[data-hero-theme="dark"] {
+    display: none;
+  }
+}
 .hero::before {
   content: "";
   position: absolute;
@@ -215,7 +233,26 @@
   position: relative;
   isolation: isolate;
   overflow: hidden;
+  /* A column, so that the footnote of a guest (#382) stands at the bottom left
+     of the block, whatever the height of the panel beside it. */
+  display: flex;
+  flex-direction: column;
   padding: var(--space-8) var(--space-10);
+}
+.togetherCopy > p.footnote {
+  max-width: none;
+  margin: auto 0 0;
+  padding-top: var(--space-4);
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  line-height: var(--leading-snug);
+}
+.footnoteMark {
+  margin-left: 0.1em;
+  font-size: 0.55em;
+  font-weight: var(--weight-bold);
+  line-height: 0;
+  vertical-align: super;
 }
 .togetherCopy > h2 {
   margin: var(--space-3) 0;
