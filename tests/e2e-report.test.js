@@ -27,23 +27,32 @@ function report(project, files, { duration = 60000 } = {}) {
       suites: [
         {
           title: "group",
-          specs: specs.map(({ title, line, status = "expected", results }) => ({
-            title,
-            file,
-            line,
-            tests: [
-              {
-                projectName: project,
-                status,
-                results: results ?? [
-                  {
-                    status: status === "skipped" ? "skipped" : "passed",
-                    duration: 1000,
-                  },
-                ],
-              },
-            ],
-          })),
+          specs: specs.map(
+            ({
+              title,
+              line,
+              id = `${file}:${title}`,
+              status = "expected",
+              results,
+            }) => ({
+              id,
+              title,
+              file,
+              line,
+              tests: [
+                {
+                  projectName: project,
+                  status,
+                  results: results ?? [
+                    {
+                      status: status === "skipped" ? "skipped" : "passed",
+                      duration: 1000,
+                    },
+                  ],
+                },
+              ],
+            }),
+          ),
         },
       ],
     })),
@@ -75,12 +84,36 @@ const good = () => [
 ];
 const expected = { projects: ["chromium", "webkit-mobile"], total: 2 };
 
-test("tests are named by project, file, line and title, wherever the suite nests them", () => {
+test("tests retain Playwright's native identity wherever the suite nests them", () => {
   assert.deepEqual(listedIds(report("chromium", A)), [
-    testId("chromium", "a.spec.js", 3, "one"),
-    testId("chromium", "a.spec.js", 9, "two"),
+    testId("chromium", "a.spec.js", "a.spec.js:one", "one"),
+    testId("chromium", "a.spec.js", "a.spec.js:two", "two"),
   ]);
   assert.equal(collectTests({ suites: [] }).length, 0);
+});
+
+test("source-map line changes do not turn listed tests into missing results", () => {
+  const evidence = good();
+  const shifted = Object.fromEntries(
+    Object.entries(A).map(([file, specs]) => [
+      file,
+      specs.map((spec) => ({ ...spec, line: spec.line + 7 })),
+    ]),
+  );
+  evidence[0].summary = summarizeRun(report("chromium", shifted));
+  assert.deepEqual(verifyRun(evidence, expected), []);
+});
+
+test("equal titles in separate describe blocks remain distinct; missing ids fail closed", () => {
+  const data = report("chromium", {
+    "a.spec.js": [
+      { title: "same", line: 3, id: "first-describe-id" },
+      { title: "same", line: 3, id: "second-describe-id" },
+    ],
+  });
+  assert.equal(new Set(listedIds(data)).size, 2);
+  delete data.suites[0].suites[0].specs[0].id;
+  assert.throws(() => listedIds(data), /Missing Playwright test id/);
 });
 
 test("a run is counted: passed, skipped, failed, flaky and retried tests apart", () => {
@@ -156,7 +189,7 @@ test("shards that lose or repeat a test, or disagree on the list, are refused", 
   lost[1] = shard("chromium", 2, {});
   assert.match(
     verifyRun(lost, expected).join("\n"),
-    /Not in any shard: chromium\|b\.spec\.js:4\|three/,
+    /Not in any shard: chromium\|b\.spec\.js\|b\.spec\.js:three\|three/,
   );
   const twice = good();
   twice[1] = shard("chromium", 2, both);
@@ -165,7 +198,7 @@ test("shards that lose or repeat a test, or disagree on the list, are refused", 
   alien[1] = shard("chromium", 2, { "c.spec.js": [{ title: "new", line: 1 }] });
   assert.match(
     verifyRun(alien, expected).join("\n"),
-    /not in the list: chromium\|c\.spec\.js:1\|new/,
+    /not in the list: chromium\|c\.spec\.js\|c\.spec\.js:new\|new/,
   );
   const other = good();
   other[1] = shard("chromium", 2, B, {
@@ -202,7 +235,7 @@ test("a red shard, a missing report and a test without a result are not a pass",
   short[3] = shard("webkit-mobile", 2, B, both, 2, {});
   assert.match(
     verifyRun(short, expected).join("\n"),
-    /has no result for webkit-mobile\|b\.spec\.js:4\|three/,
+    /has no result for webkit-mobile\|b\.spec\.js\|b\.spec\.js:three\|three/,
   );
   const extra = good();
   extra[3] = shard("webkit-mobile", 2, B, both, 2, both);

@@ -13,9 +13,12 @@ import { readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
-/** The test as the report and the manifest both name it. */
-export const testId = (project, file, line, title) =>
-  `${project}|${file}:${line}|${title}`;
+/** Playwright's id includes the project and full title path, not source-map lines. */
+export const testId = (project, file, playwrightId, title) => {
+  if (typeof playwrightId !== "string" || !playwrightId)
+    throw new Error(`Missing Playwright test id: ${project}|${file}|${title}`);
+  return `${project}|${file}|${playwrightId}|${title}`;
+};
 
 /** Every test of a `--list` / run report as `{ id, project, file, test }`. */
 export function collectTests(report) {
@@ -24,7 +27,7 @@ export function collectTests(report) {
     for (const spec of suite.specs ?? [])
       for (const test of spec.tests ?? [])
         out.push({
-          id: testId(test.projectName, spec.file, spec.line, spec.title),
+          id: testId(test.projectName, spec.file, spec.id, spec.title),
           project: test.projectName,
           file: spec.file,
           test,
