@@ -1,43 +1,14 @@
 "use client";
 import type { TraceEvent } from "../../lib/resolver-stream.ts";
+import {
+  failureReasons,
+  significantEvents,
+  traceLabels as labels,
+} from "../../lib/resolver-progress.ts";
 import { Check, LoaderCircle, TriangleAlert } from "./icons.tsx";
-const labels: Record<string, string> = {
-  retailer_search_started: "Ищем комплектацию в магазинах",
-  resolve_started: "Начинаем поиск",
-  cache_checked: "Проверяем кеш",
-  cache_hit: "Найдено в кеше",
-  source_planned: "Источники поиска",
-  source_started: "Проверяем источник",
-  source_connected: "Соединение установлено",
-  discovery_started: "Ищем модель в каталоге",
-  candidate_found: "Найдены варианты",
-  candidate_selected: "Модель выбрана",
-  store_checked: "Магазин проверен",
-  document_fetch_started: "Загружаем страницу",
-  document_fetched: "Страница загружена",
-  structured_data_found: "Найдены данные страницы",
-  spec_section_found: "Найден раздел комплектации",
-  extractor_started: "Анализируем разметку",
-  fields_extracted: "Извлечены характеристики",
-  normalization_started: "Определяем компоненты",
-  components_recognized: "Компоненты распознаны",
-  source_failed: "Источник не дал комплектацию",
-  fallback_started: "Пробуем другой способ",
-  conflict_found: "Есть расхождения — проверьте результат",
-  resolved: "Комплектация готова",
-  partial: "Часть комплектации готова",
-  failed: "Поиск завершён без комплектации",
-  completed: "Поиск завершён",
-};
-const failureReasons: Record<string, string> = {
-  http_403: "сайт отклонил запрос",
-  access_challenge: "сайт требует проверку посетителя",
-  http_429: "слишком много запросов",
-  timeout: "не ответил вовремя",
-  dns_failed: "адрес не найден",
-  blocked_source: "адрес заблокирован настройками",
-  connection_failed: "нет соединения",
-};
+
+// The full technical log (the admin Resolver Inspector). The wizard shows the
+// short status instead: ResolverProgress (#374).
 export default function ResolverTimeline({
   events,
   running,
@@ -46,15 +17,7 @@ export default function ResolverTimeline({
   running?: boolean;
 }) {
   if (!events.length && !running) return null;
-  const significant = events.filter(
-    (e) =>
-      ![
-        "extractor_started",
-        "cache_checked",
-        "source_started",
-        "completed",
-      ].includes(e.event) && !(e.event === "fields_extracted" && !e.count),
-  );
+  const significant = significantEvents(events);
   function rows(list: TraceEvent[]) {
     return (
       <ol>

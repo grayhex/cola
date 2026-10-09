@@ -40,6 +40,7 @@ export const defaultSettings: SiteSettings = {
   aboutTechnologyImageId: null,
   intentDialogGraphic: null,
   planDialogGraphic: null,
+  wizardSearchGraphic: null,
   authImageId: null,
   authRegisterImageId: null,
   footerImage1Id: null,

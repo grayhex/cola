@@ -56,7 +56,7 @@ export function MotionList({ children }: { children: React.ReactNode }) {
 // Import the tiny WAAPI-based Motion entry only for an interaction, never for
 // first paint. Failure or a slow import must not delay or hide the real state.
 let runtime: Promise<typeof MiniMotion> | null;
-function loadMotion() {
+export function loadMotion() {
   return (runtime ??= import("motion/mini").catch((error) => {
     runtime = null;
     throw error;

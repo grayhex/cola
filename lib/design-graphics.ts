@@ -133,4 +133,13 @@ export const planningGraphicSlots = [
     section: "system",
     planning: true,
   },
+  // Above the search of the bike wizard's first step (#374).
+  {
+    key: "wizardSearchGraphic",
+    label: "Мастер велосипеда, шаг «Поиск» · картинка или анимация",
+    group: "Мастер велосипеда",
+    emptyLabel: "Без картинки",
+    section: "system",
+    planning: true,
+  },
 ] as const;

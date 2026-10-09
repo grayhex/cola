@@ -24,9 +24,19 @@
 .graphic:has([data-rive-ready]) .fallback {
   visibility: hidden;
 }
+/* Above the search of the wizard (#374): a picture of its own, not a mark. */
+.graphic.wide {
+  width: min(100%, 480px);
+  height: clamp(96px, 22vw, 180px);
+  margin: 0 auto var(--space-4);
+}
 @media (max-width: 600px) {
   .graphic {
     width: var(--space-10);
     height: var(--space-10);
+  }
+  .graphic.wide {
+    width: min(100%, 320px);
+    height: 120px;
   }
 }

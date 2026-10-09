@@ -34,8 +34,15 @@ test("wizard live trace, stop, partial import and mobile review", async ({
   await dialog
     .getByRole("button", { name: "Найти комплектацию", exact: true })
     .click();
-  await expect(dialog.locator(".resolver-timeline")).toBeVisible();
+  // The status of the search (#374) is under the field at once, and ends with
+  // the variants offered: nothing is drawn as found yet.
+  await expect(dialog.locator(".resolver-run")).toBeVisible();
   await expect(dialog.locator(".wizard-candidate").first()).toBeVisible();
+  await expect(dialog.locator(".resolver-run")).toHaveAttribute(
+    "data-outcome",
+    "ambiguous",
+  );
+  await expect(dialog.locator(".resolver-run-marks")).toHaveCount(0);
   await dialog.locator(".wizard-candidate").first().click();
   await expect(dialog.locator(".wizard-found")).toBeVisible();
   await expect(dialog.locator(".wizard-found")).toContainText(
@@ -44,10 +51,32 @@ test("wizard live trace, stop, partial import and mobile review", async ({
   await expect(
     dialog.getByRole("link", { name: "Источник комплектации" }),
   ).toHaveAttribute("href", /giant-bicycles/);
-  await dialog.locator(".resolver-timeline summary").click();
-  await expect(dialog.locator(".resolver-timeline")).toContainText(
+  // The events are in view without opening anything. The groups of the one
+  // variant chosen are marked from its normalized result, and only then.
+  const status = dialog.locator(".resolver-run");
+  await expect(status).toHaveAttribute("data-outcome", /^(resolved|partial)$/);
+  await expect(status.locator(".resolver-run-events")).toContainText(
     /Компоненты распознаны|Найдено в кеше/,
   );
+  await expect(status.locator("summary, details")).toHaveCount(0);
+  await expect(
+    status.locator(".resolver-run-marks > span[data-found]").first(),
+  ).toBeVisible();
+  await expect(
+    status.locator(".resolver-run-marks > span").first(),
+  ).toContainText(/\S/);
+  // The groups stay on one line whatever the width (the rest fades out, the
+  // whole list is in the title and for the reader of the screen), so the
+  // buttons under the status do not move when the result arrives.
+  const row = status.locator(".resolver-run-components");
+  await expect(row).toContainText(/найдено \d+ из \d+/);
+  expect((await row.boundingBox()).height).toBeLessThan(24);
+  await expect(status.locator(".resolver-run-marks")).toHaveAttribute(
+    "title",
+    /Рама/,
+  );
+  await expect(status.locator("[role=status]")).toHaveCount(1);
+  await expect(dialog.locator(".wizard-search [role=status]")).toHaveCount(1);
   await page.screenshot({
     path: info.outputPath("resolver-result.png"),
     fullPage: true,

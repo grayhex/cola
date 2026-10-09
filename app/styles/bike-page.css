@@ -1486,9 +1486,24 @@
     /* A label that wraps in one of the two does not push its input down. */
     align-items: end;
   }
-  /* Step 1: a reading width, the window itself is wide. */
+  /* Step 1 (#374): the search stands in the middle of the wide window, wider
+     than a reading line, not pressed to the top left corner. */
   .wizard-search {
-    max-width: 760px;
+    max-width: 880px;
+    margin: 0 auto;
+    padding-top: var(--space-2);
+  }
+  .wizard-search .field input {
+    min-height: 48px;
+    font-size: var(--text-base);
+  }
+  .wizard-search .help {
+    margin-bottom: var(--space-3);
+  }
+  @media (min-width: 701px) {
+    .wizard-search {
+      padding-top: var(--space-8);
+    }
   }
   /* Step 2 (#370): related fields in cards — the bike, its characteristics,
      photos — in as many columns as the width allows, then the settings. */
@@ -1841,6 +1856,189 @@
     font-family: var(--font-mono);
     white-space: nowrap;
   }
+  /* The status of a search under the field of step 1 (#374): a thin line, one
+     phrase, the components and the last events. The rows have a height of
+     their own, so what is under them does not move while events come. */
+  .resolver-run {
+    display: grid;
+    gap: var(--space-1-5);
+    min-width: 0;
+    margin: var(--space-4) 0 var(--space-3);
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+  }
+  .resolver-run > p {
+    min-width: 0;
+    min-height: 1.5em;
+    margin: 0;
+    line-height: 1.5;
+  }
+  .resolver-run-title,
+  .resolver-run-stage {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .resolver-run-title {
+    color: var(--text);
+    font-weight: var(--weight-semibold);
+  }
+  .resolver-run-line {
+    position: relative;
+    height: 8px;
+    overflow: hidden;
+    background: linear-gradient(var(--line), var(--line)) center / 100% 2px
+      no-repeat;
+  }
+  /* The segment, moved by the script; still, it waits at the start. */
+  .resolver-run-line i {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 72px;
+    height: 2px;
+    margin-top: -1px;
+    background: linear-gradient(90deg, transparent, var(--text));
+  }
+  .resolver-run-line i::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    right: 0;
+    width: 6px;
+    height: 6px;
+    border-radius: var(--radius-full);
+    background: var(--text);
+    transform: translateY(-50%);
+  }
+  .resolver-run[data-state="done"] .resolver-run-line i {
+    display: none;
+  }
+  /* The end is drawn only when there is something found: the whole line for a
+     complete result, a dashed one for a part; nothing otherwise. */
+  .resolver-run[data-outcome="resolved"] .resolver-run-line {
+    background: linear-gradient(var(--text), var(--text)) center / 100% 2px
+      no-repeat;
+  }
+  .resolver-run[data-outcome="partial"] .resolver-run-line {
+    background: repeating-linear-gradient(
+        90deg,
+        var(--text) 0 8px,
+        transparent 8px 12px
+      )
+      center / 100% 2px no-repeat;
+  }
+  .resolver-run-phrase {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--text);
+    animation: resolver-run-in var(--duration-fast) var(--ease-out);
+  }
+  .resolver-run-phrase code,
+  .resolver-run-phrase small {
+    margin-left: var(--space-2);
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+  }
+  .resolver-run-phrase code {
+    font-family: var(--font-mono);
+  }
+  .resolver-run-phrase code::before,
+  .resolver-run-phrase small::before {
+    content: "· ";
+  }
+  @keyframes resolver-run-in {
+    from {
+      opacity: 0;
+      transform: translateY(3px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  .resolver-run-components,
+  .resolver-run-events {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-1-5);
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+  }
+  .resolver-run-label {
+    flex: none;
+  }
+  .resolver-run-label::after {
+    content: " ·";
+  }
+  .resolver-run-components > :not(.resolver-run-label) {
+    min-width: 0;
+  }
+  .resolver-run-count {
+    flex: none;
+    color: var(--text-secondary);
+  }
+  /* One line whatever the width: what does not fit fades out (the whole list is
+     in the title and for the reader of the screen), so the buttons under the
+     status stay where they were when the result arrives. */
+  .resolver-run-marks {
+    display: flex;
+    flex: 1;
+    gap: 0 var(--space-3);
+    overflow: hidden;
+    white-space: nowrap;
+    -webkit-mask-image: linear-gradient(
+      90deg,
+      #000 calc(100% - 24px),
+      transparent
+    );
+    mask-image: linear-gradient(90deg, #000 calc(100% - 24px), transparent);
+  }
+  .resolver-run-marks > span {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: var(--space-1);
+  }
+  .resolver-run-marks > [data-found] {
+    color: var(--text);
+  }
+  .resolver-run-marks b {
+    font-weight: var(--weight-regular);
+  }
+  .resolver-run-view {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+  }
+  /* A line that does not fit fades at its edges; the track keeps a margin of
+     the width of the fade after its last word. */
+  .resolver-run-view[data-overflow] {
+    -webkit-mask-image: linear-gradient(
+      90deg,
+      transparent,
+      #000 16px,
+      #000 calc(100% - 16px),
+      transparent
+    );
+    mask-image: linear-gradient(
+      90deg,
+      transparent,
+      #000 16px,
+      #000 calc(100% - 16px),
+      transparent
+    );
+  }
+  .resolver-run-view:focus-visible {
+    outline: 2px solid var(--focus, var(--accent));
+    outline-offset: 2px;
+  }
+  .resolver-run-track {
+    display: inline-block;
+    padding-inline-end: 16px;
+    white-space: nowrap;
+  }
   .resolver-review,
   .resolver-inspector {
     min-width: 0;
@@ -2109,6 +2307,9 @@
     .resolver-track i {
       width: 100%;
       opacity: 0.55;
+      animation: none;
+    }
+    .resolver-run-phrase {
       animation: none;
     }
   }

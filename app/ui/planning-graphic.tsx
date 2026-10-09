@@ -12,8 +12,11 @@ import styles from "./planning-graphic.module.css";
 const RiveCanvas = dynamic(() => import("./planning-rive.tsx"), { ssr: false });
 export default function PlanningGraphic({
   slot,
+  size = "compact",
 }: {
-  slot: "intentDialogGraphic" | "planDialogGraphic";
+  slot: "intentDialogGraphic" | "planDialogGraphic" | "wizardSearchGraphic";
+  /** `wide`: the picture above the search of the wizard (#374), not a mark by a title. */
+  size?: "compact" | "wide";
 }) {
   const { settings } = useSite();
   const reduced = useReducedMotion();
@@ -22,7 +25,7 @@ export default function PlanningGraphic({
   if (!graphic || failed === graphic.assetId) return null;
   return (
     <span
-      className={styles.graphic}
+      className={styles.graphic + (size === "wide" ? " " + styles.wide : "")}
       aria-hidden="true"
       data-planning-graphic={slot}
     >
@@ -41,8 +44,8 @@ export default function PlanningGraphic({
           unoptimized
           src={"/api/assets/" + graphic.assetId}
           alt=""
-          width={80}
-          height={56}
+          width={size === "wide" ? 480 : 80}
+          height={size === "wide" ? 180 : 56}
           onError={() => setFailed(graphic.assetId)}
         />
       )}
