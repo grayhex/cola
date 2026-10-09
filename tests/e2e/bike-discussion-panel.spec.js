@@ -80,7 +80,12 @@ test("bike comments: a short panel opens on demand, by a link and after posting"
       reader.locator(".bike-metrics").getByText(String(total), { exact: true }),
     ).toBeVisible();
     await expect(panel).toBeHidden();
-    await reader.getByRole("tab", { name: "Комментарии" }).click();
+    // A click made before the page has hydrated does nothing: made again until
+    // the panel is open.
+    await expect(async () => {
+      await reader.getByRole("tab", { name: "Комментарии" }).click();
+      await expect(panel).toBeVisible({ timeout: 2000 });
+    }).toPass({ timeout: 30000 });
     await expect(
       panel.getByRole("heading", {
         name: `Комментарии (${total})`,
@@ -116,11 +121,18 @@ test("bike comments: a short panel opens on demand, by a link and after posting"
 
     // The owner's own comment is not hidden behind the button.
     await page.goto("/b/" + bike.share_id);
-    await page.getByRole("tab", { name: "Комментарии" }).click();
+    const draft = page.getByRole("textbox", {
+      name: "Ваш комментарий",
+      exact: true,
+    });
+    // A click made before the page has hydrated does nothing (the tabs are
+    // buttons of the page's code): it is made again until the panel is open.
+    await expect(async () => {
+      await page.getByRole("tab", { name: "Комментарии" }).click();
+      await expect(draft).toBeVisible({ timeout: 2000 });
+    }).toPass({ timeout: 30000 });
     await expect(page.locator("#discussion .comment")).toHaveCount(3);
-    await page
-      .getByRole("textbox", { name: "Ваш комментарий", exact: true })
-      .fill("Новый комментарий владельца");
+    await draft.fill("Новый комментарий владельца");
     await page
       .getByRole("button", { name: "Отправить комментарий", exact: true })
       .click();
