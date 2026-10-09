@@ -1,0 +1,46 @@
+User-Agent: Yandex
+Disallow: /?
+Disallow: /users
+Disallow: /bicycle-parts/shina-ornate/velopokryshka-seyoun-14-x-2-125-pm-b026/
+Disallow: /admin
+Disallow: /index.php
+Disallow: /emarket/addToCompare
+Disallow: /emarket/basket
+Disallow: /go-out.php
+Disallow: /cron.php
+Disallow: /filemonitor.php
+Disallow: /search
+
+Sitemap: https://forbike.ru/sitemap.xml
+Host: https://forbike.ru
+
+User-Agent: Googlebot
+Disallow: /?
+Disallow: /users
+Disallow: /bicycle-parts/shina-ornate/velopokryshka-seyoun-14-x-2-125-pm-b026/
+Disallow: /admin
+Disallow: /index.php
+Disallow: /emarket/addToCompare
+Disallow: /emarket/basket
+Disallow: /go-out.php
+Disallow: /cron.php
+Disallow: /filemonitor.php
+Disallow: /search
+
+Sitemap: https://forbike.ru/sitemap.xml
+
+
+User-Agent: *
+Disallow: /?
+Disallow: /users
+Disallow: /bicycle-parts/shina-ornate/velopokryshka-seyoun-14-x-2-125-pm-b026/
+Disallow: /admin
+Disallow: /index.php
+Disallow: /emarket/addToCompare
+Disallow: /emarket/basket
+Disallow: /go-out.php
+Disallow: /cron.php
+Disallow: /filemonitor.php
+Disallow: /search
+
+Sitemap: https://forbike.ru/sitemap.xml

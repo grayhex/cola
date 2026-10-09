@@ -74,9 +74,21 @@ const pause = (ms: number) => {
     signal?.addEventListener("abort", stop, { once: true });
   });
 };
+// Published minimum for this source; search budgets reserve the same queue wait.
+export const crawlDelayMs = (host: string) =>
+  /^(?:www\.)?trial-sport\.ru$/.test(host) ? 10000 : 0;
+
 export class ManufacturerHttpClient {
   private queues = new Map<string, Promise<unknown>>();
   private next = new Map<string, number>();
+  private intervalFor(host: string) {
+    // Trial-Sport's public robots.txt requires Crawl-delay: 10. An operator's
+    // global interval may slow it further, but cannot silently make it faster.
+    return Math.max(
+      this.settings?.().requestIntervalMs ?? this.interval,
+      crawlDelayMs(host),
+    );
+  }
   constructor(
     private logger: Logger,
     private interval = 700,
@@ -156,10 +168,7 @@ export class ManufacturerHttpClient {
         try {
           return await this.request(url, domains, headers);
         } finally {
-          this.next.set(
-            host,
-            Date.now() + (this.settings?.().requestIntervalMs ?? this.interval),
-          );
+          this.next.set(host, Date.now() + this.intervalFor(host));
         }
       });
     this.queues.set(host, task);
@@ -184,6 +193,8 @@ export class ManufacturerHttpClient {
     let url = input;
     for (let redirects = 0; redirects <= 4; redirects++) {
       const u = validateUrl(url, domains);
+      if (redirects && /^(?:www\.)?trial-sport\.ru$/.test(u.hostname))
+        await pause(this.intervalFor(u.hostname));
       if (this.policy.httpsOnly && u.protocol !== "https:")
         throw new ResolverError(
           "upstream_unavailable",
@@ -278,7 +289,9 @@ export class ManufacturerHttpClient {
               (response.status === 429 || response.status >= 500) &&
               attempt + 1 < attempts
             ) {
-              await pause(500 * 2 ** attempt);
+              await pause(
+                Math.max(500 * 2 ** attempt, this.intervalFor(u.hostname)),
+              );
               continue;
             }
             throw new ResolverError(
@@ -377,7 +390,9 @@ export class ManufacturerHttpClient {
                 ? "dns_failed"
                 : "connection_failed",
             );
-          await pause(500 * 2 ** attempt);
+          await pause(
+            Math.max(500 * 2 ** attempt, this.intervalFor(u.hostname)),
+          );
         } finally {
           clearTimeout(timer);
           await dispatcher?.close();

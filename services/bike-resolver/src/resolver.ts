@@ -122,7 +122,7 @@ export class Resolver {
     const kind = a.sourceKind ?? "manufacturer";
     const candidates = (await a.discover(q)).map((c) => ({
         ...c,
-        kind,
+        kind: a.sourceKindForUrl?.(c.url) ?? kind,
         candidateId: createHash("sha256")
           .update(sourceIdentity(c.url))
           .digest("hex"),
@@ -237,7 +237,7 @@ export class Resolver {
         adapter: a.id,
         adapterVersion: a.adapterVersion,
         extractorVersion: EXTRACTOR_VERSION,
-        kind,
+        kind: a.sourceKindForUrl?.(document.url) ?? kind,
       },
       cached: false,
     };

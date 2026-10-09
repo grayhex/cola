@@ -72,27 +72,47 @@ const aliases: Partial<Record<ComponentType, string[]>> = {
   battery: ["akku"],
 };
 const russian: Partial<Record<ComponentType, string[]>> = {
-  frame: ["рама"],
-  fork: ["вилка"],
-  rear_derailleur: ["задний переключатель"],
-  front_derailleur: ["передний переключатель"],
+  frame: ["рама", "рама (материал)"],
+  fork: ["вилка", "вилка передняя"],
+  rear_derailleur: [
+    "задний переключатель",
+    "задний переключатель скоростей",
+    "переключатель скоростей задний",
+  ],
+  front_derailleur: [
+    "передний переключатель",
+    "передний переключатель скоростей",
+    "переключатель скоростей передний",
+  ],
   shifter: ["манетки", "манетки (шифтеры)", "шифтеры"],
-  crankset: ["система", "шатуны"],
+  crankset: ["система", "шатуны", "система (шатуны)"],
   bottom_bracket: ["каретка"],
-  cassette: ["кассета", "задние звезды"],
+  cassette: [
+    "кассета",
+    "задние звезды",
+    "кассета / трещотка",
+    "трещотка/звёздочка/кассета",
+  ],
+  freewheel: ["трещотка"],
+  rear_sprocket: ["звездочка", "звёздочка"],
   chain: ["цепь"],
   brake: ["тормоза"],
   tire: ["покрышки", "шины"],
-  rim: ["обода"],
-  front_hub: ["передняя втулка"],
+  rim: ["обода", "обод", "наименование ободов"],
+  front_hub: ["передняя втулка", "втулка передняя"],
   rear_hub: ["задняя втулка", "втулка задняя"],
   handlebar: ["руль"],
-  stem: ["вынос"],
-  seatpost: ["подседельный штырь"],
+  stem: ["вынос", "вынос руля"],
+  seatpost: ["подседельный штырь", "подседельный штырь / хомут"],
   saddle: ["седло"],
-  headset: ["рулевая колонка", "рулевая"],
+  headset: [
+    "рулевая колонка",
+    "рулевая",
+    "конструкция рулевой колонки",
+    "тип рулевой колонки",
+  ],
   pedals: ["педали"],
-  grips: ["грипсы"],
+  grips: ["грипсы", "ручки руля", "грипсы / обмотка"],
   rack: ["багажник"],
   mudguards: ["крылья"],
   front_light: ["передний фонарь"],
@@ -156,7 +176,13 @@ for (const [type, values] of Object.entries(french))
   ];
 const labels = new Map<string, ComponentType>();
 const variants: Partial<Record<ComponentType, string[]>> = {
-  hub: ["hubs", "втулки", "втулка"],
+  hub: [
+    "hubs",
+    "втулки",
+    "втулка",
+    "передняя/ задняя втулка",
+    "передняя / задняя втулка",
+  ],
   spokes: ["spoke", "спицы"],
   inner_tube: ["inner tubes", "камеры"],
   shifter: [
@@ -194,10 +220,19 @@ export const componentType = (label: string): ComponentType =>
 export function normalizeComponent(
   label: string,
   value: string,
+  override?: ComponentType,
 ): BikeComponent {
   label = componentText(label);
   value = componentText(value);
-  let type = componentType(label);
+  let type = override ?? componentType(label);
+  if (type === "cassette" && /трещотк|\bfreewheel\b/i.test(value))
+    type = "freewheel";
+  if (
+    type === "grips" &&
+    /обмотка/i.test(label) &&
+    /\btape\b|обмотк/i.test(value)
+  )
+    type = "bar_tape";
   if (type === "chain" && /\bGates\s+(CDX|CDN|CDC)\b/i.test(value))
     type = "belt";
   const c: BikeComponent = {

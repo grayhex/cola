@@ -56,7 +56,7 @@ export function absentComponent(value: unknown) {
   const s = componentText(value).replace(/^[\s:;|.,-]+|[\s:;|.,-]+$/g, "");
   return (
     !s ||
-    /^(?:n\/?a|n\.?d\.?|none(?: included)?(?: \([^)]*\))?|(?:[a-z]+ ){0,3}(?:(?:is|are) )?not (?:available|included|specified|applicable|supplied)(?: in (?:the )?(?:scope of )?(?:delivery|supply))?|unspecified|no (?:pedals|component)|without pedals|нет|отсутствует|не (?:указан[аоы]?|предусмотрен[аоы]?|входит в комплект)|без педалей)$/i.test(
+    /^(?:n\/?a|n\.?d\.?|none(?: included)?(?: \([^)]*\))?|(?:[a-z]+ ){0,3}(?:(?:is|are) )?not (?:available|included|specified|applicable|supplied)(?: in (?:the )?(?:scope of )?(?:delivery|supply))?|unspecified|no (?:pedals|component)|without pedals|нет|отсутствует|не (?:указан[аоы]?|предусмотрен[аоы]?|входит в комплект)|без педалей|педали не входят(?: в комплект)?)$/i.test(
       s,
     )
   );
@@ -72,10 +72,32 @@ const positions: Record<string, string> = {
   "rear brake": "rear_brake",
   "передний тормоз": "front_brake",
   "задний тормоз": "rear_brake",
+  "передняя втулка": "front_hub",
+  "задняя втулка": "rear_hub",
+  "подседельный штырь": "seatpost",
+  "подседельный зажим": "seat_clamp",
 };
 /** Recover labelled subfields in saved flattened specs as well as new HTML. */
-export function splitComponentField(label: string, value: string) {
+export function splitComponentField(
+  label: string,
+  value: string,
+): { label: string; value: string; type?: string }[] {
   const clean = componentText(value);
+  const combined = componentText(label)
+    .toLowerCase()
+    .replace(/\s*\/\s*/g, "/");
+  const pairs: Record<string, [string, string]> = {
+    "передняя/задняя втулка": ["Передняя втулка", "Задняя втулка"],
+    "подседельный штырь/хомут": ["Подседельный штырь", "Подседельный зажим"],
+  };
+  const pair = pairs[combined],
+    values = clean.split(/\s+\/\s+/);
+  if (pair && values.length === 2 && values.every(Boolean))
+    return pair.map((name, index) => ({
+      label: name,
+      value: values[index],
+      type: positions[name.toLowerCase()],
+    }));
   const matches = [
     ...clean.matchAll(
       /(?:^|[\s;|:])((?:Front|Rear) (?:Tire|Tyre|Brake)|(?:Передняя|Задняя) покрышка|(?:Передний|Задний) тормоз)\s*[:：]\s*/gi,

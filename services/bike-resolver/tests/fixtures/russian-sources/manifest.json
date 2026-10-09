@@ -1,0 +1,816 @@
+[
+  {
+    "id": "trial-sport",
+    "source": "trial-sport",
+    "query": {
+      "brand": "Corratec",
+      "model": "VERT PRO",
+      "trim": null,
+      "year": 2025
+    },
+    "normalized": {
+      "brand": "corratec",
+      "model": "vert pro",
+      "trim": null,
+      "year": 2025
+    },
+    "requestedUrl": "https://trial-sport.ru/goods/3079860.html",
+    "url": "https://trial-sport.ru/goods/3079860.html",
+    "pageEvidence": "pages.json#trial-sport",
+    "fetchedAt": "2026-10-09T19:50:30.391Z",
+    "rawSha256": "252f27e3d604b5c94341ac5af0f02d51de4e1d13ccf796a6dc0ea39f936480d9",
+    "yearEvidence": "Сезон in product specification",
+    "trimEvidence": "Product heading and specification; STELS Z010 build also in canonical product URL",
+    "selectedCandidate": {
+      "url": "https://trial-sport.ru/goods/3079860.html"
+    },
+    "expected": {
+      "year": 2025,
+      "minimumComponents": 21,
+      "componentsContain": {
+        "fork": "Manitou Markhor",
+        "rear_derailleur": "SLX M7100"
+      },
+      "kind": "store"
+    }
+  },
+  {
+    "id": "trial-vert-current",
+    "source": "trial-sport",
+    "query": {
+      "brand": "Corratec",
+      "model": "VERT PRO",
+      "trim": null,
+      "year": 2026
+    },
+    "normalized": {
+      "brand": "corratec",
+      "model": "vert pro",
+      "trim": null,
+      "year": 2026
+    },
+    "requestedUrl": "https://trial-sport.ru/goods/3197510.html",
+    "url": "https://trial-sport.ru/goods/3197510.html",
+    "pageEvidence": "pages.json#trial-vert-current",
+    "fetchedAt": "2026-10-09T19:55:08.246Z",
+    "rawSha256": "286d1c4c9ebff0210adbcbe229f0ba7ecd98f146838a9c0cf11818a1feafe58d",
+    "yearEvidence": "Сезон in product specification",
+    "trimEvidence": "Product heading and specification; STELS Z010 build also in canonical product URL",
+    "selectedCandidate": {
+      "url": "https://trial-sport.ru/goods/3197510.html"
+    },
+    "expected": {
+      "year": 2026,
+      "minimumComponents": 21,
+      "componentsContain": {
+        "fork": "Manitou Markhor"
+      },
+      "kind": "store"
+    }
+  },
+  {
+    "id": "trial-vector",
+    "source": "trial-sport",
+    "query": {
+      "brand": "Outleap",
+      "model": "VECTOR PRO 29",
+      "trim": null,
+      "year": 2026
+    },
+    "normalized": {
+      "brand": "outleap",
+      "model": "vector pro 29",
+      "trim": null,
+      "year": 2026
+    },
+    "requestedUrl": "https://trial-sport.ru/goods/3191514.html",
+    "url": "https://trial-sport.ru/goods/3191514.html",
+    "pageEvidence": "pages.json#trial-vector",
+    "fetchedAt": "2026-10-09T19:55:21.578Z",
+    "rawSha256": "93098f0423c677c9aaa828eb3288f4820d0de6f3627d367b2347c6be5ab7754f",
+    "yearEvidence": "Сезон in product specification",
+    "trimEvidence": "Product heading and specification; STELS Z010 build also in canonical product URL",
+    "selectedCandidate": {
+      "url": "https://trial-sport.ru/goods/3191514.html"
+    },
+    "expected": {
+      "year": 2026,
+      "minimumComponents": 21,
+      "componentsContain": {
+        "rear_derailleur": "XT M8100"
+      },
+      "kind": "store"
+    }
+  },
+  {
+    "id": "velostrana",
+    "source": "velostrana",
+    "query": {
+      "brand": "Format",
+      "model": "5222 CF",
+      "trim": null,
+      "year": 2023
+    },
+    "normalized": {
+      "brand": "format",
+      "model": "5222 cf",
+      "trim": null,
+      "year": 2023
+    },
+    "requestedUrl": "https://www.velostrana.ru/format/5222-cf/",
+    "url": "https://www.velostrana.ru/format/5222-cf/",
+    "pageEvidence": "pages.json#velostrana",
+    "fetchedAt": "2026-10-09T19:50:29.513Z",
+    "rawSha256": "4d04bdcd7de5256530596dbb899c6926037e67504656fde38594971903af8535",
+    "yearEvidence": "Model year in product heading/title/specification; original evidence retained in page fixture",
+    "trimEvidence": "Product heading and specification; STELS Z010 build also in canonical product URL",
+    "selectedCandidate": {
+      "url": "https://www.velostrana.ru/format/5222-cf/"
+    },
+    "expected": {
+      "year": 2023,
+      "minimumComponents": 23,
+      "componentsContain": {
+        "shifter": "Centos R502B"
+      },
+      "kind": "store"
+    }
+  },
+  {
+    "id": "velostrana-2022",
+    "source": "velostrana",
+    "query": {
+      "brand": "Format",
+      "model": "5222 CF",
+      "trim": null,
+      "year": 2022
+    },
+    "normalized": {
+      "brand": "format",
+      "model": "5222 cf",
+      "trim": null,
+      "year": 2022
+    },
+    "requestedUrl": "https://www.velostrana.ru/format/5222-cf/2022/",
+    "url": "https://www.velostrana.ru/format/5222-cf/2022/",
+    "pageEvidence": "pages.json#velostrana-2022",
+    "fetchedAt": "2026-10-09T19:53:51.492Z",
+    "rawSha256": "ded51a961ca3e2df9668a395fae02e634fc52954dc19784559cbec2097bb1f75",
+    "yearEvidence": "Model year in product heading/title/specification; original evidence retained in page fixture",
+    "trimEvidence": "Product heading and specification; STELS Z010 build also in canonical product URL",
+    "selectedCandidate": {
+      "url": "https://www.velostrana.ru/format/5222-cf/2022/"
+    },
+    "expected": {
+      "year": 2022,
+      "minimumComponents": 22,
+      "componentsContain": {
+        "frame": "4130"
+      },
+      "kind": "store"
+    }
+  },
+  {
+    "id": "velostrana-specialized",
+    "source": "velostrana",
+    "query": {
+      "brand": "Specialized",
+      "model": "Stumpjumper Evo Comp",
+      "trim": null,
+      "year": 2024
+    },
+    "normalized": {
+      "brand": "specialized",
+      "model": "stumpjumper evo comp",
+      "trim": null,
+      "year": 2024
+    },
+    "requestedUrl": "https://www.velostrana.ru/specialized/stumpjumper-evo-comp/",
+    "url": "https://www.velostrana.ru/specialized/stumpjumper-evo-comp/",
+    "pageEvidence": "pages.json#velostrana-specialized",
+    "fetchedAt": "2026-10-09T19:53:54.620Z",
+    "rawSha256": "3cda29618b8461dc97da14929dd0302f2c8ebd39a088a959db462ba63f866f69",
+    "yearEvidence": "Model year in product heading/title/specification; original evidence retained in page fixture",
+    "trimEvidence": "Product heading and specification; STELS Z010 build also in canonical product URL",
+    "selectedCandidate": {
+      "url": "https://www.velostrana.ru/specialized/stumpjumper-evo-comp/"
+    },
+    "expected": {
+      "year": 2024,
+      "minimumComponents": 23,
+      "componentsContain": {
+        "fork": "Float 36"
+      },
+      "kind": "store"
+    }
+  },
+  {
+    "id": "velodrive-author",
+    "source": "velodrive",
+    "query": {
+      "brand": "Author",
+      "model": "Compact",
+      "trim": null,
+      "year": 2025
+    },
+    "normalized": {
+      "brand": "author",
+      "model": "compact",
+      "trim": null,
+      "year": 2025
+    },
+    "requestedUrl": "https://www.velodrive.ru/bicycles/author/author-compact-2025.html",
+    "url": "https://www.velodrive.ru/bicycles/author/author-compact-2025.html",
+    "pageEvidence": "pages.json#velodrive-author",
+    "fetchedAt": "2026-10-09T19:52:34.236Z",
+    "rawSha256": "a7d12793cc7e3088d62e607c18ad71a38bb863bc056cb46bf30b8d909b9dc9d3",
+    "yearEvidence": "Model year in product heading/title/specification; original evidence retained in page fixture",
+    "trimEvidence": "Product heading and specification; STELS Z010 build also in canonical product URL",
+    "selectedCandidate": {
+      "url": "https://www.velodrive.ru/bicycles/author/author-compact-2025.html"
+    },
+    "expected": {
+      "year": 2025,
+      "minimumComponents": 18,
+      "componentsContain": {
+        "freewheel": "MF-TZ510",
+        "fork": "RST Neon"
+      },
+      "kind": "store"
+    }
+  },
+  {
+    "id": "velodrive-stels",
+    "source": "velodrive",
+    "query": {
+      "brand": "STELS",
+      "model": "Navigator 900 MD 29",
+      "trim": null,
+      "year": 2024
+    },
+    "normalized": {
+      "brand": "stels",
+      "model": "navigator 900 md 29",
+      "trim": null,
+      "year": 2024
+    },
+    "requestedUrl": "https://www.velodrive.ru/bicycles/stels/stels-navigator-900-md-29-2024.html",
+    "url": "https://www.velodrive.ru/bicycles/stels/stels-navigator-900-md-29-2024.html",
+    "pageEvidence": "pages.json#velodrive-stels",
+    "fetchedAt": "2026-10-09T19:55:42.198Z",
+    "rawSha256": "d3f39d538914375830fc93e4c570403c17780582e4583a473a558bb14105dbdb",
+    "yearEvidence": "Model year in product heading/title/specification; original evidence retained in page fixture",
+    "trimEvidence": "Product heading and specification; STELS Z010 build also in canonical product URL",
+    "selectedCandidate": {
+      "url": "https://www.velodrive.ru/bicycles/stels/stels-navigator-900-md-29-2024.html"
+    },
+    "expected": {
+      "year": 2024,
+      "minimumComponents": 12,
+      "componentsContain": {
+        "shifter": "EF500"
+      },
+      "kind": "store"
+    }
+  },
+  {
+    "id": "alienbike",
+    "source": "alienbike",
+    "query": {
+      "brand": "Superior",
+      "model": "RR 9.5",
+      "trim": null,
+      "year": 2025
+    },
+    "normalized": {
+      "brand": "superior",
+      "model": "rr 9 5",
+      "trim": null,
+      "year": 2025
+    },
+    "requestedUrl": "https://www.alienbike.ru/index.php?route=product/product&path=59_72_75&product_id=6865",
+    "url": "https://www.alienbike.ru/index.php?route=product/product&path=59_72_75&product_id=6865",
+    "pageEvidence": "pages.json#alienbike",
+    "fetchedAt": "2026-10-09T19:50:33.767Z",
+    "rawSha256": "8bda340ef684fa8e25720a9a73b564091bfbd2bafe555544f4d28fe12db330ff",
+    "yearEvidence": "Model year in product heading/title/specification; original evidence retained in page fixture",
+    "trimEvidence": "Product heading and specification; STELS Z010 build also in canonical product URL",
+    "selectedCandidate": {
+      "url": "https://www.alienbike.ru/index.php?route=product/product&path=59_72_75&product_id=6864",
+      "note": "6865 is available by direct URL, but public sitemap currently lists the size variant 6864"
+    },
+    "expected": {
+      "year": 2025,
+      "minimumComponents": 20,
+      "componentsContain": {
+        "fork": "RR Mid Modulus Carbon Fork",
+        "front_hub": "HB-RS470",
+        "rear_hub": "FH-RS470"
+      },
+      "kind": "store"
+    }
+  },
+  {
+    "id": "alienbike-bross",
+    "source": "alienbike",
+    "query": {
+      "brand": "Bross",
+      "model": "Keystone A3",
+      "trim": null,
+      "year": 2024
+    },
+    "normalized": {
+      "brand": "bross",
+      "model": "keystone a3",
+      "trim": null,
+      "year": 2024
+    },
+    "requestedUrl": "https://www.alienbike.ru/index.php?route=product/product&path=59_62_63&product_id=50",
+    "url": "https://www.alienbike.ru/index.php?route=product/product&path=59_62_63&product_id=50",
+    "pageEvidence": "pages.json#alienbike-bross",
+    "fetchedAt": "2026-10-09T19:55:47.898Z",
+    "rawSha256": "06d29e6c7cbecf0d4280397f728bef5a7f209687cfc7ed53cb55378aad534f94",
+    "yearEvidence": "Model year in product heading/title/specification; original evidence retained in page fixture",
+    "trimEvidence": "Product heading and specification; STELS Z010 build also in canonical product URL",
+    "selectedCandidate": {
+      "url": "https://www.alienbike.ru/index.php?route=product/product&path=59_62_63&product_id=50"
+    },
+    "expected": {
+      "year": 2024,
+      "minimumComponents": 12,
+      "componentsContain": {
+        "rear_derailleur": "SX Eagle"
+      },
+      "kind": "store"
+    }
+  },
+  {
+    "id": "aspect-pro-2025",
+    "source": "aspect",
+    "query": {
+      "brand": "ASPECT",
+      "model": "RONIN PRO 29",
+      "trim": null,
+      "year": 2025
+    },
+    "normalized": {
+      "brand": "aspect",
+      "model": "ronin pro 29",
+      "trim": null,
+      "year": 2025
+    },
+    "requestedUrl": "https://www.aspect-bikes.ru/catalog/ronin-pro-29/2025/",
+    "url": "https://www.aspect-bikes.ru/catalog/ronin-pro-29/2025/",
+    "pageEvidence": "pages.json#aspect-pro-2025",
+    "fetchedAt": "2026-10-09T19:58:52.002Z",
+    "rawSha256": "cb2e6fbb70f9d71193f92c970b43d2ecedf1ca0defcc293543435d1e3099db46",
+    "yearEvidence": "Catalogue JSON name for this exact URL (aspect-search-all)",
+    "trimEvidence": "Product heading and specification; STELS Z010 build also in canonical product URL",
+    "selectedCandidate": {
+      "url": "https://www.aspect-bikes.ru/catalog/ronin-pro-29/2025/"
+    },
+    "expected": {
+      "year": 2025,
+      "minimumComponents": 15,
+      "componentsContain": {
+        "rear_derailleur": "RD-M7100SGS"
+      },
+      "kind": "manufacturer"
+    }
+  },
+  {
+    "id": "aspect-ronin-2022",
+    "source": "aspect",
+    "query": {
+      "brand": "ASPECT",
+      "model": "RONIN",
+      "trim": null,
+      "year": 2022
+    },
+    "normalized": {
+      "brand": "aspect",
+      "model": "ronin",
+      "trim": null,
+      "year": 2022
+    },
+    "requestedUrl": "https://aspect-bikes.ru/catalog/ronin/2022",
+    "url": "https://aspect-bikes.ru/catalog/ronin/2022",
+    "pageEvidence": "pages.json#aspect-ronin-2022",
+    "fetchedAt": "2026-10-09T19:52:27.212Z",
+    "rawSha256": "144a5c18e831f72b5b06bcb4c5a708358e1218aa721519197091f83744aad5b2",
+    "yearEvidence": "Catalogue JSON name for this exact URL (aspect-search-all)",
+    "trimEvidence": "Product heading and specification; STELS Z010 build also in canonical product URL",
+    "selectedCandidate": {
+      "url": "https://aspect-bikes.ru/catalog/ronin/2022"
+    },
+    "expected": {
+      "year": 2022,
+      "minimumComponents": 12,
+      "componentsContain": {
+        "fork": "XCM32-LO-BOOST"
+      },
+      "kind": "manufacturer"
+    }
+  },
+  {
+    "id": "aspect-allroad",
+    "source": "aspect",
+    "query": {
+      "brand": "ASPECT",
+      "model": "ALLROAD",
+      "trim": null,
+      "year": 2026
+    },
+    "normalized": {
+      "brand": "aspect",
+      "model": "allroad",
+      "trim": null,
+      "year": 2026
+    },
+    "requestedUrl": "https://www.aspect-bikes.ru/catalog/aspect-allroad/",
+    "url": "https://www.aspect-bikes.ru/catalog/aspect-allroad/",
+    "pageEvidence": "pages.json#aspect-allroad",
+    "fetchedAt": "2026-10-09T19:52:32.687Z",
+    "rawSha256": "9857a6b943d2ca6df38bc60661e66abb17f6339b85aaa1280128299c839825a4",
+    "yearEvidence": "Catalogue JSON name for this exact URL (aspect-search-all)",
+    "trimEvidence": "Product heading and specification; STELS Z010 build also in canonical product URL",
+    "selectedCandidate": {
+      "url": "https://www.aspect-bikes.ru/catalog/aspect-allroad/"
+    },
+    "expected": {
+      "year": 2026,
+      "minimumComponents": 18,
+      "componentsContain": {
+        "shifter": "SB-G7000"
+      },
+      "kind": "manufacturer"
+    }
+  },
+  {
+    "id": "stark-peloton-2025",
+    "source": "stark",
+    "query": {
+      "brand": "STARK",
+      "model": "Peloton 700.4 D",
+      "trim": null,
+      "year": 2025
+    },
+    "normalized": {
+      "brand": "stark",
+      "model": "peloton 700 4 d",
+      "trim": null,
+      "year": 2025
+    },
+    "requestedUrl": "https://stark.ru/bikes/velosipedy/shosseynye/peloton/peloton-700-4-d-2025/",
+    "url": "https://stark.ru/bikes/velosipedy/shosseynye/peloton/peloton-700-4-d-2025/",
+    "pageEvidence": "pages.json#stark-peloton-2025",
+    "fetchedAt": "2026-10-09T19:53:42.858Z",
+    "rawSha256": "b1acc7c6cfc29de1b34b5053575f8e5909f47881518067f79e4321a8505a86e6",
+    "yearEvidence": "Model year in product heading/title/specification; original evidence retained in page fixture",
+    "trimEvidence": "Product heading and specification; STELS Z010 build also in canonical product URL",
+    "selectedCandidate": {
+      "url": "https://stark.ru/bikes/velosipedy/shosseynye/peloton/peloton-700-4-d-2025/"
+    },
+    "expected": {
+      "year": 2025,
+      "minimumComponents": 17,
+      "componentsContain": {
+        "fork": "Grinz Agger RCR",
+        "shifter": "ST-R3000"
+      },
+      "kind": "manufacturer"
+    }
+  },
+  {
+    "id": "stark-peloton-2024",
+    "source": "stark",
+    "query": {
+      "brand": "STARK",
+      "model": "Peloton 700.4 D",
+      "trim": null,
+      "year": 2024
+    },
+    "normalized": {
+      "brand": "stark",
+      "model": "peloton 700 4 d",
+      "trim": null,
+      "year": 2024
+    },
+    "requestedUrl": "https://stark.ru/bikes/velosipedy/shosseynye/peloton/peloton-700-4-d-2024/",
+    "url": "https://stark.ru/bikes/velosipedy/shosseynye/peloton/peloton-700-4-d-2024/",
+    "pageEvidence": "pages.json#stark-peloton-2024",
+    "fetchedAt": "2026-10-09T19:53:46.337Z",
+    "rawSha256": "108a47298a1c5942aa9b60650c42f76f9779d2c0ba9a8c4a893149035d085632",
+    "yearEvidence": "Model year in product heading/title/specification; original evidence retained in page fixture",
+    "trimEvidence": "Product heading and specification; STELS Z010 build also in canonical product URL",
+    "selectedCandidate": {
+      "url": "https://stark.ru/bikes/velosipedy/shosseynye/peloton/peloton-700-4-d-2024/"
+    },
+    "expected": {
+      "year": 2024,
+      "minimumComponents": 17,
+      "componentsContain": {
+        "shifter": "SB-R492BK"
+      },
+      "kind": "manufacturer"
+    }
+  },
+  {
+    "id": "stark-grl-2025",
+    "source": "stark",
+    "query": {
+      "brand": "STARK",
+      "model": "GRL 700.6 HD",
+      "trim": null,
+      "year": 2025
+    },
+    "normalized": {
+      "brand": "stark",
+      "model": "grl 700 6 hd",
+      "trim": null,
+      "year": 2025
+    },
+    "requestedUrl": "https://stark.ru/bikes/velosipedy/graviynye/gravel/grl-700-6-hd-2025/",
+    "url": "https://stark.ru/bikes/velosipedy/graviynye/gravel/grl-700-6-hd-2025/",
+    "pageEvidence": "pages.json#stark-grl-2025",
+    "fetchedAt": "2026-10-09T19:58:52.278Z",
+    "rawSha256": "afb22d5c1eab83038bcbb5d7649a7c4034c839ca6172ce4562b982ede079345a",
+    "yearEvidence": "Model year in product heading/title/specification; original evidence retained in page fixture",
+    "trimEvidence": "Product heading and specification; STELS Z010 build also in canonical product URL",
+    "selectedCandidate": {
+      "url": "https://stark.ru/bikes/velosipedy/graviynye/gravel/grl-700-6-hd-2025/"
+    },
+    "expected": {
+      "year": 2025,
+      "minimumComponents": 17,
+      "componentsContain": {
+        "fork": "Grinz Via RCR"
+      },
+      "kind": "manufacturer"
+    }
+  },
+  {
+    "id": "welt",
+    "source": "welt",
+    "query": {
+      "brand": "WELT",
+      "model": "G100",
+      "trim": null,
+      "year": 2025
+    },
+    "normalized": {
+      "brand": "welt",
+      "model": "g100",
+      "trim": null,
+      "year": 2025
+    },
+    "requestedUrl": "https://www.welt-bikes.com/ru/ru/vse-velosipedy/gravijnye/Welt-G100-2025-int",
+    "url": "https://www.welt-bikes.com/ru/ru/vse-velosipedy/gravijnye/Welt-G100-2025-int",
+    "pageEvidence": "pages.json#welt",
+    "fetchedAt": "2026-10-09T19:50:35.240Z",
+    "rawSha256": "4e608d8b7b1fdd8ce3e17e00958eb21bc76c3bc4d8b9d4bbf14ea72d5e43b3bd",
+    "yearEvidence": "Model year in product heading/title/specification; original evidence retained in page fixture",
+    "trimEvidence": "Product heading and specification; STELS Z010 build also in canonical product URL",
+    "selectedCandidate": {
+      "url": "https://www.welt-bikes.com/ru/ru/vse-velosipedy/gravijnye/Welt-G100-2025-int"
+    },
+    "expected": {
+      "year": 2025,
+      "minimumComponents": 14,
+      "componentsContain": {
+        "rear_derailleur": "RD-RX400",
+        "shifter": "RD-RX400"
+      },
+      "kind": "manufacturer"
+    }
+  },
+  {
+    "id": "welt-g90",
+    "source": "welt",
+    "query": {
+      "brand": "WELT",
+      "model": "G90",
+      "trim": null,
+      "year": 2025
+    },
+    "normalized": {
+      "brand": "welt",
+      "model": "g90",
+      "trim": null,
+      "year": 2025
+    },
+    "requestedUrl": "https://www.welt-bikes.com/ru/ru/vse-velosipedy/gravijnye/Welt-G90-2025",
+    "url": "https://www.welt-bikes.com/ru/ru/vse-velosipedy/gravijnye/Welt-G90-2025",
+    "pageEvidence": "pages.json#welt-g90",
+    "fetchedAt": "2026-10-09T19:55:48.516Z",
+    "rawSha256": "c8383dac31ff4b243f6cf888a609a9a7f5c065903f4f62a014f320cc219745bc",
+    "yearEvidence": "Model year in product heading/title/specification; original evidence retained in page fixture",
+    "trimEvidence": "Product heading and specification; STELS Z010 build also in canonical product URL",
+    "selectedCandidate": {
+      "url": "https://www.welt-bikes.com/ru/ru/vse-velosipedy/gravijnye/Welt-G90-2025"
+    },
+    "expected": {
+      "year": 2025,
+      "minimumComponents": 13,
+      "componentsContain": {
+        "shifter": "SB-G7000"
+      },
+      "kind": "manufacturer"
+    }
+  },
+  {
+    "id": "welt-sainty",
+    "source": "welt",
+    "query": {
+      "brand": "WELT",
+      "model": "Sainty 1.0",
+      "trim": null,
+      "year": null
+    },
+    "normalized": {
+      "brand": "welt",
+      "model": "sainty 1 0",
+      "trim": null,
+      "year": null
+    },
+    "requestedUrl": "https://www.welt-bikes.com/ru/ru/vse-velosipedy/gornye/Welt_Sainty_1",
+    "url": "https://www.welt-bikes.com/ru/ru/vse-velosipedy/gornye/Welt_Sainty_1",
+    "pageEvidence": "pages.json#welt-sainty",
+    "fetchedAt": "2026-10-09T19:55:43.723Z",
+    "rawSha256": "2232f939041cec9b9445d64ef03697dab3df4ff136c7be0f05b19f7318376757",
+    "yearEvidence": "No published model year; query/copyright/lastmod are not evidence",
+    "trimEvidence": "Product heading and specification; STELS Z010 build also in canonical product URL",
+    "selectedCandidate": {
+      "url": "https://www.welt-bikes.com/ru/ru/vse-velosipedy/gornye/Welt_Sainty_1"
+    },
+    "expected": {
+      "year": null,
+      "minimumComponents": 12,
+      "componentsContain": {
+        "rear_derailleur": "RD-U2000"
+      },
+      "kind": "manufacturer"
+    }
+  },
+  {
+    "id": "stels-navigator",
+    "source": "stels",
+    "query": {
+      "brand": "STELS",
+      "model": "Navigator 900 29 MD Z010",
+      "trim": null,
+      "year": null
+    },
+    "normalized": {
+      "brand": "stels",
+      "model": "navigator 900 29 md z010",
+      "trim": null,
+      "year": null
+    },
+    "requestedUrl": "https://stelsbicycle.ru/catalog/bicycle/gornye/navigator-900-29md-z010/",
+    "url": "https://stelsbicycle.ru/catalog/bicycle/gornye/navigator-900-29md-z010/",
+    "pageEvidence": "pages.json#stels-navigator",
+    "fetchedAt": "2026-10-09T19:55:39.307Z",
+    "rawSha256": "5571bac7708283726456bf2235f3ff27fa62ede6fb6041379a3970338c71c96b",
+    "yearEvidence": "No published model year; query/copyright/lastmod are not evidence",
+    "trimEvidence": "Product heading and specification; STELS Z010 build also in canonical product URL",
+    "selectedCandidate": {
+      "url": "https://stelsbicycle.ru/catalog/bicycle/gornye/navigator-900-29md-z010/"
+    },
+    "expected": {
+      "year": null,
+      "minimumComponents": 15,
+      "componentsContain": {
+        "rear_derailleur": "RD-TY300"
+      },
+      "kind": "manufacturer"
+    }
+  },
+  {
+    "id": "stels-pilot",
+    "source": "stels",
+    "query": {
+      "brand": "STELS",
+      "model": "Pilot 710 24",
+      "trim": null,
+      "year": null
+    },
+    "normalized": {
+      "brand": "stels",
+      "model": "pilot 710 24",
+      "trim": null,
+      "year": null
+    },
+    "requestedUrl": "https://stelsbicycle.ru/catalog/bicycle/skladnye/pilot-710-24c-z010/",
+    "url": "https://stelsbicycle.ru/catalog/bicycle/skladnye/pilot-710-24c-z010/",
+    "pageEvidence": "pages.json#stels-pilot",
+    "fetchedAt": "2026-10-09T19:55:41.738Z",
+    "rawSha256": "c98ed8579e9a4fb685db6921f1785d0f05352a28e6b5a933b7cf7705c759416d",
+    "yearEvidence": "No published model year; query/copyright/lastmod are not evidence",
+    "trimEvidence": "Product heading and specification; STELS Z010 build also in canonical product URL",
+    "selectedCandidate": {
+      "url": "https://stelsbicycle.ru/catalog/bicycle/skladnye/pilot-710-24c-z010/"
+    },
+    "expected": {
+      "year": null,
+      "minimumComponents": 10,
+      "componentsContain": {
+        "frame": "Сталь"
+      },
+      "kind": "manufacturer"
+    }
+  },
+  {
+    "id": "forbike-navigator",
+    "source": "stels",
+    "query": {
+      "brand": "STELS",
+      "model": "Navigator 870 V",
+      "trim": null,
+      "year": 2016
+    },
+    "normalized": {
+      "brand": "stels",
+      "model": "navigator 870 v",
+      "trim": null,
+      "year": 2016
+    },
+    "requestedUrl": "https://forbike.ru/bicycle-stels-2016/mountain-bikes/stels-navigator-870-v-2016/",
+    "url": "https://forbike.ru/bicycle-stels-2016/mountain-bikes/stels-navigator-870-v-2016/",
+    "pageEvidence": "pages.json#forbike-navigator",
+    "fetchedAt": "2026-10-09T19:53:56.137Z",
+    "rawSha256": "72010e31e8aba48e00d4317835f5706864977b1648b8d6ae1b22869b5ac0bf43",
+    "yearEvidence": "Model year in product heading/title/specification; original evidence retained in page fixture",
+    "trimEvidence": "Product heading and specification; STELS Z010 build also in canonical product URL",
+    "selectedCandidate": {
+      "url": "https://forbike.ru/bicycle-stels-2016/mountain-bikes/stels-navigator-870-v-2016/"
+    },
+    "expected": {
+      "year": 2016,
+      "minimumComponents": 16,
+      "componentsContain": {
+        "rear_derailleur": "RD-M592"
+      },
+      "kind": "archive"
+    }
+  },
+  {
+    "id": "forbike-pilot",
+    "source": "stels",
+    "query": {
+      "brand": "STELS",
+      "model": "Pilot 710",
+      "trim": null,
+      "year": 2016
+    },
+    "normalized": {
+      "brand": "stels",
+      "model": "pilot 710",
+      "trim": null,
+      "year": 2016
+    },
+    "requestedUrl": "https://forbike.ru/bicycle-stels-2016/folding-bikes/stels-pilot-710-2016/",
+    "url": "https://forbike.ru/bicycle-stels-2016/folding-bikes/stels-pilot-710-2016/",
+    "pageEvidence": "pages.json#forbike-pilot",
+    "fetchedAt": "2026-10-09T19:53:58.953Z",
+    "rawSha256": "54d036b6bb573d90ed2d907b48a6db0660186c78b5612863852f7830096f4d04",
+    "yearEvidence": "Model year in product heading/title/specification; original evidence retained in page fixture",
+    "trimEvidence": "Product heading and specification; STELS Z010 build also in canonical product URL",
+    "selectedCandidate": {
+      "url": "https://forbike.ru/bicycle-stels-2016/folding-bikes/stels-pilot-710-2016/"
+    },
+    "expected": {
+      "year": 2016,
+      "minimumComponents": 12,
+      "componentsContain": {
+        "rear_sprocket": "18Т"
+      },
+      "kind": "archive"
+    }
+  },
+  {
+    "id": "outleap-requested-2025",
+    "source": "trial-sport",
+    "query": {
+      "brand": "Outleap",
+      "model": "VECTOR PRO 29",
+      "trim": null,
+      "year": 2025
+    },
+    "normalized": {
+      "brand": "outleap",
+      "model": "vector pro 29",
+      "trim": null,
+      "year": 2025
+    },
+    "pageEvidence": "pages.json#trial-search-vector29",
+    "selectedCandidate": {
+      "url": "https://trial-sport.ru/goods/3191514.html"
+    },
+    "expected": {
+      "year": 2026,
+      "warning": "identity_mismatch"
+    },
+    "limitation": "2025 was not confirmed in the current public search. The captured current page states season 2026; it must never be imported as confirmed 2025."
+  }
+]

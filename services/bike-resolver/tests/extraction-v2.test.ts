@@ -95,7 +95,13 @@ it("extracts the live Specialized semantic layout independent of generated class
 });
 it("extracts real Trial-Sport Russian table including separate brakes", () => {
   const result = parseDocument(doc(fixture("trial")));
-  expect(result.components).toHaveLength(19);
+  expect(result.components).toHaveLength(21);
+  expect(result.components.find((c) => c.type === "stem")?.raw.label).toBe(
+    "Вынос руля",
+  );
+  expect(result.components.find((c) => c.type === "grips")?.raw.label).toBe(
+    "Ручки руля",
+  );
   expect(result.components.map((c) => c.type)).toEqual(
     expect.arrayContaining([
       "frame",

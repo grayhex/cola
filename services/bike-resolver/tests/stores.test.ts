@@ -214,6 +214,10 @@ describe("store URLs", () => {
       ["bikeinn", true],
       ["alltricks", false],
       ["bike24", false],
+      ["trial-sport", true],
+      ["velostrana", true],
+      ["velodrive", true],
+      ["alienbike", true],
     ]);
   });
 });

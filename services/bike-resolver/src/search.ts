@@ -22,7 +22,11 @@ import {
   type SourceReport,
   type SourceStatus,
 } from "./domain.js";
-import { readInRequest, type ManufacturerHttpClient } from "./http.js";
+import {
+  crawlDelayMs,
+  readInRequest,
+  type ManufacturerHttpClient,
+} from "./http.js";
 import { identityConflict } from "./identity.js";
 import type { ManualSources } from "./manual.js";
 import { partialScore, requestInName } from "./matcher.js";
@@ -164,7 +168,7 @@ function candidateOf(
       thumbnailId: resolved.thumbnailId,
       sourceHost: new URL(resolved.source.url).hostname,
       selectable: true,
-      kind,
+      kind: resolved.source.kind ?? kind,
       ...(resolved.source.storeId
         ? {
             storeId: resolved.source.storeId,
@@ -318,7 +322,10 @@ export class SourceSearch {
     kind: SourceKind,
     store?: RetailStore,
   ): Promise<{ verified?: Verified; failure?: Reason }> {
-    const result = (await withinBudget(this.limits.pageMs, () =>
+    // A robots-mandated queue wait must not consume the page's read budget.
+    // The enclosing phase/request deadline and cancellation still apply.
+    const pageMs = this.limits.pageMs + crawlDelayMs(new URL(url).hostname);
+    const result = (await withinBudget(pageMs, () =>
       quiet(() => this.deps.manual.resolve(query, url, kind)),
     )) as ResolveResult;
     if (result.status !== "resolved")
@@ -577,7 +584,7 @@ export class SourceSearch {
     let urls: string[];
     try {
       urls = await this.discovery(store.id, query, () =>
-        withinBudget(this.limits.storeMs, () =>
+        withinBudget(this.limits.storeMs + crawlDelayMs(host), () =>
           quiet(() =>
             store.discover!(query, { http: this.deps.http, limit: pages }),
           ),

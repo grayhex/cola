@@ -12,6 +12,7 @@ import {
   type SuggestedMetadata,
   type SourceDocument,
   type RawField,
+  type ComponentType,
 } from "./domain.js";
 import { trace, EXTRACTOR_VERSION } from "./context.js";
 import { profileFor } from "./profiles.js";
@@ -27,8 +28,15 @@ const sectionName =
 const excluded =
   /^(geometry|shipping|delivery|warranty|reviews|description|sizing guide|доставка|гарантия|отзывы|геометрия)$/i;
 const metadataName =
-  /^(weight|net weight|вес|вес велосипеда(?: без упаковки)?|вес с упаковкой|poids|weight size|available sizes|sizes|размеры?|подходит на рост|подходит для веса|размер упаковки|wheel size|диаметр кол[её]с|допустимый размер (?:покрышек|кол[её]с)(?:, (?:max|min))?|рекомендованное давление|количество скоростей|тип проводки рубашек тросов|передняя звезда, макс\.|модель \(по-русски\)|color|colour|colou?rs|bike color|цвет|couleurs?|coloris|product id|model year|year|сезон|год|год выпуска)$/i;
-type Rows = { row: string; label: string; value: string };
+  /^(weight|net weight|вес|вес велосипеда(?: без упаковки)?|вес с упаковкой|poids|вес всего велосипеда|вес нетто|вес, кг(?: \(без педалей\))?|для какого размера указан вес|размер колес в дюймах|размер колеса велосипеда|диаметр колеса|диаметр колес|размер рамы велосипеда|размер рамы|weight size|available sizes|sizes|размеры?|подходит на рост|подходит для веса|размер упаковки|wheel size|диаметр кол[её]с|допустимый размер (?:покрышек|кол[её]с)(?:, (?:max|min))?|рекомендованное давление|количество скоростей|тип проводки рубашек тросов|передняя звезда, макс\.|модель \(по-русски\)|color|colour|colou?rs|bike color|цвет|couleurs?|coloris|product id|model year|year|сезон|год|год выпуска)$/i;
+type Rows = {
+  row: string;
+  label: string;
+  value: string;
+  types?: Record<string, ComponentType>;
+};
+const fieldType = (label: string, rows?: Rows) =>
+  rows?.types?.[label] ?? componentType(label);
 type DomNode = ReturnType<CheerioAPI>[number];
 export function jsonObjects($: CheerioAPI): Record<string, unknown>[] {
   const out: Record<string, unknown>[] = [];
@@ -452,7 +460,7 @@ function pipeline(doc: SourceDocument, rows?: Rows) {
   const chosen = new Map<string, RawField>(),
     conflicts: RawField[] = [];
   for (const field of fields) {
-    const type = componentType(field.label),
+    const type = fieldType(field.label, rows),
       key = type === "other" ? normalize(field.label) : type;
     const old = chosen.get(key);
     if (!old) {
@@ -491,10 +499,10 @@ export function parseDocument(
     );
   trace("normalization_started");
   const componentFields = result.chosen.filter(
-    (f) => componentType(f.label) !== "other" && !absentComponent(f.value),
+    (f) => fieldType(f.label, rows) !== "other" && !absentComponent(f.value),
   );
   const unknownFields = result.chosen.filter(
-    (f) => componentType(f.label) === "other" && !metadataName.test(f.label),
+    (f) => fieldType(f.label, rows) === "other" && !metadataName.test(f.label),
   );
   if (componentFields.length < QUALITY.minimumComponents) {
     const bodyText = clean(result.$("body").text());
@@ -514,7 +522,7 @@ export function parseDocument(
     );
   }
   const components = componentFields.map((f) => ({
-    ...normalizeComponent(f.label, f.value),
+    ...normalizeComponent(f.label, f.value, rows?.types?.[f.label]),
     provenance: {
       sourceUrl: doc.url,
       strategy: f.strategy,
@@ -541,7 +549,7 @@ export function parseDocument(
   for (const f of result.chosen.filter((f) => metadataName.test(f.label))) {
     const key = normalize(f.label);
     if (
-      /^(weight|net weight|вес|вес велосипеда(?: без упаковки)?|poids)$/.test(
+      /^(weight|net weight|вес|вес велосипеда(?: без упаковки)?|вес всего велосипеда|вес нетто|вес кг(?: без педалей)?|poids)$/.test(
         key,
       )
     ) {
@@ -554,11 +562,25 @@ export function parseDocument(
               /(\d+(?:[.,]\d+)?)\s*(?:kg|кг)(?![\p{L}\p{N}])/giu,
             ),
           ].map((m) => Number(m[1].replace(",", ".")));
+      if (
+        !weights.length &&
+        /вес кг/.test(key) &&
+        /^\d+(?:[.,]\d+)?$/.test(f.value)
+      )
+        weights.push(Number(f.value.replace(",", ".")));
       if (weights.length === 1 && weights[0] >= 1 && weights[0] <= 100)
         suggestedMetadata.weight = weights[0];
-    } else if (/^(sizes|available sizes|размеры?)$/.test(key))
+    } else if (key === "для какого размера указан вес")
+      suggestedMetadata.weightSize = f.value;
+    else if (
+      /^(sizes|available sizes|размеры?|размер рамы(?: велосипеда)?)$/.test(key)
+    )
       suggestedMetadata.sizes = f.value;
-    else if (/^(wheel size|диаметр кол[её]с)$/.test(key))
+    else if (
+      /^(wheel size|диаметр кол[её]с|диаметр колеса|размер колес в дюймах|размер колеса велосипеда)$/.test(
+        key,
+      )
+    )
       suggestedMetadata.wheelSize = f.value;
     else if (/^(color|colour|bike color|цвет|couleurs?|coloris)$/.test(key))
       suggestedMetadata.color = f.value;

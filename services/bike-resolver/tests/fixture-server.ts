@@ -1,6 +1,11 @@
 // Disposable HTTP test server. Real resolver/parser, captured Giant document, no internet.
 import { readFileSync } from "node:fs";
 import pino from "pino";
+import {
+  pages as russianPages,
+  key as russianKey,
+  document as russianDocument,
+} from "./fixtures/russian-recordings.js";
 import { buildApp } from "../src/app.js";
 import { Resolver } from "../src/resolver.js";
 import { MemoryCache } from "../src/cache.js";
@@ -72,6 +77,10 @@ const transport = {
         body: JSON.stringify(data),
       };
     }
+    const recordedRussian = russianPages.find(
+      (entry) => russianKey(entry.url) === russianKey(url),
+    );
+    if (recordedRussian) return russianDocument(recordedRussian);
     const host = new URL(url).hostname;
     if (host === "www.tradeinn.com") {
       const recorded = storeManifest.find((e) =>
