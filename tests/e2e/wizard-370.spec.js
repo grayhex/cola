@@ -434,13 +434,14 @@ test("step 2: related fields side by side, privacy as a choice of two, prices as
   await expect(heading(wizard)).toContainText("Сведения и фото");
   const box = (locator) => locator.boundingBox();
 
-  // Only this dialog is wider (up to 1120 px); the phone keeps one column.
+  // Only this dialog is wider (up to 1520 px since #378, never past the screen
+  // with its margins); the phone keeps one column.
   const dialog = await box(wizard);
-  if (isMobile)
-    expect(dialog.width).toBeLessThanOrEqual(page.viewportSize().width);
+  const screen = page.viewportSize().width;
+  if (isMobile) expect(dialog.width).toBeLessThanOrEqual(screen);
   else {
     expect(dialog.width).toBeGreaterThan(900);
-    expect(dialog.width).toBeLessThanOrEqual(1121);
+    expect(dialog.width).toBeLessThanOrEqual(Math.min(1520, screen - 48) + 1);
   }
   const make = await box(wizard.getByLabel("Марка", { exact: true }));
   const model = await box(wizard.getByLabel("Модель", { exact: true }));
