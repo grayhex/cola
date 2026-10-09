@@ -238,6 +238,38 @@ test("«Уже есть аккаунт? Войти» keeps the scenario: after s
   expect(await intents(page)).toHaveLength(0);
 });
 
+test("a guest already on the sign-in form is brought to registering by the menu «Запланировать», on the same page; a switch by hand stays", async ({
+  page,
+  isMobile,
+}) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/account");
+  await expect(
+    page.getByRole("heading", { name: "С возвращением" }),
+  ).toBeVisible();
+  // The page is not loaded again: its own script is the proof.
+  await page.evaluate(() => {
+    window.sameDocument = true;
+  });
+  if (isMobile)
+    await page.getByRole("button", { name: "Открыть меню" }).click();
+  else
+    await page
+      .getByRole("button", { name: "Подразделы: Покатушки", exact: true })
+      .click();
+  await page.getByRole("link", { name: "Запланировать", exact: true }).click();
+  await expect(page).toHaveURL(/auth=register/);
+  await expect(
+    page.getByRole("heading", { name: "Присоединиться к ColaBike" }),
+  ).toBeVisible();
+  expect(await page.evaluate(() => window.sameDocument)).toBe(true);
+  // The guest's own choice is theirs: back to signing in, and it stays.
+  await page.getByRole("button", { name: "Уже есть аккаунт? Войти" }).click();
+  await expect(
+    page.getByRole("heading", { name: "С возвращением" }),
+  ).toBeVisible();
+});
+
 test("closed registration says so and keeps the way to sign in; cancelling goes back to the page the guest was on", async ({
   page,
 }) => {

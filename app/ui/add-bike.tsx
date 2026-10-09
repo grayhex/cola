@@ -10,6 +10,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { createPortal } from "react-dom";
 import { addBikeHref } from "../../lib/navigation.ts";
 import { useSite } from "./site-provider.tsx";
 
@@ -19,8 +20,15 @@ import { useSite } from "./site-provider.tsx";
 // request, and a failed load is told in place with a retry, the page stays.
 type Created = (bikeId: string) => void;
 interface AddBike {
-  /** Opens the wizard over the current page; `onCreated` hears of a new bike. */
-  open: (options?: { onCreated?: Created }) => void;
+  /**
+   * Opens the wizard over the current page; `onCreated` hears of a new bike;
+   * `within` is the window the request comes from (a planner is a modal, and
+   * all that stands outside of a modal is inert and under its backdrop).
+   */
+  open: (options?: {
+    onCreated?: Created;
+    within?: HTMLElement | null;
+  }) => void;
   /** The wizard's code is on its way: a second request waits. */
   loading: boolean;
 }
@@ -34,9 +42,11 @@ export function AddBikeProvider({ children }: { children: React.ReactNode }) {
   const loaded = useRef<Awaited<ReturnType<typeof loadDialog>> | null>(null);
   const created = useRef<Created | undefined>(undefined);
   const busy = useRef(false);
-  const open = useCallback((options?: { onCreated?: Created }) => {
+  const [within, setWithin] = useState<HTMLElement | null>(null);
+  const open = useCallback<AddBike["open"]>((options) => {
     if (busy.current) return;
     created.current = options?.onCreated;
+    setWithin(options?.within ?? null);
     if (loaded.current) {
       setState("open");
       return;
@@ -60,6 +70,32 @@ export function AddBikeProvider({ children }: { children: React.ReactNode }) {
     [open, state],
   );
   const Dialog = state === "open" ? loaded.current?.default : null;
+  const notice =
+    state === "loading" ? (
+      <p role="status" className="add-bike-status">
+        Открываем мастер…
+      </p>
+    ) : state === "failed" ? (
+      <div role="alert" className="add-bike-status">
+        <span>
+          Не удалось открыть мастер. Проверьте соединение и попробуйте ещё раз.
+        </span>
+        <button
+          type="button"
+          className="button small"
+          onClick={() => open({ onCreated: created.current, within })}
+        >
+          Повторить
+        </button>
+        <button
+          type="button"
+          className="quiet small"
+          onClick={() => setState("idle")}
+        >
+          Закрыть
+        </button>
+      </div>
+    ) : null;
   return (
     <AddBikeContext.Provider value={api}>
       {children}
@@ -69,33 +105,10 @@ export function AddBikeProvider({ children }: { children: React.ReactNode }) {
           onCreated={(id) => created.current?.(id)}
         />
       )}
-      {state === "loading" && (
-        <p role="status" className="add-bike-status">
-          Открываем мастер…
-        </p>
-      )}
-      {state === "failed" && (
-        <div role="alert" className="add-bike-status">
-          <span>
-            Не удалось открыть мастер. Проверьте соединение и попробуйте ещё
-            раз.
-          </span>
-          <button
-            type="button"
-            className="button small"
-            onClick={() => open({ onCreated: created.current })}
-          >
-            Повторить
-          </button>
-          <button
-            type="button"
-            className="quiet small"
-            onClick={() => setState("idle")}
-          >
-            Закрыть
-          </button>
-        </div>
-      )}
+      {/* In the modal window the request came from, when it is still there:
+          the rest of the page is inert under a modal, so a notice outside of it
+          could be neither seen nor used. */}
+      {notice && (within?.isConnected ? createPortal(notice, within) : notice)}
     </AddBikeContext.Provider>
   );
 }
@@ -143,7 +156,10 @@ export function AddBikeLink({
         if (event.defaultPrevented || plain(event)) return;
         if (!viewer || pathname === "/account") return;
         event.preventDefault();
-        add.open({ onCreated });
+        add.open({
+          onCreated,
+          within: event.currentTarget.closest("dialog"),
+        });
       }}
     >
       {children}

@@ -269,6 +269,38 @@ test("from the planner the wizard opens over it, and the planner goes on with th
   expect(page.url()).toBe(url);
 });
 
+test("a failed load of the wizard from the planner is told in the planner's own window, where it can be used", async ({
+  page,
+}) => {
+  await member(page);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  await page
+    .getByRole("button", { name: "Организовать покатушку", exact: true })
+    .first()
+    .click();
+  const planner = page.getByRole("dialog", {
+    name: "Организовать покатушку",
+    exact: true,
+  });
+  await expect(planner).toBeVisible();
+  const add = planner.getByRole("link", { name: "Добавить велосипед" });
+  await expect(add).toBeVisible();
+  await page.route("**/_next/static/chunks/**", (route) => route.abort());
+  await add.click();
+  // Under a modal everything outside of it is inert: the notice stands in the
+  // modal, so its buttons can be reached and pressed.
+  const alert = planner
+    .getByRole("alert")
+    .filter({ hasText: "Не удалось открыть мастер" });
+  await expect(alert).toBeVisible();
+  await expect(alert.getByRole("button", { name: "Повторить" })).toBeEnabled();
+  await page.unroute("**/_next/static/chunks/**");
+  await alert.getByRole("button", { name: "Повторить" }).click();
+  await expect(wizardOf(page)).toBeVisible();
+  await expect(alert).toHaveCount(0);
+});
+
 test("the picture above the search is limited, reserved and never covers it: a slow, wide, portrait, small or missing one", async ({
   page,
 }, info) => {

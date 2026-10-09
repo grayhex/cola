@@ -34,6 +34,18 @@ export default function AuthPage({
     ),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(notice);
+  // The page stays mounted when a guest on the sign-in form follows a button
+  // that asks for registration (the address changes only by its query): a new
+  // ask opens the form of registering; a switch the guest made by hand stays
+  // until the next ask.
+  const [wasAsked, setWasAsked] = useState(asked);
+  if (wasAsked !== asked) {
+    setWasAsked(asked);
+    if (asked && initialMode === undefined && mode !== "register") {
+      setMode("register");
+      setError("");
+    }
+  }
   const register = mode === "register";
   return (
     <>
