@@ -4,13 +4,11 @@ import { randomUUID } from "node:crypto";
 import { registerVerified } from "../fixtures/verified-user.js";
 import { testConsents } from "../fixtures/legal.js";
 import { publicPath } from "../../lib/public-urls.ts";
-import { gpx, loop } from "../ride-fixtures.js";
 import { chosenArea, nameArea } from "../fixtures/ride-area.js";
 
 const origin = process.env.TEST_ORIGIN || "http://localhost:3100";
 let author, reader, bike;
 const secret = "Закрытая встреча у входа 17";
-const plannedAt = "2031-03-29T09:00:00Z";
 async function create(request, path, data) {
   const response = await request.post("/api/" + path, {
     headers: { origin },
@@ -229,99 +227,9 @@ test("planner (#253): when and where first, tiles, visibility, advanced, themes,
   expect(errors).toEqual([]);
 });
 
-test("HTTP schemas and private meeting never leak to anonymous API, SSR or previews", async ({
-  browser,
-}) => {
-  const guest = await browser.newContext({ baseURL: origin });
-  try {
-    const input = {
-      bikeId: bike.id,
-      title: "HTTP passport",
-      description: "Public description",
-      isPublic: true,
-      privacyEnabled: false,
-      privacyRadiusM: 500,
-      scheduledAt: plannedAt,
-      meetingPoint: secret,
-    };
-    expect(
-      (
-        await guest.request.post("/api/rides/plan", {
-          headers: { origin },
-          data: input,
-        })
-      ).status(),
-    ).toBe(401);
-    expect(
-      (
-        await author.request.post("/api/rides/plan", {
-          headers: { origin: "https://evil.test" },
-          data: input,
-        })
-      ).status(),
-    ).toBe(403);
-    for (const fields of [
-      { passport: { surprise: true } },
-      { passport: { distanceKm: { min: 40, max: 20 } } },
-      { expectedEndAt: "2031-03-29T08:00:00Z" },
-    ])
-      expect(
-        (
-          await author.request.post("/api/rides/plan", {
-            headers: { origin },
-            data: { ...input, ...fields },
-          })
-        ).status(),
-      ).toBe(400);
-    const plan = await create(author.request, "rides/plan", input);
-    const track = await author.request.post(`/api/rides/${plan.id}/track`, {
-      headers: { origin, "content-type": "application/gpx+xml" },
-      data: gpx([loop]),
-    });
-    expect(track.status(), await track.text()).toBe(200);
-    const data = (
-      await (
-        await guest.request.get("/api/rides/public/" + plan.shareId)
-      ).json()
-    ).ride;
-    expect(data.passport).toEqual({});
-    expect(data.meetingPoint).toBe("");
-    expect(
-      data.geometry
-        .flat()
-        .some((p) => p[0] === loop[0][0] && p[1] === loop[0][1]),
-    ).toBe(false);
-    expect(data.analysis).toBeNull();
-    expect(JSON.stringify(data)).not.toContain(secret);
-    expect(
-      await (await guest.request.get(publicPath("ride", data))).text(),
-    ).not.toContain(secret);
-    expect(await (await guest.request.get("/api/rides")).text()).not.toContain(
-      secret,
-    );
-    for (const response of ["accepted", "declined"]) {
-      expect(
-        (
-          await reader.request.patch(`/api/rides/${plan.id}/rsvp`, {
-            headers: { origin },
-            data: { response, occurrenceAt: plannedAt },
-          })
-        ).status(),
-      ).toBe(200);
-      const detail = (
-        await (
-          await reader.request.get("/api/rides/public/" + plan.shareId)
-        ).json()
-      ).ride;
-      expect(detail.meetingPoint).toBe(response === "accepted" ? secret : "");
-      expect(
-        await (await guest.request.get(publicPath("ride", data))).text(),
-      ).not.toContain(secret);
-    }
-  } finally {
-    await guest.close();
-  }
-});
+// The check that HTTP schemas and the private meeting point never leak to an
+// anonymous API, the page or a preview moved to tests/ride-passport-http.js
+// (#386): it used no page, so it runs once and not once per browser.
 
 test("planner controls survive reduced motion, a missing Motion chunk, a slow API error and a missing bike", async ({
   page,

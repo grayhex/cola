@@ -162,127 +162,153 @@ test("the cabinet offers once to replace an automatic username (#71)", async ({
   await expect(prompt).toHaveCount(0);
 });
 
-test("all product routes and account sections share clear light/dark UI; composer, profile menu and real speed data work", async ({
-  page,
-  context,
-  browser,
-}, info) => {
+// The audit of every product route in both themes, the composer, the profile menu
+// and the real speed data, as separate checks of one prepared signed-in account
+// (#386): the data is made once, each theme and the composer report on their own,
+// and a failure names the one that failed. A visual case still starts with the
+// real session in a fresh browser context of its own.
+test.describe.serial("product routes and account sections", () => {
   test.setTimeout(180000);
-  const errors = [];
-  page.on("pageerror", (e) => errors.push(e.message));
-  await context.route("https://tile.openstreetmap.org/**", (r) => r.abort());
-  const registration = await registerVerified(page.request, {
-    headers: { origin },
-    data: {
-      ...testConsents,
-      name: "Александр Смирнов",
-      email: randomUUID() + "@ui.test",
-      password,
-    },
-  });
-  expect(registration.status()).toBe(201);
-  const { user } = await (await page.request.get("/api/me")).json();
-  const signedIn = await context.storageState();
-  const db = new pg.Client({ connectionString: process.env.DATABASE_URL });
-  await db.connect();
-  await db.query(
-    "UPDATE users SET role='admin', bio='Велосипед для города, длинных маршрутов и новых историй.', location='Санкт-Петербург' WHERE id=$1",
-    [user.id],
-  );
-  const request = async (path, data) => {
-    const r = await page.request.post("/api/" + path, {
+  let context, user, signedIn, db, routes, bike;
+  test.beforeAll(async ({ browser }, info) => {
+    context = await browser.newContext(info.project.use);
+    await context.route("https://tile.openstreetmap.org/**", (r) => r.abort());
+    const page = await context.newPage();
+    const registration = await registerVerified(page.request, {
       headers: { origin },
-      data,
+      data: {
+        ...testConsents,
+        name: "Александр Смирнов",
+        email: randomUUID() + "@ui.test",
+        password,
+      },
     });
-    expect(r.ok()).toBe(true);
-    return r.json();
-  };
-  const bike = await request("bikes", {
-    name: "Canyon Grail CF 8",
-    brand: "Canyon",
-    model: "Grail CF 8",
-    year: 2026,
-    category: "gravel",
-    description: "Один велосипед для города и поездок за его пределы.",
-    color: "Песочный",
-    size: "M",
-    weight: 8.2,
-    is_public: true,
+    expect(registration.status()).toBe(201);
+    user = (await (await page.request.get("/api/me")).json()).user;
+    signedIn = await context.storageState();
+    db = new pg.Client({ connectionString: process.env.DATABASE_URL });
+    await db.connect();
+    await db.query(
+      "UPDATE users SET role='admin', bio='Велосипед для города, длинных маршрутов и новых историй.', location='Санкт-Петербург' WHERE id=$1",
+      [user.id],
+    );
+    const request = async (path, data) => {
+      const r = await page.request.post("/api/" + path, {
+        headers: { origin },
+        data,
+      });
+      expect(r.ok()).toBe(true);
+      return r.json();
+    };
+    bike = await request("bikes", {
+      name: "Canyon Grail CF 8",
+      brand: "Canyon",
+      model: "Grail CF 8",
+      year: 2026,
+      category: "gravel",
+      description: "Один велосипед для города и поездок за его пределы.",
+      color: "Песочный",
+      size: "M",
+      weight: 8.2,
+      is_public: true,
+    });
+    const b = (await (await page.request.get("/api/bikes/" + bike.id)).json())
+      .bike;
+    const entry = await request("journal", {
+      bikeId: bike.id,
+      kind: "story",
+      title: "Город заканчивается — маршрут продолжается",
+      body: "Первый длинный маршрут на новой сборке. Проверил посадку, сменил покрышки и нашёл тихую дорогу вдоль реки.\n\nСамое приятное — возвращаться с новыми идеями для следующей поездки.",
+      status: "published",
+      isPublic: true,
+    });
+    const preview = await request("rides/preview", gpx([loop]));
+    const ride = await request("rides", {
+      previewId: preview.previewId,
+      bikeId: bike.id,
+      title: "Утро вдоль реки",
+      description: "Кольцевой маршрут без спешки.",
+      isPublic: true,
+      privacyEnabled: true,
+      privacyRadiusM: 500,
+    });
+    await page.request.put("/api/journal/" + entry.id + "/save", {
+      headers: { origin },
+    });
+    const comment = await request("journal/" + entry.id + "/comments", {
+      body: "Какие покрышки лучше показали себя на грунте?",
+    });
+    await request("journal/" + entry.id + "/comments", {
+      parentId: comment.id,
+      body: "На сухом грунте понравились покрышки 40 мм: держат уверенно, а на асфальте не мешают катить.",
+    });
+    // The page of the rides lists the upcoming ones: a plan of this account is
+    // there whatever other tests have or have not left in the database, which a
+    // shard of the suite must not depend on (#386).
+    await request("rides/plan", {
+      bikeId: bike.id,
+      title: "Вечерний круг",
+      description: "Плановая покатушка для списка предстоящих.",
+      isPublic: true,
+      privacyEnabled: false,
+      privacyRadiusM: 500,
+      scheduledAt: new Date(Date.now() + 5 * 86400000).toISOString(),
+    });
+    const detail = await (
+      await page.request.get("/api/rides/public/" + ride.shareId)
+    ).json();
+    expect(detail.ride.speedProfile.flat().length).toBeGreaterThan(0);
+    await page.close();
+    routes = [
+      ["/", "#hero-title", "home"],
+      ["/bikes", ".bike-card", "bikes"],
+      ["/b/" + b.share_id, ".bike-heading", "bike"],
+      ["/journal", ".journal-card", "journal"],
+      ["/j/" + entry.shareId, ".journal-body", "post"],
+      ["/j/new?bike=" + bike.id, ".journal-editor", "composer"],
+      ["/rides", ".ride-card", "rides"],
+      [
+        "/r/" + ride.shareId,
+        'svg[aria-label="График: Скорость по расстоянию"]',
+        "ride",
+      ],
+      ["/u/" + user.username, ".profile-hero", "profile"],
+      ["/saved", ".journal-card", "saved"],
+      ["/feed", "main", "feed"],
+      ["/notifications", "main", "notifications"],
+      ["/records", ".hall-heading", "records"],
+      ["/about", "main", "about"],
+      ["/search?q=Canyon", "main", "search"],
+      ["/experience?q=Canyon", "main", "experience"],
+      ["/missing-product-page", "main", "404"],
+      ...[
+        "overview",
+        "profile",
+        "bikes",
+        "rides",
+        "social",
+        "achievements",
+        "appearance",
+        "account",
+      ].map((tab) => [
+        "/account?tab=" + tab,
+        ".account-content",
+        "account-" + tab,
+      ]),
+      ["/admin", ".admin-content", "admin"],
+    ];
   });
-  const b = (await (await page.request.get("/api/bikes/" + bike.id)).json())
-    .bike;
-  const entry = await request("journal", {
-    bikeId: bike.id,
-    kind: "story",
-    title: "Город заканчивается — маршрут продолжается",
-    body: "Первый длинный маршрут на новой сборке. Проверил посадку, сменил покрышки и нашёл тихую дорогу вдоль реки.\n\nСамое приятное — возвращаться с новыми идеями для следующей поездки.",
-    status: "published",
-    isPublic: true,
+  test.afterAll(async () => {
+    await db?.query("DELETE FROM users WHERE id=$1", [user?.id]);
+    await db?.end();
+    await context?.close();
   });
-  const preview = await request("rides/preview", gpx([loop]));
-  const ride = await request("rides", {
-    previewId: preview.previewId,
-    bikeId: bike.id,
-    title: "Утро вдоль реки",
-    description: "Кольцевой маршрут без спешки.",
-    isPublic: true,
-    privacyEnabled: true,
-    privacyRadiusM: 500,
-  });
-  await page.request.put("/api/journal/" + entry.id + "/save", {
-    headers: { origin },
-  });
-  const comment = await request("journal/" + entry.id + "/comments", {
-    body: "Какие покрышки лучше показали себя на грунте?",
-  });
-  await request("journal/" + entry.id + "/comments", {
-    parentId: comment.id,
-    body: "На сухом грунте понравились покрышки 40 мм: держат уверенно, а на асфальте не мешают катить.",
-  });
-  const detail = await (
-    await page.request.get("/api/rides/public/" + ride.shareId)
-  ).json();
-  expect(detail.ride.speedProfile.flat().length).toBeGreaterThan(0);
-  const routes = [
-    ["/", "#hero-title", "home"],
-    ["/bikes", ".bike-card", "bikes"],
-    ["/b/" + b.share_id, ".bike-heading", "bike"],
-    ["/journal", ".journal-card", "journal"],
-    ["/j/" + entry.shareId, ".journal-body", "post"],
-    ["/j/new?bike=" + bike.id, ".journal-editor", "composer"],
-    ["/rides", ".ride-card", "rides"],
-    [
-      "/r/" + ride.shareId,
-      'svg[aria-label="График: Скорость по расстоянию"]',
-      "ride",
-    ],
-    ["/u/" + user.username, ".profile-hero", "profile"],
-    ["/saved", ".journal-card", "saved"],
-    ["/feed", "main", "feed"],
-    ["/notifications", "main", "notifications"],
-    ["/records", ".hall-heading", "records"],
-    ["/about", "main", "about"],
-    ["/search?q=Canyon", "main", "search"],
-    ["/experience?q=Canyon", "main", "experience"],
-    ["/missing-product-page", "main", "404"],
-    ...[
-      "overview",
-      "profile",
-      "bikes",
-      "rides",
-      "social",
-      "achievements",
-      "appearance",
-      "account",
-    ].map((tab) => [
-      "/account?tab=" + tab,
-      ".account-content",
-      "account-" + tab,
-    ]),
-    ["/admin", ".admin-content", "admin"],
-  ];
-  try {
-    for (const mode of ["light", "dark"]) {
+
+  for (const mode of ["light", "dark"])
+    test(`every route and account section in the ${mode} theme`, async ({
+      browser,
+    }, info) => {
+      const errors = [];
       for (const [url, ready, name] of routes) {
         // Each visual case starts with the same real session and fresh browser
         // state. Do not carry cookie/storage changes through dozens of pages.
@@ -355,7 +381,20 @@ test("all product routes and account sections share clear light/dark UI; compose
           await audit.close();
         }
       }
-    }
+      expect(errors).toEqual([]);
+    });
+
+  test("the journal composer keeps plain text, and the profile menu opens", async ({
+    browser,
+  }, info) => {
+    const errors = [];
+    const session = await browser.newContext({
+      ...info.project.use,
+      storageState: signedIn,
+    });
+    await session.route("https://tile.openstreetmap.org/**", (r) => r.abort());
+    const page = await session.newPage();
+    page.on("pageerror", (e) => errors.push(e.message));
     await page.goto("/j/new?bike=" + bike.id);
     const body = page.getByRole("textbox", {
       name: "Текст записи",
@@ -371,30 +410,28 @@ test("all product routes and account sections share clear light/dark UI; compose
       "Мой новый маршрут <script>plain text</script>",
     );
     await page.close();
-    page = await context.newPage();
-    page.on("pageerror", (e) => errors.push(e.message));
-    await page.goto("/account");
-    const menu = page.getByRole("button", {
+    const account = await session.newPage();
+    account.on("pageerror", (e) => errors.push(e.message));
+    await account.goto("/account");
+    const menu = account.getByRole("button", {
       name: "Открыть меню",
       exact: true,
     });
     if (await menu.isVisible()) await menu.click();
     else
-      await page
+      await account
         .getByRole("button", {
           name: "Аккаунт — Александр Смирнов",
           exact: true,
         })
         .click();
-    await noOverflow(page);
-    await page.screenshot({
+    await noOverflow(account);
+    await account.screenshot({
       path: info.outputPath("profile-menu.png"),
       fullPage: true,
       animations: "disabled",
     });
+    await session.close();
     expect(errors).toEqual([]);
-  } finally {
-    await db.query("DELETE FROM users WHERE id=$1", [user.id]);
-    await db.end();
-  }
+  });
 });
