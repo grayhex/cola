@@ -95,7 +95,12 @@ test("from the showcase the wizard opens over the page: no trip to the account, 
   await wizard.getByRole("button", { name: "Закрыть", exact: true }).click();
   await expect(wizard).toHaveCount(0);
   expect(page.url()).toBe(url);
-  expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(43);
+  // A browser applies the restored scroll a frame later (WebKit on a phone
+  // reported 0 right after the window had gone): wait for it, not for the
+  // first reading.
+  await expect
+    .poll(() => page.evaluate(() => window.scrollY))
+    .toBeGreaterThan(43);
   await expect(add).toBeFocused();
   expect(seen).toEqual([]);
 
