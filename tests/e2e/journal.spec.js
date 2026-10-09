@@ -56,7 +56,7 @@ test("component change offers an explicit draft, never automatic publication", a
     page.getByRole("heading", { name: "Записи владельца", exact: true }),
   ).toBeVisible();
   // The build is another tab of the same page.
-  await page.getByRole("tab", { name: "Комплектация", exact: true }).click();
+  await page.getByRole("tab", { name: /^Комплектация( \(\d+\))?$/ }).click();
   const group = page
     .locator(".component-group")
     .filter({ hasText: "Original saddle" });

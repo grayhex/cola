@@ -5,6 +5,11 @@ import { useEffect } from "react";
 export interface BikeTabItem {
   id: string;
   label: string;
+  /**
+   * What the tab holds, in brackets after its name (#378). `null` while it is
+   * not known (loading, a failed request): no number is better than a false 0.
+   */
+  count?: number | null;
 }
 // The ids tie a tab to its panel; the page's own hash uses the section id.
 const tabId = (id: string) => "bike-tab-" + id;
@@ -26,7 +31,9 @@ export function BikeTabList({
   label: string;
   listRef: React.RefObject<HTMLDivElement | null>;
 }) {
-  // The open tab stays in view of a narrow row.
+  // The open tab stays in view of a narrow row, also when the counts that
+  // arrive later make the tabs before it wider (#378).
+  const counts = tabs.map((tab) => tab.count ?? "").join();
   useEffect(() => {
     const row = listRef.current;
     const tab = row?.querySelector<HTMLElement>('[aria-selected="true"]');
@@ -36,7 +43,7 @@ export function BikeTabList({
     if (start < row.scrollLeft) row.scrollLeft = Math.max(0, start - 8);
     else if (end > row.scrollLeft + row.clientWidth)
       row.scrollLeft = end - row.clientWidth + 8;
-  }, [active, listRef]);
+  }, [active, counts, listRef]);
   return (
     <div
       ref={listRef}
@@ -71,7 +78,14 @@ export function BikeTabList({
             document.getElementById(tabId(tabs[next].id))?.focus();
           }}
         >
-          {tab.label}
+          {/* One inline run: the label and its count are one phrase (the
+              flex gap of the tab would pull them apart). */}
+          <span>
+            {tab.label}
+            {typeof tab.count === "number" && (
+              <span className="bike-tab-count"> ({tab.count})</span>
+            )}
+          </span>
         </button>
       ))}
     </div>

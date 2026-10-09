@@ -169,6 +169,19 @@ export async function commentPage(
     focusPath: focusRows.map((r) => commentDto(r, user)),
   };
 }
+/**
+ * The number the discussion of a bike shows in its heading and the title of its
+ * tab (#378): the same count as `bike.comments`, replies included. Asked beside
+ * the page, not inside the shared engine of the other entities.
+ */
+export async function bikeCommentTotal(q: Queryable, bikeId: string) {
+  return (
+    await q.query<{ total: number }>(
+      `SELECT (${visibleCommentCount}) AS total FROM bikes b WHERE b.id=$1`,
+      [bikeId],
+    )
+  ).rows[0].total;
+}
 export async function replyPage(
   q: Queryable,
   bikeId: string,

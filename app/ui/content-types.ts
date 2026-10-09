@@ -129,5 +129,9 @@ export type MarketNoticeDto = Extract<
   { actor: null; type: "market_expiring" }
 >;
 export type CommentDto = JsonData<ReturnType<typeof commentDto>>;
-export type CommentPageDto = JsonData<Awaited<ReturnType<typeof commentPage>>>;
+// `total` is the count of a bike's discussion (its tab title, #378); the pages
+// of other entities do not carry it.
+export type CommentPageDto = JsonData<
+  Awaited<ReturnType<typeof commentPage>>
+> & { total?: number };
 export type ReplyPageDto = JsonData<Awaited<ReturnType<typeof replyPage>>>;

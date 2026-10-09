@@ -35,6 +35,7 @@ export default function BikeIdentity({
   quote,
   specifications,
   rideTotal,
+  comments,
   likes,
   onSection,
   onRegister,
@@ -48,6 +49,9 @@ export default function BikeIdentity({
   // The «Parts» figure leads to the build only when the page has one.
   specifications: boolean;
   rideTotal: number | null;
+  // The number of comments the page knows now: the discussion's own count once
+  // it has been read, so the header and the tab say the same (#378).
+  comments: number;
   likes: number;
   // Opens the tab of the bike page that a counter or a link points at.
   onSection?: (id: string) => void;
@@ -88,7 +92,7 @@ export default function BikeIdentity({
       {
         key: "comments",
         label: t("Комментарии"),
-        value: bike.comments,
+        value: comments,
         icon: <MessageCircle size={20} aria-hidden="true" />,
         href: "#discussion",
       },

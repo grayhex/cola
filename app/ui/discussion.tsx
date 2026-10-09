@@ -430,6 +430,7 @@ export default function Discussion({
   onSolution,
   variant,
   count,
+  onTotal,
 }: {
   bike: {
     id: string;
@@ -445,6 +446,9 @@ export default function Discussion({
   // threads and a button for the rest (#291). Other pages keep the full block.
   variant?: "panel";
   count?: number;
+  // The bike's comment count as the server counts it now (#378): the title of
+  // the tab and the heading of the panel show the same number.
+  onTotal?: (total: number) => void;
 }) {
   const api = paths(entityType);
   const panel = variant === "panel";
@@ -486,6 +490,9 @@ export default function Discussion({
     },
     [api.items, bike.id, page, focus],
   );
+  useEffect(() => {
+    if (typeof data?.total === "number") onTotal?.(data.total);
+  }, [data, onTotal]);
   useEffect(() => {
     const pending = requests.current;
     if (loaded) void refresh();

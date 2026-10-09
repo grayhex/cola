@@ -39,8 +39,7 @@
   .comment-heading .person-identity {
     font-size: var(--text-sm);
   }
-  .comment-heading time,
-  .notification-list time {
+  .comment-heading time {
     color: var(--text-muted);
     font: var(--weight-regular) var(--text-xs) / 1.4 var(--font-mono);
     white-space: nowrap;
@@ -152,28 +151,30 @@
   }
 
   /* ── Notifications ──────────────────────────────────────────────────── */
+  /* A notice is a row of its own (#378): a small gap between rows, the text,
+     the action, the date and the control apart from each other. An unread one
+     differs by a bar, a tint and the word «Новое», not by colour alone. */
   .notification-list {
+    display: grid;
+    gap: var(--space-2);
     margin: 0;
     padding: 0;
-    overflow: hidden;
-    border: 1px solid var(--line);
-    border-radius: var(--radius-xl);
     list-style: none;
   }
   .notification-list:empty {
     display: none;
   }
-  .notification-list li {
+  .notification {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: var(--space-3);
     padding: var(--space-3) var(--space-4);
-    border-bottom: 1px solid var(--line);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
   }
-  .notification-list li:last-child {
-    border-bottom: 0;
-  }
-  .notification-list li.unread {
+  .notification.unread {
+    border-color: var(--line-strong);
     background: linear-gradient(
       to right,
       var(--accent-soft),
@@ -181,9 +182,77 @@
     );
     box-shadow: inset 3px 0 0 var(--accent);
   }
-  .notification-list li > div {
+  .notification-body {
+    display: grid;
     flex: 1;
+    gap: var(--space-1);
     min-width: 0;
+  }
+  .notification-body > p {
+    margin: 0;
+  }
+  .notification-text {
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    overflow-wrap: anywhere;
+  }
+  .notification-text a {
+    color: var(--text);
+    font-weight: var(--weight-semibold);
+  }
+  .notification-text a:hover,
+  .notification-actions a:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  /* What the notice offers sits on its own line under the text. */
+  .notification-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1) var(--space-3);
+    font-size: var(--text-sm);
+    overflow-wrap: anywhere;
+  }
+  .notification-actions a {
+    color: var(--text);
+    font-weight: var(--weight-semibold);
+  }
+  /* The date is an element of its own, with room around it. */
+  .notification-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--space-1) var(--space-2);
+  }
+  .notification-meta time {
+    color: var(--text-muted);
+    font: var(--weight-regular) var(--text-xs) / 1.4 var(--font-mono);
+    white-space: nowrap;
+  }
+  .notification-flag {
+    padding: 0 var(--space-1-5);
+    border-radius: var(--radius-full);
+    background: var(--accent);
+    color: var(--accent-foreground);
+    font-size: var(--text-xs);
+    font-weight: var(--weight-semibold);
+    line-height: 1.5;
+  }
+  .notification-error {
+    color: var(--danger);
+    font-size: var(--text-xs);
+  }
+  .notification-read {
+    align-self: flex-start;
+  }
+  .notification-read[aria-busy] svg {
+    animation: notification-spin 1s linear infinite;
+  }
+  @keyframes notification-spin {
+    to {
+      transform: rotate(360deg);
+    }
   }
   /* A notice from the site itself sits where an actor's avatar would (#116). */
   .notification-icon {
@@ -196,27 +265,10 @@
     background: var(--surface-hover);
     color: var(--text-secondary);
   }
-  .notification-list li > div > .button {
-    margin: var(--space-1) 0 var(--space-1-5);
-  }
-  .notification-list p time {
-    color: inherit;
-    font: inherit;
-    white-space: normal;
-  }
-  .notification-list p {
-    margin: 0 0 var(--space-0-5);
-    color: var(--text-secondary);
-    font-size: var(--text-sm);
-    overflow-wrap: anywhere;
-  }
-  .notification-list p a {
-    color: var(--text);
-    font-weight: var(--weight-semibold);
-  }
-  .notification-list p a:hover {
-    text-decoration: underline;
-    text-underline-offset: 3px;
+  @media (prefers-reduced-motion: reduce) {
+    .notification-read[aria-busy] svg {
+      animation: none;
+    }
   }
 
   /* ── Feed pages ─────────────────────────────────────────────────────── */
@@ -315,7 +367,7 @@
     .more-replies {
       margin-left: var(--space-5);
     }
-    .notification-list li {
+    .notification {
       gap: var(--space-2-5);
       padding: var(--space-3);
     }

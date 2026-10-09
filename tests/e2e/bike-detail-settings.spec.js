@@ -90,10 +90,10 @@ test("bike detail settings, passport, anchors, guest rights and owner without ph
     await expect(
       reader
         .getByRole("tablist", { name: "Разделы велосипеда" })
-        .getByRole("tab", { name: "Комплектация", exact: true }),
+        .getByRole("tab", { name: /^Комплектация( \(\d+\))?$/ }),
     ).toHaveCount(0);
     await page.goto(path);
-    await page.getByRole("tab", { name: "Комплектация", exact: true }).click();
+    await page.getByRole("tab", { name: /^Комплектация( \(\d+\))?$/ }).click();
     await expect(page.locator("#specifications")).toBeVisible();
     expect(
       (
@@ -134,7 +134,7 @@ test("bike detail settings, passport, anchors, guest rights and owner without ph
       ).toHaveAttribute("aria-selected", "true");
       await expect(tab.locator("#specifications")).toBeHidden();
       await sections
-        .getByRole("tab", { name: "Комплектация", exact: true })
+        .getByRole("tab", { name: /^Комплектация( \(\d+\))?$/ })
         .click();
       await expect(tab).toHaveURL(/#specifications$/);
       await expect(tab.locator("#specifications")).toBeVisible();
@@ -238,7 +238,7 @@ test("bike detail settings, passport, anchors, guest rights and owner without ph
     await expect(page.locator(".bike-quote")).toHaveCount(0);
     await expect(page.locator("#specifications")).toHaveCount(0);
     await expect(
-      menu.getByRole("tab", { name: "Комплектация", exact: true }),
+      menu.getByRole("tab", { name: /^Комплектация( \(\d+\))?$/ }),
     ).toHaveCount(0);
     // Owner tools do not depend on the picture or any other block.
     for (const name of ["Редактировать", "Добавить фото", "Приватность", "Ещё"])
