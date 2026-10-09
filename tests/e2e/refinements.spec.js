@@ -22,13 +22,18 @@ test("bike rides tab, raster map, six-ride accordion, preferences and grouped ad
     return route.fulfill({ contentType: "image/png", body: tile });
   });
   const nonce = randomUUID().slice(0, 8);
+  // The settings are the site's, shared with the tests that follow: a dropped
+  // connection (ECONNRESET) must not leave them as this test set them.
   const putSettings = async (value) => {
-    const latest = await (await page.request.get("/api/admin/overview")).json();
+    const latest = await (
+      await page.request.get("/api/admin/overview", { maxRetries: 3 })
+    ).json();
     expect(
       (
         await page.request.put("/api/admin/settings", {
           headers: { origin },
           data: { value, version: latest.settingsVersion },
+          maxRetries: 3,
         })
       ).status(),
     ).toBe(200);

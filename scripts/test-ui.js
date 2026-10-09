@@ -67,6 +67,12 @@ try {
     "127.0.0.1",
     "--port",
     "3100",
+    // Playwright's request contexts keep connections; a server that closes an
+    // idle one at the default 5 s can drop a request sent at that very moment
+    // ("socket hang up"), and a lost settings restore leaves later tests with
+    // another site. Long enough for any pause of a browser test.
+    "--keepAliveTimeout",
+    "65000",
   ]);
   let ready = false;
   for (let i = 0; i < 120; i++) {
