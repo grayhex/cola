@@ -79,6 +79,10 @@ test("home settings: source warning, three copy fields and four independent puls
       await expect(
         page.getByRole("combobox", { name: "Hero — тёмная тема" }),
       ).toHaveValue(asset);
+      // The size is read from the preview once it has loaded, and a preview
+      // far down the page (the dark theme's picker is the second one, #382)
+      // loads lazily: the administrator has it on the screen, so does the test.
+      await picker.locator(".asset-picker-preview").scrollIntoViewIfNeeded();
       if (width === 640) {
         await expect(picker.getByRole("status")).toContainText(
           "640×275 px меньше рекомендуемого",
