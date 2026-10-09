@@ -573,15 +573,41 @@
   .photo-credit:hover {
     color: var(--text);
   }
-  /* The photo opened whole in a dialog. */
+  /* The photo opened whole in a dialog (#382): its own wide window, not the
+     width of a form. It takes the room the screen allows, minus the compact
+     head and the margins, shows the photo whole (contain) at the size of the
+     file when the file is small, and keeps its size while the file loads. */
+  dialog.photo-viewer {
+    width: fit-content;
+    min-width: min(520px, 96vw);
+    max-width: 96vw;
+    max-height: 96dvh;
+    padding: var(--space-3) var(--space-4) var(--space-4);
+  }
+  dialog.photo-viewer > .modal-head {
+    margin-bottom: var(--space-3);
+  }
+  .photo-viewer-frame {
+    display: grid;
+    place-items: center;
+    min-width: min(480px, calc(96vw - 2 * var(--space-4)));
+    min-height: min(50dvh, 360px);
+    border-radius: var(--radius-lg);
+    background: var(--bg-subtle);
+  }
   .full-photo {
     display: block;
-    width: 100%;
+    width: auto;
     height: auto;
-    max-height: 75dvh;
+    max-width: calc(96vw - 2 * var(--space-4));
+    max-height: calc(96dvh - 96px);
     border-radius: var(--radius-lg);
     background: var(--bg-subtle);
     object-fit: contain;
+  }
+  .photo-viewer-frame > .photo-empty {
+    width: 100%;
+    min-height: inherit;
   }
   /* The personal layout (Appearance) sets how tall the phone photo is. */
   @media (max-width: 700px) {

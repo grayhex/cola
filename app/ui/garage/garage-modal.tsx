@@ -103,6 +103,7 @@ export default function GarageModal({
       }
       onClose={close}
       dismissible={modal.type !== "bike" || !!modal.bike}
+      viewer={modal.type === "photoView"}
     >
       {error && (
         <div className="error" role="alert">
@@ -111,7 +112,16 @@ export default function GarageModal({
         </div>
       )}
       {modal.type === "photoView" && (
-        <Photo bike={selectedBike} photo={photo} className="full-photo" full />
+        // The frame keeps the window's size while the picture loads or fails.
+        <div className="photo-viewer-frame">
+          <Photo
+            bike={selectedBike}
+            photo={photo}
+            className="full-photo"
+            full
+            priority
+          />
+        </div>
       )}
       {modal.type === "auth" && (
         <AuthWindow mode={modal.mode}>
@@ -129,7 +139,10 @@ export default function GarageModal({
               run(async () => {
                 await api("auth/" + modal.mode, "POST", data);
                 await refreshViewer();
-                setSelected(null);
+                // A shared bike stays on the page while the session changes:
+                // it is loaded again for the new reader, and only the server's
+                // refusal makes it unavailable (#382).
+                if (!share) setSelected(null);
                 setModal(null);
                 setNotice(
                   modal.mode === "register"

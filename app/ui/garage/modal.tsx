@@ -10,6 +10,7 @@ export default function Modal({
   children,
   dismissible = true,
   wide = false,
+  viewer = false,
   graphic,
   description,
 }: {
@@ -18,6 +19,8 @@ export default function Modal({
   children: React.ReactNode;
   dismissible?: boolean;
   wide?: boolean;
+  /** The window of an opened photo (#382): as large as the screen allows. */
+  viewer?: boolean;
   graphic?: React.ReactNode;
   /**
    * A short note in the head, to the right of the title (#382): what the
@@ -87,7 +90,7 @@ export default function Modal({
         request();
       }}
       {...backdrop}
-      className={wide ? "planning" : undefined}
+      className={wide ? "planning" : viewer ? "photo-viewer" : undefined}
       aria-labelledby={titleId}
       aria-describedby={description ? descriptionId : undefined}
     >
