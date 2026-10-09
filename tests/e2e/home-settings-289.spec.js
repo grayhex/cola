@@ -40,9 +40,15 @@ test("home settings: source warning, three copy fields and four independent puls
     await page.goto("/admin");
     await page.getByRole("tab", { name: "Дизайн", exact: true }).click();
     await page.getByRole("button", { name: "Главная", exact: true }).click();
+    // Both hero pictures (light and dark theme, #382) recommend the size.
+    await expect(
+      page
+        .getByText("Рекомендуем: минимум 2400×1030 px", { exact: false })
+        .first(),
+    ).toBeVisible();
     await expect(
       page.getByText("Рекомендуем: минимум 2400×1030 px", { exact: false }),
-    ).toBeVisible();
+    ).toHaveCount(2);
     const picker = page.locator(".asset-picker").filter({
       has: page.getByRole("combobox", { name: "Hero — тёмная тема" }),
     });
