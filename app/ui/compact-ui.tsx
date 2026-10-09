@@ -41,12 +41,20 @@ export function CompactDialog({
   title,
   children,
   className = "",
+  placement = "panel",
 }: {
   open: boolean;
   onClose: () => void;
   title: string;
   children: React.ReactNode;
   className?: string;
+  /**
+   * Where a wide screen puts it: under the header at the right («panel», the
+   * filters and the search), or in the middle of the window over the form it
+   * was opened from («center», a choice inside a form, #378). A phone shows a
+   * bottom sheet either way.
+   */
+  placement?: "panel" | "center";
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
@@ -72,6 +80,7 @@ export function CompactDialog({
     <dialog
       ref={ref}
       className={"sheet " + className}
+      data-placement={placement === "center" ? "center" : undefined}
       aria-label={title}
       onCancel={onClose}
       onClose={onClose}

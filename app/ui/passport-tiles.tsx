@@ -322,6 +322,7 @@ export default function PassportTiles({
         onClose={close}
         title={tile?.title || ""}
         className={styles.sheet}
+        placement="center"
       >
         {tile &&
           (tile.unit !== undefined ? (

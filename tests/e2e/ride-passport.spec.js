@@ -5,7 +5,7 @@ import { registerVerified } from "../fixtures/verified-user.js";
 import { testConsents } from "../fixtures/legal.js";
 import { publicPath } from "../../lib/public-urls.ts";
 import { gpx, loop } from "../ride-fixtures.js";
-import { areaName, nameArea } from "../fixtures/ride-area.js";
+import { chosenArea, nameArea } from "../fixtures/ride-area.js";
 
 const origin = process.env.TEST_ORIGIN || "http://localhost:3100";
 let author, reader, bike;
@@ -196,7 +196,7 @@ test("planner (#253): when and where first, tiles, visibility, advanced, themes,
   ).toContainText("Измайловский парк");
   await card.getByRole("button", { name: "Изменить", exact: true }).click();
   const edit = page.getByRole("dialog", { name: "Изменить покатушку" });
-  await expect(areaName(edit)).toHaveValue("Измайловский парк");
+  await expect(chosenArea(edit)).toContainText("Измайловский парк");
   await expect(edit.getByLabel("Старт", { exact: true })).toHaveValue("09:00");
   await expect(edit.getByLabel("Кто видит точное место встречи")).toHaveValue(
     "participants",

@@ -8,6 +8,7 @@ import { errorMessage } from "../../lib/errors.ts";
 import { mapStyle } from "../../lib/map-settings.ts";
 import { isMapped, withCenter, withoutMap } from "../../lib/ride-area.ts";
 import { MapAttribution } from "./ride-basemap.tsx";
+import InfoTip from "./info-tip.tsx";
 import styles from "./ride-passport.module.css";
 
 // The area picker for the site's MapLibre-style and Yandex maps (#370). The
@@ -193,12 +194,14 @@ export default function EngineAreaPicker({
       disabled={disabled}
       data-map-provider={provider}
     >
-      <legend>Область на карте</legend>
-      <p className="help" id={id + "-help"}>
-        Нажмите на карту, чтобы поставить центр, или передвиньте карту и нажмите
-        «Поставить центр сюда». Точка округляется примерно до километра —
-        выберите район или парк, не дом.
-      </p>
+      <legend>
+        Область на карте
+        <InfoTip id={id + "-help"} label="Подробнее: область на карте">
+          Нажмите на карту, чтобы поставить центр, или передвиньте карту и
+          нажмите «Поставить центр сюда». Точка округляется примерно до
+          километра — выберите район или парк, не дом.
+        </InfoTip>
+      </legend>
       <div className={styles.engineFrame}>
         <div
           ref={canvas}
@@ -258,7 +261,7 @@ export default function EngineAreaPicker({
             className="quiet"
             onClick={() => onChange(withoutMap(value))}
           >
-            <X size={14} aria-hidden="true" /> Убрать с карты
+            <X size={14} aria-hidden="true" /> Снять выделение с карты
           </button>
         ) : (
           <button

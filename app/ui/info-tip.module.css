@@ -1,0 +1,54 @@
+.tip {
+  display: inline-flex;
+  vertical-align: middle;
+}
+.button {
+  display: inline-grid;
+  place-items: center;
+  /* A target of 24 px in the line, 44 px for a finger around it. */
+  width: 24px;
+  height: 24px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: help;
+  position: relative;
+}
+.button::after {
+  content: "";
+  position: absolute;
+  inset: -10px;
+}
+.button:hover,
+.button[aria-expanded="true"] {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+.button:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+.bubble {
+  position: fixed;
+  z-index: var(--z-toast);
+  box-sizing: border-box;
+  max-width: min(320px, calc(100vw - 16px));
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+  color: var(--text);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-regular);
+  line-height: var(--leading-normal);
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.bubble[hidden] {
+  display: none;
+}

@@ -190,7 +190,7 @@ test("a MapLibre style map: the centre is clicked, set from the middle, and foll
     ",",
   );
   expect(Number(moved[0])).toBeLessThan(37.62);
-  await expect(areaName(dialog)).toHaveValue("Мой парк");
+  await expect(chosenArea(dialog)).toContainText("Мой парк · 10 км");
   await expect(radius(dialog)).toHaveValue("10");
   await page.screenshot({
     path: info.outputPath("area-style-map.png"),
@@ -199,7 +199,7 @@ test("a MapLibre style map: the centre is clicked, set from the middle, and foll
 
   // A place found by name replaces the whole area, and the map goes to it.
   await pickPlace(dialog, "сокол", "Сокольники");
-  await expect(areaName(dialog)).toHaveValue("Сокольники");
+  await expect(chosenArea(dialog)).toContainText("Сокольники · 2 км");
   await expect(canvas(dialog)).toHaveAttribute(
     "data-area-center",
     "37.67,55.79",
@@ -266,7 +266,7 @@ test("the Yandex map: the circle is drawn by the SDK, clicks and the middle of t
   });
   await dialog.getByRole("button", { name: "Поставить центр сюда" }).click();
   await expect(canvas(dialog)).toHaveAttribute("data-area-center", "37.5,55.7");
-  await expect(areaName(dialog)).toHaveValue("Мой парк");
+  await expect(chosenArea(dialog)).toContainText("Мой парк · 10 км");
   await page.screenshot({
     path: info.outputPath("area-yandex-map.png"),
     animations: "disabled",
@@ -284,7 +284,7 @@ test("the Yandex map: the circle is drawn by the SDK, clicks and the middle of t
   expect(now.center[1]).toBeCloseTo(55.67, 1);
   // Removing the area takes the circle with it.
   await chosenArea(dialog)
-    .getByRole("button", { name: "Убрать область" })
+    .getByRole("button", { name: "Очистить область" })
     .click();
   await expect(chosenArea(dialog)).toHaveCount(0);
   await expect
@@ -330,7 +330,7 @@ test("while the intent is being saved the map takes no clicks: the area that was
   );
   await save(dialog);
   // The request is in flight: the form is busy, and so is the map.
-  await expect(areaName(dialog)).toBeDisabled();
+  await expect(radius(dialog)).toBeDisabled();
   await canvas(dialog).click({ position: { x: 12, y: 12 } });
   await page.waitForTimeout(300);
   await expect(canvas(dialog)).toHaveAttribute(
@@ -387,7 +387,7 @@ for (const [name, setup, message] of [
     ).toBeDisabled();
     // The rest of the form works: a place by name, saved with its centre.
     await pickPlace(dialog, "парк горь", "Парк Горького");
-    await expect(areaName(dialog)).toHaveValue("Парк Горького");
+    await expect(chosenArea(dialog)).toContainText("Парк Горького · 1 км");
     await expect(dialog).toBeVisible();
     await save(dialog);
     await expect(dialog).toHaveCount(0);
@@ -409,7 +409,7 @@ test("with the maps switched off the form says so and the area is found by name"
   await expect(dialog).toContainText("Карты на сайте отключены");
   await expect(mapButton(dialog)).toHaveCount(0);
   await pickPlace(dialog, "сокол", "Сокольники");
-  await expect(searchBox(dialog)).toHaveValue("");
+  await expect(searchBox(dialog)).toHaveCount(0);
   await save(dialog);
   await expect(dialog).toHaveCount(0);
   expect((await intents(page))[0].passport.area.label).toBe("Сокольники");

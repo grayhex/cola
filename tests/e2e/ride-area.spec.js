@@ -10,6 +10,8 @@ import {
   nameArea,
   pickPlace,
   searchBox,
+  showName,
+  showSearch,
 } from "../fixtures/ride-area.js";
 const origin = process.env.TEST_ORIGIN || "http://localhost:3100";
 
@@ -98,36 +100,33 @@ test("a place found by name sets the name, the centre and the radius together; a
   await found.getByRole("button", { name: /^Измайловский парк/ }).click();
 
   // One area: the name, the radius of the place's size, a map with its circle.
-  await expect(areaName(dialog)).toHaveValue("Измайловский парк");
+  await expect(chosenArea(dialog)).toContainText("Измайловский парк · 3 км");
   await expect(radius(dialog)).toHaveValue("3");
-  await expect(chosenArea(dialog)).toContainText(
-    "Измайловский парк · радиус 3 км",
-  );
+  // Compact (#378): the name is no second field beside the chip, and the
+  // search is folded away until «Изменить место».
+  await expect(areaName(dialog)).toHaveCount(0);
+  await expect(searchBox(dialog)).toHaveCount(0);
   await expect(chosenArea(dialog).getByRole("application")).toBeVisible();
-  await expect(searchBox(dialog)).toHaveValue("");
   await expect(found).toHaveCount(0);
 
   // A new question is a question: the chosen area stays as it was.
-  await searchBox(dialog).fill("сокол");
+  await (await showSearch(dialog)).fill("сокол");
   await expect(
     found.getByRole("button", { name: /^Сокольники/ }),
   ).toBeVisible();
-  await expect(areaName(dialog)).toHaveValue("Измайловский парк");
   await expect(radius(dialog)).toHaveValue("3");
-  await expect(chosenArea(dialog)).toContainText(
-    "Измайловский парк · радиус 3 км",
-  );
+  await expect(chosenArea(dialog)).toContainText("Измайловский парк · 3 км");
   await page.screenshot({
     path: info.outputPath("area-search.png"),
     animations: "disabled",
   });
   // Until it is picked, then the whole area changes at once.
   await found.getByRole("button", { name: /^Сокольники/ }).click();
-  await expect(areaName(dialog)).toHaveValue("Сокольники");
-  await expect(chosenArea(dialog)).toContainText("Сокольники · радиус 2 км");
+  await expect(chosenArea(dialog)).toContainText("Сокольники · 2 км");
+  await expect(searchBox(dialog)).toHaveCount(0);
   // The radius is the person's to refine; the name, the circle stay together.
   await radius(dialog).selectOption("5");
-  await expect(chosenArea(dialog)).toContainText("Сокольники · радиус 5 км");
+  await expect(chosenArea(dialog)).toContainText("Сокольники · 5 км");
   await save(dialog);
   await expect(dialog).toHaveCount(0);
   let [intent] = await intents(page);
@@ -141,10 +140,10 @@ test("a place found by name sets the name, the centre and the radius together; a
   const card = page.locator(`[data-intent-id="${intent.id}"]`);
   await card.getByRole("button", { name: "Изменить", exact: true }).click();
   const editor = page.getByRole("dialog", { name: "Изменить намерение" });
-  await expect(areaName(editor)).toHaveValue("Сокольники");
+  await expect(chosenArea(editor)).toContainText("Сокольники · 5 км");
   await expect(radius(editor)).toHaveValue("5");
   await pickPlace(editor, "коломен", "Коломенское");
-  await expect(areaName(editor)).toHaveValue("Коломенское");
+  await expect(chosenArea(editor)).toContainText("Коломенское · 2 км");
   await editor.getByRole("button", { name: "Сохранить изменения" }).click();
   await expect(editor).toHaveCount(0);
   [intent] = await intents(page);
@@ -168,20 +167,25 @@ test("an area is needed, a name is needed, and removing it removes the circle wi
   await expect(dialog).toBeVisible();
   await pickPlace(dialog, "парк горь", "Парк Горького");
   // The name is the area's own and may be edited; the circle stays with it.
-  await areaName(dialog).fill("Мой парк");
-  await expect(chosenArea(dialog)).toContainText("Мой парк · радиус 1 км");
+  await (await showName(dialog)).fill("Мой парк");
+  await expect(chosenArea(dialog)).toContainText("Мой парк · 1 км");
   // A name that is nothing leaves an area that cannot be saved, said at the field.
   await areaName(dialog).fill("");
   await expect(chosenArea(dialog)).toContainText("Назовите область");
+  await expect(areaName(dialog)).toHaveAttribute("aria-invalid", "true");
   await dialog
     .getByRole("button", { name: "Сохранить намерение" })
     .click({ force: true });
   await expect(dialog).toBeVisible();
+  // The form does not go on: the field has the focus.
+  await expect(areaName(dialog)).toBeFocused();
   await areaName(dialog).fill("Мой парк");
-  // Removing the area takes the name and the circle, together.
+  // Removing the area takes the name and the circle, together; the cross is the
+  // area's own and does not close the window.
   await chosenArea(dialog)
-    .getByRole("button", { name: "Убрать область" })
+    .getByRole("button", { name: "Очистить область" })
     .click();
+  await expect(dialog).toBeVisible();
   await expect(chosenArea(dialog)).toHaveCount(0);
   await expect(dialog.getByRole("application")).toHaveCount(0);
   await save(dialog);
@@ -226,8 +230,7 @@ test("the search says when there is nothing, and when it is off or fails; the ar
       name: "Использовать «парк победы» как подпись без карты",
     })
     .click();
-  await expect(areaName(dialog)).toHaveValue("парк победы");
-  await expect(chosenArea(dialog)).toContainText("Без привязки к карте");
+  await expect(chosenArea(dialog)).toContainText("парк победы · без карты");
   await save(dialog);
   await expect(dialog).toHaveCount(0);
   const [intent] = await intents(page);
@@ -270,19 +273,34 @@ test("around my position: asked only by a click, a rounded centre, named and con
   // It is a proposal: not the area yet, and it needs a name.
   await expect(chosenArea(dialog)).toHaveCount(0);
   const use = pending.getByRole("button", { name: "Использовать эту область" });
-  await expect(use).toBeDisabled();
+  // The name is asked for: the field has the focus, the reason stands beside it
+  // (not only on a button that does not work), and pressing the button without
+  // a name goes to the field and says it there.
+  await expect(pending.getByLabel("Название области")).toBeFocused();
+  await expect(pending).toContainText("Укажите название района или парка");
+  await expect(use).toHaveAttribute("aria-disabled", "true");
   await expect(pending.getByRole("application")).toBeVisible();
   await pending.getByLabel("Радиус").selectOption("5");
+  // A button that is not ready is not disabled for the keyboard: Enter on it
+  // goes to the field and says what is missing.
+  await use.focus();
+  await page.keyboard.press("Enter");
+  await expect(pending).toBeVisible();
+  await expect(pending.getByLabel("Название области")).toBeFocused();
+  await expect(pending.getByLabel("Название области")).toHaveAttribute(
+    "aria-invalid",
+    "true",
+  );
+  await expect(pending).toContainText("Назовите область: подпись обязательна");
   await pending.getByLabel("Название области").fill("Рядом с домом");
-  await expect(use).toBeEnabled();
+  await expect(use).not.toHaveAttribute("aria-disabled");
   await page.screenshot({
     path: info.outputPath("area-position.png"),
     animations: "disabled",
   });
   await use.click();
   await expect(pending).toHaveCount(0);
-  await expect(areaName(dialog)).toHaveValue("Рядом с домом");
-  await expect(chosenArea(dialog)).toContainText("Рядом с домом · радиус 5 км");
+  await expect(chosenArea(dialog)).toContainText("Рядом с домом · 5 км");
   await save(dialog);
   await expect(dialog).toHaveCount(0);
   const [intent] = await intents(page);
@@ -304,6 +322,7 @@ test("around my position: asked only by a click, a rounded centre, named and con
     .getByRole("button", { name: "Изменить", exact: true })
     .click();
   const editor = page.getByRole("dialog", { name: "Изменить намерение" });
+  await showSearch(editor);
   await editor
     .getByRole("button", { name: "Использовать моё местоположение" })
     .click();
@@ -311,7 +330,7 @@ test("around my position: asked only by a click, a rounded centre, named and con
     .getByRole("group", { name: "Область по вашему положению" })
     .getByRole("button", { name: "Отмена" })
     .click();
-  await expect(areaName(editor)).toHaveValue("Рядом с домом");
+  await expect(chosenArea(editor)).toContainText("Рядом с домом · 5 км");
   // A refusal, as the browser says it: code 1, PERMISSION_DENIED.
   await page.evaluate(() => {
     navigator.geolocation.getCurrentPosition = (_done, fail) =>
@@ -322,6 +341,7 @@ test("around my position: asked only by a click, a rounded centre, named and con
         TIMEOUT: 3,
       });
   });
+  await showSearch(editor);
   await editor
     .getByRole("button", { name: "Использовать моё местоположение" })
     .click();
@@ -330,13 +350,13 @@ test("around my position: asked only by a click, a rounded centre, named and con
       .getByRole("status")
       .filter({ hasText: "Доступ к местоположению не получен" }),
   ).toBeVisible();
-  await expect(areaName(editor)).toHaveValue("Рядом с домом");
+  await expect(chosenArea(editor)).toContainText("Рядом с домом · 5 км");
   await expect(editor.getByLabel("Окно 1: с", { exact: true })).not.toHaveValue(
     "",
   );
   // The way by hand is still open.
   await pickPlace(editor, "парк побед", "Парк Победы");
-  await expect(areaName(editor)).toHaveValue("Парк Победы");
+  await expect(chosenArea(editor)).toContainText("Парк Победы");
 });
 
 test("visibility is in view: a new intent is for the community, an existing private one stays private", async ({
@@ -428,8 +448,7 @@ test("a record with a name only still opens, edits and saves; the map can be add
   const card = page.locator(`[data-intent-id="${id}"]`);
   await card.getByRole("button", { name: "Изменить", exact: true }).click();
   const editor = page.getByRole("dialog", { name: "Изменить намерение" });
-  await expect(areaName(editor)).toHaveValue("Старый парк");
-  await expect(chosenArea(editor)).toContainText("Без привязки к карте");
+  await expect(chosenArea(editor)).toContainText("Старый парк · без карты");
   // Saved as it is: still no map, nothing invented.
   await editor.getByRole("button", { name: "Сохранить изменения" }).click();
   await expect(editor).toHaveCount(0);
@@ -444,7 +463,7 @@ test("a record with a name only still opens, edits and saves; the map can be add
   const map = editor.getByRole("application");
   await map.focus();
   await page.keyboard.press("Enter");
-  await expect(chosenArea(editor)).toContainText("Старый парк · радиус 5 км");
+  await expect(chosenArea(editor)).toContainText("Старый парк · 5 км");
   await editor.getByRole("button", { name: "Сохранить изменения" }).click();
   await expect(editor).toHaveCount(0);
   const area = (await intents(page)).find((i) => i.id === id).passport.area;
@@ -479,7 +498,7 @@ test("the planner takes the same area; axe and no overflow in both themes", asyn
   await plan.getByLabel("Старт", { exact: true }).fill("09:00");
   await plan.getByLabel("Название", { exact: true }).fill("Круг по парку");
   await pickPlace(plan, "парк горь", "Парк Горького");
-  await expect(areaName(plan)).toHaveValue("Парк Горького");
+  await expect(chosenArea(plan)).toContainText("Парк Горького");
   for (const colorScheme of ["light", "dark"]) {
     await page.emulateMedia({ colorScheme, reducedMotion: "reduce" });
     expect(
