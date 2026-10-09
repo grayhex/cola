@@ -51,6 +51,7 @@ public/test-map-style.json
 **/.cache/
 **/coverage/
 **/test-results/
+**/e2e-evidence/
 **/playwright-report/
 **/*.log
 **/*.tsbuildinfo

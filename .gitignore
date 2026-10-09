@@ -5,6 +5,7 @@ node_modules/
 uploads/
 *.log
 test-results/
+e2e-evidence/
 
 services/bike-resolver/dist/
 

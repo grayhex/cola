@@ -13,5 +13,9 @@ export default defineConfig({
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },
     { name: "webkit-mobile", use: { ...devices["iPhone 13"] } },
   ],
-  reporter: [["list"]],
+  // CI keeps a machine-readable report of every shard (#386): the summary job
+  // counts the tests of all shards from it. Without the variable only the list.
+  reporter: process.env.COLA_E2E_REPORT
+    ? [["list"], ["json", { outputFile: process.env.COLA_E2E_REPORT }]]
+    : [["list"]],
 });

@@ -105,22 +105,25 @@ jobs:
       - name: Chat authorization HTTP integration with isolated vendor fixture
         run: node scripts/test-resolver-integration.js --chat
 
+  # The browser suite is split into independent shards per browser (#386): the
+  # tests of a project are cut into contiguous equal parts by Playwright itself
+  # (`--shard`), each part runs on a runner of its own with its own PostgreSQL,
+  # app, Resolver fixture and storage, one worker and no shared state.
   e2e:
-    name: Browser · ${{ matrix.project }}
+    name: Browser · ${{ matrix.project }} · ${{ matrix.shard }}/${{ matrix.total }}
     needs: prepare
     runs-on: ubuntu-latest
-    # Includes browser/OS installation, the full suite and visual artifacts.
-    # WebKit's 17.5-minute suite plus slow package mirrors can exceed 25 min.
-    timeout-minutes: 35
+    # Includes browser/OS installation, one shard of the suite and visual artifacts.
+    timeout-minutes: 25
     strategy:
       fail-fast: false
-      max-parallel: 2
+      # No max-parallel: all four shards start together (see docs/operations/ci-cd.md).
       matrix:
         include:
-          - project: chromium
-            browser: chromium
-          - project: webkit-mobile
-            browser: webkit
+          - { project: chromium, browser: chromium, shard: 1, total: 2 }
+          - { project: chromium, browser: chromium, shard: 2, total: 2 }
+          - { project: webkit-mobile, browser: webkit, shard: 1, total: 2 }
+          - { project: webkit-mobile, browser: webkit, shard: 2, total: 2 }
     services:
       postgres:
         image: postgres:17.11-alpine
@@ -136,6 +139,10 @@ jobs:
       TEST_DATABASE_URL: postgres://test:test@127.0.0.1:5432/test
       COLA_CI_PLAYWRIGHT_PROJECT: ${{ matrix.project }}
       COLA_CI_PLAYWRIGHT_BROWSER: ${{ matrix.browser }}
+      COLA_CI_PLAYWRIGHT_SHARD: ${{ matrix.shard }}/${{ matrix.total }}
+      # The JSON report of this shard, read by the summary job.
+      COLA_E2E_REPORT: ${{ github.workspace }}/e2e-evidence/results-${{ matrix.project }}-${{ matrix.shard }}of${{ matrix.total }}.json
+      E2E_SHARD_NAME: ${{ matrix.project }}-${{ matrix.shard }}of${{ matrix.total }}-${{ github.run_attempt }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -157,22 +164,44 @@ jobs:
       # Keep builds local to isolated browser runners, without repeating unit tests.
       - name: Production build for the isolated browser environment
         run: pnpm build
-      # The harness passes native --project; the committed config keeps workers=1.
+      # The harness passes native --project and --shard; the committed config keeps workers=1.
       - name: Install only this job's browser and system dependencies
         run: pnpm exec playwright install --with-deps "$COLA_CI_PLAYWRIGHT_BROWSER"
       - name: Browser tests with an isolated database and file storage
         run: pnpm test:e2e
+      # What this shard was given and the whole list of its project: the summary
+      # job proves that the shards together are the whole suite.
+      - name: Keep the manifest of this shard
+        if: ${{ !cancelled() }}
+        run: node scripts/e2e-evidence.js e2e-evidence
+      - name: Upload the evidence of this shard
+        uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
+        with:
+          name: e2e-evidence-${{ env.E2E_SHARD_NAME }}
+          path: e2e-evidence/
+          retention-days: 7
+          if-no-files-found: error
+      # The PNGs of the component review are in their own artifact below, not
+      # twice: the two uploads are disjoint.
       - uses: actions/upload-artifact@v7
         if: ${{ !cancelled() }}
         with:
-          name: browser-review-${{ matrix.project }}-${{ github.run_attempt }}
-          path: test-results/
+          name: browser-review-${{ env.E2E_SHARD_NAME }}
+          path: |
+            test-results/
+            !test-results/**/component*.png
+            !test-results/**/account-import*.png
+            !test-results/**/rides-import-planned.png
+            !test-results/**/popular-carousel.png
+            !test-results/**/profile-art-cold*.png
+            !test-results/**/chat-*.png
           retention-days: 7
       - name: Component catalog visual review
         uses: actions/upload-artifact@v7
         if: ${{ !cancelled() }}
         with:
-          name: component-review-${{ matrix.project }}-${{ github.run_attempt }}
+          name: component-review-${{ env.E2E_SHARD_NAME }}
           path: |
             test-results/**/component*.png
             test-results/**/account-import*.png
@@ -181,6 +210,31 @@ jobs:
             test-results/**/profile-art-cold*.png
             test-results/**/chat-*.png
           retention-days: 7
+
+  # Counts and times of all shards, and the proof that none is missing, repeated
+  # or red, and that together they are the whole list of every project.
+  e2e-summary:
+    name: Browser shards · summary
+    needs: [prepare, e2e]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.prepare.outputs.sha }}
+      - name: Download the evidence of every shard
+        run: gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --pattern 'e2e-evidence-*' --dir e2e-evidence
+      - name: Timings of the jobs of this run
+        run: gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/attempts/$GITHUB_RUN_ATTEMPT/jobs?per_page=100" > jobs.json
+      - name: Every shard reported and together they are the whole list
+        run: node scripts/e2e-report.js e2e-evidence --projects chromium,webkit-mobile --shards 2 --jobs jobs.json --summary "$GITHUB_STEP_SUMMARY"
+        # Failures are printed by the script as errors after it has written the table.
 
   operations:
     name: Docker and backup restore
@@ -274,7 +328,7 @@ jobs:
 
   # Preserve the required status "check": skip, cancellation and failure cannot pass.
   check:
-    needs: [prepare, core, e2e, operations]
+    needs: [prepare, core, e2e, e2e-summary, operations]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 3
@@ -284,6 +338,7 @@ jobs:
           PREPARE_RESULT: ${{ needs.prepare.result }}
           CORE_RESULT: ${{ needs.core.result }}
           E2E_RESULT: ${{ needs.e2e.result }}
+          E2E_SUMMARY_RESULT: ${{ needs.e2e-summary.result }}
           OPERATIONS_RESULT: ${{ needs.operations.result }}
           TESTED_SHA: ${{ needs.prepare.outputs.sha }}
         run: |
@@ -295,10 +350,11 @@ jobs:
             echo "| --- | --- |"
             echo "| Prepare | $PREPARE_RESULT |"
             echo "| Application, Resolver, HTTP | $CORE_RESULT |"
-            echo "| Chromium and mobile WebKit | $E2E_RESULT |"
+            echo "| Chromium and mobile WebKit, every shard | $E2E_RESULT |"
+            echo "| Shards add up to the whole list | $E2E_SUMMARY_RESULT |"
             echo "| Docker and backup/restore | $OPERATIONS_RESULT |"
           } >> "$GITHUB_STEP_SUMMARY"
-          for result in "$PREPARE_RESULT" "$CORE_RESULT" "$E2E_RESULT" "$OPERATIONS_RESULT"; do
+          for result in "$PREPARE_RESULT" "$CORE_RESULT" "$E2E_RESULT" "$E2E_SUMMARY_RESULT" "$OPERATIONS_RESULT"; do
             if [[ "$result" != "success" ]]; then
               echo "::error::All CI groups must succeed; inspect the job summary."
               exit 1

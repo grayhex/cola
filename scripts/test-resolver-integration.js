@@ -2,6 +2,7 @@ import net from "node:net";
 import { seedLegalDocuments } from "../tests/fixtures/legal.js";
 import pg from "pg";
 import { randomUUID } from "node:crypto";
+import { browserRun, playwrightArgs } from "./e2e-options.js";
 // Starts an isolated, disposable DB, fixture resolver and built app in one process tree.
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
@@ -16,6 +17,11 @@ const children = [],
 const base = "http://localhost:3100";
 const externalDatabase = process.env.TEST_DATABASE_URL;
 const chatTests = process.argv.includes("--chat");
+// The project and the shard of a browser run are checked before anything
+// starts (#386): a typo is an error, never a silent full run.
+const browser = process.argv.includes("--e2e")
+  ? browserRun(process.argv.slice(2), process.env)
+  : null;
 const chatFixture = chatTests || process.argv.includes("--e2e");
 let databaseAdmin,
   databaseCreated = false;
@@ -232,6 +238,7 @@ try {
               ]
             : []),
           "tests/rides-http.js",
+          "tests/ride-passport-http.js",
           "tests/ride-agreements-http.js",
           ...(externalDatabase ? ["tests/ride-agreements-concurrency.js"] : []),
           "tests/ride-intents-http.js",
@@ -265,10 +272,7 @@ try {
           ...(externalDatabase ? ["tests/quota-http.js"] : []),
         ])
     await new Promise((resolve, reject) => {
-      const project = environment.COLA_CI_PLAYWRIGHT_PROJECT;
-      const args = e2e
-        ? [test, "test", ...(project ? ["--project", project] : [])]
-        : [test];
+      const args = e2e ? [test, ...playwrightArgs(browser)] : [test];
       const p = spawn(process.execPath, args, {
         cwd: root,
         env: environment,

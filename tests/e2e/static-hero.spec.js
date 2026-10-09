@@ -60,12 +60,18 @@ for (const theme of ["light", "dark", "system"])
     await page.emulateMedia({ colorScheme: "dark", reducedMotion: "reduce" });
     for (const width of [390, 1440, 1600, 1920]) {
       await page.setViewportSize({ width, height: 1000 });
-      await page.goto("/", { waitUntil: "networkidle" });
+      // Not «network idle» (#386): what the checks below need is the picture
+      // drawn and the page hydrated, and both are awaited by name — the hero
+      // complete, the client-rendered pulse in place. Quiet of the whole
+      // network is awaited once per theme, after the widths, for the negative
+      // checks on late requests.
+      await page.goto("/");
       const img = page.locator("[data-hero-background]");
       await expect(img).toBeVisible();
       await expect
         .poll(() => img.evaluate((e) => e.complete && e.naturalWidth > 0))
         .toBe(true);
+      await expect(page.locator("[data-ride-pulse] li").first()).toBeVisible();
       await expect(img).toHaveAttribute("fetchpriority", "high");
       await expect(img).not.toHaveAttribute("loading", "lazy");
       await expect(
@@ -134,6 +140,9 @@ for (const theme of ["light", "dark", "system"])
         fullPage: true,
       });
     }
+    // Late requests: nothing of the animation runtime came after the pages drew.
+    await page.waitForLoadState("networkidle");
+    expect(requests.filter((u) => /\.(riv|wasm)(\?|$)/.test(u))).toEqual([]);
     await page.keyboard.press("/");
     await expect(
       page
@@ -152,7 +161,7 @@ test("desktop retina uses the largest hero without a duplicate preload", async (
     const page = await context.newPage();
     for (const width of [1440, 1600, 1920]) {
       await page.setViewportSize({ width, height: 1000 });
-      await page.goto("/", { waitUntil: "networkidle" });
+      await page.goto("/");
       const img = page.locator("[data-hero-background]");
       await expect
         .poll(() =>
