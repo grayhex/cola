@@ -3,7 +3,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { randomUUID } from "node:crypto";
 import { registerVerified } from "../fixtures/verified-user.js";
 import { testConsents } from "../fixtures/legal.js";
-import { areaName, nameArea, searchBox } from "../fixtures/ride-area.js";
+import { chosenArea, nameArea } from "../fixtures/ride-area.js";
 const origin = process.env.TEST_ORIGIN || "http://localhost:3100";
 const date = (offset) =>
   new Date(Date.now() + offset * 86400000).toISOString().slice(0, 10);
@@ -161,14 +161,17 @@ test("intent lifecycle without a bike: windows, preferences, themes, privacy and
       animations: "disabled",
     });
   }
-  await searchBox(dialog).focus();
+  const change = chosenArea(dialog).getByRole("button", {
+    name: "Изменить место",
+  });
+  await change.focus();
   await page.keyboard.press("Escape");
   await expect(page.getByRole("alertdialog")).toBeVisible();
   await page
     .getByRole("alertdialog")
     .getByRole("button", { name: "Отмена", exact: true })
     .click();
-  await expect(searchBox(dialog)).toBeFocused();
+  await expect(change).toBeFocused();
   // A new intent is for the community by default (#370); this one is kept
   // private on purpose, so the reader below sees nothing until it is shared.
   await expect(
@@ -307,7 +310,7 @@ test("load failure, lost create response, reduced motion and missing chunk prese
   ).toBeDisabled();
   release();
   await expect(dialog.getByRole("alert")).toBeVisible();
-  await expect(areaName(dialog)).toHaveValue("Повторная отправка");
+  await expect(chosenArea(dialog)).toContainText("Повторная отправка");
   await dialog.getByRole("button", { name: "Повторить отправку" }).click();
   await expect(dialog).toHaveCount(0);
   const list = await (await page.request.get("/api/ride-intents")).json();

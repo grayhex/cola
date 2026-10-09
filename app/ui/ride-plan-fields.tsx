@@ -9,6 +9,7 @@ import { ridePlanOptions } from "../../lib/ride-plan-options.ts";
 import { useMotionFeedback } from "./motion.tsx";
 import RidePassport from "./ride-passport.tsx";
 import { AreaField } from "./ride-area-field.tsx";
+export { pendingAreaMessage, type AreaPending } from "./ride-area-field.tsx";
 import PassportTiles from "./passport-tiles.tsx";
 import styles from "./ride-passport.module.css";
 

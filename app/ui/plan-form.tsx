@@ -33,7 +33,12 @@ import { Globe, LockKeyhole } from "lucide-react";
 import EmailPolicyAction from "./email-policy-action.tsx";
 import SiteIcon from "./site-icon.tsx";
 import PassportTiles from "./passport-tiles.tsx";
-import { AreaField, ExtraConditions } from "./ride-plan-fields.tsx";
+import {
+  AreaField,
+  ExtraConditions,
+  pendingAreaMessage,
+  type AreaPending,
+} from "./ride-plan-fields.tsx";
 import { RideRoutePreview, RideMetrics } from "./ride-card.tsx";
 import { useMotionFeedback } from "./motion.tsx";
 import { useSite } from "./site-provider.tsx";
@@ -225,12 +230,17 @@ export default function PlanForm({
     [preview, setPreview] = useState<RidePreview | null>(null),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
+    // The area field is told to say what is missing at its place (#378).
+    [areaCheck, setAreaCheck] = useState(0),
     [whenError, setWhenError] = useState(""),
     [bikeError, setBikeError] = useState(""),
     // Rare fields stay folded (#264); a missing bike opens them on submit.
     [advanced, setAdvanced] = useState(false),
     [suggested, setSuggested] = useState(false);
-  const bikeSelect = useRef<HTMLSelectElement | null>(null);
+  const bikeSelect = useRef<HTMLSelectElement | null>(null),
+    // An area around the position that is on its way or not confirmed is not
+    // the form's.
+    areaPending = useRef<AreaPending>(null);
   const reveal = useMotionFeedback(advanced, { reveal: true });
   const dirty = !!preview || JSON.stringify(form) !== JSON.stringify(initial);
   useEffect(() => onDirty?.(dirty), [dirty, onDirty]);
@@ -303,8 +313,15 @@ export default function PlanForm({
     setBikeError("");
     // The area is optional, but one that is begun is whole: a name, and a
     // centre with a radius or neither (#370).
+    if (areaPending.current) {
+      setAreaCheck((n) => n + 1);
+      return setError(pendingAreaMessage[areaPending.current]);
+    }
     const half = areaProblems(form.passport.area);
-    if (half.length) return setError(half[0]);
+    if (half.length) {
+      setAreaCheck((n) => n + 1);
+      return setError(half[0]);
+    }
     if (!selectedBike) return requireBike("Выберите велосипед организатора.");
     if (bikeStateError) return requireBike(bikeStateError);
     if (cannotPublish) return;
@@ -493,6 +510,10 @@ export default function PlanForm({
             onChange={(v) => set("passport", v)}
             disabled={busy}
             label="Район или парк"
+            check={areaCheck}
+            onPending={(pending) => {
+              areaPending.current = pending;
+            }}
           />
           {ride && ride.status === "planned" && (
             <RevisionHint ride={ride} initial={initial} form={form} />

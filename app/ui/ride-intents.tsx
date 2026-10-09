@@ -38,7 +38,12 @@ import { useConfirmation } from "./confirmation.tsx";
 import SiteIcon from "./site-icon.tsx";
 import Modal from "./garage/modal.tsx";
 import { MotionList, SharedView, useMotionFeedback } from "./motion.tsx";
-import { AreaField, ExtraConditions } from "./ride-plan-fields.tsx";
+import {
+  AreaField,
+  ExtraConditions,
+  pendingAreaMessage,
+  type AreaPending,
+} from "./ride-plan-fields.tsx";
 import RidePassport from "./ride-passport.tsx";
 import {
   intentLimits,
@@ -147,9 +152,14 @@ export function IntentComposer({
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
-    [uncertain, setUncertain] = useState(false);
+    [uncertain, setUncertain] = useState(false),
+    // The area field is told to say what is missing at its place (#378).
+    [areaCheck, setAreaCheck] = useState(0);
   const pending = useRef<Omit<IntentDraft, "id"> | null>(null),
-    closing = useRef(false);
+    closing = useRef(false),
+    // An area around the position that is on its way or not confirmed is not
+    // the draft's.
+    areaPending = useRef<AreaPending>(null);
   const [ask, confirmation] = useConfirmation();
   const feedback = useMotionFeedback(draft.readiness);
   const set = <K extends keyof IntentDraft>(key: K, value: IntentDraft[K]) =>
@@ -176,8 +186,14 @@ export function IntentComposer({
     // The area is one object: a name, and a centre with a radius or neither.
     // An intent needs it (the matching reads it), and a half-made one is shown
     // at the field, with the form kept as it is.
+    if (areaPending.current) {
+      setAreaCheck((n) => n + 1);
+      setError(pendingAreaMessage[areaPending.current]);
+      return;
+    }
     const area = areaProblems(draft.passport.area);
     if (!draft.passport.area || area.length) {
+      setAreaCheck((n) => n + 1);
       setError(area[0] || "Укажите район или парк: найдите место по названию");
       return;
     }
@@ -333,7 +349,7 @@ export function IntentComposer({
               </small>
             </fieldset>
             <fieldset
-              className="planning-section half"
+              className="planning-section half intent-where"
               disabled={busy || uncertain}
             >
               <legend>
@@ -347,6 +363,10 @@ export function IntentComposer({
                 onChange={(v) => set("passport", v)}
                 disabled={busy || uncertain}
                 intent
+                check={areaCheck}
+                onPending={(pending) => {
+                  areaPending.current = pending;
+                }}
               />
             </fieldset>
             <fieldset

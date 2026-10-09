@@ -1312,6 +1312,30 @@
   .planning-row .field {
     margin: 0;
   }
+  /* The intent form (#378): thin lines between its logical blocks — when,
+     where, the conditions, who sees it. Each block is a fieldset whose legend
+     sits on its top line, like a titled divider; a vertical line stands between
+     «Когда» and «Где» where they are side by side. */
+  .intent-form > .planning-body > fieldset.planning-section {
+    position: relative;
+    border-top: 1px solid var(--line);
+  }
+  .intent-form > .planning-body > fieldset.planning-section > legend {
+    padding-inline-end: var(--space-3);
+  }
+  @media (min-width: 900px) {
+    .intent-form
+      > .planning-body
+      > fieldset.planning-section.intent-where::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      inset-inline-start: calc(var(--space-6) / -2);
+      border-inline-start: 1px solid var(--line);
+      pointer-events: none;
+    }
+  }
   /* One short line that says what the window is for (#264). */
   .planning-lead {
     grid-column: span 12;
@@ -1468,6 +1492,16 @@
   }
   dialog.sheet[open] {
     animation: sheet-in var(--duration) var(--ease-out);
+  }
+  /* A choice made inside a form (#378): in the middle of the window over that
+     form on a wide screen; the phone's bottom sheet below is the same. */
+  @media (min-width: 641px) {
+    dialog.sheet[data-placement="center"] {
+      inset: 0;
+      margin: auto;
+      height: fit-content;
+      max-height: calc(100dvh - var(--space-8));
+    }
   }
   .sheet-head {
     display: flex;

@@ -119,6 +119,13 @@ export function areaSummary(area: Area) {
     ? `${name} · радиус ${area.radiusM / 1000} км`
     : `${name} · без привязки к карте`;
 }
+/** The short form of a chosen area for a chip: «Шелепиха · 1 км». */
+export function areaCompact(area: Area) {
+  const name = cleanLabel(area.label || "") || "Без названия";
+  return isMapped(area)
+    ? `${name} · ${area.radiusM / 1000} км`
+    : `${name} · без карты`;
+}
 /**
  * The circle of an area as a closed ring of [longitude, latitude] points, for
  * the engines that draw polygons (MapLibre, Yandex). A flat approximation of the

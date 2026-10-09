@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   areaFromPlace,
   areaFromPosition,
+  areaCompact,
   areaProblems,
   areaRadiiKm,
   areaSummary,
@@ -119,6 +120,23 @@ test("problems and the one-line summary", () => {
     "Без названия · без привязки к карте",
   );
   assert.equal(cleanLabel("a ".repeat(80)).length, 100);
+});
+
+test("the chip of a chosen area is one short line", () => {
+  assert.equal(
+    areaCompact({ label: "Шелепиха", center: [37.53, 55.76], radiusM: 1000 }),
+    "Шелепиха · 1 км",
+  );
+  assert.equal(
+    areaCompact({
+      label: " Сокольники ",
+      center: [37.67, 55.79],
+      radiusM: 2500,
+    }),
+    "Сокольники · 2.5 км",
+  );
+  assert.equal(areaCompact({ label: "Парк" }), "Парк · без карты");
+  assert.equal(areaCompact({ label: "" }), "Без названия · без карты");
 });
 
 test("the circle of an area is a closed ring at the radius from its centre, and a box that holds it", () => {

@@ -4,6 +4,7 @@ import type { Area } from "../../lib/ride-match-core.ts";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Minus, Plus, MapPin, X } from "lucide-react";
 import { MapAttribution } from "./ride-basemap.tsx";
+import InfoTip from "./info-tip.tsx";
 import { areaRadiiKm } from "../../lib/ride-area.ts";
 import { useSite } from "./site-provider.tsx";
 import EngineAreaPicker from "./area-engine-picker.tsx";
@@ -240,11 +241,13 @@ function RasterAreaPicker({
   const area = value.center ? value : null;
   return (
     <fieldset className={styles.picker} disabled={disabled}>
-      <legend>Область на карте</legend>
-      <p className="help" id="area-map-help">
-        Нажмите на карту или используйте стрелки, «+» и «−». Точка округляется
-        примерно до километра — выберите район или парк, не дом.
-      </p>
+      <legend>
+        Область на карте
+        <InfoTip id="area-map-help" label="Подробнее: область на карте">
+          Нажмите на карту или используйте стрелки, «+» и «−». Точка округляется
+          примерно до километра — выберите район или парк, не дом.
+        </InfoTip>
+      </legend>
       <div className={styles.areaMap}>
         <svg
           ref={svg}
@@ -320,7 +323,7 @@ function RasterAreaPicker({
         )}
         {area ? (
           <button type="button" className="quiet" onClick={clear}>
-            <X size={14} aria-hidden="true" /> Убрать с карты
+            <X size={14} aria-hidden="true" /> Снять выделение с карты
           </button>
         ) : (
           <button

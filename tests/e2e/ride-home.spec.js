@@ -191,7 +191,7 @@ test("signed-in home: one «Покататься вместе» block, both comp
   await page.keyboard.press("ArrowRight");
   await chosenArea(dialog).getByLabel("Радиус").selectOption("3");
   await expect(
-    dialog.getByText("Воробьёвы горы · радиус 3 км", { exact: false }),
+    dialog.getByText("Воробьёвы горы · 3 км", { exact: false }),
   ).toBeVisible();
   await dialog.screenshot({
     path: info.outputPath("area-picker.png"),
