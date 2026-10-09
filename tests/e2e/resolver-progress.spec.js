@@ -308,6 +308,10 @@ test("a reader of the screen gets one polite status that does not chatter, and a
   const wizard = await startSearch(page);
   const run = wizard.locator(".resolver-run");
   const status = run.locator("[role=status]");
+  // One live region for the whole step, not one in the status and another in
+  // the wizard's message beside it: a reader would hear both.
+  const live = wizard.locator(".wizard-search [role=status]");
+  await expect(live).toHaveCount(1);
   await expect(status).toHaveCount(1);
   await expect(status).toHaveText("Начинаем поиск");
   // A stream of events does not become a stream of announcements: the text
@@ -370,7 +374,15 @@ test("a reader of the screen gets one polite status that does not chatter, and a
     window.__feed.end();
   });
   await expect(run).toHaveAttribute("data-outcome", "not_found");
-  await expect(status).toHaveText("Комплектация не найдена");
+  // The end is announced once, in the words the wizard shows for it (the
+  // advice what to do next), by the one live region.
+  await expect(status).toHaveText(
+    /^Комплектация не найдена в проверенных источниках\./,
+  );
+  await expect(live).toHaveCount(1);
+  await expect(
+    wizard.locator(".wizard-search > p:not(.help)").first(),
+  ).toBeVisible();
 });
 
 test("how a search ended: a result that is not found draws no line, a broken stream says so, a new query lets go of the old status", async ({

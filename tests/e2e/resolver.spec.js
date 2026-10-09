@@ -65,6 +65,18 @@ test("wizard live trace, stop, partial import and mobile review", async ({
   await expect(
     status.locator(".resolver-run-marks > span").first(),
   ).toContainText(/\S/);
+  // The groups stay on one line whatever the width (the rest fades out, the
+  // whole list is in the title and for the reader of the screen), so the
+  // buttons under the status do not move when the result arrives.
+  const row = status.locator(".resolver-run-components");
+  await expect(row).toContainText(/найдено \d+ из \d+/);
+  expect((await row.boundingBox()).height).toBeLessThan(24);
+  await expect(status.locator(".resolver-run-marks")).toHaveAttribute(
+    "title",
+    /Рама/,
+  );
+  await expect(status.locator("[role=status]")).toHaveCount(1);
+  await expect(dialog.locator(".wizard-search [role=status]")).toHaveCount(1);
   await page.screenshot({
     path: info.outputPath("resolver-result.png"),
     fullPage: true,

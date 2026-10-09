@@ -235,6 +235,7 @@ export default function ResolverProgress({
   running,
   outcome,
   categories,
+  closing,
 }: {
   events: TraceEvent[];
   running: boolean;
@@ -242,6 +243,12 @@ export default function ResolverProgress({
   outcome: ProgressOutcome | null;
   /** Only for a finished search that found one variant. */
   categories?: ProgressCategory[] | null;
+  /**
+   * What the page says in words when the search is over (the advice what to do
+   * next). This region is the one live region of the step, so the end is
+   * announced here, in those words, and the page's own line is not live.
+   */
+  closing?: string;
 }) {
   const stage = currentStage(events);
   const ribbon = ribbonOf(events);
@@ -249,7 +256,7 @@ export default function ResolverProgress({
   const phrase = running || !outcome ? stage.text : outcomeText[outcome];
   const host = running ? stage.host : undefined;
   const spoken = useAnnouncement(
-    phrase + (host ? ", " + host : ""),
+    running ? phrase + (host ? ", " + host : "") : closing || phrase,
     running ? 2500 : 0,
   );
   if (!running && !outcome && !events.length) return null;
@@ -280,21 +287,32 @@ export default function ResolverProgress({
       <p className="resolver-run-components">
         <span className="resolver-run-label">Компоненты</span>
         {categories?.length ? (
-          <span className="resolver-run-marks">
-            {categories.map((group) => (
-              <span key={group.id} data-found={group.found || undefined}>
-                {group.name}
-                {group.found ? (
-                  <Check size={12} aria-hidden="true" />
-                ) : (
-                  <b aria-hidden="true">—</b>
-                )}
-                <span className="sr-only">
-                  {group.found ? ": найдено" : ": не найдено"}
+          <>
+            <span className="resolver-run-count">
+              найдено {categories.filter((group) => group.found).length} из{" "}
+              {categories.length}
+            </span>
+            <span
+              className="resolver-run-marks"
+              title={categories
+                .map((group) => group.name + (group.found ? " ✓" : " —"))
+                .join(", ")}
+            >
+              {categories.map((group) => (
+                <span key={group.id} data-found={group.found || undefined}>
+                  {group.name}
+                  {group.found ? (
+                    <Check size={12} aria-hidden="true" />
+                  ) : (
+                    <b aria-hidden="true">—</b>
+                  )}
+                  <span className="sr-only">
+                    {group.found ? ": найдено" : ": не найдено"}
+                  </span>
                 </span>
-              </span>
-            ))}
-          </span>
+              ))}
+            </span>
+          </>
         ) : recognized ? (
           <span>
             Распознано {recognized.count}

@@ -1186,9 +1186,13 @@ export default function BikeWizard({
                 .filter(Boolean)
                 .join(" ")}
             </p>
-            {/* While it runs the status below says it; the words stay for the
-                reader of the screen, whose live region was here before. */}
-            <p role="status" className={resolving ? "sr-only" : undefined}>
+            {/* One live region for the step: the status below while it is
+                shown (it announces these words at the end), this line when it
+                is not. While a search runs the status says it. */}
+            <p
+              role={showProgress ? undefined : "status"}
+              hidden={resolving || undefined}
+            >
               {message}
             </p>
             {showProgress && (
@@ -1197,6 +1201,7 @@ export default function BikeWizard({
                 running={resolving}
                 outcome={progressOutcome}
                 categories={progressGroups}
+                closing={message}
               />
             )}
             {resolving ? (
