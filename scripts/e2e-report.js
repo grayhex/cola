@@ -275,9 +275,36 @@ async function readJson(file) {
   }
 }
 
+/**
+ * The files of the latest attempt of every shard. The artifact of a job is
+ * `e2e-evidence-<shard>-<attempt>`; "re-run failed jobs" keeps the green shards
+ * of the earlier attempt and uploads the repeated one under a new number, so
+ * the newest number of a shard is the one that counts. Files that are not in
+ * such a folder are all read.
+ */
+function latestAttempts(files) {
+  const newest = new Map();
+  const attempt = (file) =>
+    /^(e2e-evidence-.+)-(\d+)$/.exec(file.split(path.sep)[0]);
+  for (const file of files) {
+    const found = attempt(file);
+    if (found)
+      newest.set(
+        found[1],
+        Math.max(newest.get(found[1]) ?? 0, Number(found[2])),
+      );
+  }
+  return files.filter((file) => {
+    const found = attempt(file);
+    return !found || newest.get(found[1]) === Number(found[2]);
+  });
+}
+
 /** Reads the evidence directory the jobs left: `manifest-*.json`, `results-*.json`. */
 export async function loadEvidence(dir) {
-  const files = (await readdir(dir, { recursive: true })).map((f) => String(f));
+  const files = latestAttempts(
+    (await readdir(dir, { recursive: true })).map((f) => String(f)),
+  );
   const shards = [];
   for (const file of files.filter(
     (f) => path.basename(f).startsWith("manifest-") && f.endsWith(".json"),
@@ -286,8 +313,9 @@ export async function loadEvidence(dir) {
     if (!manifest) throw new Error(`Unreadable manifest ${file}`);
     const resultFile = files.find(
       (f) =>
+        path.dirname(f) === path.dirname(file) &&
         path.basename(f) ===
-        path.basename(file).replace("manifest-", "results-"),
+          path.basename(file).replace("manifest-", "results-"),
     );
     const report = resultFile
       ? await readJson(path.join(dir, resultFile))

@@ -356,13 +356,39 @@ test("the summary job reads what the shard jobs kept, from the folders the artif
     ];
     await run(process.execPath, args);
     assert.match(await readFile(summary, "utf8"), /Every shard reported/);
-    await rm(
-      path.join(
-        dir,
-        "e2e-evidence-webkit-mobile-1of2-1",
-        "results-webkit-mobile-1of2.json",
-      ),
+    // "Re-run failed jobs": a red shard of attempt 1 stays red until its job is
+    // repeated; the repeated one is uploaded as attempt 2 and only it counts,
+    // while the green shards of attempt 1 are not asked for again.
+    const first = path.join(dir, "e2e-evidence-webkit-mobile-1of2-1");
+    const results = path.join(first, "results-webkit-mobile-1of2.json");
+    const green = await readFile(results, "utf8");
+    const red = JSON.parse(green);
+    const [failing] = collectTests(red);
+    failing.test.status = "unexpected";
+    failing.test.results[0].status = "failed";
+    await writeFile(results, JSON.stringify(red));
+    await assert.rejects(run(process.execPath, args), (error) => {
+      assert.equal(error.code, 1);
+      return true;
+    });
+    const second = path.join(dir, "e2e-evidence-webkit-mobile-1of2-2");
+    await mkdir(second, { recursive: true });
+    await writeFile(
+      path.join(second, "manifest-webkit-mobile-1of2.json"),
+      await readFile(path.join(first, "manifest-webkit-mobile-1of2.json")),
     );
+    await writeFile(
+      path.join(second, "results-webkit-mobile-1of2.json"),
+      green,
+    );
+    await run(process.execPath, args);
+    const latest = await loadEvidence(dir);
+    assert.equal(latest.length, 4);
+    assert.deepEqual(verifyRun(latest, expected), []);
+    // Back to attempt 1 alone, and a report that is gone is still a failure.
+    await rm(second, { recursive: true });
+    await writeFile(results, green);
+    await rm(path.join(first, "results-webkit-mobile-1of2.json"));
     await assert.rejects(run(process.execPath, args), (error) => {
       assert.equal(error.code, 1);
       assert.match(error.stderr, /webkit-mobile\/1of2 has no report/);
