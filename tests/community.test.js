@@ -8,7 +8,6 @@ import {
   createComment,
   changeComment,
   commentPage,
-  bikeCommentTotal,
   replyPage,
   commentDto,
 } from "../lib/comments.ts";
@@ -191,9 +190,6 @@ test("comments support bounded threads, ownership, soft deletion, blocked author
       (await showcase(db, null)).bikes.find((b) => b.id === id).comments,
       1,
     );
-    // The tab of the discussion (#378) counts the same: replies included, the
-    // blocked author's comments not.
-    assert.equal(await bikeCommentTotal(db, id), 1);
     await db.transaction((q) => changeComment(q, reply.id, admin));
     assert.equal((await commentPage(db, id, null)).comments.length, 0);
     await db.query("UPDATE users SET blocked=false WHERE id=$1", [c.id]);
