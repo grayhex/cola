@@ -11,13 +11,31 @@ import { defaultSettings } from "../lib/site-defaults.ts";
 test("navigation defaults ignore retired ordering fields; known destinations respect auth", () => {
   assert.deepEqual(
     navigationSections({}).map((s) => s.id),
-    ["bikes", "components", "journal", "articles", "rides", "market", "about"],
+    [
+      "bikes",
+      "components",
+      "journal",
+      "articles",
+      "rides",
+      "achievements",
+      "market",
+      "about",
+    ],
   );
   assert.deepEqual(
     navigationSections({ navOrder: ["subscriptions", "home"] }).map(
       (s) => s.id,
     ),
-    ["bikes", "components", "journal", "articles", "rides", "market", "about"],
+    [
+      "bikes",
+      "components",
+      "journal",
+      "articles",
+      "rides",
+      "achievements",
+      "market",
+      "about",
+    ],
   );
   assert.equal(
     sectionLinks("bikes", null).some((s) => s.href.includes("action=add")),
@@ -35,10 +53,52 @@ test("navigation defaults ignore retired ordering fields; known destinations res
     );
     assert(links.every((link) => !/action=(?:add|import)/.test(link.href)));
   }
+  // #382: «Достижения» is a section of its own with the two tabs of /records,
+  // and «Рекорды» left «Велосипеды».
+  assert.deepEqual(
+    sectionLinks("achievements", null).map((l) => [l.href, l.label]),
+    [
+      ["/records", "Рекорды"],
+      ["/records?tab=awards", "Награды"],
+    ],
+  );
+  for (const user of [null, { id: "owner" }])
+    assert.equal(
+      sectionLinks("bikes", user).some((l) => l.href.startsWith("/records")),
+      false,
+    );
+  assert.equal(activeSection("/records"), "achievements");
+  assert.equal(activeSection("/records", "?tab=awards"), "achievements");
   assert.equal(activeSection("/account", "?tab=rides"), "rides");
   assert.equal(activeSection("/r/share"), "rides");
   assert.equal(activeSection("/about"), "about");
   assert.equal(activeSection("/notifications"), null);
+});
+test("a list saved before «Достижения» gets it once, after «Покатушки»; a saved one is left as the administrator made it (#382)", () => {
+  const old = sectionDefaults
+    .filter((s) => s.id !== "achievements")
+    .map((s) => (s.id === "journal" ? { ...s, visible: false } : s))
+    .reverse();
+  const migrated = navigationSections({ navigation: old });
+  assert.equal(migrated.length, old.length + 1);
+  // The other sections keep their order and visibility; the new one follows
+  // «Покатушки», wherever the administrator put it.
+  assert.deepEqual(
+    migrated.filter((s) => s.id !== "achievements"),
+    old,
+  );
+  assert.equal(
+    migrated.findIndex((s) => s.id === "achievements"),
+    migrated.findIndex((s) => s.id === "rides") + 1,
+  );
+  assert.equal(migrated.find((s) => s.id === "achievements").visible, true);
+  // Hidden by the administrator it stays hidden and where it is.
+  const hidden = [
+    ...old.slice(0, 2),
+    { id: "achievements", label: "Хроника", visible: false },
+    ...old.slice(2),
+  ];
+  assert.deepEqual(navigationSections({ navigation: hidden }), hidden);
 });
 test("admin schema accepts missing legacy configuration but rejects unknown destinations and duplicate IDs", () => {
   const legacy = { ...defaultSettings };
@@ -49,6 +109,7 @@ test("admin schema accepts missing legacy configuration but rejects unknown dest
   for (const navigation of [
     [...sectionDefaults, sectionDefaults[0]],
     sectionDefaults.map((s) => ({ ...s, id: "bikes" })),
+    [...sectionDefaults, { ...sectionDefaults[0], id: "extra" }],
     sectionDefaults.map((s) => ({ ...s, url: "https://example.test" })),
     [{ ...sectionDefaults[0], id: "external" }, ...sectionDefaults.slice(1)],
   ])

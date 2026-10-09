@@ -44,7 +44,7 @@ test("home settings: source warning, three copy fields and four independent puls
       page.getByText("Рекомендуем: минимум 2400×1030 px", { exact: false }),
     ).toBeVisible();
     const picker = page.locator(".asset-picker").filter({
-      has: page.getByRole("combobox", { name: "Фоновое изображение hero" }),
+      has: page.getByRole("combobox", { name: "Hero — тёмная тема" }),
     });
     for (const [width, height] of [
       [640, 275],
@@ -56,7 +56,7 @@ test("home settings: source warning, three copy fields and four independent puls
           r.request().method() === "POST",
       );
       await page
-        .getByLabel("Файл: Фоновое изображение hero", { exact: true })
+        .getByLabel("Файл: Hero — тёмная тема", { exact: true })
         .setInputFiles({
           name: `hero-${width}.png`,
           mimeType: "image/png",
@@ -71,7 +71,7 @@ test("home settings: source warning, three copy fields and four independent puls
       const asset = (await response.json()).id;
       assets.push(asset);
       await expect(
-        page.getByRole("combobox", { name: "Фоновое изображение hero" }),
+        page.getByRole("combobox", { name: "Hero — тёмная тема" }),
       ).toHaveValue(asset);
       if (width === 640) {
         await expect(picker.getByRole("status")).toContainText(
@@ -88,11 +88,11 @@ test("home settings: source warning, three copy fields and four independent puls
     }
     // Selecting an existing small image shows the same advisory as uploading.
     await page
-      .getByRole("combobox", { name: "Фоновое изображение hero" })
+      .getByRole("combobox", { name: "Hero — тёмная тема" })
       .selectOption(assets[0]);
     await expect(picker.getByRole("status")).toBeVisible();
     await page
-      .getByRole("combobox", { name: "Фоновое изображение hero" })
+      .getByRole("combobox", { name: "Hero — тёмная тема" })
       .selectOption(assets[1]);
     await expect(picker.getByRole("status")).toHaveCount(0);
     await page

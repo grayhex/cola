@@ -29,6 +29,7 @@ import { useAutoScroll } from "./use-auto-scroll.ts";
 import BikeCarousel from "./bike-carousel.tsx";
 import AchievementArt from "./achievement-art.tsx";
 import TogetherActions from "./together-actions.tsx";
+import RegistrationNote, { useRegistrationText } from "./registration-note.tsx";
 import RidePulse from "./home-ride-pulse.tsx";
 import BikeWeek from "./home-bike-week.tsx";
 import { profilePath, publicPath } from "../../lib/public-urls.ts";
@@ -226,6 +227,7 @@ const heroSizes =
   "(min-width: 1584px) 1534px, (min-width: 768px) calc(100vw - 50px), (min-width: 360px) calc(100vw - 34px), calc(100vw - 26px)";
 export default function Home() {
   const { settings, viewer: user, t } = useSite(),
+    registrationText = useRegistrationText(),
     [paused, setPaused] = useState(false),
     [data, setData] = useState<HomeSnapshot | null>(null),
     [error, setError] = useState(""),
@@ -264,16 +266,40 @@ export default function Home() {
     return () => window.removeEventListener("focus", refresh);
   }, []);
   const content = data || { events: [], records: [] };
-  const hero = settings.heroBackgroundImageId
-    ? `/api/assets/${settings.heroBackgroundImageId}`
-    : null;
-  const heroSrcSet = hero
-    ? heroWidths.map((width) => `${hero}?width=${width} ${width}w`).join(", ")
-    : undefined;
-  if (hero)
-    preload(hero + "?width=2400", {
+  // The picture behind the hero (#382): one for each theme when the light one
+  // is assigned, otherwise the single picture of both. Every picture goes
+  // through the same responsive endpoint; with two, the one of the other theme
+  // is hidden by the theme of the page (set before the first paint) and, being
+  // lazy and hidden, is not fetched: only the current theme's is loaded.
+  const darkHero = settings.heroBackgroundImageId || null,
+    lightHero = settings.heroBackgroundLightImageId || null;
+  const separate = !!lightHero && lightHero !== darkHero;
+  const heroes = (
+    separate
+      ? [
+          { theme: "light", id: lightHero },
+          { theme: "dark", id: darkHero },
+        ]
+      : [{ theme: "both", id: darkHero || lightHero }]
+  ).flatMap(({ theme, id }) => {
+    if (!id) return [];
+    const url = `/api/assets/${id}`;
+    return [
+      {
+        theme,
+        url,
+        srcSet: heroWidths
+          .map((width) => `${url}?width=${width} ${width}w`)
+          .join(", "),
+      },
+    ];
+  });
+  // A picture for one theme only cannot be preloaded: the theme is not known
+  // on the server.
+  if (heroes.length === 1 && !separate)
+    preload(heroes[0].url + "?width=2400", {
       as: "image",
-      imageSrcSet: heroSrcSet,
+      imageSrcSet: heroes[0].srcSet,
       imageSizes: heroSizes,
       fetchPriority: "high",
     });
@@ -284,18 +310,21 @@ export default function Home() {
         <section className="frame" aria-labelledby="hero-title">
           <div className="frame-inner">
             <div className={styles.hero}>
-              {hero && (
+              {heroes.map((hero) => (
                 <img
+                  key={hero.theme}
                   className={styles.heroImage}
                   data-hero-background
-                  src={hero + "?width=2400"}
-                  srcSet={heroSrcSet}
+                  data-hero-theme={hero.theme}
+                  src={hero.url + "?width=2400"}
+                  srcSet={hero.srcSet}
                   sizes={heroSizes}
                   alt=""
                   fetchPriority="high"
+                  loading={separate ? "lazy" : undefined}
                   decoding="async"
                 />
-              )}
+              ))}
               <div className={styles.heroCopy}>
                 <span className={styles.heroEyebrow}>
                   {settings.heroEyebrow}
@@ -320,7 +349,16 @@ export default function Home() {
           <div className={"frame-inner " + styles.together}>
             <div className={styles.togetherCopy}>
               <span className="eyebrow">Покатушки</span>
-              <h2 id="together-heading">Покататься вместе</h2>
+              <h2 id="together-heading">
+                Покататься вместе
+                {/* The sign of the footnote below (#382), only for a guest and
+                    only while the note has words: the title's name is the same. */}
+                {!user && registrationText && (
+                  <sup className={styles.footnoteMark} aria-hidden="true">
+                    *
+                  </sup>
+                )}
+              </h2>
               <p>
                 Отметьте, когда хочется ехать, — подберём выезды и покажем, с
                 кем можно собраться. Велосипед в гараже не нужен.
@@ -328,8 +366,19 @@ export default function Home() {
               <TogetherActions
                 key={user?.id || "guest"}
                 signedIn={!!user}
+                note={false}
+                describedBy={
+                  !user && registrationText ? "together-footnote" : undefined
+                }
                 onSaved={() => setRevision((v) => v + 1)}
               />
+              {!user && (
+                <RegistrationNote
+                  id="together-footnote"
+                  marker
+                  className={styles.footnote}
+                />
+              )}
               <TogetherArt />
             </div>
             <div className={styles.pulsePanel}>

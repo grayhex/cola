@@ -699,14 +699,14 @@ test("admin appearance is explicit; hero upload, replacement and removal protect
       .toBe("dark");
     await nav.getByRole("button", { name: "Главная", exact: true }).click();
     await page
-      .getByLabel("Файл: Фоновое изображение hero", { exact: true })
+      .getByLabel("Файл: Hero — тёмная тема", { exact: true })
       .setInputFiles({
         name: "hero-test.png",
         mimeType: "image/png",
         buffer: png,
       });
     const picker = page.getByRole("combobox", {
-      name: "Фоновое изображение hero",
+      name: "Hero — тёмная тема",
       exact: true,
     });
     await expect(picker).not.toHaveValue("");
@@ -756,7 +756,7 @@ test("admin appearance is explicit; hero upload, replacement and removal protect
     });
     await page
       .getByRole("button", {
-        name: "Сбросить: Фоновое изображение hero",
+        name: "Сбросить: Hero — тёмная тема",
         exact: true,
       })
       .click();

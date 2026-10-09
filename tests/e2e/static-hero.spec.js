@@ -178,3 +178,152 @@ test("desktop retina uses the largest hero without a duplicate preload", async (
     await context.close();
   }
 });
+
+// #382: the light theme has a picture of its own. Without it the picture of
+// the dark theme stands in both, as it always did; with it, each theme shows
+// its own, the theme the visitor chose wins over the system one, a change of
+// the theme changes the picture without a reload, and the picture of the
+// other theme is not fetched.
+test("hero by theme: its own picture for each theme, the dark one as the fallback, the chosen theme before the system one, the other picture not fetched", async ({
+  browser,
+}, info) => {
+  const lightId = randomUUID();
+  const lightFile = lightId + ".webp";
+  await mkdir(process.env.UPLOAD_DIR, { recursive: true });
+  await writeFile(
+    path.join(process.env.UPLOAD_DIR, lightFile),
+    await sharp({
+      create: {
+        width: 2400,
+        height: 1030,
+        channels: 3,
+        background: "#f4e7c3",
+      },
+    })
+      .webp()
+      .toBuffer(),
+  );
+  await db.query(
+    "INSERT INTO site_assets(id,name,filename) VALUES($1,'new_hero_light.png',$2)",
+    [lightId, lightFile],
+  );
+  const set = (patch) =>
+    db.query("UPDATE site_settings SET value=$1::jsonb WHERE id=1", [
+      { ...original, heroBackgroundImageId: id, ...patch },
+    ]);
+  const base = process.env.TEST_ORIGIN || "http://localhost:3100";
+  // One visit: what is shown for a chosen theme and a screen scheme.
+  async function visit(preference, scheme, check) {
+    const context = await browser.newContext({
+      baseURL: base,
+      colorScheme: scheme,
+      reducedMotion: "reduce",
+      viewport: { width: 1440, height: 900 },
+    });
+    try {
+      await context.addInitScript(
+        (value) => localStorage.setItem("cola:theme", value),
+        preference,
+      );
+      const page = await context.newPage();
+      const requests = [];
+      page.on("request", (r) => requests.push(r.url()));
+      await page.goto("/", { waitUntil: "networkidle" });
+      await check(page, requests);
+    } finally {
+      await context.close();
+    }
+  }
+  const pictures = (page) => page.locator("[data-hero-background]:visible");
+  const fetched = (requests, asset) =>
+    requests.filter((u) => u.includes("/api/assets/" + asset));
+  const loaded = (locator) =>
+    expect
+      .poll(() => locator.evaluate((e) => e.complete && e.naturalWidth > 0))
+      .toBe(true);
+  try {
+    // Both assigned: the theme in force picks, and the other is not fetched.
+    await set({ heroBackgroundLightImageId: lightId });
+    for (const [preference, scheme, shown, hidden] of [
+      ["light", "dark", lightId, id],
+      ["dark", "light", id, lightId],
+      ["system", "dark", id, lightId],
+      ["system", "light", lightId, id],
+    ])
+      await visit(preference, scheme, async (page, requests) => {
+        await expect(pictures(page)).toHaveCount(1);
+        await loaded(pictures(page));
+        expect(await pictures(page).getAttribute("src")).toContain(
+          "/api/assets/" + shown,
+        );
+        expect(fetched(requests, hidden)).toEqual([]);
+        // The hero keeps its place and its text stays readable above it.
+        await expect(page.locator("#hero-title")).toBeVisible();
+      });
+    // A change of the theme changes the picture, without a reload.
+    await visit("light", "light", async (page) => {
+      await loaded(pictures(page));
+      expect(await pictures(page).getAttribute("src")).toContain(lightId);
+      await page.getByRole("switch", { name: "Тёмная тема" }).click();
+      await expect(pictures(page)).toHaveCount(1);
+      await loaded(pictures(page));
+      expect(await pictures(page).getAttribute("src")).toContain(
+        "/api/assets/" + id,
+      );
+      await page.getByRole("switch", { name: "Тёмная тема" }).click();
+      await loaded(pictures(page));
+      expect(await pictures(page).getAttribute("src")).toContain(lightId);
+      await page.screenshot({
+        path: info.outputPath("hero-themes-light.png"),
+      });
+    });
+    // Only the old picture: it stands in both themes, preloaded, not lazy.
+    await set({});
+    for (const preference of ["light", "dark"])
+      await visit(preference, "dark", async (page, requests) => {
+        await expect(pictures(page)).toHaveCount(1);
+        await loaded(pictures(page));
+        expect(await pictures(page).getAttribute("data-hero-theme")).toBe(
+          "both",
+        );
+        expect(await pictures(page).getAttribute("src")).toContain(
+          "/api/assets/" + id,
+        );
+        await expect(pictures(page)).not.toHaveAttribute("loading", "lazy");
+        expect(fetched(requests, lightId)).toEqual([]);
+      });
+    // Only a light picture: the dark theme has none, and nothing is broken.
+    await set({
+      heroBackgroundImageId: null,
+      heroBackgroundLightImageId: lightId,
+    });
+    await visit("dark", "light", async (page, requests) => {
+      await expect(pictures(page)).toHaveCount(0);
+      await expect(page.locator("#hero-title")).toBeVisible();
+      expect(fetched(requests, lightId)).toEqual([]);
+    });
+    await visit("light", "dark", async (page) => {
+      await expect(pictures(page)).toHaveCount(1);
+      await loaded(pictures(page));
+    });
+    // No picture at all: a plain hero with no image element.
+    await set({ heroBackgroundImageId: null });
+    await visit("light", "light", async (page) => {
+      await expect(page.locator("[data-hero-background]")).toHaveCount(0);
+      await expect(page.locator("#hero-title")).toBeVisible();
+    });
+    // Clearing one slot leaves the other and the file: both assets stay.
+    await set({ heroBackgroundLightImageId: null });
+    const kept = await db.query(
+      "SELECT count(*)::int AS n FROM site_assets WHERE id = ANY($1)",
+      [[id, lightId]],
+    );
+    expect(kept.rows[0].n).toBe(2);
+  } finally {
+    await db.query("UPDATE site_settings SET value=$1 WHERE id=1", [
+      { ...original, heroBackgroundImageId: id, heroAnimationsEnabled: true },
+    ]);
+    await db.query("DELETE FROM site_assets WHERE id=$1", [lightId]);
+    await rm(path.join(process.env.UPLOAD_DIR, lightFile), { force: true });
+  }
+});

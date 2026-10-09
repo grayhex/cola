@@ -47,6 +47,51 @@ test("only content artwork is configurable and unknown appearance settings are r
     false,
   );
 });
+test("the two hero pictures are independent settings, both protected and listed as used (#382)", () => {
+  const dark = "11111111-1111-4111-8111-111111111111";
+  const light = "22222222-2222-4222-8222-222222222222";
+  assert.deepEqual(
+    siteAssetIds({
+      heroBackgroundImageId: dark,
+      heroBackgroundLightImageId: light.toUpperCase(),
+    }),
+    [dark, light],
+  );
+  assert.deepEqual(siteAssetIds({ heroBackgroundLightImageId: light }), [
+    light,
+  ]);
+  assert.deepEqual(
+    siteAssetUsage({ heroBackgroundLightImageId: light })[light],
+    ["Оформление сайта"],
+  );
+  // Each slot is its own: one set, the other empty, both stored and read back.
+  for (const patch of [
+    { heroBackgroundImageId: dark },
+    { heroBackgroundLightImageId: light },
+    { heroBackgroundImageId: dark, heroBackgroundLightImageId: light },
+  ]) {
+    const parsed = settingsInput.parse({ ...defaultSettings, ...patch });
+    assert.equal(
+      parsed.heroBackgroundImageId,
+      patch.heroBackgroundImageId ?? null,
+    );
+    assert.equal(
+      parsed.heroBackgroundLightImageId,
+      patch.heroBackgroundLightImageId ?? null,
+    );
+  }
+  // An old setting with the single picture still reads: no light picture.
+  const legacy = { ...defaultSettings, heroBackgroundImageId: dark };
+  delete legacy.heroBackgroundLightImageId;
+  assert.equal(settingsInput.parse(legacy).heroBackgroundLightImageId, null);
+  assert.equal(
+    settingsInput.safeParse({
+      ...defaultSettings,
+      heroBackgroundLightImageId: "not-a-uuid",
+    }).success,
+    false,
+  );
+});
 test("content, draft and award references remain protected; retired icon assignments are ignored", () => {
   assert.deepEqual(
     siteAssetIds({

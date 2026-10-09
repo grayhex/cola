@@ -45,7 +45,7 @@ test("admin publishes static hero, brand/favicon and icon highlight", async ({
     ).toHaveCount(0);
     await page.getByLabel("Скорость Live, пикселей в секунду").fill("36");
     await page
-      .getByLabel("Файл: Фоновое изображение hero", { exact: true })
+      .getByLabel("Файл: Hero — тёмная тема", { exact: true })
       .setInputFiles({
         name: "hero.png",
         mimeType: "image/png",
@@ -60,7 +60,7 @@ test("admin publishes static hero, brand/favicon and icon highlight", async ({
           .png()
           .toBuffer(),
       });
-    const hero = page.getByLabel("Фоновое изображение hero", { exact: true });
+    const hero = page.getByLabel("Hero — тёмная тема", { exact: true });
     await expect(hero).toHaveValue(/^[0-9a-f-]{36}$/);
     assets.push(await hero.inputValue());
     await page.getByRole("button", { name: "Сохранить", exact: true }).click();

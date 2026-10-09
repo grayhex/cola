@@ -167,6 +167,7 @@ export const settingsInput = z
               "journal",
               "articles",
               "rides",
+              "achievements",
               "market",
               "about",
             ]),
@@ -176,7 +177,7 @@ export const settingsInput = z
           .strict(),
       )
       .min(3)
-      .max(7)
+      .max(8)
       .refine(
         (a) =>
           new Set(a.map((s) => s.id)).size === a.length &&
@@ -250,6 +251,7 @@ export const settingsInput = z
     backgroundLightMode: z.enum(["cover", "tile"]).default("cover"),
     backgroundDarkMode: z.enum(["cover", "tile"]).default("cover"),
     heroBackgroundImageId: asset.default(null),
+    heroBackgroundLightImageId: asset.default(null),
     heroAnimationsEnabled: z.boolean().default(false),
     heroImageId: asset.default(null),
     heroStageImageId: asset.default(null),

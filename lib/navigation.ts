@@ -28,6 +28,7 @@ export const sectionDefaults: NonNullable<SiteSettings["navigation"]> = [
   { id: "journal", label: "Журнал", visible: true },
   { id: "articles", label: "Статьи", visible: true },
   { id: "rides", label: "Покатушки", visible: true },
+  { id: "achievements", label: "Достижения", visible: true },
   { id: "market", label: "Рынок", visible: true },
   { id: "about", label: "О проекте", visible: true },
 ];
@@ -54,6 +55,19 @@ export function navigationSections(settings: Partial<SiteSettings>) {
         Math.max(0, sections.findIndex((s) => s.id === "journal") + 1),
         0,
         sectionDefaults.find((s) => s.id === "articles")!,
+      );
+    // «Достижения» (#382): added once to a list saved before it existed, after
+    // «Покатушки»; a list that has it, hidden or moved, is left as it is.
+    if (!sections.some((s) => s.id === "achievements"))
+      sections.splice(
+        sections.some((s) => s.id === "rides")
+          ? sections.findIndex((s) => s.id === "rides") + 1
+          : Math.max(
+              0,
+              sections.findIndex((s) => s.id === "about"),
+            ),
+        0,
+        sectionDefaults.find((s) => s.id === "achievements")!,
       );
     if (!sections.some((s) => s.id === "components"))
       sections.splice(
@@ -112,7 +126,6 @@ export function sectionLinks(
       { href: "/bikes", label: "Все велосипеды", icon: "bike" },
       { href: "/bikes?sort=new", label: "Новые", icon: "new" },
       { href: "/bikes?sort=popular", label: "Популярные", icon: "popular" },
-      { href: "/records", label: "Рекорды", icon: "records" },
       ...(user
         ? [
             {
@@ -122,6 +135,13 @@ export function sectionLinks(
             },
           ]
         : []),
+    ];
+  // The two tabs of the page /records (#382): the records of bikes, rides and
+  // riders, and the awards.
+  if (id === "achievements")
+    return [
+      { href: "/records", label: "Рекорды", icon: "records" },
+      { href: "/records?tab=awards", label: "Награды", icon: "awards" },
     ];
   if (id === "rides")
     return [
@@ -167,10 +187,10 @@ export function activeSection(pathname: string, search = "") {
     (pathname === "/account" && tab === "rides")
   )
     return "rides";
+  if (pathname === "/records") return "achievements";
   if (
     pathname === "/bikes" ||
     pathname.startsWith("/b/") ||
-    pathname === "/records" ||
     (pathname === "/account" && tab === "bikes")
   )
     return "bikes";

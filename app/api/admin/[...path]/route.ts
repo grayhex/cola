@@ -263,6 +263,7 @@ async function handler(
           const settings = value as ContractsTypes.SiteSettings;
           for (const key of [
             "heroBackgroundImageId",
+            "heroBackgroundLightImageId",
             "heroImageId",
             "heroStageImageId",
           ] as const) {

@@ -4,7 +4,11 @@ export const appearanceDefaults: SiteSettings["appearance"] = {
   accent: "#F3B51B",
 };
 export const heroDefaults = {
+  // The picture behind the hero (#382): this one is the dark theme's and the
+  // fallback of both; the light theme has a picture of its own when one is
+  // assigned, and is shown this one when it is not.
   heroBackgroundImageId: null,
+  heroBackgroundLightImageId: null,
   // Legacy fields remain for stored-settings compatibility and asset protection;
   // the static homepage uses only heroBackgroundImageId.
   heroAnimationsEnabled: false,
