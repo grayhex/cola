@@ -324,7 +324,7 @@ test("one «Хочу кататься» flow: the same «Новое намере
       g
         .locator(".together-actions")
         .getByRole("link", { name: "Хочу кататься" }),
-    ).toHaveAttribute("href", "/ride-intents?new=1");
+    ).toHaveAttribute("href", "/ride-intents?new=1&auth=register");
   } finally {
     await guest.close();
   }

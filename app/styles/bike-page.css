@@ -1367,9 +1367,10 @@
   dialog[open]:has(.bike-wizard) {
     display: flex;
     flex-direction: column;
-    /* #370: wider than before, up to the planner's 1120 px, so related fields
-       sit side by side; only this dialog changes, not the other windows. */
-    max-width: min(1120px, calc(100vw - 2 * var(--gutter)));
+    /* #370: wider than before so related fields sit side by side, #378: as wide
+       as the planner (about 36 % over the former 1120 px); only this dialog
+       changes, not the other windows. */
+    max-width: min(1520px, calc(100vw - 2 * var(--gutter)));
     height: min(860px, calc(100dvh - 2 * var(--space-4)));
     overflow: hidden;
   }
@@ -1545,6 +1546,17 @@
   }
   .wizard-settings > legend {
     grid-column: 1 / -1;
+  }
+  /* A wide window (#378): the bike, its characteristics, the photos and the
+     privacy settings are four columns of one row, so step 2 needs no scroll. */
+  @media (min-width: 1400px) {
+    .wizard-details {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+    .wizard-settings {
+      grid-column: auto;
+      grid-template-columns: minmax(0, 1fr);
+    }
   }
   .wizard-settings > .help,
   .wizard-settings > .wizard-optional {

@@ -1,6 +1,6 @@
 "use client";
 import type * as React from "react";
-import { useEffect, useRef } from "react";
+import { useEffect, useId, useRef } from "react";
 import { useSite } from "../site-provider.tsx";
 import { useBackdropClose } from "../use-backdrop-close.ts";
 import { X } from "../icons.tsx";
@@ -21,7 +21,10 @@ export default function Modal({
 }) {
   const { t } = useSite();
   const ref = useRef<HTMLDialogElement>(null),
-    leaving = useRef(false);
+    leaving = useRef(false),
+    // Its own id: two windows may stand one over the other (#378), and each is
+    // named by its own title.
+    titleId = useId();
   useEffect(() => {
     const el = ref.current!;
     // The window may unmount before it closes; focus then returns here.
@@ -77,12 +80,12 @@ export default function Modal({
       }}
       {...backdrop}
       className={wide ? "planning" : undefined}
-      aria-labelledby="dialog-title"
+      aria-labelledby={titleId}
     >
       <div className="modal-head">
         <div className="modal-heading-content">
           {graphic}
-          <h2 id="dialog-title">{title}</h2>
+          <h2 id={titleId}>{title}</h2>
         </div>
         <button className="icon" aria-label={t("Закрыть")} onClick={onClose}>
           <X size={20} />

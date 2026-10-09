@@ -242,7 +242,7 @@ export function IntentComposer({
               сохранить их кнопкой ниже.
             </p>
             <fieldset
-              className="planning-section half"
+              className="planning-section half wide-4"
               disabled={busy || uncertain}
             >
               <legend>
@@ -349,7 +349,7 @@ export function IntentComposer({
               </small>
             </fieldset>
             <fieldset
-              className="planning-section half intent-where"
+              className="planning-section half wide-4 intent-where"
               disabled={busy || uncertain}
             >
               <legend>
@@ -370,7 +370,7 @@ export function IntentComposer({
               />
             </fieldset>
             <fieldset
-              className="planning-section two-thirds"
+              className="planning-section two-thirds wide-4"
               disabled={busy || uncertain}
             >
               <legend>
@@ -439,7 +439,9 @@ export function IntentComposer({
               </div>
             </fieldset>
             <section
-              className={"planning-section third " + styles.preview}
+              className={
+                "planning-section third intent-preview " + styles.preview
+              }
               aria-label="Предпросмотр намерения"
             >
               <div>
@@ -465,7 +467,7 @@ export function IntentComposer({
               conditions — is folded (#264); its fields stay mounted, so
               nothing typed is lost when the section closes. */}
             <fieldset
-              className="planning-section half"
+              className="planning-section half wide-8"
               disabled={busy || uncertain}
             >
               <legend>
@@ -859,7 +861,12 @@ export default function RideIntents() {
   useEffect(() => {
     if (!viewer) return;
     const url = new URL(location.href);
-    if (url.searchParams.get("new") !== "1") return;
+    // The sign-up that was asked for is done: its mark goes with it (#378).
+    url.searchParams.delete("auth");
+    if (url.searchParams.get("new") !== "1") {
+      history.replaceState(history.state, "", url.pathname + url.search);
+      return;
+    }
     url.searchParams.delete("new");
     history.replaceState(history.state, "", url.pathname + url.search);
     setDraft(

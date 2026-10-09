@@ -3,6 +3,8 @@ import Link from "next/link";
 import { useRef, useState } from "react";
 import { CalendarDays } from "lucide-react";
 import SiteIcon from "./site-icon.tsx";
+import RegistrationNote from "./registration-note.tsx";
+import { guestRidingHref } from "../../lib/navigation.ts";
 
 const loadDialogs = () => import("./together-dialogs.tsx");
 type ActionKind = "intent" | "plan";
@@ -86,22 +88,22 @@ export default function TogetherActions({
           </>
         ) : (
           <>
-            {/* After signing in the page opens the same «Новое намерение»
-                window a member gets here (#264). */}
-            <Link className="button" href="/ride-intents?new=1">
+            {/* A guest is asked to register (#378): the page of the scenario
+                opens the form of registering; after signing up or in it is
+                the same «Новое намерение» window a member gets here (#264),
+                or the planner, and nothing is created by it. */}
+            <Link className="button" href={guestRidingHref.intent}>
               <CalendarDays size={16} aria-hidden="true" />
               Хочу кататься
             </Link>
-            <Link
-              className="button secondary"
-              href="/account?tab=rides&action=plan"
-            >
+            <Link className="button secondary" href={guestRidingHref.plan}>
               <SiteIcon name="plan" />
               Организовать покатушку
             </Link>
           </>
         )}
       </div>
+      {!signedIn && <RegistrationNote />}
       {error && (
         <p role="alert" className="error">
           {error}

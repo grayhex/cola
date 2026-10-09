@@ -416,7 +416,7 @@ export default function PlanForm({
             выберете, кого пригласить.
           </p>
         )}
-        <fieldset className="planning-section half" disabled={busy}>
+        <fieldset className="planning-section half wide-4" disabled={busy}>
           <legend>
             <span className="step" aria-hidden="true">
               1
@@ -519,7 +519,7 @@ export default function PlanForm({
             <RevisionHint ride={ride} initial={initial} form={form} />
           )}
         </fieldset>
-        <fieldset className="planning-section half" disabled={busy}>
+        <fieldset className="planning-section half wide-4" disabled={busy}>
           <legend>
             <span className="step" aria-hidden="true">
               2
@@ -550,7 +550,7 @@ export default function PlanForm({
             help={false}
           />
         </fieldset>
-        <fieldset className="planning-section" disabled={busy}>
+        <fieldset className="planning-section wide-4" disabled={busy}>
           <legend>
             <span className="step" aria-hidden="true">
               3

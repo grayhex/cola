@@ -9,7 +9,7 @@ import type {
 } from "../../../lib/contracts.ts";
 import type { ModalSetter, MainElement } from "./types.ts";
 import type { useShowcaseScroll } from "../showcase-scroll.ts";
-import Link from "next/link";
+import { AddBikeLink } from "../add-bike.tsx";
 import { bikeCategories } from "../../../lib/bike-classification.ts";
 import { ClassificationFilters } from "../bike-classification.tsx";
 import styles from "../garage.module.css";
@@ -161,16 +161,15 @@ export default function Showcase({
                 }}
               />
               {!account && (
-                <Link
+                <AddBikeLink
                   className="button add-bike"
-                  href="/account?tab=bikes&action=add"
                   aria-label={t("Добавить велосипед")}
                 >
                   <SiteIcon name="add" />
                   <span className={styles.addLabel}>
                     {t("Добавить велосипед")}
                   </span>
-                </Link>
+                </AddBikeLink>
               )}
               {user && account && (
                 <button
@@ -192,9 +191,9 @@ export default function Showcase({
         {publicShowcase && !user && (
           <p className={styles.invitation}>
             {t("Твой байк тоже здесь к месту")} ·{" "}
-            <Link href="/account?tab=bikes&action=add">
+            <AddBikeLink>
               {t("Покажи велосипед. Расскажи, что поменял")}
-            </Link>
+            </AddBikeLink>
           </p>
         )}
         {account && !user && (

@@ -45,7 +45,7 @@ export default function PlanningGraphic({
           src={"/api/assets/" + graphic.assetId}
           alt=""
           width={size === "wide" ? 480 : 80}
-          height={size === "wide" ? 180 : 56}
+          height={size === "wide" ? 140 : 56}
           onError={() => setFailed(graphic.assetId)}
         />
       )}

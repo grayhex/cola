@@ -474,7 +474,6 @@ export default function Garage({
           refresh={refresh}
           setDirty={setDirty}
           setBusy={setBusy}
-          account={account}
           router={router}
           openBike={openBike}
           share={share}

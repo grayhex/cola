@@ -256,7 +256,7 @@ test("signed-in home: one «Покататься вместе» block, both comp
   await page.goto("/");
   await expect(
     block.getByRole("link", { name: "Хочу кататься" }),
-  ).toHaveAttribute("href", "/ride-intents?new=1");
+  ).toHaveAttribute("href", "/ride-intents?new=1&auth=register");
   await expect(block.getByRole("status")).toHaveCount(0);
   await member(page.request, "Second");
   await page.goto("/");
@@ -284,10 +284,10 @@ test("guest home stays public: the same block, links to sign in, no personal req
   expect(html).toContain("Покататься вместе");
   await expect(
     block.getByRole("link", { name: "Хочу кататься" }),
-  ).toHaveAttribute("href", "/ride-intents?new=1");
+  ).toHaveAttribute("href", "/ride-intents?new=1&auth=register");
   await expect(
     block.getByRole("link", { name: "Организовать покатушку" }),
-  ).toHaveAttribute("href", "/account?tab=rides&action=plan");
+  ).toHaveAttribute("href", "/account?tab=rides&action=plan&auth=register");
   expect(personal).toEqual([]);
   expect(response.headers()["cache-control"] || "").not.toMatch(/public/);
 });

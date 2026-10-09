@@ -6,6 +6,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { X } from "lucide-react";
 import { useSite } from "../ui/site-provider.tsx";
 import RideCreationActions from "../ui/ride-creation-actions.tsx";
+import RegistrationNote from "../ui/registration-note.tsx";
+import { guestRidingHref } from "../../lib/navigation.ts";
 import RideList from "../ui/ride-list.tsx";
 import { CompactDialog } from "../ui/compact-ui.tsx";
 import SiteIcon from "../ui/site-icon.tsx";
@@ -216,11 +218,17 @@ export default function Rides() {
             <h1>Покатушки</h1>
             <p>Находите маршруты сообщества и планируйте совместные поездки.</p>
           </div>
-          <div className="page-actions">
-            <Link className="button secondary" href="/ride-intents">
-              Хочу кататься
-            </Link>
-            <RideCreationActions />
+          <div className="page-actions-stack">
+            <div className="page-actions">
+              <Link
+                className="button secondary"
+                href={user ? "/ride-intents" : guestRidingHref.intent}
+              >
+                Хочу кататься
+              </Link>
+              <RideCreationActions signedIn={!!user} />
+            </div>
+            {!user && <RegistrationNote />}
           </div>
         </div>
         <div className="ride-filter-bar">

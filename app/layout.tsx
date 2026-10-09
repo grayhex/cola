@@ -20,6 +20,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import { headers } from "next/headers";
 import { themeBootstrap } from "../lib/theme.ts";
 import SiteProvider from "./ui/site-provider.tsx";
+import { AddBikeProvider } from "./ui/add-bike.tsx";
 import { getSite } from "../lib/site.ts";
 import { hidden } from "../lib/indexing.ts";
 import { currentViewer } from "../lib/viewer.ts";
@@ -80,7 +81,7 @@ export default async function Layout({
           chatEnabled={!!chatConfig()}
           yandexIdEnabled={!!yandexIdConfig()}
         >
-          {children}
+          <AddBikeProvider>{children}</AddBikeProvider>
         </SiteProvider>
       </body>
     </html>

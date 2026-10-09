@@ -3,6 +3,7 @@ import { errorMessage } from "../../lib/errors.ts";
 import type { BikeDto } from "../../lib/contracts.ts";
 import type { JournalDto } from "./content-types.ts";
 import Link from "next/link";
+import { AddBikeLink } from "./add-bike.tsx";
 import { SharedView } from "./motion.tsx";
 import { useRouter } from "next/navigation";
 import RichTextBody from "./rich-text-body.tsx";
@@ -115,9 +116,7 @@ export default function JournalPage({
               <section className="empty-state">
                 <h2>Добавьте велосипед, чтобы вести его журнал</h2>
                 <p>Запись всегда связана с одним из ваших велосипедов.</p>
-                <Link className="button" href="/account?tab=bikes&action=add">
-                  Добавить велосипед
-                </Link>
+                <AddBikeLink className="button">Добавить велосипед</AddBikeLink>
               </section>
             )}
           </>
