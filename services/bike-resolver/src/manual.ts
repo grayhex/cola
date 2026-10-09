@@ -245,7 +245,10 @@ export class ManualSources {
       // A page the person chose from an official result keeps the adapter that
       // found it; a pasted address stays a pasted address.
       const official =
-        origin === "manufacturer" || origin === "distributor"
+        origin === "manufacturer" ||
+        origin === "distributor" ||
+        (origin === "archive" &&
+          adapter?.sourceKindForUrl?.(doc.url) === "archive")
           ? adapter
           : undefined;
       const parsed = store
@@ -318,7 +321,11 @@ export class ManualSources {
               ? official.adapterVersion
               : 1,
           extractorVersion: EXTRACTOR_VERSION,
-          kind: store ? "store" : origin,
+          kind: store
+            ? "store"
+            : adapter?.sourceKindForUrl?.(doc.url) === "archive"
+              ? "archive"
+              : origin,
           ...(store ? { storeId: store.id } : {}),
         },
         cached: false,

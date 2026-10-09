@@ -969,3 +969,75 @@ describe("pages found on the web", () => {
     expect(result.status).toBe("not_found");
   });
 });
+
+it("gives all eight registered stores a bounded share, including the last four", async () => {
+  const ids = [
+    "velosklad",
+    "bikeinn",
+    "alltricks",
+    "bike24",
+    "trial-sport",
+    "velostrana",
+    "velodrive",
+    "alienbike",
+  ];
+  const limits = new Map<string, number>();
+  const stores = ids.map((id) =>
+    fakeStore(id, {
+      discover: async (_query, env) => {
+        limits.set(id, env.limit);
+        return Array.from(
+          { length: 4 },
+          (_, i) => `https://www.${id}.test/p/${100 + i}`,
+        );
+      },
+    }),
+  );
+  const pages = Object.fromEntries(
+    ids.map((id) => [`https://www.${id}.test/p/100`, page("Zed Gravel 2024")]),
+  );
+  const { search, calls } = setup(stores, pages);
+  const result = await run(() =>
+    search.stores({ brand: "Zed", model: "Gravel", trim: null, year: 2024 }),
+  );
+  expect([...limits.keys()]).toEqual(ids);
+  expect([...limits.values()]).toEqual(ids.map(() => 1));
+  expect(result.status).toBe("ambiguous");
+  if (result.status !== "ambiguous") return;
+  expect(new Set(result.candidates.map((c) => c.storeId))).toEqual(
+    new Set(ids),
+  );
+  expect(calls.filter((url) => url.includes(".test/p/"))).toHaveLength(8);
+  expect(result.search?.complete).toBe(false);
+});
+
+it("reserves Trial-Sport's mandatory queue interval without losing cancellation", async () => {
+  const url = "https://trial-sport.ru/goods/123.html";
+  const store = {
+    ...fakeStore("trial-sport", { discover: async () => [url] }),
+    allowedDomains: ["trial-sport.ru"],
+    owns: (u: URL) => u.hostname === "trial-sport.ru",
+  };
+  const w = setup([store], { [url]: page("Zed Gravel 2024") }, () => {}, {
+    pageMs: 10,
+  });
+  vi.mocked(w.http.get).mockImplementation(async (...args) => {
+    await abortable(
+      new Promise((resolve) => setTimeout(resolve, 30)),
+      resolutionContext.getStore()?.signal,
+    );
+    // Do not recurse into the spy: a successful recorded product response.
+    return {
+      url: args[0],
+      body: page("Zed Gravel 2024"),
+      hash: "recorded",
+      fetchedAt: "2026-10-09T00:00:00Z",
+    };
+  });
+  const result = await run(() => w.search.stores(query));
+  expect(result.status).toBe("ambiguous");
+  const controller = new AbortController();
+  const cancelled = run(() => w.search.stores(query), controller.signal);
+  controller.abort();
+  await expect(cancelled).rejects.toBeDefined();
+});

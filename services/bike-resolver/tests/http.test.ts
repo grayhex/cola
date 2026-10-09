@@ -425,3 +425,37 @@ it("accepts octet-stream XML only from the known manufacturer catalogue paths", 
     );
   }
 });
+
+it("honours Trial-Sport's ten-second interval and cancels queued requests before fetch", async () => {
+  vi.useFakeTimers();
+  try {
+    vi.mocked(fetch).mockResolvedValue(
+      new Response("<h1>Bike</h1>") as Awaited<ReturnType<typeof fetch>>,
+    );
+    const http = client();
+    const first = http.get("https://trial-sport.ru/one", ["trial-sport.ru"]);
+    await vi.advanceTimersByTimeAsync(0);
+    await first;
+    const second = http.get("https://trial-sport.ru/two", ["trial-sport.ru"]);
+    await vi.advanceTimersByTimeAsync(9999);
+    expect(fetch).toHaveBeenCalledTimes(1);
+    // Responses are one-use streams.
+    vi.mocked(fetch).mockResolvedValue(
+      new Response("<h1>Bike 2</h1>") as Awaited<ReturnType<typeof fetch>>,
+    );
+    await vi.advanceTimersByTimeAsync(1);
+    await second;
+    expect(fetch).toHaveBeenCalledTimes(2);
+    const controller = new AbortController();
+    const third = withResolution(controller.signal, undefined, () =>
+      http.get("https://trial-sport.ru/three", ["trial-sport.ru"]),
+    );
+    const rejected = expect(third).rejects.toBeDefined();
+    await vi.advanceTimersByTimeAsync(100);
+    controller.abort();
+    await rejected;
+    expect(fetch).toHaveBeenCalledTimes(2);
+  } finally {
+    vi.useRealTimers();
+  }
+});

@@ -220,6 +220,7 @@ try {
           "tests/resolver-http.js",
           "tests/resolver-stores-http.js",
           "tests/resolver-reddit10-http.js",
+          "tests/resolver-russian-http.js",
           "tests/layout-http.js",
           "tests/wizard-http.js",
           "tests/showcase-http.js",
