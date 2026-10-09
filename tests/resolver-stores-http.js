@@ -217,6 +217,10 @@ try {
       ["bikeinn", true],
       ["alltricks", false],
       ["bike24", false],
+      ["trial-sport", true],
+      ["velostrana", true],
+      ["velodrive", true],
+      ["alienbike", true],
     ],
   );
   assert.equal(brands.storeSearch, true);
@@ -225,7 +229,7 @@ try {
   // An operator can switch one store off; it is then reported, not asked.
   await db.query("UPDATE users SET role='admin' WHERE id=$1", [user.id]);
   const config = (await person.api("admin/resolver")).data;
-  assert.equal(config.stores.length, 4);
+  assert.equal(config.stores.length, 8);
   assert.equal(config.value.stores.bikeinn, true);
   assert.equal(config.value.stores.alltricks, false);
   const switched = await person.api("admin/resolver", "PUT", {

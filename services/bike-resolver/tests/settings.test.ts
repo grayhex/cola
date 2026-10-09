@@ -47,6 +47,10 @@ it("settings persist, reject stale saves and disable adapters before network acc
       "sava",
       "shulz",
       "twitter",
+      "aspect",
+      "stark",
+      "welt",
+      "stels",
     ]);
     expect(
       (
@@ -300,6 +304,10 @@ it("keeps the stores an operator chose when an older form saves without them", a
       "bikeinn",
       "alltricks",
       "bike24",
+      "trial-sport",
+      "velostrana",
+      "velodrive",
+      "alienbike",
     ]);
   } finally {
     await app.close();

@@ -1,0 +1,38 @@
+User-Agent: clickfrogbot
+Disallow: /admin
+Disallow: /goods/51526/436425.html
+
+User-agent: dotbot
+Disallow: /
+
+User-agent: AhrefsBot
+Disallow: /
+
+User-agent: PetalBot
+Disallow: /
+
+User-Agent: *
+Crawl-delay: 10
+Disallow: /faqlist
+Disallow: /gds.context.php?*
+Disallow: /docs
+Disallow: /cgi-bin
+Disallow: /1c_exchange
+Disallow: /sgrest
+Disallow: /admin
+Disallow: /compare*
+Disallow: /gds.php?*strnal*
+Disallow: /svdownload.php?*
+#Disallow: /gds*
+Disallow: /profile.php?*
+Disallow: /login.php?*
+Clean-param: strnal
+Clean-param: kid
+Clean-param: svid
+Clean-param: ref
+Clean-param: etext
+Clean-param: yprqee
+
+Sitemap: https://trial-sport.ru/sitemap.xml
+
+Host: https://trial-sport.ru/

@@ -238,6 +238,7 @@ export interface BikeManufacturerAdapter {
   // "distributor": the brand's official shop run by its importer, used when the
   // manufacturer's own site publishes no specification.
   readonly sourceKind?: "manufacturer" | "distributor";
+  sourceKindForUrl?(url: string): "manufacturer" | "archive";
   readonly aliases: string[];
   readonly allowedDomains: string[];
   readonly adapterVersion: number;

@@ -1,5 +1,26 @@
 import { normalize } from "./normalize.js";
 import type { BikeCandidate, BikeQuery } from "./domain.js";
+// Deliberate bicycle aliases, not general transliteration: model/trim indexes
+// (MD/HD/V, D, 700.4, Z010) remain distinct and the original query is retained.
+const bicycleWords: Record<string, string> = {
+  аспект: "aspect",
+  старк: "stark",
+  стелс: "stels",
+  велт: "welt",
+  вельт: "welt",
+  ронин: "ronin",
+  пелотон: "peloton",
+  навигатор: "navigator",
+  пилот: "pilot",
+  аллроад: "allroad",
+  алроад: "allroad",
+};
+export const normalizeBikeWords = (value: string | null | undefined) =>
+  normalize(value)
+    .split(" ")
+    .map((word) => bicycleWords[word] ?? word)
+    .join(" ")
+    .replace(/\b(\d{2})(md|hd|v)\b/g, "$1 $2");
 const squash = (s: string) => s.replace(/\s+/g, "");
 // The model, written without spaces, equals a run of the name's own words.
 export function joinedRun(model: string, actual: string) {
@@ -17,6 +38,8 @@ export function joinedRun(model: string, actual: string) {
 // Normalized model words are all among the name's words, or are the same
 // words run together ("BlackLava" for "Black Lava", "Dont" for "Don't").
 export function modelWordsMatch(model: string, actual: string) {
+  model = normalizeBikeWords(model);
+  actual = normalizeBikeWords(actual);
   const words = new Set(actual.split(" "));
   return (
     model.split(" ").every((t) => words.has(t)) || joinedRun(model, actual)
@@ -26,15 +49,15 @@ export function modelWordsMatch(model: string, actual: string) {
 // spellings) are all in a name. Every filter of a search asks the same thing,
 // so a request typed "BoysDontCry" is not a different bike for any of them.
 export function requestInName(query: BikeQuery, name: string) {
-  const text = normalize(name),
+  const text = normalizeBikeWords(name),
     words = new Set(text.split(" ")),
     wanted = (value: string | null) =>
-      normalize(value ?? "")
+      normalizeBikeWords(value ?? "")
         .split(" ")
         .filter(Boolean);
   return (
     wanted(query.brand).every((w) => words.has(w)) &&
-    modelWordsMatch(normalize(query.model), text) &&
+    modelWordsMatch(normalizeBikeWords(query.model), text) &&
     wanted(query.trim).every((w) => words.has(w))
   );
 }
@@ -43,13 +66,13 @@ export const MATCH_MARGIN = 0.06;
 export const EXPLICIT_MATCH_THRESHOLD = 0.88;
 export function scoreCandidate(q: BikeQuery, c: BikeCandidate): number {
   if (
-    normalize(q.brand) !== normalize(c.brand) ||
+    normalizeBikeWords(q.brand) !== normalizeBikeWords(c.brand) ||
     (q.year !== null && c.year !== null && q.year !== c.year)
   )
     return 0;
   const strip = (s: string) => {
-    const normalized = normalize(s),
-      prefix = normalize(q.brand) + " ";
+    const normalized = normalizeBikeWords(s),
+      prefix = normalizeBikeWords(q.brand) + " ";
     return (
       normalized.startsWith(prefix)
         ? normalized.slice(prefix.length)
@@ -60,8 +83,8 @@ export function scoreCandidate(q: BikeQuery, c: BikeCandidate): number {
       .trim();
   };
   const actual = strip(c.canonicalName),
-    model = normalize(q.model),
-    wanted = normalize([q.model, q.trim].filter(Boolean).join(" "));
+    model = normalizeBikeWords(q.model),
+    wanted = normalizeBikeWords([q.model, q.trim].filter(Boolean).join(" "));
   const words = new Set(actual.split(" ")),
     wantedWords = wanted.split(" ");
   // "BlackLava 2" and "Black Lava 2" are one model: when the words differ only
@@ -106,21 +129,21 @@ export function partialScore(
   name: string,
   year: number | null,
 ): number {
-  const text = normalize(name),
+  const text = normalizeBikeWords(name),
     words = new Set(text.split(" "));
   if (
-    !normalize(query.brand)
+    !normalizeBikeWords(query.brand)
       .split(" ")
       .every((w) => words.has(w))
   )
     return 0;
-  const model = normalize(query.model).split(" ").filter(Boolean);
+  const model = normalizeBikeWords(query.model).split(" ").filter(Boolean);
   // A model written run together or spaced is the whole model, not a fragment.
   const matches = modelWordsMatch(normalize(query.model), text)
     ? model.length
     : model.filter((w) => words.has(w)).length;
   if (!matches || matches / model.length < 0.5) return 0;
-  const trim = normalize(query.trim || "")
+  const trim = normalizeBikeWords(query.trim || "")
     .split(" ")
     .filter(Boolean);
   return (

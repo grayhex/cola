@@ -262,7 +262,7 @@ it("API health, readiness, the registered brands and invalid input", async () =>
   try {
     expect((await app.inject("/health")).statusCode).toBe(200);
     expect((await app.inject("/ready")).statusCode).toBe(200);
-    // Eleven official sites, the importer's shop of TWITTER and ROSE, SAVA, SHULZ.
+    // Registered official catalogues and the importer's shop of TWITTER.
     expect(
       (await app.inject("/v1/brands")).json().brands.map((b: any) => b.id),
     ).toEqual([
@@ -281,6 +281,10 @@ it("API health, readiness, the registered brands and invalid input", async () =>
       "sava",
       "shulz",
       "twitter",
+      "aspect",
+      "stark",
+      "welt",
+      "stels",
     ]);
     expect(
       (

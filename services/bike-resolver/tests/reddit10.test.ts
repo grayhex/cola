@@ -135,6 +135,15 @@ function recordedWeb(delayMs = 0) {
 function service(delayMs = 0) {
   const web = recordedWeb(delayMs);
   const settings = new SettingsStore();
+  // Replay the source set captured by this dated benchmark. New sources have
+  // their own live capture/replay matrix in russian-sources.test.ts.
+  for (const id of [
+    "trial-sport",
+    "velostrana",
+    "velodrive",
+    "alienbike",
+  ] as const)
+    settings.value.stores[id] = false;
   const cache = new MemoryCache();
   const logger = pino({ level: "silent" });
   const app = buildApp(

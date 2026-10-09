@@ -16,6 +16,10 @@ export const adapterSupport = {
   sava: "",
   shulz: "",
   twitter: "",
+  aspect: "",
+  stark: "",
+  welt: "",
+  stels: "",
 };
 // What a result of an adapter that is switched on still does not say. Shown to
 // the operator and in /v1/brands; a note never switches an adapter off.
@@ -28,10 +32,27 @@ export const adapterNotes: Partial<
     "Год на странице не указан; цвета и размеры одной модели — одна комплектация, рамы без велосипеда не предлагаются",
   twitter:
     "Официальный дистрибьютор в США (twitterbikeusa.com): сайт производителя публикует пустые таблицы. Одна страница — несколько сборок, каждая отдельным вариантом",
+  aspect:
+    "Год подтверждается публичным каталогом для точного URL; ростовки сохраняются в исходных значениях",
+  stark:
+    "Поиск по текущим страницам семейств, включая оставшиеся прошлые годы; /arhiv/ запрещён robots.txt",
+  welt: "Русский каталог; противоречивые коды компонентов сохраняются с предупреждением для проверки",
+  stels:
+    "Текущий каталог STELS и связанный с него архив Forbike (2012–2020); год текущей карточки без указания не определяется",
 };
 // Adapters added after the first release: settings saved without their flag
 // still load and take the default.
-const laterAdapters = new Set(["gt", "rose", "sava", "shulz", "twitter"]);
+const laterAdapters = new Set([
+  "gt",
+  "rose",
+  "sava",
+  "shulz",
+  "twitter",
+  "aspect",
+  "stark",
+  "welt",
+  "stels",
+]);
 // Registered retailers. `enabled` is the default for installations that never
 // saved the flag; the text is shown to the operator and in /v1/brands.
 export const storeSupport = {
@@ -50,6 +71,26 @@ export const storeSupport = {
     enabled: false,
     limitation:
       "Сайт отклоняет автоматические запросы; поиск и разбор не проверены на реальных страницах",
+  },
+  "trial-sport": {
+    enabled: true,
+    limitation:
+      "Поиск без года в строке, сезон читается отдельно; robots.txt требует интервал 10 секунд",
+  },
+  velostrana: {
+    enabled: true,
+    limitation:
+      "По публичной карте сайта; поиск с query-параметрами запрещён robots.txt",
+  },
+  velodrive: {
+    enabled: true,
+    limitation:
+      "По публичной карте товаров; возможен HTTP 429, запросы с фильтрами запрещены robots.txt",
+  },
+  alienbike: {
+    enabled: true,
+    limitation:
+      "По карте сайта с названиями товаров; поиск OpenCart запрещён robots.txt",
   },
 } as const;
 export type StoreId = keyof typeof storeSupport;
