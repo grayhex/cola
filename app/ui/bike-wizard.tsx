@@ -94,6 +94,7 @@ import { groupedComponents } from "../../lib/garage-layout.ts";
 import { bicycleName, draftId } from "../../lib/wizard-options.ts";
 import { bikeInput, componentInput } from "../../lib/validation.ts";
 import { resolveWithTrace } from "../../lib/resolver-stream.ts";
+import InfoTip from "./info-tip.tsx";
 import PlanningGraphic from "./planning-graphic.tsx";
 import ResolverProgress from "./resolver-progress.tsx";
 import {
@@ -1719,7 +1720,14 @@ export default function BikeWizard({
               />
             </section>
             <fieldset className="wizard-card wizard-settings" disabled={locked}>
-              <legend>Приватность и показ</legend>
+              <legend>
+                Приватность и показ
+                <InfoTip label="Подробнее: приватность и показ">
+                  Публичный велосипед виден на общей витрине, «Только я»
+                  оставляет его только для вас. Цены публикуются лишь с вашего
+                  разрешения; показ можно менять, не удаляя цены.
+                </InfoTip>
+              </legend>
               <PrivacyField
                 isPublic={bike.is_public}
                 onChange={(value) => update("is_public", value)}
@@ -1733,11 +1741,6 @@ export default function BikeWizard({
                 value={bike.is_former}
                 onChange={(value) => update("is_former", value)}
               />
-              <p className="help">
-                Публичный велосипед виден на общей витрине, «Только я» оставляет
-                его только для вас. Цены публикуются лишь с вашего разрешения;
-                показ можно менять, не удаляя цены.
-              </p>
               <details
                 className="wizard-optional"
                 open={openName}

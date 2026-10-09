@@ -10,6 +10,8 @@ import type { rideList } from "../../lib/rides.ts";
 import type { MenuOrigin } from "./nav-popover.tsx";
 import SiteIcon from "./site-icon.tsx";
 import Link from "next/link";
+import { AddBikeLink } from "./add-bike.tsx";
+import { addBikeHref } from "../../lib/navigation.ts";
 import styles from "./global-header.module.css";
 import ThemeControl from "./theme-control.tsx";
 import SmallImage from "./small-image.tsx";
@@ -192,19 +194,26 @@ export default function GlobalHeader({
   const graphic = (name: string) => (
     <SiteIcon name={name} settings={settings} className="global-nav-graphic" />
   );
-  const link = (item: { href: string; icon: string; label: string }) => (
-    <Link
-      key={item.href}
-      className="nav-menu-link"
-      href={item.href}
-      // Profile links are not prefetched, see AuthorLink.
-      prefetch={item.href.startsWith("/@") ? false : undefined}
-      aria-current={pathname + search === item.href ? "page" : undefined}
-    >
-      {graphic(item.icon)}
-      <span>{item.label}</span>
-    </Link>
-  );
+  const link = (item: { href: string; icon: string; label: string }) =>
+    // «Добавить велосипед» opens the wizard over this page (#378).
+    item.href === addBikeHref ? (
+      <AddBikeLink key={item.href} className="nav-menu-link">
+        {graphic(item.icon)}
+        <span>{item.label}</span>
+      </AddBikeLink>
+    ) : (
+      <Link
+        key={item.href}
+        className="nav-menu-link"
+        href={item.href}
+        // Profile links are not prefetched, see AuthorLink.
+        prefetch={item.href.startsWith("/@") ? false : undefined}
+        aria-current={pathname + search === item.href ? "page" : undefined}
+      >
+        {graphic(item.icon)}
+        <span>{item.label}</span>
+      </Link>
+    );
   const account = (
     <>
       <div className="nav-account-identity">

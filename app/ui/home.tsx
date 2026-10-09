@@ -5,6 +5,7 @@ import type { RecordHolder } from "../../lib/gamification.ts";
 import type { JsonData } from "../../lib/contracts.ts";
 import type { homeSnapshot } from "../../lib/discovery.ts";
 import Link from "next/link";
+import { AddBikeLink } from "./add-bike.tsx";
 import { preload } from "react-dom";
 import { heroWidths } from "../../lib/media-sizes.ts";
 import { useEffect, useRef, useState } from "react";
@@ -168,7 +169,7 @@ export function ActivityTicker({
       ) : (
         <p>
           Первые истории ещё впереди.{" "}
-          <Link href="/account?tab=bikes&action=add">Добавить велосипед →</Link>
+          <AddBikeLink>Добавить велосипед →</AddBikeLink>
         </p>
       )}
       <button

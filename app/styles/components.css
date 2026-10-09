@@ -1245,12 +1245,49 @@
     }
   }
 
+  /* «Добавить велосипед» from any page (#378): the wait and the failure of the
+     wizard's code are told in a small bar, the saved bike in the window. */
+  .add-bike-status {
+    position: fixed;
+    inset-inline: 50% auto;
+    bottom: var(--space-4);
+    z-index: var(--z-toast);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2) var(--space-3);
+    max-width: min(520px, calc(100vw - 2 * var(--gutter)));
+    margin: 0;
+    padding: var(--space-2) var(--space-4);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    box-shadow: var(--shadow-lg);
+    font-size: var(--text-sm);
+    transform: translateX(-50%);
+  }
+  .add-bike-saved {
+    display: grid;
+    gap: var(--space-4);
+    padding: var(--space-2) 0 var(--space-4);
+  }
+  .add-bike-saved > p {
+    margin: 0;
+  }
+  .add-bike-saved-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
   /* Planning workspace (#253): «Хочу кататься» and «Организовать
      покатушку» in a wide window, HF /new-space density — sections in a
      12-column grid, the head and the actions stay put, only the body
      scrolls. One column on phones. <dialog class="planning">. */
   dialog.planning {
-    max-width: min(1120px, calc(100vw - 2 * var(--gutter)));
+    /* #378: about 36 % wider than the former 1120 px, the room used by columns
+       (below); the window never goes past the screen. */
+    max-width: min(1520px, calc(100vw - 2 * var(--gutter)));
     padding: 0;
   }
   dialog.planning > .modal-head {
@@ -1408,6 +1445,22 @@
     }
     .planning-section.two-thirds {
       grid-column: span 8;
+    }
+  }
+  /* On a wide window the sections stand in three columns instead of two
+     rows of halves, so a usual form needs no scrolling (#378). */
+  @media (min-width: 1200px) {
+    .planning-section.wide-4 {
+      grid-column: span 4;
+    }
+    .planning-section.wide-8 {
+      grid-column: span 8;
+    }
+    .intent-form > .planning-body > .intent-preview {
+      order: 2;
+    }
+    .intent-form > .planning-body > .planning-advanced {
+      order: 3;
     }
   }
   @media (max-width: 640px) {

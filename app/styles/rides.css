@@ -567,6 +567,32 @@
   .together-actions > p {
     margin: 0;
   }
+  /* The short line under a guest's riding buttons (#378). */
+  .registration-note {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    line-height: var(--leading-snug);
+  }
+  .together-actions > .registration-note {
+    margin-top: calc(var(--space-1) * -1);
+  }
+  /* The buttons of the rides section and the line under them. */
+  .page-actions-stack {
+    display: grid;
+    justify-items: end;
+    gap: var(--space-1);
+    margin-left: auto;
+  }
+  .page-actions-stack > .page-actions {
+    margin-left: 0;
+  }
+  @media (max-width: 640px) {
+    .page-actions-stack {
+      justify-items: start;
+      margin-left: 0;
+    }
+  }
   @media (max-width: 480px) {
     .together-buttons > .button {
       flex: 1 1 100%;

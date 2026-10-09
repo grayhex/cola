@@ -1,4 +1,26 @@
 import type { SiteSettings, Viewer } from "./contracts.ts";
+/**
+ * Where «Добавить велосипед» leads when it is a plain link: the account opens
+ * the wizard there. A signed-in rider on another page gets the same wizard over
+ * that page instead (#378, `AddBikeLink`); the address stays for new windows,
+ * old bookmarks and guests.
+ */
+export const addBikeHref = "/account?tab=bikes&action=add";
+/**
+ * What «Хочу кататься» and «Организовать покатушку» lead a guest to (#378):
+ * the page of the scenario, which asks for an account first — in the form of
+ * registering (`auth=register`), with «Уже есть аккаунт? Войти» at hand. After
+ * signing up or in the same page loads again and opens that scenario; nothing
+ * is created by it. For a signed-in rider the plain addresses stay.
+ */
+export const ridingHref = {
+  intent: "/ride-intents?new=1",
+  plan: "/account?tab=rides&action=plan",
+} as const;
+export const guestRidingHref = {
+  intent: ridingHref.intent + "&auth=register",
+  plan: ridingHref.plan + "&auth=register",
+} as const;
 // Known destinations only; saved section visibility/order remain supported.
 export const sectionDefaults: NonNullable<SiteSettings["navigation"]> = [
   { id: "bikes", label: "Велосипеды", visible: true },
@@ -94,7 +116,7 @@ export function sectionLinks(
       ...(user
         ? [
             {
-              href: "/account?tab=bikes&action=add",
+              href: addBikeHref,
               label: "Добавить велосипед",
               icon: "addBike",
             },
@@ -106,7 +128,7 @@ export function sectionLinks(
       { href: "/rides", label: "Предстоящие", icon: "rides" },
       { href: "/rides?status=all", label: "Все покатушки", icon: "rides" },
       {
-        href: "/account?tab=rides&action=plan",
+        href: user ? ridingHref.plan : guestRidingHref.plan,
         label: "Запланировать",
         icon: "plan",
       },

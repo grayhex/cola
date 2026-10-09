@@ -634,6 +634,15 @@ export default function Account() {
     setSelected(requested === "bikes" ? params.get("bike") : null);
     setCreate(requested === "bikes" && params.get("action") === "add");
   }, [params]);
+  // A guest's «Организовать покатушку» came with `?auth=register` (#378); once
+  // the rider is in, the mark has done its work and goes from the address.
+  useEffect(() => {
+    if (!user) return;
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has("auth")) return;
+    url.searchParams.delete("auth");
+    window.history.replaceState(null, "", url.pathname + url.search);
+  }, [user]);
   const createOpened = useCallback(() => {
     setCreate(false);
     const next = new URL(window.location.href);

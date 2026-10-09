@@ -48,7 +48,6 @@ export default function GarageModal({
   refresh,
   setDirty,
   setBusy,
-  account,
   router,
   openBike,
   share,
@@ -70,7 +69,6 @@ export default function GarageModal({
   refresh: () => Promise<void>;
   setDirty: (dirty: boolean) => void;
   setBusy: (busy: boolean) => void;
-  account: boolean;
   router: AppRouterInstance;
   openBike: (bike: BikeDto) => void;
   share?: string;
@@ -158,10 +156,9 @@ export default function GarageModal({
           onDirtyChange={setDirty}
           onBusy={setBusy}
           onCreated={async (id) => {
-            if (!account) {
-              router.push("/account");
-              return;
-            }
+            // Where the wizard was opened (#378): the account shows the new
+            // bike in place, another page goes to its own page; nobody is sent
+            // to an account that has nothing to show.
             await refresh();
             const { bike: b } = await api<{ bike: BikeDto }>("bikes/" + id);
             openBike(b);

@@ -15,7 +15,7 @@ type PlannerState =
   | { status: "loading" }
   | { status: "error"; error: string }
   | { status: "ready"; bikes: AccountBikeDto[]; config: RideConfig };
-import Link from "next/link";
+import { AddBikeLink } from "./add-bike.tsx";
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Modal from "./garage/modal.tsx";
@@ -163,12 +163,14 @@ export default function PlanComposer({
                   ? "В гараже только бывшие велосипеды. Добавьте текущий, чтобы организовать выезд."
                   : "Покатушка привязана к велосипеду организатора. Добавьте велосипед — это займёт минуту."}
               </p>
-              <Link
+              {/* The wizard opens over this window; the garage is read again
+                  when a bike is saved, so planning can go on at once. */}
+              <AddBikeLink
                 className="button small"
-                href="/account?tab=bikes&action=add"
+                onCreated={() => setRevision((v) => v + 1)}
               >
                 Добавить велосипед
-              </Link>
+              </AddBikeLink>
             </div>,
           )}
         {canPlan && !ride && (
