@@ -48,7 +48,8 @@ jobs:
     timeout-minutes: 25
     services:
       postgres:
-        image: postgres:17.11-alpine
+        # Services are pulled before steps, so a later docker login cannot help.
+        image: mirror.gcr.io/library/postgres:17.11-alpine
         env:
           POSTGRES_USER: test
           POSTGRES_PASSWORD: test
@@ -126,7 +127,7 @@ jobs:
           - { project: webkit-mobile, browser: webkit, shard: 2, total: 2 }
     services:
       postgres:
-        image: postgres:17.11-alpine
+        image: mirror.gcr.io/library/postgres:17.11-alpine
         env:
           POSTGRES_USER: test
           POSTGRES_PASSWORD: test
@@ -250,6 +251,12 @@ jobs:
           python3 scripts/test-compose.py
           python3 scripts/test-deploy-images.py
       - uses: docker/setup-buildx-action@v4
+        with:
+          # Bootstrap is pulled by Docker; FROM and #syntax by BuildKit.
+          driver-opts: image=mirror.gcr.io/moby/buildkit:buildx-stable-1
+          buildkitd-config-inline: |
+            [registry."docker.io"]
+              mirrors = ["mirror.gcr.io"]
       - name: Build final application image
         uses: docker/build-push-action@v7
         with:
@@ -288,6 +295,11 @@ jobs:
         env:
           COLA_TEST_OPS_IMAGE: cola-ci-ops:${{ needs.prepare.outputs.sha }}
         run: bash scripts/test-shared-ops.sh
+      - name: Cache the Compose PostgreSQL image from the public mirror
+        run: |
+          db_image="$(docker compose -f compose.yaml config --format json | jq -r '.services.db.image')"
+          docker pull "mirror.gcr.io/library/$db_image"
+          docker tag "mirror.gcr.io/library/$db_image" "$db_image"
       - name: Final-image migrations, runtime and backup restore drill
         env:
           COLA_TEST_OPS_IMAGE: cola-ci-ops:${{ needs.prepare.outputs.sha }}
