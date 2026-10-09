@@ -205,7 +205,7 @@ test("a portrait is limited by the height, a small file is not stretched, a tran
   );
 });
 
-test("a slow or failed file does not collapse the window; a private bike's photo is shown to its owner only", async ({
+test("a slow file does not collapse the window; a private bike's photo is shown to its owner only", async ({
   page,
   browser,
   isMobile,
@@ -236,15 +236,6 @@ test("a slow or failed file does not collapse the window; a private bike's photo
     early.width - 1,
   );
   await page.keyboard.press("Escape");
-  // A failed file keeps the window and says so.
-  await page.unroute("**" + url);
-  await page.route("**" + url, (route) =>
-    route.request().url().includes("width=") ? route.continue() : route.abort(),
-  );
-  const failed = await open(page);
-  await expect(failed.locator(".photo-empty")).toBeVisible();
-  expect((await failed.boundingBox()).height).toBeGreaterThan(300);
-  await page.keyboard.press("Escape");
   // Nobody else gets the private file by its address.
   const stranger = await browser.newContext({ baseURL: origin });
   try {
@@ -254,4 +245,23 @@ test("a slow or failed file does not collapse the window; a private bike's photo
   } finally {
     await stranger.close();
   }
+});
+
+test("a file that fails to load keeps the window and says so", async ({
+  page,
+}) => {
+  await member(page, "Отказ");
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  // A photo of its own, never loaded before: a browser may keep a loaded file
+  // and not ask for it again, so the refusal is there from the first request.
+  const bike = await bikeWith(page, [await picture(2400, 1600)]);
+  await page.route("**/api/photos/" + bike.photos[0].id, (route) =>
+    route.request().url().includes("width=") ? route.continue() : route.abort(),
+  );
+  await page.goto("/b/" + bike.share_id);
+  const dialog = await open(page);
+  await expect(dialog.locator(".photo-empty")).toBeVisible();
+  expect((await dialog.boundingBox()).height).toBeGreaterThan(300);
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
 });
