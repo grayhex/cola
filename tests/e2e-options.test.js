@@ -110,6 +110,17 @@ test("a typo is an error before anything starts, never a silent full run", () =>
     );
 });
 
+test("an option that is none of ours stops the run, as a misspelled shard cannot become the whole project", () => {
+  const env = { COLA_CI_PLAYWRIGHT_PROJECT: "chromium" };
+  for (const typo of ["--shrad=1/2", "--shrad", "--projct=chromium", "-x"])
+    assert.throws(() => browserRun(["--e2e", typo], env), /Unknown option/);
+  // The harness's own flag and the options of the run are not typos.
+  assert.deepEqual(browserRun(["--e2e", "--shard=2/2", "a"], env).shard, {
+    current: 2,
+    total: 2,
+  });
+});
+
 test("the native Playwright command gets the project and the shard, and only them", () => {
   assert.deepEqual(playwrightArgs({ project: undefined, shard: null }), [
     "test",

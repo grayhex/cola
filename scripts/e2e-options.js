@@ -25,6 +25,8 @@ export function parseShard(value) {
 }
 
 const valueOptions = ["--project", "--shard"];
+// Flags of the harness itself that may stand beside the run's options.
+const harnessFlags = ["--e2e"];
 function option(argv, name) {
   const found = [];
   for (let i = 0; i < argv.length; i++) {
@@ -36,12 +38,24 @@ function option(argv, name) {
   if (found.length === 1 && !found[0]) throw new Error(`${name} needs a value`);
   return found[0];
 }
-/** Files or title filters of the command line: what is not an option or its value. */
+/**
+ * Files or title filters of the command line: what is not an option or its
+ * value. An option that is none of ours (`--shrad=1/2`) stops the run: dropped
+ * silently it would turn a shard into the whole project.
+ */
 function filters(argv) {
   const out = [];
   for (let i = 0; i < argv.length; i++) {
-    if (valueOptions.includes(argv[i])) i++;
-    else if (!argv[i].startsWith("-")) out.push(argv[i]);
+    const arg = argv[i];
+    if (valueOptions.includes(arg)) i++;
+    else if (!arg.startsWith("-")) out.push(arg);
+    else if (
+      !valueOptions.includes(arg.split("=")[0]) &&
+      !harnessFlags.includes(arg)
+    )
+      throw new Error(
+        `Unknown option "${arg}"; the run takes ${valueOptions.join(", ")} and file filters`,
+      );
   }
   return out;
 }

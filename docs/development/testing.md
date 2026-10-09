@@ -168,7 +168,7 @@ pnpm test:e2e --project=chromium --shard=1/2
 pnpm test:e2e --project=chromium tests/e2e/bike-tabs.spec.js
 ```
 
-Командная строка сильнее переменных `COLA_CI_PLAYWRIGHT_PROJECT` и `COLA_CI_PLAYWRIGHT_SHARD`. Опечатка в проекте, шард вне `1 ≤ I ≤ N ≤ 16`, шард без проекта и повтор опции — ошибка, а не молчаливый полный прогон. `COLA_E2E_REPORT=файл.json` включает JSON-отчёт рядом со списком.
+Командная строка сильнее переменных `COLA_CI_PLAYWRIGHT_PROJECT` и `COLA_CI_PLAYWRIGHT_SHARD`. Опечатка в проекте, незнакомая опция (`--shrad=1/2`), шард вне `1 ≤ I ≤ N ≤ 16`, шард без проекта и повтор опции — ошибка, а не молчаливый полный прогон. `COLA_E2E_REPORT=файл.json` включает JSON-отчёт рядом со списком.
 
 Тестовый сервер (`scripts/test-resolver-integration.js`, `scripts/test-ui.js`) стартует с `next start --keepAliveTimeout 65000`: request-контексты Playwright держат соединения, а сервер с умолчанием в 5 с мог закрыть простаивающее ровно в момент отправки (`socket hang up`). Так потерянное восстановление админских настроек в `refinements.spec.js` оставило сайт с другой картой и уронило шесть следующих тестов (всего упало семь); восстановление теперь повторяется при `ECONNRESET`. Production-запуск (`pnpm start`, Docker) этим флагом не меняется.
 
