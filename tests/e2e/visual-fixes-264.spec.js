@@ -333,7 +333,9 @@ test("one «Хочу кататься» flow: the same «Новое намере
   const dialog = page.getByRole("dialog", { name: "Новое намерение" });
   await expect(dialog).toBeVisible();
   await expect(page).toHaveURL(/\/ride-intents$/);
-  const lead = await dialog.locator(".planning-lead").textContent();
+  const lead = await dialog
+    .locator(".modal-head .modal-description")
+    .textContent();
   expect(lead).toContain("конкретный раз");
   await page.keyboard.press("Escape");
   await expect(dialog).toHaveCount(0);
@@ -352,7 +354,9 @@ test("one «Хочу кататься» flow: the same «Новое намере
       .getByRole("button", { name: "Хочу кататься" }),
     dialog,
   );
-  await expect(dialog.locator(".planning-lead")).toHaveText(lead);
+  await expect(dialog.locator(".modal-head .modal-description")).toHaveText(
+    lead,
+  );
   await expect(dialog.getByLabel("Окно 1: с", { exact: true })).toHaveValue("");
   await expect(
     dialog.getByRole("button", {

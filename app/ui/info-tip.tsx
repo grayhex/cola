@@ -11,10 +11,15 @@ import {
 import { Info } from "./icons.tsx";
 import styles from "./info-tip.module.css";
 
-// A hint behind an «i» (#378): the sentence that used to stand under a field
-// as a paragraph. It opens on hover (a mouse), on the keyboard focus and on a
-// tap or a click, which pins it; Escape, a press elsewhere, leaving the control
-// and scrolling close it. The text is always in the page and is the
+// A hint behind an «i» (#378, #382): the sentence that used to stand under a
+// field as a paragraph. It opens on hover (a mouse), on the keyboard focus and
+// on a tap or a click, which pins it. While it is open it stays open: no timer
+// closes it, the pointer may go from the icon to the text (the two are one
+// hover area), and neither a scroll of something else nor a resize nor a
+// re-render of the form takes it away. It closes by the icon pressed again, a
+// press elsewhere, Escape (only the hint: the window it stands in stays) and
+// by the focus leaving it. A scroll of the box the icon stands in, or a resize
+// of the window, places it again. The text is always in the page and is the
 // description of the button, so a screen reader reads it without opening
 // anything; the bubble is placed by the viewport, not by the scrolling box of
 // the form it stands in.
@@ -36,17 +41,21 @@ export default function InfoTip({
     id = given || own;
   const [open, setOpen] = useState(false);
   const pinned = useRef(false);
+  // The focus given back to the icon after Escape is not a request to open.
+  const returning = useRef(false);
+  const root = useRef<HTMLSpanElement>(null);
   const button = useRef<HTMLButtonElement>(null);
   const bubble = useRef<HTMLSpanElement>(null);
   const close = useCallback(() => {
     pinned.current = false;
     setOpen(false);
   }, []);
-  // Placed under the icon, kept inside the viewport.
-  useLayoutEffect(() => {
+  // Placed under the icon, kept inside the viewport; above it when there is no
+  // room below.
+  const place = useCallback(() => {
     const anchor = button.current;
     const box = bubble.current;
-    if (!open || !anchor || !box) return;
+    if (!anchor || !box) return;
     const icon = anchor.getBoundingClientRect();
     const width = Math.min(box.offsetWidth, window.innerWidth - 2 * margin);
     const left = Math.min(
@@ -57,30 +66,83 @@ export default function InfoTip({
     const fits = below + box.offsetHeight <= window.innerHeight - margin;
     box.style.left = `${left}px`;
     box.style.top = `${fits ? below : Math.max(margin, icon.top - 6 - box.offsetHeight)}px`;
-  }, [open]);
+  }, []);
+  useLayoutEffect(() => {
+    if (open) place();
+  }, [open, place]);
   useEffect(() => {
     if (!open) return;
+    const inside = (target: EventTarget | null) =>
+      target instanceof Node && !!root.current?.contains(target);
     const away = (event: Event) => {
+      if (!inside(event.target)) close();
+    };
+    // Escape closes the hint and nothing else, wherever the focus is: the
+    // window the hint stands in treats an Escape it receives as its own.
+    const escape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      event.stopPropagation();
+      close();
+      // The focus on the hint's text goes back to the icon, and stays closed.
+      if (document.activeElement === bubble.current) {
+        returning.current = true;
+        button.current?.focus({ preventScroll: true });
+        returning.current = false;
+      }
+    };
+    // A scroll of something else (a map, a list, the page behind the window)
+    // does not move the icon. Only the box the icon stands in does: the hint
+    // follows it, and goes with the icon when the icon leaves the screen.
+    const scrolled = (event: Event) => {
+      const target = event.target;
+      const anchor = button.current;
       if (
-        event.target instanceof Node &&
-        (button.current?.contains(event.target) ||
-          bubble.current?.contains(event.target))
+        !anchor ||
+        (target !== document &&
+          !(target instanceof Node && target.contains(anchor)))
       )
         return;
-      close();
+      const icon = anchor.getBoundingClientRect();
+      if (icon.bottom < 0 || icon.top > window.innerHeight) close();
+      else place();
     };
     document.addEventListener("pointerdown", away, true);
-    // The form scrolls under a fixed bubble: it would be left behind.
-    document.addEventListener("scroll", close, true);
-    window.addEventListener("resize", close);
+    document.addEventListener("keydown", escape, true);
+    document.addEventListener("scroll", scrolled, true);
+    window.addEventListener("resize", place);
     return () => {
       document.removeEventListener("pointerdown", away, true);
-      document.removeEventListener("scroll", close, true);
-      window.removeEventListener("resize", close);
+      document.removeEventListener("keydown", escape, true);
+      document.removeEventListener("scroll", scrolled, true);
+      window.removeEventListener("resize", place);
     };
-  }, [open, close]);
+  }, [open, close, place]);
   return (
-    <span className={styles.tip + (className ? " " + className : "")}>
+    // The icon and the bubble are one hover area: moving the pointer from the
+    // one to the other (the bubble has a bridge over the gap) is not leaving.
+    <span
+      ref={root}
+      className={styles.tip + (className ? " " + className : "")}
+      onPointerEnter={(e) => {
+        if (e.pointerType === "mouse") setOpen(true);
+      }}
+      onPointerLeave={(e) => {
+        if (e.pointerType !== "mouse" || pinned.current) return;
+        // The keyboard focus on the icon keeps it open as well.
+        if (button.current?.matches(":focus-visible")) return;
+        setOpen(false);
+      }}
+      onBlur={(e) => {
+        // The focus moving inside (the icon to the text) is not leaving.
+        if (
+          e.relatedTarget instanceof Node &&
+          root.current?.contains(e.relatedTarget)
+        )
+          return;
+        close();
+      }}
+    >
       <button
         ref={button}
         type="button"
@@ -88,30 +150,16 @@ export default function InfoTip({
         aria-label={label}
         aria-describedby={id}
         aria-expanded={open}
-        onPointerEnter={(e) => {
-          if (e.pointerType === "mouse") setOpen(true);
-        }}
-        onPointerLeave={(e) => {
-          if (e.pointerType === "mouse" && !pinned.current) setOpen(false);
-        }}
         onFocus={(e) => {
           // A tap focuses too, and its click decides: only the keyboard opens here.
-          if (e.currentTarget.matches(":focus-visible")) setOpen(true);
+          if (!returning.current && e.currentTarget.matches(":focus-visible"))
+            setOpen(true);
         }}
-        onBlur={close}
         onClick={() => {
           if (open && pinned.current) close();
           else {
             pinned.current = true;
             setOpen(true);
-          }
-        }}
-        onKeyDown={(e) => {
-          if (e.key === "Escape" && open) {
-            // Only the hint closes; the window it stands in stays.
-            e.preventDefault();
-            e.stopPropagation();
-            close();
           }
         }}
       >
@@ -123,6 +171,12 @@ export default function InfoTip({
         role="tooltip"
         className={styles.bubble}
         hidden={!open}
+        // Pressing the text keeps the hint: it can be read and selected, and
+        // the focus pressed into it is still inside.
+        tabIndex={-1}
+        onPointerDown={() => {
+          pinned.current = true;
+        }}
       >
         {children}
       </span>

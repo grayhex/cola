@@ -126,6 +126,16 @@ export default function PlanComposer({
         graphic={<PlanningGraphic slot="planDialogGraphic" />}
         wide
         title={ride ? "Изменить покатушку" : "Организовать покатушку"}
+        description={
+          // A group chosen in «Подобрать время по интересам» (#370): the
+          // form is the plan of that group, and the head says so.
+          !ride && suggestion ? (
+            <span role="status">
+              Время и формат взяты из интереса людей. После публикации вы сами
+              выберете, кого пригласить.
+            </span>
+          ) : undefined
+        }
         onClose={close}
       >
         {state.status === "loading" &&

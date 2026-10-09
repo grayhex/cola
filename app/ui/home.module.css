@@ -217,13 +217,13 @@
   overflow: hidden;
   padding: var(--space-8) var(--space-10);
 }
-.togetherCopy h2 {
+.togetherCopy > h2 {
   margin: var(--space-3) 0;
   font-size: clamp(26px, 2.3vw, 40px);
   letter-spacing: -0.025em;
   line-height: 1.1;
 }
-.togetherCopy p {
+.togetherCopy > p {
   position: relative;
   max-width: 34rem;
   margin: 0 0 var(--space-5);

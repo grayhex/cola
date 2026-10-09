@@ -191,6 +191,44 @@ test("independent planning graphics: local uploads, protected usage, lazy animat
           const graphic = dialog.locator(`[data-planning-graphic='${slot}']`);
           await expect(graphic).toBeVisible();
           await expect(dialog.locator(".modal-head")).toContainText(title);
+          // #382: the picture is larger, and the note of the window stands
+          // in the head, to the right of the title (under it on a phone),
+          // not as a paragraph of its own above the fields.
+          const head = dialog.locator(".modal-head");
+          const art = await graphic.boundingBox();
+          expect(art.width).toBeGreaterThanOrEqual(width === 1440 ? 100 : 56);
+          expect(art.width).toBeLessThanOrEqual(112);
+          await expect(dialog.locator(".planning-lead")).toHaveCount(0);
+          if (slot === "intentDialogGraphic") {
+            const note = head.locator(".modal-description");
+            await expect(note).toContainText("конкретный раз");
+            const [title_, note_, head_] = [
+              await head.getByRole("heading").boundingBox(),
+              await note.boundingBox(),
+              await head.boundingBox(),
+            ];
+            if (width === 1440)
+              expect(note_.x).toBeGreaterThanOrEqual(title_.x + title_.width);
+            else
+              expect(note_.y).toBeGreaterThanOrEqual(
+                title_.y + title_.height - 2,
+              );
+            expect(note_.y).toBeGreaterThanOrEqual(head_.y);
+            expect(note_.y + note_.height).toBeLessThanOrEqual(
+              head_.y + head_.height,
+            );
+            expect(note_.x + note_.width).toBeLessThanOrEqual(
+              head_.x + head_.width,
+            );
+            // A small secondary note: 12–14 px on a desktop, never smaller
+            // than 12 px and never the size of the title on a phone.
+            const size = await note.evaluate((e) =>
+              parseFloat(getComputedStyle(e).fontSize),
+            );
+            expect(size).toBeGreaterThanOrEqual(12);
+            expect(size).toBeLessThanOrEqual(width === 1440 ? 14 : 16);
+            if (width === 1440) expect(head_.height).toBeLessThanOrEqual(120);
+          }
           if (slot === "intentDialogGraphic") {
             await expect(graphic.locator("img")).toHaveAttribute(
               "src",

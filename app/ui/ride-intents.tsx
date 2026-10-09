@@ -228,6 +228,7 @@ export function IntentComposer({
         graphic={<PlanningGraphic slot="intentDialogGraphic" />}
         wide
         title={draft.id ? "Изменить намерение" : "Новое намерение"}
+        description="Намерение — это конкретный раз: когда и где хочется покататься. Постоянные предпочтения хранятся отдельно и меняются, только если сохранить их кнопкой ниже."
         onClose={close}
         dismissible={!busy}
       >
@@ -236,11 +237,6 @@ export function IntentComposer({
             same window opens from the home page and /ride-intents (#264). */}
         <form onSubmit={save} className="intent-form">
           <div className="planning-body">
-            <p className="planning-lead">
-              Намерение — это конкретный раз: когда и где хочется покататься.
-              Постоянные предпочтения хранятся отдельно и меняются, только если
-              сохранить их кнопкой ниже.
-            </p>
             <fieldset
               className="planning-section half wide-4"
               disabled={busy || uncertain}
