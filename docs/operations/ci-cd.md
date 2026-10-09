@@ -35,6 +35,25 @@ CodeQL ([codeql.yml](../../.github/workflows/codeql.yml)) анализирует
 
 Browser artifacts разделены по проекту/attempt и хранятся 7 дней. Fixture/live-ограничения — в [тестировании](../development/testing.md). Успех прежнего feature-run не считается результатом итогового PR; недоступные проверки перечисляются явно. Ускорение и размеры образов публикуются только после измерения.
 
+Скачивание образов CI использует публичное зеркало Docker Hub `mirror.gcr.io`:
+PostgreSQL services получают образ непосредственно оттуда, bootstrap BuildKit —
+через `driver-opts`, а Node и Dockerfile frontend — через настройку зеркала
+BuildKit. Перед backup drill образ PostgreSQL из `compose.yaml` скачивается с
+зеркала и получает исходный локальный тег; Compose и production используют
+прежние версии и имена. Отдельный workflow Docker benchmark этой правкой не меняется.
+Зеркало кеширует популярные публичные образы: при отсутствии образа BuildKit
+может обратиться к Docker Hub, поэтому это не гарантия работы при любом отказе
+реестра. Доступность новых тегов на зеркале нужно проверять при обновлении версий.
+
+Ошибки `auth.docker.io/token: 504 Gateway Timeout`, `context deadline exceeded`
+и `unauthenticated pull rate limit` на `Initialize containers` или загрузке
+Dockerfile frontend означают сбой скачивания образов до запуска тестов.
+Увеличение `timeout-minutes` тестов его не исправляет. Обычный `docker login` в
+steps выполняется уже после создания services; если используется Docker Hub
+с авторизацией, credentials нужно задавать также непосредственно у services.
+После исправления доступа повторяют CI на нужном SHA; отсутствие тестовых
+артефактов при таком отказе не считается успешной проверкой.
+
 ## Production
 
 `deploy` из [deploy.yml](../../.github/workflows/deploy.yml) работает на `ubuntu-latest`, без runner на VPS. Автоматический путь принимает только успешный `CI · ColaBike` для события `push` в `main` этого репозитория. Ручной запуск доступен для `main` и сначала повторяет тот же CI через `verify-manual`. Operations после runtime/restore drill сохраняет те же три образа в `production-images-SHA-ATTEMPT` на 3 дня. Deploy-job скачивает исходный ZIP через GitHub API и передаёт его по SSH stdin вместе с `SHA prebuilt RUN_ID ATTEMPT`. На VPS нет повторной компиляции Next или установки зависимостей.
