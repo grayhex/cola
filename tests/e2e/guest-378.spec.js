@@ -64,9 +64,15 @@ test("a guest sees «нужна регистрация» under the buttons, in t
   const note = page.locator("[data-registration-note]");
   await expect(note).toHaveText("нужна регистрация");
   // Under the buttons, not beside them.
-  const buttons = await box.locator(".together-buttons").boundingBox();
-  const line = await note.boundingBox();
-  expect(line.y).toBeGreaterThanOrEqual(buttons.y + buttons.height - 1);
+  // Both are measured again until the layout has settled (fonts and images
+  // may move the block by a pixel or two while the page is still arriving).
+  await expect
+    .poll(async () => {
+      const buttons = await box.locator(".together-buttons").boundingBox();
+      const line = await note.boundingBox();
+      return line.y - (buttons.y + buttons.height);
+    })
+    .toBeGreaterThanOrEqual(-1);
   // #382: the title carries a small «*» (not part of its name), the footnote is
   // one small line at the bottom left of the block, and it explains the links.
   await expect(

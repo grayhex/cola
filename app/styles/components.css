@@ -1503,6 +1503,11 @@
     .planning-actions {
       padding-inline: var(--space-4);
     }
+    /* With the note under the title (#382) a pinned head would take a quarter
+       of a phone's screen: it scrolls with the form, whose actions stay put. */
+    dialog.planning > .modal-head:has(> .modal-description) {
+      position: static;
+    }
     .planning-interest {
       padding-inline: var(--space-4);
     }

@@ -68,6 +68,11 @@ export default function Garage({
   const { categories } = catalog;
   const [bikes, setBikes] = useState<BikeDto[]>([]),
     [selected, setSelected] = useState(initial?.bike || null),
+    // The page of a shared bike has three states (#382): the bike is being
+    // loaded (also for a new session), it is loaded, and the server has
+    // answered that it is not available to this reader. Only the third says
+    // «Велосипед недоступен»; an empty `selected` alone is not that.
+    [unavailable, setUnavailable] = useState(false),
     [loading, setLoading] = useState(!initial),
     [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
@@ -179,8 +184,10 @@ export default function Garage({
             : { bikes: [] });
         if (sequence !== requestId.current.sequence) return;
         if (viewer && onAuthenticated) onAuthenticated();
-        if (share) setSelected((data as { bike: BikeDto }).bike);
-        else {
+        if (share) {
+          setSelected((data as { bike: BikeDto }).bike);
+          setUnavailable(false);
+        } else {
           const list = data as { bikes: BikeDto[]; total?: number };
           const updateGrid = () => {
             setBikes(list.bikes);
@@ -204,8 +211,12 @@ export default function Garage({
       } catch (e) {
         if (sequence === requestId.current.sequence) {
           setError(errorMessage(e));
-          if (share && [401, 403, 404].includes(errorStatus(e) || 0))
+          // Only the server's refusal makes the bike unavailable; a network
+          // failure keeps the page and says so in the line with «Повторить».
+          if (share && [401, 403, 404].includes(errorStatus(e) || 0)) {
             setSelected(null);
+            setUnavailable(true);
+          }
         }
       } finally {
         if (sequence === requestId.current.sequence) {
@@ -317,7 +328,10 @@ export default function Garage({
       if (updated.share_id !== share)
         router.replace(publicPath("bike", updated), { scroll: false });
     } catch (e) {
-      if ([401, 403, 404].includes(errorStatus(e) || 0)) setSelected(null);
+      if ([401, 403, 404].includes(errorStatus(e) || 0)) {
+        setSelected(null);
+        setUnavailable(true);
+      }
       throw e;
     }
   }
@@ -362,7 +376,7 @@ export default function Garage({
           <LoaderCircle className="spin" />
           {t("Загружаем велосипеды…")}
         </Main>
-      ) : share && !bike ? (
+      ) : share && !bike && unavailable ? (
         <Main className="empty">
           <Lock size={36} />
           <h1>{t("Велосипед недоступен")}</h1>
@@ -370,6 +384,19 @@ export default function Garage({
           <Link href="/" className="button">
             {t("Открыть ColaBike")}
           </Link>
+        </Main>
+      ) : share && !bike ? (
+        // Not refused, only not here yet (the session is being renewed, the
+        // answer is on its way) or not loaded: never the words of a refusal.
+        <Main className="loading">
+          {updating ? (
+            <>
+              <LoaderCircle className="spin" />
+              {t("Загружаем велосипед…")}
+            </>
+          ) : (
+            t("Не удалось загрузить велосипед.")
+          )}
         </Main>
       ) : bike ? (
         <BikeDetail
