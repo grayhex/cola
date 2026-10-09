@@ -8,8 +8,9 @@
   grid-template: minmax(0, 1fr) / minmax(0, 1fr);
   place-items: center;
   flex: none;
-  width: var(--space-20);
-  height: var(--space-14);
+  /* A mark by a title, 104 × 72 px (#382): larger than the former 80 × 56. */
+  width: 104px;
+  height: 72px;
   color: var(--text-muted);
 }
 .graphic img {
@@ -42,7 +43,7 @@
 }
 @media (max-width: 600px) {
   .graphic {
-    width: var(--space-10);
+    width: var(--space-14);
     height: var(--space-10);
   }
   .graphic.wide {

@@ -11,6 +11,7 @@ export default function Modal({
   dismissible = true,
   wide = false,
   graphic,
+  description,
 }: {
   title: React.ReactNode;
   onClose: () => void;
@@ -18,13 +19,20 @@ export default function Modal({
   dismissible?: boolean;
   wide?: boolean;
   graphic?: React.ReactNode;
+  /**
+   * A short note in the head, to the right of the title (#382): what the
+   * window is for, without a paragraph of its own between the head and the
+   * fields. It describes the window to a screen reader.
+   */
+  description?: React.ReactNode;
 }) {
   const { t } = useSite();
   const ref = useRef<HTMLDialogElement>(null),
     leaving = useRef(false),
     // Its own id: two windows may stand one over the other (#378), and each is
     // named by its own title.
-    titleId = useId();
+    titleId = useId(),
+    descriptionId = useId();
   useEffect(() => {
     const el = ref.current!;
     // The window may unmount before it closes; focus then returns here.
@@ -81,12 +89,18 @@ export default function Modal({
       {...backdrop}
       className={wide ? "planning" : undefined}
       aria-labelledby={titleId}
+      aria-describedby={description ? descriptionId : undefined}
     >
       <div className="modal-head">
         <div className="modal-heading-content">
           {graphic}
           <h2 id={titleId}>{title}</h2>
         </div>
+        {description && (
+          <p id={descriptionId} className="modal-description">
+            {description}
+          </p>
+        )}
         <button className="icon" aria-label={t("Закрыть")} onClick={onClose}>
           <X size={20} />
         </button>

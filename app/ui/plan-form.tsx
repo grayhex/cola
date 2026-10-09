@@ -410,12 +410,6 @@ export default function PlanForm({
   return (
     <form className="plan-form" onSubmit={submit}>
       <div className="planning-body">
-        {fromInterest && (
-          <p className="planning-lead" role="status">
-            Время и формат взяты из интереса людей. После публикации вы сами
-            выберете, кого пригласить.
-          </p>
-        )}
         <fieldset className="planning-section half wide-4" disabled={busy}>
           <legend>
             <span className="step" aria-hidden="true">

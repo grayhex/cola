@@ -310,6 +310,93 @@ test("the hints behind «i»: hover, keyboard focus and tap open them; Escape cl
   expect(await pageOverflow(page)).toBeNull();
 });
 
+// #382: a hint is read, not caught. It stays while the pointer or the focus is
+// on the icon or on the hint, neither a scroll of something else, nor the
+// window being resized, nor the form being updated closes it, and only a
+// press of the icon, a press elsewhere or Escape does.
+test("a hint stays open while it is read: no timer, the pointer may go to its text, other scrolls and resizes do not close it, only the icon, a press elsewhere or Escape do", async ({
+  page,
+  isMobile,
+}) => {
+  const dialog = await open(page);
+  const tip = dialog.getByRole("button", { name: "Подробнее: поиск места" });
+  const text = dialog.getByRole("tooltip").filter({
+    hasText: "Приблизительный район или парк, без домашнего адреса.",
+  });
+  const heading = dialog.getByRole("heading", { name: "Новое намерение" });
+  // The text is read for five seconds without a move of the pointer.
+  const stays = async (ms = 5000) => {
+    await page.waitForTimeout(ms);
+    await expect(text).toBeVisible();
+  };
+  let sent = 0;
+  page.on("request", (request) => {
+    if (request.method() === "POST") sent++;
+  });
+  if (isMobile) {
+    await tip.tap();
+    await stays();
+    // A tap on the text of the hint keeps it.
+    await text.tap();
+    await expect(text).toBeVisible();
+    // A scroll of something that is not the icon's box and a resize keep it.
+    await heading.evaluate((el) => el.dispatchEvent(new Event("scroll")));
+    await page.setViewportSize({
+      width: page.viewportSize().width,
+      height: page.viewportSize().height - 40,
+    });
+    await stays(500);
+    await tip.tap();
+    await expect(text).toBeHidden();
+  } else {
+    // The pointer stays on the icon.
+    await tip.hover();
+    await stays();
+    // It goes over the gap to the text, slowly and fast, and the text stays.
+    const icon = await box(tip);
+    const bubble = await box(text);
+    await page.mouse.move(
+      icon.x + icon.width / 2,
+      bubble.y + bubble.height / 2,
+      { steps: 12 },
+    );
+    await stays(1500);
+    // Pressing the text pins it: the pointer may leave and it is still there.
+    await page.mouse.down();
+    await page.mouse.up();
+    await page.mouse.move(2, 2);
+    await stays(1500);
+    // Escape closes the hint with the pointer and the focus elsewhere, and
+    // not the window.
+    await page.keyboard.press("Escape");
+    await expect(text).toBeHidden();
+    await expect(dialog).toBeVisible();
+    // Open again by the keyboard: the focus on the icon keeps it open, a
+    // scroll of something else and a resize of the window do not close it.
+    await searchBox(dialog).focus();
+    await page.keyboard.press("Shift+Tab");
+    await expect(tip).toBeFocused();
+    await stays();
+    await heading.evaluate((el) => el.dispatchEvent(new Event("scroll")));
+    await page.setViewportSize({
+      width: page.viewportSize().width,
+      height: page.viewportSize().height - 40,
+    });
+    await stays(500);
+    // The hint is still inside the window after the resize.
+    const frame = page.viewportSize();
+    const again = await box(text);
+    expect(again.x).toBeGreaterThanOrEqual(0);
+    expect(again.x + again.width).toBeLessThanOrEqual(frame.width);
+    expect(again.y + again.height).toBeLessThanOrEqual(frame.height);
+    // Leaving the icon by the keyboard closes it.
+    await page.keyboard.press("Tab");
+    await expect(text).toBeHidden();
+  }
+  expect(sent).toBe(0);
+  await expect(dialog).toBeVisible();
+});
+
 test("a picker opens in the middle of the window over its form, closes alone, returns the focus and does not send the form", async ({
   page,
   isMobile,

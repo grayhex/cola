@@ -1227,6 +1227,13 @@
   .modal-head > .icon {
     flex: none;
   }
+  /* A secondary note in the head of a window (#382). */
+  .modal-description {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    line-height: var(--leading-snug);
+  }
   .dialog-head h2,
   .modal-head h2 {
     margin: 0;
@@ -1298,6 +1305,33 @@
     padding: var(--space-4) var(--space-6);
     border-bottom: 1px solid var(--line);
     background: var(--surface);
+  }
+  /* The title with its picture, the note of the window to the right of it, the
+     cross (#382): in one row where there is room, the note under the title
+     inside the head where there is not. The row grid, not a floated block. */
+  dialog.planning > .modal-head:has(> .modal-description) {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas: "title note close";
+    align-items: center;
+    column-gap: var(--space-5);
+  }
+  dialog.planning > .modal-head > .modal-heading-content {
+    grid-area: title;
+  }
+  dialog.planning > .modal-head > .modal-description {
+    grid-area: note;
+    max-width: 72ch;
+  }
+  dialog.planning > .modal-head > .icon {
+    grid-area: close;
+  }
+  @media (max-width: 900px) {
+    dialog.planning > .modal-head:has(> .modal-description) {
+      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-areas: "title close" "note note";
+      row-gap: var(--space-2);
+    }
   }
   .planning-body {
     display: grid;
@@ -1372,14 +1406,6 @@
       border-inline-start: 1px solid var(--line);
       pointer-events: none;
     }
-  }
-  /* One short line that says what the window is for (#264). */
-  .planning-lead {
-    grid-column: span 12;
-    margin: 0;
-    color: var(--text-secondary);
-    font-size: var(--text-sm);
-    line-height: var(--leading-snug);
   }
   .planning-advanced {
     grid-column: span 12;

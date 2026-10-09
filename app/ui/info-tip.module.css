@@ -49,6 +49,16 @@
   text-align: left;
   overflow-wrap: anywhere;
 }
+.bubble:focus {
+  outline: none;
+}
 .bubble[hidden] {
   display: none;
+}
+/* The gap between the icon and the bubble belongs to the bubble, so the
+   pointer going to the text does not leave the hint. */
+.bubble::before {
+  content: "";
+  position: absolute;
+  inset: -10px 0;
 }
