@@ -407,6 +407,15 @@ test("the composer chunk: reduced motion, a failed load, a slow load, then the w
   const dialog = page.getByRole("dialog", { name: "Новое намерение" });
   await expect(dialog).toBeVisible();
   await expect(block.getByRole("alert")).toHaveCount(0);
+  // The compact header's help owns Escape while its hint is open.
+  await dialog
+    .getByRole("button", { name: "Подробнее: Намерение", exact: true })
+    .press("Enter");
+  const hint = dialog.getByRole("tooltip");
+  await expect(hint).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(hint).toHaveCount(0);
+  await expect(dialog).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(dialog).toHaveCount(0);
   await expect(want).toBeFocused();

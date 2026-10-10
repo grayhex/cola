@@ -391,7 +391,10 @@ test("catalog tree filters 301 models on the server, preserves drafts and histor
       name: "Категории компонентов",
     });
     const result = page.getByRole("region", { name: "Модели компонентов" });
-    const search = page.getByLabel("Поиск модели");
+    const search = page.getByRole("searchbox", {
+      name: "Поиск модели",
+      exact: true,
+    });
     const categories = tree.getByRole("button", {
       name: "Категории",
       exact: true,

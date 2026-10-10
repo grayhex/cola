@@ -105,7 +105,15 @@ test("component artwork: admin upload, persistence, protected deletion, themes a
     const icons = page.locator('.global-header [data-icon="messages"]');
     await expect(icons).toHaveCount(3);
     await expect(icons).toHaveText(["✉️", "✉️", "✉️"]);
-    const trigger = page.getByRole("button", { name: /Управление и посадка/ });
+    const tree = page.getByRole("navigation", {
+      name: "Категории компонентов",
+    });
+    if (isMobile)
+      await tree
+        .getByRole("button", { name: "Категории", exact: true })
+        .click();
+    const trigger = tree.getByRole("button", { name: /Управление и посадка/ });
+    const panelId = await trigger.getAttribute("aria-controls");
     const image = trigger.locator("img");
     const assetUrl = new URL("/api/assets/" + asset, origin).href;
     await expect(image).toHaveJSProperty("src", assetUrl);
@@ -118,21 +126,21 @@ test("component artwork: admin upload, persistence, protected deletion, themes a
     // Warm the lazy Motion chunk, then hold a real reveal at its first frame.
     // This catches low-contrast text throughout the animation, not just at rest.
     await page.waitForLoadState("networkidle");
-    await trigger.press("Escape");
+    await trigger.press("Enter");
     await expect(trigger).toHaveAttribute("aria-expanded", "false");
-    await page.evaluate(() => {
+    await page.evaluate((id) => {
       const animate = Element.prototype.animate;
       Element.prototype.animate = function (...args) {
         const animation = animate.apply(this, args);
-        if (this.id === "component-group-types") {
+        if (this.id === id) {
           animation.pause();
           animation.currentTime = 0;
         }
         return animation;
       };
-    });
+    }, panelId);
     await trigger.press("Enter");
-    const panel = page.locator("#component-group-types");
+    const panel = page.locator("#" + panelId);
     await expect
       .poll(() =>
         panel.evaluate((el) =>
@@ -140,9 +148,7 @@ test("component artwork: admin upload, persistence, protected deletion, themes a
         ),
       )
       .toBe(true);
-    const category = page
-      .locator("#component-group-types")
-      .getByRole("link", { name: "Седло", exact: true });
+    const category = panel.getByRole("link", { name: "Седло", exact: true });
     await expect(category.locator("img")).toHaveJSProperty("src", assetUrl);
     for (const theme of ["light", "dark"]) {
       await page.evaluate(async (value) => {
@@ -197,7 +203,14 @@ test("component artwork: admin upload, persistence, protected deletion, themes a
       );
       await guest.goto("/components");
       await missing;
-      const fallback = guest.getByRole("button", {
+      const guestTree = guest.getByRole("navigation", {
+        name: "Категории компонентов",
+      });
+      if (isMobile)
+        await guestTree
+          .getByRole("button", { name: "Категории", exact: true })
+          .click();
+      const fallback = guestTree.getByRole("button", {
         name: /Управление и посадка/,
       });
       await expect(fallback.locator("img")).toHaveCount(0);

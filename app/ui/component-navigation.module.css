@@ -47,7 +47,7 @@
 }
 .group small {
   font-size: var(--text-xs);
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 .group:hover,
 .group:focus-visible {
