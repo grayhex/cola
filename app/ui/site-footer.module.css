@@ -87,6 +87,10 @@ a.logo:hover img {
     align-items: center;
     min-height: 44px;
   }
+  .versions :global(button) {
+    min-height: 44px;
+    min-width: 44px;
+  }
 }
 .versions {
   min-width: 0;
