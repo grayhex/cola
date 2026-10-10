@@ -2,6 +2,7 @@
 import type { RideItem } from "./ride-types.ts";
 import type { RideMetrics as RideMetricsData } from "../../lib/ride-metrics.ts";
 import Link from "next/link";
+import { rideTimeLabel } from "../../lib/ride-announcement.ts";
 import RidePassport from "./ride-passport.tsx";
 import { SharedView } from "./motion.tsx";
 import RideRsvp, { RecurringRideLabel } from "./ride-rsvp.tsx";
@@ -14,67 +15,10 @@ import {
 import { Heart, Mountain, Route, Timer } from "./icons.tsx";
 import { useSite } from "./site-provider.tsx";
 import RideBasemap from "./ride-basemap.tsx";
-import { routePaths } from "../../lib/ride-geometry.ts";
 import { profilePath, publicPath } from "../../lib/public-urls.ts";
 import { personName } from "../../lib/usernames.ts";
-export function RideRoutePreview({
-  geometry = [],
-  className = "",
-  width = 640,
-  height = 260,
-}: {
-  geometry?: number[][][];
-  className?: string;
-  width?: number;
-  height?: number;
-}) {
-  const paths = routePaths(geometry, width, height);
-  return (
-    <svg
-      className={"ride-route " + className}
-      viewBox={`0 0 ${width} ${height}`}
-      role="img"
-      aria-label={
-        paths.length
-          ? "Маршрут покатушки"
-          : "Маршрут скрыт настройками приватности"
-      }
-    >
-      {paths.map((d, i) => (
-        <path
-          key={"casing" + i}
-          className="route-casing"
-          d={d}
-          fill="none"
-          strokeWidth="5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      ))}
-      {paths.map((d, i) => (
-        <path
-          key={i}
-          d={d}
-          fill="none"
-          stroke="var(--accent)"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      ))}
-      {!paths.length && (
-        <text
-          x={width / 2}
-          y={height / 2}
-          textAnchor="middle"
-          fill="currentColor"
-        >
-          Маршрут скрыт
-        </text>
-      )}
-    </svg>
-  );
-}
+import { RideRoutePreview } from "./ride-route-preview.tsx";
+export { RideRoutePreview };
 export const rideDate = (date: string | null | undefined) =>
   date
     ? new Date(date).toLocaleDateString("ru-RU", {
@@ -83,6 +27,10 @@ export const rideDate = (date: string | null | undefined) =>
         timeZone: "UTC",
       })
     : "Дата не указана";
+export const rideCardDate = (ride: RideItem) =>
+  ride.status !== "completed" && ride.scheduledAt
+    ? rideTimeLabel(ride.scheduledAt, ride.recurrenceTimezone)
+    : rideDate(ride.date);
 export function RideMetrics({
   metrics: m,
   compact = false,
@@ -166,7 +114,7 @@ export function RideCompactCard({ ride: r }: { ride: RideItem }) {
         <h3>
           <Link href={href}>{r.title}</Link>
         </h3>
-        <p className="help">{rideDate(r.date)}</p>
+        <p className="help">{rideCardDate(r)}</p>
         {facts.length > 0 && (
           <ul className="ride-compact-facts" aria-label="Показатели поездки">
             {facts.map(({ key, Icon, text }) => (
@@ -222,7 +170,7 @@ export default function RideCard({
           </h3>
         </SharedView>
         <p className="help">
-          {rideDate(r.date)} ·{" "}
+          {rideCardDate(r)} ·{" "}
           <a href={publicPath("bike", r.bike)}>{r.bike.name}</a>
         </p>
         <RecurringRideLabel ride={r} />

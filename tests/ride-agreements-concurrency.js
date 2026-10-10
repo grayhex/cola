@@ -83,6 +83,7 @@ const startAt = new Date(
   Math.ceil((Date.now() + 50 * 3600000) / 60000) * 60000,
 ).toISOString();
 const base = {
+  passport: { area: { label: "Тестовый парк" } },
   bikeId: bike,
   title: "Гонка " + nonce,
   description: "",

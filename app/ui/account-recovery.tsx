@@ -240,6 +240,7 @@ export function ResetPassword() {
 
 export function VerifyEmail() {
   const token = useLinkToken();
+  const { refreshViewer } = useSite();
   const [state, setState] = useState("checking");
   const started = useRef(false);
   useEffect(() => {
@@ -250,19 +251,45 @@ export function VerifyEmail() {
       return;
     }
     socialApi("auth/verify-email", "POST", { token }).then(
-      () => setState("done"),
+      async () => {
+        try {
+          await refreshViewer();
+          setState("done");
+        } catch {
+          setState("done-refresh-failed");
+        }
+      },
       () => setState("invalid"),
     );
-  }, [token]);
+  }, [token, refreshViewer]);
   return (
     <RecoveryLayout icon={MailCheck} title="Подтверждение почты">
       {state === "checking" && <p role="status">Проверяем ссылку…</p>}
-      {state === "done" && (
+      {(state === "done" || state === "done-refresh-failed") && (
         <>
           <p className={styles.done} role="status">
             Адрес подтверждён. Теперь по нему можно восстановить доступ к
             аккаунту.
           </p>
+          {state === "done-refresh-failed" && (
+            <p role="alert">
+              Почта подтверждена, но статус аккаунта не обновился.{" "}
+              <button
+                type="button"
+                className="quiet"
+                onClick={async () => {
+                  try {
+                    await refreshViewer();
+                    setState("done");
+                  } catch {
+                    /* Keep the retry available. */
+                  }
+                }}
+              >
+                Повторить обновление
+              </button>
+            </p>
+          )}
           <Link className="button block" href="/account">
             Открыть кабинет
           </Link>

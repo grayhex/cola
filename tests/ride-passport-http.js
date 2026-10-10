@@ -73,6 +73,7 @@ assert.equal(created.status, 201, created.text);
 const bike = created.json();
 
 const input = {
+  passport: { area: { label: "Тестовый парк" } },
   bikeId: bike.id,
   title: "HTTP passport",
   description: "Public description",
@@ -139,7 +140,11 @@ for (const response of ["accepted", "declined"]) {
     (
       await reader(`/api/rides/${plan.id}/rsvp`, {
         method: "PATCH",
-        ...json({ response, occurrenceAt: plannedAt }),
+        ...json({
+          response,
+          occurrenceAt: plannedAt,
+          expectedAgreementRevision: data.agreement.revision,
+        }),
       })
     ).status,
     200,

@@ -51,6 +51,7 @@ const ink = "#F3F0E8",
   accent = "#C2410C",
   dark = "#111315";
 const kindLabels: Record<string, string> = {
+  home: "Сообщество велосипедистов",
   bike: "Велосипед",
   journal: "Журнал",
   ride: "Покатушка",
@@ -116,7 +117,10 @@ export function cardContent(kind: string, title: unknown, card: CardData = {}) {
     stat: "",
     route: /** @type {string[]} */ [] as string[],
   };
-  if (kind === "bike") {
+  if (kind === "home") {
+    content.meta = "Знакомьтесь. Делитесь опытом. Катайтесь вместе.";
+    content.chips = ["Люди", "Велосипеды", "Покатушки"];
+  } else if (kind === "bike") {
     content.meta = [
       [card.brand, card.model].filter(Boolean).join(" "),
       card.year,

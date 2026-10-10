@@ -185,6 +185,7 @@ test("Garmin import without track, chosen fields, GPX mismatch and future planni
     .getByRole("textbox", { name: "Место встречи", exact: true })
     .fill("Парк");
   await planner.getByLabel("Особенности маршрута").fill("Гравий, Кофе");
+  await planner.getByLabel("Место определим вместе", { exact: true }).check();
   await expect(
     planner.getByRole("combobox", { name: "Кто видит покатушку" }),
   ).toHaveValue("true");

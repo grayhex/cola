@@ -36,6 +36,7 @@ const env = {
   RIDES_DIR: path.join(dir, "rides"),
   UPLOAD_DIR: path.join(dir, "uploads"),
   MAIL_CAPTURE_DIR: path.join(dir, "mail"),
+  BUG_REPORT_TO: "owner@example.test",
 };
 function start(args, cwd = root) {
   const log = path.join(dir, logs.length + ".log"),

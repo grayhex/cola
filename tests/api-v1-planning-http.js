@@ -731,6 +731,7 @@ try {
   );
   assertError(
     await answer(invitee, closed, {
+      expectedAgreementRevision: 1,
       response: "accepted",
       occurrenceAt: scheduledAt,
     }),
@@ -740,6 +741,7 @@ try {
   );
   assertError(
     await answer(invitee, closed, {
+      expectedAgreementRevision: 1,
       response: "perhaps",
       occurrenceAt: scheduledAt,
     }),
@@ -845,6 +847,7 @@ try {
 
   // Leaving needs no edition.
   const left = await answer(invitee, closed, {
+    expectedAgreementRevision: 1,
     response: "declined",
     occurrenceAt: scheduledAt,
   });
@@ -879,6 +882,7 @@ try {
   let limited = null;
   for (let i = 0; i < 25 && !limited; i++) {
     const r = await answer(stranger, open, {
+      expectedAgreementRevision: 1,
       response: "declined",
       occurrenceAt: publicRead.body.scheduledAt,
     });

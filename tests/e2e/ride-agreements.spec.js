@@ -246,7 +246,11 @@ test("a guest reads the announcement, signs up on the ride and answers; organize
       (
         await late.context.request.patch(`/api/rides/${ride.id}/rsvp`, {
           headers: { origin },
-          data: { response: "accepted", occurrenceAt: ride.scheduledAt },
+          data: {
+            expectedAgreementRevision: 1,
+            response: "accepted",
+            occurrenceAt: ride.scheduledAt,
+          },
         })
       ).status(),
     ).toBe(409);
@@ -316,7 +320,11 @@ test("a closed plan opens for invited people only; revoking ends access; the pre
       (
         await stranger.context.request.patch(`/api/rides/${ride.id}/rsvp`, {
           headers: { origin },
-          data: { response: "accepted", occurrenceAt: ride.scheduledAt },
+          data: {
+            expectedAgreementRevision: 1,
+            response: "accepted",
+            occurrenceAt: ride.scheduledAt,
+          },
         })
       ).status(),
     ).toBe(404);

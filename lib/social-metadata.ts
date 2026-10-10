@@ -60,3 +60,51 @@ export function socialMetadata(
     },
   };
 }
+
+export const communityDescription =
+  "Люди, велосипеды и совместные выезды. Находите компанию, делитесь опытом и историями своих велосипедов.";
+export function homePreview(settings: {
+  siteName: string;
+  siteDescription: string;
+}) {
+  return {
+    title: settings.siteName + " · Люди, велосипеды и совместные выезды",
+    description:
+      settings.siteDescription ===
+      "Витрина велосипедов, комплектаций и авторских сборок."
+        ? communityDescription
+        : settings.siteDescription || communityDescription,
+    kind: "home",
+    image: { filename: null },
+    card: {},
+  };
+}
+export function homeMetadata(
+  settings: { siteName: string; siteDescription: string },
+  env = process.env,
+) {
+  const { title, description } = homePreview(settings);
+  const url = absolutePublicUrl("/", env),
+    image = absolutePublicUrl("/api/social-preview/home/image", env);
+  return {
+    title: { absolute: title },
+    description,
+    robots: indexed,
+    alternates: { canonical: url },
+    openGraph: {
+      type: "website",
+      title,
+      description,
+      url,
+      siteName: settings.siteName,
+      locale: "ru_RU",
+      images: [{ url: image, width: 1200, height: 630, alt: title }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [image],
+    },
+  };
+}

@@ -65,6 +65,7 @@ test("ride reminders: default on-site, independent mail, keyboard, rollback and 
       is_public: true,
     });
     const fields = {
+      passport: { area: { label: "Тестовый парк" } },
       bikeId: bike.id,
       title: "Утренний круг",
       description: "С остановкой на кофе",

@@ -145,6 +145,7 @@ async function requests(db, owner, bike, round) {
         counting(q, c),
         owner,
         {
+          passport: { area: { label: "Тестовый парк" } },
           bikeId: bike,
           title: "Plan " + round,
           description: "",

@@ -306,6 +306,7 @@ test("planners: «Дополнительно» starts folded in both windows and
   await plan.getByLabel("Название", { exact: true }).fill("Сбор у моста");
   await plan.getByLabel("Дата", { exact: true }).fill("2031-03-29");
   await plan.getByLabel("Старт", { exact: true }).fill("09:00");
+  await plan.getByLabel("Место определим вместе", { exact: true }).check();
   await plan
     .getByRole("button", { name: "Создать покатушку", exact: true })
     .click();

@@ -301,10 +301,11 @@ export default function BikeForm({
           placeholder={t("Для каких дорог и приключений он создан?")}
         />
       </Field>
+      <p className="help">{t("Фотографии можно добавить после сохранения.")}</p>
       <p className="help">
-        {t(
-          "Фотографии можно добавить после сохранения. Велосипед по умолчанию приватный.",
-        )}
+        {initial?.is_public
+          ? "Велосипед виден всем."
+          : "Велосипед приватный — его видите только вы."}
       </p>
       <button className="button block" disabled={busy || resolving}>
         {busy ? t("Сохраняем…") : t("Сохранить велосипед")}

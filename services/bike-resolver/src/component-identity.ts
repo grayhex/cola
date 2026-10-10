@@ -246,6 +246,14 @@ export function componentIdentity(c: Part) {
     )
     .replace(/["'\s:;|,-]+$/g, "")
     .trim();
+  // Narrow source artefacts: retain the full description as installation notes.
+  if (brand.toLowerCase() === "schwalbe" && /^G-One\b/i.test(model))
+    model = model.replace(/\s+Width$/i, "");
+  if (brand.toLowerCase() === "canyon")
+    model = model.replace(
+      /^(Cockpit CP\d{4})\s+One-piece carbon cockpit\b.*$/i,
+      "$1",
+    );
   // A structured model takes precedence over prose, but still must be a name.
   if (
     !model ||

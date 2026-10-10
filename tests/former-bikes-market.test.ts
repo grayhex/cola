@@ -141,6 +141,7 @@ test("ownership status blocks every new ride path before writes and preserves ex
       formerError,
     );
     const planned = {
+      passport: { area: { label: "Тестовый парк" } },
       bikeId: former,
       title: "Future route",
       description: "",

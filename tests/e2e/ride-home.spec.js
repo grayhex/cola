@@ -81,6 +81,7 @@ test.beforeAll(async ({ browser }) => {
     purpose: "training",
     pace: "sporty",
     surface: "gravel",
+    area: { label: "Другой парк" },
   });
   await plan(titles.relaxed, day(7), "10:00", "11:00", {
     purpose: "leisure",
@@ -238,6 +239,7 @@ test("signed-in home: one «Покататься вместе» block, both comp
   await planner.getByLabel("Название", { exact: true }).fill("Круг с главной");
   await planner.getByLabel("Дата", { exact: true }).fill(day(4));
   await planner.getByLabel("Старт", { exact: true }).fill("09:00");
+  await planner.getByLabel("Место определим вместе", { exact: true }).check();
   await planner
     .getByRole("button", { name: "Создать покатушку", exact: true })
     .click();

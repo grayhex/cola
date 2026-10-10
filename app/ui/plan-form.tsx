@@ -50,6 +50,7 @@ import {
 } from "../../lib/bike-status.ts";
 import { userTimeZone } from "../../lib/user-time-zone.ts";
 import { areaChanged, placeChanged } from "../../lib/ride-agreement.ts";
+import { undecidedPlanPlace } from "../../lib/ride-plan.ts";
 import { areaProblems } from "../../lib/ride-area.ts";
 import { localDateTime, validTimeZone } from "../../lib/ride-intent-time.ts";
 import {
@@ -320,6 +321,12 @@ export default function PlanForm({
       setAreaCheck((n) => n + 1);
       return setError(pendingAreaMessage[areaPending.current]);
     }
+    if (!ride && form.isPublic && !form.passport.area?.label?.trim()) {
+      setAreaCheck((n) => n + 1);
+      return setError(
+        "Укажите город, район или парк либо выберите «Место определим вместе».",
+      );
+    }
     const half = areaProblems(form.passport.area);
     if (half.length) {
       setAreaCheck((n) => n + 1);
@@ -506,16 +513,38 @@ export default function PlanForm({
                 onChange={(e) => set("meetingPoint", e.target.value)}
               />
             </label>
-            <AreaField
-              value={form.passport}
-              onChange={(v) => set("passport", v)}
-              disabled={busy}
-              label="Район или парк"
-              check={areaCheck}
-              onPending={(pending) => {
-                areaPending.current = pending;
-              }}
-            />
+            <label className="checkbox">
+              <input
+                type="checkbox"
+                checked={form.passport.area?.label === undecidedPlanPlace}
+                onChange={(e) => {
+                  areaPending.current = null;
+                  set("passport", {
+                    ...form.passport,
+                    area: e.target.checked
+                      ? { label: undecidedPlanPlace }
+                      : undefined,
+                  });
+                }}
+              />
+              {undecidedPlanPlace}
+            </label>
+            <p className="help">
+              Для публичного плана нужен город, район или парк, либо явный выбор
+              места вместе. Точная точка не обязательна.
+            </p>
+            {form.passport.area?.label !== undecidedPlanPlace && (
+              <AreaField
+                value={form.passport}
+                onChange={(v) => set("passport", v)}
+                disabled={busy}
+                label="Район или парк"
+                check={areaCheck}
+                onPending={(pending) => {
+                  areaPending.current = pending;
+                }}
+              />
+            )}
             {ride && ride.status === "planned" && (
               <RevisionHint ride={ride} initial={initial} form={form} />
             )}

@@ -9,7 +9,11 @@ import { db, transaction } from "../../../../lib/db.ts";
 import { readJson, sameOrigin } from "../../../../lib/http.ts";
 import { chatConfig, streamUserId } from "../../../../lib/chat-config.ts";
 import { chatProvider, ChatError } from "../../../../lib/chat-provider.ts";
-import { issueChatToken, createChatChannel } from "../../../../lib/chat.ts";
+import {
+  issueChatToken,
+  createChatChannel,
+  leaveChatChannel,
+} from "../../../../lib/chat.ts";
 import { chatPeople } from "../../../../lib/chat-people.ts";
 import {
   EmailPolicyError,
@@ -27,6 +31,7 @@ const methods: Record<string, string> = {
   people: "GET",
   unread: "GET",
   export: "POST",
+  leave: "POST",
 };
 async function payload(req: Request, limit: number) {
   try {
@@ -71,6 +76,13 @@ async function handler(
       return reply(
         await transaction((q) => createChatChannel(q, viewer, data, hash)),
         201,
+      );
+    }
+    if (action === "leave") {
+      const input = await payload(req, 1024);
+      const hash = await currentSessionHash();
+      return reply(
+        await transaction((q) => leaveChatChannel(q, viewer, input, hash)),
       );
     }
     if (action === "people" && req.method === "GET") {

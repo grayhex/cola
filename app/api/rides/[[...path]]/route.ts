@@ -21,7 +21,7 @@ import {
   commentEdit,
   communityPage,
 } from "../../../../lib/community-validation.ts";
-import { RideError } from "../../../../lib/ride-gpx.ts";
+import { RideConflict, RideError } from "../../../../lib/ride-gpx.ts";
 import {
   importGarmin,
   garminImportInput,
@@ -249,8 +249,14 @@ async function handler(
         .object({
           response: z.enum(["accepted", "declined", "maybe"]),
           occurrenceAt: z.iso.datetime({ offset: true }),
+          expectedAgreementRevision: z.number().int().positive().optional(),
         })
         .strict()
+        .refine(
+          (value) =>
+            value.response === "declined" ||
+            value.expectedAgreementRevision !== undefined,
+        )
         .parse(await readJson(req, 1024));
       return json(
         await transaction((q) =>
@@ -260,6 +266,8 @@ async function handler(
             user.id,
             input.response,
             input.occurrenceAt,
+            false,
+            input.expectedAgreementRevision ?? null,
           ),
         ),
       );
@@ -399,6 +407,11 @@ async function handler(
   } catch (e) {
     if (e instanceof EmailPolicyError)
       return json({ error: e.message, code: e.code }, e.status);
+    if (e instanceof RideConflict)
+      return json(
+        { error: e.message, code: "RIDE_" + e.reason.toUpperCase() },
+        e.status,
+      );
     if (e instanceof RideError || e instanceof CommunityError)
       return fail(e.message, e.status);
     if (e instanceof ZodError || e instanceof SyntaxError)

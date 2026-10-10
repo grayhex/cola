@@ -15,7 +15,11 @@ interface MessengerActions {
   newChat: () => void;
   retryList: () => void;
   back: () => void;
+  changed: () => void;
+  safetyChanged: (blocked: boolean) => void;
 }
+import { BlockButton } from "../ui/user-block-controls.tsx";
+import { useConfirmation } from "../ui/confirmation.tsx";
 import { errorMessage } from "../../lib/errors.ts";
 import {
   createContext,
@@ -219,14 +223,28 @@ const components: Partial<ComponentContextValue> = {
 function ConversationHeader() {
   const { channel, members } = useChannelStateContext();
   const { client } = useChatContext();
-  const { back } = useContext(MessengerContext)!;
+  const { back, changed, safetyChanged } = useContext(MessengerContext)!;
   const [details, setDetails] = useState(false);
+  const [muted, setMuted] = useState(() => channel.muteStatus().muted);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [ask, confirmation] = useConfirmation();
+  useEffect(() => {
+    const subscription = client.on("notification.channel_mutes_updated", () =>
+      setMuted(channel.muteStatus().muted),
+    );
+    return () => subscription.unsubscribe();
+  }, [client, channel]);
   const title = titleFor(channel, client.userID);
   const users = Object.values(members || channel.state.members)
     .map((m) => m.user)
     .filter((person): person is NonNullable<typeof person> => !!person);
   const group = channel.id?.startsWith("group_");
   const other = users.find((u) => u.id !== client.userID);
+  const otherId = other?.id.match(/^cola_([a-f0-9]{32})$/)?.[1];
+  const accountId = otherId
+    ? `${otherId.slice(0, 8)}-${otherId.slice(8, 12)}-${otherId.slice(12, 16)}-${otherId.slice(16, 20)}-${otherId.slice(20)}`
+    : null;
   return (
     <>
       <header className="chat-conversation-header">
@@ -284,11 +302,79 @@ function ConversationHeader() {
             </li>
           ))}
         </ul>
+        <div className="page-actions">
+          <button
+            type="button"
+            className="button secondary"
+            disabled={busy}
+            aria-pressed={muted}
+            onClick={async () => {
+              setBusy(true);
+              setError("");
+              try {
+                if (muted) await channel.unmute();
+                else await channel.mute();
+                setMuted(channel.muteStatus().muted);
+              } catch {
+                setError(
+                  "Не удалось изменить уведомления. Попробуйте ещё раз.",
+                );
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            {muted ? "Включить уведомления чата" : "Отключить уведомления чата"}
+          </button>
+          {group && (
+            <button
+              type="button"
+              className="button secondary"
+              disabled={busy}
+              onClick={async () => {
+                if (
+                  !(await ask(
+                    "Выйти из группового чата? Для возвращения потребуется новое приглашение.",
+                  ))
+                )
+                  return;
+                setBusy(true);
+                setError("");
+                try {
+                  await chatApi("leave", { cid: channel.cid });
+                  setDetails(false);
+                  changed();
+                  back();
+                } catch (failure) {
+                  setError(errorMessage(failure));
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              Выйти из группы
+            </button>
+          )}
+          {!group && accountId && (
+            <BlockButton userId={accountId} onChange={safetyChanged} />
+          )}
+        </div>
+        <p className="help">
+          Отключение сохраняется для вашего аккаунта в Stream: этот чат не
+          добавляет непрочитанные сообщения и уведомления чата. Другие события и
+          письма сайта остаются включены.
+        </p>
+        {error && (
+          <p role="alert" className="error">
+            {error}
+          </p>
+        )}
         <p className="chat-hint">
           Изображения JPG, PNG и WebP до 5 МБ. Пожаловаться можно в меню
           сообщения.
         </p>
       </CompactDialog>
+      {confirmation}
     </>
   );
 }
@@ -306,6 +392,11 @@ export default function Conversations({ client }: { client: StreamChat }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [revision, setRevision] = useState(0);
+  const [safety, setSafety] = useState<{
+    cid: string;
+    blocked: boolean;
+  } | null>(null);
+  const blocked = safety?.cid === channel?.cid && safety?.blocked;
   const [attempt, setAttempt] = useState(0);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState("");
@@ -436,6 +527,9 @@ export default function Conversations({ client }: { client: StreamChat }) {
         newChat: () => setCreating(true),
         retryList: () => setRevision((n) => n + 1),
         back,
+        changed: () => setRevision((n) => n + 1),
+        safetyChanged: (value) =>
+          channel && setSafety({ cid: channel.cid, blocked: value }),
       }}
     >
       <ComponentProvider value={components}>
@@ -533,27 +627,36 @@ export default function Conversations({ client }: { client: StreamChat }) {
                     messageActions={actions}
                     renderText={plainText}
                   />
-                  <MessageComposer
-                    audioRecordingEnabled={false}
-                    preventClearingOnUnmount
-                    maxRows={6}
-                    additionalTextareaProps={{
-                      placeholder: "Написать сообщение…",
+                  {blocked ? (
+                    <p className="notice">
+                      Человек заблокирован. Личные сообщения недоступны.
+                      Разблокировать можно в информации о диалоге.
+                    </p>
+                  ) : (
+                    <MessageComposer
+                      audioRecordingEnabled={false}
+                      preventClearingOnUnmount
+                      maxRows={6}
+                      additionalTextareaProps={{
+                        placeholder: "Написать сообщение…",
+                      }}
+                    />
+                  )}
+                </Window>
+                {!blocked && (
+                  <Thread
+                    messageActions={actions}
+                    additionalMessageListProps={{ renderText: plainText }}
+                    additionalParentMessageProps={{ renderText: plainText }}
+                    additionalMessageComposerProps={{
+                      audioRecordingEnabled: false,
+                      preventClearingOnUnmount: true,
+                      additionalTextareaProps: {
+                        placeholder: "Ответить в ветке…",
+                      },
                     }}
                   />
-                </Window>
-                <Thread
-                  messageActions={actions}
-                  additionalMessageListProps={{ renderText: plainText }}
-                  additionalParentMessageProps={{ renderText: plainText }}
-                  additionalMessageComposerProps={{
-                    audioRecordingEnabled: false,
-                    preventClearingOnUnmount: true,
-                    additionalTextareaProps: {
-                      placeholder: "Ответить в ветке…",
-                    },
-                  }}
-                />
+                )}
               </Channel>
             ) : (
               <div className="chat-welcome">

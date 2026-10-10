@@ -100,6 +100,28 @@ export function fixtureMethods() {
         },
       };
     },
+    async queryChannels(filter) {
+      const data = channels.get(filter.cid);
+      const me = filter.members.$in[0];
+      if (!data?.members.some((member) => member.user_id === me)) return [];
+      return [
+        {
+          cid: filter.cid,
+          state: {
+            members: Object.fromEntries(
+              data.members.map((member) => [member.user_id, member]),
+            ),
+          },
+          removeMembers: async (ids) => {
+            calls.push(["removeMembers", filter.cid, ids]);
+            data.members = data.members.filter(
+              (member) => !ids.includes(member.user_id),
+            );
+            return {};
+          },
+        },
+      ];
+    },
     async getUnreadCount() {
       return { total_unread_count: 2 };
     },

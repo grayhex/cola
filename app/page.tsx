@@ -1,7 +1,11 @@
 import { redirect } from "next/navigation";
 import Home from "./ui/home.tsx";
-import { indexed } from "../lib/indexing.ts";
-export const metadata = { robots: indexed };
+import type { Metadata } from "next";
+import { getSite } from "../lib/site.ts";
+import { homeMetadata } from "../lib/social-metadata.ts";
+export async function generateMetadata(): Promise<Metadata> {
+  return homeMetadata((await getSite()).settings);
+}
 export default async function Page({
   searchParams,
 }: {

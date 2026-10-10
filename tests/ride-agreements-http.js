@@ -96,17 +96,35 @@ const at = ride.scheduledAt;
 assert.equal(+new Date(at), +new Date(start));
 
 // Answers: session, origin, schema, the organizer's own plan.
-const rsvp = (c, response, occurrenceAt = at, origin) =>
-  c(`rides/${id}/rsvp`, "PATCH", { response, occurrenceAt }, origin);
+const rsvp = async (c, response, occurrenceAt = at, origin) =>
+  c(
+    `rides/${id}/rsvp`,
+    "PATCH",
+    {
+      response,
+      occurrenceAt,
+      expectedAgreementRevision: (await own()).agreement.revision,
+    },
+    origin,
+  );
 assert.equal((await rsvp(guest, "accepted")).status, 401);
 assert.equal(
   (await rsvp(rider, "accepted", at, "https://evil.test")).status,
   403,
 );
 for (const body of [
-  { response: "going", occurrenceAt: at },
+  {
+    expectedAgreementRevision: 1,
+    response: "going",
+    occurrenceAt: at,
+  },
   { response: "accepted" },
-  { response: "accepted", occurrenceAt: at, extra: true },
+  {
+    expectedAgreementRevision: 1,
+    response: "accepted",
+    occurrenceAt: at,
+    extra: true,
+  },
 ])
   assert.equal(
     (await rider(`rides/${id}/rsvp`, "PATCH", body)).status,
@@ -261,6 +279,7 @@ assert.equal(
     await stranger(`rides/${closed.body.id}/rsvp`, "PATCH", {
       response: "accepted",
       occurrenceAt: closedRide.scheduledAt,
+      expectedAgreementRevision: closedRide.agreement.revision,
     })
   ).status,
   404,

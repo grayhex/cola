@@ -14,7 +14,15 @@ export function chatBrowserFixture(users) {
     sockets = new Map(),
     reads = [],
     events = [],
-    unexpected = [];
+    unexpected = [],
+    muted = new Map();
+  const channelMutes = (id) =>
+    [...(muted.get(id) || [])].map((cid) => ({
+      channel: channels.get(cid),
+      user: profiles.find((p) => p.id === id),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }));
   const now = () => new Date().toISOString();
   function emit(event, ids = profiles.map((u) => u.id)) {
     for (const id of ids)
@@ -50,7 +58,7 @@ export function chatBrowserFixture(users) {
             ...me,
             devices: [],
             mutes: [],
-            channel_mutes: [],
+            channel_mutes: channelMutes(me.id),
             total_unread_count: 0,
             unread_channels: 0,
           },
@@ -108,6 +116,15 @@ export function chatBrowserFixture(users) {
       }
       await route.fulfill({ response, json: result });
     });
+    await page.route("**/api/chat/leave", async (route) => {
+      const data = route.request().postDataJSON(),
+        response = await route.fetch();
+      if (response.ok()) {
+        const c = channels.get(data.cid);
+        if (c) c.members = c.members.filter((m) => m.user_id !== me.id);
+      }
+      await route.fulfill({ response });
+    });
     await page.route("https://chat.stream-io-api.com/**", async (route) => {
       const url = new URL(route.request().url()),
         path = url.pathname,
@@ -115,6 +132,28 @@ export function chatBrowserFixture(users) {
       const reply = (json) =>
         route.fulfill({ json: { duration: "1ms", ...json } });
       if (path === "/app") return reply({ app: policy().app });
+      if (
+        ["/moderation/mute/channel", "/moderation/unmute/channel"].includes(
+          path,
+        )
+      ) {
+        const list = muted.get(me.id) || new Set();
+        if (path === "/moderation/mute/channel") list.add(data.channel_cid);
+        else list.delete(data.channel_cid);
+        muted.set(me.id, list);
+        const mutes = channelMutes(me.id);
+        emit(
+          {
+            type: "notification.channel_mutes_updated",
+            me: { ...me, channel_mutes: mutes },
+          },
+          [me.id],
+        );
+        return reply({
+          channel_mute: mutes[0],
+          own_user: { ...me, channel_mutes: mutes },
+        });
+      }
       if (path === "/channels")
         return reply({
           channels: [...channels.values()]

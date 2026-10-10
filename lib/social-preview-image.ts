@@ -91,7 +91,10 @@ export async function photoData(
 // Callers pass a preview that has just passed the public gate, so a cached
 // card is never served for a page that is no longer public.
 export async function renderSocialImage(
-  preview: SocialPreviewType & { card?: CardDataType | null },
+  preview: Pick<SocialPreviewType, "title" | "image"> & {
+    kind: string;
+    card?: CardDataType | null;
+  },
   { uploadDir = process.env.UPLOAD_DIR || "uploads", env = process.env } = {},
 ) {
   const filename = safeFilename(preview.image?.filename);

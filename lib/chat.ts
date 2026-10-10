@@ -166,3 +166,32 @@ export async function createChatChannel(
   await channel.create();
   return { cid: CHAT_TYPE + ":" + id };
 }
+
+// Only the current member may leave a group. No client member-management grant.
+export const leaveChannelInput = z
+  .object({ cid: z.string().regex(/^colabike:group_[a-f0-9]{32}$/) })
+  .strict();
+export async function leaveChatChannel(
+  q: Queryable,
+  viewer: CurrentUser,
+  raw: unknown,
+  sessionHash: string | null,
+  provider = chatProvider(),
+) {
+  requireVerifiedEmail(viewer);
+  const { cid } = leaveChannelInput.parse(raw);
+  await lockChatUsers(q, [viewer.id]);
+  await requireSession(q, viewer, sessionHash);
+  await ensureChatPolicy(provider);
+  const me = streamUserId(viewer.id);
+  const channels = await provider.queryChannels(
+    { type: CHAT_TYPE, cid, members: { $in: [me] } },
+    [],
+    { limit: 1, watch: false, state: true },
+  );
+  const channel = channels[0];
+  if (!channel || channel.cid !== cid || !channel.state.members[me])
+    throw new ChatError("Диалог недоступен", 404);
+  await channel.removeMembers([me]);
+  return { left: true };
+}

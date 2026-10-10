@@ -10,6 +10,10 @@
      :root style) reaches every themed scope below. */
   :root {
     /* Static photographic marketing surfaces retain contrast in both themes. */
+    --hero-bg: #ffffff;
+    --hero-text: #111827;
+    --hero-muted: #374151;
+    --hero-shade: rgb(255 255 255 / 94%);
     --marketing-bg: #0d1827;
     --marketing-text: #ffffff;
     --marketing-muted: #e1e7ed;
@@ -94,7 +98,7 @@
        it). Soft fill and readable text are derived from it. */
     --accent-soft: color-mix(in srgb, var(--accent) 16%, var(--surface));
     /* The accent as readable text on the page (yellow itself is too light). */
-    --accent-text: color-mix(in srgb, var(--accent) 55%, #000000);
+    --accent-text: var(--accent-text-on-light, #86640f);
     /* A card title under the pointer or keyboard focus (#264): the accent,
        mixed toward the page's strongest text. ThemeStyle (site-provider.jsx)
        computes it from the administrator's accent to keep 4.5:1 on
@@ -137,7 +141,7 @@
     --success-soft: var(--green-100);
     --warning: var(--amber-700);
     --warning-soft: var(--amber-100);
-    --danger: var(--red-600);
+    --danger: var(--red-700);
     --danger-soft: var(--red-50);
     /* Filled destructive buttons keep white text readable in both themes. */
     --danger-solid: var(--red-600);
@@ -261,6 +265,10 @@
 
   :root[data-theme="dark"],
   .theme-dark {
+    --hero-bg: #0d1827;
+    --hero-text: #ffffff;
+    --hero-muted: #e1e7ed;
+    --hero-shade: rgb(13 24 39 / 88%);
     --bg: var(--gray-950);
     --bg-subtle: var(--gray-925);
     --surface: var(--gray-950);
@@ -309,7 +317,7 @@
 
     --line-dot: var(--gray-500);
 
-    --accent-text: color-mix(in srgb, var(--accent) 85%, #ffffff);
+    --accent-text: var(--accent-text-on-dark, #e8bd60);
     --title-hover: var(
       --title-hover-on-dark,
       color-mix(in oklab, var(--accent) 45%, #ffffff)
@@ -353,6 +361,10 @@
      the same dark values as above. */
   @media (prefers-color-scheme: dark) {
     :root[data-theme="system"] {
+      --hero-bg: #0d1827;
+      --hero-text: #ffffff;
+      --hero-muted: #e1e7ed;
+      --hero-shade: rgb(13 24 39 / 88%);
       --bg: var(--gray-950);
       --bg-subtle: var(--gray-925);
       --surface: var(--gray-950);
@@ -405,7 +417,7 @@
 
       --line-dot: var(--gray-500);
 
-      --accent-text: color-mix(in srgb, var(--accent) 85%, #ffffff);
+      --accent-text: var(--accent-text-on-dark, #e8bd60);
       --title-hover: var(
         --title-hover-on-dark,
         color-mix(in oklab, var(--accent) 45%, #ffffff)

@@ -267,7 +267,7 @@ function recordDto(rule: GameRule, { eligible, holder }: HolderResult) {
     direction: rule.direction,
     category: rule.category,
     eligible,
-    holder,
+    holder: eligible >= 2 ? holder : null,
   };
 }
 

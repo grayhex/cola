@@ -62,6 +62,7 @@ import PhotoControl from "./photo-control.tsx";
 import { thumbnailOf } from "./photo-thumbnail.ts";
 import dynamic from "next/dynamic";
 import type { BackgroundSource } from "./background-removal-dialog.tsx";
+import { EMAIL_POLICY_MESSAGE } from "../../lib/email-policy.ts";
 import EmailPolicyAction from "./email-policy-action.tsx";
 import { useConfirmation } from "./confirmation.tsx";
 import ClassificationFields from "./bike-classification.tsx";
@@ -206,7 +207,7 @@ export default function BikeWizard({
   onBusy?: (busy: boolean) => void;
   onDirtyChange?: (dirty: boolean) => void;
 }) {
-  const { catalog, settings } = useSite();
+  const { catalog, settings, viewer } = useSite();
   const [ask, confirmation] = useConfirmation();
   const [searchText, setSearchText] = useState("");
   const [step, setStep] = useState(0),
@@ -994,8 +995,12 @@ export default function BikeWizard({
       ),
     );
   }
-  async function save() {
-    const fields = bikeFields();
+  async function save(privateDraft = false) {
+    if (saving) return;
+    const fields = {
+      ...bikeFields(),
+      ...(privateDraft ? { is_public: false } : {}),
+    };
     // The second step checks these before the third opens; a change that got
     // past it is shown where the field is.
     const problem = savedId ? null : detailsProblem();
@@ -2006,6 +2011,26 @@ export default function BikeWizard({
           </>
         )}
       </fieldset>
+      {step === 2 &&
+        !savedId &&
+        bike.is_public &&
+        !viewer?.email_verified_at && (
+          <div className="notice">
+            <p>
+              Для публичного велосипеда подтвердите почту. До этого можно
+              сохранить приватный черновик с фотографиями и комплектующими.
+            </p>
+            <EmailPolicyAction message={EMAIL_POLICY_MESSAGE} />
+            <button
+              type="button"
+              className="button secondary"
+              disabled={saving}
+              onClick={() => void save(true)}
+            >
+              Сохранить приватный черновик
+            </button>
+          </div>
+        )}
       {saving && <Progress text="Сохраняем велосипед и фотографии…" />}
       {!!savedId && !saving && (
         <button

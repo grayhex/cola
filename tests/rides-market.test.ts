@@ -230,6 +230,7 @@ test("Garmin lifecycle, safe GPX binding, planned invitations and market publica
       /уже есть трек/,
     );
     const plan = {
+      passport: { area: { label: "Тестовый парк" } },
       bikeId: bike,
       title: "Future gravel",
       description: "Easy pace",

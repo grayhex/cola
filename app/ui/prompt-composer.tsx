@@ -191,6 +191,67 @@ export default function PromptComposer({
     shouldRerenderOnTransaction: true,
     editable: !disabled,
     editorProps: {
+      handlePaste(view, event) {
+        const html = event.clipboardData?.getData("text/html");
+        if (!html || !/<table[\s>]/i.test(html)) return false;
+        const pasted = new DOMParser().parseFromString(html, "text/html");
+        const tables = Array.from(pasted.querySelectorAll("table"));
+        const complex =
+          tables.some((table) => {
+            const width = table.rows[0]?.cells.length;
+            return Array.from(table.rows).some(
+              (row, index) =>
+                row.cells.length !== width ||
+                Array.from(row.cells).some(
+                  (cell) =>
+                    cell.tagName === "TH" &&
+                    (index > 0 ||
+                      Array.from(row.cells).some(
+                        (other) => other.tagName !== "TH",
+                      )),
+                ),
+            );
+          }) ||
+          Array.from(pasted.querySelectorAll("td,th")).some(
+            (cell) =>
+              Number(cell.getAttribute("colspan") || 1) > 1 ||
+              Number(cell.getAttribute("rowspan") || 1) > 1 ||
+              !!cell.querySelector("table,ul,ol,h1,h2,h3"),
+          );
+        if (!complex) return false;
+        pasted
+          .querySelectorAll("script,style,iframe,object")
+          .forEach((node) => node.remove());
+        tables
+          .filter((table) => !table.parentElement?.closest("table"))
+          .forEach((table) => {
+            const replacement = pasted.createElement("pre");
+            replacement.textContent = Array.from(table.rows)
+              .map((row) =>
+                Array.from(row.cells)
+                  .map((cell) => cell.textContent?.trim() || "")
+                  .join(" | "),
+              )
+              .join("\n");
+            table.replaceWith(replacement);
+          });
+        // Preserve surrounding paragraphs as well as the unsupported table.
+        const readable = (node: globalThis.Node): string => {
+          if (node.nodeType === globalThis.Node.TEXT_NODE)
+            return node.textContent || "";
+          const content = Array.from(node.childNodes).map(readable).join("");
+          return node instanceof HTMLElement &&
+            /^(P|DIV|PRE|BR|LI|H[1-6])$/.test(node.tagName)
+            ? content + "\n"
+            : content;
+        };
+        const text = readable(pasted.body).trim();
+        view.dispatch(view.state.tr.insertText(text));
+        setMessage(
+          "Таблица преобразована в текст с разделителями: сложная структура не поддерживается.",
+        );
+        return true;
+      },
       attributes: {
         role: "textbox",
         "aria-label": label,

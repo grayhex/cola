@@ -246,6 +246,7 @@ test.describe.serial("product routes and account sections", () => {
     // there whatever other tests have or have not left in the database, which a
     // shard of the suite must not depend on (#386).
     await request("rides/plan", {
+      passport: { area: { label: "Тестовый парк" } },
       bikeId: bike.id,
       title: "Вечерний круг",
       description: "Плановая покатушка для списка предстоящих.",

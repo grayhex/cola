@@ -1,10 +1,15 @@
 "use client";
-import { errorMessage } from "../../lib/errors.ts";
+import { errorCode, errorMessage } from "../../lib/errors.ts";
 import type { RideItem, RideResponse } from "./ride-types.ts";
 import { useEffect, useRef, useState } from "react";
 import { socialApi } from "./social-primitives.tsx";
 import { useSite } from "./site-provider.tsx";
 import { useMotionFeedback } from "./motion.tsx";
+import Link from "next/link";
+import { RideRoutePreview } from "./ride-route-preview.tsx";
+import RidePassport from "./ride-passport.tsx";
+import { publicPath } from "../../lib/public-urls.ts";
+import { rideTimeLabel } from "../../lib/ride-announcement.ts";
 import SiteIcon from "./site-icon.tsx";
 type Rsvp = "accepted" | "maybe" | "declined";
 const choices: [Rsvp, "yes" | "maybe" | "no", string][] = [
@@ -76,7 +81,8 @@ export default function RideRsvp({
   const [state, setState] = useState(ride),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
-    [status, setStatus] = useState("");
+    [status, setStatus] = useState(""),
+    [updated, setUpdated] = useState<RideItem | null>(null);
   const running = useRef(false),
     queued = useRef<Rsvp | null>(null);
   // A refresh read before the last press must not flip the buttons back.
@@ -116,13 +122,27 @@ export default function RideRsvp({
           "PATCH",
           {
             response: choice,
-            occurrenceAt: new Date(ride.scheduledAt || "").toISOString(),
+            occurrenceAt: new Date(state.scheduledAt || "").toISOString(),
+            expectedAgreementRevision: state.agreement?.revision,
           },
         );
         saved = { ...saved, ...last };
       } catch (e) {
         failed = true;
         setError(errorMessage(e));
+        if (["RIDE_REVISION", "RIDE_OCCURRENCE"].includes(errorCode(e) || "")) {
+          try {
+            const current = await socialApi<{ ride: RideItem }>(
+              "rides/public/" + ride.shareId,
+            );
+            saved = current.ride;
+            setUpdated(current.ride);
+          } catch {
+            setError(
+              "Условия изменились. Не удалось загрузить их — откройте покатушку заново.",
+            );
+          }
+        }
         break;
       }
       choice = queued.current !== last.rsvp ? queued.current : null;
@@ -188,6 +208,24 @@ export default function RideRsvp({
       <span className="sr-only" role="status">
         {status}
       </span>
+      {updated && (
+        <section className="notice" aria-label="Актуальные условия">
+          <strong>{updated.title}</strong>
+          <p>
+            {rideTimeLabel(updated.scheduledAt, updated.recurrenceTimezone)}
+          </p>
+          {updated.description && <p>{updated.description}</p>}
+          {updated.meetingPoint && <p>Место встречи: {updated.meetingPoint}</p>}
+          <RidePassport passport={updated.passport} region={false} />
+          {!!updated.geometry?.length && (
+            <RideRoutePreview geometry={updated.geometry} />
+          )}
+          <Link href={publicPath("ride", updated)}>
+            Посмотреть маршрут и все условия
+          </Link>
+          <p>Посмотрите обновлённые условия и выберите ответ ещё раз.</p>
+        </section>
+      )}
       {error && (
         <p role="alert" className="error">
           {error}

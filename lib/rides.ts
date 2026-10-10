@@ -1612,6 +1612,10 @@ export async function planRide(
   config: RideSettings,
 ) {
   const details = plannedDetails(input);
+  if (input.isPublic && !details.passport.area?.label)
+    throw new RideError(
+      "Укажите город, район или парк либо выберите «Место определим вместе».",
+    );
   input = {
     ...input,
     privacyEnabled:

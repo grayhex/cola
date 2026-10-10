@@ -10,20 +10,29 @@ import {
   startTransition,
 } from "react";
 import { socialApi, Pagination } from "./social-primitives.tsx";
-import RideCard, { RideCompactCard, rideDate } from "./ride-card.tsx";
+import RideCard, { RideCompactCard, rideCardDate } from "./ride-card.tsx";
 import { useSite } from "./site-provider.tsx";
 import { apiFilters } from "../../lib/ride-filters.ts";
 import { plural } from "../../lib/plural.ts";
 import { ArrowRight } from "./icons.tsx";
 
 // Back/forward returns to the same public list and scroll position (#233):
-// the last public page is kept per filter set in this tab only.
-type SavedList = { data?: RideListDto; page?: number; scrollY?: number };
-const storageKey = (key: string) => "cola:ride-list:" + key;
+// only pagination and scroll are kept; personalized DTOs never enter storage.
+type SavedList = { page?: number; scrollY?: number };
+const storageKey = (key: string) => "cola:ride-list:v2:" + key;
 function readSaved(key: string): SavedList | null {
   if (!key) return null;
   try {
-    return JSON.parse(sessionStorage.getItem(storageKey(key)) || "null");
+    const value = JSON.parse(sessionStorage.getItem(storageKey(key)) || "null");
+    return (
+      value && {
+        page: Number.isInteger(value.page) && value.page > 0 ? value.page : 1,
+        scrollY:
+          Number.isFinite(value.scrollY) && value.scrollY >= 0
+            ? value.scrollY
+            : 0,
+      }
+    );
   } catch {
     return null;
   }
@@ -68,12 +77,17 @@ export default function RideList({
   compact?: boolean;
   onTotal?: (total: number | null) => void;
 }) {
-  const { personalSettings: settings } = useSite();
-  const [data, setData] = useState<RideListDto | null>(null),
+  const { personalSettings: settings, viewer } = useSite();
+  const viewerKey = viewer?.id || "guest";
+  const [result, setResult] = useState<{
+      viewerKey: string;
+      data: RideListDto;
+    } | null>(null),
     [page, setPage] = useState(1),
     [error, setError] = useState(""),
     [loading, setLoading] = useState(true),
     [revision, setRevision] = useState(0);
+  const data = result?.viewerKey === viewerKey ? result.data : null;
   const [expanded, setExpanded] = useState(false);
   const seq = useRef(0),
     restoring = useRef<number | null>(null),
@@ -87,10 +101,20 @@ export default function RideList({
     }
   }, [query]);
   useLayoutEffect(() => {
+    // Remove old versions that stored protected DTOs, including other filters.
+    try {
+      for (const key of Object.keys(sessionStorage))
+        if (
+          key.startsWith("cola:ride-list:") &&
+          !key.startsWith("cola:ride-list:v2:")
+        )
+          sessionStorage.removeItem(key);
+    } catch {
+      /* Storage is optional. */
+    }
     const saved = readSaved(restoreKey);
-    if (saved?.data) {
+    if (saved) {
       restoring.current = saved.scrollY || 0;
-      setData(saved.data);
       setPage(saved.page || 1);
     }
   }, [restoreKey]);
@@ -111,8 +135,8 @@ export default function RideList({
     )
       .then((d) => {
         if (!active || id !== seq.current) return; // an older filter answered late
-        startTransition(() => setData(d));
-        save(restoreKey, { data: d, page });
+        startTransition(() => setResult({ viewerKey, data: d }));
+        save(restoreKey, { page });
       })
       .catch((e) => {
         if (active && id === seq.current) setError(errorMessage(e));
@@ -124,7 +148,7 @@ export default function RideList({
       active = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `query` covers the filter object
-  }, [query, page, revision, restoreKey]);
+  }, [query, page, revision, restoreKey, viewerKey]);
   useEffect(() => {
     onTotal?.(error ? null : (data?.total ?? null));
   }, [data, error, onTotal]);
@@ -234,7 +258,7 @@ export default function RideList({
                   <summary>
                     <strong>{r.title}</strong>
                     <small>
-                      {rideDate(r.date)} ·{" "}
+                      {rideCardDate(r)} ·{" "}
                       {(Number(r.metrics.distanceM) / 1000).toLocaleString(
                         "ru-RU",
                         {
