@@ -302,11 +302,11 @@ class ForcedCommandTests(unittest.TestCase):
                 "runuser": 'shift 3; exec "$@"',
                 "git": f'if [ "$3" = rev-parse ]; then echo {SHA}; fi',
                 "docker": (
-                    f'printf "%s\\n" "$*" >> "{commands}"\\n'
-                    'if [ "$1" = image ] && [ "$2" = ls ]; then\\n'
+                    f'printf "%s\\n" "$*" >> "{commands}"\n'
+                    'if [ "$1" = image ] && [ "$2" = ls ]; then\n'
                     f'  printf "%s\\n" "cola-ci-app:{SHA}" "cola-ci-ops:{SHA}" '
                     f'"cola-ci-resolver:{SHA}" "cola-ci-app:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" '
-                    '"unrelated:latest" "cola-ci-app:not-a-sha"\\n'
+                    '"unrelated:latest" "cola-ci-app:not-a-sha"\n'
                     'fi'
                 ),
             }
