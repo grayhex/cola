@@ -234,6 +234,17 @@ test("preserve private/archived identities, user descriptions, URLs, and edits b
       new Map(),
     );
     assert.ok(result.every((e) => e.state === "conflict"));
+    const next = await planCatalogSeed(
+      db,
+      { ...batch, batch: "review-still-required" },
+      sha,
+      admin.id,
+    );
+    assert.ok(
+      next.entries.every((e) => e.action === "conflict"),
+      "A new batch cannot promote an earlier conflict to successful reuse",
+    );
+
     assert.deepEqual(
       (await db.query("SELECT * FROM component_models ORDER BY id")).rows,
       before,
@@ -308,6 +319,14 @@ test("partial commit resumes, old batch preserves later edits, rollback only arc
       applyCatalogSeed(db.transaction, batch, plan, backup, new Map()),
       /rolled back/,
     );
+    await rollbackCatalogSeed(db.transaction, next.batch, sha, admin.id);
+    const afterRollback = await planCatalogSeed(
+      db,
+      { ...batch, batch: "mechanical-v3" },
+      sha,
+      admin.id,
+    );
+    assert.ok(afterRollback.entries.every((e) => e.action === "conflict"));
   } finally {
     await db.close();
   }

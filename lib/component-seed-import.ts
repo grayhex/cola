@@ -75,6 +75,7 @@ interface Journal {
   photo_ids: string[];
   after_model: Record<string, unknown> | null;
   rolled_back_at: Date | null;
+  batch_rolled_back_at?: Date | null;
 }
 interface Model extends ComponentModelRow {
   snapshot: Record<string, unknown>;
@@ -108,8 +109,9 @@ export interface SeedPlan {
 async function priorEntry(q: Queryable, batch: string, key: string) {
   return (
     await q.query<Journal>(
-      `SELECT * FROM component_seed_entries WHERE seed_key=$2
-    ORDER BY (batch=$1) DESC,created_at DESC,batch LIMIT 1`,
+      `SELECT e.*,b.rolled_back_at batch_rolled_back_at FROM component_seed_entries e
+    JOIN component_seed_batches b ON b.batch=e.batch WHERE e.seed_key=$2
+    ORDER BY (e.batch=$1) DESC,e.created_at DESC,e.batch LIMIT 1`,
       [batch, key],
     )
   ).rows[0];
@@ -143,13 +145,21 @@ async function planEntry(
   const previous = await priorEntry(q, batch, entry.seedKey);
   if (previous) {
     result.modelId = previous.model_id;
-    if (previous.entry_sha256 !== result.entryHash || previous.rolled_back_at) {
+    if (
+      previous.entry_sha256 !== result.entryHash ||
+      previous.rolled_back_at ||
+      previous.batch_rolled_back_at
+    ) {
       result.action = "conflict";
       result.reason =
         "Seed key has a different approved revision or was rolled back";
     } else if (previous.batch === batch) {
       result.action = "already";
       result.reason = previous.state;
+    } else if (["conflict", "rejected"].includes(previous.state)) {
+      result.action = "conflict";
+      result.reason =
+        "Previous batch did not admit this identity; review is still required";
     } else {
       result.action = "reuse";
       result.reason = "Previously journaled seed; preserve subsequent edits";
