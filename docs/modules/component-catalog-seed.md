@@ -1,6 +1,6 @@
 # Подготовленный каталог компонентов
 
-`data/component-catalog/v1/` — редакционный пакет механической навески для #390. Содержит 399 одобренных моделей с русскими описаниями, источниками и результатами поиска изображений. Пакет сам по себе не публикует карточки в БД. Импорт и проверка наполненного каталога — следующий этап.
+`data/component-catalog/v1/` — редакционный пакет механической навески для #390. Содержит 399 одобренных моделей с русскими описаниями, источниками и результатами поиска изображений. Пакет сам по себе не публикует карточки в БД. Импорт выполняется отдельной командой после применения SQL-миграций.
 
 ## Валидация и воспроизводимость
 
@@ -210,3 +210,99 @@ docker compose --env-file .env.production -f compose.prod.yaml run --rm --no-dep
 велосипеда в private не должно оставлять его текст на посторонних страницах.
 Редакторские seed-карточки публикуются независимо от велосипедов; журнал позволяет
 отличить их от обычных установок без изменения правил приватности.
+
+## Аксессуары: accessories-v1
+
+Второй независимый пакет `data/component-catalog/accessories-v1/` содержит **301 модель,
+301 русское описание, 0 новых фотографий**. Охвачены 16 категорий, включая новую
+«Сумка на багажник» для боковых сумок и верхних багажных сумок. Пакет механики и его
+SHA остаются неизменными. Фотографии по условиям этой задачи не искались:
+`photo.status = "not_requested"`; это не означает отсутствия изображений у производителя.
+Существующая галерея сохраняется при любом таком импорте.
+
+Велокомпьютеры представлены Garmin Edge, Wahoo ELEMNT ACE/ROAM 3/BOLT 3, Magene C-серии,
+Hammerhead Karoo и Cateye. Сумки — Ortlieb, Apidura, Topeak, SILCA и Lezyne.
+Свет — Garmin Varia, Wahoo TRACKR, Magene, Knog, Lezyne и Cateye; инструменты и насосы —
+Topeak, Lezyne, Crankbrothers и SILCA. Дополнительно включены замки ABUS, крылья SKS,
+подножки Pletscher, багажники, звонки, датчики и флягодержатели.
+Это подборка известных серий и разных назначений, а не подтверждённый рейтинг продаж.
+
+| Категория          | Моделей | Повторно сверенные с фактами источников модели                                                                                                                                                                     |
+| ------------------ | ------: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Передний свет      |      26 | Knog Blinder 1000; Magene AT1200; Magene AT1600; Cateye AMPP500S                                                                                                                                                   |
+| Задний свет        |      20 | Knog Blinder Rear; Lezyne Strip Drive 300+ Rear; Garmin Varia RTL515; Magene L508; Magene L308; Cateye ViZ450                                                                                                      |
+| Крылья             |      12 | SKS Bluemels Style                                                                                                                                                                                                 |
+| Багажник           |       8 | Ortlieb Quick-Rack; Topeak TetraRack M2 HD                                                                                                                                                                         |
+| Подножка           |       4 | Pletscher Comp 18 Flex; Pletscher Multi                                                                                                                                                                            |
+| Звонок             |       5 | Knog Oi Luxe                                                                                                                                                                                                       |
+| Велокомпьютер      |      25 | Garmin Edge 530; Garmin Edge 840; Garmin Edge 520 Plus; Garmin Edge 1040 Solar; Wahoo ELEMNT ACE; Wahoo ELEMNT ROAM 3; Wahoo ELEMNT BOLT 3; Magene C706; Hammerhead Karoo; Magene C606 Pro; Cateye Padrone Digital |
+| Датчики            |       9 | Wahoo TRACKR SPEED; Wahoo TRACKR HEART RATE; Magene H803; Magene H603; Hammerhead Heart Rate Monitor                                                                                                               |
+| Замок              |       9 | ABUS BORDO GRANIT 6500K                                                                                                                                                                                            |
+| Насос              |      50 | SILCA Elettrico Ultimate; SILCA EOLO IV; SILCA Pista; Lezyne Grip Drive HP; Topeak JoeBlow Sport Digital                                                                                                           |
+| Инструменты        |      47 | SILCA T-Ratchet + Ti-Torque Kit 2nd Generation; SILCA HX-TWO; Crankbrothers M20; Crankbrothers M5; Lezyne SV Pro 7; Topeak Mini 10                                                                                 |
+| Фляга / держатель  |       8 | Lezyne Power Cage; Lezyne Matrix Air Cage; Lezyne Matrix Team Cage; Lezyne Flow Bottle; Lezyne Flow Thermal Bottle; Lezyne Flow Cage; Lezyne CNC Cage Aluminum; Topeak Modula Cage II                              |
+| Подседельная сумка |      18 | Ortlieb Seat-Pack QR; SILCA Mattone; Lezyne Road Caddy; Apidura Backcountry Saddle Pack                                                                                                                            |
+| Рамная сумка       |      24 | Ortlieb Toptube-Bag; Apidura Racing Long Top Tube Pack; Apidura Expedition Bolt-On Top Tube Pack; Apidura Aero Top Tube Module; Apidura Aero Bolt-On Long Top Tube Module                                          |
+| Сумка на руль      |      11 | Topeak FrontLoader; Apidura Backcountry Accessory Pocket; Apidura Expedition Front Accessory Pack                                                                                                                  |
+| Сумка на багажник  |      25 | Ortlieb Back-Roller Plus; Ortlieb Vario Lite; Ortlieb Velo-Shopper; Ortlieb Trunk-Bag                                                                                                                              |
+
+Все 301 записи проверяются офлайн общей схемой, нормализатором и реальными SQL-функциями.
+Дополнительно повторно сверены 68 записей из всех 16 категорий (перечень в таблице).
+Уточнены солнечная версия Edge 1040, поколение BOLT 3, различие AT1200/AT1600,
+условия установки Seat-Pack QR и TetraRack M2 HD, несамостоятельное крепление
+Apidura Accessory Pocket. У Ti-Torque описывается крутящий момент, а не сила.
+Цвета, объёмы одной сумки, размеры крыльев и варианты комплектов не превращены в отдельные карточки.
+Исключены неподтверждённые архивные Karoo 2/BOLT 2 и три названия Lezyne,
+которые консервативный нормализатор отвергает как начинающиеся с материала
+(Steel Floor Drive, Steel HV Floor Drive, Carbon Team Cage). Его правила не ослаблены.
+
+286 моделей имеют первичный источник производителя. Для 15 Apidura записано явное
+`identity.primarySourceGap`: официальный сайт возвращает CAPTCHA, ограничение не обходилось.
+Названия/назначение сверены по независимым карточкам Condor Cycles и Sigma Sports;
+описания составлены по доступным фактам. Валидатор допускает такую документированную
+замену только для `scope.domain = "accessories"` и только с двумя retailer-источниками,
+включёнными в identity evidence. Поддомены одного сайта не считаются независимыми;
+консервативная группировка по двум последним частям хоста также отвергает пары
+под общим суффиксом вроде `co.uk`. Для механического пакета первичный источник
+по-прежнему обязателен. Shopify-источники сохраняют hash точного ответа каталога,
+название конкретного товара и ссылку его product handle, а не изображение/листинг как доказательство.
+
+Миграция `065_accessory_catalog` добавляет SQL-допуск Magene/SILCA/Pletscher и категорию
+багажных сумок. В сохранённых списках категорий и группе `equipment` новая категория
+добавляется один раз в конец; остальные настройки и порядок сохраняются. Отсутствующие
+пользовательские группы не заменяются стандартными. Словарь общего Resolver дополнен
+брендами пакета; данные моделей добавляются прежним безопасным импортёром с backup,
+журналом, проверкой администратора и повторным запуском без изменений.
+
+### Применение аксессуаров
+
+Закреплённый SHA-256: `7fefcca1c892a9c24f8e9a509c85607b40d17e9e17e0f058700af64a69ba95d2`.
+После зелёного CI и выкладки проверенного ops-образа (включая SQL 065):
+
+```sh
+cd /opt/stacks/cola
+sudo docker compose --env-file .env.production -f compose.prod.yaml run --rm --no-deps migrate \
+  node scripts/component-catalog-import.ts apply \
+  --directory data/component-catalog/accessories-v1 \
+  --sha 7fefcca1c892a9c24f8e9a509c85607b40d17e9e17e0f058700af64a69ba95d2 \
+  --actor EXISTING_VERIFIED_ADMIN_USERNAME
+```
+
+`apply` сначала выводит dry-run, делает и проверяет приватный backup, применяет пакет,
+затем автоматически выполняет `verify`. Для чтения без записи заменить `apply` на
+`dry-run` или `verify`, сохранив directory/SHA/actor. На пустой базе ожидаются 301 `created`;
+на наполненной возможны `filled`/`reused`/`conflict` — эти результаты нужно проверить,
+а не перезаписывать существующие тексты. Фото и установки не создаются.
+Повторять после сбоя можно той же командой: уже учтённые записи не меняются.
+`rollback` с теми же параметрами использует прежние проверки изменений и связей;
+не удаляет пользовательские данные и не является восстановлением всей БД.
+
+Импорт выполняется отдельно после запуска приложения: ошибка наполнения не должна
+останавливать сайт. Режим `release` по-прежнему закреплён за механическим пакетом,
+для аксессуаров обязателен явный `--directory`. На VPS без прямого shell-доступа агента
+команду выполняет оператор. Публичные карточки затем проверяются через API и браузер;
+успешный CI или SQL-миграция сами по себе не подтверждают применение данных.
+
+Адресные регрессии: `tests/accessory-catalog-seed.test.ts` (весь пакет, SQL-допуск,
+сосуществование двух batches, сохранение чужого текста/галереи, идемпотентность,
+источники и пользовательские настройки) и существующие тесты импорта/каталога.

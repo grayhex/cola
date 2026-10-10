@@ -172,6 +172,20 @@ export const componentBrands = [
   "OneUp",
   "KS",
   "Öhlins",
+  "Garmin",
+  "Wahoo",
+  "Magene",
+  "Hammerhead",
+  "Apidura",
+  "Ortlieb",
+  "Lezyne",
+  "Cateye",
+  "Knog",
+  "Topeak",
+  "SKS",
+  "SILCA",
+  "ABUS",
+  "Pletscher",
 ];
 const generic =
   /^(?:alloy|aluminium|aluminum|carbon|steel|integrated|internal|sealed|hydraulic|disc|one-piece|custom|интегрированн|внутренн|закрыт|алюмини|сталь|карбон|гидравлическ)/i;

@@ -41,6 +41,7 @@ export const productCategories = [
   "Подседельная сумка",
   "Рамная сумка",
   "Сумка на руль",
+  "Сумка на багажник",
 ];
 export const pairedCategories: Record<string, string[]> = {
   "Передняя покрышка": ["Покрышки", "front"],
