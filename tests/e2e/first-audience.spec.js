@@ -557,6 +557,17 @@ test("unverified rider keeps bike fields, photo and component in a private draft
   await expect(wizard).toContainText(
     "Для публичного велосипеда подтвердите почту",
   );
+  await wizard.getByLabel("Компонент", { exact: true }).press("Tab");
+  const draftButton = wizard.getByRole("button", {
+    name: "Сохранить приватный черновик",
+    exact: true,
+  });
+  await draftButton.scrollIntoViewIfNeeded();
+  expect(
+    await wizard
+      .locator(".wizard-email-policy")
+      .evaluate((el) => el.scrollWidth <= el.clientWidth + 1),
+  ).toBe(true);
   await wizard.screenshot({
     path: info.outputPath("private-bike-draft.png"),
     animations: "disabled",

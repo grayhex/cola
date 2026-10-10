@@ -2015,7 +2015,7 @@ export default function BikeWizard({
         !savedId &&
         bike.is_public &&
         !viewer?.email_verified_at && (
-          <div className="notice">
+          <div className="notice wizard-email-policy">
             <p>
               Для публичного велосипеда подтвердите почту. До этого можно
               сохранить приватный черновик с фотографиями и комплектующими.
