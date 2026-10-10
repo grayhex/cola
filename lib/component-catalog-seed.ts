@@ -57,6 +57,24 @@ export const seedMechanicalCategories = [
   "Подседельный штырь",
   "Дроппер",
 ];
+export const seedAccessoryCategories = [
+  "Передний свет",
+  "Задний свет",
+  "Крылья",
+  "Багажник",
+  "Подножка",
+  "Звонок",
+  "Велокомпьютер",
+  "Датчики",
+  "Замок",
+  "Насос",
+  "Инструменты",
+  "Фляга / держатель",
+  "Подседельная сумка",
+  "Рамная сумка",
+  "Сумка на руль",
+  "Сумка на багажник",
+];
 const fact = z.object({ name: clean(200), value: clean(1000) }).strict();
 const source = z
   .object({
@@ -77,6 +95,9 @@ const attempt = z
   })
   .strict();
 export const seedPhoto = z.discriminatedUnion("status", [
+  z
+    .object({ status: z.literal("not_requested"), reason: clean(1000) })
+    .strict(),
   z
     .object({
       status: z.literal("ready"),
@@ -125,6 +146,7 @@ export const catalogSeedEntry = z
         verified: z.boolean(),
         sourceIds: z.array(key).min(1).max(10),
         note: clean(1000),
+        primarySourceGap: clean(1000).optional(),
       })
       .strict(),
     inclusion: clean(1000),
@@ -135,6 +157,7 @@ export const catalogSeedEntry = z
 export const catalogSeedScope = z
   .object({
     schemaVersion: z.literal(1),
+    domain: z.enum(["mechanical", "accessories"]).optional(),
     batch: key,
     categories: z.array(
       z
@@ -182,16 +205,27 @@ export function validateCatalogSeed(input: unknown, scopeInput: unknown) {
     throw new Error(message);
   };
   if (scope.batch !== batch.batch) fail("Scope and batch disagree");
+  const accessories = scope.domain === "accessories";
+  // The already published mechanical v1 manifest/hash remains immutable when
+  // the product taxonomy grows. New accessory manifests classify today's list.
+  const taxonomy = accessories
+    ? productCategories
+    : productCategories.filter((category) => category !== "Сумка на багажник");
+  const admitted = accessories
+    ? seedAccessoryCategories
+    : seedMechanicalCategories;
   const categories = new Map(scope.categories.map((c) => [c.category, c]));
   if (
     categories.size !== scope.categories.length ||
-    categories.size !== productCategories.length ||
-    productCategories.some((c) => !categories.has(c))
+    categories.size !== taxonomy.length ||
+    taxonomy.some((c) => !categories.has(c))
   )
     fail("Scope must classify every product category exactly once");
   for (const c of categories.values()) {
-    if (c.included !== seedMechanicalCategories.includes(c.category))
-      fail(`Category is outside the mechanical v1 boundary: ${c.category}`);
+    if (c.included !== admitted.includes(c.category))
+      fail(
+        `Category is outside the ${accessories ? "accessories" : "mechanical v1"} boundary: ${c.category}`,
+      );
     if (c.included && (!c.target || c.target[0] > c.target[1]))
       fail(`Missing or invalid target: ${c.category}`);
   }
@@ -213,7 +247,7 @@ export function validateCatalogSeed(input: unknown, scopeInput: unknown) {
       !categories.get(entry.category)?.included ||
       productCategory(entry.category) !== entry.category
     )
-      fail(`${at}: accessory, spec-only or out-of-scope category`);
+      fail(`${at}: spec-only or out-of-scope category`);
     // Common manufacturer codes make a mislabeled cassette/lever/upgrade kit
     // detectable too; changing its category is not admission to this package.
     if (
@@ -252,14 +286,29 @@ export function validateCatalogSeed(input: unknown, scopeInput: unknown) {
     approved++;
     if (!entry.identity.verified)
       fail(`${at}: unverified identity cannot be approved`);
+    const identitySources = entry.sources.filter((s) =>
+      entry.identity.sourceIds.includes(s.id),
+    );
+    const primary = identitySources.some((s) =>
+      ["manufacturer", "technical_archive"].includes(s.role),
+    );
+    // Editorially reviewed independent retailers are an explicit accessory-only
+    // fallback. Subdomains are not independent evidence. This conservative
+    // grouping also rejects pairs under shared suffixes such as co.uk.
+    const retailers = new Set(
+      identitySources
+        .filter((s) => s.role === "retailer")
+        .map((s) =>
+          new URL(s.url).hostname.toLowerCase().split(".").slice(-2).join("."),
+        ),
+    );
     if (
-      !entry.sources.some(
-        (s) =>
-          entry.identity.sourceIds.includes(s.id) &&
-          ["manufacturer", "technical_archive"].includes(s.role),
-      )
+      !primary &&
+      !(accessories && entry.identity.primarySourceGap && retailers.size >= 2)
     )
-      fail(`${at}: approved identity needs a primary source`);
+      fail(
+        `${at}: approved identity needs a primary source or documented independent accessory evidence`,
+      );
     for (const code of entry.codes)
       if (
         !entry.sources.some((s) =>
