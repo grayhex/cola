@@ -74,6 +74,7 @@ try {
     "060_nearby_delivery",
     "061_user_blocks",
     "062_photo_background",
+    "063_component_seed_brands",
   ]) {
     const { rowCount } = await client.query(
       "SELECT 1 FROM schema_migrations WHERE version=$1",
