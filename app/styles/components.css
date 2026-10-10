@@ -1295,6 +1295,9 @@
     /* #378: about 36 % wider than the former 1120 px, the room used by columns
        (below); the window never goes past the screen. */
     max-width: min(1520px, calc(100vw - 2 * var(--gutter)));
+    /* Keep the page gutter at both edges. Native WebKit date/time controls
+       need a little more height than Chromium in the usual three columns. */
+    max-height: min(880px, calc(100dvh - 2 * var(--gutter)));
     padding: 0;
     /* Keep keyboard targets clear of the sticky heading and action row. */
     scroll-padding-block: var(--space-20);

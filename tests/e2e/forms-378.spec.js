@@ -257,17 +257,28 @@ test("four intent windows and advanced fields remain reachable at 200 percent de
     );
     const advanced = dialog.locator("summary", { hasText: "Дополнительно" });
     await advanced.focus();
+    await expect(advanced).toBeFocused();
     await page.keyboard.press("Enter");
+    await expect(dialog.locator("details.intent-advanced")).toHaveAttribute(
+      "open",
+      "",
+    );
     await expect(
-      dialog.getByLabel("Готовность знакомиться", { exact: true }),
+      dialog.getByRole("combobox", {
+        name: "Готовность знакомиться",
+        exact: true,
+      }),
     ).toBeVisible();
     await dialog
-      .getByLabel("Готовность знакомиться", { exact: true })
+      .getByRole("combobox", { name: "Готовность знакомиться", exact: true })
       .selectOption("true");
     await advanced.click();
     await advanced.click();
     await expect(
-      dialog.getByLabel("Готовность знакомиться", { exact: true }),
+      dialog.getByRole("combobox", {
+        name: "Готовность знакомиться",
+        exact: true,
+      }),
     ).toHaveValue("true");
     await expect(
       dialog.getByRole("button", { name: "Сохранить намерение", exact: true }),

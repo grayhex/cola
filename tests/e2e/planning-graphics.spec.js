@@ -216,8 +216,17 @@ test("independent planning graphics: local uploads, protected usage, lazy animat
           ).toBeLessThan(4);
           expect(headBox.height).toBeLessThanOrEqual(80);
           if (width === 1440 || width === 1920) {
+            const geometry = await dialog.evaluate((e) => ({
+              scroll: e.scrollHeight,
+              client: e.clientHeight,
+              children: Array.from(e.children, (c) => ({
+                class: c.className,
+                height: c.getBoundingClientRect().height,
+              })),
+            }));
             expect(
-              await dialog.evaluate((e) => e.scrollHeight > e.clientHeight + 1),
+              geometry.scroll > geometry.client + 1,
+              JSON.stringify({ slot, width, theme, ...geometry }),
             ).toBe(false);
             const columns = dialog.locator(
               ".planning-side-layout > .planning-side-column",
