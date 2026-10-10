@@ -1,3 +1,4 @@
+import { seededPickerModel } from "./public-site.ts";
 import { currentBikeWeek } from "./bike-week.ts";
 import { ridePulse } from "./ride-pulse.ts";
 import type { Classification as ClassificationType } from "./contracts.ts";
@@ -78,6 +79,7 @@ export async function componentHits(q: Queryable, text: string, limit: number) {
          JOIN component_models origin ON origin.id=c.model_id JOIN bikes b ON b.id=c.bike_id JOIN users u ON u.id=b.owner_id
          WHERE coalesce(origin.merged_into,origin.id)=m.id AND b.is_public AND NOT u.blocked),1
        FROM component_models m WHERE m.first_public_at IS NOT NULL AND NOT m.archived AND m.merged_into IS NULL
+         AND ${seededPickerModel}
          AND (${literalMatch("m.name")} OR EXISTS(SELECT 1 FROM component_model_names n JOIN component_models origin ON origin.id=n.model_id
            WHERE coalesce(origin.merged_into,origin.id)=m.id AND strpos(n.name_key,component_key($1))>0))
        ), chosen AS (SELECT DISTINCT ON (lower(normalize(name,NFKC))) name,bikes

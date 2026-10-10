@@ -391,6 +391,13 @@ test("populated catalog: renamed alias, merge review, original gallery and quota
         targetVersion: 1,
       }),
     );
+    const ordinaryOptions = await getPublicSite(db);
+    assert.ok(
+      !ordinaryOptions.catalog.parts[batch.entries[0].category].includes(
+        "Shimano DEORE RD-M6100-SGS editorial",
+      ),
+    );
+    assert.deepEqual(await componentHits(db, "RD-M6100-SGS", 10), []);
     const plan = await planCatalogSeed(db, batch, sha, admin.id);
     assert.equal(plan.entries[0].name, "Shimano DEORE RD-M6100-SGS editorial");
     assert.equal(plan.entries[1].action, "conflict");
