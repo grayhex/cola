@@ -56,14 +56,18 @@ export default function BugReportDialog({ onClose }: { onClose: () => void }) {
     >
       {sent ? (
         <div className="notice" role="status">
-          <p>Почтовый сервер принял сообщение для владельца сайта.</p>
-          <p className="help">
-            Номер отчёта: {sent}. Это не подтверждение доставки во входящие или
-            прочтения.
-          </p>
-          <button type="button" className="button" onClick={onClose}>
-            Закрыть
-          </button>
+          <div>
+            <p>Почтовый сервер принял сообщение для владельца сайта.</p>
+            <p className="help">
+              Номер отчёта: {sent}. Это не подтверждение доставки во входящие
+              или прочтения.
+            </p>
+            <div className="form-actions">
+              <button type="button" className="button" onClick={onClose}>
+                Закрыть
+              </button>
+            </div>
+          </div>
         </div>
       ) : (
         <form

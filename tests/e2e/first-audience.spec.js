@@ -125,6 +125,17 @@ test("guest bug report: keyboard focus, both themes and widths, failure preserve
     .getByRole("button", { name: "Отправить сообщение", exact: true })
     .click();
   await expect(dialog.getByRole("status")).toContainText("принял сообщение");
+  await page.setViewportSize({ width: 360, height: 900 });
+  for (const value of ["light", "dark"]) {
+    await theme(page, value);
+    expect(
+      await dialog.evaluate((el) => el.scrollWidth <= el.clientWidth + 1),
+    ).toBe(true);
+    await dialog.screenshot({
+      path: info.outputPath(`bug-report-success-${value}-360.png`),
+      animations: "disabled",
+    });
+  }
 });
 
 test("article HTML table paste survives publication and editing; complex tables keep surrounding text; accents stay readable", async ({
