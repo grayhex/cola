@@ -568,7 +568,7 @@ test("unverified rider keeps bike fields, photo and component in a private draft
   await expect(wizard).toContainText(
     "Для публичного велосипеда подтвердите почту",
   );
-  await wizard.getByLabel("Компонент", { exact: true }).press("Tab");
+  await page.keyboard.press("Tab");
   const draftButton = wizard.getByRole("button", {
     name: "Сохранить приватный черновик",
     exact: true,
