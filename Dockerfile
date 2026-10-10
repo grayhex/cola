@@ -41,6 +41,7 @@ RUN addgroup -S colabike && adduser -S colabike -G colabike && mkdir uploads rid
 
 # Explicit one-shot/operator target. No Next build is required for this image.
 FROM runtime-base AS ops
+RUN apk add --no-cache postgresql17-client && mkdir -m 700 catalog-backups && chown colabike:colabike catalog-backups
 # Copy regular files independently, retaining pnpm relative symlinks. This avoids
 # BuildKit's cross-stage hardlink copier for duplicate pnpm license entries.
 RUN --mount=type=bind,from=ops-dependencies,source=/app/node_modules,target=/runtime-node_modules \
@@ -49,7 +50,8 @@ COPY package.json ./
 COPY lib ./lib
 COPY services/bike-resolver/src/component-identity.ts ./services/bike-resolver/src/component-identity.ts
 COPY db ./db
-COPY scripts/check-runtime.js scripts/migrate.js \
+COPY data/component-catalog ./data/component-catalog
+COPY scripts/check-runtime.js scripts/migrate.js scripts/component-catalog-seed.ts scripts/component-catalog-import.ts \
     scripts/bootstrap-admin.js scripts/set-admin.js scripts/reset-password.js \
     scripts/audit-photo-files.js scripts/recalculate-photo-storage.js \
     scripts/cleanup-rides.js scripts/chat-sync.js scripts/chat-setup.js scripts/activity-sync.js scripts/notification-email.js scripts/notification-push.js scripts/bike-week.js \

@@ -21,6 +21,7 @@ import { headers } from "next/headers";
 import { themeBootstrap } from "../lib/theme.ts";
 import SiteProvider from "./ui/site-provider.tsx";
 import { AddBikeProvider } from "./ui/add-bike.tsx";
+import { getPublicSite } from "../lib/public-site.ts";
 import { getSite } from "../lib/site.ts";
 import { hidden } from "../lib/indexing.ts";
 import { currentViewer } from "../lib/viewer.ts";
@@ -47,7 +48,7 @@ export default async function Layout({
   children: React.ReactNode;
 }) {
   const nonce = (await headers()).get("x-cola-nonce") || undefined;
-  const [site, user] = await Promise.all([getSite(), currentViewer()]);
+  const [site, user] = await Promise.all([getPublicSite(), currentViewer()]);
   // What /api/me would answer, in the same JSON shape (dates as strings).
   const viewer: ViewerDto | null = user
     ? JSON.parse(JSON.stringify(user))

@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { db } from "../db.ts";
 import { notModified, notModifiedResponse } from "../media-cache.ts";
-import { getSite } from "../site.ts";
+import { getPublicSite } from "../public-site.ts";
 import { ok, safely } from "./respond.ts";
 import { toSiteCatalog } from "./wizard-mappers.ts";
 
@@ -21,7 +21,7 @@ const catalogEtag = (body: unknown) =>
 /** GET /api/v1/catalog */
 export function handleSiteCatalog(req: Request) {
   return safely(async () => {
-    const catalog = toSiteCatalog(await getSite(db));
+    const catalog = toSiteCatalog(await getPublicSite(db));
     const etag = catalogEtag(catalog);
     if (notModified(req, etag))
       return notModifiedResponse(etag, {

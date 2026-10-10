@@ -56,3 +56,9 @@ public/test-map-style.json
 **/*.log
 **/*.tsbuildinfo
 **/.DS_Store
+
+!data/
+!data/component-catalog/
+!data/component-catalog/**
+!scripts/component-catalog-seed.ts
+!scripts/component-catalog-import.ts

@@ -111,9 +111,16 @@ services:
       context: .
       target: ops
     environment: *app-environment
+    command:
+      [
+        "sh",
+        "-c",
+        "node scripts/check-runtime.js && node scripts/migrate.js && node scripts/component-catalog-import.ts release",
+      ]
     volumes:
       - photos:/app/uploads
       - rides:/app/rides
+      - catalog-backups:/app/catalog-backups
     depends_on:
       db:
         condition: service_healthy
@@ -223,3 +230,4 @@ volumes:
   database:
   photos:
   rides:
+  catalog-backups:
