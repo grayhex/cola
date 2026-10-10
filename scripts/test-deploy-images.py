@@ -278,7 +278,7 @@ class ForcedCommandTests(unittest.TestCase):
     def test_prebuilt_failure_never_builds_or_records_success(self):
         self.wrapper(prebuilt_exit=1)
 
-    def test_prebuilt_success_uses_no_build_and_records_commit(self):
+    def test_prebuilt_success_uses_no_build_records_commit_and_cleans_ci_tags(self):
         self.wrapper(prebuilt_exit=0)
 
     def wrapper(self, prebuilt_exit):
@@ -301,7 +301,14 @@ class ForcedCommandTests(unittest.TestCase):
             fixtures = {
                 "runuser": 'shift 3; exec "$@"',
                 "git": f'if [ "$3" = rev-parse ]; then echo {SHA}; fi',
-                "docker": f'printf "%s\\n" "$*" >> "{commands}"',
+                "docker": (
+                    f'printf "%s\\n" "$*" >> "{commands}"\n'
+                    'if [ "$1" = image ] && [ "$2" = ls ]; then\n'
+                    f'  printf "%s\\n" "cola-ci-app:{SHA}" "cola-ci-ops:{SHA}" '
+                    f'"cola-ci-resolver:{SHA}" "cola-ci-app:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" '
+                    '"unrelated:latest" "cola-ci-app:not-a-sha"\n'
+                    'fi'
+                ),
             }
             for name, body in fixtures.items():
                 script = directory / name
@@ -318,6 +325,17 @@ class ForcedCommandTests(unittest.TestCase):
                 self.assertEqual((state / "verified-sha").read_text(), "previous\n")
             else:
                 self.assertIn("compose up --no-build -d --wait --wait-timeout 180", calls)
+                self.assertIn("image ls --format {{.Repository}}:{{.Tag}}", calls)
+                removed = {call.removeprefix("image rm ") for call in calls
+                           if call.startswith("image rm ")}
+                self.assertEqual(removed, {
+                    f"cola-ci-app:{SHA}",
+                    f"cola-ci-ops:{SHA}",
+                    f"cola-ci-resolver:{SHA}",
+                    "cola-ci-app:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                })
+                self.assertNotIn("image rm unrelated:latest", calls)
+                self.assertNotIn("image rm cola-ci-app:not-a-sha", calls)
                 self.assertEqual((state / "verified-sha").read_text(), SHA + "\n")
 
 

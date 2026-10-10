@@ -269,10 +269,13 @@ test("notifications: a mark has its own pending and error state, keeps the filte
     // The first mark of the reused token waits, then fails; the next passes.
     let release = () => {};
     const gate = new Promise((resolve) => (release = resolve));
+    let releaseLink = () => {};
+    const linkGate = new Promise((resolve) => (releaseLink = resolve));
     const calls = [];
     await page.route("**/api/community/notifications/*/read", async (route) => {
       const id = route.request().url().split("/").at(-2);
       calls.push(id);
+      if (id === ids.bikeWeek) await linkGate;
       if (id !== ids.reuse || calls.filter((c) => c === id).length > 1)
         return route.continue();
       await gate;
@@ -324,17 +327,31 @@ test("notifications: a mark has its own pending and error state, keeps the filte
     );
     expect(calls.filter((id) => id === ids.reuse)).toHaveLength(2);
 
-    // The link of a notice marks it too and still opens its target.
+    // Client-side navigation can finish before the mark. Hold the write until
+    // after navigation, then wait for the actual database change, not the URL.
     await page
       .locator(`[data-notification-id="${ids.bikeWeek}"]`)
       .getByRole("link", { name: "Подготовить материал для главной" })
       .click();
     await expect(page).not.toHaveURL(/\/notifications$/);
-    const marked = await db.query(
+    await expect
+      .poll(() => calls.filter((id) => id === ids.bikeWeek).length)
+      .toBe(1);
+    const pendingMark = await db.query(
       "SELECT read_at FROM notifications WHERE id=$1",
       [ids.bikeWeek],
     );
-    expect(marked.rows[0].read_at).not.toBeNull();
+    expect(pendingMark.rows[0].read_at).toBeNull();
+    releaseLink();
+    await expect
+      .poll(async () => {
+        const marked = await db.query(
+          "SELECT read_at FROM notifications WHERE id=$1",
+          [ids.bikeWeek],
+        );
+        return marked.rows[0].read_at;
+      })
+      .not.toBeNull();
   } finally {
     await forgetWeek(db);
     await db.end();

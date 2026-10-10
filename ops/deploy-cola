@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-# COLA_VERIFIED_DEPLOY_V3
+# COLA_VERIFIED_DEPLOY_V4
 # Install once as root at /usr/local/sbin/deploy-cola. CI supplies its tested SHA.
 
 repo=/opt/stacks/cola
@@ -34,6 +34,23 @@ repo_owner=$(stat -c '%U' "$repo")
 
 git_as_owner() {
   runuser -u "$repo_owner" -- git -C "$repo" "$@"
+}
+
+cleanup_prebuilt_images() {
+  local tag removed=0
+  # CI archive tags are transport names only. Production containers use the
+  # Compose aliases created by deploy-cola-images.py, so these SHA tags can be
+  # removed after a successful deployment. Keep cleanup scoped to ColaBike:
+  # no global image/cache/volume prune belongs in the production wrapper.
+  while IFS= read -r tag; do
+    [[ "$tag" =~ ^cola-ci-(app|ops|resolver):[a-f0-9]{40}$ ]] || continue
+    if docker image rm "$tag" >/dev/null 2>&1; then
+      ((removed += 1))
+    else
+      echo "Warning: could not remove transient CI image tag $tag" >&2
+    fi
+  done < <(docker image ls --format '{{.Repository}}:{{.Tag}}' 2>/dev/null || true)
+  echo "Removed $removed transient CI image tag(s)"
 }
 
 git_as_owner fetch --prune origin main
@@ -72,4 +89,7 @@ fi
 "${compose[@]}" ps
 
 printf '%s\n' "$sha" > "$state_dir/verified-sha"
+if "$prebuilt"; then
+  cleanup_prebuilt_images
+fi
 echo "Deployed tested commit $sha"
