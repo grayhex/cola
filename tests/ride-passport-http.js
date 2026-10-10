@@ -98,6 +98,7 @@ assert.equal(
   403,
 );
 for (const fields of [
+  { passport: {} },
   { passport: { surprise: true } },
   { passport: { distanceKm: { min: 40, max: 20 } } },
   { expectedEndAt: "2031-03-29T08:00:00Z" },
@@ -125,7 +126,7 @@ const track = await author(`/api/rides/${plan.id}/track`, {
 });
 assert.equal(track.status, 200, track.text);
 const data = (await guest("/api/rides/public/" + plan.shareId)).json().ride;
-assert.deepEqual(data.passport, {});
+assert.deepEqual(data.passport, input.passport);
 assert.equal(data.meetingPoint, "");
 assert.equal(
   data.geometry.flat().some((p) => p[0] === loop[0][0] && p[1] === loop[0][1]),
