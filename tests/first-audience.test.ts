@@ -145,6 +145,17 @@ test("safe article tables round-trip empty cells, links, pipes and long content;
   getSchema(richExtensions()).nodeFromJSON(doc).check();
   assert.equal(doc.content?.[0].type, "table");
   assert.deepEqual(parseRichText(serializeRichText(doc)), doc);
+  for (const text of [
+    String.raw`C:\| A`,
+    String.raw`C:\folder`,
+    String.raw`A \\| B`,
+  ]) {
+    const literal = parseRichText("| A | B |\n| --- | --- |\n| text | next |");
+    const cell = literal.content?.[0].content?.[1].content?.[0].content?.[0];
+    assert.ok(cell);
+    cell.content = [{ type: "text", text }];
+    assert.deepEqual(parseRichText(serializeRichText(literal)), literal);
+  }
   assert.match(richPlainText(source), /Модель \| Для кого/);
   const unsafe = parseRichText(
     "| A | B |\n| --- | --- |\n| [bad](javascript:alert%281%29) | <img src=x onerror=alert(1)> |",

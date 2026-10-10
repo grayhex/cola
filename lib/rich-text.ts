@@ -87,7 +87,10 @@ export function richExtensions() {
           Array.from({ length: count }, (_, index) =>
             helpers
               .renderChildren(row?.content?.[index]?.content || [])
-              .replace(/\|/g, "\\|")
+              // Children are already Markdown: retain existing escape pairs.
+              .replace(/\\[\s\S]|\|/g, (token) =>
+                token === "|" ? "\\|" : token,
+              )
               .replace(/\r?\n/g, " / ")
               .trim(),
           ).join(" | ") +
