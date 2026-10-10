@@ -366,9 +366,12 @@ test("visibility is in view: a new intent is for the community, an existing priv
   await windowAndPurpose(page, dialog);
   await nameArea(dialog, "Видимость");
   // Not folded away: «Дополнительно» holds the rest and says nothing more.
-  const community = dialog.getByLabel("Сообществу ColaBike", { exact: true });
+  const community = dialog.getByRole("combobox", {
+    name: "Кому видно",
+    exact: true,
+  });
   await expect(community).toBeVisible();
-  await expect(community).toBeChecked();
+  await expect(community).toHaveValue("community");
   await expect(dialog.locator("details.intent-advanced > summary")).toHaveText(
     "Дополнительно",
   );
@@ -400,11 +403,11 @@ test("visibility is in view: a new intent is for the community, an existing priv
     .click();
   const editor = page.getByRole("dialog", { name: "Изменить намерение" });
   await expect(
-    editor.getByLabel("Только мне — для подбора", { exact: true }),
-  ).toBeChecked();
+    editor.getByRole("combobox", { name: "Кому видно", exact: true }),
+  ).toHaveValue("private");
   await expect(
-    editor.getByLabel("Сообществу ColaBike", { exact: true }),
-  ).not.toBeChecked();
+    editor.getByRole("combobox", { name: "Кому видно", exact: true }),
+  ).toHaveValue("private");
   await editor.getByRole("button", { name: "Сохранить изменения" }).click();
   await expect(editor).toHaveCount(0);
   const stored = (await intents(page)).find((i) => i.id === id);

@@ -133,7 +133,7 @@ export const planningGraphicSlots = [
     section: "system",
     planning: true,
   },
-  // Above the search of the bike wizard's first step (#374).
+  // Square beside the search of the first step (#397).
   {
     key: "wizardSearchGraphic",
     label: "Мастер велосипеда, шаг «Поиск» · картинка или анимация",

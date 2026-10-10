@@ -377,11 +377,16 @@ test("the picture above the search is limited, reserved and never covers it: a s
         const reserved = await rect(graphic);
         const fieldBefore = await rect(field);
         // The room is kept before the picture arrives and is limited.
-        expect(reserved.height, kind).toBeLessThanOrEqual(141);
-        expect(reserved.width, kind).toBeLessThanOrEqual(480);
-        expect(reserved.y + reserved.height, kind).toBeLessThanOrEqual(
-          fieldBefore.y,
+        expect(Math.abs(reserved.height - reserved.width), kind).toBeLessThan(
+          2,
         );
+        expect(reserved.width, kind).toBeLessThanOrEqual(480);
+        if (width >= 900)
+          expect(reserved.x + reserved.width, kind).toBeLessThan(fieldBefore.x);
+        else
+          expect(reserved.y + reserved.height, kind).toBeLessThanOrEqual(
+            fieldBefore.y,
+          );
         release();
         await expect
           .poll(() =>
@@ -400,10 +405,13 @@ test("the picture above the search is limited, reserved and never covers it: a s
         expect(art.width, kind + " picture width").toBeLessThanOrEqual(
           reserved.width + 1,
         );
-        expect(
-          art.y + art.height,
-          kind + " picture bottom",
-        ).toBeLessThanOrEqual(fieldBefore.y);
+        if (width >= 900)
+          expect(art.x + art.width, kind).toBeLessThan(fieldBefore.x);
+        else
+          expect(
+            art.y + art.height,
+            kind + " picture bottom",
+          ).toBeLessThanOrEqual(fieldBefore.y);
         // Arrived: nothing moved, nothing covers the search, and a click on it
         // reaches it.
         const after = await rect(graphic);

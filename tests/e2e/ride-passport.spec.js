@@ -123,8 +123,8 @@ test("planner (#253): when and where first, tiles, visibility, advanced, themes,
   );
   await expect(dialog.getByText("Радиус приватности")).toHaveCount(0);
   await expect(
-    access.getByRole("radio", { name: "Публичная покатушка" }),
-  ).toBeChecked();
+    access.getByRole("combobox", { name: "Кто видит покатушку" }),
+  ).toHaveValue("true");
   await expect(access.getByLabel("Кто видит точное место встречи")).toHaveValue(
     "participants",
   );

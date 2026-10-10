@@ -168,9 +168,19 @@ test("independent planning graphics: local uploads, protected usage, lazy animat
     await expect(page.locator("#together-heading")).toBeVisible();
     expect(assetRequests).toHaveLength(0);
     const actions = page.locator("section[aria-labelledby='together-heading']");
-    for (const width of [390, 1440])
+    for (const width of [390, 1366, 1440, 1920])
       for (const theme of ["light", "dark"]) {
-        await page.setViewportSize({ width, height: 1000 });
+        await page.setViewportSize({
+          width,
+          height:
+            width === 1920
+              ? 1080
+              : width === 1440
+                ? 900
+                : width === 1366
+                  ? 768
+                  : 844,
+        });
         await page.emulateMedia({ colorScheme: theme });
         for (const [button, title, slot] of [
           ["Хочу кататься", "Новое намерение", "intentDialogGraphic"],
@@ -191,43 +201,57 @@ test("independent planning graphics: local uploads, protected usage, lazy animat
           const graphic = dialog.locator(`[data-planning-graphic='${slot}']`);
           await expect(graphic).toBeVisible();
           await expect(dialog.locator(".modal-head")).toContainText(title);
-          // #382: the picture is larger, and the note of the window stands
-          // in the head, to the right of the title (under it on a phone),
-          // not as a paragraph of its own above the fields.
+          // #397: the art is a square in the body; the centered header is compact.
           const head = dialog.locator(".modal-head");
           const art = await graphic.boundingBox();
-          expect(art.width).toBeGreaterThanOrEqual(width === 1440 ? 100 : 56);
-          expect(art.width).toBeLessThanOrEqual(112);
-          await expect(dialog.locator(".planning-lead")).toHaveCount(0);
+          const headBox = await head.boundingBox();
+          const titleBox = await head.getByRole("heading").boundingBox();
+          expect(Math.abs(art.width - art.height)).toBeLessThan(2);
+          expect(art.width).toBeGreaterThanOrEqual(width >= 900 ? 300 : 90);
+          expect(art.y).toBeGreaterThanOrEqual(headBox.y + headBox.height - 1);
+          expect(
+            Math.abs(
+              titleBox.x + titleBox.width / 2 - (headBox.x + headBox.width / 2),
+            ),
+          ).toBeLessThan(4);
+          expect(headBox.height).toBeLessThanOrEqual(80);
+          if (width === 1440 || width === 1920) {
+            const geometry = await dialog.evaluate((e) => ({
+              scroll: e.scrollHeight,
+              client: e.clientHeight,
+              children: Array.from(e.children, (c) => ({
+                class: c.className,
+                height: c.getBoundingClientRect().height,
+              })),
+            }));
+            expect(
+              geometry.scroll > geometry.client + 1,
+              JSON.stringify({ slot, width, theme, ...geometry }),
+            ).toBe(false);
+            const columns = dialog.locator(
+              ".planning-side-layout > .planning-side-column",
+            );
+            const first = await columns.first().boundingBox();
+            expect(first.x).toBeGreaterThan(art.x + art.width);
+          }
           if (slot === "intentDialogGraphic") {
-            const note = head.locator(".modal-description");
-            await expect(note).toContainText("конкретный раз");
-            const [title_, note_, head_] = [
-              await head.getByRole("heading").boundingBox(),
-              await note.boundingBox(),
-              await head.boundingBox(),
-            ];
-            if (width === 1440)
-              expect(note_.x).toBeGreaterThanOrEqual(title_.x + title_.width);
-            else
-              expect(note_.y).toBeGreaterThanOrEqual(
-                title_.y + title_.height - 2,
-              );
-            expect(note_.y).toBeGreaterThanOrEqual(head_.y);
-            expect(note_.y + note_.height).toBeLessThanOrEqual(
-              head_.y + head_.height,
+            await expect(head.locator(".modal-description")).toHaveCount(0);
+            const hint = head.getByRole("button", {
+              name: "Подробнее: Намерение",
+              exact: true,
+            });
+            await hint.click();
+            await expect(head.getByRole("tooltip")).toContainText(
+              "конкретный раз",
             );
-            expect(note_.x + note_.width).toBeLessThanOrEqual(
-              head_.x + head_.width,
-            );
-            // A small secondary note: 12–14 px on a desktop, never smaller
-            // than 12 px and never the size of the title on a phone.
-            const size = await note.evaluate((e) =>
-              parseFloat(getComputedStyle(e).fontSize),
-            );
-            expect(size).toBeGreaterThanOrEqual(12);
-            expect(size).toBeLessThanOrEqual(width === 1440 ? 14 : 16);
-            if (width === 1440) expect(head_.height).toBeLessThanOrEqual(120);
+            if (width === 1440 && theme === "light") {
+              await head.getByRole("tooltip").hover();
+              await page.waitForTimeout(5100);
+              await expect(head.getByRole("tooltip")).toBeVisible();
+            }
+            await page.keyboard.press("Escape");
+            await expect(dialog).toBeVisible();
+            await expect(head.getByRole("tooltip")).toBeHidden();
           }
           if (slot === "intentDialogGraphic") {
             await expect(graphic.locator("img")).toHaveAttribute(

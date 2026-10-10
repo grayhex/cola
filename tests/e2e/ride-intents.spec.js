@@ -152,7 +152,10 @@ test("intent lifecycle without a bike: windows, preferences, themes, privacy and
   }
   for (const [name, locator] of [
     ["tiles", dialog.getByRole("group", { name: "Параметры поездки" })],
-    ["privacy", dialog.getByRole("group", { name: "Кому видно" })],
+    [
+      "privacy",
+      dialog.getByRole("combobox", { name: "Кому видно", exact: true }),
+    ],
   ]) {
     if (name === "privacy") await advanced(dialog);
     await locator.scrollIntoViewIfNeeded();
@@ -175,9 +178,11 @@ test("intent lifecycle without a bike: windows, preferences, themes, privacy and
   // A new intent is for the community by default (#370); this one is kept
   // private on purpose, so the reader below sees nothing until it is shared.
   await expect(
-    dialog.getByLabel("Сообществу ColaBike", { exact: true }),
-  ).toBeChecked();
-  await dialog.getByLabel("Только мне — для подбора", { exact: true }).check();
+    dialog.getByRole("combobox", { name: "Кому видно", exact: true }),
+  ).toHaveValue("community");
+  await dialog
+    .getByRole("combobox", { name: "Кому видно", exact: true })
+    .selectOption("private");
   await dialog
     .getByRole("button", { name: "Сохранить намерение", exact: true })
     .click();
@@ -203,7 +208,9 @@ test("intent lifecycle without a bike: windows, preferences, themes, privacy and
     await card.getByRole("button", { name: "Изменить", exact: true }).click();
     const editor = page.getByRole("dialog", { name: "Изменить намерение" });
     await advanced(editor);
-    await editor.getByLabel("Сообществу ColaBike", { exact: true }).check();
+    await editor
+      .getByRole("combobox", { name: "Кому видно", exact: true })
+      .selectOption("community");
     await editor.getByRole("button", { name: "Сохранить изменения" }).click();
     await expect(editor).toHaveCount(0);
     expect((await reader.request.get("/api/ride-intents/" + id)).status()).toBe(
@@ -212,8 +219,8 @@ test("intent lifecycle without a bike: windows, preferences, themes, privacy and
     await card.getByRole("button", { name: "Изменить", exact: true }).click();
     await advanced(editor);
     await editor
-      .getByLabel("Только мне — для подбора", { exact: true })
-      .check();
+      .getByRole("combobox", { name: "Кому видно", exact: true })
+      .selectOption("private");
     await editor.getByRole("button", { name: "Сохранить изменения" }).click();
     await expect(editor).toHaveCount(0);
     expect((await reader.request.get("/api/ride-intents/" + id)).status()).toBe(
@@ -231,12 +238,12 @@ test("intent lifecycle without a bike: windows, preferences, themes, privacy and
   await card.getByRole("button", { name: "Повторить с новыми датами" }).click();
   await expect(dialog.getByLabel("Окно 1: с", { exact: true })).toHaveValue("");
   await expect(
-    dialog.getByLabel("Только мне — для подбора", { exact: true }),
-  ).toBeChecked();
+    dialog.getByRole("combobox", { name: "Кому видно", exact: true }),
+  ).toHaveValue("private");
   await dialog.getByRole("button", { name: "В выходные", exact: true }).click();
-  await expect(
-    dialog.getByRole("region", { name: "Предпросмотр намерения" }),
-  ).not.toContainText("Выберите точные даты");
+  await expect(dialog.getByLabel("Окно 1: с", { exact: true })).not.toHaveValue(
+    "",
+  );
   await dialog.getByRole("button", { name: "Сохранить намерение" }).click();
   await expect(dialog).toHaveCount(0);
   list = await (await page.request.get("/api/ride-intents")).json();

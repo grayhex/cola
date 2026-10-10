@@ -90,7 +90,7 @@ test("step 1: the search is wide and stands in the middle of the window, on a de
   }
 });
 
-test("step 1: a picture or an animation uploaded in the admin is shown above the search; an unset slot leaves no gap", async ({
+test("step 1: a picture or an animation uploaded in the admin stands beside the search; an unset slot leaves no gap", async ({
   page,
 }, info) => {
   const db = new pg.Client({ connectionString: process.env.DATABASE_URL });
@@ -241,18 +241,19 @@ test("step 1: a picture or an animation uploaded in the admin is shown above the
       );
       const art = await rect(graphic);
       const help = await rect(wizard.locator(".wizard-search .help"));
-      expect(art.y + art.height).toBeLessThanOrEqual(help.y + 1);
-      // A picture, not a mark by a title: bigger than the 80 px mark.
-      expect(art.width).toBeGreaterThan(width >= 700 ? 300 : 200);
-      expect(art.width).toBeLessThanOrEqual(480);
+      expect(Math.abs(art.width - art.height)).toBeLessThan(2);
       const field = await rect(
         wizard.getByLabel("Модель, год и комплектация", { exact: true }),
       );
       const dialog = await rect(wizard);
-      expect(
-        Math.abs(art.x + art.width / 2 - (field.x + field.width / 2)),
-      ).toBeLessThan(8);
-      if (width >= 700) expect(field.width).toBeGreaterThan(760);
+      if (width >= 900) {
+        expect(art.width).toBeGreaterThan(300);
+        expect(field.x).toBeGreaterThan(art.x + art.width);
+        expect(field.width).toBeGreaterThan(600);
+      } else {
+        expect(art.y + art.height).toBeLessThanOrEqual(help.y + 1);
+        expect(art.width).toBeLessThanOrEqual(100);
+      }
       expect(await pageOverflow(page)).toBeNull();
       expect(dialog.height).toBeLessThanOrEqual(height);
       expect(

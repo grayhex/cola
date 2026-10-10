@@ -273,13 +273,18 @@ test("planners: «Дополнительно» starts folded in both windows and
   // #370: the title says nothing but «Дополнительно»; who sees the intent is
   // chosen in plain view, and a new intent is for the community.
   await expect(extra.locator("summary")).toHaveText("Дополнительно");
-  const community = intent.getByLabel("Сообществу ColaBike", { exact: true });
+  const community = intent.getByRole("combobox", {
+    name: "Кому видно",
+    exact: true,
+  });
   await expect(community).toBeVisible();
-  await expect(community).toBeChecked();
+  await expect(community).toHaveValue("community");
   await expect(intent.getByLabel("Готовность знакомиться")).toBeHidden();
   await extra.locator("summary").click();
   await intent.getByLabel("Готовность знакомиться").selectOption("true");
-  await intent.getByLabel("Только мне — для подбора", { exact: true }).check();
+  await intent
+    .getByRole("combobox", { name: "Кому видно", exact: true })
+    .selectOption("private");
   await extra.locator("summary").click();
   await expect(intent.getByLabel("Готовность знакомиться")).toBeHidden();
   await expect(extra.locator("summary")).toHaveText("Дополнительно");
@@ -333,10 +338,15 @@ test("one «Хочу кататься» flow: the same «Новое намере
   const dialog = page.getByRole("dialog", { name: "Новое намерение" });
   await expect(dialog).toBeVisible();
   await expect(page).toHaveURL(/\/ride-intents$/);
-  const lead = await dialog
-    .locator(".modal-head .modal-description")
-    .textContent();
+  const lead = await dialog.locator(".modal-head [role=tooltip]").textContent();
   expect(lead).toContain("конкретный раз");
+  await dialog
+    .getByRole("button", { name: "Подробнее: Намерение", exact: true })
+    .focus();
+  await expect(dialog.locator(".modal-head [role=tooltip]")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeVisible();
+  await expect(dialog.locator(".modal-head [role=tooltip]")).toBeHidden();
   await page.keyboard.press("Escape");
   await expect(dialog).toHaveCount(0);
   const main = page.locator("main");
@@ -354,9 +364,7 @@ test("one «Хочу кататься» flow: the same «Новое намере
       .getByRole("button", { name: "Хочу кататься" }),
     dialog,
   );
-  await expect(dialog.locator(".modal-head .modal-description")).toHaveText(
-    lead,
-  );
+  await expect(dialog.locator(".modal-head [role=tooltip]")).toHaveText(lead);
   await expect(dialog.getByLabel("Окно 1: с", { exact: true })).toHaveValue("");
   await expect(
     dialog.getByRole("button", {
@@ -373,7 +381,7 @@ test("one «Хочу кататься» flow: the same «Новое намере
   }
 });
 
-test("components: illustrations fit whole, five models across, and the model page has an action row, a description and photos side by side", async ({
+test("components: illustrations fit whole, four models beside the tree, and the model page has an action row, a description and photos side by side", async ({
   page,
   browser,
   isMobile,
@@ -458,7 +466,13 @@ test("components: illustrations fit whole, five models across, and the model pag
     expect(saved.status()).toBe(200);
     if (!isMobile) await page.setViewportSize({ width: 1600, height: 1000 });
     await page.goto("/components");
-    const tiles = page.locator("section[aria-label='Категории компонентов']");
+    const tiles = page.getByRole("navigation", {
+      name: "Категории компонентов",
+    });
+    if (isMobile)
+      await tiles
+        .getByRole("button", { name: "Категории", exact: true })
+        .click();
     const art = tiles.locator(`img[src$="/api/assets/${tall}"]`).first();
     await expect(art).toBeVisible();
     const box = await art.boundingBox();
@@ -466,12 +480,14 @@ test("components: illustrations fit whole, five models across, and the model pag
     expect(await art.evaluate((i) => getComputedStyle(i).objectFit)).toBe(
       "contain",
     );
-    // Group tiles in a row share one height, however tall the picture is.
-    const heights = await tiles
-      .locator("button[aria-expanded]")
-      .evaluateAll((nodes) =>
-        nodes.slice(0, 2).map((n) => Math.round(n.offsetHeight)),
-      );
+    // Compact root rows keep the same height with either illustration.
+    const heights = await Promise.all(
+      [/Рама и подвеска/, /Трансмиссия/].map((name) =>
+        tiles
+          .getByRole("button", { name })
+          .evaluate((n) => Math.round(n.offsetHeight)),
+      ),
+    );
     expect(heights[0]).toBe(heights[1]);
     const results = page.getByRole("region", { name: "Модели компонентов" });
     const cover = results.locator(`img[src$="/api/assets/${tall}"]`).first();
@@ -490,7 +506,7 @@ test("components: illustrations fit whole, five models across, and the model pag
             new Set(items.map((li) => Math.round(li.getBoundingClientRect().x)))
               .size,
         );
-      expect(columns).toBe(Math.min(5, await results.locator("li").count()));
+      expect(columns).toBe(Math.min(4, await results.locator("li").count()));
     }
     await noOverflow(page);
     for (const mode of ["light", "dark"]) {

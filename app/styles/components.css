@@ -1295,7 +1295,12 @@
     /* #378: about 36 % wider than the former 1120 px, the room used by columns
        (below); the window never goes past the screen. */
     max-width: min(1520px, calc(100vw - 2 * var(--gutter)));
+    /* Keep the page gutter at both edges. Native WebKit date/time controls
+       need a little more height than Chromium in the usual three columns. */
+    max-height: min(880px, calc(100dvh - 2 * var(--gutter)));
     padding: 0;
+    /* Keep keyboard targets clear of the sticky heading and action row. */
+    scroll-padding-block: var(--space-20);
   }
   dialog.planning > .modal-head {
     position: sticky;
@@ -1987,4 +1992,106 @@
   box-shadow: 0 0 0 3px
     color-mix(in srgb, var(--icon-highlight) 20%, transparent);
   border-radius: var(--radius-sm);
+}
+
+/* #397: one decorative square and the two useful columns, only in composers. */
+@layer components {
+  dialog.planning > .modal-head.modal-head-compact {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr) 44px;
+    grid-template-areas: ". title close" "note note note";
+    gap: 0;
+    padding-block: var(--space-2);
+  }
+  dialog.planning > .modal-head-compact > .modal-heading-content {
+    justify-content: center;
+    gap: var(--space-2);
+    text-align: center;
+  }
+  dialog.planning > .modal-head-compact > .modal-description {
+    margin: var(--space-2) 0 0;
+    max-width: none;
+  }
+  .planning-side-layout {
+    display: grid;
+    padding-block: var(--space-4);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-4);
+    align-items: start;
+  }
+  .planning-side-layout:has(> [data-planning-graphic]) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .planning-side-column {
+    display: grid;
+    gap: var(--space-3);
+    min-width: 0;
+  }
+  .planning-side-column > .planning-section {
+    grid-column: auto;
+    gap: var(--space-2);
+    border-top: 1px solid var(--line);
+  }
+  .planning-side-column > .planning-section > legend {
+    padding-right: var(--space-2);
+    margin-bottom: var(--space-1);
+  }
+  .planning-side-column .field {
+    margin: 0;
+  }
+  .planning-side-column .planning-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-2);
+  }
+  .planning-side-column .planning-row.wide {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .planning-side-column .planning-advanced {
+    grid-column: auto;
+  }
+  .planning-side-column .planning-interest {
+    padding: 0;
+  }
+  .planning-side-column .planning-advanced > .planning-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .planning-side-column .planning-advanced .planning-section {
+    grid-column: auto;
+  }
+  .wizard-search-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .wizard-search-layout:has(> [data-planning-graphic]) {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  }
+  .wizard-search-layout .wizard-search {
+    min-width: 0;
+  }
+  @media (max-width: 899px) {
+    .planning-side-layout,
+    .planning-side-layout:has(> [data-planning-graphic]),
+    .wizard-search-layout:has(> [data-planning-graphic]) {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    dialog.planning > .modal-head.modal-head-compact {
+      position: static;
+    }
+  }
+}
+@layer components {
+  .modal-head-compact > .modal-heading-content {
+    position: relative;
+    width: fit-content;
+    margin-inline: auto;
+  }
+  .modal-head-compact > .modal-heading-content > span {
+    position: absolute;
+    left: 100%;
+    margin-left: var(--space-2);
+    top: calc(50% - 12px);
+  }
+  .wizard-search-layout .wizard-search {
+    width: 100%;
+    padding-top: 0;
+  }
 }

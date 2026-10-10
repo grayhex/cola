@@ -552,6 +552,9 @@ export function AreaField({
             <button
               type="button"
               className="quiet"
+              // Cancelling discards this proposal. Keep blur validation from
+              // moving the button between pointer down and click in WebKit.
+              onPointerDown={(e) => e.preventDefault()}
               onClick={() => {
                 setPosition(null);
                 setGeneration((n) => n + 1);

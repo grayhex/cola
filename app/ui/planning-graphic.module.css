@@ -51,3 +51,21 @@
     height: 120px;
   }
 }
+
+.graphic.side {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+  align-self: start;
+  pointer-events: none;
+}
+@media (max-width: 899px) {
+  .graphic.side {
+    width: 96px;
+    justify-self: center;
+  }
+}
+.graphic.side .fallback {
+  width: min(50%, 180px);
+  height: auto;
+}

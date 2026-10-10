@@ -14,7 +14,13 @@ RuntimeLoader.setWasmUrl(`/rive/runtime/${riveRuntimeVersion}/rive.wasm`);
 RuntimeLoader.setWasmFallbackUrl(
   `/rive/runtime/${riveRuntimeVersion}/rive_fallback.wasm`,
 );
-export default function PlanningRive({ src }: { src: string }) {
+export default function PlanningRive({
+  src,
+  onError,
+}: {
+  src: string;
+  onError?: () => void;
+}) {
   const [ready, setReady] = useState(false),
     [failed, setFailed] = useState(false);
   const firstFrame = useRef(false);
@@ -41,8 +47,11 @@ export default function PlanningRive({ src }: { src: string }) {
     return () => clearTimeout(timeout);
   }, [ready, failed]);
   useEffect(() => {
-    if (failed) rive?.cleanup();
-  }, [failed, rive]);
+    if (failed) {
+      rive?.cleanup();
+      onError?.();
+    }
+  }, [failed, rive, onError]);
   if (failed) return null;
   return (
     <span
