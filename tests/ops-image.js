@@ -39,6 +39,8 @@ const scripts = [
   "chat-sync.js",
   "check-runtime.js",
   "cleanup-rides.js",
+  "component-catalog-import.ts",
+  "component-catalog-seed.ts",
   "migrate.js",
   "notification-email.js",
   "notification-push.js",
@@ -389,6 +391,104 @@ try {
         "cleanup-rides.js",
       ])
         runScript("scripts/" + file, env);
+    },
+  );
+  await isolatedDatabase(
+    "catalog release, offline backup restore and repeat",
+    async (q, env) => {
+      runScript("scripts/migrate.js", env);
+      assert.match(
+        runScript("scripts/component-catalog-import.ts", env, ["release"]),
+        /deferred/,
+      );
+      const id = randomUUID();
+      await q.query(
+        "INSERT INTO users(id,email,name,password_hash,username,role,email_verified_at) VALUES($1,'seed@example.test','Seed drill','hash','seed-drill','admin',now())",
+        [id],
+      );
+      const args = [
+        "apply",
+        "--sha",
+        "91a76b9ec197fdcadff85f75268fe93897b8a501f656753186c3c1f5722f934f",
+        "--backup-dir",
+        path.join(env.UPLOAD_DIR, "../backups"),
+      ];
+      runScript("scripts/component-catalog-import.ts", env, args);
+      const rows = await q.query(
+        "SELECT (SELECT count(*)::int FROM component_models) models,(SELECT count(*)::int FROM component_photos) photos,(SELECT count(*)::int FROM components) installations",
+      );
+      assert.deepEqual(rows.rows[0], {
+        models: 399,
+        photos: 4,
+        installations: 0,
+      });
+      const before = (
+        await q.query(
+          "SELECT md5(string_agg(to_jsonb(m)::text,',' ORDER BY id)) hash FROM component_models m",
+        )
+      ).rows[0];
+      runScript("scripts/component-catalog-import.ts", env, ["release"]);
+      assert.deepEqual(
+        (
+          await q.query(
+            "SELECT md5(string_agg(to_jsonb(m)::text,',' ORDER BY id)) hash FROM component_models m",
+          )
+        ).rows[0],
+        before,
+      );
+      const backup = (
+        await q.query("SELECT backup FROM component_seed_batches")
+      ).rows[0].backup;
+      const restoreName =
+        "cola_seed_restore_" + randomUUID().replaceAll("-", "");
+      await admin.query(`CREATE DATABASE "${restoreName}"`);
+      const restoreUrl = new URL(env.DATABASE_URL);
+      restoreUrl.pathname = "/" + restoreName;
+      const restore = new pg.Client({
+        connectionString: restoreUrl.toString(),
+      });
+      try {
+        execFileSync(
+          "pg_restore",
+          [
+            "--exit-on-error",
+            "--no-owner",
+            "--no-acl",
+            "--dbname",
+            restoreName,
+            backup.file,
+          ],
+          {
+            env: {
+              ...process.env,
+              PGHOST: restoreUrl.hostname,
+              PGPORT: restoreUrl.port || "5432",
+              PGUSER: decodeURIComponent(restoreUrl.username),
+              PGPASSWORD: decodeURIComponent(restoreUrl.password),
+            },
+          },
+        );
+        await restore.connect();
+        assert.equal(
+          (await restore.query("SELECT count(*)::int n FROM component_models"))
+            .rows[0].n,
+          0,
+        );
+        assert.equal(
+          (
+            await restore.query(
+              "SELECT count(*)::int n FROM users WHERE id=$1",
+              [id],
+            )
+          ).rows[0].n,
+          1,
+        );
+      } finally {
+        await restore.end();
+        await admin.query(`DROP DATABASE "${restoreName}" WITH (FORCE)`);
+      }
+      for (const file of await readdir(env.UPLOAD_DIR))
+        await rm(path.join(env.UPLOAD_DIR, file));
     },
   );
   assert.deepEqual(

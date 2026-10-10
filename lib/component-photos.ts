@@ -5,8 +5,16 @@ import { errorCode } from "./errors.ts";
 import { commitUncertain } from "./db.ts";
 import type { ComponentPhotoRow } from "./database-rows.ts";
 import type { Queryable } from "./db.ts";
-import { randomUUID } from "node:crypto";
-import { mkdir, open, unlink, readdir, stat, readFile } from "node:fs/promises";
+import { randomUUID, createHash } from "node:crypto";
+import {
+  mkdir,
+  open,
+  unlink,
+  readdir,
+  stat,
+  readFile,
+  lstat,
+} from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
 import sharp from "sharp";
@@ -200,86 +208,163 @@ export async function saveComponentPhotos(
         if (consumed.rowCount !== inputs.length)
           throw new CommunityError("Выбор устарел. Повторите поиск.", 409);
       } else await authorizeComponentPhoto(q, model.id, actor);
-      const usage = (
-        await q.query<{
-          model: number;
-          own_model: number;
-          own: number;
-          next_order: number;
-        }>(
-          `SELECT (SELECT count(*) FROM component_photos WHERE model_id IN (${scope}))::int model,
-        (SELECT count(*) FROM component_photos WHERE model_id IN (${scope}) AND author_id=$2)::int own_model,
-        (SELECT count(*) FROM component_photos WHERE author_id=$2)::int own,
-        (SELECT coalesce(max(sort_order),-1)+1 FROM component_photos WHERE model_id IN (${scope})) next_order`,
-          [model.id, actor.id],
-        )
-      ).rows[0];
-      if (
-        usage.model + photos.length > 60 ||
-        usage.own_model + photos.length > 12 ||
-        usage.own + photos.length > limits.photos
-      )
-        throw new QuotaError(
-          "Максимум 60 фото модели, 12 ваших фото в одной модели и " +
-            limits.photos +
-            " фото компонентов на пользователя",
-        );
-      const other = (
-        await q.query<{ bytes: string }>(
-          `SELECT (SELECT coalesce(sum(coalesce(p.size_bytes,$2)),0) FROM photos p JOIN bikes b ON b.id=p.bike_id WHERE b.owner_id=$1)
-        +(SELECT coalesce(sum(p.size_bytes),0) FROM journal_photos p JOIN journal_entries e ON e.id=p.entry_id WHERE e.owner_id=$1)
-        +(SELECT coalesce(sum(p.size_bytes),0) FROM market_photos p JOIN market_listings m ON m.id=p.listing_id WHERE m.owner_id=$1)
-        +(SELECT avatar_size_bytes FROM users WHERE id=$1) bytes`,
-          [actor.id, limits.fileBytes],
-        )
-      ).rows[0];
-      if (
-        Number(other.bytes) +
-          (await componentPhotoBytes(q, actor.id)) +
-          photos.reduce((n, p) => n + p.bytes.length, 0) >
-        limits.storageBytes
-      )
-        throw new QuotaError("Лимит места для фотографий исчерпан");
-      await mkdir(directory(), { recursive: true });
-      for (const [
-        index,
-        { id: photo, filename, bytes, width, height, source },
-      ] of photos.entries()) {
-        const file = await open(path.join(directory(), filename), "wx");
-        written.push(filename);
-        try {
-          await file.writeFile(bytes);
-        } finally {
-          await file.close();
-        }
-        await q.query(
-          `INSERT INTO component_photos(id,model_id,author_id,filename,size_bytes,width,height,sort_order,source)
-         VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
-          [
-            photo,
-            model.id,
-            actor.id,
-            filename,
-            bytes.length,
-            width,
-            height,
-            usage.next_order + index,
-            imported ? source : null,
-          ],
-        );
-      }
-      await q.query(
-        "UPDATE component_models SET gallery_version=gallery_version+1 WHERE id=$1",
-        [model.id],
+      await persistPreparedComponentPhotos(
+        q,
+        model.id,
+        actor.id,
+        photos.map((photo) => ({
+          ...photo,
+          source: imported ? photo.source : null,
+        })),
+        written,
       );
     });
   } catch (e) {
-    if (!commitUncertain(e))
-      for (const filename of written)
-        await unlink(path.join(directory(), filename)).catch(() => {});
+    await cleanComponentPhotoWrites(written, e);
     throw e;
   }
   return photos.map((p) => ({ id: p.id }));
+}
+
+export interface PreparedComponentPhoto {
+  id: string;
+  filename: string;
+  bytes: Buffer;
+  width?: number;
+  height?: number;
+  source?: ComponentPhotoRowType["source"];
+}
+
+// Also used read-only by the seed dry run. Callers lock the actor before writing.
+export async function componentPhotoCapacity(
+  q: Queryable,
+  modelId: string | null,
+  actorId: string,
+  count: number,
+  bytes: number,
+) {
+  const usage = (
+    await q.query<{
+      model: number;
+      own_model: number;
+      own: number;
+      next_order: number;
+    }>(
+      `SELECT (SELECT count(*) FROM component_photos WHERE model_id IN (${scope}))::int model,
+  (SELECT count(*) FROM component_photos WHERE model_id IN (${scope}) AND author_id=$2)::int own_model,
+  (SELECT count(*) FROM component_photos WHERE author_id=$2)::int own,
+  (SELECT coalesce(max(sort_order),-1)+1 FROM component_photos WHERE model_id IN (${scope})) next_order`,
+      [modelId, actorId],
+    )
+  ).rows[0];
+  if (
+    (modelId !== null &&
+      (usage.model + count > 60 || usage.own_model + count > 12)) ||
+    usage.own + count > limits.photos
+  )
+    throw new QuotaError(
+      "Максимум 60 фото модели, 12 ваших фото в одной модели и " +
+        limits.photos +
+        " фото компонентов на пользователя",
+    );
+  const other = (
+    await q.query<{ bytes: string }>(
+      `SELECT (SELECT coalesce(sum(coalesce(p.size_bytes,$2)),0) FROM photos p JOIN bikes b ON b.id=p.bike_id WHERE b.owner_id=$1)
+  +(SELECT coalesce(sum(p.size_bytes),0) FROM journal_photos p JOIN journal_entries e ON e.id=p.entry_id WHERE e.owner_id=$1)
+  +(SELECT coalesce(sum(p.size_bytes),0) FROM market_photos p JOIN market_listings m ON m.id=p.listing_id WHERE m.owner_id=$1)
+  +(SELECT avatar_size_bytes FROM users WHERE id=$1) bytes`,
+      [actorId, limits.fileBytes],
+    )
+  ).rows[0];
+  if (
+    Number(other.bytes) + (await componentPhotoBytes(q, actorId)) + bytes >
+    limits.storageBytes
+  )
+    throw new QuotaError("Лимит места для фотографий исчерпан");
+  return Number(usage.next_order);
+}
+
+// Shared storage primitive. The caller owns the user -> catalog locks and the
+// enclosing transaction; journal writes must commit atomically with these rows.
+export async function persistPreparedComponentPhotos(
+  q: Queryable,
+  modelId: string,
+  actorId: string,
+  photos: PreparedComponentPhoto[],
+  written: string[],
+  resume = false,
+) {
+  const nextOrder = await componentPhotoCapacity(
+    q,
+    modelId,
+    actorId,
+    photos.length,
+    photos.reduce((n, photo) => n + photo.bytes.length, 0),
+  );
+  for (const photo of photos) {
+    z.uuid().parse(photo.id);
+    if (photo.filename !== "component-" + photo.id + ".webp")
+      throw new Error("Invalid prepared photo filename");
+  }
+  await mkdir(directory(), { recursive: true });
+  for (const [
+    index,
+    { id: photo, filename, bytes, width, height, source },
+  ] of photos.entries()) {
+    const target = path.join(directory(), filename);
+    let file;
+    try {
+      file = await open(target, "wx");
+      written.push(filename);
+      await file.writeFile(bytes);
+    } catch (error) {
+      if (!resume || errorCode(error) !== "EEXIST") throw error;
+      const info = await lstat(target);
+      if (
+        !info.isFile() ||
+        info.isSymbolicLink() ||
+        info.size !== bytes.length ||
+        !createHash("sha256")
+          .update(await readFile(target))
+          .digest()
+          .equals(createHash("sha256").update(bytes).digest())
+      )
+        throw new Error(
+          "Prepared photo filename is occupied by different bytes",
+          { cause: error },
+        );
+    } finally {
+      await file?.close();
+    }
+    await q.query(
+      `INSERT INTO component_photos(id,model_id,author_id,filename,size_bytes,width,height,sort_order,source)
+   VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+      [
+        photo,
+        modelId,
+        actorId,
+        filename,
+        bytes.length,
+        width,
+        height,
+        nextOrder + index,
+        source ?? null,
+      ],
+    );
+  }
+  await q.query(
+    "UPDATE component_models SET gallery_version=gallery_version+1 WHERE id=$1",
+    [modelId],
+  );
+}
+
+export async function cleanComponentPhotoWrites(
+  written: string[],
+  error: unknown,
+) {
+  if (!commitUncertain(error))
+    for (const filename of written)
+      await unlink(path.join(directory(), filename)).catch(() => {});
 }
 
 export async function changeComponentPhoto(

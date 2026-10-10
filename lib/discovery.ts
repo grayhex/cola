@@ -1,3 +1,4 @@
+import { seededPickerModel } from "./public-site.ts";
 import { currentBikeWeek } from "./bike-week.ts";
 import { ridePulse } from "./ride-pulse.ts";
 import type { Classification as ClassificationType } from "./contracts.ts";
@@ -60,7 +61,7 @@ const thumb = (id: string | null) =>
   id ? `/api/photos/${id}?width=160` : null;
 
 /**
- * Component names of public bikes that contain the text, with the number of
+ * Public catalog models and component names of public bikes, with the number of
  * public bikes that carry each: the suggestions behind a search box (API v1,
  * #315). Same literal, case and form insensitive match as the site search;
  * ordered by popularity, then by name. A short list, not a paged one.
@@ -68,11 +69,22 @@ const thumb = (id: string | null) =>
 export async function componentHits(q: Queryable, text: string, limit: number) {
   return (
     await q.query<{ name: string; bikes: number }>(
-      `SELECT min(p.name) AS name,count(DISTINCT b.id)::int AS bikes
+      `WITH candidates AS (
+       SELECT min(p.name) AS name,count(DISTINCT b.id)::int AS bikes,0 priority
        FROM components p JOIN bikes b ON b.id=p.bike_id JOIN users u ON u.id=b.owner_id
        WHERE b.is_public AND NOT u.blocked AND ${literalMatch("p.name")}
        GROUP BY lower(normalize(p.name,NFKC))
-       ORDER BY bikes DESC,name LIMIT $2`,
+       UNION ALL
+       SELECT m.name,(SELECT count(DISTINCT b.id)::int FROM components c
+         JOIN component_models origin ON origin.id=c.model_id JOIN bikes b ON b.id=c.bike_id JOIN users u ON u.id=b.owner_id
+         WHERE coalesce(origin.merged_into,origin.id)=m.id AND b.is_public AND NOT u.blocked),1
+       FROM component_models m WHERE m.first_public_at IS NOT NULL AND NOT m.archived AND m.merged_into IS NULL
+         AND ${seededPickerModel}
+         AND (${literalMatch("m.name")} OR EXISTS(SELECT 1 FROM component_model_names n JOIN component_models origin ON origin.id=n.model_id
+           WHERE coalesce(origin.merged_into,origin.id)=m.id AND strpos(n.name_key,component_key($1))>0))
+       ), chosen AS (SELECT DISTINCT ON (lower(normalize(name,NFKC))) name,bikes
+         FROM candidates ORDER BY lower(normalize(name,NFKC)),priority DESC)
+       SELECT name,bikes FROM chosen ORDER BY bikes DESC,name LIMIT $2`,
       [text, limit],
     )
   ).rows;
