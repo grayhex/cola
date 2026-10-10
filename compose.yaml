@@ -95,11 +95,7 @@ services:
       target: ops
     environment: *app-environment
     command:
-      [
-        "sh",
-        "-c",
-        "node scripts/check-runtime.js && node scripts/migrate.js && node scripts/component-catalog-import.ts release",
-      ]
+      ["sh", "-c", "node scripts/check-runtime.js && node scripts/migrate.js"]
     volumes:
       - photos:/app/uploads
       - rides:/app/rides
