@@ -254,7 +254,9 @@ test("product migration preserves specifications, consolidates paired models and
     ).rows;
     assert.equal(
       policy.length,
-      productCategories.length + Object.keys(pairedCategories).length,
+      // This test stops at historical migration 033 (40 product categories).
+      // New categories are checked against the full schema by accessory-catalog-seed.
+      40 + Object.keys(pairedCategories).length,
     );
     for (const p of policy) {
       assert.equal(

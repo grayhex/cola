@@ -101,6 +101,7 @@ export const categoryIcons: Record<string, string> = {
   "Подседельная сумка": "saddleBag",
   "Рамная сумка": "frameBag",
   "Сумка на руль": "barBag",
+  "Сумка на багажник": "rack",
   Багажник: "rack",
   Крылья: "mudguard",
   "Фляга / держатель": "bottle",
