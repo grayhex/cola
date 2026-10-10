@@ -1156,214 +1156,218 @@ export default function BikeWizard({
       )}
       <fieldset disabled={saving} className="wizard-content">
         {step === 0 && (
-          <div className="wizard-search">
-            <PlanningGraphic slot="wizardSearchGraphic" size="wide" />
-            <p className="help">
-              Введите марку и модель одной строкой. Год и комплектация уточняют
-              поиск, но не обязательны. Поиск необязателен: можно сразу
-              продолжить вручную.
-            </p>
-            <label className="field">
-              <span>
-                <SiteIcon name="search" /> Модель, год и комплектация
-              </span>
-              <input
-                aria-label="Модель, год и комплектация"
-                value={searchText}
-                disabled={resolving}
-                maxLength={240}
-                className={fieldStyles.modelInput}
-                onChange={(e) => setSearchText(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    search();
-                  }
-                }}
-              />
-            </label>
-            <p className="wizard-identity">
-              {[query.brand, query.model, query.trim, query.year]
-                .filter(Boolean)
-                .join(" ")}
-            </p>
-            {/* One live region for the step: the status below while it is
+          <div className="planning-side-layout wizard-search-layout">
+            <PlanningGraphic slot="wizardSearchGraphic" size="side" />
+            <div className="wizard-search">
+              <p className="help">
+                Введите марку и модель одной строкой. Год и комплектация
+                уточняют поиск, но не обязательны. Поиск необязателен: можно
+                сразу продолжить вручную.
+              </p>
+              <label className="field">
+                <span>
+                  <SiteIcon name="search" /> Модель, год и комплектация
+                </span>
+                <input
+                  aria-label="Модель, год и комплектация"
+                  value={searchText}
+                  disabled={resolving}
+                  maxLength={240}
+                  className={fieldStyles.modelInput}
+                  onChange={(e) => setSearchText(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      search();
+                    }
+                  }}
+                />
+              </label>
+              <p className="wizard-identity">
+                {[query.brand, query.model, query.trim, query.year]
+                  .filter(Boolean)
+                  .join(" ")}
+              </p>
+              {/* One live region for the step: the status below while it is
                 shown (it announces these words at the end), this line when it
                 is not. While a search runs the status says it. */}
-            <p
-              role={showProgress ? undefined : "status"}
-              hidden={resolving || undefined}
-            >
-              {message}
-            </p>
-            {showProgress && (
-              <ResolverProgress
-                events={trace}
-                running={resolving}
-                outcome={progressOutcome}
-                categories={progressGroups}
-                closing={message}
-              />
-            )}
-            {resolving ? (
-              <>
-                <button
-                  type="button"
-                  className="quiet"
-                  onClick={() => {
-                    resolveAbort.current?.abort();
-                    setResolving(false);
-                    setRunEnd("cancelled");
-                    setMessage(
-                      "Поиск остановлен. Запустите его снова, чтобы продолжить.",
-                    );
-                  }}
-                >
-                  <SiteIcon name="no" />
-                  Остановить поиск
-                </button>
-              </>
-            ) : (
-              <>
-                {result?.status === "resolved" && (
-                  <div className="wizard-found">
-                    <Check size={18} />
-                    <span>
-                      {result.components.length} компонентов ·{" "}
-                      {result.bike.canonicalName}
-                      {result.quality && (
+              <p
+                role={showProgress ? undefined : "status"}
+                hidden={resolving || undefined}
+              >
+                {message}
+              </p>
+              {showProgress && (
+                <ResolverProgress
+                  events={trace}
+                  running={resolving}
+                  outcome={progressOutcome}
+                  categories={progressGroups}
+                  closing={message}
+                />
+              )}
+              {resolving ? (
+                <>
+                  <button
+                    type="button"
+                    className="quiet"
+                    onClick={() => {
+                      resolveAbort.current?.abort();
+                      setResolving(false);
+                      setRunEnd("cancelled");
+                      setMessage(
+                        "Поиск остановлен. Запустите его снова, чтобы продолжить.",
+                      );
+                    }}
+                  >
+                    <SiteIcon name="no" />
+                    Остановить поиск
+                  </button>
+                </>
+              ) : (
+                <>
+                  {result?.status === "resolved" && (
+                    <div className="wizard-found">
+                      <Check size={18} />
+                      <span>
+                        {result.components.length} компонентов ·{" "}
+                        {result.bike.canonicalName}
+                        {result.quality && (
+                          <small>
+                            {result.quality.recognizedComponents} из{" "}
+                            {result.quality.totalFields} характеристик
+                            распознаны
+                          </small>
+                        )}
                         <small>
-                          {result.quality.recognizedComponents} из{" "}
-                          {result.quality.totalFields} характеристик распознаны
+                          <a
+                            href={result.source.url}
+                            aria-label="Источник комплектации"
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            {result.source.manufacturer} ·{" "}
+                            {sourceLabel(result.source)}
+                          </a>
                         </small>
-                      )}
-                      <small>
-                        <a
-                          href={result.source.url}
-                          aria-label="Источник комплектации"
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          {result.source.manufacturer} ·{" "}
-                          {sourceLabel(result.source)}
-                        </a>
-                      </small>
-                    </span>
-                  </div>
-                )}
-                {result?.status === "resolved" && result.manualSelection && (
-                  <p className="help">
-                    Сверьте год и версию модели. Ссылка выбрана вручную;
-                    автоматическое совпадение не подтверждено.
-                  </p>
-                )}
-                {result?.status === "ambiguous" && (
-                  <p className="help">
-                    Нашли варианты модели. Выберите свою комплектацию: название,
-                    год, навеска и источник помогут их различить. Если год не
-                    указан на странице, сверьте его перед импортом. Один выбор —
-                    один источник: детали разных страниц не смешиваются.
-                  </p>
-                )}
-                {result?.status === "ambiguous" &&
-                  result.candidates.map((c) => (
-                    <ResolverCandidateCard
-                      key={c.candidateId || c.url}
-                      candidate={c}
-                      requestedYear={query.year}
-                      disabled={
-                        resolving ||
-                        (!c.selectable &&
-                          c.year !== null &&
-                          query.year != null &&
-                          c.year !== query.year)
-                      }
-                      onChoose={(choice) =>
-                        // By id when there is one: the service remembers which
-                        // page it offered.
-                        choice.candidateId
-                          ? resolve("", choice.candidateId)
-                          : resolve(choice.url, undefined, query, true)
-                      }
-                    />
-                  ))}
-                {result && result.status !== "resolved" && (
-                  <ResolverSearchReport search={result.search} />
-                )}
-                <div className="wizard-choice-actions">
-                  <button
-                    type="button"
-                    className="button secondary"
-                    disabled={!searchText.trim()}
-                    onClick={() => search()}
-                  >
-                    <SiteIcon name="search" />
-                    {result || message
-                      ? "Повторить автоматический поиск и парсинг"
-                      : "Найти комплектацию"}
-                  </button>
-                  <button
-                    type="button"
-                    className="button secondary"
-                    aria-expanded={urlOpen}
-                    aria-controls="wizard-url-search"
-                    onClick={() => setManualMode((v) => !v)}
-                  >
-                    <SiteIcon name="link" size={18} />
-                    {settings.wizardLinkLabel ||
-                      "Распознать по странице магазина"}
-                  </button>
-                </div>
-                {urlOpen && (
-                  <section
-                    id="wizard-url-search"
-                    className="wizard-manual"
-                    aria-label="Распознавание по ссылке"
-                  >
-                    <h4>Комплектация по вашей ссылке</h4>
+                      </span>
+                    </div>
+                  )}
+                  {result?.status === "resolved" && result.manualSelection && (
                     <p className="help">
-                      Вставьте ссылку на товар с таблицей характеристик. Если
-                      страница не распознаётся, попробуйте другой магазин. Все
-                      публичные сайты доступны, кроме запрещённых
-                      администратором.
+                      Сверьте год и версию модели. Ссылка выбрана вручную;
+                      автоматическое совпадение не подтверждено.
                     </p>
-                    <label className="field">
-                      <span>Страница велосипеда</span>
-                      <input
-                        type="url"
-                        value={url}
-                        maxLength={2048}
-                        onChange={(e) => setUrl(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            if (/^https?:\/\//i.test(typedUrl))
-                              search(typedUrl);
-                          }
-                        }}
-                        placeholder="https://…"
+                  )}
+                  {result?.status === "ambiguous" && (
+                    <p className="help">
+                      Нашли варианты модели. Выберите свою комплектацию:
+                      название, год, навеска и источник помогут их различить.
+                      Если год не указан на странице, сверьте его перед
+                      импортом. Один выбор — один источник: детали разных
+                      страниц не смешиваются.
+                    </p>
+                  )}
+                  {result?.status === "ambiguous" &&
+                    result.candidates.map((c) => (
+                      <ResolverCandidateCard
+                        key={c.candidateId || c.url}
+                        candidate={c}
+                        requestedYear={query.year}
+                        disabled={
+                          resolving ||
+                          (!c.selectable &&
+                            c.year !== null &&
+                            query.year != null &&
+                            c.year !== query.year)
+                        }
+                        onChoose={(choice) =>
+                          // By id when there is one: the service remembers which
+                          // page it offered.
+                          choice.candidateId
+                            ? resolve("", choice.candidateId)
+                            : resolve(choice.url, undefined, query, true)
+                        }
                       />
-                    </label>
+                    ))}
+                  {result && result.status !== "resolved" && (
+                    <ResolverSearchReport search={result.search} />
+                  )}
+                  <div className="wizard-choice-actions">
                     <button
-                      className="button secondary"
                       type="button"
-                      disabled={
-                        !/^https?:\/\//i.test(typedUrl) || !searchText.trim()
-                      }
-                      onClick={() => search(typedUrl)}
+                      className="button secondary"
+                      disabled={!searchText.trim()}
+                      onClick={() => search()}
                     >
                       <SiteIcon name="search" />
-                      Распознать страницу
+                      {result || message
+                        ? "Повторить автоматический поиск и парсинг"
+                        : "Найти комплектацию"}
                     </button>
-                  </section>
-                )}
-                {hint && (
-                  <p id="wizard-gate" className="help wizard-gate">
-                    {hint}
-                  </p>
-                )}
-              </>
-            )}
+                    <button
+                      type="button"
+                      className="button secondary"
+                      aria-expanded={urlOpen}
+                      aria-controls="wizard-url-search"
+                      onClick={() => setManualMode((v) => !v)}
+                    >
+                      <SiteIcon name="link" size={18} />
+                      {settings.wizardLinkLabel ||
+                        "Распознать по странице магазина"}
+                    </button>
+                  </div>
+                  {urlOpen && (
+                    <section
+                      id="wizard-url-search"
+                      className="wizard-manual"
+                      aria-label="Распознавание по ссылке"
+                    >
+                      <h4>Комплектация по вашей ссылке</h4>
+                      <p className="help">
+                        Вставьте ссылку на товар с таблицей характеристик. Если
+                        страница не распознаётся, попробуйте другой магазин. Все
+                        публичные сайты доступны, кроме запрещённых
+                        администратором.
+                      </p>
+                      <label className="field">
+                        <span>Страница велосипеда</span>
+                        <input
+                          type="url"
+                          value={url}
+                          maxLength={2048}
+                          onChange={(e) => setUrl(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              if (/^https?:\/\//i.test(typedUrl))
+                                search(typedUrl);
+                            }
+                          }}
+                          placeholder="https://…"
+                        />
+                      </label>
+                      <button
+                        className="button secondary"
+                        type="button"
+                        disabled={
+                          !/^https?:\/\//i.test(typedUrl) || !searchText.trim()
+                        }
+                        onClick={() => search(typedUrl)}
+                      >
+                        <SiteIcon name="search" />
+                        Распознать страницу
+                      </button>
+                    </section>
+                  )}
+                  {hint && (
+                    <p id="wizard-gate" className="help wizard-gate">
+                      {hint}
+                    </p>
+                  )}
+                </>
+              )}
+            </div>
           </div>
         )}
         {step === 1 && (

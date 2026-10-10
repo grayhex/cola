@@ -13,6 +13,8 @@ export default function Modal({
   viewer = false,
   graphic,
   description,
+  compactHeader = false,
+  help,
 }: {
   title: React.ReactNode;
   onClose: () => void;
@@ -28,6 +30,9 @@ export default function Modal({
    * fields. It describes the window to a screen reader.
    */
   description?: React.ReactNode;
+  /** Centered compact composer header; other dialogs retain their layout. */
+  compactHeader?: boolean;
+  help?: React.ReactNode;
 }) {
   const { t } = useSite();
   const ref = useRef<HTMLDialogElement>(null),
@@ -94,10 +99,13 @@ export default function Modal({
       aria-labelledby={titleId}
       aria-describedby={description ? descriptionId : undefined}
     >
-      <div className="modal-head">
+      <div
+        className={"modal-head" + (compactHeader ? " modal-head-compact" : "")}
+      >
         <div className="modal-heading-content">
           {graphic}
           <h2 id={titleId}>{title}</h2>
+          {help}
         </div>
         {description && (
           <p id={descriptionId} className="modal-description">

@@ -1,6 +1,8 @@
 /* «Собрать компанию» (#234): an HF Datasets-like organizer workspace —
    compact filters, then rows of interest groups by day and start window. */
 .workspace {
+  /* Groups adapt to the planner's column, including when art is present. */
+  container: plan-interest / inline-size;
   display: grid;
   gap: var(--space-4);
   min-width: 0;
@@ -166,7 +168,7 @@
 .results ul {
   padding-left: var(--space-5);
 }
-@media (max-width: 900px) {
+@container plan-interest (max-width: 900px) {
   .group {
     grid-template-columns: minmax(0, 1fr) auto;
   }
@@ -179,7 +181,7 @@
     grid-row: 1;
   }
 }
-@media (max-width: 520px) {
+@container plan-interest (max-width: 520px) {
   .group {
     grid-template-columns: minmax(0, 1fr);
   }

@@ -1,5 +1,4 @@
 "use client";
-import PlanningGraphic from "./planning-graphic.tsx";
 import { errorMessage } from "../../lib/errors.ts";
 import type { ReactNode } from "react";
 import type { AccountBikeDto } from "../../lib/contracts.ts";
@@ -123,7 +122,7 @@ export default function PlanComposer({
   return (
     <>
       <Modal
-        graphic={<PlanningGraphic slot="planDialogGraphic" />}
+        compactHeader
         wide
         title={ride ? "Изменить покатушку" : "Организовать покатушку"}
         description={
@@ -183,28 +182,32 @@ export default function PlanComposer({
               </AddBikeLink>
             </div>,
           )}
-        {canPlan && !ride && (
-          <details
-            className="planning-interest"
-            open={finder}
-            onToggle={(e) => setFinder(e.currentTarget.open)}
-          >
-            <summary ref={summary}>Подобрать время по интересам людей</summary>
-            {finder && (
-              <InterestFinder
-                filters={finderFilters}
-                onFiltersChange={setFinderFilters}
-                onPropose={(draft) => {
-                  setSuggestion({ id: ++choices.current, draft });
-                  setFinder(false);
-                  summary.current?.focus();
-                }}
-              />
-            )}
-          </details>
-        )}
         {canPlan && (
           <PlanForm
+            prelude={
+              !ride ? (
+                <details
+                  className="planning-interest"
+                  open={finder}
+                  onToggle={(e) => setFinder(e.currentTarget.open)}
+                >
+                  <summary ref={summary}>
+                    Подобрать время по интересам людей
+                  </summary>
+                  {finder && (
+                    <InterestFinder
+                      filters={finderFilters}
+                      onFiltersChange={setFinderFilters}
+                      onPropose={(draft) => {
+                        setSuggestion({ id: ++choices.current, draft });
+                        setFinder(false);
+                        summary.current?.focus();
+                      }}
+                    />
+                  )}
+                </details>
+              ) : null
+            }
             ride={ride}
             suggestion={suggestion}
             bikes={state.bikes}

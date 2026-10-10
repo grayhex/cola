@@ -186,8 +186,8 @@ test("Garmin import without track, chosen fields, GPX mismatch and future planni
     .fill("Парк");
   await planner.getByLabel("Особенности маршрута").fill("Гравий, Кофе");
   await expect(
-    planner.getByRole("radio", { name: "Публичная покатушка" }),
-  ).toBeChecked();
+    planner.getByRole("combobox", { name: "Кто видит покатушку" }),
+  ).toHaveValue("true");
   await planner
     .getByRole("button", { name: "Создать покатушку", exact: true })
     .click();

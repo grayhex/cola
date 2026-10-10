@@ -129,8 +129,8 @@ for (const [width, height] of wide)
     const room = Math.min(1520, width - 2 * 24);
     for (const [name, open, columns] of [
       ["wizard step 2", wizardStepTwo, 4],
-      ["intent", intentForm, 3],
-      ["organizer", organizerForm, 3],
+      ["intent", intentForm, 2],
+      ["organizer", organizerForm, 2],
     ]) {
       const dialog = await open(page);
       await page.waitForTimeout(500);
@@ -143,7 +143,7 @@ for (const [width, height] of wide)
         .locator(
           name === "wizard step 2"
             ? ".wizard-details > .wizard-card, .wizard-details > section"
-            : ".planning-body > .planning-section",
+            : ".planning-side-layout > .planning-side-column",
         )
         .evaluateAll((items) =>
           items
@@ -193,7 +193,7 @@ test("on a phone the three forms are one column, nothing scrolls sideways and th
       .locator(
         name === "wizard step 2"
           ? ".wizard-details > .wizard-card, .wizard-details > section"
-          : ".planning-body > .planning-section",
+          : ".planning-side-layout > .planning-side-column",
       )
       .evaluateAll((items) =>
         items
@@ -209,6 +209,75 @@ test("on a phone the three forms are one column, nothing scrolls sideways and th
       .first();
     await expect(action, name).toBeInViewport();
     await page.keyboard.press("Escape");
+    await page.reload();
+  }
+});
+
+test("four intent windows and advanced fields remain reachable at 200 percent desktop reflow and with a phone keyboard", async ({
+  page,
+}) => {
+  await member(page);
+  await page.request.patch("/api/social/preferences", {
+    headers: { origin },
+    data: { preferences: { timeZone: "Asia/Yekaterinburg" } },
+  });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  // The CSS viewport at 200% of 1440×900, then a 360px phone with keyboard space.
+  for (const viewport of [
+    { width: 720, height: 450 },
+    { width: 360, height: 420 },
+  ]) {
+    await page.setViewportSize(viewport);
+    const dialog = await intentForm(page);
+    const hint = dialog.getByRole("button", {
+      name: "Подробнее: Временные окна",
+      exact: true,
+    });
+    await hint.click();
+    await expect(dialog.getByRole("tooltip")).toContainText(
+      "Asia/Yekaterinburg из профиля",
+    );
+    await expect(dialog.getByRole("tooltip")).toContainText(
+      "до 4 окон по 24 ч",
+    );
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeVisible();
+    for (let i = 1; i < 4; i++)
+      await dialog
+        .getByRole("button", { name: "Добавить окно", exact: true })
+        .click();
+    const last = dialog.getByLabel("Окно 4: до", { exact: true });
+    await last.focus();
+    await expect(last).toBeFocused();
+    await expect(last).toBeInViewport();
+    const bottom =
+      (await last.boundingBox()).y + (await last.boundingBox()).height;
+    expect(bottom).toBeLessThanOrEqual(
+      (await dialog.locator(".planning-actions").boundingBox()).y + 1,
+    );
+    const advanced = dialog.locator("summary", { hasText: "Дополнительно" });
+    await advanced.focus();
+    await page.keyboard.press("Enter");
+    await expect(
+      dialog.getByLabel("Готовность знакомиться", { exact: true }),
+    ).toBeVisible();
+    await dialog
+      .getByLabel("Готовность знакомиться", { exact: true })
+      .selectOption("true");
+    await advanced.click();
+    await advanced.click();
+    await expect(
+      dialog.getByLabel("Готовность знакомиться", { exact: true }),
+    ).toHaveValue("true");
+    await expect(
+      dialog.getByRole("button", { name: "Сохранить намерение", exact: true }),
+    ).toBeInViewport();
+    expect(await needsScroll(dialog)).toBe(true);
+    expect(await pageOverflow(page)).toBeNull();
+    expect(
+      (await new AxeBuilder({ page }).include("dialog[open]").analyze())
+        .violations,
+    ).toEqual([]);
     await page.reload();
   }
 });

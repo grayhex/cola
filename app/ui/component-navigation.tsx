@@ -1,7 +1,7 @@
 "use client";
 import type { SiteCatalog } from "../../lib/contracts.ts";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ChevronDown, ChevronRight, Shapes } from "lucide-react";
 import ComponentIllustration from "./component-illustration.tsx";
 import { useMotionFeedback } from "./motion.tsx";
@@ -72,22 +72,95 @@ export function ComponentPath({
   );
 }
 
+function GroupBranch({
+  group,
+  catalog,
+  selected,
+  expanded,
+  onToggle,
+  href,
+  onSelect,
+}: {
+  group: ReturnType<typeof componentNavigation>[number];
+  catalog: SiteCatalog;
+  selected: string;
+  expanded: boolean;
+  onToggle: () => void;
+  href: (category: string) => string;
+  onSelect: () => void;
+}) {
+  const reveal = useMotionFeedback<HTMLUListElement>(expanded, {
+    reveal: true,
+  });
+  const id = componentGroupAnchor(group.id);
+  return (
+    <li>
+      <button
+        id={id}
+        className={styles.group}
+        type="button"
+        aria-expanded={expanded}
+        aria-controls={id + "-types"}
+        onClick={onToggle}
+      >
+        <ComponentIllustration group={group.id} name={group.icon} size={26} />
+        <span>
+          <strong>{group.name}</strong>
+          <small>
+            {group.categories.length}{" "}
+            {plural(group.categories.length, "тип", "типа", "типов")}
+          </small>
+        </span>
+        <ChevronDown size={16} aria-hidden="true" />
+      </button>
+      <ul
+        id={id + "-types"}
+        className={styles.types}
+        hidden={!expanded}
+        ref={reveal}
+      >
+        {group.categories.map((c) => (
+          <li key={c}>
+            <Link
+              href={href(c)}
+              scroll={false}
+              aria-current={selected === c ? "page" : undefined}
+              onClick={onSelect}
+            >
+              <ComponentIllustration
+                category={c}
+                icons={catalog.icons}
+                size={20}
+              />
+              {c}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </li>
+  );
+}
 export default function ComponentNavigation({
   catalog,
   categories,
-  selected,
+  selected = "",
+  href = componentCategoryPath,
 }: {
   catalog: SiteCatalog;
   categories: string[];
   selected?: string;
+  href?: (category: string) => string;
 }) {
-  const groups = componentNavigation(catalog, categories);
-  const initial =
-    groups.find((g) => g.categories.includes(selected || ""))?.id || "";
-  const [expanded, setExpanded] = useState(initial);
-  const active = groups.find((g) => g.id === expanded);
-  const panel = useMotionFeedback(expanded, { reveal: true });
+  const groups = componentNavigation(catalog, [...categories, selected]);
+  const parent = groups.find((g) => g.categories.includes(selected))?.id;
+  const [expanded, setExpanded] = useState<string[]>(parent ? [parent] : []);
+  const [mobile, setMobile] = useState(false);
+  const trigger = useRef<HTMLButtonElement>(null);
   const signature = groups.map((g) => g.id).join("|");
+  useEffect(() => {
+    if (parent)
+      setExpanded((ids) => (ids.includes(parent) ? ids : [...ids, parent]));
+  }, [parent, selected]);
   useEffect(() => {
     const sync = () => {
       let hash;
@@ -99,101 +172,80 @@ export default function ComponentNavigation({
       const id = signature
         .split("|")
         .find((g) => componentGroupAnchor(g) === hash);
-      if (id) setExpanded(id);
+      if (id) {
+        setExpanded((ids) => (ids.includes(id) ? ids : [...ids, id]));
+        setMobile(true);
+      }
     };
     sync();
     window.addEventListener("hashchange", sync);
     return () => window.removeEventListener("hashchange", sync);
   }, [signature]);
-  const links = (g: ReturnType<typeof componentNavigation>[number]) => (
-    <ul className={styles.types}>
-      {g.categories.map((c) => (
-        <li key={c}>
-          <Link
-            href={componentCategoryPath(c)}
-            aria-current={selected === c ? "page" : undefined}
-          >
-            <ComponentIllustration
-              category={c}
-              icons={catalog.icons}
-              size={22}
-            />
-            {c}
-            <ChevronRight size={14} />
-          </Link>
-        </li>
-      ))}
-    </ul>
-  );
+  const select = () => {
+    if (mobile) {
+      setMobile(false);
+      trigger.current?.focus({ preventScroll: true });
+    }
+  };
   return (
-    <section className={styles.navigation} aria-label="Категории компонентов">
-      <div className={styles.groups}>
-        {groups.map((g) => (
-          <button
-            key={g.id}
-            id={componentGroupAnchor(g.id)}
-            className={styles.group}
-            type="button"
-            aria-expanded={expanded === g.id}
-            aria-controls="component-group-types"
-            onClick={() => setExpanded(g.id)}
-            onKeyDown={(e) => {
-              if (e.key === "Escape") setExpanded("");
-            }}
-          >
-            <ComponentIllustration group={g.id} name={g.icon} size={40} />
-            <span>
-              <strong>{g.name}</strong>
-              <small>
-                {g.categories.length}{" "}
-                {plural(g.categories.length, "тип", "типа", "типов")}{" "}
-                компонентов
-              </small>
-            </span>
-            <ChevronDown size={16} />
-          </button>
-        ))}
-      </div>
-      <div
-        id="component-group-types"
-        hidden={!active}
-        className={styles.panel}
-        ref={panel}
+    <nav className={styles.navigation} aria-label="Категории компонентов">
+      <button
+        ref={trigger}
+        type="button"
+        className={styles.mobileTrigger}
+        aria-expanded={mobile}
+        aria-controls="component-tree"
+        onClick={() => setMobile((v) => !v)}
       >
-        {active && (
-          <>
-            <h2>
-              <ComponentIllustration
-                group={active.id}
-                name={active.icon}
-                size={24}
-              />
-              {active.name}
-            </h2>
-            {links(active)}
-          </>
-        )}
-      </div>
-      <details className={styles.directory}>
-        <summary>
-          <Shapes size={18} />
-          Все типы компонентов{" "}
-          <span className="count">
-            {groups.reduce((n, g) => n + g.categories.length, 0)}
-          </span>
-        </summary>
-        <div className={styles.directoryGrid}>
+        <Shapes size={18} aria-hidden="true" />
+        Категории
+        <ChevronDown size={16} aria-hidden="true" />
+      </button>
+      <div
+        id="component-tree"
+        className={styles.tree}
+        data-mobile-open={mobile}
+        onKeyDown={(e) => {
+          if (e.key === "Escape" && mobile) {
+            e.preventDefault();
+            e.stopPropagation();
+            select();
+          }
+        }}
+      >
+        <Link
+          className={styles.all}
+          href={href("")}
+          scroll={false}
+          aria-current={!selected ? "page" : undefined}
+          onClick={select}
+        >
+          Все компоненты
+        </Link>
+        <ul className={styles.groups}>
           {groups.map((g) => (
-            <section key={g.id} aria-label={g.name}>
-              <h3>
-                <ComponentIllustration group={g.id} name={g.icon} size={24} />
-                {g.name}
-              </h3>
-              {links(g)}
-            </section>
+            <GroupBranch
+              key={g.id}
+              group={g}
+              catalog={catalog}
+              selected={selected}
+              expanded={expanded.includes(g.id)}
+              href={href}
+              onSelect={select}
+              onToggle={() =>
+                setExpanded((ids) =>
+                  ids.includes(g.id)
+                    ? ids.filter((id) => id !== g.id)
+                    : [...ids, g.id],
+                )
+              }
+            />
           ))}
-        </div>
-      </details>
-    </section>
+        </ul>
+      </div>
+      <p className={styles.activeType} aria-live="polite">
+        {selected || "Все компоненты"}
+      </p>
+    </nav>
   );
 }

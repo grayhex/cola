@@ -1,6 +1,8 @@
 "use client";
 import { errorMessage } from "../../lib/errors.ts";
-import type { FormEvent } from "react";
+import PlanningGraphic from "./planning-graphic.tsx";
+import InfoTip from "./info-tip.tsx";
+import type { ReactNode, FormEvent } from "react";
 import type { AccountBikeDto, ApiError } from "../../lib/contracts.ts";
 import type { RideDto } from "./content-types.ts";
 import type {
@@ -29,7 +31,6 @@ type PlanFormDraft = {
   features: string;
 };
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Globe, LockKeyhole } from "lucide-react";
 import EmailPolicyAction from "./email-policy-action.tsx";
 import SiteIcon from "./site-icon.tsx";
 import PassportTiles from "./passport-tiles.tsx";
@@ -205,6 +206,7 @@ export default function PlanForm({
   onSaved,
   onCancel,
   onDirty,
+  prelude,
 }: {
   ride?: RideDto | null;
   // A group chosen in «Подобрать время по интересам» (#370): its start and
@@ -216,6 +218,7 @@ export default function PlanForm({
   onSaved: RideSaveHandler;
   onCancel: () => void;
   onDirty?: (dirty: boolean) => void;
+  prelude?: ReactNode;
 }) {
   const { personalSettings } = useSite();
   // A series keeps the zone it was created in; new plans use the profile's.
@@ -409,338 +412,323 @@ export default function PlanForm({
   }
   return (
     <form className="plan-form" onSubmit={submit}>
-      <div className="planning-body">
-        <fieldset className="planning-section half wide-4" disabled={busy}>
-          <legend>
-            <span className="step" aria-hidden="true">
-              1
-            </span>
-            Когда и где
-          </legend>
-          <div className="planning-row">
-            <label className="field">
-              <span>Дата</span>
-              <input
-                type="date"
-                required
-                value={form.date}
-                onChange={(e) =>
-                  setForm((f) => ({
-                    ...f,
-                    date: e.target.value,
-                    startFold: undefined,
-                    endFold: undefined,
-                  }))
-                }
-              />
-            </label>
-            <label className="field">
-              <span>Старт</span>
-              <input
-                type="time"
-                required
-                value={form.time}
-                onChange={(e) =>
-                  setForm((f) => ({
-                    ...f,
-                    time: e.target.value,
-                    startFold: undefined,
-                    endFold: undefined,
-                  }))
-                }
-              />
-            </label>
-            <label className="field">
-              <span>Окончание</span>
-              <input
-                type="time"
-                aria-describedby="plan-end-help"
-                value={form.endTime}
-                onChange={(e) =>
-                  setForm((f) => ({
-                    ...f,
-                    endTime: e.target.value,
-                    endFold: undefined,
-                  }))
-                }
-              />
-            </label>
-          </div>
-          <FoldChoice
-            local={local.start}
-            zone={zone}
-            label="Время старта повторяется при переводе часов"
-            value={form.startFold}
-            onChange={(v) => set("startFold", v)}
-          />
-          <FoldChoice
-            local={local.end}
-            zone={zone}
-            label="Время окончания повторяется при переводе часов"
-            value={form.endFold}
-            onChange={(v) => set("endFold", v)}
-          />
-          <small className="help" id="plan-end-help">
-            Время — {zone}
-            {ride ? " (пояс серии)" : " · из профиля"}. Окончание необязательно;
-            раньше старта — значит на следующий день.
-          </small>
-          {whenError && (
-            <p role="alert" className="error">
-              {whenError}
-            </p>
-          )}
-          <label className="field">
-            <span>Место встречи</span>
-            <input
-              maxLength={200}
-              placeholder="Например, у входа в парк"
-              value={form.meetingPoint}
-              onChange={(e) => set("meetingPoint", e.target.value)}
-            />
-          </label>
-          <AreaField
-            value={form.passport}
-            onChange={(v) => set("passport", v)}
-            disabled={busy}
-            label="Район или парк"
-            check={areaCheck}
-            onPending={(pending) => {
-              areaPending.current = pending;
-            }}
-          />
-          {ride && ride.status === "planned" && (
-            <RevisionHint ride={ride} initial={initial} form={form} />
-          )}
-        </fieldset>
-        <fieldset className="planning-section half wide-4" disabled={busy}>
-          <legend>
-            <span className="step" aria-hidden="true">
-              2
-            </span>
-            Как поедем
-          </legend>
-          <label className="field">
-            <span>Название</span>
-            <input
-              required
-              maxLength={120}
-              placeholder="Например, утренний круг по набережной"
-              value={form.title}
-              onChange={(e) => set("title", e.target.value)}
-            />
-          </label>
-          <PassportTiles
-            value={form.passport}
-            onChange={(v) => set("passport", v)}
-            disabled={busy}
-            label="Условия поездки"
-          />
-          <ExtraConditions
-            value={form.passport}
-            onChange={(v) => set("passport", v)}
-            disabled={busy}
-            pick={["beginnerFriendly", "regroupPolicy"]}
-            help={false}
-          />
-        </fieldset>
-        <fieldset className="planning-section wide-4" disabled={busy}>
-          <legend>
-            <span className="step" aria-hidden="true">
-              3
-            </span>
-            Участники и доступ
-          </legend>
-          <div
-            className="option-tiles"
-            role="radiogroup"
-            aria-label="Кто видит покатушку"
-          >
-            {(
-              [
-                [
-                  true,
-                  "Публичная покатушка",
-                  "Видна в ленте, откликнуться может любой.",
-                  Globe,
-                ],
-                [
-                  false,
-                  "По приглашению",
-                  "Видят только вы и приглашённые.",
-                  LockKeyhole,
-                ],
-              ] as const
-            ).map(([value, label, hint, Icon]) => (
-              <label className="option-tile" key={label}>
-                <input
-                  type="radio"
-                  name="plan-visibility"
-                  aria-label={label}
-                  aria-describedby={"plan-visibility-" + value}
-                  checked={form.isPublic === value}
-                  onChange={() => set("isPublic", value)}
-                />
-                <Icon size={16} aria-hidden="true" />
-                <span>
-                  <strong>{label}</strong>
-                  <small id={"plan-visibility-" + value}>{hint}</small>
-                </span>
-              </label>
-            ))}
-          </div>
-          {cannotPublish && (
-            <p role="alert" className="error">
-              Велосипед «{selectedBike.name}» приватный: опубликуйте его или
-              выберите «По приглашению».
-            </p>
-          )}
-          {ride?.isPublic && !form.isPublic && (
-            <p className="notice" data-tone="warning">
-              Анонс и превью ссылки станут закрытыми сразу после сохранения. Но
-              превью, уже отправленные в мессенджеры, могут остаться у
-              получателей — отозвать их нельзя.
-            </p>
-          )}
-          <div className="planning-row wide">
-            <label className="field">
-              <span>Кто видит точное место встречи</span>
-              <select
-                value={form.meetingVisibility}
-                onChange={(e) => set("meetingVisibility", e.target.value)}
-              >
-                <option value="participants">
-                  Организатор и участники с ответом «Иду»
-                </option>
-                <option value="public">Все, кому доступна поездка</option>
-              </select>
-            </label>
-            <label className="field">
-              <span>Пригласить пользователей</span>
-              <input
-                maxLength={930}
-                placeholder="@username, @friend"
-                value={form.invitations}
-                onChange={(e) => set("invitations", e.target.value)}
-              />
-            </label>
-          </div>
-          <small className="help">
-            Скрытое место встречи защищает и края прикреплённого маршрута. До 30
-            приглашений; приглашённые получат уведомление.
-          </small>
-        </fieldset>
-        <details
-          className="planning-advanced"
-          open={advanced}
-          onToggle={(e) => setAdvanced(e.currentTarget.open)}
-        >
-          <summary>
-            Дополнительно
-            {selectedBike
-              ? ` · ${selectedBike.name}`
-              : rideBikes.length
-                ? " · выберите велосипед"
-                : ""}
-          </summary>
-          <div className="planning-body" ref={reveal}>
-            <fieldset className="planning-section half" disabled={busy}>
-              <legend className="sr-only">Велосипед и маршрут</legend>
+      <div className="planning-body planning-side-layout">
+        <PlanningGraphic slot="planDialogGraphic" size="side" />
+        <div className="planning-side-column">
+          {prelude}
+          <fieldset className="planning-section half wide-4" disabled={busy}>
+            <legend>
+              <span className="step" aria-hidden="true">
+                1
+              </span>
+              Когда и где
+              <InfoTip id="plan-end-help" label="Подробнее: Дата и время">
+                Время — {zone}
+                {ride ? " (пояс серии)" : " · из профиля"}. Окончание
+                необязательно; раньше старта — значит на следующий день.
+              </InfoTip>
+            </legend>
+            <div className="planning-row">
               <label className="field">
-                <span>Велосипед</span>
-                <select
-                  ref={bikeSelect}
-                  aria-label="Велосипед"
-                  aria-invalid={!!bikeError || undefined}
-                  aria-describedby={bikeError ? "plan-bike-error" : undefined}
-                  value={form.bikeId}
-                  onChange={(e) => {
-                    set("bikeId", e.target.value);
-                    setBikeError("");
-                  }}
-                >
-                  <option value="" disabled>
-                    Выберите велосипед
-                  </option>
-                  {rideBikes.map((b) => (
-                    <option key={b.id} value={b.id}>
-                      {b.name}
-                      {b.is_former ? " · бывший" : ""}
-                      {b.is_public ? "" : " · приватный"}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              {bikeError && (
-                <p role="alert" className="error" id="plan-bike-error">
-                  {bikeError}
-                </p>
-              )}
-              {!ride && (
-                <label className="ride-drop">
-                  Маршрут: GPX, FIT или TCX · необязательно
-                  <input
-                    type="file"
-                    accept={trackFiles}
-                    disabled={busy}
-                    onChange={(e) => upload(e.target.files?.[0])}
-                  />
-                  <small>
-                    До {Math.round((config?.maxGpxBytes || 10485760) / 1048576)}{" "}
-                    МБ
-                  </small>
-                </label>
-              )}
-              {!!(preview || ride)?.geometry?.length && (
-                <RideRoutePreview geometry={(preview || ride)?.geometry} />
-              )}
-              {(preview || ride?.hasTrack) && (
-                <RideMetrics
-                  metrics={(preview || ride)?.metrics || {}}
-                  visibleMetrics={["distanceM", "elevationGainM"]}
-                />
-              )}
-              <label className="ride-toggle">
+                <span>Дата</span>
                 <input
-                  type="checkbox"
-                  checked={form.recurrence === "weekly"}
+                  type="date"
+                  required
+                  value={form.date}
                   onChange={(e) =>
-                    set("recurrence", e.target.checked ? "weekly" : "none")
+                    setForm((f) => ({
+                      ...f,
+                      date: e.target.value,
+                      startFold: undefined,
+                      endFold: undefined,
+                    }))
                   }
                 />
-                <SiteIcon name="repeat" /> Повторять каждую неделю
-              </label>
-            </fieldset>
-            <fieldset className="planning-section half" disabled={busy}>
-              <legend className="sr-only">Описание и условия</legend>
-              <label className="field">
-                <span>Описание</span>
-                <textarea
-                  rows={3}
-                  maxLength={3000}
-                  value={form.description}
-                  onChange={(e) => set("description", e.target.value)}
-                />
-                <small>Без точного адреса: описание публикуется.</small>
               </label>
               <label className="field">
-                <span>Особенности маршрута</span>
+                <span>Старт</span>
                 <input
-                  maxLength={640}
-                  placeholder="Гравий, кофе по пути"
-                  value={form.features}
-                  onChange={(e) => set("features", e.target.value)}
+                  type="time"
+                  required
+                  value={form.time}
+                  onChange={(e) =>
+                    setForm((f) => ({
+                      ...f,
+                      time: e.target.value,
+                      startFold: undefined,
+                      endFold: undefined,
+                    }))
+                  }
                 />
               </label>
-              <ExtraConditions
-                value={form.passport}
-                onChange={(v) => set("passport", v)}
-                disabled={busy}
-                pick={["speedKmh", "difficulty"]}
+              <label className="field">
+                <span>Окончание</span>
+                <input
+                  type="time"
+                  aria-describedby="plan-end-help"
+                  value={form.endTime}
+                  onChange={(e) =>
+                    setForm((f) => ({
+                      ...f,
+                      endTime: e.target.value,
+                      endFold: undefined,
+                    }))
+                  }
+                />
+              </label>
+            </div>
+            <FoldChoice
+              local={local.start}
+              zone={zone}
+              label="Время старта повторяется при переводе часов"
+              value={form.startFold}
+              onChange={(v) => set("startFold", v)}
+            />
+            <FoldChoice
+              local={local.end}
+              zone={zone}
+              label="Время окончания повторяется при переводе часов"
+              value={form.endFold}
+              onChange={(v) => set("endFold", v)}
+            />
+
+            {whenError && (
+              <p role="alert" className="error">
+                {whenError}
+              </p>
+            )}
+            <label className="field">
+              <span>Место встречи</span>
+              <input
+                maxLength={200}
+                placeholder="Например, у входа в парк"
+                value={form.meetingPoint}
+                onChange={(e) => set("meetingPoint", e.target.value)}
               />
-            </fieldset>
-          </div>
-        </details>
+            </label>
+            <AreaField
+              value={form.passport}
+              onChange={(v) => set("passport", v)}
+              disabled={busy}
+              label="Район или парк"
+              check={areaCheck}
+              onPending={(pending) => {
+                areaPending.current = pending;
+              }}
+            />
+            {ride && ride.status === "planned" && (
+              <RevisionHint ride={ride} initial={initial} form={form} />
+            )}
+          </fieldset>
+        </div>
+        <div className="planning-side-column">
+          <fieldset className="planning-section half wide-4" disabled={busy}>
+            <legend>
+              <span className="step" aria-hidden="true">
+                2
+              </span>
+              Как поедем
+            </legend>
+            <label className="field">
+              <span>Название</span>
+              <input
+                required
+                maxLength={120}
+                placeholder="Например, утренний круг по набережной"
+                value={form.title}
+                onChange={(e) => set("title", e.target.value)}
+              />
+            </label>
+            <PassportTiles
+              value={form.passport}
+              onChange={(v) => set("passport", v)}
+              disabled={busy}
+              label="Условия поездки"
+            />
+            <ExtraConditions
+              value={form.passport}
+              onChange={(v) => set("passport", v)}
+              disabled={busy}
+              pick={["beginnerFriendly", "regroupPolicy"]}
+              help={false}
+            />
+          </fieldset>
+          <fieldset className="planning-section wide-4" disabled={busy}>
+            <legend>
+              <span className="step" aria-hidden="true">
+                3
+              </span>
+              Участники и доступ
+              <InfoTip label="Подробнее: Участники и доступ">
+                {form.isPublic
+                  ? "Видна в ленте, откликнуться может любой."
+                  : "Видят только вы и приглашённые."}{" "}
+                Скрытое место встречи защищает и края прикреплённого маршрута.
+                До 30 приглашений; приглашённые получат уведомление.
+              </InfoTip>
+            </legend>
+            <label className="field">
+              <span className="sr-only">Кто видит покатушку</span>
+              <select
+                aria-label="Кто видит покатушку"
+                value={String(form.isPublic)}
+                onChange={(e) => set("isPublic", e.target.value === "true")}
+              >
+                <option value="true">Публичная покатушка</option>
+                <option value="false">По приглашению</option>
+              </select>
+            </label>
+
+            {cannotPublish && (
+              <p role="alert" className="error">
+                Велосипед «{selectedBike.name}» приватный: опубликуйте его или
+                выберите «По приглашению».
+              </p>
+            )}
+            {ride?.isPublic && !form.isPublic && (
+              <p className="notice" data-tone="warning">
+                Анонс и превью ссылки станут закрытыми сразу после сохранения.
+                Но превью, уже отправленные в мессенджеры, могут остаться у
+                получателей — отозвать их нельзя.
+              </p>
+            )}
+            <div className="planning-row wide">
+              <label className="field">
+                <span>Кто видит точное место встречи</span>
+                <select
+                  value={form.meetingVisibility}
+                  onChange={(e) => set("meetingVisibility", e.target.value)}
+                >
+                  <option value="participants">
+                    Организатор и участники с ответом «Иду»
+                  </option>
+                  <option value="public">Все, кому доступна поездка</option>
+                </select>
+              </label>
+              <label className="field">
+                <span>Пригласить пользователей</span>
+                <input
+                  maxLength={930}
+                  placeholder="@username, @friend"
+                  value={form.invitations}
+                  onChange={(e) => set("invitations", e.target.value)}
+                />
+              </label>
+            </div>
+          </fieldset>
+          <details
+            className="planning-advanced"
+            open={advanced}
+            onToggle={(e) => setAdvanced(e.currentTarget.open)}
+          >
+            <summary>
+              Дополнительно
+              {selectedBike
+                ? ` · ${selectedBike.name}`
+                : rideBikes.length
+                  ? " · выберите велосипед"
+                  : ""}
+            </summary>
+            <div className="planning-body" ref={reveal}>
+              <fieldset className="planning-section half" disabled={busy}>
+                <legend className="sr-only">Велосипед и маршрут</legend>
+                <label className="field">
+                  <span>Велосипед</span>
+                  <select
+                    ref={bikeSelect}
+                    aria-label="Велосипед"
+                    aria-invalid={!!bikeError || undefined}
+                    aria-describedby={bikeError ? "plan-bike-error" : undefined}
+                    value={form.bikeId}
+                    onChange={(e) => {
+                      set("bikeId", e.target.value);
+                      setBikeError("");
+                    }}
+                  >
+                    <option value="" disabled>
+                      Выберите велосипед
+                    </option>
+                    {rideBikes.map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.name}
+                        {b.is_former ? " · бывший" : ""}
+                        {b.is_public ? "" : " · приватный"}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                {bikeError && (
+                  <p role="alert" className="error" id="plan-bike-error">
+                    {bikeError}
+                  </p>
+                )}
+                {!ride && (
+                  <label className="ride-drop">
+                    Маршрут: GPX, FIT или TCX · необязательно
+                    <input
+                      type="file"
+                      accept={trackFiles}
+                      disabled={busy}
+                      onChange={(e) => upload(e.target.files?.[0])}
+                    />
+                    <small>
+                      До{" "}
+                      {Math.round((config?.maxGpxBytes || 10485760) / 1048576)}{" "}
+                      МБ
+                    </small>
+                  </label>
+                )}
+                {!!(preview || ride)?.geometry?.length && (
+                  <RideRoutePreview geometry={(preview || ride)?.geometry} />
+                )}
+                {(preview || ride?.hasTrack) && (
+                  <RideMetrics
+                    metrics={(preview || ride)?.metrics || {}}
+                    visibleMetrics={["distanceM", "elevationGainM"]}
+                  />
+                )}
+                <label className="ride-toggle">
+                  <input
+                    type="checkbox"
+                    checked={form.recurrence === "weekly"}
+                    onChange={(e) =>
+                      set("recurrence", e.target.checked ? "weekly" : "none")
+                    }
+                  />
+                  <SiteIcon name="repeat" /> Повторять каждую неделю
+                </label>
+              </fieldset>
+              <fieldset className="planning-section half" disabled={busy}>
+                <legend className="sr-only">Описание и условия</legend>
+                <label className="field">
+                  <span>Описание</span>
+                  <textarea
+                    rows={3}
+                    maxLength={3000}
+                    value={form.description}
+                    onChange={(e) => set("description", e.target.value)}
+                  />
+                  <small>Без точного адреса: описание публикуется.</small>
+                </label>
+                <label className="field">
+                  <span>Особенности маршрута</span>
+                  <input
+                    maxLength={640}
+                    placeholder="Гравий, кофе по пути"
+                    value={form.features}
+                    onChange={(e) => set("features", e.target.value)}
+                  />
+                </label>
+                <ExtraConditions
+                  value={form.passport}
+                  onChange={(v) => set("passport", v)}
+                  disabled={busy}
+                  pick={["speedKmh", "difficulty"]}
+                />
+              </fieldset>
+            </div>
+          </details>
+        </div>
       </div>
       <div className="planning-actions">
         {error && (

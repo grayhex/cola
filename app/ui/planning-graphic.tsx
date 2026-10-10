@@ -15,8 +15,8 @@ export default function PlanningGraphic({
   size = "compact",
 }: {
   slot: "intentDialogGraphic" | "planDialogGraphic" | "wizardSearchGraphic";
-  /** `wide`: the picture above the search of the wizard (#374), not a mark by a title. */
-  size?: "compact" | "wide";
+  /** Square decorative column shared by the open composers (#397). */
+  size?: "compact" | "wide" | "side";
 }) {
   const { settings } = useSite();
   const reduced = useReducedMotion();
@@ -25,7 +25,14 @@ export default function PlanningGraphic({
   if (!graphic || failed === graphic.assetId) return null;
   return (
     <span
-      className={styles.graphic + (size === "wide" ? " " + styles.wide : "")}
+      className={
+        styles.graphic +
+        (size === "side"
+          ? " " + styles.side
+          : size === "wide"
+            ? " " + styles.wide
+            : "")
+      }
       aria-hidden="true"
       data-planning-graphic={slot}
     >
@@ -36,6 +43,7 @@ export default function PlanningGraphic({
             <RiveCanvas
               key={graphic.assetId}
               src={"/api/assets/" + graphic.assetId}
+              onError={() => setFailed(graphic.assetId)}
             />
           )}
         </>
@@ -44,8 +52,8 @@ export default function PlanningGraphic({
           unoptimized
           src={"/api/assets/" + graphic.assetId}
           alt=""
-          width={size === "wide" ? 480 : 80}
-          height={size === "wide" ? 140 : 56}
+          width={size === "side" ? 480 : size === "wide" ? 480 : 80}
+          height={size === "side" ? 480 : size === "wide" ? 140 : 56}
           onError={() => setFailed(graphic.assetId)}
         />
       )}

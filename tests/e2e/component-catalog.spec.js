@@ -197,55 +197,48 @@ test("component catalog: real filters, pagination, themes, mobile and durable mo
     expect(created.status()).toBe(201);
     const bikeId = (await created.json()).id;
     await page.goto("/components");
-    const categories = page.getByRole("region", {
+    const categories = page.getByRole("navigation", {
       name: "Категории компонентов",
     });
+    if (isMobile)
+      await categories
+        .getByRole("button", { name: "Категории", exact: true })
+        .click();
     for (const group of defaultGroups) {
       const trigger = categories.getByRole("button", {
         name: new RegExp(group.name),
       });
-      if (isMobile) await trigger.tap();
-      else {
+      await expect(trigger).toHaveAttribute("aria-expanded", "false");
+      if (!isMobile) {
         await trigger.hover();
         await expect(trigger).toHaveAttribute("aria-expanded", "false");
-        await trigger.click();
       }
+      await trigger.click();
       await expect(trigger).toHaveAttribute("aria-expanded", "true");
-      const panel = page.locator("#component-group-types");
+      const panel = page.locator("#component-group-" + group.id + "-types");
       for (const category of group.categories)
         await expect(
           panel.getByRole("link", { name: category, exact: true }),
         ).toBeVisible();
-      if (!isMobile) {
-        const neighbour = categories
-          .getByRole("button")
-          .filter({ hasNotText: group.name })
-          .first();
-        await neighbour.hover();
-        await expect(trigger).toHaveAttribute("aria-expanded", "true");
-        await expect(neighbour).toHaveAttribute("aria-expanded", "false");
-      }
-      await trigger.focus();
-      await trigger.press("Escape");
-      await expect(trigger).toHaveAttribute("aria-expanded", "false");
     }
-    await page.emulateMedia({ reducedMotion: "reduce" });
+    // Several branches stay open; collapsing one does not clear the filter.
+    await categories.getByRole("button", { name: /Трансмиссия/ }).click();
+    await expect(
+      categories.getByRole("button", { name: /Тормоза/ }),
+    ).toHaveAttribute("aria-expanded", "true");
     await categories
-      .getByText("Все типы компонентов", { exact: false })
+      .getByRole("link", { name: "Батарея", exact: true })
       .click();
-    const directory = categories.locator("details");
-    for (const category of defaultGroups.flatMap((g) => g.categories)) {
-      await expect(
-        directory.getByRole("link", { name: category, exact: true }),
-      ).toHaveCount(1);
-    }
-    await directory.getByRole("link", { name: "Батарея", exact: true }).click();
     await expect(page).toHaveURL(
       (url) => url.searchParams.get("category") === "Батарея",
     );
     await expect(page.getByRole("heading", { level: 1 })).toHaveText(
       "Компоненты 0",
     );
+    if (isMobile)
+      await expect(
+        categories.getByRole("button", { name: "Категории", exact: true }),
+      ).toBeFocused();
     await page.goto("/components#component-group-cockpit");
     await expect(
       categories.getByRole("button", { name: /Управление и посадка/ }),
@@ -253,13 +246,17 @@ test("component catalog: real filters, pagination, themes, mobile and durable mo
     await page.emulateMedia({ reducedMotion: "no-preference" });
     const filters = page.getByRole("form", { name: "Фильтры компонентов" });
     await filters.getByLabel("Поиск модели").fill(prefix);
-    await filters
-      .getByRole("combobox", { name: "Категория", exact: true })
-      .selectOption("Седло");
+    // A legacy group anchor already opens the mobile disclosure.
+    if (isMobile)
+      await expect(
+        categories.getByRole("button", { name: "Категории", exact: true }),
+      ).toHaveAttribute("aria-expanded", "true");
+    await categories.getByRole("link", { name: "Седло", exact: true }).click();
+    await expect(filters.getByLabel("Поиск модели")).toHaveValue(prefix);
     await filters
       .getByRole("combobox", { name: "Бренд", exact: true })
       .selectOption("Brooks");
-    await filters.getByRole("button", { name: "Показать" }).click();
+    await filters.getByRole("button", { name: "Найти" }).click();
     const results = page.getByRole("region", { name: "Модели компонентов" });
     await expect(results.getByRole("heading", { level: 2 })).toHaveCount(24);
     await expect(page.getByRole("heading", { level: 1 })).toContainText("26");
@@ -363,6 +360,153 @@ test("component catalog: real filters, pagination, themes, mobile and durable mo
     expect(new URL(page.url()).pathname).not.toBe(oldPath);
   } finally {
     if (owner) await db.query("DELETE FROM users WHERE id=$1", [owner]);
+    await db.end();
+  }
+});
+
+test("catalog tree filters 301 models on the server, preserves drafts and history, and discards a late navigation", async ({
+  page,
+  isMobile,
+}) => {
+  const db = new pg.Client({ connectionString: process.env.DATABASE_URL });
+  await db.connect();
+  const prefix = "Tree397-" + randomUUID().slice(0, 8);
+  try {
+    await db.query(
+      `INSERT INTO component_models(category,brand,name,category_slug,slug,first_public_at)
+      SELECT 'Седло',$1,$1 || ' ' || n,'седло',$1 || '-' || n,now() FROM generate_series(1,300) n`,
+      [prefix],
+    );
+    await db.query(
+      `INSERT INTO component_models(category,brand,name,category_slug,slug,first_public_at)
+      VALUES('Передний свет',$1,$1 || ' target','передний-свет',$1 || '-target',now() - interval '1 year')`,
+      [prefix],
+    );
+    const initial =
+      "/components?" +
+      new URLSearchParams({ q: prefix, brand: prefix, sort: "new", page: "2" });
+    await page.goto(initial);
+    const originTime = await page.evaluate(() => performance.timeOrigin);
+    const tree = page.getByRole("navigation", {
+      name: "Категории компонентов",
+    });
+    const result = page.getByRole("region", { name: "Модели компонентов" });
+    const search = page.getByLabel("Поиск модели");
+    const categories = tree.getByRole("button", {
+      name: "Категории",
+      exact: true,
+    });
+    if (isMobile) await categories.click();
+    await tree
+      .getByRole("button", { name: /Оборудование и аксессуары/ })
+      .click();
+    await expect(result.getByRole("heading", { level: 2 })).toHaveCount(24);
+    await expect(result).not.toContainText(prefix + " target");
+    await search.fill(prefix + " draft");
+    await tree
+      .getByRole("link", { name: "Передний свет", exact: true })
+      .click();
+    await expect(page).toHaveURL(
+      (u) =>
+        u.searchParams.get("category") === "Передний свет" &&
+        u.searchParams.get("page") === "1",
+    );
+    await expect(result.getByRole("heading", { level: 2 })).toHaveText([
+      prefix + " target",
+    ]);
+    await expect(search).toHaveValue(prefix + " draft");
+    expect(new URL(page.url()).searchParams.get("q")).toBe(prefix);
+    expect(new URL(page.url()).searchParams.get("brand")).toBe(prefix);
+    expect(new URL(page.url()).searchParams.get("sort")).toBe("new");
+    expect(await page.evaluate(() => performance.timeOrigin)).toBe(originTime);
+    if (isMobile) {
+      await expect(categories).toBeFocused();
+      await categories.click();
+    }
+    await tree
+      .getByRole("button", { name: /Оборудование и аксессуары/ })
+      .click();
+    await expect(page).toHaveURL(
+      (u) => u.searchParams.get("category") === "Передний свет",
+    );
+    await tree
+      .getByRole("link", { name: "Все компоненты", exact: true })
+      .click();
+    await expect(result.getByRole("heading", { level: 2 })).toHaveCount(24);
+    await page.goBack();
+    await expect(result.getByRole("heading", { level: 2 })).toHaveText([
+      prefix + " target",
+    ]);
+    if (isMobile) await categories.click();
+    await expect(
+      tree.getByRole("button", { name: /Оборудование и аксессуары/ }),
+    ).toHaveAttribute("aria-expanded", "true");
+    await page.goForward();
+    await expect(result.getByRole("heading", { level: 2 })).toHaveCount(24);
+    await page.reload();
+    await expect(search).toHaveValue(prefix);
+    if (isMobile) await categories.click();
+    await tree.getByRole("button", { name: /Тормоза/ }).click();
+    const accessories = tree.getByRole("button", {
+      name: /Оборудование и аксессуары/,
+    });
+    if ((await accessories.getAttribute("aria-expanded")) !== "true")
+      await accessories.click();
+    let release;
+    const gate = new Promise((resolve) => {
+      release = resolve;
+    });
+    let requested;
+    const started = new Promise((resolve) => {
+      requested = resolve;
+    });
+    let delivered;
+    const finished = new Promise((resolve) => {
+      delivered = resolve;
+    });
+    await page.route("**/components?**", async (route) => {
+      if (
+        new URL(route.request().url()).searchParams.get("category") ===
+        "Тормоза"
+      ) {
+        const response = await route.fetch();
+        requested();
+        await gate;
+        await route.fulfill({ response });
+        delivered();
+      } else await route.continue();
+    });
+    await tree.getByRole("link", { name: "Тормоза", exact: true }).click();
+    await started;
+    if (isMobile) await categories.click();
+    await tree
+      .getByRole("link", { name: "Передний свет", exact: true })
+      .click();
+    await expect(result.getByRole("heading", { level: 2 })).toHaveText([
+      prefix + " target",
+    ]);
+    release();
+    await finished;
+    await page.unroute("**/components?**");
+    await expect(page).toHaveURL(
+      (u) => u.searchParams.get("category") === "Передний свет",
+    );
+    await expect(result.getByRole("heading", { level: 2 })).toHaveText([
+      prefix + " target",
+    ]);
+    await page
+      .getByRole("link", { name: "Сбросить фильтры", exact: true })
+      .click();
+    await expect(search).toHaveValue("");
+    await expect(page).toHaveURL(
+      (u) =>
+        !u.searchParams.has("category") &&
+        !u.searchParams.has("q") &&
+        !u.searchParams.has("brand") &&
+        u.searchParams.get("sort") === "popular",
+    );
+  } finally {
+    await db.query("DELETE FROM component_models WHERE brand=$1", [prefix]);
     await db.end();
   }
 });

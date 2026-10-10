@@ -1,5 +1,6 @@
 "use client";
 import PlanningGraphic from "./planning-graphic.tsx";
+import InfoTip from "./info-tip.tsx";
 import type { FormEvent } from "react";
 import type {
   IntentDto,
@@ -49,7 +50,6 @@ import {
   intentLimits,
   validTimeZone,
   localInstants,
-  resolveLocal,
   quickWindows,
   windowDraft,
   formatIntentWindow,
@@ -67,16 +67,6 @@ const api = <T = unknown,>(
   method = "GET",
   body?: unknown,
 ): Promise<T> => socialApi<T>("ride-intents" + path, method, body);
-function previewWindows(draft: IntentDraft) {
-  try {
-    return draft.windows.map((w) => ({
-      startsAt: resolveLocal(w.startLocal, draft.timeZone, w.startFold),
-      endsAt: resolveLocal(w.endLocal, draft.timeZone, w.endFold),
-    }));
-  } catch {
-    return [];
-  }
-}
 function TimeField({
   side,
   window,
@@ -221,14 +211,19 @@ export function IntentComposer({
       setBusy(false);
     }
   }
-  const windows = previewWindows(draft);
   return (
     <>
       <Modal
-        graphic={<PlanningGraphic slot="intentDialogGraphic" />}
+        compactHeader
+        help={
+          <InfoTip label="Подробнее: Намерение">
+            Намерение — это конкретный раз: когда и где хочется покататься.
+            Постоянные предпочтения хранятся отдельно и меняются, только если
+            сохранить их кнопкой ниже.
+          </InfoTip>
+        }
         wide
         title={draft.id ? "Изменить намерение" : "Новое намерение"}
-        description="Намерение — это конкретный раз: когда и где хочется покататься. Постоянные предпочтения хранятся отдельно и меняются, только если сохранить их кнопкой ниже."
         onClose={close}
         dismissible={!busy}
       >
@@ -236,350 +231,323 @@ export function IntentComposer({
             shell; the zone is the profile's (an edit keeps its own). The
             same window opens from the home page and /ride-intents (#264). */}
         <form onSubmit={save} className="intent-form">
-          <div className="planning-body">
-            <fieldset
-              className="planning-section half wide-4"
-              disabled={busy || uncertain}
-            >
-              <legend>
-                <span className="step" aria-hidden="true">
-                  1
-                </span>
-                Когда
-              </legend>
-              <div
-                className="segmented"
-                role="group"
-                aria-label="Готовность"
-                ref={feedback}
+          <div className="planning-body planning-side-layout">
+            <PlanningGraphic slot="intentDialogGraphic" size="side" />
+            <div className="planning-side-column">
+              <fieldset
+                className="planning-section half wide-4"
+                disabled={busy || uncertain}
               >
-                {Object.entries(readinessLabels).map(([key, label]) => (
-                  <button
-                    key={key}
-                    type="button"
-                    aria-pressed={draft.readiness === key}
-                    onClick={() => set("readiness", key)}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-              <div className={styles.quick}>
-                {[
-                  ["tonight", "Сегодня вечером"],
-                  ["weekend", "В выходные"],
-                ].map(([kind, label]) => (
-                  <button
-                    key={kind}
-                    type="button"
-                    className="button secondary small"
-                    disabled={
-                      !validTimeZone(draft.timeZone) ||
-                      !quickWindows(kind, draft.timeZone).length
-                    }
-                    onClick={() =>
-                      set("windows", quickWindows(kind, draft.timeZone))
-                    }
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-              <div className={styles.windowList}>
-                {draft.windows.map((w, index) => (
-                  <div key={index} className={styles.window}>
-                    <div className={styles.windowHead}>
-                      <strong>Окно {index + 1}</strong>
-                      <button
-                        type="button"
-                        className="icon secondary small danger"
-                        disabled={draft.windows.length === 1}
-                        aria-label={`Удалить окно ${index + 1}`}
-                        title="Удалить окно"
-                        onClick={() =>
-                          set(
-                            "windows",
-                            draft.windows.filter((_, n) => n !== index),
-                          )
-                        }
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                    <div className={styles.windowTimes}>
-                      {(["start", "end"] as const).map((side) => (
-                        <TimeField
-                          key={side}
-                          side={side}
-                          window={w}
-                          zone={draft.timeZone}
-                          index={index}
-                          onChange={(v) =>
+                <legend>
+                  <span className="step" aria-hidden="true">
+                    1
+                  </span>
+                  Когда
+                  <InfoTip label="Подробнее: Временные окна">
+                    Поездка целиком помещается в окно; до {intentLimits.windows}{" "}
+                    окон по {intentLimits.windowHours} ч. Время —{" "}
+                    {draft.timeZone}
+                    {draft.id ? "." : " из профиля."}
+                  </InfoTip>
+                </legend>
+                <div
+                  className="segmented"
+                  role="group"
+                  aria-label="Готовность"
+                  ref={feedback}
+                >
+                  {Object.entries(readinessLabels).map(([key, label]) => (
+                    <button
+                      key={key}
+                      type="button"
+                      aria-pressed={draft.readiness === key}
+                      onClick={() => set("readiness", key)}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <div className={styles.quick}>
+                  {[
+                    ["tonight", "Сегодня вечером"],
+                    ["weekend", "В выходные"],
+                  ].map(([kind, label]) => (
+                    <button
+                      key={kind}
+                      type="button"
+                      className="button secondary small"
+                      disabled={
+                        !validTimeZone(draft.timeZone) ||
+                        !quickWindows(kind, draft.timeZone).length
+                      }
+                      onClick={() =>
+                        set("windows", quickWindows(kind, draft.timeZone))
+                      }
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <div className={styles.windowList}>
+                  {draft.windows.map((w, index) => (
+                    <div key={index} className={styles.window}>
+                      <div className={styles.windowHead}>
+                        <strong>Окно {index + 1}</strong>
+                        <button
+                          type="button"
+                          className="icon secondary small danger"
+                          disabled={draft.windows.length === 1}
+                          aria-label={`Удалить окно ${index + 1}`}
+                          title="Удалить окно"
+                          onClick={() =>
                             set(
                               "windows",
-                              draft.windows.map((row, n) =>
-                                n === index ? v : row,
-                              ),
+                              draft.windows.filter((_, n) => n !== index),
                             )
                           }
-                        />
-                      ))}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                      <div className={styles.windowTimes}>
+                        {(["start", "end"] as const).map((side) => (
+                          <TimeField
+                            key={side}
+                            side={side}
+                            window={w}
+                            zone={draft.timeZone}
+                            index={index}
+                            onChange={(v) =>
+                              set(
+                                "windows",
+                                draft.windows.map((row, n) =>
+                                  n === index ? v : row,
+                                ),
+                              )
+                            }
+                          />
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-              <button
-                type="button"
-                className="quiet"
-                disabled={draft.windows.length >= intentLimits.windows}
-                onClick={() =>
-                  set("windows", [...draft.windows, blankWindow()])
-                }
-              >
-                <Plus size={16} /> Добавить окно
-              </button>
-              <small className="help">
-                Поездка целиком помещается в окно; до 4 окон по 24 ч. Время —{" "}
-                {draft.timeZone}
-                {draft.id ? "." : " из профиля."}
-              </small>
-            </fieldset>
-            <fieldset
-              className="planning-section half wide-4 intent-where"
-              disabled={busy || uncertain}
-            >
-              <legend>
-                <span className="step" aria-hidden="true">
-                  2
-                </span>
-                Где
-              </legend>
-              <AreaField
-                value={draft.passport}
-                onChange={(v) => set("passport", v)}
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  className="quiet"
+                  disabled={draft.windows.length >= intentLimits.windows}
+                  onClick={() =>
+                    set("windows", [...draft.windows, blankWindow()])
+                  }
+                >
+                  <Plus size={16} /> Добавить окно
+                </button>
+              </fieldset>
+              <fieldset
+                className="planning-section half wide-4 intent-where"
                 disabled={busy || uncertain}
-                intent
-                check={areaCheck}
-                onPending={(pending) => {
-                  areaPending.current = pending;
-                }}
-              />
-            </fieldset>
-            <fieldset
-              className="planning-section two-thirds wide-4"
-              disabled={busy || uncertain}
-            >
-              <legend>
-                <span className="step" aria-hidden="true">
-                  3
-                </span>
-                Как хочется кататься
-              </legend>
-              <PassportTiles
-                value={draft.passport}
-                onChange={(v) => set("passport", v)}
-                required={["purpose"]}
-              />
-              <div className={styles.quick}>
-                <button
-                  type="button"
-                  className="quiet"
-                  disabled={!Object.keys(preferences.passport || {}).length}
-                  onClick={() => {
-                    setDraft((d) => ({
-                      ...d,
-                      passport: { ...preferences.passport, ...d.passport },
-                      meetNewPeople:
-                        d.meetNewPeople ?? preferences.meetNewPeople,
-                    }));
-                    setNotice(
-                      "Постоянные предпочтения подставлены в незаполненные условия",
-                    );
+              >
+                <legend>
+                  <span className="step" aria-hidden="true">
+                    2
+                  </span>
+                  Где
+                </legend>
+                <AreaField
+                  value={draft.passport}
+                  onChange={(v) => set("passport", v)}
+                  disabled={busy || uncertain}
+                  intent
+                  check={areaCheck}
+                  onPending={(pending) => {
+                    areaPending.current = pending;
                   }}
-                >
-                  Подставить постоянные предпочтения
-                </button>
-                <button
-                  type="button"
-                  className="quiet"
-                  onClick={async () => {
-                    const half = areaProblems(draft.passport.area);
-                    if (half.length) {
-                      setError(half[0]);
-                      return;
-                    }
-                    setBusy(true);
-                    setError("");
-                    try {
-                      const result = await api<{
-                        preferences: IntentPreferencesDto;
-                      }>("/preferences", "PUT", {
-                        passport: draft.passport,
-                        ...(draft.meetNewPeople === undefined
-                          ? {}
-                          : { meetNewPeople: draft.meetNewPeople }),
-                      });
-                      onPreferences(result.preferences);
+                />
+              </fieldset>
+            </div>
+            <div className="planning-side-column">
+              <fieldset
+                className="planning-section two-thirds wide-4"
+                disabled={busy || uncertain}
+              >
+                <legend>
+                  <span className="step" aria-hidden="true">
+                    3
+                  </span>
+                  Как хочется кататься
+                </legend>
+                <PassportTiles
+                  value={draft.passport}
+                  onChange={(v) => set("passport", v)}
+                  required={["purpose"]}
+                />
+                <div className={styles.quick}>
+                  <button
+                    type="button"
+                    className="quiet"
+                    disabled={!Object.keys(preferences.passport || {}).length}
+                    onClick={() => {
+                      setDraft((d) => ({
+                        ...d,
+                        passport: { ...preferences.passport, ...d.passport },
+                        meetNewPeople:
+                          d.meetNewPeople ?? preferences.meetNewPeople,
+                      }));
                       setNotice(
-                        "Постоянные предпочтения сохранены только для вас. Намерение пока не сохранено.",
+                        "Постоянные предпочтения подставлены в незаполненные условия",
                       );
-                    } catch (e) {
-                      setError(errorMessage(e));
-                    } finally {
-                      setBusy(false);
-                    }
-                  }}
-                >
-                  Сохранить как постоянные предпочтения
-                </button>
-              </div>
-            </fieldset>
-            <section
-              className={
-                "planning-section third intent-preview " + styles.preview
-              }
-              aria-label="Предпросмотр намерения"
-            >
-              <div>
-                <strong>{readinessLabels[draft.readiness]}</strong>
-                <span className="badge">
-                  {draft.visibility === "private" ? "Только мне" : "Сообществу"}
-                </span>
-              </div>
-              {windows.length ? (
-                windows.map((w) => (
-                  <p key={w.startsAt + w.endsAt}>
-                    {formatIntentWindow(w, draft.timeZone)}
-                  </p>
-                ))
-              ) : (
-                <p className="help">Выберите точные даты и время</p>
-              )}
-              <p>{draft.passport.area?.label || "Укажите район или парк"}</p>
-            </section>
-            {/* Who sees it is a choice in plain view (#370): a new intent is for
+                    }}
+                  >
+                    Подставить постоянные предпочтения
+                  </button>
+                  <button
+                    type="button"
+                    className="quiet"
+                    onClick={async () => {
+                      const half = areaProblems(draft.passport.area);
+                      if (half.length) {
+                        setError(half[0]);
+                        return;
+                      }
+                      setBusy(true);
+                      setError("");
+                      try {
+                        const result = await api<{
+                          preferences: IntentPreferencesDto;
+                        }>("/preferences", "PUT", {
+                          passport: draft.passport,
+                          ...(draft.meetNewPeople === undefined
+                            ? {}
+                            : { meetNewPeople: draft.meetNewPeople }),
+                        });
+                        onPreferences(result.preferences);
+                        setNotice(
+                          "Постоянные предпочтения сохранены только для вас. Намерение пока не сохранено.",
+                        );
+                      } catch (e) {
+                        setError(errorMessage(e));
+                      } finally {
+                        setBusy(false);
+                      }
+                    }}
+                  >
+                    Сохранить как постоянные предпочтения
+                  </button>
+                </div>
+              </fieldset>
+              {/* Who sees it is a choice in plain view (#370): a new intent is for
               the community unless the person says otherwise, and an edit keeps
               what it had. The rest — suggestions, company and extra
               conditions — is folded (#264); its fields stay mounted, so
               nothing typed is lost when the section closes. */}
-            <fieldset
-              className="planning-section half wide-8"
-              disabled={busy || uncertain}
-            >
-              <legend>
-                <span className="step" aria-hidden="true">
-                  4
-                </span>
-                Кому видно
-              </legend>
-              <div className="option-tiles">
-                {(
-                  [
-                    [
-                      "private",
-                      "Только мне — для подбора",
-                      "Видите только вы. Используется для вашего подбора.",
-                      LockKeyhole,
-                    ],
-                    [
-                      "community",
-                      "Сообществу ColaBike",
-                      "Видны имя, район и расписание, без точного адреса. Нужна подтверждённая почта.",
-                      Users,
-                    ],
-                  ] as const
-                ).map(([key, label, hint, Icon]) => (
-                  <label className="option-tile" key={key}>
-                    <input
-                      type="radio"
-                      name="intent-visibility"
-                      aria-label={label}
-                      aria-describedby={"visibility-" + key}
-                      checked={draft.visibility === key}
-                      onChange={() => set("visibility", key)}
+              <fieldset
+                className="planning-section half wide-8"
+                disabled={busy || uncertain}
+              >
+                <legend>
+                  <span className="step" aria-hidden="true">
+                    4
+                  </span>
+                  Кому видно
+                  <InfoTip label="Подробнее: Кому видно">
+                    {draft.visibility === "private"
+                      ? "Видите только вы. Используется для вашего подбора."
+                      : "Видны имя, район и расписание, без точного адреса. Нужна подтверждённая почта."}
+                  </InfoTip>
+                </legend>
+                <label className="field">
+                  <span className="sr-only">Кому видно</span>
+                  <select
+                    aria-label="Кому видно"
+                    value={draft.visibility}
+                    onChange={(e) =>
+                      set(
+                        "visibility",
+                        e.target.value === "community"
+                          ? "community"
+                          : "private",
+                      )
+                    }
+                  >
+                    <option value="community">Сообществу ColaBike</option>
+                    <option value="private">Только мне</option>
+                  </select>
+                </label>
+
+                {draft.visibility === "community" &&
+                  viewer &&
+                  !viewer.email_verified_at && (
+                    <p className="help" role="status">
+                      Чтобы показать намерение сообществу, нужна подтверждённая
+                      почта: подтвердите её или выберите «Только мне».
+                    </p>
+                  )}
+              </fieldset>
+              <details className="planning-advanced intent-advanced">
+                <summary>Дополнительно</summary>
+                <div className="planning-body">
+                  <fieldset
+                    className="planning-section half"
+                    disabled={busy || uncertain}
+                  >
+                    <legend>Предложения</legend>
+                    <label className="check">
+                      <input
+                        type="checkbox"
+                        role="switch"
+                        className="toggle"
+                        aria-label="Можно предлагать мне подходящие поездки"
+                        aria-describedby="suggestions-hint"
+                        checked={draft.allowSuggestions}
+                        onChange={(e) =>
+                          set("allowSuggestions", e.target.checked)
+                        }
+                      />
+                      <span>
+                        Можно предлагать мне подходящие поездки
+                        <small id="suggestions-hint">
+                          Отдельное разрешение. Email и push не включаются;
+                          приватные условия организаторам не показываются.
+                        </small>
+                      </span>
+                    </label>
+                  </fieldset>
+                  <fieldset
+                    className="planning-section half"
+                    disabled={busy || uncertain}
+                  >
+                    <legend>Знакомства и условия</legend>
+                    <label className="field">
+                      <span>Готовность знакомиться</span>
+                      <select
+                        value={
+                          draft.meetNewPeople === undefined
+                            ? ""
+                            : String(draft.meetNewPeople)
+                        }
+                        onChange={(e) =>
+                          set(
+                            "meetNewPeople",
+                            e.target.value === ""
+                              ? undefined
+                              : e.target.value === "true",
+                          )
+                        }
+                      >
+                        <option value="">Не уточнено</option>
+                        <option value="true">Рад новым знакомствам</option>
+                        <option value="false">
+                          Предпочитаю знакомую компанию
+                        </option>
+                      </select>
+                    </label>
+                    <ExtraConditions
+                      value={draft.passport}
+                      onChange={(v) => set("passport", v)}
                     />
-                    <Icon size={16} aria-hidden="true" />
-                    <span>
-                      <strong>{label}</strong>
-                      <small id={"visibility-" + key}>{hint}</small>
-                    </span>
-                  </label>
-                ))}
-              </div>
-              {draft.visibility === "community" &&
-                viewer &&
-                !viewer.email_verified_at && (
-                  <p className="help" role="status">
-                    Чтобы показать намерение сообществу, нужна подтверждённая
-                    почта: подтвердите её или выберите «Только мне».
-                  </p>
-                )}
-            </fieldset>
-            <details className="planning-advanced intent-advanced">
-              <summary>Дополнительно</summary>
-              <div className="planning-body">
-                <fieldset
-                  className="planning-section half"
-                  disabled={busy || uncertain}
-                >
-                  <legend>Предложения</legend>
-                  <label className="check">
-                    <input
-                      type="checkbox"
-                      role="switch"
-                      className="toggle"
-                      aria-label="Можно предлагать мне подходящие поездки"
-                      aria-describedby="suggestions-hint"
-                      checked={draft.allowSuggestions}
-                      onChange={(e) =>
-                        set("allowSuggestions", e.target.checked)
-                      }
-                    />
-                    <span>
-                      Можно предлагать мне подходящие поездки
-                      <small id="suggestions-hint">
-                        Отдельное разрешение. Email и push не включаются;
-                        приватные условия организаторам не показываются.
-                      </small>
-                    </span>
-                  </label>
-                </fieldset>
-                <fieldset
-                  className="planning-section half"
-                  disabled={busy || uncertain}
-                >
-                  <legend>Знакомства и условия</legend>
-                  <label className="field">
-                    <span>Готовность знакомиться</span>
-                    <select
-                      value={
-                        draft.meetNewPeople === undefined
-                          ? ""
-                          : String(draft.meetNewPeople)
-                      }
-                      onChange={(e) =>
-                        set(
-                          "meetNewPeople",
-                          e.target.value === ""
-                            ? undefined
-                            : e.target.value === "true",
-                        )
-                      }
-                    >
-                      <option value="">Не уточнено</option>
-                      <option value="true">Рад новым знакомствам</option>
-                      <option value="false">
-                        Предпочитаю знакомую компанию
-                      </option>
-                    </select>
-                  </label>
-                  <ExtraConditions
-                    value={draft.passport}
-                    onChange={(v) => set("passport", v)}
-                  />
-                </fieldset>
-              </div>
-            </details>
+                  </fieldset>
+                </div>
+              </details>
+            </div>
           </div>
           <div className="planning-actions">
             {notice && (
