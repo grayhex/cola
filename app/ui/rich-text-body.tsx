@@ -94,6 +94,28 @@ export default function RichTextBody({
     const children = (node.content || []).map((child, index) =>
       render(child, index),
     );
+    if (node.type === "table")
+      return (
+        <div
+          key={key}
+          className={styles.tableScroll}
+          role="region"
+          aria-label="Таблица, горизонтальная прокрутка"
+          tabIndex={0}
+        >
+          <table>
+            <tbody>{children}</tbody>
+          </table>
+        </div>
+      );
+    if (node.type === "tableRow") return <tr key={key}>{children}</tr>;
+    if (node.type === "tableCell") return <td key={key}>{children}</td>;
+    if (node.type === "tableHeader")
+      return (
+        <th key={key} scope="col">
+          {children}
+        </th>
+      );
     if (node.type === "codeBlock")
       return (
         <pre key={key}>

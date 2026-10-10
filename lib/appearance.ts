@@ -75,6 +75,13 @@ gives up accent only as far as WCAG AA (4.5:1) on the hover surface needs,
 so any accent the administrator picks, black and white included, stays
 readable. */
 export function titleHover(hex: string, theme: "light" | "dark") {
+  return readableAccent(hex, theme, titleSurfaces[theme]);
+}
+// Article links also sit on subtle surfaces; use the worst ordinary surface.
+export function linkAccent(hex: string, theme: "light" | "dark") {
+  return readableAccent(hex, theme, theme === "dark" ? "#1F2937" : "#F3F4F6");
+}
+function readableAccent(hex: string, theme: "light" | "dark", surface: string) {
   const dark = theme === "dark";
   if (!/^#[\da-f]{6}$/i.test(hex || "")) return dark ? "#FFFFFF" : "#000000";
   const rgb = channels(hex),
@@ -84,7 +91,7 @@ export function titleHover(hex: string, theme: "light" | "dark") {
     const color = dark
       ? toHex(fromOklab([lab[0] * p + (1 - p), lab[1] * p, lab[2] * p]))
       : toHex(rgb.map((c) => c * p));
-    if (contrastRatio(color, titleSurfaces[theme]) >= 4.5) return color;
+    if (contrastRatio(color, surface) >= 4.5) return color;
   }
   return dark ? "#FFFFFF" : "#000000";
 }

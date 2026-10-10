@@ -221,3 +221,23 @@
     font-size: 13px;
   }
 }
+
+.richSurface :global(.tableWrapper) {
+  overflow-x: auto;
+  max-width: 100%;
+}
+.richSurface :global(table) {
+  border-collapse: collapse;
+  min-width: 100%;
+}
+.richSurface :global(th),
+.richSurface :global(td) {
+  border: 1px solid var(--line-strong);
+  padding: var(--space-3);
+  min-width: 9rem;
+  vertical-align: top;
+}
+.richSurface :global(th) {
+  background: var(--surface-hover);
+  text-align: left;
+}

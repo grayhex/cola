@@ -59,6 +59,7 @@ try {
         q,
         owner,
         planInput.parse({
+          passport: { area: { label: "Тестовый парк" } },
           bikeId: bike,
           title: "Race",
           scheduledAt: start,

@@ -14,8 +14,8 @@
   display: flex;
   align-items: center;
   min-height: clamp(320px, 28vw, 520px);
-  background: var(--marketing-bg);
-  color: var(--marketing-text);
+  background: var(--hero-bg);
+  color: var(--hero-text);
 }
 .heroImage {
   position: absolute;
@@ -51,8 +51,8 @@
   z-index: -1;
   background: linear-gradient(
     90deg,
-    var(--marketing-shade) 0%,
-    var(--marketing-shade) 30%,
+    var(--hero-shade) 0%,
+    var(--hero-shade) 30%,
     transparent 78%
   );
 }
@@ -63,7 +63,7 @@
 .heroEyebrow {
   display: block;
   margin-bottom: var(--space-4);
-  color: var(--marketing-muted);
+  color: var(--hero-muted);
   font: var(--weight-medium) var(--text-xs) / 1.5 var(--font-mono);
 }
 .hero h1 {
@@ -80,7 +80,7 @@
 .description {
   max-width: 34rem;
   margin: 0;
-  color: var(--marketing-muted);
+  color: var(--hero-muted);
   font-size: var(--text-base);
   line-height: var(--leading-normal);
 }
@@ -639,8 +639,8 @@
   .hero::before {
     background: linear-gradient(
       90deg,
-      var(--marketing-shade) 0%,
-      var(--marketing-shade) 45%,
+      var(--hero-shade) 0%,
+      var(--hero-shade) 45%,
       transparent
     );
   }

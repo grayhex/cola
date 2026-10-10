@@ -247,6 +247,7 @@ test("a failed ride settings load does not strand «Изменить» or «По
   const created = await page.request.post("/api/rides/plan", {
     headers: { origin },
     data: {
+      passport: { area: { label: "Тестовый парк" } },
       bikeId: bike.id,
       title: "План для правки",
       description: "",

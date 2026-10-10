@@ -45,6 +45,7 @@ const environment = {
   RIDES_DIR: path.join(dir, "rides"),
   // Emails become JSON files that account tests read (never in production).
   MAIL_CAPTURE_DIR: path.join(dir, "mail"),
+  BUG_REPORT_TO: "owner@example.test",
   // Credentials are fixtures. Vendor substitution lives only in tests/, loaded
   // by Node in this child process, never by application code or production images.
   STREAM_CHAT_ENABLED: chatFixture ? "true" : "false",
@@ -193,6 +194,7 @@ try {
           "tests/csp-modes-http.js",
           "tests/chat-disabled-http.js",
           "tests/email-policy-http.js",
+          "tests/first-audience-http.js",
           "tests/identities-http.js",
           "tests/device-sessions-http.js",
           "tests/http-smoke.js",

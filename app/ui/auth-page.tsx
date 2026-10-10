@@ -78,6 +78,12 @@ export default function AuthPage({
           <h1 id="auth-title">
             {register ? "Присоединиться к ColaBike" : "С возвращением"}
           </h1>
+          {register && (
+            <p className="help">
+              После регистрации подтвердите почту для публикации и общения. До
+              подтверждения велосипед можно сохранить как приватный черновик.
+            </p>
+          )}
           {error && (
             <p className="error" role="alert">
               {error}

@@ -82,6 +82,7 @@ try {
     Math.ceil((Date.now() + 2 * 3600000) / 60000) * 60000,
   ).toISOString();
   const fields = {
+    passport: { area: { label: "Тестовый парк" } },
     bikeId: bike,
     title: "Private ride name",
     description: "",
@@ -96,8 +97,10 @@ try {
   const created = await owner("rides/plan", "POST", fields);
   assert.equal(created.status, 201, JSON.stringify(created.body));
   const { id, shareId } = created.body;
-  const answer = () =>
+  const answer = async () =>
     rider(`rides/${id}/rsvp`, "PATCH", {
+      expectedAgreementRevision: (await owner("rides/owner/" + shareId)).body
+        .ride.agreement.revision,
       response: "accepted",
       occurrenceAt: start,
     });
@@ -195,6 +198,7 @@ try {
   assert.equal(
     (
       await rider(`rides/${planned.body.id}/rsvp`, "PATCH", {
+        expectedAgreementRevision: 1,
         response: "accepted",
         occurrenceAt: future,
       })

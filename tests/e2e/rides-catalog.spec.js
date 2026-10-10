@@ -62,7 +62,7 @@ const plan = (post, bikeId, title, passport = {}) =>
     scheduledAt: `${day(6)}T10:00:00+03:00`,
     expectedEndAt: `${day(6)}T12:00:00+03:00`,
     meetingPoint: "У фонтана",
-    passport,
+    passport: { area: { label: "Место определим вместе" }, ...passport },
   });
 async function recorded(post, bikeId, title) {
   const preview = await post("rides/preview", gpx([loop]));

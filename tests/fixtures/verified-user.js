@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 const origin = process.env.TEST_ORIGIN || "http://localhost:3100";
-export async function verifyCapturedEmail(email) {
+export async function capturedVerificationToken(email) {
   const dir = process.env.MAIL_CAPTURE_DIR;
   assert.ok(dir, "A disposable mail capture directory is required");
   for (let attempt = 0; attempt < 60; attempt++) {
@@ -20,20 +20,20 @@ export async function verifyCapturedEmail(email) {
       if (mail.to !== email.trim().toLowerCase()) continue;
       const token = mail.text.match(/\/verify-email#([A-Za-z0-9_-]{43})/)?.[1];
       if (!token) continue;
-      const response = await globalThis.fetch(
-        origin + "/api/auth/verify-email",
-        {
-          method: "POST",
-          headers: { origin, "Content-Type": "application/json" },
-          body: JSON.stringify({ token }),
-        },
-      );
-      assert.equal(response.status, 200, "Captured verification link succeeds");
-      return;
+      return token;
     }
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
   throw new Error("Verification email did not arrive for the test fixture");
+}
+export async function verifyCapturedEmail(email) {
+  const token = await capturedVerificationToken(email);
+  const response = await globalThis.fetch(origin + "/api/auth/verify-email", {
+    method: "POST",
+    headers: { origin, "Content-Type": "application/json" },
+    body: JSON.stringify({ token }),
+  });
+  assert.equal(response.status, 200, "Captured verification link succeeds");
 }
 export async function registerVerified(request, options) {
   const response = await request.post("/api/auth/register", options);

@@ -1,5 +1,11 @@
 import { Node } from "@tiptap/core";
 import type { JSONContent } from "@tiptap/core";
+import {
+  Table,
+  TableRow,
+  TableCell,
+  TableHeader,
+} from "@tiptap/extension-table";
 import StarterKit from "@tiptap/starter-kit";
 import { MarkdownManager } from "@tiptap/markdown";
 import { Marked, marked as globalMarked } from "marked";
@@ -68,6 +74,40 @@ export function richExtensions() {
       },
       trailingNode: false,
     }),
+    Table.extend({
+      renderMarkdown(node, helpers) {
+        const rows = node.content || [];
+        const count = Math.max(
+          0,
+          ...rows.map((row) => row.content?.length || 0),
+        );
+        if (!count) return "";
+        const line = (row?: JSONContent) =>
+          "| " +
+          Array.from({ length: count }, (_, index) =>
+            helpers
+              .renderChildren(row?.content?.[index]?.content || [])
+              // Children are already Markdown: retain existing escape pairs.
+              .replace(/\\[\s\S]|\|/g, (token) =>
+                token === "|" ? "\\|" : token,
+              )
+              .replace(/\r?\n/g, " / ")
+              .trim(),
+          ).join(" | ") +
+          " |";
+        const headed = rows[0]?.content?.every(
+          (cell) => cell.type === "tableHeader",
+        );
+        return [
+          line(headed ? rows[0] : undefined),
+          "| " + Array(count).fill("---").join(" | ") + " |",
+          ...rows.slice(headed ? 1 : 0).map(line),
+        ].join("\n");
+      },
+    }).configure({ resizable: false, renderWrapper: true }),
+    TableRow,
+    TableHeader,
+    TableCell,
     PhotoReference,
   ];
 }
@@ -125,6 +165,10 @@ const blocks = new Set([
   "codeBlock",
   "horizontalRule",
   "hardBreak",
+  "table",
+  "tableRow",
+  "tableCell",
+  "tableHeader",
 ]);
 const marks = new Set(["bold", "italic", "underline", "strike", "code"]);
 export function cleanRichDocument(
@@ -154,6 +198,53 @@ export function cleanRichDocument(
         }
       : null;
   if (!blocks.has(node.type || "")) return null;
+  if (node.type === "table") {
+    const rows = node.content || [];
+    const width = rows[0]?.content?.length || 0;
+    const simple =
+      width > 0 &&
+      rows.every(
+        (row, index) =>
+          row.type === "tableRow" &&
+          row.content?.length === width &&
+          row.content.every(
+            (cell) =>
+              ["tableCell", "tableHeader"].includes(cell.type || "") &&
+              (cell.type !== "tableHeader" ||
+                (index === 0 &&
+                  row.content?.every(
+                    (other) => other.type === "tableHeader",
+                  ))) &&
+              !(
+                Number(cell.attrs?.colspan || 1) > 1 ||
+                Number(cell.attrs?.rowspan || 1) > 1
+              ) &&
+              cell.content?.length === 1 &&
+              cell.content.every((child) => child.type === "paragraph"),
+          ),
+      );
+    if (!simple) {
+      const text = (child: JSONContent, level = 0): string =>
+        level > 40
+          ? ""
+          : child.type === "text"
+            ? child.text || ""
+            : (child.content || [])
+                .map((item) => text(item, level + 1))
+                .join(child.type === "tableRow" ? " | " : " / ");
+      return {
+        type: "paragraph",
+        content: [
+          {
+            type: "text",
+            text:
+              "Таблица преобразована в текст (сложная структура).\n" +
+              rows.map((row) => text(row)).join("\n"),
+          },
+        ],
+      };
+    }
+  }
   const clean: JSONContent = { type: node.type };
   if (node.type === "heading")
     clean.attrs = {
@@ -229,10 +320,11 @@ export function richPlainText(body = "", { images = true } = {}) {
                   "orderedList",
                   "listItem",
                   "blockquote",
+                  "table",
                 ].includes(node.type || "")
                   ? "\n"
-                  : node.type === "hardBreak"
-                    ? "\n"
+                  : node.type === "tableRow"
+                    ? " | "
                     : "",
               );
   return visit(parseRichText(body)).trim();

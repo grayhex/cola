@@ -125,3 +125,31 @@
 .lightboxClose:hover {
   background: rgb(0 0 0 / 0.75);
 }
+
+.tableScroll {
+  max-width: 100%;
+  overflow-x: auto;
+  margin-block: var(--space-4);
+}
+.tableScroll:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.tableScroll table {
+  border-collapse: collapse;
+  min-width: 100%;
+}
+.tableScroll th,
+.tableScroll td {
+  border: 1px solid var(--line-strong);
+  padding: var(--space-3);
+  min-width: 9rem;
+  vertical-align: top;
+}
+.tableScroll th {
+  background: var(--surface-hover);
+  text-align: left;
+}
+.tableScroll p {
+  margin: 0;
+}

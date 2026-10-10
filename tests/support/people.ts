@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { CurrentUser } from "../../lib/contracts.ts";
 import type { Queryable } from "../../lib/db.ts";
-import type { UserRow } from "../../lib/database-rows.ts";
+import type { UserRow, SessionRow } from "../../lib/database-rows.ts";
 import { given, insertRow, type Columns, unique } from "./rows.ts";
 
 /**
@@ -40,6 +40,20 @@ export function viewer(overrides: Partial<CurrentUser> = {}): CurrentUser {
     email_verified_at: new Date("2026-01-01T00:00:00Z"),
     ...given(overrides),
   };
+}
+
+/** A live application session for a stored person. */
+export function sessionRow(
+  q: Queryable,
+  userId: string,
+  overrides: Columns<SessionRow> = {},
+) {
+  return insertRow<SessionRow>(q, "sessions", {
+    token_hash: randomUUID(),
+    user_id: userId,
+    expires_at: new Date(Date.now() + 86400000),
+    ...given(overrides),
+  });
 }
 
 /**

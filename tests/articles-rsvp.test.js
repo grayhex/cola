@@ -232,6 +232,7 @@ test("weekly rides keep local time across DST and RSVP is scoped to the occurren
       [bike, owner, randomUUID()],
     );
     const input = {
+      passport: { area: { label: "Тестовый парк" } },
       bikeId: bike,
       title: "Каждую субботу",
       description: "",

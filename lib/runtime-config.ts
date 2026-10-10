@@ -1,6 +1,6 @@
 import { cspMode, mapOrigins } from "./csp.ts";
 import { parseDsn } from "./error-tracker.ts";
-import { mailConfig } from "./mail.ts";
+import { bugReportRecipient, mailConfig } from "./mail.ts";
 export function validateRuntime(env = process.env) {
   if (env.DEPLOYMENT_MODE !== "production") return { mode: "local" };
   function reject(message: string): never {
@@ -69,6 +69,8 @@ export function validateRuntime(env = process.env) {
         'MAIL_FROM is required with SMTP_URL, e.g. "ColaBike <noreply@colabike.ru>"',
       );
   }
+  if (env.BUG_REPORT_TO && !bugReportRecipient(env))
+    reject("BUG_REPORT_TO must be one email address");
   // Yandex ID is optional; a half-filled configuration is a deployment error.
   // Kept here, not imported: the runner image ships only a few lib files for
   // the startup check (see the Dockerfile).
@@ -118,5 +120,6 @@ export function validateRuntime(env = process.env) {
     origin: origin.origin,
     secureCookies: true,
     mail: mail ? "smtp" : "disabled",
+    bugReports: mail && bugReportRecipient(env) ? "smtp" : "disabled",
   };
 }

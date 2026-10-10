@@ -1,4 +1,7 @@
-import type { Transporter as TransporterType } from "nodemailer";
+import type {
+  Transporter as TransporterType,
+  SMTPSentMessageInfo,
+} from "nodemailer";
 export interface MailMessage {
   to: string;
   subject: string;
@@ -66,7 +69,7 @@ export const mailEnabled = (env = process.env) => !!mailConfig(env)?.from;
 
 let cached: {
   key: string;
-  transport: TransporterType;
+  transport: TransporterType<SMTPSentMessageInfo>;
 } | null = null;
 async function smtpTransport(
   options: Extract<
@@ -106,5 +109,17 @@ export async function sendMail(
     text,
     html,
   });
+  if (!info.accepted.length) throw new Error("SMTP did not accept a recipient");
   return { messageId: info.messageId };
+}
+
+// One mailbox, never a user-selected recipient or list/header value.
+export function bugReportRecipient(env = process.env) {
+  const value = env.BUG_REPORT_TO?.trim() || "";
+  return value.length <= 254 &&
+    /^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?\.[A-Za-z]{2,}$/.test(
+      value,
+    )
+    ? value
+    : null;
 }

@@ -253,6 +253,7 @@ test("planner controls survive reduced motion, a missing Motion chunk, a slow AP
     .fill("Ошибка сохранения");
   await dialog.getByLabel("Дата", { exact: true }).fill("2031-03-29");
   await dialog.getByLabel("Старт", { exact: true }).fill("09:00");
+  await dialog.getByLabel("Место определим вместе", { exact: true }).check();
   // No bike chosen: the advanced block explains and focuses the selector.
   await dialog.getByLabel("Велосипед", { exact: true }).evaluate((select) => {
     select.value = "";

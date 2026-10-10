@@ -3,11 +3,12 @@ import type { PublicProfile } from "../../lib/contracts.ts";
 import type { ProfileInitial } from "./content-types.ts";
 import Link from "next/link";
 import RideList from "./ride-list.tsx";
+import { BlockButton } from "./user-block-controls.tsx";
 import BikeGrid from "./bike-grid.tsx";
 import { BadgeShelf } from "./achievements.tsx";
 import { ReportButton } from "./community-controls.tsx";
 import { Bike, Route } from "./icons.tsx";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { MapPin, Calendar, ArrowLeft } from "./icons.tsx";
 import {
   Avatar,
@@ -37,6 +38,34 @@ export default function PublicProfile({
     [people, setPeople] = useState(""),
     [collection, setCollection] = useState("bikes"),
     [error, setError] = useState("");
+  const [blocked, setBlocked] = useState(false);
+  const blockChanged = useCallback(
+    (value: boolean) => {
+      setBlocked(value);
+      if (value)
+        setProfile(
+          (current) =>
+            current && {
+              ...current,
+              relationship: {
+                ...current.relationship,
+                following: false,
+                followedBy: false,
+                friends: false,
+              },
+            },
+        );
+      // A block deletes both follows; reopening the button must not restore its old state.
+      void socialApi<Pick<ProfileInitial, "profile">>(
+        "social/profiles/" + username,
+      )
+        .then((data) => setProfile(data.profile))
+        .catch(() => {
+          /* Keep the confirmed block and removed follows if refreshing fails. */
+        });
+    },
+    [username],
+  );
   const { viewer: user, chatEnabled } = useSite();
   // The server rendered the profile and the first page of bikes (#74).
   const seed = useRef(initial),
@@ -128,16 +157,26 @@ export default function PublicProfile({
                   </span>
                 </div>
               </div>
-              <FollowButton profile={profile} user={user} onChange={refresh} />
-              <ShareButton path={sharePath} title={profile.name} />
-              {chatEnabled && user && !profile.relationship.isSelf && (
-                <Link
-                  className="button secondary"
-                  href={"/messages?to=" + profile.id}
-                >
-                  Написать
-                </Link>
+              {!blocked && (
+                <FollowButton
+                  profile={profile}
+                  user={user}
+                  onChange={refresh}
+                />
               )}
+              <BlockButton userId={profile.id} onChange={blockChanged} />
+              <ShareButton path={sharePath} title={profile.name} />
+              {chatEnabled &&
+                user &&
+                !blocked &&
+                !profile.relationship.isSelf && (
+                  <Link
+                    className="button secondary"
+                    href={"/messages?to=" + profile.id}
+                  >
+                    Написать
+                  </Link>
+                )}
               {!profile.relationship.isSelf && (
                 <ReportButton
                   entityType="profile"

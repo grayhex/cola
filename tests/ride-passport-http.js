@@ -73,6 +73,7 @@ assert.equal(created.status, 201, created.text);
 const bike = created.json();
 
 const input = {
+  passport: { area: { label: "Тестовый парк" } },
   bikeId: bike.id,
   title: "HTTP passport",
   description: "Public description",
@@ -97,6 +98,7 @@ assert.equal(
   403,
 );
 for (const fields of [
+  { passport: {} },
   { passport: { surprise: true } },
   { passport: { distanceKm: { min: 40, max: 20 } } },
   { expectedEndAt: "2031-03-29T08:00:00Z" },
@@ -124,7 +126,7 @@ const track = await author(`/api/rides/${plan.id}/track`, {
 });
 assert.equal(track.status, 200, track.text);
 const data = (await guest("/api/rides/public/" + plan.shareId)).json().ride;
-assert.deepEqual(data.passport, {});
+assert.deepEqual(data.passport, input.passport);
 assert.equal(data.meetingPoint, "");
 assert.equal(
   data.geometry.flat().some((p) => p[0] === loop[0][0] && p[1] === loop[0][1]),
@@ -139,7 +141,11 @@ for (const response of ["accepted", "declined"]) {
     (
       await reader(`/api/rides/${plan.id}/rsvp`, {
         method: "PATCH",
-        ...json({ response, occurrenceAt: plannedAt }),
+        ...json({
+          response,
+          occurrenceAt: plannedAt,
+          expectedAgreementRevision: data.agreement.revision,
+        }),
       })
     ).status,
     200,

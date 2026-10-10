@@ -106,6 +106,7 @@ test("public pages hydrate their server HTML and stay interactive", async ({
   const scheduledAt = new Date(Date.now() + 7 * 86400000);
   scheduledAt.setUTCSeconds(0, 0);
   const plan = await post("rides/plan", {
+    passport: { area: { label: "Тестовый парк" } },
     bikeId: bike.id,
     title: "Выезд " + nonce,
     description: "Сбор у моста " + nonce,

@@ -1638,6 +1638,10 @@
       transform: translateX(6px);
     }
   }
+  .wizard-email-policy {
+    flex-direction: column;
+    align-items: stretch;
+  }
   /* Step 1: search, candidates and the link form. */
   .wizard-choice-actions {
     display: flex;

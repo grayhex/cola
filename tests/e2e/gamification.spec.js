@@ -68,6 +68,11 @@ test("Hall of Fame changes its current record holder, with profile awards and mo
     await register(visitor.request, "record-b-" + suffix);
     await page.goto("/records");
     await expect(page.locator('[data-record="lightest_road"]')).toContainText(
+      "Недостаточно данных для сравнения",
+    );
+    await create(page.request, "Reference " + suffix, 3.5);
+    await page.reload();
+    await expect(page.locator('[data-record="lightest_road"]')).toContainText(
       first.name,
     );
     const second = await create(visitor.request, "Lighter " + suffix, 3.1);
@@ -174,7 +179,10 @@ test("Hall of Fame changes its current record holder, with profile awards and mo
     await expect(page.locator(".game-shelves")).toContainText("Сотка");
     await visitor.goto("/records");
     await expect(visitor.locator('[data-record="wild"]')).toContainText(
-      first.name,
+      "Недостаточно данных для сравнения",
+    );
+    await expect(visitor.locator('[data-record="wild"]')).toContainText(
+      "Кандидатов: 1",
     );
     // The second tab lists every award with how many people have it.
     await visitor.getByRole("button", { name: "Награды", exact: true }).click();

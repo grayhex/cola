@@ -241,6 +241,7 @@ try {
     200,
   );
   const answer = await rider.web(`/rides/${plan.body.id}/rsvp`, "PATCH", {
+    expectedAgreementRevision: 1,
     response: "accepted",
     occurrenceAt: (await owner.web("/rides/owner/" + plan.body.shareId)).body
       .ride.scheduledAt,

@@ -178,6 +178,7 @@ test("left admin navigation, configurable emoji, frame labels and one-tap weekly
     expect(response.status()).toBe(201);
     const bike = await response.json();
     const planInput = {
+      passport: { area: { label: "Тестовый парк" } },
       bikeId: bike.id,
       title: "Субботний круг",
       description: "Спокойный темп",

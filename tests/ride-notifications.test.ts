@@ -142,6 +142,7 @@ test("ride event + email is atomic, revision-bound and coalesces organizer respo
           q,
           s.owner,
           planInput.parse({
+            passport: { area: { label: "Тестовый парк" } },
             bikeId: s.bike,
             title: "Rollback",
             scheduledAt: at(48),

@@ -3,6 +3,8 @@ import { z } from "zod";
 import { ridePlanOptions } from "./ride-plan-options.ts";
 import { RideError } from "./ride-gpx.ts";
 
+export const undecidedPlanPlace = "Место определим вместе";
+
 const choice = (key: keyof typeof ridePlanOptions) =>
   z.enum(Object.keys(ridePlanOptions[key])).optional();
 const range = (max: number, integer = false) => {

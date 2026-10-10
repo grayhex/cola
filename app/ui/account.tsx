@@ -35,6 +35,7 @@ import {
   ChevronDown,
 } from "./icons.tsx";
 import AuthPage from "./auth-page.tsx";
+import BlockedPeople from "./user-block-controls.tsx";
 import AccountSecurity from "./account-security.tsx";
 import AccountNotifications from "./account-notifications.tsx";
 import Garage from "./garage.tsx";
@@ -893,6 +894,7 @@ export default function Account() {
                     />
                   </section>
                 )}
+                {tab === "social" && <BlockedPeople />}
                 {tab === "appearance" && (
                   <section className="social-panel">
                     <h2>Оформление</h2>

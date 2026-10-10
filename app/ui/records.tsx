@@ -110,12 +110,10 @@ function RecordCard({
           <small>{r.eligible} участн.</small>
         </div>
       ) : (
-        <p
-          className="record-empty"
-          title="Рекорд свободен · Пока никто не выполнил условия."
-        >
-          <strong>Рекорд свободен</strong>
-          {" · Пока никто не выполнил условия."}
+        <p className="record-empty" title="Недостаточно данных для сравнения">
+          <strong>Недостаточно данных для сравнения</strong>
+          {" · Кандидатов: "}
+          {r.eligible}
         </p>
       )}
     </article>

@@ -8,6 +8,7 @@ import type {
   Relationship,
   FollowPageDto,
 } from "../../lib/contracts.ts";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Heart } from "./icons.tsx";
@@ -86,10 +87,15 @@ function logoLinkName(href: string) {
   }
   return "Сайт " + host + " (откроется в новой вкладке)";
 }
+const BugReportDialog = dynamic(() => import("./bug-report-dialog.tsx"), {
+  ssr: false,
+});
+
 // One line (#124): up to four logos, ColaBike in the middle of the page,
 // app and parser versions. Section links live in the header only.
 export function SocialFooter() {
   const { settings, t } = useSite();
+  const [reportOpen, setReportOpen] = useState(false);
   const logos = footerSlots
     .map((slot) => ({
       id: settings[slot.key],
@@ -142,8 +148,16 @@ export function SocialFooter() {
         </p>
         <div className={footerStyles.versions}>
           <Versions link={false} />
+          <button
+            type="button"
+            className="quiet"
+            onClick={() => setReportOpen(true)}
+          >
+            Сообщить об ошибке
+          </button>
         </div>
       </div>
+      {reportOpen && <BugReportDialog onClose={() => setReportOpen(false)} />}
     </footer>
   );
 }

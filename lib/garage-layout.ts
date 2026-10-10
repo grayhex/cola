@@ -241,7 +241,13 @@ export function bikeSubtitle(
   ).find((group) => group.id === "drivetrain");
   return [
     classificationLabels(bike).join(" / "),
-    ...(drivetrain?.components ?? []).slice(0, 2).map((c) => c.name),
+    ...Array.from(
+      new Set(
+        (drivetrain?.components ?? [])
+          .map((c) => c.name.trim())
+          .filter(Boolean),
+      ),
+    ).slice(0, 2),
   ]
     .filter(Boolean)
     .join(" · ");

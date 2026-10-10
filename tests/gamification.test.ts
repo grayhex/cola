@@ -254,8 +254,8 @@ test("dynamic holders, category lightest, price privacy, budget anti gaming and 
     let r = await records(q);
     assert.equal(held(r, "expensive").id, road);
     assert.equal(held(r, "budget").id, gravel);
-    assert.equal(held(r, "lightest_mtb").id, mtb);
-    assert.equal(held(r, "lightest_road").id, road);
+    assert.equal(holder(r, "lightest_mtb"), null);
+    assert.equal(holder(r, "lightest_road"), null);
     const hidden = await bike(q, b, {
       price: 987654321,
       visible: false,
@@ -310,12 +310,21 @@ test("self reactions rejected, duplicates idempotent, valid community leaders an
     await reactToBike(q, id, b, "wild", true);
     await reactToBike(q, id, b, "dream", true);
     const r = await records(q);
-    assert.equal(held(r, "wild").value, 1);
-    assert.equal(held(r, "community").value, 1);
+    assert.equal(holder(r, "wild"), null);
+    assert.equal(holder(r, "community"), null);
     await reactToBike(q, id, c, "clean", true);
-    assert.equal(held(await records(q), "community").value, 2);
+    assert.equal(holder(await records(q), "community"), null);
+    assert.equal(
+      (
+        await q.query<{ n: number }>(
+          "SELECT count(*)::int n FROM bike_reactions WHERE bike_id=$1 AND kind='clean'",
+          [id],
+        )
+      ).rows[0].n,
+      1,
+    );
     await q.query("UPDATE users SET blocked=true WHERE id=$1", [c]);
-    assert.equal(held(await records(q), "community").value, 1);
+    assert.equal(holder(await records(q), "community"), null);
     await assert.rejects(() => reactToBike(q, id, c, "wild", true), {
       status: 401,
     });
@@ -460,7 +469,7 @@ test("switched-off records and the reaction switch remove titles without deletin
       v = await rider(q, "togglevoter"),
       id = await bike(q, a);
     await reactToBike(q, id, v, "dream", true);
-    assert(holder(await records(q), "dream"));
+    assert.equal(holder(await records(q), "dream"), null);
     await q.query(
       "UPDATE game_rules SET enabled=key IN ('budget','dream') WHERE kind='record'",
     );
@@ -483,7 +492,7 @@ test("switched-off records and the reaction switch remove titles without deletin
     await q.query("UPDATE gamification_settings SET value=$1", [
       defaultGamification,
     ]);
-    assert.equal(held(await records(q), "dream").id, id);
+    assert.equal(holder(await records(q), "dream"), null);
     await q.query("UPDATE bikes SET brand='' WHERE id=$1", [id]);
     assert.equal(holder(await records(q), "budget"), null);
     await q.query("UPDATE gamification_settings SET value=$1", [
@@ -688,6 +697,7 @@ test("hidden data never counts: a private ride, a private bike, a blocked owner,
     await ride(q, a, open, { km: 150, gain: 1500, status: "planned" });
     for (const key of ["century", "mountain_goat", "racer"])
       assert.equal(await has(q, a, key), 0, key);
+    await ride(q, b, await bike(q, b), { km: 1, gain: 1 });
     const r = await records(q);
     assert.equal(held(r, "marathon").id, hiddenSpeed);
     assert.equal(held(r, "marathon").value, 30);
@@ -706,7 +716,7 @@ test("hidden data never counts: a private ride, a private bike, a blocked owner,
     await ride(q, b, other, { km: 10 });
     await q.query("UPDATE users SET blocked=true WHERE id=$1", [a]);
     const after = await records(q);
-    assert.equal(held(after, "marathon").author.id, b);
+    assert.equal(held(after, "marathon").value, 10);
     assert.equal(
       (await awardShelf(q, { userId: a, privateView: true })).length,
       0,
@@ -770,10 +780,11 @@ test("new awards and records: Без проводов, Сотка, Горный 
     const r = await records(q);
     assert.equal(held(r, "marathon").value, 500);
     assert.equal(held(r, "climber").value, 1200);
-    const mileage = held(r, "mileage_30d");
-    assert.equal(mileage.kind, "profile");
-    assert.equal(mileage.id, b);
-    assert.equal(mileage.value, 60);
+    assert.equal(holder(r, "mileage_30d"), null);
+    assert.equal(
+      r.records.find((record) => record.key === "mileage_30d")?.eligible,
+      1,
+    );
     assert.equal(held(r, "veteran").id, heavy);
     assert.equal(held(r, "veteran").value, 1995);
     assert.equal(held(r, "heavy").id, heavy);
@@ -931,6 +942,7 @@ test("compact record features preserve configured scoring and Unicode completene
   try {
     const owner = await rider(q, "feature-score"),
       id = await bike(q, owner);
+    await bike(q, owner, { price: 9000 });
     const parts = [
       ["build", "Переключатель", "  SHIMANO—Di2  ", "drivetrain"],
       ["build", "переключатель", "shimano di2", "drivetrain"],

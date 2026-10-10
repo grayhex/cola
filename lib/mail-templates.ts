@@ -1,3 +1,4 @@
+import type { BugReportInput } from "./bug-reports.ts";
 // Plain text plus minimal inline HTML. Names come from users: always escaped.
 const escape = (value: unknown) =>
   String(value ?? "").replace(
@@ -173,5 +174,43 @@ export function emailChangedMail({
       link,
       footer: "Если смену адреса выполнили вы, ничего делать не нужно.",
     }),
+  };
+}
+
+export function bugReportMail(
+  input: BugReportInput,
+  server: {
+    id: string;
+    requestId: string;
+    at: string;
+    build: string;
+    accountId: string | null;
+  },
+) {
+  const { diagnostics: d } = input;
+  const text = [
+    "Что произошло?",
+    input.description,
+    "",
+    "Как повторить / что ожидали?",
+    input.reproduction || "Не указано",
+    "",
+    "Email для ответа: " + (input.contact || "Не указан"),
+    "",
+    "Диагностика",
+    "Страница: " + d.path,
+    "Тема: " + d.theme,
+    `Экран: ${d.width} × ${d.height}`,
+    "Браузер: " + d.browser,
+    "Время: " + server.at,
+    "Сборка: " + server.build,
+    "Отчёт: " + server.id,
+    "Запрос: " + server.requestId,
+    "Аккаунт: " + (server.accountId || "Гость"),
+  ].join("\n");
+  return {
+    subject: "Сообщение об ошибке ColaBike · " + server.id,
+    text,
+    html: `<!doctype html><html lang="ru"><body><pre style="white-space:pre-wrap;font:16px/1.5 sans-serif">${escape(text)}</pre></body></html>`,
   };
 }
