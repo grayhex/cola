@@ -531,10 +531,13 @@ test("components: illustrations fit whole, four models beside the tree, and the 
     expect(rows).toBe(1);
     const about = page.getByRole("region", { name: "Описание", exact: true });
     await expect(about).toContainText("Описания пока нет");
-    await about.getByRole("button", { name: "Добавить описание" }).click();
     const editor = page.getByRole("dialog", {
       name: "Редактировать компонент",
     });
+    await openWindow(
+      about.getByRole("button", { name: "Добавить описание" }),
+      editor,
+    );
     await expect(editor.getByLabel("Описание")).toBeFocused();
     await editor
       .getByLabel("Описание")
