@@ -9,6 +9,7 @@ ColaBike — приложение вокруг велосипеда как по�
 ```mermaid
 flowchart TD
     Browser[Браузер] --> Proxy[Nginx / HTTPS]
+    Android[Android / API v1] --> Proxy
     Proxy --> App[Next.js: страницы и API]
     App --> DB[(PostgreSQL: public)]
     App --> Photos[(photos: фото, аватары, журнал, графика)]
@@ -18,13 +19,15 @@ flowchart TD
     Resolver --> Sources[Публичные страницы источников]
     Browser --> Maps[Внешняя картографическая подложка]
     App --> Stream[Stream Chat]
-    Workers[chat-sync и activity-sync] --> DB
+    Workers[Workers: чат, активности, уведомления, велосипед недели] --> DB
     Workers --> Stream
     Workers --> RWGPS[Ride with GPS]
     Workers --> Rides
+    Workers --> Mail[SMTP]
+    Workers --> Push[Push-провайдер]
 ```
 
-Compose содержит пять долгоживущих сервисов: `app`, `db`, `bike-resolver`, `chat-sync` и `activity-sync`. Одноразовый `migrate` применяет схему перед запуском app и workers. Оба worker используют общий образ `ops`; включение и настройка провайдеров описаны в [чате](../integrations/chat.md) и [синхронизации активностей](../integrations/activity-sync.md). Nginx установлен на хосте и не входит в Compose. База физически общая, но доменные таблицы приложения и схема `bike_resolver` имеют разных владельцев логики. Отдельного Redis, брокера очередей или Elasticsearch нет: задания интеграций хранятся в PostgreSQL. Файловая очистка обслуживается `scripts/cleanup-rides.js`. Переписка и вложения Stream хранятся у провайдера, а оригиналы импортированных поездок — в локальном rides volume.
+Compose содержит восемь долгоживущих сервисов: `app`, `db`, `bike-resolver` и пять workers — `chat-sync`, `activity-sync`, `notification-email`, `notification-push`, `bike-week`. Одноразовый `migrate` применяет схему перед запуском app и workers. Все workers используют общий образ `ops`; включение и настройка провайдеров описаны в [чате](../integrations/chat.md), [синхронизации активностей](../integrations/activity-sync.md) и [уведомлениях](../modules/notifications.md). `bike-week` обслуживает [еженедельный выбор велосипеда](../modules/gamification.md). Nginx установлен на хосте и не входит в Compose. База физически общая, но доменные таблицы приложения и схема `bike_resolver` имеют разных владельцев логики. Отдельного Redis, брокера очередей или Elasticsearch нет: задания интеграций хранятся в PostgreSQL. Файловая очистка обслуживается `scripts/cleanup-rides.js`. Переписка и вложения Stream хранятся у провайдера, а оригиналы импортированных поездок — в локальном rides volume.
 
 Основной код — React/Next с native strict TypeScript/TSX во всём `app/`, `lib/` и корневом `proxy.ts`. Единый root typecheck проверяет backend, HTTP, UI и общие границы; обычные JS/JSX/MJS/CJS запрещены production policy. Единственное исключение — генерируемый `lib/version.js`, его контракт — `lib/version.d.ts`. Resolver — отдельный strict TypeScript/Fastify-сервис; shared normalizer `services/bike-resolver/src/component-identity.ts` используется приложением, сервисом и workers. Общие типы viewer, публичных DTO и API-границ находятся в `lib/contracts.ts`; Zod и DTO-mappers остаются runtime-источником истины. Версии зависимостей смотрите в [package.json](../../package.json), [package.json Resolver](../../services/bike-resolver/package.json) и lock-файлах; Docker-образы в [Dockerfile](../../Dockerfile) и [Compose](../../compose.prod.yaml). Не путайте Node приложения с runtime, на котором выполняется Marketplace action в CI.
 
@@ -39,12 +42,13 @@ Compose содержит пять долгоживущих сервисов: `ap
 | `lib/`                              | SQL и доменная логика, DTO, валидация, файлы, настройки, клиент Resolver                    |
 | `db/`                               | Миграции приложения; новые установки без demo-контента                                      |
 | `services/bike-resolver/`           | Независимый HTTP-сервис, discovery, парсинг, cache, собственные миграции                    |
+| `data/component-catalog/`           | Версионированные пакеты наполнения каталога, источники описаний и лицензированные фото      |
 | `scripts/`, `ops/`                  | Сборка, миграции, проверки runtime, backup и deploy wrappers                                |
 | `tests/`                            | Unit/DB, HTTP и браузерные сценарии приложения                                              |
 
 ## Типовой запрос
 
-Запрос изменения проходит через обработчик `app/api/.../route.ts`: проверяется текущий пользователь, Origin и входная схема, затем доменная функция выполняет SQL/файловую операцию. Возвращается предназначенный этой аудитории DTO. UI обновляет состояние по результату; скрытая кнопка не заменяет серверное разрешение. Кто спрашивает, определяет [viewer-session.ts](../../lib/viewer-session.ts) без привязки к Next; страницы и прежний API читают cookie через `auth.ts`, публичный [API v1](../modules/api-v1.md) — из заголовка `Cookie`.
+Запрос изменения проходит через обработчик `app/api/.../route.ts`: проверяется текущий пользователь, Origin и входная схема, затем доменная функция выполняет SQL/файловую операцию. Возвращается предназначенный этой аудитории DTO. UI обновляет состояние по результату; скрытая кнопка не заменяет серверное разрешение. Кто спрашивает, определяет [viewer-session.ts](../../lib/viewer-session.ts) без привязки к Next; страницы и прежний API читают cookie через `auth.ts`. Публичный [API v1](../modules/api-v1.md) принимает cookie браузерной сессии или Bearer-токен устройства; конкретные правила Origin, CSRF и выбора credentials описаны в его контракте.
 
 [lib/db.ts](../../lib/db.ts) предоставляет `db` и `transaction`. Доменные функции, принимающие `q`, могут работать как с пулом, так и внутри транзакции. Это позволяет проверять правила на тестовой базе и сохранять согласованность нескольких изменений. Не открывайте независимую транзакцию из функции, которая должна участвовать в транзакции вызывающего кода.
 

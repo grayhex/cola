@@ -4,6 +4,7 @@
 **/dist/
 **/coverage/
 **/test-results/
+**/e2e-evidence/
 **/playwright-report/
 **/__pycache__/
 uploads/
@@ -18,6 +19,7 @@ lib/version.js
 next-env.d.ts
 services/bike-resolver/src/version.ts
 public/maplibre/
+public/rive/runtime/
 public/test-map-style.json
 
 # Upstream response fixtures: keep parser input bytes and whitespace intact.

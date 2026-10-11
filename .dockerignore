@@ -12,9 +12,7 @@
 !app/**
 !lib/
 !lib/**
-!services/
-!services/bike-resolver/
-!services/bike-resolver/src/
+# Include only the shared source files, not the service's tests and fixtures.
 !services/bike-resolver/src/component-identity.ts
 !services/bike-resolver/src/domain.ts
 !services/bike-resolver/src/context.ts
@@ -24,7 +22,7 @@
 !db/*.sql
 !public/
 !public/**
-!scripts/
+# Exact file exceptions avoid including test harnesses and host-side tools.
 !scripts/build-version.js
 !scripts/copy-maplibre-worker.js
 !scripts/copy-rive-runtime.js
@@ -42,6 +40,10 @@
 !scripts/activity-sync.js
 !scripts/notification-email.js
 !scripts/notification-push.js
+!scripts/bike-week.js
+!scripts/component-catalog-seed.ts
+!scripts/component-catalog-import.ts
+!data/component-catalog/**
 # Generated assets are rebuilt from the installed, locked package.
 public/maplibre/
 public/rive/runtime/
@@ -56,9 +58,3 @@ public/test-map-style.json
 **/*.log
 **/*.tsbuildinfo
 **/.DS_Store
-
-!data/
-!data/component-catalog/
-!data/component-catalog/**
-!scripts/component-catalog-seed.ts
-!scripts/component-catalog-import.ts

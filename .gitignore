@@ -1,7 +1,10 @@
 node_modules/
 .next/
+# Local configuration stays outside Git; only documented examples are shared.
 .env
-.env.local
+.env.*
+!.env.example
+!.env.production.example
 uploads/
 *.log
 test-results/
@@ -9,7 +12,6 @@ e2e-evidence/
 
 services/bike-resolver/dist/
 
-.env.production
 playwright-report/
 __pycache__/
 

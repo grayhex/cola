@@ -10,13 +10,22 @@ tracing не заменяется вручную составленным спи
 Target `ops` не зависит от Next build и содержит migrations/bootstrap/set-admin/
 reset-password/audit/cleanup с полным production dependency graph. Этот набор оставлен
 там ради совместимости операторских команд; web больше не несёт его целиком.
-В Compose `migrate` — единственный build producer ops; `chat-sync` и `activity-sync` используют
+В Compose `migrate` — единственный build producer ops; `chat-sync`, `activity-sync`,
+`notification-email`, `notification-push` и `bike-week` используют
 его локальный project-scoped image с `pull_policy: never`. Дублирующего export
 для workers нет. Бюджет VPS и процедура повторной выкладки описаны в [runbook](deployment.md#незавершённый-deploy-и-повторный-запуск).
 Входные SQL и `public` копируются после компиляции. Docker web build hash включает
 app/lib; миграции идентифицируются историей `schema_migrations`. Генерация MapLibre
 worker/shared и двух Rive WASM вынесена в отдельный stage из locked dependencies.
 CI сравнивает выдаваемые web bytes с пакетами ops и проверяет startup validator.
+
+Корневой [.dockerignore](../../.dockerignore) ограничивает build context исходниками
+web/ops и пакетами каталога. Из Resolver включены только общие TypeScript-файлы,
+используемые приложением; из `scripts/` — точные файлы сборки и операторских команд.
+Отрицательный шаблон целого родительского каталога `!каталог/` разрешает также его
+потомков, поэтому для отдельных файлов нужны точные отрицательные шаблоны.
+Тесты и HTML fixtures Resolver остаются в репозитории, но не входят в context web/ops.
+При добавлении общего модуля или ops-команды обновляйте Dockerfile и allowlist вместе.
 
 `.next/cache` — cache mount BuildKit, а не immutable RUN layer. На VPS постоянный
 builder может его переиспользовать. GHA layer cache не переносит содержимое mount;
