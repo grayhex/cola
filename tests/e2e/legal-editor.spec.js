@@ -9,6 +9,7 @@ const termsLabel = "Принять пользовательское соглаш
 const privacyLabel = "Согласен с политикой обработки персональных данных";
 async function fillRegistration(page) {
   await page.goto("/register");
+  await expect(page.getByRole("checkbox", { name: termsLabel })).toBeEnabled();
   await page
     .getByLabel("Ваше имя", { exact: true })
     .fill("Документы " + randomUUID().slice(0, 6));
@@ -17,7 +18,6 @@ async function fillRegistration(page) {
     .fill(randomUUID() + "@legal-browser.test");
   await page.getByLabel("Пароль", { exact: true }).fill(password);
   await page.getByLabel("Подтвердите пароль", { exact: true }).fill(password);
-  await expect(page.getByRole("checkbox", { name: termsLabel })).toBeEnabled();
 }
 async function noOverflow(page) {
   expect(

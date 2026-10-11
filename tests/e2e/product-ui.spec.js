@@ -58,6 +58,11 @@ test("login and registration are complete forms, errors preserve input, password
   expect(created.status()).toBe(201);
   await other.dispose();
   await page.goto("/register");
+  // Legal metadata loads from a React effect; enabled consent proves the form
+  // is hydrated before name input must update the username suggestion.
+  await expect(
+    page.getByRole("checkbox", { name: "Принять пользовательское соглашение" }),
+  ).toBeEnabled();
   await page.getByLabel("Ваше имя", { exact: true }).fill("Новый участник");
   const username = page.getByLabel("Имя пользователя", { exact: true });
   const usernameHelp = page.locator("#username-help");
