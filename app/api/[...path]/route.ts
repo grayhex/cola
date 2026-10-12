@@ -26,6 +26,9 @@ import { savePhotos } from "../../../lib/photo-storage.ts";
 import {
   showcase,
   decorateBike,
+  ownedBikeList,
+  ownedBikeCards,
+  ownedBikeChoices,
   visibleBike,
   vote,
 } from "../../../lib/showcase.ts";
@@ -106,7 +109,6 @@ import {
   changePhoto,
   componentRowOf,
   deleteComponentRow,
-  ownBikeRows,
   removeBike,
   setBikeSharing,
   setGroupOrder,
@@ -636,13 +638,51 @@ async function handler(
     }
     if (p.length === 1) {
       if (method === "GET") {
-        const rows = await ownBikeRows(db, user.id);
+        const url = new URL(req.url);
+        const view = z
+          .enum(["full", "cards", "choices"])
+          .parse(url.searchParams.get("view") || "full");
+        if (view === "choices")
+          return json({ bikes: await ownedBikeChoices(db, user.id) });
         const site = await getSite();
-        return json({
-          bikes: await Promise.all(
-            rows.map((b) => decorateBike(db, b, user.id, site)),
-          ),
-        });
+        if (view === "full")
+          return json({ bikes: await ownedBikeList(db, user.id, site) });
+        const categories = z
+          .string()
+          .max(2000)
+          .parse(url.searchParams.get("category") || "")
+          .split(",")
+          .filter(Boolean);
+        if (
+          categories.length > 50 ||
+          categories.some((key) => !Object.hasOwn(categoryFilterLabels, key))
+        )
+          return fail("Неверный тип велосипеда");
+        return json(
+          await ownedBikeCards(db, user.id, site, {
+            page: z.coerce
+              .number()
+              .int()
+              .min(1)
+              .max(10000)
+              .parse(url.searchParams.get("page") || 1),
+            limit: z.coerce
+              .number()
+              .int()
+              .min(1)
+              .max(24)
+              .parse(url.searchParams.get("limit") || 24),
+            search: z
+              .string()
+              .trim()
+              .max(150)
+              .parse(url.searchParams.get("q") || ""),
+            categories,
+            classification: classificationQueryInput.parse(
+              Object.fromEntries(url.searchParams),
+            ),
+          }),
+        );
       }
       if (method === "POST") {
         if (!(await rateLimit("bike-create:" + user.id, limits.bikeCreates)))

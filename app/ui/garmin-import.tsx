@@ -1,7 +1,7 @@
 "use client";
 import { errorMessage } from "../../lib/errors.ts";
 import type { Dispatch, SetStateAction } from "react";
-import type { AccountBikeDto } from "../../lib/contracts.ts";
+import type { BikeChoiceDto } from "../../lib/contracts.ts";
 import type { GarminPreviewDto, GarminImportDto } from "./ride-types.ts";
 import { useState } from "react";
 import { socialApi } from "./social-primitives.tsx";
@@ -16,7 +16,7 @@ export default function GarminImport({
   onDone,
   onCancel,
 }: {
-  bikes: AccountBikeDto[];
+  bikes: BikeChoiceDto[];
   onDone: (result: GarminImportDto) => void | Promise<void>;
   onCancel: () => void;
 }) {

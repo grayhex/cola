@@ -1,6 +1,7 @@
 "use client";
+import dynamic from "next/dynamic";
 import { errorMessage } from "../../lib/errors.ts";
-import type { AccountBikeDto } from "../../lib/contracts.ts";
+import { useBikeChoices } from "./use-bike-choices.ts";
 import type { RideDto, RideListDto } from "./content-types.ts";
 import type { RideConfig } from "./ride-types.ts";
 import Link from "next/link";
@@ -8,8 +9,14 @@ import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import SiteIcon from "./site-icon.tsx";
 import AccountSectionHead from "./account-section.tsx";
-import RideForm from "./ride-form.tsx";
-import PlanComposer from "./plan-composer.tsx";
+const RideForm = dynamic(() => import("./ride-form.tsx"), {
+  ssr: false,
+  loading: () => <p role="status">Загружаем…</p>,
+});
+const PlanComposer = dynamic(() => import("./plan-composer.tsx"), {
+  ssr: false,
+  loading: () => <p role="status">Загружаем…</p>,
+});
 import { socialApi, Pagination } from "./social-primitives.tsx";
 import RideCard from "./ride-card.tsx";
 import { readOrganize } from "../../lib/organize-filters.ts";
@@ -20,7 +27,7 @@ const finderKeys = ["when", "duration", "purpose", "pace", "surface", "area"];
 // «Мои покатушки» (#245): the rider's own planned and completed rides and
 // their management. Track files, Garmin CSV and Ride with GPS live under
 // «Интеграции и импорт».
-export default function RideAccount({ bikes }: { bikes: AccountBikeDto[] }) {
+export default function RideAccount() {
   const [data, setData] = useState<RideListDto | null>(null),
     [config, setConfig] = useState<RideConfig | null>(null),
     [page, setPage] = useState(1),
@@ -36,6 +43,7 @@ export default function RideAccount({ bikes }: { bikes: AccountBikeDto[] }) {
     [settingsRevision, setSettingsRevision] = useState(0),
     // Kept apart from the list error: a loaded list must not hide it.
     [settingsError, setSettingsError] = useState("");
+  const choices = useBikeChoices(editing?.status === "completed");
   const params = useSearchParams();
   const action = params.get("action"),
     // «Изменить» on a ride page (#235) opens that plan's editor once; the
@@ -212,12 +220,22 @@ export default function RideAccount({ bikes }: { bikes: AccountBikeDto[] }) {
       )}
       {notice && <p role="status">{notice}</p>}
       {/* A recorded ride edits inline; a plan opens the wide planner (#253). */}
-      {editing?.status === "completed" && config && (
+      {editing?.status === "completed" && !choices.bikes && (
+        <p role={choices.error ? "alert" : "status"}>
+          {choices.error || "Загружаем велосипеды…"}
+          {choices.error && (
+            <button className="quiet" onClick={choices.retry}>
+              Повторить
+            </button>
+          )}
+        </p>
+      )}
+      {editing?.status === "completed" && config && choices.bikes && (
         <RideForm
           key={editing.id}
           mode="add"
           ride={editing}
-          bikes={bikes}
+          bikes={choices.bikes}
           config={config}
           onChanged={refresh}
           onCancel={() => setEditing(null)}

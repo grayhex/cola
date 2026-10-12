@@ -1,5 +1,5 @@
 import type { Passport, Range } from "../../lib/ride-match-core.ts";
-import type { JsonData, AccountBikeDto } from "../../lib/contracts.ts";
+import type { JsonData, BikeChoiceDto } from "../../lib/contracts.ts";
 import type {
   rideSettings,
   previewRide,
@@ -38,7 +38,7 @@ export type RideSaveHandler = (
   result: "planned" | "saved" | "removed",
   created?: CreatedPlan,
 ) => void | Promise<void>;
-export type GarageDto = { bikes: AccountBikeDto[] };
+export type GarageDto = { bikes: BikeChoiceDto[] };
 export type ActivityDto = JsonData<Awaited<ReturnType<typeof activityStatus>>>;
 export type ActivityOAuthDto = Awaited<ReturnType<typeof beginActivityOAuth>>;
 export type GarminPreviewDto = ReturnType<typeof parseGarminCsv>;

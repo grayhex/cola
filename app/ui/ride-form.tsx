@@ -1,7 +1,7 @@
 "use client";
 import { errorMessage } from "../../lib/errors.ts";
 import type { RideMetrics as Metrics } from "../../lib/ride-metrics.ts";
-import type { AccountBikeDto, ApiError } from "../../lib/contracts.ts";
+import type { BikeChoiceDto, ApiError } from "../../lib/contracts.ts";
 import type { RideDto } from "./content-types.ts";
 import type { RideConfig, RidePreview, RideSaveHandler } from "./ride-types.ts";
 import { useEffect, useMemo, useState } from "react";
@@ -62,7 +62,7 @@ export function FitHelp() {
 }
 function initialForm(
   ride: RideDto | null,
-  currentBikes: AccountBikeDto[],
+  currentBikes: BikeChoiceDto[],
   config: RideConfig,
 ) {
   if (!ride)
@@ -94,7 +94,7 @@ export default function RideForm({
 }: {
   mode: "add";
   ride?: RideDto | null;
-  bikes: AccountBikeDto[];
+  bikes: BikeChoiceDto[];
   config: RideConfig;
   heading?: boolean;
   onSaved: RideSaveHandler;

@@ -17,7 +17,7 @@ import type { Diagnostics } from "../services/bike-resolver/src/planner.ts";
 import type { listSessions } from "./account-data.ts";
 import type { legalMetadata } from "./legal-documents.ts";
 import type { followPage } from "./follows.ts";
-import type { decorateBike } from "./showcase.ts";
+import type { decorateBike, ownedBikeCards, BikeChoice } from "./showcase.ts";
 import type { accountOverview } from "./profiles.ts";
 import type { profileInput } from "./social-validation.ts";
 import type { settingsInput as settingsInputType } from "./admin-validation.ts";
@@ -215,6 +215,10 @@ export type JsonData<T> = T extends Date
 export type AccountOverviewDto = JsonData<
   Awaited<ReturnType<typeof accountOverview>>
 >;
+export type BikeChoiceDto = BikeChoice;
+export type BikeCardDto = JsonData<
+  Awaited<ReturnType<typeof ownedBikeCards>>
+>["bikes"][number];
 export type AccountBikeDto = JsonData<Awaited<ReturnType<typeof decorateBike>>>;
 // Owner-only fields are absent from the public allowlist. Shared controls may
 // read them only on an owner snapshot; adding optional types changes no DTO.

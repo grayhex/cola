@@ -25,10 +25,11 @@ export async function socialApi<T = unknown>(
   path: string,
   method = "GET",
   data?: unknown,
-  { keepalive }: { keepalive?: boolean } = {},
+  { keepalive, signal }: { keepalive?: boolean; signal?: AbortSignal } = {},
 ): Promise<T> {
   const response = await fetch("/api/" + path, {
     method,
+    signal,
     headers: data ? { "Content-Type": "application/json" } : {},
     body: data ? JSON.stringify(data) : undefined,
     cache: "no-store",

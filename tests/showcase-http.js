@@ -100,6 +100,31 @@ try {
   await owner("bikes/" + id + "/share", "PATCH", { is_public: false });
   assert.equal((await guest("showcase?q=" + nonce)).body.total, 0);
   assert.equal((await voter("bikes/" + id + "/like", "PUT")).status, 404);
+  const compact = await owner("bikes?view=cards&limit=3");
+  assert.equal(compact.status, 200);
+  assert.equal(compact.body.total, 1);
+  assert.equal(compact.body.bikes[0].id, id);
+  assert.equal(compact.body.bikes[0].is_public, false);
+  for (const key of [
+    "components",
+    "factory_spec",
+    "description",
+    "owner_id",
+    "price",
+  ])
+    assert.equal(key in compact.body.bikes[0], false, key);
+  assert.equal((await owner("bikes?view=cards&page=2")).body.bikes.length, 0);
+  assert.equal((await owner("bikes?view=cards&limit=25")).status, 400);
+  assert.equal((await owner("bikes?view=unknown")).status, 400);
+  const choices = await owner("bikes?view=choices");
+  assert.equal(choices.body.bikes[0].id, id);
+  assert.equal(choices.body.bikes[0].is_public, false);
+  assert.equal("photos" in choices.body.bikes[0], false);
+  assert.equal((await voter("bikes?view=choices")).body.bikes.length, 0);
+  assert.equal((await guest("bikes?view=choices")).status, 401);
+  const full = await owner("bikes");
+  assert.ok(Array.isArray(full.body.bikes[0].components));
+  assert.ok("factory_spec" in full.body.bikes[0]);
   console.log(
     "Showcase HTTP: public feed, privacy, votes, CSRF, revocation and isolated personal settings passed.",
   );

@@ -1,7 +1,7 @@
 "use client";
 import { errorMessage } from "../../lib/errors.ts";
 import type { ReactNode } from "react";
-import type { AccountBikeDto } from "../../lib/contracts.ts";
+import type { BikeChoiceDto } from "../../lib/contracts.ts";
 import type { RideDto } from "./content-types.ts";
 import type {
   RideConfig,
@@ -13,7 +13,7 @@ import type {
 type PlannerState =
   | { status: "loading" }
   | { status: "error"; error: string }
-  | { status: "ready"; bikes: AccountBikeDto[]; config: RideConfig };
+  | { status: "ready"; bikes: BikeChoiceDto[]; config: RideConfig };
 import { AddBikeLink } from "./add-bike.tsx";
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -77,7 +77,7 @@ export default function PlanComposer({
     let active = true;
     setState({ status: "loading" });
     Promise.all([
-      socialApi<GarageDto>("bikes"),
+      socialApi<GarageDto>("bikes?view=choices"),
       socialApi<RideConfig>("rides/settings"),
     ])
       .then(([garage, config]) => {

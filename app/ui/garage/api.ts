@@ -3,9 +3,11 @@ export default async function api<T = unknown>(
   url: string,
   method = "GET",
   data?: unknown,
+  signal?: AbortSignal,
 ): Promise<T> {
   const r = await fetch("/api/" + url, {
     method,
+    signal,
     headers: data ? { "Content-Type": "application/json" } : undefined,
     body: data ? JSON.stringify(data) : undefined,
   });
