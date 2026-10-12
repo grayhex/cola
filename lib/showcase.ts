@@ -634,13 +634,11 @@ export async function ownedBikeCards(
     is_public: b.is_public,
     is_former: b.is_former,
     is_owner: true,
-    photos: byPhoto
-      .get(b.id)!
-      .map((photo) => ({
-        id: photo.id,
-        is_cover: photo.is_cover,
-        source_page_url: photo.source_page_url,
-      })),
+    photos: byPhoto.get(b.id)!.map((photo) => ({
+      id: photo.id,
+      is_cover: photo.is_cover,
+      source_page_url: photo.source_page_url,
+    })),
     author: publicAuthor({
       id: owner,
       username: b.author_username,

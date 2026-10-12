@@ -113,14 +113,12 @@ export async function hydrateMany<T extends BikeRow>(
     ...b,
     is_former: b.is_former === true,
     components: byPart.get(b.id)!,
-    photos: byPhoto
-      .get(b.id)!
-      .map((photo) => ({
-        id: photo.id,
-        is_cover: photo.is_cover,
-        source_page_url: photo.source_page_url,
-        has_original: photo.has_original,
-      })),
+    photos: byPhoto.get(b.id)!.map((photo) => ({
+      id: photo.id,
+      is_cover: photo.is_cover,
+      source_page_url: photo.source_page_url,
+      has_original: photo.has_original,
+    })),
   }));
 }
 
