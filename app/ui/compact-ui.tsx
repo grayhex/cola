@@ -8,14 +8,17 @@ import type * as React from "react";
 import SiteIcon from "./site-icon.tsx";
 import SearchBox from "./search-box.tsx";
 import styles from "./compact-ui.module.css";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useBackdropClose } from "./use-backdrop-close.ts";
+import { useVisibleViewport } from "./use-visible-viewport.ts";
 import {
   significantBadge,
   metricSegments,
 } from "../../lib/card-presentation.ts";
 import { X, CheckCheck, Zap, Medal, Trophy } from "./icons.tsx";
 import { publicPath } from "../../lib/public-urls.ts";
+import { ClassificationFilters } from "./bike-classification.tsx";
+import { classificationFilterOptions } from "../../lib/bike-classification.ts";
 
 export function CompactIconButton({
   label,
@@ -57,13 +60,16 @@ export function CompactDialog({
   placement?: "panel" | "center";
 }) {
   const ref = useRef<HTMLDialogElement>(null);
-  useEffect(() => {
+  useVisibleViewport(ref, open);
+  useLayoutEffect(() => {
     const d = ref.current!;
     if (open && !d.open) {
       d.showModal();
       // Child effects run before showModal; focus the search only after the
       // native dialog is open so keyboard shortcuts are ready for typing.
-      d.querySelector<HTMLElement>("[data-autofocus]")?.focus();
+      d.querySelector<HTMLElement>("[data-autofocus]")?.focus({
+        preventScroll: true,
+      });
     }
     if (!open && d.open) d.close();
   }, [open]);
@@ -102,9 +108,21 @@ export function CompactDialog({
     </dialog>
   );
 }
-export function FilterControl({ categories, selected, onChange }: FilterProps) {
+type FacetProps = {
+  facets?: Record<string, string | null>;
+  onFacetsChange?: (value: Record<string, string>) => void;
+};
+export function FilterControl({
+  categories,
+  selected,
+  onChange,
+  facets = {},
+  onFacetsChange,
+}: FilterProps & FacetProps) {
   const [open, setOpen] = useState(false),
-    [draft, setDraft] = useState(selected);
+    [draft, setDraft] = useState(selected),
+    [draftFacets, setDraftFacets] = useState(facets);
+  const active = selected.length + Object.values(facets).filter(Boolean).length;
   return (
     <>
       <button
@@ -116,14 +134,13 @@ export function FilterControl({ categories, selected, onChange }: FilterProps) {
         aria-expanded={open}
         onClick={() => {
           setDraft(selected);
+          setDraftFacets(facets);
           setOpen(true);
         }}
       >
         <SiteIcon name="filters" />
         <span className="control-label">Фильтры</span>
-        {selected.length > 0 && (
-          <span className="badge">{selected.length}</span>
-        )}
+        {active > 0 && <span className="badge">{active}</span>}
       </button>
       <CompactDialog open={open} onClose={() => setOpen(false)} title="Фильтры">
         <fieldset className="filter-group">
@@ -150,11 +167,25 @@ export function FilterControl({ categories, selected, onChange }: FilterProps) {
             ))}
           </div>
         </fieldset>
+        {onFacetsChange && (
+          <ClassificationFilters
+            expanded
+            value={draftFacets}
+            onChange={(value) =>
+              setDraftFacets((previous) => ({ ...previous, ...value }))
+            }
+          />
+        )}
         <div className="sheet-actions">
           <button
             type="button"
             className="button secondary small"
-            onClick={() => setDraft([])}
+            onClick={() => {
+              setDraft([]);
+              setDraftFacets(
+                Object.fromEntries(Object.keys(facets).map((key) => [key, ""])),
+              );
+            }}
           >
             <SiteIcon name="reset" />
             Сбросить
@@ -164,6 +195,14 @@ export function FilterControl({ categories, selected, onChange }: FilterProps) {
             className="button small"
             onClick={() => {
               onChange(draft);
+              onFacetsChange?.(
+                Object.fromEntries(
+                  Object.entries(draftFacets).map(([key, value]) => [
+                    key,
+                    value || "",
+                  ]),
+                ),
+              );
               setOpen(false);
             }}
           >
@@ -181,8 +220,11 @@ export function FilterChips({
   onChange,
   query = "",
   onClearSearch,
-}: FilterProps & { query?: string; onClearSearch?: () => void }) {
-  return selected.length || query ? (
+  facets = {},
+  onFacetsChange,
+}: FilterProps & FacetProps & { query?: string; onClearSearch?: () => void }) {
+  const activeFacets = Object.entries(facets).filter(([, value]) => !!value);
+  return selected.length || query || activeFacets.length ? (
     <div className="filter-chips" aria-label="Активные фильтры">
       {selected.map((key) => (
         <button
@@ -200,11 +242,42 @@ export function FilterChips({
           <X size={12} />
         </button>
       )}
+      {activeFacets.map(([key, value]) => {
+        const choices = Object.entries(classificationFilterOptions).find(
+          ([facet]) => facet === key,
+        )?.[1];
+        const label =
+          Object.entries(choices || {}).find(
+            ([option]) => option === value,
+          )?.[1] || value;
+        return (
+          <button
+            key={key}
+            onClick={() => onFacetsChange?.({ [key]: "" })}
+            aria-label={"Убрать фильтр " + label}
+          >
+            {label}
+            <X size={12} />
+          </button>
+        );
+      })}
+      <button
+        onClick={() => {
+          onChange([]);
+          onFacetsChange?.(
+            Object.fromEntries(Object.keys(facets).map((key) => [key, ""])),
+          );
+          onClearSearch?.();
+        }}
+      >
+        Сбросить всё
+      </button>
     </div>
   ) : null;
 }
 export function GlobalSearch() {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(false),
+    [query, setQuery] = useState("");
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
       if (
@@ -249,7 +322,14 @@ export function GlobalSearch() {
         className={"global-search-panel " + styles.searchDialog}
       >
         {open && (
-          <SearchBox contained autoFocus onNavigate={() => setOpen(false)} />
+          <SearchBox
+            contained
+            focusInDialog
+            viewportPanel
+            initialQuery={query}
+            onQueryChange={setQuery}
+            onNavigate={() => setOpen(false)}
+          />
         )}
         <p className="help">
           Велосипеды, компоненты и покатушки. Только публичные материалы.

@@ -10,6 +10,9 @@ export default function SearchBox({
   filters = {},
   contained = false,
   autoFocus = false,
+  focusInDialog = false,
+  viewportPanel = false,
+  onQueryChange,
   onNavigate,
   shortcuts = false,
 }: {
@@ -17,6 +20,10 @@ export default function SearchBox({
   filters?: Record<string, string>;
   contained?: boolean;
   autoFocus?: boolean;
+  /** CompactDialog owns focus after opening; this only marks its target. */
+  focusInDialog?: boolean;
+  viewportPanel?: boolean;
+  onQueryChange?: (value: string) => void;
   onNavigate?: () => void;
   shortcuts?: boolean;
 }) {
@@ -130,7 +137,7 @@ export default function SearchBox({
   return (
     <div
       ref={root}
-      className={`${styles.root} ${contained ? styles.contained : ""}`}
+      className={`${styles.root} ${contained ? styles.contained : ""} ${viewportPanel ? styles.panel : ""}`}
       onBlur={(e) => {
         if (e.relatedTarget && !e.currentTarget.contains(e.relatedTarget))
           setOpen(false);
@@ -140,7 +147,7 @@ export default function SearchBox({
         <Search size={21} aria-hidden="true" />
         <input
           ref={input}
-          data-autofocus={autoFocus || undefined}
+          data-autofocus={focusInDialog || undefined}
           type="search"
           name="q"
           role="combobox"
@@ -158,6 +165,7 @@ export default function SearchBox({
           onFocus={() => setOpen(true)}
           onChange={(e) => {
             setQuery(e.target.value);
+            onQueryChange?.(e.target.value);
             setOpen(true);
           }}
           onKeyDown={(e) => {

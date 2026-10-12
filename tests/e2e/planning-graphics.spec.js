@@ -194,6 +194,10 @@ test("independent planning graphics: local uploads, protected usage, lazy animat
             name: button,
             exact: true,
           });
+          // A mouse left on the help icon in the previous opening is a real
+          // hover request when the next dialog appears under it. Start outside
+          // it to test initial focus independently of hover behaviour.
+          await page.mouse.move(0, 0);
           await opener.focus();
           await page.keyboard.press("Enter");
           const dialog = page.getByRole("dialog", { name: title, exact: true });
@@ -201,19 +205,29 @@ test("independent planning graphics: local uploads, protected usage, lazy animat
           const graphic = dialog.locator(`[data-planning-graphic='${slot}']`);
           await expect(graphic).toBeVisible();
           await expect(dialog.locator(".modal-head")).toContainText(title);
-          // #397: the art is a square in the body; the centered header is compact.
+          // #406: a small intro beside the art on phones; desktop keeps its column.
           const head = dialog.locator(".modal-head");
           const art = await graphic.boundingBox();
           const headBox = await head.boundingBox();
           const titleBox = await head.getByRole("heading").boundingBox();
           expect(Math.abs(art.width - art.height)).toBeLessThan(2);
-          expect(art.width).toBeGreaterThanOrEqual(width >= 900 ? 300 : 90);
+          expect(art.width).toBeGreaterThanOrEqual(width >= 900 ? 300 : 64);
+          if (width < 900) expect(art.width).toBeLessThanOrEqual(80);
           expect(art.y).toBeGreaterThanOrEqual(headBox.y + headBox.height - 1);
-          expect(
-            Math.abs(
-              titleBox.x + titleBox.width / 2 - (headBox.x + headBox.width / 2),
-            ),
-          ).toBeLessThan(4);
+          if (width >= 900)
+            expect(
+              Math.abs(
+                titleBox.x +
+                  titleBox.width / 2 -
+                  (headBox.x + headBox.width / 2),
+              ),
+            ).toBeLessThan(4);
+          else {
+            const close = await head
+              .getByRole("button", { name: "Закрыть", exact: true })
+              .boundingBox();
+            expect(titleBox.x + titleBox.width).toBeLessThan(close.x);
+          }
           expect(headBox.height).toBeLessThanOrEqual(80);
           if (width === 1440 || width === 1920) {
             const geometry = await dialog.evaluate((e) => ({
@@ -240,6 +254,13 @@ test("independent planning graphics: local uploads, protected usage, lazy animat
               name: "Подробнее: Намерение",
               exact: true,
             });
+            await expect(hint).toHaveAttribute("aria-expanded", "false");
+            await expect(head.getByRole("heading")).toBeFocused();
+            await page.keyboard.press("Tab");
+            await expect(hint).toBeFocused();
+            await expect(hint).toHaveAttribute("aria-expanded", "true");
+            await page.keyboard.press("Escape");
+            await expect(head.getByRole("tooltip")).toBeHidden();
             await hint.click();
             await expect(head.getByRole("tooltip")).toContainText(
               "конкретный раз",

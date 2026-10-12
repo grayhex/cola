@@ -2186,10 +2186,8 @@
     position: relative;
   }
   .combo-popup {
-    position: absolute;
-    top: calc(100% + 4px);
-    right: 0;
-    left: 0;
+    /* Fixed within the dialog's top layer, outside the step's scroll clipping. */
+    position: fixed;
     z-index: var(--z-dropdown);
     min-width: 0;
     max-width: 100%;
@@ -2201,7 +2199,7 @@
     touch-action: pan-y;
   }
   .combo-popup ul {
-    max-height: 192px;
+    max-height: var(--combo-list-height, 192px);
     margin: 0;
     padding: var(--space-1);
     overflow: auto;
@@ -2337,7 +2335,7 @@
   }
   @media (max-width: 640px) {
     dialog[open]:has(.bike-wizard) {
-      height: calc(100dvh - 2 * var(--space-2));
+      height: calc(var(--visible-height, 100dvh) - 2 * var(--space-2));
     }
     .wizard-part {
       grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) auto;
@@ -2403,6 +2401,14 @@
       width: 44px;
       min-width: 44px;
       height: 44px;
+    }
+  }
+}
+
+@layer features {
+  @media (pointer: coarse), (max-width: 700px) {
+    .combo-popup li {
+      min-height: 44px;
     }
   }
 }

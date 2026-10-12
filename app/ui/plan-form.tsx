@@ -1,6 +1,6 @@
 "use client";
 import { errorMessage } from "../../lib/errors.ts";
-import PlanningGraphic from "./planning-graphic.tsx";
+import { PlanningIntro } from "./planning-graphic.tsx";
 import InfoTip from "./info-tip.tsx";
 import type { ReactNode, FormEvent } from "react";
 import type { BikeChoiceDto, ApiError } from "../../lib/contracts.ts";
@@ -420,7 +420,9 @@ export default function PlanForm({
   return (
     <form className="plan-form" onSubmit={submit}>
       <div className="planning-body planning-side-layout">
-        <PlanningGraphic slot="planDialogGraphic" size="side" />
+        <PlanningIntro slot="planDialogGraphic">
+          Укажите время и место встречи, затем пригласите участников.
+        </PlanningIntro>
         <div className="planning-side-column">
           {prelude}
           <fieldset className="planning-section half wide-4" disabled={busy}>
@@ -435,7 +437,7 @@ export default function PlanForm({
                 необязательно; раньше старта — значит на следующий день.
               </InfoTip>
             </legend>
-            <div className="planning-row">
+            <div className="planning-row planning-date-row">
               <label className="field">
                 <span>Дата</span>
                 <input
@@ -452,37 +454,39 @@ export default function PlanForm({
                   }
                 />
               </label>
-              <label className="field">
-                <span>Старт</span>
-                <input
-                  type="time"
-                  required
-                  value={form.time}
-                  onChange={(e) =>
-                    setForm((f) => ({
-                      ...f,
-                      time: e.target.value,
-                      startFold: undefined,
-                      endFold: undefined,
-                    }))
-                  }
-                />
-              </label>
-              <label className="field">
-                <span>Окончание</span>
-                <input
-                  type="time"
-                  aria-describedby="plan-end-help"
-                  value={form.endTime}
-                  onChange={(e) =>
-                    setForm((f) => ({
-                      ...f,
-                      endTime: e.target.value,
-                      endFold: undefined,
-                    }))
-                  }
-                />
-              </label>
+              <div className="planning-times">
+                <label className="field">
+                  <span>Старт</span>
+                  <input
+                    type="time"
+                    required
+                    value={form.time}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        time: e.target.value,
+                        startFold: undefined,
+                        endFold: undefined,
+                      }))
+                    }
+                  />
+                </label>
+                <label className="field">
+                  <span>Окончание</span>
+                  <input
+                    type="time"
+                    aria-describedby="plan-end-help"
+                    value={form.endTime}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        endTime: e.target.value,
+                        endFold: undefined,
+                      }))
+                    }
+                  />
+                </label>
+              </div>
             </div>
             <FoldChoice
               local={local.start}
@@ -513,7 +517,7 @@ export default function PlanForm({
                 onChange={(e) => set("meetingPoint", e.target.value)}
               />
             </label>
-            <label className="checkbox">
+            <label className="check">
               <input
                 type="checkbox"
                 checked={form.passport.area?.label === undecidedPlanPlace}
@@ -716,7 +720,7 @@ export default function PlanForm({
                     visibleMetrics={["distanceM", "elevationGainM"]}
                   />
                 )}
-                <label className="ride-toggle">
+                <label className="check">
                   <input
                     type="checkbox"
                     checked={form.recurrence === "weekly"}

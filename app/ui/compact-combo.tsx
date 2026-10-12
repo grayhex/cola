@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useId, useRef, useState } from "react";
 import { limitedOptions } from "../../lib/wizard-options.ts";
 export default function CompactCombo({
   label,
@@ -22,6 +22,7 @@ export default function CompactCombo({
     [open, setOpen] = useState(false),
     [active, setActive] = useState(-1);
   const root = useRef<HTMLDivElement>(null),
+    popup = useRef<HTMLDivElement>(null),
     gesture = useRef<{ x: number; y: number; moved: boolean } | null>(null),
     touchClick = useRef(false);
   useEffect(() => {
@@ -35,6 +36,42 @@ export default function CompactCombo({
     return () => document.removeEventListener("pointerdown", outside);
   }, []);
   const shown = limitedOptions(options, value);
+  useLayoutEffect(() => {
+    if (!open || !shown.length) return;
+    const place = () => {
+      const field = root.current?.querySelector("input");
+      const box = popup.current;
+      if (!field || !box) return;
+      const anchor = field.getBoundingClientRect(),
+        view = window.visualViewport;
+      const top = view?.offsetTop || 0,
+        left = view?.offsetLeft || 0;
+      const height = view?.height || window.innerHeight,
+        width = view?.width || window.innerWidth;
+      const below = top + height - anchor.bottom - 8,
+        above = anchor.top - top - 8;
+      const upwards = below < 200 && above > below;
+      const room = Math.max(0, upwards ? above : below);
+      box.style.width = `${Math.min(anchor.width, width - 16)}px`;
+      box.style.left = `${Math.max(left + 8, Math.min(anchor.left, left + width - box.offsetWidth - 8))}px`;
+      box.style.setProperty(
+        "--combo-list-height",
+        `${Math.min(192, Math.max(0, room - (box.querySelector("small")?.getBoundingClientRect().height || 0) - 2))}px`,
+      );
+      box.style.top = `${upwards ? anchor.top - box.offsetHeight - 4 : anchor.bottom + 4}px`;
+    };
+    place();
+    document.addEventListener("scroll", place, true);
+    window.addEventListener("resize", place);
+    window.visualViewport?.addEventListener("resize", place);
+    window.visualViewport?.addEventListener("scroll", place);
+    return () => {
+      document.removeEventListener("scroll", place, true);
+      window.removeEventListener("resize", place);
+      window.visualViewport?.removeEventListener("resize", place);
+      window.visualViewport?.removeEventListener("scroll", place);
+    };
+  }, [open, shown.length]);
   const choose = (v: string) => {
     onChange(v);
     setOpen(false);
@@ -70,7 +107,8 @@ export default function CompactCombo({
           setOpen(true);
         }}
         onKeyDown={(e) => {
-          if (e.key === "Escape") {
+          if (e.key === "Escape" && open) {
+            e.preventDefault();
             setOpen(false);
             e.stopPropagation();
           }
@@ -94,7 +132,7 @@ export default function CompactCombo({
         }}
       />
       {open && !!shown.length && (
-        <div className="combo-popup">
+        <div ref={popup} className="combo-popup">
           <ul role="listbox" id={id} aria-label={label}>
             {shown.map((v, i) => (
               <li

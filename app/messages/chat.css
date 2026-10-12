@@ -456,11 +456,19 @@ button.chat-person:hover {
 .cola-chat .str-chat__message-composer .str-chat__send-button:disabled {
   opacity: 0.45;
 }
-@media (max-width: 700px) {
+@media (pointer: coarse), (max-width: 700px) {
   .chat-panels {
     grid-template-columns: minmax(0, 1fr);
     height: calc(100dvh - 10.5rem);
-    min-height: 23rem;
+    min-height: 0;
+  }
+  .chat-panels[data-conversation="true"][data-visible-contracted="true"] {
+    position: fixed;
+    inset: var(--visible-top, 0px) auto auto var(--visible-left, 0px);
+    z-index: var(--z-modal);
+    width: var(--visible-width, 100%);
+    height: var(--visible-height, 100dvh);
+    border-radius: 0;
   }
   .chat-panels[data-conversation="true"] .chat-channels,
   .chat-panels[data-conversation="false"] .chat-conversation {

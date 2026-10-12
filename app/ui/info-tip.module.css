@@ -55,6 +55,12 @@
 .bubble[hidden] {
   display: none;
 }
+.content {
+  display: block;
+  max-height: calc(var(--hint-height, 100dvh) - 2 * var(--space-2) - 2px);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
 /* The gap between the icon and the bubble belongs to the bubble, so the
    pointer going to the text does not leave the hint. */
 .bubble::before {

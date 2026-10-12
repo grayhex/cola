@@ -152,9 +152,35 @@
   }
 }
 @media (pointer: coarse), (max-width: 700px) {
+  .control input,
+  .all {
+    min-height: 44px;
+  }
   .control button {
     width: 44px;
     height: 44px;
+  }
+}
+@media (pointer: coarse), (max-width: 640px) {
+  .panel {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+  }
+  .panel .control {
+    flex: none;
+    margin-right: calc(44px + var(--space-2));
+  }
+  .panel .popover {
+    flex: 1;
+    min-height: 0;
+    max-height: none;
+  }
+}
+@media (max-width: 360px) {
+  .panel .control > svg {
+    display: none;
   }
 }
 @media (prefers-reduced-motion: reduce) {

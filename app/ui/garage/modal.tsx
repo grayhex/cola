@@ -4,6 +4,7 @@ import { useEffect, useId, useRef } from "react";
 import { useSite } from "../site-provider.tsx";
 import { useBackdropClose } from "../use-backdrop-close.ts";
 import { X } from "../icons.tsx";
+import { useVisibleViewport } from "../use-visible-viewport.ts";
 export default function Modal({
   title,
   onClose,
@@ -41,6 +42,7 @@ export default function Modal({
     // named by its own title.
     titleId = useId(),
     descriptionId = useId();
+  useVisibleViewport(ref);
   useEffect(() => {
     const el = ref.current!;
     // The window may unmount before it closes; focus then returns here.
@@ -57,8 +59,37 @@ export default function Modal({
       width: "100%",
     });
     el.showModal();
+    // Start at the static title, without opening help or the OS keyboard.
+    el.querySelector<HTMLElement>("[data-modal-title]")?.focus({
+      preventScroll: true,
+    });
+    // A wrapped mobile action row can be taller than the usual 80px scroll
+    // padding. Keep focused fields above its actual height, including forms
+    // that finish loading after the dialog has opened.
+    let actions: HTMLElement | null = null;
+    const measureActions = () => {
+      el.style.setProperty(
+        "--modal-actions-height",
+        `${Math.ceil(actions?.getBoundingClientRect().height || 0)}px`,
+      );
+    };
+    const size = new ResizeObserver(measureActions);
+    const connectActions = () => {
+      const next = el.querySelector<HTMLElement>(".planning-actions");
+      if (next === actions) return;
+      actions = next;
+      size.disconnect();
+      if (actions) size.observe(actions);
+      measureActions();
+    };
+    const content = new MutationObserver(connectActions);
+    content.observe(el, { childList: true, subtree: true });
+    connectActions();
     return () => {
       leaving.current = true;
+      size.disconnect();
+      content.disconnect();
+      el.style.removeProperty("--modal-actions-height");
       el.close();
       if (previous === null) body.removeAttribute("style");
       else body.setAttribute("style", previous);
@@ -104,7 +135,9 @@ export default function Modal({
       >
         <div className="modal-heading-content">
           {graphic}
-          <h2 id={titleId}>{title}</h2>
+          <h2 id={titleId} data-modal-title tabIndex={-1} autoFocus>
+            {title}
+          </h2>
           {help}
         </div>
         {description && (

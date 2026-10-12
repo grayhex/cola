@@ -574,8 +574,11 @@
     font-size: var(--text-sm);
     line-height: var(--leading-snug);
     cursor: pointer;
+    min-height: var(--control-md);
+    padding-block: var(--space-2);
   }
   .check > input {
+    flex: none;
     margin-top: 2px;
   }
   .check > .toggle {
@@ -1300,7 +1303,8 @@
     max-height: min(880px, calc(100dvh - 2 * var(--gutter)));
     padding: 0;
     /* Keep keyboard targets clear of the sticky heading and action row. */
-    scroll-padding-block: var(--space-20);
+    scroll-padding-block: var(--space-20)
+      calc(var(--modal-actions-height, var(--space-16)) + var(--space-4));
   }
   dialog.planning > .modal-head {
     position: sticky;
@@ -2022,6 +2026,18 @@
   .planning-side-layout:has(> [data-planning-graphic]) {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
+  .planning-side-layout:has(> .planning-intro [data-planning-graphic]) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .planning-intro {
+    min-width: 0;
+  }
+  .planning-intro:not(:has([data-planning-graphic])) {
+    display: none;
+  }
+  .planning-intro > p {
+    display: none;
+  }
   .planning-side-column {
     display: grid;
     gap: var(--space-3);
@@ -2040,8 +2056,17 @@
     margin: 0;
   }
   .planning-side-column .planning-row {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 9em), 1fr));
     gap: var(--space-2);
+  }
+  .planning-side-column .planning-date-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .planning-times {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 9em), 1fr));
+    gap: var(--space-2);
+    min-width: 0;
   }
   .planning-side-column .planning-row.wide {
     grid-template-columns: minmax(0, 1fr);
@@ -2070,11 +2095,33 @@
   @media (max-width: 899px) {
     .planning-side-layout,
     .planning-side-layout:has(> [data-planning-graphic]),
+    .planning-side-layout:has(> .planning-intro [data-planning-graphic]),
     .wizard-search-layout:has(> [data-planning-graphic]) {
       grid-template-columns: minmax(0, 1fr);
     }
     dialog.planning > .modal-head.modal-head-compact {
       position: static;
+      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-areas: "title close";
+      gap: var(--space-3);
+    }
+    dialog.planning > .modal-head-compact > .modal-heading-content {
+      margin: 0;
+      width: auto;
+      justify-content: flex-start;
+      text-align: left;
+      gap: var(--space-4);
+    }
+    .planning-intro {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+    }
+    .planning-intro > p {
+      display: block;
+      margin: 0;
+      color: var(--text-secondary);
+      font-size: var(--text-sm);
     }
   }
 }
@@ -2090,8 +2137,75 @@
     margin-left: var(--space-2);
     top: calc(50% - 12px);
   }
+  @media (max-width: 899px) {
+    .modal-head-compact > .modal-heading-content > span {
+      position: static;
+      margin: 0;
+      flex: none;
+    }
+  }
   .wizard-search-layout .wizard-search {
     width: 100%;
     padding-top: 0;
+  }
+}
+
+/* #406: native controls and fixed dialogs use their actual available box. */
+@layer components {
+  input:is([type="date"], [type="time"], [type="datetime-local"]) {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    min-inline-size: 0;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  input::-webkit-date-and-time-value {
+    min-width: 0;
+    text-align: left;
+  }
+  input::-webkit-datetime-edit {
+    min-width: 0;
+    padding: 0;
+  }
+  @media (pointer: coarse) and (max-width: 899px), (max-width: 640px) {
+    dialog {
+      position: fixed;
+      inset: var(--visible-top, 0px) 0 var(--visible-bottom, 0px);
+      max-height: calc(var(--visible-height, 90dvh) - 2 * var(--gutter));
+      scroll-padding-block: var(--space-4);
+    }
+    dialog.planning {
+      inset: var(--visible-top, 0px) auto auto var(--visible-left, 0px);
+      margin: 0;
+      width: var(--visible-width, 100%);
+      height: var(--visible-height, 100dvh);
+      max-height: var(--visible-height, 100dvh);
+      scroll-padding-block: var(--space-20)
+        calc(var(--modal-actions-height, var(--space-16)) + var(--space-4));
+    }
+    dialog.sheet,
+    dialog.sheet[data-placement="center"] {
+      inset: auto 0 var(--visible-bottom, 0px);
+      width: var(--visible-width, 100%);
+      margin: 0;
+      max-height: calc(var(--visible-height, 100dvh) * 0.85);
+    }
+    .planning-actions {
+      padding-bottom: max(var(--space-3), env(safe-area-inset-bottom));
+    }
+    .planning-actions > .button {
+      min-width: 0;
+      white-space: normal;
+      text-align: center;
+    }
+  }
+  @media (pointer: coarse), (max-width: 700px) {
+    .icon.small {
+      width: 44px;
+      height: 44px;
+      min-height: 44px;
+    }
   }
 }

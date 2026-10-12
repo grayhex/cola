@@ -1,5 +1,5 @@
 "use client";
-import PlanningGraphic from "./planning-graphic.tsx";
+import { PlanningIntro } from "./planning-graphic.tsx";
 import InfoTip from "./info-tip.tsx";
 import type { FormEvent } from "react";
 import type {
@@ -232,7 +232,9 @@ export function IntentComposer({
             same window opens from the home page and /ride-intents (#264). */}
         <form onSubmit={save} className="intent-form">
           <div className="planning-body planning-side-layout">
-            <PlanningGraphic slot="intentDialogGraphic" size="side" />
+            <PlanningIntro slot="intentDialogGraphic">
+              Выберите время и место, чтобы найти компанию для поездки.
+            </PlanningIntro>
             <div className="planning-side-column">
               <fieldset
                 className="planning-section half wide-4"

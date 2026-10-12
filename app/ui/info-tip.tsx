@@ -57,15 +57,30 @@ export default function InfoTip({
     const box = bubble.current;
     if (!anchor || !box) return;
     const icon = anchor.getBoundingClientRect();
-    const width = Math.min(box.offsetWidth, window.innerWidth - 2 * margin);
+    const viewport = window.visualViewport;
+    const viewLeft = viewport?.offsetLeft || 0;
+    const viewTop = viewport?.offsetTop || 0;
+    const viewWidth = viewport?.width || window.innerWidth;
+    const viewHeight = viewport?.height || window.innerHeight;
+    box.style.maxWidth = `${Math.max(0, viewWidth - 2 * margin)}px`;
+    box.style.setProperty(
+      "--hint-height",
+      `${Math.max(0, viewHeight - 2 * margin)}px`,
+    );
+    // A fixed element with auto width shrinks to the space after its current
+    // left edge. Measure at a safe edge first; moving a narrow measurement to
+    // the centre otherwise changes its width and pushes text past the screen.
+    box.style.left = `${viewLeft + margin}px`;
+    const width = Math.min(box.offsetWidth, viewWidth - 2 * margin);
     const left = Math.min(
-      Math.max(margin, icon.left + icon.width / 2 - width / 2),
-      window.innerWidth - margin - width,
+      Math.max(viewLeft + margin, icon.left + icon.width / 2 - width / 2),
+      viewLeft + viewWidth - margin - width,
     );
     const below = icon.bottom + 6;
-    const fits = below + box.offsetHeight <= window.innerHeight - margin;
+    const bottom = viewTop + viewHeight - margin;
+    const fits = below + box.offsetHeight <= bottom;
     box.style.left = `${left}px`;
-    box.style.top = `${fits ? below : Math.max(margin, icon.top - 6 - box.offsetHeight)}px`;
+    box.style.top = `${Math.max(viewTop + margin, Math.min(fits ? below : icon.top - 6 - box.offsetHeight, bottom - box.offsetHeight))}px`;
   }, []);
   useLayoutEffect(() => {
     if (open) place();
@@ -111,11 +126,15 @@ export default function InfoTip({
     document.addEventListener("keydown", escape, true);
     document.addEventListener("scroll", scrolled, true);
     window.addEventListener("resize", place);
+    window.visualViewport?.addEventListener("resize", place);
+    window.visualViewport?.addEventListener("scroll", place);
     return () => {
       document.removeEventListener("pointerdown", away, true);
       document.removeEventListener("keydown", escape, true);
       document.removeEventListener("scroll", scrolled, true);
       window.removeEventListener("resize", place);
+      window.visualViewport?.removeEventListener("resize", place);
+      window.visualViewport?.removeEventListener("scroll", place);
     };
   }, [open, close, place]);
   return (
@@ -178,7 +197,7 @@ export default function InfoTip({
           pinned.current = true;
         }}
       >
-        {children}
+        <span className={styles.content}>{children}</span>
       </span>
     </span>
   );

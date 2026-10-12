@@ -10,6 +10,22 @@ import styles from "./planning-graphic.module.css";
 // This component belongs to the composers' lazy chunk. Merely visiting a
 // page with a planning button never loads the image, Rive JS or WASM.
 const RiveCanvas = dynamic(() => import("./planning-rive.tsx"), { ssr: false });
+export function PlanningIntro({
+  slot,
+  children,
+}: {
+  slot: "intentDialogGraphic" | "planDialogGraphic";
+  children: React.ReactNode;
+}) {
+  const { settings } = useSite();
+  if (!settings[slot]) return null;
+  return (
+    <div className="planning-intro">
+      <PlanningGraphic slot={slot} size="side" />
+      <p>{children}</p>
+    </div>
+  );
+}
 export default function PlanningGraphic({
   slot,
   size = "compact",

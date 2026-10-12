@@ -30,6 +30,7 @@ import {
   useState,
 } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useVisibleViewport } from "../ui/use-visible-viewport.ts";
 import {
   Channel,
   ChannelList,
@@ -401,6 +402,8 @@ export default function Conversations({ client }: { client: StreamChat }) {
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState("");
   const newButton = useRef<HTMLButtonElement>(null);
+  const panels = useRef<HTMLDivElement>(null);
+  useVisibleViewport(panels);
   const wasConversation = useRef(false);
   const filters = useMemo(
     () => ({ type: "colabike", members: { $in: [client.userID!] } }),
@@ -553,7 +556,11 @@ export default function Conversations({ client }: { client: StreamChat }) {
             </button>
           </div>
         )}
-        <div className="chat-panels" data-conversation={!!(cid || target)}>
+        <div
+          ref={panels}
+          className="chat-panels"
+          data-conversation={!!(cid || target)}
+        >
           <aside className="chat-channels" aria-label="Диалоги">
             <div className="chat-list-heading">
               <div>
