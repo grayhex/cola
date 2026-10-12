@@ -160,6 +160,14 @@ test("large owner garage pages and filters on the server, then loads full detail
     .getByRole("button", { name: "Performance bike 00", exact: true })
     .click();
   await page.getByRole("tab", { name: /Комплектация/ }).click();
+  const group = page.getByRole("button", {
+    name: "Рама и подвеска 1",
+    exact: true,
+  });
+  if ((await group.getAttribute("aria-expanded")) === "false") {
+    await group.focus();
+    await page.keyboard.press("Enter");
+  }
   await expect(
     page.getByText("Owner detail component", { exact: true }),
   ).toBeVisible();
@@ -169,6 +177,10 @@ test("large owner garage pages and filters on the server, then loads full detail
     page.getByRole("heading", { name: "Performance bike 00", exact: true }),
   ).toBeVisible();
   await page.getByRole("tab", { name: /Комплектация/ }).click();
+  if ((await group.getAttribute("aria-expanded")) === "false") {
+    await group.focus();
+    await page.keyboard.press("Enter");
+  }
   await expect(
     page.getByText("Owner detail component", { exact: true }),
   ).toBeVisible();
