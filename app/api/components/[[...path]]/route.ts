@@ -46,6 +46,8 @@ import {
   notModified,
   notModifiedResponse,
   mediaResponse,
+  mediaBusyResponse,
+  revalidatedMedia,
   mediaVariant,
 } from "../../../../lib/media-cache.ts";
 import { mediaVary, mediaViewer } from "../../../../lib/media-viewer.ts";
@@ -107,14 +109,18 @@ async function handler(
         // ones): by cookie or by Bearer (#324).
         const who = await mediaViewer(req, user);
         if ("denied" in who) return who.denied;
-        const filename = await componentPhotoFilename(db, id, who.viewer);
+        const authorize = () => componentPhotoFilename(db, id, who.viewer);
+        const filename = await authorize();
         const etag = mediaEtag(id, width),
           headers = mediaVary;
         if (notModified(req, etag))
           return notModifiedResponse(etag, { headers });
         const original = () => readComponentPhotoFile(filename);
         return mediaResponse(
-          width ? await mediaVariant(id, width, original) : await original(),
+          await revalidatedMedia(
+            () => (width ? mediaVariant(id, width, original) : original()),
+            authorize,
+          ),
           etag,
           { headers },
         );
@@ -280,6 +286,8 @@ async function handler(
     }
     return fail("Не найдено", 404);
   } catch (e) {
+    const overloaded = mediaBusyResponse(e);
+    if (overloaded) return overloaded;
     if (e instanceof EmailPolicyError)
       return json({ error: e.message, code: e.code }, e.status);
     if (e instanceof CommunityError || e instanceof QuotaError)

@@ -9,6 +9,8 @@ import { traced } from "../../../../lib/observability.ts";
 import {
   mediaEtag,
   mediaResponse,
+  mediaBusyResponse,
+  revalidatedMedia,
   mediaVariant,
   mediaWidth,
   notModified,
@@ -23,11 +25,18 @@ export const GET = traced(
     // Stored avatars are 512 px; larger variants would only waste the cache.
     if (width === undefined || (width !== null && width > 320))
       return fail("Неверный размер аватара");
-    const row = await db.query<{ "?column?": number }>(
-      "SELECT 1 FROM users WHERE avatar_id=$1 AND NOT blocked",
-      [id],
-    );
-    if (!row.rowCount) return fail("Аватар недоступен", 404);
+    const allowed = async () => {
+      const row = await db.query<{ "?column?": number }>(
+        "SELECT 1 FROM users WHERE avatar_id=$1 AND NOT blocked",
+        [id],
+      );
+      return !!row.rowCount;
+    };
+    if (!(await allowed())) return fail("Аватар недоступен", 404);
+    const authorize = async () => {
+      if (!(await allowed()))
+        throw Object.assign(new Error("Аватар недоступен"), { code: "ENOENT" });
+    };
     const etag = mediaEtag("avatar-" + id, width);
     if (notModified(req, etag)) return notModifiedResponse(etag);
     try {
@@ -40,12 +49,16 @@ export const GET = traced(
           ),
         );
       return mediaResponse(
-        width
-          ? await mediaVariant("avatar-" + id, width, original)
-          : await original(),
+        await revalidatedMedia(
+          () =>
+            width ? mediaVariant("avatar-" + id, width, original) : original(),
+          authorize,
+        ),
         etag,
       );
     } catch (e) {
+      const overloaded = mediaBusyResponse(e);
+      if (overloaded) return overloaded;
       if (errorCode(e) === "ENOENT") return fail("Аватар недоступен", 404);
       throw e;
     }

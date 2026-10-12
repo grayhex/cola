@@ -73,6 +73,8 @@ import {
 import {
   mediaEtag,
   mediaResponse,
+  mediaBusyResponse,
+  revalidatedMedia,
   mediaVariant,
   mediaWidth,
   notModified,
@@ -345,22 +347,27 @@ async function handler(
       // A private bike's photo is its owner's: by cookie or by Bearer (#324).
       const who = await mediaViewer(req, user);
       if ("denied" in who) return who.denied;
-      const { rows } = await db.query<{ filename: string }>(
-        "SELECT p.filename FROM photos p JOIN bikes b ON b.id=p.bike_id JOIN users u ON u.id=b.owner_id WHERE p.id=$1 AND u.blocked=false AND (b.is_public=true OR b.owner_id=$2)",
-        [p[1], who.viewer?.id || null],
-      );
-      if (!rows[0]) return fail("Фото не найдено", 404);
+      const authorize = async () => {
+        const { rows } = await db.query<{ filename: string }>(
+          "SELECT p.filename FROM photos p JOIN bikes b ON b.id=p.bike_id JOIN users u ON u.id=b.owner_id WHERE p.id=$1 AND u.blocked=false AND (b.is_public=true OR b.owner_id=$2)",
+          [p[1], who.viewer?.id || null],
+        );
+        if (!rows[0]) throw new CommunityError("Фото не найдено", 404);
+        return rows[0].filename;
+      };
+      const filename = await authorize();
       // Access is checked above on every request, including revalidation.
       const etag = mediaEtag(p[1], width);
       if (notModified(req, etag))
         return notModifiedResponse(etag, { headers: mediaVary });
       try {
         const original = () =>
-          readFile(
-            /*turbopackIgnore: true*/ path.join(uploads(), rows[0].filename),
-          );
+          readFile(/*turbopackIgnore: true*/ path.join(uploads(), filename));
         return mediaResponse(
-          width ? await mediaVariant(p[1], width, original) : await original(),
+          await revalidatedMedia(
+            () => (width ? mediaVariant(p[1], width, original) : original()),
+            authorize,
+          ),
           etag,
           { headers: mediaVary },
         );
@@ -966,6 +973,8 @@ async function handler(
     }
     return fail("Не найдено", 404);
   } catch (e) {
+    const overloaded = mediaBusyResponse(e);
+    if (overloaded) return overloaded;
     if (e instanceof EmailPolicyError)
       return json({ error: e.message, code: e.code }, e.status);
     if (e instanceof LegalError)
