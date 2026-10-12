@@ -12,6 +12,7 @@ import {
   mediaWidth,
   mediaVariant,
   mediaResponse,
+  mediaBusyResponse,
   notModified,
   notModifiedResponse,
 } from "../../../../lib/media-cache.ts";
@@ -64,7 +65,9 @@ export const GET = traced(
           headers,
         },
       );
-    } catch {
+    } catch (e) {
+      const overloaded = mediaBusyResponse(e);
+      if (overloaded) return overloaded;
       return fail("Изображение не найдено", 404);
     }
   },

@@ -42,6 +42,8 @@ import {
 import {
   mediaEtag,
   mediaResponse,
+  mediaBusyResponse,
+  revalidatedMedia,
   mediaVariant,
   mediaWidth,
   notModified,
@@ -73,14 +75,18 @@ async function handler(
         // A draft's picture is its owner's, by cookie or by Bearer (#324).
         const who = await mediaViewer(req, user);
         if ("denied" in who) return who.denied;
-        const filename = await journalPhotoFilename(db, id, who.viewer?.id),
+        const authorize = () => journalPhotoFilename(db, id, who.viewer?.id);
+        const filename = await authorize(),
           etag = mediaEtag(id, width),
           headers = mediaVary;
         if (notModified(req, etag))
           return notModifiedResponse(etag, { headers });
         const original = () => readJournalPhotoFile(filename);
         return mediaResponse(
-          width ? await mediaVariant(id, width, original) : await original(),
+          await revalidatedMedia(
+            () => (width ? mediaVariant(id, width, original) : original()),
+            authorize,
+          ),
           etag,
           { headers },
         );
@@ -255,6 +261,8 @@ async function handler(
       );
     return fail("Не найдено", 404);
   } catch (e) {
+    const overloaded = mediaBusyResponse(e);
+    if (overloaded) return overloaded;
     if (e instanceof EmailPolicyError)
       return json({ error: e.message, code: e.code }, e.status);
     if (e instanceof CommunityError || e instanceof QuotaError)

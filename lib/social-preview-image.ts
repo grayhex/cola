@@ -6,7 +6,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
 import type { SharpInput } from "sharp";
-import { cachedDerivative } from "./media-cache.ts";
+import { cachedDerivative, MediaCacheBusyError } from "./media-cache.ts";
 import { logError } from "./observability.ts";
 import {
   cardContent,
@@ -116,6 +116,7 @@ export async function renderSocialImage(
       env,
     );
   } catch (error) {
+    if (error instanceof MediaCacheBusyError) throw error;
     logError("social_card_failed", error);
     return plainImage(await readUpload(filename, uploadDir).catch(() => null));
   }

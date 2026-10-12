@@ -1,3 +1,4 @@
+import { mediaBusyResponse } from "../../../../../../lib/media-cache.ts";
 import { db } from "../../../../../../lib/db.ts";
 import {
   isSocialKind,
@@ -27,7 +28,21 @@ export async function GET(
       status: 404,
       headers: { "Cache-Control": "no-store" },
     });
-  const bytes = await renderSocialImage({ ...preview, card });
+  const bytes = await (async () => {
+    try {
+      return await renderSocialImage({ ...preview, card });
+    } catch (error) {
+      const overloaded = mediaBusyResponse(error);
+      if (overloaded) return overloaded;
+      throw error;
+    }
+  })();
+  if (bytes instanceof Response) return bytes;
+  if (!(await loadSocialPreview(db, kind, publicId, { byPublicId: true })))
+    return new Response(null, {
+      status: 404,
+      headers: { "Cache-Control": "no-store" },
+    });
   return new Response(new Uint8Array(bytes), {
     headers: {
       "Content-Type": "image/jpeg",
