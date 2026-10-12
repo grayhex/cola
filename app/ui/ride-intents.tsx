@@ -1,5 +1,5 @@
 "use client";
-import PlanningGraphic from "./planning-graphic.tsx";
+import { PlanningIntro } from "./planning-graphic.tsx";
 import InfoTip from "./info-tip.tsx";
 import type { FormEvent } from "react";
 import type {
@@ -232,7 +232,9 @@ export function IntentComposer({
             same window opens from the home page and /ride-intents (#264). */}
         <form onSubmit={save} className="intent-form">
           <div className="planning-body planning-side-layout">
-            <PlanningGraphic slot="intentDialogGraphic" size="side" />
+            <PlanningIntro slot="intentDialogGraphic">
+              Выберите время и место, чтобы найти компанию для поездки.
+            </PlanningIntro>
             <div className="planning-side-column">
               <fieldset
                 className="planning-section half wide-4"
@@ -796,7 +798,7 @@ export default function RideIntents() {
     ])
       .then(([list, prefs]) => {
         if (!live) return;
-        startTransition(() => {
+        const update = () => {
           setData({ ...list, scope });
           setPreferences(prefs.preferences);
           // Do not overwrite unsaved tile edits on a list refresh.
@@ -807,7 +809,13 @@ export default function RideIntents() {
               : d,
           );
           loaded.current = snapshot;
-        });
+        };
+        // The first response can arrive after ?new=1 has opened the composer.
+        // A view transition captures its old focus and can restore the title
+        // after the user has already tabbed into the form (WebKit). Animate
+        // later list changes; the initial background load must keep focus.
+        if (loaded.current) startTransition(update);
+        else update();
       })
       .catch((e) => {
         if (live) setError(errorMessage(e));

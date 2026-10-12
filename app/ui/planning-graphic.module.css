@@ -61,8 +61,11 @@
 }
 @media (max-width: 899px) {
   .graphic.side {
-    width: 96px;
+    width: var(--space-20);
     justify-self: center;
+  }
+  :global(.planning-intro) .graphic.side {
+    width: var(--space-16);
   }
 }
 .graphic.side .fallback {

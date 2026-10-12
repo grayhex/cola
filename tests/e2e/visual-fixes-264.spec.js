@@ -335,15 +335,34 @@ test("one «Хочу кататься» flow: the same «Новое намере
     await guest.close();
   }
   await member(page.request, "flow");
+  // Complete the first background list load after keyboard navigation has
+  // begun in the URL-opened dialog; it must not restore an older focus.
+  const firstList = Promise.withResolvers();
+  await page.route(/\/api\/ride-intents\?scope=/, async (route) => {
+    await firstList.promise;
+    await route.continue();
+  });
   await page.goto("/ride-intents?new=1");
   const dialog = page.getByRole("dialog", { name: "Новое намерение" });
   await expect(dialog).toBeVisible();
   await expect(page).toHaveURL(/\/ride-intents$/);
   const lead = await dialog.locator(".modal-head [role=tooltip]").textContent();
   expect(lead).toContain("конкретный раз");
-  await dialog
-    .getByRole("button", { name: "Подробнее: Намерение", exact: true })
-    .focus();
+  // #406: initial dialog focus is deliberately static; exercise real Tab.
+  await expect(dialog.locator(".modal-head [role=tooltip]")).toBeHidden();
+  await expect(dialog.locator(".modal-head h2")).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(
+    dialog.getByRole("button", { name: "Подробнее: Намерение", exact: true }),
+  ).toBeFocused();
+  await expect(dialog.locator(".modal-head [role=tooltip]")).toBeVisible();
+  firstList.resolve();
+  await expect(
+    page.locator("main button[aria-busy]").filter({ hasText: "Обновить" }),
+  ).toHaveAttribute("aria-busy", "false");
+  await expect(
+    dialog.getByRole("button", { name: "Подробнее: Намерение", exact: true }),
+  ).toBeFocused();
   await expect(dialog.locator(".modal-head [role=tooltip]")).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(dialog).toBeVisible();

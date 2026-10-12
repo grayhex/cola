@@ -1,3 +1,41 @@
 .searchDialog {
   --dialog-width: 640px;
 }
+@media (pointer: coarse), (max-width: 640px) {
+  .searchDialog {
+    inset: var(--visible-top, 0px) auto auto var(--visible-left, 0px);
+    width: var(--visible-width, 100%);
+    height: var(--visible-height, 100dvh);
+    max-height: var(--visible-height, 100dvh);
+    border: 0;
+    border-radius: 0;
+    padding-top: max(var(--space-3), env(safe-area-inset-top));
+    scroll-padding-block: var(--space-4);
+  }
+  .searchDialog[open] {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .searchDialog :global(.sheet-head) {
+    position: absolute;
+    z-index: 1;
+    top: calc(max(var(--space-3), env(safe-area-inset-top)) + var(--space-1));
+    right: var(--space-4);
+    margin: 0;
+  }
+  .searchDialog :global(.sheet-head h2) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .searchDialog :global(.help) {
+    flex: none;
+    margin: var(--space-2) 0 0;
+  }
+  .searchDialog[data-visible-contracted="true"] :global(.help) {
+    display: none;
+  }
+}

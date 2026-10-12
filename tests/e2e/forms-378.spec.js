@@ -84,14 +84,17 @@ async function wizardStepTwo(page) {
   await wizard.getByLabel("Год", { exact: true }).fill("2024");
   return wizard;
 }
-async function intentForm(page) {
+async function intentForm(page, touch = false) {
   await page.goto("/ride-intents");
   await expect(
     page.getByText("Пока нет намерений.", { exact: false }),
   ).toBeVisible();
-  await page
-    .getByRole("button", { name: "Выбрать время", exact: true })
-    .click();
+  const opener = page.getByRole("button", {
+    name: "Выбрать время",
+    exact: true,
+  });
+  if (touch) await opener.tap();
+  else await opener.click();
   const dialog = page.getByRole("dialog", {
     name: "Новое намерение",
     exact: true,
@@ -213,7 +216,7 @@ test("on a phone the three forms are one column, nothing scrolls sideways and th
   }
 });
 
-test("four intent windows and advanced fields remain reachable at 200 percent desktop reflow and with a phone keyboard", async ({
+test("four intent windows and advanced fields remain reachable at desktop reflow and a small phone viewport", async ({
   page,
 }) => {
   await member(page);
@@ -222,7 +225,7 @@ test("four intent windows and advanced fields remain reachable at 200 percent de
     data: { preferences: { timeZone: "Asia/Yekaterinburg" } },
   });
   await page.emulateMedia({ reducedMotion: "reduce" });
-  // The CSS viewport at 200% of 1440×900, then a 360px phone with keyboard space.
+  // CSS viewport at 200% of 1440×900, then a small 360px viewport (no OS keyboard).
   for (const viewport of [
     { width: 720, height: 450 },
     { width: 360, height: 420 },
@@ -291,4 +294,167 @@ test("four intent windows and advanced fields remain reachable at 200 percent de
     ).toEqual([]);
     await page.reload();
   }
+});
+
+// #406: the native control's own box must fit, not only the document width.
+async function nativeGeometry(dialog) {
+  const boxes = await dialog
+    .locator('input:is([type="date"],[type="time"],[type="datetime-local"])')
+    .evaluateAll((inputs) =>
+      inputs.map((input) => {
+        const b = input.getBoundingClientRect(),
+          label = input.closest("label").getBoundingClientRect();
+        const card =
+          input.closest('[class*="windowTimes"]')?.parentElement ||
+          input.closest("fieldset");
+        const c = card.getBoundingClientRect(),
+          s = getComputedStyle(card);
+        return {
+          left: b.left,
+          right: b.right,
+          top: b.top,
+          bottom: b.bottom,
+          labelLeft: label.left,
+          labelRight: label.right,
+          cardLeft: c.left + parseFloat(s.paddingLeft),
+          cardRight: c.right - parseFloat(s.paddingRight),
+        };
+      }),
+    );
+  for (const b of boxes) {
+    expect(b.left).toBeGreaterThanOrEqual(b.labelLeft - 1);
+    expect(b.right).toBeLessThanOrEqual(b.labelRight + 1);
+    expect(b.left).toBeGreaterThanOrEqual(b.cardLeft - 1);
+    expect(b.right).toBeLessThanOrEqual(b.cardRight + 1);
+  }
+  for (let i = 0; i < boxes.length; i++)
+    for (const b of boxes.slice(i + 1)) {
+      const a = boxes[i];
+      expect(
+        a.right <= b.left - 7 ||
+          b.right <= a.left - 7 ||
+          a.bottom <= b.top - 7 ||
+          b.bottom <= a.top - 7,
+      ).toBe(true);
+    }
+}
+
+test.describe("native controls on touch screens", () => {
+  test.use({ hasTouch: true });
+  for (const width of [320, 360, 393, 430])
+    test(`native date/time at ${width}: empty/filled, four windows, enlarged text and compact actions`, async ({
+      page,
+    }, info) => {
+      await member(page);
+      await bike(page);
+      await page.emulateMedia({
+        reducedMotion: "reduce",
+        colorScheme: width === 393 ? "dark" : "light",
+      });
+      await page.setViewportSize({ width, height: 800 });
+      const intent = await intentForm(page, true);
+      await expect(intent.getByRole("tooltip")).toBeHidden();
+      await expect(intent.locator(".modal-head h2")).toBeFocused();
+      const help = intent.getByRole("button", {
+        name: "Подробнее: Намерение",
+        exact: true,
+      });
+      await help.tap();
+      await expect(intent.getByRole("tooltip")).toBeVisible();
+      await help.tap();
+      await expect(intent.getByRole("tooltip")).toBeHidden();
+      await nativeGeometry(intent);
+      for (let i = 1; i <= 4; i++) {
+        if (i > 1)
+          await intent
+            .getByRole("button", { name: "Добавить окно", exact: true })
+            .click();
+        await intent
+          .getByLabel(`Окно ${i}: с`, { exact: true })
+          .fill("2026-12-10T10:00");
+        await intent
+          .getByLabel(`Окно ${i}: до`, { exact: true })
+          .fill("2026-12-10T15:00");
+      }
+      await nativeGeometry(intent);
+      await page.evaluate(() => {
+        for (const [token, value] of [
+          ["--text-sm", "20px"],
+          ["--text-base", "22px"],
+          ["--field-font-size", "22px"],
+        ])
+          document.documentElement.style.setProperty(token, value);
+      });
+      await nativeGeometry(intent);
+      await page.setViewportSize({ width, height: 280 });
+      await help.tap();
+      const tip = await intent.getByRole("tooltip").boundingBox();
+      expect(tip.x).toBeGreaterThanOrEqual(7);
+      expect(tip.x + tip.width).toBeLessThanOrEqual(width - 7);
+      expect(tip.y).toBeGreaterThanOrEqual(7);
+      expect(tip.y + tip.height).toBeLessThanOrEqual(273);
+      await page.keyboard.press("Escape");
+      await expect(intent).toBeVisible();
+      const last = intent.getByLabel("Окно 4: до", { exact: true });
+      await last.focus();
+      expect(
+        (await last.boundingBox()).y + (await last.boundingBox()).height,
+      ).toBeLessThanOrEqual(
+        (await intent.locator(".planning-actions").boundingBox()).y + 1,
+      );
+      await page.setViewportSize({ width, height: 800 });
+      await page.screenshot({
+        path: info.outputPath(`intent-native-${width}.png`),
+      });
+      await page.keyboard.press("Escape");
+      await page
+        .getByRole("alertdialog")
+        .getByRole("button", { name: "Закрыть форму", exact: true })
+        .click();
+      // Reopening by a pointer must still leave help closed and focus on title.
+      await page
+        .getByRole("button", { name: "Выбрать время", exact: true })
+        .tap();
+      await expect(page.getByRole("dialog").getByRole("tooltip")).toBeHidden();
+      await expect(page.locator("dialog .modal-head h2")).toBeFocused();
+      await page.keyboard.press("Escape");
+      const plan = await organizerForm(page);
+      await nativeGeometry(plan);
+      await plan.getByLabel("Дата", { exact: true }).fill("2026-12-10");
+      await plan.getByLabel("Старт", { exact: true }).fill("10:00");
+      await plan.getByLabel("Окончание", { exact: true }).fill("15:00");
+      await nativeGeometry(plan);
+      const date = await plan.getByLabel("Дата", { exact: true }).boundingBox();
+      const start = await plan
+        .getByLabel("Старт", { exact: true })
+        .boundingBox();
+      expect(start.y).toBeGreaterThan(date.y + date.height);
+      const meeting = plan.getByRole("checkbox", {
+        name: "Место определим вместе",
+      });
+      const label = meeting.locator("..");
+      expect((await label.boundingBox()).height).toBeGreaterThanOrEqual(44);
+      await label.click();
+      await expect(meeting).toBeChecked();
+      // Enlarge the semantic font tokens, rather than claim OS text scaling.
+      await page.evaluate(() => {
+        for (const [token, value] of [
+          ["--text-sm", "20px"],
+          ["--text-base", "22px"],
+          ["--field-font-size", "22px"],
+        ])
+          document.documentElement.style.setProperty(token, value);
+      });
+      await nativeGeometry(plan);
+      const submit = plan.getByRole("button", {
+        name: "Создать покатушку",
+        exact: true,
+      });
+      await submit.scrollIntoViewIfNeeded();
+      await expect(submit).toBeInViewport();
+      expect(await pageOverflow(page)).toBeNull();
+      await page.screenshot({
+        path: info.outputPath(`plan-native-${width}-large-text.png`),
+      });
+    });
 });

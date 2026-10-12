@@ -12,7 +12,6 @@ import type { ModalSetter, MainElement } from "./types.ts";
 import type { useShowcaseScroll } from "../showcase-scroll.ts";
 import { AddBikeLink } from "../add-bike.tsx";
 import { bikeCategories } from "../../../lib/bike-classification.ts";
-import { ClassificationFilters } from "../bike-classification.tsx";
 import styles from "../garage.module.css";
 import ChoiceMenu from "../choice-menu.tsx";
 import SiteIcon from "../site-icon.tsx";
@@ -114,6 +113,8 @@ export default function Showcase({
                 <FilterControl
                   categories={bikeCategories}
                   selected={filters}
+                  facets={facets}
+                  onFacetsChange={setFacets}
                   onChange={(values) => {
                     setFilters(values);
                     setPage(1);
@@ -165,6 +166,8 @@ export default function Showcase({
               <FilterControl
                 categories={bikeCategories}
                 selected={filters}
+                facets={facets}
+                onFacetsChange={setFacets}
                 onChange={(values) => {
                   setFilters(values);
                   setPage(1);
@@ -212,6 +215,8 @@ export default function Showcase({
         <FilterChips
           categories={categories}
           selected={filters}
+          facets={facets}
+          onFacetsChange={setFacets}
           onChange={(values) => {
             setFilters(values);
             setPage(1);
@@ -222,7 +227,6 @@ export default function Showcase({
             setPage(1);
           }}
         />
-        <ClassificationFilters value={facets} onChange={setFacets} />
         <span className={styles.status} role="status">
           {loading
             ? t("Загружаем велосипеды…")
@@ -274,28 +278,41 @@ export default function Showcase({
             </button>
           </nav>
         )}
-        {!loading && !filtered.length && !query && !filters.length && (
-          <p className="empty-state">
-            {account
-              ? "Добавьте свой первый велосипед."
-              : "Пока нет публичных велосипедов. Опубликуйте свой!"}
-          </p>
-        )}
-        {!loading && !filtered.length && (query || filters.length > 0) && (
-          <div className="empty-state">
-            <Search aria-hidden="true" />
-            <h3>{t("Таких велосипедов пока не нашли")}</h3>
-            <button
-              className="button secondary small"
-              onClick={() => {
-                setQuery("");
-                setFilters([]);
-              }}
-            >
-              {t("Сбросить фильтры")}
-            </button>
-          </div>
-        )}
+        {!loading &&
+          !filtered.length &&
+          !query &&
+          !filters.length &&
+          !Object.values(facets).some(Boolean) && (
+            <p className="empty-state">
+              {account
+                ? "Добавьте свой первый велосипед."
+                : "Пока нет публичных велосипедов. Опубликуйте свой!"}
+            </p>
+          )}
+        {!loading &&
+          !filtered.length &&
+          (query ||
+            filters.length > 0 ||
+            Object.values(facets).some(Boolean)) && (
+            <div className="empty-state">
+              <Search aria-hidden="true" />
+              <h3>{t("Таких велосипедов пока не нашли")}</h3>
+              <button
+                className="button secondary small"
+                onClick={() => {
+                  setQuery("");
+                  setFilters([]);
+                  setFacets(
+                    Object.fromEntries(
+                      Object.keys(facets).map((key) => [key, ""]),
+                    ),
+                  );
+                }}
+              >
+                {t("Сбросить фильтры")}
+              </button>
+            </div>
+          )}
       </Main>
     </>
   );

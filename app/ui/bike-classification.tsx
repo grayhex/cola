@@ -194,15 +194,17 @@ export function ClassificationFilters({
   value = {},
   onChange,
   withCategory = false,
+  expanded = false,
 }: {
   value?: Record<string, string | null>;
   onChange: (value: Record<string, string>) => void;
   withCategory?: boolean;
+  /** Inside the combined filter dialog; experience search stays collapsible. */
+  expanded?: boolean;
 }) {
   const active = Object.entries(value).filter(([, v]) => !!v).length;
-  return (
-    <details className={styles.filters}>
-      <summary>Классификация{active ? ` · ${active}` : ""}</summary>
+  const fields = (
+    <>
       <div className={styles.grid}>
         {withCategory && (
           <Choice
@@ -248,6 +250,17 @@ export function ClassificationFilters({
           Сбросить особенности
         </button>
       )}
+    </>
+  );
+  return expanded ? (
+    <fieldset className={styles.fields}>
+      <legend>Особенности велосипеда</legend>
+      {fields}
+    </fieldset>
+  ) : (
+    <details className={styles.filters}>
+      <summary>Классификация{active ? ` · ${active}` : ""}</summary>
+      {fields}
     </details>
   );
 }

@@ -66,6 +66,7 @@
 }
 .cover {
   display: grid;
+  grid-template: minmax(0, 1fr) / minmax(0, 1fr);
   place-items: center;
   height: calc(var(--space-20) * 1.75);
   border-bottom: 1px solid var(--line);
@@ -77,6 +78,8 @@
 /* A photo fills the cover and is shown whole; an illustration keeps its own
    square (component-illustration.jsx). */
 .cover .photo {
+  min-width: 0;
+  min-height: 0;
   width: 100%;
   height: 100%;
   max-width: none;
@@ -86,8 +89,8 @@
 .cover > * {
   transition: transform var(--duration-slow) var(--ease-out);
 }
-.card:hover .cover > *,
-.card:focus-within .cover > * {
+.card:hover .cover > :not(.photo),
+.card:focus-within .cover > :not(.photo) {
   transform: scale(1.035);
 }
 .cardBody {
@@ -154,7 +157,10 @@
     grid-template-columns: minmax(0, 1fr);
   }
   .cover {
-    height: calc(var(--space-20) * 1.5);
+    height: calc(var(--space-16) * 2.25);
+  }
+  .cover .photo {
+    padding: var(--space-2);
   }
 }
 @media (max-width: 420px) {
