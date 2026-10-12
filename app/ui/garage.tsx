@@ -30,10 +30,9 @@ import GlobalHeader from "./global-header.tsx";
 import { Check, Lock, LoaderCircle } from "./icons.tsx";
 import { useSite } from "./site-provider.tsx";
 import api from "./garage/api.ts";
-const BikeDetail = dynamic(() => import("./garage/bike-detail.tsx"), {
-  ssr: true,
-  loading: () => <p role="status">Загружаем…</p>,
-});
+// The public detail participates in the route photo transition and SSR.
+// Editors remain deferred in GarageModal; Account loads Garage only on its tab.
+import BikeDetail from "./garage/bike-detail.tsx";
 import Showcase from "./garage/showcase.tsx";
 const GarageModal = dynamic(() => import("./garage/garage-modal.tsx"), {
   ssr: false,
@@ -188,7 +187,7 @@ export default function Garage({
               "shared/" + share,
               "GET",
               undefined,
-              controller.signal,
+              account ? controller.signal : undefined,
             )
           : publicShowcase
             ? api<{ bikes: BikeDto[]; total: number }>(
@@ -202,7 +201,7 @@ export default function Garage({
                   }),
                 "GET",
                 undefined,
-                controller.signal,
+                account ? controller.signal : undefined,
               )
             : null;
         seed.current = null;
@@ -221,7 +220,7 @@ export default function Garage({
                   }),
                 "GET",
                 undefined,
-                controller.signal,
+                account ? controller.signal : undefined,
               )
             : { bikes: [] });
         if (sequence !== requestId.current.sequence) return;
@@ -249,7 +248,12 @@ export default function Garage({
           initialSelection.current = null;
           const wanted = requested || selectedId.current;
           if (account && wanted) {
-            const detail = await api<{ bike: BikeDto }>("bikes/" + wanted);
+            const detail = await api<{ bike: BikeDto }>(
+              "bikes/" + wanted,
+              "GET",
+              undefined,
+              controller.signal,
+            );
             if (sequence !== requestId.current.sequence) return;
             setSelected(detail.bike);
           }
@@ -349,7 +353,12 @@ export default function Garage({
     setUpdating(true);
     setError("");
     try {
-      const { bike: detail } = await api<{ bike: BikeDto }>("bikes/" + b.id);
+      const { bike: detail } = await api<{ bike: BikeDto }>(
+        "bikes/" + b.id,
+        "GET",
+        undefined,
+        controller.signal,
+      );
       if (sequence !== requestId.current.sequence) return;
       setSelected(detail);
       setPhoto(null);
