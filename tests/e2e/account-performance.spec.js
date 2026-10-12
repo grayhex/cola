@@ -136,6 +136,8 @@ test("large owner garage pages and filters on the server, then loads full detail
   const bikes = await owner(page, 50);
   await page.goto("/account?tab=bikes");
   await expect(page.locator(".bike-card")).toHaveCount(24);
+  expect(await pageOverflow(page)).toBeNull();
+  await page.screenshot({ path: info.outputPath("garage-page.png") });
   const first = await page
     .locator(".bike-card")
     .evaluateAll((cards) => cards.map((card) => card.dataset.bikeId));

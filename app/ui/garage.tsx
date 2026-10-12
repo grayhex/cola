@@ -31,7 +31,7 @@ import { Check, Lock, LoaderCircle } from "./icons.tsx";
 import { useSite } from "./site-provider.tsx";
 import api from "./garage/api.ts";
 const BikeDetail = dynamic(() => import("./garage/bike-detail.tsx"), {
-  ssr: false,
+  ssr: true,
   loading: () => <p role="status">Загружаем…</p>,
 });
 import Showcase from "./garage/showcase.tsx";
