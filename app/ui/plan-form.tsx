@@ -3,7 +3,7 @@ import { errorMessage } from "../../lib/errors.ts";
 import PlanningGraphic from "./planning-graphic.tsx";
 import InfoTip from "./info-tip.tsx";
 import type { ReactNode, FormEvent } from "react";
-import type { AccountBikeDto, ApiError } from "../../lib/contracts.ts";
+import type { BikeChoiceDto, ApiError } from "../../lib/contracts.ts";
 import type { RideDto } from "./content-types.ts";
 import type {
   RideConfig,
@@ -78,7 +78,7 @@ const splitLocal = (
 };
 function initialPlan(
   ride: RideDto | null,
-  currentBikes: AccountBikeDto[],
+  currentBikes: BikeChoiceDto[],
   zone: string,
 ): PlanFormDraft {
   if (!ride) {
@@ -214,7 +214,7 @@ export default function PlanForm({
   // format replace the form's, the rest of what was typed stays. `id` tells a
   // second choice of the same group from the first.
   suggestion?: { id: number; draft: PlanDraft } | null;
-  bikes: AccountBikeDto[];
+  bikes: BikeChoiceDto[];
   config: RideConfig;
   onSaved: RideSaveHandler;
   onCancel: () => void;

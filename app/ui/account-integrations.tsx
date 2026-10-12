@@ -1,5 +1,6 @@
 "use client";
-import type { AccountBikeDto } from "../../lib/contracts.ts";
+import dynamic from "next/dynamic";
+import { useBikeChoices } from "./use-bike-choices.ts";
 import type { RideSettings, importGarmin } from "../../lib/rides.ts";
 import type * as React from "react";
 import { errorMessage } from "../../lib/errors.ts";
@@ -8,8 +9,14 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import AccountSectionHead from "./account-section.tsx";
 import ActivitySync from "./activity-sync.tsx";
-import GarminImport from "./garmin-import.tsx";
-import RideForm from "./ride-form.tsx";
+const GarminImport = dynamic(() => import("./garmin-import.tsx"), {
+  ssr: false,
+  loading: () => <p role="status">Загружаем…</p>,
+});
+const RideForm = dynamic(() => import("./ride-form.tsx"), {
+  ssr: false,
+  loading: () => <p role="status">Загружаем…</p>,
+});
 import EmailPolicyAction from "./email-policy-action.tsx";
 import { socialApi } from "./social-primitives.tsx";
 import { selectableRideBikes } from "../../lib/bike-status.ts";
@@ -49,12 +56,12 @@ function Row({
   );
 }
 export default function AccountIntegrations({
-  bikes,
   onImported,
 }: {
-  bikes: AccountBikeDto[];
   onImported?: () => void;
 }) {
+  const choices = useBikeChoices(true);
+  const bikes = useMemo(() => choices.bikes || [], [choices.bikes]);
   const [config, setConfig] = useState<RideSettings | null>(null),
     [open, setOpen] = useState<string | null>(null),
     [error, setError] = useState(""),
@@ -112,6 +119,17 @@ export default function AccountIntegrations({
       Мои покатушки
     </Link>
   );
+  if (!choices.bikes)
+    return (
+      <p role={choices.error ? "alert" : "status"}>
+        {choices.error || "Загружаем велосипеды…"}
+        {choices.error && (
+          <button className="quiet" onClick={choices.retry}>
+            Повторить
+          </button>
+        )}
+      </p>
+    );
   return (
     <section className="account-section" aria-labelledby="integrations-heading">
       <AccountSectionHead

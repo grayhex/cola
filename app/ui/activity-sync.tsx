@@ -1,6 +1,6 @@
 "use client";
 import { errorMessage } from "../../lib/errors.ts";
-import type { AccountBikeDto, ApiError } from "../../lib/contracts.ts";
+import type { BikeChoiceDto, ApiError } from "../../lib/contracts.ts";
 import type { ActivityDto, ActivityOAuthDto } from "./ride-types.ts";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
@@ -28,7 +28,7 @@ export default function ActivitySync({
   disabled = false,
   onImported,
 }: {
-  bikes: AccountBikeDto[];
+  bikes: BikeChoiceDto[];
   disabled?: boolean;
   onImported?: () => void;
 }) {

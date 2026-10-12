@@ -9,7 +9,7 @@ import { notify } from "./notifications.ts";
 import { visibleCommentCount } from "./comments.ts";
 import { publicAuthor } from "./profile-dto.ts";
 import { publicSocial } from "./public-dto.ts";
-import { hydrate } from "./repository.ts";
+import { hydrate, hydrateMany, byBike } from "./repository.ts";
 import { scoreBike, defaultScoring } from "./bike-score.ts";
 import { getSite } from "./site.ts";
 import { publicBikeSql, readableBikeSql } from "./bike-visibility.ts";
@@ -150,12 +150,7 @@ async function cardParts(q: QueryableType, ids: string[]) {
       [ids],
     ),
   ]);
-  const index = <T extends { bike_id: string }>(rows: T[]) => {
-    const map: Map<string, T[]> = new Map(ids.map((id: string) => [id, []]));
-    for (const row of rows) map.get(row.bike_id)?.push(row);
-    return map;
-  };
-  return { byPart: index(parts.rows), byPhoto: index(photos.rows) };
+  return { byPart: byBike(ids, parts.rows), byPhoto: byBike(ids, photos.rows) };
 }
 // Hydrate the bike row; publicSocial remains the explicit allowlist.
 // New ownership metadata follows the same DTO path as account/detail views.
@@ -508,4 +503,156 @@ export async function homeShowcase(q: Queryable, viewerId?: string | null) {
       badges: badges.get(b.id),
     })),
   };
+}
+
+// Legacy callers keep the complete list/editor fields, but never perform 4N
+// round trips. Author/reaction data travels with the owner-scoped bike query.
+export async function ownedBikeList(
+  q: Queryable,
+  owner: string,
+  site: SiteDefinitionType,
+) {
+  const { rows } = await q.query<CardRow>(
+    "SELECT b.*" +
+      cardSocialColumns("$1") +
+      " FROM bikes b JOIN users u ON u.id=b.owner_id WHERE b.owner_id=$1 AND NOT u.blocked ORDER BY b.created_at DESC,b.id DESC",
+    [owner],
+  );
+  const full = await hydrateMany(q, rows);
+  return full.map((b, index) => {
+    const { author_name, author_username, author_avatar_id, ...base } =
+      rows[index];
+    return {
+      ...base,
+      is_former: b.is_former,
+      components: b.components,
+      photos: b.photos,
+      author: publicAuthor({
+        id: owner,
+        username: author_username,
+        name: author_name,
+        avatar_id: author_avatar_id,
+      }),
+      is_owner: true,
+      likes: b.likes,
+      liked: b.liked,
+      comments: b.comments,
+      scores: scoreBike(
+        b,
+        site.settings.scoring || defaultScoring,
+        site.catalog.componentGroups,
+      ),
+    };
+  });
+}
+export interface BikeChoice {
+  id: string;
+  name: string;
+  is_public: boolean;
+  is_former: boolean;
+}
+// All choices, including former bikes for editing existing history. This is
+// intentionally not paginated: selectors must never silently lose a bike.
+export async function ownedBikeChoices(q: Queryable, owner: string) {
+  return (
+    await q.query<BikeChoice>(
+      "SELECT b.id,b.name,b.is_public,b.is_former FROM bikes b JOIN users u ON u.id=b.owner_id WHERE b.owner_id=$1 AND NOT u.blocked ORDER BY b.created_at DESC,b.id DESC",
+      [owner],
+    )
+  ).rows;
+}
+export async function ownedBikeCards(
+  q: Queryable,
+  owner: string,
+  site: SiteDefinitionType,
+  {
+    page = 1,
+    limit = 24,
+    search = "",
+    categories = [],
+    classification = {},
+  }: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    categories?: string[];
+    classification?: Parameters<typeof classificationWhere>[0];
+  } = {},
+) {
+  const params: unknown[] = [owner];
+  let where =
+    " FROM bikes b JOIN users u ON u.id=b.owner_id WHERE b.owner_id=$1 AND NOT u.blocked";
+  if (search) {
+    params.push(search);
+    where +=
+      " AND strpos(lower(b.name || ' ' || b.brand || ' ' || b.model),lower($2))>0";
+  }
+  where += classificationWhere(classification, params, categories);
+  const total = (
+    await q.query<{ total: number }>(
+      "SELECT count(*)::int AS total" + where,
+      params,
+    )
+  ).rows[0].total;
+  const { rows } = await q.query<CardRow>(
+    "SELECT b.id,b.owner_id,b.share_id,b.name,b.brand,b.model,b.year,b.category,b.classification,b.size,b.weight,b.price,b.show_bike_price,b.is_public,b.is_former" +
+      cardSocialColumns("$1") +
+      where +
+      ` ORDER BY b.created_at DESC,b.id DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+    [...params, limit, (page - 1) * limit],
+  );
+  if (!rows.length) return { bikes: [], total };
+  const ids = rows.map((b) => b.id);
+  const [parts, photos] = await Promise.all([
+    q.query<
+      Pick<
+        CardComponent,
+        "bike_id" | "section" | "category" | "name" | "group_id"
+      >
+    >(
+      "SELECT bike_id,section,category,name,group_id FROM components WHERE bike_id=ANY($1::uuid[]) AND section='build'",
+      [ids],
+    ),
+    q.query<CardPhoto>(
+      "SELECT DISTINCT ON (bike_id) id,bike_id,is_cover,source_page_url FROM photos WHERE bike_id=ANY($1::uuid[]) ORDER BY bike_id,is_cover DESC,created_at,id",
+      [ids],
+    ),
+  ]);
+  const byPart = byBike(ids, parts.rows),
+    byPhoto = byBike(ids, photos.rows);
+  const bikes = rows.map((b) => ({
+    id: b.id,
+    share_id: b.share_id,
+    name: b.name,
+    brand: b.brand,
+    model: b.model,
+    year: b.year,
+    category: b.category,
+    classification: classificationOf(b),
+    size: b.size,
+    weight: b.weight,
+    is_public: b.is_public,
+    is_former: b.is_former,
+    is_owner: true,
+    photos: byPhoto.get(b.id)!.map((photo) => ({
+      id: photo.id,
+      is_cover: photo.is_cover,
+      source_page_url: photo.source_page_url,
+    })),
+    author: publicAuthor({
+      id: owner,
+      username: b.author_username,
+      name: b.author_name,
+      avatar_id: b.author_avatar_id,
+    }),
+    likes: b.likes,
+    liked: b.liked,
+    comments: b.comments,
+    scores: scoreBike(
+      { ...b, components: byPart.get(b.id), photos: byPhoto.get(b.id) },
+      site.settings.scoring || defaultScoring,
+      site.catalog.componentGroups,
+    ),
+  }));
+  return { bikes, total };
 }

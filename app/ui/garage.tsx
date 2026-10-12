@@ -1,6 +1,7 @@
 "use client";
+import dynamic from "next/dynamic";
 import type * as React from "react";
-import type { BikeDto, PublicPhoto } from "../../lib/contracts.ts";
+import type { BikeDto, BikeCardDto, PublicPhoto } from "../../lib/contracts.ts";
 import { sendBikePhoto, type PhotoProblem } from "../../lib/photo-upload.ts";
 import type { GarageModalState } from "./garage/types.ts";
 import { errorMessage, errorStatus } from "../../lib/errors.ts";
@@ -14,10 +15,7 @@ import {
 } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import {
-  matchesClassification,
-  readClassificationFilters,
-} from "../../lib/bike-classification.ts";
+import { readClassificationFilters } from "../../lib/bike-classification.ts";
 import {
   readShowcaseQuery,
   writeShowcaseQuery,
@@ -32,9 +30,14 @@ import GlobalHeader from "./global-header.tsx";
 import { Check, Lock, LoaderCircle } from "./icons.tsx";
 import { useSite } from "./site-provider.tsx";
 import api from "./garage/api.ts";
+// The public detail participates in the route photo transition and SSR.
+// Editors remain deferred in GarageModal; Account loads Garage only on its tab.
 import BikeDetail from "./garage/bike-detail.tsx";
 import Showcase from "./garage/showcase.tsx";
-import GarageModal from "./garage/garage-modal.tsx";
+const GarageModal = dynamic(() => import("./garage/garage-modal.tsx"), {
+  ssr: false,
+  loading: () => <p role="status">Загружаем…</p>,
+});
 
 export default function Garage({
   share,
@@ -45,6 +48,7 @@ export default function Garage({
   initialBikeId = null,
   onAuthenticated,
   onCreateOpened,
+  onChanged,
 }: {
   share?: string;
   initial?: { bike: BikeDto } | null;
@@ -54,6 +58,7 @@ export default function Garage({
   initialBikeId?: string | null;
   onAuthenticated?: () => void;
   onCreateOpened?: () => void;
+  onChanged?: () => void;
 }) {
   const {
     personalSettings: settings,
@@ -66,7 +71,7 @@ export default function Garage({
   // Typed but unsaved data in the open window (wizard or part form).
   const [dirty, setDirty] = useState(false);
   const { categories } = catalog;
-  const [bikes, setBikes] = useState<BikeDto[]>([]),
+  const [bikes, setBikes] = useState<(BikeDto | BikeCardDto)[]>([]),
     [selected, setSelected] = useState(initial?.bike || null),
     // The page of a shared bike has three states (#382): the bike is being
     // loaded (also for a new session), it is loaded, and the server has
@@ -136,17 +141,29 @@ export default function Garage({
   const setFilters = (value: string[]) =>
     publicShowcase
       ? change({ filters: value, page: 1 })
-      : setLocalFilters(value);
+      : (setLocalPage(1), setLocalFilters(value));
   const setQuery = (value: string) =>
-    publicShowcase ? change({ query: value, page: 1 }) : setLocalQuery(value);
+    publicShowcase
+      ? change({ query: value, page: 1 })
+      : (setLocalPage(1), setLocalQuery(value));
   const setPage = (value: React.SetStateAction<number>) =>
     publicShowcase
       ? change({ page: typeof value === "function" ? value(page) : value })
       : setLocalPage(value);
   const [updating, setUpdating] = useState(false);
   const userId = user?.id;
-  const requestId = useRef({ sequence: 0 });
+  const requestId = useRef<{
+    sequence: number;
+    controller: AbortController | null;
+  }>({ sequence: 0, controller: null });
   const initialSelection = useRef(initialBikeId);
+  const selectedId = useRef(initial?.bike?.id || null);
+  useEffect(() => {
+    selectedId.current = selected?.id || null;
+  }, [selected]);
+  useEffect(() => {
+    initialSelection.current = initialBikeId;
+  }, [initialBikeId]);
   // The server rendered the shared bike for this viewer (#74): the first
   // load reuses it instead of asking again.
   const seed = useRef(initial);
@@ -158,11 +175,20 @@ export default function Garage({
   const load = useCallback(
     async (viewer = userId) => {
       const sequence = ++requestId.current.sequence;
+      requestId.current.controller?.abort();
+      const controller = new AbortController();
+      requestId.current.controller = controller;
       setUpdating(true);
       setError("");
       try {
         const dataRequest = share
-          ? seed.current || api<{ bike: BikeDto }>("shared/" + share)
+          ? seed.current ||
+            api<{ bike: BikeDto }>(
+              "shared/" + share,
+              "GET",
+              undefined,
+              account ? controller.signal : undefined,
+            )
           : publicShowcase
             ? api<{ bikes: BikeDto[]; total: number }>(
                 "showcase?" +
@@ -173,6 +199,9 @@ export default function Garage({
                     ...JSON.parse(facetKey),
                     q: query,
                   }),
+                "GET",
+                undefined,
+                account ? controller.signal : undefined,
               )
             : null;
         seed.current = null;
@@ -180,7 +209,19 @@ export default function Garage({
         const data =
           publicData ||
           (viewer
-            ? await api<{ bikes: BikeDto[]; total?: number }>("bikes")
+            ? await api<{ bikes: BikeCardDto[]; total: number }>(
+                "bikes?" +
+                  new URLSearchParams({
+                    view: "cards",
+                    page: String(page),
+                    category: filterKey,
+                    ...JSON.parse(facetKey),
+                    q: query,
+                  }),
+                "GET",
+                undefined,
+                account ? controller.signal : undefined,
+              )
             : { bikes: [] });
         if (sequence !== requestId.current.sequence) return;
         if (viewer && onAuthenticated) onAuthenticated();
@@ -188,7 +229,10 @@ export default function Garage({
           setSelected((data as { bike: BikeDto }).bike);
           setUnavailable(false);
         } else {
-          const list = data as { bikes: BikeDto[]; total?: number };
+          const list = data as {
+            bikes: (BikeDto | BikeCardDto)[];
+            total?: number;
+          };
           const updateGrid = () => {
             setBikes(list.bikes);
             setTotal(list.total ?? list.bikes.length);
@@ -198,22 +242,31 @@ export default function Garage({
           if (publicShowcase && loaded.current) startTransition(updateGrid);
           else updateGrid();
           loaded.current = true;
-          const requested = initialSelection.current;
+          const requested =
+            initialSelection.current ||
+            (!loaded.current ? initialBikeId : null);
           initialSelection.current = null;
-          setSelected((prev) =>
-            prev
-              ? list.bikes.find((b) => b.id === prev.id) || null
-              : requested
-                ? list.bikes.find((b) => b.id === requested) || null
-                : null,
-          );
+          const wanted = requested || selectedId.current;
+          if (account && wanted) {
+            const detail = await api<{ bike: BikeDto }>(
+              "bikes/" + wanted,
+              "GET",
+              undefined,
+              controller.signal,
+            );
+            if (sequence !== requestId.current.sequence) return;
+            setSelected(detail.bike);
+          }
         }
       } catch (e) {
         if (sequence === requestId.current.sequence) {
           setError(errorMessage(e));
           // Only the server's refusal makes the bike unavailable; a network
           // failure keeps the page and says so in the line with «Повторить».
-          if (share && [401, 403, 404].includes(errorStatus(e) || 0)) {
+          if (
+            (share || account) &&
+            [401, 403, 404].includes(errorStatus(e) || 0)
+          ) {
             setSelected(null);
             setUnavailable(true);
           }
@@ -227,6 +280,8 @@ export default function Garage({
     },
     [
       userId,
+      initialBikeId,
+      account,
       share,
       publicShowcase,
       sort,
@@ -250,6 +305,7 @@ export default function Garage({
     return () => {
       clearTimeout(timer);
       pending.sequence++;
+      pending.controller?.abort();
     };
   }, [load, query]);
   useEffect(() => {
@@ -279,14 +335,39 @@ export default function Garage({
   const bike = selected;
   const detailReaction = useBikeReaction(bike, user, () => auth());
   const editable = !!user && bike?.is_owner === true;
-  function openBike(b: BikeDto) {
+  async function openBike(b: BikeDto | BikeCardDto) {
     if (!account) {
       router.push(publicPath("bike", b));
       return;
     }
-    setSelected(b);
-    setPhoto(null);
-    window.scrollTo({ top: 0 });
+    if ("components" in b) {
+      setSelected(b);
+      setPhoto(null);
+      window.scrollTo({ top: 0 });
+      return;
+    }
+    const sequence = ++requestId.current.sequence;
+    requestId.current.controller?.abort();
+    const controller = new AbortController();
+    requestId.current.controller = controller;
+    setUpdating(true);
+    setError("");
+    try {
+      const { bike: detail } = await api<{ bike: BikeDto }>(
+        "bikes/" + b.id,
+        "GET",
+        undefined,
+        controller.signal,
+      );
+      if (sequence !== requestId.current.sequence) return;
+      setSelected(detail);
+      setPhoto(null);
+      window.scrollTo({ top: 0 });
+    } catch (e) {
+      if (sequence === requestId.current.sequence) setError(errorMessage(e));
+    } finally {
+      if (sequence === requestId.current.sequence) setUpdating(false);
+    }
   }
   async function close() {
     if (busy) return;
@@ -316,6 +397,7 @@ export default function Garage({
     setError("");
   }
   async function refresh() {
+    onChanged?.();
     if (!share || !editable) return load();
     // A revocation rotates share_id. Refresh through the owner-authorized ID
     // endpoint, not the revoked public URL, then adopt the new canonical URL.
@@ -339,15 +421,7 @@ export default function Garage({
     setError("");
     setModal({ type: "auth", mode });
   }
-  const filtered = account
-    ? bikes.filter(
-        (b) =>
-          matchesClassification(b, facets, filters) &&
-          `${b.name} ${b.brand} ${b.model}`
-            .toLowerCase()
-            .includes(query.toLowerCase()),
-      )
-    : bikes;
+  const filtered = bikes;
   return (
     <>
       {!embedded && (

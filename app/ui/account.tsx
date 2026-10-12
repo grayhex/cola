@@ -1,7 +1,7 @@
 "use client";
 import type {
   AccountOverviewDto,
-  AccountBikeDto,
+  BikeCardDto,
   PublicProfile,
   UserPreferences,
   EmailVerificationResponse,
@@ -9,11 +9,10 @@ import type {
 } from "../../lib/contracts.ts";
 import type { ReadonlyURLSearchParams } from "next/navigation";
 type Tab = keyof typeof tabs;
+import dynamic from "next/dynamic";
 import type * as React from "react";
 import { errorMessage } from "../../lib/errors.ts";
-import BikeWeekStory from "./bike-week-story.tsx";
-import RideAccount from "./ride-account.tsx";
-import AccountIntegrations from "./account-integrations.tsx";
+
 import TogetherActions from "./together-actions.tsx";
 import { CompactDialog } from "./compact-ui.tsx";
 import { useSearchParams } from "next/navigation";
@@ -36,9 +35,7 @@ import {
 } from "./icons.tsx";
 import AuthPage from "./auth-page.tsx";
 import BlockedPeople from "./user-block-controls.tsx";
-import AccountSecurity from "./account-security.tsx";
-import AccountNotifications from "./account-notifications.tsx";
-import Garage from "./garage.tsx";
+
 import BikeCard from "./bike-card.tsx";
 import {
   Avatar,
@@ -52,6 +49,30 @@ import { profilePath } from "../../lib/public-urls.ts";
 import { isGeneratedUsername } from "../../lib/usernames.ts";
 import { userTimeZone, timeZoneChoices } from "../../lib/user-time-zone.ts";
 import { validTimeZone } from "../../lib/ride-intent-time.ts";
+const RideAccount = dynamic(() => import("./ride-account.tsx"), {
+  ssr: false,
+  loading: () => <p role="status">Загружаем раздел…</p>,
+});
+const AccountIntegrations = dynamic(
+  () => import("./account-integrations.tsx"),
+  { ssr: false, loading: () => <p role="status">Загружаем раздел…</p> },
+);
+const AccountSecurity = dynamic(() => import("./account-security.tsx"), {
+  ssr: false,
+  loading: () => <p role="status">Загружаем раздел…</p>,
+});
+const Garage = dynamic(() => import("./garage.tsx"), {
+  ssr: false,
+  loading: () => <p role="status">Загружаем раздел…</p>,
+});
+const AccountNotifications = dynamic(
+  () => import("./account-notifications.tsx"),
+  { ssr: false, loading: () => <p role="status">Загружаем раздел…</p> },
+);
+const BikeWeekStory = dynamic(() => import("./bike-week-story.tsx"), {
+  ssr: false,
+  loading: () => <p role="status">Загружаем раздел…</p>,
+});
 const tabIcons = {
   overview: LayoutGrid,
   profile: UserRound,
@@ -571,10 +592,14 @@ function forwardedTab(params: ReadonlyURLSearchParams) {
 const sectionHref = (key: string) =>
   "/account" + (key === "overview" ? "" : "?tab=" + key);
 export default function Account() {
+  const owner = useSite().viewer?.id;
+  return <AccountContent key={owner || "guest"} />;
+}
+function AccountContent() {
   const params = useSearchParams()!;
   const [data, setData] = useState<AccountOverviewDto | null>(null),
-    [bikes, setBikes] = useState<AccountBikeDto[]>([]),
-    [tab, setTab] = useState<Tab>("overview"),
+    [bikes, setBikes] = useState<BikeCardDto[] | null>(null),
+    [tab, setTab] = useState<Tab>(() => forwardedTab(params)),
     [kind, setKind] = useState("following"),
     [error, setError] = useState(""),
     [create, setCreate] = useState(false),
@@ -584,25 +609,54 @@ export default function Account() {
   // The reader comes from the server layout (#74). A profile change reloads
   // it too, so the header shows the new name at once.
   const userId = user?.id;
-  const requests = useRef({ revision: 0 });
+  const requests = useRef<{
+    revision: number;
+    controller: AbortController | null;
+  }>({ revision: 0, controller: null });
   const refresh = useCallback(
     async (reloadViewer = false) => {
       const revision = ++requests.current.revision;
+      requests.current.controller?.abort();
+      const controller = new AbortController();
+      requests.current.controller = controller;
       const current = reloadViewer ? await refreshViewer() : userId;
       if (current) {
-        const [d, b] = await Promise.all([
-          socialApi<AccountOverviewDto>("social/account"),
-          socialApi<{ bikes: AccountBikeDto[] }>("bikes"),
-        ]);
+        const d = await socialApi<AccountOverviewDto>(
+          "social/account",
+          "GET",
+          undefined,
+          { signal: controller.signal },
+        );
         if (revision !== requests.current.revision) return;
         if (!d.profile)
           throw new Error("Профиль недоступен. Обновите страницу.");
         setData(d);
-        setBikes(b.bikes);
+        if (reloadViewer) setBikes(null);
       }
     },
     [userId, refreshViewer],
   );
+  useEffect(() => {
+    if (tab !== "overview" || !userId || bikes) return;
+    const controller = new AbortController();
+    socialApi<{ bikes: BikeCardDto[] }>(
+      "bikes?view=cards&limit=3",
+      "GET",
+      undefined,
+      { signal: controller.signal },
+    )
+      .then((result) => {
+        if (!controller.signal.aborted) setBikes(result.bikes);
+      })
+      .catch((e) => {
+        if (!controller.signal.aborted) setError(errorMessage(e));
+      });
+    return () => controller.abort();
+  }, [tab, userId, bikes]);
+  const garageChanged = useCallback(() => {
+    setBikes(null);
+    refresh().catch((e) => setError(errorMessage(e)));
+  }, [refresh]);
   // Stable: ActivitySync reloads when this identity changes, and a reload
   // would reset the bike the rider has just chosen.
   const reload = useCallback(() => {
@@ -617,6 +671,7 @@ export default function Account() {
     return () => {
       active = false;
       pending.revision++;
+      pending.controller?.abort();
     };
   }, [refresh]);
   // Next navigation within /account does not remount Account. Observe the URL,
@@ -661,7 +716,6 @@ export default function Account() {
       "",
       sectionHref(next),
     );
-    if (next !== "bikes") refresh().catch((e) => setError(errorMessage(e)));
   }
   if (user === null)
     return <AuthPage onAuthenticated={() => window.location.reload()} />;
@@ -742,9 +796,21 @@ export default function Account() {
           </aside>
           <div className="account-main">
             {error && (
-              <p role="alert" className="error">
-                {error}
-              </p>
+              <>
+                <p role="alert" className="error">
+                  {error}
+                </p>
+                <button
+                  className="quiet"
+                  onClick={() => {
+                    setError("");
+                    setBikes(null);
+                    refresh().catch((e) => setError(errorMessage(e)));
+                  }}
+                >
+                  Повторить
+                </button>
+              </>
             )}
             {!data || !profile ? (
               <p role="status">Загружаем кабинет…</p>
@@ -811,8 +877,9 @@ export default function Account() {
                           Все велосипеды
                         </button>
                       </div>
+                      {!bikes && <p role="status">Загружаем велосипеды…</p>}
                       <BikeGrid>
-                        {bikes.slice(0, 3).map((b) => (
+                        {(bikes || []).map((b) => (
                           <BikeCard
                             key={b.id}
                             bike={b}
@@ -824,7 +891,7 @@ export default function Account() {
                           />
                         ))}
                       </BikeGrid>
-                      {!bikes.length && (
+                      {bikes && !bikes.length && (
                         <p className="help">
                           Велосипеды появятся здесь после добавления в разделе
                           «Мои велосипеды».
@@ -833,10 +900,10 @@ export default function Account() {
                     </section>
                   </>
                 )}
-                {tab === "rides" && <RideAccount bikes={bikes} />}
+                {tab === "rides" && <RideAccount />}
                 {tab === "spotlight" && <BikeWeekStory />}
                 {tab === "integrations" && (
-                  <AccountIntegrations bikes={bikes} onImported={reload} />
+                  <AccountIntegrations onImported={reload} />
                 )}
                 {tab === "achievements" && (
                   <BadgeShelf endpoint="game/me" account />
@@ -858,6 +925,7 @@ export default function Account() {
                     startCreate={create}
                     onCreateOpened={createOpened}
                     initialBikeId={selected}
+                    onChanged={garageChanged}
                   />
                 )}
                 {tab === "social" && (

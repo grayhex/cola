@@ -2,6 +2,7 @@
 import type * as React from "react";
 import type {
   BikeDto,
+  BikeCardDto,
   ViewerDto,
   SiteSettings,
   SiteCatalog,
@@ -71,8 +72,8 @@ export default function Showcase({
   facets: Record<string, string | null>;
   setFacets: (value: Record<string, string>) => void;
   updating: boolean;
-  filtered: BikeDto[];
-  openBike: (bike: BikeDto) => void;
+  filtered: (BikeDto | BikeCardDto)[];
+  openBike: (bike: BikeDto | BikeCardDto) => void;
   auth: (mode?: "login" | "register") => void;
   page: number;
 }) {
@@ -102,14 +103,23 @@ export default function Showcase({
               )
             }
             toolbar={
-              <FilterControl
-                categories={bikeCategories}
-                selected={filters}
-                onChange={(values) => {
-                  setFilters(values);
-                  setPage(1);
-                }}
-              />
+              <>
+                <input
+                  type="search"
+                  aria-label="Поиск в гараже"
+                  placeholder="Название, марка или модель"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                />
+                <FilterControl
+                  categories={bikeCategories}
+                  selected={filters}
+                  onChange={(values) => {
+                    setFilters(values);
+                    setPage(1);
+                  }}
+                />
+              </>
             }
           />
         ) : (
@@ -240,8 +250,11 @@ export default function Showcase({
             />
           ))}
         </BikeGrid>
-        {!account && total > 24 && (
-          <nav className="pager" aria-label="Страницы витрины">
+        {total > 24 && (
+          <nav
+            className="pager"
+            aria-label={account ? "Страницы гаража" : "Страницы витрины"}
+          >
             <button
               className="button secondary small"
               disabled={page <= 1}

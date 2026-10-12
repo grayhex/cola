@@ -1,5 +1,5 @@
 "use client";
-import type { BikeDto, ApiError } from "../../lib/contracts.ts";
+import type { BikeDto, BikeChoiceDto, ApiError } from "../../lib/contracts.ts";
 import type {
   JournalDto,
   JournalSaved,
@@ -22,7 +22,7 @@ export default function JournalEditor({
 }: {
   entry?: JournalDto | null;
   bikeId?: string;
-  bikes?: BikeDto[] | null;
+  bikes?: BikeChoiceDto[] | null;
   onSaved: (record: JournalSaved) => void | Promise<void>;
   onCancel?: () => void;
 }) {

@@ -1,6 +1,6 @@
 "use client";
 import { errorMessage } from "../../lib/errors.ts";
-import type { BikeDto } from "../../lib/contracts.ts";
+import type { BikeChoiceDto } from "../../lib/contracts.ts";
 import type { JournalDto } from "./content-types.ts";
 import Link from "next/link";
 import { AddBikeLink } from "./add-bike.tsx";
@@ -34,9 +34,9 @@ export default function JournalPage({
   initial?: { entry: JournalDto } | null;
 }) {
   const router = useRouter();
-  const [bikes, setBikes] = useState<BikeDto[]>([]);
+  const [bikes, setBikes] = useState<BikeChoiceDto[]>([]);
   const [entry, setEntry] = useState(initial?.entry || null),
-    [bike, setBike] = useState<BikeDto | null>(null),
+    [bike, setBike] = useState<BikeChoiceDto | null>(null),
     [editing, setEditing] = useState(false),
     [loaded, setLoaded] = useState(!!initial),
     [error, setError] = useState(""),
@@ -69,7 +69,9 @@ export default function JournalPage({
         } else {
           if (!userId) throw Error("Войдите в аккаунт, чтобы написать запись");
           const id = new URLSearchParams(location.search).get("bike");
-          const d = await socialApi<{ bikes: BikeDto[] }>("bikes");
+          const d = await socialApi<{ bikes: BikeChoiceDto[] }>(
+            "bikes?view=choices",
+          );
           if (!active) return;
           setBikes(d.bikes);
           if (id && !d.bikes.some((b) => b.id === id))

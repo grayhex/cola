@@ -82,6 +82,46 @@ export async function hydrate(
   return publicView ? publicBike(full) : full;
 }
 
+// One index for both public card pages and the owner's full legacy list.
+export function byBike<T extends { bike_id: string }>(
+  ids: string[],
+  rows: T[],
+) {
+  const map = new Map<string, T[]>(ids.map((id) => [id, []]));
+  for (const row of rows) map.get(row.bike_id)?.push(row);
+  return map;
+}
+export async function hydrateMany<T extends BikeRow>(
+  db: Queryable,
+  bikes: T[],
+) {
+  if (!bikes.length) return [];
+  const ids = bikes.map((b) => b.id);
+  const [components, photos] = await Promise.all([
+    db.query<ComponentRow>(
+      "SELECT * FROM components WHERE bike_id=ANY($1::uuid[]) ORDER BY sort_order,created_at,id",
+      [ids],
+    ),
+    db.query<PublicPhoto & { bike_id: string }>(
+      "SELECT id,bike_id,is_cover,source_page_url,original_filename IS NOT NULL AS has_original FROM photos WHERE bike_id=ANY($1::uuid[]) ORDER BY is_cover DESC,created_at,id",
+      [ids],
+    ),
+  ]);
+  const byPart = byBike(ids, components.rows),
+    byPhoto = byBike(ids, photos.rows);
+  return bikes.map((b) => ({
+    ...b,
+    is_former: b.is_former === true,
+    components: byPart.get(b.id)!,
+    photos: byPhoto.get(b.id)!.map((photo) => ({
+      id: photo.id,
+      is_cover: photo.is_cover,
+      source_page_url: photo.source_page_url,
+      has_original: photo.has_original,
+    })),
+  }));
+}
+
 export async function sharedBike(
   db: Queryable,
   shareId: string,
