@@ -798,7 +798,7 @@ export default function RideIntents() {
     ])
       .then(([list, prefs]) => {
         if (!live) return;
-        startTransition(() => {
+        const update = () => {
           setData({ ...list, scope });
           setPreferences(prefs.preferences);
           // Do not overwrite unsaved tile edits on a list refresh.
@@ -809,7 +809,13 @@ export default function RideIntents() {
               : d,
           );
           loaded.current = snapshot;
-        });
+        };
+        // The first response can arrive after ?new=1 has opened the composer.
+        // A view transition captures its old focus and can restore the title
+        // after the user has already tabbed into the form (WebKit). Animate
+        // later list changes; the initial background load must keep focus.
+        if (loaded.current) startTransition(update);
+        else update();
       })
       .catch((e) => {
         if (live) setError(errorMessage(e));
