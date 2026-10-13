@@ -90,6 +90,9 @@ test("chat identity, authorization, lifecycle and deletion survive actual databa
     "031_chat_lifecycle",
     // The people of a chat leave out those who blocked each other (#354).
     "061_user_blocks",
+    // Current token issuance reconciles club jobs; no club is seeded here.
+    "066_clubs",
+    "070_club_chat",
   ])
     await db.exec(
       await readFile(

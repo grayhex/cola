@@ -1,3 +1,6 @@
+import { db, type Queryable } from "./db.ts";
+import { userIdOfStream } from "./chat-push.ts";
+import { clubIdOfCid } from "./club-chat-id.ts";
 import { streamUserId } from "./chat-config.ts";
 import { chatProvider } from "./chat-provider.ts";
 
@@ -31,14 +34,47 @@ const isNotFound = (error: unknown) =>
 
 export function streamChatPushAccess(
   provider: () => ReturnType<typeof chatProvider> = chatProvider,
+  q: Queryable = db,
 ): ChatPushAccess {
   return {
     async check({ cid, messageId, recipientId }) {
+      const clubId = clubIdOfCid(cid);
+      if (
+        clubId &&
+        !(
+          await q.query(
+            `SELECT 1 FROM club_memberships m JOIN clubs c ON c.id=m.club_id
+         JOIN users u ON u.id=m.user_id LEFT JOIN users owner ON owner.id=c.owner_id
+         WHERE c.id=$1 AND m.user_id=$2 AND m.state='active' AND NOT u.blocked
+           AND u.email_verified_at IS NOT NULL AND c.archived_at IS NULL
+           AND c.hidden_at IS NULL AND (c.owner_id IS NULL OR NOT owner.blocked)`,
+            [clubId, recipientId],
+          )
+        ).rowCount
+      )
+        return "not_member";
       const client = provider();
       const person = streamUserId(recipientId);
       try {
         const { message } = await client.getMessage(messageId);
-        if (!message || message.type === "deleted" || message.deleted_at)
+        if (
+          !message ||
+          (message.cid && message.cid !== cid) ||
+          message.type === "deleted" ||
+          message.deleted_at
+        )
+          return "gone";
+        if (
+          clubId &&
+          !(
+            await q.query(
+              `SELECT 1 FROM club_memberships m JOIN users u ON u.id=m.user_id
+           WHERE m.club_id=$1 AND m.user_id=$2 AND m.state='active'
+             AND NOT u.blocked AND u.email_verified_at IS NOT NULL`,
+              [clubId, userIdOfStream(message.user?.id)],
+            )
+          ).rowCount
+        )
           return "gone";
         const channels = await client.queryChannels(
           { cid },
@@ -46,7 +82,16 @@ export function streamChatPushAccess(
           { state: true, message_limit: 0, limit: 1, user_id: person },
         );
         const state = channels[0]?.state;
-        const found = state?.members?.[person];
+        const found =
+          clubId && channels[0]
+            ? (
+                await channels[0].queryMembers(
+                  { user_id: person },
+                  {},
+                  { limit: 1 },
+                )
+              ).members[0]
+            : state?.members?.[person];
         if (!found || found.banned) return "not_member";
         if (found.notifications_muted) return "muted";
         const lastRead = state?.read?.[person]?.last_read;

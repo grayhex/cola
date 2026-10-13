@@ -353,6 +353,9 @@ await db.exec(
 await db.exec(
   await readFile(new URL("../db/069_club_rides.sql", import.meta.url), "utf8"),
 );
+await db.exec(
+  await readFile(new URL("../db/070_club_chat.sql", import.meta.url), "utf8"),
+);
 await seedLegalDocuments(db);
 const server = new PGLiteSocketServer({
   db,

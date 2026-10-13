@@ -6,6 +6,7 @@ import type { ClubDto } from "../../lib/club-contracts.ts";
 import type { PublicAuthor } from "../../lib/contracts.ts";
 import ClubEditor from "./club-editor.tsx";
 import ClubMembers from "./club-members.tsx";
+import ClubChat from "./club-chat.tsx";
 import LocalDate from "./local-date.tsx";
 import { useSite } from "./site-provider.tsx";
 import { socialApi } from "./social-primitives.tsx";
@@ -25,6 +26,8 @@ const actions: Record<string, string> = {
   rules_edited: "Правила изменены",
   logo_changed: "Логотип изменён",
   cover_changed: "Обложка изменена",
+  chat_link_changed: "Дополнительная ссылка чата изменена",
+  chat_message_removed: "Сообщение чата удалено администрацией",
   archived: "Клуб архивирован",
   restored: "Клуб восстановлен",
   membership_join: "Вступление или заявка",
@@ -97,6 +100,7 @@ export default function ClubManagement({
             ["about", "О клубе"],
             ["members", "Участники и заявки"],
             ["rules", "Правила"],
+            ["chat", "Чат"],
           ].map(([key, label]) => (
             <Link
               key={key}
@@ -109,7 +113,11 @@ export default function ClubManagement({
           ))}
         </div>
       </nav>
-      {section === "members" ? (
+      {section === "chat" ? (
+        <section className={styles.page}>
+          <ClubChat club={club} settings />
+        </section>
+      ) : section === "members" ? (
         <section className={styles.page}>
           <ClubMembers club={club} management />
           {data?.transfer && (

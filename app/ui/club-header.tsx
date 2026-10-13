@@ -5,6 +5,7 @@ import RichTextBody from "./rich-text-body.tsx";
 import ClubMembershipControls from "./club-membership-controls.tsx";
 import ClubReport from "./club-report.tsx";
 import ClubLifecycle from "./club-lifecycle.tsx";
+import ClubChat from "./club-chat.tsx";
 import styles from "./clubs.module.css";
 export default function ClubHeader({ club: c }: { club: ClubDto }) {
   return (
@@ -62,6 +63,7 @@ export default function ClubHeader({ club: c }: { club: ClubDto }) {
           }
           initial={c}
         />
+        <ClubChat club={c} />
         <div className={styles.actions}>
           <Link className="button" href={"/clubs/" + c.id + "/rules"}>
             Правила клуба

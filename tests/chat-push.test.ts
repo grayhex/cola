@@ -29,6 +29,11 @@ import type {
 } from "../lib/push-transport.ts";
 import { processEnv } from "./support/env.ts";
 import { testDatabase } from "./support/database.ts";
+import { clubRow } from "./support/clubs.ts";
+import { bikeRow } from "./support/bikes.ts";
+import { clubChannelCid } from "../lib/club-chat-id.ts";
+import { streamChatPushAccess } from "../lib/chat-push-access.ts";
+import { fixtureProvider } from "./fixtures/chat-provider.js";
 import { userRow } from "./support/people.ts";
 
 // New messages of Stream conversations as pushes (#342): the call of Stream is
@@ -582,4 +587,80 @@ test("a blocked author, a deleted account and a revoked device take their messag
     "the author's messages go with the author",
   );
   await s.db.close();
+});
+
+test("club webhook derives recipients from SQL beyond the payload page, and delivery rechecks leave/archive/mute", async () => {
+  const s = await setup();
+  try {
+    await bikeRow(s.db, s.author);
+    const c = await s.db.transaction((q) => clubRow(q, s.author));
+    for (let i = 0; i < 55; i++) {
+      const u = await userRow(s.db, { email_verified_at: new Date() });
+      await s.db.query(
+        "INSERT INTO club_memberships(club_id,user_id,state,role) VALUES($1,$2,'active','member')",
+        [c.id, u.id],
+      );
+    }
+    await s.db.query(
+      "INSERT INTO club_memberships(club_id,user_id,state,role) VALUES($1,$2,'active','member')",
+      [c.id, s.recipient],
+    );
+    const clubCid = clubChannelCid(c.id);
+    const e = event(s.author, [], { cid: clubCid, members: [] });
+    assert.equal((await s.webhook(e)).status, 200);
+    assert.equal(
+      (await s.deliveries()).length,
+      1,
+      "device outside webhook member page still receives opted-in chat",
+    );
+    const provider = fixtureProvider(),
+      uid = streamUserId(s.recipient);
+    const channel = provider.channel("colabike", clubCid.split(":")[1], {
+      members: [],
+    });
+    await channel.create();
+    await channel.addMembers([
+      { user_id: uid, channel_role: "colabike_member" },
+    ]);
+    provider.messages.set(e.message.id, {
+      id: e.message.id,
+      cid: clubCid,
+      user: { id: streamUserId(s.author) },
+      created_at: new Date().toISOString(),
+    });
+    const access = streamChatPushAccess(() => provider, s.db);
+    const input = {
+      cid: clubCid,
+      messageId: e.message.id,
+      recipientId: s.recipient,
+    };
+    assert.equal(await access.check(input), "ok");
+    const remote = provider.channels
+      .get(clubCid)
+      ?.members.find((m) => m.user_id === uid);
+    assert.ok(remote);
+    remote.notifications_muted = true;
+    assert.equal(await access.check(input), "muted");
+    remote.notifications_muted = false;
+    await s.db.query("UPDATE clubs SET archived_at=now() WHERE id=$1", [c.id]);
+    assert.equal(await access.check(input), "not_member");
+    await s.db.query("UPDATE clubs SET archived_at=NULL WHERE id=$1", [c.id]);
+    await s.db.query(
+      "UPDATE club_memberships SET state='left' WHERE club_id=$1 AND user_id=$2",
+      [c.id, s.recipient],
+    );
+    assert.equal(
+      await access.check(input),
+      "not_member",
+      "stale provider member cannot receive a push",
+    );
+    await s.webhook(event(s.author, [s.recipient], { cid: clubCid }));
+    assert.equal(
+      (await s.deliveries()).length,
+      1,
+      "stale webhook does not enqueue departed member",
+    );
+  } finally {
+    await s.db.close();
+  }
 });

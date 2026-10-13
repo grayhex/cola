@@ -21,6 +21,14 @@ import {
   clubRideOptions,
 } from "../../../../lib/rides.ts";
 import { RideError } from "../../../../lib/ride-gpx.ts";
+import {
+  clubChatState,
+  setClubChatSettings,
+  clubChatSettingsInput,
+  deleteClubChatMessage,
+} from "../../../../lib/club-chat.ts";
+import { ChatError } from "../../../../lib/chat-provider.ts";
+import { chatConfig } from "../../../../lib/chat-config.ts";
 import { currentUser, rateLimit } from "../../../../lib/auth.ts";
 import { db, transaction } from "../../../../lib/db.ts";
 import {
@@ -67,6 +75,10 @@ async function handler(
     if (m !== "GET" && !sameOrigin(req))
       return fail("Недопустимый источник запроса", 403);
     if (m === "GET") {
+      if (p.length === 2 && p[1] === "chat")
+        return user
+          ? json(await clubChatState(db, uuid.parse(p[0]), user.id))
+          : fail("Войдите в аккаунт", 401);
       if (p.length === 1 && p[0] === "ride-options")
         return user
           ? json(
@@ -175,6 +187,31 @@ async function handler(
       return fail("Не найдено", 404);
     }
     if (!user) return fail("Войдите в аккаунт", 401);
+    if (p.length === 2 && p[1] === "chat" && m === "PATCH") {
+      if (!(await rateLimit("club-chat-settings:" + user.id, 20)))
+        return fail("Слишком много действий", 429);
+      const input = clubChatSettingsInput.parse(await readJson(req, 8192));
+      return json(
+        await transaction((q) =>
+          setClubChatSettings(q, uuid.parse(p[0]), user.id, input),
+        ),
+      );
+    }
+    if (
+      p.length === 4 &&
+      p[1] === "chat" &&
+      p[2] === "messages" &&
+      m === "DELETE"
+    ) {
+      if (!chatConfig()) return fail("Сообщения пока отключены", 503);
+      if (!(await rateLimit("club-chat-moderation:" + user.id, 20)))
+        return fail("Слишком много действий", 429);
+      return json(
+        await transaction((q) =>
+          deleteClubChatMessage(q, uuid.parse(p[0]), user.id, p[3]),
+        ),
+      );
+    }
     if (p.length === 3 && p[1] === "rides" && m === "PATCH") {
       if (!(await rateLimit("club-ride:" + user.id, 20)))
         return fail("Слишком много действий", 429);
@@ -293,7 +330,11 @@ async function handler(
   } catch (error) {
     if (error instanceof EmailPolicyError)
       return json({ error: error.message, code: error.code }, error.status);
-    if (error instanceof CommunityError || error instanceof RideError)
+    if (
+      error instanceof CommunityError ||
+      error instanceof RideError ||
+      error instanceof ChatError
+    )
       return fail(error.message, error.status);
     if (error instanceof ZodError || error instanceof SyntaxError)
       return fail("Проверьте поля клуба");
