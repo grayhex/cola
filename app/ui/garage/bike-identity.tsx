@@ -1,4 +1,5 @@
 "use client";
+import ClubBadges from "../club-badges.tsx";
 import type * as React from "react";
 import type { BikeDto, SiteCatalog } from "../../../lib/contracts.ts";
 import BikeActions from "../bike-actions.tsx";
@@ -158,6 +159,13 @@ export default function BikeIdentity({
               </button>
             )}
           </div>
+        )}
+        {author && (
+          <ClubBadges
+            key={author.id + JSON.stringify(bike.ownerClubs)}
+            ownerId={author.id}
+            initial={bike.ownerClubs}
+          />
         )}
       </div>
       {metrics && (

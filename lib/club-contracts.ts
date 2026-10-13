@@ -20,8 +20,14 @@ export interface ClubDto {
   archived: boolean;
   version: number;
   memberCount: number;
-  membership: { state: ClubState; role: ClubRole } | null;
+  membership: {
+    userId: string;
+    state: ClubState;
+    role: ClubRole;
+    inviteExpiresAt: string | null;
+  } | null;
   canManage: boolean;
+  ownershipOffer: { expiresAt: string } | null;
 }
 export interface ClubEligibility {
   verified: boolean;
@@ -43,3 +49,13 @@ export type ClubSummaryDto = Omit<
   ClubDto,
   "mission" | "missionDoc" | "rules" | "rulesDoc" | "rulesUpdatedAt" | "version"
 >;
+export interface ClubBadgeDto {
+  id: string;
+  name: string;
+  logo: string | null;
+  href: string;
+}
+export interface ClubBadgesDto {
+  items: ClubBadgeDto[];
+  total: number;
+}

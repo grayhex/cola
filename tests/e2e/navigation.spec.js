@@ -9,6 +9,8 @@ test("navigation: real destinations, account, keyboard, configurable About and a
   page,
   isMobile,
 }, info) => {
+  // Nine default sections use the drawer below 1400px; test the full desktop menu here.
+  if (!isMobile) await page.setViewportSize({ width: 1440, height: 900 });
   const db = new pg.Client({ connectionString: process.env.DATABASE_URL });
   // Fail on the missing control, with time left to restore shared settings.
   page.setDefaultTimeout(15000);

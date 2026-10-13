@@ -1,3 +1,19 @@
+import {
+  changeMembership,
+  manageClubMember,
+  clubMembers,
+  transferClub,
+  clubAdministrativeState,
+  membershipActionInput,
+  memberManagementInput,
+  transferInput,
+} from "../../../../lib/club-membership.ts";
+import {
+  publicClubBadges,
+  ownBadgePreferences,
+  saveBadgePreferences,
+  badgePreferencesInput,
+} from "../../../../lib/club-badges.ts";
 import { ZodError, z } from "zod";
 import { currentUser, rateLimit } from "../../../../lib/auth.ts";
 import { db, transaction } from "../../../../lib/db.ts";
@@ -45,6 +61,45 @@ async function handler(
     if (m !== "GET" && !sameOrigin(req))
       return fail("Недопустимый источник запроса", 403);
     if (m === "GET") {
+      if (p.length === 2 && p[0] === "badges")
+        return json(
+          (
+            await publicClubBadges(
+              db,
+              [uuid.parse(p[1])],
+              z.coerce
+                .number()
+                .int()
+                .min(1)
+                .max(10000)
+                .parse(url.searchParams.get("page") || 1),
+            )
+          ).get(p[1]),
+        );
+      if (p.length === 1 && p[0] === "badge-preferences")
+        return user
+          ? json(await ownBadgePreferences(db, user.id))
+          : fail("Войдите в аккаунт", 401);
+      if (p.length === 2 && p[1] === "members")
+        return json(
+          await clubMembers(
+            db,
+            uuid.parse(p[0]),
+            user?.id || null,
+            z.coerce
+              .number()
+              .int()
+              .min(1)
+              .max(10000)
+              .parse(url.searchParams.get("page") || 1),
+            url.searchParams.get("manage") === "1",
+          ),
+        );
+      if (p.length === 2 && p[1] === "administration")
+        return user
+          ? json(await clubAdministrativeState(db, uuid.parse(p[0]), user.id))
+          : fail("Войдите в аккаунт", 401);
+
       if (!p.length)
         return json(
           await clubList(db, user?.id || null, {
@@ -58,6 +113,7 @@ async function handler(
             city: url.searchParams.get("city") || "",
             format: url.searchParams.get("format") || "",
             own: url.searchParams.get("own") === "1",
+            archived: url.searchParams.get("archived") === "1",
           }),
         );
       if (p.length === 1 && p[0] === "eligibility")
@@ -86,6 +142,42 @@ async function handler(
     if (!user) return fail("Войдите в аккаунт", 401);
     if (!(await rateLimit("club-write:" + user.id, 20)))
       return fail("Слишком много действий. Попробуйте позже.", 429);
+    if (p.length === 1 && p[0] === "badge-preferences" && m === "PATCH") {
+      const input = badgePreferencesInput.parse(await readJson(req, 100000));
+      return json(
+        await transaction((q) => saveBadgePreferences(q, user.id, input)),
+      );
+    }
+    if (p.length === 2 && p[1] === "membership" && m === "POST") {
+      const input = membershipActionInput.parse(await readJson(req, 8192));
+      return json({
+        club: await transaction((q) =>
+          changeMembership(q, uuid.parse(p[0]), user.id, input),
+        ),
+      });
+    }
+    if (p.length === 3 && p[1] === "members" && m === "PATCH") {
+      const input = memberManagementInput.parse(await readJson(req, 8192));
+      return json({
+        club: await transaction((q) =>
+          manageClubMember(
+            q,
+            uuid.parse(p[0]),
+            user.id,
+            uuid.parse(p[2]),
+            input,
+          ),
+        ),
+      });
+    }
+    if (p.length === 2 && p[1] === "transfer" && m === "POST") {
+      const input = transferInput.parse(await readJson(req, 8192));
+      return json({
+        club: await transaction((q) =>
+          transferClub(q, uuid.parse(p[0]), user.id, input),
+        ),
+      });
+    }
     if (!p.length && m === "POST") {
       const input = clubCreateInput.parse(await readJson(req, 100000));
       return json(

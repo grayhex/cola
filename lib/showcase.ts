@@ -1,3 +1,5 @@
+import type { ClubBadgesDto } from "./club-contracts.ts";
+import { publicClubBadgesSql } from "./club-badges.ts";
 import { classificationOf } from "./bike-classification.ts";
 import type { SiteDefinition as SiteDefinitionType } from "./contracts.ts";
 import type { Queryable as QueryableType } from "./repository.ts";
@@ -27,8 +29,9 @@ export async function decorateBike(
     username: string;
     name: string;
     avatar_id: string;
+    ownerClubs: ClubBadgesDto;
   }>(
-    "SELECT id,username,name,avatar_id FROM users WHERE id=$1 AND blocked=false",
+    `SELECT id,username,name,avatar_id,${publicClubBadgesSql("users.id")} "ownerClubs" FROM users WHERE id=$1 AND blocked=false`,
     [bike.owner_id],
   );
   const likes = await q.query<{
@@ -41,6 +44,7 @@ export async function decorateBike(
       ") AS comments FROM bike_likes l JOIN users u ON u.id=l.user_id WHERE l.bike_id=$1 AND u.blocked=false",
     [bike.id, viewerId || null],
   );
+  const ownerClubs = author.rows[0]?.ownerClubs || { items: [], total: 0 };
   const social = {
     author: author.rows[0] || null,
     isOwner: viewerId === bike.owner_id,
@@ -54,9 +58,10 @@ export async function decorateBike(
     ),
   };
   return publicView
-    ? publicSocial(full, social)
+    ? { ...publicSocial(full, social), ownerClubs }
     : {
         ...full,
+        ownerClubs,
         author: publicAuthor(social.author),
         is_owner: social.isOwner,
         likes: social.likes,
@@ -105,6 +110,7 @@ async function readVisibleBike(
 // A bike card: the bike row, its author and the viewer's reactions. Shared by
 // the web showcase and the keyset page below, so both read the same facts.
 type CardRow = BikeRow & {
+  ownerClubs?: ClubBadgesDto;
   author_name: string;
   author_username: string;
   author_avatar_id: string | null;
@@ -513,7 +519,7 @@ export async function ownedBikeList(
   site: SiteDefinitionType,
 ) {
   const { rows } = await q.query<CardRow>(
-    "SELECT b.*" +
+    `SELECT b.*,${publicClubBadgesSql("$1::uuid")} "ownerClubs"` +
       cardSocialColumns("$1") +
       " FROM bikes b JOIN users u ON u.id=b.owner_id WHERE b.owner_id=$1 AND NOT u.blocked ORDER BY b.created_at DESC,b.id DESC",
     [owner],

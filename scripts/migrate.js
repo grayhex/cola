@@ -78,6 +78,7 @@ try {
     "064_component_seed_import",
     "065_accessory_catalog",
     "066_clubs",
+    "067_club_membership",
   ]) {
     const { rowCount } = await client.query(
       "SELECT 1 FROM schema_migrations WHERE version=$1",

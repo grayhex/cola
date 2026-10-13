@@ -300,7 +300,10 @@ export default function GlobalHeader({
   );
   return (
     <div className={styles.frame}>
-      <header className={`global-header ${styles.header}`}>
+      <header
+        className={`global-header ${styles.header}`}
+        data-wide-navigation={sections.length > 8 ? "" : undefined}
+      >
         <Link className="brand" href="/" aria-label="ColaBike — главная">
           <span className="brand-mark" aria-hidden="true">
             {settings.faviconId ? (
@@ -368,6 +371,7 @@ export default function GlobalHeader({
                       journal: "/journal",
                       articles: "/articles",
                       rides: "/rides",
+                      clubs: "/clubs",
                       achievements: "/records",
                       market: "/market",
                     }[section.id]
@@ -503,6 +507,7 @@ export default function GlobalHeader({
                             journal: "/journal",
                             articles: "/articles",
                             rides: "/rides",
+                            clubs: "/clubs",
                             achievements: "/records",
                             market: "/market",
                           }[section.id]

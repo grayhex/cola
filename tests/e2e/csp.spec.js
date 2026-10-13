@@ -4,6 +4,7 @@ test("CSP blocks untrusted inline scripts, keeps theme/navigation and delivers r
   page,
   isMobile,
 }) => {
+  if (!isMobile) await page.setViewportSize({ width: 1440, height: 900 });
   // The browser suite shares one disposable DB (workers=1). Earlier scenarios
   // can fill the global report bucket; this test needs a fresh delivery budget.
   // HTTP tests separately verify that exhausting this same budget returns 429.

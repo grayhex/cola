@@ -121,6 +121,7 @@ test("the menu «Добавить велосипед» opens the wizard over the
   isMobile,
 }) => {
   test.skip(isMobile, "the drawer of the phone is covered by navigation");
+  await page.setViewportSize({ width: 1440, height: 900 });
   await member(page);
   const seen = accountRequests(page);
   await page.emulateMedia({ reducedMotion: "reduce" });

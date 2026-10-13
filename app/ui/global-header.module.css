@@ -168,9 +168,9 @@
 .header :global(.search-trigger) kbd {
   display: none;
 }
-/* The search pill (#382): with eight sections the menu leaves room for it only
-   from 1500 px; below, a round icon, as on a narrower screen. */
-@media (min-width: 1500px) {
+/* The search pill (#382): with nine sections the menu leaves room for it only
+   from 1640 px; below, a round icon, as on a narrower screen. */
+@media (min-width: 1640px) {
   .header :global(.search-trigger) {
     justify-content: flex-start;
     gap: var(--space-2);
@@ -493,6 +493,22 @@ dialog.drawer {
     display: none;
   }
   .header :global(.mobile-nav-toggle) {
+    display: inline-flex;
+  }
+}
+/* The ninth section (#413) needs another 124px. Hidden sections keep the
+   existing compact boundary; the menu never overlays the brand. */
+@media (max-width: 1399px) {
+  .header[data-wide-navigation] :global(.brand) {
+    margin-right: auto;
+  }
+  .header[data-wide-navigation] :global(.global-nav) {
+    flex: none;
+  }
+  .header[data-wide-navigation] :global(.primary-navigation) {
+    display: none;
+  }
+  .header[data-wide-navigation] :global(.mobile-nav-toggle) {
     display: inline-flex;
   }
 }

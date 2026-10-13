@@ -28,6 +28,7 @@ export const sectionDefaults: NonNullable<SiteSettings["navigation"]> = [
   { id: "journal", label: "Журнал", visible: true },
   { id: "articles", label: "Статьи", visible: true },
   { id: "rides", label: "Покатушки", visible: true },
+  { id: "clubs", label: "Клубы", visible: true },
   { id: "achievements", label: "Достижения", visible: true },
   { id: "market", label: "Рынок", visible: true },
   { id: "about", label: "О проекте", visible: true },
@@ -56,6 +57,14 @@ export function navigationSections(settings: Partial<SiteSettings>) {
         0,
         sectionDefaults.find((s) => s.id === "articles")!,
       );
+    if (!sections.some((s) => s.id === "clubs"))
+      sections.splice(
+        sections.some((s) => s.id === "rides")
+          ? sections.findIndex((s) => s.id === "rides") + 1
+          : sections.length,
+        0,
+        sectionDefaults.find((s) => s.id === "clubs")!,
+      );
     // «Достижения» (#382): added once to a list saved before it existed, after
     // «Покатушки»; a list that has it, hidden or moved, is left as it is.
     if (!sections.some((s) => s.id === "achievements"))
@@ -83,6 +92,12 @@ export function sectionLinks(
   id: string,
   user: Pick<NonNullable<Viewer>, "username"> | null,
 ) {
+  if (id === "clubs")
+    return [
+      { href: "/clubs", label: "Все клубы", icon: "clubs" },
+      { href: "/account?tab=clubs", label: "Мои клубы", icon: "profile" },
+      { href: "/clubs/new", label: "Создать клуб", icon: "add" },
+    ];
   if (id === "components")
     return [
       { href: "/components", label: "Популярные", icon: "popular" },
@@ -187,6 +202,12 @@ export function activeSection(pathname: string, search = "") {
     (pathname === "/account" && tab === "rides")
   )
     return "rides";
+  if (
+    pathname === "/clubs" ||
+    pathname.startsWith("/clubs/") ||
+    (pathname === "/account" && tab === "clubs")
+  )
+    return "clubs";
   if (pathname === "/records") return "achievements";
   if (
     pathname === "/bikes" ||

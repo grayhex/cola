@@ -275,6 +275,8 @@ test("primary menu opens on hover, crosses panels and preserves keyboard and tou
   page,
   isMobile,
 }) => {
+  // Keep the hover scenario on the full nine-section menu.
+  if (!isMobile) await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
   if (isMobile) {
     await page.getByRole("button", { name: "Открыть меню" }).click();
@@ -399,6 +401,8 @@ test("hover preference inherits the site default and a member can override and r
   page,
   isMobile,
 }) => {
+  // Keep the hover scenario on the full nine-section menu.
+  if (!isMobile) await page.setViewportSize({ width: 1440, height: 900 });
   const db = new pg.Client({ connectionString: process.env.DATABASE_URL });
   await db.connect();
   const original = (

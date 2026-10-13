@@ -6,17 +6,27 @@ import { clubList } from "../../lib/clubs.ts";
 import styles from "../ui/clubs.module.css";
 export const dynamic = "force-dynamic",
   runtime = "nodejs";
-export const metadata = { title: "Клубы велосипедистов · ColaBike" };
+export const metadata = {
+  title: "Клубы велосипедистов · ColaBike",
+  robots: { index: true, follow: true },
+};
 export default async function Page({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; page?: string }>;
+  searchParams: Promise<{
+    q?: string;
+    page?: string;
+    city?: string;
+    format?: string;
+  }>;
 }) {
   const params = await searchParams,
     user = await currentUser(),
     page = Math.max(1, Math.min(10000, Number(params.page) || 1));
   const safePage = Number.isSafeInteger(page) ? page : 1;
   const data = await clubList(db, user?.id || null, {
+    city: params.city,
+    format: params.format,
     search: params.q,
     page: safePage,
   });
@@ -40,6 +50,18 @@ export default async function Page({
             defaultValue={params.q || ""}
             maxLength={100}
             placeholder="Название или слоган"
+          />
+        </label>
+        <label>
+          Город · необязательно
+          <input name="city" maxLength={80} defaultValue={params.city || ""} />
+        </label>
+        <label>
+          Формат катания · необязательно
+          <input
+            name="format"
+            maxLength={40}
+            defaultValue={params.format || ""}
           />
         </label>
         <button className="button">Найти</button>
@@ -82,6 +104,10 @@ export default async function Page({
             href={
               "/clubs?q=" +
               encodeURIComponent(params.q || "") +
+              "&city=" +
+              encodeURIComponent(params.city || "") +
+              "&format=" +
+              encodeURIComponent(params.format || "") +
               "&page=" +
               (safePage - 1)
             }
@@ -95,6 +121,10 @@ export default async function Page({
             href={
               "/clubs?q=" +
               encodeURIComponent(params.q || "") +
+              "&city=" +
+              encodeURIComponent(params.city || "") +
+              "&format=" +
+              encodeURIComponent(params.format || "") +
               "&page=" +
               (safePage + 1)
             }

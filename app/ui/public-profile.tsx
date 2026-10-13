@@ -1,6 +1,7 @@
 "use client";
 import type { PublicProfile } from "../../lib/contracts.ts";
 import type { ProfileInitial } from "./content-types.ts";
+import ClubBadges from "./club-badges.tsx";
 import Link from "next/link";
 import RideList from "./ride-list.tsx";
 import { BlockButton } from "./user-block-controls.tsx";
@@ -129,12 +130,22 @@ export default function PublicProfile({
           <p role="status">Загружаем профиль…</p>
         ) : (
           <>
-            <section className="profile-hero">
+            <section
+              className={
+                "profile-hero" +
+                (profile.clubBadges?.total ? " has-club-badges" : "")
+              }
+            >
               <Avatar person={profile} size="large" />
               <div className="profile-title">
                 <p className="eyebrow">Владелец коллекции</p>
                 <h1>{profile.name}</h1>
                 <span className="username">@{profile.username}</span>
+                <ClubBadges
+                  key={profile.id + JSON.stringify(profile.clubBadges)}
+                  ownerId={profile.id}
+                  initial={profile.clubBadges}
+                />
                 {profile.bio && (
                   <section className="profile-about">
                     <h2>О себе</h2>

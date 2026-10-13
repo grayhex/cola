@@ -57,24 +57,28 @@ test("«Достижения» is its own section: two links, none left in «В�
       "Журнал",
       "Статьи",
       "Покатушки",
+      "Клубы",
       "Достижения",
       "Рынок",
       "О проекте",
     ]);
     expect(await sections.count()).toBeGreaterThan(0);
     expect(await pageOverflow(page)).toBeNull();
-    // Eight sections fit between the brand and the utilities wherever the full
+    // Nine sections fit between the brand and the utilities wherever the full
     // menu shows, and fold into the panel (the «Открыть меню» button) below
-    // 1276 px.
-    for (const width of [1101, 1275]) {
+    // 1400 px.
+    for (const width of [1101, 1275, 1276, 1280, 1350, 1399]) {
       await page.setViewportSize({ width, height: 900 });
       await expect(page.locator("header .primary-navigation")).toBeHidden();
       await expect(
         page.getByRole("button", { name: "Открыть меню" }),
       ).toBeVisible();
+      const account = page.locator("header .desktop-account");
+      if (width >= 1276) await expect(account).toBeVisible();
+      else await expect(account).toBeHidden();
       expect(await pageOverflow(page)).toBeNull();
     }
-    for (const width of [1276, 1280, 1350, 1440, 1499, 1500, 1920]) {
+    for (const width of [1400, 1440, 1499, 1500, 1639, 1640, 1920]) {
       await page.setViewportSize({ width, height: 900 });
       await expect(page.locator("header .primary-navigation")).toBeVisible();
       await expect(
@@ -246,6 +250,7 @@ test("a menu saved before «Достижения» gets it once; one the adminis
     "О проекте",
     "Покатушки",
     "Достижения",
+    "Клубы",
     "Мой гараж",
     "Компоненты",
     "Журнал",

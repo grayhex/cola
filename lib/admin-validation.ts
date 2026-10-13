@@ -168,6 +168,7 @@ export const settingsInput = z
               "articles",
               "rides",
               "achievements",
+              "clubs",
               "market",
               "about",
             ]),
@@ -177,7 +178,7 @@ export const settingsInput = z
           .strict(),
       )
       .min(3)
-      .max(8)
+      .max(9)
       .refine(
         (a) =>
           new Set(a.map((s) => s.id)).size === a.length &&
