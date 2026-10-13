@@ -707,6 +707,138 @@
           "agreementRevision": null
         }
       }
+    },
+    {
+      "name": "club_application",
+      "description": "Клубное событие в общем колокольчике; без автоматического внешнего канала.",
+      "notification": {
+        "id": "00000000-0000-4000-8000-000000000080",
+        "type": "club_application",
+        "category": "clubs",
+        "createdAt": "2026-10-04T08:33:00.000Z",
+        "readAt": null,
+        "actor": null,
+        "reasons": [],
+        "target": {
+          "type": "club",
+          "id": "00000000-0000-4000-8000-000000000011",
+          "name": "Ночной клуб",
+          "path": "/clubs/00000000-0000-4000-8000-000000000011/manage",
+          "commentId": null,
+          "occurrenceAt": null,
+          "agreementRevision": null
+        }
+      }
+    },
+    {
+      "name": "club_invitation",
+      "description": "Клубное событие в общем колокольчике; без автоматического внешнего канала.",
+      "notification": {
+        "id": "00000000-0000-4000-8000-000000000081",
+        "type": "club_invitation",
+        "category": "clubs",
+        "createdAt": "2026-10-04T08:32:00.000Z",
+        "readAt": null,
+        "actor": null,
+        "reasons": [],
+        "target": {
+          "type": "club",
+          "id": "00000000-0000-4000-8000-000000000011",
+          "name": "Ночной клуб",
+          "path": "/clubs/00000000-0000-4000-8000-000000000011",
+          "commentId": null,
+          "occurrenceAt": null,
+          "agreementRevision": null
+        }
+      }
+    },
+    {
+      "name": "club_membership_result",
+      "description": "Клубное событие в общем колокольчике; без автоматического внешнего канала.",
+      "notification": {
+        "id": "00000000-0000-4000-8000-000000000082",
+        "type": "club_membership_result",
+        "category": "clubs",
+        "createdAt": "2026-10-04T08:31:00.000Z",
+        "readAt": null,
+        "actor": null,
+        "reasons": [],
+        "target": {
+          "type": "club",
+          "id": "00000000-0000-4000-8000-000000000011",
+          "name": "Ночной клуб",
+          "path": "/clubs/00000000-0000-4000-8000-000000000011",
+          "commentId": null,
+          "occurrenceAt": null,
+          "agreementRevision": null
+        }
+      }
+    },
+    {
+      "name": "club_role",
+      "description": "Клубное событие в общем колокольчике; без автоматического внешнего канала.",
+      "notification": {
+        "id": "00000000-0000-4000-8000-000000000083",
+        "type": "club_role",
+        "category": "clubs",
+        "createdAt": "2026-10-04T08:30:00.000Z",
+        "readAt": null,
+        "actor": null,
+        "reasons": [],
+        "target": {
+          "type": "club",
+          "id": "00000000-0000-4000-8000-000000000011",
+          "name": "Ночной клуб",
+          "path": "/clubs/00000000-0000-4000-8000-000000000011",
+          "commentId": null,
+          "occurrenceAt": null,
+          "agreementRevision": null
+        }
+      }
+    },
+    {
+      "name": "club_organizer_lost",
+      "description": "Клубное событие в общем колокольчике; без автоматического внешнего канала.",
+      "notification": {
+        "id": "00000000-0000-4000-8000-000000000084",
+        "type": "club_organizer_lost",
+        "category": "clubs",
+        "createdAt": "2026-10-04T08:29:00.000Z",
+        "readAt": null,
+        "actor": null,
+        "reasons": [],
+        "target": {
+          "type": "club",
+          "id": "00000000-0000-4000-8000-000000000011",
+          "name": "Ночной клуб",
+          "path": "/clubs/00000000-0000-4000-8000-000000000011/manage",
+          "commentId": null,
+          "occurrenceAt": null,
+          "agreementRevision": null
+        }
+      }
+    },
+    {
+      "name": "club_ride_new",
+      "description": "Клубное событие в общем колокольчике; без автоматического внешнего канала.",
+      "notification": {
+        "id": "00000000-0000-4000-8000-000000000085",
+        "type": "club_ride_new",
+        "category": "clubs",
+        "createdAt": "2026-10-04T08:28:00.000Z",
+        "readAt": null,
+        "actor": null,
+        "reasons": [],
+        "target": {
+          "type": "ride",
+          "id": "00000000-0000-4000-8000-00000000000b",
+          "name": "Ночной круг",
+          "path": "/r/night-loop",
+          "commentId": null,
+          "occurrenceAt": null,
+          "agreementRevision": null
+        }
+      }
     }
   ]
 }

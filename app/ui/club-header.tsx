@@ -5,6 +5,7 @@ import RichTextBody from "./rich-text-body.tsx";
 import ClubMembershipControls from "./club-membership-controls.tsx";
 import ClubReport from "./club-report.tsx";
 import ClubLifecycle from "./club-lifecycle.tsx";
+import ClubNoticeControls from "./club-notice-controls.tsx";
 import ClubChat from "./club-chat.tsx";
 import styles from "./clubs.module.css";
 export default function ClubHeader({ club: c }: { club: ClubDto }) {
@@ -64,14 +65,18 @@ export default function ClubHeader({ club: c }: { club: ClubDto }) {
           initial={c}
         />
         <ClubChat club={c} />
+        <ClubNoticeControls club={c} />
         <div className={styles.actions}>
-          <Link className="button" href={"/clubs/" + c.id + "/rules"}>
+          <Link className="button secondary" href={"/clubs/" + c.id + "/rules"}>
             Правила клуба
           </Link>
           {c.archived && <ClubLifecycle club={c} />}
           <ClubReport club={c} />
           {c.canManage && (
-            <Link className="button" href={"/clubs/" + c.id + "/manage"}>
+            <Link
+              className="button secondary"
+              href={"/clubs/" + c.id + "/manage"}
+            >
               Управление
             </Link>
           )}

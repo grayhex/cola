@@ -60,6 +60,13 @@ import {
   notificationCategoryKeys,
 } from "../../lib/notification-catalog.ts";
 const eventText: Record<string, string> = {
+  club_application: "Новая заявка на вступление —",
+  club_invitation: "Вас пригласили в клуб —",
+  club_membership_result: "Обновлён результат участия в клубе —",
+  club_role: "Изменилась ваша роль в клубе —",
+  club_organizer_lost:
+    "Организатор недоступен: проверьте приостановленный выезд —",
+  club_ride_new: "Новый выезд клуба —",
   plan_published: "запланировал покатушку",
   plan_nearby: "запланировал покатушку в выбранном вами районе —",
   intent_published: "ищет компанию для покатушки —",

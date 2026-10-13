@@ -205,8 +205,12 @@ test("loss of organizing role closes recruitment and blocks old creator edits; o
     "accepted",
   );
   assert.equal(
-    (await db.query("SELECT 1 FROM club_event_outbox WHERE ride_id=$1", [r.id]))
-      .rowCount,
+    (
+      await db.query(
+        "SELECT 1 FROM club_event_outbox WHERE ride_id=$1 AND kind='organizer_lost'",
+        [r.id],
+      )
+    ).rowCount,
     1,
   );
 });

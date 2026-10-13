@@ -27,6 +27,7 @@ export interface NotificationCategory {
  * discovery too, but from the area the person chose, and it is a switch.
  */
 export const notificationCategories = {
+  clubs: { label: "Клубы", email: false, push: false, pushDefault: false },
   rides: {
     label: "Покатушки и приглашения",
     email: true,
@@ -109,6 +110,12 @@ export interface NotificationEvent {
  * the kind of event and never quotes a comment, a place or a track.
  */
 export const notificationEvents = {
+  club_application: { category: "clubs" },
+  club_invitation: { category: "clubs" },
+  club_membership_result: { category: "clubs" },
+  club_role: { category: "clubs" },
+  club_organizer_lost: { category: "clubs" },
+  club_ride_new: { category: "clubs" },
   club_post_like: { category: "reactions" },
   club_post_comment: {
     category: "discussions",
@@ -342,6 +349,7 @@ export const notificationPushDiscoveryTypes = notificationPushTypes.filter(
  */
 export const notificationPushTtlHours: Record<NotificationCategoryKey, number> =
   {
+    clubs: 0,
     rides: 168,
     discussions: 24,
     market: 0,

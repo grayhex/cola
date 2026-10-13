@@ -158,3 +158,15 @@
   object-fit: cover;
   border-radius: var(--radius-md);
 }
+
+.noticePreference {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  margin-block: var(--space-3);
+  cursor: pointer;
+}
+.nearest {
+  margin-block: var(--space-3);
+}
