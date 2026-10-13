@@ -1,3 +1,4 @@
+import { publicClubRideSql } from "./club-ride-access.ts";
 import { z } from "zod";
 import type { Queryable } from "./db.ts";
 import {
@@ -417,7 +418,7 @@ export async function nearbyNoticeStands(
     return false;
   const ride = (
     await q.query<{ plan_passport: unknown }>(
-      "SELECT plan_passport FROM rides WHERE id=$1 AND status='planned' AND is_public",
+      `SELECT plan_passport FROM rides r WHERE id=$1 AND status='planned' AND is_public AND ${publicClubRideSql()}`,
       [subject.rideId],
     )
   ).rows[0];

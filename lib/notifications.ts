@@ -1,3 +1,8 @@
+import {
+  publicClubRideSql,
+  clubRideEnvelopeSql,
+  internalClubRideSql,
+} from "./club-ride-access.ts";
 import type { Queryable as QueryableType } from "./repository.ts";
 import type { Queryable } from "./db.ts";
 import { randomUUID } from "node:crypto";
@@ -120,13 +125,13 @@ export const inboxVisible = (
 ) => `n.recipient_id=$1 AND ((n.type='bike_week' AND b.owner_id=n.recipient_id AND b.is_public AND NOT o.blocked AND NOT b.leaderboard_excluded AND EXISTS(SELECT 1 FROM bike_weeks w WHERE w.bike_id=b.id AND w.owner_id=n.recipient_id AND w.status='selected' AND w.week_start=date_trunc('week',(${clock}) AT TIME ZONE 'Europe/Moscow')::date AND n.dedup_key='bike_week:'||w.week_start::text||':'||b.id::text)) OR (n.type='market_expiring' AND ml.owner_id=n.recipient_id) OR n.type='session_reuse' OR ${rideNoticeVisible(clock)} OR NOT a.blocked AND NOT EXISTS(SELECT 1 FROM user_blocks ub WHERE (ub.blocker_id=n.recipient_id AND ub.blocked_id=n.actor_id) OR (ub.blocker_id=n.actor_id AND ub.blocked_id=n.recipient_id)) AND (
  (n.type IN ('club_post_like','club_post_comment','club_post_reply') AND cp.status='published' AND cp.deleted_at IS NULL AND cp.hidden_at IS NULL AND NOT cpo.blocked AND cl.hidden_at IS NULL AND (cl.owner_id IS NULL OR NOT clo.blocked) AND ((n.type='club_post_like' AND EXISTS(SELECT 1 FROM club_post_likes l WHERE l.post_id=cp.id AND l.user_id=n.actor_id)) OR (n.type IN ('club_post_comment','club_post_reply') AND cpc.deleted_at IS NULL AND cpc.author_id=n.actor_id))) OR
  (n.type='component_reply' AND cm.first_public_at IS NOT NULL AND cc.deleted_at IS NULL AND cc.author_id=n.actor_id) OR
- (n.type='plan_published' AND r.owner_id=n.actor_id AND r.status='planned' AND r.is_public AND rb.is_public AND NOT ro.blocked AND (${rideOccurrence.replaceAll("now()", `(${clock})`)})>(${clock})) OR
- (n.type='plan_nearby' AND r.owner_id=n.actor_id AND r.status='planned' AND r.is_public AND rb.is_public AND NOT ro.blocked AND (${rideOccurrence.replaceAll("now()", `(${clock})`)})>(${clock}) AND EXISTS(SELECT 1 FROM nearby_areas na WHERE na.user_id=n.recipient_id AND na.enabled)) OR
+ (n.type='plan_published' AND r.owner_id=n.actor_id AND r.status='planned' AND NOT r.club_suspended AND ${publicClubRideSql()} AND r.is_public AND rb.is_public AND NOT ro.blocked AND (${rideOccurrence.replaceAll("now()", `(${clock})`)})>(${clock})) OR
+ (n.type='plan_nearby' AND r.owner_id=n.actor_id AND r.status='planned' AND NOT r.club_suspended AND ${publicClubRideSql()} AND r.is_public AND rb.is_public AND NOT ro.blocked AND (${rideOccurrence.replaceAll("now()", `(${clock})`)})>(${clock}) AND EXISTS(SELECT 1 FROM nearby_areas na WHERE na.user_id=n.recipient_id AND na.enabled)) OR
  (n.type='intent_published' AND ri.owner_id=n.actor_id AND ri.visibility='community' AND ri.status='active' AND EXISTS(SELECT 1 FROM ride_intent_windows w WHERE w.intent_id=ri.id AND w.ends_at>(${clock}))) OR
  (n.type='follow' AND EXISTS(SELECT 1 FROM user_follows f WHERE f.follower_id=n.actor_id AND f.following_id=n.recipient_id)) OR
  (b.is_public AND NOT o.blocked AND (
   (n.type='like' AND EXISTS(SELECT 1 FROM bike_likes l WHERE l.bike_id=b.id AND l.user_id=n.actor_id)) OR
-  (n.type IN ('comment','reply') AND c.deleted_at IS NULL AND c.author_id=n.actor_id))) OR (r.is_public AND rb.is_public AND NOT ro.blocked AND ((n.type='ride_like' AND EXISTS(SELECT 1 FROM ride_likes l WHERE l.ride_id=r.id AND l.user_id=n.actor_id)) OR (n.type IN ('ride_comment','ride_reply') AND rc.deleted_at IS NULL AND rc.author_id=n.actor_id))) OR
+  (n.type IN ('comment','reply') AND c.deleted_at IS NULL AND c.author_id=n.actor_id))) OR (${clubRideEnvelopeSql("n.recipient_id")} AND (${internalClubRideSql("n.recipient_id")} OR (r.is_public AND rb.is_public)) AND NOT ro.blocked AND ((n.type='ride_like' AND EXISTS(SELECT 1 FROM ride_likes l WHERE l.ride_id=r.id AND l.user_id=n.actor_id)) OR (n.type IN ('ride_comment','ride_reply') AND rc.deleted_at IS NULL AND rc.author_id=n.actor_id))) OR
  (e.status='published' AND e.is_public AND (e.kind='article' OR eb.is_public) AND NOT eo.blocked AND ((n.type='journal_like' AND EXISTS(SELECT 1 FROM journal_likes l WHERE l.entry_id=e.id AND l.user_id=n.actor_id)) OR (n.type IN ('journal_comment','journal_reply') AND ec.deleted_at IS NULL AND ec.author_id=n.actor_id)))))`;
 export async function unreadCount(q: Queryable, id: string, now = new Date()) {
   const r = await q.query<{ id: string }>(

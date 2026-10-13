@@ -286,6 +286,10 @@ export interface ChatJobRow {
 
 // Shared with the legacy ride loaders during the backend migration.
 export interface RideRow {
+  club_id?: string | null;
+  club_audience?: "members" | "open" | null;
+  club_suspended?: boolean;
+
   id: string;
   share_id: string;
   owner_id: string;
@@ -333,6 +337,9 @@ export interface RideRow {
   recruitment_closed_for: Date | null;
 }
 export interface RideViewRow extends RideRow {
+  club_name?: string | null;
+  club_role?: "owner" | "admin" | "organizer" | "member" | null;
+
   occurs_at: Date | null;
   viewer_active: boolean;
   invited: boolean;

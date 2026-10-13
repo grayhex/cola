@@ -1,3 +1,4 @@
+import { publicClubRideSql } from "./club-ride-access.ts";
 import type { JsonData } from "./contracts.ts";
 import type { Queryable } from "./db.ts";
 // Landing pages of owner experience for a model and for a part (#74): the
@@ -140,7 +141,7 @@ export async function modelLanding(
       `SELECT count(*)::int rides, coalesce(sum(r.distance_m),0)::float distance
         FROM rides r JOIN bikes b ON b.id=r.bike_id JOIN users u ON u.id=b.owner_id` +
         where +
-        " AND r.is_public AND r.status='completed'",
+        ` AND ${publicClubRideSql()} AND r.is_public AND r.status='completed'`,
       params,
     )
   ).rows[0];

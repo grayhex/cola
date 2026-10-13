@@ -1,3 +1,4 @@
+import { RideError } from "../../../../lib/ride-gpx.ts";
 import { errorMessage } from "../../../../lib/errors.ts";
 import { z } from "zod";
 import { currentUser, rateLimit } from "../../../../lib/auth.ts";
@@ -83,7 +84,8 @@ async function handler(
       );
     return fail("Не найдено", 404);
   } catch (error) {
-    if (error instanceof MatchError) return fail(error.message, error.status);
+    if (error instanceof MatchError || error instanceof RideError)
+      return fail(error.message, error.status);
     if (error instanceof EmailPolicyError)
       return fail(error.message, error.status);
     if (error instanceof z.ZodError)

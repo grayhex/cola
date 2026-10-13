@@ -1,3 +1,7 @@
+import {
+  clubRideEnvelopeSql,
+  internalClubRideSql,
+} from "./club-ride-access.ts";
 import type { Queryable } from "./db.ts";
 import { CommunityError } from "./community-validation.ts";
 import {
@@ -8,8 +12,7 @@ import {
   uuidReference,
 } from "./public-urls.ts";
 
-const canRead = `l.is_public OR l.owner_id=$2::uuid OR
-  (l.kind='ride' AND EXISTS(SELECT 1 FROM ride_invitations i WHERE i.ride_id=l.entity_id AND i.user_id=$2::uuid))`;
+const canRead = `(l.kind<>'ride' AND (l.is_public OR l.owner_id=$2::uuid)) OR (l.kind='ride' AND EXISTS(SELECT 1 FROM rides r WHERE r.id=l.entity_id AND ${clubRideEnvelopeSql("$2")} AND (l.is_public OR r.owner_id=$2::uuid OR ${internalClubRideSql("$2")} OR EXISTS(SELECT 1 FROM ride_invitations i WHERE i.ride_id=r.id AND i.user_id=$2::uuid))))`;
 
 export async function findPublicLink(
   q: Queryable,

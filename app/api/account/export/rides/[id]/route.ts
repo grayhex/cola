@@ -25,6 +25,8 @@ export const GET = traced(async function GET(req, { params }) {
     if (errorCode(e) === "ENOENT") return fail("Трек не найден", 404);
     throw e;
   }
+  if (!(await ownRideTrack(db, user.id, id)))
+    return fail("Трек не найден", 404);
   return new NextResponse(bytes, {
     headers: {
       "Content-Type": "application/gpx+xml",

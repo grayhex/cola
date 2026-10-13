@@ -1,3 +1,8 @@
+import {
+  clubRideEnvelopeSql,
+  internalClubRideSql,
+  lockRideClub,
+} from "./club-ride-access.ts";
 import type { QueryRows } from "./db.ts";
 import type { Queryable } from "./db.ts";
 import * as comments from "./comments.ts";
@@ -35,23 +40,55 @@ const targets = {
 export function entitySocial(kind: keyof typeof targets) {
   const t = targets[kind];
   if (!t) throw new Error("Unknown social target");
-  const visible = `FROM ${t.table} r LEFT JOIN bikes b ON b.id=r.bike_id JOIN users u ON u.id=r.owner_id WHERE r.id=$1 AND ${t.guard} AND ${kind === "ride" ? "b.is_public" : "(r.kind='article' OR b.is_public)"} AND NOT u.blocked`;
+  const visibleFor = (ref: `$${number}`) =>
+    `FROM ${t.table} r LEFT JOIN bikes b ON b.id=r.bike_id JOIN users u ON u.id=r.owner_id WHERE r.id=$1 AND (${ref}::uuid IS NULL OR ${ref}::uuid IS NOT NULL) AND ${kind === "ride" ? `${clubRideEnvelopeSql(ref)} AND (${internalClubRideSql(ref)} OR (r.is_public AND b.is_public))` : `${t.guard} AND (r.kind='article' OR b.is_public)`} AND NOT u.blocked`;
   const notificationKind = kind === "article" ? "journal" : kind;
   const event = (id: string, comment: string | null = null) =>
     kind === "ride"
       ? { ride: id, rideComment: comment }
       : { entry: id, entryComment: comment };
-  function query(q: Queryable): Queryable {
+  async function lockClubSocial(
+    q: Queryable,
+    id: string,
+    actor: string,
+    parent: string | null = null,
+  ) {
+    if (kind !== "ride") return;
+    const r = (
+      await q.query<{
+        club_id: string | null;
+        owner_id: string;
+        club_audience: string | null;
+      }>("SELECT club_id,owner_id,club_audience FROM rides WHERE id=$1", [id])
+    ).rows[0];
+    if (!r?.club_id) return;
+    const recipient = parent
+      ? (
+          await q.query<{ author_id: string | null }>(
+            "SELECT author_id FROM ride_comments WHERE id=$1 AND ride_id=$2",
+            [parent, id],
+          )
+        ).rows[0]?.author_id
+      : null;
+    await lockRideClub(q, r.club_id, actor, {
+      organizer: false,
+      membershipRequired: r.club_audience === "members",
+      others: [r.owner_id, ...(recipient ? [recipient] : [])],
+    });
+  }
+  function query(q: Queryable, viewer: string | null = null): Queryable {
     return {
       query: async <Row extends object>(
         sql: string,
         args: unknown[] = [],
       ): Promise<QueryRows<Row>> => {
+        const ref: `$${number}` = `$${args.length + 1}`;
+        const visible = visibleFor(ref);
         if (sql.includes("SELECT b.id,b.owner_id,b.share_id FROM bikes"))
-          return q.query<Row>(
-            `SELECT r.id,r.owner_id,r.share_id ${visible}`,
-            args,
-          );
+          return q.query<Row>(`SELECT r.id,r.owner_id,r.share_id ${visible}`, [
+            ...args,
+            viewer,
+          ]);
         if (sql.startsWith("SELECT id FROM bikes WHERE")) {
           await q.query(
             `SELECT b.id FROM bikes b JOIN ${t.table} r ON r.bike_id=b.id WHERE r.id=$1 FOR UPDATE OF b`,
@@ -71,11 +108,31 @@ export function entitySocial(kind: keyof typeof targets) {
           });
           return { rows: [], rowCount: 0 };
         }
+        let translated = sql
+          .replaceAll("bike_comments", t.comments)
+          .replaceAll("bike_id", t.key);
+        let parameters = args;
+        if (
+          kind === "ride" &&
+          /^(SELECT|WITH)\b/.test(translated) &&
+          !translated.includes("FOR UPDATE") &&
+          translated.includes(t.comments)
+        ) {
+          translated = translated.replaceAll(
+            t.comments,
+            "readable_ride_comments",
+          );
+          const guard = `readable_ride_comments AS (SELECT rc.* FROM ride_comments rc WHERE EXISTS(SELECT 1 FROM rides r JOIN bikes b ON b.id=r.bike_id JOIN users u ON u.id=r.owner_id WHERE r.id=rc.ride_id AND NOT u.blocked AND ${clubRideEnvelopeSql(ref)} AND (${internalClubRideSql(ref)} OR (r.is_public AND b.is_public))))`;
+          translated = translated.startsWith("WITH RECURSIVE ")
+            ? "WITH RECURSIVE " + guard + "," + translated.slice(15)
+            : translated.startsWith("WITH ")
+              ? "WITH " + guard + "," + translated.slice(5)
+              : "WITH " + guard + " " + translated;
+          parameters = [...args, viewer];
+        }
         const r = await q.query<Row & Record<string, unknown>>(
-          sql
-            .replaceAll("bike_comments", t.comments)
-            .replaceAll("bike_id", t.key),
-          args,
+          translated,
+          parameters,
         );
         return {
           ...r,
@@ -93,11 +150,13 @@ export function entitySocial(kind: keyof typeof targets) {
     user: string,
     enabled: boolean,
   ) {
+    await lockClubSocial(q, id, user);
+    const visible = visibleFor("$2");
     // Same lock order as comments / owner mutations: users -> bike -> entity.
     const initial = (
       await q.query<{ owner_id: string; bike_id: string | null }>(
         `SELECT r.owner_id,r.bike_id ${visible}`,
-        [id],
+        [id, user],
       )
     ).rows[0];
     if (!initial) throw new CommunityError(t.label + " недоступна", 404);
@@ -116,7 +175,7 @@ export function entitySocial(kind: keyof typeof targets) {
     const r = (
       await q.query<{ owner_id: string }>(
         `SELECT r.owner_id ${visible} FOR UPDATE OF r`,
-        [id],
+        [id, user],
       )
     ).rows[0];
     if (!r) throw new CommunityError(t.label + " недоступна", 404);
@@ -154,9 +213,9 @@ export function entitySocial(kind: keyof typeof targets) {
   return {
     query,
     page: (q: Queryable, ...a: comments.CommentPageArgs) =>
-      comments.commentPage(query(q), ...a),
+      comments.commentPage(query(q, a[1]?.id), ...a),
     replies: (q: Queryable, ...a: comments.ReplyPageArgs) =>
-      comments.replyPage(query(q), ...a),
+      comments.replyPage(query(q, a[2]?.id), ...a),
     keysetPage: (
       q: Queryable,
       id: string,
@@ -168,14 +227,37 @@ export function entitySocial(kind: keyof typeof targets) {
       parent: string,
       options: Parameters<typeof comments.replyKeysetPage>[3],
     ) => comments.replyKeysetPage(query(q), id, parent, options),
-    create: (
+    create: async (
       q: Queryable,
       id: string,
       user: CurrentUser,
-      input: { body: string; parentId?: string | null | undefined },
-    ) => comments.createComment(query(q), id, user, input),
-    change: (q: Queryable, ...a: comments.ChangeCommentArgs) =>
-      comments.changeComment(query(q), ...a),
+      input: { body: string; parentId?: string | null },
+    ) => {
+      await lockClubSocial(q, id, user.id, input.parentId || null);
+      return comments.createComment(query(q, user.id), id, user, input);
+    },
+    change: async (q: Queryable, ...a: comments.ChangeCommentArgs) => {
+      const [id, user, body = null] = a;
+      if (kind === "ride") {
+        const c = (
+          await q.query<{ ride_id: string; author_id: string | null }>(
+            "SELECT ride_id,author_id FROM ride_comments WHERE id=$1",
+            [id],
+          )
+        ).rows[0];
+        if (!c) throw new CommunityError("Комментарий недоступен", 404);
+        if (body === null && c.author_id === user.id) {
+          await q.query(
+            "UPDATE ride_comments SET body='',deleted_at=coalesce(deleted_at,now()),updated_at=now() WHERE id=$1 AND author_id=$2",
+            [id, user.id],
+          );
+          return { ok: true };
+        }
+        if (body !== null || c.author_id !== user.id)
+          await lockClubSocial(q, c.ride_id, user.id);
+      }
+      return comments.changeComment(query(q, user.id), ...a);
+    },
     like,
   };
 }

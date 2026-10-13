@@ -1,3 +1,4 @@
+import { clubRideEnvelopeSql } from "../../../../lib/club-ride-access.ts";
 import { errorCode, errorMessage } from "../../../../lib/errors.ts";
 import { ZodError } from "zod";
 import {
@@ -229,7 +230,7 @@ async function handler(
     if (p.length === 2 && p[1] === "track" && m === "POST") {
       const ride = (
         await db.query<{ is_public: boolean }>(
-          "SELECT is_public FROM rides WHERE id=$1 AND owner_id=$2",
+          `SELECT is_public FROM rides r WHERE id=$1 AND owner_id=$2 AND ${clubRideEnvelopeSql("$2")}`,
           [uuid.parse(p[0]), user.id],
         )
       ).rows[0];

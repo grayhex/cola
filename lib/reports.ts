@@ -1,3 +1,4 @@
+import { publicClubRideSql } from "./club-ride-access.ts";
 import type { ReportInput as ReportInputType } from "./community-validation.ts";
 import type { Queryable } from "./db.ts";
 import { changeRideComment } from "./ride-comments.ts";
@@ -61,7 +62,7 @@ export async function createReport(
   if (input.entityType === "ride" || input.entityType === "ride_comment")
     author = (
       await q.query<{ author: string }>(
-        `SELECT ${input.entityType === "ride" ? "r.owner_id" : "rc.author_id"} AS author FROM rides r JOIN bikes b ON b.id=r.bike_id JOIN users u ON u.id=r.owner_id ${input.entityType === "ride_comment" ? "JOIN ride_comments rc ON rc.ride_id=r.id JOIN users ca ON ca.id=rc.author_id" : ""} WHERE ${input.entityType === "ride" ? "r.id=$1" : "rc.id=$1 AND rc.deleted_at IS NULL AND NOT ca.blocked"} AND r.is_public AND b.is_public AND NOT u.blocked`,
+        `SELECT ${input.entityType === "ride" ? "r.owner_id" : "rc.author_id"} AS author FROM rides r JOIN bikes b ON b.id=r.bike_id JOIN users u ON u.id=r.owner_id ${input.entityType === "ride_comment" ? "JOIN ride_comments rc ON rc.ride_id=r.id JOIN users ca ON ca.id=rc.author_id" : ""} WHERE ${input.entityType === "ride" ? "r.id=$1" : "rc.id=$1 AND rc.deleted_at IS NULL AND NOT ca.blocked"} AND ${publicClubRideSql()} AND r.is_public AND b.is_public AND NOT u.blocked`,
         [input.targetId],
       )
     ).rows[0]?.author;
@@ -146,7 +147,7 @@ export async function reportPage(q: Queryable, page = 1, status = "open") {
  u.id reporter_id,u.username reporter_username,u.name reporter_name,u.avatar_id reporter_avatar,
  a.id profile_id,a.username profile_username,a.name profile_name,
  c.body,c.deleted_at,c.author_id,ca.username comment_username,ca.name comment_author_name,
- b.id bike_id,b.share_id,b.name bike_name,bo.username owner_username,rr.share_id AS ride_share_id,rr.title AS ride_title,rc.body AS ride_body,rc.deleted_at AS ride_deleted,
+ b.id bike_id,b.share_id,b.name bike_name,bo.username owner_username,rr.share_id AS ride_share_id,CASE WHEN rr.club_id IS NULL OR rr.club_audience='open' THEN rr.title END AS ride_title,CASE WHEN rr.club_id IS NULL OR rr.club_audience='open' THEN rc.body END AS ride_body,rc.deleted_at AS ride_deleted,
  je.kind entry_kind,je.share_id entry_share,je.title entry_title,jc.body entry_body,jc.deleted_at entry_deleted,
  cl.id club_id,cl.name club_name,clp.id club_post_id,CASE WHEN clp.status='published' THEN clp.title END club_post_title,CASE WHEN clp.status='published' THEN clc.body END club_body,clc.deleted_at club_comment_deleted,clu.username club_author,cm.id component_id,cm.name component_name,cm.category_slug,cm.slug,cc.body component_body,cc.deleted_at component_deleted,cp.hidden photo_hidden,cp.caption photo_caption,cu.username component_username
  FROM community_reports r JOIN users u ON u.id=r.reporter_id

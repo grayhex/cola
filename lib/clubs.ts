@@ -49,6 +49,7 @@ export const clubMediaPath = (id: string, photoId: string) =>
 export interface ClubRow {
   id: string;
   owner_id: string | null;
+  hidden_at?: Date | string | null;
   name: string;
   slogan: string;
   city: string;
@@ -75,7 +76,7 @@ const memberColumns = `(SELECT count(*)::int FROM club_memberships cm JOIN users
  WHERE cm.club_id=c.id AND cm.state='active' AND NOT mu.blocked) member_count,
  m.state member_state,m.role member_role,m.user_id member_user_id,m.invite_expires_at`;
 const columns = `c.*,${memberColumns}`;
-const summaryColumns = `c.id,c.name,c.slogan,c.city,c.formats,c.join_mode,c.members_visibility,c.logo_id,c.cover_id,c.archived_at,${memberColumns}`;
+const summaryColumns = `c.id,c.name,c.slogan,c.city,c.formats,c.join_mode,c.members_visibility,c.logo_id,c.cover_id,c.archived_at,c.hidden_at,${memberColumns}`;
 const from = `FROM clubs c LEFT JOIN users u ON u.id=c.owner_id
  LEFT JOIN club_memberships m ON m.club_id=c.id AND m.user_id=$2
  AND EXISTS(SELECT 1 FROM users viewer WHERE viewer.id=$2 AND NOT viewer.blocked)`;
@@ -93,6 +94,7 @@ type ClubSummaryRow = Omit<
 function clubSummaryDto(c: ClubSummaryRow): ClubSummaryDto {
   return {
     id: c.id,
+    hidden: !!c.hidden_at,
     name: c.name,
     slogan: c.slogan,
     city: c.city,
@@ -145,7 +147,7 @@ export async function clubDetail(
 ) {
   const c = (
     await q.query<ClubRow>(
-      `SELECT ${columns} ${from} WHERE c.id=$1 AND ${visible}`,
+      `SELECT ${columns} ${from} WHERE c.id=$1 AND (${visible} OR (c.owner_id=$2 AND m.state='active' AND m.role='owner'))`,
       [id, viewer],
     )
   ).rows[0];
@@ -175,7 +177,7 @@ export async function clubList(
   const rows = (
     await q.query<ClubSummaryRow>(
       `SELECT ${summaryColumns} ${from}
- WHERE ${visible} AND (c.archived_at IS NULL OR $7)
+ WHERE (${visible} OR ($5 AND c.owner_id=$2 AND m.state='active' AND m.role='owner')) AND (c.archived_at IS NULL OR $7)
  AND ($1='' OR position(lower($1) IN lower(c.name || ' ' || c.slogan))>0)
  AND ($3='' OR lower(c.city)=lower($3)) AND ($4='' OR $4=ANY(c.formats))
  AND (NOT $5 OR m.state IN ('active','pending','invited'))
@@ -385,10 +387,10 @@ export async function setClubArchived(
   raw: z.infer<typeof clubArchiveInput>,
 ) {
   const input = clubArchiveInput.parse(raw);
-  await lockClubActor(q, user);
+  await lockClubActor(q, user, !input.archived);
   const c = (
     await q.query<ClubRow>(
-      `SELECT ${columns} ${from} WHERE c.id=$1 AND ${visible} FOR UPDATE OF c`,
+      `SELECT ${columns} ${from} WHERE c.id=$1 AND c.owner_id=$2 FOR UPDATE OF c`,
       [id, user],
     )
   ).rows[0];
@@ -403,6 +405,11 @@ export async function setClubArchived(
     throw new CommunityError("Клуб уже изменён. Обновите страницу.", 409);
   if (!!c.archived_at === input.archived) return clubDto(c);
   if (!input.archived) {
+    if (c.hidden_at)
+      throw new CommunityError(
+        "Скрытый клуб восстанавливает модерация сайта",
+        403,
+      );
     const eligibility = await clubEligibility(q, user);
     if (!eligibility.hasBike)
       throw new CommunityError(
@@ -418,6 +425,15 @@ export async function setClubArchived(
   );
   if (input.archived) {
     await q.query(
+      `WITH cancelled AS (UPDATE rides SET status='cancelled',updated_at=now() WHERE club_id=$1 AND status='planned' AND (recurrence='weekly' OR started_at>now()) RETURNING id)
+      UPDATE notifications n SET cancelled_at=coalesce(n.cancelled_at,now()) WHERE n.ride_id IN (SELECT id FROM cancelled) AND n.type<>'ride_cancelled'`,
+      [id],
+    );
+    await q.query(
+      "INSERT INTO club_event_outbox(club_id,kind,actor_id,revision) VALUES($1,'club_archived',$2,$3)",
+      [id, user, c.version + 1],
+    );
+    await q.query(
       "UPDATE club_memberships SET state='left',role='member',invite_expires_at=NULL,revision=revision+1,updated_at=now() WHERE club_id=$1 AND state IN ('pending','invited')",
       [id],
     );
@@ -427,5 +443,11 @@ export async function setClubArchived(
     );
   }
   await clubAudit(q, id, user, input.archived ? "archived" : "restored");
-  return clubDetail(q, id, user);
+  return clubDto({
+    ...c,
+    archived_at: input.archived ? new Date() : null,
+    version: c.version + 1,
+    transfer_user_id: null,
+    transfer_expires_at: null,
+  });
 }

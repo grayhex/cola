@@ -177,8 +177,13 @@ test("public detail and catalog do not reveal the member list, requests or accou
     (e) => e instanceof CommunityError && e.status === 401,
   );
   await db.query("UPDATE clubs SET hidden_at=now() WHERE id=$1", [club.id]);
+  assert.equal(
+    (await clubDetail(db, club.id, user.id)).hidden,
+    true,
+    "the owner can resolve a hidden club's lifecycle without publishing it",
+  );
   await assert.rejects(
-    clubDetail(db, club.id, user.id),
+    clubDetail(db, club.id),
     (e) => e instanceof CommunityError && e.status === 404,
   );
   assert.ok(

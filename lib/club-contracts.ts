@@ -3,6 +3,7 @@ export type ClubRole = "owner" | "admin" | "organizer" | "member";
 export type ClubState =
   "pending" | "invited" | "active" | "left" | "excluded" | "blocked";
 export interface ClubDto {
+  hidden?: boolean;
   id: string;
   name: string;
   slogan: string;

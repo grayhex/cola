@@ -8,6 +8,7 @@ import { absolutePublicUrl } from "../../../lib/public-urls.ts";
 import Link from "next/link";
 import { clubPostList } from "../../../lib/club-posts.ts";
 import ClubPostFeed from "../../ui/club-post-feed.tsx";
+import ClubRides from "../../ui/club-rides.tsx";
 import ClubMembers from "../../ui/club-members.tsx";
 import ClubHeader from "../../ui/club-header.tsx";
 import styles from "../../ui/clubs.module.css";
@@ -56,15 +57,31 @@ export default async function Page({
     const club = await clubDetail(db, id, user?.id),
       tab = (await searchParams).tab,
       feed =
-        tab !== "members" ? await clubPostList(db, id, user?.id || null) : null;
+        !club.hidden && !["members", "rides"].includes(tab || "")
+          ? await clubPostList(db, id, user?.id || null)
+          : null;
     return (
       <section className={styles.page}>
         <ClubHeader club={club} />
+        {club.hidden && (
+          <>
+            <p role="status">
+              Клуб скрыт модерацией сайта. Вы можете архивировать его в
+              настройках.
+            </p>
+            <Link
+              className="button secondary"
+              href={"/clubs/" + id + "/manage"}
+            >
+              Управление клубом
+            </Link>
+          </>
+        )}
         <nav className={styles.actions} aria-label="Разделы клуба">
           <Link
             className="button secondary"
             href={"/clubs/" + id}
-            aria-current={tab !== "members" ? "page" : undefined}
+            aria-current={!tab ? "page" : undefined}
           >
             Лента
           </Link>
@@ -74,8 +91,17 @@ export default async function Page({
           >
             Участники
           </Link>
+          <Link
+            className="button secondary"
+            href={"/clubs/" + id + "?tab=rides"}
+            aria-current={tab === "rides" ? "page" : undefined}
+          >
+            Выезды
+          </Link>
         </nav>
-        {tab === "members" ? (
+        {tab === "rides" ? (
+          <ClubRides club={club} />
+        ) : tab === "members" ? (
           <ClubMembers club={club} />
         ) : (
           feed && <ClubPostFeed club={club} initial={feed} />
