@@ -547,8 +547,21 @@ export async function exportAccount(
       badge_order: number;
       created_at: Date;
       updated_at: Date;
+      invite_expires_at: Date | null;
     }>(
-      "SELECT club_id,role,state,badge_visible,badge_order,created_at,updated_at FROM club_memberships WHERE user_id=$1 ORDER BY created_at,club_id",
+      "SELECT club_id,role,state,badge_visible,badge_order,created_at,updated_at,invite_expires_at FROM club_memberships WHERE user_id=$1 ORDER BY created_at,club_id",
+      [userId],
+    )
+  ).rows;
+  const clubActions = (
+    await q.query<{
+      club_id: string;
+      actor_id: string | null;
+      target_user_id: string | null;
+      action: string;
+      created_at: Date;
+    }>(
+      "SELECT club_id,actor_id,target_user_id,action,created_at FROM club_audit WHERE actor_id=$1 OR target_user_id=$1 ORDER BY created_at,id",
       [userId],
     )
   ).rows;
@@ -718,6 +731,7 @@ export async function exportAccount(
     })),
     clubs,
     clubMemberships,
+    clubActions,
     rideIntents,
     rideIntentPreferences,
     notificationEmailPreferences,

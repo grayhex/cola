@@ -12,6 +12,7 @@ export function NavigationSettings({ settings, onChange }: SettingsProps) {
     components: "Компоненты",
     journal: "Журнал",
     rides: "Покатушки",
+    clubs: "Клубы",
     achievements: "Достижения",
     market: "Рынок",
     articles: "Статьи",

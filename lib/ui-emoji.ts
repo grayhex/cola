@@ -5,6 +5,7 @@ export const emojiSlots = [
   ["journal", "Журнал", "📓"],
   ["articles", "Статьи", "📚"],
   ["rides", "Покатушки", "🧭"],
+  ["clubs", "Клубы", ""],
   ["achievements", "Достижения", "🏅"],
   ["market", "Рынок", "🛍️"],
   ["about", "О проекте", "ℹ️"],

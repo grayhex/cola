@@ -1,3 +1,4 @@
+import type { ClubBadgesDto } from "./club-contracts.ts";
 import type { discoverySearch } from "./discovery.ts";
 import type { BikeRow } from "./database-rows.ts";
 import type { listAssetLibrary } from "./site-asset-library.ts";
@@ -96,6 +97,7 @@ export interface Relationship {
   friends: boolean;
 }
 export interface PublicProfile extends PublicAuthor {
+  clubBadges?: ClubBadgesDto;
   bio: string;
   location: string;
   createdAt: Date | string;
@@ -196,6 +198,7 @@ export interface PublicBike extends PublicEntityReference {
   photos: PublicPhoto[];
 }
 export interface SocialBike extends PublicBike {
+  ownerClubs?: ClubBadgesDto;
   author: PublicAuthor | null;
   is_owner: boolean;
   likes: number;

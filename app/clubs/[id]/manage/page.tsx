@@ -5,7 +5,7 @@ import { db } from "../../../../lib/db.ts";
 import { clubDetail } from "../../../../lib/clubs.ts";
 import { uuid } from "../../../../lib/validation.ts";
 import { CommunityError } from "../../../../lib/community-validation.ts";
-import ClubEditor from "../../../ui/club-editor.tsx";
+import ClubManagement from "../../../ui/club-management.tsx";
 export const dynamic = "force-dynamic",
   runtime = "nodejs";
 export default async function Page({
@@ -34,9 +34,9 @@ export default async function Page({
     const c = await clubDetail(db, id, user.id);
     if (!c.canManage) notFound();
     return (
-      <ClubEditor
-        initial={c}
-        rulesOnly={(await searchParams).section === "rules"}
+      <ClubManagement
+        club={c}
+        section={(await searchParams).section || "about"}
       />
     );
   } catch (e) {

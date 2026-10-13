@@ -65,11 +65,15 @@ export interface ClubRow {
   member_count: number;
   member_state: ClubState | null;
   member_role: ClubRole | null;
+  member_user_id: string | null;
+  invite_expires_at: Date | string | null;
+  transfer_user_id: string | null;
+  transfer_expires_at: Date | string | null;
 }
 const visible = "c.hidden_at IS NULL AND (c.owner_id IS NULL OR NOT u.blocked)";
 const memberColumns = `(SELECT count(*)::int FROM club_memberships cm JOIN users mu ON mu.id=cm.user_id
  WHERE cm.club_id=c.id AND cm.state='active' AND NOT mu.blocked) member_count,
- m.state member_state,m.role member_role`;
+ m.state member_state,m.role member_role,m.user_id member_user_id,m.invite_expires_at`;
 const columns = `c.*,${memberColumns}`;
 const summaryColumns = `c.id,c.name,c.slogan,c.city,c.formats,c.join_mode,c.members_visibility,c.logo_id,c.cover_id,c.archived_at,${memberColumns}`;
 const from = `FROM clubs c LEFT JOIN users u ON u.id=c.owner_id
@@ -78,7 +82,13 @@ const from = `FROM clubs c LEFT JOIN users u ON u.id=c.owner_id
 const iso = (v: Date | string | null) => (v ? new Date(v).toISOString() : null);
 type ClubSummaryRow = Omit<
   ClubRow,
-  "owner_id" | "mission" | "rules" | "rules_updated_at" | "version"
+  | "owner_id"
+  | "mission"
+  | "rules"
+  | "rules_updated_at"
+  | "version"
+  | "transfer_user_id"
+  | "transfer_expires_at"
 >;
 function clubSummaryDto(c: ClubSummaryRow): ClubSummaryDto {
   return {
@@ -94,9 +104,15 @@ function clubSummaryDto(c: ClubSummaryRow): ClubSummaryDto {
     archived: !!c.archived_at,
     memberCount: c.member_count,
     membership:
-      c.member_state && c.member_role
-        ? { state: c.member_state, role: c.member_role }
+      c.member_state && c.member_role && c.member_user_id
+        ? {
+            userId: c.member_user_id,
+            state: c.member_state,
+            role: c.member_role,
+            inviteExpiresAt: iso(c.invite_expires_at),
+          }
         : null,
+    ownershipOffer: null,
     canManage:
       !c.archived_at &&
       c.member_state === "active" &&
@@ -112,6 +128,14 @@ export function clubDto(c: ClubRow): ClubDto {
     rulesDoc: parseRichText(c.rules),
     rulesUpdatedAt: iso(c.rules_updated_at),
     version: c.version,
+    ownershipOffer:
+      c.transfer_user_id &&
+      c.transfer_expires_at &&
+      new Date(c.transfer_expires_at) > new Date() &&
+      c.member_state === "active" &&
+      c.transfer_user_id === c.member_user_id
+        ? { expiresAt: new Date(c.transfer_expires_at).toISOString() }
+        : null,
   };
 }
 export async function clubDetail(
@@ -137,6 +161,7 @@ export async function clubList(
     city?: string;
     format?: string;
     own?: boolean;
+    archived?: boolean;
   } = {},
 ) {
   const page = z
@@ -150,7 +175,7 @@ export async function clubList(
   const rows = (
     await q.query<ClubSummaryRow>(
       `SELECT ${summaryColumns} ${from}
- WHERE ${visible} AND c.archived_at IS NULL
+ WHERE ${visible} AND (c.archived_at IS NULL OR $7)
  AND ($1='' OR position(lower($1) IN lower(c.name || ' ' || c.slogan))>0)
  AND ($3='' OR lower(c.city)=lower($3)) AND ($4='' OR $4=ANY(c.formats))
  AND (NOT $5 OR m.state IN ('active','pending','invited'))
@@ -162,6 +187,7 @@ export async function clubList(
         (options.format || "").slice(0, 40),
         !!options.own,
         (page - 1) * 20,
+        !!options.own && !!options.archived,
       ],
     )
   ).rows;
@@ -193,7 +219,11 @@ export async function clubEligibility(
   };
 }
 // Always take the user lock BEFORE club locks; creation/transfer/restore share it.
-export async function lockClubActor(q: Queryable, user: string) {
+export async function lockClubActor(
+  q: Queryable,
+  user: string,
+  verified = true,
+) {
   const row = (
     await q.query<{ email_verified_at: Date | null }>(
       "SELECT email_verified_at FROM users WHERE id=$1 AND NOT blocked FOR UPDATE",
@@ -201,7 +231,7 @@ export async function lockClubActor(q: Queryable, user: string) {
     )
   ).rows[0];
   if (!row) throw new CommunityError("Аккаунт недоступен", 403);
-  if (!row.email_verified_at) throw new EmailPolicyError();
+  if (verified && !row.email_verified_at) throw new EmailPolicyError();
 }
 export async function lockManagedClub(
   q: Queryable,
@@ -238,10 +268,11 @@ export async function clubAudit(
   club: string,
   actor: string,
   action: string,
+  target: string | null = null,
 ) {
   await q.query(
-    "INSERT INTO club_audit(club_id,actor_id,action) VALUES($1,$2,$3)",
-    [club, actor, action],
+    "INSERT INTO club_audit(club_id,actor_id,action,target_user_id) VALUES($1,$2,$3,$4)",
+    [club, actor, action, target],
   );
 }
 export async function createClub(
@@ -385,6 +416,16 @@ export async function setClubArchived(
     "UPDATE clubs SET archived_at=CASE WHEN $2 THEN now() ELSE NULL END,version=version+1,updated_at=now() WHERE id=$1",
     [id, input.archived],
   );
+  if (input.archived) {
+    await q.query(
+      "UPDATE club_memberships SET state='left',role='member',invite_expires_at=NULL,revision=revision+1,updated_at=now() WHERE club_id=$1 AND state IN ('pending','invited')",
+      [id],
+    );
+    await q.query(
+      "UPDATE clubs SET transfer_user_id=NULL,transfer_expires_at=NULL,transfer_revision=transfer_revision+1 WHERE id=$1",
+      [id],
+    );
+  }
   await clubAudit(q, id, user, input.archived ? "archived" : "restored");
   return clubDetail(q, id, user);
 }

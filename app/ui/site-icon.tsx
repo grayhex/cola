@@ -67,6 +67,7 @@ export const slotIcons: Record<string, LucideIcon> = {
   journal: NotebookPen,
   articles: BookOpen,
   rides: Route,
+  clubs: UsersRound,
   achievements: Award,
   market: ShoppingBag,
   about: Info,

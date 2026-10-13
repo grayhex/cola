@@ -5,6 +5,8 @@ import { clubDetail, clubPath } from "../../../lib/clubs.ts";
 import { uuid } from "../../../lib/validation.ts";
 import { CommunityError } from "../../../lib/community-validation.ts";
 import { absolutePublicUrl } from "../../../lib/public-urls.ts";
+import Link from "next/link";
+import ClubMembers from "../../ui/club-members.tsx";
 import ClubHeader from "../../ui/club-header.tsx";
 import styles from "../../ui/clubs.module.css";
 export const dynamic = "force-dynamic",
@@ -40,8 +42,10 @@ export async function generateMetadata({
 }
 export default async function Page({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ tab?: string }>;
 }) {
   const id = (await params).id;
   if (!uuid.safeParse(id).success) notFound();
@@ -51,6 +55,15 @@ export default async function Page({
     return (
       <section className={styles.page}>
         <ClubHeader club={club} />
+        <nav className={styles.actions} aria-label="Разделы клуба">
+          <Link
+            className="button secondary"
+            href={"/clubs/" + id + "?tab=members"}
+          >
+            Участники
+          </Link>
+        </nav>
+        {(await searchParams).tab === "members" && <ClubMembers club={club} />}
       </section>
     );
   } catch (e) {

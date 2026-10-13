@@ -1,3 +1,4 @@
+import { publicClubBadges } from "./club-badges.ts";
 import type { PublicProfileInput as PublicProfileInputType } from "./social-validation.ts";
 import type { CurrentUser } from "./contracts.ts";
 import type { Queryable } from "./db.ts";
@@ -85,7 +86,15 @@ export async function getProfile(
   viewerId: string | null | undefined,
 ) {
   const row = await profileRow(q, username, viewerId);
-  return row ? publicProfile(row, await profileCounts(q, row.id)) : null;
+  if (!row) return null;
+  const [counts, clubs] = await Promise.all([
+    profileCounts(q, row.id),
+    publicClubBadges(q, [row.id]),
+  ]);
+  return {
+    ...publicProfile(row, counts),
+    clubBadges: clubs.get(row.id) || { items: [], total: 0 },
+  };
 }
 
 export async function updateProfile(

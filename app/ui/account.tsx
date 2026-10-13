@@ -73,6 +73,10 @@ const BikeWeekStory = dynamic(() => import("./bike-week-story.tsx"), {
   ssr: false,
   loading: () => <p role="status">Загружаем раздел…</p>,
 });
+const MyClubs = dynamic(() => import("./my-clubs.tsx"), {
+  ssr: false,
+  loading: () => <p role="status">Загружаем клубы…</p>,
+});
 const tabIcons = {
   overview: LayoutGrid,
   profile: UserRound,
@@ -80,6 +84,7 @@ const tabIcons = {
   rides: Route,
   integrations: Cable,
   social: Users,
+  clubs: Users,
   achievements: Trophy,
   spotlight: Trophy,
   appearance: Palette,
@@ -92,6 +97,7 @@ const tabs = {
   rides: "Мои покатушки",
   integrations: "Интеграции и импорт",
   social: "Социальное",
+  clubs: "Мои клубы",
   achievements: "Достижения",
   spotlight: "Велосипед недели",
   appearance: "Оформление",
@@ -901,6 +907,7 @@ function AccountContent() {
                   </>
                 )}
                 {tab === "rides" && <RideAccount />}
+                {tab === "clubs" && <MyClubs />}
                 {tab === "spotlight" && <BikeWeekStory />}
                 {tab === "integrations" && (
                   <AccountIntegrations onImported={reload} />

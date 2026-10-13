@@ -17,6 +17,7 @@ test("navigation defaults ignore retired ordering fields; known destinations res
       "journal",
       "articles",
       "rides",
+      "clubs",
       "achievements",
       "market",
       "about",
@@ -32,6 +33,7 @@ test("navigation defaults ignore retired ordering fields; known destinations res
       "journal",
       "articles",
       "rides",
+      "clubs",
       "achievements",
       "market",
       "about",
@@ -124,4 +126,25 @@ test("admin schema accepts missing legacy configuration but rejects unknown dest
     }).success,
     false,
   );
+});
+test("clubs are added once without changing the saved order or hiding choices", () => {
+  const old = sectionDefaults
+    .filter((s) => s.id !== "clubs")
+    .map((s) => ({ ...s, visible: s.id !== "journal" }))
+    .reverse();
+  const result = navigationSections({ navigation: old });
+  assert.deepEqual(
+    result.filter((s) => s.id !== "clubs"),
+    old,
+  );
+  assert.equal(result.filter((s) => s.id === "clubs").length, 1);
+  const customized = result
+    .map((s) =>
+      s.id === "clubs" ? { ...s, label: "Наши компании", visible: false } : s,
+    )
+    .reverse();
+  assert.deepEqual(navigationSections({ navigation: customized }), customized);
+  assert.equal(activeSection("/clubs/uuid"), "clubs");
+  assert.equal(activeSection("/account", "?tab=clubs"), "clubs");
+  assert.ok(sectionLinks("clubs", null).some((l) => l.href === "/clubs"));
 });

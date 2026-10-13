@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { ClubDto } from "../../lib/club-contracts.ts";
 import RichTextBody from "./rich-text-body.tsx";
+import ClubMembershipControls from "./club-membership-controls.tsx";
 import ClubLifecycle from "./club-lifecycle.tsx";
 import styles from "./clubs.module.css";
 export default function ClubHeader({ club: c }: { club: ClubDto }) {
@@ -48,6 +49,18 @@ export default function ClubHeader({ club: c }: { club: ClubDto }) {
         )}
         <RichTextBody doc={c.missionDoc} />
         <p className={styles.meta}>Участников: {c.memberCount}</p>
+        <ClubMembershipControls
+          key={
+            c.id +
+            ":" +
+            c.version +
+            ":" +
+            c.membership?.state +
+            ":" +
+            c.membership?.role
+          }
+          initial={c}
+        />
         <div className={styles.actions}>
           <Link className="button" href={"/clubs/" + c.id + "/rules"}>
             Правила клуба

@@ -888,3 +888,7 @@
     }
   }
 }
+
+.profile-hero.has-club-badges {
+  align-items: flex-start;
+}
