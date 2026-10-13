@@ -234,7 +234,7 @@ const blank = {
   bikeModelId: null,
   linkedBikeId: null,
 };
-function ListingEditor({
+function ListingForm({
   initial,
   onSaved,
   onCancel,
@@ -246,8 +246,17 @@ function ListingEditor({
   // SSR fields must not accept input before React can retain it in form state.
   const hydrated = useHydrated();
   const legacyCurrency = !!initial?.currency && initial.currency !== "RUB";
-  const { restored, remember, forget, pending, read, begin, isMounted } =
-    useContentDraft("market", initial?.id || "new");
+  const {
+    restored,
+    remember,
+    forget,
+    pending,
+    read,
+    begin,
+    isMounted,
+    shouldWarn,
+    resume,
+  } = useContentDraft("market", initial?.id || "new");
   const [baseline] = useState<ListingDraft>(
     () =>
       ({
@@ -269,7 +278,7 @@ function ListingEditor({
     [busy, setBusy] = useState(!!pending),
     [error, setError] = useState(restored?.error || "");
   const dirty = JSON.stringify(form) !== JSON.stringify(baseline);
-  const { mayDiscard, confirmation } = useDraftExit(dirty);
+  const { mayDiscard, confirmation } = useDraftExit(dirty, shouldWarn);
   useEffect(() => {
     if (!pending) return;
     let active = true;
@@ -330,10 +339,11 @@ function ListingEditor({
         try {
           const saved = await save(form.status === "sold" ? "sold" : "active");
           if (isMounted()) {
-            await onSaved(saved);
             forget();
+            await onSaved(saved);
           }
         } catch (e) {
+          resume();
           setError(errorMessage(e));
           remember({
             form,
@@ -507,6 +517,7 @@ function ListingEditor({
                       photos: photos.filter((v) => v.id !== p.id),
                     });
                   } catch (e) {
+                    resume();
                     setError(errorMessage(e));
                   } finally {
                     setBusy(false);
@@ -563,6 +574,7 @@ function ListingEditor({
                   remember({ form, identity: saved, photos: uploaded });
                 }
               } catch (e) {
+                resume();
                 setError(errorMessage(e));
                 remember({
                   form,
@@ -604,10 +616,11 @@ function ListingEditor({
             try {
               const saved = await save("draft");
               if (isMounted()) {
-                await onSaved(saved);
                 forget();
+                await onSaved(saved);
               }
             } catch (e) {
+              resume();
               setError(errorMessage(e));
               remember({
                 form,
@@ -642,6 +655,11 @@ function ListingEditor({
     </form>
   );
 }
+function ListingEditor(props: React.ComponentProps<typeof ListingForm>) {
+  const { viewer } = useSite();
+  return <ListingForm key={viewer?.id || "guest"} {...props} />;
+}
+
 export default function Market({
   share = null,
   create = false,

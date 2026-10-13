@@ -13,9 +13,10 @@ import { socialApi } from "./social-primitives.tsx";
 import PromptComposer from "./prompt-composer.tsx";
 import { journalKinds } from "../../lib/journal-kinds.ts";
 import { publicPath } from "../../lib/public-urls.ts";
+import { useSite } from "./site-provider.tsx";
 import { useContentDraft } from "./content-drafts.tsx";
 import { useDraftExit } from "./use-draft-exit.tsx";
-export default function JournalEditor({
+function JournalForm({
   entry = null,
   bikeId,
   bikes = null,
@@ -28,8 +29,17 @@ export default function JournalEditor({
   onSaved: (record: JournalSaved) => void | Promise<void>;
   onCancel?: () => void;
 }) {
-  const { restored, remember, forget, pending, read, begin, isMounted } =
-    useContentDraft("journal", entry?.id || "new:" + (bikeId || ""));
+  const {
+    restored,
+    remember,
+    forget,
+    pending,
+    read,
+    begin,
+    isMounted,
+    shouldWarn,
+    resume,
+  } = useContentDraft("journal", entry?.id || "new:" + (bikeId || ""));
   const [baseline] = useState<JournalDraft>({
     bikeId: entry?.bike.id || bikeId || "",
     kind: entry?.kind || "story",
@@ -56,7 +66,7 @@ export default function JournalEditor({
     );
   const dirty =
     JSON.stringify(form) !== JSON.stringify(baseline) || files.length > 0;
-  const { mayDiscard, confirmation } = useDraftExit(dirty);
+  const { mayDiscard, confirmation } = useDraftExit(dirty, shouldWarn);
   useEffect(() => {
     if (!pending) return;
     let active = true;
@@ -148,10 +158,11 @@ export default function JournalEditor({
       if (files.length && status === "published")
         await socialApi("journal/" + r.id, "PATCH", input);
       if (isMounted()) {
-        await onSaved(r);
         forget();
+        await onSaved(r);
       }
     } catch (e) {
+      resume();
       const message =
         errorMessage(e) +
         (record ? " Черновик/сохранённые данные доступны по ссылке ниже." : "");
@@ -496,4 +507,11 @@ export default function JournalEditor({
       </div>
     </form>
   );
+}
+
+export default function JournalEditor(
+  props: React.ComponentProps<typeof JournalForm>,
+) {
+  const { viewer } = useSite();
+  return <JournalForm key={viewer?.id || "guest"} {...props} />;
 }

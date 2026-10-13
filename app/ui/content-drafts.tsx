@@ -65,11 +65,7 @@ export function ContentDraftProvider({
     }),
     [ownerId],
   );
-  return (
-    <Context.Provider key={ownerId || "guest"} value={value}>
-      {children}
-    </Context.Provider>
-  );
+  return <Context.Provider value={value}>{children}</Context.Provider>;
 }
 
 export function useContentDraft<K extends keyof Drafts>(kind: K, key: string) {
@@ -80,6 +76,10 @@ export function useContentDraft<K extends keyof Drafts>(kind: K, key: string) {
   const [pending] = useState(() => context.tasks.get(token));
   const [restored] = useState(() => cache.get(key));
   const forgotten = useRef(false);
+  const shouldWarn = useCallback(() => !forgotten.current, []);
+  const resume = useCallback(() => {
+    forgotten.current = false;
+  }, []);
   const mounted = useRef(true);
   useEffect(() => {
     mounted.current = true;
@@ -112,5 +112,15 @@ export function useContentDraft<K extends keyof Drafts>(kind: K, key: string) {
     forgotten.current = true;
     cache.delete(key);
   }, [cache, key]);
-  return { restored, remember, forget, pending, read, begin, isMounted };
+  return {
+    restored,
+    remember,
+    forget,
+    pending,
+    read,
+    begin,
+    isMounted,
+    shouldWarn,
+    resume,
+  };
 }

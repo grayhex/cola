@@ -61,6 +61,11 @@ for (const scene of scenes) {
     browserName,
   }, info) => {
     await member(page);
+    const dialogs = [];
+    page.on("dialog", async (dialog) => {
+      dialogs.push(dialog.type());
+      await dialog.accept();
+    });
     for (const width of browserName === "chromium" ? [393, 1440] : [393]) {
       await page.setViewportSize({ width, height: width > 393 ? 900 : 852 });
       for (const theme of ["light", "dark"]) {
@@ -135,6 +140,10 @@ for (const scene of scenes) {
         ).toHaveValue("");
       }
     }
+    expect(
+      dialogs,
+      "Successful saving must not warn that its text will be lost",
+    ).toEqual([]);
   });
 }
 

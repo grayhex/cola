@@ -333,7 +333,7 @@ export function NewArticle() {
     </>
   );
 }
-function ArticleEditor({
+function ArticleForm({
   initial,
   onSaved,
   onCancel,
@@ -347,8 +347,17 @@ function ArticleEditor({
   useEffect(() => setReady(true), []);
   const { settings } = useSite(),
     topics = settings.articleTopics || [];
-  const { restored, remember, forget, pending, read, begin, isMounted } =
-    useContentDraft("article", initial?.id || "new");
+  const {
+    restored,
+    remember,
+    forget,
+    pending,
+    read,
+    begin,
+    isMounted,
+    shouldWarn,
+    resume,
+  } = useContentDraft("article", initial?.id || "new");
   const [record, setRecord] = useState<ArticleSaved | null>(
       restored?.record || initial || null,
     ),
@@ -363,7 +372,7 @@ function ArticleEditor({
     [busy, setBusy] = useState(!!pending),
     [error, setError] = useState(restored?.error || ""),
     [dirty, setDirty] = useState(restored?.dirty || false);
-  const { mayDiscard, confirmation } = useDraftExit(dirty);
+  const { mayDiscard, confirmation } = useDraftExit(dirty, shouldWarn);
   useEffect(() => {
     if (!pending) return;
     let active = true;
@@ -435,10 +444,11 @@ function ArticleEditor({
             "articles/public/" + result.shareId,
           );
           if (isMounted()) {
-            await onSaved(d.article);
             forget();
+            await onSaved(d.article);
           }
         } catch (e) {
+          resume();
           setError(errorMessage(e));
           remember({
             form,
@@ -548,6 +558,7 @@ function ArticleEditor({
                     dirty: true,
                   });
                 } catch (e) {
+                  resume();
                   setError(errorMessage(e));
                   remember({
                     form,
@@ -606,6 +617,7 @@ function ArticleEditor({
                       ),
                     );
                   } catch (e) {
+                    resume();
                     setError(errorMessage(e));
                   } finally {
                     setBusy(false);
@@ -669,6 +681,7 @@ function ArticleEditor({
                 forget();
                 router.push("/articles?own=1");
               } catch (e) {
+                resume();
                 setError(errorMessage(e));
                 setBusy(false);
               }
@@ -680,4 +693,9 @@ function ArticleEditor({
       </div>
     </form>
   );
+}
+
+function ArticleEditor(props: React.ComponentProps<typeof ArticleForm>) {
+  const { viewer } = useSite();
+  return <ArticleForm key={viewer?.id || "guest"} {...props} />;
 }
