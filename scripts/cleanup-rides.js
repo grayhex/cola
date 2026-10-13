@@ -1,6 +1,7 @@
 import { db } from "../lib/db.ts";
 import { cleanupRides } from "../lib/ride-storage.ts";
 import { cleanupMarketPhotos } from "../lib/market.ts";
+import { cleanupClubPhotos } from "../lib/club-storage.ts";
 import { cleanupJournalPhotos } from "../lib/journal-storage.ts";
 import { cleanupComponentPhotos } from "../lib/component-photos.ts";
 // Scheduled storage maintenance (#248): requests no longer clean storage, so
@@ -12,6 +13,7 @@ try {
   console.log(JSON.stringify({ event: "ride_storage_cleanup", ...rides }));
   await cleanupMarketPhotos(db, { orphans: true });
   await cleanupJournalPhotos(db, { orphans: true });
+  await cleanupClubPhotos(db, { orphans: true });
   await cleanupComponentPhotos(db, { orphans: true });
 } finally {
   await db.end();
