@@ -83,7 +83,11 @@ test("from the showcase the wizard opens over the page: no trip to the account, 
     .first();
   await expect(add).toBeVisible();
   await scrolled(page);
-  await add.click();
+  // A pointer click may first auto-scroll the link past the sticky header:
+  // CI's trace then correctly locked top:0. Keyboard activation retains the
+  // prepared offset and tests the real scrolled-modal restoration contract.
+  await add.evaluate((element) => element.focus({ preventScroll: true }));
+  await add.press("Enter");
   const wizard = wizardOf(page);
   await expect(wizard).toBeVisible();
   // The page under the window is the one the rider was on.
