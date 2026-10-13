@@ -19,7 +19,18 @@ import type {
   MarketSaved,
 } from "./content-types.ts";
 
+import type { ClubDto, ClubForm } from "../../lib/club-contracts.ts";
+
 interface Drafts {
+  club: {
+    form: ClubForm;
+    rules: string;
+    requestId: string;
+    record: ClubDto | null;
+    logo: File | null;
+    cover: File | null;
+    dirty: boolean;
+  };
   article: {
     form: { title: string; body: string; topicId: string };
     record: ArticleSaved | null;
@@ -58,6 +69,7 @@ export function ContentDraftProvider({
       ownerId,
       tasks: new Map<string, Promise<void>>(),
       stores: {
+        club: new Map<string, Snapshot<"club">>(),
         article: new Map<string, Snapshot<"article">>(),
         journal: new Map<string, Snapshot<"journal">>(),
         market: new Map<string, Snapshot<"market">>(),

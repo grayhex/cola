@@ -290,6 +290,19 @@ export async function removeAccount(q: Queryable, userId: string) {
   if (!user) return { error: "Аккаунт недоступен", status: 404 };
   if (user.role === "admin")
     return { error: adminDeletionMessage, status: 409 };
+  if (
+    (
+      await q.query(
+        "SELECT 1 FROM clubs WHERE owner_id=$1 AND archived_at IS NULL LIMIT 1",
+        [userId],
+      )
+    ).rowCount
+  )
+    return {
+      error:
+        "Сначала передайте владение или архивируйте свои клубы, затем удалите аккаунт.",
+      status: 409,
+    };
   const files = await accountFiles(q, userId);
   await q.query("DELETE FROM users WHERE id=$1", [userId]);
   return { ok: true, files };
@@ -506,6 +519,39 @@ export async function exportAccount(
       [userId],
     )
   ).rows[0]?.value || { passport: {} };
+  const clubs = (
+    await q.query<{
+      id: string;
+      name: string;
+      slogan: string;
+      city: string;
+      formats: string[];
+      mission: string;
+      rules: string;
+      join_mode: string;
+      members_visibility: string;
+      archived_at: Date | null;
+      created_at: Date;
+      updated_at: Date;
+    }>(
+      "SELECT id,name,slogan,city,formats,mission,rules,join_mode,members_visibility,archived_at,created_at,updated_at FROM clubs WHERE owner_id=$1 ORDER BY created_at,id",
+      [userId],
+    )
+  ).rows;
+  const clubMemberships = (
+    await q.query<{
+      club_id: string;
+      role: string;
+      state: string;
+      badge_visible: boolean;
+      badge_order: number;
+      created_at: Date;
+      updated_at: Date;
+    }>(
+      "SELECT club_id,role,state,badge_visible,badge_order,created_at,updated_at FROM club_memberships WHERE user_id=$1 ORDER BY created_at,club_id",
+      [userId],
+    )
+  ).rows;
   const link = (href: string) => absolute(origin, href);
   const notificationSettingsRow = (
     await q.query<{
@@ -670,6 +716,8 @@ export async function exportAccount(
       ...listing,
       photos: photo_ids.map((id: string) => link("/api/market/media/" + id)),
     })),
+    clubs,
+    clubMemberships,
     rideIntents,
     rideIntentPreferences,
     notificationEmailPreferences,
