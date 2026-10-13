@@ -240,6 +240,11 @@ test("left admin navigation, configurable emoji, frame labels and one-tap weekly
       await expect(
         card.getByRole("button", { name: /^Может быть/ }),
       ).toHaveAttribute("aria-pressed", "true");
+      await expect(
+        card
+          .getByRole("status")
+          .filter({ hasText: "Ответ сохранён: Может быть" }),
+      ).toHaveText("Ответ сохранён: Может быть");
       await rider.reload();
       await expect(
         card.getByRole("button", { name: /^Может быть/ }),

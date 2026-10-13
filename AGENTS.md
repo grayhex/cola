@@ -7,6 +7,7 @@
 - Next.js / React; production-код в `app/`, `lib/` и корневом `proxy.ts` — native strict TypeScript/TSX; бизнес-логика и SQL в `lib/`, HTTP в `app/api/`, UI в `app/ui/`. Общие типы границ — `lib/contracts.ts`; входные типы выводятся из Zod. Resolver — отдельный TypeScript-сервис в `services/bike-resolver/`.
 - Node 24.x; корень — pnpm с закреплённым `packageManager`, Resolver — npm. Сохраняйте соответствующие lockfiles. Код, схема и workflows определяют текущее поведение; issues — намерения и приоритеты.
 - Интерфейс: [дизайн-код](docs/development/design-system.md), семантические токены `app/styles/tokens.css`, общие компоненты. Обе темы, мобильный экран, клавиатура и reduced motion обязательны. Переиспользуйте существующие Motion/Rive-механизмы.
+- Impeccable для дополнительного UI-ревью: [установка и границы проверки](docs/development/design-qa.md). `PRODUCT.md`/`DESIGN.md` — производный контекст; исходные токены и документы ColaBike выше шаблонов detector. Skill закреплён submodule; hooks автоматически не включаются.
 
 ## Инварианты
 

@@ -1,0 +1,53 @@
+name: Design QA · report only
+
+on:
+  pull_request:
+    paths:
+      - "app/**"
+      - "tools/design-qa/**"
+      - ".impeccable/**"
+      - "PRODUCT.md"
+      - "DESIGN.md"
+      - ".github/workflows/design-qa.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-report:
+    name: Impeccable source report
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # Separate optional workflow; operational failures are visible, not gates.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24.21.0
+          cache: npm
+          cache-dependency-path: tools/design-qa/package-lock.json
+      - name: Install only the locked development CLI
+        run: npm ci --prefix tools/design-qa --ignore-scripts
+      - name: Validate the pinned engine
+        run: node tools/design-qa/impeccable.mjs engine-probe
+      - name: Source scan — findings do not block merge
+        run: node tools/design-qa/report.mjs "$RUNNER_TEMP/design-qa" app/
+      - name: Publish status and diagnostics
+        if: always()
+        run: |
+          if [ -f "$RUNNER_TEMP/design-qa/summary.md" ]; then
+            cat "$RUNNER_TEMP/design-qa/summary.md" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Scan did not produce a report; installation or execution failed." >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: impeccable-source-report
+          path: ${{ runner.temp }}/design-qa/
+          if-no-files-found: warn
+          retention-days: 14

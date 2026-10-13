@@ -1,4 +1,6 @@
 # Dependencies, build output, runtime storage and test reports.
+# Upstream submodule: keep licensed provider payloads unchanged.
+.impeccable/vendor/
 **/node_modules/
 **/.next/
 **/dist/
