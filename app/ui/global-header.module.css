@@ -505,8 +505,7 @@ dialog.drawer {
   .header[data-wide-navigation] :global(.global-nav) {
     flex: none;
   }
-  .header[data-wide-navigation] :global(.primary-navigation),
-  .header[data-wide-navigation] :global(.desktop-account) {
+  .header[data-wide-navigation] :global(.primary-navigation) {
     display: none;
   }
   .header[data-wide-navigation] :global(.mobile-nav-toggle) {

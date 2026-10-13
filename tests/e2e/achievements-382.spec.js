@@ -73,6 +73,9 @@ test("«Достижения» is its own section: two links, none left in «В�
       await expect(
         page.getByRole("button", { name: "Открыть меню" }),
       ).toBeVisible();
+      const account = page.locator("header .desktop-account");
+      if (width >= 1276) await expect(account).toBeVisible();
+      else await expect(account).toBeHidden();
       expect(await pageOverflow(page)).toBeNull();
     }
     for (const width of [1400, 1440, 1499, 1500, 1639, 1640, 1920]) {
