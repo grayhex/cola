@@ -409,3 +409,43 @@ test("a bulk-created member profile follows edits and deletion even before its f
     false,
   );
 });
+
+test("a slow projection is bounded and cannot issue a late add after its SQL lock expires", async () => {
+  const p = await setup();
+  let now = 0;
+  const original = p.provider.upsertUsers.bind(p.provider);
+  p.provider.upsertUsers = async (users) => {
+    const result = await original(users);
+    if (users.some((u) => u.id.startsWith("cola_"))) now += 21000;
+    return result;
+  };
+  await assert.rejects(
+    db.transaction((q) => syncClubChannel(q, p.club.id, p.provider, () => now)),
+    /Синхронизация чата/,
+  );
+  assert.equal(
+    p.provider.calls.some((c) => c[0] === "addMembers"),
+    false,
+  );
+  assert.equal(
+    (
+      await db.query("SELECT 1 FROM club_chat_jobs WHERE club_id=$1", [
+        p.club.id,
+      ])
+    ).rowCount,
+    1,
+  );
+  p.provider.upsertUsers = original;
+  await db.transaction((q) =>
+    manageClubMember(q, p.club.id, p.owner.id, p.member.id, {
+      action: "exclude",
+    }),
+  );
+  await db.transaction((q) => syncClubChannel(q, p.club.id, p.provider));
+  assert.equal(
+    p.provider.channels
+      .get(clubChannelCid(p.club.id))
+      ?.members.some((m) => m.user_id === streamUserId(p.member.id)),
+    false,
+  );
+});

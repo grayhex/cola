@@ -100,9 +100,20 @@ export async function issueChatToken(
   await ensureChatPolicy(provider);
   const users = await lockChatUsers(q, [viewer.id]);
   await requireSession(q, viewer, sessionHash);
-  await syncViewerClubRevocations(q, viewer.id, provider);
   await registerChatUsers(q, users, provider);
+  // Clubs precede their plain revocation rows, just as archive/hidden triggers
+  // do. Taking a job row first and then its club can deadlock an archive.
   await syncViewerClubChannels(q, viewer.id, provider);
+  await syncViewerClubRevocations(q, viewer.id, provider);
+  if (
+    (
+      await q.query(
+        "SELECT 1 FROM club_chat_jobs j JOIN club_memberships m ON m.club_id=j.club_id WHERE m.user_id=$1 LIMIT 1",
+        [viewer.id],
+      )
+    ).rowCount
+  )
+    throw new ChatError("Обновляем доступ к сообщениям. Попробуйте позже", 503);
   const identity = (
     await q.query<{ revoked_at: Date | null }>(
       "SELECT revoked_at FROM chat_identities WHERE user_id=$1",

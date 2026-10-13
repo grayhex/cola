@@ -87,7 +87,20 @@ export async function syncClubChannel(
   q: Queryable,
   id: string,
   provider = chatProvider(),
+  clock: () => number = Date.now,
+  deadline = clock() + 20000,
 ) {
+  async function rpc<T>(call: () => Promise<T>): Promise<T> {
+    if (clock() >= deadline)
+      throw new ChatError(
+        "Синхронизация чата ещё выполняется. Повторите открытие позже",
+        503,
+      );
+    // Keep the club lock alive before each bounded RPC; an expired SQL
+    // transaction must never continue applying an old membership snapshot.
+    await q.query("SELECT 1");
+    return call();
+  }
   const c = (
     await q.query<ClubChatRow>(
       "SELECT c.*,co.blocked owner_blocked FROM clubs c LEFT JOIN users co ON co.id=c.owner_id WHERE c.id=$1 FOR UPDATE OF c",
@@ -98,10 +111,12 @@ export async function syncClubChannel(
   await ensureChatPolicy(provider);
   const enabled = !!chatConfig();
   if (!enabled) {
-    const existing = await provider.queryChannels(
-      { cid: clubChannelCid(id) },
-      [],
-      { limit: 1, watch: false, state: false },
+    const existing = await rpc(() =>
+      provider.queryChannels({ cid: clubChannelCid(id) }, [], {
+        limit: 1,
+        watch: false,
+        state: false,
+      }),
     );
     if (!existing.length) {
       await q.query(
@@ -132,28 +147,37 @@ export async function syncClubChannel(
       503,
     );
   if (enabled)
-    await provider.upsertUser({
-      id: CLUB_CHAT_CREATOR,
-      role: CHAT_ROLE,
-      name: "ColaBike clubs",
-      image: "",
-    });
+    await rpc(() =>
+      provider.upsertUser({
+        id: CLUB_CHAT_CREATOR,
+        role: CHAT_ROLE,
+        name: "ColaBike clubs",
+        image: "",
+      }),
+    );
   const channel = provider.channel(CHAT_TYPE, clubChannelId(id), {
     created_by_id: CLUB_CHAT_CREATOR,
     members: [],
     club_id: id,
   });
-  if (enabled) await channel.create();
+  if (enabled) await rpc(() => channel.create());
   const remote = new Map<
     string,
-    { banned?: boolean; channel_role?: string; club_role?: ClubRole }
+    {
+      banned?: boolean;
+      channel_role?: string;
+      club_role?: ClubRole;
+      user?: { name?: string; image?: string; role?: string };
+    }
   >();
   let after: string | undefined;
   for (let scanned = 0; scanned <= MAX_RECONCILE_MEMBERS; scanned += PAGE) {
-    const result = await channel.queryMembers(
-      {},
-      { user_id: 1 },
-      { limit: PAGE, ...(after ? { user_id_gt: after } : {}) },
+    const result = await rpc(() =>
+      channel.queryMembers(
+        {},
+        { user_id: 1 },
+        { limit: PAGE, ...(after ? { user_id_gt: after } : {}) },
+      ),
     );
     for (const m of result.members) {
       const uid = m.user_id || m.user?.id;
@@ -171,18 +195,35 @@ export async function syncClubChannel(
   const wanted = new Map(desired.map((u) => [streamUserId(u.id), u]));
   const removed = [...remote.keys()].filter((uid) => !wanted.has(uid));
   for (let offset = 0; offset < removed.length; offset += PAGE)
-    await channel.removeMembers(removed.slice(offset, offset + PAGE));
+    await rpc(() =>
+      channel.removeMembers(removed.slice(offset, offset + PAGE)),
+    );
   for (let offset = 0; offset < desired.length; offset += PAGE) {
     const people = desired.slice(offset, offset + PAGE);
-    await provider.upsertUsers(people.map((u) => chatProfile(u)));
+    const changedProfiles = people.filter((u) => {
+      const prior = remote.get(streamUserId(u.id))?.user,
+        profile = chatProfile(u);
+      return (
+        !prior ||
+        prior.role !== CHAT_ROLE ||
+        prior.name !== profile.name ||
+        (prior.image || "") !== profile.image
+      );
+    });
+    if (changedProfiles.length)
+      await rpc(() =>
+        provider.upsertUsers(changedProfiles.map((u) => chatProfile(u))),
+      );
     const additions = people.filter((u) => !remote.has(streamUserId(u.id)));
     if (additions.length)
-      await channel.addMembers(
-        additions.map((u) => ({
-          user_id: streamUserId(u.id),
-          channel_role: CHAT_MEMBER_ROLE,
-          club_role: u.role,
-        })),
+      await rpc(() =>
+        channel.addMembers(
+          additions.map((u) => ({
+            user_id: streamUserId(u.id),
+            channel_role: CHAT_MEMBER_ROLE,
+            club_role: u.role,
+          })),
+        ),
       );
     for (const u of people) {
       const member = remote.get(streamUserId(u.id));
@@ -196,29 +237,34 @@ export async function syncClubChannel(
         (member.club_role !== u.role ||
           member.channel_role !== CHAT_MEMBER_ROLE)
       )
-        await channel.updateMemberPartial(
-          { set: { channel_role: CHAT_MEMBER_ROLE, club_role: u.role } },
-          { userId: streamUserId(u.id) },
+        await rpc(() =>
+          channel.updateMemberPartial(
+            { set: { channel_role: CHAT_MEMBER_ROLE, club_role: u.role } },
+            { userId: streamUserId(u.id) },
+          ),
         );
     }
   }
   // Frozen channels retain the saved cohort's history but reject new messages
   // through Stream's own grants. Hidden clubs/blocked owners have no members.
-  await channel.updatePartial({
-    set: {
-      club_id: id,
-      club_revision: String(c.chat_revision),
-      name: c.name,
-      image:
-        c.logo_id && process.env.APP_ORIGIN
-          ? new URL(
-              "/api/clubs/" + id + "/media/" + c.logo_id,
-              process.env.APP_ORIGIN,
-            ).href
-          : "",
-      frozen: !enabled || !!c.archived_at || !!c.hidden_at || !!c.owner_blocked,
-    },
-  });
+  await rpc(() =>
+    channel.updatePartial({
+      set: {
+        club_id: id,
+        club_revision: String(c.chat_revision),
+        name: c.name,
+        image:
+          c.logo_id && process.env.APP_ORIGIN
+            ? new URL(
+                "/api/clubs/" + id + "/media/" + c.logo_id,
+                process.env.APP_ORIGIN,
+              ).href
+            : "",
+        frozen:
+          !enabled || !!c.archived_at || !!c.hidden_at || !!c.owner_blocked,
+      },
+    }),
+  );
   if (!enabled) {
     await q.query(
       "UPDATE club_chat_jobs SET next_attempt_at=now()+interval '30 seconds' WHERE club_id=$1",
@@ -356,7 +402,9 @@ export async function syncViewerClubChannels(
   ).rows;
   if (jobs.length > 20)
     throw new ChatError("Обновляем доступ к сообщениям. Попробуйте позже", 503);
-  for (const job of jobs) await syncClubChannel(q, job.club_id, provider);
+  const deadline = Date.now() + 20000;
+  for (const job of jobs)
+    await syncClubChannel(q, job.club_id, provider, Date.now, deadline);
 }
 
 /** A token issued after an archive must not be disconnected by its older queued
@@ -374,6 +422,25 @@ export async function syncViewerClubRevocations(
   ).rows;
   if (jobs.length > 20)
     throw new ChatError("Обновляем доступ к сообщениям. Попробуйте позже", 503);
+  if (!jobs.length) return;
+  // All these club jobs revoke the same person. One global revoke is enough;
+  // repeating the vendor lifecycle once per club would hold locks needlessly.
+  await q.query(
+    "SELECT club_id FROM club_chat_revocations WHERE user_id=$1 AND club_id=ANY($2::uuid[]) ORDER BY club_id FOR UPDATE",
+    [actor, jobs.map((job) => job.club_id)],
+  );
+  await q.query("SELECT cola_queue_chat($1,'sync',true)", [actor]);
+  const global = (
+    await q.query<ChatJobRow>(
+      "SELECT * FROM chat_jobs WHERE user_id=$1 FOR UPDATE",
+      [actor],
+    )
+  ).rows[0];
+  if (global && !(await syncChatJob(q, global, provider)))
+    throw new ChatError("Отзыв доступа ещё выполняется", 503);
   for (const job of jobs)
-    await syncClubRevocation(q, job.club_id, actor, job.revision, provider);
+    await q.query(
+      "DELETE FROM club_chat_revocations WHERE club_id=$1 AND user_id=$2 AND revision=$3",
+      [job.club_id, actor, job.revision],
+    );
 }
