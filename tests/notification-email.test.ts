@@ -338,10 +338,14 @@ test("signed unsubscribe has no login dependency, expires, resists tampering and
       )
     ).unsubscribe_key;
     const token = notificationUnsubscribeToken(s.recipient, key);
-    assert.equal(
-      await unsubscribeNotificationEmail(s.db, token.slice(0, -2) + "xx"),
-      false,
-    );
+    // Mutate signed bytes, not base64 padding bits: changing the last text
+    // characters can decode to the same signature (#408 CI audit).
+    const signatureStart = token.lastIndexOf(".") + 1;
+    const changed = Buffer.from(token.slice(signatureStart), "base64url");
+    changed[0] ^= 1;
+    const tampered =
+      token.slice(0, signatureStart) + changed.toString("base64url");
+    assert.equal(await unsubscribeNotificationEmail(s.db, tampered), false);
     assert.equal(
       await unsubscribeNotificationEmail(
         s.db,
