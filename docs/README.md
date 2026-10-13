@@ -23,6 +23,7 @@
 | [Тестирование](development/testing.md)                 | Команды, PostgreSQL, HTTP, браузеры и Docker drill      |
 | [Дизайн-система](development/design-system.md)         | Референсы Hugging Face, токены, типографика, компоненты |
 | [Design QA](development/design-qa.md)                  | Закреплённый Impeccable, контекст, detector и приёмка   |
+| [Реестр UI-аудита](development/design-qa-findings.md)  | Находки #408, baseline и остаточная приёмка             |
 | [Интерфейс](development/ui.md)                         | Темы, редактор, SSR, формы и адаптивность               |
 | [Motion и View Transitions](development/motion.md)     | Переходы, обратная связь, reduced motion и измерения    |
 | [Графика hero и Rive](development/rive.md)             | Статичный hero, архив сцен, исходники и экспорт         |
