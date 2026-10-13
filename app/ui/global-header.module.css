@@ -412,9 +412,9 @@ dialog.drawer {
 .drawer summary {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: 0;
   min-height: 44px;
-  padding: 0 var(--space-3);
+  padding: 0;
   list-style: none;
   cursor: pointer;
 }
@@ -425,7 +425,8 @@ dialog.drawer {
   content: "";
   width: 8px;
   height: 8px;
-  margin: -4px 4px 0 auto;
+  flex: none;
+  margin: -4px calc((var(--control-lg) - 8px) / 2) 0;
   border-right: 1.5px solid var(--text-muted);
   border-bottom: 1.5px solid var(--text-muted);
   transform: rotate(45deg);
@@ -443,6 +444,13 @@ dialog.drawer {
   gap: var(--space-2-5);
   font-size: var(--text-base);
   font-weight: var(--weight-semibold);
+}
+.drawer :global(.nav-menu-link),
+.drawer summary a {
+  min-height: var(--control-lg);
+}
+.drawer summary a {
+  padding-inline: var(--space-3);
 }
 .drawer summary a :global(.site-icon) {
   color: var(--text-subtle);

@@ -192,7 +192,7 @@ export function FilterControl({
           </button>
           <button
             type="button"
-            className="button small"
+            className="button"
             onClick={() => {
               onChange(draft);
               onFacetsChange?.(
