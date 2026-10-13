@@ -13,6 +13,8 @@ import { socialApi } from "./social-primitives.tsx";
 import PromptComposer from "./prompt-composer.tsx";
 import { journalKinds } from "../../lib/journal-kinds.ts";
 import { publicPath } from "../../lib/public-urls.ts";
+import { useContentDraft } from "./content-drafts.tsx";
+import { useDraftExit } from "./use-draft-exit.tsx";
 export default function JournalEditor({
   entry = null,
   bikeId,
@@ -26,7 +28,9 @@ export default function JournalEditor({
   onSaved: (record: JournalSaved) => void | Promise<void>;
   onCancel?: () => void;
 }) {
-  const [form, setForm] = useState<JournalDraft>({
+  const { restored, remember, forget, pending, read, begin, isMounted } =
+    useContentDraft("journal", entry?.id || "new:" + (bikeId || ""));
+  const [baseline] = useState<JournalDraft>({
     bikeId: entry?.bike.id || bikeId || "",
     kind: entry?.kind || "story",
     installationResult: entry?.installationResult || null,
@@ -39,16 +43,41 @@ export default function JournalEditor({
     rideId: entry?.ride?.id || null,
     componentIds: entry?.components.map((c) => c.id) || [],
   });
+  const [form, setForm] = useState(restored?.form || baseline);
   const [bike, setBike] = useState<BikeDto | null>(null),
     [rides, setRides] = useState<RideListDto["rides"]>([]),
     [ridePage, setRidePage] = useState(1),
     [rideTotal, setRideTotal] = useState(0),
-    [error, setError] = useState(""),
-    [busy, setBusy] = useState(false),
-    [files, setFiles] = useState<File[]>([]),
+    [error, setError] = useState(restored?.error || ""),
+    [busy, setBusy] = useState(!!pending),
+    [files, setFiles] = useState<File[]>(restored?.files || []),
     [saved, setSaved] = useState<(JournalSaved & Partial<JournalDto>) | null>(
-      entry,
+      restored?.saved || entry,
     );
+  const dirty =
+    JSON.stringify(form) !== JSON.stringify(baseline) || files.length > 0;
+  const { mayDiscard, confirmation } = useDraftExit(dirty);
+  useEffect(() => {
+    if (!pending) return;
+    let active = true;
+    pending.then(() => {
+      if (!active) return;
+      const latest = read();
+      setError(latest?.error || "");
+      if (latest) {
+        setForm(latest.form);
+        setFiles(latest.files);
+        setSaved(latest.saved);
+      }
+      setBusy(false);
+    });
+    return () => {
+      active = false;
+    };
+  }, [pending, read]);
+  useEffect(() => {
+    if (!busy) remember(dirty ? { form, files, saved, error } : undefined);
+  }, [dirty, form, files, saved, error, busy, remember]);
   const set = <K extends keyof JournalDraft>(k: K, v: JournalDraft[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
   useEffect(() => {
@@ -84,9 +113,11 @@ export default function JournalEditor({
     ),
   ];
   async function submit(status: "draft" | "published") {
+    const done = begin();
     setBusy(true);
     setError("");
     let record = saved;
+    let remaining = files;
     try {
       const input = { ...form, status };
       if (!input.bikeId) throw Error("Выберите велосипед для записи");
@@ -101,6 +132,7 @@ export default function JournalEditor({
       );
       record = { ...record, ...r };
       setSaved(record);
+      remember({ form, saved: record, files: remaining });
       for (const f of files) {
         const res = await fetch("/api/journal/" + r.id + "/photos", {
           method: "POST",
@@ -110,25 +142,33 @@ export default function JournalEditor({
         const d: Partial<ApiError> = await res.json();
         if (!res.ok) throw Error(d.error);
         setFiles((a) => a.filter((x) => x !== f));
+        remaining = remaining.filter((x) => x !== f);
+        remember({ form, saved: record, files: remaining });
       }
       if (files.length && status === "published")
         await socialApi("journal/" + r.id, "PATCH", input);
-      await onSaved(r);
+      if (isMounted()) {
+        await onSaved(r);
+        forget();
+      }
     } catch (e) {
-      setError(
+      const message =
         errorMessage(e) +
-          (record
-            ? " Черновик/сохранённые данные доступны по ссылке ниже."
-            : ""),
-      );
+        (record ? " Черновик/сохранённые данные доступны по ссылке ниже." : "");
+      setError(message);
+      remember({ form, saved: record, files: remaining, error: message });
       if (record?.shareId) {
         const d = await socialApi<{ entry: JournalDto }>(
           "journal/public/" + record.shareId,
         ).catch(() => null);
-        if (d) setSaved(d.entry);
+        if (d) {
+          setSaved(d.entry);
+          remember({ form, saved: d.entry, files: remaining, error: message });
+        }
       }
     } finally {
       setBusy(false);
+      done();
     }
   }
   return (
@@ -139,6 +179,12 @@ export default function JournalEditor({
         submit("published");
       }}
     >
+      {restored && (
+        <p role="status" className="help">
+          Черновик восстановлен. Сохраните изменения, когда закончите.
+        </p>
+      )}
+      {confirmation}
       {bikes && !entry && (
         <label className="field">
           <span>Велосипед для записи</span>
@@ -178,6 +224,7 @@ export default function JournalEditor({
         <span>Тип записи</span>
         <select
           aria-label="Тип записи"
+          disabled={busy}
           value={form.kind}
           onChange={(e) => set("kind", e.target.value)}
         >
@@ -192,6 +239,7 @@ export default function JournalEditor({
         <span>Заголовок записи</span>
         <input
           maxLength={160}
+          disabled={busy}
           value={form.title}
           onChange={(e) => set("title", e.target.value)}
         />
@@ -201,6 +249,7 @@ export default function JournalEditor({
           <span>Результат установки — необязательно</span>
           <select
             aria-label="Результат установки"
+            disabled={busy}
             value={form.installationResult || ""}
             onChange={(e) => set("installationResult", e.target.value || null)}
           >
@@ -227,6 +276,7 @@ export default function JournalEditor({
           <span>Дата события (необязательно)</span>
           <input
             type="date"
+            disabled={busy}
             value={form.eventDate || ""}
             onChange={(e) => set("eventDate", e.target.value || null)}
           />
@@ -235,6 +285,7 @@ export default function JournalEditor({
           <span>Пробег, км (необязательно)</span>
           <input
             type="number"
+            disabled={busy}
             min="0"
             max="10000000"
             step="1"
@@ -264,6 +315,7 @@ export default function JournalEditor({
             </span>
             <input
               type="checkbox"
+              disabled={busy}
               checked={form.componentIds.includes(p.id)}
               onChange={(e) =>
                 set(
@@ -280,6 +332,7 @@ export default function JournalEditor({
           <span>Покатушка этого велосипеда</span>
           <select
             aria-label="Покатушка этого велосипеда"
+            disabled={busy}
             value={form.rideId || ""}
             onChange={(e) => set("rideId", e.target.value || null)}
           >
@@ -393,6 +446,7 @@ export default function JournalEditor({
         <span>Публичная запись</span>
         <input
           type="checkbox"
+          disabled={busy}
           checked={form.isPublic}
           onChange={(e) => set("isPublic", e.target.checked)}
         />
@@ -429,7 +483,12 @@ export default function JournalEditor({
             type="button"
             className="quiet"
             disabled={busy}
-            onClick={onCancel}
+            onClick={async () => {
+              if (await mayDiscard()) {
+                forget();
+                onCancel();
+              }
+            }}
           >
             Отмена
           </button>
