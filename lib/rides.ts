@@ -1,3 +1,10 @@
+import {
+  publicClubRideSql,
+  clubRideEnvelopeSql,
+  internalClubRideSql,
+  lockRideClub,
+  lockOwnRideClub,
+} from "./club-ride-access.ts";
 import { announcePlan, nearbyMatchSql } from "./notification-fanout.ts";
 import type * as RepositoryTypes from "./repository.ts";
 import type * as DatabaseRowsTypes from "./database-rows.ts";
@@ -114,13 +121,21 @@ const fields = {
 };
 export const rideInput = z.object({ ...fields, previewId: uuid }).strict();
 export type RideEdit = z.infer<typeof rideEdit>;
-export const rideEdit = z.object({ ...fields, ...planFields }).strict();
+export const rideEdit = z
+  .object({
+    ...fields,
+    ...planFields,
+    clubAudience: z.enum(["members", "open"]).optional(),
+  })
+  .strict();
 export type PlanInput = z.infer<typeof planInput>;
 export const planInput = z
   .object({
     ...fields,
     ...planFields,
     scheduledAt: z.iso.datetime({ offset: true }),
+    clubId: uuid.nullable().optional(),
+    clubAudience: z.enum(["members", "open"]).optional(),
     previewId: uuid.optional(),
     // #234: proposed from a group of interest; kept for the funnel only.
     fromInterest: z.literal(true).optional(),
@@ -138,18 +153,21 @@ export const garminImportInput = z
     visibleMetrics: z.array(z.enum(garminFields.map((f) => f.key))).max(32),
   })
   .strict();
-export const effectiveRide = "r.is_public AND b.is_public AND NOT u.blocked";
+export const effectiveRide = `r.is_public AND b.is_public AND NOT u.blocked AND ${publicClubRideSql()}`;
 export const rideFrom =
   " FROM rides r JOIN bikes b ON b.id=r.bike_id JOIN users u ON u.id=r.owner_id";
 // One answer per person and date (#235): "going"/"maybe" given to an earlier
 // edition of the conditions counts as "reconfirm", never as agreement.
 const answerState = `CASE WHEN v.response<>'declined' AND v.revision<r.agreement_revision THEN 'reconfirm' ELSE v.response END`;
-const columns = `r.*,${rideOccurrence} AS occurs_at,
+const columns = `r.*,
+ (SELECT c.name FROM clubs c WHERE c.id=r.club_id) club_name,
+ (SELECT cm.role FROM club_memberships cm WHERE cm.club_id=r.club_id AND cm.user_id=$1 AND cm.state='active') club_role,
+ ${rideOccurrence} AS occurs_at,
  EXISTS(SELECT 1 FROM users viewer WHERE viewer.id=$1 AND NOT viewer.blocked) AS viewer_active,
  EXISTS(SELECT 1 FROM ride_invitations i WHERE i.ride_id=r.id AND i.user_id=$1) AS invited,
  (SELECT response FROM ride_rsvps v WHERE v.ride_id=r.id AND v.user_id=$1 AND v.occurs_at=(${rideOccurrence})) AS rsvp,
  (SELECT revision FROM ride_rsvps v WHERE v.ride_id=r.id AND v.user_id=$1 AND v.occurs_at=(${rideOccurrence})) AS rsvp_revision,
- coalesce(r.recruitment_closed_for=(${rideOccurrence}),false) AS recruitment_closed,
+ (r.club_suspended OR coalesce(r.recruitment_closed_for=(${rideOccurrence}),false)) AS recruitment_closed,
  (SELECT jsonb_object_agg(state,n) FROM (SELECT ${answerState} AS state,count(*)::int n FROM ride_rsvps v JOIN users a ON a.id=v.user_id WHERE v.ride_id=r.id AND v.occurs_at=(${rideOccurrence}) AND NOT a.blocked GROUP BY 1) votes) AS rsvp_counts,b.name AS bike_name,b.share_id AS bike_share_id,b.is_public AS bike_public,u.username,u.name AS author_name,u.avatar_id,
  (SELECT count(*)::int FROM ride_likes l JOIN users a ON a.id=l.user_id WHERE l.ride_id=r.id AND NOT a.blocked) AS likes,
  EXISTS(SELECT 1 FROM ride_likes l WHERE l.ride_id=r.id AND l.user_id=$1) AS liked,
@@ -185,6 +203,7 @@ function viewerParticipation(
     canJoin:
       !!viewer &&
       !!r.viewer_active &&
+      !r.club_suspended &&
       mayJoin(state, {
         invited: !!r.invited,
         recruitmentClosed: !!r.recruitment_closed,
@@ -256,14 +275,37 @@ export function publicRide(r: RideViewRow, viewer: string | null | undefined) {
     },
     geometry: r.public_geometry,
     bounds: bounds(r.public_geometry),
-    bike: { id: r.bike_id, name: r.bike_name, shareId: r.bike_share_id },
+    bike: {
+      id: r.bike_id,
+      name:
+        r.club_id && !r.bike_public && r.owner_id !== viewer
+          ? "Велосипед организатора"
+          : r.bike_name,
+      shareId:
+        r.club_id && !r.bike_public && r.owner_id !== viewer
+          ? ""
+          : r.bike_share_id,
+    },
+    club: r.club_id
+      ? {
+          id: r.club_id,
+          name: r.club_name || "Клуб",
+          audience: r.club_audience || "members",
+          suspended: !!r.club_suspended,
+          canManage:
+            !!r.viewer_active && ["owner", "admin"].includes(r.club_role || ""),
+        }
+      : null,
     author: publicAuthor({
       id: r.owner_id,
       username: r.username,
       name: r.author_name,
       avatar_id: r.avatar_id,
     }),
-    isOwner: r.owner_id === viewer,
+    isOwner:
+      r.owner_id === viewer &&
+      (!r.club_id ||
+        ["owner", "admin", "organizer"].includes(r.club_role || "")),
     likes: r.likes,
     liked: r.liked,
     comments: r.comments,
@@ -282,6 +324,84 @@ export function ownerRide(r: RideViewRow, viewer: string | null | undefined) {
     ...(r.source_kind === "planned" ? { planEndsAt: r.plan_ends_at } : {}),
     pointCount: r.point_count,
   };
+}
+/** Public open events plus internal events of the current member, one SQL read. */
+export async function clubRides(
+  q: Queryable,
+  club: string,
+  viewer: string | null,
+  page = 1,
+) {
+  const offset = (z.number().int().min(1).max(10000).parse(page) - 1) * 20;
+  const rows = (
+    await q.query<RideViewRow>(
+      `SELECT ${columns}${rideFrom} WHERE r.club_id=$2 AND NOT u.blocked AND ${clubRideEnvelopeSql("$1")} AND (${effectiveRide} OR ${internalClubRideSql("$1")}) ORDER BY (r.status='planned' AND (${rideOccurrence})>now()) DESC,(${rideOccurrence}) ASC NULLS LAST,r.id LIMIT 21 OFFSET $3`,
+      [viewer, club, offset],
+    )
+  ).rows;
+  return {
+    viewerId: viewer,
+    rides: rows.slice(0, 20).map((r) => publicRide(r, viewer)),
+    hasMore: rows.length > 20,
+  };
+}
+export async function clubRideOptions(q: Queryable, actor: string, page = 1) {
+  const offset = (z.number().int().min(1).max(10000).parse(page) - 1) * 20;
+  const rows = (
+    await q.query<{ id: string; name: string }>(
+      `SELECT c.id,c.name FROM clubs c JOIN club_memberships m ON m.club_id=c.id JOIN users u ON u.id=m.user_id JOIN users co ON co.id=c.owner_id WHERE m.user_id=$1 AND m.state='active' AND m.role IN ('owner','admin','organizer') AND NOT u.blocked AND NOT co.blocked AND c.archived_at IS NULL AND c.hidden_at IS NULL ORDER BY c.name,c.id LIMIT 21 OFFSET $2`,
+      [actor, offset],
+    )
+  ).rows;
+  return { clubs: rows.slice(0, 20), hasMore: rows.length > 20 };
+}
+/** Club administration resolves orphaned recruitment without taking ownership
+ * of the creator's bicycle, track or conditions. A paused orphan can be cancelled;
+ * only its current authorized creator can resume recruitment. */
+export async function manageClubRide(
+  q: Queryable,
+  club: string,
+  id: string,
+  actor: string,
+  action: "cancel" | "pause",
+) {
+  const before = (
+    await q.query<{ owner_id: string }>(
+      "SELECT owner_id FROM rides WHERE id=$1 AND club_id=$2",
+      [id, club],
+    )
+  ).rows[0];
+  if (!before) throw new RideError("Выезд недоступен", 404);
+  const c = await lockRideClub(q, club, actor, {
+    others: [before.owner_id],
+    verified: action !== "cancel",
+  });
+  if (!["owner", "admin"].includes(c.role || ""))
+    throw new RideError("Выездом управляет администрация клуба", 403);
+  const r = (
+    await q.query<RideRow>(
+      "SELECT * FROM rides WHERE id=$1 AND club_id=$2 AND status='planned' FOR UPDATE",
+      [id, club],
+    )
+  ).rows[0];
+  if (!r) throw new RideError("Выезд недоступен", 404);
+  if (action === "pause")
+    await q.query(
+      "UPDATE rides SET club_suspended=true,updated_at=now() WHERE id=$1",
+      [id],
+    );
+  else {
+    await invalidateRideNotices(q, id);
+    await q.query(
+      "UPDATE rides SET status='cancelled',updated_at=now() WHERE id=$1",
+      [id],
+    );
+    await q.query(
+      "INSERT INTO club_event_outbox(club_id,kind,actor_id,ride_id,revision) VALUES($1,'club_archived',$2,$3,$4) ON CONFLICT DO NOTHING",
+      [club, actor, id, r.agreement_revision],
+    );
+  }
+  return { ok: true };
 }
 /** Who answered the current date or is invited to it, for the organizer only
 (#235). Names never reach other viewers; counts are the same states as the
@@ -372,7 +492,7 @@ export async function rideDetail(
   // owner-only fields still need the owner endpoint.
   const row = (
     await q.query<DatabaseRowsTypes.RideViewRow>(
-      `SELECT ${columns}${rideFrom} WHERE r.share_id=$2 AND (${effectiveRide} OR (NOT u.blocked AND (r.owner_id=$1 OR EXISTS(SELECT 1 FROM ride_invitations i WHERE i.ride_id=r.id AND i.user_id=$1))))`,
+      `SELECT ${columns}${rideFrom} WHERE r.share_id=$2 AND ${clubRideEnvelopeSql("$1")} AND (${effectiveRide} OR ${internalClubRideSql("$1")} OR (NOT u.blocked AND (r.owner_id=$1 OR EXISTS(SELECT 1 FROM ride_invitations i WHERE i.ride_id=r.id AND i.user_id=$1))))`,
       [viewer || null, share],
     )
   ).rows[0];
@@ -381,7 +501,7 @@ export async function rideDetail(
     isOwner = !!viewer && row.owner_id === viewer;
   const fullAnalysis = owner && row.owner_id === viewer;
   const cached = await analysisSeries(q, row, fullAnalysis);
-  return {
+  const result = {
     ...(owner && row.owner_id === viewer
       ? ownerRide(row, viewer)
       : publicRide(row, viewer)),
@@ -443,6 +563,16 @@ export async function rideDetail(
         }
       : {}),
   };
+  if (
+    !(
+      await q.query(
+        `SELECT 1 FROM rides r WHERE r.id=$2 AND ${clubRideEnvelopeSql("$1")}`,
+        [viewer || null, row.id],
+      )
+    ).rowCount
+  )
+    throw new RideError("Покатушка недоступна", 404);
+  return result;
 }
 export async function rideList(
   q: Queryable,
@@ -507,7 +637,7 @@ export async function rideList(
     f.area ? "%" + f.area.replace(/[\\%_]/g, "\\$&") + "%" : null,
   ];
   const duration = `coalesce(extract(epoch FROM (r.plan_ends_at-r.started_at))/60,(r.plan_passport->'durationMinutes'->>'max')::numeric)`;
-  const where = ` WHERE ($1::uuid IS NULL OR $1::uuid IS NOT NULL) AND ${own ? "r.owner_id=$1 AND NOT u.blocked" : effectiveRide} AND ($2::uuid IS NULL OR r.owner_id=$2) AND ($3::text IS NULL OR u.username=$3) AND ($4::uuid IS NULL OR r.bike_id=$4) AND ($5::uuid[] IS NULL OR r.id=ANY($5)) AND ($6::text IS NULL OR r.status=$6)
+  const where = ` WHERE ($1::uuid IS NULL OR $1::uuid IS NOT NULL) AND ${own ? `r.owner_id=$1 AND NOT u.blocked AND ${clubRideEnvelopeSql("$1")}` : effectiveRide} AND ($2::uuid IS NULL OR r.owner_id=$2) AND ($3::text IS NULL OR u.username=$3) AND ($4::uuid IS NULL OR r.bike_id=$4) AND ($5::uuid[] IS NULL OR r.id=ANY($5)) AND ($6::text IS NULL OR r.status=$6)
    AND ($7::timestamptz IS NULL OR (${rideOccurrence})>=$7) AND ($8::timestamptz IS NULL OR (${rideOccurrence})<$8)
    AND ($9::text IS NULL OR r.plan_passport->>'pace'=$9) AND ($10::text IS NULL OR r.plan_passport->>'purpose'=$10) AND ($11::text IS NULL OR r.plan_passport->>'surface'=$11)
    AND ($12::int IS NULL OR ${duration}>=$12) AND ($13::int IS NULL OR ${duration}<=$13)
@@ -590,7 +720,7 @@ export async function apiRideRow(
 ) {
   return (
     await q.query<RideViewRow>(
-      `SELECT ${columns}${rideFrom} WHERE r.id=$2 AND ${apiRide}`,
+      `SELECT ${columns}${rideFrom} WHERE r.id=$2 AND NOT u.blocked AND ${clubRideEnvelopeSql("$1")} AND (${apiRide} OR ${internalClubRideSql("$1")})`,
       [viewer, id],
     )
   ).rows[0];
@@ -607,7 +737,7 @@ export async function apiRideRow(
  */
 export interface RideParticipation {
   row: RideViewRow;
-  access: "organizer" | "invited" | "public" | "answered";
+  access: "organizer" | "invited" | "public" | "answered" | "club";
   /** The current date of the plan while it can still be answered, else null. */
   scheduledAt: Date | null;
   requested: {
@@ -630,10 +760,11 @@ export async function rideParticipation(
          CASE WHEN r.owner_id=$1 THEN 'organizer'
               WHEN EXISTS(SELECT 1 FROM ride_invitations i WHERE i.ride_id=r.id AND i.user_id=$1) THEN 'invited'
               WHEN ${apiRide} THEN 'public'
+              WHEN ${internalClubRideSql("$1")} THEN 'club'
               ELSE 'answered' END AS access${rideFrom}
-       WHERE r.id=$2 AND r.source_kind='planned' AND NOT u.blocked
+       WHERE r.id=$2 AND r.source_kind='planned' AND NOT u.blocked AND ${clubRideEnvelopeSql("$1")}
          AND EXISTS(SELECT 1 FROM users x WHERE x.id=$1 AND NOT x.blocked)
-         AND (r.owner_id=$1
+         AND (${internalClubRideSql("$1")} OR r.owner_id=$1
            OR EXISTS(SELECT 1 FROM ride_invitations i WHERE i.ride_id=r.id AND i.user_id=$1)
            OR (${apiRide})
            OR (r.status='cancelled' AND EXISTS(SELECT 1 FROM ride_rsvps v WHERE v.ride_id=r.id AND v.user_id=$1)))`,
@@ -684,7 +815,11 @@ export async function rideParticipation(
     scheduledAt,
     requested,
     participation,
-    allowedResponses: answerable ? ["accepted", "maybe", "declined"] : [],
+    allowedResponses: answerable
+      ? row.club_suspended
+        ? ["declined"]
+        : ["accepted", "maybe", "declined"]
+      : [],
   };
 }
 /** Public rides by id, in no particular order, for API v1 lists that were chosen elsewhere (the feed). */
@@ -838,7 +973,7 @@ export async function ownRideKeysetPage(
     (
       await q.query<RideKeysetRow>(
         `SELECT ${columns},${cursorText(position)} AS cursor_at${rideFrom}
-         WHERE r.owner_id=$1 AND NOT u.blocked
+         WHERE r.owner_id=$1 AND NOT u.blocked AND ${clubRideEnvelopeSql("$1")}
            AND ($2::timestamptz IS NULL OR (${position},r.id)<($2::timestamptz,$3::uuid))
          ORDER BY ${position} DESC,r.id DESC LIMIT $4`,
         [viewer, after?.createdAt ?? null, after?.id ?? null, limit + 1],
@@ -859,9 +994,9 @@ async function upcomingEntries(q: RepositoryTypes.Queryable, viewer: string) {
        ${rideFrom}
        WHERE NOT u.blocked AND r.source_kind='planned'
          AND EXISTS(SELECT 1 FROM users viewer WHERE viewer.id=$1 AND NOT viewer.blocked)
-         AND (r.owner_id=$1 OR (${effectiveRide}) OR EXISTS(SELECT 1 FROM ride_invitations i WHERE i.ride_id=r.id AND i.user_id=$1))
+         AND ${clubRideEnvelopeSql("$1")} AND (r.owner_id=$1 OR ${internalClubRideSql("$1")} OR (${effectiveRide}) OR EXISTS(SELECT 1 FROM ride_invitations i WHERE i.ride_id=r.id AND i.user_id=$1))
          AND ((r.status='planned' AND ${occurrence}>now() AND ${occurrence}<now()+interval '60 days'
-               AND (r.owner_id=$1
+               AND (${internalClubRideSql("$1")} OR r.owner_id=$1
                  OR EXISTS(SELECT 1 FROM ride_rsvps v WHERE v.ride_id=r.id AND v.user_id=$1 AND v.occurs_at=${occurrence} AND v.response IN ('accepted','maybe'))
                  OR (EXISTS(SELECT 1 FROM ride_invitations i WHERE i.ride_id=r.id AND i.user_id=$1)
                      AND NOT EXISTS(SELECT 1 FROM ride_rsvps v WHERE v.ride_id=r.id AND v.user_id=$1 AND v.occurs_at=${occurrence}))))
@@ -879,7 +1014,7 @@ async function upcomingEntries(q: RepositoryTypes.Queryable, viewer: string) {
        JOIN bikes b ON b.id=r.bike_id JOIN users u ON u.id=r.owner_id
        JOIN ride_rsvps v ON v.ride_id=r.id AND v.user_id=$1 AND v.response IN ('accepted','maybe')
          AND (v.occurs_at AT TIME ZONE r.recurrence_timezone)::date=c.occurs_on
-       WHERE NOT u.blocked AND r.status='planned' AND r.owner_id<>$1 AND v.occurs_at>now()
+       WHERE NOT u.blocked AND ${clubRideEnvelopeSql("$1")} AND r.status='planned' AND r.owner_id<>$1 AND v.occurs_at>now()
          AND c.cancelled_at>now()-interval '14 days'
          AND EXISTS(SELECT 1 FROM users viewer WHERE viewer.id=$1 AND NOT viewer.blocked)
          AND ((${effectiveRide}) OR EXISTS(SELECT 1 FROM ride_invitations i WHERE i.ride_id=r.id AND i.user_id=$1))
@@ -945,7 +1080,7 @@ export async function bikeRideStats(
 ) {
   return (
     await q.query<{ bike_id: string; count: number; distance: string }>(
-      `SELECT r.bike_id,count(*)::int AS count,coalesce(sum(r.distance_m) FILTER(WHERE r.status='completed'),0)::bigint AS distance${rideFrom} WHERE r.status='completed' AND r.bike_id=ANY($1::uuid[]) AND ((${effectiveRide}) OR (r.owner_id=$2 AND NOT u.blocked)) GROUP BY r.bike_id`,
+      `SELECT r.bike_id,count(*)::int AS count,coalesce(sum(r.distance_m) FILTER(WHERE r.status='completed'),0)::bigint AS distance${rideFrom} WHERE r.status='completed' AND r.bike_id=ANY($1::uuid[]) AND ${clubRideEnvelopeSql("$2")} AND ((${effectiveRide}) OR (r.owner_id=$2 AND NOT u.blocked)) GROUP BY r.bike_id`,
       [ids, viewer],
     )
   ).rows;
@@ -1130,6 +1265,50 @@ export async function saveRide(
   id: string | null = null,
   { planned = false } = {},
 ) {
+  input = rideEdit.extend({ previewId: uuid.optional() }).strict().parse(input);
+  if (id) {
+    const proposed = (
+        await q.query<{ id: string }>(
+          "SELECT id FROM users WHERE username=ANY($1::text[])",
+          [input.invitations || []],
+        )
+      ).rows.map((u) => u.id),
+      prior = await lockOwnRideClub(q, id, owner, { others: proposed });
+    if (input.clubAudience && !prior.club_id)
+      throw new RideError("Это не клубный выезд");
+    if (prior.club_id) {
+      const audience = input.clubAudience || prior.club_audience || "members";
+      if (
+        prior.club_audience === "members" &&
+        audience === "open" &&
+        (
+          await q.query(
+            `SELECT 1 WHERE EXISTS(SELECT 1 FROM ride_rsvps WHERE ride_id=$1) OR EXISTS(SELECT 1 FROM ride_invitations WHERE ride_id=$1) OR EXISTS(SELECT 1 FROM ride_comments WHERE ride_id=$1) OR EXISTS(SELECT 1 FROM ride_likes WHERE ride_id=$1)`,
+            [id],
+          )
+        ).rowCount
+      )
+        throw new RideError(
+          "Внутренний выезд с приглашениями, ответами или обсуждением нельзя сделать открытым. Создайте отдельный открытый выезд.",
+          409,
+        );
+      input = { ...input, isPublic: audience === "open" };
+      await q.query(
+        "UPDATE rides SET club_audience=$2,is_public=($2='open') WHERE id=$1",
+        [id, audience],
+      );
+      if (audience === "members") {
+        await q.query(
+          "DELETE FROM ride_rsvps v WHERE v.ride_id=$1 AND v.occurs_at>now() AND NOT EXISTS(SELECT 1 FROM club_memberships cm WHERE cm.club_id=$2 AND cm.user_id=v.user_id AND cm.state='active')",
+          [id, prior.club_id],
+        );
+        await q.query(
+          "DELETE FROM ride_invitations i WHERE i.ride_id=$1 AND NOT EXISTS(SELECT 1 FROM club_memberships cm WHERE cm.club_id=$2 AND cm.user_id=i.user_id AND cm.state='active')",
+          [id, prior.club_id],
+        );
+      }
+    }
+  }
   if (!config.privacyRadii.includes(input.privacyRadiusM))
     throw new RideError("Недопустимый радиус приватности");
   const bike = await lockOwnedBike(q, owner, input.bikeId, input.isPublic, {
@@ -1314,6 +1493,7 @@ export async function refreshRideAnalysis(
   id: string,
   config: RideSettings,
 ) {
+  await lockOwnRideClub(q, id, owner);
   await q.query<{ id: string }>(
     "SELECT id FROM users WHERE id=$1 AND NOT blocked FOR UPDATE",
     [owner],
@@ -1341,6 +1521,7 @@ export async function refreshRideAnalysis(
   return { ok: true };
 }
 export async function deleteRide(q: Queryable, owner: string, id: string) {
+  await lockOwnRideClub(q, id, owner);
   await q.query<{ id: string }>("SELECT id FROM users WHERE id=$1 FOR UPDATE", [
     owner,
   ]);
@@ -1575,6 +1756,25 @@ async function inviteRiders(
       [names],
     )
   ).rows;
+  const attached = (
+    await q.query<{ club_id: string | null; club_audience: string | null }>(
+      "SELECT club_id,club_audience FROM rides WHERE id=$1",
+      [ride.id],
+    )
+  ).rows[0];
+  if (attached?.club_id && attached.club_audience === "members") {
+    const eligible = (
+      await q.query<{ user_id: string }>(
+        "SELECT user_id FROM club_memberships WHERE club_id=$1 AND user_id=ANY($2::uuid[]) AND state='active'",
+        [attached.club_id, users.map((u) => u.id)],
+      )
+    ).rows;
+    if (users.some((u) => !eligible.some((m) => m.user_id === u.id)))
+      throw new RideError(
+        "Во внутренний выезд приглашайте только действующих участников клуба",
+        403,
+      );
+  }
   const missing = names.filter((n) => !users.some((u) => u.username === n));
   if (missing.length)
     throw new RideError("Пользователи не найдены: " + missing.join(", "));
@@ -1611,6 +1811,23 @@ export async function planRide(
   input: PlanInput,
   config: RideSettings,
 ) {
+  input = planInput.parse(input);
+  if (input.clubAudience && !input.clubId)
+    throw new RideError("Сначала выберите клуб");
+  if (input.clubId) {
+    const invitees = (
+      await q.query<{ id: string }>(
+        "SELECT id FROM users WHERE username=ANY($1::text[])",
+        [input.invitations || []],
+      )
+    ).rows.map((u) => u.id);
+    await lockRideClub(q, input.clubId, owner, { others: invitees });
+    input = {
+      ...input,
+      clubAudience: input.clubAudience || "members",
+      isPublic: input.clubAudience === "open",
+    };
+  }
   const details = plannedDetails(input);
   if (input.isPublic && !details.passport.area?.label)
     throw new RideError(
@@ -1627,9 +1844,15 @@ export async function planRide(
     throw new RideError("Выберите будущую дату");
   await lockOwnedBike(q, owner, input.bikeId, input.isPublic);
   let result;
-  if (input.previewId)
-    result = await saveRide(q, owner, input, config, null, { planned: true });
-  else {
+  if (input.previewId) {
+    const rideDraft = { ...input };
+    delete rideDraft.clubId;
+    delete rideDraft.clubAudience;
+    delete rideDraft.fromInterest;
+    result = await saveRide(q, owner, rideDraft, config, null, {
+      planned: true,
+    });
+  } else {
     if (
       (
         await q.query<{ n: number }>(
@@ -1659,7 +1882,7 @@ export async function planRide(
     result = { id, shareId };
   }
   await q.query(
-    `UPDATE rides SET status='planned',source_kind='planned',started_at=$2,ended_at=NULL,moving_time_s=NULL,elapsed_time_s=NULL,avg_speed_mps=NULL,public_speed_profile='[]',features=$3,meeting_point=$4,recurrence=$5,recurrence_timezone=$6,plan_passport=$7,meeting_visibility=$8,plan_ends_at=$9,proposed_from_interest=$10 WHERE id=$1`,
+    `UPDATE rides SET status='planned',source_kind='planned',started_at=$2,ended_at=NULL,moving_time_s=NULL,elapsed_time_s=NULL,avg_speed_mps=NULL,public_speed_profile='[]',features=$3,meeting_point=$4,recurrence=$5,recurrence_timezone=$6,plan_passport=$7,meeting_visibility=$8,plan_ends_at=$9,proposed_from_interest=$10,club_id=$11,club_audience=$12 WHERE id=$1`,
     [
       result.id,
       input.scheduledAt,
@@ -1671,6 +1894,8 @@ export async function planRide(
       details.meetingVisibility,
       details.expectedEndAt,
       !!input.fromInterest,
+      input.clubId || null,
+      input.clubId ? input.clubAudience || "members" : null,
     ],
   );
   await inviteRiders(q, { id: result.id }, owner, input.invitations || []);
@@ -1684,6 +1909,7 @@ export async function attachRideTrack(
   bytes: Uint8Array,
   config: RideSettings,
 ) {
+  await lockOwnRideClub(q, id, owner);
   const prior = (
     await q.query<{ bike_id: string; is_public: boolean }>(
       "SELECT bike_id,is_public FROM rides WHERE id=$1 AND owner_id=$2",
@@ -1779,12 +2005,23 @@ export async function respondRide(
 ) {
   // Match owner mutation lock order, and re-check visibility after locking.
   const initial = (
-    await q.query<{ owner_id: string; bike_id: string }>(
-      "SELECT owner_id,bike_id FROM rides WHERE id=$1",
-      [id],
-    )
+    await q.query<{
+      owner_id: string;
+      bike_id: string;
+      club_id: string | null;
+      club_audience: string | null;
+    }>("SELECT owner_id,bike_id,club_id,club_audience FROM rides WHERE id=$1", [
+      id,
+    ])
   ).rows[0];
   if (!initial) throw new RideError("Покатушка недоступна", 404);
+  if (initial.club_id)
+    await lockRideClub(q, initial.club_id, user, {
+      organizer: false,
+      membershipRequired: initial.club_audience === "members",
+      verified: response !== "declined",
+      others: [initial.owner_id],
+    });
   const people = (
     await q.query<{ id: string; blocked: boolean }>(
       "SELECT id,blocked FROM users WHERE id=ANY($1::uuid[]) ORDER BY id FOR UPDATE",
@@ -1805,13 +2042,14 @@ export async function respondRide(
         | "agreement_revision"
         | "occurs_at"
         | "recruitment_closed"
+        | "club_suspended"
         | "invited"
       >
     >(
-      `SELECT r.id,r.owner_id,r.agreement_revision,${rideOccurrence} AS occurs_at,
-        coalesce(r.recruitment_closed_for=(${rideOccurrence}),false) AS recruitment_closed,
+      `SELECT r.id,r.owner_id,r.agreement_revision,r.club_suspended,${rideOccurrence} AS occurs_at,
+        (r.club_suspended OR coalesce(r.recruitment_closed_for=(${rideOccurrence}),false)) AS recruitment_closed,
         EXISTS(SELECT 1 FROM ride_invitations i WHERE i.ride_id=r.id AND i.user_id=$2) AS invited${rideFrom}
-       WHERE r.id=$1 AND r.status='planned' AND NOT u.blocked AND (r.owner_id=$2 OR (${effectiveRide}) OR EXISTS(SELECT 1 FROM ride_invitations i WHERE i.ride_id=r.id AND i.user_id=$2)) FOR UPDATE OF r`,
+       WHERE r.id=$1 AND r.status='planned' AND NOT u.blocked AND ${clubRideEnvelopeSql("$2")} AND (r.owner_id=$2 OR ${internalClubRideSql("$2")} OR (${effectiveRide}) OR EXISTS(SELECT 1 FROM ride_invitations i WHERE i.ride_id=r.id AND i.user_id=$2)) FOR UPDATE OF r`,
       [id, user],
     )
   ).rows[0];
@@ -1838,6 +2076,8 @@ export async function respondRide(
       "Условия покатушки изменились. Посмотрите их и подтвердите участие заново.",
       "revision",
     );
+  if (row.club_suspended && response !== "declined")
+    throw new RideError("Набор приостановлен администрацией клуба", 409);
   if (row.owner_id === user)
     throw new RideError("Организатор уже участвует в своей покатушке", 409);
   const previous = (
@@ -1917,6 +2157,7 @@ async function lockOwnPlan(
   id: string,
   owner: string,
 ) {
+  await lockOwnRideClub(q, id, owner);
   await q.query<{ id: string }>(
     "SELECT id FROM users WHERE id=$1 AND NOT blocked FOR UPDATE",
     [owner],
@@ -1958,6 +2199,7 @@ export async function cancelPlannedRide(
   owner: string,
   occurrenceAt: string | null = null,
 ) {
+  await lockOwnRideClub(q, id, owner, { verified: false });
   if (!occurrenceAt) {
     await q.query<{ id: string }>(
       "SELECT id FROM users WHERE id=$1 FOR UPDATE",
@@ -2025,7 +2267,7 @@ export async function setRideRecruitment(
   if (+new Date(occurrenceAt) !== +new Date(row.occurs_at))
     throw new RideError("Дата покатушки изменилась. Обновите страницу.", 409);
   await q.query(
-    "UPDATE rides SET recruitment_closed_for=$2,updated_at=now() WHERE id=$1",
+    "UPDATE rides SET recruitment_closed_for=$2,club_suspended=false,updated_at=now() WHERE id=$1",
     [id, open ? null : row.occurs_at],
   );
   return { ok: true, recruitmentClosed: !open, scheduledAt: row.occurs_at };

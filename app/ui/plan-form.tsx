@@ -201,6 +201,7 @@ function FoldChoice({
 
 export default function PlanForm({
   ride = null,
+  club: initialClub = null,
   suggestion = null,
   bikes,
   config,
@@ -210,6 +211,7 @@ export default function PlanForm({
   prelude,
 }: {
   ride?: RideDto | null;
+  club?: { id: string; name: string } | null;
   // A group chosen in «Подобрать время по интересам» (#370): its start and
   // format replace the form's, the rest of what was typed stays. `id` tells a
   // second choice of the same group from the first.
@@ -222,6 +224,40 @@ export default function PlanForm({
   prelude?: ReactNode;
 }) {
   const { personalSettings } = useSite();
+  const [club, setClub] = useState<{ id: string; name: string } | null>(
+      () => initialClub || ride?.club || null,
+    ),
+    [clubOptions, setClubOptions] = useState<{ id: string; name: string }[]>(
+      [],
+    ),
+    [clubPage, setClubPage] = useState(1),
+    [moreClubs, setMoreClubs] = useState(false),
+    [clubError, setClubError] = useState("");
+  useEffect(() => {
+    if (ride) return;
+    let active = true;
+    socialApi<{ clubs: { id: string; name: string }[]; hasMore: boolean }>(
+      "clubs/ride-options?page=" + clubPage,
+    )
+      .then((d) => {
+        if (active) {
+          setClubOptions((old) =>
+            clubPage === 1 ? d.clubs : [...old, ...d.clubs],
+          );
+          setMoreClubs(d.hasMore);
+          setClubError("");
+        }
+      })
+      .catch(() => {
+        if (active)
+          setClubError(
+            "Не удалось загрузить доступные клубы. Личный план можно сохранить; список клубов появится при повторном открытии формы.",
+          );
+      });
+    return () => {
+      active = false;
+    };
+  }, [ride, clubPage]);
   // A series keeps the zone it was created in; new plans use the profile's.
   const zone =
     ride && validTimeZone(ride.recurrenceTimezone)
@@ -229,7 +265,10 @@ export default function PlanForm({
       : userTimeZone(personalSettings);
   const currentBikes = useMemo(() => selectableRideBikes(bikes), [bikes]);
   const rideBikes = selectableRideBikes(bikes, ride?.bike?.id);
-  const [form, setForm] = useState(() => initialPlan(ride, currentBikes, zone)),
+  const [form, setForm] = useState(() => ({
+      ...initialPlan(ride, currentBikes, zone),
+      ...(!ride && club ? { isPublic: false } : {}),
+    })),
     [initial] = useState(form),
     [preview, setPreview] = useState<RidePreview | null>(null),
     [busy, setBusy] = useState(false),
@@ -246,7 +285,10 @@ export default function PlanForm({
     // the form's.
     areaPending = useRef<AreaPending>(null);
   const reveal = useMotionFeedback(advanced, { reveal: true });
-  const dirty = !!preview || JSON.stringify(form) !== JSON.stringify(initial);
+  const dirty =
+    !!preview ||
+    JSON.stringify(form) !== JSON.stringify(initial) ||
+    (!ride && (club?.id || null) !== (initialClub?.id || null));
   useEffect(() => onDirty?.(dirty), [dirty, onDirty]);
   const taken = useRef(0);
   useEffect(() => {
@@ -267,7 +309,7 @@ export default function PlanForm({
     }));
     setSuggested(true);
   }, [suggestion, ride, zone]);
-  const fromInterest = !ride && suggested;
+  const fromInterest = !ride && suggested && (!club || form.isPublic);
   const set = <K extends keyof PlanFormDraft>(
     key: K,
     value: PlanFormDraft[K],
@@ -353,6 +395,10 @@ export default function PlanForm({
         title: form.title,
         description: form.description,
         isPublic: form.isPublic,
+        ...(!ride && club ? { clubId: club.id } : {}),
+        ...(club || ride?.club
+          ? { clubAudience: form.isPublic ? "open" : "members" }
+          : {}),
         // Track privacy follows the meeting point; no separate control.
         privacyEnabled: planPrivacy(ride, form.meetingVisibility),
         privacyRadiusM: ride
@@ -424,7 +470,15 @@ export default function PlanForm({
           Укажите время и место встречи, затем пригласите участников.
         </PlanningIntro>
         <div className="planning-side-column">
-          {prelude}
+          {club && (
+            <p className="help">
+              Выезд клуба «{club.name}».{" "}
+              {form.isPublic
+                ? "Открытый — могут участвовать не-члены."
+                : "Только участники клуба. Запись на выезд — отдельный ответ «Иду»."}
+            </p>
+          )}
+          {(!club || form.isPublic) && prelude}
           <fieldset className="planning-section half wide-4" disabled={busy}>
             <legend>
               <span className="step" aria-hidden="true">
@@ -595,20 +649,68 @@ export default function PlanForm({
               <InfoTip label="Подробнее: Участники и доступ">
                 {form.isPublic
                   ? "Видна в ленте, откликнуться может любой."
-                  : "Видят только вы и приглашённые."}{" "}
+                  : club || ride?.club
+                    ? "Видят действующие участники клуба. Вступление не записывает на выезд: нужно отдельно ответить «Иду»."
+                    : "Видят только вы и приглашённые."}{" "}
                 Скрытое место встречи защищает и края прикреплённого маршрута.
                 До 30 приглашений; приглашённые получат уведомление.
               </InfoTip>
             </legend>
+            {!ride && (
+              <label className="field">
+                <span>От кого выезд</span>
+                <select
+                  value={club?.id || ""}
+                  onChange={(e) => {
+                    const chosen =
+                      clubOptions.find((c) => c.id === e.target.value) ||
+                      (initialClub?.id === e.target.value ? initialClub : null);
+                    setClub(chosen || null);
+                    if (chosen) set("isPublic", false);
+                  }}
+                >
+                  <option value="">Личная покатушка</option>
+                  {club && !clubOptions.some((c) => c.id === club.id) && (
+                    <option value={club.id}>От клуба «{club.name}»</option>
+                  )}
+                  {clubOptions.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      От клуба «{c.name}»
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            {!ride && moreClubs && (
+              <button
+                type="button"
+                className="button secondary"
+                onClick={() => setClubPage((p) => p + 1)}
+              >
+                Ещё клубы
+              </button>
+            )}
+            {clubError && <p className="help">{clubError}</p>}
             <label className="field">
+              {(club || ride?.club) && (
+                <span>Выезд клуба «{club?.name || ride?.club?.name}»</span>
+              )}
               <span className="sr-only">Кто видит покатушку</span>
               <select
                 aria-label="Кто видит покатушку"
                 value={String(form.isPublic)}
                 onChange={(e) => set("isPublic", e.target.value === "true")}
               >
-                <option value="true">Публичная покатушка</option>
-                <option value="false">По приглашению</option>
+                <option value="true">
+                  {club || ride?.club
+                    ? "Открытый клубный выезд"
+                    : "Публичная покатушка"}
+                </option>
+                <option value="false">
+                  {club || ride?.club
+                    ? "Только участники клуба"
+                    : "По приглашению"}
+                </option>
               </select>
             </label>
 
@@ -623,6 +725,13 @@ export default function PlanForm({
                 Анонс и превью ссылки станут закрытыми сразу после сохранения.
                 Но превью, уже отправленные в мессенджеры, могут остаться у
                 получателей — отозвать их нельзя.
+              </p>
+            )}
+            {ride?.club?.audience === "members" && form.isPublic && (
+              <p className="help">
+                Если у внутреннего выезда уже есть приглашения, ответы или
+                обсуждение, создайте отдельный открытый выезд: прежние закрытые
+                материалы останутся внутри клуба.
               </p>
             )}
             <div className="planning-row wide">

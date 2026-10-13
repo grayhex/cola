@@ -1,3 +1,9 @@
+import {
+  clubRideEnvelopeSql,
+  internalClubRideSql,
+  clubRideWritableSql,
+  lockOwnRideClub,
+} from "./club-ride-access.ts";
 import type * as RepositoryTypes from "./repository.ts";
 import type * as RideMatchCoreTypes from "./ride-match-core.ts";
 import type * as ZodTypes from "zod";
@@ -266,7 +272,7 @@ export async function matchRides(
         EXISTS(SELECT 1 FROM ride_invitations i WHERE i.ride_id=r.id AND i.user_id=$1) AS invited
        FROM rides r JOIN bikes b ON b.id=r.bike_id JOIN users u ON u.id=r.owner_id ${planOccurrences}
        WHERE ${planned} AND r.owner_id<>$1
-         AND ((r.is_public AND b.is_public) OR EXISTS(SELECT 1 FROM ride_invitations i WHERE i.ride_id=r.id AND i.user_id=$1))
+         AND ${clubRideEnvelopeSql("$1")} AND (${internalClubRideSql("$1")} OR (r.is_public AND b.is_public) OR EXISTS(SELECT 1 FROM ride_invitations i WHERE i.ride_id=r.id AND i.user_id=$1))
          AND ($4::timestamptz[] IS NULL OR EXISTS(SELECT 1 FROM unnest($4::timestamptz[],$5::timestamptz[]) w(s,e) WHERE o.occurs_at>=w.s AND o.occurs_at<w.e))
          AND NOT EXISTS(SELECT 1 FROM ride_rsvps v WHERE v.ride_id=r.id AND v.user_id=$1 AND v.occurs_at=o.occurs_at)
        ORDER BY o.occurs_at,r.id LIMIT $6`,
@@ -510,7 +516,7 @@ async function occurrenceCandidates(
     }>(
       `SELECT r.id,r.started_at,r.plan_ends_at,r.plan_passport,r.has_track,r.distance_m,o.occurs_at
        FROM rides r JOIN users u ON u.id=r.owner_id ${planOccurrences}
-       WHERE r.id=$4 AND r.owner_id=$1 AND ${planned} ORDER BY o.occurs_at`,
+       WHERE r.id=$4 AND r.owner_id=$1 AND ${clubRideEnvelopeSql("$1")} AND ${clubRideWritableSql("$1")} AND (r.club_id IS NULL OR r.club_audience='open') AND ${planned} ORDER BY o.occurs_at`,
       [
         viewerId,
         new Date(from).toISOString(),
@@ -645,6 +651,7 @@ export async function inviteFromInterest(
   input: InterestInvitationsInput,
   now = Date.now(),
 ) {
+  await lockOwnRideClub(q, rideId, viewerId, { others: input.userIds });
   // Same lock order as other owner mutations (users → bike → ride), so an
   // account deletion running at the same time cannot deadlock with it. One
   // sender at a time per plan: a double click waits and then sees the first

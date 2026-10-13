@@ -1,3 +1,4 @@
+import { clubRideEnvelopeSql } from "./club-ride-access.ts";
 import type { Queryable } from "./db.ts";
 import { unlink } from "node:fs/promises";
 import path from "node:path";
@@ -448,7 +449,7 @@ export async function exportAccount(
       created_at: Date;
     }>(
       `SELECT id,bike_id,title,description,started_at,ended_at,distance_m,elapsed_time_s,moving_time_s,avg_speed_mps,elevation_gain_m,is_public,has_track,created_at
-       FROM rides WHERE owner_id=$1 ORDER BY started_at NULLS LAST,id`,
+       FROM rides r WHERE owner_id=$1 AND ${clubRideEnvelopeSql("$1")} ORDER BY started_at NULLS LAST,id`,
       [userId],
     )
   ).rows;
@@ -788,7 +789,7 @@ export async function ownRideTrack(
   return (
     (
       await q.query<{ id: string; title: string; track_file_id: string }>(
-        "SELECT id,title,track_file_id FROM rides WHERE id=$1 AND owner_id=$2 AND has_track",
+        `SELECT id,title,track_file_id FROM rides r WHERE id=$1 AND owner_id=$2 AND has_track AND ${clubRideEnvelopeSql("$2")}`,
         [rideId, userId],
       )
     ).rows[0] || null

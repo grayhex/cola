@@ -1,3 +1,4 @@
+import { clubRideEnvelopeSql, publicClubRideSql } from "./club-ride-access.ts";
 export type JournalViewRow = Omit<JournalRow, "event_date"> & {
   event_date: string | Date | null;
   bike_name: string;
@@ -161,7 +162,7 @@ export async function journalDetail(
   if (e.ride_id) {
     const r = (
       await q.query<{ id: string; share_id: string; title: string }>(
-        "SELECT r.id,r.share_id,r.title FROM rides r JOIN bikes b ON b.id=r.bike_id WHERE r.id=$1 AND r.bike_id=$2 AND (r.owner_id=$3 OR (r.is_public AND b.is_public))",
+        `SELECT r.id,r.share_id,r.title FROM rides r JOIN bikes b ON b.id=r.bike_id WHERE r.id=$1 AND r.bike_id=$2 AND ${publicClubRideSql()} AND ${clubRideEnvelopeSql("$3")} AND (r.owner_id=$3 OR (r.is_public AND b.is_public))`,
         [e.ride_id, e.bike_id, user],
       )
     ).rows[0];
@@ -296,7 +297,7 @@ export async function saveJournal(
     input.rideId &&
     !(
       await q.query<{ id: string }>(
-        "SELECT id FROM rides WHERE id=$1 AND bike_id=$2 AND owner_id=$3 FOR SHARE",
+        `SELECT id FROM rides r WHERE id=$1 AND bike_id=$2 AND owner_id=$3 AND ${publicClubRideSql()} AND ${clubRideEnvelopeSql("$3")} FOR SHARE`,
         [input.rideId, input.bikeId, user],
       )
     ).rowCount

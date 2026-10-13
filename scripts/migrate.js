@@ -80,6 +80,7 @@ try {
     "066_clubs",
     "067_club_membership",
     "068_club_posts",
+    "069_club_rides",
   ]) {
     const { rowCount } = await client.query(
       "SELECT 1 FROM schema_migrations WHERE version=$1",

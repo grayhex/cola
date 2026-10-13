@@ -45,11 +45,13 @@ const InviteFromInterest = dynamic(() => import("./invite-from-interest.tsx"), {
 // organizer's filters (old `?mode=organize` links).
 export default function PlanComposer({
   ride = null,
+  club = null,
   interest = null,
   onClose,
   onSaved,
 }: {
   ride?: RideDto | null;
+  club?: { id: string; name: string } | null;
   interest?: Record<string, string> | null;
   onClose: () => void;
   onSaved: RideSaveHandler;
@@ -184,6 +186,7 @@ export default function PlanComposer({
           )}
         {canPlan && (
           <PlanForm
+            club={club}
             prelude={
               !ride ? (
                 <details

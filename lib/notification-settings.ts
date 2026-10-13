@@ -1,3 +1,7 @@
+import {
+  clubRideEnvelopeSql,
+  internalClubRideSql,
+} from "./club-ride-access.ts";
 import type { Queryable } from "./db.ts";
 import { z } from "zod";
 import { mailEnabled } from "./mail.ts";
@@ -172,7 +176,7 @@ export async function notificationSettings(
       `SELECT m.kind,m.target_id id,CASE m.kind
         WHEN 'author' THEN (SELECT a.name FROM users a WHERE a.id=m.target_id AND NOT a.blocked)
         ELSE coalesce(
-          (SELECT r.title FROM rides r JOIN bikes rb ON rb.id=r.bike_id WHERE r.id=m.target_id AND (r.owner_id=$1 OR (r.is_public AND rb.is_public))),
+          (SELECT r.title FROM rides r JOIN bikes rb ON rb.id=r.bike_id WHERE r.id=m.target_id AND ${clubRideEnvelopeSql("$1")} AND (${internalClubRideSql("$1")} OR r.owner_id=$1 OR (r.is_public AND rb.is_public))),
           CASE WHEN m.kind='discussion' THEN (SELECT b.name FROM bikes b WHERE b.id=m.target_id AND (b.owner_id=$1 OR b.is_public)) END) END label
       FROM notification_mutes m WHERE m.user_id=$1 ORDER BY m.created_at,m.target_id LIMIT ${muteLimit}`,
       [userId],

@@ -1,3 +1,4 @@
+import { publicClubRideSql } from "./club-ride-access.ts";
 import { randomUUID } from "node:crypto";
 import type { Queryable } from "./db.ts";
 import { rideOccurrence } from "./ride-occurrence.ts";
@@ -207,7 +208,7 @@ export async function announcePlan(
     `INSERT INTO notification_fanouts(kind,source_id,author_id,occurs_at,revision,created_at)
     SELECT 'plan_published',r.id,r.owner_id,(${occurrence}),r.agreement_revision,$2
     FROM rides r JOIN bikes b ON b.id=r.bike_id JOIN users u ON u.id=r.owner_id
-    WHERE r.id=$1 AND r.status='planned' AND r.is_public AND b.is_public AND NOT u.blocked AND (${occurrence})>$2::timestamptz
+    WHERE r.id=$1 AND r.status='planned' AND NOT r.club_suspended AND ${publicClubRideSql()} AND r.is_public AND b.is_public AND NOT u.blocked AND (${occurrence})>$2::timestamptz
       AND (SELECT count(*) FROM notification_fanouts f WHERE f.author_id=r.owner_id AND f.created_at>$2::timestamptz-interval '24 hours')<$3
     ON CONFLICT(kind,source_id,considering) DO NOTHING`,
     [rideId, now, limits.announcementsPerAuthorDay],
@@ -261,7 +262,7 @@ async function stillPublished(q: Queryable, job: Fanout, now: Date) {
     return !!(
       await q.query(
         `SELECT 1 FROM rides r JOIN bikes b ON b.id=r.bike_id JOIN users u ON u.id=r.owner_id
-        WHERE r.id=$1 AND r.status='planned' AND r.is_public AND b.is_public AND NOT u.blocked AND (${occurrence})>$2::timestamptz`,
+        WHERE r.id=$1 AND r.status='planned' AND NOT r.club_suspended AND ${publicClubRideSql()} AND r.is_public AND b.is_public AND NOT u.blocked AND (${occurrence})>$2::timestamptz`,
         [job.source_id, now],
       )
     ).rowCount;

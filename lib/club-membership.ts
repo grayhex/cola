@@ -87,7 +87,7 @@ async function lockPeople(
   if (verified && !user.email_verified_at) throw new EmailPolicyError();
   return people;
 }
-async function lockClub(q: Queryable, id: string) {
+async function lockClub(q: Queryable, id: string, withdrawal = false) {
   const c = (
     await q.query<LockedClub>(
       `SELECT c.* FROM clubs c JOIN users o ON o.id=c.owner_id WHERE c.id=$1 AND c.hidden_at IS NULL AND NOT o.blocked FOR UPDATE OF c`,
@@ -95,7 +95,8 @@ async function lockClub(q: Queryable, id: string) {
     )
   ).rows[0];
   if (!c) throw new CommunityError("Клуб недоступен", 404);
-  if (c.archived_at) throw new CommunityError("Клуб в архиве", 409);
+  if (c.archived_at && !withdrawal)
+    throw new CommunityError("Клуб в архиве", 409);
   return c;
 }
 const member = async (q: Queryable, id: string, user: string) =>
@@ -133,7 +134,7 @@ export async function changeMembership(
     [],
     action === "join" || action === "accept-invite",
   );
-  const c = await lockClub(q, id),
+  const c = await lockClub(q, id, action === "leave"),
     m = await member(q, id, user);
   if (m?.state === "blocked")
     throw new CommunityError("Действие недоступно в этом клубе", 403);

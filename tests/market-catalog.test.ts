@@ -125,6 +125,12 @@ test("market catalog: populated migration, independent fields, private/foreign b
     await sql("030_market_catalog_links.sql");
     // Model edits write the description (#264).
     await sql("041_component_descriptions.sql");
+    // Current model aggregates include club publicity. Keep the populated 030
+    // upgrade above, adding the later unrelated read columns for today's code.
+    await sql("066_clubs.sql");
+    await db.exec(
+      "ALTER TABLE rides ADD COLUMN club_id uuid, ADD COLUMN club_audience text",
+    );
     const migrated = await one<MarketRow>(
       db,
       "SELECT * FROM market_listings WHERE id=$1",

@@ -31,6 +31,14 @@ test("thread migration and shared engine preserve immediate parents, tombstones,
     await db.exec(
       "ALTER TABLE notifications ADD COLUMN club_id uuid, ADD COLUMN club_post_id uuid, ADD COLUMN club_post_comment_id uuid",
     );
+    // Current ride ACL adds club references after the populated thread upgrade.
+    // Apply its real schema, keeping this fixture's original 048 upgrade order.
+    await db.exec(
+      await readFile(new URL("../db/066_clubs.sql", import.meta.url), "utf8"),
+    );
+    await db.exec(
+      "ALTER TABLE rides ADD COLUMN club_id uuid, ADD COLUMN club_audience text, ADD COLUMN club_suspended boolean NOT NULL DEFAULT false",
+    );
     // Notices are not made between people who blocked each other (#354).
     await db.exec(
       await readFile(

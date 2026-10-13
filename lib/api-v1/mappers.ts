@@ -380,7 +380,6 @@ export function toRideSummary(
   row: RideViewRow,
   viewer: string | null,
 ): RideSummary {
-  void viewer;
   const planned = row.status === "planned";
   const counts = row.rsvp_counts ?? {};
   return {
@@ -401,7 +400,13 @@ export function toRideSummary(
       avgSpeedMps: numberOrNull(row.avg_speed_mps),
       elevationGainM: numberOrNull(row.elevation_gain_m),
     },
-    bike: { id: row.bike_id, name: row.bike_name },
+    bike: {
+      id: row.bike_id,
+      name:
+        row.club_id && !row.bike_public && row.owner_id !== viewer
+          ? ""
+          : row.bike_name,
+    },
     author: author(row),
     likes: row.likes,
     comments: row.comments,
