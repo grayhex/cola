@@ -71,8 +71,10 @@ test("categories: every event has one and the lists agree", () => {
   }
 });
 
-test("e-mail events: the same thirteen, in the categories the outbox knows, with a subject and one line", () => {
+test("e-mail events: including club discussions, in the categories the outbox knows, with a subject and one line", () => {
   assert.deepEqual(Object.keys(notificationEmailEvents).sort(), [
+    "club_post_comment",
+    "club_post_reply",
     "comment",
     "component_reply",
     "journal_comment",
@@ -119,6 +121,10 @@ const noRow: NotificationRow = {
   ride_comment_id: "",
   entry_comment_id: "",
   component_comment_id: "",
+  club_id: "",
+  club_post_id: "",
+  club_post_title: "",
+  club_post_comment_id: "",
   component_id: "",
   component_name: "",
   category_slug: "",
@@ -178,6 +184,37 @@ interface Expected {
   dated?: boolean;
 }
 const cases: Record<NotificationType, Expected> = {
+  club_post_like: {
+    row: {
+      ...person,
+      club_id: randomUUID(),
+      club_post_id: randomUUID(),
+      club_post_title: "Клуб",
+    },
+    target: "club-post",
+  },
+  club_post_comment: {
+    row: {
+      ...person,
+      club_id: randomUUID(),
+      club_post_id: randomUUID(),
+      club_post_title: "Клуб",
+      club_post_comment_id: comment,
+    },
+    target: "club-post",
+    comment,
+  },
+  club_post_reply: {
+    row: {
+      ...person,
+      club_id: randomUUID(),
+      club_post_id: randomUUID(),
+      club_post_title: "Клуб",
+      club_post_comment_id: comment,
+    },
+    target: "club-post",
+    comment,
+  },
   follow: { row: person, target: "profile" },
   like: { row: { ...person, ...bike }, target: "bike" },
   comment: {

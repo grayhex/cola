@@ -105,3 +105,56 @@
   gap: var(--space-2);
   min-height: var(--control-lg);
 }
+.feed {
+  margin-block: var(--space-6);
+}
+.feed h2 {
+  margin: 0;
+  flex: 1;
+}
+.posts {
+  display: grid;
+  gap: var(--space-6);
+  margin-block: var(--space-4);
+}
+.post {
+  padding-block: var(--space-4);
+  border-top: 1px solid var(--line);
+  overflow-wrap: anywhere;
+}
+.post h3 {
+  font-size: var(--text-xl);
+  margin-block: var(--space-2);
+}
+.postPhoto {
+  display: block;
+  width: 100%;
+  max-height: 320px;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+}
+.postTitle {
+  overflow-wrap: anywhere;
+}
+.author {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  color: var(--text-secondary);
+}
+.author strong {
+  color: var(--text);
+}
+.gallery {
+  display: grid;
+  gap: var(--space-4);
+  max-width: 720px;
+  margin-block: var(--space-4);
+}
+.thumb {
+  width: 96px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+}

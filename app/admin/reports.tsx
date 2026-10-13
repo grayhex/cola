@@ -83,6 +83,9 @@ export default function Reports({
                   journal_comment: "Комментарий к записи",
                   component_comment: "Комментарий к компоненту",
                   component_photo: "Фото компонента",
+                  club: "Клуб",
+                  club_post: "Публикация клуба",
+                  club_post_comment: "Комментарий в клубе",
                   profile: "Профиль",
                   bike: "Велосипед",
                 }[r.entityType]
@@ -134,6 +137,22 @@ export default function Reports({
                 >
                   Закрыть жалобу
                 </button>
+                {["club", "club_post"].includes(r.entityType) && (
+                  <button
+                    className="quiet"
+                    disabled={busy}
+                    onClick={() =>
+                      act(
+                        r.id,
+                        r.entityType === "club"
+                          ? "hide_club"
+                          : "hide_club_post",
+                      )
+                    }
+                  >
+                    Скрыть {r.entityType === "club" ? "клуб" : "публикацию"}
+                  </button>
+                )}
                 {r.entityType === "ride" && (
                   <button
                     className="quiet"
@@ -166,6 +185,7 @@ export default function Reports({
                   "comment",
                   "ride_comment",
                   "journal_comment",
+                  "club_post_comment",
                   "component_comment",
                 ].includes(r.entityType) &&
                   !r.target.commentDeleted && (

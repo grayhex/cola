@@ -109,6 +109,21 @@ export interface NotificationEvent {
  * the kind of event and never quotes a comment, a place or a track.
  */
 export const notificationEvents = {
+  club_post_like: { category: "reactions" },
+  club_post_comment: {
+    category: "discussions",
+    email: {
+      subject: "Комментарий к публикации клуба",
+      line: "У вашей публикации клуба появился новый комментарий.",
+    },
+  },
+  club_post_reply: {
+    category: "discussions",
+    email: {
+      subject: "Ответ в клубе",
+      line: "На ваш комментарий в клубе ответили.",
+    },
+  },
   follow: { category: "reactions" },
   like: { category: "reactions" },
   comment: {

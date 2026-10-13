@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { ClubDto } from "../../lib/club-contracts.ts";
 import RichTextBody from "./rich-text-body.tsx";
 import ClubMembershipControls from "./club-membership-controls.tsx";
+import ClubReport from "./club-report.tsx";
 import ClubLifecycle from "./club-lifecycle.tsx";
 import styles from "./clubs.module.css";
 export default function ClubHeader({ club: c }: { club: ClubDto }) {
@@ -66,6 +67,7 @@ export default function ClubHeader({ club: c }: { club: ClubDto }) {
             Правила клуба
           </Link>
           {c.archived && <ClubLifecycle club={c} />}
+          <ClubReport club={c} />
           {c.canManage && (
             <Link className="button" href={"/clubs/" + c.id + "/manage"}>
               Управление

@@ -22,7 +22,7 @@ import { CommunityError } from "./community-validation.ts";
 import { mailEnabled } from "./mail.ts";
 import { notificationEmailEnqueueSql } from "./notification-catalog.ts";
 import { publicAuthor } from "./profile-dto.ts";
-import { limits, componentPhotoBytes } from "./limits.ts";
+import { limits, componentPhotoBytes, clubPostPhotoBytes } from "./limits.ts";
 import { participation } from "./participation.ts";
 import { publicPath } from "./public-urls.ts";
 import { getSite } from "./site.ts";
@@ -648,6 +648,7 @@ export async function saveMarketPhoto(
         Number(usage.bytes) +
           Number(others.bytes) +
           (await componentPhotoBytes(q, owner)) +
+          (await clubPostPhotoBytes(q, owner)) +
           bytes.length >
         limits.storageBytes
       )

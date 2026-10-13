@@ -19,9 +19,18 @@ import type {
   MarketSaved,
 } from "./content-types.ts";
 
+import type { ClubPostView } from "./club-post-feed.tsx";
 import type { ClubDto, ClubForm } from "../../lib/club-contracts.ts";
 
 interface Drafts {
+  clubPost: {
+    form: { title: string; body: string };
+    requestId: string;
+    record: ClubPostView | null;
+    files: { id: string; file: File; bytes: File | null }[];
+    dirty: boolean;
+  };
+
   club: {
     form: ClubForm;
     rules: string;
@@ -70,6 +79,7 @@ export function ContentDraftProvider({
       tasks: new Map<string, Promise<void>>(),
       stores: {
         club: new Map<string, Snapshot<"club">>(),
+        clubPost: new Map<string, Snapshot<"clubPost">>(),
         article: new Map<string, Snapshot<"article">>(),
         journal: new Map<string, Snapshot<"journal">>(),
         market: new Map<string, Snapshot<"market">>(),

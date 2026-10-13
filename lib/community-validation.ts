@@ -24,6 +24,9 @@ export const reportInput = z
       "journal_comment",
       "component_comment",
       "component_photo",
+      "club",
+      "club_post",
+      "club_post_comment",
     ]),
     targetId: uuid,
     reason: z.enum(["spam", "abuse", "inappropriate", "copyright", "other"]),
@@ -37,6 +40,8 @@ export const reportAction = z
       "hide_ride",
       "hide_journal",
       "hide_component_photo",
+      "hide_club",
+      "hide_club_post",
     ]),
   })
   .strict();

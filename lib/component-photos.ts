@@ -19,7 +19,12 @@ import path from "node:path";
 import { z } from "zod";
 import sharp from "sharp";
 import { CommunityError } from "./community-validation.ts";
-import { limits, QuotaError, componentPhotoBytes } from "./limits.ts";
+import {
+  limits,
+  QuotaError,
+  componentPhotoBytes,
+  clubPostPhotoBytes,
+} from "./limits.ts";
 import {
   componentActor,
   lockComponent,
@@ -277,7 +282,10 @@ export async function componentPhotoCapacity(
     )
   ).rows[0];
   if (
-    Number(other.bytes) + (await componentPhotoBytes(q, actorId)) + bytes >
+    Number(other.bytes) +
+      (await componentPhotoBytes(q, actorId)) +
+      (await clubPostPhotoBytes(q, actorId)) +
+      bytes >
     limits.storageBytes
   )
     throw new QuotaError("Лимит места для фотографий исчерпан");
