@@ -441,7 +441,7 @@
   height: 32px;
   border-radius: var(--radius-full);
   background: color-mix(in srgb, var(--tone) 16%, var(--surface));
-  color: var(--tone);
+  color: var(--text);
   font-size: var(--text-xs);
   font-weight: var(--weight-bold);
 }
