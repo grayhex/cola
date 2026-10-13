@@ -112,7 +112,11 @@ export function fixtureMethods() {
             .filter(
               (m) => !options.user_id_gt || m.user_id > options.user_id_gt,
             )
-            .sort((a, b) => a.user_id.localeCompare(b.user_id));
+            .sort(
+              (a, b) =>
+                (sort.user_id === -1 ? -1 : 1) *
+                a.user_id.localeCompare(b.user_id),
+            );
           const matching = filter.id
             ? sorted.filter(
                 (m) => m.user_id === filter.id || m.user_id === filter.id.$eq,
