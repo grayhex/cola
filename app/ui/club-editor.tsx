@@ -92,6 +92,8 @@ function Editor({
     ),
     [record, setRecord] = useState(draft.restored?.record || initial),
     [requestId] = useState(draft.restored?.requestId || crypto.randomUUID());
+  const [interactive, setInteractive] = useState(false);
+  useEffect(() => setInteractive(true), []);
   const [logo, setLogo] = useState<File | null>(draft.restored?.logo || null),
     [cover, setCover] = useState<File | null>(draft.restored?.cover || null),
     [dirty, setDirty] = useState(draft.restored?.dirty || false),
@@ -127,7 +129,7 @@ function Editor({
   };
   async function save(event: React.SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (busy) return;
+    if (busy || !interactive) return;
     setBusy(true);
     setError("");
     const done = draft.begin();
@@ -262,7 +264,7 @@ function Editor({
               setDirty(true);
               draft.resume();
             }}
-            disabled={busy}
+            disabled={busy || !interactive}
           />
         ) : (
           <>
@@ -272,7 +274,7 @@ function Editor({
                 required
                 maxLength={80}
                 value={form.name}
-                disabled={busy}
+                disabled={busy || !interactive}
                 onChange={(e) => field("name", e.target.value)}
               />
             </label>
@@ -281,7 +283,7 @@ function Editor({
               <input
                 maxLength={180}
                 value={form.slogan}
-                disabled={busy}
+                disabled={busy || !interactive}
                 onChange={(e) => field("slogan", e.target.value)}
               />
             </label>
@@ -291,7 +293,7 @@ function Editor({
                 <input
                   maxLength={80}
                   value={form.city}
-                  disabled={busy}
+                  disabled={busy || !interactive}
                   onChange={(e) => field("city", e.target.value)}
                 />
               </label>
@@ -300,7 +302,7 @@ function Editor({
                 <input
                   maxLength={328}
                   value={form.formatsText}
-                  disabled={busy}
+                  disabled={busy || !interactive}
                   placeholder="Гравий, шоссе, город"
                   onChange={(e) => field("formatsText", e.target.value)}
                 />
@@ -310,14 +312,14 @@ function Editor({
               label="О клубе и его миссии"
               value={form.mission}
               onChange={(s) => field("mission", s)}
-              disabled={busy}
+              disabled={busy || !interactive}
             />
             <div className={styles.fields}>
               <label>
                 Вступление
                 <select
                   value={form.joinMode}
-                  disabled={busy}
+                  disabled={busy || !interactive}
                   onChange={(e) =>
                     field(
                       "joinMode",
@@ -333,7 +335,7 @@ function Editor({
                 Список участников
                 <select
                   value={form.membersVisibility}
-                  disabled={busy}
+                  disabled={busy || !interactive}
                   onChange={(e) =>
                     field(
                       "membersVisibility",
@@ -357,7 +359,7 @@ function Editor({
                   <input
                     type="file"
                     accept="image/jpeg,image/png,image/webp"
-                    disabled={busy}
+                    disabled={busy || !interactive}
                     onChange={(e) => {
                       const f = e.target.files?.[0] || null;
                       if (p === "logo") setLogo(f);
@@ -377,13 +379,16 @@ function Editor({
         )}
         {error && <p role="alert">{error}</p>}
         <div className={styles.actions}>
-          <button className="button primary" disabled={busy || !allowed}>
+          <button
+            className="button primary"
+            disabled={busy || !interactive || !allowed}
+          >
             {busy ? "Сохраняем…" : "Сохранить"}
           </button>
           <button
             type="button"
             className="button"
-            disabled={busy}
+            disabled={busy || !interactive}
             onClick={async () => {
               if (await mayDiscard()) {
                 draft.forget();

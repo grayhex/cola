@@ -656,7 +656,7 @@ export default function PlanForm({
                 До 30 приглашений; приглашённые получат уведомление.
               </InfoTip>
             </legend>
-            {!ride && (
+            {!ride && (club || clubOptions.length > 0) && (
               <label className="field">
                 <span>От кого выезд</span>
                 <select
