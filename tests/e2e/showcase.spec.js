@@ -6,9 +6,14 @@ import { leaveSearch, searchWizard } from "../fixtures/wizard-search.js";
 async function register(page, name) {
   await page.goto("/bikes");
   await expect(page.locator(".global-header")).toBeVisible();
-  if (await page.getByRole("button", { name: "Открыть меню" }).isVisible())
-    await page.getByRole("button", { name: "Открыть меню" }).click();
-  await page.getByRole("button", { name: "Войти", exact: true }).click();
+  const compact = await page
+    .getByRole("button", { name: "Открыть меню" })
+    .isVisible();
+  if (compact) await page.getByRole("button", { name: "Открыть меню" }).click();
+  const account = compact
+    ? page.getByRole("dialog", { name: "Меню ColaBike" })
+    : page.locator(".desktop-account");
+  await account.getByRole("button", { name: "Войти", exact: true }).click();
   await page
     .getByRole("button", {
       name: "Нет аккаунта? Зарегистрироваться",
