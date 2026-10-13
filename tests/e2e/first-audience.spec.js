@@ -310,6 +310,11 @@ test("stale RSVP at unchanged start shows fresh coarse place; retry is explicit;
     await expect(answer).toHaveAttribute("aria-pressed", "false");
     await answer.click();
     await expect(answer).toHaveAttribute("aria-pressed", "true");
+    // aria-pressed is optimistic; a reload must wait for the saved answer,
+    // otherwise WebKit can abort the still-pending PATCH (#408 audit).
+    await expect(
+      reader.getByRole("status").filter({ hasText: "Ответ сохранён: Иду" }),
+    ).toHaveText("Ответ сохранён: Иду");
     await reader.reload();
     await expect(reader.locator("main")).toContainText("Скрытый вход 7");
     await reader.goto("/rides");
