@@ -22,6 +22,7 @@ test("account profile/avatar editing, public garage, author links and mutual mob
   browser,
   isMobile,
 }, testInfo) => {
+  if (!isMobile) await page.setViewportSize({ width: 1440, height: 900 });
   const nonce = randomUUID().slice(0, 8),
     username = "social-" + nonce;
   await register(page.request, "owner-" + nonce);
