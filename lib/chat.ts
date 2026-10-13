@@ -1,3 +1,8 @@
+import {
+  openClubChat,
+  syncViewerClubChannels,
+  syncViewerClubRevocations,
+} from "./club-chat.ts";
 import type { ChatJobRow as ChatJobRowType } from "./database-rows.ts";
 import type { Queryable } from "./db.ts";
 import { createHash, randomUUID } from "node:crypto";
@@ -16,6 +21,7 @@ import type { CurrentUser } from "./contracts.ts";
 
 const memberId = z.uuid().transform((value) => value.toLowerCase());
 export const channelInput = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("club"), clubId: memberId }).strict(),
   z
     .object({ kind: z.literal("dm"), members: z.array(memberId).length(1) })
     .strict(),
@@ -94,7 +100,9 @@ export async function issueChatToken(
   await ensureChatPolicy(provider);
   const users = await lockChatUsers(q, [viewer.id]);
   await requireSession(q, viewer, sessionHash);
+  await syncViewerClubRevocations(q, viewer.id, provider);
   await registerChatUsers(q, users, provider);
+  await syncViewerClubChannels(q, viewer.id, provider);
   const identity = (
     await q.query<{ revoked_at: Date | null }>(
       "SELECT revoked_at FROM chat_identities WHERE user_id=$1",
@@ -129,6 +137,13 @@ export async function createChatChannel(
 ) {
   requireVerifiedEmail(viewer);
   const input = channelInput.parse(raw);
+  if (input.kind === "club") {
+    await ensureChatPolicy(provider);
+    const users = await lockChatUsers(q, [viewer.id]);
+    await requireSession(q, viewer, sessionHash);
+    await registerChatUsers(q, users, provider);
+    return openClubChat(q, input.clubId, viewer.id, provider);
+  }
   const ids = [viewer.id, ...input.members];
   if (new Set(ids).size !== ids.length)
     throw new ChatError(

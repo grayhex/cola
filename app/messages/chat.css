@@ -511,3 +511,13 @@ button.chat-person:hover {
     --str-chat__message-composer-command-transition-duration: 0ms;
   }
 }
+
+.chat-club-moderation {
+  padding-inline: var(--space-3);
+  margin-block: var(--space-1);
+  color: var(--muted);
+}
+.chat-club-moderation > button {
+  min-height: 44px;
+  font-size: var(--text-sm);
+}

@@ -14,6 +14,7 @@ import {
   createChatChannel,
   leaveChatChannel,
 } from "../../../../lib/chat.ts";
+import { syncViewerClubChannels } from "../../../../lib/club-chat.ts";
 import { chatPeople } from "../../../../lib/chat-people.ts";
 import {
   EmailPolicyError,
@@ -95,6 +96,7 @@ async function handler(
         [viewer.id],
       );
       if (!identity.rowCount) return reply({ unread: 0 });
+      await transaction((q) => syncViewerClubChannels(q, viewer.id));
       const counts = await chatProvider().getUnreadCount(
         streamUserId(viewer.id),
       );

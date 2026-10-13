@@ -3,11 +3,13 @@ import type {
   Channel as StreamChannel,
   StreamChat,
   ChannelSort,
+  ChannelMemberResponse,
 } from "stream-chat";
 import type {
   ChannelListItemUIProps,
   ChannelListUIProps,
   ComponentContextValue,
+  MessageUIComponentProps,
 } from "stream-chat-react";
 import type { PropsWithChildren } from "react";
 import type { RideDto } from "../ui/content-types.ts";
@@ -17,6 +19,7 @@ interface MessengerActions {
   back: () => void;
   changed: () => void;
   safetyChanged: (blocked: boolean) => void;
+  clubModeration: { clubId: string; canModerate: boolean } | null;
 }
 import { BlockButton } from "../ui/user-block-controls.tsx";
 import { useConfirmation } from "../ui/confirmation.tsx";
@@ -38,12 +41,16 @@ import {
   ComponentProvider,
   MessageComposer,
   MessageList,
+  MessageUI,
+  useMessageContext,
   Thread,
   Window,
   useChatContext,
   useChannelStateContext,
 } from "stream-chat-react";
 import { Avatar } from "../ui/avatar.tsx";
+import Link from "next/link";
+import { clubIdOfCid } from "../../lib/club-chat-id.ts";
 import { CompactDialog, CompactIconButton } from "../ui/compact-ui.tsx";
 import {
   ArrowLeft,
@@ -101,6 +108,16 @@ function ChannelAvatar({
   channel: StreamChannel;
   me?: string;
 }) {
+  if (clubIdOfCid(channel.cid))
+    return channel.data?.image ? (
+      <Avatar
+        person={{ name: channel.data.name, avatar: channel.data.image }}
+      />
+    ) : (
+      <span className="chat-group-avatar" aria-hidden="true">
+        <Users size={22} />
+      </span>
+    );
   return channel.id?.startsWith("group_") ? (
     <span className="chat-group-avatar" aria-hidden="true">
       <Users size={22} />
@@ -220,12 +237,96 @@ const components: Partial<ComponentContextValue> = {
   ChannelListHeader: () => null,
   ChannelListUI: ConversationList,
   ChannelListItemUI: ConversationRow,
+  MessageUI: ClubMessageUI,
 };
+function ClubMessageUI(props: MessageUIComponentProps) {
+  const { message } = useMessageContext(),
+    { channel } = useChannelStateContext(),
+    { client } = useChatContext(),
+    context = useContext(MessengerContext),
+    [busy, setBusy] = useState(false),
+    [error, setError] = useState(""),
+    [ask, confirmation] = useConfirmation();
+  const right = context?.clubModeration;
+  return (
+    <>
+      <MessageUI {...props} />
+      {right?.canModerate &&
+        right.clubId === clubIdOfCid(channel.cid) &&
+        message.user?.id !== client.userID &&
+        message.type !== "deleted" && (
+          <div className="chat-club-moderation">
+            <button
+              className="quiet"
+              disabled={busy}
+              onClick={async () => {
+                if (
+                  !(await ask("Удалить сообщение из чата этого клуба?", {
+                    title: "Модерация чата",
+                    confirmLabel: "Удалить сообщение",
+                  }))
+                )
+                  return;
+                setBusy(true);
+                setError("");
+                try {
+                  await socialApi(
+                    "clubs/" +
+                      right.clubId +
+                      "/chat/messages/" +
+                      encodeURIComponent(message.id),
+                    "DELETE",
+                  );
+                  context?.changed();
+                } catch (e) {
+                  setError(errorMessage(e));
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              Удалить · администрация клуба
+            </button>
+            {error && <p role="alert">{error}</p>}
+          </div>
+        )}
+      {confirmation}
+    </>
+  );
+}
 function ConversationHeader() {
   const { channel, members } = useChannelStateContext();
   const { client } = useChatContext();
   const { back, changed, safetyChanged } = useContext(MessengerContext)!;
   const [details, setDetails] = useState(false);
+  const [clubMembers, setClubMembers] = useState<ChannelMemberResponse[]>([]),
+    [memberCursor, setMemberCursor] = useState<string | null>(null),
+    [membersBusy, setMembersBusy] = useState(false);
+  async function moreMembers(after?: string) {
+    setMembersBusy(true);
+    setError("");
+    try {
+      const result = await channel.queryMembers(
+        {},
+        { user_id: 1 },
+        { limit: 100, ...(after ? { user_id_gt: after } : {}) },
+      );
+      setClubMembers((old) =>
+        after ? [...old, ...result.members] : result.members,
+      );
+      const last = result.members.at(-1),
+        cursor = last?.user_id || last?.user?.id;
+      setMemberCursor(
+        result.members.length === 100 && cursor && cursor !== after
+          ? cursor
+          : null,
+      );
+    } catch {
+      setError("Не удалось загрузить участников. Повторите открытие списка.");
+    } finally {
+      setMembersBusy(false);
+    }
+  }
   const [muted, setMuted] = useState(() => channel.muteStatus().muted);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -237,10 +338,16 @@ function ConversationHeader() {
     return () => subscription.unsubscribe();
   }, [client, channel]);
   const title = titleFor(channel, client.userID);
-  const users = Object.values(members || channel.state.members)
+  const users = (
+    clubMembers.length
+      ? clubMembers
+      : Object.values(members || channel.state.members)
+  )
     .map((m) => m.user)
     .filter((person): person is NonNullable<typeof person> => !!person);
   const group = channel.id?.startsWith("group_");
+  const club = clubIdOfCid(channel.cid),
+    isGroup = !!(group || club);
   const other = users.find((u) => u.id !== client.userID);
   const otherId = other?.id.match(/^cola_([a-f0-9]{32})$/)?.[1];
   const accountId = otherId
@@ -260,8 +367,8 @@ function ConversationHeader() {
         <div className="chat-header-copy">
           <h2>{title}</h2>
           <p>
-            {group
-              ? `Участников: ${users.length}`
+            {isGroup
+              ? `${club ? "Клуб · " : ""}Участников: ${channel.data?.member_count ?? users.length}`
               : other?.deactivated_at || other?.banned
                 ? "Пользователь недоступен"
                 : other?.online
@@ -271,7 +378,10 @@ function ConversationHeader() {
         </div>
         <CompactIconButton
           label="Участники и информация"
-          onClick={() => setDetails(true)}
+          onClick={() => {
+            setDetails(true);
+            if (clubIdOfCid(channel.cid)) void moreMembers();
+          }}
         >
           <Info size={20} />
         </CompactIconButton>
@@ -279,7 +389,9 @@ function ConversationHeader() {
       <CompactDialog
         open={details}
         onClose={() => setDetails(false)}
-        title={group ? "Участники группы" : "О диалоге"}
+        title={
+          club ? "Участники клуба" : group ? "Участники группы" : "О диалоге"
+        }
         className="chat-details"
       >
         <h3>{title}</h3>
@@ -303,6 +415,16 @@ function ConversationHeader() {
             </li>
           ))}
         </ul>
+        {club && memberCursor && (
+          <button
+            className="button secondary"
+            disabled={membersBusy}
+            onClick={() => void moreMembers(memberCursor)}
+          >
+            Ещё участники
+          </button>
+        )}
+        {membersBusy && <p role="status">Загружаем участников…</p>}
         <div className="page-actions">
           <button
             type="button"
@@ -356,8 +478,13 @@ function ConversationHeader() {
               Выйти из группы
             </button>
           )}
-          {!group && accountId && (
+          {!isGroup && accountId && (
             <BlockButton userId={accountId} onChange={safetyChanged} />
+          )}
+          {club && (
+            <Link className="button secondary" href={"/clubs/" + club}>
+              Перейти в клуб
+            </Link>
           )}
         </div>
         <p className="help">
@@ -398,6 +525,10 @@ export default function Conversations({ client }: { client: StreamChat }) {
     blocked: boolean;
   } | null>(null);
   const blocked = safety?.cid === channel?.cid && safety?.blocked;
+  const [clubModeration, setClubModeration] = useState<{
+    clubId: string;
+    canModerate: boolean;
+  } | null>(null);
   const [attempt, setAttempt] = useState(0);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState("");
@@ -414,6 +545,7 @@ export default function Conversations({ client }: { client: StreamChat }) {
   useEffect(() => {
     let active = true;
     setError("");
+    setClubModeration(null);
     if (!target && !cid) {
       setBusy(false);
       setActiveChannel(undefined);
@@ -432,14 +564,37 @@ export default function Conversations({ client }: { client: StreamChat }) {
             })
           ).cid
         : cid;
-      if (!/^colabike:(dm_[a-f0-9]{40}|group_[a-f0-9]{32})$/.test(nextCid!))
+      if (
+        !/^colabike:(dm_[a-f0-9]{40}|group_[a-f0-9]{32}|club_[a-f0-9]{32})$/.test(
+          nextCid!,
+        )
+      )
         throw new Error("Диалог недоступен");
       const next = client.channel("colabike", nextCid!.split(":")[1]);
       await next.watch();
-      if (!next.state.members[client.userID!])
+      if (
+        !next.state.members[client.userID!] &&
+        next.state.membership?.user_id !== client.userID
+      )
         throw new Error("Диалог недоступен");
       if (!active) return;
       setActiveChannel(next);
+      const club = clubIdOfCid(next.cid);
+      if (club) {
+        const current = await socialApi<{
+          viewerId: string;
+          canModerate: boolean;
+          archived: boolean;
+        }>("clubs/" + club + "/chat");
+        if (
+          active &&
+          "cola_" + current.viewerId.replaceAll("-", "") === client.userID
+        )
+          setClubModeration({
+            clubId: club,
+            canModerate: current.canModerate && !current.archived,
+          });
+      }
       if (target) {
         setRevision((n) => n + 1);
         router.replace(
@@ -533,6 +688,7 @@ export default function Conversations({ client }: { client: StreamChat }) {
         changed: () => setRevision((n) => n + 1),
         safetyChanged: (value) =>
           channel && setSafety({ cid: channel.cid, blocked: value }),
+        clubModeration,
       }}
     >
       <ComponentProvider value={components}>
@@ -565,7 +721,7 @@ export default function Conversations({ client }: { client: StreamChat }) {
             <div className="chat-list-heading">
               <div>
                 <h2>Диалоги</h2>
-                <p>Личные сообщения и группы</p>
+                <p>Личные сообщения, группы и клубы</p>
               </div>
               <button
                 ref={newButton}
@@ -589,7 +745,9 @@ export default function Conversations({ client }: { client: StreamChat }) {
                 channelRenderFilterFn={(list) =>
                   list.filter(
                     (c) =>
-                      c.type === "colabike" && c.state.members[client.userID!],
+                      c.type === "colabike" &&
+                      (c.state.members[client.userID!] ||
+                        c.state.membership?.user_id === client.userID),
                   )
                 }
                 renderChannels={(list) =>
@@ -634,7 +792,12 @@ export default function Conversations({ client }: { client: StreamChat }) {
                     messageActions={actions}
                     renderText={plainText}
                   />
-                  {blocked ? (
+                  {channel.data?.frozen ? (
+                    <p className="notice">
+                      Чат клуба доступен для чтения. Новые сообщения
+                      остановлены.
+                    </p>
+                  ) : blocked ? (
                     <p className="notice">
                       Человек заблокирован. Личные сообщения недоступны.
                       Разблокировать можно в информации о диалоге.

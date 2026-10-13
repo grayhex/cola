@@ -2,6 +2,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 import type { Queryable } from "./db.ts";
 import { CHAT_TYPE, streamUserId } from "./chat-config.ts";
+import { clubIdOfCid } from "./club-chat-id.ts";
 import { stableUuid } from "./stable-uuid.ts";
 
 // New messages of Stream conversations as pushes (#342). Stream calls a webhook
@@ -16,11 +17,11 @@ import { stableUuid } from "./stable-uuid.ts";
 // send the conversation is asked again (chat-push-access.ts): the message may be
 // gone, the person may have left, muted it or read it elsewhere.
 
-/** The raw body is bounded; a conversation has up to eight members. */
+/** Bound vendor input independently of SQL-owned club membership. */
 export const CHAT_WEBHOOK_MAX_BYTES = 256 * 1024;
 /** How long a message is worth a push. */
 export const CHAT_PUSH_HOURS = 12;
-/** More members than any conversation of ours has: a sign of a body that is not ours. */
+/** Ordinary conversations remain limited; club channels have paged members. */
 const MAX_MEMBERS = 50;
 
 const streamIdPattern = /^cola_([0-9a-f]{32})$/;
@@ -66,7 +67,7 @@ const messageEvent = z.looseObject({
     user: z.looseObject({ id: z.string() }).optional(),
   }),
   user: z.looseObject({ id: z.string() }).optional(),
-  members: z.array(member).max(MAX_MEMBERS).optional(),
+  members: z.array(member).max(10000).optional(),
 });
 
 export interface ChatMessagePush {
@@ -92,6 +93,8 @@ export function chatMessagePush(body: unknown): ChatMessagePush | null {
     !/^colabike:[A-Za-z0-9_-]{1,100}$/.test(event.cid)
   )
     return null;
+  const clubId = clubIdOfCid(event.cid);
+  if (!clubId && (event.members?.length || 0) > MAX_MEMBERS) return null;
   const { message } = event;
   if (message.skip_push || message.silent) return null;
   if (message.type && !["regular", "reply"].includes(message.type)) return null;
@@ -103,7 +106,7 @@ export function chatMessagePush(body: unknown): ChatMessagePush | null {
     const id = userIdOfStream(item.user_id ?? item.user?.id);
     if (id && id !== author) recipients.add(id);
   }
-  if (!recipients.size) return null;
+  if (!recipients.size && !clubId) return null;
   return {
     messageId: message.id,
     cid: event.cid,
@@ -123,6 +126,27 @@ export async function enqueueChatPush(
   push: ChatMessagePush,
   now = new Date(),
 ) {
+  // Club membership is SQL-owned. A webhook may contain only the first page;
+  // it must neither omit later members nor grant a former member a delivery.
+  const clubId = clubIdOfCid(push.cid);
+  const recipients = clubId
+    ? (
+        await q.query<{ id: string }>(
+          `SELECT m.user_id id FROM club_memberships m
+         JOIN clubs c ON c.id=m.club_id
+         JOIN users u ON u.id=m.user_id
+         LEFT JOIN users owner ON owner.id=c.owner_id
+         WHERE c.id=$1 AND c.hidden_at IS NULL AND c.archived_at IS NULL
+           AND (c.owner_id IS NULL OR NOT owner.blocked)
+           AND m.state='active' AND NOT u.blocked AND u.email_verified_at IS NOT NULL
+           AND EXISTS(SELECT 1 FROM club_memberships a JOIN users au ON au.id=a.user_id
+             WHERE a.club_id=c.id AND a.user_id=$2 AND a.state='active'
+             AND NOT au.blocked AND au.email_verified_at IS NOT NULL)
+         ORDER BY m.user_id`,
+          [clubId, push.authorId],
+        )
+      ).rows.map((u) => u.id)
+    : push.recipients;
   const first = await q.query(
     "INSERT INTO chat_webhooks(webhook_id,received_at) VALUES($1,$2) ON CONFLICT DO NOTHING",
     [webhookId, now],
@@ -133,7 +157,7 @@ export async function enqueueChatPush(
   await q.query(
     `UPDATE push_deliveries SET status='skipped',error_code='superseded',finished_at=$3,lease_token=NULL,lease_until=NULL
      WHERE status='pending' AND chat_cid=$1 AND recipient_id=ANY($2::uuid[]) AND chat_message_id<>$4`,
-    [push.cid, push.recipients, now, push.messageId],
+    [push.cid, recipients, now, push.messageId],
   );
   const made = await q.query(
     `INSERT INTO push_deliveries(recipient_id,device_session_id,generation,available_at,expires_at,chat_message_id,chat_cid,chat_author_id)
@@ -146,7 +170,7 @@ export async function enqueueChatPush(
      WHERE d.user_id=ANY($5::uuid[]) AND d.user_id<>$4 AND d.revoked_at IS NULL AND d.registered_at<=$1::timestamptz
        AND NOT EXISTS(SELECT 1 FROM user_blocks ub WHERE (ub.blocker_id=d.user_id AND ub.blocked_id=$4) OR (ub.blocker_id=$4 AND ub.blocked_id=d.user_id))
      ON CONFLICT DO NOTHING`,
-    [now, push.messageId, push.cid, push.authorId, push.recipients],
+    [now, push.messageId, push.cid, push.authorId, recipients],
   );
   return { first: true, queued: made.rowCount ?? 0 };
 }

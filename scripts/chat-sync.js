@@ -1,6 +1,44 @@
 import { db, transaction } from "../lib/db.ts";
 import { chatCredentials } from "../lib/chat-config.ts";
 import { syncChatBlockJob, syncChatJob } from "../lib/chat-lifecycle.ts";
+import { syncClubChannel, syncClubRevocation } from "../lib/club-chat.ts";
+
+async function clubs() {
+  const revocations = (
+    await db.query(
+      "SELECT club_id,user_id,revision::text FROM club_chat_revocations WHERE next_attempt_at<=now() ORDER BY club_id,user_id LIMIT 40",
+    )
+  ).rows;
+  for (const job of revocations) {
+    try {
+      await transaction((q) =>
+        syncClubRevocation(q, job.club_id, job.user_id, job.revision),
+      );
+    } catch {
+      await db.query(
+        "UPDATE club_chat_revocations SET attempts=attempts+1,next_attempt_at=now()+make_interval(secs=>least(300,5*power(2,least(attempts,6)))::int) WHERE club_id=$1 AND user_id=$2 AND revision=$3",
+        [job.club_id, job.user_id, job.revision],
+      );
+      console.error(JSON.stringify({ event: "club_chat_revoke_retry" }));
+    }
+  }
+  const jobs = (
+    await db.query(
+      "SELECT club_id,revision::text FROM club_chat_jobs WHERE next_attempt_at<=now() ORDER BY updated_at,club_id LIMIT 10",
+    )
+  ).rows;
+  for (const job of jobs) {
+    try {
+      await transaction((q) => syncClubChannel(q, job.club_id));
+    } catch {
+      await db.query(
+        "UPDATE club_chat_jobs SET attempts=attempts+1,next_attempt_at=now()+make_interval(secs=>least(300,5*power(2,least(attempts,6)))::int) WHERE club_id=$1 AND revision=$2",
+        [job.club_id, job.revision],
+      );
+      console.error(JSON.stringify({ event: "club_chat_sync_retry" }));
+    }
+  }
+}
 
 // The blocks of people in Stream (#354). The job row is locked for the whole
 // call: a newer intention for the same pair waits for it and replaces it.
@@ -62,6 +100,7 @@ async function batch() {
       console.error(JSON.stringify({ event: "chat_sync_retry" }));
     }
   }
+  await clubs();
 }
 if (process.argv.includes("--once")) {
   await batch();

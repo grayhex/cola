@@ -74,14 +74,27 @@ export function chatBrowserFixture(users) {
         result = await response.json();
       if (response.status() === 201 && !channels.has(result.cid)) {
         const id = result.cid.split(":")[1],
-          ids = [person.id, ...request.members].map(
-            (id) => "cola_" + id.replaceAll("-", ""),
-          );
+          ids = (
+            request.kind === "club"
+              ? users.map((u) => u.id)
+              : [person.id, ...request.members]
+          ).map((id) => "cola_" + id.replaceAll("-", ""));
         channels.set(result.cid, {
           id,
           cid: result.cid,
           type: "colabike",
-          ...(request.name ? { name: request.name } : {}),
+          ...(request.kind === "club"
+            ? {
+                name: (
+                  await (
+                    await page.request.get("/api/clubs/" + request.clubId)
+                  ).json()
+                ).club.name,
+                club_id: request.clubId,
+              }
+            : request.name
+              ? { name: request.name }
+              : {}),
           created_at: now(),
           updated_at: now(),
           created_by: me,
@@ -153,6 +166,14 @@ export function chatBrowserFixture(users) {
           channel_mute: mutes[0],
           own_user: { ...me, channel_mutes: mutes },
         });
+      }
+      if (path === "/members") {
+        const payload = JSON.parse(url.searchParams.get("payload") || "{}");
+        const c = channels.get(payload.type + ":" + payload.id);
+        const members = (c?.members || [])
+          .filter((m) => !payload.user_id_gt || m.user_id > payload.user_id_gt)
+          .sort((a, b) => a.user_id.localeCompare(b.user_id));
+        return reply({ members: members.slice(0, payload.limit || 100) });
       }
       if (path === "/channels")
         return reply({
