@@ -54,6 +54,8 @@ import ShareButton from "./share-button.tsx";
 import { useHydrated } from "./use-hydrated.ts";
 import SiteIcon from "./site-icon.tsx";
 import LocalDate from "./local-date.tsx";
+import { useContentDraft } from "./content-drafts.tsx";
+import { useDraftExit } from "./use-draft-exit.tsx";
 // The link keeps the original; previews use the cached size variants.
 const marketVariants = (id: string, widths = [320, 640, 1280]) =>
   widths.map((w) => `/api/market/media/${id}?width=${w} ${w}w`).join(", ");
@@ -232,7 +234,7 @@ const blank = {
   bikeModelId: null,
   linkedBikeId: null,
 };
-function ListingEditor({
+function ListingForm({
   initial,
   onSaved,
   onCancel,
@@ -244,25 +246,65 @@ function ListingEditor({
   // SSR fields must not accept input before React can retain it in form state.
   const hydrated = useHydrated();
   const legacyCurrency = !!initial?.currency && initial.currency !== "RUB";
-  const [form, setForm] = useState<ListingDraft>(
-      () =>
-        ({
-          ...Object.fromEntries(
-            (Object.keys(blank) as (keyof ListingDraft)[]).map((k) => [
-              k,
-              initial?.[k] ?? blank[k],
-            ]),
-          ),
-          currency: "RUB",
-          price: legacyCurrency ? "" : (initial?.price ?? ""),
-        }) as ListingDraft,
-    ),
+  const {
+    restored,
+    remember,
+    forget,
+    pending,
+    read,
+    begin,
+    isMounted,
+    shouldWarn,
+    resume,
+  } = useContentDraft("market", initial?.id || "new");
+  const [baseline] = useState<ListingDraft>(
+    () =>
+      ({
+        ...Object.fromEntries(
+          (Object.keys(blank) as (keyof ListingDraft)[]).map((k) => [
+            k,
+            initial?.[k] ?? blank[k],
+          ]),
+        ),
+        currency: "RUB",
+        price: legacyCurrency ? "" : (initial?.price ?? ""),
+      }) as ListingDraft,
+  );
+  const [form, setForm] = useState(restored?.form || baseline),
     [identity, setIdentity] = useState<
       MarketSaved | MarketDto | null | undefined
-    >(initial),
-    [photos, setPhotos] = useState(initial?.photos || []),
-    [busy, setBusy] = useState(false),
-    [error, setError] = useState("");
+    >(restored?.identity || initial),
+    [photos, setPhotos] = useState(restored?.photos || initial?.photos || []),
+    [busy, setBusy] = useState(!!pending),
+    [error, setError] = useState(restored?.error || "");
+  const dirty = JSON.stringify(form) !== JSON.stringify(baseline);
+  const { mayDiscard, confirmation } = useDraftExit(dirty, shouldWarn);
+  useEffect(() => {
+    if (!pending) return;
+    let active = true;
+    pending.then(() => {
+      if (!active) return;
+      const latest = read();
+      setError(latest?.error || "");
+      if (latest) {
+        setForm(latest.form);
+        setPhotos(latest.photos);
+        setIdentity(latest.identity);
+      }
+      setBusy(false);
+    });
+    return () => {
+      active = false;
+    };
+  }, [pending, read]);
+  useEffect(() => {
+    if (!busy)
+      remember(
+        dirty || (identity && !initial)
+          ? { form, identity, photos, error }
+          : undefined,
+      );
+  }, [dirty, form, identity, photos, initial, error, busy, remember]);
   const set = <K extends keyof ListingDraft>(k: K, v: ListingDraft[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
   async function save(status: string) {
@@ -283,6 +325,7 @@ function ListingEditor({
       body,
     );
     setIdentity(saved);
+    remember({ form, identity: saved, photos });
     return saved;
   }
   return (
@@ -290,17 +333,36 @@ function ListingEditor({
       className={styles.editor}
       onSubmit={async (e) => {
         e.preventDefault();
+        const done = begin();
         setBusy(true);
         setError("");
         try {
-          await onSaved(await save(form.status === "sold" ? "sold" : "active"));
+          const saved = await save(form.status === "sold" ? "sold" : "active");
+          if (isMounted()) {
+            forget();
+            await onSaved(saved);
+          }
         } catch (e) {
+          resume();
           setError(errorMessage(e));
+          remember({
+            form,
+            identity: read()?.identity || identity,
+            photos: read()?.photos || photos,
+            error: errorMessage(e),
+          });
         } finally {
           setBusy(false);
+          done();
         }
       }}
     >
+      {restored && (
+        <p role="status" className="help">
+          Черновик восстановлен. Сохраните изменения, когда закончите.
+        </p>
+      )}
+      {confirmation}
       <h1>{initial ? "Изменить объявление" : "Новое объявление"}</h1>
       <label className="field">
         <span>Тип объявления</span>
@@ -319,7 +381,7 @@ function ListingEditor({
       <label className="field">
         <span>Название</span>
         <input
-          disabled={!hydrated}
+          disabled={!hydrated || busy}
           required
           maxLength={120}
           value={form.title}
@@ -331,7 +393,7 @@ function ListingEditor({
         <label className="field">
           <span>Категория</span>
           <select
-            disabled={!hydrated}
+            disabled={!hydrated || busy}
             value={form.category}
             onChange={(e) =>
               setForm((f) => ({
@@ -352,7 +414,7 @@ function ListingEditor({
         <label className="field">
           <span>Состояние</span>
           <select
-            disabled={!hydrated}
+            disabled={!hydrated || busy}
             value={form.condition}
             onChange={(e) => set("condition", e.target.value)}
           >
@@ -371,7 +433,7 @@ function ListingEditor({
       <label className="field">
         <span>Описание</span>
         <textarea
-          disabled={!hydrated}
+          disabled={!hydrated || busy}
           required
           maxLength={6000}
           rows={6}
@@ -413,7 +475,7 @@ function ListingEditor({
       <label className="field">
         <span>Город</span>
         <input
-          disabled={!hydrated}
+          disabled={!hydrated || busy}
           maxLength={100}
           value={form.location}
           onChange={(e) => set("location", e.target.value)}
@@ -422,7 +484,7 @@ function ListingEditor({
       <label className="field">
         <span>Как с вами связаться</span>
         <input
-          disabled={!hydrated}
+          disabled={!hydrated || busy}
           maxLength={300}
           value={form.contact}
           onChange={(e) => set("contact", e.target.value)}
@@ -449,7 +511,13 @@ function ListingEditor({
                   try {
                     await socialApi("market/media/" + p.id, "DELETE");
                     setPhotos((rows) => rows.filter((v) => v.id !== p.id));
+                    remember({
+                      form,
+                      identity,
+                      photos: photos.filter((v) => v.id !== p.id),
+                    });
                   } catch (e) {
+                    resume();
                     setError(errorMessage(e));
                   } finally {
                     setBusy(false);
@@ -488,8 +556,10 @@ function ListingEditor({
               }
               setBusy(true);
               setError("");
+              const done = begin();
               try {
                 const saved = identity || (await save("draft"));
+                let uploaded = photos;
                 for (const file of files) {
                   const r = await fetch("/api/market/" + saved.id + "/photos", {
                       method: "POST",
@@ -500,11 +570,21 @@ function ListingEditor({
                       await r.json();
                   if (!r.ok) throw Error(p.error);
                   setPhotos((rows) => [...rows, p]);
+                  uploaded = [...uploaded, p];
+                  remember({ form, identity: saved, photos: uploaded });
                 }
               } catch (e) {
+                resume();
                 setError(errorMessage(e));
+                remember({
+                  form,
+                  identity: read()?.identity || identity,
+                  photos: read()?.photos || photos,
+                  error: errorMessage(e),
+                });
               } finally {
                 setBusy(false);
+                done();
               }
             }}
           />
@@ -530,14 +610,27 @@ function ListingEditor({
           className="quiet"
           disabled={!hydrated || busy || !form.title.trim()}
           onClick={async () => {
+            const done = begin();
             setBusy(true);
             setError("");
             try {
-              await onSaved(await save("draft"));
+              const saved = await save("draft");
+              if (isMounted()) {
+                forget();
+                await onSaved(saved);
+              }
             } catch (e) {
+              resume();
               setError(errorMessage(e));
+              remember({
+                form,
+                identity: read()?.identity || identity,
+                photos: read()?.photos || photos,
+                error: errorMessage(e),
+              });
             } finally {
               setBusy(false);
+              done();
             }
           }}
         >
@@ -548,7 +641,12 @@ function ListingEditor({
           type="button"
           className="quiet"
           disabled={!hydrated || busy}
-          onClick={() => onCancel(identity)}
+          onClick={async () => {
+            if (await mayDiscard()) {
+              forget();
+              onCancel(identity);
+            }
+          }}
         >
           <SiteIcon name="no" />
           Отмена
@@ -557,6 +655,11 @@ function ListingEditor({
     </form>
   );
 }
+function ListingEditor(props: React.ComponentProps<typeof ListingForm>) {
+  const { viewer } = useSite();
+  return <ListingForm key={viewer?.id || "guest"} {...props} />;
+}
+
 export default function Market({
   share = null,
   create = false,

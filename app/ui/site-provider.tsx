@@ -46,6 +46,7 @@ import {
 import { useBrowseHistory } from "./showcase-scroll.ts";
 import { installErrorReporting } from "./error-reporting.ts";
 import { defaultSettings, defaultCatalog } from "../../lib/site-defaults.ts";
+import { ContentDraftProvider } from "./content-drafts.tsx";
 const Context = createContext<SiteContext | null>(null);
 export function ThemeStyle({
   settings,
@@ -205,7 +206,9 @@ export default function SiteProvider({
         data-detail-order={site.settings.detailOrder}
         data-photo-mode={site.settings.photoMode}
       >
-        {children}
+        <ContentDraftProvider ownerId={viewer?.id || null}>
+          {children}
+        </ContentDraftProvider>
       </div>
     </Context.Provider>
   );

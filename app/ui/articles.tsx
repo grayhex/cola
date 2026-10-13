@@ -21,6 +21,8 @@ import ChoiceMenu from "./choice-menu.tsx";
 import ArticleBody from "./article-body.tsx";
 import Discussion from "./discussion.tsx";
 import LocalDate from "./local-date.tsx";
+import { useContentDraft } from "./content-drafts.tsx";
+import { useDraftExit } from "./use-draft-exit.tsx";
 // Only authors need the editor; readers get the parsed article (#117).
 const PromptComposer = dynamic(() => import("./prompt-composer.tsx"), {
   ssr: false,
@@ -331,7 +333,7 @@ export function NewArticle() {
     </>
   );
 }
-function ArticleEditor({
+function ArticleForm({
   initial,
   onSaved,
   onCancel,
@@ -345,31 +347,65 @@ function ArticleEditor({
   useEffect(() => setReady(true), []);
   const { settings } = useSite(),
     topics = settings.articleTopics || [];
-  const [record, setRecord] = useState<ArticleSaved | null>(initial || null),
-    [form, setForm] = useState({
-      title: initial?.title || "",
-      body: initial?.body || "",
-      topicId: initial?.topicId || topics[0]?.id || "",
-    }),
-    [photos, setPhotos] = useState(initial?.photos || []),
-    [busy, setBusy] = useState(false),
-    [error, setError] = useState(""),
-    [dirty, setDirty] = useState(false);
+  const {
+    restored,
+    remember,
+    forget,
+    pending,
+    read,
+    begin,
+    isMounted,
+    shouldWarn,
+    resume,
+  } = useContentDraft("article", initial?.id || "new");
+  const [record, setRecord] = useState<ArticleSaved | null>(
+      restored?.record || initial || null,
+    ),
+    [form, setForm] = useState(
+      restored?.form || {
+        title: initial?.title || "",
+        body: initial?.body || "",
+        topicId: initial?.topicId || topics[0]?.id || "",
+      },
+    ),
+    [photos, setPhotos] = useState(restored?.photos || initial?.photos || []),
+    [busy, setBusy] = useState(!!pending),
+    [error, setError] = useState(restored?.error || ""),
+    [dirty, setDirty] = useState(restored?.dirty || false);
+  const { mayDiscard, confirmation } = useDraftExit(dirty, shouldWarn);
+  useEffect(() => {
+    if (!pending) return;
+    let active = true;
+    pending.then(() => {
+      if (!active) return;
+      const latest = read();
+      setError(latest?.error || "");
+      if (latest) {
+        setForm(latest.form);
+        setPhotos(latest.photos);
+        setRecord(latest.record);
+        setDirty(latest.dirty);
+      }
+      setBusy(false);
+    });
+    return () => {
+      active = false;
+    };
+  }, [pending, read]);
+  useEffect(() => {
+    if (!busy)
+      remember(
+        dirty || (record && !initial)
+          ? { form, record, photos, dirty, error }
+          : undefined,
+      );
+  }, [dirty, form, record, photos, initial, error, busy, remember]);
   // Filled in by the editor: puts an illustration where the author writes.
   const inserter = useRef<PhotoInserter | null>(null);
   const set = (key: "title" | "body" | "topicId", value: string) => {
     setForm((v) => ({ ...v, [key]: value }));
     setDirty(true);
   };
-  useEffect(() => {
-    if (!dirty) return;
-    const handler = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-      e.returnValue = "";
-    };
-    window.addEventListener("beforeunload", handler);
-    return () => window.removeEventListener("beforeunload", handler);
-  }, [dirty]);
   async function save(status: "draft" | "published") {
     const result = await socialApi<ArticleSaved>(
       "articles" + (record ? "/" + record.id : ""),
@@ -378,6 +414,7 @@ function ArticleEditor({
     );
     setRecord(result);
     setDirty(false);
+    remember({ form, record: result, photos, dirty: false });
     return result;
   }
   // An illustration becomes a block of its own at the cursor (#128); until
@@ -395,6 +432,7 @@ function ArticleEditor({
       className="article-editor"
       onSubmit={async (e) => {
         e.preventDefault();
+        const done = begin();
         setBusy(true);
         setError("");
         try {
@@ -405,14 +443,32 @@ function ArticleEditor({
           const d = await socialApi<{ article: ArticleDto }>(
             "articles/public/" + result.shareId,
           );
-          onSaved(d.article);
+          if (isMounted()) {
+            forget();
+            await onSaved(d.article);
+          }
         } catch (e) {
+          resume();
           setError(errorMessage(e));
+          remember({
+            form,
+            record: read()?.record || record,
+            photos: read()?.photos || photos,
+            dirty,
+            error: errorMessage(e),
+          });
         } finally {
           setBusy(false);
+          done();
         }
       }}
     >
+      {restored && (
+        <p role="status" className="help">
+          Черновик восстановлен. Сохраните изменения, когда закончите.
+        </p>
+      )}
+      {confirmation}
       <label className="field">
         <span>Заголовок статьи</span>
         <input
@@ -428,6 +484,7 @@ function ArticleEditor({
         <span>Рубрика</span>
         <select
           aria-label="Рубрика"
+          disabled={!ready || busy}
           required
           value={form.topicId}
           onChange={(e) => set("topicId", e.target.value)}
@@ -467,6 +524,7 @@ function ArticleEditor({
                 const file = e.target.files?.[0];
                 e.target.value = "";
                 if (!file) return;
+                const done = begin();
                 setBusy(true);
                 setError("");
                 try {
@@ -483,11 +541,35 @@ function ArticleEditor({
                     Partial<ApiError> = await r.json();
                   if (!r.ok) throw Error(photo.error);
                   setPhotos((v) => [...v, photo]);
-                  insertPhoto(photo.id);
+                  if (isMounted()) insertPhoto(photo.id);
+                  remember({
+                    form: isMounted()
+                      ? form
+                      : {
+                          ...form,
+                          body:
+                            form.body.replace(/\s*$/, "") +
+                            "\n\n![](photo:" +
+                            photo.id +
+                            ")\n",
+                        },
+                    record: target,
+                    photos: [...photos, photo],
+                    dirty: true,
+                  });
                 } catch (e) {
+                  resume();
                   setError(errorMessage(e));
+                  remember({
+                    form,
+                    record: read()?.record || record,
+                    photos: read()?.photos || photos,
+                    dirty,
+                    error: errorMessage(e),
+                  });
                 } finally {
                   setBusy(false);
+                  done();
                 }
               }}
             />
@@ -535,6 +617,7 @@ function ArticleEditor({
                       ),
                     );
                   } catch (e) {
+                    resume();
                     setError(errorMessage(e));
                   } finally {
                     setBusy(false);
@@ -573,8 +656,11 @@ function ArticleEditor({
             className="quiet"
             type="button"
             disabled={busy}
-            onClick={() => {
-              if (!dirty || confirm("Не сохранять изменения?")) onCancel();
+            onClick={async () => {
+              if (await mayDiscard()) {
+                forget();
+                onCancel();
+              }
             }}
           >
             <SiteIcon name="no" />
@@ -592,8 +678,10 @@ function ArticleEditor({
               try {
                 await socialApi("articles/" + record.id, "DELETE");
                 setDirty(false);
+                forget();
                 router.push("/articles?own=1");
               } catch (e) {
+                resume();
                 setError(errorMessage(e));
                 setBusy(false);
               }
@@ -605,4 +693,9 @@ function ArticleEditor({
       </div>
     </form>
   );
+}
+
+function ArticleEditor(props: React.ComponentProps<typeof ArticleForm>) {
+  const { viewer } = useSite();
+  return <ArticleForm key={viewer?.id || "guest"} {...props} />;
 }
