@@ -1,0 +1,8 @@
+{
+  "name": "colabike-design-qa",
+  "private": true,
+  "description": "Pinned development-only Impeccable CLI; excluded from web and ops images.",
+  "dependencies": {
+    "impeccable": "4.5.2"
+  }
+}

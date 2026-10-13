@@ -25,4 +25,9 @@ coverage/
 public/test-map-style.json
 *.tsbuildinfo
 .DS_Store
+.impeccable/config.local.json
+.impeccable/hook.cache.json
+.impeccable/critique/
+.impeccable/live/
+.claude/settings.local.json
 next-env.d.ts

@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-13T10:27:45+03:00",
+  "title": "Design System: ColaBike",
+  "extensions": {
+    "motion": [
+      {
+        "name": "duration-fast",
+        "value": "150ms",
+        "purpose": "Быстрые изменения состояния; источник tokens.css."
+      },
+      {
+        "name": "duration",
+        "value": "200ms",
+        "purpose": "Обычный переход; источник tokens.css."
+      },
+      {
+        "name": "duration-slow",
+        "value": "300ms",
+        "purpose": "Деликатный переход; источник tokens.css."
+      },
+      {
+        "name": "ease-out",
+        "value": "cubic-bezier(0, 0, 0.2, 1)",
+        "purpose": "Существующая easing-политика ColaBike."
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary button",
+      "kind": "button",
+      "description": "Light-образец .button: декларации и используемые токены извлечены из components.css/tokens.css; адаптивные варианты и обе темы проверяются в UI Kit.",
+      "html": "<button class=\"button\">Сохранить</button>",
+      "css": ":host { --control-md: 36px; --duration-fast: 150ms; --ease-out: cubic-bezier(0, 0, 0.2, 1); --font-sans: \"Cola Source Sans 3\", \"Source Sans Pro\", ui-sans-serif, system-ui,\n      sans-serif; --leading-tight: 1.25; --primary: #000000; --primary-foreground: #ffffff; --radius-lg: 8px; --space-1-5: 6px; --space-3-5: 14px; --text-sm: 14px; --weight-semibold: 600; }\n.button {\n    display: inline-flex;\n    align-items: center;\n    justify-content: center;\n    gap: var(--space-1-5);\n    min-height: var(--control-md);\n    padding: 0 var(--space-3-5);\n    border: 1px solid var(--primary);\n    border-radius: var(--radius-lg);\n    background: var(--primary);\n    color: var(--primary-foreground);\n    font: var(--weight-semibold) var(--text-sm) / var(--leading-tight)\n      var(--font-sans);\n    text-align: center;\n    text-decoration: none;\n    white-space: nowrap;\n    cursor: pointer;\n    user-select: none;\n    box-shadow: none;\n    transition:\n      background-color var(--duration-fast) var(--ease-out),\n      border-color var(--duration-fast) var(--ease-out),\n      color var(--duration-fast) var(--ease-out),\n      box-shadow var(--duration-fast) var(--ease-out);\n  }"
+    }
+  ],
+  "narrative": {
+    "overview": "Производный контекст нейтрального, плотного интерфейса ColaBike. Первоисточник — app/styles/tokens.css и docs/development/design-system.md; настройки сайта и темы сохраняются.",
+    "keyCharacteristics": [
+      "Нейтральные поверхности и тонкие линии",
+      "Фотографии и данные важнее украшений",
+      "Полноценные мобильные и десктопные сценарии"
+    ],
+    "dos": [
+      "Использовать существующие компоненты и семантические токены",
+      "Проверять реальные границы, состояния и доступность"
+    ],
+    "donts": [
+      "Не вводить конкурирующую палитру и UI framework",
+      "Не считать предпочтения detector подтверждённым дефектом"
+    ]
+  }
+}

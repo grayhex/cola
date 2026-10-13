@@ -8,6 +8,9 @@ import tseslint from "typescript-eslint";
 export default [
   {
     ignores: [
+      // Reviewed, pinned upstream source; project QA scripts remain checked.
+      ".impeccable/vendor/",
+      "**/node_modules/",
       ".next/",
       "node_modules/",
       "services/",
