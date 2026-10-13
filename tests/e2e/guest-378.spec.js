@@ -274,7 +274,6 @@ test("«Уже есть аккаунт? Войти» keeps the scenario: after s
 
 test("a guest already on the sign-in form is brought to registering by the menu «Запланировать», on the same page; a switch by hand stays", async ({
   page,
-  isMobile,
 }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/account");
@@ -285,7 +284,7 @@ test("a guest already on the sign-in form is brought to registering by the menu 
   await page.evaluate(() => {
     window.sameDocument = true;
   });
-  if (isMobile)
+  if (await page.getByRole("button", { name: "Открыть меню" }).isVisible())
     await page.getByRole("button", { name: "Открыть меню" }).click();
   else
     await page
