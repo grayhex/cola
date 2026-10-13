@@ -26,6 +26,11 @@ test("thread migration and shared engine preserve immediate parents, tombstones,
     // The notice code of today needs the group column of #341 (migration 055),
     // which has nothing to do with the thread migration under test.
     await db.exec("ALTER TABLE notifications ADD COLUMN group_key text");
+    // Current notification writes name the nullable targets of 068; this
+    // fixture still tests the populated upgrade from before thread migration 048.
+    await db.exec(
+      "ALTER TABLE notifications ADD COLUMN club_id uuid, ADD COLUMN club_post_id uuid, ADD COLUMN club_post_comment_id uuid",
+    );
     // Notices are not made between people who blocked each other (#354).
     await db.exec(
       await readFile(

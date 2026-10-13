@@ -1,6 +1,7 @@
 import { db } from "../lib/db.ts";
 import { cleanupRides } from "../lib/ride-storage.ts";
 import { cleanupMarketPhotos } from "../lib/market.ts";
+import { cleanupClubPostPhotos } from "../lib/club-post-storage.ts";
 import { cleanupClubPhotos } from "../lib/club-storage.ts";
 import { cleanupJournalPhotos } from "../lib/journal-storage.ts";
 import { cleanupComponentPhotos } from "../lib/component-photos.ts";
@@ -14,6 +15,7 @@ try {
   await cleanupMarketPhotos(db, { orphans: true });
   await cleanupJournalPhotos(db, { orphans: true });
   await cleanupClubPhotos(db, { orphans: true });
+  await cleanupClubPostPhotos(db, { orphans: true });
   await cleanupComponentPhotos(db, { orphans: true });
 } finally {
   await db.end();

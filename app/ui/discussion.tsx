@@ -5,7 +5,8 @@ import type {
   CommentPageDto,
   ReplyPageDto,
 } from "./content-types.ts";
-type DiscussionEntity = "bike" | "component" | "article" | "journal" | "ride";
+type DiscussionEntity =
+  "bike" | "component" | "article" | "journal" | "ride" | "club_post";
 interface Question {
   solutionId?: string | null;
   canSelect?: boolean;
@@ -35,38 +36,47 @@ const PromptComposer = dynamic(() => import("./prompt-composer.tsx"), {
 });
 // How many threads the short panel of a bike shows before «all comments».
 const shownThreads = 3;
-const DiscussionKind = createContext<DiscussionEntity>("bike");
+const DiscussionKind = createContext<{
+  kind: DiscussionEntity;
+  canParticipate: boolean;
+}>({ kind: "bike", canParticipate: true });
 const QuestionContext = createContext<Question | null>(null);
 const paths = (kind: DiscussionEntity) =>
-  kind === "component"
+  kind === "club_post"
     ? {
-        items: "components/",
-        comments: "components/comments/",
-        report: "component_comment" as const,
+        items: "club-posts/",
+        comments: "club-posts/comments/",
+        report: "club_post_comment" as const,
       }
-    : kind === "article"
+    : kind === "component"
       ? {
-          items: "articles/",
-          comments: "articles/comments/",
-          report: "journal_comment" as const,
+          items: "components/",
+          comments: "components/comments/",
+          report: "component_comment" as const,
         }
-      : kind === "journal"
+      : kind === "article"
         ? {
-            items: "journal/",
-            comments: "journal/comments/",
+            items: "articles/",
+            comments: "articles/comments/",
             report: "journal_comment" as const,
           }
-        : kind === "ride"
+        : kind === "journal"
           ? {
-              items: "rides/",
-              comments: "rides/comments/",
-              report: "ride_comment" as const,
+              items: "journal/",
+              comments: "journal/comments/",
+              report: "journal_comment" as const,
             }
-          : {
-              items: "community/bikes/",
-              comments: "community/comments/",
-              report: "comment" as const,
-            };
+          : kind === "ride"
+            ? {
+                items: "rides/",
+                comments: "rides/comments/",
+                report: "ride_comment" as const,
+              }
+            : {
+                items: "community/bikes/",
+                comments: "community/comments/",
+                report: "comment" as const,
+              };
 function Editor({
   initial = "",
   label,
@@ -149,8 +159,9 @@ function Comment({
   reply?: boolean;
   parent?: CommentDto;
 }) {
-  const question = useContext(QuestionContext);
-  const api = paths(useContext(DiscussionKind));
+  const question = useContext(QuestionContext),
+    participate = useContext(DiscussionKind).canParticipate;
+  const api = paths(useContext(DiscussionKind).kind);
   const [editing, setEditing] = useState(false),
     [answer, setAnswer] = useState(false),
     [confirm, setConfirm] = useState(false),
@@ -233,7 +244,7 @@ function Comment({
                   : "Отметить решением"}
               </button>
             )}
-            {user && !c.unavailable && (
+            {user && participate && !c.unavailable && (
               <button className="quiet" onClick={() => setAnswer((v) => !v)}>
                 <Reply size={14} aria-hidden="true" />
                 Ответить
@@ -337,7 +348,7 @@ function Thread({
   depth?: number;
   parent?: CommentDto;
 }) {
-  const api = paths(useContext(DiscussionKind));
+  const api = paths(useContext(DiscussionKind).kind);
   const [page, setPage] = useState(1),
     [expanded, setExpanded] = useState(false),
     [data, setData] = useState<ReplyPageDto | null>(null),
@@ -431,6 +442,7 @@ export default function Discussion({
   variant,
   count,
   onTotal,
+  canParticipate = true,
 }: {
   bike: {
     id: string;
@@ -441,6 +453,7 @@ export default function Discussion({
   };
   user: ViewerDto | null;
   entityType?: DiscussionEntity;
+  canParticipate?: boolean;
   onSolution?: () => void | Promise<void>;
   // The bike page shows a short panel: «Комментарии (N)», the first three
   // threads and a button for the rest (#291). Other pages keep the full block.
@@ -511,7 +524,7 @@ export default function Discussion({
     target?.focus({ preventScroll: true });
   }, [focus, data]);
   return (
-    <DiscussionKind.Provider value={entityType}>
+    <DiscussionKind.Provider value={{ kind: entityType, canParticipate }}>
       <QuestionContext.Provider
         value={
           entityType === "journal" && bike.kind === "question"
@@ -536,15 +549,17 @@ export default function Discussion({
                 Комментарии{count != null && ` (${count})`}
               </h2>
               <div className="panel-heading-actions">
-                {entityType !== "component" && bike.author?.id !== user?.id && (
-                  <ReportButton
-                    entityType={
-                      entityType === "article" ? "journal" : entityType
-                    }
-                    targetId={bike.id}
-                    user={user}
-                  />
-                )}
+                {entityType !== "component" &&
+                  entityType !== "club_post" &&
+                  bike.author?.id !== user?.id && (
+                    <ReportButton
+                      entityType={
+                        entityType === "article" ? "journal" : entityType
+                      }
+                      targetId={bike.id}
+                      user={user}
+                    />
+                  )}
                 {data &&
                   !expanded &&
                   (data.comments.length > shownThreads || data.hasMore) && (
@@ -563,29 +578,37 @@ export default function Discussion({
               <div>
                 <h2>
                   <MessagesSquare size={20} aria-hidden="true" />
-                  {entityType === "component"
-                    ? "Обсуждение компонента"
-                    : entityType === "article"
-                      ? "Обсуждение статьи"
-                      : entityType === "journal"
-                        ? "Обсуждение записи"
-                        : entityType === "ride"
-                          ? "Обсуждение покатушки"
-                          : "Обсуждение сборки"}
+                  {entityType === "club_post"
+                    ? "Обсуждение публикации клуба"
+                    : entityType === "component"
+                      ? "Обсуждение компонента"
+                      : entityType === "article"
+                        ? "Обсуждение статьи"
+                        : entityType === "journal"
+                          ? "Обсуждение записи"
+                          : entityType === "ride"
+                            ? "Обсуждение покатушки"
+                            : "Обсуждение сборки"}
                 </h2>
                 <p className="help">
-                  {entityType === "article"
-                    ? "Вопросы, дополнения и личный опыт."
-                    : "Детали, идеи и опыт владельцев."}
+                  {entityType === "club_post"
+                    ? "Новости, вопросы и рассказы участников."
+                    : entityType === "article"
+                      ? "Вопросы, дополнения и личный опыт."
+                      : "Детали, идеи и опыт владельцев."}
                 </p>
               </div>
-              {entityType !== "component" && bike.author?.id !== user?.id && (
-                <ReportButton
-                  entityType={entityType === "article" ? "journal" : entityType}
-                  targetId={bike.id}
-                  user={user}
-                />
-              )}
+              {entityType !== "component" &&
+                entityType !== "club_post" &&
+                bike.author?.id !== user?.id && (
+                  <ReportButton
+                    entityType={
+                      entityType === "article" ? "journal" : entityType
+                    }
+                    targetId={bike.id}
+                    user={user}
+                  />
+                )}
             </div>
           )}
           {focus && (
@@ -625,7 +648,8 @@ export default function Discussion({
             <p className="help">
               {entityType === "ride"
                 ? "Поделитесь впечатлениями о маршруте."
-                : entityType === "journal" ||
+                : entityType === "club_post" ||
+                    entityType === "journal" ||
                     entityType === "article" ||
                     entityType === "component"
                   ? "Задайте вопрос или поделитесь своим опытом."
@@ -635,7 +659,7 @@ export default function Discussion({
           {data && !(panel && !expanded) && (
             <PageControls {...data} onPage={setPage} />
           )}
-          {user ? (
+          {user && canParticipate ? (
             <Editor
               label="Ваш комментарий"
               onSave={async (body) => {
@@ -648,6 +672,11 @@ export default function Discussion({
                 await refresh(null);
               }}
             />
+          ) : user ? (
+            <p className="help">
+              Обсуждение доступно действующим участникам клуба с подтверждённой
+              почтой.
+            </p>
           ) : (
             <Link className="button secondary small" href="/account">
               Войти, чтобы участвовать в обсуждении

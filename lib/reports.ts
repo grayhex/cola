@@ -11,6 +11,8 @@ import { profilePath } from "./public-urls.ts";
 import { partLandingPath } from "./experience-catalog.ts";
 import { componentSocial } from "./component-social.ts";
 import { changeComponentPhoto } from "./component-photos.ts";
+import { clubPostFrom, clubPostPublic } from "./club-post-access.ts";
+import { clubPostSocial } from "./club-post-social.ts";
 import type { CurrentUser } from "./contracts.ts";
 
 export async function createReport(
@@ -19,6 +21,24 @@ export async function createReport(
   input: ReportInputType,
 ) {
   let author;
+  if (input.entityType === "club") {
+    const target = (
+      await q.query<{ owner_id: string | null }>(
+        "SELECT c.owner_id FROM clubs c LEFT JOIN users o ON o.id=c.owner_id WHERE c.id=$1 AND c.hidden_at IS NULL AND (c.owner_id IS NULL OR NOT o.blocked)",
+        [input.targetId],
+      )
+    ).rows[0];
+    if (!target) throw new CommunityError("Объект недоступен", 404);
+    author = target.owner_id;
+  }
+  if (["club_post", "club_post_comment"].includes(input.entityType))
+    author = (
+      await q.query<{ author_id: string }>(
+        `SELECT ${input.entityType === "club_post" ? "p.owner_id" : "comment.author_id"} author_id ${clubPostFrom} ${input.entityType === "club_post_comment" ? "JOIN club_post_comments comment ON comment.post_id=p.id JOIN users ca ON ca.id=comment.author_id" : ""} WHERE ${clubPostPublic} AND ${input.entityType === "club_post" ? "p.id=$1" : "comment.id=$1 AND comment.deleted_at IS NULL AND NOT ca.blocked"}`,
+        [input.targetId],
+      )
+    ).rows[0]?.author_id;
+
   if (["component_comment", "component_photo"].includes(input.entityType)) {
     const photo = input.entityType === "component_photo";
     author = (
@@ -61,7 +81,8 @@ export async function createReport(
         [input.targetId],
       )
     ).rows[0]?.author_id;
-  if (!author) throw new CommunityError("Объект недоступен", 404);
+  if (!author && input.entityType !== "club")
+    throw new CommunityError("Объект недоступен", 404);
   if (author === user.id)
     throw new CommunityError("Нельзя жаловаться на собственный контент");
   const r = await q.query<{ id: string }>(
@@ -113,6 +134,13 @@ export async function reportPage(q: Queryable, page = 1, status = "open") {
       photo_hidden: boolean;
       photo_caption: string;
       component_username: string;
+      club_id: string;
+      club_name: string;
+      club_post_id: string;
+      club_post_title: string;
+      club_body: string;
+      club_comment_deleted: Date;
+      club_author: string;
     }>(
       `SELECT r.id,r.entity_type,r.target_id,r.reason,r.status,r.created_at,
  u.id reporter_id,u.username reporter_username,u.name reporter_name,u.avatar_id reporter_avatar,
@@ -120,7 +148,7 @@ export async function reportPage(q: Queryable, page = 1, status = "open") {
  c.body,c.deleted_at,c.author_id,ca.username comment_username,ca.name comment_author_name,
  b.id bike_id,b.share_id,b.name bike_name,bo.username owner_username,rr.share_id AS ride_share_id,rr.title AS ride_title,rc.body AS ride_body,rc.deleted_at AS ride_deleted,
  je.kind entry_kind,je.share_id entry_share,je.title entry_title,jc.body entry_body,jc.deleted_at entry_deleted,
- cm.id component_id,cm.name component_name,cm.category_slug,cm.slug,cc.body component_body,cc.deleted_at component_deleted,cp.hidden photo_hidden,cp.caption photo_caption,cu.username component_username
+ cl.id club_id,cl.name club_name,clp.id club_post_id,CASE WHEN clp.status='published' THEN clp.title END club_post_title,CASE WHEN clp.status='published' THEN clc.body END club_body,clc.deleted_at club_comment_deleted,clu.username club_author,cm.id component_id,cm.name component_name,cm.category_slug,cm.slug,cc.body component_body,cc.deleted_at component_deleted,cp.hidden photo_hidden,cp.caption photo_caption,cu.username component_username
  FROM community_reports r JOIN users u ON u.id=r.reporter_id
  LEFT JOIN users a ON r.entity_type='profile' AND a.id=r.target_id
  LEFT JOIN bike_comments c ON r.entity_type='comment' AND c.id=r.target_id
@@ -136,6 +164,10 @@ export async function reportPage(q: Queryable, page = 1, status = "open") {
  LEFT JOIN component_models cs ON cs.id=coalesce(cc.model_id,cp.model_id)
  LEFT JOIN component_models cm ON cm.id=coalesce(cs.merged_into,cs.id)
  LEFT JOIN users cu ON cu.id=coalesce(cc.author_id,cp.author_id)
+ LEFT JOIN club_post_comments clc ON r.entity_type='club_post_comment' AND clc.id=r.target_id
+ LEFT JOIN club_posts clp ON ((r.entity_type='club_post' AND clp.id=r.target_id) OR clp.id=clc.post_id) AND clp.status='published'
+ LEFT JOIN clubs cl ON (r.entity_type='club' AND cl.id=r.target_id) OR cl.id=clp.club_id
+ LEFT JOIN users clu ON clu.id=coalesce(clc.author_id,clp.owner_id,cl.owner_id)
  WHERE r.status=$1 ORDER BY r.created_at DESC,r.id LIMIT 21 OFFSET $2`,
       [status, (page - 1) * 20],
     )
@@ -156,51 +188,63 @@ export async function reportPage(q: Queryable, page = 1, status = "open") {
       }),
       target: {
         name:
+          r.club_post_title ||
+          r.club_name ||
           r.component_name ||
           r.entry_title ||
           r.ride_title ||
           r.profile_name ||
           r.bike_name ||
           "Удалённый объект",
-        href: r.component_id
-          ? partLandingPath(r.category_slug, r.slug) +
-            (r.entity_type === "component_comment"
+        href: r.club_id
+          ? "/clubs/" +
+            r.club_id +
+            (r.club_post_id ? "/posts/" + r.club_post_id : "") +
+            (r.entity_type === "club_post_comment"
               ? "?comment=" + r.target_id + "#discussion"
-              : "#photo-" + r.target_id)
-          : r.entry_share
-            ? (r.entry_kind === "article" ? "/articles/" : "/j/") +
-              r.entry_share +
-              (r.entity_type === "journal_comment"
+              : "")
+          : r.component_id
+            ? partLandingPath(r.category_slug, r.slug) +
+              (r.entity_type === "component_comment"
                 ? "?comment=" + r.target_id + "#discussion"
-                : "")
-            : r.ride_share_id
-              ? "/r/" +
-                r.ride_share_id +
-                (r.entity_type === "ride_comment"
+                : "#photo-" + r.target_id)
+            : r.entry_share
+              ? (r.entry_kind === "article" ? "/articles/" : "/j/") +
+                r.entry_share +
+                (r.entity_type === "journal_comment"
                   ? "?comment=" + r.target_id + "#discussion"
                   : "")
-              : r.profile_username
-                ? profilePath(r.profile_username)
-                : r.share_id
-                  ? "/b/" +
-                    r.share_id +
-                    (r.entity_type === "comment"
-                      ? "?comment=" + r.target_id + "#discussion"
-                      : "")
-                  : null,
+              : r.ride_share_id
+                ? "/r/" +
+                  r.ride_share_id +
+                  (r.entity_type === "ride_comment"
+                    ? "?comment=" + r.target_id + "#discussion"
+                    : "")
+                : r.profile_username
+                  ? profilePath(r.profile_username)
+                  : r.share_id
+                    ? "/b/" +
+                      r.share_id +
+                      (r.entity_type === "comment"
+                        ? "?comment=" + r.target_id + "#discussion"
+                        : "")
+                    : null,
         username:
+          r.club_author ||
           r.component_username ||
           r.profile_username ||
           r.comment_username ||
           r.owner_username ||
           null,
         body:
+          r.club_comment_deleted ||
           r.component_deleted ||
           r.entry_deleted ||
           r.ride_deleted ||
           r.deleted_at
             ? null
-            : r.component_body ||
+            : r.club_body ||
+              r.component_body ||
               r.photo_caption ||
               r.entry_body ||
               r.ride_body ||
@@ -239,18 +283,43 @@ export async function moderateReport(
         "ride_comment",
         "journal_comment",
         "component_comment",
+        "club_post_comment",
       ].includes(r.entity_type)
     )
       throw new CommunityError("Это не комментарий");
     await (
-      r.entity_type === "component_comment"
-        ? componentSocial.change
-        : r.entity_type === "journal_comment"
-          ? journalSocial.change
-          : r.entity_type === "ride_comment"
-            ? changeRideComment
-            : changeComment
+      r.entity_type === "club_post_comment"
+        ? clubPostSocial.change
+        : r.entity_type === "component_comment"
+          ? componentSocial.change
+          : r.entity_type === "journal_comment"
+            ? journalSocial.change
+            : r.entity_type === "ride_comment"
+              ? changeRideComment
+              : changeComment
     )(q, r.target_id, user, null);
+  }
+  if (action === "hide_club" || action === "hide_club_post") {
+    if (r.entity_type !== (action === "hide_club" ? "club" : "club_post"))
+      throw new CommunityError("Неверный объект жалобы");
+    const staff = (
+      await q.query<{ role: string; blocked: boolean }>(
+        "SELECT role,blocked FROM users WHERE id=$1 FOR UPDATE",
+        [user.id],
+      )
+    ).rows[0];
+    if (!staff || staff.blocked || staff.role !== "admin")
+      throw new CommunityError("Недостаточно прав", 403);
+    if (action === "hide_club")
+      await q.query(
+        "UPDATE clubs SET hidden_at=now(),version=version+1 WHERE id=$1",
+        [r.target_id],
+      );
+    else
+      await q.query(
+        "UPDATE club_posts SET hidden_at=now(),pinned=false,version=version+1 WHERE id=$1 AND status='published'",
+        [r.target_id],
+      );
   }
   if (action === "hide_ride") {
     if (r.entity_type !== "ride") throw new CommunityError("Это не покатушка");

@@ -74,6 +74,16 @@ export async function componentPhotoBytes(q: Queryable, owner: unknown) {
     ).rows[0].bytes,
   );
 }
+export async function clubPostPhotoBytes(q: Queryable, owner: unknown) {
+  return Number(
+    (
+      await q.query<{ bytes: string }>(
+        "SELECT coalesce(sum(size_bytes),0)::bigint bytes FROM club_post_photos WHERE uploader_id=$1",
+        [owner],
+      )
+    ).rows[0].bytes,
+  );
+}
 export async function checkBikeQuota(
   q: Queryable,
   owner: unknown,
@@ -131,6 +141,7 @@ export async function checkPhotoQuota(
     Number(usage.bytes) +
       journalBytes +
       (await componentPhotoBytes(q, owner)) +
+      (await clubPostPhotoBytes(q, owner)) +
       Number(
         (
           await q.query<{ bytes: string }>(

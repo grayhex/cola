@@ -6,7 +6,12 @@ import { mkdir, open, unlink } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
 import { preparePhoto } from "./images.ts";
-import { limits, QuotaError, componentPhotoBytes } from "./limits.ts";
+import {
+  limits,
+  QuotaError,
+  componentPhotoBytes,
+  clubPostPhotoBytes,
+} from "./limits.ts";
 import { purgeMediaVariants } from "./media-cache.ts";
 export const avatarFilename = (id: string) => "avatar-" + id + ".webp";
 export async function prepareAvatar(bytes: Buffer) {
@@ -56,6 +61,7 @@ export async function replaceAvatar(
           Number(usage.bytes) +
             journalBytes +
             (await componentPhotoBytes(q, owner)) +
+            (await clubPostPhotoBytes(q, owner)) +
             Number(
               (
                 await q.query<{ bytes: string }>(

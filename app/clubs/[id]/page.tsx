@@ -6,6 +6,8 @@ import { uuid } from "../../../lib/validation.ts";
 import { CommunityError } from "../../../lib/community-validation.ts";
 import { absolutePublicUrl } from "../../../lib/public-urls.ts";
 import Link from "next/link";
+import { clubPostList } from "../../../lib/club-posts.ts";
+import ClubPostFeed from "../../ui/club-post-feed.tsx";
 import ClubMembers from "../../ui/club-members.tsx";
 import ClubHeader from "../../ui/club-header.tsx";
 import styles from "../../ui/clubs.module.css";
@@ -51,11 +53,21 @@ export default async function Page({
   if (!uuid.safeParse(id).success) notFound();
   const user = await currentUser();
   try {
-    const club = await clubDetail(db, id, user?.id);
+    const club = await clubDetail(db, id, user?.id),
+      tab = (await searchParams).tab,
+      feed =
+        tab !== "members" ? await clubPostList(db, id, user?.id || null) : null;
     return (
       <section className={styles.page}>
         <ClubHeader club={club} />
         <nav className={styles.actions} aria-label="Разделы клуба">
+          <Link
+            className="button secondary"
+            href={"/clubs/" + id}
+            aria-current={tab !== "members" ? "page" : undefined}
+          >
+            Лента
+          </Link>
           <Link
             className="button secondary"
             href={"/clubs/" + id + "?tab=members"}
@@ -63,7 +75,11 @@ export default async function Page({
             Участники
           </Link>
         </nav>
-        {(await searchParams).tab === "members" && <ClubMembers club={club} />}
+        {tab === "members" ? (
+          <ClubMembers club={club} />
+        ) : (
+          feed && <ClubPostFeed club={club} initial={feed} />
+        )}
       </section>
     );
   } catch (e) {

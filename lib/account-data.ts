@@ -553,6 +553,33 @@ export async function exportAccount(
       [userId],
     )
   ).rows;
+  const clubPosts = (
+    await q.query<{
+      id: string;
+      club_id: string;
+      title: string;
+      body: string;
+      status: string;
+    }>(
+      "SELECT id,club_id,title,body,status,created_at,updated_at FROM club_posts WHERE owner_id=$1 ORDER BY created_at",
+      [userId],
+    )
+  ).rows;
+  const clubPostPhotos = (
+    await q.query<{ id: string; post_id: string; filename: string }>(
+      "SELECT id,post_id,filename,size_bytes FROM club_post_photos WHERE uploader_id=$1 ORDER BY created_at",
+      [userId],
+    )
+  ).rows.map((p) => ({
+    ...p,
+    url: origin + "/api/club-posts/" + p.post_id + "/media/" + p.id,
+  }));
+  const clubPostComments = (
+    await q.query<{ id: string; post_id: string; body: string }>(
+      "SELECT id,post_id,parent_id,body,created_at,updated_at,deleted_at FROM club_post_comments WHERE author_id=$1 ORDER BY created_at",
+      [userId],
+    )
+  ).rows;
   const clubActions = (
     await q.query<{
       club_id: string;
@@ -732,6 +759,9 @@ export async function exportAccount(
     clubs,
     clubMemberships,
     clubActions,
+    clubPosts,
+    clubPostPhotos,
+    clubPostComments,
     rideIntents,
     rideIntentPreferences,
     notificationEmailPreferences,

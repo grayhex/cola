@@ -5,7 +5,12 @@ import type { Queryable } from "./db.ts";
 import { randomUUID } from "node:crypto";
 import { mkdir, open, unlink, readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
-import { limits, QuotaError, componentPhotoBytes } from "./limits.ts";
+import {
+  limits,
+  QuotaError,
+  componentPhotoBytes,
+  clubPostPhotoBytes,
+} from "./limits.ts";
 import { CommunityError } from "./community-validation.ts";
 import { journalBikeLock, journalPublic } from "./journal.ts";
 const directory = () =>
@@ -103,6 +108,7 @@ export async function saveJournalPhoto(
       if (
         Number(usage.bytes) +
           (await componentPhotoBytes(q, user)) +
+          (await clubPostPhotoBytes(q, user)) +
           Number(other.bytes) +
           Number(
             (

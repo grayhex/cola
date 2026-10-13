@@ -626,6 +626,87 @@
           "agreementRevision": 1
         }
       }
+    },
+    {
+      "name": "club_post_comment",
+      "description": "Комментарий к публикации клуба без привязки к велосипеду.",
+      "notification": {
+        "id": "00000000-0000-4000-8000-00000000007d",
+        "type": "club_post_comment",
+        "category": "discussions",
+        "createdAt": "2026-10-04T08:36:00.000Z",
+        "readAt": null,
+        "actor": {
+          "id": "00000000-0000-4000-8000-000000000002",
+          "username": "anna",
+          "name": "Анна",
+          "avatarUrl": null
+        },
+        "reasons": [],
+        "target": {
+          "type": "club-post",
+          "id": "00000000-0000-4000-8000-000000000012",
+          "name": "Ночная поездка",
+          "path": "/clubs/00000000-0000-4000-8000-000000000011/posts/00000000-0000-4000-8000-000000000012?comment=00000000-0000-4000-8000-000000000019#discussion",
+          "commentId": "00000000-0000-4000-8000-000000000019",
+          "occurrenceAt": null,
+          "agreementRevision": null
+        }
+      }
+    },
+    {
+      "name": "club_post_like",
+      "description": "Лайк публикации клуба.",
+      "notification": {
+        "id": "00000000-0000-4000-8000-00000000007e",
+        "type": "club_post_like",
+        "category": "reactions",
+        "createdAt": "2026-10-04T08:35:00.000Z",
+        "readAt": null,
+        "actor": {
+          "id": "00000000-0000-4000-8000-000000000002",
+          "username": "anna",
+          "name": "Анна",
+          "avatarUrl": null
+        },
+        "reasons": [],
+        "target": {
+          "type": "club-post",
+          "id": "00000000-0000-4000-8000-000000000012",
+          "name": "Ночная поездка",
+          "path": "/clubs/00000000-0000-4000-8000-000000000011/posts/00000000-0000-4000-8000-000000000012",
+          "commentId": null,
+          "occurrenceAt": null,
+          "agreementRevision": null
+        }
+      }
+    },
+    {
+      "name": "club_post_reply",
+      "description": "Ответ на комментарий в клубе.",
+      "notification": {
+        "id": "00000000-0000-4000-8000-00000000007f",
+        "type": "club_post_reply",
+        "category": "discussions",
+        "createdAt": "2026-10-04T08:34:00.000Z",
+        "readAt": null,
+        "actor": {
+          "id": "00000000-0000-4000-8000-000000000003",
+          "username": "boris",
+          "name": "Борис",
+          "avatarUrl": null
+        },
+        "reasons": [],
+        "target": {
+          "type": "club-post",
+          "id": "00000000-0000-4000-8000-000000000012",
+          "name": "Ночная поездка",
+          "path": "/clubs/00000000-0000-4000-8000-000000000011/posts/00000000-0000-4000-8000-000000000012?comment=00000000-0000-4000-8000-000000000019#discussion",
+          "commentId": "00000000-0000-4000-8000-000000000019",
+          "occurrenceAt": null,
+          "agreementRevision": null
+        }
+      }
     }
   ]
 }
