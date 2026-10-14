@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { ClubBadgeDto, ClubSummaryDto } from "../../lib/club-contracts.ts";
 import { socialApi } from "./social-primitives.tsx";
+import ClubCard from "./club-card.tsx";
 import { ClubBadge } from "./club-badges.tsx";
 import { useSite } from "./site-provider.tsx";
 import styles from "./clubs.module.css";
@@ -104,26 +105,11 @@ function Contents() {
       {loading ? (
         <p role="status">Загружаем клубы…</p>
       ) : (
-        clubs.map((c) => (
-          <article key={c.id} className={styles.notice}>
-            <Link href={"/clubs/" + c.id}>{c.name}</Link>
-            <p>
-              {c.archived
-                ? "Клуб в архиве"
-                : c.membership?.state === "pending"
-                  ? "Заявка отправлена"
-                  : c.membership?.state === "invited"
-                    ? "Приглашение"
-                    : c.membership?.role === "owner"
-                      ? "Владелец"
-                      : c.membership?.role === "admin"
-                        ? "Администратор"
-                        : c.membership?.role === "organizer"
-                          ? "Организатор"
-                          : "Участник"}
-            </p>
-          </article>
-        ))
+        <div className={styles.posts}>
+          {clubs.map((c) => (
+            <ClubCard key={c.id} club={c} />
+          ))}
+        </div>
       )}
       {!loading && !clubs.length && (
         <p>Вы пока не состоите в клубах и не отправляли заявок.</p>
@@ -152,8 +138,23 @@ function Contents() {
         велосипедов. Скрытие бейджа не скрывает ваше имя в открытом составе и
         публичных постах.
       </p>
+      {preferences && (
+        <div aria-label="Предпросмотр бейджей" className={styles.previewShelf}>
+          {preferences.clubs
+            .filter((c) => c.visible)
+            .slice(0, 2)
+            .map((c) => (
+              <ClubBadge key={c.id} club={c} />
+            ))}
+          {preferences.clubs.filter((c) => c.visible).length > 2 && (
+            <span>
+              +{preferences.clubs.filter((c) => c.visible).length - 2}
+            </span>
+          )}
+        </div>
+      )}
       {preferences?.clubs.map((c, i) => (
-        <div className={styles.notice} key={c.id}>
+        <div className={styles.badgeSettings} key={c.id}>
           <ClubBadge club={c} />
           <div className={styles.actions}>
             <label className={styles.checkbox}>

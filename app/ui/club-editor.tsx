@@ -1,7 +1,8 @@
 "use client";
 import Link from "next/link";
+import Image from "next/image";
 import dynamic from "next/dynamic";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type {
   ClubDto,
@@ -187,7 +188,10 @@ function Editor({
         );
         const result: { club: ClubDto; error?: string } = await response.json();
         if (!response.ok)
-          throw new Error(result.error || "Не удалось загрузить картинку");
+          throw new Error(
+            (purpose === "logo" ? "Логотип: " : "Обложка: ") +
+              (result.error || "Не удалось загрузить картинку"),
+          );
         saved = result.club;
         if (purpose === "logo") remainingLogo = null;
         else remainingCover = null;
@@ -232,12 +236,17 @@ function Editor({
     }
   }
   const allowed = record ? record.canManage : eligibility?.canCreate;
+  const GroupTitle = initial ? "h3" : "h2";
   return (
-    <section className={styles.page}>
-      <h1>
-        {rulesOnly ? "Правила клуба" : record ? "О клубе" : "Создать клуб"}
-      </h1>
-      {!record && (
+    <section className={initial ? styles.editor : styles.page}>
+      {initial ? (
+        <h2>
+          {rulesOnly ? "Правила клуба" : record ? "О клубе" : "Создать клуб"}
+        </h2>
+      ) : (
+        <h1>{record ? "Завершить создание клуба" : "Создать клуб"}</h1>
+      )}
+      {!record && !allowed && (
         <div className={styles.notice}>
           <p>
             Для создания клуба нужны подтверждённая почта и собственный
@@ -254,6 +263,11 @@ function Editor({
           )}
         </div>
       )}
+      {!rulesOnly && (
+        <p className={styles.meta}>
+          Обязательно только название. Остальное можно добавить позже.
+        </p>
+      )}
       <form className={styles.form} onSubmit={save}>
         {rulesOnly ? (
           <PromptComposer
@@ -268,6 +282,7 @@ function Editor({
           />
         ) : (
           <>
+            <GroupTitle>Название и миссия</GroupTitle>
             <label>
               Название
               <input
@@ -314,6 +329,7 @@ function Editor({
               onChange={(s) => field("mission", s)}
               disabled={busy || !interactive}
             />
+            <GroupTitle>Вступление и видимость</GroupTitle>
             <div className={styles.fields}>
               <label>
                 Вступление
@@ -352,24 +368,63 @@ function Editor({
               Страница и правила публичны. Закрытый состав не означает анонимное
               членство: авторы постов и личные бейджи могут быть видны всем.
             </p>
+            <GroupTitle>Оформление</GroupTitle>
             <div className={styles.fields}>
               {(["logo", "cover"] as const).map((p) => (
-                <label key={p}>
-                  {p === "logo" ? "Логотип" : "Обложка"} · необязательно
-                  <input
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    disabled={busy || !interactive}
-                    onChange={(e) => {
-                      const f = e.target.files?.[0] || null;
-                      if (p === "logo") setLogo(f);
-                      else setCover(f);
-                      setDirty(true);
-                      draft.resume();
-                    }}
-                  />
-                  {(p === "logo" ? logo : cover)?.name}
-                </label>
+                <MediaSlot
+                  key={p}
+                  purpose={p}
+                  error={
+                    error.startsWith(p === "logo" ? "Логотип: " : "Обложка: ")
+                      ? error
+                      : ""
+                  }
+                  current={record?.[p] || null}
+                  file={p === "logo" ? logo : cover}
+                  disabled={busy || !interactive}
+                  onChange={(f) => {
+                    if (p === "logo") setLogo(f);
+                    else setCover(f);
+                    setDirty(true);
+                    draft.resume();
+                  }}
+                  onRemove={
+                    record?.[p]
+                      ? async () => {
+                          if (!record || busy) return;
+                          setBusy(true);
+                          setError("");
+                          try {
+                            const r = await fetch(
+                              "/api/clubs/" +
+                                record.id +
+                                "/" +
+                                p +
+                                "?version=" +
+                                record.version,
+                              { method: "DELETE" },
+                            );
+                            const d: { club: ClubDto; error?: string } =
+                              await r.json();
+                            if (!r.ok)
+                              throw new Error(
+                                d.error || "Не удалось удалить изображение",
+                              );
+                            setRecord(d.club);
+                            router.refresh();
+                          } catch (e) {
+                            setError(
+                              e instanceof Error
+                                ? e.message
+                                : "Не удалось удалить изображение",
+                            );
+                          } finally {
+                            setBusy(false);
+                          }
+                        }
+                      : undefined
+                  }
+                />
               ))}
             </div>
             <p className={styles.meta}>
@@ -378,16 +433,20 @@ function Editor({
           </>
         )}
         {error && <p role="alert">{error}</p>}
-        <div className={styles.actions}>
+        <div className={styles.formFooter}>
           <button
             className="button primary"
             disabled={busy || !interactive || !allowed}
           >
-            {busy ? "Сохраняем…" : "Сохранить"}
+            {busy
+              ? "Сохраняем…"
+              : record
+                ? "Сохранить изменения"
+                : "Создать клуб"}
           </button>
           <button
             type="button"
-            className="button"
+            className="button secondary"
             disabled={busy || !interactive}
             onClick={async () => {
               if (await mayDiscard()) {
@@ -401,9 +460,102 @@ function Editor({
         </div>
       </form>
       {record && !rulesOnly && !busy && !dirty && (
-        <ClubLifecycle club={record} />
+        <details className={styles.dangerZone}>
+          <summary>Архив клуба</summary>
+          <ClubLifecycle club={record} />
+        </details>
       )}
       {confirmation}
     </section>
+  );
+}
+
+function MediaSlot({
+  purpose,
+  error,
+  current,
+  file,
+  disabled,
+  onChange,
+  onRemove,
+}: {
+  purpose: "logo" | "cover";
+  error: string;
+  current: string | null;
+  file: File | null;
+  disabled: boolean;
+  onChange: (f: File | null) => void;
+  onRemove?: () => Promise<void>;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  useEffect(() => {
+    if (!file) {
+      setPreview(null);
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    setPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
+  return (
+    <div className={styles.mediaSlot}>
+      <label>
+        {purpose === "logo" ? "Логотип" : "Обложка"} · необязательно
+        <input
+          type="file"
+          ref={inputRef}
+          accept="image/jpeg,image/png,image/webp"
+          disabled={disabled}
+          onChange={(e) => onChange(e.target.files?.[0] || null)}
+        />
+      </label>
+      {(preview || current) && (
+        <Image
+          unoptimized
+          width={800}
+          height={400}
+          className={styles.mediaPreview}
+          src={preview || current || ""}
+          alt={
+            purpose === "logo"
+              ? "Предпросмотр логотипа"
+              : "Предпросмотр обложки"
+          }
+        />
+      )}
+      <p className={styles.meta}>
+        {file?.name ||
+          (current
+            ? "Текущее изображение"
+            : purpose === "logo"
+              ? "Без логотипа будет монограмма"
+              : "Фото для шапки клуба")}
+      </p>
+      {error && <p className="error">{error}</p>}
+      {file && (
+        <button
+          type="button"
+          className="button secondary"
+          disabled={disabled}
+          onClick={() => {
+            if (inputRef.current) inputRef.current.value = "";
+            onChange(null);
+          }}
+        >
+          Отменить выбор
+        </button>
+      )}
+      {!file && current && onRemove && (
+        <button
+          type="button"
+          className="button secondary"
+          disabled={disabled}
+          onClick={() => void onRemove()}
+        >
+          Удалить {purpose === "logo" ? "логотип" : "обложку"}
+        </button>
+      )}
+    </div>
   );
 }

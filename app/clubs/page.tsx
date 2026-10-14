@@ -1,4 +1,5 @@
-import Image from "next/image";
+import ClubCard from "../ui/club-card.tsx";
+import ClubFilters from "../ui/club-filters.tsx";
 import Link from "next/link";
 import { currentUser } from "../../lib/auth.ts";
 import { db } from "../../lib/db.ts";
@@ -32,70 +33,66 @@ export default async function Page({
   });
   return (
     <section className={styles.page}>
-      <h1>Клубы велосипедистов</h1>
-      <p>
-        Компания для поездок и общения. У клуба может быть город или общая тема.
-      </p>
-      <div className={styles.actions}>
+      <header className={styles.pageHeader}>
+        <div>
+          <h1>Клубы велосипедистов</h1>
+          <p className={styles.meta}>
+            Компания для поездок и общения — в вашем городе или по общей теме.
+          </p>
+        </div>
         <Link className="button" href="/clubs/new">
           Создать клуб
         </Link>
+      </header>
+      <ClubFilters
+        key={JSON.stringify([params.q, params.city, params.format])}
+        search={params.q || ""}
+        city={params.city || ""}
+        format={params.format || ""}
+      />
+      <div className={styles.clubList}>
+        {data.clubs.map((c) => (
+          <ClubCard key={c.id} club={c} />
+        ))}
       </div>
-      <form className={styles.actions}>
-        <label>
-          Найти клуб
-          <input
-            type="search"
-            name="q"
-            defaultValue={params.q || ""}
-            maxLength={100}
-            placeholder="Название или слоган"
-          />
-        </label>
-        <label>
-          Город · необязательно
-          <input name="city" maxLength={80} defaultValue={params.city || ""} />
-        </label>
-        <label>
-          Формат катания · необязательно
-          <input
-            name="format"
-            maxLength={40}
-            defaultValue={params.format || ""}
-          />
-        </label>
-        <button className="button">Найти</button>
-      </form>
-      {data.clubs.map((c) => (
-        <article key={c.id} className={styles.identity}>
-          {c.logo ? (
-            <Image
-              unoptimized
-              width={512}
-              height={512}
-              className={styles.logo}
-              src={c.logo}
-              alt=""
-              loading="lazy"
-            />
-          ) : (
-            <span className={styles.logo} aria-hidden="true">
-              {Array.from(c.name).slice(0, 2).join("").toUpperCase()}
-            </span>
-          )}
-          <div>
-            <h2>
-              <Link href={"/clubs/" + c.id}>{c.name}</Link>
-            </h2>
-            <p>{c.slogan}</p>
-            <p className={styles.meta}>
-              {c.city && c.city + " · "}Участников: {c.memberCount}
-            </p>
-          </div>
-        </article>
-      ))}
       {!data.clubs.length && (
-        <p>Клубов пока нет. Попробуйте другой запрос или создайте свой.</p>
+        <div className={styles.empty}>
+          <h2>
+            {safePage > 1
+              ? "На этой странице клубов нет"
+              : params.q || params.city || params.format
+                ? "Ничего не найдено"
+                : "Здесь появятся ваши клубы"}
+          </h2>
+          <p>
+            {safePage > 1
+              ? "Вернитесь к началу списка."
+              : params.q || params.city || params.format
+                ? "Попробуйте другой запрос или уберите фильтры."
+                : "Создайте клуб, чтобы собираться на покатушки и общаться."}
+          </p>
+          <Link
+            className="button secondary"
+            href={
+              safePage > 1
+                ? "/clubs?" +
+                  new URLSearchParams({
+                    q: params.q || "",
+                    city: params.city || "",
+                    format: params.format || "",
+                  })
+                : params.q || params.city || params.format
+                  ? "/clubs"
+                  : "/clubs/new"
+            }
+          >
+            {safePage > 1
+              ? "К первой странице"
+              : params.q || params.city || params.format
+                ? "Сбросить фильтры"
+                : "Создать первый клуб"}
+          </Link>
+        </div>
       )}
       <nav className={styles.actions} aria-label="Страницы клубов">
         {safePage > 1 && (

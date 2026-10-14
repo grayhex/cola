@@ -6,6 +6,10 @@ import {
 } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import sharp from "sharp";
+import AxeBuilder from "@axe-core/playwright";
+import { spawnSync } from "node:child_process";
+import { writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { registerVerified } from "../fixtures/verified-user.js";
 import { testConsents } from "../fixtures/legal.js";
 import type { ClubDto } from "../../lib/club-contracts.ts";
@@ -177,7 +181,12 @@ test("club creation: responsive themes, draft Back, safe logo/cover and rules", 
     mimeType: "image/png",
     buffer: image,
   });
-  await page.getByRole("button", { name: "Сохранить", exact: true }).click();
+  await page
+    .getByRole("button", {
+      name: /^(Создать клуб|Сохранить изменения)$/,
+      exact: true,
+    })
+    .click();
   await expect(page).toHaveURL(/\/clubs\/[a-f0-9-]{36}$/);
   await expect(
     page.getByRole("img", { name: /Логотип Гравийный/ }),
@@ -232,7 +241,12 @@ test("club creation: responsive themes, draft Back, safe logo/cover and rules", 
   await page
     .locator('[contenteditable="true"]')
     .fill("Держимся вместе, предупреждаем о препятствиях и бережём природу.");
-  await page.getByRole("button", { name: "Сохранить", exact: true }).click();
+  await page
+    .getByRole("button", {
+      name: /^(Создать клуб|Сохранить изменения)$/,
+      exact: true,
+    })
+    .click();
   await expect(page).toHaveURL(origin + path + "/rules");
   await expect(
     page.getByText(
@@ -273,14 +287,24 @@ test("a failed image upload resumes the created club rather than creating twice"
       });
     else await route.continue();
   });
-  await page.getByRole("button", { name: "Сохранить", exact: true }).click();
+  await page
+    .getByRole("button", {
+      name: /^(Создать клуб|Сохранить изменения)$/,
+      exact: true,
+    })
+    .click();
   await expect(page.locator("p[role=alert]")).toHaveText(
-    "Тестовый отказ загрузки",
+    "Логотип: Тестовый отказ загрузки",
   );
   await expect(
     page.getByRole("textbox", { name: "Название", exact: true }),
   ).toHaveValue("Без дубля после потери сети");
-  await page.getByRole("button", { name: "Сохранить", exact: true }).click();
+  await page
+    .getByRole("button", {
+      name: /^(Создать клуб|Сохранить изменения)$/,
+      exact: true,
+    })
+    .click();
   await expect(page).toHaveURL(/\/clubs\/[a-f0-9-]{36}$/);
   expect(creates).toBe(1);
   expect(uploads).toBe(2);
@@ -326,4 +350,203 @@ test("club media rejects SVG and wrong-club image IDs; replacing revokes the old
   );
   expect(removed.status()).toBe(200);
   expect((await page.request.get(media)).status()).toBe(404);
+});
+
+test("club UI: URL filters, mobile disclosure, measured fields and management surfaces", async ({
+  page,
+  browserName,
+}, info) => {
+  if (process.env.CLUB_UI_DESIGN_REPORTS) test.setTimeout(180000);
+  await owner(page.request);
+  const c = await newClub(page.request);
+  await page.goto("/clubs");
+  const form = page.locator("form").filter({
+    has: page.getByRole("searchbox", { name: "Поиск", exact: true }),
+  });
+  await form.getByRole("searchbox").fill(c.name);
+  await form.getByRole("searchbox").press("Enter");
+  await expect(page).toHaveURL(/q=/);
+  await expect(page.locator('a[href="/clubs/' + c.id + '"]')).toBeVisible();
+  await page.reload();
+  await expect(form.getByRole("searchbox")).toHaveValue(c.name);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole("button", { name: /^Фильтры/ }).click();
+  const dialog = page.getByRole("dialog", { name: "Фильтры клубов" });
+  await dialog
+    .getByLabel("Город", { exact: true })
+    .fill("Не применённый город");
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /^Фильтры/ })).toBeFocused();
+  await form.getByRole("searchbox").press("Enter");
+  await expect(page).not.toHaveURL(/city=/);
+  await page.getByRole("button", { name: /^Фильтры/ }).click();
+  await dialog
+    .getByLabel("Город", { exact: true })
+    .fill("Несуществующий город");
+  await dialog.getByRole("button", { name: "Применить" }).click();
+  await expect(page).toHaveURL(/city=/);
+  await expect(
+    page.getByRole("heading", { name: "Ничего не найдено" }),
+  ).toBeVisible();
+  await page.getByRole("link", { name: "Сбросить", exact: true }).click();
+  await expect(page).toHaveURL(origin + "/clubs");
+  const widths =
+    browserName === "chromium"
+      ? [320, 360, 390, 430, 768, 1024, 1280, 1440, 1920]
+      : [390, 1440];
+  for (const width of widths) {
+    await page.setViewportSize({ width, height: width >= 768 ? 900 : 844 });
+    for (const t of ["light", "dark"]) {
+      await theme(page, t);
+      await expect(
+        page.getByRole("searchbox", { name: "Поиск" }),
+      ).toBeEnabled();
+      expect(
+        await page.evaluate(
+          () =>
+            document.documentElement.scrollWidth -
+            document.documentElement.clientWidth,
+        ),
+      ).toBeLessThanOrEqual(1);
+      const gap = await page
+        .getByRole("searchbox", { name: "Поиск" })
+        .evaluate((el) => {
+          const label = el.closest("label")!;
+          return parseFloat(getComputedStyle(label).rowGap);
+        });
+      expect(gap).toBeGreaterThanOrEqual(4);
+      if (width === 390 || width === 1440)
+        await page.screenshot({
+          path: info.outputPath(`catalog-${width}-${t}.png`),
+          fullPage: true,
+        });
+    }
+  }
+  await page.goto("/clubs/" + c.id + "?tab=members");
+  await expect(
+    page
+      .getByRole("navigation", { name: "Разделы клуба" })
+      .getByRole("link", { name: "Участники" }),
+  ).toHaveAttribute("aria-current", "page");
+  await page.goto("/clubs/" + c.id + "/manage?section=members");
+  await expect(
+    page.getByRole("heading", { name: "Участники и заявки" }),
+  ).toBeVisible();
+  const invite = page.getByRole("textbox", {
+    name: "Пригласить по имени пользователя",
+  });
+  expect(
+    await invite.evaluate((el) =>
+      parseFloat(getComputedStyle(el.closest("label")!).rowGap),
+    ),
+  ).toBeGreaterThanOrEqual(4);
+  for (const width of [390, 1440]) {
+    for (const t of ["light", "dark"]) {
+      await page.setViewportSize({ width, height: 900 });
+      await theme(page, t);
+      await page.screenshot({
+        path: info.outputPath(`management-${width}-${t}.png`),
+        fullPage: true,
+      });
+    }
+  }
+  const inputBox = await invite.boundingBox();
+  const inviteButtonBox = await page
+    .getByRole("button", { name: "Пригласить", exact: true })
+    .boundingBox();
+  expect(inputBox).not.toBeNull();
+  expect(inviteButtonBox).not.toBeNull();
+  expect(
+    Math.abs(
+      inputBox!.y +
+        inputBox!.height -
+        inviteButtonBox!.y -
+        inviteButtonBox!.height,
+    ),
+  ).toBeLessThanOrEqual(1);
+  expect(
+    inviteButtonBox!.x - inputBox!.x - inputBox!.width,
+  ).toBeGreaterThanOrEqual(8);
+  expect(
+    (
+      await new AxeBuilder({ page })
+        .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+        .analyze()
+    ).violations,
+  ).toEqual([]);
+  await page.goto("/clubs/new");
+  for (const width of [390, 1440]) {
+    for (const t of ["light", "dark"]) {
+      await page.setViewportSize({ width, height: 900 });
+      await theme(page, t);
+      await expect(
+        page.getByRole("textbox", { name: "Название", exact: true }),
+      ).toBeEnabled();
+      expect(
+        await page.evaluate(
+          () =>
+            document.documentElement.scrollWidth -
+            document.documentElement.clientWidth,
+        ),
+      ).toBeLessThanOrEqual(1);
+      await expect(page.locator('[contenteditable="true"]')).toBeVisible();
+      await page.screenshot({
+        path: info.outputPath(`editor-${width}-${t}.png`),
+        fullPage: true,
+      });
+    }
+  }
+  expect(
+    (
+      await new AxeBuilder({ page })
+        .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+        .analyze()
+    ).violations,
+  ).toEqual([]);
+  if (process.env.CLUB_UI_DESIGN_REPORTS) {
+    for (const [surface, path] of [
+      ["catalog", "/clubs"],
+      ["club", "/clubs/" + c.id],
+    ])
+      for (const viewport of ["390x844", "1440x900"]) {
+        const report = spawnSync(
+          process.execPath,
+          [
+            "tools/design-qa/impeccable.mjs",
+            "detect",
+            "--json",
+            "--viewport",
+            viewport,
+            origin + path,
+          ],
+          { encoding: "utf8", timeout: 30000 },
+        );
+        const base = join(
+          process.env.CLUB_UI_DESIGN_REPORTS,
+          `rendered-${surface}-${viewport}`,
+        );
+        writeFileSync(base + ".json", report.stdout || "");
+        writeFileSync(
+          base + ".stderr",
+          report.stderr || String(report.error || ""),
+        );
+        writeFileSync(base + ".exit", String(report.status));
+        expect([0, 2], report.stderr || String(report.error || "")).toContain(
+          report.status,
+        );
+      }
+  }
+  await page
+    .getByRole("textbox", { name: "Название", exact: true })
+    .fill("Черновик для отмены");
+  await page.getByRole("button", { name: "Отмена", exact: true }).click();
+  await expect(page.getByRole("alertdialog")).toBeVisible();
+  await page
+    .getByRole("alertdialog")
+    .getByRole("button", { name: /Продолжить|Остаться/ })
+    .click();
+  await expect(
+    page.getByRole("textbox", { name: "Название", exact: true }),
+  ).toHaveValue("Черновик для отмены");
 });

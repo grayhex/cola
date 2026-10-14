@@ -21,7 +21,7 @@ export default async function Page({
   try {
     const c = await clubDetail(db, id, user?.id);
     return (
-      <section className={styles.page}>
+      <section className={styles.readingPage}>
         <Link href={"/clubs/" + id}>{c.name}</Link>
         <h1>Правила клуба</h1>
         {c.rules ? (

@@ -103,6 +103,11 @@ export default function ClubBadges({
             }
           }}
           aria-expanded={expanded}
+          aria-label={
+            expanded
+              ? "Свернуть список клубов"
+              : "Показать ещё клубы: " + (data.total - 2)
+          }
         >
           {expanded ? "Свернуть" : "+" + (data.total - 2)}
         </button>

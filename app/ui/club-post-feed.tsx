@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import Image from "next/image";
+import LocalDate from "./local-date.tsx";
 import { useEffect, useState } from "react";
 import type { JsonData } from "../../lib/contracts.ts";
 import type { ClubPostDto, clubPostList } from "../../lib/club-posts.ts";
@@ -99,11 +100,7 @@ export default function ClubPostFeed({
               {post.author && <Avatar person={post.author} />}
               <span>
                 {post.author?.name} ·{" "}
-                <time dateTime={post.publishedAt || post.createdAt}>
-                  {new Date(
-                    post.publishedAt || post.createdAt,
-                  ).toLocaleDateString("ru-RU")}
-                </time>
+                <LocalDate value={post.publishedAt || post.createdAt} />
               </span>
               {post.pinned && <strong>Закреплено</strong>}
               {post.status === "draft" && <strong>Черновик</strong>}

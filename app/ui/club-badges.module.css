@@ -28,7 +28,7 @@
   width: 32px;
   height: 32px;
   flex: 0 0 32px;
-  object-fit: cover;
+  object-fit: contain;
   border-radius: var(--radius-sm);
 }
 .monogram {
@@ -45,4 +45,10 @@
 }
 .expand {
   flex: 0 0 auto;
+}
+
+.badge img {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  padding: var(--space-1);
 }

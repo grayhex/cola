@@ -50,7 +50,7 @@ export default function ClubHeader({ club: c }: { club: ClubDto }) {
             Клуб в архиве. История доступна для чтения.
           </p>
         )}
-        <RichTextBody doc={c.missionDoc} />
+
         <p className={styles.meta}>Участников: {c.memberCount}</p>
         <ClubMembershipControls
           key={
@@ -66,7 +66,7 @@ export default function ClubHeader({ club: c }: { club: ClubDto }) {
         />
         <ClubChat club={c} />
         <ClubNoticeControls club={c} />
-        <div className={styles.actions}>
+        <div className={styles.secondaryActions}>
           <Link className="button secondary" href={"/clubs/" + c.id + "/rules"}>
             Правила клуба
           </Link>
@@ -81,6 +81,12 @@ export default function ClubHeader({ club: c }: { club: ClubDto }) {
             </Link>
           )}
         </div>
+        {c.mission && (
+          <details className={styles.about}>
+            <summary>О клубе</summary>
+            <RichTextBody doc={c.missionDoc} />
+          </details>
+        )}
       </div>
     </header>
   );

@@ -123,8 +123,10 @@ test("clubs: guest, application, approval and revocation use distinct states and
   await page.goto("/clubs/" + c.id + "/manage?section=members");
   const row = page.locator("article").filter({ hasText: rider.username });
   await row.getByRole("button", { name: "Принять", exact: true }).click();
+  await row.getByText("Другие действия", { exact: true }).click();
   await expect(row.getByRole("combobox", { name: "Роль" })).toBeVisible();
   await memberPage.reload();
+  await memberPage.getByText("Членство", { exact: true }).click();
   await expect(
     memberPage.getByRole("button", { name: "Выйти из клуба" }),
   ).toBeVisible();
@@ -209,9 +211,11 @@ test("badges: shared visibility/order on profile and bicycle, long names, +N and
     const shelf = p.getByLabel("Клубы участника", { exact: true });
     await expect(shelf.getByRole("link")).toHaveCount(2);
     await expect(
-      shelf.getByRole("button", { name: "+1", exact: true }),
+      shelf.getByRole("button", { name: "Показать ещё клубы: 1", exact: true }),
     ).toBeVisible();
-    await shelf.getByRole("button", { name: "+1", exact: true }).click();
+    await shelf
+      .getByRole("button", { name: "Показать ещё клубы: 1", exact: true })
+      .click();
     await expect(shelf.getByRole("link")).toHaveCount(3);
     await shelf.getByRole("button", { name: "Свернуть" }).click();
     for (const width of browserName === "chromium"
@@ -263,7 +267,7 @@ test("badges: shared visibility/order on profile and bicycle, long names, +N and
     shelf.getByRole("link", { name: names[0], exact: true }),
   ).toHaveCount(0);
   await expect(
-    shelf.getByRole("button", { name: "+1", exact: true }),
+    shelf.getByRole("button", { name: "Показать ещё клубы: 1", exact: true }),
   ).toHaveCount(0);
   await p.goto("/b/" + rider.share);
   await expect(

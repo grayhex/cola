@@ -93,13 +93,16 @@ export default function ClubMembershipControls({
           <>
             <span>{roles[m.role]}</span>
             {m.role !== "owner" && (
-              <button
-                className="button secondary"
-                disabled={busy}
-                onClick={() => action("leave")}
-              >
-                Выйти из клуба
-              </button>
+              <details>
+                <summary>Членство</summary>
+                <button
+                  className="button secondary danger"
+                  disabled={busy}
+                  onClick={() => action("leave")}
+                >
+                  Выйти из клуба
+                </button>
+              </details>
             )}
           </>
         ) : m?.state === "pending" ? (
