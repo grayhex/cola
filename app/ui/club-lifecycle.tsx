@@ -14,7 +14,7 @@ export default function ClubLifecycle({ club }: { club: ClubDto }) {
   return (
     <>
       <button
-        className="button"
+        className={club.archived ? "button" : "button secondary danger"}
         disabled={busy}
         onClick={async () => {
           const accepted = await ask(

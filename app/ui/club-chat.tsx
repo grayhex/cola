@@ -127,15 +127,11 @@ function Contents({ club, settings }: { club: ClubDto; settings: boolean }) {
           )}
           {data.enabled && data.status !== "ready" && (
             <p className="help">
-              Доступ к чату обновляется. При открытии мы проверим текущий
-              состав; при недоступности чата покажем ошибку.
+              Подключаем чат. Если он не откроется, попробуйте позже.
             </p>
           )}
           {data.externalUrl && (
-            <p className="help">
-              Это отдельный внешний чат. Выход из клуба не удаляет вас из него
-              автоматически.
-            </p>
+            <p className="help">Внешний чат: членство управляется отдельно.</p>
           )}
           {settings && data.canModerate && !club.archived && (
             <form

@@ -92,79 +92,90 @@ export default function ClubManagement({
       </section>
     );
   return (
-    <>
-      <nav className={styles.page} aria-label="Управление клубом">
-        <Link href={"/clubs/" + club.id}>{club.name}</Link>
-        <div className={styles.actions}>
-          {[
-            ["about", "О клубе"],
-            ["members", "Участники и заявки"],
-            ["rules", "Правила"],
-            ["chat", "Чат"],
-          ].map(([key, label]) => (
-            <Link
-              key={key}
-              className="button secondary"
-              aria-current={section === key ? "page" : undefined}
-              href={"/clubs/" + club.id + "/manage?section=" + key}
-            >
-              {label}
-            </Link>
-          ))}
+    <section className={styles.page}>
+      <header className={styles.pageHeader}>
+        <div>
+          <Link href={"/clubs/" + club.id}>Вернуться в клуб</Link>
+          <h1>{club.name}</h1>
         </div>
-      </nav>
-      {section === "chat" ? (
-        <section className={styles.page}>
-          <ClubChat club={club} settings />
-        </section>
-      ) : section === "members" ? (
-        <section className={styles.page}>
-          <ClubMembers club={club} management />
-          {data?.transfer && (
-            <div className={styles.notice}>
-              <p>
-                Предложение передачи действует до{" "}
-                <LocalDate value={data.transfer.expiresAt} />.
-              </p>
-              <button
-                className="button secondary"
-                onClick={async () => {
-                  setError("");
-                  try {
-                    await socialApi("clubs/" + club.id + "/transfer", "POST", {
-                      action: "cancel",
-                      version: club.version,
-                    });
-                    router.refresh();
-                  } catch (e) {
-                    setError(
-                      e instanceof Error
-                        ? e.message
-                        : "Не удалось отменить передачу",
-                    );
-                  }
-                }}
+      </header>
+      <div className={styles.management}>
+        <nav className={styles.managementNav} aria-label="Управление клубом">
+          <div className={styles.managementLinks}>
+            {[
+              ["about", "О клубе"],
+              ["members", "Участники и заявки"],
+              ["rules", "Правила"],
+              ["chat", "Чат"],
+            ].map(([key, label]) => (
+              <Link
+                key={key}
+                className={styles.tab}
+                aria-current={section === key ? "page" : undefined}
+                href={"/clubs/" + club.id + "/manage?section=" + key}
               >
-                Отменить передачу
-              </button>
-            </div>
-          )}
-          {error && <p role="alert">{error}</p>}
-          <details>
-            <summary>Журнал управления</summary>
-            {data?.audit.map((a, i) => (
-              <p key={i}>
-                {actions[a.action] || "Членство изменено"}
-                {a.target ? " · " + a.target.name : ""} ·{" "}
-                {a.actor?.name || "Удалённый аккаунт"} ·{" "}
-                <LocalDate value={a.createdAt} time />
-              </p>
+                {label}
+              </Link>
             ))}
-          </details>
-        </section>
-      ) : (
-        <ClubEditor initial={club} rulesOnly={section === "rules"} />
-      )}
-    </>
+          </div>
+        </nav>
+        {section === "chat" ? (
+          <section className={styles.managementContent}>
+            <ClubChat club={club} settings />
+          </section>
+        ) : section === "members" ? (
+          <section className={styles.managementContent}>
+            <ClubMembers club={club} management />
+            {data?.transfer && (
+              <div className={styles.notice}>
+                <p>
+                  Предложение передачи действует до{" "}
+                  <LocalDate value={data.transfer.expiresAt} />.
+                </p>
+                <button
+                  className="button secondary"
+                  onClick={async () => {
+                    setError("");
+                    try {
+                      await socialApi(
+                        "clubs/" + club.id + "/transfer",
+                        "POST",
+                        {
+                          action: "cancel",
+                          version: club.version,
+                        },
+                      );
+                      router.refresh();
+                    } catch (e) {
+                      setError(
+                        e instanceof Error
+                          ? e.message
+                          : "Не удалось отменить передачу",
+                      );
+                    }
+                  }}
+                >
+                  Отменить передачу
+                </button>
+              </div>
+            )}
+            {error && <p role="alert">{error}</p>}
+            <details>
+              <summary>Журнал управления</summary>
+              {data?.audit.map((a, i) => (
+                <p key={i}>
+                  {actions[a.action] || "Членство изменено"}
+                  {a.target ? " · " + a.target.name : ""} ·{" "}
+                  {a.actor?.name || "Удалённый аккаунт"} ·{" "}
+                  <LocalDate value={a.createdAt} time />
+                </p>
+              ))}
+            </details>
+          </section>
+        ) : (
+          <ClubEditor initial={club} rulesOnly={section === "rules"} />
+        )}
+      </div>
+    </section>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import type { ClubDto, ClubRole, ClubState } from "../../lib/club-contracts.ts";
 import type { PublicAuthor } from "../../lib/contracts.ts";
@@ -54,8 +55,10 @@ export default function ClubMembers({
       club.membership.state === "active" &&
       (!management || club.canManage));
   useEffect(() => {
-    let active = true;
     setData(null);
+  }, [club.id, page, management, allowed, viewer?.id]);
+  useEffect(() => {
+    let active = true;
     setError("");
     if (!allowed) return;
     socialApi<Members>(
@@ -138,7 +141,7 @@ export default function ClubMembers({
       <h2>{management ? "Участники и заявки" : "Участники"}</h2>
       {management && (
         <form
-          className={styles.actions}
+          className={styles.invite}
           onSubmit={async (e) => {
             e.preventDefault();
             setBusy(true);
@@ -165,7 +168,7 @@ export default function ClubMembers({
             }
           }}
         >
-          <label>
+          <label className={styles.field}>
             Пригласить по имени пользователя
             <input
               maxLength={32}
@@ -183,21 +186,36 @@ export default function ClubMembers({
       {error && <p role="alert">{error}</p>}
       {!data && !error && <p role="status">Загружаем состав…</p>}
       {data?.members.map((m) => (
-        <article key={m.user.id} className={styles.notice}>
-          <Link href={"/u/" + m.user.username}>
-            {m.user.name} · @{m.user.username}
-          </Link>
-          <p>
-            {m.state && management ? states[m.state] + " · " : ""}
-            {roles[m.role]}
-          </p>
+        <article key={m.user.id} className={styles.member}>
+          <div className={styles.memberIdentity}>
+            {m.user.avatar && (
+              <Image
+                unoptimized
+                src={m.user.avatar}
+                width={44}
+                height={44}
+                alt=""
+              />
+            )}
+            <div>
+              <Link href={"/u/" + m.user.username}>
+                {m.user.name} · @{m.user.username}
+              </Link>
+              <p>
+                {m.state && management && m.state !== "active"
+                  ? states[m.state] + " · "
+                  : ""}
+                {roles[m.role]}
+              </p>
+            </div>
+          </div>
           {management &&
             m.user.id !== viewer?.id &&
             m.role !== "owner" &&
             (club.membership?.role === "owner" || m.role !== "admin") && (
-              <div className={styles.actions}>
+              <>
                 {m.state === "pending" && (
-                  <>
+                  <div className={styles.actions}>
                     <button
                       className="button"
                       disabled={busy}
@@ -212,112 +230,119 @@ export default function ClubMembers({
                     >
                       Отклонить заявку
                     </button>
-                  </>
+                  </div>
                 )}
-                {m.state === "invited" && (
-                  <button
-                    className="button secondary"
-                    disabled={busy}
-                    onClick={() => manage(m.user.id, "revoke-invite")}
-                  >
-                    Отозвать приглашение
-                  </button>
-                )}
-                {m.state === "active" && (
-                  <>
-                    <label>
-                      Роль
-                      <select
-                        value={m.role}
+
+                <details>
+                  <summary>Другие действия</summary>
+                  <div className={styles.actions}>
+                    {m.state === "invited" && (
+                      <button
+                        className="button secondary"
                         disabled={busy}
-                        onChange={(e) =>
-                          manage(
-                            m.user.id,
-                            "role",
-                            e.target.value === "admin"
-                              ? "admin"
-                              : e.target.value === "organizer"
-                                ? "organizer"
-                                : "member",
-                          )
-                        }
+                        onClick={() => manage(m.user.id, "revoke-invite")}
                       >
-                        <option value="member">Участник</option>
-                        <option value="organizer">Организатор</option>
-                        {club.membership?.role === "owner" && (
-                          <option value="admin">Администратор</option>
-                        )}
-                      </select>
-                    </label>
-                    <button
-                      className="button secondary"
-                      disabled={busy}
-                      onClick={() => manage(m.user.id, "exclude")}
-                    >
-                      Исключить
-                    </button>
-                  </>
-                )}
-                {m.state === "blocked" ? (
-                  <button
-                    className="button secondary"
-                    disabled={busy}
-                    onClick={() => manage(m.user.id, "unblock")}
-                  >
-                    Снять блокировку
-                  </button>
-                ) : (
-                  <button
-                    className="button secondary"
-                    disabled={busy}
-                    onClick={() => manage(m.user.id, "block")}
-                  >
-                    Заблокировать в клубе
-                  </button>
-                )}
-                {m.state === "active" && club.membership?.role === "owner" && (
-                  <button
-                    className="button secondary"
-                    disabled={busy}
-                    onClick={async () => {
-                      if (
-                        !(await ask(
-                          "Участник получит предложение и должен сам его принять. До этого вы остаётесь владельцем.",
-                          {
-                            title: "Предложить передачу владения?",
-                            confirmLabel: "Предложить",
-                          },
-                        ))
-                      )
-                        return;
-                      setBusy(true);
-                      setError("");
-                      try {
-                        await socialApi(
-                          "clubs/" + club.id + "/transfer",
-                          "POST",
-                          {
-                            action: "offer",
-                            targetId: m.user.id,
-                            version: club.version,
-                          },
-                        );
-                        location.reload();
-                      } catch (e) {
-                        setError(
-                          e instanceof Error
-                            ? e.message
-                            : "Не удалось предложить передачу",
-                        );
-                      } finally {
-                        setBusy(false);
-                      }
-                    }}
-                  >
-                    Передать владение
-                  </button>
-                )}
-              </div>
+                        Отозвать приглашение
+                      </button>
+                    )}
+                    {m.state === "active" && (
+                      <>
+                        <label className={styles.field}>
+                          Роль
+                          <select
+                            value={m.role}
+                            disabled={busy}
+                            onChange={(e) =>
+                              manage(
+                                m.user.id,
+                                "role",
+                                e.target.value === "admin"
+                                  ? "admin"
+                                  : e.target.value === "organizer"
+                                    ? "organizer"
+                                    : "member",
+                              )
+                            }
+                          >
+                            <option value="member">Участник</option>
+                            <option value="organizer">Организатор</option>
+                            {club.membership?.role === "owner" && (
+                              <option value="admin">Администратор</option>
+                            )}
+                          </select>
+                        </label>
+                        <button
+                          className="button secondary"
+                          disabled={busy}
+                          onClick={() => manage(m.user.id, "exclude")}
+                        >
+                          Исключить
+                        </button>
+                      </>
+                    )}
+                    {m.state === "blocked" ? (
+                      <button
+                        className="button secondary"
+                        disabled={busy}
+                        onClick={() => manage(m.user.id, "unblock")}
+                      >
+                        Снять блокировку
+                      </button>
+                    ) : (
+                      <button
+                        className="button secondary"
+                        disabled={busy}
+                        onClick={() => manage(m.user.id, "block")}
+                      >
+                        Заблокировать в клубе
+                      </button>
+                    )}
+                    {m.state === "active" &&
+                      club.membership?.role === "owner" && (
+                        <button
+                          className="button secondary"
+                          disabled={busy}
+                          onClick={async () => {
+                            if (
+                              !(await ask(
+                                "Участник получит предложение и должен сам его принять. До этого вы остаётесь владельцем.",
+                                {
+                                  title: "Предложить передачу владения?",
+                                  confirmLabel: "Предложить",
+                                },
+                              ))
+                            )
+                              return;
+                            setBusy(true);
+                            setError("");
+                            try {
+                              await socialApi(
+                                "clubs/" + club.id + "/transfer",
+                                "POST",
+                                {
+                                  action: "offer",
+                                  targetId: m.user.id,
+                                  version: club.version,
+                                },
+                              );
+                              location.reload();
+                            } catch (e) {
+                              setError(
+                                e instanceof Error
+                                  ? e.message
+                                  : "Не удалось предложить передачу",
+                              );
+                            } finally {
+                              setBusy(false);
+                            }
+                          }}
+                        >
+                          Передать владение
+                        </button>
+                      )}
+                  </div>
+                </details>
+              </>
             )}
         </article>
       ))}

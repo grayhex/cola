@@ -61,7 +61,7 @@ export default async function Page({
           ? await clubPostList(db, id, user?.id || null)
           : null;
     return (
-      <section className={styles.page}>
+      <section className={styles.clubPage}>
         <ClubHeader club={club} />
         {club.hidden && (
           <>
@@ -77,26 +77,29 @@ export default async function Page({
             </Link>
           </>
         )}
-        <nav className={styles.actions} aria-label="Разделы клуба">
+        <nav className={styles.tabs} aria-label="Разделы клуба">
           <Link
-            className="button secondary"
+            className={styles.tab}
             href={"/clubs/" + id}
-            aria-current={!tab ? "page" : undefined}
+            aria-current={
+              !["members", "rides"].includes(tab || "") ? "page" : undefined
+            }
           >
             Лента
           </Link>
           <Link
-            className="button secondary"
+            className={styles.tab}
             href={"/clubs/" + id + "?tab=members"}
+            aria-current={tab === "members" ? "page" : undefined}
           >
             Участники
           </Link>
           <Link
-            className="button secondary"
+            className={styles.tab}
             href={"/clubs/" + id + "?tab=rides"}
             aria-current={tab === "rides" ? "page" : undefined}
           >
-            Выезды
+            Покатушки
           </Link>
         </nav>
         {tab === "rides" ? (

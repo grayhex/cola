@@ -78,45 +78,48 @@ function Contents({ club }: { club: ClubDto }) {
         </p>
       )}
       {member && prefs?.viewerId === viewer?.id && (
-        <label className={styles.noticePreference}>
-          <input
-            type="checkbox"
-            checked={prefs.notifyRides}
-            disabled={busy || (!prefs.verified && !prefs.notifyRides)}
-            onChange={async (e) => {
-              const notifyRides = e.target.checked,
-                previous = prefs;
-              setPrefs({ ...prefs, notifyRides });
-              setBusy(true);
-              setError("");
-              try {
-                setPrefs(
-                  await socialApi<Preferences>(
-                    "clubs/" + club.id + "/notice-preferences",
-                    "PATCH",
-                    { notifyRides },
-                  ),
-                );
-              } catch (e) {
-                setPrefs(previous);
-                setError(
-                  e instanceof Error
-                    ? e.message
-                    : "Не удалось сохранить настройку. Повторите действие.",
-                );
-              } finally {
-                setBusy(false);
-              }
-            }}
-          />
-          <span>
-            Уведомлять о новых выездах
-            <br />
-            <span className="help">
-              В уведомлениях сайта. Участие в выезде подтверждается отдельно.
+        <details className={styles.preferences}>
+          <summary>Уведомления клуба</summary>
+          <label className={styles.noticePreference}>
+            <input
+              type="checkbox"
+              checked={prefs.notifyRides}
+              disabled={busy || (!prefs.verified && !prefs.notifyRides)}
+              onChange={async (e) => {
+                const notifyRides = e.target.checked,
+                  previous = prefs;
+                setPrefs({ ...prefs, notifyRides });
+                setBusy(true);
+                setError("");
+                try {
+                  setPrefs(
+                    await socialApi<Preferences>(
+                      "clubs/" + club.id + "/notice-preferences",
+                      "PATCH",
+                      { notifyRides },
+                    ),
+                  );
+                } catch (e) {
+                  setPrefs(previous);
+                  setError(
+                    e instanceof Error
+                      ? e.message
+                      : "Не удалось сохранить настройку. Повторите действие.",
+                  );
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            />
+            <span>
+              Уведомлять о новых выездах
+              <br />
+              <span className="help">
+                В уведомлениях сайта. Участие в выезде подтверждается отдельно.
+              </span>
             </span>
-          </span>
-        </label>
+          </label>
+        </details>
       )}
       {member && error && <p role="alert">{error}</p>}
     </>

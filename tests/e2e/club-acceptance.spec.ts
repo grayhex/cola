@@ -76,7 +76,10 @@ test("recorded mobile path: create, invitation, badge, post/comment, real ride, 
       (r) => r.url().endsWith("/api/clubs") && r.request().method() === "POST",
     );
     await ownerPage
-      .getByRole("button", { name: "Сохранить", exact: true })
+      .getByRole("button", {
+        name: /^(Создать клуб|Сохранить изменения)$/,
+        exact: true,
+      })
       .click();
     expect((await created).status()).toBe(201);
     const data: { club: ClubDto } = await (await created).json(),
@@ -94,7 +97,10 @@ test("recorded mobile path: create, invitation, badge, post/comment, real ride, 
       .locator('[contenteditable="true"]')
       .fill("Едем вместе и предупреждаем о препятствиях.");
     await ownerPage
-      .getByRole("button", { name: "Сохранить", exact: true })
+      .getByRole("button", {
+        name: /^(Создать клуб|Сохранить изменения)$/,
+        exact: true,
+      })
       .click();
     await expect(ownerPage).toHaveURL(origin + "/clubs/" + c.id + "/rules");
     await expect(
@@ -122,6 +128,7 @@ test("recorded mobile path: create, invitation, badge, post/comment, real ride, 
     await expect(
       page.getByRole("button", { name: "Чат клуба", exact: true }),
     ).toBeVisible();
+    await page.getByText("Уведомления клуба", { exact: true }).click();
     await page.getByLabel("Уведомлять о новых выездах").check();
     await expect
       .poll(
