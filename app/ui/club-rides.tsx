@@ -21,9 +21,13 @@ function Contents({ club }: { club: ClubDto }) {
     [page, setPage] = useState(1),
     [revision, setRevision] = useState(0),
     [planning, setPlanning] = useState(false),
+    [interactive, setInteractive] = useState(false),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
     [ask, confirmation] = useConfirmation();
+  useEffect(() => {
+    setInteractive(true);
+  }, []);
   useEffect(() => {
     let active = true;
     setData(null);
@@ -76,7 +80,11 @@ function Contents({ club }: { club: ClubDto }) {
     <section aria-labelledby="club-rides-heading">
       <h2 id="club-rides-heading">Выезды клуба</h2>
       {canPlan && (
-        <button className="button" onClick={() => setPlanning(true)}>
+        <button
+          className="button"
+          disabled={!interactive}
+          onClick={() => setPlanning(true)}
+        >
           Запланировать выезд клуба
         </button>
       )}
