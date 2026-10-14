@@ -1,3 +1,4 @@
+import { runClubEventBatch } from "../lib/club-events.ts";
 import { db } from "../lib/db.ts";
 import {
   runNotificationEmailBatch,
@@ -24,6 +25,7 @@ try {
         console.log(
           JSON.stringify({
             event: "notification_email_batch",
+            clubs: await runClubEventBatch(),
             ...(await runNotificationEmailBatch(db)),
           }),
         );

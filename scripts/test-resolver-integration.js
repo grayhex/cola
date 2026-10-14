@@ -243,6 +243,7 @@ try {
           ...(externalDatabase
             ? [
                 "tests/community-concurrency.js",
+                "tests/club-events-concurrency.ts",
                 "tests/comment-threads-concurrency.js",
               ]
             : []),

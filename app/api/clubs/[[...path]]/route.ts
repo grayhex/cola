@@ -1,4 +1,10 @@
 import {
+  clubNoticePreferences,
+  setClubNoticePreferences,
+  clubNoticePreferencesInput,
+} from "../../../../lib/club-events.ts";
+import { nearestClubRide } from "../../../../lib/club-nearest.ts";
+import {
   changeMembership,
   manageClubMember,
   clubMembers,
@@ -75,6 +81,14 @@ async function handler(
     if (m !== "GET" && !sameOrigin(req))
       return fail("Недопустимый источник запроса", 403);
     if (m === "GET") {
+      if (p.length === 2 && p[1] === "nearest")
+        return json(
+          await nearestClubRide(db, uuid.parse(p[0]), user?.id || null),
+        );
+      if (p.length === 2 && p[1] === "notice-preferences")
+        return user
+          ? json(await clubNoticePreferences(db, uuid.parse(p[0]), user.id))
+          : fail("Войдите в аккаунт", 401);
       if (p.length === 2 && p[1] === "chat")
         return user
           ? json(await clubChatState(db, uuid.parse(p[0]), user.id))
@@ -187,6 +201,16 @@ async function handler(
       return fail("Не найдено", 404);
     }
     if (!user) return fail("Войдите в аккаунт", 401);
+    if (p.length === 2 && p[1] === "notice-preferences" && m === "PATCH") {
+      if (!(await rateLimit("club-notice-preferences:" + user.id, 30)))
+        return fail("Слишком много действий", 429);
+      const input = clubNoticePreferencesInput.parse(await readJson(req, 1024));
+      return json(
+        await transaction((q) =>
+          setClubNoticePreferences(q, uuid.parse(p[0]), user.id, input),
+        ),
+      );
+    }
     if (p.length === 2 && p[1] === "chat" && m === "PATCH") {
       if (!(await rateLimit("club-chat-settings:" + user.id, 20)))
         return fail("Слишком много действий", 429);

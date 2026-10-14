@@ -527,6 +527,7 @@ export async function exportAccount(
       slogan: string;
       city: string;
       formats: string[];
+      external_chat_url: string | null;
       mission: string;
       rules: string;
       join_mode: string;
@@ -535,7 +536,7 @@ export async function exportAccount(
       created_at: Date;
       updated_at: Date;
     }>(
-      "SELECT id,name,slogan,city,formats,mission,rules,join_mode,members_visibility,archived_at,created_at,updated_at FROM clubs WHERE owner_id=$1 ORDER BY created_at,id",
+      "SELECT id,name,slogan,city,formats,mission,rules,external_chat_url,join_mode,members_visibility,archived_at,created_at,updated_at FROM clubs WHERE owner_id=$1 ORDER BY created_at,id",
       [userId],
     )
   ).rows;
@@ -546,11 +547,13 @@ export async function exportAccount(
       state: string;
       badge_visible: boolean;
       badge_order: number;
+      notify_rides: boolean;
+      notify_rides_since: Date | null;
       created_at: Date;
       updated_at: Date;
       invite_expires_at: Date | null;
     }>(
-      "SELECT club_id,role,state,badge_visible,badge_order,created_at,updated_at,invite_expires_at FROM club_memberships WHERE user_id=$1 ORDER BY created_at,club_id",
+      "SELECT club_id,role,state,badge_visible,badge_order,notify_rides,notify_rides_since,created_at,updated_at,invite_expires_at FROM club_memberships WHERE user_id=$1 ORDER BY created_at,club_id",
       [userId],
     )
   ).rows;

@@ -124,6 +124,7 @@ const noRow: NotificationRow = {
   club_id: "",
   club_post_id: "",
   club_post_title: "",
+  club_name: "",
   club_post_comment_id: "",
   component_id: "",
   component_name: "",
@@ -184,6 +185,30 @@ interface Expected {
   dated?: boolean;
 }
 const cases: Record<NotificationType, Expected> = {
+  club_application: {
+    row: { club_id: randomUUID(), club_name: "Клуб" },
+    target: "club",
+  },
+  club_invitation: {
+    row: { club_id: randomUUID(), club_name: "Клуб" },
+    target: "club",
+  },
+  club_membership_result: {
+    row: { club_id: randomUUID(), club_name: "Клуб" },
+    target: "club",
+  },
+  club_role: {
+    row: { club_id: randomUUID(), club_name: "Клуб" },
+    target: "club",
+  },
+  club_organizer_lost: {
+    row: { club_id: randomUUID(), club_name: "Клуб" },
+    target: "club",
+  },
+  club_ride_new: {
+    row: { ...ride, club_id: randomUUID(), club_name: "Клуб" },
+    target: "ride",
+  },
   club_post_like: {
     row: {
       ...person,

@@ -59,6 +59,7 @@ const empty: NotificationRow = {
   club_id: "",
   club_post_id: "",
   club_post_title: "",
+  club_name: "",
   club_post_comment_id: "",
   component_id: "",
   component_name: "",
@@ -384,6 +385,65 @@ export const targetCases: TargetCase[] = [
       club_post_id: uid(18),
       club_post_title: "Ночная поездка",
       club_post_comment_id: uid(25),
+    },
+  },
+  {
+    name: "club_application",
+    description:
+      "Клубное событие в общем колокольчике; без автоматического внешнего канала.",
+    row: {
+      type: "club_application",
+      club_id: uid(17),
+      club_name: "Ночной клуб",
+    },
+  },
+  {
+    name: "club_invitation",
+    description:
+      "Клубное событие в общем колокольчике; без автоматического внешнего канала.",
+    row: {
+      type: "club_invitation",
+      club_id: uid(17),
+      club_name: "Ночной клуб",
+    },
+  },
+  {
+    name: "club_membership_result",
+    description:
+      "Клубное событие в общем колокольчике; без автоматического внешнего канала.",
+    row: {
+      type: "club_membership_result",
+      club_id: uid(17),
+      club_name: "Ночной клуб",
+    },
+  },
+  {
+    name: "club_role",
+    description:
+      "Клубное событие в общем колокольчике; без автоматического внешнего канала.",
+    row: { type: "club_role", club_id: uid(17), club_name: "Ночной клуб" },
+  },
+  {
+    name: "club_organizer_lost",
+    description:
+      "Клубное событие в общем колокольчике; без автоматического внешнего канала.",
+    row: {
+      type: "club_organizer_lost",
+      club_id: uid(17),
+      club_name: "Ночной клуб",
+    },
+  },
+  {
+    name: "club_ride_new",
+    description:
+      "Клубное событие в общем колокольчике; без автоматического внешнего канала.",
+    row: {
+      type: "club_ride_new",
+      club_id: uid(17),
+      club_name: "Ночной клуб",
+      ride_id: ids.ride,
+      ride_share_id: "night-loop",
+      ride_title: "Ночной круг",
     },
   },
 ];
