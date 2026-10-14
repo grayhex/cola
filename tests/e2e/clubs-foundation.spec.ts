@@ -401,7 +401,7 @@ test("club UI: URL filters, mobile disclosure, measured fields and management su
       await theme(page, t);
       await expect(
         page.getByRole("searchbox", { name: "Поиск" }),
-      ).toBeVisible();
+      ).toBeEnabled();
       expect(
         await page.evaluate(
           () =>
