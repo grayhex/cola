@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Modal from "./garage/modal.tsx";
 import styles from "./clubs.module.css";
@@ -13,11 +13,15 @@ export default function ClubFilters({
   city: string;
   format: string;
 }) {
-  const [open, setOpen] = useState(false),
+  const [interactive, setInteractive] = useState(false),
+    [open, setOpen] = useState(false),
     [query, setQuery] = useState(search),
     [draftCity, setCity] = useState(city),
     [draftFormat, setFormat] = useState(format),
     router = useRouter();
+  useEffect(() => {
+    setInteractive(true);
+  }, []);
   const submit = (c = city, f = format) => {
     const p = new URLSearchParams();
     if (query.trim()) p.set("q", query.trim());
@@ -31,6 +35,7 @@ export default function ClubFilters({
       <label className={styles.field}>
         Город
         <input
+          disabled={!interactive}
           name="city"
           maxLength={80}
           value={draftCity}
@@ -41,6 +46,7 @@ export default function ClubFilters({
       <label className={styles.field}>
         Формат
         <input
+          disabled={!interactive}
           name="format"
           maxLength={40}
           value={draftFormat}
@@ -67,6 +73,7 @@ export default function ClubFilters({
         <label className={styles.field}>
           Поиск
           <input
+            disabled={!interactive}
             type="search"
             name="q"
             maxLength={100}
@@ -79,6 +86,7 @@ export default function ClubFilters({
         <button
           className={"button secondary " + styles.mobileFilters}
           type="button"
+          disabled={!interactive}
           onClick={() => {
             setCity(city);
             setFormat(format);
@@ -88,7 +96,9 @@ export default function ClubFilters({
           Фильтры
           {city || format ? " · " + [city, format].filter(Boolean).length : ""}
         </button>
-        <button className="button">Найти</button>
+        <button className="button" disabled={!interactive}>
+          Найти
+        </button>
       </form>
       {(search || city || format) && (
         <div className={styles.filterSummary}>
